@@ -192,7 +192,16 @@ async function anonId(file: string | undefined): Promise<string | undefined> {
 function sessionRows(rows: ReturnType<Storage["pendingEvents"]>): ReturnType<Storage["pendingEvents"]> {
   const first = rows[0]
   if (!first) return []
-  return rows.filter((row) => row.rootSessionId === first.rootSessionId && row.sessionId === first.sessionId)
+  const session = rows
+    .filter((row) => row.rootSessionId === first.rootSessionId && row.sessionId === first.sessionId)
+    .sort((a, b) => a.seq - b.seq)
+  const out: typeof session = []
+  for (const row of session) {
+    const prev = out.at(-1)
+    if (prev && row.seq !== prev.seq + 1) break
+    out.push(row)
+  }
+  return out
 }
 
 async function sha256Hex(value: string): Promise<string> {

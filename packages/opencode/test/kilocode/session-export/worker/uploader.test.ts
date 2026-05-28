@@ -365,6 +365,53 @@ describe("Uploader", () => {
     expect(storage.pendingEvents({ now: Date.now(), limitBytes: 1_000_000 }).length).toBe(0)
   })
 
+  test("does not combine retried rows across uploaded sequence gaps", async () => {
+    storage.markRetry("01", Date.now() + 60_000)
+    storage.insertEvent({
+      id: "02",
+      schemaVersion: 1,
+      sessionId: "s1",
+      rootSessionId: "s1",
+      seq: 1,
+      type: "workspace_baseline_completed",
+      ts: 101,
+      agentVersion: "v0",
+      dataJson: "{}",
+      clientScrubbed: 1,
+    })
+    const bodies: string[] = []
+    const uploader = new Uploader({
+      storage,
+      endpoint: "https://example.test/ingest",
+      fetch: async (_input, init) => {
+        bodies.push(init.body as string)
+        return new Response("", { status: 204 })
+      },
+      reportTelemetry: () => {},
+      agentVersion: "v0",
+      surface: "test",
+    })
+    await uploader.flush("test")
+    storage.markRetry("01", Date.now() - 1)
+    storage.insertEvent({
+      id: "03",
+      schemaVersion: 1,
+      sessionId: "s1",
+      rootSessionId: "s1",
+      seq: 2,
+      type: "tool_executed",
+      ts: 102,
+      agentVersion: "v0",
+      dataJson: "{}",
+      clientScrubbed: 1,
+    })
+
+    await uploader.flush("test")
+
+    const seqs = bodies.map((body) => (JSON.parse(body) as { events: Array<{ seq: number }> }).events.map((event) => event.seq))
+    expect(seqs).toEqual([[1], [0], [2]])
+  })
+
   test("backoffFor grows exponentially and caps at retryBackoffMaxMs", () => {
     expect(backoffFor(0)).toBe(Config.retryBackoffMinMs)
     expect(backoffFor(1)).toBe(Config.retryBackoffMinMs * 2)
