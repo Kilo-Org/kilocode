@@ -48,9 +48,12 @@ async function disableAnimations(page: Page) {
 // Stories to skip from visual regression (add IDs here if needed)
 // Spinner animation captures at an indeterminate frame, causing flaky diffs.
 // Permission dock config-preloaded has non-deterministic toggle rendering.
+// Navigation fixtures are exercised by interaction tests rather than screenshot baselines.
 const SKIP = new Set<string>([
   "agentmanager--worktree-item-busy",
   "agentmanager--pr-badge-checks-pending",
+  "agentmanager-navigation--worktrees-keyboard",
+  "agentmanager-navigation--tabs-keyboard",
   "composite-webview--permission-dock-config-preloaded",
 ])
 

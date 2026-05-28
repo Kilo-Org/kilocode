@@ -100,6 +100,7 @@ import { createTabOrderSync } from "./tab-order-sync"
 import { ConstrainDragYAxis } from "./sortable-tab"
 import { isTerminalTabId, createTerminalState, createTerminalHandlers, createTerminalMessageHandler } from "./terminal"
 import { renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
+import { nextTab, panelId, tabId } from "./tab-accessibility"
 import { useTabScroll } from "./tab-scroll"
 import { DiffPanel } from "./DiffPanel"
 import { createRevertFile } from "./revert-file"
@@ -747,6 +748,12 @@ const AgentManagerContent: Component = () => {
     if (reviewActive()) return REVIEW_TAB_ID
     return session.currentSessionID() ?? activePendingId()
   })
+  const chatTab = createMemo(() => {
+    const id = visibleTabId()
+    if (selection() === null || !id || id === REVIEW_TAB_ID || isTerminalTabId(id)) return undefined
+    return id
+  })
+  const chatHidden = () => !!terms.activeId() || reviewActive()
   const tabScroll = useTabScroll(activeTabs, visibleTabId)
 
   const worktreeLabel = (wt: WorktreeState): string => {
@@ -1495,13 +1502,26 @@ const AgentManagerContent: Component = () => {
     openReviewTab()
   }
 
+  const focusAfterClose = (id: string) => {
+    const next = nextTab(tabIds(), id)
+    if (!next) return false
+    focusTab(next)
+    return true
+  }
+
   // Deferred close: flip signal immediately for instant UI feedback,
   // the <Show> unmount triggers heavy FileDiff cleanup but the tab bar
   // and chat view are already visible before that work runs.
   const closeReviewTab = () => {
     freezeTabs()
+    const active = reviewActive()
+    const moved = active && focusAfterClose(REVIEW_TAB_ID)
     setReviewActive(false)
     setReviewOpenForSelection(false)
+    if (!active || moved) return
+    terms.setActiveId(undefined)
+    setActivePendingId(undefined)
+    session.clearCurrentSession()
   }
 
   // Data for the review tab: use local diff data for local context,
@@ -1858,20 +1878,9 @@ const AgentManagerContent: Component = () => {
     freezeTabs()
     const pending = isPending(sessionId)
     const isActive = pending ? sessionId === activePendingId() : session.currentSessionID() === sessionId
-    if (isActive) {
-      const tabs = activeTabs()
-      const idx = tabs.findIndex((s) => s.id === sessionId)
-      const next = tabs[idx + 1] ?? tabs[idx - 1]
-      if (next && isPending(next.id)) {
-        setActivePendingId(next.id)
-        session.clearCurrentSession()
-      } else if (next) {
-        setActivePendingId(undefined)
-        session.selectSession(next.id)
-      } else {
-        setActivePendingId(undefined)
-        session.clearCurrentSession()
-      }
+    if (isActive && !focusAfterClose(sessionId)) {
+      setActivePendingId(undefined)
+      session.clearCurrentSession()
     }
     if (pending || localSet().has(sessionId)) {
       setLocalSessionIDs((prev) => prev.filter((id) => id !== sessionId))
@@ -2111,6 +2120,7 @@ const AgentManagerContent: Component = () => {
         <button
           class={`am-local-item ${selection() === LOCAL ? "am-local-item-active" : ""}`}
           data-sidebar-id="local"
+          aria-current={selection() === LOCAL ? "page" : undefined}
           onClick={() => selectLocal()}
         >
           <Show when={!isLocalBusy()} fallback={<Spinner class="am-worktree-spinner" />}>
@@ -2195,7 +2205,7 @@ const AgentManagerContent: Component = () => {
                     icon="plus"
                     size="small"
                     variant="ghost"
-                    label={t("agentManager.worktree.new")}
+                    aria-label={t("agentManager.worktree.new")}
                     onClick={handleCreateWorktree}
                     disabled={!loaded()}
                   />
@@ -2251,7 +2261,7 @@ const AgentManagerContent: Component = () => {
                     icon="keyboard"
                     size="small"
                     variant="ghost"
-                    label={t("agentManager.shortcuts.title")}
+                    aria-label={t("agentManager.shortcuts.title")}
                     onClick={handleShowKeyboardShortcuts}
                   />
                 </TooltipKeybind>
@@ -2261,7 +2271,7 @@ const AgentManagerContent: Component = () => {
                     icon="settings-gear"
                     size="small"
                     variant="ghost"
-                    label={t("agentManager.worktree.settings")}
+                    aria-label={t("agentManager.worktree.settings")}
                   />
                   <DropdownMenu.Portal>
                     <DropdownMenu.Content class="am-split-menu">
@@ -2567,6 +2577,9 @@ const AgentManagerContent: Component = () => {
                         <button
                           class={`am-item ${s.id === session.currentSessionID() && selection() === null ? "am-item-active" : ""}`}
                           data-sidebar-id={s.id}
+                          aria-current={
+                            s.id === session.currentSessionID() && selection() === null ? "page" : undefined
+                          }
                           onClick={() => {
                             saveTabMemory()
                             setSelection(null)
@@ -2586,7 +2599,7 @@ const AgentManagerContent: Component = () => {
                                 icon="branch"
                                 size="small"
                                 variant="ghost"
-                                label={t("agentManager.session.openInWorktree")}
+                                aria-label={t("agentManager.session.openInWorktree")}
                                 onClick={(e: MouseEvent) => handlePromote(s.id, e)}
                               />
                             </TooltipKeybind>
@@ -2654,6 +2667,9 @@ const AgentManagerContent: Component = () => {
                   <div
                     class="am-tab-list"
                     ref={tabScroll.setRef}
+                    role="tablist"
+                    aria-label={t("agentManager.tabsMenu.label")}
+                    aria-orientation="horizontal"
                     style={{ "--tab-count": `${tabIds().length}` } as JSX.CSSProperties}
                   >
                     <SortableProvider ids={tabIds()}>
@@ -2779,7 +2795,7 @@ const AgentManagerContent: Component = () => {
                                       icon="chevron-down"
                                       size="small"
                                       variant="ghost"
-                                      label={t("agentManager.run.options")}
+                                      aria-label={t("agentManager.run.options")}
                                       class="am-run-group-chevron"
                                     />
                                   )}
@@ -2835,7 +2851,7 @@ const AgentManagerContent: Component = () => {
                       icon="expand"
                       size="small"
                       variant="ghost"
-                      label={t("command.review.toggle")}
+                      aria-label={t("command.review.toggle")}
                       class={reviewActive() ? "am-tab-diff-btn-active" : ""}
                       onClick={toggleReviewTab}
                     />
@@ -2854,7 +2870,7 @@ const AgentManagerContent: Component = () => {
                     icon="console"
                     size="small"
                     variant="ghost"
-                    label={t("agentManager.tab.openTerminal")}
+                    aria-label={t("agentManager.tab.openTerminal")}
                     onClick={() => {
                       const id = session.currentSessionID()
                       if (id) vscode.postMessage({ type: "agentManager.showTerminal", sessionId: id })
@@ -2964,15 +2980,27 @@ const AgentManagerContent: Component = () => {
         <Show when={!contextEmpty() && !history()}>
           {/* Terminal overlay is scoped to the main pane so it does not cover the tab bar or side panel. */}
           <div class="am-detail-stack">
+            <For each={tabIds().filter((id) => id !== visibleTabId() && id !== REVIEW_TAB_ID && !isTerminalTabId(id))}>
+              {(id) => <div id={panelId(id)} role="tabpanel" aria-labelledby={tabId(id)} hidden />}
+            </For>
             {/* Chat/terminal + side diff panel. Keep it mounted under the
                 review tab so live xterm canvases never leave the paint tree. */}
             <div
               class={`am-detail-content ${sidePanel() !== null ? "am-detail-split" : ""} ${reviewActive() ? "am-detail-content-hidden" : ""}`}
+              aria-hidden={reviewActive() ? "true" : undefined}
+              inert={reviewActive() || undefined}
             >
               <div class={`am-main-pane ${terms.activeId() ? "am-main-pane-terminal-active" : ""}`}>
                 {/* Keep terminal tabs mounted so output streams across worktree switches. */}
                 {renderTerminalLayer({ state: terms })}
-                <div class="am-chat-wrapper">
+                <div
+                  class="am-chat-wrapper"
+                  id={chatTab() ? panelId(chatTab()!) : undefined}
+                  role={chatTab() ? "tabpanel" : undefined}
+                  aria-labelledby={chatTab() ? tabId(chatTab()!) : undefined}
+                  aria-hidden={chatHidden() ? "true" : undefined}
+                  inert={chatHidden() || undefined}
+                >
                   <ChatView
                     onSelectSession={(id) => {
                       if (addSessionToCurrentWorktree(id)) return
@@ -3083,7 +3111,15 @@ const AgentManagerContent: Component = () => {
             </div>
             {/* Full-screen review tab (lazy-mounted, stays alive once opened for fast toggle) */}
             <Show when={reviewOpen()}>
-              <div class="am-review-host" style={{ display: reviewActive() && !terms.activeId() ? undefined : "none" }}>
+              <div
+                class="am-review-host"
+                id={panelId(REVIEW_TAB_ID)}
+                role="tabpanel"
+                aria-labelledby={tabId(REVIEW_TAB_ID)}
+                aria-hidden={reviewActive() && !terms.activeId() ? undefined : "true"}
+                inert={!reviewActive() || !!terms.activeId() || undefined}
+                style={{ display: reviewActive() && !terms.activeId() ? undefined : "none" }}
+              >
                 <FullScreenDiffView
                   diffs={reviewDiffs()}
                   loading={diffLoading()}

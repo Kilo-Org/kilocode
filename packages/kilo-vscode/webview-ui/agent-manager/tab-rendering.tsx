@@ -185,7 +185,7 @@ export function renderNewTabButton(deps: NewTabButtonDeps): JSX.Element {
             icon="plus"
             size="small"
             variant="ghost"
-            label={deps.newSessionLabel}
+            aria-label={deps.newSessionLabel}
             onClick={deps.onNewSession}
           />
         </TooltipKeybind>

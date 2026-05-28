@@ -9,6 +9,7 @@
 import { For, Show } from "solid-js"
 import type { JSX } from "solid-js"
 import { SortableTerminalTab } from "./SortableTerminalTab"
+import { panelId, tabId } from "../tab-accessibility"
 import { TerminalTab } from "./TerminalTab"
 import type { TerminalStateControls } from "./state"
 
@@ -84,7 +85,14 @@ export function renderTerminalLayer(props: { state: TerminalStateControls }): JS
           {(term) => {
             const visible = () => slotVisible(term.id, term.contextKey)
             return (
-              <div class={`am-terminal-slot ${visible() ? "am-terminal-slot-visible" : ""}`}>
+              <div
+                class={`am-terminal-slot ${visible() ? "am-terminal-slot-visible" : ""}`}
+                id={panelId(term.id)}
+                role="tabpanel"
+                aria-labelledby={tabId(term.id)}
+                aria-hidden={visible() ? undefined : "true"}
+                inert={!visible() || undefined}
+              >
                 <TerminalTab terminalId={term.id} wsUrl={term.wsUrl} active={visible()} />
               </div>
             )

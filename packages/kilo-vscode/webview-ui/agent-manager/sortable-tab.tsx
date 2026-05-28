@@ -22,6 +22,7 @@ import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { useLanguage } from "../src/context/language"
 import { parseBindingTokens } from "./keybind-tokens"
+import { handleTabKeyDown, panelId, restoreTabFocus, tabId } from "./tab-accessibility"
 
 /** Lock drag movement to the X axis (horizontal-only tab dragging). */
 export const ConstrainDragYAxis: Component = () => {
@@ -66,28 +67,35 @@ export const SortableTab: Component<{
     >
       <ContextMenu>
         <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
-          <div
-            class={`am-tab ${props.active ? "am-tab-active" : ""}`}
-            onClick={props.onSelect}
-            onMouseDown={props.onMiddleClick}
-          >
-            <TooltipKeybind
-              title={props.tab.title || t("agentManager.session.untitled")}
-              keybind={props.keybind ?? ""}
-              placement="bottom"
-              gutter={8}
-              class="am-tab-tooltip"
-              openDelay={0}
+          <div class={`am-tab ${props.active ? "am-tab-active" : ""}`} onMouseDown={props.onMiddleClick}>
+            <div
+              class="am-tab-select"
+              id={tabId(props.tab.id)}
+              role="tab"
+              tabIndex={props.active ? 0 : -1}
+              aria-selected={props.active}
+              aria-controls={panelId(props.tab.id)}
+              onClick={props.onSelect}
+              onKeyDown={handleTabKeyDown}
             >
-              <span class="am-tab-title">
-                <Show when={props.busy}>
-                  <span class="am-tab-icon">
-                    <Spinner class="am-worktree-spinner" />
-                  </span>
-                </Show>
-                <span class="am-tab-label">{props.tab.title || t("agentManager.session.untitled")}</span>
-              </span>
-            </TooltipKeybind>
+              <TooltipKeybind
+                title={props.tab.title || t("agentManager.session.untitled")}
+                keybind={props.keybind ?? ""}
+                placement="bottom"
+                gutter={8}
+                class="am-tab-tooltip"
+                openDelay={0}
+              >
+                <span class="am-tab-title">
+                  <Show when={props.busy}>
+                    <span class="am-tab-icon">
+                      <Spinner class="am-worktree-spinner" />
+                    </span>
+                  </Show>
+                  <span class="am-tab-label">{props.tab.title || t("agentManager.session.untitled")}</span>
+                </span>
+              </TooltipKeybind>
+            </div>
             <TooltipKeybind
               title={t("agentManager.tab.close")}
               keybind={props.closeKeybind ?? ""}
@@ -100,10 +108,12 @@ export const SortableTab: Component<{
                 icon="close-small"
                 size="small"
                 variant="ghost"
-                label={t("agentManager.tab.closeTab")}
+                aria-label={`${t("agentManager.tab.closeTab")}: ${props.tab.title || t("agentManager.session.untitled")}`}
+                tabIndex={props.active ? 0 : -1}
                 class="am-tab-close"
                 onClick={(e) => {
                   e.stopPropagation()
+                  restoreTabFocus(e.currentTarget)
                   props.onClose()
                 }}
               />
@@ -160,26 +170,33 @@ export const SortableReviewTab: Component<{
       class={`am-tab-sortable ${sortable.isActiveDraggable ? "am-tab-dragging" : ""}`}
       data-tab-id={props.id}
     >
-      <div
-        class={`am-tab am-tab-review ${props.active ? "am-tab-active" : ""}`}
-        onClick={props.onSelect}
-        onMouseDown={props.onMiddleClick}
-      >
-        <TooltipKeybind
-          title={props.tooltip}
-          keybind={props.keybind ?? ""}
-          placement="bottom"
-          gutter={8}
-          class="am-tab-tooltip"
-          openDelay={0}
+      <div class={`am-tab am-tab-review ${props.active ? "am-tab-active" : ""}`} onMouseDown={props.onMiddleClick}>
+        <div
+          class="am-tab-select"
+          id={tabId(props.id)}
+          role="tab"
+          tabIndex={props.active ? 0 : -1}
+          aria-selected={props.active}
+          aria-controls={panelId(props.id)}
+          onClick={props.onSelect}
+          onKeyDown={handleTabKeyDown}
         >
-          <span class="am-tab-title">
-            <span class="am-tab-icon">
-              <Icon name="layers" size="small" />
+          <TooltipKeybind
+            title={props.tooltip}
+            keybind={props.keybind ?? ""}
+            placement="bottom"
+            gutter={8}
+            class="am-tab-tooltip"
+            openDelay={0}
+          >
+            <span class="am-tab-title">
+              <span class="am-tab-icon">
+                <Icon name="layers" size="small" />
+              </span>
+              <span class="am-tab-label">{props.label}</span>
             </span>
-            <span class="am-tab-label">{props.label}</span>
-          </span>
-        </TooltipKeybind>
+          </TooltipKeybind>
+        </div>
         <TooltipKeybind
           title={t("agentManager.tab.close")}
           keybind={props.closeKeybind ?? ""}
@@ -192,9 +209,14 @@ export const SortableReviewTab: Component<{
             icon="close-small"
             size="small"
             variant="ghost"
-            label={t("agentManager.tab.closeTab")}
+            aria-label={`${t("agentManager.tab.closeTab")}: ${props.label}`}
+            tabIndex={props.active ? 0 : -1}
             class="am-tab-close"
-            onClick={props.onClose}
+            onClick={(e) => {
+              e.stopPropagation()
+              restoreTabFocus(e.currentTarget)
+              props.onClose(e)
+            }}
           />
         </TooltipKeybind>
       </div>

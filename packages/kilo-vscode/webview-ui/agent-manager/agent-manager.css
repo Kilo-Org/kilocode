@@ -275,13 +275,16 @@ button.am-section-toggle:hover .am-section-label {
   opacity: 0;
   visibility: hidden;
 }
-.am-worktree-item:hover .am-wt-hover-actions {
+.am-worktree-item:hover .am-wt-hover-actions,
+.am-worktree-item:focus-within .am-wt-hover-actions {
   opacity: 1;
   visibility: visible;
 }
-/* Stats fade out on hover (replaced by hover actions in same grid cell) */
+/* Stats fade out on hover or keyboard focus (replaced by actions in the same grid cell) */
 .am-worktree-item:hover .am-wt-actions-cell > .am-worktree-stats,
-.am-worktree-item:hover .am-wt-actions-cell > .am-worktree-stats-skeleton {
+.am-worktree-item:hover .am-wt-actions-cell > .am-worktree-stats-skeleton,
+.am-worktree-item:focus-within .am-wt-actions-cell > .am-worktree-stats,
+.am-worktree-item:focus-within .am-wt-actions-cell > .am-worktree-stats-skeleton {
   opacity: 0;
   visibility: hidden;
 }
@@ -311,6 +314,11 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-worktree-item:hover {
   background: var(--surface-inset-base-hover);
+}
+
+.am-worktree-item:focus-visible {
+  outline: 1px solid var(--border-focus, var(--vscode-focusBorder, #007fd4));
+  outline-offset: -1px;
 }
 
 .am-worktree-item:active {
@@ -777,6 +785,11 @@ button.am-section-toggle:hover .am-section-label {
   background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
 }
 
+.am-section-group-header:focus-visible {
+  outline: 1px solid var(--border-focus, var(--vscode-focusBorder, #007fd4));
+  outline-offset: -1px;
+}
+
 .am-section-group-left {
   display: flex;
   align-items: center;
@@ -1179,9 +1192,24 @@ button.am-section-toggle:hover .am-section-label {
 }
 
 .am-tab:hover,
-.am-tab:focus-visible {
+.am-tab:focus-visible,
+.am-tab:has(.am-tab-select:focus-visible) {
   background: var(--button-ghost-hover, var(--surface-base-hover, rgba(128, 128, 128, 0.2)));
   color: var(--text-base);
+}
+
+.am-tab:has(.am-tab-select:focus-visible) {
+  outline: 1px solid var(--border-focus, var(--vscode-focusBorder, #007fd4));
+  outline-offset: -1px;
+}
+
+.am-tab-select {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+  flex: 1;
+  outline: none;
 }
 
 .am-tab-active {
@@ -4306,6 +4334,8 @@ body.vscode-high-contrast-light {
   .am-worktree-item:focus-visible,
   .am-item:focus-visible,
   .am-tab:focus-visible,
+  .am-tab:has(.am-tab-select:focus-visible),
+  .am-section-group-header:focus-visible,
   .am-worktree-create:focus-visible,
   .am-nv-pill:focus-visible,
   .am-tab-switcher-pill:focus-visible,

@@ -59,6 +59,13 @@ const SectionHeader: Component<Props> = (props) => {
     props.onToggle()
   }
 
+  const activate = (e: KeyboardEvent) => {
+    if (e.target !== e.currentTarget || renaming()) return
+    if (e.key !== "Enter" && e.key !== " ") return
+    e.preventDefault()
+    props.onToggle()
+  }
+
   const droppable = createDroppable(props.section.id)
 
   return (
@@ -68,7 +75,14 @@ const SectionHeader: Component<Props> = (props) => {
       style={{ "--section-color": border() }}
     >
       <ContextMenu>
-        <ContextMenu.Trigger class="am-section-group-header" onClick={handleClick}>
+        <ContextMenu.Trigger
+          class="am-section-group-header"
+          role="button"
+          tabIndex={renaming() ? -1 : 0}
+          aria-expanded={!props.section.collapsed}
+          onClick={handleClick}
+          onKeyDown={activate}
+        >
           <div class="am-section-group-left">
             <Icon
               name="chevron-down"

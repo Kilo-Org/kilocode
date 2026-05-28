@@ -21,7 +21,7 @@ export function SidebarToggleButton(props: Props) {
         icon={props.collapsed ? "layout-left-partial" : "layout-left-full"}
         size="small"
         variant="ghost"
-        label={label()}
+        aria-label={label()}
         onClick={props.onClick}
       />
     </Tooltip>
