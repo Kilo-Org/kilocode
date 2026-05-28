@@ -4,7 +4,6 @@ import { SyncEvent } from "@/sync"
 import { Effect, Layer, Scope, Context } from "effect"
 import { Config } from "@/config/config"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import * as ShareNext from "./share-next"
 
 export interface Interface {
   readonly create: (input?: Session.CreateInput) => Effect.Effect<Session.Info>
@@ -19,20 +18,29 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const cfg = yield* Config.Service
     const session = yield* Session.Service
-    const shareNext = yield* ShareNext.Service
     const scope = yield* Scope.Scope
     const sync = yield* SyncEvent.Service
 
     const share = Effect.fn("SessionShare.share")(function* (sessionID: SessionID) {
       const conf = yield* cfg.get()
       if (conf.share === "disabled") throw new Error("Sharing is disabled in configuration")
-      const result = yield* shareNext.create(sessionID)
+      // kilocode_change start - use KiloSessions instead of ShareNext (upstream OC backend not supported)
+      const result = yield* Effect.promise(async () => {
+        const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
+        return KiloSessions.share(sessionID)
+      })
+      // kilocode_change end
       yield* sync.run(Session.Event.Updated, { sessionID, info: { share: { url: result.url } } })
       return result
     })
 
     const unshare = Effect.fn("SessionShare.unshare")(function* (sessionID: SessionID) {
-      yield* shareNext.remove(sessionID)
+      // kilocode_change start - use KiloSessions instead of ShareNext (upstream OC backend not supported)
+      yield* Effect.promise(async () => {
+        const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
+        await KiloSessions.unshare(sessionID)
+      })
+      // kilocode_change end
       yield* sync.run(Session.Event.Updated, { sessionID, info: { share: { url: null } } })
     })
 
@@ -40,7 +48,7 @@ export const layer = Layer.effect(
       const result = yield* session.create(input)
       if (result.parentID) return result
       const conf = yield* cfg.get()
-      if (!(Flag.KILO_AUTO_SHARE || conf.share === "auto")) return result
+      if (!(Flag.KILO_AUTO_SHARE || conf.share === "auto")) return result // kilocode_change
       yield* share(result.id).pipe(Effect.ignore, Effect.forkIn(scope))
       return result
     })
@@ -50,7 +58,6 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer.pipe(
-  Layer.provide(ShareNext.defaultLayer),
   Layer.provide(Session.defaultLayer),
   Layer.provide(Config.defaultLayer),
   Layer.provide(SyncEvent.defaultLayer),
