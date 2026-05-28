@@ -21,7 +21,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Skills",
   "marketplace.tab.mcpServers": "MCP Servers",
-  "marketplace.tab.modes": "Modes",
   "marketplace.category.all": "All",
   "marketplace.placeholder": "To be implemented",
   "marketplace.card.installed": "Installed",
@@ -47,6 +46,7 @@ export const dict = {
   "marketplace.remove.cancel": "Cancel",
   "marketplace.remove.confirm.button": "Remove",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "Agents",
   "marketplace.search": "Search...",
   "marketplace.filter.all": "All Items",
   "marketplace.filter.notInstalled": "Not Installed",
@@ -62,7 +62,7 @@ export const dict = {
   "marketplace.scope.global": "global",
   "marketplace.remove.type.mcp": "MCP server",
   "marketplace.remove.type.skill": "skill",
-  "marketplace.remove.type.mode": "mode",
+  "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Failed to remove {{name}}",
   "marketplace.install": "Install",
   "marketplace.filter.installed": "Installed",
@@ -71,8 +71,10 @@ export const dict = {
   "marketplace.warning.busyMany": "Several sessions are running and will be interrupted",
   "marketplace.warning.installAnyway": "Install anyway",
   "marketplace.warning.cancel": "Cancel",
-  "marketplace.contribute.prompt": "Missing a skill, mode, or MCP server?",
+  "marketplace.contribute.prompt": "Missing a skill, agent, or MCP server?",
   "marketplace.contribute.cta": "Contribute on GitHub",
+  "marketplace.migration.notice":
+    "Modes have been replaced by agents. If you previously installed marketplace modes, please remove and reinstall them as agents to migrate to the new format.",
 
   // Plan follow-up question shown after plan_exit. The English strings here must match
   // the canonical `label`/`header`/`question` sent by the backend — those canonical labels

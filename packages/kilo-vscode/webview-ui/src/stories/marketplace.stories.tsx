@@ -13,7 +13,7 @@ import { ItemCard } from "../components/marketplace/ItemCard"
 import type {
   SkillMarketplaceItem,
   McpMarketplaceItem,
-  ModeMarketplaceItem,
+  AgentMarketplaceItem,
   MarketplaceInstalledMetadata,
 } from "../types/marketplace"
 import "../components/marketplace/marketplace.css"
@@ -190,52 +190,81 @@ const MOCK_MCPS: McpMarketplaceItem[] = [
   },
 ]
 
-const MOCK_MODES: ModeMarketplaceItem[] = [
+const MOCK_AGENTS: AgentMarketplaceItem[] = [
   {
-    type: "mode",
+    type: "agent",
     id: "architect",
     name: "Architect",
     description:
       "High-level system design and planning. Focuses on architecture decisions, component boundaries, and technical specifications without writing implementation code.",
-    content: "name: Architect\nroleDefinition: You are a software architect...\ngroups:\n  - read\n",
+    content: {
+      mode: "primary",
+      description: "Stress-test technical designs and produce implementation-ready plans",
+      prompt: "You are a software architect...",
+      options: { displayName: "Architect" },
+      permission: { read: "allow", edit: "deny", bash: "deny", mcp: "deny", question: "allow" },
+    },
     author: "Kilo",
     tags: ["planning", "design"],
   },
   {
-    type: "mode",
+    type: "agent",
     id: "reviewer",
     name: "Code Reviewer",
     description:
       "Reviews code for bugs, security issues, and best practices. Provides actionable feedback with specific line references.",
-    content: "name: Code Reviewer\nroleDefinition: You are a code reviewer...\ngroups:\n  - read\n",
+    content: {
+      mode: "primary",
+      description: "Senior software engineer conducting thorough code reviews",
+      prompt: "You are a code reviewer...",
+      options: { displayName: "Code Reviewer" },
+      permission: { read: "allow", edit: "deny", bash: "allow", mcp: "deny", question: "allow" },
+    },
     author: "Kilo",
     tags: ["review", "quality"],
   },
   {
-    type: "mode",
+    type: "agent",
     id: "docs-writer",
     name: "Documentation Writer",
     description: "Generates and maintains documentation including READMEs, API docs, and inline code comments.",
-    content: "name: Documentation Writer\nroleDefinition: You write documentation...\ngroups:\n  - read\n  - edit\n",
+    content: {
+      mode: "primary",
+      description: "Focus on writing documentation and other text-based files",
+      prompt: "You write documentation...",
+      options: { displayName: "Documentation Writer" },
+      permission: { read: "allow", edit: "allow", bash: "allow", mcp: "deny", question: "allow" },
+    },
     tags: ["documentation", "writing"],
   },
   {
-    type: "mode",
+    type: "agent",
     id: "tdd",
     name: "Test-Driven Developer",
     description:
       "Follows strict TDD methodology: write failing tests first, implement minimum code to pass, then refactor.",
-    content:
-      "name: Test-Driven Developer\nroleDefinition: You follow TDD...\ngroups:\n  - read\n  - edit\n  - command\n",
+    content: {
+      mode: "primary",
+      description: "Strict TDD practitioner",
+      prompt: "You follow TDD...",
+      options: { displayName: "Test-Driven Developer" },
+      permission: { read: "allow", edit: "allow", bash: "allow", mcp: "allow", question: "allow" },
+    },
     author: "Community",
     tags: ["testing", "methodology"],
   },
   {
-    type: "mode",
+    type: "agent",
     id: "debug",
     name: "Debugger",
     description: "Systematically diagnoses and fixes bugs. Uses logs, stack traces, and bisection to isolate issues.",
-    content: "name: Debugger\nroleDefinition: You are a debugger...\ngroups:\n  - read\n  - command\n",
+    content: {
+      mode: "primary",
+      description: "Systematic bug diagnosis and fixing",
+      prompt: "You are a debugger...",
+      options: { displayName: "Debugger" },
+      permission: { read: "allow", edit: "allow", bash: "allow", mcp: "deny", question: "allow" },
+    },
     tags: ["debugging", "troubleshooting"],
   },
 ]
@@ -252,9 +281,9 @@ const PARTIAL_INSTALLED_MCPS: MarketplaceInstalledMetadata = {
   global: { "postgres-mcp": { type: "mcp" } },
 }
 
-const PARTIAL_INSTALLED_MODES: MarketplaceInstalledMetadata = {
-  project: { architect: { type: "mode" } },
-  global: { reviewer: { type: "mode" } },
+const PARTIAL_INSTALLED_AGENTS: MarketplaceInstalledMetadata = {
+  project: { architect: { type: "agent" } },
+  global: { reviewer: { type: "agent" } },
 }
 
 const noop = () => {}
@@ -461,18 +490,18 @@ export const InstalledMcpCard: Story = {
 // Mode Stories
 // ---------------------------------------------------------------------------
 
-export const ModesTabWithItems: Story = {
-  name: "Modes tab — with items",
+export const AgentsTabWithItems: Story = {
+  name: "Agents tab — with items",
   render: () => (
     <StoryProviders>
       <div style={{ width: "420px", height: "700px", overflow: "auto", padding: "12px" }}>
         <MarketplaceListView
-          items={MOCK_MODES}
+          items={MOCK_AGENTS}
           metadata={EMPTY_METADATA}
           fetching={false}
-          type="mode"
-          searchPlaceholder="Search modes..."
-          emptyMessage="No modes found"
+          type="agent"
+          searchPlaceholder="Search agents..."
+          emptyMessage="No agents found"
           onInstall={noop}
           onRemove={noop}
         />
@@ -481,18 +510,18 @@ export const ModesTabWithItems: Story = {
   ),
 }
 
-export const ModesTabWithInstalled: Story = {
-  name: "Modes tab — some installed",
+export const AgentsTabWithInstalled: Story = {
+  name: "Agents tab — some installed",
   render: () => (
     <StoryProviders>
       <div style={{ width: "420px", height: "700px", overflow: "auto", padding: "12px" }}>
         <MarketplaceListView
-          items={MOCK_MODES}
-          metadata={PARTIAL_INSTALLED_MODES}
+          items={MOCK_AGENTS}
+          metadata={PARTIAL_INSTALLED_AGENTS}
           fetching={false}
-          type="mode"
-          searchPlaceholder="Search modes..."
-          emptyMessage="No modes found"
+          type="agent"
+          searchPlaceholder="Search agents..."
+          emptyMessage="No agents found"
           onInstall={noop}
           onRemove={noop}
         />
@@ -501,8 +530,8 @@ export const ModesTabWithInstalled: Story = {
   ),
 }
 
-export const ModesTabEmpty: Story = {
-  name: "Modes tab — empty state",
+export const AgentsTabEmpty: Story = {
+  name: "Agents tab — empty state",
   render: () => (
     <StoryProviders>
       <div style={{ width: "420px", height: "400px", overflow: "auto", padding: "12px" }}>
@@ -510,9 +539,9 @@ export const ModesTabEmpty: Story = {
           items={[]}
           metadata={EMPTY_METADATA}
           fetching={false}
-          type="mode"
-          searchPlaceholder="Search modes..."
-          emptyMessage="No modes found"
+          type="agent"
+          searchPlaceholder="Search agents..."
+          emptyMessage="No agents found"
           onInstall={noop}
           onRemove={noop}
         />
@@ -521,23 +550,23 @@ export const ModesTabEmpty: Story = {
   ),
 }
 
-export const SingleModeCard: Story = {
-  name: "ItemCard — single mode not installed",
+export const SingleAgentCard: Story = {
+  name: "ItemCard — single agent not installed",
   render: () => (
     <StoryProviders>
       <div style={{ width: "420px", padding: "12px" }}>
-        <ItemCard item={MOCK_MODES[0]} metadata={EMPTY_METADATA} onInstall={noop} onRemove={noop} />
+        <ItemCard item={MOCK_AGENTS[0]} metadata={EMPTY_METADATA} onInstall={noop} onRemove={noop} />
       </div>
     </StoryProviders>
   ),
 }
 
-export const InstalledModeCard: Story = {
-  name: "ItemCard — installed mode",
+export const InstalledAgentCard: Story = {
+  name: "ItemCard — installed agent",
   render: () => (
     <StoryProviders>
       <div style={{ width: "420px", padding: "12px" }}>
-        <ItemCard item={MOCK_MODES[0]} metadata={PARTIAL_INSTALLED_MODES} onInstall={noop} onRemove={noop} />
+        <ItemCard item={MOCK_AGENTS[0]} metadata={PARTIAL_INSTALLED_AGENTS} onInstall={noop} onRemove={noop} />
       </div>
     </StoryProviders>
   ),

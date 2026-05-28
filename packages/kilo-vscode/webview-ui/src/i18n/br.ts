@@ -1200,7 +1200,6 @@ export const dict = {
     'A telemetria é controlada pela configuração de telemetria integrada do VS Code. Para desativá-la, vá para Configurações > Telemetria > Nível de Telemetria e defina como "off". Reinicie o VS Code para aplicar a alteração.',
   "settings.aboutKiloCode.telemetry.openSettings": "Abrir Configurações de Telemetria",
 
-  "settings.agentBehaviour.subtab.modes": "Modos",
   "settings.agentBehaviour.subtab.agents": "Agentes",
   "settings.agentBehaviour.subtab.mcpServers": "Servidores MCP",
   "settings.agentBehaviour.subtab.rules": "Regras",
@@ -1319,7 +1318,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Nenhuma habilidade encontrada. Adicione caminhos de pastas ou URLs abaixo para disponibilizar habilidades.",
   "settings.agentBehaviour.availableModes": "Modos personalizados disponíveis",
-  "settings.agentBehaviour.noModesFound": "Nenhum modo encontrado.",
+  "settings.agentBehaviour.noAgentsFound": "Nenhum agente encontrado.",
   "settings.agentBehaviour.createMode": "Criar Novo Modo",
   "settings.agentBehaviour.createMode.name": "Nome",
   "settings.agentBehaviour.createMode.name.placeholder": "ex: reviewer",
@@ -1363,10 +1362,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Copiar permissões como JSON",
   "settings.agentBehaviour.permissions.hint":
     "As regras são avaliadas em ordem — a última regra correspondente vence. Este é o conjunto de regras resolvido do backend da CLI.",
-  "settings.agentBehaviour.removeMode.title": "Remover modo",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Remover o modo "{{name}}"? Isso desativará o modo atualizando sua configuração.',
-  "settings.agentBehaviour.removeMode.button": "Remover",
+  "settings.agentBehaviour.removeAgent.title": "Remover agente",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Remover agente "{{name}}"? Isso irá desativá-lo atualizando sua configuração.',
+  "settings.agentBehaviour.removeAgent.button": "Remover",
   "settings.agentBehaviour.removeMcp.title": "Remover servidor MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'Remover o servidor MCP "{{name}}"? Isso o removerá da sua configuração.',

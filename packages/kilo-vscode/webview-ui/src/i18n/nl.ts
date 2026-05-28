@@ -1193,7 +1193,6 @@ export const dict = {
     'Telemetrie wordt beheerd door de ingebouwde telemetrie-instelling van VS Code. Om dit uit te schakelen, gaat u naar Instellingen > Telemetrie > Telemetrieniveau en stelt u dit in op "off". Herstart VS Code om de wijziging toe te passen.',
   "settings.aboutKiloCode.telemetry.openSettings": "Telemetrie-instellingen openen",
 
-  "settings.agentBehaviour.subtab.modes": "Modi",
   "settings.agentBehaviour.subtab.agents": "Agenten",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
   "settings.agentBehaviour.subtab.rules": "Regels",
@@ -1315,7 +1314,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Geen skills ontdekt. Voeg hieronder skill mappaden of URL's toe om skills beschikbaar te maken.",
   "settings.agentBehaviour.availableModes": "Beschikbare Aangepaste Modi",
-  "settings.agentBehaviour.noModesFound": "Geen modi gevonden.",
+  "settings.agentBehaviour.noAgentsFound": "Geen agenten gevonden.",
   "settings.agentBehaviour.importMode": "Importeren",
   "settings.agentBehaviour.importMode.invalidName":
     "Ongeldige modusnaam in bestand. De naam moet beginnen met een kleine letter en mag alleen kleine letters, cijfers en streepjes bevatten.",
@@ -1324,10 +1323,10 @@ export const dict = {
     "Ongeldig JSON-bestand. Selecteer een geldig agentdefinitiebestand.",
   "settings.agentBehaviour.importMode.tooLarge": "Bestand is te groot. Agentdefinities moeten kleiner zijn dan 1 MB.",
   "settings.agentBehaviour.exportMode": "Agentdefinitie exporteren",
-  "settings.agentBehaviour.removeMode.title": "Verwijder modus",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Modus "{{name}}" verwijderen? Dit zal de modus uitschakelen door je configuratie bij te werken.',
-  "settings.agentBehaviour.removeMode.button": "Verwijderen",
+  "settings.agentBehaviour.removeAgent.title": "Verwijder agent",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Agent "{{name}}" verwijderen? Dit schakelt de agent uit door uw configuratie bij te werken.',
+  "settings.agentBehaviour.removeAgent.button": "Verwijderen",
   "settings.agentBehaviour.skillPaths": "Skill Mappaden",
   "settings.agentBehaviour.skillUrls": "Skill URL's",
   "settings.agentBehaviour.removeSkill.title": "Verwijder skill",

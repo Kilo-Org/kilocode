@@ -844,6 +844,7 @@ export interface MarketplaceDataMessage {
   marketplaceItems: MarketplaceItem[]
   marketplaceInstalledMetadata: MarketplaceInstalledMetadata
   errors?: string[]
+  showAgentMigrationBanner?: boolean
 }
 
 export interface MarketplaceInstallResultMessage {

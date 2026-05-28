@@ -17,7 +17,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "技能",
   "marketplace.tab.mcpServers": "MCP 伺服器",
-  "marketplace.tab.modes": "模式",
   "marketplace.category.all": "全部",
   "marketplace.placeholder": "待實作",
   "marketplace.card.installed": "已安裝",
@@ -42,6 +41,7 @@ export const dict = {
   "marketplace.remove.cancel": "取消",
   "marketplace.remove.confirm.button": "移除",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "智能體",
   "marketplace.search": "搜尋...",
   "marketplace.filter.all": "所有項目",
   "marketplace.filter.notInstalled": "未安裝",
@@ -57,7 +57,7 @@ export const dict = {
   "marketplace.scope.global": "全域",
   "marketplace.remove.type.mcp": "MCP 伺服器",
   "marketplace.remove.type.skill": "技能",
-  "marketplace.remove.type.mode": "模式",
+  "marketplace.remove.type.agent": "智能體",
   "marketplace.remove.failed": "移除 {{name}} 失敗",
   "marketplace.install": "安裝",
   "marketplace.filter.installed": "已安裝",
@@ -66,8 +66,10 @@ export const dict = {
   "marketplace.warning.busyMany": "多個工作階段正在執行，將被中斷",
   "marketplace.warning.installAnyway": "仍然安裝",
   "marketplace.warning.cancel": "取消",
-  "marketplace.contribute.prompt": "缺少技能、模式或 MCP 伺服器？",
+  "marketplace.contribute.prompt": "缺少技能、智能體或 MCP 伺服器？",
   "marketplace.contribute.cta": "在 GitHub 上貢獻",
+  "marketplace.migration.notice":
+    "模式已被智能體取代。如果您之前安裝了市場中的模式，請將其刪除並重新安裝為智能體，以遷移到新格式。",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "實作",

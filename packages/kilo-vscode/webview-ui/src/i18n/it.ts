@@ -1004,7 +1004,6 @@ export const dict = {
   "settings.aboutKiloCode.telemetry.title": "Telemetria",
   "settings.aboutKiloCode.telemetry.description": "La telemetria è controllata dall'impostazione integrata di VS Code. Per disabilitarla, vai in Impostazioni > Telemetria > Livello telemetria e impostala su \"off\". Riavvia VS Code per applicare la modifica.",
   "settings.aboutKiloCode.telemetry.openSettings": "Apri impostazioni telemetria",
-  "settings.agentBehaviour.subtab.modes": "Modalità",
   "settings.agentBehaviour.subtab.agents": "Agenti",
   "settings.agentBehaviour.subtab.mcpServers": "Server MCP",
   "settings.agentBehaviour.subtab.rules": "Regole",
@@ -1062,8 +1061,6 @@ export const dict = {
   "settings.experimental.semanticIndexing.description": "Abilita l'indicizzazione semantica del codebase e il tool semantic_search. Richiede configurazione indicizzazione.",
   "settings.experimental.codebaseSearch.title": "Ricerca codebase",
   "settings.experimental.codebaseSearch.description": "Abilita ricerca in linguaggio naturale con AI nel codebase",
-  "settings.experimental.agentManagerTool.title": "Tool Agent Manager",
-  "settings.experimental.agentManagerTool.description": "Consenti agli agenti di avviare sessioni locali e sessioni worktree di Agent Manager tramite chiamata tool",
   "settings.experimental.continueOnDeny.title": "Continua dopo rifiuto",
   "settings.experimental.continueOnDeny.description": "Continua il loop agente quando un'autorizzazione viene negata",
   "settings.experimental.mcpTimeout.title": "Timeout MCP (ms)",
@@ -1102,10 +1099,7 @@ export const dict = {
   "settings.agentBehaviour.discoveredSkills": "Skill rilevate",
   "settings.agentBehaviour.noSkillsFound": "Nessuna skill rilevata. Aggiungi percorsi cartella o URL di skill qui sotto per renderle disponibili.",
   "settings.agentBehaviour.availableModes": "Modalità personalizzate disponibili",
-  "settings.agentBehaviour.noModesFound": "Nessuna modalità trovata.",
-  "settings.agentBehaviour.removeMode.title": "Rimuovi modalità",
-  "settings.agentBehaviour.removeMode.confirm": "Rimuovere la modalità \"{{name}}\"? Questo disabiliterà la modalità aggiornando la configurazione.",
-  "settings.agentBehaviour.removeMode.button": "Rimuovi",
+
   "settings.agentBehaviour.skillPaths": "Percorsi cartelle skill",
   "settings.agentBehaviour.skillUrls": "URL skill",
   "settings.agentBehaviour.removeSkill.title": "Rimuovi skill",
@@ -1342,4 +1336,130 @@ export const dict = {
   "notifications.action.close": "Chiudi",
   "notifications.action.tryModel": "Prova {{model}}",
   "notifications.action.tryModelGeneric": "Prova modello",
+
+  // Marketplace agents (replaces modes)
+  "settings.agentBehaviour.noAgentsFound": "Nessun agente trovato.",
+  "settings.agentBehaviour.removeAgent.title": "Rimuovi agente",
+  "settings.agentBehaviour.removeAgent.confirm": 'Rimuovere l\'agente "{{name}}"? Questo disabiliterà l\'agente aggiornando la configurazione.',
+  "settings.agentBehaviour.removeAgent.button": "Rimuovi",
+  "settings.agentBehaviour.variantOverride.title": "Override variante",
+  "settings.agentBehaviour.variantOverride.description": "Sostituisci la variante del modello per questo agente",
+
+  // Diff viewer
+  "diffViewer.source.workspace.label": "Branch",
+  "diffViewer.source.workspace.tooltip":
+    "Tutte le modifiche in questo branch rispetto al branch base. Include file non sottoposti a commit (staged, unstaged, untracked) e commit locali non ancora nel base.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "File con modifiche aggiunte all'area di staging di git (`git add`), come appariranno nel prossimo commit.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "File modificati nel working tree ma non ancora sottoposti a staging, più file non tracciati (nuovi).",
+  "diffViewer.source.session.label": "Sessione",
+  "diffViewer.source.session.tooltip":
+    "File modificati da Kilo durante la sessione corrente, basati su snapshot per turno. Si resetta quando inizi una nuova sessione.",
+  "diffViewer.group.session": "Sessione",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Gli snapshot sono disabilitati per questa repository. Modifica i file di configurazione per visualizzare le modifiche della sessione.",
+  "diffViewer.baseBranch.auto": "Predefinito",
+  "diffViewer.baseBranch.default": "Predefinito",
+  "diffViewer.baseBranch.remote": "Remoto",
+  "diffViewer.baseBranch.search": "Cerca branch",
+  "diffViewer.baseBranch.empty": "Nessun branch corrispondente",
+  "diffViewer.baseBranch.loading": "Caricamento branch...",
+  "diffViewer.baseBranch.none": "—",
+
+  // Session outcomes
+  "session.outcome.incomplete": "Il turno è terminato con {{count}} to-do rimanenti.",
+  "session.outcome.limit": "La risposta ha raggiunto il limite di output e potrebbe essere incompleta.",
+  "session.outcome.unknown": "La risposta è terminata senza un motivo di fine e potrebbe essere incompleta.",
+  "session.outcome.filtered": "Il provider ha interrotto questa risposta a causa di un filtro contenuti.",
+  "session.outcome.unexpected": "La risposta è terminata inaspettatamente e potrebbe essere incompleta.",
+  "session.outcome.interrupted": "Turno interrotto.",
+  "session.outcome.error": "Turno fallito.",
+  "session.outcome.finish": "Motivo tecnico di fine: {{reason}}",
+
+  // Speech to Text
+  "settings.experimental.speechToText.title": "Da voce a testo",
+  "settings.experimental.speechToText.description":
+    "Abilita input vocale nei campi prompt usando il tuo account Kilo tramite Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Abilita e accedi al provider Kilo per usare Da voce a testo. Da voce a testo è attualmente supportato solo tramite Kilo Gateway.",
+  "settings.experimental.speechToTextModel.title": "Modello Da voce a testo",
+  "settings.experimental.speechToTextModel.description": "Scegli il modello di trascrizione Kilo Gateway per l'input vocale.",
+
+  // Compaction limit
+  "settings.context.compactionLimit.title": "Limite compattazione automatica",
+  "settings.context.compactionLimit.description":
+    "Compatta quando il contesto raggiunge questa percentuale della finestra del modello. Lascia vuoto per usare solo il buffer di sicurezza.",
+
+  // Subagent model
+  "settings.providers.subagentModel.title": "Modello sub-agent",
+  "settings.providers.subagentModel.description":
+    "Modello e sforzo di ragionamento predefiniti per i sub-agent del tool task. Lascia non impostato per ereditare il modello dell'agente chiamante.",
+
+  // Autocomplete hint
+  "settings.autocomplete.modelsHint": "Per scegliere quale modello usare per l'autocompletamento, vedi le impostazioni Modelli.",
+
+  // Indexing
+  "settings.indexing.globalEnable.title": "Abilita globalmente",
+  "settings.indexing.globalEnable.description": "Abilita l'indicizzazione per ogni workspace.",
+  "settings.indexing.projectEnable.title": "Abilita per questo progetto",
+  "settings.indexing.projectEnable.description": "Abilita l'indicizzazione per questo workspace quando l'indicizzazione globale è disattivata.",
+  "settings.indexing.projectEnable.disabledTooltip": "L'indicizzazione globale è abilitata, quindi questo progetto è già coperto.",
+  "settings.indexing.kiloModel.title": "Preset modello Kilo",
+  "settings.indexing.kiloModel.description": "Scegli un modello embedding ospitato da Kilo.",
+  "settings.indexing.kiloSignIn.title": "Accesso Kilo richiesto",
+  "settings.indexing.kiloSignIn.description": "Accedi a Kilo per usare gli embedding ospitati.",
+
+  // Azure provider
+  "provider.connect.azure.endpointType.label": "Seleziona configurazione endpoint Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "Nome risorsa",
+  "provider.connect.azure.endpointType.resourceName.hint": "Costruisci l'endpoint dal nome della risorsa Azure",
+  "provider.connect.azure.endpointType.baseURL.label": "URL endpoint completo",
+  "provider.connect.azure.endpointType.baseURL.hint": "Usa un endpoint Azure OpenAI personalizzato",
+  "provider.connect.azure.resourceName.label": "Nome risorsa Azure",
+  "provider.connect.azure.resourceName.placeholder": "es. my-models",
+  "provider.connect.azure.baseURL.label": "URL endpoint Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "es. https://my-models.openai.azure.com/openai",
+  "provider.connect.prompt.required": "{{field}} è obbligatorio",
+
+  // Prompt recording
+  "prompt.action.send.recording": "Trascrivi e invia",
+
+  // Session export
+  "command.session.export": "Esporta trascrizione sessione",
+
+  // Model groups
+  "model.group.collapse": "Comprimi {{group}}",
+  "model.group.expand": "Espandi {{group}}",
+
+  // Plan exit
+  "plan.exit.ready": "Il piano è pronto:",
+
+  // Toast
+  "toast.session.rename.invalid.title": "Titolo sessione non valido",
+
+  // Error provider auth
+  "error.providerAuth.title": "{{provider}} ti ha disconnesso",
+  "error.providerAuth.description": "Riconnetti {{provider}}, quindi invia di nuovo il tuo messaggio.",
+  "error.providerAuth.chatgpt.title": "OpenAI ti ha disconnesso",
+  "error.providerAuth.chatgpt.description":
+    "Accedi di nuovo con ChatGPT, quindi invia di nuovo il tuo messaggio per continuare a usare i modelli Codex.",
+
+  // Speech to Text tooltips and errors
+  "speechToText.tooltip.start": "Avvia input vocale con Kilo Gateway",
+  "speechToText.tooltip.stop": "Interrompi acquisizione",
+  "speechToText.tooltip.transcribing": "Trascrizione... Fai clic per annullare.",
+  "speechToText.tooltip.error": "Input vocale fallito. Fai clic per cancellare.",
+  "speechToText.error.title": "Input vocale fallito",
+  "speechToText.error.loginRequired": "Accedi a Kilo per usare l'input vocale.",
+  "speechToText.error.permission": "Permesso microfono negato.",
+  "speechToText.error.microphone": "Impossibile avviare il microfono.",
+  "speechToText.error.recording": "Registrazione fallita.",
+  "speechToText.error.emptyRecording": "Nessun audio registrato.",
+  "speechToText.error.emptyTranscript": "Nessun parlato rilevato.",
+  "speechToText.error.encoding": "Impossibile codificare la registrazione.",
+  "speechToText.toast.transcribed": "Trascrizione inserita",
 } as const
