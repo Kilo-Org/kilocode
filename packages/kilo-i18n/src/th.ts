@@ -71,6 +71,8 @@ export const dict = {
   "marketplace.warning.cancel": "ยกเลิก",
   "marketplace.contribute.prompt": "ไม่พบทักษะ โหมด หรือเซิร์ฟเวอร์ MCP ที่ต้องการ?",
   "marketplace.contribute.cta": "ร่วมสมทบบน GitHub",
+  "marketplace.migration.notice":
+    "โหมดถูกแทนที่ด้วยเอเจนต์แล้ว หากคุณเคยติดตั้งโหมดจาก marketplace กรุณาลบและติดตั้งใหม่เป็นเอเจนต์เพื่อย้ายไปยังรูปแบบใหม่",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "ดำเนินการ",

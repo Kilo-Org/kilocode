@@ -33,6 +33,7 @@ export const MarketplaceView = () => {
   const [errors, setErrors] = createSignal<string[]>([])
   const [tab, setTab] = createSignal("agent")
   const [pending, setPending] = createSignal<{ item: MarketplaceItem; scope: "project" | "global" } | null>(null)
+  const [showMigrationBanner, setShowMigrationBanner] = createSignal(false)
 
   const skills = createMemo(() => items().filter((i): i is SkillMarketplaceItem => i.type === "skill"))
   const mcps = createMemo(() => items().filter((i): i is McpMarketplaceItem => i.type === "mcp"))
@@ -51,6 +52,7 @@ export const MarketplaceView = () => {
         setMetadata(msg.marketplaceInstalledMetadata ?? EMPTY_METADATA)
         setErrors(msg.errors ?? [])
         setFetching(false)
+        setShowMigrationBanner(msg.showAgentMigrationBanner ?? false)
       }
       if (msg.type === "marketplaceRemoveResult") {
         const removed = pending()
@@ -138,6 +140,11 @@ export const MarketplaceView = () => {
     setErrors((prev) => prev.filter((_, i) => i !== idx))
   }
 
+  const dismissMigrationBanner = () => {
+    setShowMigrationBanner(false)
+    vscode.postMessage({ type: "dismissAgentMigrationBanner" })
+  }
+
   return (
     <div class="marketplace-view">
       <Show when={errors().length > 0}>
@@ -160,6 +167,14 @@ export const MarketplaceView = () => {
 
         <div class="marketplace-content">
           <Tabs.Content value="agent">
+            <Show when={showMigrationBanner()}>
+              <Card variant="info" class="marketplace-error-banner">
+                <span>{t("marketplace.migration.notice")}</span>
+                <Button variant="ghost" size="small" onClick={dismissMigrationBanner}>
+                  {t("marketplace.error.dismiss")}
+                </Button>
+              </Card>
+            </Show>
             <MarketplaceListView
               items={agents()}
               metadata={metadata()}

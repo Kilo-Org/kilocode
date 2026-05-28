@@ -69,6 +69,8 @@ export const dict = {
   "marketplace.warning.cancel": "취소",
   "marketplace.contribute.prompt": "스킬, 모드 또는 MCP 서버가 없나요?",
   "marketplace.contribute.cta": "GitHub에서 기여하기",
+  "marketplace.migration.notice":
+    "모드가 에이전트로 대체되었습니다. 이전에 마켓플레이스 모드를 설치한 경우 새 형식으로 마이그레이션하려면 해당 모드를 제거하고 에이전트로 다시 설치하세요.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "구현",

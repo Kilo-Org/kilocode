@@ -71,6 +71,8 @@ export const dict = {
   "marketplace.warning.cancel": "Anuluj",
   "marketplace.contribute.prompt": "Brakuje skilla, trybu lub serwera MCP?",
   "marketplace.contribute.cta": "Wnieś wkład na GitHubie",
+  "marketplace.migration.notice":
+    "Tryby zostały zastąpione przez agentów. Jeśli wcześniej instalowałeś tryby z marketplace, usuń je i zainstaluj ponownie jako agenty, aby przejść na nowy format.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "Wdróż",

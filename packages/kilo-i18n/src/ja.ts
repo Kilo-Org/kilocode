@@ -69,6 +69,8 @@ export const dict = {
   "marketplace.warning.cancel": "キャンセル",
   "marketplace.contribute.prompt": "スキル、モード、MCP サーバーが見つかりませんか？",
   "marketplace.contribute.cta": "GitHub で貢献する",
+  "marketplace.migration.notice":
+    "モードはエージェントに置き換えられました。以前にマーケットプレイスのモードをインストールしていた場合は、新しい形式に移行するためにそれらを削除してエージェントとして再インストールしてください。",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "実装",

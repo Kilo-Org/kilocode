@@ -71,6 +71,8 @@ export const dict = {
   "marketplace.warning.cancel": "Annuller",
   "marketplace.contribute.prompt": "Mangler du en skill, tilstand eller MCP-server?",
   "marketplace.contribute.cta": "Bidrag på GitHub",
+  "marketplace.migration.notice":
+    "Tilstande er blevet erstattet af agenter. Hvis du tidligere har installeret marketplace-tilstande, skal du fjerne dem og geninstallere dem som agenter for at migrere til det nye format.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "Implementér",

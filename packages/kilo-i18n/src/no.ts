@@ -71,6 +71,8 @@ export const dict = {
   "marketplace.warning.cancel": "Avbryt",
   "marketplace.contribute.prompt": "Mangler du en skill, modus eller MCP-server?",
   "marketplace.contribute.cta": "Bidra på GitHub",
+  "marketplace.migration.notice":
+    "Modi er erstattet av agenter. Hvis du tidligere har installert marketplace-modi, fjern dem og installer dem på nytt som agenter for å migrere til det nye formatet.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "Implementer",

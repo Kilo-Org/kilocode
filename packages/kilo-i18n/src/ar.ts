@@ -71,6 +71,8 @@ export const dict = {
   "marketplace.warning.cancel": "إلغاء",
   "marketplace.contribute.prompt": "هل تفتقد مهارة أو وضعًا أو خادم MCP؟",
   "marketplace.contribute.cta": "ساهم على GitHub",
+  "marketplace.migration.notice":
+    "تم استبدال الأوضاع بالوكلاء. إذا كنت قد قمت بتثبيت أوضاع السوق سابقاً، يرجى إزالتها وإعادة تثبيتها كوكلاء للانتقال إلى التنسيق الجديد.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "نفّذ",

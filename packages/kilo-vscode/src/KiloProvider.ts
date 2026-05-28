@@ -1134,6 +1134,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           })
           break
         }
+        case "dismissAgentMigrationBanner": {
+          await this.extensionContext?.globalState.update("kilo.agentMigrationBannerDismissed", true)
+          break
+        }
       }
     })
     this.webviewMessageDisposable = watchFontSizeConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
@@ -1156,7 +1160,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const mp = this.getMarketplace()
     const skills = await this.fetchCliSkills()
     const data = await mp.fetchData(workspace, skills)
-    this.postMessage({ type: "marketplaceData", ...data })
+    const dismissed = this.extensionContext?.globalState.get<boolean>("kilo.agentMigrationBannerDismissed") ?? false
+    this.postMessage({ type: "marketplaceData", ...data, showAgentMigrationBanner: !dismissed })
   }
 
   /**
@@ -1950,24 +1955,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return true
   }
 
-  /** Remove an agent via the CLI backend, falling back to kilo.json removal. */
+  /** Remove an agent via CLI, falling back to kilo.json removal. */
   private async handleRemoveAgent(name: string): Promise<void> {
     if (!this.client) return
-
-    // 1. Try CLI removal (handles .md files and legacy .kilocodemodes)
     try {
-      const dir = this.getWorkspaceDirectory()
-      const result = await this.client.kilocode.removeAgent({ name, directory: dir })
+      const result = await this.client.kilocode.removeAgent({ name, directory: this.getWorkspaceDirectory() })
       if (!result.error) {
         this.cachedAgentsMessage = null
         await this.fetchAndSendAgents()
         return
       }
     } catch {
-      // CLI removal failed — agent may be in kilo.json instead
+      // fall through to kilo.json removal
     }
-
-    // 2. Try removing from kilo.json (handles marketplace-installed agents)
     const stub: AgentMarketplaceItem = {
       id: name,
       type: "agent",
@@ -1975,8 +1975,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       description: "",
       content: { mode: "primary", description: "", prompt: "" },
     }
-    const removed = await this.removeMarketplaceItemFromAllScopes(stub)
-    if (!removed) {
+    if (!(await this.removeMarketplaceItemFromAllScopes(stub))) {
       console.error("[Kilo New] KiloProvider: Failed to remove agent:", name)
     }
   }
@@ -3073,6 +3072,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     await this.extensionContext?.globalState.update("variantSelections", undefined)
     await this.extensionContext?.globalState.update("recentModels", undefined)
     await this.extensionContext?.globalState.update("kilo.dismissedNotificationIds", undefined)
+    await this.extensionContext?.globalState.update("kilo.agentMigrationBannerDismissed", undefined)
 
     // Re-send all settings to the webview so the UI reflects the reset
     this.postMessage(buildAutocompleteSettingsMessage())

@@ -73,6 +73,8 @@ export const dict = {
   "marketplace.warning.cancel": "Cancel",
   "marketplace.contribute.prompt": "Missing a skill, mode, or MCP server?",
   "marketplace.contribute.cta": "Contribute on GitHub",
+  "marketplace.migration.notice":
+    "Modes have been replaced by agents. If you previously installed marketplace modes, please remove and reinstall them as agents to migrate to the new format.",
 
   // Plan follow-up question shown after plan_exit. The English strings here must match
   // the canonical `label`/`header`/`question` sent by the backend — those canonical labels

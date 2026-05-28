@@ -71,6 +71,8 @@ export const dict = {
   "marketplace.warning.cancel": "Cancelar",
   "marketplace.contribute.prompt": "Está faltando uma skill, modo ou servidor MCP?",
   "marketplace.contribute.cta": "Contribuir no GitHub",
+  "marketplace.migration.notice":
+    "Os modos foram substituídos por agentes. Se você instalou modos do marketplace anteriormente, remova-os e reinstale-os como agentes para migrar para o novo formato.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "Implementar",

@@ -71,6 +71,8 @@ export const dict = {
   "marketplace.warning.cancel": "Отмена",
   "marketplace.contribute.prompt": "Не хватает навыка, режима или MCP-сервера?",
   "marketplace.contribute.cta": "Внести вклад на GitHub",
+  "marketplace.migration.notice":
+    "Режимы заменены агентами. Если вы ранее устанавливали режимы из магазина, удалите их и переустановите как агенты, чтобы перейти на новый формат.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "Реализовать",

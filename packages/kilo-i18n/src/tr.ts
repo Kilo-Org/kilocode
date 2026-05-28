@@ -71,6 +71,8 @@ export const dict = {
   "marketplace.warning.cancel": "İptal",
   "marketplace.contribute.prompt": "Bir yetenek, mod veya MCP sunucusu mu eksik?",
   "marketplace.contribute.cta": "GitHub'da katkıda bulun",
+  "marketplace.migration.notice":
+    "Modlar agentlarla değiştirildi. Daha önce marketplace modları yüklediyseniz, yeni formata geçiş yapmak için bunları kaldırın ve agent olarak yeniden yükleyin.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "Uygula",
