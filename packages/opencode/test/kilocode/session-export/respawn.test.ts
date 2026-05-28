@@ -35,6 +35,20 @@ describe("SessionExport worker respawn", () => {
     expect(init?.surface).toBe("cli")
   })
 
+  test("shutdown catches synchronous worker acknowledgements", async () => {
+    SessionExport.init({
+      agentVersion: "v0",
+      dbPath: ":memory:",
+      subscribeAll: () => () => {},
+      createWorker: () => new FakeWorker(0) as unknown as Worker,
+    })
+
+    const start = performance.now()
+    await SessionExport.shutdown()
+
+    expect(performance.now() - start).toBeLessThan(100)
+  })
+
   test("respawns once when worker postMessage fails", () => {
     const workers: FakeWorker[] = []
     SessionExport.init({

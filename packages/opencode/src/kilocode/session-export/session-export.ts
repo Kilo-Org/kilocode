@@ -93,19 +93,19 @@ export const onSessionClose = async (sessionId: string): Promise<void> => {
 
 export const shutdown = async (): Promise<void> => {
   if (!worker) return
+  const current = worker
   unsubscribe?.()
-  worker.postMessage({ kind: "shutdown", timeoutMs: Config.shutdownFlushTimeoutMs })
   await new Promise<void>((resolve) => {
     const timer = setTimeout(resolve, Config.shutdownFlushTimeoutMs + 500)
-    const current = worker!
     current.onmessage = (event: MessageEvent) => {
       if ((event.data as { kind?: string }).kind === "shutdown_done") {
         clearTimeout(timer)
         resolve()
       }
     }
+    current.postMessage({ kind: "shutdown", timeoutMs: Config.shutdownFlushTimeoutMs })
   })
-  worker.terminate()
+  current.terminate()
   worker = undefined
   capture = undefined
   subscriber = undefined
