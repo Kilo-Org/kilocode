@@ -24,6 +24,7 @@ const ENVELOPE = new Set([
 ])
 
 const IDENTITY = new Set(["accountid", "email", "org", "orgid", "organizationid", "kilo_org_id"])
+const METADATA = new Set(["eventSeq", "time", "durationMs", "retryCount", "requestedAt", "durationToDecideMs"])
 
 export async function handleEvent(envelope: ExportEvent, ctx: HandlerCtx): Promise<void> {
   const result = ctx.scrubber.scrubEvent(envelope)
@@ -125,6 +126,14 @@ function stripEnvelopeFields(input: unknown): unknown {
   const out: Record<string, unknown> = {}
   for (const [key, val] of Object.entries(input)) {
     if (!ENVELOPE.has(key)) out[key] = val
+  }
+  return stripMetadata(out)
+}
+
+function stripMetadata(input: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(input)) {
+    if (!METADATA.has(key)) out[key] = val
   }
   return out
 }

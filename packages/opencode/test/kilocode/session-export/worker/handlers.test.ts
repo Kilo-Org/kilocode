@@ -70,6 +70,23 @@ describe("handlers", () => {
     expect((data.output.textParts[0] as { chunkIds: string[] }).chunkIds.length).toBeGreaterThan(0)
   })
 
+  test("drops event sequencing and timing metadata before writing", async () => {
+    const env = completed("01Q", "ok")
+    env.eventSeq = 7
+    await handleEvent(env, { storage, chunker, scrubber: new Scrubber(), inlineThresholdBytes: 64 * 1024 })
+    const rows = storage.pendingEvents({ now: 1000, limitBytes: 1_000_000 })
+    const data = JSON.parse(rows[0].dataJson) as {
+      eventSeq?: number
+      durationMs?: number
+      retryCount?: number
+      time?: unknown
+    }
+    expect(data.eventSeq).toBeUndefined()
+    expect(data.durationMs).toBeUndefined()
+    expect(data.retryCount).toBeUndefined()
+    expect(data.time).toBeUndefined()
+  })
+
   test("strings over maxPayloadBytes are truncated with originalSize", async () => {
     const env = completed("01M", "y".repeat(150_000))
     await handleEvent(env, {
