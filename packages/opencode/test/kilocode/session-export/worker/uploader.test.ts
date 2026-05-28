@@ -292,7 +292,7 @@ describe("Uploader", () => {
       surface: "test",
     })
     await uploader.flush("test")
-    expect(storage.pendingEvents({ now: Date.now(), limitBytes: 1_000_000 }).length).toBe(0)
+    expect(storage.pendingEvents({ now: Date.now() + Config.retryBackoffMaxMs + 1, limitBytes: 1_000_000 }).length).toBe(0)
   })
 
   test("5xx response backs rows off", async () => {

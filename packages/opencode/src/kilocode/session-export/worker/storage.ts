@@ -1,4 +1,4 @@
-import { Database } from "bun:sqlite"
+import { Database, type SQLQueryBindings, type Statement } from "bun:sqlite"
 import { and, asc, eq, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm"
 import { drizzle, type SQLiteBunDatabase } from "drizzle-orm/bun-sqlite"
 import type { ExportEventType } from "../envelope"
@@ -7,6 +7,7 @@ import { ChunkTable, EventTable } from "./schema"
 const tables = { ChunkTable, EventTable }
 
 type Client = SQLiteBunDatabase<typeof tables> & { $client: Database }
+type Prepared = Statement<unknown, SQLQueryBindings[]>
 
 export type EventRow = {
   id: string
@@ -40,7 +41,7 @@ export class Storage {
 
   constructor(path: string) {
     this.sqlite = new Database(path, { create: true })
-    this.db = drizzle({ client: this.sqlite, schema: tables }) as Client
+    this.db = drizzle({ client: finalizing(this.sqlite), schema: tables }) as Client
     this.sqlite.exec("PRAGMA journal_mode = WAL")
     this.sqlite.exec("PRAGMA synchronous = NORMAL")
     this.sqlite.exec("PRAGMA busy_timeout = 5000")
@@ -213,6 +214,35 @@ export class Storage {
 
   close(): void {
     this.sqlite.close()
+  }
+}
+
+function finalizing(db: Database): Database {
+  const client = Object.create(db) as Database
+  const prepare = db.prepare.bind(db) as (query: string) => Prepared
+  client.prepare = ((query: string) => wrap(prepare(query))) as Database["prepare"]
+  client.exec = db.exec.bind(db)
+  client.transaction = db.transaction.bind(db)
+  return client
+}
+
+function wrap(stmt: Prepared): Prepared {
+  const run = stmt.run.bind(stmt)
+  const all = stmt.all.bind(stmt)
+  const get = stmt.get.bind(stmt)
+  const values = stmt.values.bind(stmt)
+  stmt.run = (...params) => finish(stmt, () => run(...params))
+  stmt.all = (...params) => finish(stmt, () => all(...params))
+  stmt.get = (...params) => finish(stmt, () => get(...params))
+  stmt.values = (...params) => finish(stmt, () => values(...params))
+  return stmt
+}
+
+function finish<T>(stmt: Prepared, fn: () => T): T {
+  try {
+    return fn()
+  } finally {
+    stmt.finalize()
   }
 }
 
