@@ -58,15 +58,30 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
 
     override suspend fun reinstall() = app.reinstall()
 
-    override suspend fun modelState(): ModelStateDto = app.models.state()
+    override suspend fun modelState(): ModelStateDto {
+        app.requireReady()
+        return app.models.state()
+    }
 
-    override suspend fun updateModelFavorite(update: ModelFavoriteUpdateDto): ModelStateDto = app.models.favorite(update)
+    override suspend fun updateModelFavorite(update: ModelFavoriteUpdateDto): ModelStateDto {
+        app.requireReady()
+        return app.models.favorite(update)
+    }
 
-    override suspend fun updateModelSelection(update: ModelSelectionUpdateDto): ModelStateDto = app.models.selection(update)
+    override suspend fun updateModelSelection(update: ModelSelectionUpdateDto): ModelStateDto {
+        app.requireReady()
+        return app.models.selection(update)
+    }
 
-    override suspend fun clearModelSelection(agent: String): ModelStateDto = app.models.clear(agent)
+    override suspend fun clearModelSelection(agent: String): ModelStateDto {
+        app.requireReady()
+        return app.models.clear(agent)
+    }
 
-    override suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto = app.models.variant(update)
+    override suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto {
+        app.requireReady()
+        return app.models.variant(update)
+    }
 
     override suspend fun refreshProfile(): ProfileDto? = app.refreshProfile()?.let(::profileDto)
 
@@ -90,6 +105,10 @@ internal fun appStateDto(state: KiloAppState): KiloAppStateDto =
         is KiloAppState.Loading -> KiloAppStateDto(
             status = KiloAppStatusDto.LOADING,
             progress = progress(state.progress),
+        )
+        is KiloAppState.MigrationRequired -> KiloAppStateDto(
+            status = KiloAppStatusDto.MIGRATION_REQUIRED,
+            migration = MigrationRpcMapper.toDto(state.detection),
         )
         is KiloAppState.Ready -> KiloAppStateDto(
             status = KiloAppStatusDto.READY,

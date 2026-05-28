@@ -5,11 +5,10 @@ import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import { useSession } from "../../context/session"
 import { parseModelString } from "../../../../src/shared/provider-model"
-import { DEFAULT_AUTOCOMPLETE_MODEL } from "../../../../src/shared/autocomplete-models"
 import { ModelSelectorBase } from "../shared/ModelSelector"
 import { ThinkingSelectorBase } from "../shared/ThinkingSelector"
 import SettingsRow from "./SettingsRow"
-import { AUTOCOMPLETE_PROVIDER_ID, AUTOCOMPLETE_SELECTOR_MODELS } from "./autocomplete-model-selector"
+import { AUTOCOMPLETE_SELECTOR_MODELS, getAutocompleteSelection } from "./autocomplete-model-selector"
 
 const ModelsTab: Component = () => {
   const { config, settings, updateConfig, updateSetting } = useConfig()
@@ -17,7 +16,14 @@ const ModelsTab: Component = () => {
   const provider = useProvider()
   const session = useSession()
 
-  const autocompleteModel = () => String(settings()["autocomplete.model"] ?? DEFAULT_AUTOCOMPLETE_MODEL.id)
+  const autocompleteProvider = () => {
+    const v = settings()["autocomplete.provider"]
+    return typeof v === "string" ? v : undefined
+  }
+  const autocompleteModel = () => {
+    const v = settings()["autocomplete.model"]
+    return typeof v === "string" ? v : undefined
+  }
 
   function handleModelSelect(configKey: "model" | "small_model") {
     return (providerID: string, modelID: string) => {
@@ -71,7 +77,14 @@ const ModelsTab: Component = () => {
   }
 
   function handleAutocompleteModelSelect(providerID: string, modelID: string) {
-    if (providerID !== AUTOCOMPLETE_PROVIDER_ID || !modelID) return
+    if (!providerID || !modelID) {
+      // Clearing both keys reverts to the resolved server-side default. Users
+      // who pick "Not set" follow future default changes automatically.
+      updateSetting("autocomplete.provider", null)
+      updateSetting("autocomplete.model", null)
+      return
+    }
+    updateSetting("autocomplete.provider", providerID)
     updateSetting("autocomplete.model", modelID)
   }
 
@@ -129,11 +142,13 @@ const ModelsTab: Component = () => {
           last
         >
           <ModelSelectorBase
-            value={{ providerID: AUTOCOMPLETE_PROVIDER_ID, modelID: autocompleteModel() }}
+            value={getAutocompleteSelection(autocompleteProvider(), autocompleteModel())}
             onSelect={handleAutocompleteModelSelect}
             placement="bottom-start"
             models={AUTOCOMPLETE_SELECTOR_MODELS}
             favorites={false}
+            allowClear
+            clearLabel={language.t("settings.providers.notSet")}
           />
         </SettingsRow>
       </Card>

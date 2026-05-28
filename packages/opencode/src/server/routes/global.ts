@@ -194,9 +194,11 @@ export const GlobalRoutes = lazy(() =>
         const config = c.req.valid("json")
         const result = await AppRuntime.runPromise(Config.Service.use((cfg) => cfg.updateGlobal(config)))
         if (result.changed) {
-          void AppRuntime.runPromise(disposeAllInstancesAndEmitGlobalDisposed({ swallowErrors: true })).catch(
-            () => undefined,
+          // kilocode_change start
+          await AppRuntime.runPromise(
+            disposeAllInstancesAndEmitGlobalDisposed({ swallowErrors: true }).pipe(Effect.catchCause(() => Effect.void)),
           )
+          // kilocode_change end
         }
         return c.json(result.info)
       },

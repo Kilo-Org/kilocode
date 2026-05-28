@@ -286,7 +286,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Кнопка 'Покращити запит' допомагає вдосконалити ваш запит, надаючи додатковий контекст, уточнення або перефразування. Введіть запит тут і натисніть кнопку ще раз, щоб побачити, як це працює.",
 
-  "speechToText.tooltip.start": "Почати голосове введення",
+  "speechToText.tooltip.start": "Почати голосове введення з Kilo Gateway",
   "speechToText.tooltip.stop": "Зупинити захоплення звуку",
   "speechToText.tooltip.transcribing": "Транскрибування... Натисніть, щоб скасувати.",
   "speechToText.tooltip.error": "Помилка голосового введення. Натисніть, щоб очистити.",
@@ -455,6 +455,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Не вдалося закрити доступ до сесії",
   "toast.session.unshare.failed.description": "Під час закриття доступу до сесії сталася помилка",
 
+  "toast.session.rename.invalid.title": "Некоректна назва сесії",
   "toast.session.listFailed.title": "Не вдалося завантажити сесії для {{project}}",
 
   "toast.update.title": "Доступне оновлення",
@@ -1116,6 +1117,14 @@ export const dict = {
   "session.status.retrying": "Повторна спроба (спроба {{ attempt }})… {{ message }}",
   "session.status.working": "Працює...",
   "session.status.offline": "Мережу відключено — перепідключення...",
+  "session.outcome.incomplete": "Хід завершився з {{count}} невиконаними завданнями",
+  "session.outcome.limit": "Ліміт відповідей досягнуто до завершення",
+  "session.outcome.unknown": "Хід завершився без причини завершення моделі",
+  "session.outcome.filtered": "Провайдер зупинив цю відповідь через фільтр вмісту.",
+  "session.outcome.unexpected": "Відповідь завершилася несподівано і може бути неповною.",
+  "session.outcome.interrupted": "Хід перервано",
+  "session.outcome.error": "Хід не вдався",
+  "session.outcome.finish": "Причина завершення: {{reason}}",
 
   "ui.sessionTurn.cancel": "Скасувати",
   "ui.sessionTurn.status.thinking": "Думаю...",
@@ -1179,7 +1188,6 @@ export const dict = {
     'Телеметрія керується вбудованим налаштуванням телеметрії VS Code. Щоб вимкнути її, перейдіть до Налаштування > Телеметрія > Рівень телеметрії та встановіть значення "off". Перезапустіть VS Code, щоб застосувати зміну.',
   "settings.aboutKiloCode.telemetry.openSettings": "Відкрити налаштування телеметрії",
 
-  "settings.agentBehaviour.subtab.modes": "Режими",
   "settings.agentBehaviour.subtab.agents": "Агенти",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-сервери",
   "settings.agentBehaviour.subtab.rules": "Правила",
@@ -1248,14 +1256,11 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Пошук по кодовій базі",
   "settings.experimental.codebaseSearch.description":
     "Увімкнути пошук природною мовою на основі ШІ по всій кодовій базі",
-  "settings.experimental.agentManagerTool.title": "Інструмент Agent Manager",
-  "settings.experimental.agentManagerTool.description":
-    "Дозволити агентам запускати локальні сесії Agent Manager і сесії worktree через виклик інструмента",
   "settings.experimental.speechToText.title": "Мовлення в текст",
   "settings.experimental.speechToText.description":
     "Увімкніть голосове введення в полях запитів, використовуючи ваш обліковий запис Kilo через Kilo Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Увімкніть Kilo provider і увійдіть, щоб використовувати голосове введення в полях запитів.",
+    "Увімкніть провайдер Kilo та виконайте вхід, щоб використовувати Speech to Text. Наразі Speech to Text підтримується лише з Kilo Gateway.",
   "settings.experimental.speechToTextModel.title": "Модель мовлення в текст",
   "settings.experimental.speechToTextModel.description":
     "Виберіть модель транскрипції Kilo Gateway для голосового введення.",
@@ -1281,6 +1286,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Виберіть агента для налаштування…",
   "settings.agentBehaviour.modelOverride.title": "Перевизначення моделі",
   "settings.agentBehaviour.modelOverride.description": "Перевизначити стандартну модель для цього агента",
+  "settings.agentBehaviour.variantOverride.title": "Перевизначення варіанту",
+  "settings.agentBehaviour.variantOverride.description": "Перевизначити варіант моделі для цього агента",
   "settings.agentBehaviour.prompt.title": "Власний запит",
   "settings.agentBehaviour.prompt.description": "Додатковий системний запит для цього агента",
   "settings.agentBehaviour.temperature.title": "Температура",
@@ -1300,7 +1307,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Навичок не виявлено. Додайте шляхи до папок навичок або URL нижче, щоб зробити їх доступними.",
   "settings.agentBehaviour.availableModes": "Доступні власні режими",
-  "settings.agentBehaviour.noModesFound": "Режимів не знайдено.",
+  "settings.agentBehaviour.noAgentsFound": "Агентів не знайдено.",
   "settings.agentBehaviour.importMode": "Імпортувати",
   "settings.agentBehaviour.importMode.invalidName":
     "Назва режиму у файлі недійсна. Назва має починатися з малої літери і містити лише малі літери, цифри та дефіси.",
@@ -1309,10 +1316,10 @@ export const dict = {
     "Недійсний файл JSON. Будь ласка, виберіть дійсний файл визначення агента.",
   "settings.agentBehaviour.importMode.tooLarge": "Файл занадто великий. Визначення агентів мають бути менше 1 МБ.",
   "settings.agentBehaviour.exportMode": "Експортувати визначення агента",
-  "settings.agentBehaviour.removeMode.title": "Видалити режим",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Видалити режим "{{name}}"? Це оновить вашу конфігурацію, щоб вимкнути режим.',
-  "settings.agentBehaviour.removeMode.button": "Видалити",
+  "settings.agentBehaviour.removeAgent.title": "Видалити агент",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Видалити агент "{{name}}"? Це вимкне агент шляхом оновлення конфігурації.',
+  "settings.agentBehaviour.removeAgent.button": "Видалити",
   "settings.agentBehaviour.skillPaths": "Шляхи до папок навичок",
   "settings.agentBehaviour.skillUrls": "URL навичок",
   "settings.agentBehaviour.removeSkill.title": "Видалити навичку",

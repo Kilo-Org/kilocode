@@ -38,13 +38,15 @@ import javax.swing.ButtonGroup
 import javax.swing.JPanel
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
+import com.intellij.util.concurrency.annotations.RequiresEdt
 
 /** Question tool form rendered inside the session transcript. */
 class QuestionView(
     private val project: Project,
-    private val reply: (String, QuestionReplyDto) -> Unit,
+    private val reply: (String, QuestionReplyDto, List<List<String>>) -> Unit,
     private val reject: (String) -> Unit,
-    private val scroll: () -> Unit = {},
+    private val follow: () -> Boolean = { true },
+    private val scroll: (Boolean) -> Unit = {},
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, SessionView {
     override val sessionViewKind = SessionView.Kind.Default
 
@@ -113,6 +115,7 @@ class QuestionView(
         add(card, BorderLayout.CENTER)
     }
 
+    @RequiresEdt
     fun show(q: Question) {
         if (q.items.isEmpty()) {
             hideView()
@@ -121,13 +124,17 @@ class QuestionView(
         request = q.id
         question = q
         idx = 0
+        val tail = follow()
         selections = List(q.items.size) { mutableSetOf() }
         customTexts = List(q.items.size) { "" }
         customOpen = List(q.items.size) { false }
         isVisible = true
+        applyStyle(SessionEditorStyle.current())
         syncPage()
+        scroll(tail)
     }
 
+    @RequiresEdt
     fun hideView() {
         request = null
         question = null
@@ -144,6 +151,7 @@ class QuestionView(
         refresh()
     }
 
+    @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         card.applyStyle(style)
@@ -157,6 +165,7 @@ class QuestionView(
         refresh()
     }
 
+    @RequiresEdt
     private fun syncPage() {
         val q = question ?: return
         texts.clear()
@@ -180,14 +189,18 @@ class QuestionView(
         refresh()
     }
 
+    @RequiresEdt
     private fun syncHeader(q: Question) {
         val total = q.items.size
         val shown = minOf(idx + 1, total)
         summary.text = KiloBundle.message("session.question.summary", shown, total)
         summary.foreground = UiStyle.Colors.weak()
+        summary.isVisible = total > 1
         nav.isVisible = total > 1
+        topPanel.isVisible = total > 1
     }
 
+    @RequiresEdt
     private fun syncFooter(q: Question) {
         val actions = mutableListOf<BaseQuestionView.Action>()
         actions.add(BaseQuestionView.Action(ID_DISMISS, KiloBundle.message("session.question.dismiss"), primary = false) { doReject() })
@@ -213,6 +226,7 @@ class QuestionView(
         card.setActions(actions)
     }
 
+    @RequiresEdt
     private fun syncControls(q: Question) {
         val ready = isReady(idx)
         back.isEnabled = idx > 0
@@ -255,12 +269,16 @@ class QuestionView(
         }
     }
 
+    private fun optionAnswers(i: Int): List<String> = selections.getOrNull(i)?.toList() ?: emptyList()
+
+    @RequiresEdt
     private fun addContent(item: QuestionItem, set: MutableSet<String>) {
         val opts = optionList(item, set)
         opts.alignmentX = Component.LEFT_ALIGNMENT
         body.add(opts)
     }
 
+    @RequiresEdt
     private fun addReview(q: Question) {
         for ((i, item) in q.items.withIndex()) {
             val row = reviewRow(item, i)
@@ -271,6 +289,7 @@ class QuestionView(
         (body.components.lastOrNull() as? JPanel)?.border = JBUI.Borders.empty()
     }
 
+    @RequiresEdt
     private fun reviewRow(item: QuestionItem, i: Int): JPanel {
         val row = JPanel().apply {
             isOpaque = false
@@ -293,6 +312,7 @@ class QuestionView(
         return row
     }
 
+    @RequiresEdt
     private fun optionList(item: QuestionItem, set: MutableSet<String>): JPanel {
         val panel = JPanel().apply {
             isOpaque = false
@@ -315,6 +335,7 @@ class QuestionView(
         return panel
     }
 
+    @RequiresEdt
     private fun customRow(item: QuestionItem, set: MutableSet<String>): JPanel {
         val open = customOpen.getOrElse(idx) { false }
         val existing = customTexts.getOrElse(idx) { "" }.trim()
@@ -426,12 +447,14 @@ class QuestionView(
         return row
     }
 
+    @RequiresEdt
     internal fun testFocusCustomEditor() {
         val ed = customEditor ?: return
         val focus = customFocus ?: return
         focus.focusGained(FocusEvent(ed, FocusEvent.FOCUS_GAINED))
     }
 
+    @RequiresEdt
     private fun selectCustom(item: QuestionItem, set: MutableSet<String>) {
         if (customOpen.getOrElse(idx) { false }) return
         if (!item.multiple) set.clear()
@@ -448,6 +471,7 @@ class QuestionView(
      * the first time the component becomes visible, satisfying the platform's
      * read-context requirement without any additional wrapping here.
      */
+    @RequiresEdt
     private fun buildCustomEditor(): SessionEditorTextField {
         val ed = SessionEditorTextField(project)
         ed.border = JBUI.Borders.empty()
@@ -480,13 +504,14 @@ class QuestionView(
         // The document was already created above (ed.text = saved ensures getDocument()
         // was called), so installDocumentListener succeeds.
         ed.addDocumentListener(object : DocumentListener {
+            @RequiresEdt
             override fun documentChanged(e: DocumentEvent) {
                 val txt = ed.text
                 customTexts = customTexts.toMutableList().also { it[idx] = txt }
                 syncEditorHeight(ed)
                 question?.let(::syncControls)
                 refresh()
-                scroll()
+                scroll(follow())
             }
         })
 
@@ -494,6 +519,7 @@ class QuestionView(
         return ed
     }
 
+    @RequiresEdt
     private fun syncEditorHeight(ed: SessionEditorTextField) {
         val editor = ed.getEditor(false)
         val estimated = estimatedLines(ed)
@@ -504,6 +530,7 @@ class QuestionView(
         ed.minimumSize = Dimension(0, height)
     }
 
+    @RequiresEdt
     private fun estimatedLines(ed: SessionEditorTextField): Int {
         val width = space(ed)
         if (width <= 0) return (ed.text.count { it == '\n' } + 1).coerceAtLeast(1)
@@ -514,6 +541,7 @@ class QuestionView(
         }.coerceAtLeast(1)
     }
 
+    @RequiresEdt
     private fun space(component: Component): Int {
         if (component.width > 0) return component.width
         var node = component.parent
@@ -528,6 +556,7 @@ class QuestionView(
     }
 
     /** Re-syncs the current page after the custom row toggle changes. */
+    @RequiresEdt
     private fun refreshCustomRow() {
         val q = question ?: return
         syncPage()
@@ -536,9 +565,10 @@ class QuestionView(
             customEditor?.requestFocusInWindow()
         }
         syncControls(q)
-        scroll()
+        scroll(follow())
     }
 
+    @RequiresEdt
     private fun radioRow(opt: QuestionOption, set: MutableSet<String>, group: ButtonGroup): JPanel {
         val radio = JBRadioButton().apply {
             actionCommand = opt.label
@@ -560,6 +590,7 @@ class QuestionView(
         return optionRow(radio, opt)
     }
 
+    @RequiresEdt
     private fun checkboxRow(opt: QuestionOption, set: MutableSet<String>): JPanel {
         val box = JBCheckBox().apply {
             actionCommand = opt.label
@@ -573,6 +604,7 @@ class QuestionView(
         return optionRow(box, opt)
     }
 
+    @RequiresEdt
     private fun optionRow(toggle: AbstractButton, opt: QuestionOption): JPanel {
         val row = JPanel(BorderLayout()).apply {
             isOpaque = false
@@ -615,6 +647,7 @@ class QuestionView(
         return row
     }
 
+    @RequiresEdt
     private fun text(value: String, color: Color, bold: Boolean = false): JBTextArea {
         val area = object : JBTextArea(value) {
             override fun getPreferredSize() = withWidth(super.getPreferredSize().height)
@@ -669,13 +702,15 @@ class QuestionView(
 
     private fun direct(q: Question): Boolean = single(q)
 
+    @RequiresEdt
     private fun goBack() {
         if (idx <= 0) return
         idx--
         syncPage()
-        scroll()
+        scroll(true)
     }
 
+    @RequiresEdt
     private fun goForward() {
         val q = question ?: return
         if (idx >= q.items.size || !isReady(idx)) return
@@ -686,39 +721,47 @@ class QuestionView(
         if (!toReview) {
             idx++
             syncPage()
-            scroll()
+            scroll(true)
         }
     }
 
+    @RequiresEdt
     private fun goReview() {
         val q = question ?: return
         if (idx == q.items.size - 1 && isReady(idx)) {
             idx = q.items.size
             syncPage()
-            scroll()
+            scroll(true)
         }
     }
 
+    @RequiresEdt
     private fun refreshSelection() {
         question?.let(::syncControls)
         refresh()
-        scroll()
+        scroll(follow())
     }
 
+    @RequiresEdt
     private fun doReply() {
         val id = request ?: return
         if ((question?.items?.indices ?: return).any { !isReady(it) }) return
         val answers = (question?.items?.indices ?: return).map { effectiveAnswers(it) }
-        reply(id, QuestionReplyDto(answers))
+        val opts = (question?.items?.indices ?: return).map { optionAnswers(it) }
+        reply(id, QuestionReplyDto(answers), opts)
         hideView()
+        scroll(follow())
     }
 
+    @RequiresEdt
     private fun doReject() {
         val id = request ?: return
         reject(id)
         hideView()
+        scroll(follow())
     }
 
+    @RequiresEdt
     private fun setFont(area: JBTextArea, bold: Boolean): Boolean {
         val font = if (bold) style.boldFont else style.regularFont
         if (area.font == font) return false
@@ -726,6 +769,7 @@ class QuestionView(
         return true
     }
 
+    @RequiresEdt
     private fun refresh() {
         revalidate()
         repaint()

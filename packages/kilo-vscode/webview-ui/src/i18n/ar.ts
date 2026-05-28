@@ -282,7 +282,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "زر «حسّن الموجه» يطوّر موجهك بإضافة سياق أو توضيح أو إعادة صياغة. جرّب اكتب موجه هنا ثم اضغط الزر مرة ثانية وشوف النتيجة.",
 
-  "speechToText.tooltip.start": "بدء الإدخال الصوتي",
+  "speechToText.tooltip.start": "بدء الإدخال الصوتي باستخدام Kilo Gateway",
   "speechToText.tooltip.stop": "إيقاف التقاط الصوت",
   "speechToText.tooltip.transcribing": "جاري تحويل الصوت إلى نص... انقر للإلغاء.",
   "speechToText.tooltip.error": "فشل الإدخال الصوتي. انقر للمسح.",
@@ -447,6 +447,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "فشل إلغاء مشاركة الجلسة",
   "toast.session.unshare.failed.description": "حدث خطأ أثناء إلغاء مشاركة الجلسة",
 
+  "toast.session.rename.invalid.title": "عنوان الجلسة غير صالح",
   "toast.session.listFailed.title": "فشل تحميل الجلسات لـ {{project}}",
 
   "toast.update.title": "تحديث متاح",
@@ -1107,6 +1108,14 @@ export const dict = {
   "session.status.retrying": "...إعادة المحاولة (المحاولة {{ attempt }})… {{ message }}",
   "session.status.working": "...جارٍ العمل",
   "session.status.offline": "انقطع الاتصال بالشبكة — جارٍ إعادة الاتصال...",
+  "session.outcome.incomplete": "انتهى الدور مع تبقي {{count}} مهام",
+  "session.outcome.limit": "تم الوصول إلى حد الاستجابة قبل الاكتمال",
+  "session.outcome.unknown": "انتهى الدور بدون سبب إنهاء من النموذج",
+  "session.outcome.filtered": "أوقف المزود هذه الاستجابة بسبب عامل تصفية المحتوى.",
+  "session.outcome.unexpected": "انتهت الاستجابة بشكل غير متوقع وقد تكون غير مكتملة.",
+  "session.outcome.interrupted": "تمت مقاطعة الدور",
+  "session.outcome.error": "فشل الدور",
+  "session.outcome.finish": "سبب الإنهاء: {{reason}}",
 
   "ui.sessionTurn.cancel": "إلغاء",
   "ui.sessionTurn.status.thinking": "...جارٍ التفكير",
@@ -1167,7 +1176,6 @@ export const dict = {
     'يتم التحكم في Telemetry بواسطة إعداد Telemetry المدمج في VS Code. لتعطيله، انتقل إلى الإعدادات > Telemetry > Telemetry Level واضبطه على "off". أعد تشغيل VS Code لتطبيق التغيير.',
   "settings.aboutKiloCode.telemetry.openSettings": "فتح إعدادات Telemetry",
 
-  "settings.agentBehaviour.subtab.modes": "الأوضاع",
   "settings.agentBehaviour.subtab.agents": "الوكلاء",
   "settings.agentBehaviour.subtab.mcpServers": "خوادم MCP",
   "settings.agentBehaviour.subtab.rules": "القواعد",
@@ -1230,14 +1238,11 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "بحث في قاعدة الكود",
   "settings.experimental.codebaseSearch.description": "تمكين البحث بالذكاء الاصطناعي باللغة الطبيعية عبر قاعدة الكود",
-  "settings.experimental.agentManagerTool.title": "أداة Agent Manager",
-  "settings.experimental.agentManagerTool.description":
-    "السماح للوكلاء ببدء جلسات Agent Manager المحلية وجلسات worktree من استدعاء أداة",
   "settings.experimental.speechToText.title": "تحويل الصوت إلى نص",
   "settings.experimental.speechToText.description":
     "تمكين الإدخال الصوتي في حقول المطالبة باستخدام حساب Kilo الخاص بك من خلال Kilo Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "قم بتمكين وتسجيل الدخول إلى Kilo provider لاستخدام الإدخال الصوتي في حقول المطالبة.",
+    "قم بتمكين وتسجيل الدخول إلى مزود Kilo لاستخدام Speech to Text. ميزة Speech to Text مدعومة حاليًا فقط مع Kilo Gateway.",
   "settings.experimental.speechToTextModel.title": "نموذج تحويل الصوت إلى نص",
   "settings.experimental.speechToTextModel.description": "اختر نموذج نسخ Kilo Gateway للإدخال الصوتي.",
   "settings.experimental.continueOnDeny.title": "المتابعة عند الرفض",
@@ -1261,6 +1266,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "اختر وكيلاً للتهيئة…",
   "settings.agentBehaviour.modelOverride.title": "تجاوز النموذج",
   "settings.agentBehaviour.modelOverride.description": "تجاوز النموذج الافتراضي لهذا الوكيل",
+  "settings.agentBehaviour.variantOverride.title": "تجاوز المتغير",
+  "settings.agentBehaviour.variantOverride.description": "تجاوز متغير النموذج لهذا الوكيل",
   "settings.agentBehaviour.prompt.title": "موجه مخصص",
   "settings.agentBehaviour.prompt.description": "موجه نظام إضافي لهذا الوكيل",
   "settings.agentBehaviour.temperature.title": "الحرارة",
@@ -1280,7 +1287,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "لم يتم العثور على مهارات. أضف مسارات مجلدات أو عناوين URL أدناه لإتاحة المهارات.",
   "settings.agentBehaviour.availableModes": "الأوضاع المخصصة المتاحة",
-  "settings.agentBehaviour.noModesFound": "لم يتم العثور على أوضاع.",
+  "settings.agentBehaviour.noAgentsFound": "لم يتم العثور على وكلاء.",
   "settings.agentBehaviour.createMode": "إنشاء وضع جديد",
   "settings.agentBehaviour.createMode.name": "الاسم",
   "settings.agentBehaviour.createMode.name.placeholder": "مثال: reviewer",
@@ -1323,10 +1330,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "نسخ الأذونات كـ JSON",
   "settings.agentBehaviour.permissions.hint":
     "يتم تقييم القواعد بالترتيب — القاعدة المطابقة الأخيرة هي التي تُطبق. هذه هي مجموعة القواعد المحلولة من خلفية CLI.",
-  "settings.agentBehaviour.removeMode.title": "إزالة الوضع",
-  "settings.agentBehaviour.removeMode.confirm":
-    'هل تريد إزالة الوضع "{{name}}"؟ سيؤدي هذا إلى تعطيل الوضع عن طريق تحديث الإعدادات.',
-  "settings.agentBehaviour.removeMode.button": "إزالة",
+  "settings.agentBehaviour.removeAgent.title": "إزالة الوكيل",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'هل تريد إزالة الوكيل "{{name}}"؟ سيؤدي هذا إلى تعطيله عن طريق تحديث الإعدادات.',
+  "settings.agentBehaviour.removeAgent.button": "إزالة",
   "settings.agentBehaviour.removeMcp.title": "إزالة خادم MCP",
   "settings.agentBehaviour.removeMcp.confirm": 'هل تريد إزالة خادم MCP "{{name}}"؟ سيؤدي هذا إلى إزالته من الإعدادات.',
   "settings.agentBehaviour.removeMcp.button": "إزالة",

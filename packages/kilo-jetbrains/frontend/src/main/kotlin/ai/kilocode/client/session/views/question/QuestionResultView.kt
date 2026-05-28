@@ -258,7 +258,9 @@ class QuestionResultView(tool: Tool) : PartView() {
         val color = if (value) SessionUiStyle.View.headerHover() else SessionUiStyle.View.header()
         if (header.background?.rgb == color.rgb) return
         header.background = color
+        root.border = if (value) SessionUiStyle.View.card(SessionUiStyle.View.hoverLine()) else SessionUiStyle.View.card()
         header.repaint()
+        root.repaint()
     }
 
     private fun inside(e: MouseEvent): Boolean {

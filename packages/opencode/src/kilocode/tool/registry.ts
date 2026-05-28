@@ -83,7 +83,7 @@ export namespace KiloToolRegistry {
   /** Kilo-specific tools to append to the builtin list */
   export function extra(
     tools: { codebase: Tool.Def; semantic?: Tool.Def; recall: Tool.Def; manager: Tool.Def; process: Tool.Def },
-    cfg: { experimental?: { codebase_search?: boolean; agent_manager_tool?: boolean } },
+    cfg: { experimental?: { codebase_search?: boolean } },
   ): Tool.Def[] {
     return [
       ...(cfg.experimental?.codebase_search === true ? [tools.codebase] : []),
@@ -91,7 +91,7 @@ export namespace KiloToolRegistry {
       tools.recall,
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
       // The extension is the only client that can consume the Agent Manager start event.
-      ...(Flag.KILO_CLIENT === "vscode" && cfg.experimental?.agent_manager_tool === true ? [tools.manager] : []),
+      ...(Flag.KILO_CLIENT === "vscode" ? [tools.manager] : []),
     ]
   }
 

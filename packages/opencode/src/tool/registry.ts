@@ -2,6 +2,7 @@ import { PlanExitTool } from "./plan"
 import { Session } from "@/session/session"
 import { QuestionTool } from "./question"
 import { SuggestTool } from "../kilocode/suggestion/tool" // kilocode_change
+import { Command } from "@/command" // kilocode_change
 import { ShellTool } from "./shell"
 import { EditTool } from "./edit"
 import { GlobTool } from "./glob"
@@ -49,8 +50,10 @@ import { Instruction } from "../session/instruction"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Bus } from "../bus"
 import { Agent } from "../agent/agent"
+import { Git } from "../git" // kilocode_change
 import { Skill } from "../skill"
 import { Permission } from "@/permission"
+import { SessionStatus } from "@/session/status" // kilocode_change
 
 const log = Log.create({ service: "tool.registry" })
 
@@ -93,6 +96,9 @@ export const layer: Layer.Layer<
   | Ripgrep.Service
   | Format.Service
   | Truncate.Service
+  | Command.Service // kilocode_change
+  | Git.Service // kilocode_change
+  | SessionStatus.Service // kilocode_change
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -372,6 +378,9 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(CrossSpawnSpawner.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Truncate.defaultLayer),
+    Layer.provide(Command.defaultLayer), // kilocode_change
+    Layer.provide(Git.defaultLayer), // kilocode_change
+    Layer.provide(SessionStatus.defaultLayer), // kilocode_change
   ),
 )
 // kilocode_change start

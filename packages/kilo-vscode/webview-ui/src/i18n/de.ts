@@ -289,7 +289,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Die Schaltfläche 'Prompt verbessern' hilft, deine Anfrage durch zusätzlichen Kontext, Klarstellungen oder Umformulierungen zu verbessern. Versuche, hier eine Anfrage einzugeben und klicke erneut auf die Schaltfläche, um zu sehen, wie es funktioniert.",
 
-  "speechToText.tooltip.start": "Spracheingabe starten",
+  "speechToText.tooltip.start": "Spracheingabe mit Kilo Gateway starten",
   "speechToText.tooltip.stop": "Audioerfassung beenden",
   "speechToText.tooltip.transcribing": "Transkribieren... Zum Abbrechen klicken.",
   "speechToText.tooltip.error": "Spracheingabe fehlgeschlagen. Zum Löschen klicken.",
@@ -456,6 +456,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Aufheben des Teilens fehlgeschlagen",
   "toast.session.unshare.failed.description": "Beim Aufheben des Teilens ist ein Fehler aufgetreten",
 
+  "toast.session.rename.invalid.title": "Ungültiger Sitzungstitel",
   "toast.session.listFailed.title": "Sitzungen für {{project}} konnten nicht geladen werden",
 
   "toast.update.title": "Update verfügbar",
@@ -1139,6 +1140,14 @@ export const dict = {
   "session.status.retrying": "Erneuter Versuch ({{ attempt }})… {{ message }}",
   "session.status.working": "Wird bearbeitet…",
   "session.status.offline": "Netzwerk getrennt — Verbindung wird wiederhergestellt...",
+  "session.outcome.incomplete": "Zug beendet mit {{count}} verbleibenden To-dos",
+  "session.outcome.limit": "Antwortlimit vor Abschluss erreicht",
+  "session.outcome.unknown": "Zug ohne Modell-Abschlussgrund beendet",
+  "session.outcome.filtered": "Der Anbieter hat diese Antwort aufgrund eines Inhaltsfilters gestoppt.",
+  "session.outcome.unexpected": "Die Antwort wurde unerwartet beendet und ist möglicherweise unvollständig.",
+  "session.outcome.interrupted": "Zug unterbrochen",
+  "session.outcome.error": "Zug fehlgeschlagen",
+  "session.outcome.finish": "Abschlussgrund: {{reason}}",
 
   "ui.sessionTurn.cancel": "Abbrechen",
   "ui.sessionTurn.status.thinking": "Denke nach...",
@@ -1205,7 +1214,6 @@ export const dict = {
     'Die Telemetrie wird durch die integrierte Telemetrie-Einstellung von VS Code gesteuert. Um sie zu deaktivieren, gehen Sie zu Einstellungen > Telemetrie > Telemetrie-Stufe und setzen Sie diese auf "off". Starten Sie VS Code neu, um die Änderung zu übernehmen.',
   "settings.aboutKiloCode.telemetry.openSettings": "Telemetrie-Einstellungen öffnen",
 
-  "settings.agentBehaviour.subtab.modes": "Modi",
   "settings.agentBehaviour.subtab.agents": "Agenten",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-Server",
   "settings.agentBehaviour.subtab.rules": "Regeln",
@@ -1274,14 +1282,11 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Codebase-Suche",
   "settings.experimental.codebaseSearch.description":
     "KI-gestützte Suche in natürlicher Sprache über die gesamte Codebasis aktivieren",
-  "settings.experimental.agentManagerTool.title": "Agent Manager-Werkzeug",
-  "settings.experimental.agentManagerTool.description":
-    "Agenten erlauben, lokale Agent Manager-Sitzungen und Worktree-Sitzungen per Werkzeugaufruf zu starten",
   "settings.experimental.speechToText.title": "Sprache zu Text",
   "settings.experimental.speechToText.description":
     "Aktivieren Sie die Spracheingabe in Prompt-Feldern mit Ihrem Kilo-Konto über Kilo Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Aktivieren Sie Kilo provider und melden Sie sich an, um die Spracheingabe in Prompt-Feldern zu verwenden.",
+    "Aktivieren Sie den Kilo-Anbieter und melden Sie sich an, um Speech to Text zu verwenden. Speech to Text wird derzeit nur mit Kilo Gateway unterstützt.",
   "settings.experimental.speechToTextModel.title": "Sprache-zu-Text-Modell",
   "settings.experimental.speechToTextModel.description":
     "Wählen Sie das Kilo Gateway-Transkriptionsmodell für die Spracheingabe.",
@@ -1307,6 +1312,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Agent zum Konfigurieren auswählen…",
   "settings.agentBehaviour.modelOverride.title": "Modell-Überschreibung",
   "settings.agentBehaviour.modelOverride.description": "Standardmodell für diesen Agent überschreiben",
+  "settings.agentBehaviour.variantOverride.title": "Varianten-Überschreibung",
+  "settings.agentBehaviour.variantOverride.description": "Modellvariante für diesen Agent überschreiben",
   "settings.agentBehaviour.prompt.title": "Benutzerdefinierter Prompt",
   "settings.agentBehaviour.prompt.description": "Zusätzlicher System-Prompt für diesen Agent",
   "settings.agentBehaviour.temperature.title": "Temperatur",
@@ -1326,7 +1333,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Keine Skills gefunden. Fügen Sie unten Skill-Ordnerpfade oder URLs hinzu, um Skills verfügbar zu machen.",
   "settings.agentBehaviour.availableModes": "Verfügbare benutzerdefinierte Modi",
-  "settings.agentBehaviour.noModesFound": "Keine Modi gefunden.",
+  "settings.agentBehaviour.noAgentsFound": "Keine Agenten gefunden.",
   "settings.agentBehaviour.createMode": "Neuen Modus erstellen",
   "settings.agentBehaviour.createMode.name": "Name",
   "settings.agentBehaviour.createMode.name.placeholder": "z.B. reviewer",
@@ -1371,10 +1378,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Berechtigungen als JSON kopieren",
   "settings.agentBehaviour.permissions.hint":
     "Regeln werden der Reihe nach ausgewertet — die letzte übereinstimmende Regel gewinnt. Dies ist das aufgelöste Regelwerk vom CLI-Backend.",
-  "settings.agentBehaviour.removeMode.title": "Modus entfernen",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Modus "{{name}}" entfernen? Dadurch wird der Modus durch Aktualisierung Ihrer Konfiguration deaktiviert.',
-  "settings.agentBehaviour.removeMode.button": "Entfernen",
+  "settings.agentBehaviour.removeAgent.title": "Agent entfernen",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Agent "{{name}}" entfernen? Dies deaktiviert den Agenten durch Aktualisierung der Konfiguration.',
+  "settings.agentBehaviour.removeAgent.button": "Entfernen",
   "settings.agentBehaviour.removeMcp.title": "MCP-Server entfernen",
   "settings.agentBehaviour.removeMcp.confirm":
     'MCP-Server "{{name}}" entfernen? Dadurch wird er aus Ihrer Konfiguration entfernt.',

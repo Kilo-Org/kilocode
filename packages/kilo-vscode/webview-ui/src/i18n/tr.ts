@@ -284,7 +284,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "'Komutu Geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifadelendirme sağlayarak komutunuzu iyileştirmeye yardımcı olur. Buraya bir komut yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
 
-  "speechToText.tooltip.start": "Sesli girişi başlat",
+  "speechToText.tooltip.start": "Kilo Gateway ile sesli girişi başlatın",
   "speechToText.tooltip.stop": "Ses yakalamayı durdur",
   "speechToText.tooltip.transcribing": "Metne dönüştürülüyor... İptal etmek için tıklayın.",
   "speechToText.tooltip.error": "Sesli giriş başarısız oldu. Temizlemek için tıklayın.",
@@ -451,6 +451,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Oturum paylaşımı kaldırılamadı",
   "toast.session.unshare.failed.description": "Oturum paylaşımı kaldırılırken bir hata oluştu",
 
+  "toast.session.rename.invalid.title": "Geçersiz oturum başlığı",
   "toast.session.listFailed.title": "{{project}} için oturumlar yüklenemedi",
 
   "toast.update.title": "Güncelleme mevcut",
@@ -1117,6 +1118,14 @@ export const dict = {
   "session.status.retrying": "Yeniden deneniyor (deneme {{ attempt }})… {{ message }}",
   "session.status.working": "Çalışıyor...",
   "session.status.offline": "Ağ bağlantısı kesildi — yeniden bağlanılıyor...",
+  "session.outcome.incomplete": "Tur, {{count}} yapılacak öğe kalarak sona erdi",
+  "session.outcome.limit": "Tamamlanmadan önce yanıt sınırına ulaşıldı",
+  "session.outcome.unknown": "Tur, model bitiş nedeni olmadan sona erdi",
+  "session.outcome.filtered": "Sağlayıcı, bir içerik filtresi nedeniyle bu yanıtı durdurdu.",
+  "session.outcome.unexpected": "Yanıt beklenmedik bir şekilde sona erdi ve eksik olabilir.",
+  "session.outcome.interrupted": "Tur kesintiye uğradı",
+  "session.outcome.error": "Tur başarısız oldu",
+  "session.outcome.finish": "Bitiş nedeni: {{reason}}",
 
   "ui.sessionTurn.cancel": "İptal",
   "ui.sessionTurn.status.thinking": "Düşünüyor...",
@@ -1180,7 +1189,6 @@ export const dict = {
     "Telemetri, VS Code'un yerleşik telemetri ayarı tarafından kontrol edilir. Devre dışı bırakmak için Ayarlar > Telemetri > Telemetri Düzeyi'ne gidin ve \"off\" olarak ayarlayın. Değişikliği uygulamak için VS Code'u yeniden başlatın.",
   "settings.aboutKiloCode.telemetry.openSettings": "Telemetri Ayarlarını Aç",
 
-  "settings.agentBehaviour.subtab.modes": "Modlar",
   "settings.agentBehaviour.subtab.agents": "Ajanlar",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Sunucuları",
   "settings.agentBehaviour.subtab.rules": "Kurallar",
@@ -1248,14 +1256,11 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Kod Tabanı Araması",
   "settings.experimental.codebaseSearch.description":
     "Kod tabanınız genelinde yapay zeka destekli doğal dil aramasını etkinleştir",
-  "settings.experimental.agentManagerTool.title": "Agent Manager Aracı",
-  "settings.experimental.agentManagerTool.description":
-    "Ajanların bir araç çağrısından Agent Manager yerel oturumları ve worktree oturumları başlatmasına izin ver",
   "settings.experimental.speechToText.title": "Sesten metne",
   "settings.experimental.speechToText.description":
     "Kilo Gateway üzerinden Kilo hesabınızı kullanarak komut alanlarında sesli girişi etkinleştirin.",
   "settings.experimental.speechToText.disabledDescription":
-    "Komut alanlarında sesli girişi kullanmak için Kilo provider'ı etkinleştirin ve giriş yapın.",
+    "Speech to Text kullanmak için Kilo sağlayıcısını etkinleştirin ve giriş yapın. Speech to Text şu anda yalnızca Kilo Gateway ile desteklenmektedir.",
   "settings.experimental.speechToTextModel.title": "Sesten metne modeli",
   "settings.experimental.speechToTextModel.description": "Sesli giriş için Kilo Gateway transkripsiyon modelini seçin.",
   "settings.experimental.continueOnDeny.title": "Reddetme Durumunda Devam Et",
@@ -1280,6 +1285,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Yapılandırmak için bir ajan seçin…",
   "settings.agentBehaviour.modelOverride.title": "Model Geçersiz Kılma",
   "settings.agentBehaviour.modelOverride.description": "Bu ajan için varsayılan modeli geçersiz kıl",
+  "settings.agentBehaviour.variantOverride.title": "Varyant Geçersiz Kılma",
+  "settings.agentBehaviour.variantOverride.description": "Bu ajan için model varyantını geçersiz kıl",
   "settings.agentBehaviour.prompt.title": "Özel Komut",
   "settings.agentBehaviour.prompt.description": "Bu ajan için ek sistem komutu",
   "settings.agentBehaviour.temperature.title": "Sıcaklık",
@@ -1299,7 +1306,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Keşfedilen beceri yok. Becerileri kullanılabilir kılmak için aşağıya beceri klasör yolları veya URL'ler ekleyin.",
   "settings.agentBehaviour.availableModes": "Mevcut Özel Modlar",
-  "settings.agentBehaviour.noModesFound": "Mod bulunamadı.",
+  "settings.agentBehaviour.noAgentsFound": "Ajan bulunamadı.",
   "settings.agentBehaviour.importMode": "İçe Aktar",
   "settings.agentBehaviour.importMode.invalidName":
     "Dosyadaki mod adı geçersiz. Ad küçük harfle başlamalı ve yalnızca küçük harfler, rakamlar ve tire içermelidir.",
@@ -1308,10 +1315,10 @@ export const dict = {
     "Geçersiz JSON dosyası. Lütfen geçerli bir ajan tanım dosyası seçin.",
   "settings.agentBehaviour.importMode.tooLarge": "Dosya çok büyük. Ajan tanımları 1 MB'den küçük olmalıdır.",
   "settings.agentBehaviour.exportMode": "Ajan tanımını dışa aktar",
-  "settings.agentBehaviour.removeMode.title": "Modu kaldır",
-  "settings.agentBehaviour.removeMode.confirm":
-    '"{{name}}" modu kaldırılsın mı? Bu, yapılandırmanızı güncelleyerek modu devre dışı bırakacak.',
-  "settings.agentBehaviour.removeMode.button": "Kaldır",
+  "settings.agentBehaviour.removeAgent.title": "Ajanı kaldır",
+  "settings.agentBehaviour.removeAgent.confirm":
+    '"{{name}}" ajanını kaldır? Bu, yapılandırmanızı güncelleyerek ajanı devre dışı bırakır.',
+  "settings.agentBehaviour.removeAgent.button": "Kaldır",
   "settings.agentBehaviour.skillPaths": "Beceri Klasör Yolları",
   "settings.agentBehaviour.skillUrls": "Beceri URL'leri",
   "settings.agentBehaviour.removeSkill.title": "Beceriyi kaldır",

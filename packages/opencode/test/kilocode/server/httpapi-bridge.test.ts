@@ -36,6 +36,10 @@ function sortSchema(input: unknown): unknown {
   )
 }
 
+function isRecord(input: unknown): input is Record<string, unknown> {
+  return !!input && typeof input === "object" && !Array.isArray(input)
+}
+
 type Operation = {
   responses?: unknown
 }
@@ -53,6 +57,14 @@ function providerSchema(input: unknown) {
   const provider = props.provider
   if (!provider || typeof provider !== "object" || !("additionalProperties" in provider)) return undefined
   return provider.additionalProperties
+}
+
+function indexingNullableFields(input: unknown) {
+  if (!isRecord(input) || !isRecord(input.components) || !isRecord(input.components.schemas)) return []
+  const indexing = input.components.schemas.IndexingConfig
+  if (!isRecord(indexing) || !isRecord(indexing.properties)) return []
+  const properties = indexing.properties
+  return ["model", "dimension"].filter((key) => JSON.stringify(properties[key]).includes('"null"'))
 }
 
 function responseSchema(input: {
@@ -136,6 +148,14 @@ describe("Kilo HttpApi bridge", () => {
     const effect = effectOpenApi()
 
     expect(stableSchema(providerSchema(effect))).toBe(stableSchema(providerSchema(hono)))
+  })
+
+  test("keeps nullable indexing model reset sentinels in both APIs", async () => {
+    const hono = await Server.openapiHono()
+    const effect = effectOpenApi()
+
+    expect(indexingNullableFields(effect)).toEqual(["model", "dimension"])
+    expect(indexingNullableFields(hono)).toEqual(["model", "dimension"])
   })
 
   test("matches Kilo FIM SSE response schema", async () => {

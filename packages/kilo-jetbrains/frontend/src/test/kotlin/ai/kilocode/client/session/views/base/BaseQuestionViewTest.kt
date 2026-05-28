@@ -24,6 +24,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
     fun `test header and description text areas are in the component tree by default`() {
         edt {
             val panel = BaseQuestionView()
+            assertTrue("Root layout should be BorderLayout", panel.layout is BorderLayout)
             val areas = findAll<JBTextArea>(panel)
             assertTrue("Should have at least 2 text areas (header + description)", areas.size >= 2)
         }
@@ -89,11 +90,10 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
             val top = JLabel("top")
             panel.setTopPanel(top)
 
-            val col = findCol(panel)!!
-            val comps = col.components.toList()
+            val north = region(panel, BorderLayout.NORTH) as Container
+            val comps = north.components.toList()
             val topIdx = comps.indexOf(top)
-            // header row is the JPanel containing the header text area
-            val headerRow = findAll<JBTextArea>(panel).firstOrNull { it.font.isBold }?.parent as? JPanel
+            val headerRow = headerRow(panel)
             val headerIdx = if (headerRow != null) comps.indexOf(headerRow) else comps.indexOfFirst { it is JPanel }
             assertTrue("top should appear before headerText row", topIdx >= 0 && topIdx < headerIdx)
         }
@@ -131,6 +131,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
             val body = JLabel("body")
             panel.setContent(body)
             assertNotNull("body should be in the tree", find(panel, body))
+            assertSame("body should be in root center", body, region(panel, BorderLayout.CENTER))
         }
     }
 
@@ -156,6 +157,18 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test setContent adds header spacer in north stack`() {
+        edt {
+            val panel = BaseQuestionView()
+            panel.setContent(JLabel("body"))
+
+            val north = region(panel, BorderLayout.NORTH) as Container
+            val filler = north.components.last()
+            assertEquals(UiStyle.Gap.md(), filler.preferredSize.height)
+            assertEquals(0, filler.preferredSize.width)
+        }
+    }
+
     // ------ setActions ------
 
     fun `test setActions renders one button per action`() {
@@ -165,12 +178,10 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
                 BaseQuestionView.Action("a", "Cancel", primary = false) {},
                 BaseQuestionView.Action("b", "OK", primary = true) {},
             ))
-            val btns = panel.actionButtonsForTest()
+            val btns = actionButtons(panel)
             assertEquals(2, btns.size)
-            assertNotNull(btns["a"])
-            assertNotNull(btns["b"])
-            assertEquals("Cancel", btns["a"]!!.text)
-            assertEquals("OK", btns["b"]!!.text)
+            assertNotNull(btns["Cancel"])
+            assertNotNull(btns["OK"])
         }
     }
 
@@ -178,7 +189,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
         edt {
             val panel = BaseQuestionView()
             panel.setActions(listOf(BaseQuestionView.Action("ok", "OK", primary = true) {}))
-            val btn = panel.actionButtonsForTest()["ok"]!!
+            val btn = actionButton(panel, "OK")
             assertEquals(true, btn.getClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY))
         }
     }
@@ -187,7 +198,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
         edt {
             val panel = BaseQuestionView()
             panel.setActions(listOf(BaseQuestionView.Action("cancel", "Cancel", primary = false) {}))
-            val btn = panel.actionButtonsForTest()["cancel"]!!
+            val btn = actionButton(panel, "Cancel")
             val key = btn.getClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY)
             assertTrue("Non-primary should not have default style key", key == null || key == false)
         }
@@ -198,7 +209,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
             var clicked = false
             val panel = BaseQuestionView()
             panel.setActions(listOf(BaseQuestionView.Action("ok", "OK", primary = true) { clicked = true }))
-            panel.actionButtonsForTest()["ok"]!!.doClick()
+            actionButton(panel, "OK").doClick()
             assertTrue("handler should have been invoked", clicked)
         }
     }
@@ -208,9 +219,9 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
             val panel = BaseQuestionView()
             panel.setActions(listOf(BaseQuestionView.Action("ok", "OK", primary = true, enabled = true) {}))
             panel.setActionEnabled("ok", false)
-            assertFalse(panel.actionButtonsForTest()["ok"]!!.isEnabled)
+            assertFalse(actionButton(panel, "OK").isEnabled)
             panel.setActionEnabled("ok", true)
-            assertTrue(panel.actionButtonsForTest()["ok"]!!.isEnabled)
+            assertTrue(actionButton(panel, "OK").isEnabled)
         }
     }
 
@@ -219,7 +230,8 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
             val panel = BaseQuestionView()
             panel.setActions(listOf(BaseQuestionView.Action("ok", "OK", primary = true) {}))
             panel.setActions(emptyList())
-            assertTrue("actionButtonsForTest should be empty", panel.actionButtonsForTest().isEmpty())
+            assertTrue("action buttons should be removed", actionButtons(panel).isEmpty())
+            assertNull("footer should be removed when empty", region(panel, BorderLayout.SOUTH))
         }
     }
 
@@ -230,40 +242,100 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
                 BaseQuestionView.Action("a", "A", primary = false) {},
                 BaseQuestionView.Action("b", "B", primary = true) {},
             ))
-            val btns = panel.actionButtonsForTest()
-            assertEquals(SessionUiStyle.View.surface(), btns["a"]!!.background)
-            assertEquals(SessionUiStyle.View.surface(), btns["b"]!!.background)
+            assertEquals(SessionUiStyle.View.surface(), actionButton(panel, "A").background)
+            assertEquals(SessionUiStyle.View.surface(), actionButton(panel, "B").background)
         }
     }
 
-    // ------ ordering ------
+    // ------ structure ------
 
-    fun `test content appears after description in col`() {
+    fun `test header row uses icon west and text stack center`() {
         edt {
             val panel = BaseQuestionView()
-            val body = JLabel("body")
-            panel.setContent(body)
-            val col = findCol(panel)!!
-            val comps = col.components.toList()
-            val descIdx = comps.indexOfFirst { it is JBTextArea && !(it).font.isBold }
-            val bodyIdx = comps.indexOf(body)
-            assertTrue("body should appear after description", descIdx < bodyIdx)
+            panel.setHeaderIcon(AllIcons.General.Warning)
+            val header = headerRow(panel)!!
+            val layout = header.layout as BorderLayout
+            val west = layout.getLayoutComponent(BorderLayout.WEST)
+            val center = layout.getLayoutComponent(BorderLayout.CENTER) as Container
+            assertTrue("icon should be the direct west component", west is JBLabel)
+            val icon = west as JBLabel
+            assertEquals("icon should be horizontally centered", JBLabel.CENTER, icon.horizontalAlignment)
+            assertEquals("icon should be vertically centered", JBLabel.CENTER, icon.verticalAlignment)
+            assertTrue("center should contain header and description text", findAll<JBTextArea>(center).size >= 2)
         }
     }
 
-    fun `test action footer appears after content`() {
+    fun `test header row has no west icon gap by default`() {
         edt {
             val panel = BaseQuestionView()
-            val body = JLabel("body")
-            panel.setContent(body)
+            val header = headerRow(panel)!!
+            val west = (header.layout as BorderLayout).getLayoutComponent(BorderLayout.WEST)
+            assertNull("header should not reserve icon space when icon is absent", west)
+        }
+    }
+
+    fun `test action footer is in south with buttons east`() {
+        edt {
+            val panel = BaseQuestionView()
             panel.setActions(listOf(BaseQuestionView.Action("ok", "OK", primary = true) {}))
-            val col = findCol(panel)!!
-            val comps = col.components.toList()
-            val bodyIdx = comps.indexOf(body)
-            val btn = panel.actionButtonsForTest()["ok"]!!
-            // find the footer panel that contains the button
-            val footerIdx = comps.indexOfFirst { it is JPanel && find(it, btn) != null }
-            assertTrue("footer should appear after body", bodyIdx < footerIdx)
+            val btn = actionButton(panel, "OK")
+            val footer = region(panel, BorderLayout.SOUTH) as JPanel
+            val row = (footer.layout as BorderLayout).getLayoutComponent(BorderLayout.EAST) as JPanel
+            assertNotNull("button should be in footer east row", find(row, btn))
+        }
+    }
+
+    fun `test action footer has top gap matching panel vertical padding`() {
+        edt {
+            val panel = BaseQuestionView()
+            panel.setActions(listOf(BaseQuestionView.Action("ok", "OK", primary = true) {}))
+
+            val footer = region(panel, BorderLayout.SOUTH) as JPanel
+            val ins = footer.border.getBorderInsets(footer)
+            assertEquals(UiStyle.Gap.lg(), ins.top)
+        }
+    }
+
+    fun `test action left alone attaches footer west`() {
+        edt {
+            val panel = BaseQuestionView()
+            val left = JLabel("left")
+            panel.setActionLeft(left)
+            val footer = region(panel, BorderLayout.SOUTH) as JPanel
+            val west = (footer.layout as BorderLayout).getLayoutComponent(BorderLayout.WEST) as Container
+            assertNotNull("action left should be in footer west", find(west, left))
+        }
+    }
+
+    fun `test action left component is transparent`() {
+        edt {
+            val panel = BaseQuestionView()
+            val left = JPanel()
+            panel.setActionLeft(left)
+            assertFalse("action left should be transparent", left.isOpaque)
+        }
+    }
+
+    fun `test footer adds bottom padding gap after side actions`() {
+        edt {
+            val panel = BaseQuestionView()
+            panel.setActionLeft(JLabel("left"))
+            panel.setActions(listOf(BaseQuestionView.Action("ok", "OK", primary = true) {}))
+
+            val footer = region(panel, BorderLayout.SOUTH) as JPanel
+            val west = (footer.layout as BorderLayout).getLayoutComponent(BorderLayout.WEST) as Container
+            val filler = west.components.toList().firstOrNull { it.preferredSize.width == UiStyle.Gap.pad() }
+            assertNotNull("side actions should include trailing gap", filler)
+            assertEquals(0, filler!!.preferredSize.height)
+        }
+    }
+
+    fun `test setActionLeft null removes left-only footer`() {
+        edt {
+            val panel = BaseQuestionView()
+            panel.setActionLeft(JLabel("left"))
+            panel.setActionLeft(null)
+            assertNull("footer should be removed when action left is cleared", region(panel, BorderLayout.SOUTH))
         }
     }
 
@@ -300,9 +372,12 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
             panel.setHeader("Title", "Hint")
             val style = SessionEditorStyle.current()
             panel.applyStyle(style)
+            val areas = findAll<JBTextArea>(panel)
+            val header = areas.first { it.text == "Title" }
+            val desc = areas.first { it.text == "Hint" }
 
-            assertEquals("headerText should use headerFont", style.headerFont, panel.headerFont())
-            assertEquals("descriptionText should use hintFont", style.hintFont, panel.descriptionFont())
+            assertEquals("headerText should use headerFont", style.headerFont, header.font)
+            assertEquals("descriptionText should use hintFont", style.hintFont, desc.font)
         }
     }
 
@@ -312,9 +387,12 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
             panel.setHeader("Title", "Hint")
             val style = SessionEditorStyle.create(family = "Courier New", size = 20)
             panel.applyStyle(style)
+            val areas = findAll<JBTextArea>(panel)
+            val header = areas.first { it.text == "Title" }
+            val desc = areas.first { it.text == "Hint" }
 
-            assertFalse("headerText should not use editor font family", panel.headerFont().name == "Courier New")
-            assertFalse("descriptionText should not use editor font family", panel.descriptionFont().name == "Courier New")
+            assertFalse("headerText should not use editor font family", header.font.name == "Courier New")
+            assertFalse("descriptionText should not use editor font family", desc.font.name == "Courier New")
         }
     }
 
@@ -338,11 +416,11 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
         return result as T
     }
 
-    private fun findCol(panel: BaseQuestionView): JPanel? {
-        for (child in panel.components) {
-            if (child is JPanel) return child
-        }
-        return null
+    private fun region(panel: BaseQuestionView, region: String) = (panel.layout as BorderLayout).getLayoutComponent(region)
+
+    private fun headerRow(panel: BaseQuestionView): JPanel? {
+        val north = region(panel, BorderLayout.NORTH) as? Container ?: return null
+        return north.components.filterIsInstance<JPanel>().firstOrNull { it.layout is BorderLayout }
     }
 
     private fun find(root: Container, target: JComponent): JComponent? {
@@ -367,6 +445,10 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
         }
         return null
     }
+
+    private fun actionButton(panel: BaseQuestionView, text: String): JButton = actionButtons(panel)[text]!!
+
+    private fun actionButtons(panel: BaseQuestionView): Map<String, JButton> = findAll<JButton>(panel).associateBy { it.text }
 
     private inline fun <reified T> findAll(root: Container): List<T> = findAllCls(root, T::class.java)
 

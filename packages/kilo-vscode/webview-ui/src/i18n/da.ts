@@ -285,7 +285,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedr prompt' hjælper med at forbedre din forespørgsel ved at give ekstra kontekst, præcisering eller omformulering. Prøv at skrive en forespørgsel her og klik på knappen igen for at se hvordan det virker.",
 
-  "speechToText.tooltip.start": "Start stemmeinput",
+  "speechToText.tooltip.start": "Start stemmeinput med Kilo Gateway",
   "speechToText.tooltip.stop": "Stop lydoptagelse",
   "speechToText.tooltip.transcribing": "Transskriberer... Klik for at annullere.",
   "speechToText.tooltip.error": "Stemmeinput mislykkedes. Klik for at rydde.",
@@ -451,6 +451,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Kunne ikke stoppe deling af session",
   "toast.session.unshare.failed.description": "Der opstod en fejl under stop af sessionsdeling",
 
+  "toast.session.rename.invalid.title": "Ugyldig sessionstitel",
   "toast.session.listFailed.title": "Kunne ikke indlæse sessioner for {{project}}",
 
   "toast.update.title": "Opdatering tilgængelig",
@@ -1124,6 +1125,14 @@ export const dict = {
   "session.status.retrying": "Prøver igen (forsøg {{ attempt }})… {{ message }}",
   "session.status.working": "Arbejder…",
   "session.status.offline": "Netværk afbrudt — genopretter forbindelse...",
+  "session.outcome.incomplete": "Tur afsluttet, {{count}} to-dos tilbage",
+  "session.outcome.limit": "Svarbegrænsning nået før fuldførelse",
+  "session.outcome.unknown": "Tur afsluttet uden en model-afslutningsårsag",
+  "session.outcome.filtered": "Udbyderen stoppede dette svar på grund af et indholdsfilter.",
+  "session.outcome.unexpected": "Svaret sluttede uventet og kan være ufuldstændigt.",
+  "session.outcome.interrupted": "Tur afbrudt",
+  "session.outcome.error": "Tur mislykkedes",
+  "session.outcome.finish": "Afslutningsårsag: {{reason}}",
 
   "ui.sessionTurn.cancel": "Annuller",
   "ui.sessionTurn.status.thinking": "Tænker...",
@@ -1187,7 +1196,6 @@ export const dict = {
     'Telemetri styres af VS Codes indbyggede telemetriindstilling. For at deaktivere den, gå til Indstillinger > Telemetry > Telemetry Level og sæt den til "off". Genstart VS Code for at anvende ændringen.',
   "settings.aboutKiloCode.telemetry.openSettings": "Åbn telemetriindstillinger",
 
-  "settings.agentBehaviour.subtab.modes": "Tilstande",
   "settings.agentBehaviour.subtab.agents": "Agenter",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-servere",
   "settings.agentBehaviour.subtab.rules": "Regler",
@@ -1252,14 +1260,11 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Kodesøgning",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig sprogsøgning på tværs af kodebasen",
-  "settings.experimental.agentManagerTool.title": "Agent Manager-værktøj",
-  "settings.experimental.agentManagerTool.description":
-    "Tillad agenter at starte lokale Agent Manager-sessioner og worktree-sessioner fra et værktøjskald",
   "settings.experimental.speechToText.title": "Tale til tekst",
   "settings.experimental.speechToText.description":
     "Aktivér stemmeinput i prompt-felter ved hjælp af din Kilo-konto gennem Kilo Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Aktivér og log ind på Kilo provider for at bruge stemmeinput i prompt-felter.",
+    "Aktivér og log ind på Kilo-udbyderen for at bruge Speech to Text. Speech to Text understøttes i øjeblikket kun med Kilo Gateway.",
   "settings.experimental.speechToTextModel.title": "Model til tale til tekst",
   "settings.experimental.speechToTextModel.description": "Vælg Kilo Gateway-transskriptionsmodellen til stemmeinput.",
   "settings.experimental.continueOnDeny.title": "Fortsæt ved afvisning",
@@ -1283,6 +1288,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Vælg en agent at konfigurere…",
   "settings.agentBehaviour.modelOverride.title": "Modeloverstyring",
   "settings.agentBehaviour.modelOverride.description": "Tilsidesæt standardmodellen for denne agent",
+  "settings.agentBehaviour.variantOverride.title": "Variantoverstyring",
+  "settings.agentBehaviour.variantOverride.description": "Tilsidesæt modelvarianten for denne agent",
   "settings.agentBehaviour.prompt.title": "Brugerdefineret prompt",
   "settings.agentBehaviour.prompt.description": "Yderligere systemprompt for denne agent",
   "settings.agentBehaviour.temperature.title": "Temperatur",
@@ -1302,7 +1309,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Ingen skills fundet. Tilføj skill-mappestier eller URL'er nedenfor for at gøre skills tilgængelige.",
   "settings.agentBehaviour.availableModes": "Tilgængelige brugerdefinerede tilstande",
-  "settings.agentBehaviour.noModesFound": "Ingen tilstande fundet.",
+  "settings.agentBehaviour.noAgentsFound": "Ingen agenter fundet.",
   "settings.agentBehaviour.createMode": "Opret ny tilstand",
   "settings.agentBehaviour.createMode.name": "Navn",
   "settings.agentBehaviour.createMode.name.placeholder": "f.eks. reviewer",
@@ -1345,10 +1352,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Kopiér tilladelser som JSON",
   "settings.agentBehaviour.permissions.hint":
     "Reglerne evalueres i rækkefølge — den sidst matchende regel vinder. Dette er det endelige regelsæt fra CLI-backenden.",
-  "settings.agentBehaviour.removeMode.title": "Fjern tilstand",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Vil du fjerne tilstanden "{{name}}"? Dette vil deaktivere tilstanden ved at opdatere din konfiguration.',
-  "settings.agentBehaviour.removeMode.button": "Fjern",
+  "settings.agentBehaviour.removeAgent.title": "Fjern agent",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Fjern agent "{{name}}"? Dette deaktiverer agenten ved at opdatere din konfiguration.',
+  "settings.agentBehaviour.removeAgent.button": "Fjern",
   "settings.agentBehaviour.removeMcp.title": "Fjern MCP-server",
   "settings.agentBehaviour.removeMcp.confirm":
     'Vil du fjerne MCP-serveren "{{name}}"? Dette vil fjerne den fra din konfiguration.',

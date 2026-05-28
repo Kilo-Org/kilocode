@@ -67,6 +67,8 @@ data class PartDto(
     val output: String? = null,
     val error: String? = null,
     val time: PartTimeDto? = null,
+    val todos: List<TodoDto> = emptyList(),
+    val todoView: TodoViewDto? = null,
     val reason: String? = null,
     val cost: Double? = null,
     val tokens: TokensDto? = null,
@@ -145,6 +147,13 @@ sealed class ChatEventDto {
     data class TurnClose(
         val sessionID: String,
         val reason: String,
+    ) : ChatEventDto()
+
+    @Serializable
+    @SerialName("session.created")
+    data class SessionCreated(
+        val sessionID: String,
+        val info: SessionDto,
     ) : ChatEventDto()
 
     @Serializable
@@ -291,6 +300,7 @@ data class QuestionRequestDto(
     val sessionID: String,
     val questions: List<QuestionInfoDto>,
     val tool: ToolRefDto? = null,
+    val blocking: Boolean = false,
 )
 
 @Serializable
@@ -300,12 +310,17 @@ data class QuestionInfoDto(
     val options: List<QuestionOptionDto> = emptyList(),
     val multiple: Boolean = false,
     val custom: Boolean = true,
+    val questionKey: String? = null,
+    val headerKey: String? = null,
 )
 
 @Serializable
 data class QuestionOptionDto(
     val label: String,
     val description: String,
+    val labelKey: String? = null,
+    val descriptionKey: String? = null,
+    val mode: String? = null,
 )
 
 @Serializable
@@ -320,6 +335,16 @@ data class TodoDto(
     val content: String,
     val status: String,
     val priority: String,
+    val changed: Boolean = false,
+)
+
+@Serializable
+data class TodoViewDto(
+    val mode: String = "full",
+    val todos: List<TodoDto> = emptyList(),
+    val hiddenBefore: Int = 0,
+    val hiddenAfter: Int = 0,
+    val changed: Int = 0,
 )
 
 // --- Diff DTO ---

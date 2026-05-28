@@ -24,7 +24,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Vještine",
   "marketplace.tab.mcpServers": "MCP Serveri",
-  "marketplace.tab.modes": "Modovi",
   "marketplace.category.all": "Sve",
   "marketplace.placeholder": "Biće implementirano",
   "marketplace.card.installed": "Instalirano",
@@ -50,6 +49,7 @@ export const dict = {
   "marketplace.remove.cancel": "Otkaži",
   "marketplace.remove.confirm.button": "Ukloni",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "Agenti",
   "marketplace.search": "Pretraži...",
   "marketplace.filter.all": "Sve stavke",
   "marketplace.filter.notInstalled": "Nije instalirano",
@@ -65,7 +65,7 @@ export const dict = {
   "marketplace.scope.global": "globalno",
   "marketplace.remove.type.mcp": "MCP server",
   "marketplace.remove.type.skill": "vještina",
-  "marketplace.remove.type.mode": "režim",
+  "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Uklanjanje {{name}} nije uspjelo",
   "marketplace.install": "Instaliraj",
   "marketplace.filter.installed": "Instalirano",
@@ -74,8 +74,10 @@ export const dict = {
   "marketplace.warning.busyMany": "Nekoliko sesija je pokrenuto i bit će prekinuto",
   "marketplace.warning.installAnyway": "Instaliraj svejedno",
   "marketplace.warning.cancel": "Otkaži",
-  "marketplace.contribute.prompt": "Nedostaje vještina, način rada ili MCP server?",
+  "marketplace.contribute.prompt": "Nedostaje vještina, agent ili MCP server?",
   "marketplace.contribute.cta": "Doprinesi na GitHub-u",
+  "marketplace.migration.notice":
+    "Modovi su zamijenjeni agentima. Ako ste prethodno instalirali marketplace modove, uklonite ih i ponovo instalirajte kao agente da biste prešli na novi format.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "Implementiraj",

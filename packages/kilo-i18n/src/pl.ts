@@ -19,7 +19,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Skills",
   "marketplace.tab.mcpServers": "Serwery MCP",
-  "marketplace.tab.modes": "Tryby",
   "marketplace.category.all": "Wszystkie",
   "marketplace.placeholder": "Do zaimplementowania",
   "marketplace.card.installed": "Zainstalowano",
@@ -45,6 +44,7 @@ export const dict = {
   "marketplace.remove.cancel": "Anuluj",
   "marketplace.remove.confirm.button": "Usuń",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "Agenci",
   "marketplace.search": "Szukaj...",
   "marketplace.filter.all": "Wszystkie elementy",
   "marketplace.filter.notInstalled": "Nie zainstalowano",
@@ -60,7 +60,7 @@ export const dict = {
   "marketplace.scope.global": "globalny",
   "marketplace.remove.type.mcp": "serwer MCP",
   "marketplace.remove.type.skill": "umiejętność",
-  "marketplace.remove.type.mode": "tryb",
+  "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Nie udało się usunąć {{name}}",
   "marketplace.install": "Zainstaluj",
   "marketplace.filter.installed": "Zainstalowano",
@@ -69,8 +69,10 @@ export const dict = {
   "marketplace.warning.busyMany": "Kilka sesji jest uruchomionych i zostanie przerwanych",
   "marketplace.warning.installAnyway": "Zainstaluj mimo to",
   "marketplace.warning.cancel": "Anuluj",
-  "marketplace.contribute.prompt": "Brakuje skilla, trybu lub serwera MCP?",
+  "marketplace.contribute.prompt": "Brakuje umiejętności, agenta lub serwera MCP?",
   "marketplace.contribute.cta": "Wnieś wkład na GitHubie",
+  "marketplace.migration.notice":
+    "Tryby zostały zastąpione przez agentów. Jeśli wcześniej instalowałeś tryby z marketplace, usuń je i zainstaluj ponownie jako agenty, aby przejść na nowy format.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "Wdróż",

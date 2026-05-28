@@ -28,6 +28,31 @@ Before installing the Kilo Code plugin, ensure you have:
 4. Search for "Kilo Code"
 5. Click **Install** and restart your IDE
 
+### Try the v7 Early Access Program plugin
+
+The v7 EAP plugin is available for users who want to try the newest JetBrains experience before it reaches the default Marketplace channel. It uses a JetBrains-native UI and is designed to work well with JetBrains remote development.
+
+{% callout type="info" %}
+EAP builds may update more frequently than the default Marketplace release. Share feedback in the JetBrains channel on the [Kilo Discord](https://kilo.ai/discord).
+{% /callout %}
+
+To install the EAP build and receive updates:
+
+1. Open IntelliJ IDEA or another JetBrains IDE
+2. Go to **Settings/Preferences → Plugins**
+3. Click the gear icon and choose **Manage Plugin Repositories**
+4. Add this repository URL:
+
+```text
+https://plugins.jetbrains.com/plugins/list?channel=eap&pluginId=28350
+```
+
+5. Return to the **Marketplace** tab
+6. Search for **Kilo Code**
+7. Click **Install** or **Update** and restart your IDE if prompted
+
+After the custom repository is added, JetBrains will offer EAP updates through the normal plugin update flow.
+
 ### Supported IDEs
 
 - IntelliJ IDEA

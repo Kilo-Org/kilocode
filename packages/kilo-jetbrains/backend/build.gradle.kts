@@ -84,10 +84,12 @@ val fixGeneratedApi by tasks.registering(FixGeneratedApiTask::class) {
 
 tasks.named("compileKotlin") {
     dependsOn(fixGeneratedApi)
+    inputs.dir(generatedApi)
 }
 
 tasks.named("compileTestKotlin") {
     dependsOn(fixGeneratedApi)
+    inputs.dir(generatedApi)
 }
 
 val cliDir = layout.buildDirectory.dir("generated/cli/cli")
