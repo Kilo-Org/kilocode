@@ -82,8 +82,9 @@ describe("SessionExport worker respawn", () => {
       },
     })
 
-    SessionExport.beforeRequest(request("s1"))
-    SessionExport.beforeRequest(request("s2"))
+    for (const id of ["s1", "s2", "s3", "s4"]) {
+      SessionExport.beforeRequest(request(id))
+    }
 
     expect(getKillSwitchReason()).toBe("worker_respawn_failed")
     expect(workers.filter((worker) => worker.terminated).length).toBeGreaterThanOrEqual(4)

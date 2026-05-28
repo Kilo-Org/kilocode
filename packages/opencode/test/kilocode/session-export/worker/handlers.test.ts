@@ -80,7 +80,7 @@ describe("handlers", () => {
         toolName: "bash",
         input: { command: "echo ok" },
         output: { output: "ok", metadata: { exit: 0 } },
-      } as unknown as LlmRequestCompleted["output"]["toolCalls"][number],
+      } as unknown as NonNullable<LlmRequestCompleted["output"]["toolCalls"]>[number],
     ]
     await handleEvent(env, { storage, chunker, scrubber: new Scrubber(), inlineThresholdBytes: 64 * 1024 })
     const rows = storage.pendingEvents({ now: 1000, limitBytes: 1_000_000 })
