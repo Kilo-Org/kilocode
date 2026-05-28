@@ -108,6 +108,14 @@ export class Storage {
       .run()
   }
 
+  incrementRefCount(id: string): void {
+    this.db
+      .update(ChunkTable)
+      .set({ ref_count: sql`${ChunkTable.ref_count} + 1` })
+      .where(eq(ChunkTable.id, id))
+      .run()
+  }
+
   getChunk(id: string): { id: string; bytes: Uint8Array; refCount: number; size: number } | undefined {
     const row = this.db
       .select({ id: ChunkTable.id, bytes: ChunkTable.bytes, size: ChunkTable.size, ref_count: ChunkTable.ref_count })

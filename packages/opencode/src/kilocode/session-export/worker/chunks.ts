@@ -19,7 +19,7 @@ export class Chunker {
 
       const row = this.storage.getChunk(id)
       if (row) {
-        this.storage.upsertChunk({ id, bytes: row.bytes, size: slice.byteLength, encoding: "zstd" })
+        this.storage.incrementRefCount(id)
         continue
       }
       const zipped = await compressZstd(slice)

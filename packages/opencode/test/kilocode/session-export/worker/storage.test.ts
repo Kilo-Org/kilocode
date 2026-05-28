@@ -46,6 +46,14 @@ describe("Storage", () => {
     expect(chunk?.refCount).toBe(2)
   })
 
+  test("increments chunk ref count directly", () => {
+    storage.upsertChunk({ id: "h1", bytes: new Uint8Array([1, 2, 3]), size: 3, encoding: "zstd" })
+    storage.incrementRefCount("h1")
+
+    const chunk = storage.getChunk("h1")
+    expect(chunk?.refCount).toBe(2)
+  })
+
   test("pendingEvents respects next_attempt_at backoff", () => {
     storage.insertEvent({
       id: "02",
