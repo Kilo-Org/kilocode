@@ -259,6 +259,11 @@ export const dict = {
 
   "prompt.popover.emptyResults": "Нет совпадений",
   "prompt.popover.emptyCommands": "Нет совпадающих команд",
+  "prompt.input.label": "Промпт чата",
+  "prompt.suggestions.files": "Предложения упоминаний файлов",
+  "prompt.suggestions.commands": "Предложения команд",
+  "prompt.suggestions.mentionSelected": "Выбранное упоминание {{value}}",
+  "prompt.suggestions.commandSelected": "Выбранная команда {{value}}",
   "prompt.dropzone.label": "Перетащите изображения или PDF сюда",
   "prompt.slash.badge.custom": "своё",
   "prompt.slash.badge.skill": "навык",

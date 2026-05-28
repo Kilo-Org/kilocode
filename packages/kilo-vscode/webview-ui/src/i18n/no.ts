@@ -263,6 +263,11 @@ export const dict = {
 
   "prompt.popover.emptyResults": "Ingen matchende resultater",
   "prompt.popover.emptyCommands": "Ingen matchende kommandoer",
+  "prompt.input.label": "Chat-prompt",
+  "prompt.suggestions.files": "Forslag til filomtale",
+  "prompt.suggestions.commands": "Kommandoforslag",
+  "prompt.suggestions.mentionSelected": "Valgt omtale {{value}}",
+  "prompt.suggestions.commandSelected": "Valgt kommando {{value}}",
   "prompt.dropzone.label": "Slipp bilder eller PDF-er her",
   "prompt.slash.badge.custom": "egendefinert",
   "prompt.slash.badge.skill": "skill",

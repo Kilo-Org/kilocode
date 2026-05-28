@@ -260,6 +260,11 @@ export const dict = {
 
   "prompt.popover.emptyResults": "ไม่พบผลลัพธ์ที่ตรงกัน",
   "prompt.popover.emptyCommands": "ไม่พบคำสั่งที่ตรงกัน",
+  "prompt.input.label": "พรอมต์แชต",
+  "prompt.suggestions.files": "คำแนะนำการกล่าวถึงไฟล์",
+  "prompt.suggestions.commands": "คำแนะนำคำสั่ง",
+  "prompt.suggestions.mentionSelected": "การกล่าวถึงที่เลือก {{value}}",
+  "prompt.suggestions.commandSelected": "คำสั่งที่เลือก {{value}}",
   "prompt.dropzone.label": "วางรูปภาพหรือ PDF ที่นี่",
   "prompt.slash.badge.custom": "กำหนดเอง",
   "prompt.slash.badge.skill": "skill",

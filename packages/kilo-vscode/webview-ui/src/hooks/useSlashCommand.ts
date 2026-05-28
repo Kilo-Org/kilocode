@@ -17,6 +17,7 @@ export interface SlashCommand {
   results: Accessor<SlashCommandEntry[]>
   index: Accessor<number>
   show: Accessor<boolean>
+  pending: Accessor<boolean>
   commands: Accessor<SlashCommandEntry[]>
   onInput: (val: string, cursor: number) => void
   onKeyDown: (
@@ -40,6 +41,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string> | A
   const [query, setQuery] = createSignal<string | null>(null)
   const [index, setIndex] = createSignal(0)
   const [requested, setRequested] = createSignal(false)
+  const [loaded, setLoaded] = createSignal(false)
 
   const all: SlashCommandEntry[] = [
     {
@@ -145,6 +147,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string> | A
   }
 
   const show = () => query() !== null
+  const pending = () => requested() && !loaded()
 
   const request = () => {
     if (requested()) return
@@ -169,6 +172,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string> | A
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type !== "commandsLoaded") return
     setServer(message.commands)
+    setLoaded(true)
   })
 
   onCleanup(() => {
@@ -228,7 +232,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string> | A
 
     if (e.key === "ArrowDown") {
       e.preventDefault()
-      setIndex((i) => Math.min(i + 1, filtered.length - 1))
+      setIndex((i) => Math.min(i + 1, Math.max(filtered.length - 1, 0)))
       return true
     }
     if (e.key === "ArrowUp") {
@@ -257,6 +261,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string> | A
     results,
     index,
     show,
+    pending,
     commands,
     onInput,
     onKeyDown,

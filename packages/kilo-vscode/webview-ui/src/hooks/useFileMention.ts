@@ -25,6 +25,7 @@ export interface FileMention {
   mentionResults: Accessor<MentionResult[]>
   mentionIndex: Accessor<number>
   showMention: Accessor<boolean>
+  pending: Accessor<boolean>
   onInput: (val: string, cursor: number) => void
   onKeyDown: (
     e: KeyboardEvent,
@@ -76,6 +77,7 @@ export function useFileMention(
   const [mentionQuery, setMentionQuery] = createSignal<string | null>(null)
   const [mentionResults, setMentionResults] = createSignal<MentionResult[]>([])
   const [mentionIndex, setMentionIndex] = createSignal(0)
+  const [pending, setPending] = createSignal(false)
   let workspaceDir = ""
   // Accumulates every path ever mentioned so syncMentionedPaths can
   // rediscover them after a native undo restores the text.
@@ -97,6 +99,7 @@ export function useFileMention(
       workspaceDir = message.dir
       setMentionResults(buildMentionResults(mentionQuery() ?? "", items, git?.() ?? true))
       setMentionIndex(0)
+      setPending(false)
     }
   })
 
@@ -107,13 +110,14 @@ export function useFileMention(
 
   const requestFileSearch = (query: string) => {
     if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    fileSearchCounter++
+    const requestId = `file-search-${fileSearchCounter}`
     fileSearchTimer = setTimeout(() => {
-      fileSearchCounter++
       const id = sessionID?.()
       vscode.postMessage({
         type: "requestFileSearch",
         query,
-        requestId: `file-search-${fileSearchCounter}`,
+        requestId,
         ...(id ? { sessionID: id } : {}),
       })
     }, FILE_SEARCH_DEBOUNCE_MS)
@@ -122,6 +126,7 @@ export function useFileMention(
   const closeMention = () => {
     setMentionQuery(null)
     setMentionResults([])
+    setPending(false)
   }
 
   const syncMentionedPaths = (text: string) => {
@@ -178,6 +183,7 @@ export function useFileMention(
     if (match) {
       const query = match[1] ?? ""
       setMentionQuery(query)
+      setPending(true)
       setMentionResults((prev) => {
         const next = filterMentionResults(query, prev)
         if (next.length) return next
@@ -330,6 +336,7 @@ export function useFileMention(
     mentionResults,
     mentionIndex,
     showMention,
+    pending,
     onInput,
     onKeyDown,
     selectMention,

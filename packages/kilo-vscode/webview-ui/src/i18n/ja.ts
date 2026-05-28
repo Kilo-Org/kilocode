@@ -259,6 +259,11 @@ export const dict = {
 
   "prompt.popover.emptyResults": "一致する結果がありません",
   "prompt.popover.emptyCommands": "一致するコマンドがありません",
+  "prompt.input.label": "チャットプロンプト",
+  "prompt.suggestions.files": "ファイルメンションの提案",
+  "prompt.suggestions.commands": "コマンドの提案",
+  "prompt.suggestions.mentionSelected": "選択されたメンション {{value}}",
+  "prompt.suggestions.commandSelected": "選択されたコマンド {{value}}",
   "prompt.dropzone.label": "画像またはPDFをここにドロップ",
   "prompt.slash.badge.custom": "カスタム",
   "prompt.slash.badge.skill": "スキル",

@@ -261,6 +261,11 @@ export const dict = {
 
   "prompt.popover.emptyResults": "Geen overeenkomende resultaten",
   "prompt.popover.emptyCommands": "Geen overeenkomende commando's",
+  "prompt.input.label": "Chatprompt",
+  "prompt.suggestions.files": "Suggesties voor bestandsvermeldingen",
+  "prompt.suggestions.commands": "Commandosuggesties",
+  "prompt.suggestions.mentionSelected": "Geselecteerde vermelding {{value}}",
+  "prompt.suggestions.commandSelected": "Geselecteerd commando {{value}}",
   "prompt.dropzone.label": "Sleep hier afbeeldingen of PDF's",
   "prompt.slash.badge.custom": "aangepast",
   "prompt.slash.badge.skill": "skill",

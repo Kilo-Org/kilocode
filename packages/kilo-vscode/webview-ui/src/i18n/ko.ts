@@ -262,6 +262,11 @@ export const dict = {
 
   "prompt.popover.emptyResults": "일치하는 결과 없음",
   "prompt.popover.emptyCommands": "일치하는 명령어 없음",
+  "prompt.input.label": "채팅 프롬프트",
+  "prompt.suggestions.files": "파일 멘션 제안",
+  "prompt.suggestions.commands": "명령 제안",
+  "prompt.suggestions.mentionSelected": "선택된 멘션 {{value}}",
+  "prompt.suggestions.commandSelected": "선택된 명령 {{value}}",
   "prompt.dropzone.label": "이미지나 PDF를 여기에 드롭하세요",
   "prompt.slash.badge.custom": "사용자 지정",
   "prompt.slash.badge.skill": "스킬",

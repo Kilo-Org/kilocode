@@ -260,6 +260,11 @@ export const dict = {
 
   "prompt.popover.emptyResults": "Brak pasujących wyników",
   "prompt.popover.emptyCommands": "Brak pasujących poleceń",
+  "prompt.input.label": "Prompt czatu",
+  "prompt.suggestions.files": "Sugestie wzmianek o pliku",
+  "prompt.suggestions.commands": "Sugestie poleceń",
+  "prompt.suggestions.mentionSelected": "Wybrana wzmianka {{value}}",
+  "prompt.suggestions.commandSelected": "Wybrane polecenie {{value}}",
   "prompt.dropzone.label": "Upuść obrazy lub pliki PDF tutaj",
   "prompt.slash.badge.custom": "własne",
   "prompt.slash.badge.skill": "skill",

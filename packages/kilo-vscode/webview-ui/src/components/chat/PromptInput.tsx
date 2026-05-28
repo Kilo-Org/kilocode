@@ -3,7 +3,18 @@
  * Text input with send/abort buttons, ghost-text autocomplete, and @ file mention support
  */
 
-import { createSignal, createEffect, on, For, Index, onCleanup, Show, untrack, type Component } from "solid-js"
+import {
+  createSignal,
+  createEffect,
+  createUniqueId,
+  on,
+  For,
+  Index,
+  onCleanup,
+  Show,
+  untrack,
+  type Component,
+} from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -144,6 +155,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
   const [autoApprove, setAutoApprove] = createSignal(false)
+  const [notice, setNotice] = createSignal("")
+  let noticeCounter = 0
   let enhanceCounter = 0
   let preEnhanceText: string | null = null
 
@@ -217,6 +230,57 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
   let slashDropdownRef: HTMLDivElement | undefined
+  const uid = createUniqueId()
+  const mentionsID = `${uid}-mention-list`
+  const commandsID = `${uid}-command-list`
+  const popup = () => (mention.showMention() ? "mention" : slash.show() ? "command" : undefined)
+  const list = () => (popup() === "mention" ? mentionsID : popup() === "command" ? commandsID : undefined)
+  const active = () => {
+    if (popup() === "mention" && mention.mentionResults().length > 0)
+      return `${mentionsID}-option-${mention.mentionIndex()}`
+    if (popup() === "command" && slash.results().length > 0) return `${commandsID}-option-${slash.index()}`
+    return undefined
+  }
+  const clearNotice = () => {
+    noticeCounter++
+    setNotice("")
+  }
+  const announce = (value: string) => {
+    clearNotice()
+    const id = noticeCounter
+    queueMicrotask(() => {
+      if (id === noticeCounter) setNotice(value)
+    })
+  }
+  const confirmMention = (value: string) =>
+    announce(language.t("prompt.suggestions.mentionSelected", { value: `@${value}` }))
+  const confirmCommand = (name: string) =>
+    announce(language.t("prompt.suggestions.commandSelected", { value: `/${name}` }))
+  createEffect(() => {
+    const kind = popup()
+    if (!kind) return
+    if (kind === "mention") {
+      if (mention.mentionResults().length > 0) {
+        clearNotice()
+        return
+      }
+      if (mention.pending()) {
+        announce(language.t("common.loading"))
+        return
+      }
+      announce(language.t("prompt.popover.emptyResults"))
+      return
+    }
+    if (slash.results().length > 0) {
+      clearNotice()
+      return
+    }
+    if (slash.pending()) {
+      announce(language.t("common.loading"))
+      return
+    }
+    announce(language.t("prompt.popover.emptyCommands"))
+  })
   // Save/restore input text when switching sessions.
   // Uses `on()` to track only draftKey — avoids re-running on every keystroke.
   createEffect(
@@ -576,6 +640,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     slash.onInput(val, target.selectionStart ?? val.length)
     mention.onInput(val, target.selectionStart ?? val.length)
     ghost.setMentionOpen(slash.show() || mention.showMention())
+    if (!slash.show() && !mention.showMention()) clearNotice()
     ghost.scheduleRequest(val, textareaRef)
   }
 
@@ -605,13 +670,19 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     // Skip cursor over mentions on arrow keys
     if (mention.handleArrowKey(e, textareaRef)) return
 
+    const command = e.key === "Enter" || e.key === "Tab" ? slash.results()[slash.index()] : undefined
     if (slash.onKeyDown(e, textareaRef, setText, adjustHeight)) {
+      if (command) confirmCommand(command.name)
+      if (e.key === "Escape") clearNotice()
       ghost.setMentionOpen(slash.show())
       queueMicrotask(scrollToActiveSlashItem)
       return
     }
 
+    const result = e.key === "Enter" || e.key === "Tab" ? mention.mentionResults()[mention.mentionIndex()] : undefined
     if (mention.onKeyDown(e, textareaRef, setText, adjustHeight)) {
+      if (result) confirmMention(result.value)
+      if (e.key === "Escape") clearNotice()
       ghost.setMentionOpen(mention.showMention())
       queueMicrotask(scrollToActiveItem)
       return
@@ -894,19 +965,34 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         </div>
       </Show>
       <Show when={mention.showMention()}>
-        <div class="file-mention-dropdown" ref={dropdownRef}>
+        <div
+          id={mentionsID}
+          class="file-mention-dropdown"
+          role="listbox"
+          aria-label={language.t("prompt.suggestions.files")}
+          ref={dropdownRef}
+        >
           <Show
             when={mention.mentionResults().length > 0}
-            fallback={<div class="file-mention-empty">No files or folders found</div>}
+            fallback={
+              <div class="file-mention-empty">
+                {mention.pending() ? language.t("common.loading") : language.t("prompt.popover.emptyResults")}
+              </div>
+            }
           >
             <For each={mention.mentionResults()}>
               {(item, index) => (
                 <div
+                  id={`${mentionsID}-option-${index()}`}
                   class="file-mention-item"
                   classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
+                  role="option"
+                  aria-selected={index() === mention.mentionIndex()}
                   onMouseDown={(e) => {
                     e.preventDefault()
-                    if (textareaRef) mention.selectMention(item, textareaRef, setText, adjustHeight)
+                    if (!textareaRef) return
+                    mention.selectMention(item, textareaRef, setText, adjustHeight)
+                    confirmMention(item.value)
                   }}
                   onMouseEnter={() => mention.setMentionIndex(index())}
                 >
@@ -941,8 +1027,21 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         </div>
       </Show>
       <Show when={slash.show()}>
-        <div class="slash-command-dropdown" ref={slashDropdownRef}>
-          <Show when={slash.results().length > 0} fallback={<div class="slash-command-empty">No commands found</div>}>
+        <div
+          id={commandsID}
+          class="slash-command-dropdown"
+          role="listbox"
+          aria-label={language.t("prompt.suggestions.commands")}
+          ref={slashDropdownRef}
+        >
+          <Show
+            when={slash.results().length > 0}
+            fallback={
+              <div class="slash-command-empty">
+                {slash.pending() ? language.t("common.loading") : language.t("prompt.popover.emptyCommands")}
+              </div>
+            }
+          >
             {(() => {
               const all = slash.results()
               const actions = all.filter((c) => c.action)
@@ -951,15 +1050,22 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               return (
                 <>
                   <Show when={actions.length > 0}>
-                    <div class="slash-command-group-label">Actions</div>
+                    <div class="slash-command-group-label" aria-hidden="true">
+                      Actions
+                    </div>
                     <For each={actions}>
                       {(cmd, idx) => (
                         <div
+                          id={`${commandsID}-option-${idx()}`}
                           class="slash-command-item"
                           classList={{ "slash-command-item--active": idx() === slash.index() }}
+                          role="option"
+                          aria-selected={idx() === slash.index()}
                           onMouseDown={(e) => {
                             e.preventDefault()
-                            if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
+                            if (!textareaRef) return
+                            slash.select(cmd, textareaRef, setText, adjustHeight)
+                            confirmCommand(cmd.name)
                           }}
                           onMouseEnter={() => slash.setIndex(idx())}
                         >
@@ -973,17 +1079,24 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   </Show>
                   <Show when={server.length > 0}>
                     <Show when={actions.length > 0}>
-                      <div class="slash-command-separator" />
+                      <div class="slash-command-separator" aria-hidden="true" />
                     </Show>
-                    <div class="slash-command-group-label">Commands</div>
+                    <div class="slash-command-group-label" aria-hidden="true">
+                      Commands
+                    </div>
                     <For each={server}>
                       {(cmd, idx) => (
                         <div
+                          id={`${commandsID}-option-${idx() + offset}`}
                           class="slash-command-item"
                           classList={{ "slash-command-item--active": idx() + offset === slash.index() }}
+                          role="option"
+                          aria-selected={idx() + offset === slash.index()}
                           onMouseDown={(e) => {
                             e.preventDefault()
-                            if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
+                            if (!textareaRef) return
+                            slash.select(cmd, textareaRef, setText, adjustHeight)
+                            confirmCommand(cmd.name)
                           }}
                           onMouseEnter={() => slash.setIndex(idx() + offset)}
                         >
@@ -1001,6 +1114,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </Show>
         </div>
       </Show>
+      <div class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-testid="prompt-status">
+        {notice()}
+      </div>
       <Show when={imageAttach.images().length > 0}>
         <div class="image-attachments">
           <For each={imageAttach.images()}>
@@ -1062,6 +1178,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             ref={textareaRef}
             class="prompt-input"
             classList={{ "prompt-input--disabled": isDisabled() }}
+            role="combobox"
+            aria-label={language.t("prompt.input.label")}
+            aria-autocomplete="list"
+            aria-haspopup="listbox"
+            aria-expanded={popup() !== undefined}
+            aria-controls={list()}
+            aria-activedescendant={active()}
             placeholder={placeholder()}
             value={text()}
             onInput={handleInput}

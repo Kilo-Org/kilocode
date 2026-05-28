@@ -1898,7 +1898,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (!this.client) {
       if (this.cachedCommandsMessage) {
         this.postMessage(this.cachedCommandsMessage)
+        return
       }
+      this.postMessage({ type: "commandsLoaded", commands: [] })
       return
     }
 
@@ -1910,6 +1912,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage(message)
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch commands:", error)
+      this.postMessage({ type: "commandsLoaded", commands: [] })
     }
   }
 

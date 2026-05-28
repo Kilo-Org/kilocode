@@ -15,6 +15,7 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { type ParentComponent } from "solid-js"
 import { StoryProviders, mockSessionValue } from "./StoryProviders"
 import { SessionContext } from "../context/session"
+import { ServerContext } from "../context/server"
 import { PromptInput } from "../components/chat/PromptInput"
 
 const agents = [
@@ -24,6 +25,23 @@ const agents = [
 ]
 
 const noop = () => {}
+
+const connected = {
+  connectionState: () => "connected" as const,
+  serverInfo: () => undefined,
+  extensionVersion: () => "1.0.0",
+  errorMessage: () => undefined,
+  errorDetails: () => undefined,
+  isConnected: () => true,
+  profileData: () => null,
+  deviceAuth: () => ({ status: "idle" as const }),
+  startLogin: noop,
+  goToLogin: noop,
+  vscodeLanguage: () => "en",
+  languageOverride: () => undefined,
+  workspaceDirectory: () => "/project",
+  gitInstalled: () => false,
+}
 
 const PromptProviders: ParentComponent<{ variants?: boolean; modelOverride?: boolean }> = (props) => {
   const base = mockSessionValue({ status: "idle" })
@@ -76,6 +94,17 @@ export const Default200: Story = {
   render: () => (
     <PromptProviders>
       <PromptInput />
+    </PromptProviders>
+  ),
+}
+
+export const Suggestions: Story = {
+  name: "Suggestions - interactive",
+  render: () => (
+    <PromptProviders>
+      <ServerContext.Provider value={connected as any}>
+        <PromptInput />
+      </ServerContext.Provider>
     </PromptProviders>
   ),
 }

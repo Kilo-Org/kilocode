@@ -49,6 +49,58 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
+  it("keeps a newer query pending when a stale response arrives during debounce", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@a", 2)
+    await wait(170)
+    expect(posted.at(-1)).toMatchObject({ query: "a", requestId: "file-search-1" })
+
+    mention.onInput("@ab", 3)
+    expect(mention.pending()).toBe(true)
+
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: "file-search-1",
+        dir: "/repo",
+        paths: [],
+        items: [],
+      })
+    }
+
+    expect(mention.pending()).toBe(true)
+    await wait(170)
+    expect(posted.at(-1)).toMatchObject({ query: "ab", requestId: "file-search-2" })
+
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: "file-search-2",
+        dir: "/repo",
+        paths: [],
+        items: [],
+      })
+    }
+
+    expect(mention.pending()).toBe(false)
+    dispose.fn?.()
+  })
+
   it("does not keep stale file results visible for unrelated queries", async () => {
     const posted: WebviewMessage[] = []
     const handlers = new Set<(message: ExtensionMessage) => void>()

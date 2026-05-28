@@ -260,6 +260,11 @@ export const dict = {
 
   "prompt.popover.emptyResults": "Nenhum resultado correspondente",
   "prompt.popover.emptyCommands": "Nenhum comando correspondente",
+  "prompt.input.label": "Prompt do chat",
+  "prompt.suggestions.files": "Sugestões de menção de arquivo",
+  "prompt.suggestions.commands": "Sugestões de comando",
+  "prompt.suggestions.mentionSelected": "Menção selecionada {{value}}",
+  "prompt.suggestions.commandSelected": "Comando selecionado {{value}}",
   "prompt.dropzone.label": "Solte imagens ou PDFs aqui",
   "prompt.slash.badge.custom": "personalizado",
   "prompt.slash.badge.skill": "skill",

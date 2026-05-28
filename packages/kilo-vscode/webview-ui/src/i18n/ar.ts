@@ -259,6 +259,11 @@ export const dict = {
 
   "prompt.popover.emptyResults": "لا توجد نتائج مطابقة",
   "prompt.popover.emptyCommands": "لا توجد أوامر مطابقة",
+  "prompt.input.label": "موجه الدردشة",
+  "prompt.suggestions.files": "اقتراحات الإشارة للملفات",
+  "prompt.suggestions.commands": "اقتراحات الأوامر",
+  "prompt.suggestions.mentionSelected": "الإشارة المحددة {{value}}",
+  "prompt.suggestions.commandSelected": "الأمر المحدد {{value}}",
   "prompt.dropzone.label": "أفلت الصور أو ملفات PDF هنا",
   "prompt.slash.badge.custom": "مخصص",
   "prompt.slash.badge.skill": "مهارة",

@@ -260,6 +260,11 @@ export const dict = {
 
   "prompt.popover.emptyResults": "Eşleşen sonuç yok",
   "prompt.popover.emptyCommands": "Eşleşen komut yok",
+  "prompt.input.label": "Sohbet istemi",
+  "prompt.suggestions.files": "Dosya bahsetme önerileri",
+  "prompt.suggestions.commands": "Komut önerileri",
+  "prompt.suggestions.mentionSelected": "Seçilen bahsetme {{value}}",
+  "prompt.suggestions.commandSelected": "Seçilen komut {{value}}",
   "prompt.dropzone.label": "Görsel veya PDF'leri buraya bırakın",
   "prompt.slash.badge.custom": "özel",
   "prompt.slash.badge.skill": "beceri",

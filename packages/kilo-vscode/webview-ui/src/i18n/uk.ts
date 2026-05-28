@@ -261,6 +261,11 @@ export const dict = {
 
   "prompt.popover.emptyResults": "Збігів не знайдено",
   "prompt.popover.emptyCommands": "Команд не знайдено",
+  "prompt.input.label": "Запит чату",
+  "prompt.suggestions.files": "Пропозиції згадування файлів",
+  "prompt.suggestions.commands": "Пропозиції команд",
+  "prompt.suggestions.mentionSelected": "Вибране згадування {{value}}",
+  "prompt.suggestions.commandSelected": "Вибрана команда {{value}}",
   "prompt.dropzone.label": "Скиньте сюди зображення або PDF",
   "prompt.slash.badge.custom": "власна",
   "prompt.slash.badge.skill": "навичка",

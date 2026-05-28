@@ -259,6 +259,11 @@ export const dict = {
 
   "prompt.popover.emptyResults": "沒有符合的結果",
   "prompt.popover.emptyCommands": "沒有符合的命令",
+  "prompt.input.label": "聊天提示",
+  "prompt.suggestions.files": "檔案提及建議",
+  "prompt.suggestions.commands": "命令建議",
+  "prompt.suggestions.mentionSelected": "已選提及 {{value}}",
+  "prompt.suggestions.commandSelected": "已選命令 {{value}}",
   "prompt.dropzone.label": "將圖片或 PDF 拖到這裡",
   "prompt.slash.badge.custom": "自訂",
   "prompt.slash.badge.skill": "技能",

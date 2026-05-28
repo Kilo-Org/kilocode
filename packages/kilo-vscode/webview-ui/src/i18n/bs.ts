@@ -261,6 +261,11 @@ export const dict = {
 
   "prompt.popover.emptyResults": "Nema rezultata",
   "prompt.popover.emptyCommands": "Nema komandi",
+  "prompt.input.label": "Upit za chat",
+  "prompt.suggestions.files": "Prijedlozi spominjanja datoteke",
+  "prompt.suggestions.commands": "Prijedlozi komandi",
+  "prompt.suggestions.mentionSelected": "Odabrano spominjanje {{value}}",
+  "prompt.suggestions.commandSelected": "Odabrana komanda {{value}}",
   "prompt.dropzone.label": "Spusti slike ili PDF-ove ovdje",
   "prompt.slash.badge.custom": "prilagođeno",
   "prompt.slash.badge.skill": "skill",
