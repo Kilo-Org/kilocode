@@ -71,6 +71,28 @@ describe("handlers", () => {
     expect((data.output.textParts[0] as { chunkIds: string[] }).chunkIds.length).toBeGreaterThan(0)
   })
 
+  test("drops duplicate tool result bodies from llm completion parts", async () => {
+    const env = completed("01P", "done")
+    env.output.toolCalls = [
+      {
+        type: "tool-result",
+        toolCallId: "call_1",
+        toolName: "bash",
+        input: { command: "echo ok" },
+        output: { output: "ok", metadata: { exit: 0 } },
+      } as unknown as LlmRequestCompleted["output"]["toolCalls"][number],
+    ]
+    await handleEvent(env, { storage, chunker, scrubber: new Scrubber(), inlineThresholdBytes: 64 * 1024 })
+    const rows = storage.pendingEvents({ now: 1000, limitBytes: 1_000_000 })
+    const data = JSON.parse(rows[0].dataJson) as {
+      output: { toolCalls?: Array<{ input?: unknown; output?: unknown; toolCallId?: string; toolName?: string }> }
+    }
+    expect(data.output.toolCalls?.[0].toolCallId).toBe("call_1")
+    expect(data.output.toolCalls?.[0].toolName).toBe("bash")
+    expect(data.output.toolCalls?.[0].input).toEqual({ command: "echo ok" })
+    expect(data.output.toolCalls?.[0].output).toBeUndefined()
+  })
+
   test("drops event sequencing and timing metadata before writing", async () => {
     const env = completed("01Q", "ok")
     env.eventSeq = 7
