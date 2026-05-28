@@ -67,6 +67,10 @@ The bot examines the bug report, searches the codebase for related code paths, a
 
 For implementation requests, the bot creates a new branch, commits the changes, and opens a PR back to the repository. You'll see the PR linked directly in the thread.
 
+### Mention syntax and Auto Fix
+
+The Kilo Connect GitHub bot behavior on this page uses `@kilocode-bot`. Auto Fix review-comment automation is separate: when it is enabled, PR review comments can use `@kilo fix` or `@kilo patch` to request a targeted fix. Those Auto Fix commands do not invoke the general Kilo Code Bot GitHub App workflows described here.
+
 ---
 
 ## Prerequisites
@@ -124,7 +128,7 @@ Kilo Code credits are consumed the same way as any other Kilo interface. Credit 
 ## Troubleshooting
 
 **The bot isn't responding to mentions.**
-Make sure the Kilo Code Bot GitHub App is installed on the repository and that you're mentioning `@kilocode-bot` (not `@kilo`).
+Make sure the Kilo Code Bot GitHub App is installed on the repository and that you're mentioning `@kilocode-bot` for the Kilo Connect GitHub bot workflows on this page. Use `@kilo fix` or `@kilo patch` only for Auto Fix review-comment automation when that feature is enabled.
 
 **The bot can't access the repository.**
 Verify that both the KiloConnect App and the Kilo Code Bot App are installed and have access to the repository in question.
