@@ -1,13 +1,9 @@
 import z from "zod"
 import path from "path"
-import {
-  CodeIndexManager,
-  type IndexingTelemetryEvent,
-  type VectorStoreSearchResult,
-} from "@kilocode/kilo-indexing/engine"
+import { type IndexingTelemetryEvent, type VectorStoreSearchResult } from "@kilocode/kilo-indexing/engine"
 import { toIndexingConfigInput, type IndexingConfig } from "@kilocode/kilo-indexing/config"
 import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
-import { IndexingStatus, disabledIndexingStatus, normalizeIndexingStatus } from "@kilocode/kilo-indexing/status"
+import { IndexingStatus, disabledIndexingStatus } from "@kilocode/kilo-indexing/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
 import { Instance } from "@/project/instance"
@@ -20,6 +16,7 @@ import { registerDisposer } from "@/effect/instance-registry"
 import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
 import { Event as IndexingEvent } from "./indexing-event"
+import { IndexingWorker } from "./indexing-worker-client"
 import { LanceDBRuntime } from "./lancedb" // kilocode_change
 import { indexingWithKiloDefault, resolveKiloIndexingAuth, type KiloIndexingAuth } from "./indexing-auth" // kilocode_change
 
@@ -196,10 +193,11 @@ export namespace KiloIndexing {
   }
 
   type Entry = {
-    manager?: CodeIndexManager
+    engine?: IndexingWorker.Driver
+    initialized?: boolean
     current(): Status
     publish(): Promise<void>
-    dispose(): void
+    dispose(): Promise<void>
   }
 
   type Cache = {
@@ -223,14 +221,14 @@ export namespace KiloIndexing {
     return {
       current,
       publish,
-      dispose() {},
+      async dispose() {},
     }
   }
 
   function track(hit: Cache, entry: Entry) {
     if (!hit.entry) hit.resolve(entry)
     hit.entry = entry
-    if (hit.disposed) entry.dispose()
+    if (hit.disposed) void entry.dispose()
     return entry
   }
 
@@ -259,61 +257,83 @@ export namespace KiloIndexing {
 
     log.info("initializing project indexing", { workspacePath: dir })
     const root = path.join(Global.Path.state, "indexing")
-    const manager = new CodeIndexManager(dir, root)
     const auth = await kiloAuth(cfg)
     const globalConfig = await AppRuntime.runPromise(Config.Service.use((svc) => svc.getGlobal()))
     const global = globalConfig.indexing
     const merged = indexingWithKiloDefault({ ...global, ...cfg.indexing }, auth)
     const cfgInput = await model(enrichKilo(input(merged, global), auth), auth)
-    const box = { status: pending() as Status | undefined }
-    const current = () => box.status ?? normalizeIndexingStatus(manager)
+    const box = { status: pending() }
+    const current = () => box.status
     let disposed = false
 
     const publish = async () => {
       await Bus.publish(Event, { status: current() })
     }
-    const report = async () => {
+    const report = Instance.bind(async () => {
       try {
         return await publish()
       } catch (err) {
         log.error("failed to publish indexing status", { err })
       }
-    }
-
-    const unsub = manager.onProgressUpdate.on(() => {
+    })
+    const status = Instance.bind((next: Status) => {
+      if (disposed) return
+      box.status = next
       void report()
     })
-    const telemetrySub = manager.onTelemetry.on((event) => {
+    const telemetry = Instance.bind((event: IndexingTelemetryEvent) => {
+      if (disposed) return
       trackTelemetry(event)
     })
-
     const base: Entry = {
       current,
       publish,
-      dispose() {
+      async dispose() {
         if (disposed) return
         disposed = true
-        unsub.dispose()
-        telemetrySub.dispose()
-        manager.dispose()
+        base.initialized = false
+        await base.engine?.dispose().catch((err) => {
+          log.warn("failed to dispose project indexing worker", { err, workspacePath: dir })
+        })
       },
     }
+    const failure = Instance.bind((err: unknown) => {
+      if (disposed) return
+      base.initialized = false
+      box.status = failed(err)
+      log.error("project indexing worker failed", { err, workspacePath: dir })
+      void report()
+    })
     track(hit, base)
     await report()
 
     if (hit.disposed) return base
 
-    // kilocode_change start
+    if (!cfgInput.enabled) {
+      box.status = disabledIndexingStatus()
+      await report()
+      return base
+    }
+
     const err = await LanceDBRuntime.ensure(cfgInput.vectorStoreProvider)
-      .then(() => manager.initialize(cfgInput))
+      .then(async () => {
+        if (hit.disposed) return
+        const engine = IndexingWorker.create(dir, root, { status, telemetry, failure })
+        base.engine = engine
+        box.status = await engine.init(cfgInput)
+        base.initialized = true
+      })
       .then(
         () => undefined,
         (err) => err,
       )
-    // kilocode_change end
     if (hit.disposed) return base
 
     if (err) {
+      await base.engine?.dispose().catch((disposeErr) => {
+        log.warn("failed to dispose failed project indexing worker", { err: disposeErr, workspacePath: dir })
+      })
+      base.engine = undefined
       box.status = failed(err)
       log.error("project indexing initialization failed", {
         err,
@@ -322,14 +342,10 @@ export namespace KiloIndexing {
       await report()
       return base
     }
-    box.status = undefined
-    base.manager = manager
 
     log.info("project indexing initialized", {
       workspacePath: dir,
-      featureEnabled: manager.isFeatureEnabled,
-      featureConfigured: manager.isFeatureConfigured,
-      state: manager.getCurrentStatus().systemStatus,
+      state: current().state,
     })
     await report()
 
@@ -348,9 +364,9 @@ export namespace KiloIndexing {
       reject: gate.reject,
     } as Cache
     next.promise = boot(next)
-      .then((entry) => {
+      .then(async (entry) => {
         if (next.disposed) {
-          entry.dispose()
+          await entry.dispose()
           return entry
         }
         next.entry = entry
@@ -370,7 +386,7 @@ export namespace KiloIndexing {
     cache.delete(dir)
     if (hit) hit.disposed = true
     if (hit?.entry) {
-      hit.entry.dispose()
+      await hit.entry.dispose()
       return
     }
   })
@@ -389,19 +405,19 @@ export namespace KiloIndexing {
 
   export function ready(): boolean {
     const entry = cache.get(Instance.directory)?.entry
-    if (!entry?.manager) return false
+    if (!entry?.initialized) return false
     return entry.current().state !== "Disabled"
   }
 
   export async function available(): Promise<boolean> {
     const entry = await hit().ready
-    if (!entry.manager) return false
+    if (!entry.initialized) return false
     return entry.current().state !== "Disabled"
   }
 
   export async function search(query: string, directoryPrefix?: string): Promise<VectorStoreSearchResult[]> {
     const entry = await hit().ready
-    if (!entry.manager) return []
-    return entry.manager.searchIndex(query, directoryPrefix)
+    if (!entry.initialized || entry.current().state === "Disabled" || !entry.engine) return []
+    return entry.engine.search(query, directoryPrefix)
   }
 }
