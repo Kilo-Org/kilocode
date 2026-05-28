@@ -51,6 +51,7 @@ async function disableAnimations(page: Page) {
 const SKIP = new Set<string>([
   "agentmanager--worktree-item-busy",
   "agentmanager--pr-badge-checks-pending",
+  "chat--question-dock-multiple-choice",
   "composite-webview--permission-dock-config-preloaded",
 ])
 
