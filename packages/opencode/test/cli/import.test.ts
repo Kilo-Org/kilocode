@@ -20,7 +20,7 @@ test("parses valid Kilo share URLs", () => {
 test("rejects invalid URLs", () => {
   expect(parseShareUrl("https://app.kilo.ai/s/")).toBeNull()
   expect(parseShareUrl("https://app.kilo.ai/s/id/extra")).toBeNull()
-  expect(parseShareUrl("https://opncd.ai/share/Jsj3hNIW")).toBeNull()
+  expect(parseShareUrl("https://other-domain.example.com/share/Jsj3hNIW")).toBeNull()
   expect(parseShareUrl("https://other.example.com/s/abc")).toBeNull()
   expect(parseShareUrl("not-a-url")).toBeNull()
 })

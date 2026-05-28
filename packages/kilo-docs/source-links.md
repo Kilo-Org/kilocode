@@ -13,6 +13,7 @@
   <!-- packages/opencode/src/plugin/xai.ts -->
 - <https://app.kilo.ai>
   <!-- packages/opencode/src/kilocode/kilo-commands.tsx -->
+  <!-- packages/opencode/src/share/share-next.ts -->
 - <https://app.kilo.ai/claw>
   <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/SetupView.tsx -->
   <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/UpgradeView.tsx -->
@@ -148,8 +149,6 @@
   <!-- packages/opencode/src/kilocode/session/index.ts -->
 - <https://opentelemetry.io/blog/2025/how-to-name-your-span-attributes/>
   <!-- packages/opencode/src/server/routes/instance/trace.ts -->
-- <https://opncd.ai>
-  <!-- packages/opencode/src/share/share-next.ts -->
 - <https://platform.openai.com/docs/api-reference/responses/create>
   <!-- packages/opencode/src/provider/sdk/copilot/responses/openai-responses-language-model.ts -->
 - <https://platform.openai.com/docs/api-reference/responses/create#responses_create-top_logprobs>
