@@ -23,6 +23,7 @@ import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilo
 import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-payload-recovery" // kilocode_change
 import { KiloCompactionChunks } from "@/kilocode/session/compaction-chunks" // kilocode_change
 import { SessionExport } from "@/kilocode/session-export" // kilocode_change
+import { KiloSession } from "@/kilocode/session" // kilocode_change
 import { EventV2 } from "@/v2/event"
 import { SessionEvent } from "@/v2/session-event"
 
@@ -632,9 +633,13 @@ export const layer: Layer.Layer<
           include: selected.tail_start_id,
         })
         // kilocode_change start - export self-contained compaction capture
+        const parent = KiloSession.resolveParent(input.sessionID)
+        const found = KiloSession.resolveRoot(input.sessionID)
+        const root = parent ? (found === input.sessionID ? parent : found) : input.sessionID
         SessionExport.compaction({
           sessionId: input.sessionID,
-          rootSessionId: input.sessionID,
+          rootSessionId: root,
+          parentSessionId: parent,
           requestId: msg.id,
           input: {
             inputMessagesSnapshot: modelMessages,
