@@ -125,10 +125,21 @@ export class MarketplaceInstaller {
     const dir = this.paths.agentsDir(scope, workspace)
     await fs.mkdir(dir, { recursive: true })
 
+    const filepath = path.join(dir, `${item.id}.md`)
+    if (!path.resolve(filepath).startsWith(path.resolve(dir))) {
+      return { success: false, slug: item.id, error: "Invalid agent id" }
+    }
+
+    try {
+      await fs.access(filepath)
+      return { success: false, slug: item.id, error: "Agent already installed. Remove it first." }
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err
+    }
+
     const { prompt, ...front } = item.content
     const frontmatter = yaml.stringify(front).trimEnd()
     const content = `---\n${frontmatter}\n---\n\n${prompt}\n`
-    const filepath = path.join(dir, `${item.id}.md`)
     await fs.writeFile(filepath, content, "utf-8")
 
     // Migration: remove stale kilo.json agent entry with same id if present
@@ -151,7 +162,12 @@ export class MarketplaceInstaller {
       return { success: false, slug: item.id, error: "Invalid agent id" }
     }
 
-    const filepath = path.join(this.paths.agentsDir(scope, workspace), `${item.id}.md`)
+    const dir = this.paths.agentsDir(scope, workspace)
+    const filepath = path.join(dir, `${item.id}.md`)
+    if (!path.resolve(filepath).startsWith(path.resolve(dir))) {
+      return { success: false, slug: item.id, error: "Invalid agent id" }
+    }
+
     try {
       await fs.unlink(filepath)
     } catch (err) {
