@@ -1212,6 +1212,8 @@ export const dict = {
   "settings.notifications.permissions.description": "إظهار إشعار عند طلبات الأذونات",
   "settings.notifications.errors.title": "أخطاء",
   "settings.notifications.errors.description": "إظهار إشعار عند الأخطاء",
+  "settings.notifications.playWhenFocused.title": "تشغيل الأصوات عند التركيز",
+  "settings.notifications.playWhenFocused.description": "السماح بأصوات الإشعار حتى عندما تكون نافذة VS Code مُركَزة",
   "settings.notifications.sounds": "أصوات",
   "settings.notifications.agentSound.title": "صوت إكمال الوكيل",
   "settings.notifications.agentSound.description": "الصوت عند إكمال الوكيل",

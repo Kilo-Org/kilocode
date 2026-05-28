@@ -482,6 +482,7 @@ export interface NotificationSettingsLoadedMessage {
     notifyAgent: boolean
     notifyPermissions: boolean
     notifyErrors: boolean
+    playWhenFocused: boolean
     soundAgent: string
     soundPermissions: string
     soundErrors: string

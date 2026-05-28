@@ -1202,6 +1202,8 @@ export const dict = {
   "settings.notifications.permissions.description": "权限请求时显示通知",
   "settings.notifications.errors.title": "错误",
   "settings.notifications.errors.description": "发生错误时显示通知",
+  "settings.notifications.playWhenFocused.title": "聚焦时播放声音",
+  "settings.notifications.playWhenFocused.description": "即使 VS Code 窗口处于焦点状态也播放声音通知",
   "settings.notifications.sounds": "声音",
   "settings.notifications.agentSound.title": "智能体完成提示音",
   "settings.notifications.agentSound.description": "智能体完成时播放的声音",

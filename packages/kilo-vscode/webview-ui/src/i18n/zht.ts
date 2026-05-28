@@ -1170,6 +1170,8 @@ export const dict = {
   "settings.notifications.permissions.description": "權限請求時顯示通知",
   "settings.notifications.errors.title": "錯誤",
   "settings.notifications.errors.description": "發生錯誤時顯示通知",
+  "settings.notifications.playWhenFocused.title": "聚焦時播放聲音",
+  "settings.notifications.playWhenFocused.description": "即使 VS Code 視窗聚焦也播放聲音通知",
   "settings.notifications.sounds": "聲音",
   "settings.notifications.agentSound.title": "Agent 完成提示音",
   "settings.notifications.agentSound.description": "Agent 完成時播放的聲音",

@@ -1234,6 +1234,8 @@ export const dict = {
   "settings.notifications.permissions.description": "Vis notifikation ved tilladelsesanmodninger",
   "settings.notifications.errors.title": "Fejl",
   "settings.notifications.errors.description": "Vis notifikation ved fejl",
+  "settings.notifications.playWhenFocused.title": "Afspil lyde ved fokus",
+  "settings.notifications.playWhenFocused.description": "Tillad lydnotifikationer, selvom VS Code-vinduet er i fokus",
   "settings.notifications.sounds": "Lyde",
   "settings.notifications.agentSound.title": "Agentafslutningslyd",
   "settings.notifications.agentSound.description": "Lyd ved agentafslutning",

@@ -1200,6 +1200,8 @@ export const dict = {
   "settings.notifications.permissions.description": "Vis varsling ved tillatelsesforespørsler",
   "settings.notifications.errors.title": "Feil",
   "settings.notifications.errors.description": "Vis varsling ved feil",
+  "settings.notifications.playWhenFocused.title": "Spill lyd ved fokus",
+  "settings.notifications.playWhenFocused.description": "Tillat lydvarsler selv om VS Code-vinduet er i fokus",
   "settings.notifications.sounds": "Lyder",
   "settings.notifications.agentSound.title": "Agentfullføringslyd",
   "settings.notifications.agentSound.description": "Lyd ved agentfullføring",

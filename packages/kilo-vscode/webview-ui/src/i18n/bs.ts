@@ -1241,6 +1241,9 @@ export const dict = {
   "settings.notifications.permissions.description": "Prikaži obavijest pri zahtjevima za dozvolu",
   "settings.notifications.errors.title": "Greške",
   "settings.notifications.errors.description": "Prikaži obavijest pri greškama",
+  "settings.notifications.playWhenFocused.title": "Reproduciraj zvukove prilikom fokusa",
+  "settings.notifications.playWhenFocused.description":
+    "Omogući zvučne obavijesti čak i kad je VS Code prozor fokusiran",
   "settings.notifications.sounds": "Zvukovi",
   "settings.notifications.agentSound.title": "Zvuk završetka agenta",
   "settings.notifications.agentSound.description": "Zvuk pri završetku agenta",

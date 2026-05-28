@@ -1295,7 +1295,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // Get current state and push to webview
       const serverInfo = this.connectionService.getServerInfo()
       this.connectionState = this.connectionService.getConnectionState()
-
       if (serverInfo) {
         const langConfig = vscode.workspace.getConfiguration("kilo-code.new")
         this.postMessage({
@@ -2386,6 +2385,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         notifyAgent: notifications.get<boolean>("agent", true),
         notifyPermissions: notifications.get<boolean>("permissions", true),
         notifyErrors: notifications.get<boolean>("errors", true),
+        playWhenFocused: notifications.get<boolean>("playWhenFocused", false),
         soundAgent: sounds.get<string>("agent", "system"),
         soundPermissions: sounds.get<string>("permissions", "system"),
         soundErrors: sounds.get<string>("errors", "system"),

@@ -1228,6 +1228,9 @@ export const dict = {
   "settings.notifications.permissions.description": "Показувати сповіщення при запитах дозволів",
   "settings.notifications.errors.title": "Помилки",
   "settings.notifications.errors.description": "Показувати сповіщення при виникненні помилок",
+  "settings.notifications.playWhenFocused.title": "Відтворювати звуки при фокусі",
+  "settings.notifications.playWhenFocused.description":
+    "Дозволяти звукові сповіщення, навіть коли вікно VS Code знаходиться на фокусі",
   "settings.notifications.sounds": "Звуки",
   "settings.notifications.agentSound.title": "Звук завершення агента",
   "settings.notifications.agentSound.description": "Звук, що відтворюється після завершення агента",

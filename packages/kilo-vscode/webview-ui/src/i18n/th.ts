@@ -1220,6 +1220,8 @@ export const dict = {
   "settings.notifications.permissions.description": "แสดงการแจ้งเตือนเมื่อมีคำขออนุญาต",
   "settings.notifications.errors.title": "ข้อผิดพลาด",
   "settings.notifications.errors.description": "แสดงการแจ้งเตือนเมื่อเกิดข้อผิดพลาด",
+  "settings.notifications.playWhenFocused.title": "เล่นเสียงเมื่อโฟกัส",
+  "settings.notifications.playWhenFocused.description": "อนุญาตให้แจ้งเตือนด้วยเสียงแม้ว่าหน้าต่าง VS Code อยู่ในโฟกัส",
   "settings.notifications.sounds": "เสียง",
   "settings.notifications.agentSound.title": "เสียงเอเจนต์เสร็จสิ้น",
   "settings.notifications.agentSound.description": "เสียงเมื่อเอเจนต์ทำงานเสร็จ",

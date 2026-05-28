@@ -1228,6 +1228,8 @@ export const dict = {
   "settings.notifications.permissions.description": "İzin isteklerinde bildirim göster",
   "settings.notifications.errors.title": "Hatalar",
   "settings.notifications.errors.description": "Hata oluştuğunda bildirim göster",
+  "settings.notifications.playWhenFocused.title": "Odaklandığında Sesleri Çal",
+  "settings.notifications.playWhenFocused.description": "VS Code penceresi odaklıyken bile ses bildirimlerine izin ver",
   "settings.notifications.sounds": "Sesler",
   "settings.notifications.agentSound.title": "Ajan Tamamlanma Sesi",
   "settings.notifications.agentSound.description": "Ajan tamamlandığında çalınacak ses",

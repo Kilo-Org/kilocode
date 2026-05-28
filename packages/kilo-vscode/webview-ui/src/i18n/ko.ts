@@ -1223,6 +1223,8 @@ export const dict = {
   "settings.notifications.permissions.description": "권한 요청 시 알림 표시",
   "settings.notifications.errors.title": "오류",
   "settings.notifications.errors.description": "오류 발생 시 알림 표시",
+  "settings.notifications.playWhenFocused.title": "포커스 시 소리 재생",
+  "settings.notifications.playWhenFocused.description": "VS Code 창이 포커스되어 있어도 소리 알림 재생",
   "settings.notifications.sounds": "소리",
   "settings.notifications.agentSound.title": "에이전트 완료 소리",
   "settings.notifications.agentSound.description": "에이전트 완료 시 재생할 소리",

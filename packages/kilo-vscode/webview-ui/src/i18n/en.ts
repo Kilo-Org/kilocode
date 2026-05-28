@@ -1220,6 +1220,9 @@ export const dict = {
   "settings.notifications.permissions.description": "Show notification on permission requests",
   "settings.notifications.errors.title": "Errors",
   "settings.notifications.errors.description": "Show notification on errors",
+  "settings.notifications.playWhenFocused.title": "Play Sounds When Focused",
+  "settings.notifications.playWhenFocused.description":
+    "Allow sound notifications to play even when VS Code window is focused",
   "settings.notifications.sounds": "Sounds",
   "settings.notifications.agentSound.title": "Agent Completion Sound",
   "settings.notifications.agentSound.description": "Sound to play when agent completes",

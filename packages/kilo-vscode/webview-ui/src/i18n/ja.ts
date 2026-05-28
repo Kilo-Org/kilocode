@@ -1229,6 +1229,9 @@ export const dict = {
   "settings.notifications.permissions.description": "権限リクエスト時に通知を表示",
   "settings.notifications.errors.title": "エラー",
   "settings.notifications.errors.description": "エラー発生時に通知を表示",
+  "settings.notifications.playWhenFocused.title": "フォーカス時にサウンドを再生",
+  "settings.notifications.playWhenFocused.description":
+    "VS Codeウィンドウにフォーカスがある場合でもサウンド通知を再生できるようにする",
   "settings.notifications.sounds": "サウンド",
   "settings.notifications.agentSound.title": "エージェント完了サウンド",
   "settings.notifications.agentSound.description": "エージェント完了時に再生するサウンド",

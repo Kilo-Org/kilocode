@@ -105,8 +105,10 @@ export class SoundNotificationService {
     sessionID?: string,
     eventType?: string,
   ): void {
-    // Don't play sounds when VS Code is focused (only when undefined/not explicit focused)
-    if (this.focused === true) return
+    // Don't play sounds when VS Code is focused unless playWhenFocused is true
+    const notifyConfig = vscode.workspace.getConfiguration("kilo-code.new.notifications")
+    const playWhenFocused = notifyConfig.get<boolean>("playWhenFocused", false)
+    if (this.focused === true && !playWhenFocused) return
 
     const sessionKey = `${setting}:${eventType}:${sessionID}`
     const cooldownKey = sessionID ? sessionKey : setting
@@ -114,8 +116,7 @@ export class SoundNotificationService {
     if (now - last < COOLDOWN_MS) return
     this.cooldowns.set(cooldownKey, now)
 
-    const config = vscode.workspace.getConfiguration("kilo-code.new.notifications")
-    if (!config.get<boolean>(setting, true)) return
+    if (!notifyConfig.get<boolean>(setting, true)) return
 
     const soundConfig = vscode.workspace.getConfiguration("kilo-code.new.sounds")
     const soundSetting = soundConfig.get<string>(setting, "system")

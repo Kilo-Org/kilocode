@@ -1087,8 +1087,13 @@ export const dict = {
   "settings.notifications.permSound.description": "Suono da riprodurre per le richieste di autorizzazione",
   "settings.notifications.errorSound.title": "Suono errore",
   "settings.notifications.errorSound.description": "Suono da riprodurre per gli errori",
+  "settings.notifications.playWhenFocused.title": "Riproduci suoni quando è in focus",
+  "settings.notifications.playWhenFocused.description":
+    "Consenti notifiche audio anche quando la finestra di VS Code è in primo piano",
   "settings.notifications.sound.default": "Predefinito",
   "settings.notifications.sound.none": "Nessuno",
+  "settings.notifications.sound.system": "Sistema",
+  "settings.notifications.testSound": "Test",
   "settings.experimental.share.title": "Modalità condivisione",
   "settings.experimental.share.description": "Come si comporta la condivisione sessione",
   "settings.experimental.share.manual": "Manuale",

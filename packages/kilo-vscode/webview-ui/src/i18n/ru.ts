@@ -1237,6 +1237,9 @@ export const dict = {
   "settings.notifications.permissions.description": "Показать уведомление при запросах разрешений",
   "settings.notifications.errors.title": "Ошибки",
   "settings.notifications.errors.description": "Показать уведомление при ошибках",
+  "settings.notifications.playWhenFocused.title": "Воспроизводить звуки при фокусе",
+  "settings.notifications.playWhenFocused.description":
+    "Разрешить звуковые уведомления, даже когда окно VS Code находится в фокусе",
   "settings.notifications.sounds": "Звуки",
   "settings.notifications.agentSound.title": "Звук завершения агента",
   "settings.notifications.agentSound.description": "Звук при завершении агента",

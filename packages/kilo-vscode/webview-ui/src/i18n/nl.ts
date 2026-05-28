@@ -1235,6 +1235,9 @@ export const dict = {
   "settings.notifications.permissions.description": "Toon melding bij toestemmingsverzoeken",
   "settings.notifications.errors.title": "Fouten",
   "settings.notifications.errors.description": "Toon melding bij fouten",
+  "settings.notifications.playWhenFocused.title": "Speel geluid bij focus",
+  "settings.notifications.playWhenFocused.description":
+    "Sta geluidsmeldingen toe zelfs als VS Code-venster focus heeft",
   "settings.notifications.sounds": "Geluiden",
   "settings.notifications.agentSound.title": "Agent Voltooiingsgeluid",
   "settings.notifications.agentSound.description": "Geluid om af te spelen wanneer agent voltooit",

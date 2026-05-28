@@ -952,6 +952,11 @@
           "default": true,
           "description": "Show notification on errors"
         },
+        "kilo-code.new.notifications.playWhenFocused": {
+          "type": "boolean",
+          "default": false,
+          "description": "Play sounds even when VS Code is focused"
+        },
         "kilo-code.new.sounds.agent": {
           "type": "string",
           "default": "system",

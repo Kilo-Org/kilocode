@@ -71,6 +71,7 @@ const NotificationsTab: Component = () => {
   const [agentNotify, setAgentNotify] = createSignal(true)
   const [permNotify, setPermNotify] = createSignal(true)
   const [errorNotify, setErrorNotify] = createSignal(true)
+  const [playWhenFocused, setPlayWhenFocused] = createSignal(false)
   const [agentSound, setAgentSound] = createSignal("system")
   const [permSound, setPermSound] = createSignal("system")
   const [errorSound, setErrorSound] = createSignal("system")
@@ -83,6 +84,7 @@ const NotificationsTab: Component = () => {
     setAgentNotify(s.notifyAgent)
     setPermNotify(s.notifyPermissions)
     setErrorNotify(s.notifyErrors)
+    setPlayWhenFocused(s.playWhenFocused)
     setAgentSound(s.soundAgent)
     setPermSound(s.soundPermissions)
     setErrorSound(s.soundErrors)
@@ -135,7 +137,6 @@ const NotificationsTab: Component = () => {
         <SettingsRow
           title={language.t("settings.notifications.errors.title")}
           description={language.t("settings.notifications.errors.description")}
-          last
         >
           <Switch
             checked={errorNotify()}
@@ -146,6 +147,22 @@ const NotificationsTab: Component = () => {
             hideLabel
           >
             {language.t("settings.notifications.errors.title")}
+          </Switch>
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.notifications.playWhenFocused.title")}
+          description={language.t("settings.notifications.playWhenFocused.description")}
+          last
+        >
+          <Switch
+            checked={playWhenFocused()}
+            onChange={(checked) => {
+              setPlayWhenFocused(checked)
+              save("notifications.playWhenFocused", checked)
+            }}
+            hideLabel
+          >
+            {language.t("settings.notifications.playWhenFocused.title")}
           </Switch>
         </SettingsRow>
       </Card>

@@ -1240,6 +1240,9 @@ export const dict = {
   "settings.notifications.permissions.description": "Mostrar notificação em solicitações de permissão",
   "settings.notifications.errors.title": "Erros",
   "settings.notifications.errors.description": "Mostrar notificação em erros",
+  "settings.notifications.playWhenFocused.title": "Reproduzir sons quando focado",
+  "settings.notifications.playWhenFocused.description":
+    "Permitir notificações sonoras mesmo quando a janela do VS Code estiver focada",
   "settings.notifications.sounds": "Sons",
   "settings.notifications.agentSound.title": "Som de conclusão do agente",
   "settings.notifications.agentSound.description": "Som ao concluir o agente",
