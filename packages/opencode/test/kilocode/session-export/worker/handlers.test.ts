@@ -196,6 +196,42 @@ describe("handlers", () => {
     expect(storage.chunksForEvents([rows[0].id]).length).toBe(1)
   })
 
+  test("drops workspace baseline bookkeeping before writing", async () => {
+    const env: WorkspaceBaselineCompleted = {
+      id: "01B",
+      schemaVersion: 1,
+      type: "workspace_baseline_completed",
+      sessionId: "s1",
+      rootSessionId: "s1",
+      seq: 0,
+      ts: 100,
+      agentVersion: "v0",
+      consistency: "stable",
+      snapshotId: "snap-1",
+      capture: { mode: "git-tracked-and-untracked", fileCount: 1, totalBytes: 21, omittedCountsByReason: {}, truncated: false },
+      truncated: false,
+      originalFileCount: 1,
+      originalTotalSize: 21,
+      files: [{ path: "src/index.ts", kind: "file", size: 21, hash: "h1", content: "export const value = 1\n" }],
+    }
+    await handleEvent(env, { storage, chunker, scrubber: new Scrubber(), inlineThresholdBytes: 64 * 1024 })
+    const rows = storage.pendingEvents({ now: 1000, limitBytes: 1_000_000 })
+    const data = JSON.parse(rows[0].dataJson) as {
+      snapshotId?: string
+      capture?: unknown
+      truncated?: boolean
+      originalFileCount?: number
+      originalTotalSize?: number
+      files: unknown[]
+    }
+    expect(data.snapshotId).toBeUndefined()
+    expect(data.capture).toBeUndefined()
+    expect(data.truncated).toBeUndefined()
+    expect(data.originalFileCount).toBeUndefined()
+    expect(data.originalTotalSize).toBeUndefined()
+    expect(data.files.length).toBe(1)
+  })
+
   test("workspace delta patches are stored as upload chunks", async () => {
     const env: WorkspaceDeltaCaptured = {
       id: "01Y",
@@ -226,6 +262,29 @@ describe("handlers", () => {
     expect(data.diff[0].patch).toBeUndefined()
     expect(data.diff[0].patchChunkIds.length).toBe(1)
     expect(storage.chunksForEvents([rows[0].id]).length).toBe(1)
+  })
+
+  test("drops workspace delta hashes before writing", async () => {
+    const env: WorkspaceDeltaCaptured = {
+      id: "01Z",
+      schemaVersion: 1,
+      type: "workspace_delta_captured",
+      sessionId: "s1",
+      rootSessionId: "s1",
+      seq: 0,
+      ts: 100,
+      agentVersion: "v0",
+      snapshotHash: "h2",
+      prevSnapshotHash: "h1",
+      trigger: "turn_end",
+      diff: [{ path: "src/index.ts", status: "removed", patchChunkIds: [] }],
+    }
+    await handleEvent(env, { storage, chunker, scrubber: new Scrubber(), inlineThresholdBytes: 64 * 1024 })
+    const rows = storage.pendingEvents({ now: 1000, limitBytes: 1_000_000 })
+    const data = JSON.parse(rows[0].dataJson) as { snapshotHash?: string; prevSnapshotHash?: string; diff: unknown[] }
+    expect(data.snapshotHash).toBeUndefined()
+    expect(data.prevSnapshotHash).toBeUndefined()
+    expect(data.diff.length).toBe(1)
   })
 })
 

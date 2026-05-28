@@ -68,6 +68,11 @@ async function normalizePayload(envelope: ExportEvent, ctx: HandlerCtx): Promise
 async function normalizeBaseline(payload: unknown, ctx: HandlerCtx): Promise<unknown> {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload
   const out = { ...(payload as Record<string, unknown>) }
+  delete out.snapshotId
+  delete out.capture
+  delete out.truncated
+  delete out.originalFileCount
+  delete out.originalTotalSize
   if (!Array.isArray(out.files)) return out
   const files: unknown[] = []
   for (const file of out.files) {
@@ -97,6 +102,8 @@ async function normalizeBaseline(payload: unknown, ctx: HandlerCtx): Promise<unk
 async function normalizeDelta(payload: unknown, ctx: HandlerCtx): Promise<unknown> {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload
   const out = { ...(payload as Record<string, unknown>) }
+  delete out.snapshotHash
+  delete out.prevSnapshotHash
   if (!Array.isArray(out.diff)) return out
   const diff: unknown[] = []
   for (const item of out.diff) {
