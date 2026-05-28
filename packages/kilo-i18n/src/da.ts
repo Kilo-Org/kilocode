@@ -69,7 +69,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Flere sessioner kører og vil blive afbrudt",
   "marketplace.warning.installAnyway": "Installer alligevel",
   "marketplace.warning.cancel": "Annuller",
-  "marketplace.contribute.prompt": "Mangler du en skill, tilstand eller MCP-server?",
+  "marketplace.contribute.prompt": "Mangler du en skill, agent eller MCP-server?",
   "marketplace.contribute.cta": "Bidrag på GitHub",
   "marketplace.migration.notice":
     "Tilstande er blevet erstattet af agenter. Hvis du tidligere har installeret marketplace-tilstande, skal du fjerne dem og geninstallere dem som agenter for at migrere til det nye format.",

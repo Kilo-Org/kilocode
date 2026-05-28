@@ -69,7 +69,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Birden fazla oturum çalışıyor ve kesintiye uğrayacak",
   "marketplace.warning.installAnyway": "Yine de yükle",
   "marketplace.warning.cancel": "İptal",
-  "marketplace.contribute.prompt": "Bir yetenek, mod veya MCP sunucusu mu eksik?",
+  "marketplace.contribute.prompt": "Bir yetenek, ajan veya MCP sunucusu mu eksik?",
   "marketplace.contribute.cta": "GitHub'da katkıda bulun",
   "marketplace.migration.notice":
     "Modlar agentlarla değiştirildi. Daha önce marketplace modları yüklediyseniz, yeni formata geçiş yapmak için bunları kaldırın ve agent olarak yeniden yükleyin.",

@@ -69,7 +69,7 @@ export const dict = {
   "marketplace.warning.busyMany": "มีหลายเซสชันกำลังทำงานและจะถูกขัดจังหวะ",
   "marketplace.warning.installAnyway": "ติดตั้งต่อไป",
   "marketplace.warning.cancel": "ยกเลิก",
-  "marketplace.contribute.prompt": "ไม่พบทักษะ โหมด หรือเซิร์ฟเวอร์ MCP ที่ต้องการ?",
+  "marketplace.contribute.prompt": "ขาดสกิล เอเจนต์ หรือเซิร์ฟเวอร์ MCP?",
   "marketplace.contribute.cta": "ร่วมสมทบบน GitHub",
   "marketplace.migration.notice":
     "โหมดถูกแทนที่ด้วยเอเจนต์แล้ว หากคุณเคยติดตั้งโหมดจาก marketplace กรุณาลบและติดตั้งใหม่เป็นเอเจนต์เพื่อย้ายไปยังรูปแบบใหม่",

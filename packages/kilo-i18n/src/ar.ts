@@ -69,7 +69,7 @@ export const dict = {
   "marketplace.warning.busyMany": "عدة جلسات تعمل وستتوقف",
   "marketplace.warning.installAnyway": "تثبيت على أي حال",
   "marketplace.warning.cancel": "إلغاء",
-  "marketplace.contribute.prompt": "هل تفتقد مهارة أو وضعًا أو خادم MCP؟",
+  "marketplace.contribute.prompt": "هل تفتقد مهارة أو وكيلاً أو خادم MCP؟",
   "marketplace.contribute.cta": "ساهم على GitHub",
   "marketplace.migration.notice":
     "تم استبدال الأوضاع بالوكلاء. إذا كنت قد قمت بتثبيت أوضاع السوق سابقاً، يرجى إزالتها وإعادة تثبيتها كوكلاء للانتقال إلى التنسيق الجديد.",

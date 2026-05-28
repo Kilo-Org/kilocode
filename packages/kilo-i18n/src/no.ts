@@ -69,7 +69,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Flere økter kjører og vil bli avbrutt",
   "marketplace.warning.installAnyway": "Installer uansett",
   "marketplace.warning.cancel": "Avbryt",
-  "marketplace.contribute.prompt": "Mangler du en skill, modus eller MCP-server?",
+  "marketplace.contribute.prompt": "Mangler du en skill, agent eller MCP-server?",
   "marketplace.contribute.cta": "Bidra på GitHub",
   "marketplace.migration.notice":
     "Modi er erstattet av agenter. Hvis du tidligere har installert marketplace-modi, fjern dem og installer dem på nytt som agenter for å migrere til det nye formatet.",

@@ -69,7 +69,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Varias sesiones están en ejecución y se interrumpirán",
   "marketplace.warning.installAnyway": "Instalar de todas formas",
   "marketplace.warning.cancel": "Cancelar",
-  "marketplace.contribute.prompt": "¿Falta una skill, modo o servidor MCP?",
+  "marketplace.contribute.prompt": "¿Falta una skill, agente o servidor MCP?",
   "marketplace.contribute.cta": "Contribuir en GitHub",
   "marketplace.migration.notice":
     "Los modos han sido reemplazados por agentes. Si anteriormente instalaste modos del marketplace, elimínalos y reinstálalos como agentes para migrar al nuevo formato.",

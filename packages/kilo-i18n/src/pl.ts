@@ -69,7 +69,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Kilka sesji jest uruchomionych i zostanie przerwanych",
   "marketplace.warning.installAnyway": "Zainstaluj mimo to",
   "marketplace.warning.cancel": "Anuluj",
-  "marketplace.contribute.prompt": "Brakuje skilla, trybu lub serwera MCP?",
+  "marketplace.contribute.prompt": "Brakuje umiejętności, agenta lub serwera MCP?",
   "marketplace.contribute.cta": "Wnieś wkład na GitHubie",
   "marketplace.migration.notice":
     "Tryby zostały zastąpione przez agentów. Jeśli wcześniej instalowałeś tryby z marketplace, usuń je i zainstaluj ponownie jako agenty, aby przejść na nowy format.",

@@ -69,7 +69,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Виконується кілька сесій, їх буде перервано",
   "marketplace.warning.installAnyway": "Встановити все одно",
   "marketplace.warning.cancel": "Скасувати",
-  "marketplace.contribute.prompt": "Бракує навички, режиму або MCP-сервера?",
+  "marketplace.contribute.prompt": "Бракує навички, агента або MCP-сервера?",
   "marketplace.contribute.cta": "Зробити внесок на GitHub",
   "marketplace.migration.notice":
     "Режими замінено агентами. Якщо ви раніше встановлювали режими з маркетплейсу, видаліть їх та перевстановіть як агенти для переходу на новий формат.",

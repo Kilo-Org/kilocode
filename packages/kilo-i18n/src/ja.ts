@@ -67,7 +67,7 @@ export const dict = {
   "marketplace.warning.busyMany": "複数のセッションが実行中で中断されます",
   "marketplace.warning.installAnyway": "それでもインストール",
   "marketplace.warning.cancel": "キャンセル",
-  "marketplace.contribute.prompt": "スキル、モード、MCP サーバーが見つかりませんか？",
+  "marketplace.contribute.prompt": "スキル、エージェント、またはMCPサーバーが見つかりませんか？",
   "marketplace.contribute.cta": "GitHub で貢献する",
   "marketplace.migration.notice":
     "モードはエージェントに置き換えられました。以前にマーケットプレイスのモードをインストールしていた場合は、新しい形式に移行するためにそれらを削除してエージェントとして再インストールしてください。",

@@ -66,7 +66,7 @@ export const dict = {
   "marketplace.warning.busyMany": "多个会话正在运行，将被中断",
   "marketplace.warning.installAnyway": "仍然安装",
   "marketplace.warning.cancel": "取消",
-  "marketplace.contribute.prompt": "缺少技能、模式或 MCP 服务器？",
+  "marketplace.contribute.prompt": "缺少技能、智能体或 MCP 服务器？",
   "marketplace.contribute.cta": "在 GitHub 上贡献",
   "marketplace.migration.notice":
     "模式已被智能体取代。如果您之前安装了市场中的模式，请将其删除并重新安装为智能体，以迁移到新格式。",

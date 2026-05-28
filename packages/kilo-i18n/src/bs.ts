@@ -74,7 +74,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Nekoliko sesija je pokrenuto i bit će prekinuto",
   "marketplace.warning.installAnyway": "Instaliraj svejedno",
   "marketplace.warning.cancel": "Otkaži",
-  "marketplace.contribute.prompt": "Nedostaje vještina, način rada ili MCP server?",
+  "marketplace.contribute.prompt": "Nedostaje vještina, agent ili MCP server?",
   "marketplace.contribute.cta": "Doprinesi na GitHub-u",
   "marketplace.migration.notice":
     "Modovi su zamijenjeni agentima. Ako ste prethodno instalirali marketplace modove, uklonite ih i ponovo instalirajte kao agente da biste prešli na novi format.",
