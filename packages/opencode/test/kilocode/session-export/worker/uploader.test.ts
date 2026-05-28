@@ -250,6 +250,61 @@ describe("Uploader", () => {
     expect(body.surface).toBe("vscode-extension")
   })
 
+  test("deduplicates repeated request context into batch dictionaries", async () => {
+    storage.insertEvent({
+      id: "02",
+      schemaVersion: 1,
+      sessionId: "s1",
+      rootSessionId: "s1",
+      seq: 1,
+      type: "llm_request_started",
+      ts: 101,
+      agentVersion: "v0",
+      dataJson: JSON.stringify({
+        requestId: "r2",
+        agentInfo: { name: "code" },
+        input: {
+          system: ["sys"],
+          messages: [],
+          tools: { bash: { description: "run" } },
+          permissions: [{ permission: "*", pattern: "*", action: "allow" }],
+          params: {},
+        },
+      }),
+      clientScrubbed: 1,
+    })
+    const bodies: string[] = []
+    const uploader = new Uploader({
+      storage,
+      endpoint: "https://example.test/ingest",
+      fetch: async (_input, init) => {
+        bodies.push(init.body as string)
+        return new Response("", { status: 204 })
+      },
+      reportTelemetry: () => {},
+      agentVersion: "v0",
+      surface: "test",
+    })
+    await uploader.flush("test")
+    const body = JSON.parse(bodies[0]) as {
+      events: Array<{ requestId?: string; input?: Record<string, unknown>; agentInfo?: unknown; agentRef?: string }>
+      systemPrompts?: Record<string, unknown>
+      toolSchemas?: Record<string, unknown>
+      permissionSets?: Record<string, unknown>
+      agents?: Record<string, unknown>
+    }
+    const event = body.events.find((item) => item.requestId === "r2")
+    const input = event?.input
+    expect(input?.system).toBeUndefined()
+    expect(input?.tools).toBeUndefined()
+    expect(input?.permissions).toBeUndefined()
+    expect(event?.agentInfo).toBeUndefined()
+    expect(body.systemPrompts?.[input?.systemRef as string]).toEqual(["sys"])
+    expect(body.toolSchemas?.[input?.toolSchemaRef as string]).toEqual({ bash: { description: "run" } })
+    expect(body.permissionSets?.[input?.permissionRef as string]).toEqual([{ permission: "*", pattern: "*", action: "allow" }])
+    expect(body.agents?.[event?.agentRef as string]).toEqual({ name: "code" })
+  })
+
   test("uploads chunks as zstd base64 strings", async () => {
     storage.upsertChunk({ id: "h1", bytes: new Uint8Array([1, 2, 3, 4]), size: 10, encoding: "zstd" })
     storage.insertEvent({

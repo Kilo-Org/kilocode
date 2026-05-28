@@ -51,5 +51,9 @@ export type BatchEnvelope = {
   surface: string
   batchId: string
   events: UploadedEvent[]
+  systemPrompts?: Record<string, JsonValue>
+  toolSchemas?: Record<string, JsonValue>
+  permissionSets?: Record<string, JsonValue>
+  agents?: Record<string, JsonValue>
   chunks: { id: string; bytes: string; size: number; encoding: "zstd+base64" }[]
 }

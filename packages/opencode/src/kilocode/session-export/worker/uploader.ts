@@ -71,12 +71,8 @@ export class Uploader {
         if (rows.length === 0) return
         const batchId = await sha256Hex(rows.map((row) => row.id).join("\n"))
         const chunks = this.deps.storage.chunksForEvents(rows.map((row) => row.id))
-        const batch: BatchEnvelope = {
-          schemaVersion: 1,
-          agentVersion: this.deps.agentVersion,
-          surface: this.deps.surface,
-          batchId,
-          events: rows.map((row): UploadedEvent => ({
+        const compact = await compactEvents(
+          rows.map((row): UploadedEvent => ({
             ...parseObject(row.dataJson),
             id: row.id,
             type: row.type,
@@ -87,6 +83,17 @@ export class Uploader {
             seq: row.seq,
             ts: row.ts,
           })),
+        )
+        const batch: BatchEnvelope = {
+          schemaVersion: 1,
+          agentVersion: this.deps.agentVersion,
+          surface: this.deps.surface,
+          batchId,
+          events: compact.events,
+          ...(Object.keys(compact.systemPrompts).length > 0 ? { systemPrompts: compact.systemPrompts } : {}),
+          ...(Object.keys(compact.toolSchemas).length > 0 ? { toolSchemas: compact.toolSchemas } : {}),
+          ...(Object.keys(compact.permissionSets).length > 0 ? { permissionSets: compact.permissionSets } : {}),
+          ...(Object.keys(compact.agents).length > 0 ? { agents: compact.agents } : {}),
           chunks: chunks.map((chunk) => ({
             id: chunk.id,
             bytes: Buffer.from(chunk.bytes).toString("base64"),
@@ -198,4 +205,68 @@ function parseObject(value: string): JsonObject {
   const json = JSON.parse(value) as JsonValue
   if (!json || typeof json !== "object" || Array.isArray(json)) throw new Error("stored event payload must be a JSON object")
   return json
+}
+
+type Compact = {
+  events: UploadedEvent[]
+  systemPrompts: Record<string, JsonValue>
+  toolSchemas: Record<string, JsonValue>
+  permissionSets: Record<string, JsonValue>
+  agents: Record<string, JsonValue>
+}
+
+async function compactEvents(events: UploadedEvent[]): Promise<Compact> {
+  const out: Compact = { events: [], systemPrompts: {}, toolSchemas: {}, permissionSets: {}, agents: {} }
+  for (const event of events) {
+    const next: UploadedEvent = { ...event }
+    if (next.type !== "llm_request_started") {
+      out.events.push(next)
+      continue
+    }
+    const input = object(next.input)
+    if (input) {
+      next.input = { ...input }
+      const copy = next.input as JsonObject
+      if (copy.system !== undefined) {
+        copy.systemRef = await intern(out.systemPrompts, copy.system)
+        delete copy.system
+      }
+      if (copy.tools !== undefined) {
+        copy.toolSchemaRef = await intern(out.toolSchemas, copy.tools)
+        delete copy.tools
+      }
+      if (copy.permissions !== undefined) {
+        copy.permissionRef = await intern(out.permissionSets, copy.permissions)
+        delete copy.permissions
+      }
+    }
+    if (next.agentInfo !== undefined) {
+      next.agentRef = await intern(out.agents, next.agentInfo)
+      delete next.agentInfo
+    }
+    out.events.push(next)
+  }
+  return out
+}
+
+async function intern(dict: Record<string, JsonValue>, value: JsonValue): Promise<string> {
+  const id = await sha256Hex(stable(value))
+  dict[id] = value
+  return id
+}
+
+function object(value: JsonValue | undefined): JsonObject | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined
+  return value
+}
+
+function stable(value: JsonValue): string {
+  if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stable(value[key])}`)
+      .join(",")}}`
+  }
+  return JSON.stringify(value)
 }
