@@ -72,6 +72,10 @@ export namespace RemoteSender {
     }
     subscribe?: (callback: (event: any) => void) => () => void
     provide?: Provide
+    permission?: {
+      readonly list: () => Promise<ReadonlyArray<Permission.Request>>
+      readonly reply: (input: Permission.ReplyInput) => Promise<boolean>
+    }
   }
 
   export type Sender = {
@@ -83,6 +87,16 @@ export namespace RemoteSender {
     const sessions = new Set<string>()
     const children = new Map<string, string>() // childId → parentId
     let unsub: (() => void) | undefined
+    const permission = options.permission ?? {
+      list: async () => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        return AppRuntime.runPromise(Permission.Service.use((svc) => svc.list()))
+      },
+      reply: async (input: Permission.ReplyInput) => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        return AppRuntime.runPromise(Permission.Service.use((svc) => svc.reply(input)))
+      },
+    }
 
     const sub =
       options.subscribe ??
@@ -130,11 +144,10 @@ export namespace RemoteSender {
     // sees state that was asked before it connected — analogous to the Cloud
     // Agent's `connected` event carrying pending question/permission fields.
     async function replay(sessionId: string) {
-      const { AppRuntime } = await import("@/effect/app-runtime")
       const [suggestions, questions, permissions] = await Promise.all([
         Suggestion.list(),
         Question.list(),
-        AppRuntime.runPromise(Permission.Service.use((svc) => svc.list())),
+        permission.list(),
       ])
       for (const suggestion of suggestions) {
         if (suggestion.sessionID !== sessionId) continue
@@ -360,12 +373,7 @@ export namespace RemoteSender {
         }
         const dir = msg.sessionId ? directoryFor(msg.sessionId) : Promise.resolve(options.directory)
         dispatchQuick(msg, dir, async () => {
-          const { AppRuntime } = await import("@/effect/app-runtime")
-          await AppRuntime.runPromise(
-            Permission.Service.use((svc) =>
-              svc.reply({ ...parsed.data, requestID: PermissionID.make(parsed.data.requestID) }),
-            ),
-          )
+          await permission.reply({ ...parsed.data, requestID: PermissionID.make(parsed.data.requestID) })
         })
         return
       }
