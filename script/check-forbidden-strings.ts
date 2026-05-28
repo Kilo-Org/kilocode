@@ -20,7 +20,7 @@ const SELF = path.relative(ROOT, import.meta.path).replaceAll("\\", "/")
 // prefixes where the string is legitimate (e.g. docs describing the fork lineage,
 // upstream-merge tooling, generated source-link manifests).
 const forbidden: { pattern: string; reason: string; allow?: string[] }[] = [
-  { pattern: "opncd.ai/s/", reason: "legacy upstream share URL pattern" },
+  { pattern: "opncd.ai", reason: "legacy upstream domain -- use the Kilo domain instead" },
   {
     pattern: "github.com/anomalyco/opencode",
     reason: "upstream repo URL -- should be Kilo-Org/kilocode",
@@ -50,7 +50,6 @@ const forbidden: { pattern: string; reason: string; allow?: string[] }[] = [
   // { pattern: "opencode.ai/go", reason: "upstream upsell URL -- dialog-go-upsell.tsx" },
   // { pattern: "opencode.ai/docs", reason: "upstream docs URL -- config.ts schema descriptions, providers.ts cloudflare help" },
   // { pattern: "opencode.ai/tui.json", reason: "upstream-hosted schema URL -- tui-migrate.ts" },
-  // { pattern: `?? "https://opncd.ai"`, reason: "default share base URL still points at upstream -- share-next.ts" },
   // { pattern: "opencode.ai/theme.json", reason: "upstream-hosted theme JSON-Schema URL -- theme/*.json $schema fields" },
   // { pattern: "opencode.ai/desktop-theme.json", reason: "upstream-hosted desktop theme schema URL" },
 ]
