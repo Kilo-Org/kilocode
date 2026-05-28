@@ -454,6 +454,7 @@ export const dict = {
   "toast.session.unshare.success.description": "Delen van sessie succesvol gestopt!",
   "toast.session.unshare.failed.title": "Delen van sessie stoppen mislukt",
   "toast.session.unshare.failed.description": "Er is een fout opgetreden bij het stoppen van het delen van de sessie",
+  "toast.session.rename.invalid.title": "Ongeldige sessietitel",
   "toast.session.listFailed.title": "Laden van sessies voor {{project}} is mislukt",
 
   "toast.update.title": "Update beschikbaar",

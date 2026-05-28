@@ -88,7 +88,8 @@ class SessionUiFactoryTest : BasePlatformTestCase() {
             testRootDisposable,
             controller,
             emptyList(),
-        ) { manager.showHistory() }
+            history = { manager.showHistory() },
+        )
 
         panel.clickShowHistory()
 

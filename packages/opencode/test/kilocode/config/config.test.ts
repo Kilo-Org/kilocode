@@ -14,6 +14,7 @@ import { Config } from "../../../src/config/config"
 import { ConfigMarkdown } from "../../../src/config/markdown"
 import { Env } from "../../../src/env"
 import { KiloIndexing } from "../../../src/kilocode/indexing"
+import { KilocodeConfig } from "../../../src/kilocode/config/config"
 import { WithInstance } from "../../../src/project/with-instance"
 import { Filesystem } from "../../../src/util/filesystem"
 import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
@@ -167,5 +168,24 @@ describe("kilocode indexing config", () => {
   test("global indexing enabled applies when project indexing is disabled", async () => {
     const input = KiloIndexing.input({ enabled: false }, { enabled: true })
     expect(input.enabled).toBe(true)
+  })
+
+  test("accepts delete sentinels for indexing model overrides", () => {
+    const patch = Config.Info.zod.parse({ indexing: { model: null, dimension: null } })
+    const merged = KilocodeConfig.mergeConfig(
+      {
+        indexing: {
+          provider: "openai",
+          model: "text-embedding-3-large",
+          dimension: 3072,
+        },
+      },
+      patch,
+    )
+    const input = KiloIndexing.input(patch.indexing)
+
+    expect(merged.indexing).toEqual({ provider: "openai" })
+    expect(input.modelId).toBeUndefined()
+    expect(input.modelDimension).toBeUndefined()
   })
 })

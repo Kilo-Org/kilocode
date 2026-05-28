@@ -165,6 +165,18 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertTrue(mv.part("p1") is TextView)
     }
 
+    fun `test text markdown link uses panel url opener`() {
+        val urls = mutableListOf<String>()
+        val item = SessionMessageListPanel(model, parent, openFile = openFile, openUrl = { urls.add(it) })
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p1", "a1", "text", text = "[docs](https://kilocode.ai/docs)"))
+
+        val view = item.findMessage("a1")!!.part("p1") as TextView
+        view.md.simulateLink("https://kilocode.ai/docs")
+
+        assertEquals(listOf("https://kilocode.ai/docs"), urls)
+    }
+
     fun `test ContentDelta appends text to TextView`() {
         model.upsertMessage(msg("a1", "assistant"))
         model.updateContent("a1", part("p1", "a1", "text", text = "hello "))

@@ -1023,8 +1023,8 @@ export type IndexingConfig = {
     | "bedrock"
     | "openrouter"
     | "voyage"
-  model?: string
-  dimension?: number
+  model?: string | null
+  dimension?: number | null
   vectorStore?: "lancedb" | "qdrant"
   kilo?: {
     apiKey?: string

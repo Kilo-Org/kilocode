@@ -52,6 +52,7 @@ internal class SessionScroll(
     private var seq = 0
     private var user = false
     private var value = 0
+    private var question = false
 
     init {
         jump = JBLabel(ScrollButtonIcon.create()).apply {
@@ -156,13 +157,26 @@ internal class SessionScroll(
     }
 
     @RequiresEdt
+    fun setQuestionPending(value: Boolean) {
+        if (question == value) return
+        question = value
+        syncIcon()
+    }
+
+    @RequiresEdt
     fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        jump.icon = ScrollButtonIcon.create()
+        syncIcon()
         messages.applyStyle(style)
         val view = component.viewport.view
         if (view !== messages) (view as? SessionEditorStyleTarget)?.applyStyle(style)
         refresh()
+    }
+
+    @RequiresEdt
+    private fun syncIcon() {
+        jump.icon = ScrollButtonIcon.create(question)
+        jump.toolTipText = KiloBundle.message(if (question) "session.scroll.question" else "session.scroll.bottom")
     }
 
     @RequiresEdt

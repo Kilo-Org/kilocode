@@ -447,6 +447,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "取消分享失败",
   "toast.session.unshare.failed.description": "取消分享会话时发生错误",
 
+  "toast.session.rename.invalid.title": "无效的会话标题",
   "toast.session.listFailed.title": "无法加载 {{project}} 的会话",
 
   "toast.update.title": "有可用更新",

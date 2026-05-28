@@ -15663,11 +15663,25 @@
             ]
           },
           "model": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "dimension": {
-            "type": "integer",
-            "exclusiveMinimum": 0
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "vectorStore": {
             "type": "string",

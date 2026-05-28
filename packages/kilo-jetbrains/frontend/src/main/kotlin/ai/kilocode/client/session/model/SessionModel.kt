@@ -35,7 +35,7 @@ class SessionModel {
 
     companion object {
         /** Part types that are internal server markers and must never be stored or rendered. */
-        val SILENT_PART_TYPES = setOf("step-start")
+        val SILENT_PART_TYPES = setOf("step-start", "patch")
     }
 
     private val entries = LinkedHashMap<String, Message>()

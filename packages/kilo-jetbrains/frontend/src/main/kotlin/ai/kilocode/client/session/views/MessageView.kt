@@ -11,8 +11,10 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import com.intellij.ui.RoundedLineBorder
 import com.intellij.util.ui.JBUI
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.RenderingHints
 
 /**
  * A single message container inside a [TurnView].
@@ -29,6 +31,7 @@ class MessageView(
     val msg: Message,
     private val openFile: (String) -> Unit,
     private var style: SessionEditorStyle = SessionEditorStyle.current(),
+    private val openUrl: (String) -> Unit = {},
 ) : ai.kilocode.client.session.ui.SessionLayoutPanel(
     JBUI.scale(SessionUiStyle.SessionLayout.GAP),
 ), SessionEditorStyleTarget, SessionView {
@@ -45,6 +48,7 @@ class MessageView(
 
     init {
         isOpaque = false
+        if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = style.editorScheme.defaultBackground
         border = if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) {
             userBorder()
         } else {
@@ -55,7 +59,7 @@ class MessageView(
         for ((_, content) in msg.parts) {
             if (content is StepFinish) continue
             if (isHidden(content)) continue
-            val view = ViewFactory.create(content, openFile)
+            val view = view(content)
             view.applyStyle(style)
             parts[content.id] = view
             add(view)
@@ -95,7 +99,7 @@ class MessageView(
             refresh()
             return
         }
-        val view = ViewFactory.create(content, openFile)
+        val view = view(content)
         view.applyStyle(style)
         parts[content.id] = view
         add(view)
@@ -107,7 +111,7 @@ class MessageView(
         val at = components.indexOfFirst { it === existing }.takeIf { it >= 0 } ?: componentCount
         parts.remove(content.id)
         remove(existing)
-        val view = ViewFactory.create(content, openFile)
+        val view = view(content)
         view.applyStyle(style)
         parts[content.id] = view
         add(view, at)
@@ -147,7 +151,7 @@ class MessageView(
         for ((_, content) in msg.parts) {
             if (content is StepFinish) continue
             if (isHidden(content)) continue
-            val view = ViewFactory.create(content, openFile)
+            val view = view(content)
             view.applyStyle(style)
             parts[content.id] = view
             add(view)
@@ -159,6 +163,12 @@ class MessageView(
     private fun syncBorder() {
         if (msg.info.role != SessionUiStyle.View.Message.ASSISTANT_ROLE) return
         border = assistantBorder()
+    }
+
+    private fun view(content: Content) = if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) {
+        ViewFactory.createUser(content, openFile, openUrl)
+    } else {
+        ViewFactory.create(content, openFile, openUrl)
     }
 
     /** Append a streaming delta to the renderer for [contentId]. */
@@ -179,8 +189,30 @@ class MessageView(
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
+        if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = style.editorScheme.defaultBackground
         for (view in parts.values) view.applyStyle(style)
         refresh()
+    }
+
+    override fun paintComponent(g: Graphics) {
+        if (msg.info.role != SessionUiStyle.View.Message.USER_ROLE) {
+            super.paintComponent(g)
+            return
+        }
+        val g2 = g.create() as Graphics2D
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            val arc = JBUI.scale(JBUI.getInt("Button.arc", SessionUiStyle.View.Prompt.CORNER_ARC))
+            g2.color = style.editorScheme.defaultBackground
+            g2.fillRoundRect(0, 0, width, height, arc, arc)
+            g2.color = SessionUiStyle.View.line()
+            val w = width - 1
+            val h = height - 1
+            if (w > 0 && h > 0) g2.drawRoundRect(0, 0, w, h, arc, arc)
+        } finally {
+            g2.dispose()
+        }
+        super.paintComponent(g)
     }
 
     private fun refresh() {
@@ -188,13 +220,10 @@ class MessageView(
         repaint()
     }
 
-    private fun userBorder() = JBUI.Borders.compound(
-        RoundedLineBorder(SessionUiStyle.View.line(), JBUI.scale(SessionUiStyle.View.Message.USER_BORDER_ARC)),
-        JBUI.Borders.empty(
-            JBUI.scale(SessionUiStyle.View.Message.USER_BORDER_VERTICAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.Message.USER_BORDER_HORIZONTAL_PADDING),
-        ),
-    )!!
+    private fun userBorder() = JBUI.Borders.empty(
+        JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
+        JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
+    )
 
     private fun assistantBorder() = JBUI.Borders.empty()
 }

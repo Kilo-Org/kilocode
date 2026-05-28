@@ -36,6 +36,7 @@ import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.log.ChatLogSummary
 import com.intellij.util.ui.JBUI
 import ai.kilocode.log.KiloLog
+import com.intellij.ide.BrowserUtil
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -130,6 +131,7 @@ class SessionUi(
     private lateinit var prompt: PromptPanel
     private lateinit var load: LoadingPanel
     private lateinit var migrationOverlay: MigrationOverlayPanel
+    private var empty: EmptySessionPanel? = null
     private var modalFocus: (() -> JComponent)? = null
     private var style = SessionEditorStyle.current()
 
@@ -161,6 +163,31 @@ class SessionUi(
     internal val cacheKey: String? get() = controller.refKey
 
     internal fun currentStyle() = style
+
+    @RequiresEdt
+    internal fun canDisposeInactive(): Boolean = controller.model.state is SessionState.Idle
+
+    @RequiresEdt
+    internal fun activityKind(): SessionActivityKind? = when (val state = controller.model.state) {
+        is SessionState.Idle,
+        is SessionState.Loading,
+        is SessionState.Busy,
+        is SessionState.Retry,
+        is SessionState.Offline,
+        is SessionState.Error -> null
+        is SessionState.LoginRequired -> SessionActivityKind.LOGIN_REQUIRED
+        is SessionState.AwaitingPermission -> SessionActivityKind.PERMISSION
+        is SessionState.AwaitingQuestion ->
+            SessionActivityKind.PLAN.takeIf { state.question.items.any { it.planFollowup() } } ?: SessionActivityKind.QUESTION
+    }
+
+    @RequiresEdt
+    internal fun title(): String? = controller.model.session?.title?.takeIf { it.isNotBlank() }
+
+    @RequiresEdt
+    internal fun syncActivity() {
+        empty?.syncActivity()
+    }
 
     val defaultFocusedComponent: JComponent get() {
         modalFocus?.invoke()?.let { return it }
@@ -223,7 +250,7 @@ class SessionUi(
             reply = { id, dto -> controller.replyPermission(id, dto) },
         )
         login = LoginRequiredView(openProfile = { controller.openProfile() }, dismiss = { controller.dismissLoginRequired() })
-        messageBody = SessionMessageListPanel(controller.model, this, question, permission, login, ::openFile)
+        messageBody = SessionMessageListPanel(controller.model, this, question, permission, login, ::openFile, ::openUrl)
         header = SessionHeaderPanel(controller, this)
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
@@ -288,15 +315,25 @@ class SessionUi(
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowProgress -> {
+                    empty = null
                     scroll.show(progressBody)
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowRecents -> {
-                    val panel = EmptySessionPanel(this, controller, event.recents) { manager?.showHistory() }
+                    val panel = EmptySessionPanel(
+                        this,
+                        controller,
+                        event.recents,
+                        history = { manager?.showHistory() },
+                        activity = { manager?.activity() ?: sessions.activity() },
+                        titles = { manager?.titles().orEmpty() },
+                    )
+                    empty = panel
                     scroll.show(panel.view)
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowSession -> {
+                    empty = null
                     scroll.show(messageBody)
                 }
 
@@ -318,6 +355,8 @@ class SessionUi(
             when (event) {
                 is SessionModelEvent.StateChanged -> onStateChanged(event.state)
 
+                is SessionModelEvent.SessionUpdated -> onSessionUpdated()
+
                 is SessionModelEvent.TurnAdded,
                 is SessionModelEvent.TurnUpdated,
                 is SessionModelEvent.ContentAdded,
@@ -331,7 +370,6 @@ class SessionUi(
                 is SessionModelEvent.ContentRemoved,
                 is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
-                is SessionModelEvent.SessionUpdated,
                 is SessionModelEvent.HeaderUpdated,
                 is SessionModelEvent.Compacted,
                 is SessionModelEvent.Cleared -> Unit
@@ -433,11 +471,21 @@ class SessionUi(
         }
     }
 
+    private fun openUrl(url: String) {
+        BrowserUtil.browse(url)
+    }
+
     private fun onStateChanged(state: SessionState) {
         prompt.setBusy(state.isBusy())
         load.setState(state)
+        scroll.setQuestionPending(questionPending(state))
         scroll.show(body(state))
+        manager?.activityChanged()
         refresh()
+    }
+
+    private fun onSessionUpdated() {
+        manager?.activityChanged()
     }
 
     private fun refresh() {
@@ -469,3 +517,11 @@ class SessionUi(
 }
 
 private fun variantTitle(value: String): String = value.replaceFirstChar { it.titlecase() }
+
+private fun questionPending(state: SessionState): Boolean {
+    if (state !is SessionState.AwaitingQuestion) return false
+    return state.question.items.none { it.planFollowup() }
+}
+
+private fun ai.kilocode.client.session.model.QuestionItem.planFollowup() =
+    questionKey == "plan.followup.question" || headerKey == "plan.followup.header"

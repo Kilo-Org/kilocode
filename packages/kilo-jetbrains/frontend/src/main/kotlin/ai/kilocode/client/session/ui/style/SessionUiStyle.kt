@@ -3,7 +3,6 @@ package ai.kilocode.client.session.ui.style
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.JBUI.Borders.customLine
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
 import javax.swing.border.Border
@@ -26,7 +25,8 @@ object SessionUiStyle {
         const val CARD_BODY_EXTRA_HEIGHT = 16
 
         internal const val BORDER_DELTA = 64
-        internal const val HOVER_ALPHA = 0.35f
+        internal const val HOVER_BORDER_ALPHA = 0.18f
+        internal const val HOVER_FILL_ALPHA = 0.10f
 
         /** Creates a visible separator against editor-derived transcript surfaces. */
         fun line(): Color = JBColor.lazy { UiStyle.Colors.contrast(UiStyle.Colors.editorBackground(), BORDER_DELTA) }
@@ -35,12 +35,17 @@ object SessionUiStyle {
 
         fun header(): Color = UiStyle.Colors.editorBackground()
 
-        /** Local hover color for collapsible transcript card headers. */
-        fun headerHover(): Color = JBColor.lazy { UiStyle.Colors.blend(header(), line(), HOVER_ALPHA) }
+        /** Subtle hover fill, softer than the card outline. */
+        fun headerHover(): Color = JBColor.lazy { UiStyle.Colors.blend(header(), hoverLine(), HOVER_FILL_ALPHA) }
 
-        fun card(): Border = cardBorder()
+        /** Subtle hover outline, stronger than the hover fill. */
+        fun hoverLine(): Color = JBColor.lazy {
+            UiStyle.Colors.blend(line(), JBUI.CurrentTheme.ActionButton.hoverBackground(), HOVER_BORDER_ALPHA)
+        }
 
-        fun cardBorder(): Border = JBUI.Borders.customLine(line(), 1)
+        fun card(color: Color = line()): Border = cardBorder(color)
+
+        fun cardBorder(color: Color = line()): Border = JBUI.Borders.customLine(color, 1)
 
         fun cardTop(): Border = JBUI.Borders.customLineTop(line())
 

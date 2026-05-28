@@ -6,9 +6,10 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
+import ai.kilocode.client.session.model.ToolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
-import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
 import com.intellij.ui.components.JBLabel
@@ -17,8 +18,8 @@ import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.JBUI
 import com.intellij.xml.util.XmlStringUtil
 import java.awt.BorderLayout
+import java.awt.CardLayout
 import java.awt.Color
-import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Font
@@ -29,109 +30,27 @@ import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
-import javax.swing.SwingUtilities
 
-/** Renders tool calls with VS Code-inspired rows/cards. */
-class ToolView(tool: Tool) : PartView() {
+/** Renders non-read tool calls with VS Code-inspired rows/cards. */
+class ToolView(tool: Tool, private val parts: ToolParts = toolParts(tool)) :
+    SecondarySessionPartView(parts.header, parts.scroll) {
 
     override val contentId: String = tool.id
 
     private var item = tool
     private var style = SessionEditorStyle.current()
 
-    private val root = JPanel(BorderLayout()).apply {
-        isOpaque = true
-        background = SessionUiStyle.View.surface()
-        border = SessionUiStyle.View.card()
-    }
-    private val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP), 0)).apply {
-        isOpaque = true
-        background = SessionUiStyle.View.header()
-        border = JBUI.Borders.empty(
-            JBUI.scale(SessionUiStyle.View.CARD_VERTICAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.CARD_HORIZONTAL_PADDING),
-        )
-    }
-    private val glyph = JBLabel()
-    private val title = JBLabel()
-    private val sub = JBLabel().apply {
-        foreground = UiStyle.Colors.weak()
-    }
-    private val state = JBLabel().apply {
-        foreground = UiStyle.Colors.weak()
-    }
-    private val arrow = JBLabel()
-    private val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP), 0)).apply {
-        isOpaque = false
-    }
-    private val controls: JComponent = Box.createHorizontalBox().apply {
-        add(state)
-        add(arrow)
-    }
-    private val text = JBTextArea().apply {
-        isEditable = false
-        caret.isVisible = false
-        caret.isSelectionVisible = false
-        lineWrap = true
-        wrapStyleWord = true
-        foreground = bodyColor()
-        background = SessionUiStyle.View.surface()
-        border = JBUI.Borders.empty(
-            JBUI.scale(SessionUiStyle.View.CARD_VERTICAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.CARD_HORIZONTAL_PADDING),
-        )
-    }
-    private val scroll = JBScrollPane(text).apply {
-        border = SessionUiStyle.View.cardTop()
-        isOpaque = true
-        background = SessionUiStyle.View.surface()
-        viewport.background = SessionUiStyle.View.surface()
-        horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-        verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
-    }
-
-    private val click = object : MouseAdapter() {
-        override fun mouseClicked(e: MouseEvent) {
-            if (!canExpand(item)) return
-            toggle()
-        }
-    }
-
-    private val mouse = object : MouseAdapter() {
-        override fun mouseEntered(e: MouseEvent) {
-            setHover(true)
-        }
-
-        override fun mouseExited(e: MouseEvent) {
-            if (inside(e)) return
-            setHover(false)
-        }
-    }
-
     init {
-        layout = BorderLayout()
-        isOpaque = false
-        center.add(title, BorderLayout.WEST)
-        center.add(sub, BorderLayout.CENTER)
-        header.add(glyph, BorderLayout.WEST)
-        header.add(center, BorderLayout.CENTER)
-        header.add(controls, BorderLayout.EAST)
-        root.add(header, BorderLayout.NORTH)
-
-        listOf(header, glyph, title, sub, state, arrow, center, controls).forEach {
-            bind(it)
-            it.addMouseListener(click)
-        }
-        text.text = preview(item)
-        applyStyle(SessionEditorStyle.current())
-        add(root, BorderLayout.CENTER)
+        bindHeader(parts.glyph, parts.title, parts.sub, parts.state, parts.center, parts.controls, parts.slot)
+        parts.text.text = preview(item)
+        applyStyle(style)
         sync()
     }
 
     override fun getPreferredSize(): Dimension {
         val size = super.getPreferredSize()
         if (!bodyVisible()) return size
-        val height = header.preferredSize.height + bodyMaxHeight()
+        val height = row.preferredSize.height + bodyMaxHeight()
         return Dimension(size.width, minOf(size.height, height))
     }
 
@@ -140,162 +59,300 @@ class ToolView(tool: Tool) : PartView() {
         val was = item.name
         item = content
         var changed = false
-        if (was != content.name || !canExpand(content)) changed = detach() || changed
+        if (was != content.name || !canExpand(content)) changed = collapse() || changed
         changed = sync() || changed
         changed = syncBody() || changed
         if (changed) refresh()
     }
 
-    fun labelText(): String = listOf(title.text, sub.text, state.text).filter { it.isNotBlank() }.joinToString(" ")
+    fun labelText(): String = listOf(parts.title.text, subtitleText(parts), parts.state.text)
+        .filter { it.isNotBlank() }
+        .joinToString(" ")
 
     fun commandText(): String = command(item)
 
     fun outputText(): String = output(item)
-
     fun bodyText(): String = body(item)
-
-    internal fun previewText(): String = text.text
-
-    fun isExpanded(): Boolean = bodyVisible()
-
+    internal fun previewText(): String = parts.text.text
     fun hasToggle(): Boolean = arrow.isVisible
-
-    internal fun bodyFont() = text.font
-
-    internal fun titleFont() = title.font
-
-    internal fun subtitleFont() = sub.font
-
-    internal fun stateFont() = state.font
-
-    internal fun bodyEditable() = text.isEditable
-
-    internal fun bodyCaretVisible() = text.caret.isVisible
-
-    internal fun bodyVisible() = scroll.parent === root
-
+    internal fun bodyFont() = parts.text.font
+    internal fun titleFont() = parts.title.font
+    internal fun subtitleFont() = parts.sub.font
+    internal fun stateFont() = parts.state.font
+    internal fun bodyEditable() = parts.text.isEditable
+    internal fun bodyCaretVisible() = parts.text.caret.isVisible
+    internal fun bodyVisible() = parts.scroll.parent === this
     internal fun controlCount() = if (arrow.isVisible) 1 else 0
-
-    internal fun horizontalPolicy() = scroll.horizontalScrollBarPolicy
-
-    internal fun bodyWrap() = text.lineWrap
-
+    internal fun horizontalPolicy() = parts.scroll.horizontalScrollBarPolicy
+    internal fun bodyWrap() = parts.text.lineWrap
     internal fun bodyMaxRows() = SessionUiStyle.View.Tool.BODY_LINES
-
     internal fun bodyCreated() = true
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         var changed = false
-        changed = setFont(title, style.boldEditorFont) || changed
-        changed = setFont(sub, style.smallEditorFont) || changed
-        changed = setFont(state, style.smallEditorFont) || changed
-        changed = setFont(text, style.transcriptFont) || changed
+        changed = setFont(parts.title, style.boldEditorFont) || changed
+        changed = setFont(parts.sub, style.smallEditorFont) || changed
+        changed = setFont(parts.link, style.smallEditorFont) || changed
+        changed = setFont(parts.state, style.smallEditorFont) || changed
+        changed = setFont(parts.text, style.transcriptFont) || changed
         if (changed) refresh()
-    }
-
-    fun toggle() {
-        if (!canExpand(item)) return
-        var changed = if (bodyVisible()) detach() else attach()
-        changed = syncArrow() || changed
-        if (changed) refresh()
-    }
-
-    private fun setHover(value: Boolean) {
-        val color = if (value) SessionUiStyle.View.headerHover() else SessionUiStyle.View.header()
-        if (same(header.background, color)) return
-        header.background = color
-        header.repaint()
-    }
-
-    private fun inside(e: MouseEvent): Boolean {
-        val point = SwingUtilities.convertPoint(e.component, e.point, header)
-        return header.contains(point)
-    }
-
-    private fun bind(component: Component) {
-        component.addMouseListener(mouse)
     }
 
     private fun sync(): Boolean {
         val expand = canExpand(item)
-        val cursor = if (expand) Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) else Cursor.getDefaultCursor()
         var changed = false
-        changed = syncCursor(cursor) || changed
-        changed = setVisible(arrow, expand) || changed
-        changed = setVisible(state, !expand) || changed
-        changed = syncArrow() || changed
+        changed = syncExpandable(expand) || changed
+        changed = setVisible(parts.state, !expand) || changed
         changed = syncLabels() || changed
-        changed = setForeground(text, bodyColor()) || changed
+        changed = setForeground(parts.text, bodyColor()) || changed
         return changed
     }
 
     private fun syncLabels(): Boolean {
         var changed = false
-        changed = setIcon(glyph, icon(item)) || changed
-        changed = setForeground(glyph, color(item)) || changed
-        changed = setText(title, title(item)) || changed
-        changed = setText(sub, subtitle(item)) || changed
-        changed = setForeground(title, titleColor(item)) || changed
-        changed = setText(state, stateText(item)) || changed
-        changed = setForeground(state, color(item)) || changed
+        changed = setIcon(parts.glyph, icon(item)) || changed
+        changed = setForeground(parts.glyph, color(item)) || changed
+        changed = setText(parts.title, title(item)) || changed
+        changed = setText(parts.sub, subtitle(item)) || changed
+        changed = setForeground(parts.title, titleColor(item)) || changed
+        changed = setText(parts.state, stateText(item)) || changed
+        changed = setForeground(parts.state, color(item)) || changed
         return changed
-    }
-
-    private fun syncArrow(): Boolean {
-        val icon = if (bodyVisible()) AllIcons.General.ArrowDown else AllIcons.General.ArrowRight
-        return setIcon(arrow, icon)
     }
 
     private fun syncBody(): Boolean {
         var changed = false
         val value = preview(item)
-        if (text.text != value) {
-            text.text = value
-            text.caretPosition = 0
+        if (parts.text.text != value) {
+            parts.text.text = value
+            parts.text.caretPosition = 0
             changed = true
         }
-        changed = setForeground(text, bodyColor()) || changed
+        changed = setForeground(parts.text, bodyColor()) || changed
         return changed
-    }
-
-    private fun attach(): Boolean {
-        if (bodyVisible()) return false
-        syncBody()
-        root.add(scroll, BorderLayout.CENTER)
-        return true
-    }
-
-    private fun detach(): Boolean {
-        val attached = scroll.parent === root
-        if (attached) root.remove(scroll)
-        return attached
-    }
-
-    private fun syncCursor(cursor: Cursor): Boolean {
-        var changed = false
-        listOf(header, glyph, title, sub, state, arrow, center, controls).forEach {
-            if (it.cursor?.type != cursor.type) {
-                it.cursor = cursor
-                changed = true
-            }
-        }
-        return changed
-    }
-
-    private fun refresh() {
-        revalidate()
-        repaint()
     }
 
     private fun bodyColor() = if (item.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else UiStyle.Colors.fg()
 
     private fun bodyMaxHeight(): Int {
-        return text.getFontMetrics(text.font).height * bodyMaxRows() +
+        return parts.text.getFontMetrics(parts.text.font).height * bodyMaxRows() +
             JBUI.scale(SessionUiStyle.View.CARD_BODY_EXTRA_HEIGHT)
     }
 
     override fun dumpLabel() = "ToolView#$contentId(${labelText()})"
+}
+
+/** Renders read calls with secondary, borderless chrome. */
+class ReadToolView(
+    tool: Tool,
+    openFile: (String) -> Unit = {},
+    private val parts: ToolParts = toolParts(tool, openFile),
+) : SecondarySessionPartView(parts.header, parts.scroll, expandable = false) {
+
+    companion object {
+        fun canRender(tool: Tool): Boolean = tool.kind == ToolKind.READ
+    }
+
+    override val contentId: String = tool.id
+
+    private var item = tool
+    private var style = SessionEditorStyle.current()
+
+    init {
+        bindHeader(parts.glyph, parts.title, parts.sub, parts.state, parts.center, parts.controls, parts.slot)
+        parts.text.text = preview(item)
+        applyStyle(style)
+        sync()
+    }
+
+    override fun getPreferredSize(): Dimension {
+        val size = super.getPreferredSize()
+        if (!bodyVisible()) return size
+        val height = row.preferredSize.height + bodyMaxHeight()
+        return Dimension(size.width, minOf(size.height, height))
+    }
+
+    override fun update(content: Content) {
+        if (content !is Tool) return
+        item = content
+        var changed = sync()
+        changed = syncBody() || changed
+        if (changed) refresh()
+    }
+
+    fun labelText(): String = listOf(parts.title.text, subtitleText(parts), parts.state.text)
+        .filter { it.isNotBlank() }
+        .joinToString(" ")
+    fun bodyText(): String = body(item)
+    internal fun bodyVisible() = parts.scroll.parent === this
+    internal fun hasToggle() = arrow.isVisible
+    internal fun horizontalPolicy() = parts.scroll.horizontalScrollBarPolicy
+    internal fun bodyMaxRows() = SessionUiStyle.View.Tool.BODY_LINES
+    internal fun bodyFont() = parts.text.font
+    internal fun linkVisible() = parts.link.isVisible
+    internal fun linkText() = parts.label
+    internal fun linkMarkup() = parts.link.text ?: ""
+    internal fun linkForeground() = parts.link.foreground
+    internal fun linkFont() = parts.link.font
+    internal fun subtitleForeground() = parts.sub.foreground
+    internal fun subtitleFont() = parts.sub.font
+    internal fun linkHref() = parts.href
+    internal fun openLink() = parts.openLink()
+
+    override fun applyStyle(style: SessionEditorStyle) {
+        this.style = style
+        var changed = false
+        changed = setFont(parts.title, style.boldEditorFont) || changed
+        changed = setFont(parts.sub, style.transcriptFont) || changed
+        changed = setFont(parts.link, style.transcriptFont) || changed
+        changed = setFont(parts.state, style.smallEditorFont) || changed
+        changed = setFont(parts.text, style.transcriptFont) || changed
+        if (changed) refresh()
+    }
+
+    private fun sync(): Boolean {
+        var changed = false
+        changed = syncExpandable(false) || changed
+        changed = setVisible(parts.state, true) || changed
+        changed = setIcon(parts.glyph, icon(item)) || changed
+        changed = setForeground(parts.glyph, color(item)) || changed
+        changed = setText(parts.title, title(item)) || changed
+        changed = syncSubtitle() || changed
+        changed = setForeground(parts.title, titleColor(item)) || changed
+        changed = setForeground(parts.sub, UiStyle.Colors.fg()) || changed
+        changed = setForeground(parts.link, UiStyle.Colors.fg()) || changed
+        changed = setText(parts.state, stateText(item)) || changed
+        changed = setForeground(parts.state, color(item)) || changed
+        changed = setForeground(parts.text, bodyColor()) || changed
+        return changed
+    }
+
+    private fun syncSubtitle(): Boolean {
+        val target = target(item)?.takeIf { it.type == "file" }
+        if (target != null) {
+            var changed = false
+            if (parts.href != target.path) {
+                parts.href = target.path
+                changed = true
+            }
+            changed = setLinkText(parts, tail(target.path).ifBlank { target.path }) || changed
+            changed = show(parts, true) || changed
+            return changed
+        }
+
+        var changed = false
+        if (parts.href != null) {
+            parts.href = null
+            changed = true
+        }
+        changed = setText(parts.sub, subtitle(item)) || changed
+        changed = show(parts, false) || changed
+        return changed
+    }
+
+    private fun syncBody(): Boolean {
+        val value = preview(item)
+        if (parts.text.text == value) return false
+        parts.text.text = value
+        parts.text.caretPosition = 0
+        return true
+    }
+
+    private fun bodyColor() = if (item.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else UiStyle.Colors.fg()
+
+    private fun bodyMaxHeight(): Int {
+        return parts.text.getFontMetrics(parts.text.font).height * bodyMaxRows() +
+            JBUI.scale(SessionUiStyle.View.CARD_BODY_EXTRA_HEIGHT)
+    }
+
+    override fun dumpLabel() = "ReadToolView#$contentId(${labelText()})"
+}
+
+class ToolParts(
+    val header: JPanel,
+    val glyph: JBLabel,
+    val title: JBLabel,
+    val sub: JBLabel,
+    val link: JBLabel,
+    val slot: JPanel,
+    val state: JBLabel,
+    val center: JPanel,
+    val controls: JComponent,
+    val text: JBTextArea,
+    val scroll: JBScrollPane,
+    private val open: ((String) -> Unit)? = null,
+) {
+    var href: String? = null
+    var label: String = ""
+
+    fun openLink() {
+        val value = href ?: return
+        open?.invoke(value)
+    }
+}
+
+private const val SUB_CARD = "sub"
+private const val LINK_CARD = "link"
+
+private fun toolParts(tool: Tool, openFile: ((String) -> Unit)? = null): ToolParts {
+    lateinit var parts: ToolParts
+    val glyph = JBLabel()
+    val title = JBLabel()
+    val sub = JBLabel().apply { foreground = UiStyle.Colors.weak() }
+    val link = JBLabel().apply {
+        isVisible = false
+        isFocusable = false
+        foreground = UiStyle.Colors.fg()
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        setRequestFocusEnabled(false)
+        addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                parts.openLink()
+            }
+        })
+    }
+    val slot = JPanel(CardLayout()).apply {
+        isOpaque = false
+        add(sub, SUB_CARD)
+        add(link, LINK_CARD)
+    }
+    val state = JBLabel().apply { foreground = UiStyle.Colors.weak() }
+    val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP), 0)).apply { isOpaque = false }
+    val text = JBTextArea().apply {
+        isEditable = false
+        caret.isVisible = false
+        caret.isSelectionVisible = false
+        lineWrap = true
+        wrapStyleWord = true
+        foreground = if (tool.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else UiStyle.Colors.fg()
+        background = SessionUiStyle.View.surface()
+        border = JBUI.Borders.empty(
+            JBUI.scale(SessionUiStyle.View.CARD_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.CARD_HORIZONTAL_PADDING),
+        )
+    }
+    val scroll = JBScrollPane(text).apply {
+        border = SessionUiStyle.View.cardTop()
+        isOpaque = true
+        background = SessionUiStyle.View.surface()
+        viewport.background = SessionUiStyle.View.surface()
+        horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+        verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
+    }
+    val controls = Box.createHorizontalBox()
+    val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP), 0)).apply {
+        isOpaque = false
+        center.add(title, BorderLayout.WEST)
+        center.add(slot, BorderLayout.CENTER)
+        add(glyph, BorderLayout.WEST)
+        add(center, BorderLayout.CENTER)
+        add(controls, BorderLayout.EAST)
+    }
+    parts = ToolParts(header, glyph, title, sub, link, slot, state, center, controls, text, scroll, openFile)
+    return parts.also {
+        controls.add(it.state)
+    }
 }
 
 private fun icon(tool: Tool) = when (tool.name) {
@@ -327,6 +384,22 @@ private fun setText(label: JBLabel, text: String): Boolean {
     label.text = value
     return true
 }
+
+private fun setLinkText(parts: ToolParts, text: String): Boolean {
+    val value = if (text.isBlank()) "" else XmlStringUtil.wrapInHtml("<u>${XmlStringUtil.escapeString(text)}</u>")
+    if (parts.label == text && parts.link.text == value) return false
+    parts.label = text
+    parts.link.text = value
+    return true
+}
+
+private fun show(parts: ToolParts, link: Boolean): Boolean {
+    if (parts.link.isVisible == link && parts.sub.isVisible != link) return false
+    (parts.slot.layout as CardLayout).show(parts.slot, if (link) LINK_CARD else SUB_CARD)
+    return true
+}
+
+private fun subtitleText(parts: ToolParts): String = if (parts.link.isVisible) parts.label else parts.sub.text
 
 private fun setIcon(label: JBLabel, icon: Icon): Boolean {
     if (label.icon === icon) return false
@@ -375,9 +448,35 @@ private fun stateText(tool: Tool) = when (tool.state) {
 }
 
 private fun readPath(tool: Tool): String {
+    val target = target(tool)
+    if (target != null) {
+        if (target.type == "file") return tail(target.path).ifBlank { target.path }
+        return target.path
+    }
     val path = tool.input["filePath"] ?: tool.input["path"] ?: tool.title ?: return tool.name
     return tail(path).ifBlank { path }
 }
+
+private data class Target(
+    val path: String,
+    val type: String,
+)
+
+private fun target(tool: Tool): Target? {
+    val out = output(tool)
+    if (out.isBlank()) return null
+    val path = tag(out, "path") ?: return null
+    val type = tag(out, "type") ?: return null
+    return Target(path, type.lowercase())
+}
+
+private fun tag(text: String, name: String): String? =
+    Regex("<$name>\\s*([\\s\\S]*?)\\s*</$name>")
+        .find(text)
+        ?.groupValues
+        ?.getOrNull(1)
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
 
 private fun shellTitle(tool: Tool): String =
     tool.input["description"]?.takeIf { it.isNotBlank() }
@@ -453,9 +552,7 @@ private fun plainBody(tool: Tool): String {
 }
 
 private fun canExpand(tool: Tool): Boolean {
-    if (tool.name == "bash") {
-        return command(tool).isNotBlank() || output(tool).isNotBlank() || !tool.error.isNullOrBlank()
-    }
+    if (tool.name == "bash") return command(tool).isNotBlank() || output(tool).isNotBlank() || !tool.error.isNullOrBlank()
     return output(tool).isNotBlank() || !tool.error.isNullOrBlank()
 }
 

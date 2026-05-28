@@ -511,6 +511,66 @@ class SessionScrollTest : SessionUiTestBase() {
         assertTrue(jumpButton().isVisible)
     }
 
+    fun `test question overlay replaces scroll icon and still jumps to bottom`() {
+        showMessages()
+        fillTranscript(24)
+        val button = jumpButton()
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        drainScroll()
+        val icon = button.icon
+
+        emit(ChatEventDto.QuestionAsked("ses_test", question("q_overlay")))
+        drainScroll()
+
+        assertTrue(button.isVisible)
+        assertNotSame(icon, button.icon)
+        assertEquals(KiloBundle.message("session.scroll.question"), button.toolTipText)
+
+        click(button)
+        drainScroll()
+
+        assertBottom(bar)
+        assertFalse(button.isVisible)
+    }
+
+    fun `test question overlay returns to scroll icon when question resolves`() {
+        showMessages()
+        fillTranscript(24)
+        val button = jumpButton()
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        drainScroll()
+        emit(ChatEventDto.QuestionAsked("ses_test", question("q_resolve")))
+        drainScroll()
+        val icon = button.icon
+        val value = bar.value
+
+        emit(ChatEventDto.QuestionReplied("ses_test", "q_resolve"))
+        drainScroll()
+
+        assertEquals(value, bar.value)
+        assertTrue(button.isVisible)
+        assertNotSame(icon, button.icon)
+        assertEquals(KiloBundle.message("session.scroll.bottom"), button.toolTipText)
+    }
+
+    fun `test plan followup question keeps scroll icon`() {
+        showMessages()
+        fillTranscript(24)
+        val button = jumpButton()
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        drainScroll()
+        val icon = button.icon
+
+        emit(ChatEventDto.QuestionAsked("ses_test", question("q_plan", plan = true)))
+        drainScroll()
+
+        assertTrue(button.isVisible)
+        assertSame(icon, button.icon)
+    }
+
     fun `test question carousel navigation follows when transcript is at bottom`() {
         showMessages()
         fillTranscript(24)
@@ -791,7 +851,7 @@ class SessionScrollTest : SessionUiTestBase() {
         return out
     }
 
-    private fun question(id: String) = QuestionRequestDto(
+    private fun question(id: String, plan: Boolean = false) = QuestionRequestDto(
         id = id,
         sessionID = "ses_test",
         questions = listOf(
@@ -801,6 +861,7 @@ class SessionScrollTest : SessionUiTestBase() {
                 options = listOf(QuestionOptionDto("A", "Option A")),
                 multiple = false,
                 custom = true,
+                questionKey = if (plan) "plan.followup.question" else null,
             ),
         ),
         tool = ToolRefDto("msg1", "call1"),

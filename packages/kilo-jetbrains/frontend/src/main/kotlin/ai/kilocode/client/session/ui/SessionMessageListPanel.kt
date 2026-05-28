@@ -47,6 +47,7 @@ class SessionMessageListPanel(
     private val permission: PermissionView? = null,
     private val login: LoginRequiredView? = null,
     private val openFile: (String) -> Unit,
+    private val openUrl: (String) -> Unit = {},
 ) : SessionLayoutPanel(
     JBUI.scale(SessionUiStyle.SessionLayout.GAP),
     JBUI.insets(
@@ -174,7 +175,7 @@ class SessionMessageListPanel(
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id, openFile, style)
+        val tv = TurnView(turn.id, openFile, style, openUrl)
         turnViews[turn.id] = tv
         for (msgId in turn.messageIds) {
             val msg = model.message(msgId) ?: continue
@@ -225,7 +226,7 @@ class SessionMessageListPanel(
         removeAll()
 
         for (turn in model.turns()) {
-            val tv = TurnView(turn.id, openFile, style)
+            val tv = TurnView(turn.id, openFile, style, openUrl)
             turnViews[turn.id] = tv
             for (msgId in turn.messageIds) {
                 val msg = model.message(msgId) ?: continue

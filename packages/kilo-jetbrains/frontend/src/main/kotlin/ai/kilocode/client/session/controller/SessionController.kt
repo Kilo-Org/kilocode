@@ -113,7 +113,8 @@ class SessionController(
       flushMs,
       ::handle,
       condense,
-      ref != null
+      ref != null,
+      ::handleHidden,
     ) { sid ?: ref?.key ?: "pending" }
 
     private var disposed = false
@@ -884,16 +885,7 @@ class SessionController(
             is ChatEventDto.SessionCreated -> adoptFollowup(event.info)
 
             is ChatEventDto.Error -> {
-                partType = null
-                tool = null
-                if (isPaidModelAuthRequired(event.error)) {
-                    loginRetry = retryPrompt()
-                    showSession()
-                    model.setState(SessionState.LoginRequired(KiloBundle.message("session.login.required.description")))
-                } else {
-                    val msg = event.error?.message ?: event.error?.type ?: KiloBundle.message("session.error.unknown")
-                    model.setState(SessionState.Error(msg, event.error?.type))
-                }
+                error(event, true)
             }
 
             is ChatEventDto.MessageRemoved -> {
@@ -901,84 +893,160 @@ class SessionController(
             }
 
             is ChatEventDto.PermissionAsked -> {
-                if (autoApprove) {
-                    approve(event.request)
-                    return
-                }
-                val perm = toPermission(event.request)
-                model.setState(SessionState.AwaitingPermission(perm))
+                asked(event)
             }
 
             is ChatEventDto.PermissionReplied -> {
-                val current = model.state
-                if (current is SessionState.AwaitingPermission && current.permission.id == event.requestID) {
-                    model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
-                }
+                replied(event)
             }
 
             is ChatEventDto.QuestionAsked -> {
-                model.setState(SessionState.AwaitingQuestion(toQuestion(event.request)))
+                asked(event)
             }
 
             is ChatEventDto.QuestionReplied -> {
-                val current = model.state
-                if (current is SessionState.AwaitingQuestion && current.question.id == event.requestID) {
-                    model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
-                }
+                replied(event)
             }
 
             is ChatEventDto.QuestionRejected -> {
-                val current = model.state
-                if (current is SessionState.AwaitingQuestion && current.question.id == event.requestID) {
-                    model.setState(SessionState.Idle)
-                }
+                rejected(event)
             }
 
             is ChatEventDto.SessionStatusChanged -> {
-                val state = when (event.status.type) {
-                    "idle" -> {
-                        val current = model.state
-                        if (current is SessionState.LoginRequired) return
-                        SessionState.Idle
-                    }
-                    "busy" -> {
-                        val current = model.state
-                        if (current is SessionState.Idle || current is SessionState.Error)
-                            SessionState.Busy(KiloBundle.message("session.status.considering"))
-                        else return // already in a more specific phase
-                    }
-                    "retry" -> SessionState.Retry(
-                        message = event.status.message ?: "",
-                        attempt = event.status.attempt ?: 0,
-                        next = event.status.next ?: 0L,
-                    )
-                    "offline" -> SessionState.Offline(
-                        message = event.status.message ?: "",
-                        requestId = event.status.requestID ?: "",
-                    )
-                    else -> return
-                }
-                model.setState(state)
+                status(event.status)
             }
 
             is ChatEventDto.SessionUpdated -> model.setSession(event.session)
 
             is ChatEventDto.SessionIdle -> {
-                // Treat session.idle as an explicit signal to return to Idle.
-                // Only apply if we're not in a more specific non-terminal state.
-                val current = model.state
-                if (current !is SessionState.Error
-                    && current !is SessionState.AwaitingPermission
-                    && current !is SessionState.AwaitingQuestion
-                    && current !is SessionState.LoginRequired
-                ) {
-                    model.setState(SessionState.Idle)
-                }
+                idle()
             }
 
             is ChatEventDto.SessionCompacted -> model.markCompacted()
             is ChatEventDto.SessionDiffChanged -> model.setDiff(event.diff)
             is ChatEventDto.TodoUpdated -> model.setTodos(event.todos)
+        }
+    }
+
+    private fun handleHidden(event: ChatEventDto): Boolean = when (event) {
+        is ChatEventDto.Error,
+        is ChatEventDto.PermissionAsked,
+        is ChatEventDto.PermissionReplied,
+        is ChatEventDto.QuestionAsked,
+        is ChatEventDto.QuestionReplied,
+        is ChatEventDto.QuestionRejected,
+        is ChatEventDto.SessionStatusChanged,
+        is ChatEventDto.SessionUpdated,
+        is ChatEventDto.SessionIdle -> {
+            edt {
+                if (disposed) return@edt
+                updateModel { handleMetadata(event) }
+            }
+            true
+        }
+        else -> false
+    }
+
+    private fun handleMetadata(event: ChatEventDto) {
+        LOG.debug { ChatLogSummary.event(event) }
+        when (event) {
+            is ChatEventDto.Error -> error(event, false)
+            is ChatEventDto.PermissionAsked -> asked(event)
+            is ChatEventDto.PermissionReplied -> replied(event)
+            is ChatEventDto.QuestionAsked -> asked(event)
+            is ChatEventDto.QuestionReplied -> replied(event)
+            is ChatEventDto.QuestionRejected -> rejected(event)
+            is ChatEventDto.SessionStatusChanged -> status(event.status)
+            is ChatEventDto.SessionUpdated -> model.setSession(event.session)
+            is ChatEventDto.SessionIdle -> idle()
+            else -> Unit
+        }
+    }
+
+    private fun error(event: ChatEventDto.Error, reveal: Boolean) {
+        partType = null
+        tool = null
+        if (isPaidModelAuthRequired(event.error)) {
+            loginRetry = retryPrompt()
+            if (reveal) showSession()
+            model.setState(SessionState.LoginRequired(KiloBundle.message("session.login.required.description")))
+            return
+        }
+        val msg = event.error?.message ?: event.error?.type ?: KiloBundle.message("session.error.unknown")
+        model.setState(SessionState.Error(msg, event.error?.type))
+    }
+
+    private fun asked(event: ChatEventDto.PermissionAsked) {
+        if (autoApprove) {
+            approve(event.request)
+            return
+        }
+        val perm = toPermission(event.request)
+        model.setState(SessionState.AwaitingPermission(perm))
+    }
+
+    private fun replied(event: ChatEventDto.PermissionReplied) {
+        val current = model.state
+        if (current is SessionState.AwaitingPermission && current.permission.id == event.requestID) {
+            model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
+        }
+    }
+
+    private fun asked(event: ChatEventDto.QuestionAsked) {
+        model.setState(SessionState.AwaitingQuestion(toQuestion(event.request)))
+    }
+
+    private fun replied(event: ChatEventDto.QuestionReplied) {
+        val current = model.state
+        if (current is SessionState.AwaitingQuestion && current.question.id == event.requestID) {
+            model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
+        }
+    }
+
+    private fun rejected(event: ChatEventDto.QuestionRejected) {
+        val current = model.state
+        if (current is SessionState.AwaitingQuestion && current.question.id == event.requestID) {
+            model.setState(SessionState.Idle)
+        }
+    }
+
+    private fun status(dto: SessionStatusDto) {
+        val state = when (dto.type) {
+            "idle" -> {
+                val current = model.state
+                if (current is SessionState.LoginRequired) return
+                SessionState.Idle
+            }
+            "busy" -> {
+                val current = model.state
+                if (current is SessionState.Idle || current is SessionState.Error)
+                    SessionState.Busy(KiloBundle.message("session.status.considering"))
+                else return // already in a more specific phase
+            }
+            "retry" -> SessionState.Retry(
+                message = dto.message ?: "",
+                attempt = dto.attempt ?: 0,
+                next = dto.next ?: 0L,
+            )
+            "offline" -> SessionState.Offline(
+                message = dto.message ?: "",
+                requestId = dto.requestID ?: "",
+            )
+            else -> return
+        }
+        model.setState(state)
+    }
+
+    private fun idle() {
+        // Treat session.idle as an explicit signal to return to Idle.
+        // Only apply if we're not in a more specific non-terminal state.
+        val current = model.state
+        if (current !is SessionState.Error
+            && current !is SessionState.AwaitingPermission
+            && current !is SessionState.AwaitingQuestion
+            && current !is SessionState.LoginRequired
+        ) {
+            model.setState(SessionState.Idle)
         }
     }
 

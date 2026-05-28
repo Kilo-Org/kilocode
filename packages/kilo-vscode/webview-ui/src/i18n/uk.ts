@@ -455,6 +455,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Не вдалося закрити доступ до сесії",
   "toast.session.unshare.failed.description": "Під час закриття доступу до сесії сталася помилка",
 
+  "toast.session.rename.invalid.title": "Некоректна назва сесії",
   "toast.session.listFailed.title": "Не вдалося завантажити сесії для {{project}}",
 
   "toast.update.title": "Доступне оновлення",

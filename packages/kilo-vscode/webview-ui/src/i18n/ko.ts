@@ -450,6 +450,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "세션 공유 해제 실패",
   "toast.session.unshare.failed.description": "세션 공유를 해제하는 동안 오류가 발생했습니다",
 
+  "toast.session.rename.invalid.title": "잘못된 세션 제목",
   "toast.session.listFailed.title": "{{project}}에 대한 세션을 로드하지 못했습니다",
 
   "toast.update.title": "업데이트 가능",

@@ -23,6 +23,7 @@ internal class SessionUpdateQueue(
     private val fire: (List<ChatEventDto>) -> Unit,
     private val condense: Boolean = true,
     hold: Boolean,
+    private val hidden: (ChatEventDto) -> Boolean = { false },
     private val sid: () -> String,
 ) : Disposable {
     companion object {
@@ -59,6 +60,10 @@ internal class SessionUpdateQueue(
     }
 
     fun enqueue(event: ChatEventDto) {
+        if (!visible.get() && hidden(event)) {
+            LOG.debug { "${ChatLogSummary.sid(sid())} enqueue hidden=true visible=false" }
+            return
+        }
         val size = synchronized(lock) {
             pending.add(event)
             pending.size

@@ -87,6 +87,14 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         assertFalse(tv.labelText().contains("Running"))
     }
 
+    fun `test read tool renders as ReadToolView`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", toolPart("t1", "a1", "read", "completed"))
+
+        val tv = panel.findMessage("a1")!!.part("t1")
+        assertTrue(tv is ai.kilocode.client.session.views.ReadToolView)
+    }
+
     // ------ multiple turns update correctly ------
 
     fun `test content goes to correct turn when multiple turns exist`() {
@@ -127,6 +135,7 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         assertNotNull(gv)
         assertTrue(gv is ai.kilocode.client.session.views.base.GenericView)
         assertTrue((gv as ai.kilocode.client.session.views.base.GenericView).labelText().contains("snapshot"))
+        assertNull(gv.border)
     }
 
     // ------ silent part types ------

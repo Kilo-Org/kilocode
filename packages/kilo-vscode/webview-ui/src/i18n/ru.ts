@@ -451,6 +451,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Не удалось отменить публикацию",
   "toast.session.unshare.failed.description": "Произошла ошибка при отмене публикации",
 
+  "toast.session.rename.invalid.title": "Недопустимое название сессии",
   "toast.session.listFailed.title": "Не удалось загрузить сессии для {{project}}",
 
   "toast.update.title": "Доступно обновление",

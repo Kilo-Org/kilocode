@@ -20,6 +20,7 @@ class TurnView(
     val id: String,
     private val openFile: (String) -> Unit,
     private var style: SessionEditorStyle = SessionEditorStyle.current(),
+    private val openUrl: (String) -> Unit = {},
 ) : SessionLayoutPanel(JBUI.scale(SessionUiStyle.SessionLayout.GAP)), SessionEditorStyleTarget {
 
     constructor(id: String, openFile: (String) -> Unit) : this(id, openFile, SessionEditorStyle.current())
@@ -32,7 +33,7 @@ class TurnView(
 
     /** Add a new [MessageView] for [msg] at the end of this turn. */
     fun addMessage(msg: Message): MessageView {
-        val view = MessageView(msg, openFile, style)
+        val view = MessageView(msg, openFile, style, openUrl)
         messages[msg.info.id] = view
         add(view)
         revalidate()
