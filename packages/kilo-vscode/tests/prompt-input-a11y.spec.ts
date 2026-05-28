@@ -9,6 +9,9 @@ function storyUrl() {
 
 async function load(page: Page): Promise<Locator> {
   await page.goto(storyUrl(), { waitUntil: "load" })
+  await page.waitForSelector("#storybook-root *", { state: "attached", timeout: 5_000 }).catch(async () => {
+    await page.reload({ waitUntil: "load" })
+  })
   await page.waitForSelector("#storybook-root *", { state: "attached" })
   const prompt = page.getByRole("combobox", { name: "Chat prompt" })
   await expect(prompt).toBeVisible()
