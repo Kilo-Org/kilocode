@@ -12,7 +12,7 @@ import { MCP } from "../mcp"
 import { Skill } from "../skill"
 import { localReviewCommand, localReviewUncommittedCommand } from "@/kilocode/review/command" // kilocode_change
 import PROMPT_INITIALIZE from "./template/initialize.txt"
-import PROMPT_REVIEW from "./template/review.txt"
+// kilocode_change: PROMPT_REVIEW intentionally not imported — /review is disabled, see comment below.
 
 type State = {
   commands: Record<string, Info>
@@ -94,18 +94,11 @@ export const layer = Layer.effect(
         },
         hints: hints(PROMPT_INITIALIZE),
       }
-      commands[Default.REVIEW] = {
-        name: Default.REVIEW,
-        description: "review changes [commit|branch|pr], defaults to uncommitted",
-        source: "command",
-        get template() {
-          return PROMPT_REVIEW.replace("${path}", ctx.worktree)
-        },
-        subtask: true,
-        hints: hints(PROMPT_REVIEW),
-      }
-
       // kilocode_change start
+      // /review is intentionally disabled — use /local-review and /local-review-uncommitted instead.
+      // It was accidentally re-introduced via the OpenCode v1.3.0 merge (PR #8772, commit b1811147).
+      // Do NOT re-enable without explicit team discussion.
+
       commands[Default.LOCAL_REVIEW] = localReviewCommand()
       commands[Default.LOCAL_REVIEW_UNCOMMITTED] = localReviewUncommittedCommand()
       // kilocode_change end

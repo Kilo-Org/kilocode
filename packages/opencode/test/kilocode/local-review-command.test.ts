@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test"
+import { Effect, Layer } from "effect"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { Command } from "../../src/command"
 import { localReviewCommand, localReviewUncommittedCommand, parseReviewCommand } from "../../src/kilocode/review/command"
+import { testEffect } from "../lib/effect"
 
 describe("review command parsing", () => {
   test("parses review slash commands", () => {
@@ -157,4 +161,27 @@ describe("local-review-uncommitted command", () => {
     expect(text).toContain("business logic")
     expect(text).toContain("NO_FINDINGS")
   })
+})
+
+// Guard against accidental re-introduction of /review.
+//
+// /review was intentionally disabled in favour of /local-review and
+// /local-review-uncommitted. It was accidentally re-enabled during the
+// OpenCode v1.3.0 upstream merge (PR #8772, commit b1811147) because the
+// kilocode_change suppression comment was lost in conflict resolution.
+// This test ensures the same mistake cannot silently ship again.
+const it = testEffect(Layer.mergeAll(Command.defaultLayer, CrossSpawnSpawner.defaultLayer))
+
+describe("/review command guard", () => {
+  it.instance(
+    "/review is not present in the registered command list",
+    () =>
+      Effect.gen(function* () {
+        const svc = yield* Command.Service
+        const list = yield* svc.list()
+        const names = list.map((c) => c.name)
+        expect(names).not.toContain("review")
+      }),
+    { git: true },
+  )
 })
