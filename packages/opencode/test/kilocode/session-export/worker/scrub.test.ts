@@ -55,16 +55,16 @@ describe("scrubber", () => {
     expect(isHighRiskPath("src/index.ts")).toBe(false)
   })
 
-  test("Scrubber.scrubEvent walks string fields and accumulates counts", () => {
+  test("Scrubber.scrubEvent walks string fields and accumulates counts", async () => {
     const scrubber = new Scrubber()
     const ev = { type: "x", input: { prompt: "AKIAIOSFODNN7EXAMPLE" } }
-    const out = scrubber.scrubEvent(ev)
+    const out = await scrubber.scrubEvent(ev)
     expect(out.success).toBe(true)
     expect(out.data.input.prompt).toContain("<<REDACTED:")
     expect(out.report.redactionsByType.aws_access_key).toBe(1)
   })
 
-  test("Scrubber returns failure with original payload on throw", () => {
+  test("Scrubber returns failure with original payload on throw", async () => {
     const regex = {
       [Symbol.replace]() {
         throw new Error("boom")
@@ -72,10 +72,22 @@ describe("scrubber", () => {
     } as never
     const scrubber = new Scrubber({ patterns: [{ name: "boom", regex }] })
     const ev = { type: "x", text: "abc" }
-    const out = scrubber.scrubEvent(ev)
+    const out = await scrubber.scrubEvent(ev)
     expect(out.success).toBe(false)
     if (out.success) throw new Error("expected scrub failure")
     expect(out.data).toBe(ev)
     expect(out.report.failureReason).toBeTruthy()
+  })
+
+  test("Scrubber redacts basicauth and database connection URIs", async () => {
+    const scrubber = new Scrubber()
+    const basicauth = "https://alice:hunter2@private.example.com/path"
+    const mongo = "mongodb://admin:s3cret@10.0.0.1:27017/admin"
+    const out = await scrubber.scrubEvent({ type: "x", input: { text: `${basicauth}\n${mongo}` } })
+    expect(out.success).toBe(true)
+    expect(out.data.input.text).not.toContain(basicauth)
+    expect(out.data.input.text).not.toContain(mongo)
+    expect(out.data.input.text).not.toContain("hunter2")
+    expect(out.data.input.text).not.toContain("s3cret")
   })
 })

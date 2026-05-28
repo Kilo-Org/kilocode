@@ -27,7 +27,7 @@ const IDENTITY = new Set(["accountid", "email", "org", "orgid", "organizationid"
 const METADATA = new Set(["eventSeq", "time", "durationMs", "retryCount", "requestedAt", "durationToDecideMs"])
 
 export async function handleEvent(envelope: ExportEvent, ctx: HandlerCtx): Promise<void> {
-  const result = ctx.scrubber.scrubEvent(envelope)
+  const result = await ctx.scrubber.scrubEvent(envelope)
   const payload = await normalizePayload(result.data, ctx)
   const chunked = await chunkLargeStrings(payload, ctx)
   const dataJson = JSON.stringify(chunked)
