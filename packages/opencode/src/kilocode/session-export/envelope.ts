@@ -13,19 +13,22 @@ export type ExportEnvelope = {
   agentVersion: string
 }
 
-export type ExportEventType =
-  | "llm_request_started"
-  | "llm_request_completed"
-  | "workspace_baseline_started"
-  | "workspace_baseline_completed"
-  | "workspace_delta_captured"
-  | "tool_executed"
-  | "terminal_outcome"
-  | "permission_decided"
-  | "compaction_captured"
-  | "feedback_captured"
-  | "scrub_report"
-  | "session_degraded"
+export const ExportEventTypes = [
+  "llm_request_started",
+  "llm_request_completed",
+  "workspace_baseline_started",
+  "workspace_baseline_completed",
+  "workspace_delta_captured",
+  "tool_executed",
+  "terminal_outcome",
+  "permission_decided",
+  "compaction_captured",
+  "feedback_captured",
+  "scrub_report",
+  "session_degraded",
+] as const
+
+export type ExportEventType = (typeof ExportEventTypes)[number]
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue }
 

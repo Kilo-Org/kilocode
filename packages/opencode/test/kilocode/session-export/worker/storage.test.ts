@@ -86,4 +86,10 @@ describe("Storage", () => {
     }
     expect(storage.pendingEvents({ now: Date.now(), limitBytes: 1_000_000_000 }).length).toBe(500)
   })
+
+  test("keeps worker schema out of main drizzle migration glob", async () => {
+    const root = join(import.meta.dir, "../../../..")
+    const files = await Array.fromAsync(new Bun.Glob("src/**/*.sql.ts").scan({ cwd: root }))
+    expect(files.some((file) => file.includes("session-export"))).toBe(false)
+  })
 })

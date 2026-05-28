@@ -1,5 +1,12 @@
 import { Database } from "bun:sqlite"
+import { and, asc, eq, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm"
+import { drizzle, type SQLiteBunDatabase } from "drizzle-orm/bun-sqlite"
 import type { ExportEventType } from "../envelope"
+import { ChunkTable, EventTable } from "./schema"
+
+const tables = { ChunkTable, EventTable }
+
+type Client = SQLiteBunDatabase<typeof tables> & { $client: Database }
 
 export type EventRow = {
   id: string
@@ -27,35 +34,13 @@ export type ChunkRow = {
   encoding: "zstd"
 }
 
-type EventRecord = {
-  id: string
-  schema_version: number
-  session_id: string
-  root_session_id: string
-  parent_session_id: string | null
-  seq: number
-  request_id: string | null
-  type: ExportEventType
-  ts: number
-  agent_version: string
-  data_json: string
-  client_scrubbed: number
-  upload_attempts: number
-}
-
-type ChunkRecord = {
-  id: string
-  bytes: Uint8Array
-  size: number
-  encoding?: string
-  ref_count: number
-}
-
 export class Storage {
   private readonly sqlite: Database
+  private readonly db: Client
 
   constructor(path: string) {
     this.sqlite = new Database(path, { create: true })
+    this.db = drizzle({ client: this.sqlite, schema: tables }) as Client
     this.sqlite.exec("PRAGMA journal_mode = WAL")
     this.sqlite.exec("PRAGMA synchronous = NORMAL")
     this.sqlite.exec("PRAGMA busy_timeout = 5000")
@@ -95,55 +80,51 @@ export class Storage {
   }
 
   insertEvent(row: EventRow): void {
-    this.sqlite
-      .query(
-        `INSERT INTO event (
-          id, schema_version, session_id, root_session_id, parent_session_id, seq,
-          request_id, type, ts, agent_version, data_json, client_scrubbed
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        row.id,
-        row.schemaVersion,
-        row.sessionId,
-        row.rootSessionId,
-        row.parentSessionId ?? null,
-        row.seq,
-        row.requestId ?? null,
-        row.type,
-        row.ts,
-        row.agentVersion,
-        row.dataJson,
-        row.clientScrubbed,
-      )
+    this.db
+      .insert(EventTable)
+      .values({
+        id: row.id,
+        schema_version: row.schemaVersion,
+        session_id: row.sessionId,
+        root_session_id: row.rootSessionId,
+        parent_session_id: row.parentSessionId ?? null,
+        seq: row.seq,
+        request_id: row.requestId ?? null,
+        type: row.type,
+        ts: row.ts,
+        agent_version: row.agentVersion,
+        data_json: row.dataJson,
+        client_scrubbed: row.clientScrubbed,
+      })
+      .run()
   }
 
   upsertChunk(row: ChunkRow): void {
-    this.sqlite
-      .query(
-        `INSERT INTO chunk (id, bytes, size, encoding, ref_count) VALUES (?, ?, ?, ?, 1)
-         ON CONFLICT(id) DO UPDATE SET ref_count = ref_count + 1`,
-      )
-      .run(row.id, row.bytes, row.size, row.encoding)
+    this.db
+      .insert(ChunkTable)
+      .values({ id: row.id, bytes: Buffer.from(row.bytes), size: row.size, encoding: row.encoding, ref_count: 1 })
+      .onConflictDoUpdate({ target: ChunkTable.id, set: { ref_count: sql`${ChunkTable.ref_count} + 1` } })
+      .run()
   }
 
   getChunk(id: string): { id: string; bytes: Uint8Array; refCount: number; size: number } | undefined {
-    const row = this.sqlite.query("SELECT id, bytes, size, ref_count FROM chunk WHERE id = ?").get(id) as
-      | ChunkRecord
-      | undefined
+    const row = this.db
+      .select({ id: ChunkTable.id, bytes: ChunkTable.bytes, size: ChunkTable.size, ref_count: ChunkTable.ref_count })
+      .from(ChunkTable)
+      .where(eq(ChunkTable.id, id))
+      .get()
     if (!row) return undefined
     return { id: row.id, bytes: row.bytes, refCount: row.ref_count, size: row.size }
   }
 
   pendingEvents(opts: { now: number; limitBytes: number }): PendingEventRow[] {
-    const rows = this.sqlite
-      .query(
-        `SELECT * FROM event
-         WHERE uploaded_at IS NULL AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
-         ORDER BY ts ASC
-         LIMIT 500`,
-      )
-      .all(opts.now) as EventRecord[]
+    const rows = this.db
+      .select()
+      .from(EventTable)
+      .where(and(isNull(EventTable.uploaded_at), or(isNull(EventTable.next_attempt_at), lte(EventTable.next_attempt_at, opts.now))))
+      .orderBy(asc(EventTable.ts))
+      .limit(500)
+      .all()
     const out: PendingEventRow[] = []
     let bytes = 0
     for (const row of rows) {
@@ -169,45 +150,58 @@ export class Storage {
   }
 
   markRetry(id: string, next: number): void {
-    this.sqlite.query("UPDATE event SET upload_attempts = upload_attempts + 1, next_attempt_at = ? WHERE id = ?").run(next, id)
+    this.db
+      .update(EventTable)
+      .set({ upload_attempts: sql`${EventTable.upload_attempts} + 1`, next_attempt_at: next })
+      .where(eq(EventTable.id, id))
+      .run()
   }
 
   markUploaded(ids: string[]): void {
     if (ids.length === 0) return
-    const vars = ids.map(() => "?").join(",")
-    this.sqlite.query(`UPDATE event SET uploaded_at = ? WHERE id IN (${vars})`).run(Date.now(), ...ids)
+    this.db.update(EventTable).set({ uploaded_at: Date.now() }).where(inArray(EventTable.id, ids)).run()
   }
 
   deleteUploaded(): { events: number; chunks: number } {
-    const events = this.sqlite.query("DELETE FROM event WHERE uploaded_at IS NOT NULL").run().changes
-    const chunks = this.sqlite.query("DELETE FROM chunk WHERE ref_count <= 0").run().changes
+    const events = this.db.delete(EventTable).where(isNotNull(EventTable.uploaded_at)).returning({ id: EventTable.id }).all().length
+    const chunks = this.db.delete(ChunkTable).where(lte(ChunkTable.ref_count, 0)).returning({ id: ChunkTable.id }).all().length
     return { events, chunks }
   }
 
   decRefChunks(ids: string[]): void {
     if (ids.length === 0) return
-    const vars = ids.map(() => "?").join(",")
-    this.sqlite.query(`UPDATE chunk SET ref_count = ref_count - 1 WHERE id IN (${vars})`).run(...ids)
+    this.db
+      .update(ChunkTable)
+      .set({ ref_count: sql`${ChunkTable.ref_count} - 1` })
+      .where(inArray(ChunkTable.id, ids))
+      .run()
   }
 
   commitUploaded(eventIds: string[], chunkIds: string[]): { events: number; chunks: number } {
-    return this.sqlite.transaction(() => {
-      this.markUploaded(eventIds)
-      this.decRefChunks(chunkIds)
-      return this.deleteUploaded()
-    })()
+    return this.db.transaction((tx) => {
+      if (eventIds.length > 0) {
+        tx.update(EventTable).set({ uploaded_at: Date.now() }).where(inArray(EventTable.id, eventIds)).run()
+      }
+      if (chunkIds.length > 0) {
+        tx.update(ChunkTable)
+          .set({ ref_count: sql`${ChunkTable.ref_count} - 1` })
+          .where(inArray(ChunkTable.id, chunkIds))
+          .run()
+      }
+      const events = tx.delete(EventTable).where(isNotNull(EventTable.uploaded_at)).returning({ id: EventTable.id }).all().length
+      const chunks = tx.delete(ChunkTable).where(lte(ChunkTable.ref_count, 0)).returning({ id: ChunkTable.id }).all().length
+      return { events, chunks }
+    })
   }
 
   chunksForEvents(ids: string[]): ChunkRow[] {
     if (ids.length === 0) return []
-    const vars = ids.map(() => "?").join(",")
-    const rows = this.sqlite.query(`SELECT data_json FROM event WHERE id IN (${vars})`).all(...ids) as { data_json: string }[]
+    const rows = this.db.select({ data_json: EventTable.data_json }).from(EventTable).where(inArray(EventTable.id, ids)).all()
     const chunkIds = new Set<string>()
     for (const row of rows) collectChunkIds(JSON.parse(row.data_json), chunkIds)
     if (chunkIds.size === 0) return []
-    const chunkVars = [...chunkIds].map(() => "?").join(",")
-    const chunks = this.sqlite.query(`SELECT id, bytes, size, encoding, ref_count FROM chunk WHERE id IN (${chunkVars})`).all(...chunkIds) as ChunkRecord[]
-    return chunks.map((row) => ({ id: row.id, bytes: row.bytes, size: row.size, encoding: "zstd" }))
+    const chunks = this.db.select().from(ChunkTable).where(inArray(ChunkTable.id, [...chunkIds])).all()
+    return chunks.map((row) => ({ id: row.id, bytes: row.bytes, size: row.size, encoding: row.encoding }))
   }
 
   dbSize(): number {

@@ -1,4 +1,6 @@
+import { sql } from "drizzle-orm"
 import { blob, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core"
+import { ExportEventTypes } from "../envelope"
 
 export const EventTable = sqliteTable(
   "event",
@@ -10,7 +12,7 @@ export const EventTable = sqliteTable(
     parent_session_id: text(),
     seq: integer().notNull(),
     request_id: text(),
-    type: text().notNull(),
+    type: text({ enum: ExportEventTypes }).notNull(),
     ts: integer().notNull(),
     agent_version: text().notNull(),
     data_json: text().notNull(),
@@ -19,14 +21,17 @@ export const EventTable = sqliteTable(
     upload_attempts: integer().notNull().default(0),
     next_attempt_at: integer(),
   },
-  (t) => [index("event_session_seq").on(t.session_id, t.seq), index("event_pending").on(t.uploaded_at, t.next_attempt_at)],
+  (t) => [
+    index("event_session_seq").on(t.session_id, t.seq),
+    index("event_pending").on(t.uploaded_at, t.next_attempt_at).where(sql`${t.uploaded_at} IS NULL`),
+  ],
 )
 
 export const ChunkTable = sqliteTable("chunk", {
   id: text().primaryKey(),
-  bytes: blob().notNull(),
+  bytes: blob({ mode: "buffer" }).notNull(),
   size: integer().notNull(),
-  encoding: text().notNull(),
+  encoding: text({ enum: ["zstd"] }).notNull(),
   ref_count: integer().notNull(),
   uploaded_at: integer(),
 })
