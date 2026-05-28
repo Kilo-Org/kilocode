@@ -37,12 +37,8 @@ export function createWorkspaceProvider(opts: { root: string; statePath?: string
       return state.sessions[sessionId]
     },
     remember(sessionId: string, snapshotId: string): void {
-      const previous = state.sessions[sessionId]
       state.sessions[sessionId] = snapshotId
-      if (previous && previous !== snapshotId && !Object.values(state.sessions).includes(previous)) {
-        delete state.snapshots[previous]
-        snapshots.delete(previous)
-      }
+      prune(state, snapshots)
       save(opts.statePath, state)
     },
     async baseline(): Promise<{ snapshotId: string; files: FileEntry[]; capture: CaptureMetadata }> {
@@ -60,6 +56,15 @@ export function createWorkspaceProvider(opts: { root: string; statePath?: string
 type State = {
   sessions: Record<string, string>
   snapshots: Record<string, File[]>
+}
+
+function prune(state: State, snapshots: Map<string, Map<string, File>>): void {
+  const used = new Set(Object.values(state.sessions))
+  for (const id of Object.keys(state.snapshots)) {
+    if (used.has(id)) continue
+    delete state.snapshots[id]
+    snapshots.delete(id)
+  }
 }
 
 function load(file: string | undefined): State {
