@@ -62,10 +62,10 @@ While the specifics change constantly, some principles stay consistent:
 
 You don't need a paid API key to use Kilo Code productively. The fastest way to start for free is [Auto Model Free](/docs/code-with-ai/agents/auto-model) (`kilo-auto/free`), which routes to the best available free models automatically. See [Using Kilo for Free](/docs/getting-started/using-kilo-for-free) for the full zero-cost setup.
 
-If you prefer to pick models yourself, here are the current standouts. Type `free` in the model picker to filter the list.
+If you prefer to pick models yourself, type `free` in the model picker to filter by free models, or browse the full list at [kilo.ai/models](https://kilo.ai/models).
 
 {% callout type="info" %}
-Free model availability changes as providers adjust promotional periods. The models below reflect what's available as of April 2026 — check [kilo.ai/models](https://kilo.ai/models) for the live list.
+Free model availability changes as providers adjust promotional periods. Check [kilo.ai/models](https://kilo.ai/models) for the live list.
 {% /callout %}
 
 ## Context Windows Matter
