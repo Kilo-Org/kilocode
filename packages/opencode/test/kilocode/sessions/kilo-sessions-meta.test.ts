@@ -85,6 +85,7 @@ describe("KiloSessions kilo_meta", () => {
         const svc = yield* KiloSessions.Service
         const bus = yield* Bus.Service
         yield* svc.init()
+        yield* Effect.yieldNow
         yield* bus.publish(Session.Event.Updated, { sessionID: session.id, info: { ...session, title: "updated" } })
 
         const payload = yield* Effect.promise(() => timeout(sent.promise))
