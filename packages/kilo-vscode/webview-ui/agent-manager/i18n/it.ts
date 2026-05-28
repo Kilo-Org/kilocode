@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "locale",
+  "agentManager.sidebar.collapse": "Comprimi barra laterale",
+  "agentManager.sidebar.expand": "Mostra barra laterale",
   "agentManager.section.worktrees": "WORKTREE",
   "agentManager.section.sessions": "SESSIONI",
   "agentManager.notGitRepo": "Non è una repository git",
@@ -53,6 +55,11 @@ export const dict = {
   "agentManager.tab.terminal": "Terminale",
   "agentManager.tab.openTerminal": "Apri terminale",
   "agentManager.tab.newOptions": "Altre opzioni nuova scheda",
+  "agentManager.tabsMenu.label": "Cerca e cambia scheda",
+  "agentManager.tabsMenu.search": "Cerca schede...",
+  "agentManager.tabsMenu.empty": "Nessuna scheda corrispondente",
+  "agentManager.tabsMenu.status.waiting": "Attendi",
+  "agentManager.tabsMenu.status.retry": "Riprova",
 
   "agentManager.terminal.new": "Nuova scheda terminale",
   "agentManager.terminal.ended": "terminale terminato - chiudi la scheda per nasconderlo",

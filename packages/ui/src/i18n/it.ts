@@ -1,3 +1,4 @@
+// kilocode_change - new file
 export const dict: Record<string, string> = {
   "ui.sessionReview.title": "Modifiche della sessione",
   "ui.sessionReview.title.git": "Modifiche Git",
@@ -97,6 +98,16 @@ export const dict: Record<string, string> = {
   "ui.textField.copied": "Copiato",
 
   "ui.imagePreview.alt": "Anteprima immagine",
+  "ui.mermaid.rendering": "Rendering del diagramma Mermaid...",
+  "ui.mermaid.renderError": "Rendering Mermaid non riuscito: {{message}}",
+  "ui.mermaid.errorDefault": "Impossibile renderizzare il diagramma Mermaid.",
+  "ui.mermaid.errorEmpty": "Mermaid ha generato un diagramma vuoto.",
+  "ui.mermaid.download": "Download",
+  "ui.mermaid.copySource": "Copia sorgente Mermaid",
+  "ui.mermaid.copySvg": "Copia SVG",
+  "ui.mermaid.copyPng": "Copia PNG",
+  "ui.mermaid.downloadSvg": "Scarica SVG",
+  "ui.mermaid.downloadPng": "Scarica PNG",
   "ui.scrollView.ariaLabel": "contenuto scorrevole",
 
   "ui.fileSearch.placeholder": "Cerca",

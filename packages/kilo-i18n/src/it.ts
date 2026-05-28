@@ -73,6 +73,8 @@ export const dict = {
   "marketplace.warning.cancel": "Annulla",
   "marketplace.contribute.prompt": "Manca una skill, una modalità o un server MCP?",
   "marketplace.contribute.cta": "Contribuisci su GitHub",
+  "marketplace.migration.notice":
+    "Le Modalità sono state sostituite dagli agenti. Se in precedenza hai installato Modalità dal marketplace, rimuovile e reinstallale come agenti per migrare al nuovo formato.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "Implementa",
@@ -93,4 +95,11 @@ export const dict = {
     "Disattiva gli snapshot di Kilo per questo progetto. Perderai annulla/ripeti sulle modifiche ai file fatte da Kilo, ma git continuerà a tracciare tutto.",
 
   "ui.messagePart.openInDiffViewer": "Apri nel visualizzatore diff",
+  "ui.messagePart.shell.command": "Comando",
+  "ui.messagePart.shell.output": "Output",
+  "ui.messagePart.openInEditor": "Apri nell'editor",
+
+  "ui.message.feedback.helpful": "È stato utile",
+  "ui.message.feedback.notHelpful": "Non è stato utile",
+  "ui.message.feedback.clearRating": "Cancella valutazione",
 }
