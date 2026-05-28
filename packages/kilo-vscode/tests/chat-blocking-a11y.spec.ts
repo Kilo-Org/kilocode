@@ -28,6 +28,20 @@ test.describe("QuestionDock accessibility interactions", () => {
     await expect(jest).toHaveAttribute("aria-checked", "true")
   })
 
+  test("selects the custom radio when reached with arrow navigation", async ({ page }) => {
+    await page.goto(story("chat--question-dock-single"), { waitUntil: "load" })
+
+    const bun = page.getByRole("radio", { name: "Bun test" })
+    const custom = page.getByRole("radio", { name: "Type your own answer" })
+    await bun.click()
+    await expect(bun).toHaveAttribute("aria-checked", "true")
+
+    await bun.press("ArrowRight")
+    await expect(bun).toHaveAttribute("aria-checked", "false")
+    await expect(custom).toHaveAttribute("aria-checked", "true")
+    await expect(page.getByRole("textbox", { name: "Type your own answer" })).toBeFocused()
+  })
+
   test("does not advance a question step while navigating radio answers", async ({ page }) => {
     await page.goto(story("chat--question-dock-multi"), { waitUntil: "load" })
 

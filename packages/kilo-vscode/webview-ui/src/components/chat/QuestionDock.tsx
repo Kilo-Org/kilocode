@@ -66,8 +66,10 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   const multi = createMemo(() => question()?.multiple === true)
   const role = createMemo(() => (multi() ? "checkbox" : "radio"))
   const group = createMemo(() => (multi() ? "group" : "radiogroup"))
-  const customPicked = createMemo(() =>
-    (store.answers[store.tab] ?? []).some((answer) => store.kinds[store.tab]?.[answer] === "custom"),
+  const customPicked = createMemo(
+    () =>
+      (!multi() && store.editing) ||
+      (store.answers[store.tab] ?? []).some((answer) => store.kinds[store.tab]?.[answer] === "custom"),
   )
   const tabIndex = (picked: boolean, index: number) => {
     if (multi()) return undefined
@@ -188,11 +190,24 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     setStore("editing", false)
   }
 
+  const edit = () => {
+    setStore("editing", true)
+    if (multi()) return
+
+    const answers = [...store.answers]
+    answers[store.tab] = []
+    setStore("answers", answers)
+    const kinds = [...store.kinds]
+    kinds[store.tab] = {}
+    setStore("kinds", kinds)
+    syncAgent(answers, kinds)
+  }
+
   const selectOption = (optIndex: number) => {
     if (store.sending) return
 
     if (optIndex === options().length) {
-      setStore("editing", true)
+      edit()
       return
     }
 
@@ -225,6 +240,10 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     const next = idx === -1 ? (delta > 0 ? 0 : items.length - 1) : (idx + delta + items.length) % items.length
     items[next]?.focus()
     if (multi()) return
+    if (next === options().length) {
+      edit()
+      return
+    }
     const opt = options()[next]
     if (opt) pick(opt.label, false, false)
   }
