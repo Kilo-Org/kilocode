@@ -1,4 +1,4 @@
-import type { ExportEvent, FeedbackCaptured, PermissionDecided, TerminalOutcome, ToolExecuted } from "./events"
+import type { ExportEvent, FeedbackCaptured, PermissionDecided, ToolExecuted } from "./events"
 import { ulid } from "ulid"
 
 export type SyncSubscriberDeps = {
@@ -48,6 +48,8 @@ export class SyncSubscriber {
     const end = number(record(state.time).end) ?? this.deps.now()
     const output = text(state.output)
     const input = state.input
+    const meta = record(state.metadata)
+    const shell = toolName === "bash" || toolName === "shell"
     const seq = this.deps.syncSeq(sessionId)
     const tool: ToolExecuted = {
       id: ulid(),
@@ -69,32 +71,12 @@ export class SyncSubscriber {
       toolInput: input,
       toolOutput: output,
       errorCode: text(state.error),
+      exitCode: shell ? (number(meta.exit) ?? number(meta.exitCode) ?? 0) : undefined,
+      signal: shell ? text(meta.signal) : undefined,
       durationMs: Math.max(0, end - start),
       retryCount: 0,
     }
     this.deps.dispatch(tool)
-
-    if (toolName === "bash" || toolName === "shell") {
-      const meta = record(state.metadata)
-      const termSeq = this.deps.syncSeq(sessionId)
-      const term: TerminalOutcome = {
-        id: ulid(),
-        schemaVersion: 1,
-        type: "terminal_outcome",
-        sessionId,
-        rootSessionId: this.deps.getRootSessionId?.(sessionId) ?? sessionId,
-        turnId: this.deps.getTurnId?.(sessionId),
-        seq: termSeq,
-        eventSeq: termSeq,
-        ts: this.deps.now(),
-        agentVersion: this.deps.agentVersion,
-        toolCallId: text(part.callID) ?? "",
-        exitCode: number(meta.exit) ?? number(meta.exitCode) ?? 0,
-        signal: text(meta.signal),
-        durationMs: Math.max(0, end - start),
-      }
-      this.deps.dispatch(term)
-    }
   }
 
   private handlePermission(sessionId: string, data: Record<string, unknown>): void {

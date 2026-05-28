@@ -44,7 +44,7 @@ describe("SyncSubscriber", () => {
     expect(posted.length).toBe(0)
   })
 
-  test("emits terminal_outcome for bash tools", () => {
+  test("folds terminal outcome into bash tool events", () => {
     const posted: unknown[] = []
     const sub = new SyncSubscriber({
       isEligibleSession: () => true,
@@ -66,7 +66,11 @@ describe("SyncSubscriber", () => {
         },
       },
     })
-    expect(posted.some((item) => (item as { type?: string }).type === "terminal_outcome")).toBe(true)
+    const tool = posted.find((item) => (item as { type?: string }).type === "tool_executed") as
+      | { exitCode?: number; signal?: string }
+      | undefined
+    expect(tool?.exitCode).toBe(2)
+    expect(posted.some((item) => (item as { type?: string }).type === "terminal_outcome")).toBe(false)
   })
 
   test("uses getRootSessionId so sub-agent events keep their root linkage", () => {

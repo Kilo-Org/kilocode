@@ -112,6 +112,8 @@ export type ToolExecuted = ExportEnvelope & {
   toolInput?: unknown
   toolOutput?: string
   errorCode?: string
+  exitCode?: number
+  signal?: string
   durationMs: number
   retryCount: number
 }
