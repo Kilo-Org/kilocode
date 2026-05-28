@@ -28,6 +28,7 @@ const METADATA = new Set(["eventSeq", "time", "durationMs", "retryCount", "reque
 
 export async function handleEvent(envelope: ExportEvent, ctx: HandlerCtx): Promise<void> {
   const result = await ctx.scrubber.scrubEvent(envelope)
+  if (!result.success) return
   const payload = await normalizePayload(result.data, ctx)
   const chunked = await chunkLargeStrings(payload, ctx)
   const dataJson = JSON.stringify(chunked)

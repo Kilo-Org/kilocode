@@ -52,14 +52,14 @@ describe("handlers", () => {
     expect(rows[0].clientScrubbed).toBe(1)
   })
 
-  test("persists with clientScrubbed=0 when scrubber fails", async () => {
+  test("drops event when scrubber fails", async () => {
     const scrubber = new Scrubber()
     ;(scrubber as unknown as { walk: (node: unknown) => unknown }).walk = () => {
       throw new Error("boom")
     }
     await handleEvent(started("01K", { system: [] }), { storage, chunker, scrubber, inlineThresholdBytes: 64 * 1024 })
     const rows = storage.pendingEvents({ now: 1000, limitBytes: 1_000_000 })
-    expect(rows[0].clientScrubbed).toBe(0)
+    expect(rows).toEqual([])
   })
 
   test("large text field is chunked, not inlined", async () => {
