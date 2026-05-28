@@ -15,6 +15,7 @@ import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
+import ai.kilocode.rpc.dto.SessionRuntimeDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import kotlinx.coroutines.CompletableDeferred
@@ -65,6 +66,9 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     /** Push status updates here. */
     val statuses = MutableStateFlow<Map<String, SessionStatusDto>>(emptyMap())
+
+    /** Push runtime updates here. */
+    val runtime = MutableStateFlow(SessionRuntimeDto())
 
     /** Pending permissions returned by [pendingPermissions]. */
     val pendingPermissionList = mutableListOf<PermissionRequestDto>()
@@ -162,6 +166,11 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun statuses(): Flow<Map<String, SessionStatusDto>> {
         assertNotEdt("statuses")
         return statuses
+    }
+
+    override suspend fun runtime(): Flow<SessionRuntimeDto> {
+        assertNotEdt("runtime")
+        return runtime
     }
 
     override suspend fun setDirectory(id: String, directory: String) {

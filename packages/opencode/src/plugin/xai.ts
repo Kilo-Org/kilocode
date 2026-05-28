@@ -119,7 +119,10 @@ function authHeaders() {
 // to make trust decisions, so unsigned decode is safe. Returns false for
 // opaque tokens (no JWT shape), which conservatively skips the proactive
 // refresh and lets the 401-on-call path drive the refresh instead.
-export function accessTokenIsExpiring(token: string | undefined, skewMs: number = ACCESS_TOKEN_REFRESH_SKEW_MS): boolean {
+export function accessTokenIsExpiring(
+  token: string | undefined,
+  skewMs: number = ACCESS_TOKEN_REFRESH_SKEW_MS,
+): boolean {
   if (!token || typeof token !== "string") return false
   const parts = token.split(".")
   if (parts.length < 2) return false

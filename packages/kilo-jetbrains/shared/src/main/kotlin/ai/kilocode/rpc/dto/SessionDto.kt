@@ -12,6 +12,7 @@ data class SessionDto(
     val version: String,
     val time: SessionTimeDto,
     val summary: SessionSummaryDto? = null,
+    val cost: Double? = null,
 )
 
 @Serializable
@@ -38,7 +39,23 @@ data class SessionStatusDto(
 )
 
 @Serializable
+data class SessionActivityDto(
+    val kind: String,
+    val requestID: String? = null,
+    val message: String? = null,
+)
+
+@Serializable
+data class SessionRuntimeDto(
+    val statuses: Map<String, SessionStatusDto> = emptyMap(),
+    val activities: Map<String, SessionActivityDto> = emptyMap(),
+    val costs: Map<String, Double> = emptyMap(),
+)
+
+@Serializable
 data class SessionListDto(
     val sessions: List<SessionDto>,
     val statuses: Map<String, SessionStatusDto>,
+    val activities: Map<String, SessionActivityDto> = emptyMap(),
+    val costs: Map<String, Double> = emptyMap(),
 )

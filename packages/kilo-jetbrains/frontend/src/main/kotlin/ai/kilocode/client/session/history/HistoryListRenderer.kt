@@ -2,6 +2,7 @@ package ai.kilocode.client.session.history
 
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.session.SessionActivityKind
+import ai.kilocode.client.session.ui.header.money
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
@@ -30,6 +31,7 @@ internal open class HistoryRenderer<T : HistoryItem>(
     private val deletable: Boolean,
     private val activity: () -> Map<String, SessionActivityKind>,
     private val titles: () -> Map<String, String> = { emptyMap() },
+    private val costs: () -> Map<String, Double> = { emptyMap() },
 ) : JPanel(BorderLayout()), ListCellRenderer<T> {
     companion object {
         private val icon: Icon = AllIcons.Actions.GC
@@ -62,6 +64,9 @@ internal open class HistoryRenderer<T : HistoryItem>(
     }
     private val title = SimpleColoredComponent()
     private val badge = BadgeLabel()
+    private val cost = JBLabel().apply {
+        border = JBUI.Borders.emptyRight(UiStyle.Gap.sm())
+    }
     private val time = JBLabel()
     private val del = JBLabel().apply {
         horizontalAlignment = SwingConstants.CENTER
@@ -74,7 +79,11 @@ internal open class HistoryRenderer<T : HistoryItem>(
     }
     private val main = JPanel(BorderLayout()).apply {
         add(head, BorderLayout.CENTER)
-        add(time, BorderLayout.EAST)
+        add(JPanel(FlowLayout(FlowLayout.RIGHT, 0, 0)).apply {
+            add(cost)
+            add(time)
+            UiStyle.Components.transparent(this, cost)
+        }, BorderLayout.EAST)
     }
     private val row = JPanel(BorderLayout()).apply {
         add(main, BorderLayout.CENTER)
@@ -87,7 +96,7 @@ internal open class HistoryRenderer<T : HistoryItem>(
         isOpaque = true
         top.isOpaque = true
         row.border = JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.lg(), UiStyle.Gap.lg(), UiStyle.Gap.lg())
-        UiStyle.Components.transparent(row, main, head, title, badge, time, del)
+        UiStyle.Components.transparent(row, main, head, title, badge, cost, time, del)
         wrap.setContent(row)
         add(top, BorderLayout.NORTH)
         add(wrap, BorderLayout.CENTER)
@@ -119,6 +128,10 @@ internal open class HistoryRenderer<T : HistoryItem>(
         )
         time.text = value?.let(HistoryTime::relative).orEmpty()
         time.foreground = weak
+        val amount = value?.let { costs()[it.id] ?: (it as? LocalHistoryItem)?.session?.cost }
+        cost.text = money(amount).orEmpty()
+        cost.foreground = weak
+        cost.isVisible = cost.text.isNotEmpty()
         badge.setKind(value?.id?.let(activity()::get))
         if (deletable) del.icon = if (selected) icon else empty
 
@@ -131,6 +144,8 @@ internal open class HistoryRenderer<T : HistoryItem>(
     internal fun badgeText() = badge.kind?.label()
 
     internal fun titleText() = text
+
+    internal fun costText() = cost.text
 
     private class BadgeLabel : JBLabel() {
         var kind: SessionActivityKind? = null
@@ -153,7 +168,8 @@ internal class LocalHistoryRenderer(
     model: HistoryModel<LocalHistoryItem>,
     activity: () -> Map<String, SessionActivityKind> = { emptyMap() },
     titles: () -> Map<String, String> = { emptyMap() },
-) : HistoryRenderer<LocalHistoryItem>(model, deletable = true, activity, titles)
+    costs: () -> Map<String, Double> = { emptyMap() },
+) : HistoryRenderer<LocalHistoryItem>(model, deletable = true, activity, titles, costs)
 
 internal class CloudHistoryRenderer(
     model: HistoryModel<CloudHistoryItem>,

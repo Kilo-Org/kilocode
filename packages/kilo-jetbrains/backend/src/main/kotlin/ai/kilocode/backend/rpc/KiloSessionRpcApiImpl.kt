@@ -21,6 +21,7 @@ import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
+import ai.kilocode.rpc.dto.SessionRuntimeDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.components.service
 import ai.kilocode.log.KiloLog
@@ -91,6 +92,9 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
 
     override suspend fun statuses(): Flow<Map<String, SessionStatusDto>> =
         sessions.statuses
+
+    override suspend fun runtime(): Flow<SessionRuntimeDto> =
+        sessions.runtime
 
     override suspend fun setDirectory(id: String, directory: String) =
         sessions.setDirectory(id, directory)

@@ -65,6 +65,7 @@ class MockCliServer : AutoCloseable {
     @Volatile var recentSessions = "[]"
     @Volatile var sessionCreate = """{"id":"ses_test","slug":"test","projectID":"prj_test","directory":"/test","title":"New Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
     @Volatile var sessionStatuses = "{}"
+    @Volatile var sessionOverview: String? = null
     @Volatile var summarizeResponse = "true"
     @Volatile var sessionsStatus = 200
     @Volatile var recentSessionsStatus = 200
@@ -104,6 +105,7 @@ class MockCliServer : AutoCloseable {
     fun requestCount(path: String): Int = counts[path]?.get() ?: 0
 
     @Volatile var lastExperimentalSessionPath: String? = null
+    @Volatile var lastSessionOverviewPath: String? = null
 
     /** Reset all request counters. */
     fun resetCounts() { counts.clear() }
@@ -265,6 +267,10 @@ class MockCliServer : AutoCloseable {
                     lastExperimentalSessionPath = path
                     respond(output, recentSessionsStatus, recentSessions)
                 }
+                bare == "/kilocode/session/overview" -> {
+                    lastSessionOverviewPath = path
+                    respond(output, sessionsStatus, overview(path))
+                }
                 bare == "/kilo/cloud-sessions" -> {
                     lastCloudSessionsPath = path
                     respond(output, cloudSessionsStatus, cloudSessions)
@@ -317,6 +323,13 @@ class MockCliServer : AutoCloseable {
         writer.write("\r\n")
         writer.write(body)
         writer.flush()
+    }
+
+    private fun overview(path: String): String {
+        val custom = sessionOverview
+        if (custom != null) return custom
+        val list = if (path.contains("worktrees=true")) recentSessions else sessions
+        return """{"sessions":$list,"statuses":$sessionStatuses,"activities":{},"costs":{}}"""
     }
 
     private fun handleSse(writer: BufferedWriter) {

@@ -62,6 +62,8 @@ class HistoryController(
 
     internal fun activity() = sessions.activity()
 
+    internal fun costs() = sessions.costs()
+
     fun reloadLocal() {
         edt { local.start() }
         cs.launch {

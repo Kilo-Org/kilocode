@@ -33,6 +33,7 @@ export function register(app: Hono, handler: Handler, context: Context.Context<u
   app.get(SuggestionPaths.list, (c) => handler(c.req.raw, context))
   app.post(SuggestionPaths.accept, (c) => handler(c.req.raw, context))
   app.post(SuggestionPaths.dismiss, (c) => handler(c.req.raw, context))
+  app.get(KilocodePaths.sessionOverview, (c) => handler(c.req.raw, context))
   app.post(KilocodePaths.heapSnapshot, (c) => handler(c.req.raw, context))
   app.post(KilocodePaths.removeSkill, (c) => handler(c.req.raw, context))
   app.post(KilocodePaths.removeAgent, (c) => handler(c.req.raw, context))

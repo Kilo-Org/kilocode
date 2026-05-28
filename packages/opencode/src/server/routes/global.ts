@@ -196,7 +196,9 @@ export const GlobalRoutes = lazy(() =>
         if (result.changed) {
           // kilocode_change start
           await AppRuntime.runPromise(
-            disposeAllInstancesAndEmitGlobalDisposed({ swallowErrors: true }).pipe(Effect.catchCause(() => Effect.void)),
+            disposeAllInstancesAndEmitGlobalDisposed({ swallowErrors: true }).pipe(
+              Effect.catchCause(() => Effect.void),
+            ),
           )
           // kilocode_change end
         }

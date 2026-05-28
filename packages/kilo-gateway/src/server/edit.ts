@@ -1,5 +1,11 @@
 import { HEADER_FEATURE } from "../api/constants.js"
-import { DIRECT_EDIT_ENV, extractFencedBody, resolveEditTarget, type EditTarget, type EditUpstreamResponse } from "../edit.js"
+import {
+  DIRECT_EDIT_ENV,
+  extractFencedBody,
+  resolveEditTarget,
+  type EditTarget,
+  type EditUpstreamResponse,
+} from "../edit.js"
 import { buildMercuryEditPrompt, type MercuryEditContext } from "../edit-prompt.js"
 import type { DirectAutocompleteProviderID } from "../autocomplete.js"
 import { buildKiloHeaders } from "../headers.js"
@@ -37,7 +43,9 @@ export function createEditHandler(Auth: Auth) {
 
     const proxy = target.provider === "kilo" ? await getProxyAuth(Auth) : undefined
     const token =
-      target.provider === "kilo" ? proxy?.token : await getProviderKey(Auth, target.provider as DirectAutocompleteProviderID)
+      target.provider === "kilo"
+        ? proxy?.token
+        : await getProviderKey(Auth, target.provider as DirectAutocompleteProviderID)
 
     if (target.provider === "kilo" && !proxy?.auth) {
       return c.json({ error: "Not authenticated with Kilo Gateway" }, 401 as any)

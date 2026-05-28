@@ -215,10 +215,13 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
         )
       }
 
-      const json = yield* Effect.promise(() => response.json() as Promise<{
-        choices?: Array<{ message?: { content?: string } }>
-        usage?: { prompt_tokens?: number; completion_tokens?: number }
-      }>)
+      const json = yield* Effect.promise(
+        () =>
+          response.json() as Promise<{
+            choices?: Array<{ message?: { content?: string } }>
+            usage?: { prompt_tokens?: number; completion_tokens?: number }
+          }>,
+      )
       const raw = json.choices?.[0]?.message?.content ?? ""
       const body = extractFencedBody(raw)
       return {

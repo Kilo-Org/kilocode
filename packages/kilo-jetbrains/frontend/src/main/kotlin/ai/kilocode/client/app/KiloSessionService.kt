@@ -18,6 +18,7 @@ import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
+import ai.kilocode.rpc.dto.SessionRuntimeDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.components.Service
 import ai.kilocode.log.KiloLog
@@ -56,6 +57,9 @@ class KiloSessionService internal constructor(
     private val _sessions = MutableStateFlow<List<SessionDto>>(emptyList())
     val sessions: StateFlow<List<SessionDto>> = _sessions.asStateFlow()
 
+    val runtime: StateFlow<SessionRuntimeDto> =
+        stream { runtime() }.stateIn(cs, SharingStarted.Eagerly, SessionRuntimeDto())
+
     /** Live session status map from SSE events. */
     val statuses: StateFlow<Map<String, SessionStatusDto>> =
         stream { statuses() }.stateIn(cs, SharingStarted.Eagerly, emptyMap())
@@ -86,10 +90,25 @@ class KiloSessionService internal constructor(
         }
     }
 
-    internal fun activity(): Map<String, SessionActivityKind> =
-        statuses.value
+    internal fun activity(): Map<String, SessionActivityKind> {
+        val mapped = runtime.value.activities.mapNotNull { (id, value) ->
+            val kind = when (value.kind) {
+                "running" -> SessionActivityKind.RUNNING
+                "login_required" -> SessionActivityKind.LOGIN_REQUIRED
+                "permission" -> SessionActivityKind.PERMISSION
+                "plan" -> SessionActivityKind.PLAN
+                "question" -> SessionActivityKind.QUESTION
+                else -> null
+            } ?: return@mapNotNull null
+            id to kind
+        }.toMap()
+        val busy = statuses.value
             .filterValues { it.type == "busy" }
             .mapValues { SessionActivityKind.RUNNING }
+        return busy + mapped
+    }
+
+    internal fun costs(): Map<String, Double> = runtime.value.costs
 
     suspend fun list(dir: String): SessionListDto {
         val result = call { list(dir) }

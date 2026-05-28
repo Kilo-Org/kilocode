@@ -28,7 +28,9 @@ import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionStatusDto
+import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionSummaryDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import ai.kilocode.rpc.dto.TodoDto
@@ -255,6 +257,33 @@ object KiloCliDataParser {
     fun parseSession(raw: String): SessionDto {
         val obj = json.parseToJsonElement(raw).jsonObject
         return parseSessionObject(obj)
+    }
+
+    fun parseSessionOverview(raw: String): SessionListDto {
+        val obj = tryParseObject(raw) ?: return SessionListDto(emptyList(), emptyMap())
+        val costs = obj["costs"]?.jsonObject?.mapValues { (_, value) -> value.jsonPrimitive.doubleOrNull ?: 0.0 }.orEmpty()
+        val sessions = obj["sessions"]?.jsonArray?.mapNotNull { elem ->
+            runCatching {
+                val session = parseSessionObject(elem.jsonObject)
+                session.copy(cost = costs[session.id])
+            }.getOrNull()
+        }.orEmpty()
+        val statuses = obj["statuses"]?.jsonObject?.mapValues { (_, value) -> parseStatus(value.jsonObject) }.orEmpty()
+        val activities = obj["activities"]?.jsonObject?.mapNotNull { (id, value) ->
+            val activity = value.jsonObject
+            val kind = activity.str("kind") ?: return@mapNotNull null
+            id to SessionActivityDto(
+                kind = kind,
+                requestID = activity.str("requestID"),
+                message = activity.str("message"),
+            )
+        }?.toMap().orEmpty()
+        return SessionListDto(
+            sessions = sessions,
+            statuses = statuses,
+            activities = activities,
+            costs = costs,
+        )
     }
 
     /**
@@ -712,6 +741,7 @@ object KiloCliDataParser {
                     files = it.long("files")?.safeInt() ?: 0,
                 )
             },
+            cost = obj.num("cost"),
         )
     }
 

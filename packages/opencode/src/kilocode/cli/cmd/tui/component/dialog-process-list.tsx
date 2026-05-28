@@ -146,7 +146,8 @@ export function DialogProcessList() {
     const busy = actions.busy()
     return list().map((item) => {
       const note = mode() === "all" ? session(sync, item.sessionID) : undefined
-      const footer = busy?.id === item.id ? `${busy.kind === "stop" ? "stopping" : "restarting"}...` : item.pid?.toString()
+      const footer =
+        busy?.id === item.id ? `${busy.kind === "stop" ? "stopping" : "restarting"}...` : item.pid?.toString()
       const title = `${note ? `(${note}) ` : ""}${label(item)} - ${item.command}`
 
       return {
@@ -286,9 +287,7 @@ function DialogProcessDetail(props: { id: string; back: () => void }) {
               <Show when={proc().exitCode !== undefined}>
                 <text fg={theme.textMuted}>Exit: {proc().exitCode}</text>
               </Show>
-              <Show when={proc().signal}>
-                {(signal) => <text fg={theme.textMuted}>Signal: {signal()}</text>}
-              </Show>
+              <Show when={proc().signal}>{(signal) => <text fg={theme.textMuted}>Signal: {signal()}</text>}</Show>
               <text fg={theme.textMuted}>Started: {Locale.datetime(proc().time.started)}</text>
               <text fg={theme.textMuted}>Updated: {Locale.datetime(proc().time.updated)}</text>
               <Show when={proc().time.ended}>

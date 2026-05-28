@@ -664,7 +664,8 @@ describe("workspace-old CRUD", () => {
     })
   })
 
-  winSkip("sessionWarp applies source workspace patch to local target workspace", async () => { // kilocode_change
+  winSkip("sessionWarp applies source workspace patch to local target workspace", async () => {
+    // kilocode_change
     await withInstance(async (dir) => {
       const previousType = unique("warp-patch-prev-local")
       const targetType = unique("warp-patch-target-local")

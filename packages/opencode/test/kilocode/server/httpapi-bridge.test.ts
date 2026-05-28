@@ -122,6 +122,7 @@ describe("Kilo HttpApi bridge", () => {
       "POST /kilocode/heap/snapshot",
       "POST /kilocode/skill/remove",
       "POST /kilocode/agent/remove",
+      "GET /kilocode/session/overview",
       "POST /kilocode/session-import/project",
       "POST /kilocode/session-import/session",
       "POST /kilocode/session-import/message",
