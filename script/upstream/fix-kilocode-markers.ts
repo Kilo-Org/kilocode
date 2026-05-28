@@ -10,15 +10,7 @@
 
 import path from "node:path"
 import { error, header, info, success, warn } from "./utils/logger"
-import {
-  annotate,
-  annotates,
-  changed,
-  clean,
-  fresh,
-  ranges,
-  supported,
-} from "./utils/markers"
+import { annotate, annotates, changed, clean, fresh, ranges, supported } from "./utils/markers"
 import { last, normalize, root, translate, upstream } from "./utils/upstream"
 
 interface Args {

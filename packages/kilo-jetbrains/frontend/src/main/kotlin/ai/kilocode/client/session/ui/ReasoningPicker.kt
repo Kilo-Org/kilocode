@@ -1,7 +1,7 @@
 package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.PickerButton
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.ListPopup
@@ -21,7 +21,7 @@ import javax.swing.Icon
  * opens a list popup above the picker. Disabled (greyed out, not
  * clickable) when no items are loaded.
  */
-class ReasoningPicker : UiStyle.Pickers.Label() {
+class ReasoningPicker : PickerButton() {
 
     private companion object {
         val checked: Icon = AllIcons.Actions.Checked

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const state = new Map<string, unknown>()
-const update = vi.fn(async (key: string, value: unknown) => {
+const update = vi.fn((key: string, value: unknown) => {
   state.set(key, value)
 })
 
@@ -24,16 +24,29 @@ describe("autocomplete settings", () => {
     update.mockClear()
   })
 
-  it("includes the configured model in loaded settings", async () => {
-    state.set("model", "inception/mercury-edit")
+  it("includes the configured direct provider model in loaded settings", async () => {
+    state.set("provider", "inception")
+    state.set("model", "mercury-edit-2")
     const { buildAutocompleteSettingsMessage } = await import("../settings")
 
-    expect(buildAutocompleteSettingsMessage().settings.model).toBe("inception/mercury-edit")
+    expect(buildAutocompleteSettingsMessage().settings.provider).toBe("inception")
+    expect(buildAutocompleteSettingsMessage().settings.model).toBe("mercury-edit-2")
+  })
+
+  it("does not infer direct provider from a bare model name when provider is unset", async () => {
+    // Safety: a legacy `model` setting alone must never silently route to a
+    // direct BYOK provider. Direct providers require an explicit `provider`.
+    state.set("model", "mercury-edit-2")
+    const { buildAutocompleteSettingsMessage } = await import("../settings")
+
+    expect(buildAutocompleteSettingsMessage().settings.provider).toBe("kilo")
+    expect(buildAutocompleteSettingsMessage().settings.model).toBe("mistralai/codestral-2508")
   })
 
   it("defaults to codestral when no model is set", async () => {
     const { buildAutocompleteSettingsMessage } = await import("../settings")
 
+    expect(buildAutocompleteSettingsMessage().settings.provider).toBe("kilo")
     expect(buildAutocompleteSettingsMessage().settings.model).toBe("mistralai/codestral-2508")
   })
 
@@ -41,39 +54,44 @@ describe("autocomplete settings", () => {
     state.set("model", "some/removed-model")
     const { buildAutocompleteSettingsMessage } = await import("../settings")
 
+    expect(buildAutocompleteSettingsMessage().settings.provider).toBe("kilo")
     expect(buildAutocompleteSettingsMessage().settings.model).toBe("mistralai/codestral-2508")
   })
 
-  it("persists supported model updates", async () => {
-    const post = vi.fn()
-    const { routeAutocompleteMessage } = await import("../settings")
+  it("maps legacy inception/mercury-edit to Kilo Gateway Mercury", async () => {
+    state.set("model", "inception/mercury-edit")
+    const { buildAutocompleteSettingsMessage } = await import("../settings")
 
-    await routeAutocompleteMessage(
-      { type: "updateAutocompleteSetting", key: "model", value: "inception/mercury-edit" },
-      post,
-    )
-
-    expect(update).toHaveBeenCalledWith("model", "inception/mercury-edit", 1)
-    expect(post).toHaveBeenCalledWith(expect.objectContaining({ type: "autocompleteSettingsLoaded" }))
+    expect(buildAutocompleteSettingsMessage().settings.provider).toBe("kilo")
+    expect(buildAutocompleteSettingsMessage().settings.model).toBe("inception/mercury-edit-2")
   })
 
-  it("rejects unsupported model updates", async () => {
-    const post = vi.fn()
-    const { routeAutocompleteMessage } = await import("../settings")
+  it("maps legacy inception/mercury-edit-2 to Kilo Gateway Mercury", async () => {
+    state.set("model", "inception/mercury-edit-2")
+    const { buildAutocompleteSettingsMessage } = await import("../settings")
 
-    await routeAutocompleteMessage({ type: "updateAutocompleteSetting", key: "model", value: "other/model" }, post)
+    expect(buildAutocompleteSettingsMessage().settings.provider).toBe("kilo")
+    expect(buildAutocompleteSettingsMessage().settings.model).toBe("inception/mercury-edit-2")
+  })
 
-    expect(update).not.toHaveBeenCalled()
-    expect(post).not.toHaveBeenCalled()
+  it("validates supported model updates", async () => {
+    const { validAutocompleteSetting } = await import("../settings")
+
+    expect(validAutocompleteSetting("model", "mercury-edit-2")).toBe(true)
+    expect(validAutocompleteSetting("provider", "inception")).toBe(true)
+  })
+
+  it("rejects unsupported autocomplete updates", async () => {
+    const { validAutocompleteSetting } = await import("../settings")
+
+    expect(validAutocompleteSetting("model", "other/model")).toBe(false)
+    expect(validAutocompleteSetting("provider", undefined)).toBe(false)
+    expect(validAutocompleteSetting("provider", null)).toBe(false)
   })
 
   it("rejects non-boolean toggle updates", async () => {
-    const post = vi.fn()
-    const { routeAutocompleteMessage } = await import("../settings")
+    const { validAutocompleteSetting } = await import("../settings")
 
-    await routeAutocompleteMessage({ type: "updateAutocompleteSetting", key: "enableAutoTrigger", value: "true" }, post)
-
-    expect(update).not.toHaveBeenCalled()
-    expect(post).not.toHaveBeenCalled()
+    expect(validAutocompleteSetting("enableAutoTrigger", "true")).toBe(false)
   })
 })

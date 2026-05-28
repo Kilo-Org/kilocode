@@ -24,7 +24,7 @@ Add a thumbs-up / thumbs-down widget next to the existing copy button on every a
 | Surface | Approach |
 |---|---|
 | VS Code extension | Thumbs buttons inline next to the copy button |
-| TUI | Keybinds (`<leader>+` / `<leader>-`) on the last assistant message |
+| TUI | Keybinds (`<leader>=` / `<leader>-`) on the last assistant message |
 
 ### Telemetry Payload
 

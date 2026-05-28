@@ -18,20 +18,18 @@ class SessionUiFactory(
         project: Project,
         workspace: Workspace,
         manager: SessionManager,
-        id: String? = null,
-        loading: Boolean = id == null,
+        ref: SessionRef? = null,
     ): SessionUi = SessionUi(
         project = project,
         workspace = workspace,
         sessions = project.service<KiloSessionService>(),
         app = service<KiloAppService>(),
         cs = scope(),
-        id = id,
-        loading = loading,
-        open = manager::openSession,
+        ref = ref,
+        manager = manager,
     )
 
-    private fun scope(): CoroutineScope {
+    fun scope(): CoroutineScope {
         val parent = cs.coroutineContext[Job]
         return CoroutineScope(cs.coroutineContext + SupervisorJob(parent))
     }

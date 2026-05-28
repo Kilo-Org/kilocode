@@ -8,8 +8,8 @@ import { afterAll, afterEach, describe, test, expect } from "bun:test"
 import path from "path"
 import { Effect, Layer, ManagedRuntime } from "effect"
 import { EditTool } from "../../src/tool/edit"
-import { Instance } from "../../src/project/instance"
-import { tmpdir } from "../fixture/fixture"
+import { WithInstance } from "../../src/project/with-instance"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 import { LSP } from "../../src/lsp/lsp"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Format } from "../../src/format"
@@ -34,7 +34,7 @@ afterAll(async () => {
 })
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 const resolve = () =>
@@ -69,7 +69,7 @@ describe("edit tool permission filediff metadata", () => {
       await using tmp = await tmpdir()
       const filepath = path.join(tmp.path, "new.txt")
 
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           const edit = await resolve()
@@ -103,7 +103,7 @@ describe("edit tool permission filediff metadata", () => {
       const filepath = path.join(tmp.path, "existing.txt")
       await Bun.write(filepath, "line one\nline two\nline three\n")
 
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           const edit = await resolve()
@@ -137,7 +137,7 @@ describe("edit tool permission filediff metadata", () => {
       const filepath = path.join(tmp.path, "diff-check.txt")
       await Bun.write(filepath, "alpha\nbeta\ngamma\n")
 
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           const edit = await resolve()
@@ -168,7 +168,7 @@ describe("edit tool permission filediff metadata", () => {
       await using tmp = await tmpdir()
       const filepath = path.join(tmp.path, "result-new.txt")
 
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           const edit = await resolve()
@@ -196,7 +196,7 @@ describe("edit tool permission filediff metadata", () => {
       const filepath = path.join(tmp.path, "result-edit.txt")
       await Bun.write(filepath, "before\n")
 
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           const edit = await resolve()

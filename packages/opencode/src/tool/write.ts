@@ -10,12 +10,12 @@ import { File } from "../file"
 import { FileWatcher } from "../file/watcher"
 import { Format } from "../format"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
-import { Instance } from "../project/instance"
+import { InstanceState } from "@/effect/instance-state"
 import { trimDiff, buildFileDiff } from "./edit" // kilocode_change
 import { assertExternalDirectoryEffect } from "./external-directory"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
-import { EncodedIO } from "../kilocode/tool/encoded-io" // kilocode_change
+import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 import * as Bom from "@/util/bom"
 
 const MAX_PROJECT_DIAGNOSTICS_FILES = 5
@@ -40,9 +40,10 @@ export const WriteTool = Tool.define(
       parameters: Parameters,
       execute: (params: { content: string; filePath: string }, ctx: Tool.Context) =>
         Effect.gen(function* () {
+          const instance = yield* InstanceState.context
           const filepath = path.isAbsolute(params.filePath)
             ? params.filePath
-            : path.join(Instance.directory, params.filePath)
+            : path.join(instance.directory, params.filePath)
           yield* assertExternalDirectoryEffect(ctx, filepath)
 
           const exists = yield* fs.existsSafe(filepath)
@@ -60,7 +61,7 @@ export const WriteTool = Tool.define(
           const filediff = buildFileDiff(filepath, contentOld, contentNew) // kilocode_change
           yield* ctx.ask({
             permission: "edit",
-            patterns: [path.relative(Instance.worktree, filepath)],
+            patterns: [path.relative(instance.worktree, filepath)],
             always: ["*"],
             metadata: {
               filepath,
@@ -99,7 +100,7 @@ export const WriteTool = Tool.define(
           output += yield* Effect.promise(() => ConfigValidation.check(filepath)) // kilocode_change
 
           return {
-            title: path.relative(Instance.worktree, filepath),
+            title: path.relative(instance.worktree, filepath),
             metadata: {
               diagnostics: filterDiagnostics(diagnostics, [normalizedFilepath]), // kilocode_change
               filepath,

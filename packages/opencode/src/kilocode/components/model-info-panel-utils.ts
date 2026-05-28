@@ -13,11 +13,11 @@ export function fmtPrice(n: number): string {
   return `$${n.toFixed(2)}/1M`
 }
 
-export function fmtCachedPrice(cost: Cost): string {
+export function fmtCachedPrice(cost: Cost): string | null {
   const read = cost.cache.read
   if (read > 0) return fmtPrice(read)
   if (cost.input === 0) return fmtPrice(0)
-  return "N/A"
+  return null
 }
 
 export function avgPrice(cost: Cost): number {
@@ -30,4 +30,10 @@ export function fmtContext(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`
   if (n >= 1_000) return `${(n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1)}K`
   return String(n)
+}
+
+export function fmtDate(s: string): string {
+  const d = new Date(s)
+  if (isNaN(d.getTime())) return s
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "short" })
 }

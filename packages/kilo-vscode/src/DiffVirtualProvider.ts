@@ -6,8 +6,7 @@ import { getDiffMarkdownRender, setDiffMarkdownRender } from "./review-settings"
 
 export interface DiffVirtualFile {
   file: string
-  before: string
-  after: string
+  patch?: string
   additions: number
   deletions: number
   initialDiffStyle: "unified" | "split"

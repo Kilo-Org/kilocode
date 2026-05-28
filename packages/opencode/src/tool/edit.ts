@@ -13,14 +13,14 @@ import { File } from "../file"
 import { FileWatcher } from "../file/watcher"
 import { Bus } from "../bus"
 import { Format } from "../format"
-import { Instance } from "../project/instance"
+import { InstanceState } from "@/effect/instance-state"
 import { Snapshot } from "@/snapshot"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import * as Bom from "@/util/bom"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
-import { EncodedIO } from "../kilocode/tool/encoded-io" // kilocode_change
+import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 
 const MAX_DIFF_CONTENT = 500_000 // kilocode_change
 
@@ -101,9 +101,10 @@ export const EditTool = Tool.define(
             throw new Error("No changes to apply: oldString and newString are identical.")
           }
 
+          const instance = yield* InstanceState.context
           const filePath = path.isAbsolute(params.filePath)
             ? params.filePath
-            : path.join(Instance.directory, params.filePath)
+            : path.join(instance.directory, params.filePath)
           yield* assertExternalDirectoryEffect(ctx, filePath)
 
           let diff = ""
@@ -127,7 +128,7 @@ export const EditTool = Tool.define(
                 cachedFilediff = buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
                 yield* ctx.ask({
                   permission: "edit",
-                  patterns: [path.relative(Instance.worktree, filePath)],
+                  patterns: [path.relative(instance.worktree, filePath)],
                   always: ["*"],
                   metadata: {
                     filepath: filePath,
@@ -176,7 +177,7 @@ export const EditTool = Tool.define(
               cachedFilediff = buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
               yield* ctx.ask({
                 permission: "edit",
-                patterns: [path.relative(Instance.worktree, filePath)],
+                patterns: [path.relative(instance.worktree, filePath)],
                 always: ["*"],
                 metadata: {
                   filepath: filePath,
@@ -229,7 +230,7 @@ export const EditTool = Tool.define(
               diff,
               filediff, // kilocode_change
             },
-            title: `${path.relative(Instance.worktree, filePath)}`,
+            title: `${path.relative(instance.worktree, filePath)}`,
             output,
           }
         }),

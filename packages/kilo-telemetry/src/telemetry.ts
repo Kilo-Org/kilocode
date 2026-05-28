@@ -10,6 +10,8 @@ export interface TelemetryProperties {
   vscodeVersion?: string
 }
 
+export type ReviewCommand = "review" | "local-review" | "local-review-uncommitted"
+
 export interface IndexingTelemetryProperties extends Record<string, unknown> {
   source: "scan" | "watcher"
   provider: string
@@ -156,7 +158,8 @@ export namespace Telemetry {
     taskId?: string
     mode?: "review"
     feature?: "code_reviews"
-    command?: "local-review" | "local-review-uncommitted"
+    command?: ReviewCommand
+    tool?: "suggest"
     apiProvider: string
     modelId: string
     inputTokens?: number
@@ -185,6 +188,28 @@ export namespace Telemetry {
 
   export function trackPlanFollowup(sessionId: string, choice: "new_session" | "continue" | "custom" | "dismissed") {
     track(TelemetryEvent.PLAN_FOLLOWUP, { sessionId, choice })
+  }
+
+  export function trackSuggestionAccepted(properties: {
+    sessionId: string
+    requestId: string
+    index: number
+    tool: "suggest"
+    command: ReviewCommand
+    actionCount?: number
+  }) {
+    track(TelemetryEvent.SUGGESTION_ACCEPTED, properties)
+  }
+
+  export function trackSuggestionShown(properties: {
+    sessionId: string
+    requestId: string
+    index: number
+    tool: "suggest"
+    command: ReviewCommand
+    actionCount?: number
+  }) {
+    track(TelemetryEvent.SUGGESTION_SHOWN, properties)
   }
 
   export function trackIndexingStarted(properties: IndexingTelemetryProperties) {
@@ -242,6 +267,22 @@ export namespace Telemetry {
   // Errors
   export function trackError(error: string, context?: string) {
     track(TelemetryEvent.ERROR, { error, context })
+  }
+
+  // Feedback
+  export interface FeedbackProperties extends Record<string, unknown> {
+    providerID: string
+    modelID: string
+    variant?: string
+    rating: "up" | "down" | "cleared"
+    previousRating?: "up" | "down"
+    sessionID?: string
+    messageID?: string
+    parentMessageID?: string
+  }
+
+  export function trackFeedback(props: FeedbackProperties) {
+    track(TelemetryEvent.FEEDBACK_SUBMITTED, props)
   }
 
   export async function shutdown(): Promise<void> {

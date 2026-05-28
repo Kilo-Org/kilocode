@@ -17,6 +17,7 @@ import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
+import { recentSessions } from "../../context/session-utils"
 import { formatRelativeDate } from "../../utils/date"
 import { FeedbackDialog } from "./FeedbackDialog"
 import { VscodeSessionTurn } from "./VscodeSessionTurn"
@@ -24,6 +25,7 @@ import { RevertBanner } from "./RevertBanner"
 import { AccountSwitcher } from "../shared/AccountSwitcher"
 import { KiloNotifications } from "./KiloNotifications"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
+import { TurnOutcome } from "../shared/TurnOutcome"
 import { QuestionDock } from "./QuestionDock"
 import { Virtualizer } from "virtua/solid"
 import { SuggestBar } from "./SuggestBar"
@@ -93,11 +95,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   )
   const isEmpty = () => turns().length === 0 && !session.loading() && !boundary()
 
-  const recent = createMemo(() =>
-    [...session.sessions()]
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-      .slice(0, 3),
-  )
+  const recent = createMemo(() => recentSessions(session.sessions()))
 
   const activeUserID = createMemo(() => getActiveUserMessageID(session.messages(), session.statusInfo()))
   const queuedIDs = createMemo(() => new Set(queuedUserMessageIDs(session.messages(), session.statusInfo())))
@@ -254,6 +252,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
             </Show>
             <For each={queuedTurns()}>{(turn) => <VscodeSessionTurn turn={turn} queued />}</For>
             <WorkingIndicator />
+            <TurnOutcome />
             <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
             <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
           </Show>

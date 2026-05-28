@@ -5,6 +5,10 @@ import {
   buildTextAfterMentionSelect,
   buildFileAttachments,
   buildMentionResults,
+  filterMentionResults,
+  getMentionRemovalRange,
+  isCursorAtMentionEnd,
+  findMentionRange,
 } from "../../webview-ui/src/hooks/file-mention-utils"
 
 describe("AT_PATTERN", () => {
@@ -70,6 +74,21 @@ describe("buildMentionResults", () => {
   it("includes folder results", () => {
     const result = buildMentionResults("src", [{ path: "src", type: "folder" }])
     expect(result).toEqual([{ type: "folder", value: "src" }])
+  })
+
+  it("preserves opened file result type", () => {
+    const result = buildMentionResults("src", [{ path: "src/index.ts", type: "opened-file" }])
+    expect(result).toEqual([{ type: "opened-file", value: "src/index.ts" }])
+  })
+})
+
+describe("filterMentionResults", () => {
+  it("keeps matching file results for the latest query", () => {
+    const result = filterMentionResults("gi", [
+      { type: "file", value: "README.md" },
+      { type: "file", value: "src/git.ts" },
+    ])
+    expect(result).toEqual([{ type: "file", value: "src/git.ts" }])
   })
 })
 
@@ -222,5 +241,154 @@ describe("buildFileAttachments", () => {
     const paths = new Set(["foo.ts"])
     const result = buildFileAttachments("@foo.ts", paths, "C:\\Users\\workspace")
     expect(result[0]!.url).not.toContain("\\")
+  })
+})
+
+describe("getMentionRemovalRange", () => {
+  it("returns range for a file path mention ending at position", () => {
+    const text = "see @foo.ts for details"
+    const paths = new Set(["foo.ts"])
+    // position = 11 → text.slice(0, 11) = "see @foo.ts"
+    const result = getMentionRemovalRange(text, 11, paths)
+    expect(result).toEqual({ start: 4, end: 12 })
+  })
+
+  it("includes trailing whitespace in the range", () => {
+    const text = "check @src/bar.ts rest"
+    const paths = new Set(["src/bar.ts"])
+    // position = 17 → slice(0,17) = "check @src/bar.ts", slice(17) = " rest"
+    const result = getMentionRemovalRange(text, 17, paths)
+    expect(result).toEqual({ start: 6, end: 18 })
+  })
+
+  it("does not include trailing non-space character", () => {
+    const text = "@foo.tsmore"
+    const paths = new Set(["foo.ts"])
+    const result = getMentionRemovalRange(text, 7, paths)
+    expect(result).toEqual({ start: 0, end: 7 })
+  })
+
+  it("returns null when no mention ends at position", () => {
+    const text = "no mention here"
+    const paths = new Set(["foo.ts"])
+    expect(getMentionRemovalRange(text, 5, paths)).toBeNull()
+  })
+
+  it("matches terminal builtin mention", () => {
+    const text = "see @terminal output"
+    const result = getMentionRemovalRange(text, 13, new Set())
+    expect(result).toEqual({ start: 4, end: 14 })
+  })
+
+  it("matches git-changes builtin mention", () => {
+    const text = "see @git-changes here"
+    const result = getMentionRemovalRange(text, 16, new Set())
+    expect(result).toEqual({ start: 4, end: 17 })
+  })
+
+  it("prefers the longest matching path", () => {
+    const text = "see @src/a.tsx end"
+    const paths = new Set(["src/a.ts", "src/a.tsx"])
+    const result = getMentionRemovalRange(text, 14, paths)
+    expect(result).toEqual({ start: 4, end: 15 })
+  })
+
+  it("handles mention at end of text with no trailing space", () => {
+    const text = "check @foo.ts"
+    const paths = new Set(["foo.ts"])
+    const result = getMentionRemovalRange(text, 13, paths)
+    expect(result).toEqual({ start: 6, end: 13 })
+  })
+})
+
+describe("isCursorAtMentionEnd", () => {
+  it("returns true when cursor is at end of a file mention", () => {
+    const text = "see @foo.ts rest"
+    const paths = new Set(["foo.ts"])
+    expect(isCursorAtMentionEnd(text, 11, paths)).toBe(true)
+  })
+
+  it("returns false when cursor is not at a mention boundary", () => {
+    const text = "see @foo.ts rest"
+    const paths = new Set(["foo.ts"])
+    expect(isCursorAtMentionEnd(text, 8, paths)).toBe(false)
+  })
+
+  it("returns false for empty paths and no builtin match", () => {
+    expect(isCursorAtMentionEnd("hello", 3, new Set())).toBe(false)
+  })
+
+  it("matches terminal builtin", () => {
+    expect(isCursorAtMentionEnd("@terminal", 9, new Set())).toBe(true)
+  })
+
+  it("matches git-changes builtin", () => {
+    expect(isCursorAtMentionEnd("@git-changes", 12, new Set())).toBe(true)
+  })
+
+  it("does not match partial path", () => {
+    const text = "see @foo.ts rest"
+    const paths = new Set(["foo.tsx"])
+    expect(isCursorAtMentionEnd(text, 11, paths)).toBe(false)
+  })
+})
+
+describe("findMentionRange", () => {
+  it("returns range when cursor is inside a mention", () => {
+    const text = "see @foo.ts rest"
+    const paths = new Set(["foo.ts"])
+    // position 7 is inside "@foo.ts" (indices 4..11)
+    const result = findMentionRange(text, 7, paths)
+    expect(result).toEqual({ start: 4, end: 11 })
+  })
+
+  it("returns null when cursor is at the start edge of a mention", () => {
+    const text = "see @foo.ts rest"
+    const paths = new Set(["foo.ts"])
+    expect(findMentionRange(text, 4, paths)).toBeNull()
+  })
+
+  it("returns null when cursor is at the end edge of a mention", () => {
+    const text = "see @foo.ts rest"
+    const paths = new Set(["foo.ts"])
+    expect(findMentionRange(text, 11, paths)).toBeNull()
+  })
+
+  it("returns null when cursor is outside any mention", () => {
+    const text = "see @foo.ts rest"
+    const paths = new Set(["foo.ts"])
+    expect(findMentionRange(text, 2, paths)).toBeNull()
+  })
+
+  it("matches the second occurrence of a duplicated mention", () => {
+    const text = "@a.ts and @a.ts"
+    const paths = new Set(["a.ts"])
+    // First @a.ts is at 0..5, second at 10..15
+    const result = findMentionRange(text, 12, paths)
+    expect(result).toEqual({ start: 10, end: 15 })
+  })
+
+  it("handles builtin mentions", () => {
+    const text = "check @terminal output"
+    const result = findMentionRange(text, 8, new Set())
+    expect(result).toEqual({ start: 6, end: 15 })
+  })
+
+  it("prefers the longest matching path to avoid partial matches", () => {
+    const text = "see @src/a.tsx end"
+    const paths = new Set(["src/a.ts", "src/a.tsx"])
+    // position 10 is inside @src/a.tsx (indices 4..14)
+    const result = findMentionRange(text, 10, paths)
+    expect(result).toEqual({ start: 4, end: 14 })
+  })
+
+  it("skips overlapping token matches correctly", () => {
+    const text = "@ab@ab"
+    const paths = new Set(["ab"])
+    // First @ab is at 0..3, second at 3..6
+    // Position 1 is inside the first
+    expect(findMentionRange(text, 1, paths)).toEqual({ start: 0, end: 3 })
+    // Position 4 is inside the second
+    expect(findMentionRange(text, 4, paths)).toEqual({ start: 3, end: 6 })
   })
 })

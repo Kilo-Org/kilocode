@@ -7,10 +7,11 @@ import java.util.Base64
 import java.util.concurrent.TimeUnit
 
 /**
- * Factory for the two OkHttp clients used by the plugin.
+ * Factory for the OkHttp clients used by the plugin.
  *
  * Mirrors the VS Code architecture:
  * - [api] client has no call/read timeout (streaming ops like prompt/SSE can run long)
+ * - [appLoad] client has a bounded timeout for startup REST calls
  * - [health] client has a short 3 s timeout and a small dedicated connection pool
  *
  * Both clients bundle Basic Auth via an interceptor and are fully independent
@@ -29,6 +30,18 @@ object KiloBackendHttpClients {
             .callTimeout(0, TimeUnit.MILLISECONDS)
             .readTimeout(0, TimeUnit.MILLISECONDS)
             .build()
+
+    /** App-load client — bounded timeout for required startup REST calls. */
+    fun appLoad(password: String, timeoutMs: Long): OkHttpClient {
+        val timeout = timeoutMs.coerceAtLeast(1L)
+        return OkHttpClient.Builder()
+            .addInterceptor(auth(password))
+            .connectTimeout(CONNECT_TIMEOUT_MS.coerceAtMost(timeout), TimeUnit.MILLISECONDS)
+            .callTimeout(timeout, TimeUnit.MILLISECONDS)
+            .readTimeout(timeout, TimeUnit.MILLISECONDS)
+            .connectionPool(ConnectionPool(2, 30, TimeUnit.SECONDS))
+            .build()
+    }
 
     /** Health client — short timeout, dedicated connection pool. */
     fun health(password: String): OkHttpClient =

@@ -2,6 +2,8 @@
 import { $ } from "bun"
 import { join } from "node:path"
 import { existsSync, mkdirSync, rmSync, chmodSync } from "node:fs"
+import { copyTreeSitterResources } from "../src/services/cli-backend/cli-resources"
+import { ensureFfmpegForTarget } from "./ffmpeg-helper"
 
 const packageJsonPath = join(import.meta.dir, "..", "package.json")
 const packageJson = await Bun.file(packageJsonPath).json()
@@ -74,12 +76,16 @@ for (const config of targets) {
 
   console.log(`  📥 Copying binary from ${config.cliDir}/bin/${config.binary}...`)
   await $`cp ${sourceBinary} ${targetBinary}`
+  await copyTreeSitterResources(sourceBinary, targetBinary)
 
   if (config.binary !== "kilo.exe") {
     chmodSync(targetBinary, 0o755)
   }
 
   console.log(`  ✅ Binary ready at ${targetBinary}`)
+
+  console.log("Adding bundled FFmpeg helper...")
+  await ensureFfmpegForTarget(config.target, binDir)
 
   console.log(`  📦 Packaging .vsix for ${config.target}${prerelease ? " (pre-release)" : ""}...`)
   const vsixPath = join(outDir, `kilo-vscode-${config.target}.vsix`)

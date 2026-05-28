@@ -2,7 +2,7 @@
 import { describe, expect, test } from "bun:test"
 import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
-import { Instance } from "../../../src/project/instance"
+import { WithInstance } from "../../../src/project/with-instance"
 import { Server } from "../../../src/server/server"
 import { Session } from "../../../src/session/session"
 import { tmpdir } from "../../fixture/fixture"
@@ -11,7 +11,7 @@ describe("permission.allowEverything endpoint", () => {
   test("disables global allow-all and removes wildcard from config", async () => {
     await using tmp = await tmpdir({ git: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const app = Server.Default().app
@@ -58,7 +58,7 @@ describe("permission.allowEverything endpoint", () => {
   test("disables session-scoped allow-all without touching global config", async () => {
     await using tmp = await tmpdir({ git: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const app = Server.Default().app

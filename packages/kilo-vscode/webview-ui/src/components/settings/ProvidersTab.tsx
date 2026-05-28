@@ -271,7 +271,7 @@ const ProvidersTab: Component = () => {
                       </Button>
                     </Show>
                     <Button size="large" variant="ghost" onClick={() => disconnect(item.id, item.name)}>
-                      {language.t("common.disconnect")}
+                      {language.t(isCustom(item) ? "common.delete" : "common.disconnect")}
                     </Button>
                   </Show>
                 </div>

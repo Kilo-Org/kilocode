@@ -105,6 +105,67 @@ describe("resolveSelectedQuestionMode", () => {
   })
 })
 
+describe("plan follow-up Continue here option", () => {
+  it("resolves to code mode when option carries mode: code matching the Continue here label", () => {
+    const questions = [
+      {
+        options: [
+          {
+            label: "Start new session",
+            description: "Implement in a fresh session",
+            labelKey: "plan.followup.answer.newSession",
+            descriptionKey: "plan.followup.answer.newSession.description",
+          },
+          {
+            label: "Continue here",
+            description: "Implement the plan in this session",
+            labelKey: "plan.followup.answer.continue",
+            descriptionKey: "plan.followup.answer.continue.description",
+            mode: "code",
+          },
+        ],
+      },
+    ]
+    expect(resolveSelectedQuestionMode(questions, [["Continue here"]])).toBe("code")
+  })
+
+  it("does not resolve a mode for Start new session (it carries no mode)", () => {
+    const questions = [
+      {
+        options: [
+          {
+            label: "Start new session",
+            description: "Implement in a fresh session",
+            labelKey: "plan.followup.answer.newSession",
+            descriptionKey: "plan.followup.answer.newSession.description",
+          },
+          {
+            label: "Continue here",
+            description: "Implement the plan in this session",
+            labelKey: "plan.followup.answer.continue",
+            descriptionKey: "plan.followup.answer.continue.description",
+            mode: "code",
+          },
+        ],
+      },
+    ]
+    expect(resolveSelectedQuestionMode(questions, [["Start new session"]])).toBeUndefined()
+  })
+
+  it("resolves optimistic agent to code when Continue here is picked while in plan mode", () => {
+    const mode = resolveSelectedQuestionMode(
+      [
+        {
+          options: [{ label: "Continue here", description: "Implement here", mode: "code" }],
+        },
+      ],
+      [["Continue here"]],
+    )
+    const result = resolveOptimisticQuestionAgent(undefined, "plan", mode)
+    expect(result).toEqual({ base: "plan", agent: "code" })
+  })
+})
+
 describe("resolveOptimisticQuestionAgent", () => {
   it("stores the previous agent when applying an optimistic mode", () => {
     const result = resolveOptimisticQuestionAgent(undefined, "ask", "code")

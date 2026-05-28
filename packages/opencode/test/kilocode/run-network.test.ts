@@ -39,6 +39,7 @@ function asked(id: number): Event {
       sessionID: "ses_test",
       id: `req_${id}`,
       message: "Connection refused",
+      restored: false,
       time: { created: 0 },
     },
   }

@@ -12,5 +12,5 @@
     "esModuleInterop": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*", "agent-manager/**/*", "kiloclaw/**/*"]
+  "include": ["src/**/*", "agent-manager/**/*", "kiloclaw/**/*", "diff-viewer/**/*", "diff-virtual/**/*"]
 }

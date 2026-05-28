@@ -147,6 +147,74 @@ const bashPending = {
   },
 }
 
+const backgroundStartPending: ToolPart = {
+  id: "part-background-start-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-background-start-001",
+  tool: "background_process",
+  state: {
+    status: "running",
+    input: {
+      action: "start",
+      command: "bun run dev --host 127.0.0.1",
+      description: "Dev server",
+      workdir: "/project/web",
+      ready: { port: 5173, pattern: "ready in", timeout: 30000 },
+    },
+    metadata: {},
+    time: { start: now - 2500 },
+  },
+}
+
+const backgroundStartCompleted: ToolPart = {
+  id: "part-background-start-002",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-background-start-002",
+  tool: "background_process",
+  state: {
+    status: "completed",
+    input: {
+      action: "start",
+      command: "bun run dev --host 127.0.0.1",
+      description: "Dev server",
+      workdir: "/project/web",
+      ready: { port: 5173, pattern: "ready in", timeout: 30000 },
+    },
+    output: [
+      "id: bgp_01hv8devserver",
+      "status: ready",
+      "pid: 42817",
+      "cwd: /project/web",
+      "command: bun run dev --host 127.0.0.1",
+      "last_output: VITE v5.4.0 ready in 318 ms",
+    ].join("\n"),
+    title: "Started background process",
+    metadata: { processID: "bgp?", status: "ready" },
+    time: { start: now - 2400, end: now - 1800 },
+  },
+}
+
+const backgroundLogsCompleted: ToolPart = {
+  id: "part-background-logs-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-background-logs-001",
+  tool: "background_process",
+  state: {
+    status: "completed",
+    input: { action: "logs", id: "bgp_01hv8devserver" },
+    output: ["VITE v5.4.0 ready in 318 ms", "Local: http://127.0.0.1:5173/"].join("\n"),
+    title: "Logs: Dev server",
+    metadata: { processID: "bgp_01hv8devserver", status: "ready" },
+    time: { start: now - 1800, end: now - 1200 },
+  },
+}
+
 const textPart: TextPart = {
   id: "part-text-001",
   sessionID: SESSION_ID,
@@ -538,6 +606,18 @@ export const ToolCards: Story = {
     const data = dataWith([readCompleted, globCompleted, grepCompleted, lsCompleted])
     return (
       <StoryProviders data={data} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+export const BackgroundProcessToolCards: Story = {
+  name: "Tool Cards — background process",
+  render: () => {
+    const data = dataWith([backgroundStartPending, backgroundStartCompleted, backgroundLogsCompleted])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID} status="busy">
         <AssistantMessage message={baseAssistantMessage} />
       </StoryProviders>
     )
@@ -1140,7 +1220,7 @@ export const McpToolExpanded: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// 19. Diff summary — "Modified N files" collapsed header
+// 19. Diff summary — "Modified N files" banner (opens changes view on click)
 // ---------------------------------------------------------------------------
 
 const USER_MSG_ID = "user-msg-diff-001"
@@ -1152,7 +1232,7 @@ const mockDiffs = [
 ]
 
 export const DiffSummaryCollapsed: Story = {
-  name: "Diff Summary — Modified N files (collapsed)",
+  name: "Diff Summary — Modified N files",
   render: () => {
     const data = {
       ...defaultMockData,

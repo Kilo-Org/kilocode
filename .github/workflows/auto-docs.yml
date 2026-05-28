@@ -1,35 +1,113 @@
-name: Trigger webhook for feat PRs
+name: Auto-docs dry-run intake
 
+# Trigger on merged feature PRs, or manually with a specific PR number.
+# IMPORTANT: This workflow intentionally does NOT check out PR code and does NOT
+# execute any code from the PR branch. It only reads PR metadata and forwards it
+# to a webhook. This is required for safe use of pull_request_target on a public repo.
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to test"
+        required: true
+
+# Minimal permissions: read repo contents and PR metadata only.
+permissions:
+  contents: read
+  pull-requests: read
+
+# One run per PR at a time. Does not cancel in progress — let the current run
+# finish so we don't drop events when a PR is quickly closed/reopened/closed.
+concurrency:
+  group: auto-docs-${{ github.event.pull_request.number || inputs.pr_number }}
+  cancel-in-progress: false
 
 jobs:
-  call-webhook:
+  call-valtown:
     if: >
-      github.event.pull_request.merged == true &&
-      (startsWith(github.event.pull_request.title, 'feat:') ||
-       startsWith(github.event.pull_request.title, 'feat('))
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.pull_request.merged == true &&
+        (
+          startsWith(github.event.pull_request.title, 'feat:') ||
+          startsWith(github.event.pull_request.title, 'feat(')
+        )
+      )
+
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+
     steps:
-      - name: Send webhook safely
+      - name: Build webhook payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER_FROM_EVENT: ${{ github.event.pull_request.number }}
+          PR_NUMBER_FROM_INPUT: ${{ inputs.pr_number }}
         run: |
-          payload=$(jq -n \
-            --arg repo "${GITHUB_REPOSITORY}" \
-            --arg pr_number "${{ github.event.pull_request.number }}" \
-            --arg title "${{ github.event.pull_request.title }}" \
-            --arg body "${{ github.event.pull_request.body }}" \
-            --arg author "${{ github.event.pull_request.user.login }}" \
-            --arg merged_at "${{ github.event.pull_request.merged_at }}" \
+          set -euo pipefail
+
+          PR_NUMBER="${PR_NUMBER_FROM_EVENT:-$PR_NUMBER_FROM_INPUT}"
+
+          if [ -z "$PR_NUMBER" ]; then
+            echo "Missing PR number"
+            exit 1
+          fi
+
+          gh api "repos/$REPO/pulls/$PR_NUMBER" > pr.json
+
+          jq -n \
+            --arg event_name "$EVENT_NAME" \
+            --arg repo "$REPO" \
+            --arg pr_number "$PR_NUMBER" \
+            --slurpfile pr pr.json \
             '{
+              event_name: $event_name,
               repo: $repo,
               pr_number: $pr_number,
-              title: $title,
-              description: $body,
-              author: $author,
-              merged_at: $merged_at
-            }'
-          )
-          curl --fail-with-body -X POST "${{ secrets.DOC_WEBHOOK_URL }}" \
+              title: $pr[0].title,
+              description: ($pr[0].body // ""),
+              author: $pr[0].user.login,
+              merged_at: ($pr[0].merged_at // ""),
+              pr_url: $pr[0].html_url,
+              base_branch: $pr[0].base.ref,
+              head_branch: $pr[0].head.ref
+            }' > payload.json
+
+          echo "Payload created:"
+          jq '{
+            event_name,
+            repo,
+            pr_number,
+            title,
+            author,
+            merged_at,
+            pr_url,
+            base_branch,
+            head_branch
+          }' payload.json
+
+      - name: Send webhook to Val Town
+        env:
+          DOC_WEBHOOK_URL: ${{ secrets.DOC_WEBHOOK_URL }}
+          DOC_WEBHOOK_SECRET: ${{ secrets.DOC_WEBHOOK_SECRET }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${DOC_WEBHOOK_URL:-}" ]; then
+            echo "DOC_WEBHOOK_URL secret is not set"
+            exit 1
+          fi
+
+          if [ -z "${DOC_WEBHOOK_SECRET:-}" ]; then
+            echo "DOC_WEBHOOK_SECRET secret is not set"
+            exit 1
+          fi
+
+          curl --fail-with-body -sS -X POST "$DOC_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
-            --data-raw "$payload"
+            -H "X-Docs-Webhook-Secret: $DOC_WEBHOOK_SECRET" \
+            --data-binary @payload.json

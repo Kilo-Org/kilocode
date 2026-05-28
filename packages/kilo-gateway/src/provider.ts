@@ -4,9 +4,19 @@ import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import type { KiloProvider, KiloProviderOptions } from "./types.js"
-import { getKiloUrlFromToken, getApiKey } from "./auth/token.js"
+import { getApiKey } from "./auth/token.js"
 import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
-import { KILO_API_BASE, ANONYMOUS_API_KEY } from "./api/constants.js"
+import { ANONYMOUS_API_KEY } from "./api/constants.js"
+import { resolveKiloOpenRouterBaseUrl } from "./api/url.js"
+import { sanitizeResponsesBody } from "./responses.js"
+
+export function buildRequestHeaders(defaultHeaders: Record<string, string>, requestHeaders?: HeadersInit): Headers {
+  const headers = new Headers(defaultHeaders)
+  new Headers(requestHeaders).forEach((value, key) => {
+    headers.set(key, value)
+  })
+  return headers
+}
 
 /**
  * Create a KiloCode provider instance
@@ -28,15 +38,7 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   // Get API key from options or environment
   const apiKey = getApiKey(options)
 
-  // Determine base URL
-  const baseApiUrl = getKiloUrlFromToken(options.baseURL ?? KILO_API_BASE, apiKey ?? "")
-
-  // Build OpenRouter URL - only append /openrouter/ if not already present
-  const openRouterUrl = baseApiUrl.includes("/openrouter")
-    ? baseApiUrl
-    : baseApiUrl.endsWith("/")
-      ? `${baseApiUrl}openrouter/`
-      : `${baseApiUrl}/openrouter/`
+  const openRouterUrl = resolveKiloOpenRouterBaseUrl({ baseURL: options.baseURL, token: apiKey })
 
   // Merge custom headers with defaults
   const customHeaders = {
@@ -51,12 +53,8 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   // Create custom fetch wrapper to add dynamic headers
   const originalFetch = options.fetch ?? fetch
   const wrappedFetch = async (input: string | URL | Request, init?: RequestInit) => {
-    const headers = new Headers(init?.headers)
-
-    // Add custom headers
-    Object.entries(customHeaders).forEach(([key, value]) => {
-      headers.set(key, value)
-    })
+    const headers = buildRequestHeaders(customHeaders, init?.headers)
+    const body = sanitizeResponsesBody(input, init?.body)
 
     // Add authorization if API key exists
     if (apiKey) {
@@ -66,6 +64,7 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
     return originalFetch(input, {
       ...init,
       headers,
+      body,
     })
   }
 

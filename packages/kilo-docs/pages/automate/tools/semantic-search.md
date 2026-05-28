@@ -1,3 +1,8 @@
+---
+title: Semantic Search Tool | Kilo Code Docs
+description: Learn how the semantic_search tool uses AI embeddings and vector search to find semantically relevant code across your indexed codebase.
+---
+
 # semantic_search
 
 {% callout type="info" title="Setup Required" %}

@@ -3,7 +3,7 @@ import { Auth } from "@/auth"
 import { InstanceState } from "@/effect/instance-state"
 import { zod } from "@/util/effect-zod"
 import { namedSchemaError } from "@/util/named-schema-error"
-import { withStatics } from "@/util/schema"
+import { optionalOmitUndefined, withStatics } from "@/util/schema"
 import { Plugin } from "../plugin"
 import { ProviderID } from "./schema"
 import { Array as Arr, Effect, Layer, Record, Result, Context, Schema } from "effect"
@@ -11,7 +11,6 @@ import { Array as Arr, Effect, Layer, Record, Result, Context, Schema } from "ef
 // kilocode_change start
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { ModelCache } from "./model-cache"
-import { Instance } from "@/project/instance"
 // kilocode_change end
 
 const When = Schema.Struct({
@@ -24,14 +23,14 @@ const TextPrompt = Schema.Struct({
   type: Schema.Literal("text"),
   key: Schema.String,
   message: Schema.String,
-  placeholder: Schema.optional(Schema.String),
-  when: Schema.optional(When),
+  placeholder: optionalOmitUndefined(Schema.String),
+  when: optionalOmitUndefined(When),
 })
 
 const SelectOption = Schema.Struct({
   label: Schema.String,
   value: Schema.String,
-  hint: Schema.optional(Schema.String),
+  hint: optionalOmitUndefined(Schema.String),
 })
 
 const SelectPrompt = Schema.Struct({
@@ -39,7 +38,7 @@ const SelectPrompt = Schema.Struct({
   key: Schema.String,
   message: Schema.String,
   options: Schema.Array(SelectOption),
-  when: Schema.optional(When),
+  when: optionalOmitUndefined(When),
 })
 
 const Prompt = Schema.Union([TextPrompt, SelectPrompt])
@@ -47,7 +46,7 @@ const Prompt = Schema.Union([TextPrompt, SelectPrompt])
 export class Method extends Schema.Class<Method>("ProviderAuthMethod")({
   type: Schema.Literals(["oauth", "api"]),
   label: Schema.String,
-  prompts: Schema.optional(Schema.Array(Prompt)),
+  prompts: optionalOmitUndefined(Schema.Array(Prompt)),
 }) {
   static readonly zod = zod(this)
 }
@@ -64,13 +63,13 @@ export class Authorization extends Schema.Class<Authorization>("ProviderAuthAuth
 }
 
 export const AuthorizeInput = Schema.Struct({
-  method: Schema.Number.annotate({ description: "Auth method index" }),
+  method: Schema.Finite.annotate({ description: "Auth method index" }),
   inputs: Schema.optional(Schema.Record(Schema.String, Schema.String)).annotate({ description: "Prompt inputs" }),
 }).pipe(withStatics((s) => ({ zod: zod(s) })))
 export type AuthorizeInput = Schema.Schema.Type<typeof AuthorizeInput>
 
 export const CallbackInput = Schema.Struct({
-  method: Schema.Number.annotate({ description: "Auth method index" }),
+  method: Schema.Finite.annotate({ description: "Auth method index" }),
   code: Schema.optional(Schema.String).annotate({ description: "OAuth authorization code" }),
 }).pipe(withStatics((s) => ({ zod: zod(s) })))
 export type CallbackInput = Schema.Schema.Type<typeof CallbackInput>
@@ -112,11 +111,14 @@ interface State {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/ProviderAuth") {}
 
-export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service> = Layer.effect(
+// kilocode_change start
+export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | ModelCache.Service> = Layer.effect(
   Service,
   Effect.gen(function* () {
     const auth = yield* Auth.Service
     const plugin = yield* Plugin.Service
+    const cache = yield* ModelCache.Service
+    // kilocode_change end
     const state = yield* InstanceState.make<State>(
       Effect.fn("ProviderAuth.state")(function* () {
         const plugins = yield* plugin.list()
@@ -141,23 +143,25 @@ export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service> =
           item.methods.map((method) => ({
             type: method.type,
             label: method.label,
-            prompts: method.prompts?.map((prompt) => {
-              if (prompt.type === "select") {
+            ...(method.prompts && {
+              prompts: method.prompts.map((prompt) => {
+                if (prompt.type === "select") {
+                  return {
+                    type: "select" as const,
+                    key: prompt.key,
+                    message: prompt.message,
+                    options: prompt.options,
+                    ...(prompt.when && { when: prompt.when }),
+                  }
+                }
                 return {
-                  type: "select" as const,
+                  type: "text" as const,
                   key: prompt.key,
                   message: prompt.message,
-                  options: prompt.options,
-                  when: prompt.when,
+                  ...(prompt.placeholder && { placeholder: prompt.placeholder }),
+                  ...(prompt.when && { when: prompt.when }),
                 }
-              }
-              return {
-                type: "text" as const,
-                key: prompt.key,
-                message: prompt.message,
-                placeholder: prompt.placeholder,
-                when: prompt.when,
-              }
+              }),
             }),
           })),
         ),
@@ -230,8 +234,7 @@ export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service> =
         }
       }
       Telemetry.trackAuthSuccess(input.providerID)
-      ModelCache.clear(input.providerID)
-      yield* Effect.promise(() => Instance.disposeAll())
+      yield* cache.clear(input.providerID)
       // kilocode_change end
     })
 
@@ -239,8 +242,14 @@ export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service> =
   }),
 )
 
+// kilocode_change start
 export const defaultLayer = Layer.suspend(() =>
-  layer.pipe(Layer.provide(Auth.defaultLayer), Layer.provide(Plugin.defaultLayer)),
+  layer.pipe(
+    Layer.provide(Auth.defaultLayer),
+    Layer.provide(Plugin.defaultLayer),
+    Layer.provide(ModelCache.defaultLayer),
+  ),
 )
+// kilocode_change end
 
 export * as ProviderAuth from "./auth"

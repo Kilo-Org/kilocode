@@ -156,7 +156,31 @@ function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
   })
 }
 
-function planGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
+function denies(user: Permission.Ruleset) {
+  return user.filter((rule) => rule.action === "deny")
+}
+
+function askEditGuard() {
+  return Permission.fromConfig({ edit: "deny" })
+}
+
+// Upstream v1.14.33 builds Agent state outside the Instance ALS, so reading
+// Instance.worktree here would crash. Thread worktree through from patchAgents
+// instead.
+function planEditRules(worktree: string) {
+  return {
+    "*": "deny" as const,
+    [path.join(".kilo", "plans", "*.md")]: "allow" as const,
+    [path.join(".opencode", "plans", "*.md")]: "allow" as const,
+    [path.relative(worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow" as const,
+  }
+}
+
+function planEditGuard(worktree: string) {
+  return Permission.fromConfig({ edit: planEditRules(worktree) })
+}
+
+function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
   return Permission.fromConfig({
     "*": "deny",
     question: "allow",
@@ -182,12 +206,7 @@ function planGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
       [Truncate.GLOB]: "allow",
       [path.join(Global.Path.data, "plans", "*")]: "allow",
     },
-    edit: {
-      "*": "deny",
-      [path.join(".kilo", "plans", "*.md")]: "allow",
-      [path.join(".opencode", "plans", "*.md")]: "allow",
-      [path.relative(Instance.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",
-    },
+    edit: planEditRules(worktree),
     ...mcp,
   })
 }
@@ -277,6 +296,8 @@ export function patchAgents(
   user: Permission.Ruleset,
   cfg: Config.Info,
   kilo: KiloData,
+  worktree: string,
+  whitelistedDirs: string[],
 ) {
   // Rename "build" → "code" for backward compatibility
   if (agents.build) {
@@ -300,9 +321,10 @@ export function patchAgents(
       description: "Plan mode. Can only edit plan files; all other filesystem mutations are denied.",
       permission: Permission.merge(
         defaults,
+        planGuard(worktree, kilo.mcpRules),
         user,
-        planGuard(kilo.mcpRules),
-        user.filter((r: Permission.Rule) => r.action === "deny"),
+        planEditGuard(worktree),
+        denies(user),
       ),
     }
   }
@@ -327,8 +349,13 @@ export function patchAgents(
           semantic_search: "allow",
           read: "allow",
           external_directory: {
+            // Mirror upstream explore's shape: the outer "*": "deny" above wins
+            // over defaults' external_directory rules via findLast, so re-apply
+            // the full whitelist (Truncate.GLOB, tmp, skill, config, globalDirs)
+            // here. Upstream adds these inline in agent.ts; we do the same from
+            // within the patch.
             "*": "ask",
-            [Truncate.GLOB]: "allow",
+            ...Object.fromEntries(whitelistedDirs.map((dir) => [dir, "allow"])),
           },
         }),
         user,
@@ -404,12 +431,7 @@ export function patchAgents(
     description: "Get answers and explanations without making changes to the codebase.",
     prompt: PROMPT_ASK,
     options: {},
-    permission: Permission.merge(
-      defaults,
-      user, // user before ask-specific so ask's deny+allowlist wins
-      askGuard(kilo.mcpRules),
-      user.filter((r: Permission.Rule) => r.action === "deny"), // re-apply user denies so explicit MCP blocks win over mcpRules
-    ),
+    permission: Permission.merge(defaults, askGuard(kilo.mcpRules), user, askEditGuard(), denies(user)),
     mode: "primary",
     native: true,
   }
@@ -443,8 +465,8 @@ export async function remove(name: string) {
   let found = false
 
   // 1. Delete .md files from config directories
-  const { Config } = await import("../../config/config")
-  const dirs = await Config.directories()
+  const { AppRuntime } = await import("@/effect/app-runtime")
+  const dirs = await AppRuntime.runPromise(Config.Service.use((svc) => svc.directories()))
   const patterns = ["{agent,agents}/**/" + name + ".md", "{mode,modes}/" + name + ".md"]
   for (const dir of dirs) {
     for (const pattern of patterns) {
@@ -489,5 +511,6 @@ export async function remove(name: string) {
 
   if (!found) throw new RemoveError({ name, message: "no agent file found on disk" })
 
-  await Instance.dispose()
+  const runtime = await import("../../project/instance-runtime")
+  await runtime.InstanceRuntime.disposeInstance(Instance.current)
 }

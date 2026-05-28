@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "このセッションを共有しURLをクリップボードにコピー",
   "command.session.unshare": "セッションの共有を停止",
   "command.session.unshare.description": "このセッションの共有を停止",
+  "command.session.export": "セッション記録をエクスポート",
 
   "palette.search.placeholder": "ファイル、コマンド、セッションを検索",
   "palette.empty": "結果が見つかりません",
@@ -137,6 +138,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} APIキー",
   "provider.connect.apiKey.placeholder": "APIキー",
   "provider.connect.apiKey.required": "APIキーが必要です",
+  "provider.connect.prompt.required": "{{field}}は必須です",
+  "provider.connect.azure.endpointType.label": "Azure エンドポイント構成の選択",
+  "provider.connect.azure.endpointType.resourceName.label": "リソース名",
+  "provider.connect.azure.endpointType.resourceName.hint": "Azure リソース名からエンドポイントを構築します",
+  "provider.connect.azure.endpointType.baseURL.label": "完全なエンドポイント URL",
+  "provider.connect.azure.endpointType.baseURL.hint": "カスタム Azure OpenAI エンドポイントを使用します",
+  "provider.connect.azure.resourceName.label": "Azure リソース名",
+  "provider.connect.azure.resourceName.placeholder": "例：my-models",
+  "provider.connect.azure.baseURL.label": "Azure OpenAI エンドポイント URL",
+  "provider.connect.azure.baseURL.placeholder": "例：https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zenは、コーディングエージェント向けに最適化された信頼性の高いモデルへのアクセスを提供します。",
   "provider.connect.opencodeZen.line2": "1つのAPIキーで、Claude、GPT、Gemini、GLMなどのモデルにアクセスできます。",
@@ -165,6 +176,8 @@ export const dict = {
   "model.tag.latest": "最新",
   "model.group.recommended": "推奨",
   "model.group.favorites": "お気に入り",
+  "model.group.collapse": "{{group}} を折りたたむ",
+  "model.group.expand": "{{group}} を展開",
   "model.favorite.add": "お気に入りに追加",
   "model.favorite.remove": "お気に入りから削除",
 
@@ -258,6 +271,7 @@ export const dict = {
   "prompt.attachment.remove": "添付ファイルを削除",
   "prompt.action.send": "送信",
   "prompt.action.send.blocked": "最初に保留中の質問に答えるか、閉じてください",
+  "prompt.action.send.recording": "文字起こしして送信",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "プロンプトを改善",
   "prompt.action.autoApprove.enable": "自動承認を有効化",
@@ -268,6 +282,20 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "「プロンプトを強化」ボタンは、追加コンテキスト、説明、または言い換えを提供することで、リクエストを改善します。ここにリクエストを入力し、ボタンを再度クリックして動作を確認してください。",
   "prompt.action.indexing": "インデックス設定",
+
+  "speechToText.tooltip.start": "Kilo Gatewayで音声入力を開始",
+  "speechToText.tooltip.stop": "音声キャプチャを停止",
+  "speechToText.tooltip.transcribing": "文字起こし中... クリックしてキャンセル。",
+  "speechToText.tooltip.error": "音声入力に失敗しました。クリックしてクリア。",
+  "speechToText.error.title": "音声入力に失敗しました",
+  "speechToText.error.loginRequired": "音声入力を使用するにはKiloにサインインしてください。",
+  "speechToText.error.permission": "マイクの許可が拒否されました。",
+  "speechToText.error.microphone": "マイクを起動できませんでした。",
+  "speechToText.error.recording": "録音に失敗しました。",
+  "speechToText.error.emptyRecording": "音声が録音されていません。",
+  "speechToText.error.emptyTranscript": "音声が検出されませんでした。",
+  "speechToText.error.encoding": "録音をエンコードできませんでした。",
+  "speechToText.toast.transcribed": "文字起こしを挿入しました",
 
   "prompt.toast.pasteUnsupported.title": "サポートされていない貼り付け",
   "prompt.toast.pasteUnsupported.description": "ここでは画像またはPDFのみ貼り付け可能です。",
@@ -420,6 +448,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "セッションの共有解除に失敗しました",
   "toast.session.unshare.failed.description": "セッションの共有解除中にエラーが発生しました",
 
+  "toast.session.rename.invalid.title": "無効なセッションタイトル",
   "toast.session.listFailed.title": "{{project}}のセッション読み込みに失敗しました",
 
   "toast.update.title": "アップデートが利用可能です",
@@ -453,6 +482,11 @@ export const dict = {
   "error.promotionLimit.description":
     "無料でサインアップして、500以上のモデルを探索しましょう。2分で完了、クレジットカード不要。または後でお戻りください。",
   "error.promotionLimit.action": "サインアップ",
+  "error.providerAuth.title": "{{provider}} からログアウトしました",
+  "error.providerAuth.description": "{{provider}} に再接続してから、メッセージを再送信してください。",
+  "error.providerAuth.chatgpt.title": "OpenAI からログアウトしました",
+  "error.providerAuth.chatgpt.description":
+    "Codex モデルを引き続き使用するには、ChatGPT に再度ログインしてから、メッセージを再送信してください。",
 
   "error.chain.unknown": "不明なエラー",
   "error.chain.causedBy": "原因:",
@@ -750,12 +784,23 @@ export const dict = {
   "settings.indexing.dimension.title": "ベクトル次元",
   "settings.indexing.enable.description": "セマンティックコードベースインデックスをオンまたはオフにします。",
   "settings.indexing.enable.title": "インデックスを有効にする",
+  "settings.indexing.globalEnable.title": "グローバルで有効にする",
+  "settings.indexing.globalEnable.description": "すべてのワークスペースでインデックス作成を有効にします。",
+  "settings.indexing.projectEnable.title": "このプロジェクトで有効にする",
+  "settings.indexing.projectEnable.description":
+    "グローバルなインデックス作成がオフの場合に、このワークスペースでのインデックス作成を有効にします。",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "グローバルインデックスが有効なため、このプロジェクトはすでにカバーされています。",
   "settings.indexing.lancedbDirectory.description": "ローカルLanceDBストアのオプションのディレクトリ。",
   "settings.indexing.lancedbDirectory.placeholder": "デフォルトの場合は空のままにする",
   "settings.indexing.lancedbDirectory.title": "LanceDBディレクトリ",
   "settings.indexing.model.description": "選択したプロバイダーのデフォルト埋め込みモデルを上書きします。",
   "settings.indexing.model.title": "埋め込みモデル",
   "settings.indexing.provider.description": "セマンティック検索用の埋め込みを生成するプロバイダーを選択します。",
+  "settings.indexing.kiloModel.title": "Kiloモデルプリセット",
+  "settings.indexing.kiloModel.description": "サポートされているKiloホスト型埋め込みモデルを選択します。",
+  "settings.indexing.kiloSignIn.title": "Kiloへのサインインが必要です",
+  "settings.indexing.kiloSignIn.description": "ホスト型埋め込みを使用するにはKiloにサインインしてください。",
   "settings.indexing.provider.title": "埋め込みプロバイダー",
   "settings.indexing.providerField.description": "プロバイダー固有の接続設定。",
   "settings.indexing.qdrantApiKey.description": "QdrantインスタンスのオプションのAPIキー。",
@@ -806,6 +851,9 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "環境変数から接続されています",
   "settings.providers.action.signInChatGPT": "ChatGPT でサインイン",
   "settings.providers.custom.description": "ベースURLでOpenAI互換プロバイダーを追加します。",
+  "settings.providers.subagentModel.title": "サブエージェントモデル",
+  "settings.providers.subagentModel.description":
+    "task-tool サブエージェントのデフォルトモデルと推論の労力。呼び出し元のエージェントのモデルを継承する場合は未設定のままにしてください。",
   "settings.providers.modeModels": "モードごとのモデル",
   "settings.providers.custom.note": "Base URL で OpenAI 互換プロバイダーを追加します。",
   "settings.providers.modeModels.description":
@@ -1072,6 +1120,14 @@ export const dict = {
   "session.status.retrying": "再試行中（{{ attempt }}回目）… {{ message }}",
   "session.status.working": "作業中…",
   "session.status.offline": "ネットワークが切断されました — 再接続中…",
+  "session.outcome.incomplete": "{{count}} 個の To-Do を残してターンが終了しました",
+  "session.outcome.limit": "完了前に応答制限に達しました",
+  "session.outcome.unknown": "モデルの終了理由なしでターンが終了しました",
+  "session.outcome.filtered": "コンテンツフィルターにより、プロバイダーがこの応答を停止しました。",
+  "session.outcome.unexpected": "応答が予期せず終了したため、不完全である可能性があります。",
+  "session.outcome.interrupted": "ターンが中断されました",
+  "session.outcome.error": "ターンが失敗しました",
+  "session.outcome.finish": "終了理由: {{reason}}",
 
   "ui.sessionTurn.cancel": "キャンセル",
   "ui.sessionTurn.status.thinking": "考え中...",
@@ -1166,6 +1222,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "インラインタスクをトリガーするスマートキーバインドを使用",
   "settings.autocomplete.chatAutocomplete.title": "チャットの自動補完を有効にする",
   "settings.autocomplete.chatAutocomplete.description": "チャットテキストエリアに自動補完の提案を表示",
+  "settings.autocomplete.modelsHint": "オートコンプリートに使用するモデルを選択するには、モデル設定をご覧ください。",
   "settings.notifications.agent.title": "エージェント完了",
   "settings.notifications.agent.description": "エージェントがタスクを完了したら通知を表示",
   "settings.notifications.permissions.title": "権限リクエスト",
@@ -1199,9 +1256,13 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "コードベース検索",
   "settings.experimental.codebaseSearch.description": "コードベース全体でAIによる自然言語検索を有効にする",
-  "settings.experimental.agentManagerTool.title": "Agent Manager ツール",
-  "settings.experimental.agentManagerTool.description":
-    "エージェントがツール呼び出しから Agent Manager のローカルセッションとワークツリーセッションを開始できるようにする",
+  "settings.experimental.speechToText.title": "音声認識",
+  "settings.experimental.speechToText.description":
+    "Kilo Gateway経由でKiloアカウントを使用して、プロンプトフィールドでの音声入力を有効にします。",
+  "settings.experimental.speechToText.disabledDescription":
+    "Speech to Text を使用するには、Kilo プロバイダーを有効にしてサインインしてください。現在、Speech to Text は Kilo Gateway でのみサポートされています。",
+  "settings.experimental.speechToTextModel.title": "音声認識モデル",
+  "settings.experimental.speechToTextModel.description": "音声入力に使用するKilo Gateway文字起こしモデルを選択します。",
   "settings.experimental.continueOnDeny.title": "拒否時に続行",
   "settings.experimental.continueOnDeny.description": "権限が拒否された場合にエージェントループを続行",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
@@ -1223,6 +1284,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "設定するエージェントを選択…",
   "settings.agentBehaviour.modelOverride.title": "モデルオーバーライド",
   "settings.agentBehaviour.modelOverride.description": "このエージェントのデフォルトモデルを上書き",
+  "settings.agentBehaviour.variantOverride.title": "バリアントオーバーライド",
+  "settings.agentBehaviour.variantOverride.description": "このエージェントのモデルバリアントを上書き",
   "settings.agentBehaviour.prompt.title": "カスタムプロンプト",
   "settings.agentBehaviour.prompt.description": "このエージェントの追加システムプロンプト",
   "settings.agentBehaviour.temperature.title": "温度",
@@ -1374,7 +1437,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "スナップショットを有効にする",
   "settings.checkpoints.enable.description": "ファイル編集前にチェックポイントを作成して以前の状態を復元可能にする",
   "settings.context.autoCompaction.title": "自動圧縮",
-  "settings.context.autoCompaction.description": "コンテキストが満杯のとき自動的に圧縮",
+  "settings.context.autoCompaction.description": "コンテキストが上限に達する前に自動的に圧縮",
+  "settings.context.compactionLimit.title": "自動圧縮の上限",
+  "settings.context.compactionLimit.description":
+    "コンテキストがモデルウィンドウのこの割合に達したら圧縮します。安全バッファーのみを使用するには空欄のままにしてください。",
   "settings.context.prune.title": "古い出力を削除",
   "settings.context.prune.description": "圧縮時に古いツール出力を削除",
   "settings.context.watcherPatterns": "ファイルウォッチャー無視パターン",
@@ -1531,4 +1597,29 @@ export const dict = {
   "notifications.action.close": "閉じる",
   "notifications.action.tryModel": "{{model}}を試す",
   "notifications.action.tryModelGeneric": "モデルを試す",
+  "diffViewer.source.workspace.label": "ブランチ",
+  "diffViewer.source.workspace.tooltip":
+    "ベースブランチと比較したこのブランチのすべての変更。未コミットのファイル（staged、unstaged、未追跡）とベースにまだ反映されていないローカルコミットを含みます。",
+  "diffViewer.source.staged.label": "ステージ済み",
+  "diffViewer.source.staged.tooltip":
+    "git のステージングエリアに追加（`git add`）した変更のあるファイル。次のコミットに含まれる内容です。",
+  "diffViewer.source.unstaged.label": "未ステージ",
+  "diffViewer.source.unstaged.tooltip":
+    "作業ツリーで変更されたがまだステージングされていないファイルと、追跡されていない（新しい）ファイル。",
+  "diffViewer.source.session.label": "セッション",
+  "diffViewer.source.session.tooltip":
+    "現在のセッション中に Kilo が変更したファイル。ターンごとのスナップショットに基づきます。新しいセッションを開始するとリセットされます。",
+  "diffViewer.group.session": "セッション",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "このリポジトリではスナップショットが無効になっています。セッションの変更を表示するには、構成ファイルを編集してください。",
+
+  "diffViewer.baseBranch.auto": "デフォルト",
+  "diffViewer.baseBranch.default": "デフォルト",
+  "diffViewer.baseBranch.remote": "リモート",
+  "diffViewer.baseBranch.search": "ブランチを検索",
+  "diffViewer.baseBranch.empty": "一致するブランチがありません",
+  "diffViewer.baseBranch.loading": "ブランチを読み込み中…",
+  "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "プランの準備ができました:",
 }

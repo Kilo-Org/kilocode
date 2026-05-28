@@ -1,16 +1,18 @@
-import { afterEach, describe, expect, spyOn, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test"
 import { CodeIndexManager } from "@kilocode/kilo-indexing/engine"
+import { normalizeIndexingStatus } from "@kilocode/kilo-indexing/status"
 import type { Config } from "../../src/config/config"
 import { GlobalBus } from "../../src/bus/global"
-import { AppRuntime } from "../../src/effect/app-runtime"
 import { KiloIndexing } from "../../src/kilocode/indexing"
-import { InstanceBootstrap } from "../../src/project/bootstrap"
-import { Instance } from "../../src/project/instance"
+import { IndexingWorker } from "../../src/kilocode/indexing-worker-client"
+import { WithInstance } from "../../src/project/with-instance"
 import { Server } from "../../src/server/server"
 import * as Log from "@opencode-ai/core/util/log"
-import { tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
+
+const fetch = global.fetch
 
 const cfg: Partial<Config.Info> = {
   plugin: ["@kilocode/kilo-indexing"],
@@ -41,9 +43,75 @@ const off: Partial<Config.Info> = {
     },
   },
 }
+const inactive: Partial<Config.Info> = {
+  plugin: ["@kilocode/kilo-indexing"],
+  experimental: {
+    semantic_indexing: true,
+  },
+  indexing: {
+    enabled: false,
+    provider: "ollama",
+    vectorStore: "qdrant",
+  },
+}
+const kilo: Partial<Config.Info> = {
+  plugin: ["@kilocode/kilo-indexing"],
+  experimental: {
+    semantic_indexing: true,
+  },
+  indexing: {
+    enabled: true,
+    vectorStore: "qdrant",
+  },
+}
+const implicitOpenAi: Partial<Config.Info> = {
+  plugin: ["@kilocode/kilo-indexing"],
+  experimental: {
+    semantic_indexing: true,
+  },
+  indexing: {
+    enabled: true,
+    vectorStore: "qdrant",
+    openai: {
+      apiKey: "openai-token",
+    },
+  },
+}
+const staleKilo: Partial<Config.Info> = {
+  plugin: ["@kilocode/kilo-indexing"],
+  experimental: {
+    semantic_indexing: true,
+  },
+  indexing: {
+    enabled: true,
+    provider: "kilo",
+    model: "custom/model",
+    dimension: 2048,
+    vectorStore: "qdrant",
+  },
+}
 const configDir = process.env["KILO_CONFIG_DIR"]
 const disabled = process.env["KILO_DISABLE_CODEBASE_INDEXING"]
 const error = new Error("test indexing initialization failed")
+
+function inline(directory: string, root: string, hooks: IndexingWorker.Hooks): IndexingWorker.Driver {
+  const manager = new CodeIndexManager(directory, root)
+  const progress = manager.onProgressUpdate.on(() => hooks.status(normalizeIndexingStatus(manager)))
+  const telemetry = manager.onTelemetry.on(hooks.telemetry)
+
+  return {
+    async init(input) {
+      await manager.initialize(input)
+      return normalizeIndexingStatus(manager)
+    },
+    search: (query, directoryPrefix) => manager.searchIndex(query, directoryPrefix),
+    async dispose() {
+      progress.dispose()
+      telemetry.dispose()
+      manager.dispose()
+    },
+  }
+}
 
 async function wait(read: () => Promise<KiloIndexing.Status>, state: KiloIndexing.Status["state"]) {
   for (const _ of Array.from({ length: 100 })) {
@@ -62,12 +130,18 @@ async function called(init: ReturnType<typeof spyOn<CodeIndexManager, "initializ
   throw new Error("indexing initialization did not start")
 }
 
+beforeEach(() => {
+  IndexingWorker.override(inline)
+})
+
 afterEach(async () => {
+  IndexingWorker.override()
   if (configDir === undefined) delete process.env["KILO_CONFIG_DIR"]
   else process.env["KILO_CONFIG_DIR"] = configDir
   if (disabled === undefined) delete process.env["KILO_DISABLE_CODEBASE_INDEXING"]
   else process.env["KILO_DISABLE_CODEBASE_INDEXING"] = disabled
-  await Instance.disposeAll()
+  global.fetch = fetch
+  await disposeAllInstances()
 })
 
 describe("indexing startup degradation", () => {
@@ -158,16 +232,15 @@ describe("indexing startup degradation", () => {
     GlobalBus.on("event", on)
 
     try {
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
-        init: () => AppRuntime.runPromise(InstanceBootstrap),
         fn: async () => {
           await called(init)
           expect((await KiloIndexing.current()).state).toBe("In Progress")
         },
       })
 
-      await Instance.disposeAll()
+      await disposeAllInstances()
       gate.resolve({ requiresRestart: false })
       await new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -179,16 +252,16 @@ describe("indexing startup degradation", () => {
     }
   })
 
-  test("keeps degraded indexing queryable but unavailable", async () => {
+  test("keeps degraded indexing queryable but releases its failed engine", async () => {
     const init = spyOn(CodeIndexManager.prototype, "initialize").mockRejectedValue(error)
+    const dispose = spyOn(CodeIndexManager.prototype, "dispose")
 
     await using tmp = await tmpdir({ git: true, config: cfg })
     process.env["KILO_CONFIG_DIR"] = tmp.path
 
     try {
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
-        init: () => AppRuntime.runPromise(InstanceBootstrap),
         fn: async () => {
           const status = await wait(() => KiloIndexing.current(), "Error")
 
@@ -197,9 +270,11 @@ describe("indexing startup degradation", () => {
           expect(await KiloIndexing.available()).toBe(false)
           expect(KiloIndexing.ready()).toBe(false)
           expect(await KiloIndexing.search("boot failure")).toEqual([])
+          expect(dispose).toHaveBeenCalledTimes(1)
         },
       })
     } finally {
+      dispose.mockRestore()
       init.mockRestore()
     }
   })
@@ -211,9 +286,8 @@ describe("indexing startup degradation", () => {
     const init = spyOn(CodeIndexManager.prototype, "initialize").mockImplementation(() => gate.promise)
 
     try {
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
-        init: () => AppRuntime.runPromise(InstanceBootstrap),
         fn: async () => {
           await called(init)
 
@@ -234,9 +308,8 @@ describe("indexing startup degradation", () => {
     process.env["KILO_CONFIG_DIR"] = tmp.path
     const init = spyOn(CodeIndexManager.prototype, "initialize")
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
-      init: () => AppRuntime.runPromise(InstanceBootstrap),
       fn: async () => {
         const status = await KiloIndexing.current()
 
@@ -252,6 +325,224 @@ describe("indexing startup degradation", () => {
     })
   })
 
+  test("does not allocate an engine when indexing configuration is disabled", async () => {
+    const created: string[] = []
+    IndexingWorker.override((directory, root, hooks) => {
+      created.push(directory)
+      return inline(directory, root, hooks)
+    })
+
+    await using tmp = await tmpdir({ git: true, config: inactive })
+    process.env["KILO_CONFIG_DIR"] = tmp.path
+
+    await WithInstance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const status = await wait(() => KiloIndexing.current(), "Disabled")
+
+        expect(status).toMatchObject({
+          state: "Disabled",
+          message: "Indexing disabled.",
+        })
+        expect(await KiloIndexing.available()).toBe(false)
+        expect(KiloIndexing.ready()).toBe(false)
+        expect(await KiloIndexing.search("disabled")).toEqual([])
+        expect(created).toEqual([])
+      },
+    })
+  })
+
+  test("enriches Kilo provider config from env auth", async () => {
+    global.fetch = (() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            defaultModel: "mistralai/mistral-embed-2312",
+            models: [
+              { id: "mistralai/mistral-embed-2312", name: "Mistral Embed 2312", dimension: 1024, scoreThreshold: 0.35 },
+            ],
+            aliases: {},
+          }),
+        ),
+      )) as unknown as typeof global.fetch
+    const init = spyOn(CodeIndexManager.prototype, "initialize").mockResolvedValue({ requiresRestart: false })
+    const key = process.env.KILO_API_KEY
+    const org = process.env.KILO_ORG_ID
+
+    await using tmp = await tmpdir({ git: true, config: kilo })
+    process.env["KILO_CONFIG_DIR"] = tmp.path
+    process.env.KILO_API_KEY = "kilo-token"
+    process.env.KILO_ORG_ID = "org_123"
+
+    try {
+      await WithInstance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          await called(init)
+          expect(init.mock.calls[0]?.[0]).toMatchObject({
+            embedderProvider: "kilo",
+            kiloApiKey: "kilo-token",
+            kiloOrganizationId: "org_123",
+            modelId: "mistralai/mistral-embed-2312",
+            modelDimension: 1024,
+            searchMinScore: 0.35,
+          })
+        },
+      })
+    } finally {
+      if (key === undefined) delete process.env.KILO_API_KEY
+      else process.env.KILO_API_KEY = key
+      if (org === undefined) delete process.env.KILO_ORG_ID
+      else process.env.KILO_ORG_ID = org
+      init.mockRestore()
+    }
+  })
+
+  test("falls back from unsupported stored Kilo models to the hosted default", async () => {
+    global.fetch = (() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            defaultModel: "mistralai/mistral-embed-2312",
+            models: [
+              { id: "mistralai/mistral-embed-2312", name: "Mistral Embed 2312", dimension: 1024, scoreThreshold: 0.35 },
+            ],
+            aliases: {},
+          }),
+        ),
+      )) as unknown as typeof global.fetch
+    const init = spyOn(CodeIndexManager.prototype, "initialize").mockResolvedValue({ requiresRestart: false })
+    const key = process.env.KILO_API_KEY
+
+    await using tmp = await tmpdir({ git: true, config: staleKilo })
+    process.env["KILO_CONFIG_DIR"] = tmp.path
+    process.env.KILO_API_KEY = "kilo-token"
+
+    try {
+      await WithInstance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          await called(init)
+          expect(init.mock.calls[0]?.[0]).toMatchObject({
+            embedderProvider: "kilo",
+            modelId: "mistralai/mistral-embed-2312",
+            modelDimension: 1024,
+            searchMinScore: 0.35,
+          })
+        },
+      })
+    } finally {
+      if (key === undefined) delete process.env.KILO_API_KEY
+      else process.env.KILO_API_KEY = key
+      init.mockRestore()
+    }
+  })
+
+  test("keeps configured dimensions for supported Kilo models", async () => {
+    global.fetch = (() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            defaultModel: "mistralai/mistral-embed-2312",
+            models: [
+              { id: "mistralai/mistral-embed-2312", name: "Mistral Embed 2312", dimension: 1024, scoreThreshold: 0.35 },
+              {
+                id: "openai/text-embedding-3-small",
+                name: "OpenAI Text Embedding 3 Small",
+                dimension: 1536,
+                scoreThreshold: 0.4,
+              },
+            ],
+            aliases: {},
+          }),
+        ),
+      )) as unknown as typeof global.fetch
+    const init = spyOn(CodeIndexManager.prototype, "initialize").mockResolvedValue({ requiresRestart: false })
+    const key = process.env.KILO_API_KEY
+    const config: Partial<Config.Info> = {
+      ...staleKilo,
+      indexing: {
+        ...staleKilo.indexing,
+        model: "openai/text-embedding-3-small",
+        dimension: 256,
+      },
+    }
+
+    await using tmp = await tmpdir({ git: true, config })
+    process.env["KILO_CONFIG_DIR"] = tmp.path
+    process.env.KILO_API_KEY = "kilo-token"
+
+    try {
+      await WithInstance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          await called(init)
+          expect(init.mock.calls[0]?.[0]).toMatchObject({
+            embedderProvider: "kilo",
+            modelId: "openai/text-embedding-3-small",
+            modelDimension: 256,
+          })
+        },
+      })
+    } finally {
+      if (key === undefined) delete process.env.KILO_API_KEY
+      else process.env.KILO_API_KEY = key
+      init.mockRestore()
+    }
+  })
+
+  test("does not execute stored Kilo models when the hosted catalog is unavailable", async () => {
+    global.fetch = (() => Promise.resolve(new Response(undefined, { status: 500 }))) as unknown as typeof global.fetch
+    const init = spyOn(CodeIndexManager.prototype, "initialize").mockResolvedValue({ requiresRestart: false })
+    const key = process.env.KILO_API_KEY
+
+    await using tmp = await tmpdir({ git: true, config: staleKilo })
+    process.env["KILO_CONFIG_DIR"] = tmp.path
+    process.env.KILO_API_KEY = "kilo-token"
+
+    try {
+      await WithInstance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          await called(init)
+          expect(init.mock.calls[0]?.[0]).toMatchObject({ embedderProvider: "kilo" })
+          expect(init.mock.calls[0]?.[0].modelId).toBeUndefined()
+          expect(init.mock.calls[0]?.[0].modelDimension).toBeUndefined()
+        },
+      })
+    } finally {
+      if (key === undefined) delete process.env.KILO_API_KEY
+      else process.env.KILO_API_KEY = key
+      init.mockRestore()
+    }
+  })
+
+  test("does not default to Kilo when an existing provider config is present", async () => {
+    const init = spyOn(CodeIndexManager.prototype, "initialize").mockResolvedValue({ requiresRestart: false })
+    const key = process.env.KILO_API_KEY
+
+    await using tmp = await tmpdir({ git: true, config: implicitOpenAi })
+    process.env["KILO_CONFIG_DIR"] = tmp.path
+    process.env.KILO_API_KEY = "kilo-token"
+
+    try {
+      await WithInstance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          await called(init)
+          expect(init.mock.calls[0]?.[0]).toMatchObject({
+            embedderProvider: "openai",
+            openAiKey: "openai-token",
+          })
+        },
+      })
+    } finally {
+      if (key === undefined) delete process.env.KILO_API_KEY
+      else process.env.KILO_API_KEY = key
+      init.mockRestore()
+    }
+  })
+
   test("stays disabled when VS Code starts without a workspace folder", async () => {
     await using tmp = await tmpdir({ git: true, config: cfg })
     process.env["KILO_CONFIG_DIR"] = tmp.path
@@ -259,9 +550,8 @@ describe("indexing startup degradation", () => {
     const init = spyOn(CodeIndexManager.prototype, "initialize")
 
     try {
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
-        init: () => AppRuntime.runPromise(InstanceBootstrap),
         fn: async () => {
           const status = await KiloIndexing.current()
 

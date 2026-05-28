@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@kilocode/kilo-gateway",
-  "version": "7.2.40",
+  "version": "7.3.12",
   "type": "module",
   "license": "MIT",
   "description": "Unified Kilo Gateway package for OpenCode - authentication, provider, and API integration",
@@ -17,6 +17,10 @@
   ],
   "exports": {
     ".": "./src/index.ts",
+    "./autocomplete": "./src/autocomplete.ts",
+    "./fim": "./src/fim.ts",
+    "./edit": "./src/edit.ts",
+    "./edit-prompt": "./src/edit-prompt.ts",
     "./tui": "./src/tui.ts"
   },
   "files": [
@@ -24,7 +28,8 @@
   ],
   "scripts": {
     "typecheck": "tsgo --noEmit",
-    "build": "tsc"
+    "build": "tsc",
+    "test:ci": "mkdir -p .artifacts/unit && bun test test --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"
   },
   "dependencies": {
     "@kilocode/plugin": "workspace:*",

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:
 import { Effect } from "effect"
 import path from "path"
 import z from "zod"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Project } from "@/project/project"
 import { Session as SessionNs } from "@/session/session"
 import * as Log from "@opencode-ai/core/util/log"
@@ -45,11 +45,11 @@ describe("session.listGlobal", () => {
     await using first = await tmpdir({ git: true })
     await using second = await tmpdir({ git: true })
 
-    const firstSession = await Instance.provide({
+    const firstSession = await WithInstance.provide({
       directory: first.path,
       fn: async () => svc.create({ title: "first-session" }),
     })
-    const secondSession = await Instance.provide({
+    const secondSession = await WithInstance.provide({
       directory: second.path,
       fn: async () => svc.create({ title: "second-session" }),
     })
@@ -75,12 +75,12 @@ describe("session.listGlobal", () => {
   test("excludes archived sessions by default", async () => {
     await using tmp = await tmpdir({ git: true })
 
-    const archived = await Instance.provide({
+    const archived = await WithInstance.provide({
       directory: tmp.path,
       fn: async () => svc.create({ title: "archived-session" }),
     })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => svc.setArchived({ sessionID: archived.id, time: Date.now() }),
     })
@@ -99,12 +99,12 @@ describe("session.listGlobal", () => {
   test("supports cursor pagination", async () => {
     await using tmp = await tmpdir({ git: true })
 
-    const first = await Instance.provide({
+    const first = await WithInstance.provide({
       directory: tmp.path,
       fn: async () => svc.create({ title: "page-one" }),
     })
     await new Promise((resolve) => setTimeout(resolve, 5))
-    const second = await Instance.provide({
+    const second = await WithInstance.provide({
       directory: tmp.path,
       fn: async () => svc.create({ title: "page-two" }),
     })
@@ -130,7 +130,7 @@ describe("session.listGlobal", () => {
       await $`git worktree add ${worktree} -b test-branch-${Date.now()}`.cwd(first.path).quiet()
 
       // Create worktree session first so it computes its own project ID via rev-list
-      const branch = await Instance.provide({
+      const branch = await WithInstance.provide({
         directory: worktree,
         fn: async () => svc.create({ title: "worktree-session" }),
       })
@@ -138,12 +138,12 @@ describe("session.listGlobal", () => {
       // Now write a stale project ID to .git/kilo — this overrides the root's cached ID
       await Bun.write(path.join(first.path, ".git", "kilo"), "stale-project-id")
 
-      const root = await Instance.provide({
+      const root = await WithInstance.provide({
         directory: first.path,
         fn: async () => svc.create({ title: "root-session" }),
       })
       await Bun.file(path.join(first.path, ".git", "kilo")).delete()
-      const other = await Instance.provide({
+      const other = await WithInstance.provide({
         directory: second.path,
         fn: async () => svc.create({ title: "other-session" }),
       })

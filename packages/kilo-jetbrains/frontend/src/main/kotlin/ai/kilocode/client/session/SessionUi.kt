@@ -2,51 +2,60 @@ package ai.kilocode.client.session
 
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
+import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
-import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.migration.KiloMigrationService
+import ai.kilocode.client.migration.MigrationUiController
+import ai.kilocode.client.migration.MigrationUiState
+import ai.kilocode.client.migration.ui.MigrationOverlayPanel
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.scroll.SessionScroll
 import ai.kilocode.client.session.ui.ConnectionPanel
 import ai.kilocode.client.session.ui.EmptySessionPanel
+import ai.kilocode.client.session.ui.LoadingPanel
 import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
-import ai.kilocode.client.session.ui.PermissionPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
-import ai.kilocode.client.session.ui.QuestionPanel
+import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.SessionMessageListPanel
-import ai.kilocode.client.session.ui.SessionStyle
-import ai.kilocode.client.session.ui.SessionStyleTarget
-import ai.kilocode.client.session.update.EVENT_FLUSH_MS
-import ai.kilocode.client.session.update.SessionController
-import ai.kilocode.client.session.update.SessionControllerEvent
-import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.client.session.ui.header.SessionHeaderPanel
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.controller.EVENT_FLUSH_MS
+import ai.kilocode.client.session.controller.SessionController
+import ai.kilocode.client.session.controller.SessionControllerEvent
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.LoginRequiredView
+import ai.kilocode.client.session.views.permission.PermissionView
+import ai.kilocode.client.session.views.question.QuestionView
+import ai.kilocode.client.settings.profile.UserProfileConfigurable
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.log.ChatLogSummary
+import com.intellij.util.ui.JBUI
 import ai.kilocode.log.KiloLog
+import com.intellij.ide.BrowserUtil
 import com.intellij.ide.ui.LafManagerListener
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.colors.EditorColorsListener
 import com.intellij.openapi.editor.colors.EditorColorsManager
-import com.intellij.openapi.Disposable
+import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.options.ConfigurableWithId
+import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.IconLoader
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.registry.Registry
-import com.intellij.ui.icons.CachedImageIcon
-import com.intellij.ui.svg.SvgAttributePatcher
-import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBScrollPane
-import com.intellij.util.SVGLoader
-import com.intellij.util.ui.Centerizer
-import com.intellij.util.ui.JBUI
+import com.intellij.util.concurrency.annotations.RequiresEdt
+import java.util.function.Predicate
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
-import java.awt.Color
-import java.awt.Rectangle
-import javax.swing.BoxLayout
-import javax.swing.BoxLayout.Y_AXIS
-import javax.swing.Icon
-import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -56,48 +65,30 @@ import javax.swing.JPanel
  * It builds the session panels, wires controller/model listeners, and swaps the
  * center body between the empty state and the message list.
  */
-class SessionUi private constructor(
+class SessionUi(
     project: Project,
     workspace: Workspace,
     sessions: KiloSessionService,
     app: KiloAppService,
-    cs: CoroutineScope,
-    id: String?,
-    displayMs: Long,
-    open: (SessionDto) -> Unit,
-    private val loading: Boolean,
-) : JPanel(BorderLayout()), Disposable, SessionStyleTarget {
-
-    constructor(
-        project: Project,
-        workspace: Workspace,
-        sessions: KiloSessionService,
-        app: KiloAppService,
-        cs: CoroutineScope,
-        id: String? = null,
-        displayMs: Long = SessionController.DISPLAY_DELAY_MS,
-        open: (SessionDto) -> Unit = {},
-    ) : this(project, workspace, sessions, app, cs, id, displayMs, open, id == null)
-
-    internal constructor(
-        project: Project,
-        workspace: Workspace,
-        sessions: KiloSessionService,
-        app: KiloAppService,
-        cs: CoroutineScope,
-        id: String? = null,
-        displayMs: Long = SessionController.DISPLAY_DELAY_MS,
-        loading: Boolean,
-        open: (SessionDto) -> Unit = {},
-    ) : this(project, workspace, sessions, app, cs, id, displayMs, open, loading)
+    private val cs: CoroutineScope,
+    ref: SessionRef? = null,
+    displayMs: Long = SessionController.DISPLAY_DELAY_MS,
+    private val manager: SessionManager? = null,
+    private val workspaces: KiloWorkspaceService = service(),
+    private val migration: MigrationUiController = service<KiloMigrationService>(),
+) : JPanel(BorderLayout()), Disposable, SessionEditorStyleTarget {
 
     companion object {
         private val LOG = KiloLog.create(SessionUi::class.java)
-        private val SCROLL_ICON = IconLoader.getIcon("/icons/scroll-bottom.svg", SessionUi::class.java)
     }
 
     private val project = project
     private val app = app
+    private val sessions = sessions
+    private val workspace = workspace
+    private var opening = ref != null
+    private var pending = false
+    private var loaded: Boolean? = null
     private val flushMs =
         Registry.intValue("kilo.session.flushMs", EVENT_FLUSH_MS.toInt())
             .takeIf { it > 0 }
@@ -105,17 +96,20 @@ class SessionUi private constructor(
             ?: EVENT_FLUSH_MS
 
     private val controller = SessionController(
-        this, id, sessions, workspace, app, cs, this,
+        this, ref, sessions, workspace, app, cs, comp = this,
         flushMs = flushMs,
         condense = Registry.`is`("kilo.session.condense", true),
         displayMs = displayMs,
-        open = open,
-        beforeUpdate = ::atBottom,
-        afterUpdate = ::followBottom,
+        open = { item -> manager?.openSession(item) },
+        beforeUpdate = { if (opening) false else scroll.atBottom() },
+        afterUpdate = { if (!opening) scroll.followBottom(it) },
+        loaded = ::onSessionLoaded,
+        openProfileAction = ::openProfileSettings,
     )
 
 
     private lateinit var root: SessionRootPanel
+    private lateinit var account: SessionAccountOverlay
 
     private lateinit var sessionContent: JPanel
 
@@ -125,36 +119,117 @@ class SessionUi private constructor(
 
     private lateinit var messageBody: SessionMessageListPanel
 
-    private lateinit var scroll: JBScrollPane
+    private lateinit var header: SessionHeaderPanel
 
-    private lateinit var jump: JButton
+    internal lateinit var scroll: SessionScroll
 
-    private lateinit var question: QuestionPanel
-    private lateinit var permission: PermissionPanel
+    private lateinit var question: QuestionView
+    private lateinit var permission: PermissionView
+    private lateinit var login: LoginRequiredView
     private lateinit var connection: ConnectionPanel
 
     private lateinit var prompt: PromptPanel
-    private lateinit var loadingLabel: JBLabel
-    private var style = SessionStyle.current()
+    private lateinit var load: LoadingPanel
+    private lateinit var migrationOverlay: MigrationOverlayPanel
+    private var empty: EmptySessionPanel? = null
+    private var modalFocus: (() -> JComponent)? = null
+    private var style = SessionEditorStyle.current()
 
     init {
         buildUi()
+        scroll.show(body(controller.model.state))
         bindUi()
         bindStyle()
+        bindMigration()
         applyStyle(style)
-        showBody(if (loading) progressBody else blankBody)
+        onStateChanged(controller.model.state)
+        loaded?.let(::finishOpen)
+    }
+
+    override fun addNotify() {
+        super.addNotify()
+        resumeOpen()
+    }
+
+    override fun doLayout() {
+        super.doLayout()
+        resumeOpen()
     }
 
     internal val blank: Boolean get() = controller.blank
 
     internal val id: String? get() = controller.id
 
+    internal val cacheKey: String? get() = controller.refKey
+
     internal fun currentStyle() = style
 
-    val defaultFocusedComponent: JComponent get() = prompt.defaultFocusedComponent
+    @RequiresEdt
+    internal fun canDisposeInactive(): Boolean = controller.model.state is SessionState.Idle
+
+    @RequiresEdt
+    internal fun activityKind(): SessionActivityKind? = when (val state = controller.model.state) {
+        is SessionState.Idle,
+        is SessionState.Loading,
+        is SessionState.Busy,
+        is SessionState.Retry,
+        is SessionState.Offline,
+        is SessionState.Error -> null
+        is SessionState.LoginRequired -> SessionActivityKind.LOGIN_REQUIRED
+        is SessionState.AwaitingPermission -> SessionActivityKind.PERMISSION
+        is SessionState.AwaitingQuestion ->
+            SessionActivityKind.PLAN.takeIf { state.question.items.any { it.planFollowup() } } ?: SessionActivityKind.QUESTION
+    }
+
+    @RequiresEdt
+    internal fun title(): String? = controller.model.session?.title?.takeIf { it.isNotBlank() }
+
+    @RequiresEdt
+    internal fun syncActivity() {
+        empty?.syncActivity()
+    }
+
+    val defaultFocusedComponent: JComponent get() {
+        modalFocus?.invoke()?.let { return it }
+        return prompt.defaultFocusedComponent
+    }
+
+    internal fun setModalContent(content: JComponent?, focus: (() -> JComponent)? = null) {
+        modalFocus = if (content == null) null else focus
+        root.setModalContent(content)
+    }
 
     private fun buildUi() {
         root = SessionRootPanel()
+
+        migrationOverlay = MigrationOverlayPanel().apply {
+            onSkip = { migration.skip() }
+            onDone = { migration.finish() }
+            onContinueFromError = { migration.finish() }
+            onStart = { sel -> migration.start(sel) }
+        }
+        migrationOverlay.border = JBUI.Borders.empty(
+            JBUI.scale(SessionUiStyle.View.Prompt.PANEL_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Prompt.PANEL_HORIZONTAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Prompt.PANEL_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Prompt.PANEL_HORIZONTAL_PADDING),
+        )
+
+        account = SessionAccountOverlay(
+            select = { org -> controller.selectOrganization(org) },
+            profile = { controller.openProfile() },
+        )
+        root.addOverlay(account) { pane, child ->
+            val size = child.preferredSize
+            val top = JBUI.scale(SessionUiStyle.View.Prompt.PANEL_VERTICAL_PADDING)
+            val right = JBUI.scale(SessionUiStyle.View.Prompt.PANEL_HORIZONTAL_PADDING)
+            java.awt.Rectangle(
+                pane.width - size.width - right,
+                top,
+                size.width,
+                size.height,
+            )
+        }
 
         sessionContent = JPanel(BorderLayout())
 
@@ -162,34 +237,23 @@ class SessionUi private constructor(
             isOpaque = false
         }
 
-        progressBody = JPanel(BorderLayout()).apply {
-            isOpaque = false
-            loadingLabel = JBLabel(KiloBundle.message("session.empty.loading"))
-            add(Centerizer(
-                loadingLabel,
-                Centerizer.TYPE.BOTH,
-            ), BorderLayout.CENTER)
-        }
-        messageBody = SessionMessageListPanel(controller.model, this)
+        load = LoadingPanel()
+        progressBody = load
+        question = QuestionView(
+            project = project,
+            reply = { id, dto, opts -> controller.replyQuestion(id, dto, opts) },
+            reject = { id -> controller.rejectQuestion(id) },
+            follow = { scroll.following() },
+            scroll = { scroll.followBottom(it) },
+        )
+        permission = PermissionView(
+            reply = { id, dto -> controller.replyPermission(id, dto) },
+        )
+        login = LoginRequiredView(openProfile = { controller.openProfile() }, dismiss = { controller.dismissLoginRequired() })
+        messageBody = SessionMessageListPanel(controller.model, this, question, permission, login, ::openFile, ::openUrl)
+        header = SessionHeaderPanel(controller, this)
 
-        scroll = JBScrollPane(blankBody).apply {
-            border = JBUI.Borders.empty()
-            verticalScrollBarPolicy = JBScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED
-            horizontalScrollBarPolicy = JBScrollPane.HORIZONTAL_SCROLLBAR_NEVER
-        }
-        jump = JButton(patchedIcon(SCROLL_ICON)).apply {
-            border = JBUI.Borders.empty()
-            isContentAreaFilled = false
-            isBorderPainted = false
-            isFocusPainted = false
-            isFocusable = false
-            isOpaque = false
-            toolTipText = KiloBundle.message("session.scroll.bottom")
-            isVisible = false
-            addActionListener { jumpBottom() }
-        }
-        question = QuestionPanel(controller)
-        permission = PermissionPanel(controller)
+        scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
         connection = ConnectionPanel(this, controller)
 
         prompt = PromptPanel(
@@ -198,28 +262,10 @@ class SessionUi private constructor(
             onAbort = { controller.abort() },
         )
 
-        sessionContent.add(scroll, BorderLayout.CENTER)
+        sessionContent.add(header, BorderLayout.NORTH)
+        sessionContent.add(scroll.component, BorderLayout.CENTER)
         root.content.add(sessionContent, BorderLayout.CENTER)
-        // Dock panels stay in normal flow so each visible state takes layout space
-        // above the prompt.
-        root.content.add(JPanel().apply {
-            this.layout = BoxLayout(this, Y_AXIS)
-            add(question)
-            add(permission)
-            add(connection)
-            add(prompt)
-        }, BorderLayout.SOUTH)
-        root.addOverlay(jump) { _, child ->
-            val size = child.preferredSize
-            val gap = JBUI.scale(12)
-            Rectangle(
-                sessionContent.x + sessionContent.width - size.width - gap,
-                sessionContent.y + sessionContent.height - size.height - gap,
-                size.width,
-                size.height,
-            )
-        }
-
+        root.content.add(Stack.vertical().next(connection).next(prompt), BorderLayout.SOUTH)
         add(root, BorderLayout.CENTER)
     }
 
@@ -228,9 +274,14 @@ class SessionUi private constructor(
         prompt.model.onSelect = { item -> controller.selectModel(item.provider, item.id) }
         prompt.reasoning.onSelect = { item -> controller.selectVariant(item.id) }
         prompt.onReset = { controller.clearModelOverride() }
+        prompt.onChange = { scroll.followTail() }
+        prompt.onAutoApproveToggle = { value ->
+            controller.setAutoApprove(value)
+            prompt.setAutoApprove(controller.autoApprove)
+        }
+        prompt.setAutoApprove(controller.autoApprove)
         prompt.model.favorites = { app.favorites.value }
         prompt.model.onFavoriteToggle = { item -> app.toggleModelFavorite(item.provider, item.id) }
-        scroll.verticalScrollBar.addAdjustmentListener { updateJump() }
 
         controller.addListener(this) { event ->
             when (event) {
@@ -264,30 +315,47 @@ class SessionUi private constructor(
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowProgress -> {
-                    showBody(progressBody)
+                    empty = null
+                    scroll.show(progressBody)
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowRecents -> {
-                    val panel = EmptySessionPanel(this, controller, event.recents)
-                    showBody(panel)
+                    val panel = EmptySessionPanel(
+                        this,
+                        controller,
+                        event.recents,
+                        history = { manager?.showHistory() },
+                        activity = { manager?.activity() ?: sessions.activity() },
+                        titles = { manager?.titles().orEmpty() },
+                    )
+                    empty = panel
+                    scroll.show(panel.view)
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowSession -> {
-                    showBody(messageBody)
+                    empty = null
+                    scroll.show(messageBody)
                 }
 
-                is SessionControllerEvent.AppChanged,
+                is SessionControllerEvent.AppChanged -> {
+                    prompt.setReady(controller.model.isReady())
+                }
+
                 is SessionControllerEvent.WorkspaceChanged -> {
                     prompt.setReady(controller.model.isReady())
                 }
 
                 is SessionControllerEvent.ConnectionChanged -> Unit
+
+                is SessionControllerEvent.AccountOverlayChanged -> account.onEvent(event)
             }
         }
 
         controller.model.addListener(this) { event ->
             when (event) {
                 is SessionModelEvent.StateChanged -> onStateChanged(event.state)
+
+                is SessionModelEvent.SessionUpdated -> onSessionUpdated()
 
                 is SessionModelEvent.TurnAdded,
                 is SessionModelEvent.TurnUpdated,
@@ -302,8 +370,36 @@ class SessionUi private constructor(
                 is SessionModelEvent.ContentRemoved,
                 is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
+                is SessionModelEvent.HeaderUpdated,
                 is SessionModelEvent.Compacted,
                 is SessionModelEvent.Cleared -> Unit
+            }
+        }
+    }
+
+    private fun bindMigration() {
+        cs.launch {
+            migration.state.collect { state ->
+                withContext(Dispatchers.Main) {
+                    applyMigrationState(state)
+                }
+            }
+        }
+    }
+
+    @RequiresEdt
+    private fun applyMigrationState(state: MigrationUiState) {
+        when (state) {
+            is MigrationUiState.Hidden -> {
+                if (root.blocker.isVisible) LOG.info("Migration wizard: overlay hidden session=${id ?: cacheKey ?: "new"}")
+                setModalContent(null)
+            }
+            is MigrationUiState.Needed -> {
+                if (!root.blocker.isVisible) LOG.info("Migration wizard: overlay shown session=${id ?: cacheKey ?: "new"} phase=${state.phase}")
+                migrationOverlay.update(state)
+                setModalContent(migrationOverlay) { migrationOverlay.preferredFocusComponent() }
+                migrationOverlay.revalidate()
+                migrationOverlay.repaint()
             }
         }
     }
@@ -312,146 +408,120 @@ class SessionUi private constructor(
         val bus = ApplicationManager.getApplication().messageBus.connect(this)
         bus.subscribe(EditorColorsManager.TOPIC, EditorColorsListener {
             ApplicationManager.getApplication().invokeLater {
-                applyStyle(SessionStyle.current())
+                applyStyle(SessionEditorStyle.current())
             }
         })
         bus.subscribe(LafManagerListener.TOPIC, LafManagerListener {
             ApplicationManager.getApplication().invokeLater {
-                applyStyle(SessionStyle.current())
+                applyStyle(SessionEditorStyle.current())
             }
         })
+    }
+
+    private fun onSessionLoaded(show: Boolean) {
+        loaded = show
+        if (!this::scroll.isInitialized) return
+        finishOpen(show)
+    }
+
+    private fun body(state: SessionState): JPanel {
+        if (state is SessionState.Retry || state is SessionState.Offline) return progressBody
+        if (controller.model.showSession) return messageBody
+        if (state is SessionState.Loading) return progressBody
+        return blankBody
+    }
+
+    private fun finishOpen(show: Boolean) {
+        loaded = show
+        if (!opening) return
+        if (!show) {
+            pending = false
+            opening = false
+            return
+        }
+        pending = true
+        resumeOpen()
+    }
+
+    private fun resumeOpen() {
+        if (!pending || !opening || !this::scroll.isInitialized) return
+        if (width <= 0 || height <= 0) return
+        pending = false
+        scroll.openBottom {
+            opening = false
+        }
     }
 
     private fun sendPrompt(text: String) {
         if (text.isBlank()) return
         LOG.debug {
-            "${ChatLogSummary.prompt(text)} agent=${controller.model.agent ?: "none"} model=${controller.model.model ?: "none"} ready=${controller.ready}"
+            val agent = controller.model.agent ?: "none"
+            val model = controller.model.model ?: "none"
+            "${ChatLogSummary.prompt(text)} agent=$agent model=$model ready=${controller.ready}"
         }
-        controller.prompt(text)
         prompt.clear()
+        val follow = scroll.atBottom()
+        controller.prompt(text)
+        scroll.followBottom(follow)
+    }
+
+    private fun openFile(path: String) {
+        cs.launch {
+            workspaces.openPath(workspace.directory, path)
+        }
+    }
+
+    private fun openUrl(url: String) {
+        BrowserUtil.browse(url)
     }
 
     private fun onStateChanged(state: SessionState) {
         prompt.setBusy(state.isBusy())
-        when (state) {
-            is SessionState.AwaitingQuestion -> {
-                permission.hidePanel()
-                question.show(state.question)
-            }
-
-            is SessionState.AwaitingPermission -> {
-                question.hidePanel()
-                permission.show(state.permission)
-            }
-
-            else -> {
-                question.hidePanel()
-                permission.hidePanel()
-            }
-        }
+        load.setState(state)
+        scroll.setQuestionPending(questionPending(state))
+        scroll.show(body(state))
+        manager?.activityChanged()
         refresh()
     }
 
-    internal fun atBottom(): Boolean {
-        val bar = scroll.verticalScrollBar
-        if (bar.maximum <= bar.visibleAmount) return true
-        return bar.value + bar.visibleAmount >= bar.maximum - JBUI.scale(32)
-    }
-
-    internal fun followBottom(follow: Boolean) {
-        if (!follow) return
-        showBody(messageBody)
-        scrollToBottom()
-        updateJump()
-        ApplicationManager.getApplication().invokeLater {
-            scroll.viewport.view?.revalidate()
-            scroll.viewport.view?.doLayout()
-            scroll.revalidate()
-            scroll.doLayout()
-            scrollToBottom()
-            updateJump()
-        }
-    }
-
-    private fun jumpBottom() {
-        showBody(messageBody)
-        scrollToBottom()
-        updateJump()
-        ApplicationManager.getApplication().invokeLater {
-            scroll.viewport.view?.revalidate()
-            scroll.viewport.view?.doLayout()
-            scroll.revalidate()
-            scroll.doLayout()
-            scrollToBottom()
-            updateJump()
-        }
-    }
-
-    private fun scrollToBottom() {
-        val bar = scroll.verticalScrollBar
-        bar.value = bar.maximum
-    }
-
-    private fun updateJump() {
-        val visible = scroll.viewport.view === messageBody && !atBottom()
-        if (jump.isVisible == visible) return
-        jump.isVisible = visible
-        root.overlay.revalidate()
-        root.overlay.repaint()
+    private fun onSessionUpdated() {
+        manager?.activityChanged()
     }
 
     private fun refresh() {
-        updateJump()
+        scroll.refresh()
         root.revalidate()
         root.repaint()
     }
 
-    private fun showBody(panel: JPanel) {
-        if (scroll.viewport.view === panel) return
-        (panel as? SessionStyleTarget)?.applyStyle(style)
-        scroll.viewport.setView(panel)
-        scroll.revalidate()
-        scroll.repaint()
-        updateJump()
+    override fun applyStyle(style: SessionEditorStyle) {
+        this.style = style
+        load.applyStyle(style)
+        header.applyStyle(style)
+        prompt.applyStyle(style)
+        scroll.applyStyle(style)
+        refresh()
     }
 
-    override fun applyStyle(style: SessionStyle) {
-        this.style = style
-        jump.icon = patchedIcon(SCROLL_ICON)
-        loadingLabel.font = style.uiFont
-        messageBody.applyStyle(style)
-        prompt.applyStyle(style)
-        (scroll.viewport.view as? SessionStyleTarget)?.applyStyle(style)
-        refresh()
+    private fun openProfileSettings() {
+        ShowSettingsUtil.getInstance().showSettingsDialog(
+            project,
+            Predicate { cfg: Configurable ->
+                cfg is ConfigurableWithId && cfg.getId() == UserProfileConfigurable.ID
+            },
+            { cfg: Configurable -> cfg.focusOn(UserProfileConfigurable.FOCUS_ACCOUNT_COMBO) },
+        )
     }
 
     override fun dispose() {}
 }
 
-private fun patchedIcon(icon: Icon): Icon {
-    val cached = icon as? CachedImageIcon ?: return icon
-    return cached.createWithPatcher(object : SVGLoader.SvgElementColorPatcherProvider, SvgAttributePatcher {
-        override fun digest(): LongArray {
-            val bg = JBUI.CurrentTheme.Button.defaultButtonColorStart().rgb.toLong()
-            val fg = JBUI.CurrentTheme.Button.defaultButtonForeground().rgb.toLong()
-            return longArrayOf(bg, fg, 0x5c011b0bb17L)
-        }
+private fun variantTitle(value: String): String = value.replaceFirstChar { it.titlecase() }
 
-        override fun attributeForPath(path: String) = this
-
-        override fun patchColors(attributes: MutableMap<String, String>) {
-            when (attributes["id"]) {
-                "ScrollButton.Background" -> set(attributes, "fill", JBUI.CurrentTheme.Button.defaultButtonColorStart())
-                "ScrollButton.Foreground" -> set(attributes, "stroke", JBUI.CurrentTheme.Button.defaultButtonForeground())
-            }
-        }
-
-        private fun set(attributes: MutableMap<String, String>, key: String, color: Color) {
-            if (!attributes.containsKey(key) || attributes[key] == "none") return
-            attributes[key] = "rgb(${color.red},${color.green},${color.blue})"
-            if (color.alpha != 255) attributes["$key-opacity"] = "${color.alpha / 255f}"
-        }
-    })
+private fun questionPending(state: SessionState): Boolean {
+    if (state !is SessionState.AwaitingQuestion) return false
+    return state.question.items.none { it.planFollowup() }
 }
 
-private fun variantTitle(value: String): String = value.replaceFirstChar { it.titlecase() }
+private fun ai.kilocode.client.session.model.QuestionItem.planFollowup() =
+    questionKey == "plan.followup.question" || headerKey == "plan.followup.header"

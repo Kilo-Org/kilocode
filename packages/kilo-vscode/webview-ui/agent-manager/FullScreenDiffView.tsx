@@ -20,18 +20,34 @@ import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pie
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { KILO_FILE_PATH_MIME } from "../src/utils/path-mentions"
 import { useLanguage } from "../src/context/language"
+import { useVSCode } from "../src/context/vscode"
+import { useServer } from "../src/context/server"
+import { useProvider } from "../src/context/provider"
+import { useConfig } from "../src/context/config"
+import { canUseSpeechToText, selectedSpeechToTextModel } from "../src/components/speech-to-text/availability"
+import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
 import { FileTree } from "./FileTree"
 import { treeOrder } from "./file-tree-utils"
 import { getDirectory, getFilename, lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
 import {
   buildFileAnnotations,
   buildReviewAnnotation,
+  reviewDraftSpeechKey,
+  reviewEditSpeechKey,
   type AnnotationLabels,
   type AnnotationMeta,
 } from "./review-annotations"
-import { LONG_DIFF_MARKER_FILE_COUNT, initialOpenFiles, isLargeDiffFile } from "./diff-open-policy"
+import { createReviewAnnotationSpeechRenderer } from "./review-annotation-speech"
+import {
+  LONG_DIFF_MARKER_FILE_COUNT,
+  allOpenFiles,
+  initialOpenFiles,
+  isLargeDiffFile,
+  toggleOpenFiles,
+} from "./diff-open-policy"
 import { DiffEndMarker } from "./DiffEndMarker"
 import { isMarkdownFile, MarkdownDiffView } from "./MarkdownDiffView"
+import { diffToken } from "./diff-state"
 
 type DiffStyle = "unified" | "split"
 
@@ -52,11 +68,23 @@ interface FullScreenDiffViewProps {
   onOpenFile?: (relativePath: string, line?: number) => void
   onRevertFile?: (file: string) => void
   revertingFiles?: Set<string>
+  activeTerminalId?: string
+  /** Defaults to true. Hides the per-file Revert action when false. */
+  canRevert?: boolean
+  /** Defaults to true. Disables comment creation and "Send all" when false. */
+  canComment?: boolean
   onClose: () => void
 }
 
 export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) => {
   const { t } = useLanguage()
+  const vscode = useVSCode()
+  const server = useServer()
+  const provider = useProvider()
+  const { config } = useConfig()
+  const speech = useSpeechToText(vscode, server, { t })
+  const canUseSpeech = () => canUseSpeechToText(config(), provider.connected(), server.profileData())
+  const speechModel = () => selectedSpeechToTextModel(config())
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
   const sendAllKeybind = () =>
     isMac ? t("agentManager.review.sendAllShortcut.mac") : t("agentManager.review.sendAllShortcut.other")
@@ -72,16 +100,34 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     delete: t("common.delete"),
   })
   const [open, setOpen] = createSignal<string[]>([])
-  const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number } | null>(null)
+  const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number; endLine?: number } | null>(
+    null,
+  )
   const [editing, setEditing] = createSignal<string | null>(null)
+  const speechKeys = createMemo(() => {
+    const keys = new Set<string>()
+    const current = draft()
+    const edit = editing()
+    if (current) keys.add(reviewDraftSpeechKey(current))
+    if (edit) keys.add(reviewEditSpeechKey(edit))
+    return keys
+  })
+  const reviewSpeech = createReviewAnnotationSpeechRenderer({
+    speech,
+    enabled: canUseSpeech,
+    model: speechModel,
+    label: t,
+    keys: speechKeys,
+  })
   const [activeFile, setActiveFile] = createSignal<string | null>(null)
   const [treeWidth, setTreeWidth] = createSignal(240)
   let nextId = 0
   let draftMeta: AnnotationMeta | null = null
-  // Tracks the session key for which auto-open has already run. When the
-  // key changes (different worktree) we re-expand. Within the same key,
+  // Tracks the session key for which initial open state has already run. When the
+  // key changes (different worktree) we expand reviewable files. Within the same key,
   // only pruning happens so the user's manual collapse state is preserved.
   let initializedKey: string | undefined
+  const requested = new Map<string, string>()
   let rootRef: HTMLDivElement | undefined
   let scrollRef: HTMLDivElement | undefined
   let syncFrame: number | undefined
@@ -129,9 +175,9 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     focusRoot()
   }
 
-  // Unified auto-open effect: tracks both sessionKey and diffs in a single effect
+  // Unified open-state effect: tracks both sessionKey and diffs in a single effect
   // to eliminate the race condition between the old separate sessionKey-reset and
-  // diffs-watch effects. Uses the session key to decide when auto-expand is needed
+  // diffs-watch effects. Uses the session key to decide when initialization is needed
   // vs when we just prune stale entries from the open list.
   createEffect(
     on(
@@ -172,14 +218,31 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
 
   createEffect(
     on(
+      () => props.sessionKey,
+      () => {
+        requested.clear()
+      },
+    ),
+  )
+
+  createEffect(
+    on(
       () => [open(), props.diffs] as const,
       ([next]) => {
+        const files = new Set(next)
+        for (const file of requested.keys()) {
+          if (!files.has(file)) requested.delete(file)
+        }
+        if (!props.onRequestDiff) return
         const loading = props.loadingFiles ?? new Set<string>()
         for (const file of next) {
           if (loading.has(file)) continue
           const diff = props.diffs.find((item) => item.file === file)
           if (!diff || diff.summarized !== true) continue
-          props.onRequestDiff?.(file)
+          const value = diffToken(diff)
+          if (requested.get(file) === value) continue
+          requested.set(file, value)
+          props.onRequestDiff(file)
         }
       },
       { defer: true },
@@ -251,6 +314,11 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
         if (currentDraft.line < 1 || currentDraft.line > max) {
           setDraft(null)
           draftMeta = null
+          return
+        }
+        if (currentDraft.endLine !== undefined && currentDraft.endLine > max) {
+          setDraft(null)
+          draftMeta = null
         }
       },
     ),
@@ -284,14 +352,17 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       deleteComment,
       cancelDraft,
       labels: labels(),
+      activeTerminalId: props.activeTerminalId,
+      speech: reviewSpeech,
     })
   }
 
   const handleGutterClick = (file: string, range: SelectedLineRange) => {
+    if (props.canComment === false) return
     if (draft()) return
     const side: AnnotationSide = range.side === "deletions" ? "deletions" : "additions"
     preserveScroll(() => {
-      setDraft({ file, side, line: range.start })
+      setDraft({ file, side, line: range.start, endLine: range.end })
     })
   }
 
@@ -299,7 +370,14 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     const all = comments()
     if (all.length === 0) return
     window.dispatchEvent(
-      new MessageEvent("message", { data: { type: "appendReviewComments", comments: all, autoSend: true } }),
+      new MessageEvent("message", {
+        data: {
+          type: props.activeTerminalId ? "appendReviewCommentsToTerminal" : "appendReviewComments",
+          comments: all,
+          autoSend: true,
+          targetTerminalId: props.activeTerminalId,
+        },
+      }),
     )
     preserveScroll(() => setComments([]))
     props.onSendAll?.()
@@ -310,6 +388,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     if (!(e.metaKey || e.ctrlKey)) return
     const target = e.target
     if (keepNativeFocus(target)) return
+    if (props.canComment === false) return
     if (comments().length === 0) return
     e.preventDefault()
     e.stopPropagation()
@@ -336,8 +415,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   }
 
   const handleExpandAll = () => {
-    const allOpen = open().length === props.diffs.length
-    setOpen(allOpen ? [] : props.diffs.map((d) => d.file))
+    setOpen(toggleOpenFiles(props.diffs, open()))
   }
 
   const syncActiveFileFromScroll = () => {
@@ -400,10 +478,12 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     large: props.diffs.filter((diff) => isLargeDiffFile(diff)).length,
     collapsed: Math.max(props.diffs.length - open().length, 0),
   }))
+  const allOpen = createMemo(() => allOpenFiles(props.diffs, open()))
+  const openLabel = () => (allOpen() ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll"))
 
   return (
     <div
-      class="am-review-layout kilo-diff-theme"
+      class="am-review-layout"
       onKeyDown={handleKeyDown}
       onMouseDown={handleRootMouseDown}
       tabIndex={-1}
@@ -443,9 +523,9 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
         <div class="am-review-toolbar-right">
           <Button size="small" variant="ghost" onClick={handleExpandAll}>
             <Icon name="chevron-grabber-vertical" size="small" />
-            {open().length === props.diffs.length ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll")}
+            {openLabel()}
           </Button>
-          <Show when={comments().length > 0}>
+          <Show when={comments().length > 0 && props.canComment !== false}>
             <TooltipKeybind
               title={t("agentManager.review.sendAllToChat")}
               keybind={sendAllKeybind()}
@@ -469,7 +549,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
               activeFile={activeFile()}
               onFileSelect={handleFileSelect}
               comments={comments()}
-              onRevertFile={props.onRevertFile}
+              onRevertFile={props.canRevert !== false ? props.onRevertFile : undefined}
               revertingFiles={props.revertingFiles}
             />
           </div>
@@ -567,7 +647,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                     />
                                   </Tooltip>
                                 </Show>
-                                <Show when={props.onRevertFile}>
+                                <Show when={props.onRevertFile && props.canRevert !== false}>
                                   <Tooltip value={t("agentManager.diff.revertFile")} placement="top">
                                     <IconButton
                                       icon="discard"
@@ -631,7 +711,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                     diffStyle={props.diffStyle}
                                     annotations={annotationsForFile(diff.file)}
                                     renderAnnotation={buildAnnotation}
-                                    enableGutterUtility={true}
+                                    enableGutterUtility={props.canComment !== false}
                                     onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
                                     onLineNumberClick={(event) => {
                                       if (event.annotationSide === "deletions") return
@@ -640,7 +720,17 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                   />
                                 }
                               >
-                                <MarkdownDiffView diff={diff} />
+                                <MarkdownDiffView
+                                  diff={diff}
+                                  annotations={annotationsForFile(diff.file)}
+                                  renderAnnotation={buildAnnotation}
+                                  enableGutterUtility={props.canComment !== false}
+                                  onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
+                                  onLineNumberClick={(event) => {
+                                    if (event.annotationSide === "deletions") return
+                                    props.onOpenFile?.(diff.file, event.lineNumber)
+                                  }}
+                                />
                               </Show>
                             </Show>
                           </Show>

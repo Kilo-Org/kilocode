@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from "vitest"
 import { getProcessedSnippets } from "../getProcessedSnippets"
 import { AutocompleteInput, AutocompleteContextProvider } from "../../types"
 import { AutocompleteSnippetType } from "../../continuedev/core/autocomplete/types"
-import { AutocompleteModel } from "../../AutocompleteModel"
 import { RooIgnoreController } from "../../../../core/ignore/RooIgnoreController"
 import crypto from "crypto"
 import { ContextRetrievalService } from "../../continuedev/core/autocomplete/context/ContextRetrievalService"
@@ -85,15 +84,10 @@ function createAutocompleteInput(filepath: string = "/test.ts"): AutocompleteInp
 
 describe("AutocompleteContextProvider", () => {
   let contextProvider: AutocompleteContextProvider
-  let mockModel: AutocompleteModel
   let mockIgnoreController: Promise<RooIgnoreController> | undefined
 
   beforeEach(() => {
     vi.clearAllMocks()
-
-    mockModel = {
-      getModelName: vi.fn().mockReturnValue("codestral"),
-    } as any
 
     mockIgnoreController = undefined
 
@@ -102,7 +96,7 @@ describe("AutocompleteContextProvider", () => {
     contextProvider = {
       ide,
       contextService,
-      model: mockModel,
+      modelId: "codestral",
       ignoreController: mockIgnoreController,
     }
   })
@@ -114,7 +108,7 @@ describe("AutocompleteContextProvider", () => {
         input,
         "/test.ts",
         contextProvider.contextService,
-        contextProvider.model,
+        contextProvider.modelId,
         contextProvider.ide,
         contextProvider.ignoreController,
       )
@@ -150,7 +144,7 @@ describe("AutocompleteContextProvider", () => {
         input,
         "/test.ts",
         contextProvider.contextService,
-        contextProvider.model,
+        contextProvider.modelId,
         contextProvider.ide,
         contextProvider.ignoreController,
       )
@@ -195,7 +189,7 @@ describe("AutocompleteContextProvider", () => {
         input,
         "/test.ts",
         contextProvider.contextService,
-        contextProvider.model,
+        contextProvider.modelId,
         contextProvider.ide,
         contextProvider.ignoreController,
       )
@@ -225,7 +219,7 @@ describe("AutocompleteContextProvider", () => {
           input,
           "/test.ts",
           contextProvider.contextService,
-          contextProvider.model,
+          contextProvider.modelId,
           contextProvider.ide,
           contextProvider.ignoreController,
         ),
@@ -251,7 +245,7 @@ describe("AutocompleteContextProvider", () => {
       contextProvider = {
         ide,
         contextService,
-        model: mockModel,
+        modelId: "codestral",
         ignoreController: mockIgnoreController,
       }
     })
@@ -292,7 +286,7 @@ describe("AutocompleteContextProvider", () => {
         input,
         "/test.ts",
         contextProvider.contextService,
-        contextProvider.model,
+        contextProvider.modelId,
         contextProvider.ide,
         contextProvider.ignoreController,
       )
@@ -353,7 +347,7 @@ describe("AutocompleteContextProvider", () => {
         input,
         "/test.ts",
         contextProvider.contextService,
-        contextProvider.model,
+        contextProvider.modelId,
         contextProvider.ide,
         contextProvider.ignoreController,
       )
@@ -377,7 +371,7 @@ describe("AutocompleteContextProvider", () => {
       contextProvider = {
         ide,
         contextService,
-        model: mockModel,
+        modelId: "codestral",
         ignoreController: undefined,
       }
 
@@ -406,7 +400,7 @@ describe("AutocompleteContextProvider", () => {
         input,
         "/test.ts",
         contextProvider.contextService,
-        contextProvider.model,
+        contextProvider.modelId,
         contextProvider.ide,
         contextProvider.ignoreController,
       )

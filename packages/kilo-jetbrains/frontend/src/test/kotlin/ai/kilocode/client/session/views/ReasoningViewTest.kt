@@ -1,68 +1,68 @@
 package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Reasoning
-import ai.kilocode.client.session.ui.SessionStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import javax.swing.ScrollPaneConstants
 
 @Suppress("UnstableApiUsage")
 class ReasoningViewTest : BasePlatformTestCase() {
 
-    fun `test completed reasoning is expanded by default`() {
+    fun `test completed reasoning is collapsed by default`() {
         val view = ReasoningView(reasoning("p1", done = true, text = "one\ntwo\nthree\nfour"))
+        val base: Any = view
 
-        assertTrue(view.isExpanded())
+        assertFalse(view.isExpanded())
+        assertTrue(base is SecondarySessionPartView)
         assertEquals("Reasoning", view.headerText())
         assertEquals("one\ntwo\nthree\nfour", view.markdown())
         assertTrue(view.hasToggle())
-        assertTrue(view.bodyVisible())
+        assertFalse(view.bodyVisible())
         assertTrue(view.bodyCreated())
     }
 
     fun `test short completed reasoning is collapsible`() {
         val view = ReasoningView(reasoning("p1", done = true, text = "one\ntwo\nthree"))
 
-        assertTrue(view.isExpanded())
+        assertFalse(view.isExpanded())
         assertTrue(view.hasToggle())
         view.toggle()
-        assertFalse(view.isExpanded())
-        assertFalse(view.bodyVisible())
+        assertTrue(view.isExpanded())
+        assertTrue(view.bodyVisible())
         assertTrue(view.bodyCreated())
     }
 
-    fun `test streaming reasoning is expanded by default`() {
+    fun `test streaming reasoning is collapsed by default`() {
         val view = ReasoningView(reasoning("p1", done = false, text = "one\ntwo\nthree\nfour"))
 
-        assertTrue(view.isExpanded())
+        assertFalse(view.isExpanded())
         assertTrue(view.hasToggle())
     }
 
-    fun `test update to done preserves visible reasoning`() {
+    fun `test update to done preserves collapsed reasoning`() {
         val view = ReasoningView(reasoning("p1", done = false, text = "one\ntwo\nthree\nfour"))
 
         view.update(reasoning("p1", done = true, text = "one\ntwo\nthree\nfour"))
 
-        assertTrue(view.isExpanded())
+        assertFalse(view.isExpanded())
         assertEquals("one\ntwo\nthree\nfour", view.markdown())
     }
 
     fun `test toggle opens and closes reasoning`() {
         val view = ReasoningView(reasoning("p1", done = true, text = "one\ntwo\nthree\nfour"))
 
+        view.toggle()
         assertTrue(view.isExpanded())
         view.toggle()
         assertFalse(view.isExpanded())
-        view.toggle()
-        assertTrue(view.isExpanded())
     }
 
-    fun `test collapsed reasoning expands on update`() {
+    fun `test collapsed reasoning stays collapsed on update`() {
         val view = ReasoningView(reasoning("p1", done = false, text = "one\ntwo"))
-
-        view.toggle()
         view.update(reasoning("p1", done = true, text = "one\ntwo\nthree"))
 
-        assertTrue(view.isExpanded())
+        assertFalse(view.isExpanded())
         assertEquals("one\ntwo\nthree", view.markdown())
     }
 
@@ -72,39 +72,38 @@ class ReasoningViewTest : BasePlatformTestCase() {
         view.appendDelta("b")
 
         assertEquals("ab", view.markdown())
-        assertTrue(view.isExpanded())
+        assertFalse(view.isExpanded())
     }
 
-    fun `test blank reasoning expands when delta arrives`() {
+    fun `test blank reasoning stays collapsed when delta arrives`() {
         val view = ReasoningView(reasoning("p1", done = false, text = ""))
 
         view.appendDelta("b")
 
         assertEquals("b", view.markdown())
         assertTrue(view.bodyCreated())
-        assertTrue(view.bodyVisible())
+        assertFalse(view.bodyVisible())
+        assertTrue(view.hasToggle())
     }
 
-    fun `test collapsed append reattaches eager reasoning body`() {
+    fun `test collapsed append keeps eager reasoning body detached`() {
         val view = ReasoningView(reasoning("p1", done = false, text = "a"))
-        view.toggle()
 
         view.appendDelta("b")
 
         assertEquals("ab", view.markdown())
         assertTrue(view.bodyCreated())
-        assertTrue(view.bodyVisible())
+        assertFalse(view.bodyVisible())
     }
 
-    fun `test collapsed update reattaches eager reasoning body`() {
+    fun `test collapsed update keeps eager reasoning body detached`() {
         val view = ReasoningView(reasoning("p1", done = false, text = "a"))
-        view.toggle()
 
         view.update(reasoning("p1", done = false, text = "abc"))
 
         assertEquals("abc", view.markdown())
         assertTrue(view.bodyCreated())
-        assertTrue(view.bodyVisible())
+        assertFalse(view.bodyVisible())
     }
 
     fun `test reasoning reuses eager markdown body`() {
@@ -116,7 +115,7 @@ class ReasoningViewTest : BasePlatformTestCase() {
         view.toggle()
 
         assertSame(component, view.md.component)
-        assertFalse(view.bodyVisible())
+        assertTrue(view.bodyVisible())
     }
 
     fun `test blank reasoning has no toggle`() {
@@ -127,7 +126,7 @@ class ReasoningViewTest : BasePlatformTestCase() {
     }
 
     fun `test reasoning markdown uses editor font settings`() {
-        val style = SessionStyle.current()
+        val style = SessionEditorStyle.current()
         val view = ReasoningView(reasoning("p1", done = true, text = "one\ntwo\nthree\nfour"))
 
         assertSmallItalicSheet(view.md.overrideSheet(), style)
@@ -135,7 +134,7 @@ class ReasoningViewTest : BasePlatformTestCase() {
     }
 
     fun `test reasoning header uses smaller editor-derived font`() {
-        val style = SessionStyle.current()
+        val style = SessionEditorStyle.current()
         val view = ReasoningView(reasoning("p1", done = true, text = "one"))
         val font = view.headerFont()
 
@@ -146,7 +145,7 @@ class ReasoningViewTest : BasePlatformTestCase() {
     fun `test applyStyle updates reasoning in place`() {
         val view = ReasoningView(reasoning("p1", done = true, text = "one\ntwo\nthree\nfour"))
         val component = view.md.component
-        val style = SessionStyle.create(family = "Courier New", size = 24)
+        val style = SessionEditorStyle.create(family = "Courier New", size = 24)
 
         view.applyStyle(style)
 
@@ -158,17 +157,29 @@ class ReasoningViewTest : BasePlatformTestCase() {
 
     fun `test expanded reasoning body is capped to five rows`() {
         val view = ReasoningView(reasoning("p1", done = false, text = (1..20).joinToString("\n") { "line $it" }))
+        view.toggle()
 
         assertEquals(5, view.bodyMaxRows())
         assertTrue(view.preferredSize.height > 0)
     }
 
-    private fun assertEditorSheet(sheet: String, style: SessionStyle) {
+    fun `test link opens url callback`() {
+        val urls = mutableListOf<String>()
+        val view = ReasoningView(reasoning("p1", done = true, text = "[docs](https://kilocode.ai/docs)"), openUrl = {
+            urls.add(it)
+        })
+
+        view.md.simulateLink("https://kilocode.ai/docs")
+
+        assertEquals(listOf("https://kilocode.ai/docs"), urls)
+    }
+
+    private fun assertEditorSheet(sheet: String, style: SessionEditorStyle) {
         assertTrue(sheet.contains(style.editorFamily))
         assertTrue(sheet.contains("${style.editorSize}pt"))
     }
 
-    private fun assertSmallItalicSheet(sheet: String, style: SessionStyle) {
+    private fun assertSmallItalicSheet(sheet: String, style: SessionEditorStyle) {
         assertTrue(sheet.contains(style.editorFamily))
         assertFalse(sheet.contains("${style.editorSize}pt"))
         assertTrue(sheet.contains("font-style: italic"))

@@ -8,7 +8,6 @@ import { Auth } from "../auth"
 import { ProviderTransform } from "@/provider/transform"
 
 import PROMPT_GENERATE from "./generate.txt"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
@@ -34,8 +33,8 @@ export const Info = Schema.Struct({
   mode: Schema.Literals(["subagent", "primary", "all"]),
   native: Schema.optional(Schema.Boolean),
   hidden: Schema.optional(Schema.Boolean),
-  topP: Schema.optional(Schema.Number),
-  temperature: Schema.optional(Schema.Number),
+  topP: Schema.optional(Schema.Finite),
+  temperature: Schema.optional(Schema.Finite),
   color: Schema.optional(Schema.String),
   permission: Permission.Ruleset,
   model: Schema.optional(
@@ -47,7 +46,7 @@ export const Info = Schema.Struct({
   variant: Schema.optional(Schema.String),
   prompt: Schema.optional(Schema.String),
   options: Schema.Record(Schema.String, Schema.Unknown),
-  steps: Schema.optional(Schema.Number),
+  steps: Schema.optional(Schema.Finite),
 })
   .annotate({ identifier: "Agent" })
   .pipe(withStatics((s) => ({ zod: zod(s) })))
@@ -87,6 +86,7 @@ export const layer = Layer.effect(
         // kilocode_change start - include global config dirs so agents can read them without prompting
         const whitelistedDirs = [
           Truncate.GLOB,
+          path.join(Global.Path.tmp, "*"),
           ...skillDirs.map((dir) => path.join(dir, "*")),
           path.join(Global.Path.config, "*"),
           ...KilocodePaths.globalDirs().map((dir) => path.join(dir, "*")),
@@ -187,7 +187,6 @@ export const layer = Layer.effect(
                 bash: "allow",
                 webfetch: "allow",
                 websearch: "allow",
-                codesearch: "allow",
                 read: "allow",
                 external_directory: {
                   "*": "ask",
@@ -251,7 +250,7 @@ export const layer = Layer.effect(
         }
 
         // kilocode_change start - rename build→code, add debug/orchestrator/ask, patch plan/explore
-        KiloAgent.patchAgents(agents, defaults, user, cfg, kilo)
+        KiloAgent.patchAgents(agents, defaults, user, cfg, kilo, ctx.worktree, whitelistedDirs)
         // kilocode_change end
 
         // kilocode_change start - preprocess config to remap "build" key → "code"
@@ -430,19 +429,5 @@ export const defaultLayer = layer.pipe(
   Layer.provide(Config.defaultLayer),
   Layer.provide(Skill.defaultLayer),
 )
-
-// kilocode_change start - agent removal (delegated to kilocode module)
-export const RemoveError = KiloAgent.RemoveError
-export async function remove(name: string) {
-  return KiloAgent.remove(name)
-}
-// kilocode_change end
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const get = (agent: string) => runPromise((svc) => svc.get(agent))
-export const list = () => runPromise((svc) => svc.list())
-export const defaultAgent = () => runPromise((svc) => svc.defaultAgent())
-// kilocode_change end
 
 export * as Agent from "./agent"

@@ -3,7 +3,8 @@
 // Imported by ../../server/server.ts with minimal kilocode_change markers.
 
 import { ModelCache } from "../../provider/model-cache"
-import { Instance } from "../../project/instance"
+import { AppRuntime } from "../../effect/app-runtime"
+import { InstanceRuntime } from "../../project/instance-runtime"
 
 /** Extra paths to skip request logging for */
 export function skipLogging(path: string): boolean {
@@ -20,8 +21,8 @@ export function corsOrigin(input: string): string | undefined {
 
 /** Invalidate model cache and provider state after auth change */
 export async function authChanged(providerID: string) {
-  ModelCache.clear(providerID)
-  await Instance.disposeAll()
+  await AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.clear(providerID)))
+  await InstanceRuntime.disposeAllInstances()
 }
 
 export const DOC_TITLE = "kilo"

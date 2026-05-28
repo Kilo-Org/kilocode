@@ -78,6 +78,8 @@ export function getErrorMessageForStatus(status: number | undefined, embedderTyp
         : "Invalid endpoint URL. Please verify the endpoint."
     case 429:
       return "Service is temporarily unavailable due to rate limiting. Please try again later."
+    case 402:
+      return "Add credits to continue, or switch to a free embedding model."
     default:
       if (status && status >= 400 && status < 600) {
         return "Configuration error. Please verify your embedder settings."

@@ -1,7 +1,8 @@
 package ai.kilocode.client.session.ui
 
-import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import com.intellij.util.ui.JBDimension
+import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Component
 import java.awt.Container
@@ -29,8 +30,8 @@ import java.awt.LayoutManager
  * the panel width and the layout always has a valid width to work with.
  */
 class SessionLayout(
-    private val gap: Int = UiStyle.Gap.part(),
-    private val pad: Insets = UiStyle.Insets.none(),
+    private val gap: Int = JBUI.scale(SessionUiStyle.SessionLayout.GAP),
+    private val pad: Insets = JBUI.emptyInsets(),
 ) : LayoutManager {
 
     override fun addLayoutComponent(name: String, comp: Component) = Unit
@@ -76,9 +77,9 @@ class SessionLayout(
     private fun bounds(ins: Insets, width: Int, comp: Component): Bounds {
         val view = comp as? SessionView ?: return Bounds(ins.left, width)
         if (view.sessionViewKind != SessionView.Kind.UserPrompt) return Bounds(ins.left, width)
-        val shift = UiStyle.Insets.userPrompt()
+        val shift = JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_INDENT)
         val next = width - shift
-        if (next < UiStyle.Size.userPromptMin()) return Bounds(ins.left, width)
+        if (next < JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_INDENT)) return Bounds(ins.left, width)
         return Bounds(ins.left + shift, next)
     }
 
@@ -103,8 +104,8 @@ class SessionLayout(
  * [SessionLayout] a valid width to measure against.
  */
 open class SessionLayoutPanel(
-    gap: Int = UiStyle.Gap.part(),
-    pad: Insets = UiStyle.Insets.none(),
+    gap: Int = JBUI.scale(SessionUiStyle.SessionLayout.GAP),
+    pad: Insets = JBUI.emptyInsets(),
 ) : BorderLayoutPanel(), javax.swing.Scrollable {
     init {
         layout = SessionLayout(gap, pad)
@@ -117,7 +118,7 @@ open class SessionLayoutPanel(
         visibleRect: java.awt.Rectangle,
         @Suppress("UNUSED_PARAMETER") orientation: Int,
         @Suppress("UNUSED_PARAMETER") direction: Int,
-    ): Int = UiStyle.Gap.scroll()
+    ): Int = JBUI.scale(SessionUiStyle.SessionLayout.SCROLL_INCREMENT)
     override fun getScrollableBlockIncrement(
         visibleRect: java.awt.Rectangle,
         @Suppress("UNUSED_PARAMETER") orientation: Int,

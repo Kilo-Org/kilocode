@@ -14,19 +14,19 @@
 
 import { test, expect, afterEach, mock } from "bun:test"
 import { $ } from "bun"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Server } from "../../src/server/server"
 import { Session } from "../../src/session/session"
 import { Snapshot } from "../../src/snapshot"
 import { Filesystem } from "../../src/util/filesystem"
 import * as Log from "@opencode-ai/core/util/log"
-import { tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
 
 afterEach(async () => {
   mock.restore()
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 test("pathological diffFull workload finishes quickly and does not block abort", async () => {
@@ -45,7 +45,7 @@ test("pathological diffFull workload finishes quickly and does not block abort",
     },
   })
 
-  await Instance.provide({
+  await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       const session = await Session.create({})

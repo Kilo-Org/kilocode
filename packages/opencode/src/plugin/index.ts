@@ -3,13 +3,14 @@ import type {
   PluginInput,
   Plugin as PluginInstance,
   PluginModule,
-  WorkspaceAdaptor as PluginWorkspaceAdaptor,
+  WorkspaceAdapter as PluginWorkspaceAdapter,
 } from "@kilocode/plugin"
 import { Config } from "@/config/config"
 import { Bus } from "../bus"
 import * as Log from "@opencode-ai/core/util/log"
 import { createKiloClient } from "@kilocode/sdk"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { ServerAuth } from "@/server/auth"
 import { CodexAuthPlugin } from "./codex"
 import { Session } from "@/session/session"
 import { NamedError } from "@opencode-ai/core/util/error"
@@ -17,15 +18,17 @@ import { CopilotAuthPlugin } from "./github-copilot/copilot"
 import { gitlabAuthPlugin as GitlabAuthPlugin } from "opencode-gitlab-auth"
 import { PoeAuthPlugin } from "opencode-poe-auth"
 import { CloudflareAIGatewayAuthPlugin, CloudflareWorkersAuthPlugin } from "./cloudflare"
+import { AzureAuthPlugin } from "./azure"
+import { XaiAuthPlugin } from "./xai" // kilocode_change
 import { Effect, Layer, Context, Stream } from "effect"
 import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { errorMessage } from "@/util/error"
 import { PluginLoader } from "./loader"
 import { parsePluginSpecifier, readPluginId, readV1Plugin, resolvePluginId } from "./shared"
-import { registerAdaptor } from "@/control-plane/adaptors"
-import type { WorkspaceAdaptor } from "@/control-plane/types"
 import { KiloAuthPlugin } from "@kilocode/kilo-gateway" // kilocode_change
+import { registerAdapter } from "@/control-plane/adapters"
+import type { WorkspaceAdapter } from "@/control-plane/types"
 
 const log = Log.create({ service: "plugin" })
 
@@ -60,11 +63,15 @@ const INTERNAL_PLUGINS: PluginInstance[] = [
   KiloAuthPlugin,
   CodexAuthPlugin,
   CopilotAuthPlugin,
+  // kilocode_change - external auth plugins ship against @opencode-ai/plugin; bridge to our @kilocode/plugin types
   GitlabAuthPlugin as unknown as PluginInstance,
   PoeAuthPlugin as unknown as PluginInstance,
-  CloudflareWorkersAuthPlugin as unknown as PluginInstance,
-  CloudflareAIGatewayAuthPlugin as unknown as PluginInstance,
-] // kilocode_change end
+  CloudflareWorkersAuthPlugin,
+  CloudflareAIGatewayAuthPlugin,
+  AzureAuthPlugin,
+  XaiAuthPlugin,
+]
+// kilocode_change end
 
 function isServerPlugin(value: unknown): value is PluginInstance {
   return typeof value === "function"
@@ -125,11 +132,7 @@ export const layer = Layer.effect(
         const client = createKiloClient({
           baseUrl: "http://localhost:4096",
           directory: ctx.directory,
-          headers: Flag.KILO_SERVER_PASSWORD
-            ? {
-                Authorization: `Basic ${Buffer.from(`${Flag.KILO_SERVER_USERNAME ?? "opencode"}:${Flag.KILO_SERVER_PASSWORD}`).toString("base64")}`,
-              }
-            : undefined,
+          headers: ServerAuth.headers(),
           fetch: async (...args) => Server.Default().app.fetch(...args),
         })
         const cfg = yield* config.get()
@@ -139,8 +142,8 @@ export const layer = Layer.effect(
           worktree: ctx.worktree,
           directory: ctx.directory,
           experimental_workspace: {
-            register(type: string, adaptor: PluginWorkspaceAdaptor) {
-              registerAdaptor(ctx.project.id, type, adaptor as WorkspaceAdaptor)
+            register(type: string, adapter: PluginWorkspaceAdapter) {
+              registerAdapter(ctx.project.id, type, adapter as WorkspaceAdapter)
             },
           },
           get serverUrl(): URL {

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, mock, spyOn } from "bun:test"
 import { Effect, Layer } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import { Instance } from "../../src/project/instance"
-import { provideTmpdirInstance } from "../fixture/fixture"
+import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { testEffect } from "../lib/effect"
 
@@ -24,7 +24,7 @@ const node = CrossSpawnSpawner.defaultLayer
 const it = testEffect(Layer.mergeAll(ToolRegistry.defaultLayer, node))
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 describe("kilocode tool registry semantic tool import failure", () => {

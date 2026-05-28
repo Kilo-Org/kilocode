@@ -1,5 +1,7 @@
 import type { Part, TokenUsage } from "./parts"
 
+export type SessionCloseReason = "completed" | "error" | "interrupted"
+
 // Message structure (simplified for webview)
 export interface Message {
   id: string
@@ -10,7 +12,7 @@ export interface Message {
   createdAt: string
   time?: { created: number; completed?: number }
   agent?: string
-  model?: { providerID: string; modelID: string }
+  model?: { providerID: string; modelID: string; variant?: string }
   providerID?: string
   modelID?: string
   mode?: string

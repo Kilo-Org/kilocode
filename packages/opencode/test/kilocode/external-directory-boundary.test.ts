@@ -3,6 +3,8 @@ import { Effect } from "effect"
 import path from "path"
 import type { Permission } from "../../src/permission"
 import { Instance } from "../../src/project/instance"
+import { InstanceRuntime } from "../../src/project/instance-runtime"
+import { WithInstance } from "../../src/project/with-instance"
 import { SessionID, MessageID } from "../../src/session/schema"
 import { assertExternalDirectory } from "../../src/tool/external-directory"
 import type { Tool } from "../../src/tool/tool"
@@ -42,13 +44,13 @@ describe("kilocode external directory boundaries", () => {
     const file = path.join(outer.path, "outside.txt")
     const { items, ctx } = asks()
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: repo.path,
       fn: async () => {
         try {
           await assertExternalDirectory(ctx, file)
         } finally {
-          await Instance.dispose()
+          await InstanceRuntime.disposeInstance(Instance.current)
         }
       },
     })
@@ -66,13 +68,13 @@ describe("kilocode external directory boundaries", () => {
     const file = path.join(outer.path, "outside-root.txt")
     const { items, ctx } = asks()
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: root,
       fn: async () => {
         try {
           await assertExternalDirectory(ctx, file)
         } finally {
-          await Instance.dispose()
+          await InstanceRuntime.disposeInstance(Instance.current)
         }
       },
     })

@@ -50,6 +50,8 @@ describe("TelemetryEvent", () => {
     expect(TelemetryEvent.COMMAND_USED).toBeDefined()
     expect(TelemetryEvent.TOOL_USED).toBeDefined()
     expect(TelemetryEvent.AGENT_USED).toBeDefined()
+    expect(TelemetryEvent.SUGGESTION_SHOWN).toBeDefined()
+    expect(TelemetryEvent.SUGGESTION_ACCEPTED).toBeDefined()
   })
 
   test("indexing events are defined", () => {
@@ -87,5 +89,10 @@ describe("Telemetry", () => {
     expect(typeof Telemetry.trackIndexingFileCount).toBe("function")
     expect(typeof Telemetry.trackIndexingBatchRetry).toBe("function")
     expect(typeof Telemetry.trackIndexingError).toBe("function")
+  })
+
+  test("suggestion helper is exposed", () => {
+    expect(typeof Telemetry.trackSuggestionShown).toBe("function")
+    expect(typeof Telemetry.trackSuggestionAccepted).toBe("function")
   })
 })

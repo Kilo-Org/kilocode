@@ -32,37 +32,26 @@ internal class ModePickerRenderer(
     private val icon = JBLabel().apply {
         horizontalAlignment = SwingConstants.CENTER
         verticalAlignment = SwingConstants.CENTER
-        UiStyle.Components.transparent(this)
     }
-    private val title = SimpleColoredComponent().apply {
-        UiStyle.Components.transparent(this)
-    }
-    private val desc = SimpleColoredComponent().apply {
-        UiStyle.Components.transparent(this)
-    }
-    private val badge = JBLabel(KiloBundle.message("mode.picker.deprecated")).apply {
-        UiStyle.Components.transparent(this)
-    }
+    private val title = SimpleColoredComponent()
+    private val desc = SimpleColoredComponent()
+    private val badge = JBLabel(KiloBundle.message("mode.picker.deprecated"))
     private val head = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
-        UiStyle.Components.transparent(this)
         add(title)
         add(badge)
     }
-    private val body = JPanel(BorderLayout()).apply {
-        UiStyle.Components.transparent(this)
-    }
+    private val body = JPanel(BorderLayout())
     private val row = JPanel(BorderLayout())
     private val wrap = PickerRow()
 
     init {
-        UiStyle.Components.transparent(this)
-        UiStyle.Components.transparent(row)
-        (row.layout as BorderLayout).hgap = UiStyle.Gap.inline()
+        UiStyle.Components.transparent(this, icon, title, desc, badge, head, body, row)
+        (row.layout as BorderLayout).hgap = UiStyle.Gap.md()
         row.border = JBUI.Borders.empty(
-            UiStyle.Space.MD,
-            UiStyle.Space.LG,
-            UiStyle.Space.MD,
-            UiStyle.Space.LG,
+            UiStyle.Gap.md(),
+            UiStyle.Gap.lg(),
+            UiStyle.Gap.md(),
+            UiStyle.Gap.lg(),
         )
         body.add(head, BorderLayout.NORTH)
         body.add(desc, BorderLayout.CENTER)
@@ -82,7 +71,7 @@ internal class ModePickerRenderer(
         val focus = selected || list.hasFocus() || focused
         val fg = UIUtil.getListForeground(selected, focus)
         val weak = if (selected) fg else UiStyle.Colors.weak()
-        val warn = if (selected) fg else UiStyle.Colors.warning()
+        val warn = if (selected) fg else UiStyle.Colors.warningLabelForeground()
 
         background = list.background
         wrap.update(list, selected, focus)
@@ -98,8 +87,8 @@ internal class ModePickerRenderer(
         badge.border = JBUI.Borders.compound(
             JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap()),
             JBUI.Borders.compound(
-                RoundedLineBorder(warn, JBUI.scale(UiStyle.Space.SM)),
-                JBUI.Borders.empty(0, UiStyle.Space.MD),
+                RoundedLineBorder(warn, UiStyle.Gap.sm()),
+                JBUI.Borders.empty(0, UiStyle.Gap.md()),
             ),
         )
         icon.icon = icon(value)

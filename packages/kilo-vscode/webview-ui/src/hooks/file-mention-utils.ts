@@ -8,6 +8,7 @@ export type MentionResult =
   | { type: "terminal"; value: typeof TERMINAL_MENTION; label: string; description: string }
   | { type: "git-changes"; value: typeof GIT_CHANGES_MENTION; label: string; description: string }
   | { type: "file"; value: string }
+  | { type: "opened-file"; value: string }
   | { type: "folder"; value: string }
 
 export const TERMINAL_RESULT: MentionResult = {
@@ -47,9 +48,20 @@ export function buildMentionResults(query: string, items: Array<FileSearchItem |
   const results: MentionResult[] = items.map((item) => {
     if (typeof item === "string") return { type: "file", value: item }
     if (item.type === "folder") return { type: "folder", value: item.path }
+    if (item.type === "opened-file") return { type: "opened-file", value: item.path }
     return { type: "file", value: item.path }
   })
   return [...getTerminalMentionResult(query), ...(git ? getGitChangesMentionResult(query) : []), ...results]
+}
+
+export function filterMentionResults(query: string, items: MentionResult[]): MentionResult[] {
+  const value = query.toLowerCase()
+  if (!value) return items
+  return items.filter((item) => {
+    if (item.type === "terminal") return TERMINAL_MENTION.startsWith(value)
+    if (item.type === "git-changes") return GIT_CHANGES_MENTION.startsWith(value) || "git".startsWith(value)
+    return item.value.toLowerCase().includes(value)
+  })
 }
 
 /**
@@ -84,6 +96,74 @@ export function buildTextAfterMentionSelect(before: string, after: string, path:
   })
   const suffix = /^\s/.test(after) ? "" : " "
   return replaced + suffix + after
+}
+
+/**
+ * Return the character range [start, end) of a mention ending at `position`,
+ * including one trailing whitespace character if present. Used by execCommand
+ * deletion so the change is added to the browser's undo stack.
+ */
+export function getMentionRemovalRange(
+  text: string,
+  position: number,
+  paths: Set<string>,
+): { start: number; end: number } | null {
+  const before = text.slice(0, position)
+  const all = [...[...paths].sort((a, b) => b.length - a.length), TERMINAL_MENTION, GIT_CHANGES_MENTION]
+  for (const path of all) {
+    const token = `@${path}`
+    if (before.endsWith(token)) {
+      const start = position - token.length
+      const trailing = /^\s/.test(text.slice(position)) ? 1 : 0
+      return { start, end: position + trailing }
+    }
+  }
+  return null
+}
+
+/**
+ * Check whether the cursor sits immediately after a known mention.
+ */
+export function isCursorAtMentionEnd(text: string, position: number, paths: Set<string>): boolean {
+  const before = text.slice(0, position)
+  const sorted = [...paths].sort((a, b) => b.length - a.length)
+  for (const path of sorted) {
+    if (before.endsWith(`@${path}`)) return true
+  }
+  for (const builtin of [TERMINAL_MENTION, GIT_CHANGES_MENTION]) {
+    if (before.endsWith(`@${builtin}`)) return true
+  }
+  return false
+}
+
+/**
+ * If the cursor is inside (or at a boundary of) a known @mention token,
+ * return the token's start and end offsets. Returns null otherwise.
+ * "Inside" means start < position < end (exclusive boundaries are not
+ * considered inside, so the cursor can sit right before or right after
+ * a mention without triggering a skip).
+ */
+export function findMentionRange(
+  text: string,
+  position: number,
+  paths: Set<string>,
+): { start: number; end: number } | null {
+  const all = [...paths, TERMINAL_MENTION, GIT_CHANGES_MENTION]
+  // Check longest first to avoid partial matches
+  all.sort((a, b) => b.length - a.length)
+  for (const path of all) {
+    const token = `@${path}`
+    let idx = text.indexOf(token)
+    while (idx !== -1) {
+      const end = idx + token.length
+      // Cursor is strictly inside the token (not at the edges)
+      if (position > idx && position < end) {
+        return { start: idx, end }
+      }
+      idx = text.indexOf(token, idx + token.length)
+    }
+  }
+  return null
 }
 
 /**

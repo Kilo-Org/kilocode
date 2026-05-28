@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "Compartir esta sesión y copiar la URL al portapapeles",
   "command.session.unshare": "Dejar de compartir sesión",
   "command.session.unshare.description": "Dejar de compartir esta sesión",
+  "command.session.export": "Exportar transcripción de la sesión",
 
   "palette.search.placeholder": "Buscar archivos, comandos y sesiones",
   "palette.empty": "No se encontraron resultados",
@@ -137,6 +138,17 @@ export const dict = {
   "provider.connect.apiKey.label": "Clave API de {{provider}}",
   "provider.connect.apiKey.placeholder": "Clave API",
   "provider.connect.apiKey.required": "La clave API es obligatoria",
+  "provider.connect.prompt.required": "{{field}} es obligatorio",
+  "provider.connect.azure.endpointType.label": "Seleccionar configuración de endpoint de Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "Nombre del recurso",
+  "provider.connect.azure.endpointType.resourceName.hint":
+    "Crear el endpoint a partir del nombre de su recurso de Azure",
+  "provider.connect.azure.endpointType.baseURL.label": "URL completa del endpoint",
+  "provider.connect.azure.endpointType.baseURL.hint": "Usar un endpoint de Azure OpenAI personalizado",
+  "provider.connect.azure.resourceName.label": "Nombre del recurso de Azure",
+  "provider.connect.azure.resourceName.placeholder": "p. ej. my-models",
+  "provider.connect.azure.baseURL.label": "URL del endpoint de Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "p. ej. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen te da acceso a un conjunto curado de modelos fiables optimizados para agentes de programación.",
   "provider.connect.opencodeZen.line2":
@@ -166,6 +178,8 @@ export const dict = {
   "model.tag.latest": "Último",
   "model.group.recommended": "Recomendado",
   "model.group.favorites": "Favoritos",
+  "model.group.collapse": "Contraer {{group}}",
+  "model.group.expand": "Expandir {{group}}",
   "model.favorite.add": "Añadir a favoritos",
   "model.favorite.remove": "Eliminar de favoritos",
 
@@ -259,6 +273,7 @@ export const dict = {
   "prompt.attachment.remove": "Eliminar adjunto",
   "prompt.action.send": "Enviar",
   "prompt.action.send.blocked": "Responda o descarte la pregunta pendiente primero",
+  "prompt.action.send.recording": "Transcribir y enviar",
   "prompt.action.stop": "Detener",
   "prompt.action.enhance": "Mejorar prompt",
   "prompt.action.autoApprove.enable": "Activar aprobación automática",
@@ -271,6 +286,20 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "El botón 'Mejorar el mensaje' ayuda a mejorar tu petición proporcionando contexto adicional, aclaraciones o reformulaciones. Intenta escribir una petición aquí y haz clic en el botón nuevamente para ver cómo funciona.",
   "prompt.action.indexing": "Configuración de indexación",
+
+  "speechToText.tooltip.start": "Iniciar entrada de voz con Kilo Gateway",
+  "speechToText.tooltip.stop": "Detener captura",
+  "speechToText.tooltip.transcribing": "Transcribiendo... Haz clic para cancelar.",
+  "speechToText.tooltip.error": "Falló la entrada de voz. Haz clic para borrar.",
+  "speechToText.error.title": "Falló la entrada de voz",
+  "speechToText.error.loginRequired": "Inicia sesión en Kilo para usar la entrada de voz.",
+  "speechToText.error.permission": "Se denegó el permiso del micrófono.",
+  "speechToText.error.microphone": "No se pudo iniciar el micrófono.",
+  "speechToText.error.recording": "La grabación falló.",
+  "speechToText.error.emptyRecording": "No se grabó ningún audio.",
+  "speechToText.error.emptyTranscript": "No se detectó voz.",
+  "speechToText.error.encoding": "No se pudo codificar la grabación.",
+  "speechToText.toast.transcribed": "Transcripción insertada",
 
   "prompt.toast.pasteUnsupported.title": "Pegado no soportado",
   "prompt.toast.pasteUnsupported.description": "Solo se pueden pegar imágenes o PDFs aquí.",
@@ -425,6 +454,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Fallo al dejar de compartir sesión",
   "toast.session.unshare.failed.description": "Ocurrió un error al dejar de compartir la sesión",
 
+  "toast.session.rename.invalid.title": "Título de sesión no válido",
   "toast.session.listFailed.title": "Fallo al cargar sesiones para {{project}}",
 
   "toast.update.title": "Actualización disponible",
@@ -458,6 +488,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Regístrate gratis para continuar y explorar más de 500 modelos. Solo 2 minutos, sin tarjeta de crédito. O vuelve más tarde.",
   "error.promotionLimit.action": "Registrarse",
+  "error.providerAuth.title": "{{provider}} cerró tu sesión",
+  "error.providerAuth.description": "Vuelve a conectar {{provider}} y envía tu mensaje de nuevo.",
+  "error.providerAuth.chatgpt.title": "OpenAI cerró tu sesión",
+  "error.providerAuth.chatgpt.description":
+    "Vuelve a iniciar sesión con ChatGPT y envía tu mensaje de nuevo para seguir usando los modelos Codex.",
 
   "error.chain.unknown": "Error desconocido",
   "error.chain.causedBy": "Causado por:",
@@ -755,9 +790,20 @@ export const dict = {
   "settings.indexing.title": "Indexación",
   "settings.indexing.enable.title": "Habilitar indexación",
   "settings.indexing.enable.description": "Activar o desactivar la indexación semántica de la base de código.",
+  "settings.indexing.globalEnable.title": "Habilitar globalmente",
+  "settings.indexing.globalEnable.description": "Habilitar la indexación para cada área de trabajo.",
+  "settings.indexing.projectEnable.title": "Habilitar para este proyecto",
+  "settings.indexing.projectEnable.description":
+    "Habilitar la indexación para esta área de trabajo cuando la indexación global está desactivada.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "La indexación global está habilitada, por lo que este proyecto ya está cubierto.",
   "settings.indexing.provider.title": "Proveedor de embeddings",
   "settings.indexing.provider.description":
     "Elige el proveedor utilizado para generar embeddings para búsqueda semántica.",
+  "settings.indexing.kiloModel.title": "Preajuste de modelo de Kilo",
+  "settings.indexing.kiloModel.description": "Elige un modelo de embeddings alojado por Kilo compatible.",
+  "settings.indexing.kiloSignIn.title": "Se requiere iniciar sesión en Kilo",
+  "settings.indexing.kiloSignIn.description": "Inicia sesión en Kilo para usar embeddings alojados.",
   "settings.indexing.model.title": "Modelo de embeddings",
   "settings.indexing.model.description":
     "Anular el modelo de embeddings predeterminado para el proveedor seleccionado.",
@@ -817,6 +863,9 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "Conectado desde tus variables de entorno",
   "settings.providers.action.signInChatGPT": "Iniciar sesión con ChatGPT",
   "settings.providers.custom.description": "Añade un proveedor compatible con OpenAI por URL base.",
+  "settings.providers.subagentModel.title": "Modelo de subagente",
+  "settings.providers.subagentModel.description":
+    "Modelo predeterminado y esfuerzo de razonamiento para los subagentes de task-tool. Déjelo sin configurar para heredar el modelo del agente invocador.",
   "settings.providers.modeModels": "Modelo por modo",
   "settings.providers.custom.note": "Agrega un proveedor compatible con OpenAI mediante URL base.",
   "settings.providers.modeModels.description":
@@ -1087,6 +1136,14 @@ export const dict = {
   "session.status.retrying": "Reintentando (intento {{ attempt }})… {{ message }}",
   "session.status.working": "Trabajando…",
   "session.status.offline": "Red desconectada — reconectando...",
+  "session.outcome.incomplete": "Turno finalizado con {{count}} tareas pendientes",
+  "session.outcome.limit": "Límite de respuesta alcanzado antes de finalizar",
+  "session.outcome.unknown": "Turno finalizado sin motivo de finalización del modelo",
+  "session.outcome.filtered": "El proveedor detuvo esta respuesta debido a un filtro de contenido.",
+  "session.outcome.unexpected": "La respuesta terminó inesperadamente y puede estar incompleta.",
+  "session.outcome.interrupted": "Turno interrumpido",
+  "session.outcome.error": "Turno fallido",
+  "session.outcome.finish": "Motivo de finalización: {{reason}}",
 
   "ui.sessionTurn.cancel": "Cancelar",
   "ui.sessionTurn.status.thinking": "Pensando...",
@@ -1182,6 +1239,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Usar un atajo inteligente para activar tareas en línea",
   "settings.autocomplete.chatAutocomplete.title": "Habilitar autocompletado del chat",
   "settings.autocomplete.chatAutocomplete.description": "Mostrar sugerencias de autocompletado en el chat",
+  "settings.autocomplete.modelsHint":
+    "Para elegir qué modelo se usa para el autocompletado, consulta la configuración de Modelos.",
   "settings.notifications.agent.title": "Finalización del agente",
   "settings.notifications.agent.description": "Mostrar notificación cuando el agente completa una tarea",
   "settings.notifications.permissions.title": "Solicitudes de permiso",
@@ -1216,9 +1275,14 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Búsqueda de código",
   "settings.experimental.codebaseSearch.description":
     "Habilitar búsqueda por lenguaje natural con IA en toda la base de código",
-  "settings.experimental.agentManagerTool.title": "Herramienta Agent Manager",
-  "settings.experimental.agentManagerTool.description":
-    "Permitir que los agentes inicien sesiones locales y sesiones de worktree de Agent Manager desde una llamada de herramienta",
+  "settings.experimental.speechToText.title": "Voz a texto",
+  "settings.experimental.speechToText.description":
+    "Habilita la entrada de voz en los campos de prompt usando tu cuenta de Kilo a través de Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Habilita e inicia sesión en el proveedor Kilo para usar Speech to Text. Actualmente, Speech to Text solo es compatible con Kilo Gateway.",
+  "settings.experimental.speechToTextModel.title": "Modelo de voz a texto",
+  "settings.experimental.speechToTextModel.description":
+    "Elige el modelo de transcripción de Kilo Gateway para la entrada de voz.",
   "settings.experimental.continueOnDeny.title": "Continuar al denegar",
   "settings.experimental.continueOnDeny.description": "Continuar el bucle del agente cuando se deniega un permiso",
   "settings.experimental.mcpTimeout.title": "Tiempo de espera MCP (ms)",
@@ -1240,6 +1304,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Seleccionar un agente para configurar…",
   "settings.agentBehaviour.modelOverride.title": "Anulación de modelo",
   "settings.agentBehaviour.modelOverride.description": "Anular el modelo predeterminado para este agente",
+  "settings.agentBehaviour.variantOverride.title": "Anulación de variante",
+  "settings.agentBehaviour.variantOverride.description": "Anular la variante del modelo para este agente",
   "settings.agentBehaviour.prompt.title": "Prompt personalizado",
   "settings.agentBehaviour.prompt.description": "Prompt de sistema adicional para este agente",
   "settings.agentBehaviour.temperature.title": "Temperatura",
@@ -1397,7 +1463,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "Habilitar instantáneas",
   "settings.checkpoints.enable.description": "Crear puntos de control antes de editar archivos",
   "settings.context.autoCompaction.title": "Compactación automática",
-  "settings.context.autoCompaction.description": "Compactar automáticamente el contexto cuando está lleno",
+  "settings.context.autoCompaction.description": "Compactar automáticamente el contexto antes de que alcance el límite",
+  "settings.context.compactionLimit.title": "Límite de compactación automática",
+  "settings.context.compactionLimit.description":
+    "Compactar cuando el contexto alcance este porcentaje de la ventana del modelo. Déjalo en blanco para usar solo el búfer de seguridad.",
   "settings.context.prune.title": "Eliminar salidas antiguas",
   "settings.context.prune.description": "Eliminar salidas de herramientas antiguas durante la compactación",
   "settings.context.watcherPatterns": "Patrones de ignorar del observador",
@@ -1555,4 +1624,29 @@ export const dict = {
   "notifications.action.close": "Cerrar",
   "notifications.action.tryModel": "Probar {{model}}",
   "notifications.action.tryModelGeneric": "Probar modelo",
+  "diffViewer.source.workspace.label": "Rama",
+  "diffViewer.source.workspace.tooltip":
+    "Todos los cambios de esta rama respecto a la rama base. Incluye archivos sin commitear (staged, unstaged y no rastreados) y commits locales que todavía no están en la base.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Archivos con cambios que has añadido al área de preparación de git (`git add`), tal como aparecerán en el próximo commit.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Archivos modificados en tu árbol de trabajo pero que aún no están en el área de preparación, más archivos no rastreados (nuevos).",
+  "diffViewer.source.session.label": "Sesión",
+  "diffViewer.source.session.tooltip":
+    "Archivos modificados por Kilo durante la sesión actual, basado en snapshots por turno. Se reinicia al empezar una nueva sesión.",
+  "diffViewer.group.session": "Sesión",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Las instantáneas están deshabilitadas para este repositorio. Edita tus archivos de configuración para mostrar los cambios de la sesión.",
+
+  "diffViewer.baseBranch.auto": "Predeterminada",
+  "diffViewer.baseBranch.default": "Predeterminada",
+  "diffViewer.baseBranch.remote": "Remota",
+  "diffViewer.baseBranch.search": "Buscar ramas",
+  "diffViewer.baseBranch.empty": "Sin ramas que coincidan",
+  "diffViewer.baseBranch.loading": "Cargando ramas…",
+  "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "El plan está listo:",
 }

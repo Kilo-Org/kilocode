@@ -156,6 +156,7 @@ export const defaultConfig: MergeConfig = {
     "packages/app/**",
     "packages/desktop/**",
     "packages/desktop-electron/**",
+    "sdks/vscode/**",
     // GitHub Action - Kilo version is fully ported and complete
     "github/index.ts",
     "github/package.json",
@@ -230,4 +231,10 @@ export const defaultConfig: MergeConfig = {
 
 export function loadConfig(overrides?: Partial<MergeConfig>): MergeConfig {
   return { ...defaultConfig, ...overrides }
+}
+
+export function resolveBaseBranch(base: string | undefined, current: string): string | undefined {
+  if (base !== "HEAD") return base
+  if (current === "HEAD") throw new Error("--base-branch HEAD requires a named branch, but git is in detached HEAD")
+  return current
 }

@@ -2,6 +2,7 @@ import type { Config } from "@/config/config"
 import type { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
 import type { MessageV2 } from "./message-v2"
+import { KiloSessionOverflow } from "@/kilocode/session/overflow" // kilocode_change
 
 const COMPACTION_BUFFER = 20_000
 
@@ -22,5 +23,8 @@ export function isOverflow(input: { cfg: Config.Info; tokens: MessageV2.Assistan
 
   const count =
     input.tokens.total || input.tokens.input + input.tokens.output + input.tokens.cache.read + input.tokens.cache.write
-  return count >= usable(input)
+  // kilocode_change start
+  const cap = KiloSessionOverflow.limit({ cfg: input.cfg, model: input.model, usable: usable(input) })
+  return count >= cap
+  // kilocode_change end
 }

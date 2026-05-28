@@ -3,13 +3,6 @@
   "extends": "@tsconfig/bun/tsconfig.json",
   "compilerOptions": {
     "noUncheckedIndexedAccess": false,
-    "types": ["bun"],
-    "plugins": [
-      {
-        "name": "@effect/language-service",
-        "transform": "@effect/language-service/transform",
-        "namespaceImportPackages": ["effect", "@effect/*"]
-      }
-    ]
+    "types": ["bun"]
   }
 }

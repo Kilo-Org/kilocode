@@ -1,3 +1,8 @@
+---
+title: Update Todo List Tool | Kilo Code Docs
+description: Learn how the update_todo_list tool tracks step-by-step task progress, replacing the entire TODO list to reflect current completion state during complex tasks.
+---
+
 # update_todo_list
 
 The `update_todo_list` tool replaces the entire TODO list with an updated checklist reflecting the current state. It provides step-by-step task tracking, allowing confirmation of completion before updating and dynamic addition of new todos discovered during complex tasks.

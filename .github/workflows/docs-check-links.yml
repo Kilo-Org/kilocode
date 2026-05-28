@@ -17,7 +17,7 @@ jobs:
     if: github.repository == 'Kilo-Org/kilocode'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6 # kilocode_change
 
       - name: Link Checker
         uses: Kilo-Org/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411

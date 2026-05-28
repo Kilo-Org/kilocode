@@ -126,6 +126,7 @@ interface StateMessage {
   tabOrder?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
+  sidebarCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
   reviewMarkdownRender?: boolean
   isGitRepo?: boolean
@@ -347,6 +348,7 @@ interface OpenLocallyIn {
 interface AddSessionToWorktreeIn {
   type: "agentManager.addSessionToWorktree"
   worktreeId: string
+  sessionId?: string
 }
 
 interface CloseSessionIn {
@@ -453,6 +455,11 @@ interface SetWorktreeOrderIn {
 
 interface SetSessionsCollapsedIn {
   type: "agentManager.setSessionsCollapsed"
+  collapsed: boolean
+}
+
+interface SetSidebarCollapsedIn {
+  type: "agentManager.setSidebarCollapsed"
   collapsed: boolean
 }
 
@@ -564,6 +571,12 @@ interface PreviewImageIn {
   filename: string
 }
 
+interface SaveImageIn {
+  type: "saveImage"
+  dataUrl: string
+  filename: string
+}
+
 interface LoadMessagesIn {
   type: "loadMessages"
   sessionID: string
@@ -594,6 +607,7 @@ interface SendMessageIn {
   variant?: string
   files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
   agentManagerContext?: string
+  contextDirectory?: string
 }
 
 interface SendCommandIn {
@@ -609,6 +623,7 @@ interface SendCommandIn {
   variant?: string
   files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
   agentManagerContext?: string
+  contextDirectory?: string
 }
 
 interface RequestTerminalContextIn {
@@ -730,6 +745,7 @@ export type AgentManagerInMessage =
   | SetTabOrderIn
   | SetWorktreeOrderIn
   | SetSessionsCollapsedIn
+  | SetSidebarCollapsedIn
   | SetReviewDiffStyleIn
   | SetReviewMarkdownRenderIn
   | SetDefaultBaseBranchIn
@@ -750,6 +766,7 @@ export type AgentManagerInMessage =
   | OpenFileIn
   | GenericOpenFileIn
   | PreviewImageIn
+  | SaveImageIn
   | LoadMessagesIn
   | SendMessageIn
   | SendCommandIn

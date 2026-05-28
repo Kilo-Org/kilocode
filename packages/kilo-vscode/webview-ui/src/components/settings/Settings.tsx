@@ -240,7 +240,7 @@ const Settings: Component<SettingsProps> = (props) => {
         </Tabs.Content>
         <Tabs.Content value="autocomplete">
           <h3>{language.t("settings.autocomplete.title")}</h3>
-          <AutocompleteTab />
+          <AutocompleteTab onNavigateToModels={() => onTabChange("models")} />
         </Tabs.Content>
         <Tabs.Content value="notifications">
           <h3>{language.t("settings.notifications.title")}</h3>

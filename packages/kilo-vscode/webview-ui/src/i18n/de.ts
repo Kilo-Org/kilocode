@@ -96,6 +96,7 @@ export const dict = {
   "command.session.share.description": "Diese Sitzung teilen und URL in die Zwischenablage kopieren",
   "command.session.unshare": "Teilen der Sitzung aufheben",
   "command.session.unshare.description": "Teilen dieser Sitzung beenden",
+  "command.session.export": "Sitzungsprotokoll exportieren",
 
   "palette.search.placeholder": "Dateien, Befehle und Sitzungen durchsuchen",
   "palette.empty": "Keine Ergebnisse gefunden",
@@ -141,6 +142,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API-Schlüssel",
   "provider.connect.apiKey.placeholder": "API-Schlüssel",
   "provider.connect.apiKey.required": "API-Schlüssel ist erforderlich",
+  "provider.connect.prompt.required": "{{field}} ist erforderlich",
+  "provider.connect.azure.endpointType.label": "Azure-Endpunktkonfiguration auswählen",
+  "provider.connect.azure.endpointType.resourceName.label": "Ressourcenname",
+  "provider.connect.azure.endpointType.resourceName.hint": "Erstellen Sie den Endpunkt aus Ihrem Azure-Ressourcennamen",
+  "provider.connect.azure.endpointType.baseURL.label": "Vollständige Endpunkt-URL",
+  "provider.connect.azure.endpointType.baseURL.hint": "Einen benutzerdefinierten Azure OpenAI-Endpunkt verwenden",
+  "provider.connect.azure.resourceName.label": "Azure-Ressourcenname",
+  "provider.connect.azure.resourceName.placeholder": "z. B. my-models",
+  "provider.connect.azure.baseURL.label": "Azure OpenAI-Endpunkt-URL",
+  "provider.connect.azure.baseURL.placeholder": "z. B. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen bietet Ihnen Zugriff auf eine kuratierte Auswahl zuverlässiger, optimierter Modelle für Coding-Agenten.",
   "provider.connect.opencodeZen.line2":
@@ -170,6 +181,8 @@ export const dict = {
   "model.tag.latest": "Neueste",
   "model.group.recommended": "Empfohlen",
   "model.group.favorites": "Favoriten",
+  "model.group.collapse": "{{group}} einklappen",
+  "model.group.expand": "{{group}} ausklappen",
   "model.favorite.add": "Zu Favoriten hinzufügen",
   "model.favorite.remove": "Aus Favoriten entfernen",
 
@@ -263,6 +276,7 @@ export const dict = {
   "prompt.attachment.remove": "Anhang entfernen",
   "prompt.action.send": "Senden",
   "prompt.action.send.blocked": "Beantworten oder verwerfen Sie zuerst die ausstehende Frage",
+  "prompt.action.send.recording": "Transkribieren und senden",
   "prompt.action.stop": "Stopp",
   "prompt.action.enhance": "Prompt verbessern",
   "prompt.action.autoApprove.enable": "Automatische Genehmigung aktivieren",
@@ -274,6 +288,20 @@ export const dict = {
   "prompt.action.resetModel": "Modell auf Standard zurücksetzen",
   "prompt.action.enhanceDescription":
     "Die Schaltfläche 'Prompt verbessern' hilft, deine Anfrage durch zusätzlichen Kontext, Klarstellungen oder Umformulierungen zu verbessern. Versuche, hier eine Anfrage einzugeben und klicke erneut auf die Schaltfläche, um zu sehen, wie es funktioniert.",
+
+  "speechToText.tooltip.start": "Spracheingabe mit Kilo Gateway starten",
+  "speechToText.tooltip.stop": "Audioerfassung beenden",
+  "speechToText.tooltip.transcribing": "Transkribieren... Zum Abbrechen klicken.",
+  "speechToText.tooltip.error": "Spracheingabe fehlgeschlagen. Zum Löschen klicken.",
+  "speechToText.error.title": "Spracheingabe fehlgeschlagen",
+  "speechToText.error.loginRequired": "Melden Sie sich bei Kilo an, um die Spracheingabe zu verwenden.",
+  "speechToText.error.permission": "Mikrofonberechtigung wurde verweigert.",
+  "speechToText.error.microphone": "Mikrofon konnte nicht gestartet werden.",
+  "speechToText.error.recording": "Aufnahme fehlgeschlagen.",
+  "speechToText.error.emptyRecording": "Es wurde kein Audio aufgenommen.",
+  "speechToText.error.emptyTranscript": "Es wurde keine Sprache erkannt.",
+  "speechToText.error.encoding": "Aufnahme konnte nicht codiert werden.",
+  "speechToText.toast.transcribed": "Transkription eingefügt",
 
   "prompt.toast.pasteUnsupported.title": "Nicht unterstütztes Einfügen",
   "prompt.toast.pasteUnsupported.description": "Hier können nur Bilder oder PDFs eingefügt werden.",
@@ -428,6 +456,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Aufheben des Teilens fehlgeschlagen",
   "toast.session.unshare.failed.description": "Beim Aufheben des Teilens ist ein Fehler aufgetreten",
 
+  "toast.session.rename.invalid.title": "Ungültiger Sitzungstitel",
   "toast.session.listFailed.title": "Sitzungen für {{project}} konnten nicht geladen werden",
 
   "toast.update.title": "Update verfügbar",
@@ -461,6 +490,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Registriere dich kostenlos, um weiterzumachen und über 500 Modelle zu entdecken. Dauert 2 Minuten, keine Kreditkarte nötig. Oder komm später wieder.",
   "error.promotionLimit.action": "Registrieren",
+  "error.providerAuth.title": "{{provider}} hat Sie abgemeldet",
+  "error.providerAuth.description": "Verbinden Sie {{provider}} erneut und senden Sie Ihre Nachricht noch einmal.",
+  "error.providerAuth.chatgpt.title": "OpenAI hat Sie abgemeldet",
+  "error.providerAuth.chatgpt.description":
+    "Melden Sie sich erneut bei ChatGPT an und senden Sie Ihre Nachricht noch einmal, um weiterhin Codex-Modelle zu verwenden.",
 
   "error.chain.unknown": "Unbekannter Fehler",
   "error.chain.causedBy": "Verursacht durch:",
@@ -765,6 +799,13 @@ export const dict = {
   "settings.indexing.dimension.title": "Vektordimension",
   "settings.indexing.enable.description": "Semantische Codebasis-Indizierung ein- oder ausschalten.",
   "settings.indexing.enable.title": "Indizierung aktivieren",
+  "settings.indexing.globalEnable.title": "Global aktivieren",
+  "settings.indexing.globalEnable.description": "Indizierung für jeden Workspace aktivieren.",
+  "settings.indexing.projectEnable.title": "Für dieses Projekt aktivieren",
+  "settings.indexing.projectEnable.description":
+    "Indizierung für diesen Workspace aktivieren, wenn die globale Indizierung deaktiviert ist.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Die globale Indizierung ist aktiviert, dieses Projekt wird also bereits erfasst.",
   "settings.indexing.lancedbDirectory.description": "Optionaler Ordner für den lokalen LanceDB-Speicher.",
   "settings.indexing.lancedbDirectory.placeholder": "Leer lassen für Standard",
   "settings.indexing.lancedbDirectory.title": "LanceDB-Ordner",
@@ -772,6 +813,10 @@ export const dict = {
   "settings.indexing.model.title": "Embedding-Modell",
   "settings.indexing.provider.description":
     "Wählen Sie den Anbieter, der für die Generierung von Embeddings für die semantische Suche verwendet wird.",
+  "settings.indexing.kiloModel.title": "Kilo-Modellvoreinstellung",
+  "settings.indexing.kiloModel.description": "Wählen Sie ein unterstütztes von Kilo gehostetes Embedding-Modell.",
+  "settings.indexing.kiloSignIn.title": "Kilo-Anmeldung erforderlich",
+  "settings.indexing.kiloSignIn.description": "Melden Sie sich bei Kilo an, um gehostete Embeddings zu verwenden.",
   "settings.indexing.provider.title": "Embedding-Anbieter",
   "settings.indexing.providerField.description": "Anbieterspezifische Verbindungseinstellung.",
   "settings.indexing.qdrantApiKey.description": "Optionaler API-Schlüssel für die Qdrant-Instanz.",
@@ -822,6 +867,9 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "Verbunden über Ihre Umgebungsvariablen",
   "settings.providers.action.signInChatGPT": "Mit ChatGPT anmelden",
   "settings.providers.custom.description": "Fügen Sie einen OpenAI-kompatiblen Anbieter über die Basis-URL hinzu.",
+  "settings.providers.subagentModel.title": "Subagenten-Modell",
+  "settings.providers.subagentModel.description":
+    "Standardmodell und Aufwand für Schlussfolgerungen für task-tool-Subagenten. Leer lassen, um das Modell des aufrufenden Agenten zu übernehmen.",
   "settings.providers.modeModels": "Modell pro Modus",
   "settings.providers.custom.note": "Fügen Sie einen OpenAI-kompatiblen Anbieter per Basis-URL hinzu.",
   "settings.providers.modeModels.description":
@@ -1092,6 +1140,14 @@ export const dict = {
   "session.status.retrying": "Erneuter Versuch ({{ attempt }})… {{ message }}",
   "session.status.working": "Wird bearbeitet…",
   "session.status.offline": "Netzwerk getrennt — Verbindung wird wiederhergestellt...",
+  "session.outcome.incomplete": "Zug beendet mit {{count}} verbleibenden To-dos",
+  "session.outcome.limit": "Antwortlimit vor Abschluss erreicht",
+  "session.outcome.unknown": "Zug ohne Modell-Abschlussgrund beendet",
+  "session.outcome.filtered": "Der Anbieter hat diese Antwort aufgrund eines Inhaltsfilters gestoppt.",
+  "session.outcome.unexpected": "Die Antwort wurde unerwartet beendet und ist möglicherweise unvollständig.",
+  "session.outcome.interrupted": "Zug unterbrochen",
+  "session.outcome.error": "Zug fehlgeschlagen",
+  "session.outcome.finish": "Abschlussgrund: {{reason}}",
 
   "ui.sessionTurn.cancel": "Abbrechen",
   "ui.sessionTurn.status.thinking": "Denke nach...",
@@ -1191,6 +1247,8 @@ export const dict = {
     "Eine intelligente Tastenkombination zum Auslösen von Inline-Aufgaben verwenden",
   "settings.autocomplete.chatAutocomplete.title": "Chat-Textfeld-Autovervollständigung aktivieren",
   "settings.autocomplete.chatAutocomplete.description": "Autovervollständigungsvorschläge im Chat-Textfeld anzeigen",
+  "settings.autocomplete.modelsHint":
+    "Um zu wählen, welches Modell für die Autovervollständigung verwendet wird, siehe Modelleinstellungen.",
   "settings.notifications.agent.title": "Agent-Abschluss",
   "settings.notifications.agent.description": "Benachrichtigung anzeigen, wenn der Agent eine Aufgabe abschließt",
   "settings.notifications.permissions.title": "Berechtigungsanfragen",
@@ -1225,9 +1283,14 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Codebase-Suche",
   "settings.experimental.codebaseSearch.description":
     "KI-gestützte Suche in natürlicher Sprache über die gesamte Codebasis aktivieren",
-  "settings.experimental.agentManagerTool.title": "Agent Manager-Werkzeug",
-  "settings.experimental.agentManagerTool.description":
-    "Agenten erlauben, lokale Agent Manager-Sitzungen und Worktree-Sitzungen per Werkzeugaufruf zu starten",
+  "settings.experimental.speechToText.title": "Sprache zu Text",
+  "settings.experimental.speechToText.description":
+    "Aktivieren Sie die Spracheingabe in Prompt-Feldern mit Ihrem Kilo-Konto über Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Aktivieren Sie den Kilo-Anbieter und melden Sie sich an, um Speech to Text zu verwenden. Speech to Text wird derzeit nur mit Kilo Gateway unterstützt.",
+  "settings.experimental.speechToTextModel.title": "Sprache-zu-Text-Modell",
+  "settings.experimental.speechToTextModel.description":
+    "Wählen Sie das Kilo Gateway-Transkriptionsmodell für die Spracheingabe.",
   "settings.experimental.continueOnDeny.title": "Bei Ablehnung fortfahren",
   "settings.experimental.continueOnDeny.description":
     "Agent-Schleife fortsetzen, wenn eine Berechtigung abgelehnt wird",
@@ -1250,6 +1313,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Agent zum Konfigurieren auswählen…",
   "settings.agentBehaviour.modelOverride.title": "Modell-Überschreibung",
   "settings.agentBehaviour.modelOverride.description": "Standardmodell für diesen Agent überschreiben",
+  "settings.agentBehaviour.variantOverride.title": "Varianten-Überschreibung",
+  "settings.agentBehaviour.variantOverride.description": "Modellvariante für diesen Agent überschreiben",
   "settings.agentBehaviour.prompt.title": "Benutzerdefinierter Prompt",
   "settings.agentBehaviour.prompt.description": "Zusätzlicher System-Prompt für diesen Agent",
   "settings.agentBehaviour.temperature.title": "Temperatur",
@@ -1406,7 +1471,10 @@ export const dict = {
   "settings.checkpoints.enable.description":
     "Prüfpunkte vor Dateibearbeitungen erstellen, um vorherige Zustände wiederherstellen zu können",
   "settings.context.autoCompaction.title": "Automatische Komprimierung",
-  "settings.context.autoCompaction.description": "Kontext automatisch komprimieren, wenn er voll ist",
+  "settings.context.autoCompaction.description": "Kontext automatisch komprimieren, bevor er das Limit erreicht",
+  "settings.context.compactionLimit.title": "Limit für automatische Komprimierung",
+  "settings.context.compactionLimit.description":
+    "Komprimieren, wenn der Kontext diesen Prozentsatz des Modellfensters erreicht. Leer lassen, um nur den Sicherheitspuffer zu verwenden.",
   "settings.context.prune.title": "Alte Ausgaben bereinigen",
   "settings.context.prune.description": "Alte Werkzeugausgaben während der Komprimierung entfernen",
   "settings.context.watcherPatterns": "Datei-Watcher-Ignorierungsmuster",
@@ -1566,4 +1634,29 @@ export const dict = {
   "notifications.action.close": "Schließen",
   "notifications.action.tryModel": "{{model}} ausprobieren",
   "notifications.action.tryModelGeneric": "Modell ausprobieren",
+  "diffViewer.source.workspace.label": "Branch",
+  "diffViewer.source.workspace.tooltip":
+    "Alle Änderungen in diesem Branch im Vergleich zum Base-Branch. Enthält nicht committete Dateien (gestaged, ungestaged, nicht getrackt) und lokale Commits, die noch nicht im Base-Branch sind.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Dateien mit Änderungen, die du zu gits Staging-Bereich hinzugefügt hast (`git add`), wie sie im nächsten Commit erscheinen werden.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Dateien, die in deinem Arbeitsbaum geändert, aber noch nicht gestaged wurden, plus nicht verfolgte (neue) Dateien.",
+  "diffViewer.source.session.label": "Sitzung",
+  "diffViewer.source.session.tooltip":
+    "Von Kilo während der aktuellen Sitzung geänderte Dateien, basierend auf Snapshots pro Runde. Wird beim Start einer neuen Sitzung zurückgesetzt.",
+  "diffViewer.group.session": "Sitzung",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots sind für dieses Repository deaktiviert. Bitte bearbeite deine Konfigurationsdateien, um die Sitzungsänderungen anzuzeigen.",
+
+  "diffViewer.baseBranch.auto": "Standard",
+  "diffViewer.baseBranch.default": "Standard",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Branches suchen",
+  "diffViewer.baseBranch.empty": "Keine passenden Branches",
+  "diffViewer.baseBranch.loading": "Branches werden geladen…",
+  "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "Plan ist bereit:",
 } satisfies Partial<Record<Keys, string>>

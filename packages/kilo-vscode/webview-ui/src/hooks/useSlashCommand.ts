@@ -100,6 +100,14 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string> | A
       },
     },
     {
+      name: "export",
+      description: "Export the current session transcript as Markdown",
+      hints: ["markdown", "transcript"],
+      action: () => {
+        window.dispatchEvent(new CustomEvent("exportSessionTranscript"))
+      },
+    },
+    {
       name: "settings",
       description: "Open settings",
       hints: [],

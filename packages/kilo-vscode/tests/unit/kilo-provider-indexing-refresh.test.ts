@@ -7,6 +7,8 @@ const { KiloProvider } = await import("../../src/KiloProvider")
 type Internals = {
   connectionState: "connecting" | "connected" | "disconnected" | "error"
   currentSession: { id: string } | null
+  cachedIndexingStatusMessage: unknown
+  handleEvent: (event: unknown, directory?: string) => void
   reloadAfterAuthChange: () => Promise<void>
   handleUpdateConfig: (partial: Partial<Config>) => Promise<void>
   fetchAndSendConfig: () => Promise<void>
@@ -23,11 +25,13 @@ function createConnection() {
   const client = {
     global: {
       config: {
+        get: async () => ({ data: {} }),
         update: async () => ({ data: {} }),
       },
     },
     config: {
       get: async () => ({ data: {} }),
+      update: async () => ({ data: {} }),
     },
   }
 
@@ -137,5 +141,43 @@ describe("KiloProvider indexing refresh", () => {
     } finally {
       globalThis.fetch = original
     }
+  })
+
+  it("forwards indexing.status when directory only differs by Windows drive casing", () => {
+    const provider = new KiloProvider(
+      {} as never,
+      {
+        resolveEventSessionId: () => undefined,
+      } as never,
+    )
+    const internal = provider as unknown as Internals
+    provider.setSessionDirectory("ses_worktree", "C:/Repo/Work")
+    internal.currentSession = { id: "ses_worktree" }
+
+    const desc = Object.getOwnPropertyDescriptor(process, "platform")
+    Object.defineProperty(process, "platform", { value: "win32", configurable: true })
+    try {
+      internal.handleEvent(
+        {
+          type: "indexing.status",
+          properties: {
+            status: {
+              state: "Complete",
+              message: "Done",
+              processedFiles: 10,
+              totalFiles: 10,
+              percent: 100,
+            },
+          },
+        },
+        "c:/repo/work",
+      )
+    } finally {
+      if (desc) Object.defineProperty(process, "platform", desc)
+    }
+
+    const msg = internal.cachedIndexingStatusMessage as { type?: string; status?: { state?: string } } | undefined
+    expect(msg?.type).toBe("indexingStatusLoaded")
+    expect(msg?.status?.state).toBe("Complete")
   })
 })

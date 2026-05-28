@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { SystemPrompt } from "../../src/session/system"
+import { environmentDetails } from "../../src/kilocode/editor-context"
 import { ProviderTest } from "../fake/provider"
 
 import PROMPT_ANTHROPIC from "../../src/session/prompt/anthropic.txt"
@@ -123,5 +124,19 @@ describe("SystemPrompt.provider", () => {
       const result = SystemPrompt.provider(model)
       expect(result).toEqual([PROMPT_CODEX])
     })
+  })
+})
+
+describe("environmentDetails", () => {
+  test("includes cwd and worktree in dynamic context", () => {
+    const result = environmentDetails({
+      directory: "/repo/.kilo/worktrees/feature",
+      worktree: "/repo/.kilo/worktrees/feature",
+      activeFile: "src/app.ts",
+    })
+
+    expect(result).toContain("Working directory: /repo/.kilo/worktrees/feature")
+    expect(result).toContain("Workspace root folder: /repo/.kilo/worktrees/feature")
+    expect(result).toContain("Active file: src/app.ts")
   })
 })
