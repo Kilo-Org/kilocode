@@ -1850,11 +1850,14 @@ unix(
             const sh = yield* prompt
               .shell({ sessionID: chat.id, agent: "build", command: "sleep 30" })
               .pipe(Effect.forkChild)
-            yield* Effect.sleep(50)
+            const status = yield* SessionStatus.Service
+            yield* waitFor(
+              "shell busy",
+              status.get(chat.id).pipe(Effect.map((s) => (s.type === "busy" ? s : undefined))),
+            )
 
             yield* prompt.cancel(chat.id)
 
-            const status = yield* SessionStatus.Service
             expect((yield* status.get(chat.id)).type).toBe("idle")
             const busy = yield* run.assertNotBusy(chat.id).pipe(Effect.exit)
             expect(Exit.isSuccess(busy)).toBe(true)
