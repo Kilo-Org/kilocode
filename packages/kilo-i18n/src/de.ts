@@ -7,6 +7,9 @@ export const dict = {
   "provider.connect.kiloGateway.visit.prefix": "Besuchen Sie ",
   "provider.connect.kiloGateway.visit.link": "kilo.ai",
   "provider.connect.kiloGateway.visit.suffix": ", um Ihren API-Schlüssel zu erhalten.",
+  "provider.connect.kiloGateway.byok.prefix": "Für weitere Nutzungsstatistiken ",
+  "provider.connect.kiloGateway.byok.link": "BYOK via Kilo's Gateway",
+  "provider.connect.kiloGateway.byok.suffix": " nutzen.",
 
   // Provider dialog translations
   "dialog.provider.group.recommended": "Empfohlen",

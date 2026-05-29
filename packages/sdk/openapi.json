@@ -16786,9 +16786,6 @@
               "codebase_search": {
                 "type": "boolean"
               },
-              "semantic_indexing": {
-                "type": "boolean"
-              },
               "speech_to_text_model": {
                 "type": "string"
               },

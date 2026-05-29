@@ -17,6 +17,7 @@ import com.intellij.util.ui.JBUI
 import java.awt.Container
 import javax.swing.AbstractButton
 import javax.swing.JButton
+import javax.swing.JTextArea
 import kotlinx.coroutines.CompletableDeferred
 
 @Suppress("UnstableApiUsage")
@@ -772,6 +773,22 @@ class SessionScrollTest : SessionUiTestBase() {
         option<JBRadioButton>("").doClick()
         drainScroll()
         findAll<EditorTextField>(ui).last().text = "custom line\n".repeat(80)
+        drainScroll()
+
+        assertEquals(value, bar.value)
+        assertTrue(jumpButton().isVisible)
+    }
+
+    fun `test question text caret visibility cannot move middle scroll position`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        emit(ChatEventDto.QuestionAsked("ses_test", largeQuestion("q_text_caret_middle")))
+        drainScroll()
+        setValue(bar, bottom(bar) / 2)
+        val value = bar.value
+
+        findAll<JTextArea>(ui).first { !it.isEditable }.scrollRectToVisible(java.awt.Rectangle(0, 10_000, 1, 1))
         drainScroll()
 
         assertEquals(value, bar.value)

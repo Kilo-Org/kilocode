@@ -408,9 +408,6 @@ export const IndexingProviderBlurRace: Story = {
   render: () => {
     const [saved, setSaved] = createSignal<Record<string, unknown>>({})
     const cfg: Config = {
-      experimental: {
-        semantic_indexing: true,
-      },
       indexing: {
         provider: "openai",
         model: "text-embedding-3-large",
@@ -439,9 +436,6 @@ export const IndexingKiloModelPreset: Story = {
   name: "IndexingTab - Kilo stale custom model fallback",
   render: () => {
     const cfg: Config = {
-      experimental: {
-        semantic_indexing: true,
-      },
       indexing: {
         provider: "kilo",
         model: "custom/model",
@@ -473,9 +467,6 @@ export const IndexingKiloCatalogLoading: Story = {
   render: () => {
     const [saved, setSaved] = createSignal<Record<string, unknown>>({})
     const cfg: Config = {
-      experimental: {
-        semantic_indexing: true,
-      },
       indexing: {},
     }
     return (

@@ -27,6 +27,7 @@ import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.GridBagLayout
+import java.awt.Rectangle
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
 import java.awt.event.MouseAdapter
@@ -656,6 +657,8 @@ class QuestionView(
                 val size = preferredSize
                 return Dimension(Int.MAX_VALUE, size.height)
             }
+
+            override fun scrollRectToVisible(aRect: Rectangle) {}
 
             private fun withWidth(fallback: Int): Dimension {
                 val width = space()

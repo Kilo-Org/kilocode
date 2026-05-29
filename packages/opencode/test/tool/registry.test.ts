@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test"
+import { afterEach, describe, expect } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
 import { Effect, Layer } from "effect"
@@ -6,7 +6,7 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { ToolRegistry } from "@/tool/registry"
 import { Command } from "@/command" // kilocode_change
 import { Git } from "@/git" // kilocode_change
-import { disposeAllInstances, provideTmpdirInstance, TestInstance, tmpdir } from "../fixture/fixture" // kilocode_change
+import { disposeAllInstances, provideTmpdirInstance, TestInstance } from "../fixture/fixture" // kilocode_change
 import { testEffect } from "../lib/effect"
 import { TestConfig } from "../fixture/config"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
@@ -25,7 +25,6 @@ import { Format } from "@/format"
 import { Ripgrep } from "@/file/ripgrep"
 import * as Truncate from "@/tool/truncate"
 import { InstanceState } from "@/effect/instance-state"
-import { WithInstance } from "@/project/with-instance"
 import { SessionStatus } from "@/session/status" // kilocode_change
 
 const node = CrossSpawnSpawner.defaultLayer
@@ -89,34 +88,37 @@ describe("tool.registry", () => {
   // kilocode_change end
 
   // kilocode_change start
-  test("suggest is registered for cli and vscode only", async () => {
-    const original = process.env["KILO_CLIENT"]
-    const originalQuestion = process.env["KILO_ENABLE_QUESTION_TOOL"]
-    const originalConfig = process.env["KILO_CONFIG_DIR"]
-    try {
-      for (const client of ["cli", "vscode", "desktop", "app"]) {
-        process.env["KILO_CLIENT"] = client
-        process.env["KILO_ENABLE_QUESTION_TOOL"] = client === "vscode" ? "true" : "false"
-        await using tmp = await tmpdir({ git: true })
-        process.env["KILO_CONFIG_DIR"] = tmp.path
-        await WithInstance.provide({
-          directory: tmp.path,
-          fn: async () => {
-            const ids = await ToolRegistry.ids()
-            if (client === "cli" || client === "vscode") expect(ids).toContain("suggest")
-            else expect(ids).not.toContain("suggest")
-          },
-        })
+  it.live("suggest is registered for cli and vscode only", () =>
+    Effect.gen(function* () {
+      const original = process.env["KILO_CLIENT"]
+      const originalQuestion = process.env["KILO_ENABLE_QUESTION_TOOL"]
+      const originalConfig = process.env["KILO_CONFIG_DIR"]
+      try {
+        for (const client of ["cli", "vscode", "desktop", "app"]) {
+          process.env["KILO_CLIENT"] = client
+          process.env["KILO_ENABLE_QUESTION_TOOL"] = client === "vscode" ? "true" : "false"
+          yield* provideTmpdirInstance(
+            (dir) =>
+              Effect.gen(function* () {
+                process.env["KILO_CONFIG_DIR"] = dir
+                const registry = yield* ToolRegistry.Service
+                const ids = yield* registry.ids()
+                if (client === "cli" || client === "vscode") expect(ids).toContain("suggest")
+                else expect(ids).not.toContain("suggest")
+              }),
+            { git: true },
+          )
+        }
+      } finally {
+        if (original === undefined) delete process.env["KILO_CLIENT"]
+        else process.env["KILO_CLIENT"] = original
+        if (originalQuestion === undefined) delete process.env["KILO_ENABLE_QUESTION_TOOL"]
+        else process.env["KILO_ENABLE_QUESTION_TOOL"] = originalQuestion
+        if (originalConfig === undefined) delete process.env["KILO_CONFIG_DIR"]
+        else process.env["KILO_CONFIG_DIR"] = originalConfig
       }
-    } finally {
-      if (original === undefined) delete process.env["KILO_CLIENT"]
-      else process.env["KILO_CLIENT"] = original
-      if (originalQuestion === undefined) delete process.env["KILO_ENABLE_QUESTION_TOOL"]
-      else process.env["KILO_ENABLE_QUESTION_TOOL"] = originalQuestion
-      if (originalConfig === undefined) delete process.env["KILO_CONFIG_DIR"]
-      else process.env["KILO_CONFIG_DIR"] = originalConfig
-    }
-  })
+    }),
+  )
   // kilocode_change end
 
   it.instance("loads tools from .opencode/tool (singular)", () =>

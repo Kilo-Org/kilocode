@@ -16,8 +16,8 @@
 //        - "Disable for this project": interrupt the in-flight snapshot,
 //          persist `"snapshot": false` to `.kilo/kilo.json`, and skip. All
 //          future sessions on this project load with snapshots off.
-//        - Dismissed / no sessionID: interrupt and skip. Mark the instance
-//          so we don't prompt again until the instance reloads.
+//        - Dismissed / no sessionID: interrupt and skip. Mark the active
+//          Snapshot.Service guard so later calls through it do not prompt again.
 //
 // While the snapshot is running, we inject a synthetic text part into the
 // live assistant message so the user sees an "Initializing snapshot…" line
@@ -25,8 +25,9 @@
 // removed when the snapshot finishes, so the chat history stays clean.
 //
 // Design notes:
-//   - The question is asked once per instance — `state.asked` guards follow-up
-//     prompts so a slow repo doesn't spam the user every turn.
+//   - `state.asked` is scoped to the active Snapshot.Service closure, not the
+//     directory-keyed snapshot state. It suppresses follow-up prompts until a
+//     continued snapshot successfully produces a hash.
 //   - We do NOT call `Config.update()` when the user picks "Disable" because
 //     that finalizer runs `Instance.dispose()` and tears down the live turn.
 //     Instead we write the file directly via `KilocodeConfig.updateProjectConfig`
@@ -123,11 +124,11 @@ export namespace KiloSnapshotTrack {
   /** Replace the `{spinner}` placeholder in `template` with the given frame. */
   export const formatProgress = (template: string, frame: string): string => template.replace("{spinner}", frame)
 
-  /** Per-instance state. Lives as long as the Snapshot.Service scope. */
+  /** Guard state shared by one Snapshot.Service scope, outside directory-keyed InstanceState. */
   export interface State {
-    /** Skip every future track call once this flips. Resets when the instance reloads. */
+    /** Skip every future track call through this service once this flips. */
     disabledForSession: boolean
-    /** One-shot guard so we don't prompt the user every turn. */
+    /** Guard prompt display until a continued snapshot successfully produces a hash. */
     asked: boolean
   }
 
@@ -303,9 +304,9 @@ export namespace KiloSnapshotTrack {
       // decided whether to keep waiting, disable, or skip below.
 
       // Slow path. No target session to prompt against, or we've already
-      // prompted on this instance — skip silently.
+      // prompted through this service scope — skip silently.
       if (!input.sessionID || input.state.asked) {
-        log.warn("snapshot track slow; skipping for this instance", { timeoutMs })
+        log.warn("snapshot track slow; skipping for this service scope", { timeoutMs })
         input.state.disabledForSession = true
         yield* Fiber.interrupt(fiber)
         if (progressFiber) yield* Fiber.interrupt(progressFiber)
@@ -349,7 +350,7 @@ export namespace KiloSnapshotTrack {
           }),
         )
       } else {
-        log.info("user dismissed snapshot prompt; disabling for this instance only")
+        log.info("user dismissed snapshot prompt; disabling for this service scope only")
       }
 
       yield* clearProgress()

@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { Effect, Layer, ManagedRuntime } from "effect"
+import { Cause, Effect, Exit, Fiber, Layer, ManagedRuntime } from "effect"
 import path from "path"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Global } from "@opencode-ai/core/global"
 import { Agent } from "../../../src/agent/agent"
+import { Bus } from "../../../src/bus"
 import { Config } from "../../../src/config/config"
 import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
@@ -14,7 +15,8 @@ import { Shell } from "../../../src/shell/shell"
 import { Truncate } from "../../../src/tool/truncate"
 import { ShellTool } from "../../../src/tool/shell"
 import { Plugin } from "../../../src/plugin"
-import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
+import { disposeAllInstances, provideTmpdirInstance, tmpdir } from "../../fixture/fixture"
+import { testEffect } from "../../lib/effect"
 import { ConfigProtection } from "../../../src/kilocode/permission/config-paths"
 
 const runtime = ManagedRuntime.make(
@@ -65,6 +67,31 @@ const variants = (dir: string) => {
 const config = path.resolve(Global.Path.config)
 const configFile = path.join(config, "hello.txt")
 const configGlob = glob(path.join(config, "*"))
+const bus = Bus.layer
+const env = Layer.mergeAll(
+  Permission.layer.pipe(Layer.provide(bus), Layer.provide(Config.defaultLayer)),
+  bus,
+  CrossSpawnSpawner.defaultLayer,
+)
+const it = testEffect(env)
+
+const ask = (input: Permission.AskInput) =>
+  Effect.gen(function* () {
+    const permission = yield* Permission.Service
+    return yield* permission.ask(input)
+  })
+
+const reply = (input: Permission.ReplyInput) =>
+  Effect.gen(function* () {
+    const permission = yield* Permission.Service
+    return yield* permission.reply(input)
+  })
+
+const list = () =>
+  Effect.gen(function* () {
+    const permission = yield* Permission.Service
+    return yield* permission.list()
+  })
 
 const capture = (requests: Array<Omit<Permission.Request, "id" | "sessionID" | "tool">>, stop?: Error) => ({
   ...ctx,
@@ -90,52 +117,46 @@ const withShell = (item: { shell: string }, fn: () => Promise<void>) => async ()
   }
 }
 
-async function reject() {
-  const requests = await Permission.list()
-  for (const req of requests) {
-    await Permission.reply({ requestID: req.id, reply: "reject" })
-  }
-}
-
-async function immediate(pending: Promise<void>) {
-  try {
-    await Promise.race([
-      pending,
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("timed out waiting for permission to resolve")), 500),
-      ),
-    ])
-  } finally {
-    const requests = await Permission.list()
-    if (requests.length > 0) {
-      await reject()
-      await pending.catch(() => undefined)
+const reject = () =>
+  Effect.gen(function* () {
+    for (const req of yield* list()) {
+      yield* reply({ requestID: req.id, reply: "reject" })
     }
-  }
-  expect(await Permission.list()).toHaveLength(0)
-}
+  })
 
-async function wait(count: number) {
-  for (const _ of Array.from({ length: 500 })) {
-    const list = await Permission.list()
-    if (list.length === count) return list
-    await Bun.sleep(10)
-  }
-  throw new Error(`timed out waiting for ${count} pending permission request(s)`)
-}
+const immediate = (pending: Effect.Effect<void, Permission.Error, Permission.Service>) =>
+  Effect.gen(function* () {
+    const exit = yield* pending.pipe(Effect.timeout("500 millis"), Effect.exit)
+    if (Exit.isFailure(exit)) {
+      const items = yield* list()
+      if (items.length > 0) {
+        yield* reject()
+      }
+      return yield* exit
+    }
+    expect(yield* list()).toHaveLength(0)
+  })
+
+const wait = (count: number) =>
+  Effect.gen(function* () {
+    for (const _ of Array.from({ length: 500 })) {
+      const items = yield* list()
+      if (items.length === count) return items
+      yield* Effect.sleep("10 millis")
+    }
+    return yield* Effect.fail(new Error(`timed out waiting for ${count} pending permission request(s)`))
+  })
 
 afterEach(async () => {
   await disposeAllInstances()
 })
 
 describe("external_directory allow config protection", () => {
-  test("allows file-tool external_directory requests for global config paths", async () => {
-    await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        await immediate(
-          Permission.ask({
+  it.live("allows file-tool external_directory requests for global config paths", () =>
+    provideTmpdirInstance(
+      () =>
+        immediate(
+          ask({
             id: PermissionID.make("permission_file_external_read"),
             sessionID: SessionID.make("session_file_external_read"),
             permission: "external_directory",
@@ -144,18 +165,16 @@ describe("external_directory allow config protection", () => {
             always: [configGlob],
             ruleset,
           }),
-        )
-      },
-    })
-  })
+        ),
+      { git: true },
+    ),
+  )
 
-  test("allows read-only bash external_directory requests for global config paths", async () => {
-    await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        await immediate(
-          Permission.ask({
+  it.live("allows read-only bash external_directory requests for global config paths", () =>
+    provideTmpdirInstance(
+      () =>
+        immediate(
+          ask({
             id: PermissionID.make("permission_bash_external_read"),
             sessionID: SessionID.make("session_bash_external_read"),
             permission: "external_directory",
@@ -164,10 +183,10 @@ describe("external_directory allow config protection", () => {
             always: [configGlob],
             ruleset,
           }),
-        )
-      },
-    })
-  })
+        ),
+      { git: true },
+    ),
+  )
 
   for (const pattern of variants(configGlob)) {
     test(`detects unknown bash external_directory requests for global config paths [${pattern}]`, () => {
@@ -181,33 +200,37 @@ describe("external_directory allow config protection", () => {
     })
   }
 
-  test("keeps unknown bash external_directory requests for global config paths protected", async () => {
-    await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        const pending = Permission.ask({
-          id: PermissionID.make("permission_bash_external_write"),
-          sessionID: SessionID.make("session_bash_external_write"),
-          permission: "external_directory",
-          patterns: [configGlob],
-          metadata: { command: `rm ${quote(configFile)}` },
-          always: [configGlob],
-          ruleset,
-        })
+  it.live("keeps unknown bash external_directory requests for global config paths protected", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const pending = yield* ask({
+            id: PermissionID.make("permission_bash_external_write"),
+            sessionID: SessionID.make("session_bash_external_write"),
+            permission: "external_directory",
+            patterns: [configGlob],
+            metadata: { command: `rm ${quote(configFile)}` },
+            always: [configGlob],
+            ruleset,
+          }).pipe(Effect.forkScoped)
 
-        const requests = await wait(1)
-        expect(requests[0]).toMatchObject({
-          id: PermissionID.make("permission_bash_external_write"),
-          permission: "external_directory",
-          metadata: { disableAlways: true },
-        })
+          const requests = yield* wait(1)
+          expect(requests[0]).toMatchObject({
+            id: PermissionID.make("permission_bash_external_write"),
+            permission: "external_directory",
+            metadata: { disableAlways: true },
+          })
 
-        await Permission.reply({ requestID: PermissionID.make("permission_bash_external_write"), reply: "reject" })
-        await expect(pending).rejects.toBeInstanceOf(Permission.RejectedError)
-      },
-    })
-  })
+          yield* reply({ requestID: PermissionID.make("permission_bash_external_write"), reply: "reject" })
+          const exit = yield* Fiber.await(pending)
+          expect(Exit.isFailure(exit)).toBe(true)
+          if (Exit.isFailure(exit)) {
+            expect(Cause.squash(exit.cause)).toBeInstanceOf(Permission.RejectedError)
+          }
+        }),
+      { git: true },
+    ),
+  )
 })
 
 describe("bash external_directory access metadata", () => {
