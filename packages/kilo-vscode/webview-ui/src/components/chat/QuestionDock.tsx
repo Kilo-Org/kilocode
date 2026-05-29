@@ -30,7 +30,6 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   const textID = () => `${id}-text-${store.tab}`
   const hintID = () => `${id}-hint-${store.tab}`
   const customID = () => `${id}-custom-${store.tab}`
-  const formID = () => `${id}-form-${store.tab}`
 
   const questions = createMemo(() => props.request.questions)
   const single = createMemo(() => questions().length === 1 && questions()[0]?.multiple !== true)
@@ -465,7 +464,6 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                   aria-checked={aria(customPicked())}
                   aria-labelledby={customID()}
                   aria-describedby={!store.editing ? `${customID()}-description` : undefined}
-                  aria-controls={store.editing ? formID() : undefined}
                   tabIndex={tabIndex(customPicked(), options().length)}
                   disabled={store.sending}
                   onClick={() => selectOption(options().length)}
@@ -493,7 +491,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                   </span>
                 </button>
                 <Show when={store.editing}>
-                  <form id={formID()} data-slot="custom-input-form" onSubmit={handleCustomSubmit}>
+                  <form data-slot="custom-input-form" onSubmit={handleCustomSubmit}>
                     <input
                       ref={(el) => {
                         setTimeout(() => {
