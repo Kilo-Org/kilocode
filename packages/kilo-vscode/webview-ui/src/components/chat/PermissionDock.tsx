@@ -310,18 +310,12 @@ export const PermissionDock: Component<{
             variant="primary"
             size="small"
             onClick={() => submit("once")}
-            aria-label={language.t("ui.permission.allowOnce")}
+            aria-label={`${language.t("ui.permission.run")}, ${language.t("ui.permission.allowOnce")}`}
             disabled={props.responding}
           >
             {language.t("ui.permission.run")}
           </Button>
-          <Button
-            variant="ghost"
-            size="small"
-            onClick={() => submit("reject")}
-            aria-label={language.t("ui.permission.deny")}
-            disabled={props.responding}
-          >
+          <Button variant="ghost" size="small" onClick={() => submit("reject")} disabled={props.responding}>
             {language.t("ui.permission.deny")}
           </Button>
         </div>

@@ -131,8 +131,9 @@ test.describe("PermissionDock accessibility interactions", () => {
     await expect(deny).toHaveAttribute("aria-pressed", "true")
     await expect(row).toHaveAttribute("data-decision", "denied")
 
-    const once = page.getByRole("button", { name: "Allow once" })
+    const once = page.getByRole("button", { name: "Run, Allow once", exact: true })
     await expect(once).toContainText("Run")
+    await expect(once).toHaveAccessibleName("Run, Allow once")
     await expect(page.getByRole("button", { name: "Deny", exact: true })).toBeVisible()
   })
 })
