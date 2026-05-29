@@ -125,7 +125,7 @@ jobs:
           ./scripts/run_eval.sh \
             -m kilo/anthropic/claude-sonnet-4.6 \
             -d terminal-bench-sample \
-            -t "log-summary-date-ranges" \
+            --include-task-name "log-summary-date-ranges" \
             --job-name smoke-test-log-summary \
             --timeout-multiplier 2
 

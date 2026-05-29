@@ -3,6 +3,7 @@ import { Card } from "@kilocode/kilo-ui/card"
 import { Collapsible } from "@kilocode/kilo-ui/collapsible"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { ErrorDetails } from "@kilocode/kilo-ui/error-details"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
 import type { AssistantMessage } from "@kilocode/sdk/v2"
 import { useLanguage } from "../../context/language"
@@ -62,8 +63,11 @@ export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
   return (
     <Switch
       fallback={
-        <Card variant="error" class="error-card">
-          {errorText()}
+        <Card variant="error" class="error-card" role="alert">
+          <div class="error-card-body">
+            <Icon name="warning" size="small" />
+            <div class="error-card-message">{errorText()}</div>
+          </div>
           <Collapsible variant="ghost">
             <Collapsible.Trigger class="error-details-trigger">
               <span>{t("error.details.show")}</span>

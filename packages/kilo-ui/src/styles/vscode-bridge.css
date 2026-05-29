@@ -68,7 +68,7 @@ html[data-theme="kilo-vscode"] {
 
   --surface-critical-base: var(--vscode-editorMarkerNavigationError-headerBackground);
   --surface-critical-weak: var(--vscode-editorMarkerNavigationError-headerBackground);
-  --surface-critical-strong: var(--vscode-charts-red);
+  --surface-critical-strong: var(--vscode-errorForeground, var(--vscode-charts-red));
 
   --surface-info-base: var(--vscode-editorMarkerNavigationInfo-headerBackground);
   --surface-info-weak: var(--vscode-editorMarkerNavigationInfo-headerBackground);
@@ -125,9 +125,9 @@ html[data-theme="kilo-vscode"] {
   --text-on-success-base: var(--vscode-charts-green);
   --text-on-success-weak: var(--vscode-charts-green);
   --text-on-success-strong: var(--vscode-charts-green);
-  --text-on-critical-base: var(--vscode-charts-red);
-  --text-on-critical-weak: var(--vscode-charts-red);
-  --text-on-critical-strong: var(--vscode-charts-red);
+  --text-on-critical-base: var(--vscode-errorForeground, var(--vscode-charts-red));
+  --text-on-critical-weak: var(--vscode-errorForeground, var(--vscode-charts-red));
+  --text-on-critical-strong: var(--vscode-errorForeground, var(--vscode-charts-red));
   --text-on-warning-base: var(--vscode-charts-yellow);
   --text-on-warning-weak: var(--vscode-charts-yellow);
   --text-on-warning-strong: var(--vscode-charts-yellow);
@@ -192,9 +192,9 @@ html[data-theme="kilo-vscode"] {
   --border-warning-base: var(--vscode-charts-yellow);
   --border-warning-hover: var(--vscode-charts-yellow);
   --border-warning-selected: var(--vscode-charts-yellow);
-  --border-critical-base: var(--vscode-charts-red);
-  --border-critical-hover: var(--vscode-charts-red);
-  --border-critical-selected: var(--vscode-charts-red);
+  --border-critical-base: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground, var(--vscode-charts-red)));
+  --border-critical-hover: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground, var(--vscode-charts-red)));
+  --border-critical-selected: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground, var(--vscode-charts-red)));
   --border-info-base: var(--vscode-charts-blue);
   --border-info-hover: var(--vscode-charts-blue);
   --border-info-selected: var(--vscode-charts-blue);
@@ -230,9 +230,9 @@ html[data-theme="kilo-vscode"] {
   --icon-warning-base: var(--vscode-charts-yellow);
   --icon-warning-hover: var(--vscode-charts-yellow);
   --icon-warning-active: var(--vscode-charts-yellow);
-  --icon-critical-base: var(--vscode-charts-red);
-  --icon-critical-hover: var(--vscode-charts-red);
-  --icon-critical-active: var(--vscode-charts-red);
+  --icon-critical-base: var(--vscode-errorForeground, var(--vscode-charts-red));
+  --icon-critical-hover: var(--vscode-errorForeground, var(--vscode-charts-red));
+  --icon-critical-active: var(--vscode-errorForeground, var(--vscode-charts-red));
   --icon-info-base: var(--vscode-charts-blue);
   --icon-info-hover: var(--vscode-charts-blue);
   --icon-info-active: var(--vscode-charts-blue);
@@ -248,9 +248,9 @@ html[data-theme="kilo-vscode"] {
   --icon-on-warning-base: var(--vscode-charts-yellow);
   --icon-on-warning-hover: var(--vscode-charts-yellow);
   --icon-on-warning-selected: var(--vscode-charts-yellow);
-  --icon-on-critical-base: var(--vscode-charts-red);
-  --icon-on-critical-hover: var(--vscode-charts-red);
-  --icon-on-critical-selected: var(--vscode-charts-red);
+  --icon-on-critical-base: var(--vscode-errorForeground, var(--vscode-charts-red));
+  --icon-on-critical-hover: var(--vscode-errorForeground, var(--vscode-charts-red));
+  --icon-on-critical-selected: var(--vscode-errorForeground, var(--vscode-charts-red));
   --icon-on-info-base: var(--vscode-charts-blue);
   --icon-on-info-hover: var(--vscode-charts-blue);
   --icon-on-info-selected: var(--vscode-charts-blue);
@@ -282,7 +282,7 @@ html[data-theme="kilo-vscode"] {
   --syntax-object: var(--vscode-editor-foreground);
   --syntax-success: var(--vscode-charts-green);
   --syntax-warning: var(--vscode-charts-yellow);
-  --syntax-critical: var(--vscode-charts-red);
+  --syntax-critical: var(--vscode-errorForeground, var(--vscode-charts-red));
   --syntax-info: var(--vscode-charts-blue);
   --syntax-diff-add: var(--vscode-gitDecoration-addedResourceForeground);
   --syntax-diff-delete: var(--vscode-gitDecoration-deletedResourceForeground);

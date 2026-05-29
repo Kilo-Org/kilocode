@@ -1,5 +1,51 @@
 # kilo-code
 
+## 7.3.15
+
+### Patch Changes
+
+- [#10637](https://github.com/Kilo-Org/kilocode/pull/10637) [`7d8ec09`](https://github.com/Kilo-Org/kilocode/commit/7d8ec095c0d7d05b4c3f91149b873f9944716b23) - Show DeepSeek in the Popular Providers list instead of GitHub Copilot.
+
+- [#10599](https://github.com/Kilo-Org/kilocode/pull/10599) [`46213dc`](https://github.com/Kilo-Org/kilocode/commit/46213dcebda653c1575b67ef93fc8aab065a9db7) Thanks [@Drixled](https://github.com/Drixled)! - Improve chat error styling in the VS Code extension.
+
+- Updated dependencies [[`46213dc`](https://github.com/Kilo-Org/kilocode/commit/46213dcebda653c1575b67ef93fc8aab065a9db7)]:
+  - @kilocode/kilo-ui@7.3.15
+
+## 7.3.14
+
+### Minor Changes
+
+- [#10650](https://github.com/Kilo-Org/kilocode/pull/10650) [`f18a452`](https://github.com/Kilo-Org/kilocode/commit/f18a452082c998aa9f699204cda1fbf49fb3486f) - Add a "Not set (use server default)" option to the autocomplete model picker so users can follow the recommended default automatically. Users who previously had the default model pinned only because it was the only thing visible in the dropdown are migrated to "Not set" once.
+
+- [#10621](https://github.com/Kilo-Org/kilocode/pull/10621) [`29c3798`](https://github.com/Kilo-Org/kilocode/commit/29c3798faae2b82cba8ce531304630fee10f23b3) - Add Mercury Next Edit as an opt-in autocomplete mode. Predicts multi-line edits beyond the cursor (including off-cursor and pure-insertion edits) and surfaces them with a Tab-to-jump / Tab-to-apply affordance. Select "Mercury Next Edit" under the autocomplete model setting to enable it (requires an Inception API key). Thanks [@tfiras](https://github.com/tfiras)!
+
+- [#10644](https://github.com/Kilo-Org/kilocode/pull/10644) [`db38888`](https://github.com/Kilo-Org/kilocode/commit/db388889e867021c6bae42cbd03df6b67941b208) - Support Mercury Next Edit through the Kilo Gateway. The new "Mercury Next Edit via Kilo Gateway" autocomplete model routes Next Edit predictions through your Kilo account (no separate Inception API key required).
+
+- [#10608](https://github.com/Kilo-Org/kilocode/pull/10608) [`3ffacc8`](https://github.com/Kilo-Org/kilocode/commit/3ffacc847b79c8cdd44c17c4d26476998f24c098) - Make the Agent Manager tool available by default in VS Code.
+
+- [#10641](https://github.com/Kilo-Org/kilocode/pull/10641) [`4869d87`](https://github.com/Kilo-Org/kilocode/commit/4869d8722b423815a29832c812cf8a766c965a94) - Allow renaming sessions with a consistent inline editor in the active chat header and History, using safe bounded titles.
+
+### Patch Changes
+
+- [#10643](https://github.com/Kilo-Org/kilocode/pull/10643) [`6d77d6b`](https://github.com/Kilo-Org/kilocode/commit/6d77d6bbf293ebca7f76d848264d48073d29a44f) - Center local session history delete buttons within their rows.
+
+- [#10646](https://github.com/Kilo-Org/kilocode/pull/10646) [`d5a8989`](https://github.com/Kilo-Org/kilocode/commit/d5a8989b81d2cb0dd3ea4f62f3ee4570a7725891) - Improve the size and readability of the local History session context menu.
+
+- [#10619](https://github.com/Kilo-Org/kilocode/pull/10619) [`117691e`](https://github.com/Kilo-Org/kilocode/commit/117691e4d6fe48f91223bb7d7e24103c67cde73f) - Use supported hosted model presets for Kilo indexing and clear obsolete model and dimension overrides.
+
+- [#10642](https://github.com/Kilo-Org/kilocode/pull/10642) [`5a8d6ae`](https://github.com/Kilo-Org/kilocode/commit/5a8d6ae5dc8ed5d22117da96e7ee713b1a6e567b) - Restore readable diff highlighting and collapsed unchanged sections in VS Code themes.
+
+- [#10656](https://github.com/Kilo-Org/kilocode/pull/10656) [`d25d5ff`](https://github.com/Kilo-Org/kilocode/commit/d25d5ff473cbac8e230042d746b440465a259f11) - Keep the VS Code chat position stable when reading earlier output during a streaming response.
+
+- [#10652](https://github.com/Kilo-Org/kilocode/pull/10652) [`3af4c7e`](https://github.com/Kilo-Org/kilocode/commit/3af4c7ebabc2b95ece1c60cabb07930f9d4f42e6) - Warn when a chat turn stops unexpectedly or ends while tracked to-dos remain unfinished.
+
+- Updated dependencies [[`117691e`](https://github.com/Kilo-Org/kilocode/commit/117691e4d6fe48f91223bb7d7e24103c67cde73f), [`db38888`](https://github.com/Kilo-Org/kilocode/commit/db388889e867021c6bae42cbd03df6b67941b208)]:
+  - @kilocode/kilo-indexing@7.3.13
+  - @kilocode/sdk@7.3.13
+  - @kilocode/kilo-gateway@7.4.0
+  - @kilocode/kilo-ui@7.3.13
+  - @opencode-ai/ui@7.3.13
+
 ## 7.3.11
 
 ### Minor Changes

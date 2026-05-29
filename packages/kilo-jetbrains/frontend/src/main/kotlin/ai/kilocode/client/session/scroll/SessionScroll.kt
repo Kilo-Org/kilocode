@@ -53,6 +53,7 @@ internal class SessionScroll(
     private var user = false
     private var value = 0
     private var question = false
+    private var restoring = false
 
     init {
         jump = JBLabel(ScrollButtonIcon.create()).apply {
@@ -71,6 +72,7 @@ internal class SessionScroll(
                 user = true
             }
         })
+        component.viewport.addChangeListener { onViewport() }
         component.verticalScrollBar.addAdjustmentListener { onScroll() }
         root.addOverlay(jump) { _, child ->
             val size = child.preferredSize
@@ -166,6 +168,8 @@ internal class SessionScroll(
     @RequiresEdt
     fun applyStyle(style: SessionEditorStyle) {
         this.style = style
+        component.background = style.editorBackground
+        component.viewport.background = style.editorBackground
         syncIcon()
         messages.applyStyle(style)
         val view = component.viewport.view
@@ -264,6 +268,21 @@ internal class SessionScroll(
         (view as? JComponent)?.scrollRectToVisible(Rectangle(0, view.height.coerceAtLeast(1) - 1, 1, 1))
         val bar = component.verticalScrollBar
         bar.value = bottom()
+    }
+
+    @RequiresEdt
+    private fun onViewport() {
+        if (restoring || auto || opening || user || tail || component.viewport.view !== messages) return
+        val y = value.coerceIn(0, bottom())
+        if (component.viewport.viewPosition.y == y && bar.value == y) return
+        restoring = true
+        try {
+            component.viewport.viewPosition = Point(0, y)
+            bar.value = y
+        } finally {
+            restoring = false
+        }
+        updateJump()
     }
 
     @RequiresEdt

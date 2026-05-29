@@ -5,7 +5,6 @@ import ai.kilocode.client.settings.profile.UserProfileConfigurable
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.remoting.ActionRemoteBehaviorSpecification
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurableWithId
 import com.intellij.openapi.options.ShowSettingsUtil
@@ -22,7 +21,7 @@ class ShowProfileAction : DumbAwareAction(
     KiloBundle.message("action.Kilo.ShowProfile.text"),
     KiloBundle.message("action.Kilo.ShowProfile.description"),
     AllIcons.General.User,
-), ActionRemoteBehaviorSpecification.Frontend {
+) {
 
     override fun actionPerformed(e: AnActionEvent) {
         ShowSettingsUtil.getInstance().showSettingsDialog(

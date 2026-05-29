@@ -23,7 +23,7 @@ jobs:
           matched=false
           while IFS= read -r file; do
             case "$file" in
-              packages/kilo-ui/*|packages/ui/*|packages/util/*|packages/sdk/js/*|packages/kilo-vscode/webview-ui/*|packages/kilo-vscode/.storybook/*|packages/kilo-vscode/tests/visual-regression*|packages/kilo-vscode/tests/permission-dock-dropdown*|packages/kilo-docs/public/img/screenshot-tests/*|.github/workflows/visual-regression.yml)
+              packages/kilo-ui/*|packages/ui/*|packages/util/*|packages/sdk/js/*|packages/kilo-vscode/webview-ui/*|packages/kilo-vscode/.storybook/*|packages/kilo-vscode/tests/visual-regression*|packages/kilo-vscode/tests/permission-dock-dropdown*|packages/kilo-vscode/tests/accessibility*|packages/kilo-docs/public/img/screenshot-tests/*|.github/workflows/visual-regression.yml)
                 matched=true
                 break
                 ;;
@@ -281,7 +281,7 @@ jobs:
         run: bun run build-storybook
         working-directory: packages/kilo-vscode
 
-      - name: Generate baselines for new/missing stories
+      - name: Generate baselines and enforce webview accessibility checks # kilocode_change
         run: bun run test:visual:update
         working-directory: packages/kilo-vscode
         env:

@@ -9,12 +9,8 @@ import {
 describe("indexing plugin helpers", () => {
   test("detects plugin-enabled configs", () => {
     expect(indexingEnabled({ plugin: ["global-plugin"] })).toBe(false)
-    expect(indexingEnabled({ plugin: [INDEXING_PLUGIN] })).toBe(false)
-    expect(indexingEnabled({ plugin: [INDEXING_PLUGIN], experimental: { semantic_indexing: false } })).toBe(false)
-    expect(indexingEnabled({ plugin: [INDEXING_PLUGIN], experimental: { semantic_indexing: true } })).toBe(true)
-    expect(
-      indexingEnabled({ plugin: ["@kilocode/kilo-indexing@1.0.0"], experimental: { semantic_indexing: true } }),
-    ).toBe(true)
+    expect(indexingEnabled({ plugin: [INDEXING_PLUGIN] })).toBe(true)
+    expect(indexingEnabled({ plugin: ["@kilocode/kilo-indexing@1.0.0"] })).toBe(true)
   })
 
   test("adds indexing plugin when present but missing from config", () => {

@@ -56,8 +56,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
+import java.awt.event.HierarchyEvent
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.UIManager
 
 /**
  * Top-level session UI composition root.
@@ -134,6 +136,8 @@ class SessionUi(
     private var empty: EmptySessionPanel? = null
     private var modalFocus: (() -> JComponent)? = null
     private var style = SessionEditorStyle.current()
+    private var editorTheme = style.editorScheme
+    private var colorTheme = UIManager.getLookAndFeel()
 
     init {
         buildUi()
@@ -274,7 +278,7 @@ class SessionUi(
         prompt.model.onSelect = { item -> controller.selectModel(item.provider, item.id) }
         prompt.reasoning.onSelect = { item -> controller.selectVariant(item.id) }
         prompt.onReset = { controller.clearModelOverride() }
-        prompt.onChange = { scroll.followTail() }
+        prompt.onChange = { scroll.refresh() }
         prompt.onAutoApproveToggle = { value ->
             controller.setAutoApprove(value)
             prompt.setAutoApprove(controller.autoApprove)
@@ -405,6 +409,12 @@ class SessionUi(
     }
 
     private fun bindStyle() {
+        addHierarchyListener { event ->
+            if ((event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong()) == 0L) return@addHierarchyListener
+            if (!isShowing) return@addHierarchyListener
+            applyStyleIfThemeChanged()
+        }
+
         val bus = ApplicationManager.getApplication().messageBus.connect(this)
         bus.subscribe(EditorColorsManager.TOPIC, EditorColorsListener {
             ApplicationManager.getApplication().invokeLater {
@@ -496,11 +506,24 @@ class SessionUi(
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
+        editorTheme = style.editorScheme
+        colorTheme = UIManager.getLookAndFeel()
+        background = style.editorBackground
+        root.content.background = style.editorBackground
+        sessionContent.background = style.editorBackground
+        blankBody.background = style.editorBackground
         load.applyStyle(style)
         header.applyStyle(style)
         prompt.applyStyle(style)
         scroll.applyStyle(style)
         refresh()
+    }
+
+    private fun applyStyleIfThemeChanged() {
+        val next = SessionEditorStyle.current()
+        val laf = UIManager.getLookAndFeel()
+        if (editorTheme === next.editorScheme && colorTheme == laf) return
+        applyStyle(next)
     }
 
     private fun openProfileSettings() {
