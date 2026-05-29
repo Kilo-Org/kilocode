@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach } from "bun:test"
 import { Capture } from "@/kilocode/session-export/capture"
+import { resetEligibility } from "@/kilocode/session-export/eligibility"
 import { ModelID, ProviderID } from "@/provider/schema"
 import { MessageID, SessionID } from "@/session/schema"
 import type { MessageV2 } from "@/session/message-v2"
@@ -13,13 +14,14 @@ describe("Capture", () => {
   } as unknown as Worker
 
   beforeEach(() => {
+    resetEligibility()
     posted.length = 0
   })
 
   test("ineligible input returns immediately and posts nothing", () => {
     const cap = new Capture({ worker, agentVersion: "v0", nowMs: () => 100, syncSeq: () => 7 })
     cap.beforeRequest({
-      input: { model: { api: { npm: "@ai-sdk/openai" }, isFree: true }, org: undefined },
+      input: { model: { api: { npm: "@ai-sdk/openai" }, isFree: true }, org: { type: "personal" } },
       requestMeta: meta("s1"),
       assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
@@ -29,7 +31,7 @@ describe("Capture", () => {
   test("free org requests do not start session export", async () => {
     const cap = new Capture({ worker, agentVersion: "v0", nowMs: () => 100, syncSeq: () => 7 })
     cap.beforeRequest({
-      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: "org_1" },
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: { type: "org", id: "org_1" } },
       requestMeta: meta("s1"),
       assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
@@ -48,7 +50,7 @@ describe("Capture", () => {
   test("title agent requests do not start session export", () => {
     const cap = new Capture({ worker, agentVersion: "v0", nowMs: () => 100, syncSeq: () => 7 })
     cap.beforeRequest({
-      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: { type: "personal" } },
       requestMeta: { ...meta("s1"), agent: "title" },
       assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
@@ -68,7 +70,7 @@ describe("Capture", () => {
     cap.beforeRequest({
       input: {
         model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true, providerID: "kilo", id: "free-1" },
-        org: undefined,
+        org: { type: "personal" },
       },
       requestMeta: meta("s1"),
       assembled: { system: ["sys"], messages: [], tools: {}, permissions: [], params: {} },
@@ -98,7 +100,7 @@ describe("Capture", () => {
     cap.beforeRequest({
       input: {
         model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true, providerId: "kilo", modelId: "free-1" },
-        org: undefined,
+        org: { type: "personal" },
       },
       requestMeta: meta("s1"),
       assembled: {
@@ -123,7 +125,7 @@ describe("Capture", () => {
   test("first eligible request of a session starts with llm_request_started", () => {
     const cap = new Capture({ worker, agentVersion: "v0", nowMs: () => 100, syncSeq: () => 7 })
     cap.beforeRequest({
-      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: { type: "personal" } },
       requestMeta: meta("s1"),
       assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
@@ -135,7 +137,7 @@ describe("Capture", () => {
     const cap = new Capture({ worker, agentVersion: "v0", nowMs: () => 100, syncSeq: () => 7 })
     cap.markDegraded("s1")
     cap.beforeRequest({
-      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: { type: "personal" } },
       requestMeta: meta("s1"),
       assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
@@ -156,7 +158,7 @@ describe("Capture", () => {
       },
     })
     cap.beforeRequest({
-      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: { type: "personal" } },
       requestMeta: meta("s1"),
       assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
@@ -188,7 +190,7 @@ describe("Capture", () => {
       },
     })
     cap.beforeRequest({
-      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: { type: "personal" } },
       requestMeta: meta("s1"),
       assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
@@ -212,7 +214,7 @@ describe("Capture", () => {
       },
     })
     cap.beforeRequest({
-      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: { type: "personal" } },
       requestMeta: meta("s1"),
       assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
@@ -243,7 +245,7 @@ describe("Capture", () => {
       },
     })
     cap.beforeRequest({
-      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: { type: "personal" } },
       requestMeta: meta("s1"),
       assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
@@ -277,7 +279,7 @@ describe("Capture", () => {
       },
     })
     cap.beforeRequest({
-      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: { type: "personal" } },
       requestMeta: meta("s1"),
       assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
@@ -321,7 +323,7 @@ describe("Capture", () => {
       },
     })
     cap.beforeRequest({
-      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: { type: "personal" } },
       requestMeta: meta("s1"),
       assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
@@ -336,7 +338,7 @@ describe("Capture", () => {
     })
     await until(() => state.calls === 1)
     cap.beforeRequest({
-      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: { type: "personal" } },
       requestMeta: { ...meta("s1"), requestId: "r2", userMessageId: "u2" },
       assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
@@ -360,7 +362,7 @@ describe("Capture", () => {
       },
     })
     cap.beforeRequest({
-      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: { type: "personal" } },
       requestMeta: meta("s1"),
       assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
@@ -375,7 +377,7 @@ describe("Capture", () => {
   test("compaction dispatches a self-contained compaction_captured envelope", () => {
     const cap = new Capture({ worker, agentVersion: "v0", nowMs: () => 100, syncSeq: () => 7 })
     cap.beforeRequest({
-      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: { type: "personal" } },
       requestMeta: meta("s1"),
       assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })

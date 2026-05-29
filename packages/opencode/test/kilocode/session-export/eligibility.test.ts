@@ -1,12 +1,12 @@
 import { describe, test, expect, beforeEach } from "bun:test"
-import { isEligible, setKillSwitch, resetEligibility } from "@/kilocode/session-export/eligibility"
+import { isEligible, setKillSwitch, resetEligibility, type OrgState } from "@/kilocode/session-export/eligibility"
 
 const base = {
   model: {
     api: { npm: "@kilocode/kilo-gateway" },
     isFree: true,
   },
-  org: undefined as string | undefined,
+  org: { type: "personal" } as OrgState,
 }
 
 describe("isEligible", () => {
@@ -29,7 +29,11 @@ describe("isEligible", () => {
   })
 
   test("org context is ineligible regardless of model", () => {
-    expect(isEligible({ ...base, org: "org_xyz" })).toBe(false)
+    expect(isEligible({ ...base, org: { type: "org", id: "org_xyz" } })).toBe(false)
+  })
+
+  test("unknown org state is ineligible", () => {
+    expect(isEligible({ ...base, org: { type: "unknown" } })).toBe(false)
   })
 
   test("killSwitch blocks everything", () => {

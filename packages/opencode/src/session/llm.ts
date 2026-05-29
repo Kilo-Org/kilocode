@@ -384,12 +384,12 @@ const live: Layer.Layer<
         : undefined
 
       // kilocode_change start - capture eligible session export request start
-      const org = yield* isKilo && input.model.isFree === true ? Effect.promise(() => getActiveOrg()) : Effect.succeed(undefined)
+      const org = yield* isKilo && input.model.isFree === true ? Effect.promise(() => getActiveOrg()) : Effect.succeed({ type: "unknown" as const })
       const started = Date.now()
       const parent = input.parentSessionID ?? KiloSession.resolveParent(input.sessionID)
       const found = KiloSession.resolveRoot(input.sessionID)
       const root = parent ? (found === input.sessionID ? parent : found) : input.sessionID
-      const exportable = isKilo && input.model.isFree === true && !org && input.agent.name !== "title"
+      const exportable = isKilo && input.model.isFree === true && org.type === "personal" && input.agent.name !== "title"
       if (exportable) {
         SessionExport.beforeRequest({
           input: { model: input.model, org },

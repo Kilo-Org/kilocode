@@ -144,7 +144,7 @@ function request(sessionId: string): Parameters<typeof SessionExport.beforeReque
   return {
     input: {
       model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true, providerId: "kilo", modelId: "free-1" },
-      org: undefined,
+      org: { type: "personal" },
     },
     requestMeta: {
       sessionId,

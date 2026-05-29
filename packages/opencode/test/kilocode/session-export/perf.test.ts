@@ -8,7 +8,7 @@ describe("session export performance budget", () => {
   test.skipIf(!enabled)("ineligible beforeRequest p99 stays under 0.1 ms", () => {
     const cap = new Capture({ worker, agentVersion: "v0", nowMs: () => 0, syncSeq: () => 0 })
     const input = {
-      input: { model: { api: { npm: "@ai-sdk/openai" }, isFree: true }, org: undefined },
+      input: { model: { api: { npm: "@ai-sdk/openai" }, isFree: true }, org: { type: "personal" } },
       requestMeta: meta("s1"),
       assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     }
@@ -29,7 +29,7 @@ describe("session export performance budget", () => {
     for (let i = 0; i < 200; i++) {
       const start = performance.now()
       cap.beforeRequest({
-        input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+        input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: { type: "personal" } },
         requestMeta: meta(`s${i}`),
         assembled: { system: [body], messages: [], tools: {}, permissions: [], params: {} },
       })

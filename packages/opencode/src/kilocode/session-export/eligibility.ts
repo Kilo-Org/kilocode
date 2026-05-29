@@ -1,4 +1,5 @@
-import { getAuthOrgId, type OrgSource } from "./org-sources"
+import { getAuthOrgId, type OrgSource, type OrgState } from "./org-sources"
+export type { OrgState } from "./org-sources"
 
 let kill = false
 let reason: string | undefined
@@ -9,12 +10,12 @@ export type EligibilityInput = {
     api: { npm: string }
     isFree?: boolean
   }
-  org?: string | undefined
+  org?: OrgState
 }
 
 export function isEligible(input: EligibilityInput): boolean {
   if (kill) return false
-  if (input.org) return false
+  if (input.org?.type !== "personal") return false
   if (input.model.isFree !== true) return false
   if (input.model.api.npm !== "@kilocode/kilo-gateway") return false
   return true
@@ -34,10 +35,15 @@ export function resetEligibility(): void {
   reason = undefined
 }
 
-export async function getActiveOrg(): Promise<string | undefined> {
+export async function getActiveOrg(): Promise<OrgState> {
   const env = process.env.KILO_ORG_ID?.trim()
-  if (env) return env
-  return source()
+  if (env) return { type: "org", id: env }
+  try {
+    return await source()
+  } catch (err) {
+    console.warn("[session-export] org source failed", err)
+    return { type: "unknown" }
+  }
 }
 
 export function setOrgSource(next: OrgSource): void {
