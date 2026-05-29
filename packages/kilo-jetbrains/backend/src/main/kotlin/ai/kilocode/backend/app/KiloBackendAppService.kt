@@ -495,8 +495,8 @@ class KiloBackendAppService private constructor(
 
     private fun setAppReady(data: AppData) {
         warnings = data.warnings
-        _appState.value = KiloAppState.Ready(data)
         if (data.warnings.isNotEmpty()) warnAppWarnings(data.warnings)
+        _appState.value = KiloAppState.Ready(data)
     }
 
     private fun setAppError(message: String, errors: List<LoadError>) {
