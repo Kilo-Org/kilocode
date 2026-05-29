@@ -621,22 +621,22 @@ function collectPart(
       return
     case "finish-step":
       out.setFinish(part.finishReason)
-      out.setUsage(normalizeUsage(part.usage))
+      out.setUsage(normalizeUsageForExport(part.usage))
       return
     case "finish":
       out.setFinish(part.finishReason)
-      out.setUsage(normalizeUsage(part.totalUsage))
+      out.setUsage(normalizeUsageForExport(part.totalUsage))
       return
     default:
       return
   }
 }
 
-function normalizeUsage(value: LanguageModelUsage) {
+export function normalizeUsageForExport(value: Partial<LanguageModelUsage>) {
   const inputTokens = value.inputTokens ?? 0
   const outputTokens = value.outputTokens ?? 0
-  const cacheReadTokens = value.inputTokenDetails.cacheReadTokens ?? undefined
-  const cacheWriteTokens = value.inputTokenDetails.cacheWriteTokens ?? undefined
+  const cacheReadTokens = value.inputTokenDetails?.cacheReadTokens ?? undefined
+  const cacheWriteTokens = value.inputTokenDetails?.cacheWriteTokens ?? undefined
   return { inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens }
 }
 // kilocode_change end
