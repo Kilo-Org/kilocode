@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
-import { readFile, stat } from "node:fs/promises"
+import { lstat, readFile } from "node:fs/promises"
 import path from "node:path"
 import { formatPatch, structuredPatch } from "diff"
 import { Config } from "./config"
@@ -155,8 +155,9 @@ async function tracked(root: string): Promise<string[]> {
 
 async function inspect(root: string, rel: string): Promise<File | undefined> {
   const full = path.join(root, rel)
-  const info = await stat(full).catch(() => undefined)
+  const info = await lstat(full).catch(() => undefined)
   if (!info) return undefined
+  if (info.isSymbolicLink()) return { path: rel, kind: "symlink", size: info.size, hash: `symlink:${info.size}` }
   if (!info.isFile()) return undefined
   const size = info.size
   if (isHighRiskPath(rel)) {

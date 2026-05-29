@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { $ } from "bun"
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises"
 import { tmpdir as osTmpdir } from "node:os"
 import { join } from "node:path"
 import { tmpdir } from "../../fixture/fixture"
@@ -103,6 +103,24 @@ describe("workspace provider", () => {
       omitted: { reason: "high_risk_path" },
     })
     await expect(Bun.file(state).text()).resolves.not.toContain("AKIAIOSFODNN7EXAMPLE")
+  })
+
+  test("does not follow symlink contents outside the repository", async () => {
+    await using tmp = await tmpdir({ git: true })
+    const dir = await mkdtemp(join(osTmpdir(), "session-export-provider-"))
+    const secret = join(dir, "secret.txt")
+    await writeFile(secret, "outside-secret\n")
+    await symlink(secret, join(tmp.path, "link.txt"))
+    await $`git add link.txt`.cwd(tmp.path).quiet()
+    await $`git commit -m link`.cwd(tmp.path).quiet()
+
+    const provider = createWorkspaceProvider({ root: tmp.path })
+    const baseline = await provider.baseline()
+    const link = baseline.files.find((file) => file.path === "link.txt")
+
+    expect(link?.kind).toBe("symlink")
+    expect(link?.content).toBeUndefined()
+    expect(JSON.stringify(baseline)).not.toContain("outside-secret")
   })
 
   test("captures diffs from the previous snapshot", async () => {
