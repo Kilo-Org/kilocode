@@ -105,6 +105,20 @@ describe("workspace provider", () => {
     await expect(Bun.file(state).text()).resolves.not.toContain("AKIAIOSFODNN7EXAMPLE")
   })
 
+  test("does not persist ordinary source contents in snapshot state", async () => {
+    await using tmp = await tmpdir({ git: true })
+    const state = join(await mkdtemp(join(osTmpdir(), "session-export-provider-")), "state.json")
+    await writeFile(join(tmp.path, "src.ts"), "export const secret = 'local-only'\n")
+    await $`git add src.ts`.cwd(tmp.path).quiet()
+    await $`git commit -m files`.cwd(tmp.path).quiet()
+
+    const provider = createWorkspaceProvider({ root: tmp.path, statePath: state })
+    const baseline = await provider.baseline()
+
+    expect(baseline.files[0].content).toContain("local-only")
+    await expect(Bun.file(state).text()).resolves.not.toContain("local-only")
+  })
+
   test("does not follow symlink contents outside the repository", async () => {
     await using tmp = await tmpdir({ git: true })
     const dir = await mkdtemp(join(osTmpdir(), "session-export-provider-"))

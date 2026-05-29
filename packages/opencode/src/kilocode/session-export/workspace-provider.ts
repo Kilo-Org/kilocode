@@ -28,7 +28,7 @@ export function createWorkspaceProvider(opts: { root: string; statePath?: string
     const files = result.files
     const id = hash(files)
     snapshots.set(id, files)
-    state.snapshots[id] = [...files.values()]
+    state.snapshots[id] = [...files.values()].map(persist)
     pending.add(id)
     setTimeout(() => pending.delete(id), 0).unref?.()
     save(opts.statePath, state)
@@ -110,6 +110,16 @@ function file(value: unknown): value is File {
   if (value.content !== undefined && typeof value.content !== "string") return false
   if (value.omitted !== undefined && !plain(value.omitted)) return false
   return true
+}
+
+function persist(file: File): File {
+  return {
+    path: file.path,
+    kind: file.kind,
+    size: file.size,
+    hash: file.hash,
+    omitted: file.omitted,
+  }
 }
 
 function plain(value: unknown): value is Record<string, unknown> {
