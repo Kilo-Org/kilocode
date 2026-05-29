@@ -14,6 +14,6 @@ describe("session-export Config", () => {
     expect(Config.baselineWaitMs).toBe(3_000)
     expect(Config.retryBackoffMinMs).toBe(1_000)
     expect(Config.retryBackoffMaxMs).toBe(5 * 60_000)
-    expect(Config.shutdownFlushTimeoutMs).toBe(3_000)
+    expect(Config.shutdownFlushTimeoutMs).toBe(15_000)
   })
 })

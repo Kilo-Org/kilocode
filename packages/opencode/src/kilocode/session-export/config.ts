@@ -10,5 +10,5 @@ export const Config = {
   baselineWaitMs: 3_000,
   retryBackoffMinMs: 1_000,
   retryBackoffMaxMs: 5 * 60_000,
-  shutdownFlushTimeoutMs: 3_000,
+  shutdownFlushTimeoutMs: 15_000,
 } as const
