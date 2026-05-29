@@ -1,4 +1,5 @@
 import { describe, expect, spyOn, test } from "bun:test"
+import { Effect } from "effect"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { TuiEvent } from "../../src/cli/cmd/tui/event"
@@ -1211,10 +1212,16 @@ describe("plan follow-up", () => {
 
       expect(followup).toBeDefined()
       if (!followup) return
-      expect(states.some((x) => x.sessionID === followup && x.type === "busy")).toBe(true)
+      const sid = followup
+      expect(states.some((x) => x.sessionID === sid && x.type === "busy")).toBe(true)
 
       const { SessionPrompt } = await import("../../src/session/prompt")
-      await SessionPrompt.cancel(followup)
+      await Effect.runPromise(
+        SessionPrompt.Service.use((svc) => svc.cancel(sid)).pipe(
+          Effect.provide(SessionPrompt.defaultLayer),
+          Effect.scoped,
+        ),
+      )
       deferred.resolve("## Discoveries\n\nexample")
       await expect(pending).resolves.toBe("break")
 

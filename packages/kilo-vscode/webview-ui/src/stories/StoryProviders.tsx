@@ -292,7 +292,7 @@ const ConfigWrapper: ParentComponent<{ config?: Config; onConfigChange?: (config
       }
 
       return {
-        indexing: hasIndexingPlugin(config.plugin ?? []) && config.experimental?.semantic_indexing === true,
+        indexing: hasIndexingPlugin(config.plugin ?? []),
       }
     })
 

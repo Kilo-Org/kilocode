@@ -168,6 +168,8 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 
 ## Build and Verification
 
+- **Marketplace version build**: Use `script/build-version.sh <version>` from `packages/kilo-jetbrains/` to clean, prepare production CLI binaries, build, sign, and verify the JetBrains Marketplace plugin ZIP. Pass `--skip-verification` only when explicitly needed.
+- **Test version build**: If the user asks for a JetBrains test build, still require a version and use `script/build-version.sh <version> --skip-signing --skip-verification` from `packages/kilo-jetbrains/` so no signing secrets are needed. Add `--skip-clean` only when the user wants a faster incremental test build.
 - **Typecheck**: `bun run typecheck` or `./gradlew typecheck` from `packages/kilo-jetbrains/` — compiles all Kotlin sources including the generated API client. Does NOT require CLI binaries.
 - **Full build**: `bun run build` from `packages/kilo-jetbrains/` (prepares CLI binaries + runs Gradle `buildPlugin`).
 - **Gradle only**: `./gradlew buildPlugin` from `packages/kilo-jetbrains/` (requires CLI binaries already present in `backend/build/generated/cli/`; run `bun run build --prepare-cli` first).

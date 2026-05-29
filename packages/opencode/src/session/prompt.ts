@@ -13,7 +13,6 @@ import { SessionID, MessageID, PartID } from "./schema"
 import { MessageV2 } from "./message-v2"
 import * as Log from "@opencode-ai/core/util/log"
 import { SessionRevert } from "./revert"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import * as Session from "./session"
 import { Agent } from "../agent/agent"
 import { Provider } from "@/provider/provider"
@@ -2148,12 +2147,5 @@ const bashRegex = /!`([^`]+)`/g
 const argsRegex = /(?:\[Image\s+\d+\]|"[^"]*"|'[^']*'|[^\s"']+)/gi
 const placeholderRegex = /\$(\d+)/g
 const quoteTrimRegex = /^["']|["']$/g
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const prompt = (input: PromptInput) => runPromise((svc) => svc.prompt(input))
-export const loop = (input: LoopInput) => runPromise((svc) => svc.loop(input))
-export const cancel = (sessionID: SessionID) => runPromise((svc) => svc.cancel(sessionID))
-// kilocode_change end
 
 export * as SessionPrompt from "./prompt"

@@ -47,6 +47,8 @@ const SessionList: Component<SessionListProps> = (props) => {
 
   const [renamingId, setRenamingId] = createSignal<string | null>(null)
   const [pendingRenameId, setPendingRenameId] = createSignal<string | null>(null)
+  const [notice, setNotice] = createSignal("")
+  let seq = 0
 
   onMount(() => {
     console.log("[Kilo New] SessionList mounted, loading sessions")
@@ -74,36 +76,89 @@ const SessionList: Component<SessionListProps> = (props) => {
     setRenamingId(null)
   }
 
-  function confirmDelete(s: SessionInfo) {
-    dialog.show(() => (
-      <Dialog title={language.t("session.delete.title")} fit>
-        <div class="dialog-confirm-body">
-          <span>{language.t("session.delete.confirm", { name: s.title || language.t("session.untitled") })}</span>
-          <div class="dialog-confirm-actions">
-            <Button variant="ghost" size="large" onClick={() => dialog.close()}>
-              {language.t("common.cancel")}
-            </Button>
-            <Button
-              variant="primary"
-              size="large"
-              onClick={() => {
-                session.deleteSession(s.id)
-                dialog.close()
-              }}
-            >
-              {language.t("session.delete.button")}
-            </Button>
+  function name(s: SessionInfo) {
+    return s.title || language.t("session.untitled")
+  }
+
+  function label(action: string, s: SessionInfo) {
+    return `${action}: ${name(s)}`
+  }
+
+  function announce(s: SessionInfo | undefined) {
+    const id = ++seq
+    setNotice("")
+    if (!s) return
+    queueMicrotask(() => {
+      if (id !== seq) return
+      const current = session.currentSessionID() === s.id ? `. ${language.t("session.current")}` : ""
+      setNotice(`${name(s)}${current}`)
+    })
+  }
+
+  function confirmDelete(s: SessionInfo, restore?: HTMLElement) {
+    dialog.show(
+      () => (
+        <Dialog title={language.t("session.delete.title")} fit>
+          <div class="dialog-confirm-body">
+            <span>{language.t("session.delete.confirm", { name: name(s) })}</span>
+            <div class="dialog-confirm-actions">
+              <Button variant="ghost" size="large" onClick={() => dialog.close()}>
+                {language.t("common.cancel")}
+              </Button>
+              <Button
+                variant="primary"
+                size="large"
+                onClick={() => {
+                  session.deleteSession(s.id)
+                  dialog.close()
+                }}
+              >
+                {language.t("session.delete.button")}
+              </Button>
+            </div>
           </div>
-        </div>
-      </Dialog>
-    ))
+        </Dialog>
+      ),
+      () => {
+        queueMicrotask(() => {
+          if (restore?.isConnected) restore.focus()
+        })
+      },
+    )
   }
 
   function wrapItem(item: SessionInfo, node: JSX.Element): JSX.Element {
     return (
       <ContextMenu>
-        <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
-          {node}
+        <ContextMenu.Trigger as="div" class="session-row">
+          <Show
+            when={renamingId() === item.id}
+            fallback={
+              <>
+                {node}
+                <IconButton
+                  data-slot="session-row-action"
+                  icon="edit"
+                  size="small"
+                  variant="ghost"
+                  aria-label={label(language.t("common.rename"), item)}
+                  onClick={() => startRename(item)}
+                />
+                <IconButton
+                  data-slot="session-row-action"
+                  icon="trash"
+                  size="small"
+                  variant="ghost"
+                  aria-label={label(language.t("session.delete.title"), item)}
+                  onClick={(event) => confirmDelete(item, event.currentTarget)}
+                />
+              </>
+            }
+          >
+            <div data-slot="session-row-editor">
+              <SessionRenameEditor title={item.title || ""} fill onSave={saveRename} onCancel={cancelRename} />
+            </div>
+          </Show>
         </ContextMenu.Trigger>
         <ContextMenu.Portal>
           <ContextMenu.Content
@@ -138,6 +193,7 @@ const SessionList: Component<SessionListProps> = (props) => {
         key={(s) => s.id}
         filterKeys={["title"]}
         current={currentSession()}
+        onMove={announce}
         onSelect={(s) => {
           if (s && renamingId() !== s.id) {
             props.onSelectSession(s.id)
@@ -153,42 +209,18 @@ const SessionList: Component<SessionListProps> = (props) => {
         itemWrapper={wrapItem}
       >
         {(s) => (
-          <Show
-            when={renamingId() === s.id}
-            fallback={
-              <>
-                <span data-slot="list-item-title">{s.title || language.t("session.untitled")}</span>
-                <span data-slot="list-item-description">{formatRelativeDate(s.updatedAt)}</span>
-                <span
-                  data-slot="session-row-action"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    startRename(s)
-                  }}
-                >
-                  <IconButton icon="edit" size="small" variant="ghost" aria-label={language.t("common.rename")} />
-                </span>
-                <span
-                  data-slot="session-row-action"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    confirmDelete(s)
-                  }}
-                >
-                  <IconButton
-                    icon="trash"
-                    size="small"
-                    variant="ghost"
-                    aria-label={language.t("session.delete.title")}
-                  />
-                </span>
-              </>
-            }
-          >
-            <SessionRenameEditor title={s.title || ""} fill stop onSave={saveRename} onCancel={cancelRename} />
-          </Show>
+          <>
+            <span data-slot="list-item-title">{name(s)}</span>
+            <span data-slot="list-item-description">{formatRelativeDate(s.updatedAt)}</span>
+            <Show when={session.currentSessionID() === s.id}>
+              <span class="sr-only">{language.t("session.current")}</span>
+            </Show>
+          </>
         )}
       </List>
+      <div data-slot="session-list-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {notice()}
+      </div>
     </div>
   )
 }
