@@ -19,6 +19,7 @@ import kotlinx.coroutines.cancel
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.Timer
 
 class SessionSidePanelManager(
     private val project: Project,
@@ -42,6 +43,7 @@ class SessionSidePanelManager(
     private var current: SessionUi? = null
     private var latest: SessionUi? = null
     private var panel: JComponent? = null
+    private val cleanup = Timer(60_000) { cleanupInactive() }.apply { start() }
 
     val defaultFocusedComponent: JComponent? get() = current?.defaultFocusedComponent ?: (panel as? HistoryPanel)?.defaultFocusedComponent
 
@@ -66,15 +68,10 @@ class SessionSidePanelManager(
     }
 
     @RequiresEdt
-    override fun activity(): Map<String, SessionActivityKind> {
-        val base = status()
-        val live = all.mapNotNull { ui ->
-            val id = ui.id ?: return@mapNotNull null
-            val kind = ui.activityKind() ?: return@mapNotNull null
-            id to kind
-        }.toMap()
-        return base + live
-    }
+    override fun activity(): Map<String, SessionActivityKind> = status()
+
+    @RequiresEdt
+    override fun costs(): Map<String, Double> = project.service<KiloSessionService>().costs()
 
     @RequiresEdt
     override fun titles(): Map<String, String> = all.mapNotNull { ui ->
@@ -202,14 +199,25 @@ class SessionSidePanelManager(
         Disposer.dispose(ui)
     }
 
-    private fun disposeInactiveUi() = Registry.`is`("kilo.session.inactive.dispose", false)
+    private fun cleanupInactive() {
+        all.toList().forEach { ui ->
+            if (ui === current) return@forEach
+            if (ui.cacheKey == null) return@forEach
+            if (!ui.canDisposeInactive()) return@forEach
+            disposeUi(ui)
+        }
+    }
+
+    private fun disposeInactiveUi() = Registry.`is`("kilo.session.inactive.dispose", true)
 
     override fun dispose() {
+        cleanup.stop()
         val items = all.toList()
         opened.clear()
         all.clear()
         current = null
         latest = null
+        panel = null
         component.removeAll()
         items.forEach { Disposer.dispose(it) }
     }

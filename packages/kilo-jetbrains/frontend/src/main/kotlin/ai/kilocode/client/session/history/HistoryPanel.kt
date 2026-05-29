@@ -222,7 +222,7 @@ class HistoryPanel(
     private fun localList() = JBList(controller.local).apply {
         selectionMode = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION
         isFocusable = true
-        cellRenderer = LocalHistoryRenderer(controller.local, { snapshot.activity }, { snapshot.titles })
+        cellRenderer = LocalHistoryRenderer(controller.local, { snapshot.activity }, { snapshot.titles }, { snapshot.costs })
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         emptyText.text = KiloBundle.message("history.empty")
         addMouseListener(object : MouseAdapter() {
@@ -296,6 +296,7 @@ class HistoryPanel(
         val next = HistoryActivitySnapshot(
             activity = manager?.activity() ?: controller.activity(),
             titles = manager?.titles().orEmpty(),
+            costs = manager?.costs() ?: controller.costs(),
         )
         val changed = snapshot.changed(next)
         snapshot = next

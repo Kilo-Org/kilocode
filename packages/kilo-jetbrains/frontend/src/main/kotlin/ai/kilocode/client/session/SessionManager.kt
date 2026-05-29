@@ -18,6 +18,8 @@ interface SessionManager {
 
     fun titles(): Map<String, String> = emptyMap()
 
+    fun costs(): Map<String, Double> = emptyMap()
+
     fun activityChanged() {}
 
     fun openSession(session: SessionDto) {

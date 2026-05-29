@@ -6,9 +6,12 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
 import ai.kilocode.jetbrains.api.model.GlobalSession
 import ai.kilocode.jetbrains.api.model.SessionStatus
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
+import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
+import ai.kilocode.rpc.dto.SessionRuntimeDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionSummaryDto
 import ai.kilocode.rpc.dto.SessionTimeDto
@@ -52,6 +55,11 @@ class KiloBackendSessionManager(
     private val _statuses = MutableStateFlow<Map<String, SessionStatusDto>>(emptyMap())
     val statuses: StateFlow<Map<String, SessionStatusDto>> = _statuses.asStateFlow()
 
+    private val _runtime = MutableStateFlow(SessionRuntimeDto())
+    val runtime: StateFlow<SessionRuntimeDto> = _runtime.asStateFlow()
+
+    private val costs = ConcurrentHashMap<String, ConcurrentHashMap<String, Double>>()
+
     private var client: DefaultApi? = null
     private var http: OkHttpClient? = null
     private var base: String? = null
@@ -64,11 +72,13 @@ class KiloBackendSessionManager(
         if (watcher?.isActive == true) return
         watcher = cs.launch {
             events.collect { event ->
-                if (event.type == "session.status") {
+                when (event.type) {
+                    "session.status" -> {
                     val pair = KiloCliDataParser.parseSessionStatus(event.data)
                     if (pair != null) {
                         val prev = _statuses.value[pair.first]
-                        _statuses.update { it + pair }
+                        mergeRuntime(statuses = mapOf(pair))
+                        syncActivity(pair.first)
                         val total = _statuses.value.size
                         log.debug { "${ChatLogSummary.sid(pair.first)} evt=session.status ${ChatLogSummary.status(pair.second)}" }
                         if (pair.second.type != "busy") {
@@ -78,6 +88,9 @@ class KiloBackendSessionManager(
                             )
                         }
                     }
+                }
+                    "permission.asked", "permission.replied", "question.asked", "question.replied", "question.rejected",
+                    "message.updated", "session.error", "session.turn.open" -> updateRuntime(event)
                 }
             }
         }
@@ -91,6 +104,8 @@ class KiloBackendSessionManager(
         http = null
         base = null
         _statuses.value = emptyMap()
+        _runtime.value = SessionRuntimeDto()
+        costs.clear()
         log.info("Session manager stopped")
     }
 
@@ -100,27 +115,11 @@ class KiloBackendSessionManager(
     // ------ session CRUD ------
 
     fun list(dir: String): SessionListDto {
-        seed(dir)
-        val raw = requireClient().sessionList(directory = dir, roots = JsonPrimitive(true))
-        val mapped = raw.map(::dto)
-        val ids = mapped.map { it.id }.toSet()
-        val relevant = _statuses.value.filterKeys { it in ids }
-        return SessionListDto(mapped, relevant)
+        return overview(dir, limit = null, worktrees = false)
     }
 
     fun recent(dir: String, limit: Int): SessionListDto {
-        seed(dir)
-        val raw = requireClient().experimentalSessionList(
-            directory = dir,
-            worktrees = true,
-            roots = JsonPrimitive(true),
-            limit = limit.toDouble(),
-            archived = JsonPrimitive(false),
-        )
-        val mapped = raw.map(::dto)
-        val ids = mapped.map { it.id }.toSet()
-        val relevant = _statuses.value.filterKeys { it in ids }
-        return SessionListDto(mapped, relevant)
+        return overview(dir, limit = limit, worktrees = true)
     }
 
     /**
@@ -244,12 +243,112 @@ class KiloBackendSessionManager(
         try {
             val raw = requireClient().sessionStatus(directory = dir)
             val mapped = raw.mapValues { (_, v) -> statusDto(v) }
-            _statuses.update { it + mapped }
+            mergeRuntime(statuses = mapped)
             val meta = if (log.isDebugEnabled) ChatLogSummary.dir(dir) else "kind=status"
             log.info("kind=status $meta seeded=${mapped.size}")
         } catch (e: Exception) {
             log.warn("kind=status dir=${ChatLogSummary.dir(dir)} seed=true failed message=${e.message}", e)
         }
+    }
+
+    private fun overview(dir: String, limit: Int?, worktrees: Boolean): SessionListDto {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val builder = "$url/kilocode/session/overview".toHttpUrl().newBuilder()
+            .addQueryParameter("directory", dir)
+            .addQueryParameter("roots", "true")
+            .addQueryParameter("worktrees", worktrees.toString())
+            .addQueryParameter("archived", "false")
+        if (limit != null) builder.addQueryParameter("limit", limit.toString())
+        val request = Request.Builder().url(builder.build()).get().build()
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                log.warn("Session overview failed: HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Session overview failed: HTTP ${response.code} — $raw")
+            }
+            val parsed = KiloCliDataParser.parseSessionOverview(raw)
+            val ids = parsed.sessions.map { it.id }.toSet()
+            val result = parsed.copy(
+                statuses = parsed.statuses.filterKeys { it in ids },
+                activities = parsed.activities.filterKeys { it in ids },
+                costs = parsed.costs.filterKeys { it in ids },
+            )
+            mergeRuntime(parsed.statuses, parsed.activities, parsed.costs)
+            return result
+        }
+    }
+
+    private fun updateRuntime(event: SseEvent) {
+        val parsed = KiloCliDataParser.parseChatEvent(event.type, event.data) ?: return
+        when (parsed) {
+            is ChatEventDto.PermissionAsked -> mergeRuntime(activities = mapOf(parsed.sessionID to SessionActivityDto("permission", parsed.request.id)))
+            is ChatEventDto.PermissionReplied -> clearActivity(parsed.sessionID, parsed.requestID)
+            is ChatEventDto.QuestionAsked -> {
+                val kind = if (parsed.request.questions.any { it.questionKey == "plan.followup.question" || it.headerKey == "plan.followup.header" }) "plan" else "question"
+                mergeRuntime(activities = mapOf(parsed.sessionID to SessionActivityDto(kind, parsed.request.id)))
+            }
+            is ChatEventDto.QuestionReplied -> clearActivity(parsed.sessionID, parsed.requestID)
+            is ChatEventDto.QuestionRejected -> clearActivity(parsed.sessionID, parsed.requestID)
+            is ChatEventDto.MessageUpdated -> {
+                val cost = parsed.info.cost
+                if (parsed.info.role == "assistant" && cost != null) updateCost(parsed.info.sessionID, parsed.info.id, cost)
+                clearLogin(parsed.info.sessionID)
+            }
+            is ChatEventDto.Error -> parsed.sessionID?.let { mergeRuntime(activities = mapOf(it to SessionActivityDto("login_required", message = parsed.error?.message))) }
+            is ChatEventDto.TurnOpen -> clearLogin(parsed.sessionID)
+            else -> Unit
+        }
+    }
+
+    private fun mergeRuntime(
+        statuses: Map<String, SessionStatusDto> = emptyMap(),
+        activities: Map<String, SessionActivityDto> = emptyMap(),
+        costs: Map<String, Double> = emptyMap(),
+    ) {
+        _runtime.update {
+            SessionRuntimeDto(
+                statuses = it.statuses + statuses,
+                activities = it.activities + activities,
+                costs = it.costs + costs,
+            )
+        }
+        _statuses.value = _runtime.value.statuses
+    }
+
+    private fun clearActivity(id: String, request: String) {
+        _runtime.update {
+            val activity = it.activities[id]
+            if (activity?.requestID != request) return@update it
+            it.copy(activities = it.activities - id)
+        }
+        syncActivity(id)
+    }
+
+    private fun syncActivity(id: String) {
+        val status = _runtime.value.statuses[id]
+        val current = _runtime.value.activities[id]
+        if (status?.type == "busy" && current == null) {
+            mergeRuntime(activities = mapOf(id to SessionActivityDto("running")))
+            return
+        }
+        if (status?.type != "busy" && current?.kind == "running") {
+            _runtime.update { it.copy(activities = it.activities - id) }
+        }
+    }
+
+    private fun clearLogin(id: String) {
+        _runtime.update {
+            if (it.activities[id]?.kind != "login_required") return@update it
+            it.copy(activities = it.activities - id)
+        }
+    }
+
+    private fun updateCost(id: String, msg: String, cost: Double) {
+        val session = costs.getOrPut(id) { ConcurrentHashMap() }
+        val prev = session.put(msg, cost)
+        val next = if (prev == null) (_runtime.value.costs[id] ?: 0.0) + cost else (_runtime.value.costs[id] ?: 0.0) - prev + cost
+        mergeRuntime(costs = mapOf(id to next))
     }
 
     // ------ worktree directory management ------

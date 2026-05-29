@@ -1992,6 +1992,25 @@ export type EffectHttpApiErrorServiceUnavailable = {
   _tag: "ServiceUnavailable"
 }
 
+export type SessionActivity = {
+  kind: "running" | "login_required" | "permission" | "plan" | "question"
+  requestID?: string
+  message?: string
+}
+
+export type SessionOverview = {
+  sessions: Array<Session | GlobalSession>
+  statuses: {
+    [key: string]: SessionStatus
+  }
+  activities: {
+    [key: string]: SessionActivity
+  }
+  costs: {
+    [key: string]: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  }
+}
+
 export type KilocodeSessionImportResult = {
   ok: boolean
   id: string
@@ -8147,6 +8166,42 @@ export type KiloCloudSessionImportResponses = {
 }
 
 export type KiloCloudSessionImportResponse = KiloCloudSessionImportResponses[keyof KiloCloudSessionImportResponses]
+
+export type KilocodeSessionOverviewData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+    projectID?: string
+    worktrees?: "true" | "false"
+    roots?: boolean | "true" | "false"
+    start?: number
+    cursor?: number
+    search?: string
+    limit?: number
+    archived?: boolean | "true" | "false"
+  }
+  url: "/kilocode/session/overview"
+}
+
+export type KilocodeSessionOverviewErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeSessionOverviewError = KilocodeSessionOverviewErrors[keyof KilocodeSessionOverviewErrors]
+
+export type KilocodeSessionOverviewResponses = {
+  /**
+   * Session overview
+   */
+  200: SessionOverview
+}
+
+export type KilocodeSessionOverviewResponse = KilocodeSessionOverviewResponses[keyof KilocodeSessionOverviewResponses]
 
 export type KilocodeHeapSnapshotData = {
   body?: never

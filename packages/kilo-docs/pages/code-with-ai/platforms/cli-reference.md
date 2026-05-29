@@ -179,7 +179,7 @@ Options:
       --format                        format: default (formatted) or json (raw JSON events)  [string] [choices: "default", "json"] [default: "default"]
   -f, --file                          file(s) to attach to message  [array]
       --title                         title for the session (uses truncated prompt if no value provided)  [string]
-      --attach                        attach to a running opencode server (e.g., http://localhost:4096)  [string]
+      --attach                        attach to a running kilo server (e.g., http://localhost:4096)  [string]
   -p, --password                      basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
   -u, --username                      basic auth username (defaults to KILO_SERVER_USERNAME or 'kilo')  [string]
       --dir                           directory to run in, path on remote server if attaching  [string]

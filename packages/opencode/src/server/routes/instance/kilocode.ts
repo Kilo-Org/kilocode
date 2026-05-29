@@ -10,10 +10,78 @@ import { lazy } from "@/util/lazy"
 import { errors } from "../../error"
 import { SessionImportRoutes } from "@/kilocode/session-import/routes"
 import { HeapSnapshot } from "@/kilocode/cli/heap-snapshot"
+import { SessionOverview } from "@/kilocode/session/overview"
+import { jsonRequest } from "./trace"
+
+const QueryBoolean = z.union([
+  z.preprocess((value) => (value === "true" ? true : value === "false" ? false : value), z.boolean()),
+  z.enum(["true", "false"]),
+])
+
+function queryBoolean(value: z.infer<typeof QueryBoolean> | undefined) {
+  if (value === undefined) return
+  return value === true || value === "true"
+}
 
 export const KilocodeRoutes = lazy(() =>
   new Hono()
     .route("/session-import", SessionImportRoutes())
+    .get(
+      "/session/overview",
+      describeRoute({
+        summary: "Get session overview",
+        description: "Get sessions, runtime statuses, activities, and costs in one lightweight response.",
+        operationId: "kilocode.session.overview",
+        responses: {
+          200: {
+            description: "Session overview",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.object({
+                    sessions: z.array(z.unknown()),
+                    statuses: z.record(z.string(), z.unknown()),
+                    activities: z.record(z.string(), z.unknown()),
+                    costs: z.record(z.string(), z.number()),
+                  }),
+                ),
+              },
+            },
+          },
+          ...errors(400),
+        },
+      }),
+      validator(
+        "query",
+        z.object({
+          directory: z.string().optional(),
+          projectID: z.string().optional(),
+          worktrees: QueryBoolean.optional(),
+          roots: QueryBoolean.optional(),
+          start: z.coerce.number().optional(),
+          cursor: z.coerce.number().optional(),
+          search: z.string().optional(),
+          limit: z.coerce.number().optional(),
+          archived: QueryBoolean.optional(),
+        }),
+      ),
+      async (c) => {
+        const query = c.req.valid("query")
+        return jsonRequest("KilocodeRoutes.sessionOverview", c, function* () {
+          return yield* SessionOverview.build({
+            directory: query.directory,
+            projectID: query.projectID,
+            worktrees: queryBoolean(query.worktrees),
+            roots: queryBoolean(query.roots),
+            start: query.start,
+            cursor: query.cursor,
+            search: query.search,
+            limit: query.limit,
+            archived: queryBoolean(query.archived),
+          })
+        })
+      },
+    )
     .post(
       "/heap/snapshot",
       describeRoute({

@@ -124,7 +124,7 @@ class KiloBackendSessionManagerTest {
     }
 
     @Test
-    fun `recent returns global sessions from experimental endpoint`() = runBlocking {
+    fun `recent returns global sessions from overview endpoint`() = runBlocking {
         mock.recentSessions = """[
             {"id":"ses_1","slug":"s1","projectID":"prj","directory":"/repo","title":"Session 1","version":"1","time":{"created":1000,"updated":5000},"project":{"id":"prj","worktree":"/repo","name":"Repo"},"summary":{"additions":10,"deletions":2,"files":3}},
             {"id":"ses_2","slug":"s2","projectID":"prj","directory":"/repo-wt","title":"Session 2","version":"1","time":{"created":2000,"updated":4000},"project":{"id":"prj","worktree":"/repo","name":"Repo"},"parentID":"ses_parent"}
@@ -149,12 +149,12 @@ class KiloBackendSessionManagerTest {
 
         app.sessions.recent("/repo path", 5)
 
-        val path = mock.lastExperimentalSessionPath ?: error("missing experimental session request")
-        assertTrue(path.startsWith("/experimental/session?"))
+        val path = mock.lastSessionOverviewPath ?: error("missing overview session request")
+        assertTrue(path.startsWith("/kilocode/session/overview?"))
         assertTrue(URLDecoder.decode(path, "UTF-8").contains("directory=/repo path"), path)
         assertTrue(path.contains("worktrees=true"), path)
         assertTrue(path.contains("roots=true"), path)
-        assertTrue(path.contains("limit=5.0"), path)
+        assertTrue(path.contains("limit=5"), path)
         assertTrue(path.contains("archived=false"), path)
     }
 

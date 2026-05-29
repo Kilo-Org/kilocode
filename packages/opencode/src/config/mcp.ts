@@ -2,7 +2,8 @@ import { Schema, SchemaGetter } from "effect" // kilocode_change
 import { zod } from "@/util/effect-zod"
 import { PositiveInt, withStatics } from "@/util/schema"
 
-const LocalCanonical = Schema.Struct({ // kilocode_change
+const LocalCanonical = Schema.Struct({
+  // kilocode_change
   type: Schema.Literal("local").annotate({ description: "Type of MCP server connection" }),
   command: Schema.mutable(Schema.Array(Schema.String)).annotate({
     description: "Command and arguments to run the MCP server",

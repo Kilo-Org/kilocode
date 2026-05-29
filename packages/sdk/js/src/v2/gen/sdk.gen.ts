@@ -97,6 +97,8 @@ import type {
   KilocodeSessionImportProjectResponses,
   KilocodeSessionImportSessionErrors,
   KilocodeSessionImportSessionResponses,
+  KilocodeSessionOverviewErrors,
+  KilocodeSessionOverviewResponses,
   KiloEditErrors,
   KiloEditResponses,
   KiloFimErrors,
@@ -5946,6 +5948,58 @@ export class Kilo extends HeyApiClient {
   }
 }
 
+export class Session5 extends HeyApiClient {
+  /**
+   * Get session overview
+   *
+   * Get sessions, runtime statuses, activities, and costs in one lightweight response.
+   */
+  public overview<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      projectID?: string
+      worktrees?: "true" | "false"
+      roots?: boolean | "true" | "false"
+      start?: number
+      cursor?: number
+      search?: string
+      limit?: number
+      archived?: boolean | "true" | "false"
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "projectID" },
+            { in: "query", key: "worktrees" },
+            { in: "query", key: "roots" },
+            { in: "query", key: "start" },
+            { in: "query", key: "cursor" },
+            { in: "query", key: "search" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "archived" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeSessionOverviewResponses,
+      KilocodeSessionOverviewErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session/overview",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Heap extends HeyApiClient {
   /**
    * Write heap snapshot
@@ -6443,6 +6497,11 @@ export class Kilocode extends HeyApiClient {
         },
       },
     )
+  }
+
+  private _session?: Session5
+  get session(): Session5 {
+    return (this._session ??= new Session5({ client: this.client }))
   }
 
   private _heap?: Heap
