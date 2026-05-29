@@ -192,10 +192,12 @@ export class Storage {
         tx.update(EventTable).set({ uploaded_at: Date.now() }).where(inArray(EventTable.id, eventIds)).run()
       }
       if (chunkIds.length > 0) {
-        tx.update(ChunkTable)
-          .set({ ref_count: sql`${ChunkTable.ref_count} - 1` })
-          .where(inArray(ChunkTable.id, chunkIds))
-          .run()
+        for (const id of chunkIds) {
+          tx.update(ChunkTable)
+            .set({ ref_count: sql`${ChunkTable.ref_count} - 1` })
+            .where(eq(ChunkTable.id, id))
+            .run()
+        }
       }
       const events = tx.delete(EventTable).where(isNotNull(EventTable.uploaded_at)).returning({ id: EventTable.id }).all().length
       const chunks = tx.delete(ChunkTable).where(lte(ChunkTable.ref_count, 0)).returning({ id: ChunkTable.id }).all().length
@@ -203,11 +205,20 @@ export class Storage {
     })
   }
 
+  chunkRefsForEvents(ids: string): string[]
+  chunkRefsForEvents(ids: string[]): string[]
+  chunkRefsForEvents(ids: string | string[]): string[] {
+    const keys = Array.isArray(ids) ? ids : [ids]
+    if (keys.length === 0) return []
+    const rows = this.db.select({ data_json: EventTable.data_json }).from(EventTable).where(inArray(EventTable.id, keys)).all()
+    const out: string[] = []
+    for (const row of rows) collectChunkRefs(JSON.parse(row.data_json), out)
+    return out
+  }
+
   chunksForEvents(ids: string[]): ChunkRow[] {
     if (ids.length === 0) return []
-    const rows = this.db.select({ data_json: EventTable.data_json }).from(EventTable).where(inArray(EventTable.id, ids)).all()
-    const chunkIds = new Set<string>()
-    for (const row of rows) collectChunkIds(JSON.parse(row.data_json), chunkIds)
+    const chunkIds = new Set(this.chunkRefsForEvents(ids))
     if (chunkIds.size === 0) return []
     const chunks = this.db.select().from(ChunkTable).where(inArray(ChunkTable.id, [...chunkIds])).all()
     return chunks.map((row) => ({ id: row.id, bytes: row.bytes, size: row.size, encoding: row.encoding }))
@@ -254,37 +265,23 @@ function finish<T>(stmt: Prepared, fn: () => T): T {
   }
 }
 
-function collectChunkIds(node: unknown, out: Set<string>): void {
+function collectChunkRefs(node: unknown, out: string[]): void {
   if (!node || typeof node !== "object") return
   if (Array.isArray(node)) {
-    for (const item of node) collectChunkIds(item, out)
+    for (const item of node) collectChunkRefs(item, out)
     return
   }
   const record = node as Record<string, unknown>
-  if (record.__chunked === true && Array.isArray(record.chunkIds)) {
-    for (const id of record.chunkIds) {
-      if (typeof id === "string") out.add(id)
-    }
+  if (record.__chunked === true && Array.isArray(record.chunkIds)) push(record.chunkIds, out)
+  if (Array.isArray(record.chunkIds)) push(record.chunkIds, out)
+  if (Array.isArray(record.patchChunkIds)) push(record.patchChunkIds, out)
+  if (Array.isArray(record.inputChunkIds)) push(record.inputChunkIds, out)
+  if (Array.isArray(record.outputChunkIds)) push(record.outputChunkIds, out)
+  for (const val of Object.values(record)) collectChunkRefs(val, out)
+}
+
+function push(ids: unknown[], out: string[]): void {
+  for (const id of ids) {
+    if (typeof id === "string") out.push(id)
   }
-  if (Array.isArray(record.chunkIds)) {
-    for (const id of record.chunkIds) {
-      if (typeof id === "string") out.add(id)
-    }
-  }
-  if (Array.isArray(record.patchChunkIds)) {
-    for (const id of record.patchChunkIds) {
-      if (typeof id === "string") out.add(id)
-    }
-  }
-  if (Array.isArray(record.inputChunkIds)) {
-    for (const id of record.inputChunkIds) {
-      if (typeof id === "string") out.add(id)
-    }
-  }
-  if (Array.isArray(record.outputChunkIds)) {
-    for (const id of record.outputChunkIds) {
-      if (typeof id === "string") out.add(id)
-    }
-  }
-  for (const val of Object.values(record)) collectChunkIds(val, out)
 }

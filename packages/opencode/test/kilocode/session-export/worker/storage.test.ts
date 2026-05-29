@@ -54,6 +54,31 @@ describe("Storage", () => {
     expect(chunk?.refCount).toBe(2)
   })
 
+  test("preserves duplicate chunk references for upload cleanup", () => {
+    storage.upsertChunk({ id: "h1", bytes: new Uint8Array([1, 2, 3]), size: 3, encoding: "zstd" })
+    storage.incrementRefCount("h1")
+    storage.insertEvent({
+      id: "e1",
+      schemaVersion: 1,
+      sessionId: "s1",
+      rootSessionId: "s1",
+      seq: 0,
+      type: "tool_executed",
+      ts: 100,
+      agentVersion: "v0",
+      dataJson: JSON.stringify({ inputChunkIds: ["h1"], outputChunkIds: ["h1"] }),
+      clientScrubbed: 1,
+    })
+
+    const refs = storage.chunkRefsForEvents(["e1"])
+    const chunks = storage.chunksForEvents(["e1"])
+    storage.commitUploaded(["e1"], refs)
+
+    expect(refs).toEqual(["h1", "h1"])
+    expect(chunks.map((chunk) => chunk.id)).toEqual(["h1"])
+    expect(storage.getChunk("h1")).toBeUndefined()
+  })
+
   test("pendingEvents respects next_attempt_at backoff", () => {
     storage.insertEvent({
       id: "02",

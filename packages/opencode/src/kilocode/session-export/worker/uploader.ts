@@ -117,7 +117,7 @@ export class Uploader {
           body,
         })
         const eventIds = rows.map((row) => row.id)
-        const chunkIds = chunks.map((chunk) => chunk.id)
+        const chunkIds = this.deps.storage.chunkRefsForEvents(eventIds)
         if (res.ok) {
           const deleted = this.deps.storage.commitUploaded(eventIds, chunkIds)
           this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.uploaded", props: { events: deleted.events, chunks: deleted.chunks, batchId } })
