@@ -94,6 +94,42 @@ describe("SessionExport worker respawn", () => {
     expect(worker.messages.filter((msg) => msg.kind === "init").length).toBe(1)
   })
 
+  test("keeps snapshot providers scoped by workspace", async () => {
+    const worker = new FakeWorker(0)
+    SessionExport.init({
+      agentVersion: "v0",
+      dbPath: ":memory:",
+      workspaceKey: "workspace-a",
+      subscribeAll: () => () => {},
+      createWorker: () => worker as unknown as Worker,
+      snapshotProvider: {
+        baseline: async () => ({ snapshotId: "snap-a", files: [{ path: "a.ts", kind: "file", size: 1 }] }),
+        diff: async () => ({ snapshotHash: "snap-a", diff: [] }),
+      },
+    })
+    SessionExport.init({
+      agentVersion: "v0",
+      dbPath: ":memory:",
+      workspaceKey: "workspace-b",
+      subscribeAll: () => () => {},
+      createWorker: () => worker as unknown as Worker,
+      snapshotProvider: {
+        baseline: async () => ({ snapshotId: "snap-b", files: [{ path: "b.ts", kind: "file", size: 1 }] }),
+        diff: async () => ({ snapshotHash: "snap-b", diff: [] }),
+      },
+    })
+
+    SessionExport.beforeRequest(request("s-a", "workspace-a"))
+    SessionExport.beforeRequest(request("s-b", "workspace-b"))
+    await waitFor(() => worker.messages.filter((msg) => msg.kind === "event" && msg.envelope?.type === "workspace_baseline_completed").length === 2)
+
+    const files = worker.messages
+      .filter((msg) => msg.kind === "event" && msg.envelope?.type === "workspace_baseline_completed")
+      .map((msg) => msg.envelope?.files?.[0]?.path)
+      .sort()
+    expect(files).toEqual(["a.ts", "b.ts"])
+  })
+
   test("sets kill switch after repeated worker postMessage failures", () => {
     const workers: FakeWorker[] = []
     SessionExport.init({
@@ -120,7 +156,7 @@ class FakeWorker {
   onmessage: ((event: MessageEvent) => void) | null = null
   onerror: ((event: ErrorEvent) => void) | null = null
   terminated = false
-  messages: Array<{ kind?: string; surface?: string; envelope?: { type?: string } }> = []
+  messages: Array<{ kind?: string; surface?: string; envelope?: { type?: string; files?: Array<{ path?: string }> } }> = []
 
   constructor(private failures: number) {}
 
@@ -140,7 +176,7 @@ class FakeWorker {
   }
 }
 
-function request(sessionId: string): Parameters<typeof SessionExport.beforeRequest>[0] {
+function request(sessionId: string, workspaceKey?: string): Parameters<typeof SessionExport.beforeRequest>[0] {
   return {
     input: {
       model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true, providerId: "kilo", modelId: "free-1" },
@@ -153,6 +189,7 @@ function request(sessionId: string): Parameters<typeof SessionExport.beforeReque
       userMessageId: `u-${sessionId}`,
       agent: "build",
       modeId: "build",
+      workspaceKey,
     },
     assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
   }

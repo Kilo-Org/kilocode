@@ -379,9 +379,8 @@ const live: Layer.Layer<
           })
         : undefined
 
-      const opencodeProjectID = input.model.providerID.startsWith("opencode")
-        ? (yield* InstanceState.context).project.id
-        : undefined
+      const instance = yield* InstanceState.context
+      const opencodeProjectID = input.model.providerID.startsWith("opencode") ? instance.project.id : undefined
 
       // kilocode_change start - capture eligible session export request start
       const org = yield* isKilo && input.model.isFree === true ? Effect.promise(() => getActiveOrg()) : Effect.succeed({ type: "unknown" as const })
@@ -401,6 +400,7 @@ const live: Layer.Layer<
             userMessageId: input.user.id,
             agent: input.agent.name,
             modeId: input.agent.mode,
+            workspaceKey: instance.directory,
             agentInfo: SessionExport.agentInfo(input.agent),
           },
           assembled: {
@@ -505,6 +505,7 @@ const live: Layer.Layer<
           rootSessionId: root,
           parentSessionId: parent,
           requestId: input.user.id,
+          workspaceKey: instance.directory,
           started,
           retries: input.retries ?? 0,
         }),
@@ -551,6 +552,7 @@ export function observeFullStreamForExport(
     rootSessionId: string
     parentSessionId?: string
     requestId: string
+    workspaceKey?: string
     started: number
     retries: number
   },
@@ -572,6 +574,7 @@ export function observeFullStreamForExport(
         rootSessionId: meta.rootSessionId,
         parentSessionId: meta.parentSessionId,
         requestId: meta.requestId,
+        workspaceKey: meta.workspaceKey,
         output: { textParts, reasoningParts, toolCalls, finishReason, error, usage },
         durationMs: Date.now() - meta.started,
         retryCount: meta.retries,

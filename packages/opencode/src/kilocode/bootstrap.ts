@@ -39,6 +39,7 @@ export namespace KilocodeBootstrap {
             agentVersion: InstallationVersion,
             anonId: anon,
             dbPath: path.join(Global.Path.data, "session-export.db"),
+            workspaceKey: Instance.directory,
             subscribeAll: (cb) => Bus.subscribeAll(cb),
             snapshotProvider: createWorkspaceProvider({
               root: Instance.directory,

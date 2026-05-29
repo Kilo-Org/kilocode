@@ -10,26 +10,25 @@ declare global {
 }
 
 type WorkerTarget = string | URL
+type Opts = {
+  agentVersion: string
+  dbPath: string
+  endpoint?: string
+  surface: string
+  anonId?: string
+  workspaceKey: string
+  snapshotProvider?: CaptureDeps["snapshotProvider"]
+  syncSeq: (sessionId: string) => number
+  subscribeAll: (cb: (event: unknown) => void) => () => void
+  createWorker: (url: WorkerTarget) => Worker
+  sequencer?: ReturnType<typeof createSequencer>
+}
+type Instance = { options: Opts; capture: Capture; subscriber: SyncSubscriber; unsubscribe: () => void }
 
 let worker: Worker | undefined
-let capture: Capture | undefined
-let subscriber: SyncSubscriber | undefined
-let unsubscribe: (() => void) | undefined
 let attempts = 0
-let sequencer: ReturnType<typeof createSequencer> | undefined
-let options:
-  | {
-      agentVersion: string
-      dbPath: string
-      endpoint?: string
-      surface: string
-      anonId?: string
-      snapshotProvider?: CaptureDeps["snapshotProvider"]
-      syncSeq: (sessionId: string) => number
-      subscribeAll: (cb: (event: unknown) => void) => () => void
-      createWorker: (url: WorkerTarget) => Worker
-    }
-  | undefined
+let shared: Opts | undefined
+const instances = new Map<string, Instance>()
 
 const maxRespawns = 3
 
@@ -40,56 +39,63 @@ export const init = (opts: {
   surface?: string
   anonId?: string
   snapshotProvider?: CaptureDeps["snapshotProvider"]
+  workspaceKey?: string
   syncSeq?: (sessionId: string) => number
   subscribeAll: (cb: (event: unknown) => void) => () => void
   createWorker?: (url: WorkerTarget) => Worker
 }): void => {
   const url = target()
   try {
-    const previous = sequencer
-    sequencer = opts.syncSeq ? undefined : createSequencer(opts.dbPath)
-    previous?.close()
+    const key = opts.workspaceKey ?? "default"
+    const previous = instances.get(key)
+    previous?.unsubscribe()
+    previous?.options.sequencer?.close()
+    const sequencer = opts.syncSeq ? undefined : createSequencer(opts.dbPath)
     const syncSeq = opts.syncSeq ?? ((sessionId: string) => sequencer!.next(sessionId))
-    options = {
+    const next: Opts = {
       agentVersion: opts.agentVersion,
       dbPath: opts.dbPath,
       endpoint: opts.endpoint,
       surface: opts.surface ?? currentSurface(),
       anonId: opts.anonId,
+      workspaceKey: key,
       snapshotProvider: opts.snapshotProvider,
       syncSeq,
       subscribeAll: opts.subscribeAll,
       createWorker: opts.createWorker ?? ((file) => new Worker(file)),
+      sequencer,
     }
+    shared = shared ?? next
     if (worker) {
-      configure()
+      configure(next)
       return
     }
+    shared = next
     spawn(url)
   } catch (err) {
     const current = worker as unknown as Worker | undefined
     if (current) current.terminate()
     worker = undefined
-    capture = undefined
-    subscriber = undefined
-    unsubscribe = undefined
-    options = undefined
-    sequencer?.close()
-    sequencer = undefined
+    for (const item of instances.values()) {
+      item.unsubscribe()
+      item.options.sequencer?.close()
+    }
+    instances.clear()
+    shared = undefined
     throw err
   }
 }
 
 export const beforeRequest = (...args: Parameters<Capture["beforeRequest"]>): void => {
-  capture?.beforeRequest(...args)
+  captureFor(args[0].requestMeta.workspaceKey)?.beforeRequest(...args)
 }
 
 export const afterRequest = (...args: Parameters<Capture["afterRequest"]>): void => {
-  capture?.afterRequest(...args)
+  captureFor(args[0].workspaceKey)?.afterRequest(...args)
 }
 
 export const compaction = (args: Parameters<Capture["compaction"]>[0]): void => {
-  capture?.compaction(args)
+  captureFor(args.workspaceKey)?.compaction(args)
 }
 
 export const agentInfo = (info: Agent.Info): Record<string, unknown> => {
@@ -111,14 +117,14 @@ export const agentInfo = (info: Agent.Info): Record<string, unknown> => {
   return out
 }
 
-export const onSessionClose = async (sessionId: string): Promise<void> => {
-  await capture?.onSessionClose(sessionId)
+export const onSessionClose = async (sessionId: string, workspaceKey?: string): Promise<void> => {
+  await captureFor(workspaceKey)?.onSessionClose(sessionId)
 }
 
 export const shutdown = async (): Promise<void> => {
   if (!worker) return
   const current = worker
-  unsubscribe?.()
+  for (const item of instances.values()) item.unsubscribe()
   await new Promise<void>((resolve) => {
     const timer = setTimeout(resolve, Config.shutdownFlushTimeoutMs + 500)
     current.onmessage = (event: MessageEvent) => {
@@ -131,12 +137,9 @@ export const shutdown = async (): Promise<void> => {
   })
   current.terminate()
   worker = undefined
-  capture = undefined
-  subscriber = undefined
-  unsubscribe = undefined
-  options = undefined
-  sequencer?.close()
-  sequencer = undefined
+  for (const item of instances.values()) item.options.sequencer?.close()
+  instances.clear()
+  shared = undefined
   attempts = 0
 }
 
@@ -146,23 +149,24 @@ function target(): WorkerTarget {
 }
 
 function spawn(url = target()): void {
-  if (!options) return
-  worker = options.createWorker(url)
+  if (!shared) return
+  worker = shared.createWorker(url)
   worker.postMessage({
     kind: "init",
-    dbPath: options.dbPath,
-    agentVersion: options.agentVersion,
-    endpoint: options.endpoint,
-    surface: options.surface,
-    anonId: options.anonId,
+    dbPath: shared.dbPath,
+    agentVersion: shared.agentVersion,
+    endpoint: shared.endpoint,
+    surface: shared.surface,
+    anonId: shared.anonId,
   })
-  configure()
+  for (const item of [...instances.values()]) configure(item.options)
+  if (instances.size === 0) configure(shared)
 }
 
-function configure(): void {
-  if (!worker || !options) return
-  unsubscribe?.()
-  capture = new Capture({
+function configure(options: Opts): void {
+  if (!worker) return
+  instances.get(options.workspaceKey)?.unsubscribe()
+  const capture = new Capture({
     worker,
     agentVersion: options.agentVersion,
     nowMs: () => Date.now(),
@@ -170,19 +174,22 @@ function configure(): void {
     onPostError: respawn,
     snapshotProvider: options.snapshotProvider,
   })
-  subscriber = new SyncSubscriber({
-    isEligibleSession: (sessionId) => capture?.hasEligibleSession(sessionId) ?? false,
-    dispatch: (event) => capture?.dispatchRaw(event),
+  const subscriber = new SyncSubscriber({
+    isEligibleSession: (sessionId) => capture.hasEligibleSession(sessionId),
+    dispatch: (event) => capture.dispatchRaw(event),
     agentVersion: options.agentVersion,
     now: () => Date.now(),
     syncSeq: options.syncSeq,
-    getTurnId: (sessionId) => capture?.turnId(sessionId),
-    getRootSessionId: (sessionId) => capture?.rootSessionId(sessionId),
+    getTurnId: (sessionId) => capture.turnId(sessionId),
+    getRootSessionId: (sessionId) => capture.rootSessionId(sessionId),
   })
-  unsubscribe = options.subscribeAll((event) => subscriber?.onSyncEvent(event as never))
+  const unsubscribe = options.subscribeAll((event) => subscriber.onSyncEvent(event as never))
+  instances.set(options.workspaceKey, { options, capture, subscriber, unsubscribe })
   worker.onmessage = (event: MessageEvent) => {
     const msg = event.data as { kind?: string; sessionId?: string; reason?: string; name?: string }
-    if (msg.kind === "pressure" && msg.sessionId) capture?.markDegraded(msg.sessionId)
+    if (msg.kind === "pressure" && msg.sessionId) {
+      for (const item of instances.values()) item.capture.markDegraded(msg.sessionId!)
+    }
     if (msg.kind === "kill_switch") setKillSwitch(true, msg.reason ?? "worker")
   }
   worker.onerror = (event: ErrorEvent) => {
@@ -199,12 +206,15 @@ function respawn(err: unknown): void {
   console.warn("[session-export] worker respawn", err)
   worker?.terminate()
   worker = undefined
-  capture = undefined
-  subscriber = undefined
   attempts++
   if (attempts > maxRespawns) {
     setKillSwitch(true, "worker_respawn_failed")
     return
   }
   spawn()
+}
+
+function captureFor(key: string | undefined): Capture | undefined {
+  if (key) return instances.get(key)?.capture
+  return instances.get("default")?.capture ?? instances.values().next().value?.capture
 }

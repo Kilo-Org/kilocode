@@ -636,11 +636,13 @@ export const layer: Layer.Layer<
         const parent = KiloSession.resolveParent(input.sessionID)
         const found = KiloSession.resolveRoot(input.sessionID)
         const root = parent ? (found === input.sessionID ? parent : found) : input.sessionID
+        const workspace = yield* InstanceState.context
         SessionExport.compaction({
           sessionId: input.sessionID,
           rootSessionId: root,
           parentSessionId: parent,
           requestId: msg.id,
+          workspaceKey: workspace.directory,
           input: {
             inputMessagesSnapshot: modelMessages,
             selectedContext: selected.head,

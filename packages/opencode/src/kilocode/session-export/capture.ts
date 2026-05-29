@@ -40,6 +40,7 @@ export type RequestMeta = {
   assistantMessageId?: string
   agent: string
   modeId: string
+  workspaceKey?: string
   agentInfo?: unknown
   gitContext?: { branch: string; sha: string; dirtyFileCount: number }
 }
@@ -155,6 +156,7 @@ export class Capture {
     output: LlmRequestCompleted["output"]
     durationMs: number
     retryCount: number
+    workspaceKey?: string
   }): void {
     if (!this.authorized.has(args.sessionId)) return
     if (this.degraded.has(args.sessionId)) return
@@ -195,6 +197,7 @@ export class Capture {
     modelId: string
     durationMs: number
     usage?: { inputTokens: number; outputTokens: number }
+    workspaceKey?: string
   }): void {
     if (!this.authorized.has(args.sessionId)) return
     if (this.degraded.has(args.sessionId)) return

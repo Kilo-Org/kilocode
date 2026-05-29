@@ -14,8 +14,8 @@ describe("session export llm usage", () => {
   test("finalizes export when stream is closed early", async () => {
     const calls: unknown[] = []
     async function* stream() {
-      yield { type: "text-delta", text: "hello" } as const
-      yield { type: "text-delta", text: "later" } as const
+      yield { type: "text-delta", id: "1", text: "hello" } as const
+      yield { type: "text-delta", id: "1", text: "later" } as const
     }
     const observed = observeFullStreamForExport(
       stream(),
