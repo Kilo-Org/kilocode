@@ -1,8 +1,9 @@
 // kilocode_change - new file
 import { remapChildren as _remapChildren } from "./fork"
 import z from "zod"
-import { Schema } from "effect"
+import { Cause, Effect, Schema } from "effect"
 import { BusEvent } from "@/bus/bus-event"
+import { EffectBridge } from "@/effect/bridge"
 import { Session } from "@/session/session"
 import { MessageID, SessionID } from "@/session/schema"
 import { makeRuntime } from "@/effect/run-service"
@@ -231,14 +232,18 @@ export namespace KiloSession {
   // Session lifecycle hooks (share, unshare, remove)
   // ---------------------------------------------------------------------------
 
-  export async function shareSession(id: string): Promise<{ url: string }> {
-    const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
-    return KiloSessions.share(id)
+  export function shareSession(id: SessionID) {
+    return EffectBridge.fromPromise(async () => {
+      const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
+      return KiloSessions.share(id)
+    }).pipe(Effect.catchCause((cause) => Effect.fail(Cause.squash(cause))))
   }
 
-  export async function unshareSession(id: string): Promise<void> {
-    const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
-    await KiloSessions.unshare(id)
+  export function unshareSession(id: SessionID) {
+    return EffectBridge.fromPromise(async () => {
+      const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
+      await KiloSessions.unshare(id)
+    }).pipe(Effect.catchCause((cause) => Effect.fail(Cause.squash(cause))))
   }
 
   export async function removeSession(id: string): Promise<void> {
