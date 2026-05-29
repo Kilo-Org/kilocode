@@ -46,6 +46,7 @@ export type RequestMeta = {
 
 export class Capture {
   private firstEligible = new Set<string>()
+  private authorized = new Set<string>()
   private degradedAnnounced = new Set<string>()
   private degraded = new Set<string>()
   private roots = new Map<string, string>()
@@ -60,7 +61,7 @@ export class Capture {
   }
 
   hasEligibleSession(sessionId: string): boolean {
-    return this.firstEligible.has(sessionId) && !this.degraded.has(sessionId)
+    return this.authorized.has(sessionId) && !this.degraded.has(sessionId)
   }
 
   turnId(sessionId: string): string | undefined {
@@ -86,13 +87,18 @@ export class Capture {
     }
   }): void {
     if (args.requestMeta.agent === "title") return
-    if (!isEligible(args.input)) return
     const meta = args.requestMeta
+    if (!isEligible(args.input)) {
+      this.authorized.delete(meta.sessionId)
+      this.turns.delete(meta.sessionId)
+      return
+    }
 
     if (this.degraded.has(meta.sessionId)) {
       this.announceDegraded(meta)
       return
     }
+    this.authorized.add(meta.sessionId)
     this.turns.set(meta.sessionId, meta.userMessageId)
 
     if (!this.firstEligible.has(meta.sessionId)) {
@@ -150,7 +156,7 @@ export class Capture {
     durationMs: number
     retryCount: number
   }): void {
-    if (!this.firstEligible.has(args.sessionId)) return
+    if (!this.authorized.has(args.sessionId)) return
     if (this.degraded.has(args.sessionId)) return
     const seq = this.deps.syncSeq(args.sessionId)
     const env: LlmRequestCompleted = {
@@ -190,7 +196,7 @@ export class Capture {
     durationMs: number
     usage?: { inputTokens: number; outputTokens: number }
   }): void {
-    if (!this.firstEligible.has(args.sessionId)) return
+    if (!this.authorized.has(args.sessionId)) return
     if (this.degraded.has(args.sessionId)) return
     const seq = this.deps.syncSeq(args.sessionId)
     const env: CompactionCaptured = {
@@ -216,7 +222,7 @@ export class Capture {
   }
 
   async onSessionClose(sessionId: string): Promise<void> {
-    if (!this.firstEligible.has(sessionId)) return
+    if (!this.authorized.has(sessionId)) return
     if (this.degraded.has(sessionId)) return
     const root = this.roots.get(sessionId) ?? sessionId
     await this.startDelta(sessionId, root, "session_close").catch((err) => this.deps.onPostError?.(err))

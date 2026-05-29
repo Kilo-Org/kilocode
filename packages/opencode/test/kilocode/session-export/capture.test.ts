@@ -146,6 +146,52 @@ describe("Capture", () => {
     expect(types.filter((type) => type === "llm_request_started").length).toBe(0)
   })
 
+  test("later ineligible requests revoke downstream session capture", async () => {
+    const cap = new Capture({
+      worker,
+      agentVersion: "v0",
+      nowMs: () => 100,
+      syncSeq: () => 7,
+      snapshotProvider: {
+        baseline: async () => ({ snapshotId: "h0", files: [] }),
+        diff: async () => ({ snapshotHash: "h1", diff: [{ path: "src/a.ts", status: "modified", patchChunkIds: [] }] }),
+      },
+    })
+    cap.beforeRequest({
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: { type: "personal" } },
+      requestMeta: meta("s1"),
+      assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
+    })
+    cap.beforeRequest({
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: { type: "org", id: "org_1" } },
+      requestMeta: meta("s1"),
+      assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
+    })
+    posted.length = 0
+
+    cap.afterRequest({
+      sessionId: "s1",
+      rootSessionId: "s1",
+      requestId: "r1",
+      output: { textParts: ["nope"] },
+      durationMs: 1,
+      retryCount: 0,
+    })
+    cap.compaction({
+      sessionId: "s1",
+      rootSessionId: "s1",
+      requestId: "r1",
+      input: { inputMessagesSnapshot: [], selectedContext: [], prompt: "" },
+      output: { summary: "", assistantMessageId: "a1" },
+      modelId: "m1",
+      durationMs: 1,
+    })
+    await cap.onSessionClose("s1")
+
+    expect(cap.hasEligibleSession("s1")).toBe(false)
+    expect(posted.length).toBe(0)
+  })
+
   test("onSessionClose spawns a delta fiber for sessions that had eligible requests", async () => {
     const cap = new Capture({
       worker,
