@@ -26,7 +26,6 @@ const allow: Record<string, string> = {
   "question/index.ts": "transitional facade deferred for upstream reconciliation in #10655",
   "session/compaction.ts": "existing compaction facade outside #10655",
   "session/prompt.ts": "transitional facade tracked by #10655",
-  "session/session.ts": "transitional facade tracked by #10655",
   "sync/index.ts": "sync event runtime boundary",
 }
 
@@ -38,7 +37,6 @@ const testAllow: Record<string, { count: number; reason: string }> = {
   "kilocode/config-resilience.test.ts": { count: 4, reason: "existing runtime integration test" },
   "kilocode/config-validation.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/plan-followup.test.ts": { count: 7, reason: "existing runtime integration test" },
-  "kilocode/session-list.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/session/platform-attribution.test.ts": { count: 5, reason: "existing runtime integration test" },
   "kilocode/session/session.test.ts": { count: 4, reason: "existing runtime integration test" },
   "mcp/headers.test.ts": { count: 4, reason: "existing runtime integration test" },
