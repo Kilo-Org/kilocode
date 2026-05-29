@@ -6,7 +6,7 @@ import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/type
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 describe("useFileMention", () => {
-  it("keeps previous file results visible while the next search is pending", async () => {
+  it("shows matching broader search results while the narrower search is pending", async () => {
     const posted: WebviewMessage[] = []
     const handlers = new Set<(message: ExtensionMessage) => void>()
     const ctx = {
@@ -30,6 +30,9 @@ describe("useFileMention", () => {
     expect(first?.type).toBe("requestFileSearch")
     expect(first).toMatchObject({ query: "e", requestId: "file-search-1" })
 
+    mention.onInput("@ex", 3)
+    expect(mention.pending()).toBe(true)
+
     for (const handler of handlers) {
       handler({
         type: "fileSearchResult",
@@ -41,10 +44,7 @@ describe("useFileMention", () => {
     }
 
     expect(mention.mentionResults()).toEqual([{ type: "opened-file", value: "packages/kilo-vscode/src/extension.ts" }])
-
-    mention.onInput("@ex", 3)
-
-    expect(mention.mentionResults()).toEqual([{ type: "opened-file", value: "packages/kilo-vscode/src/extension.ts" }])
+    expect(mention.pending()).toBe(true)
 
     dispose.fn?.()
   })

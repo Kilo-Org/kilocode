@@ -94,13 +94,15 @@ export function useFileMention(
 
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type !== "fileSearchResult") return
-    if (message.requestId === `file-search-${fileSearchCounter}`) {
-      const items = message.items ?? message.paths.map((path) => ({ path, type: "file" as const }))
-      workspaceDir = message.dir
-      setMentionResults(buildMentionResults(mentionQuery() ?? "", items, git?.() ?? true))
-      setMentionIndex(0)
-      setPending(false)
-    }
+    const current = message.requestId === `file-search-${fileSearchCounter}`
+    if (!current && !pending()) return
+    const items = message.items ?? message.paths.map((path) => ({ path, type: "file" as const }))
+    const next = buildMentionResults(mentionQuery() ?? "", items, git?.() ?? true)
+    if (!current && next.length === 0) return
+    workspaceDir = message.dir
+    setMentionResults(next)
+    setMentionIndex(0)
+    if (current) setPending(false)
   })
 
   onCleanup(() => {
