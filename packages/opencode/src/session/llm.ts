@@ -500,7 +500,7 @@ const live: Layer.Layer<
       // kilocode_change start - capture eligible session export request completion off the stream path
       if (!exportable) return { fullStream: result.fullStream } satisfies StreamResult
       return {
-        fullStream: observeFullStream(result.fullStream, {
+        fullStream: observeFullStreamForExport(result.fullStream, {
           sessionId: input.sessionID,
           rootSessionId: root,
           parentSessionId: parent,
@@ -544,7 +544,7 @@ export const defaultLayer = Layer.suspend(() =>
 )
 
 // kilocode_change start - session export stream observer
-function observeFullStream(
+export function observeFullStreamForExport(
   stream: AsyncIterable<Event>,
   meta: {
     sessionId: string
@@ -554,22 +554,31 @@ function observeFullStream(
     started: number
     retries: number
   },
+  complete: (args: Parameters<typeof SessionExport.afterRequest>[0]) => void = SessionExport.afterRequest,
 ): AsyncIterable<Event> {
   const textParts: string[] = []
   const reasoningParts: string[] = []
   const toolCalls: Event[] = []
   let finishReason: string | undefined
   let usage: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number } | undefined
+  let finished = false
+  let reported = false
   const done = (error?: unknown) => {
-    SessionExport.afterRequest({
-      sessionId: meta.sessionId,
-      rootSessionId: meta.rootSessionId,
-      parentSessionId: meta.parentSessionId,
-      requestId: meta.requestId,
-      output: { textParts, reasoningParts, toolCalls, finishReason, error, usage },
-      durationMs: Date.now() - meta.started,
-      retryCount: meta.retries,
-    })
+    if (reported) return
+    reported = true
+    try {
+      complete({
+        sessionId: meta.sessionId,
+        rootSessionId: meta.rootSessionId,
+        parentSessionId: meta.parentSessionId,
+        requestId: meta.requestId,
+        output: { textParts, reasoningParts, toolCalls, finishReason, error, usage },
+        durationMs: Date.now() - meta.started,
+        retryCount: meta.retries,
+      })
+    } catch (err) {
+      console.warn("[session-export] request completion export failed", err)
+    }
   }
   const observed = async function* () {
     try {
@@ -583,10 +592,12 @@ function observeFullStream(
         })
         yield part
       }
-      done()
+      finished = true
     } catch (err) {
       done(err)
       throw err
+    } finally {
+      done(finished ? undefined : { code: "stream_cancelled" })
     }
   }
   return observed()
