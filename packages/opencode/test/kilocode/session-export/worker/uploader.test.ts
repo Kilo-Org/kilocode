@@ -357,7 +357,7 @@ describe("Uploader", () => {
     expect(storage.getChunk("h1")).toBeUndefined()
   })
 
-  test("4xx response drops rows without retry", async () => {
+  test("terminal 4xx response drops rows without retry", async () => {
     const uploader = new Uploader({
       storage,
       endpoint: "https://example.test/ingest",
@@ -370,6 +370,21 @@ describe("Uploader", () => {
     expect(storage.pendingEvents({ now: Date.now(), limitBytes: 1_000_000 }).length).toBe(0)
     const afterRetryWindow = Date.now() + Config.retryBackoffMaxMs + 1
     expect(storage.pendingEvents({ now: afterRetryWindow, limitBytes: 1_000_000 }).length).toBe(0)
+  })
+
+  test("429 response retries rows after retry-after", async () => {
+    const uploader = new Uploader({
+      storage,
+      endpoint: "https://example.test/ingest",
+      fetch: async () => new Response("", { status: 429, headers: { "retry-after": "2" } }),
+      reportTelemetry: () => {},
+      agentVersion: "v0",
+      surface: "test",
+    })
+    const start = Date.now()
+    await uploader.flush("test")
+    expect(storage.pendingEvents({ now: start + 1_500, limitBytes: 1_000_000 }).length).toBe(0)
+    expect(storage.pendingEvents({ now: start + 2_500, limitBytes: 1_000_000 }).length).toBe(1)
   })
 
   test("5xx response backs rows off", async () => {

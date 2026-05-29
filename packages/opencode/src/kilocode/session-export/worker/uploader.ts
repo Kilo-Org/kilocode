@@ -123,13 +123,15 @@ export class Uploader {
           this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.uploaded", props: { events: deleted.events, chunks: deleted.chunks, batchId } })
           continue
         }
-        if (res.status >= 400 && res.status < 500) {
+        if (terminal(res.status)) {
           this.deps.storage.commitUploaded(eventIds, chunkIds)
           this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.upload_4xx", props: { status: res.status, batchId } })
           continue
         }
         const retryAt = Date.now()
-        for (const row of rows) this.deps.storage.markRetry(row.id, retryAt + backoffFor(row.uploadAttempts))
+        const delay = retryAfter(res.headers) ?? backoffFor(rows[0]?.uploadAttempts ?? 0)
+        for (const row of rows) this.deps.storage.markRetry(row.id, retryAt + delay)
+        this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.upload_retryable", props: { status: res.status, batchId } })
         return
       }
     } catch (err) {
@@ -144,6 +146,23 @@ export function backoffFor(attempts: number): number {
   const exponent = Math.max(0, attempts)
   const grown = Config.retryBackoffMinMs * 2 ** Math.min(exponent, 16)
   return Math.min(grown, Config.retryBackoffMaxMs)
+}
+
+function terminal(status: number): boolean {
+  if (status === 400) return true
+  if (status === 413) return true
+  if (status === 422) return true
+  return false
+}
+
+function retryAfter(headers: Headers): number | undefined {
+  const value = headers.get("retry-after")
+  if (!value) return undefined
+  const seconds = Number(value)
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1_000)
+  const time = Date.parse(value)
+  if (!Number.isFinite(time)) return undefined
+  return Math.max(0, time - Date.now())
 }
 
 type HeaderArgs = {
