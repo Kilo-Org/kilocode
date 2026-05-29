@@ -14,6 +14,8 @@ export type SyncSubscriberDeps = {
 type SyncLike = { type: string; aggregateID?: string; seq?: number; data?: unknown; properties?: unknown }
 
 export class SyncSubscriber {
+  private permissions = new Map<string, { sessionId: string; toolName: string; started: number }>()
+
   constructor(private readonly deps: SyncSubscriberDeps) {}
 
   onSyncEvent(event: SyncLike): void {
@@ -23,6 +25,9 @@ export class SyncSubscriber {
     if (!this.deps.isEligibleSession(sessionId)) return
 
     switch (event.type) {
+      case "permission.asked":
+        this.handlePermissionAsked(sessionId, data)
+        return
       case "message.part.updated":
         this.handlePart(sessionId, data)
         return
@@ -35,6 +40,16 @@ export class SyncSubscriber {
       default:
         return
     }
+  }
+
+  private handlePermissionAsked(sessionId: string, data: Record<string, unknown>): void {
+    const id = text(data.id) ?? text(data.requestID) ?? text(data.requestId)
+    if (!id) return
+    this.permissions.set(id, {
+      sessionId,
+      toolName: text(data.permission) ?? text(record(data.metadata).tool) ?? "",
+      started: this.deps.now(),
+    })
   }
 
   private handlePart(sessionId: string, data: Record<string, unknown>): void {
@@ -80,8 +95,11 @@ export class SyncSubscriber {
   }
 
   private handlePermission(sessionId: string, data: Record<string, unknown>): void {
-    const reply = record(data.reply)
-    const decision = text(reply.response) === "once" || text(reply.response) === "always" ? "allow" : "deny"
+    const request = text(data.requestID) ?? text(data.requestId)
+    const asked = request ? this.permissions.get(request) : undefined
+    if (request) this.permissions.delete(request)
+    const reply = text(data.reply)
+    const decision = reply === "always" ? "always_allow" : reply === "once" ? "allow" : "deny"
     const seq = this.deps.syncSeq(sessionId)
     const env: PermissionDecided = {
       id: ulid(),
@@ -94,10 +112,9 @@ export class SyncSubscriber {
       eventSeq: seq,
       ts: this.deps.now(),
       agentVersion: this.deps.agentVersion,
-      toolName: text(data.permission) ?? "",
+      toolName: text(data.permission) ?? asked?.toolName ?? "",
       decision,
-      reason: text(reply.message),
-      durationToDecideMs: 0,
+      durationToDecideMs: Math.max(0, this.deps.now() - (asked?.started ?? this.deps.now())),
     }
     this.deps.dispatch(env)
   }

@@ -99,7 +99,7 @@ describe("SyncSubscriber", () => {
     sub.onSyncEvent({
       type: "permission.replied",
       aggregateID: "sub_1",
-      data: { permission: "write_file", reply: { response: "once" } },
+      data: { permission: "write_file", reply: "once" },
     })
     sub.onSyncEvent({
       type: "session.feedback",
@@ -108,6 +108,33 @@ describe("SyncSubscriber", () => {
     })
     const roots = posted.map((item) => (item as { rootSessionId?: string }).rootSessionId)
     expect(roots.every((root) => root === "root_1")).toBe(true)
+  })
+
+  test("correlates permission replies with prior requests", () => {
+    const posted: unknown[] = []
+    const sub = new SyncSubscriber({
+      isEligibleSession: () => true,
+      dispatch: (event) => posted.push(event),
+      agentVersion: "v0",
+      now: () => 10,
+      syncSeq: () => 1,
+    })
+    sub.onSyncEvent({
+      type: "permission.asked",
+      aggregateID: "s1",
+      data: { id: "p1", permission: "write_file" },
+    })
+    sub.onSyncEvent({
+      type: "permission.replied",
+      aggregateID: "s1",
+      data: { requestID: "p1", reply: "always" },
+    })
+
+    const event = posted.find((item) => (item as { type?: string }).type === "permission_decided") as
+      | { toolName?: string; decision?: string }
+      | undefined
+    expect(event?.toolName).toBe("write_file")
+    expect(event?.decision).toBe("always_allow")
   })
 
   test("turnId groups tool events with the active session turn", () => {
