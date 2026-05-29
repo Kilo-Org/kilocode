@@ -14,6 +14,36 @@ describe("parseDshowAudioDevices", () => {
     expect(parseDshowAudioDevices(raw)).toEqual(["Microphone Array (Realtek Audio)", "Webcam Microphone"])
   })
 
+  it("extracts audio devices from bundled Windows FFmpeg output", () => {
+    const raw = `
+[dshow @ 000001] DirectShow video devices (some may be both video and audio devices)
+[dshow @ 000001]  "Integrated Camera"
+[dshow @ 000001]     Alternative name "@devicepnp\\camera"
+[dshow @ 000001] DirectShow audio devices
+[dshow @ 000001]  "Microphone Array (LG MONITOR WEBCAM MIC)"
+[dshow @ 000001]     Alternative name "@devicecm\\wave_mic"
+[dshow @ 000001]  "Microphone (Voice Changer Virtual Audio Device (WDM))"
+[dshow @ 000001]     Alternative name "@devicecm\\wave_virtual"
+dummy: Immediate exit requested
+`
+
+    expect(parseDshowAudioDevices(raw)).toEqual([
+      "Microphone Array (LG MONITOR WEBCAM MIC)",
+      "Microphone (Voice Changer Virtual Audio Device (WDM))",
+    ])
+  })
+
+  it("keeps audio device names containing parser-label text", () => {
+    const raw = `
+[dshow @ 000001] DirectShow audio devices
+[dshow @ 000001]  "Alternative name Microphone"
+[dshow @ 000001]     Alternative name "@devicecm\\wave_mic"
+[dshow @ 000001]  "Microphone (Video)"
+`
+
+    expect(parseDshowAudioDevices(raw)).toEqual(["Alternative name Microphone", "Microphone (Video)"])
+  })
+
   it("deduplicates repeated dshow audio device names", () => {
     const raw = `"Microphone" (audio)\n"Microphone" (audio)`
 
