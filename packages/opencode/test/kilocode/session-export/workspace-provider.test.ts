@@ -223,4 +223,14 @@ describe("workspace provider", () => {
     expect(delta.diff[0].path).toBe("src.ts")
     expect(delta.diff[0].patch).toContain("value = 2")
   })
+
+  test("ignores corrupt persisted snapshot state", async () => {
+    await using tmp = await tmpdir({ git: true })
+    const state = join(await mkdtemp(join(osTmpdir(), "session-export-provider-")), "state.json")
+    await writeFile(state, JSON.stringify({ sessions: { s1: "bad" }, snapshots: { bad: { path: "src.ts" } } }))
+
+    const provider = createWorkspaceProvider({ root: tmp.path, statePath: state })
+
+    expect(provider.current("s1")).toBeUndefined()
+  })
 })

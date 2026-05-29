@@ -74,11 +74,47 @@ function prune(state: State, snapshots: Map<string, Map<string, File>>, pending:
 function load(file: string | undefined): State {
   if (!file || !existsSync(file)) return { sessions: {}, snapshots: {} }
   try {
-    const value = JSON.parse(readFileSync(file, "utf8")) as Partial<State>
-    return { sessions: value.sessions ?? {}, snapshots: value.snapshots ?? {} }
+    const value = JSON.parse(readFileSync(file, "utf8"))
+    return state(value)
   } catch {
     return { sessions: {}, snapshots: {} }
   }
+}
+
+function state(value: unknown): State {
+  if (!plain(value)) return { sessions: {}, snapshots: {} }
+  const raw = plain(value.snapshots) ? value.snapshots : {}
+  const snapshots: Record<string, File[]> = {}
+  for (const [id, files] of Object.entries(raw)) {
+    if (!Array.isArray(files)) continue
+    const valid = files.filter((item): item is File => file(item))
+    if (valid.length !== files.length) continue
+    snapshots[id] = valid
+  }
+  const sessions: Record<string, string> = {}
+  const refs = plain(value.sessions) ? value.sessions : {}
+  for (const [session, id] of Object.entries(refs)) {
+    if (typeof id !== "string") continue
+    if (!snapshots[id]) continue
+    sessions[session] = id
+  }
+  return { sessions, snapshots }
+}
+
+function file(value: unknown): value is File {
+  if (!plain(value)) return false
+  if (typeof value.path !== "string") return false
+  if (value.kind !== "file" && value.kind !== "symlink") return false
+  if (typeof value.size !== "number" || !Number.isFinite(value.size)) return false
+  if (typeof value.hash !== "string") return false
+  if (value.content !== undefined && typeof value.content !== "string") return false
+  if (value.omitted !== undefined && !plain(value.omitted)) return false
+  return true
+}
+
+function plain(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false
+  return true
 }
 
 function save(file: string | undefined, state: State): void {
