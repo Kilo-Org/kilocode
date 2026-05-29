@@ -55,6 +55,7 @@ export const dict = {
   "agentManager.tab.terminal": "Terminale",
   "agentManager.tab.openTerminal": "Apri terminale",
   "agentManager.tab.newOptions": "Altre opzioni nuova scheda",
+  "agentManager.tabList.label": "Schede aperte",
   "agentManager.tabsMenu.label": "Cerca e cambia scheda",
   "agentManager.tabsMenu.search": "Cerca schede...",
   "agentManager.tabsMenu.empty": "Nessuna scheda corrispondente",
