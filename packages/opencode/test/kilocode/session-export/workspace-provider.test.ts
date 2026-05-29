@@ -75,6 +75,24 @@ describe("workspace provider", () => {
     })
   })
 
+  test("truncates workspace content past aggregate snapshot budget", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await writeFile(join(tmp.path, "a.ts"), "aaaa\n")
+    await writeFile(join(tmp.path, "b.ts"), "bbbb\n")
+    await $`git add a.ts b.ts`.cwd(tmp.path).quiet()
+    await $`git commit -m files`.cwd(tmp.path).quiet()
+
+    const provider = createWorkspaceProvider({ root: tmp.path, maxSnapshotBytes: 5 })
+    const baseline = await provider.baseline()
+
+    expect(baseline.capture.truncated).toBe(true)
+    expect(baseline.capture.omittedCountsByReason.large).toBe(1)
+    expect(baseline.files.map((file) => [file.path, file.content, file.omitted?.reason])).toEqual([
+      ["a.ts", "aaaa\n", undefined],
+      ["b.ts", undefined, "large"],
+    ])
+  })
+
   test("baseline capture metadata never embeds the absolute workspace root", async () => {
     await using tmp = await tmpdir({ git: true })
     await writeFile(join(tmp.path, "src.ts"), "export const value = 1\n")

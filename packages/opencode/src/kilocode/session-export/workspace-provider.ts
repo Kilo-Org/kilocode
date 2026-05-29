@@ -16,7 +16,7 @@ type File = {
   omitted?: FileEntry["omitted"]
 }
 
-export function createWorkspaceProvider(opts: { root: string; statePath?: string }) {
+export function createWorkspaceProvider(opts: { root: string; statePath?: string; maxSnapshotBytes?: number }) {
   const state = load(opts.statePath)
   const snapshots = new Map<string, Map<string, File>>(
     Object.entries(state.snapshots).map(([key, files]) => [key, new Map(files.map((file) => [file.path, file]))]),
@@ -24,7 +24,7 @@ export function createWorkspaceProvider(opts: { root: string; statePath?: string
   const pending = new Set<string>()
 
   const capture = async () => {
-    const result = await scan(opts.root)
+    const result = await scan(opts.root, opts.maxSnapshotBytes ?? Config.maxSnapshotBytes)
     const files = result.files
     const id = hash(files)
     snapshots.set(id, files)
@@ -32,7 +32,7 @@ export function createWorkspaceProvider(opts: { root: string; statePath?: string
     pending.add(id)
     setTimeout(() => pending.delete(id), 0).unref?.()
     save(opts.statePath, state)
-    return { id, files, capture: metadata(result.mode, files) }
+    return { id, files, capture: metadata(result.mode, files, result.truncated) }
   }
 
   return {
@@ -133,14 +133,17 @@ function save(file: string | undefined, state: State): void {
   writeFileSync(file, JSON.stringify(state))
 }
 
-async function scan(root: string): Promise<{ files: Map<string, File>; mode: CaptureMetadata["mode"] }> {
+async function scan(root: string, limit: number): Promise<{ files: Map<string, File>; mode: CaptureMetadata["mode"]; truncated: boolean }> {
   const repo = await repository(root)
-  if (!repo) return { files: new Map(), mode: "none" }
+  if (!repo) return { files: new Map(), mode: "none", truncated: false }
   const paths = await tracked(repo)
-  const files = await Promise.all(paths.map((item) => inspect(repo, item)))
   const out = new Map<string, File>()
-  for (const file of files.filter((item): item is File => Boolean(item))) out.set(file.path, file)
-  return { files: out, mode: "git-tracked-and-untracked" }
+  const budget = { used: 0, limit, truncated: false }
+  for (const item of paths) {
+    const file = await inspect(repo, item, budget)
+    if (file) out.set(file.path, file)
+  }
+  return { files: out, mode: "git-tracked-and-untracked", truncated: budget.truncated }
 }
 
 async function repository(root: string): Promise<string | undefined> {
@@ -163,7 +166,7 @@ async function tracked(root: string): Promise<string[]> {
   return Array.from(new Set(text.split("\0").filter(Boolean))).sort((a, b) => a.localeCompare(b))
 }
 
-async function inspect(root: string, rel: string): Promise<File | undefined> {
+async function inspect(root: string, rel: string, budget: { used: number; limit: number; truncated: boolean }): Promise<File | undefined> {
   const full = path.join(root, rel)
   const info = await lstat(full).catch(() => undefined)
   if (!info) return undefined
@@ -176,8 +179,13 @@ async function inspect(root: string, rel: string): Promise<File | undefined> {
   if (size > Config.maxPayloadBytes) {
     return { path: rel, kind: "file", size, hash: "", omitted: { reason: "large" } }
   }
+  if (budget.used + size > budget.limit) {
+    budget.truncated = true
+    return { path: rel, kind: "file", size, hash: "", omitted: { reason: "large" } }
+  }
   const bytes = await readFile(full).catch(() => undefined)
   if (!bytes) return { path: rel, kind: "file", size, hash: "", omitted: { reason: "error" } }
+  budget.used += size
   const hash = sha(bytes)
   if (binary(bytes)) return { path: rel, kind: "file", size, hash, omitted: { reason: "binary" } }
   return { path: rel, kind: "file", size, hash, content: bytes.toString("utf8") }
@@ -207,13 +215,13 @@ function entry(file: File): FileEntry {
   }
 }
 
-function metadata(mode: CaptureMetadata["mode"], files: Map<string, File>): CaptureMetadata {
+function metadata(mode: CaptureMetadata["mode"], files: Map<string, File>, truncated: boolean): CaptureMetadata {
   return {
     mode,
     fileCount: files.size,
     totalBytes: [...files.values()].reduce((sum, file) => sum + file.size, 0),
     omittedCountsByReason: omitted(files),
-    truncated: false,
+    truncated,
   }
 }
 
