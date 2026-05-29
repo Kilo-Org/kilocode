@@ -51,6 +51,7 @@ export const dict = {
   "agentManager.tab.terminal": "終端機",
   "agentManager.tab.openTerminal": "開啟終端機",
   "agentManager.tab.newOptions": "更多新增分頁選項",
+  "agentManager.tabList.label": "開啟的分頁",
   "agentManager.tabsMenu.label": "搜尋開啟的分頁",
   "agentManager.tabsMenu.search": "搜尋分頁...",
   "agentManager.tabsMenu.empty": "沒有相符的分頁",

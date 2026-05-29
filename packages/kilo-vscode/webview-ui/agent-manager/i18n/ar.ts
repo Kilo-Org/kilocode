@@ -51,6 +51,7 @@ export const dict = {
   "agentManager.tab.terminal": "الطرفية",
   "agentManager.tab.openTerminal": "فتح الطرفية",
   "agentManager.tab.newOptions": "المزيد من خيارات علامات التبويب الجديدة",
+  "agentManager.tabList.label": "علامات التبويب المفتوحة",
   "agentManager.tabsMenu.label": "البحث في علامات التبويب المفتوحة",
   "agentManager.tabsMenu.search": "البحث في علامات التبويب...",
   "agentManager.tabsMenu.empty": "لا توجد علامات تبويب مطابقة",

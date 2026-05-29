@@ -55,6 +55,7 @@ export const dict = {
   "agentManager.tab.terminal": "Термінал",
   "agentManager.tab.openTerminal": "Відкрити термінал",
   "agentManager.tab.newOptions": "Інші параметри нової вкладки",
+  "agentManager.tabList.label": "Відкриті вкладки",
   "agentManager.tabsMenu.label": "Шукати відкриті вкладки",
   "agentManager.tabsMenu.search": "Шукати вкладки...",
   "agentManager.tabsMenu.empty": "Немає відповідних вкладок",

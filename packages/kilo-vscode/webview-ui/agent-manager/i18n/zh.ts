@@ -51,6 +51,7 @@ export const dict = {
   "agentManager.tab.terminal": "终端",
   "agentManager.tab.openTerminal": "打开终端",
   "agentManager.tab.newOptions": "更多新建标签页选项",
+  "agentManager.tabList.label": "打开的标签页",
   "agentManager.tabsMenu.label": "搜索打开的标签页",
   "agentManager.tabsMenu.search": "搜索标签页...",
   "agentManager.tabsMenu.empty": "无匹配标签页",

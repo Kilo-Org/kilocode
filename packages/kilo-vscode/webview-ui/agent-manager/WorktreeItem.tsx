@@ -141,13 +141,6 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
     props.onOpenPR?.()
   }
 
-  const activate = (e: KeyboardEvent) => {
-    if (e.target !== e.currentTarget) return
-    if (e.key !== "Enter" && e.key !== " ") return
-    e.preventDefault()
-    props.onClick()
-  }
-
   return (
     <>
       <Show when={props.groupStart}>
@@ -175,13 +168,18 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                   "am-wt-group-end": props.groupEnd,
                 }}
                 data-sidebar-id={props.worktree.id}
-                role="button"
-                tabIndex={0}
-                aria-label={props.subtitle ? `${props.label}, ${props.subtitle}` : props.label}
-                aria-current={props.active ? "page" : undefined}
                 onClick={() => props.onClick()}
-                onKeyDown={activate}
               >
+                <button
+                  type="button"
+                  class="am-worktree-select"
+                  aria-label={props.subtitle ? `${props.label}, ${props.subtitle}` : props.label}
+                  aria-current={props.active ? "page" : undefined}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    props.onClick()
+                  }}
+                />
                 <div class="am-wt-icon">
                   <Show when={!props.busy && !props.working} fallback={<Spinner class="am-worktree-spinner" />}>
                     <Icon name="branch" size="small" />

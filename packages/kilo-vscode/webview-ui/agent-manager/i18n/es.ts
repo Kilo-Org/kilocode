@@ -51,6 +51,7 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Abrir Terminal",
   "agentManager.tab.newOptions": "Más opciones de nueva pestaña",
+  "agentManager.tabList.label": "Pestañas abiertas",
   "agentManager.tabsMenu.label": "Buscar pestañas abiertas",
   "agentManager.tabsMenu.search": "Buscar pestañas...",
   "agentManager.tabsMenu.empty": "No hay pestañas coincidentes",

@@ -67,7 +67,11 @@ export const SortableTab: Component<{
     >
       <ContextMenu>
         <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
-          <div class={`am-tab ${props.active ? "am-tab-active" : ""}`} onMouseDown={props.onMiddleClick}>
+          <div
+            class={`am-tab ${props.active ? "am-tab-active" : ""}`}
+            onClick={props.onSelect}
+            onMouseDown={props.onMiddleClick}
+          >
             <div
               class="am-tab-select"
               id={tabId(props.tab.id)}
@@ -75,7 +79,6 @@ export const SortableTab: Component<{
               tabIndex={props.active ? 0 : -1}
               aria-selected={props.active}
               aria-controls={panelId(props.tab.id)}
-              onClick={props.onSelect}
               onKeyDown={handleTabKeyDown}
             >
               <TooltipKeybind
@@ -170,7 +173,11 @@ export const SortableReviewTab: Component<{
       class={`am-tab-sortable ${sortable.isActiveDraggable ? "am-tab-dragging" : ""}`}
       data-tab-id={props.id}
     >
-      <div class={`am-tab am-tab-review ${props.active ? "am-tab-active" : ""}`} onMouseDown={props.onMiddleClick}>
+      <div
+        class={`am-tab am-tab-review ${props.active ? "am-tab-active" : ""}`}
+        onClick={props.onSelect}
+        onMouseDown={props.onMiddleClick}
+      >
         <div
           class="am-tab-select"
           id={tabId(props.id)}
@@ -178,7 +185,6 @@ export const SortableReviewTab: Component<{
           tabIndex={props.active ? 0 : -1}
           aria-selected={props.active}
           aria-controls={panelId(props.id)}
-          onClick={props.onSelect}
           onKeyDown={handleTabKeyDown}
         >
           <TooltipKeybind

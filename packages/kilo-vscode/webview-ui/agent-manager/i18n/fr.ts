@@ -51,6 +51,7 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Ouvrir le Terminal",
   "agentManager.tab.newOptions": "Plus d'options de nouvel onglet",
+  "agentManager.tabList.label": "Onglets ouverts",
   "agentManager.tabsMenu.label": "Rechercher les onglets ouverts",
   "agentManager.tabsMenu.search": "Rechercher des onglets...",
   "agentManager.tabsMenu.empty": "Aucun onglet correspondant",

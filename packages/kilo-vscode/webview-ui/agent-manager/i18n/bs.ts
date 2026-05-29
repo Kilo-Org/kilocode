@@ -51,6 +51,7 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Otvori Terminal",
   "agentManager.tab.newOptions": "Više opcija nove kartice",
+  "agentManager.tabList.label": "Otvorene kartice",
   "agentManager.tabsMenu.label": "Pretraži otvorene kartice",
   "agentManager.tabsMenu.search": "Pretraži kartice...",
   "agentManager.tabsMenu.empty": "Nema podudarnih kartica",

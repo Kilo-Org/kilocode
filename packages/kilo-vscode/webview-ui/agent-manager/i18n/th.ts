@@ -51,6 +51,7 @@ export const dict = {
   "agentManager.tab.terminal": "เทอร์มินัล",
   "agentManager.tab.openTerminal": "เปิดเทอร์มินัล",
   "agentManager.tab.newOptions": "ตัวเลือกแท็บใหม่เพิ่มเติม",
+  "agentManager.tabList.label": "แท็บที่เปิดอยู่",
   "agentManager.tabsMenu.label": "ค้นหาแท็บที่เปิดอยู่",
   "agentManager.tabsMenu.search": "ค้นหาแท็บ...",
   "agentManager.tabsMenu.empty": "ไม่มีแท็บที่ตรงกัน",

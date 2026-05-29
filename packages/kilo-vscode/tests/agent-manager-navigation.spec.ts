@@ -18,8 +18,8 @@ test.describe("Agent Manager accessible navigation", () => {
     await expect(page.locator(".am-worktree-item")).toHaveCount(0)
 
     await section.press("Enter")
-    const first = page.locator('.am-worktree-item[aria-label="Keyboard navigation"]')
-    const second = page.locator('.am-worktree-item[aria-label="Screen reader navigation"]')
+    const first = page.getByRole("button", { name: "Keyboard navigation", exact: true })
+    const second = page.getByRole("button", { name: "Screen reader navigation", exact: true })
     await expect(first).toHaveAttribute("aria-current", "page")
     await expect(second).not.toHaveAttribute("aria-current", "page")
 
@@ -28,10 +28,12 @@ test.describe("Agent Manager accessible navigation", () => {
     await expect(second).toHaveAttribute("aria-current", "page")
     await expect(page.getByTestId("worktree-state")).toContainText("wt-reader")
 
+    await first.press("Enter")
+    await second.focus()
     const remove = page.getByRole("button", { name: "Delete worktree: Screen reader navigation" })
     await expect(remove).toBeVisible()
     await remove.press("Enter")
-    await expect(page.getByTestId("worktree-state")).toContainText("wt-reader|wt-reader")
+    await expect(page.getByTestId("worktree-state")).toContainText("wt-keyboard|wt-reader")
   })
 
   test("switches and safely closes session, review, and terminal tabs", async ({ page }) => {
@@ -59,6 +61,16 @@ test.describe("Agent Manager accessible navigation", () => {
     await terminal.press("Home")
     await expect(session).toBeFocused()
     await session.press("Space")
+    await expect(session).toHaveAttribute("aria-selected", "true")
+
+    await page.locator(".am-tab-review").click({ position: { x: 2, y: 10 } })
+    await expect(review).toHaveAttribute("aria-selected", "true")
+    await page.locator(".am-tab-terminal").click({ position: { x: 2, y: 10 } })
+    await expect(terminal).toHaveAttribute("aria-selected", "true")
+    await page
+      .locator(".am-tab")
+      .first()
+      .click({ position: { x: 2, y: 10 } })
     await expect(session).toHaveAttribute("aria-selected", "true")
 
     const closeSession = page.getByRole("button", { name: "Close tab: Implement navigation" })

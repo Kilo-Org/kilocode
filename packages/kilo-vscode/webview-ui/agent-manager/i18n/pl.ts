@@ -51,6 +51,7 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Otwórz Terminal",
   "agentManager.tab.newOptions": "Więcej opcji nowej karty",
+  "agentManager.tabList.label": "Otwarte karty",
   "agentManager.tabsMenu.label": "Szukaj otwartych kart",
   "agentManager.tabsMenu.search": "Szukaj kart...",
   "agentManager.tabsMenu.empty": "Brak pasujących kart",

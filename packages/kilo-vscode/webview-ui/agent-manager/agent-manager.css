@@ -213,6 +213,7 @@ button.am-section-toggle:hover .am-section-label {
 }
 
 .am-worktree-item {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 8px;
@@ -228,8 +229,21 @@ button.am-section-toggle:hover .am-section-label {
   transition: background 200ms ease;
 }
 
+.am-worktree-select {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
 /* Left icon column — shrink-0, vertically centered with first row */
 .am-wt-icon {
+  position: relative;
+  z-index: 1;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -238,6 +252,8 @@ button.am-section-toggle:hover .am-section-label {
 
 /* Right content column — flex-1 with two rows */
 .am-wt-content {
+  position: relative;
+  z-index: 1;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -316,7 +332,7 @@ button.am-section-toggle:hover .am-section-label {
   background: var(--surface-inset-base-hover);
 }
 
-.am-worktree-item:focus-visible {
+.am-worktree-select:focus-visible {
   outline: 1px solid var(--border-focus, var(--vscode-focusBorder, #007fd4));
   outline-offset: -1px;
 }
@@ -4331,7 +4347,7 @@ body.vscode-high-contrast-light {
 
   /* Focus states */
   .am-local-item:focus-visible,
-  .am-worktree-item:focus-visible,
+  .am-worktree-select:focus-visible,
   .am-item:focus-visible,
   .am-tab:focus-visible,
   .am-tab:has(.am-tab-select:focus-visible),

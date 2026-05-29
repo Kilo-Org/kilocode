@@ -48,6 +48,7 @@ export const SortableTerminalTab: Component<{
         <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
           <div
             class={`am-tab am-tab-terminal ${props.active ? "am-tab-active" : ""}`}
+            onClick={props.onSelect}
             onMouseDown={props.onMiddleClick}
           >
             <div
@@ -57,7 +58,6 @@ export const SortableTerminalTab: Component<{
               tabIndex={props.active ? 0 : -1}
               aria-selected={props.active}
               aria-controls={panelId(props.id)}
-              onClick={props.onSelect}
               onKeyDown={handleTabKeyDown}
             >
               <TooltipKeybind

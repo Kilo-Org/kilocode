@@ -2668,7 +2668,7 @@ const AgentManagerContent: Component = () => {
                     class="am-tab-list"
                     ref={tabScroll.setRef}
                     role="tablist"
-                    aria-label={t("agentManager.tabsMenu.label")}
+                    aria-label={t("agentManager.tabList.label")}
                     aria-orientation="horizontal"
                     style={{ "--tab-count": `${tabIds().length}` } as JSX.CSSProperties}
                   >

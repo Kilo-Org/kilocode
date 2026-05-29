@@ -55,6 +55,7 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Terminal openen",
   "agentManager.tab.newOptions": "Meer opties voor nieuwe tabblad",
+  "agentManager.tabList.label": "Open tabbladen",
   "agentManager.tabsMenu.label": "Open tabbladen zoeken",
   "agentManager.tabsMenu.search": "Tabbladen zoeken...",
   "agentManager.tabsMenu.empty": "Geen overeenkomende tabbladen",
