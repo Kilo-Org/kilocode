@@ -219,7 +219,7 @@ export class Capture {
     if (!this.firstEligible.has(sessionId)) return
     if (this.degraded.has(sessionId)) return
     const root = this.roots.get(sessionId) ?? sessionId
-    await this.startDelta(sessionId, root, "session_close")
+    await this.startDelta(sessionId, root, "session_close").catch((err) => this.deps.onPostError?.(err))
   }
 
   private async startDelta(

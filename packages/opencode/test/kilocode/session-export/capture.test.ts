@@ -167,6 +167,37 @@ describe("Capture", () => {
     expect(types).toContain("workspace_delta_captured")
   })
 
+  test("onSessionClose is best effort when final delta persistence fails", async () => {
+    const errors: unknown[] = []
+    let calls = 0
+    const cap = new Capture({
+      worker,
+      agentVersion: "v0",
+      nowMs: () => 100,
+      syncSeq: () => 7,
+      onPostError: (err) => errors.push(err),
+      snapshotProvider: {
+        current: () => "h0",
+        baseline: async () => ({ snapshotId: "h0", files: [] }),
+        diff: async () => ({ snapshotHash: "h1", diff: [] }),
+        remember: () => {
+          calls++
+          if (calls === 1) return
+          throw new Error("state failed")
+        },
+      },
+    })
+    cap.beforeRequest({
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      requestMeta: meta("s1"),
+      assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    await expect(cap.onSessionClose("s1")).resolves.toBeUndefined()
+    expect(String(errors[0])).toContain("state failed")
+  })
+
   test("empty workspace deltas advance snapshot without dispatching", async () => {
     const remembered: string[] = []
     const cap = new Capture({
