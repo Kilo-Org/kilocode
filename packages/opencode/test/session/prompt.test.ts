@@ -1850,11 +1850,13 @@ unix(
             const sh = yield* prompt
               .shell({ sessionID: chat.id, agent: "build", command: "sleep 30" })
               .pipe(Effect.forkChild)
+            // kilocode_change start
             const status = yield* SessionStatus.Service
             yield* waitFor(
               "shell busy",
               status.get(chat.id).pipe(Effect.map((s) => (s.type === "busy" ? s : undefined))),
             )
+            // kilocode_change end
 
             yield* prompt.cancel(chat.id)
 
