@@ -66,7 +66,7 @@ describe("workspace fiber", () => {
     })
   })
 
-  test("emits eventual consistency when token times out then arrives", async () => {
+  test("emits missing at timeout then eventual when snapshot arrives", async () => {
     const dispatched: unknown[] = []
     await startBaselineFiber({
       sessionId: "s1",
@@ -78,7 +78,9 @@ describe("workspace fiber", () => {
       requestSnapshot: () => new Promise((resolve) => setTimeout(() => resolve({ snapshotId: "snap-1", files: [] }), 60)),
       dispatch: (event) => dispatched.push(event),
     })
-    expect((dispatched[0] as { consistency: string }).consistency).toBe("eventual")
+    expect((dispatched[0] as { consistency: string }).consistency).toBe("missing")
+    await new Promise((resolve) => setTimeout(resolve, 40))
+    expect(dispatched.map((item) => (item as { consistency?: string }).consistency)).toEqual(["missing", "eventual"])
   })
 
   test("emits missing consistency when snapshot fails entirely", async () => {

@@ -28,8 +28,21 @@ export type DeltaFiberArgs = {
 
 export async function startBaselineFiber(args: BaselineFiberArgs): Promise<string | undefined> {
   const result = await resolveBaseline(args)
+  emitBaseline(args, result)
+  return result.snapshotId
+}
+
+function emitBaseline(
+  args: BaselineFiberArgs,
+  result: {
+    consistency: "stable" | "eventual" | "missing"
+    snapshotId?: string
+    files: FileEntry[]
+    capture?: CaptureMetadata
+  },
+): void {
   const seq = args.syncSeq()
-  const env: WorkspaceBaselineCompleted = {
+  args.dispatch({
     id: ulid(),
     schemaVersion: 1,
     type: "workspace_baseline_completed",
@@ -44,9 +57,7 @@ export async function startBaselineFiber(args: BaselineFiberArgs): Promise<strin
     consistency: result.consistency,
     files: result.files,
     capture: result.capture,
-  }
-  args.dispatch(env)
-  return result.snapshotId
+  })
 }
 
 export async function startDeltaFiber(args: DeltaFiberArgs): Promise<string | undefined> {
@@ -89,13 +100,11 @@ async function resolveBaseline(args: BaselineFiberArgs): Promise<{
   try {
     const winner = await Promise.race([pending, timeout])
     if (winner === "timeout") {
-      try {
-        const eventual = await pending
-        return { consistency: "eventual", snapshotId: eventual.snapshotId, files: eventual.files, capture: eventual.capture }
-      } catch (err) {
-        console.warn("[session-export] eventual baseline failed", err)
-        return { consistency: "missing", files: [] }
-      }
+      void pending.then(
+        (eventual) => emitBaseline(args, { consistency: "eventual", snapshotId: eventual.snapshotId, files: eventual.files, capture: eventual.capture }),
+        (err) => console.warn("[session-export] eventual baseline failed", err),
+      )
+      return { consistency: "missing", files: [] }
     }
     return { consistency: "stable", snapshotId: winner.snapshotId, files: winner.files, capture: winner.capture }
   } catch (err) {
