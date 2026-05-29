@@ -7,6 +7,7 @@ import { Scrubber } from "./worker/scrub"
 import { Storage } from "./worker/storage"
 import { Uploader } from "./worker/uploader"
 import { checkBufferCap } from "./worker/buffer-cap"
+import { resolveEndpoint } from "./worker/endpoint"
 import path from "node:path"
 
 type Scope = {
@@ -62,7 +63,11 @@ scope.onmessage = (event) => {
       inbox = new Inbox({ capacityBytes: Config.ringBufferBytes })
       uploader = new Uploader({
         storage,
-        endpoint: msg.endpoint ?? process.env.KILO_SESSION_EXPORT_INGEST ?? "https://supermassive-black-hole.kiloapps.io/v1/session-export/batch",
+        endpoint: resolveEndpoint({
+          endpoint: msg.endpoint,
+          env: process.env.KILO_SESSION_EXPORT_INGEST,
+          allowCustom: process.env.KILO_SESSION_EXPORT_ALLOW_CUSTOM_INGEST === "1",
+        }),
         fetch: globalThis.fetch,
         reportTelemetry: (item) => scope.postMessage(item),
         agentVersion: msg.agentVersion ?? "unknown",
