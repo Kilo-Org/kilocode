@@ -46,6 +46,19 @@ const models: AutocompleteModelDef[] = [
     temperature: 0,
   },
   {
+    // Same wire-level model as `kilo/inception/mercury-edit-2`, but routed
+    // through the Kilo Gateway's Next Edit endpoint instead of FIM. Picked by
+    // users who want multi-line next-edit predictions with the jump-to-edit UX.
+    id: "kilo/inception/mercury-next-edit",
+    modelID: "inception/mercury-next-edit",
+    label: "Mercury Next Edit",
+    providerID: "kilo",
+    provider: "Kilo Gateway",
+    requestModel: "inception/mercury-edit-2",
+    temperature: 0,
+    kind: "edit",
+  },
+  {
     id: "mistral/codestral-2508",
     modelID: "codestral-2508",
     label: "Codestral",
@@ -83,7 +96,20 @@ const models: AutocompleteModelDef[] = [
 
 export const AUTOCOMPLETE_MODELS: readonly AutocompleteModelDef[] = models
 
-export const DEFAULT_AUTOCOMPLETE_MODEL: AutocompleteModelDef = models[0]!
+export const DEFAULT_AUTOCOMPLETE_PROVIDER_ID: AutocompleteProviderID = "kilo"
+export const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/codestral-2508"
+
+export const DEFAULT_AUTOCOMPLETE_MODEL: AutocompleteModelDef = (() => {
+  const found = models.find(
+    (m) => m.providerID === DEFAULT_AUTOCOMPLETE_PROVIDER_ID && m.modelID === DEFAULT_AUTOCOMPLETE_MODEL_ID,
+  )
+  if (!found) {
+    throw new Error(
+      `DEFAULT_AUTOCOMPLETE_MODEL not found: provider=${DEFAULT_AUTOCOMPLETE_PROVIDER_ID} model=${DEFAULT_AUTOCOMPLETE_MODEL_ID}`,
+    )
+  }
+  return found
+})()
 
 const aliases: Record<string, string> = {
   "inception/mercury-edit": "inception/mercury-edit-2",

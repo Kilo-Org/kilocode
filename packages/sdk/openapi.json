@@ -5723,6 +5723,10 @@
                   "variant": {
                     "type": "string"
                   },
+                  "snapshotInitialization": {
+                    "type": "string",
+                    "enum": ["wait"]
+                  },
                   "editorContext": {
                     "type": "object",
                     "properties": {
@@ -6547,6 +6551,10 @@
                   "variant": {
                     "type": "string"
                   },
+                  "snapshotInitialization": {
+                    "type": "string",
+                    "enum": ["wait"]
+                  },
                   "editorContext": {
                     "type": "object",
                     "properties": {
@@ -6705,6 +6713,10 @@
                   },
                   "variant": {
                     "type": "string"
+                  },
+                  "snapshotInitialization": {
+                    "type": "string",
+                    "enum": ["wait"]
                   },
                   "parts": {
                     "type": "array",
@@ -16784,9 +16796,6 @@
                 "type": "boolean"
               },
               "codebase_search": {
-                "type": "boolean"
-              },
-              "semantic_indexing": {
                 "type": "boolean"
               },
               "speech_to_text_model": {

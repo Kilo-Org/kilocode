@@ -110,6 +110,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "추천",
   "dialog.provider.opencode.note": "Claude, GPT, Gemini 등 엄선된 모델",
   "dialog.provider.anthropic.note": "Claude Pro/Max 또는 API 키로 연결",
+  "dialog.provider.deepseek.note": "추론 및 코딩 작업을 위한 DeepSeek 모델",
   "dialog.provider.openai.note": "ChatGPT Pro/Plus 또는 API 키로 연결",
   "dialog.provider.google.note": "빠르고 구조화된 응답을 위한 Gemini 모델",
   "dialog.provider.openrouter.note": "하나의 공급자에서 모든 지원 모델에 액세스",
@@ -977,6 +978,8 @@ export const dict = {
   "session.delete.confirm": '"{{name}}" 세션을 삭제하시겠습니까?',
   "session.delete.button": "세션 삭제",
   "session.untitled": "제목 없음",
+  "session.current": "현재 세션",
+  "session.history.sources": "기록 출처",
   "session.recent": "최근",
   "session.showHistory": "기록 보기",
   "session.search.placeholder": "세션 검색...",
@@ -1117,6 +1120,14 @@ export const dict = {
   "session.status.retrying": "재시도 중 ({{ attempt }}번째 시도)… {{ message }}",
   "session.status.working": "작업 중...",
   "session.status.offline": "네트워크 연결 끊김 — 다시 연결 중...",
+  "session.outcome.incomplete": "턴이 종료되었으며 {{count}}개의 할 일이 남았습니다",
+  "session.outcome.limit": "완료 전에 응답 제한에 도달했습니다",
+  "session.outcome.unknown": "모델의 종료 이유 없이 턴이 종료되었습니다",
+  "session.outcome.filtered": "콘텐츠 필터로 인해 제공자가 이 응답을 중단했습니다.",
+  "session.outcome.unexpected": "응답이 예기치 않게 종료되었으며 불완전할 수 있습니다.",
+  "session.outcome.interrupted": "턴이 중단되었습니다",
+  "session.outcome.error": "턴이 실패했습니다",
+  "session.outcome.finish": "종료 이유: {{reason}}",
 
   "ui.sessionTurn.cancel": "취소",
   "ui.sessionTurn.status.thinking": "생각 중...",
@@ -1179,7 +1190,6 @@ export const dict = {
     '원격 측정은 VS Code에 내장된 원격 측정 설정으로 제어됩니다. 비활성화하려면 설정 > 원격 측정 > 원격 측정 수준으로 이동하여 "off"로 설정하세요. 변경 사항을 적용하려면 VS Code를 다시 시작하세요.',
   "settings.aboutKiloCode.telemetry.openSettings": "원격 측정 설정 열기",
 
-  "settings.agentBehaviour.subtab.modes": "모드",
   "settings.agentBehaviour.subtab.agents": "에이전트",
   "settings.agentBehaviour.subtab.mcpServers": "MCP 서버",
   "settings.agentBehaviour.subtab.rules": "규칙",
@@ -1237,9 +1247,6 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "대량 붙여넣기 콘텐츠를 요약하지 않음",
   "settings.experimental.batch.title": "배치 도구",
   "settings.experimental.batch.description": "여러 도구 호출의 배치 처리 활성화",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "코드베이스 검색",
   "settings.experimental.codebaseSearch.description": "코드베이스 전체에서 AI 기반 자연어 검색 활성화",
   "settings.experimental.speechToText.title": "음성 텍스트 변환",
@@ -1291,7 +1298,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "스킬을 찾을 수 없습니다. 스킬을 사용하려면 아래에 스킬 폴더 경로 또는 URL을 추가하세요.",
   "settings.agentBehaviour.availableModes": "사용 가능한 사용자 정의 모드",
-  "settings.agentBehaviour.noModesFound": "모드를 찾을 수 없습니다.",
+  "settings.agentBehaviour.noAgentsFound": "에이전트를 찾을 수 없습니다.",
   "settings.agentBehaviour.createMode": "새 모드 만들기",
   "settings.agentBehaviour.createMode.name": "이름",
   "settings.agentBehaviour.createMode.name.placeholder": "예: reviewer",
@@ -1333,10 +1340,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "권한을 JSON으로 복사",
   "settings.agentBehaviour.permissions.hint":
     "규칙은 순서대로 평가되며, 마지막에 일치하는 규칙이 적용됩니다. 이것은 CLI 백엔드에서 확인된 규칙 세트입니다.",
-  "settings.agentBehaviour.removeMode.title": "모드 제거",
-  "settings.agentBehaviour.removeMode.confirm":
-    '모드 "{{name}}"을(를) 제거하시겠습니까? 구성을 업데이트하여 모드를 비활성화합니다.',
-  "settings.agentBehaviour.removeMode.button": "제거",
+  "settings.agentBehaviour.removeAgent.title": "에이전트 제거",
+  "settings.agentBehaviour.removeAgent.confirm":
+    '에이전트 "{{name}}"을(를) 제거하시겠습니까? 구성을 업데이트하여 에이전트를 비활성화합니다.',
+  "settings.agentBehaviour.removeAgent.button": "제거",
   "settings.agentBehaviour.removeMcp.title": "MCP 서버 제거",
   "settings.agentBehaviour.removeMcp.confirm": 'MCP 서버 "{{name}}"을(를) 제거하시겠습니까? 구성에서 제거됩니다.',
   "settings.agentBehaviour.removeMcp.button": "제거",

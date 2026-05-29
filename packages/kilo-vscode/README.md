@@ -23,6 +23,8 @@
 - [VS Code Marketplace](https://kilo.ai/vscode-marketplace?utm_source=Readme) (download)
 - [Official Kilo.ai Home page](https://kilo.ai) (learn more)
 
+> 🚀 **Coming from Roo Code?** Switch to Kilo and check out our [migration guide](https://kilo.ai/articles/roo-to-kilo-migration-guide)!
+
 ## Key Features
 
 - **Code Generation:** Kilo can generate code using natural language.

@@ -106,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Recomendado",
   "dialog.provider.opencode.note": "Modelos selecionados incluindo Claude, GPT, Gemini e mais",
   "dialog.provider.anthropic.note": "Conectar com Claude Pro/Max ou chave de API",
+  "dialog.provider.deepseek.note": "Modelos DeepSeek para tarefas de raciocínio e programação",
   "dialog.provider.openai.note": "Conectar com ChatGPT Pro/Plus ou chave de API",
   "dialog.provider.google.note": "Modelos Gemini para respostas rápidas e estruturadas",
   "dialog.provider.openrouter.note": "Acesse todos os modelos suportados a partir de um único provedor",
@@ -987,6 +988,8 @@ export const dict = {
   "session.delete.confirm": 'Excluir sessão "{{name}}"?',
   "session.delete.button": "Excluir sessão",
   "session.untitled": "Sem título",
+  "session.current": "Sessão atual",
+  "session.history.sources": "Fonte do histórico",
   "session.recent": "Recentes",
   "session.showHistory": "Mostrar Histórico",
   "session.search.placeholder": "Buscar sessões...",
@@ -1127,6 +1130,14 @@ export const dict = {
   "session.status.retrying": "Tentando novamente (tentativa {{ attempt }})… {{ message }}",
   "session.status.working": "Trabalhando…",
   "session.status.offline": "Rede desconectada — reconectando...",
+  "session.outcome.incomplete": "Turno encerrado com {{count}} tarefas restantes",
+  "session.outcome.limit": "Limite de resposta atingido antes da conclusão",
+  "session.outcome.unknown": "Turno encerrado sem um motivo de conclusão do modelo",
+  "session.outcome.filtered": "O provedor interrompeu esta resposta devido a um filtro de conteúdo.",
+  "session.outcome.unexpected": "A resposta terminou inesperadamente e pode estar incompleta.",
+  "session.outcome.interrupted": "Turno interrompido",
+  "session.outcome.error": "Turno falhou",
+  "session.outcome.finish": "Motivo da conclusão: {{reason}}",
 
   "ui.sessionTurn.cancel": "Cancelar",
   "ui.sessionTurn.status.thinking": "Pensando...",
@@ -1192,7 +1203,6 @@ export const dict = {
     'A telemetria é controlada pela configuração de telemetria integrada do VS Code. Para desativá-la, vá para Configurações > Telemetria > Nível de Telemetria e defina como "off". Reinicie o VS Code para aplicar a alteração.',
   "settings.aboutKiloCode.telemetry.openSettings": "Abrir Configurações de Telemetria",
 
-  "settings.agentBehaviour.subtab.modes": "Modos",
   "settings.agentBehaviour.subtab.agents": "Agentes",
   "settings.agentBehaviour.subtab.mcpServers": "Servidores MCP",
   "settings.agentBehaviour.subtab.rules": "Regras",
@@ -1254,9 +1264,6 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Não resumir conteúdo colado grande",
   "settings.experimental.batch.title": "Ferramenta em lote",
   "settings.experimental.batch.description": "Ativar processamento em lote de chamadas de ferramentas",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Pesquisa de código",
   "settings.experimental.codebaseSearch.description":
     "Ativar pesquisa por linguagem natural com IA em toda a base de código",
@@ -1311,7 +1318,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Nenhuma habilidade encontrada. Adicione caminhos de pastas ou URLs abaixo para disponibilizar habilidades.",
   "settings.agentBehaviour.availableModes": "Modos personalizados disponíveis",
-  "settings.agentBehaviour.noModesFound": "Nenhum modo encontrado.",
+  "settings.agentBehaviour.noAgentsFound": "Nenhum agente encontrado.",
   "settings.agentBehaviour.createMode": "Criar Novo Modo",
   "settings.agentBehaviour.createMode.name": "Nome",
   "settings.agentBehaviour.createMode.name.placeholder": "ex: reviewer",
@@ -1355,10 +1362,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Copiar permissões como JSON",
   "settings.agentBehaviour.permissions.hint":
     "As regras são avaliadas em ordem — a última regra correspondente vence. Este é o conjunto de regras resolvido do backend da CLI.",
-  "settings.agentBehaviour.removeMode.title": "Remover modo",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Remover o modo "{{name}}"? Isso desativará o modo atualizando sua configuração.',
-  "settings.agentBehaviour.removeMode.button": "Remover",
+  "settings.agentBehaviour.removeAgent.title": "Remover agente",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Remover agente "{{name}}"? Isso irá desativá-lo atualizando sua configuração.',
+  "settings.agentBehaviour.removeAgent.button": "Remover",
   "settings.agentBehaviour.removeMcp.title": "Remover servidor MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'Remover o servidor MCP "{{name}}"? Isso o removerá da sua configuração.',

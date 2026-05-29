@@ -21,6 +21,7 @@ Kilo CLI is an open source AI coding agent that generates code from natural lang
 - **Source links**: After adding or changing URLs in `packages/kilo-vscode/`, `packages/kilo-vscode/webview-ui/`, or `packages/opencode/src/`, run `bun run script/extract-source-links.ts` from the repo root and commit the updated `packages/kilo-docs/source-links.md`. CI runs this check — the build fails if the file is stale.
 - **kilocode_change check**: `bun run check-kilocode-change` from `packages/kilo-vscode/`. CI runs this — `kilocode_change` is a marker for upstream merge conflicts and must not appear in `packages/kilo-vscode/` or `packages/kilo-ui/` (these are entirely Kilo Code additions). Remove the markers before pushing.
 - **opencode annotation check**: `bun run script/check-opencode-annotations.ts` from repo root. CI runs this on PRs touching `packages/opencode/` — every Kilo-specific change in shared opencode files must be annotated with `kilocode_change` markers. Exempt paths (no markers needed): `packages/opencode/src/kilocode/`, `packages/opencode/test/kilocode/`, and any path containing `kilocode` in the name.
+- **Effect facade ratchet**: Do not add runtime-backed Promise facades to shared `packages/opencode/src` Effect services; use service dependencies, `AppRuntime`, or Kilo-owned boundaries. Run `bun run script/check-opencode-promise-facades.ts` when touching service adapters.
 - **workflow allowlist**: `bun run script/check-workflows.ts` from repo root. CI runs this as part of the annotations workflow — any `.yml` / `.yaml` file added to or removed from `.github/workflows/` must be reflected in the hardcoded list in `script/check-workflows.ts`. Prevents upstream-merged workflows from silently starting to run in our CI.
 - **Backend/SDK programmatic testing**: see [TESTING.md](./TESTING.md) for spawning the local main-branch backend (`bun dev serve`) and driving it via `curl` — use this instead of `kilo serve` (prod binary) when testing backend fixes.
 
@@ -49,6 +50,8 @@ All products are clients of the **CLI** (`packages/opencode/`), which contains t
 | Kilo VS Code Extension | `packages/kilo-vscode/` | VS Code extension. Bundles the CLI binary, spawns `kilo serve` as a child process. Includes the **Agent Manager** — a multi-session orchestration panel with git worktree isolation. |
 
 **Agent Manager** refers to a feature inside `packages/kilo-vscode/` (extension code in `src/agent-manager/`, webview in `webview-ui/agent-manager/`). It is not a standalone product. See the extension's `AGENTS.md` for details.
+
+In each VS Code extension host, one `KiloConnectionService` is created for the sidebar, every Kilo editor tab, and Agent Manager; it lazily starts and reuses one current `kilo serve` backend at a time. Agent Manager worktree sessions pass a directory context to this shared backend rather than starting one per worktree. State captured by the active service layer, such as Snapshot `trackState`, is shared across those requests; only directory-keyed `InstanceState` data is isolated.
 
 Extension-specific settings should live in the Kilo extension settings, not default VS Code settings, unless they are intentionally VS Code-wide.
 
@@ -84,23 +87,7 @@ Turborepo + Bun workspaces. The packages you'll work with most:
 
 ### Avoid let statements
 
-We don't like `let` statements, especially combined with if/else statements.
-Prefer `const`.
-
-Good:
-
-```ts
-const foo = condition ? 1 : 2
-```
-
-Bad:
-
-```ts
-let foo
-
-if (condition) foo = 1
-else foo = 2
-```
+Prefer `const`. Replace `let` + if/else assignment with a ternary or an IIFE. Reassignment is the only legitimate reason to reach for `let`.
 
 ### Naming Enforcement (Read This)
 
@@ -115,25 +102,7 @@ THIS RULE IS MANDATORY FOR AGENT WRITTEN CODE.
 
 ### Avoid else statements
 
-Prefer early returns or using an `iife` to avoid else statements.
-
-Good:
-
-```ts
-function foo() {
-  if (condition) return 1
-  return 2
-}
-```
-
-Bad:
-
-```ts
-function foo() {
-  if (condition) return 1
-  else return 2
-}
-```
+Prefer early returns (or an IIFE) over `else`. After an `if` that returns/throws, the `else` is redundant.
 
 ### No empty catch blocks
 
@@ -141,46 +110,11 @@ Never leave a `catch` block empty. An empty `catch` silently swallows errors and
 
 1. Is the `try`/`catch` even needed? (prefer removing it)
 2. Should the error be handled explicitly? (recover, retry, rethrow)
-3. At minimum, log it so failures are visible
-
-Good:
-
-```ts
-try {
-  await save(data)
-} catch (err) {
-  log.error("save failed", { err })
-}
-```
-
-Bad:
-
-```ts
-try {
-  await save(data)
-} catch {}
-```
+3. At minimum, log it via `log.error("...", { err })` so failures are visible — never `catch {}` or `catch (e) {}` with no body.
 
 ### Prefer single word naming
 
-Try your best to find a single word name for your variables, functions, etc.
-Only use multiple words if you cannot.
-
-Good:
-
-```ts
-const foo = 1
-const bar = 2
-const baz = 3
-```
-
-Bad:
-
-```ts
-const fooBar = 1
-const barBaz = 2
-const bazFoo = 3
-```
+Default to a single-word name for variables, parameters, and helper functions. Reach for a multi-word name only when a single word would be genuinely ambiguous in context — not just because the longer name "reads nicer". The rule is about meaning, not character count: don't introduce camelCase compounds like `inputPID`, `existingClient`, `connectTimeout`, or `workerPath` when `pid`, `client`, `timeout`, or `path` is already clear from the surrounding code. See the "Naming Enforcement" section above for the preferred vocabulary.
 
 ## Testing
 

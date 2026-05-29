@@ -71,6 +71,17 @@ export const ModelsAutocompleteOpen: Story = {
   ),
 }
 
+export const ModelsAccessibleLabels: Story = {
+  name: "ModelsTab — accessible model labels",
+  render: () => (
+    <StoryProviders config={{} as any}>
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
+        <ModelsTab />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 function OpenModelPicker(props: { children: any }) {
   let ref: HTMLDivElement | undefined
   onMount(() => {
@@ -92,7 +103,7 @@ export const AgentBehaviourAgents: Story = {
       ...mockSessionValue({ id: "agents-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
       allAgents: () => MOCK_AGENTS,
-      removeMode: noop,
+      removeAgent: noop,
       removeMcp: noop,
       skills: () => [],
       refreshSkills: noop,
@@ -117,7 +128,7 @@ export const AgentBehaviourEditCustomMode: Story = {
       ...mockSessionValue({ id: "edit-mode-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
       allAgents: () => MOCK_AGENTS,
-      removeMode: noop,
+      removeAgent: noop,
       removeMcp: noop,
       skills: () => [],
       refreshSkills: noop,
@@ -219,7 +230,7 @@ export const AgentBehaviourWorkflows: Story = {
       ...mockSessionValue({ id: "workflows-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
       allAgents: () => MOCK_AGENTS,
-      removeMode: noop,
+      removeAgent: noop,
       removeMcp: noop,
       skills: () => [],
       refreshSkills: noop,
@@ -242,7 +253,7 @@ export const AgentBehaviourWorkflowsEmpty: Story = {
       ...mockSessionValue({ id: "workflows-empty-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
       allAgents: () => MOCK_AGENTS,
-      removeMode: noop,
+      removeAgent: noop,
       removeMcp: noop,
       skills: () => [],
       refreshSkills: noop,
@@ -340,7 +351,7 @@ export const ModeEditExport: Story = {
       ...mockSessionValue({ id: "export-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
       allAgents: () => MOCK_AGENTS,
-      removeMode: noop,
+      removeAgent: noop,
       removeMcp: noop,
       skills: () => [],
       refreshSkills: noop,
@@ -381,7 +392,7 @@ export const ModeEditPermissions: Story = {
       ...mockSessionValue({ id: "permissions-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
       allAgents: () => MOCK_AGENTS,
-      removeMode: noop,
+      removeAgent: noop,
       removeMcp: noop,
       skills: () => [],
       refreshSkills: noop,
@@ -408,9 +419,6 @@ export const IndexingProviderBlurRace: Story = {
   render: () => {
     const [saved, setSaved] = createSignal<Record<string, unknown>>({})
     const cfg: Config = {
-      experimental: {
-        semantic_indexing: true,
-      },
       indexing: {
         provider: "openai",
         model: "text-embedding-3-large",
@@ -439,9 +447,6 @@ export const IndexingKiloModelPreset: Story = {
   name: "IndexingTab - Kilo stale custom model fallback",
   render: () => {
     const cfg: Config = {
-      experimental: {
-        semantic_indexing: true,
-      },
       indexing: {
         provider: "kilo",
         model: "custom/model",
@@ -473,9 +478,6 @@ export const IndexingKiloCatalogLoading: Story = {
   render: () => {
     const [saved, setSaved] = createSignal<Record<string, unknown>>({})
     const cfg: Config = {
-      experimental: {
-        semantic_indexing: true,
-      },
       indexing: {},
     }
     return (

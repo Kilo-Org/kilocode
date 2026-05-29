@@ -50,10 +50,9 @@ class TextView(
     internal fun contentOpaque() = md.opaque
 
     override fun applyStyle(style: SessionEditorStyle) {
-        val changed = md.font != style.transcriptFont || md.codeFont != style.editorFamily
-        if (md.font != style.transcriptFont) md.font = style.transcriptFont
-        if (md.codeFont != style.editorFamily) md.codeFont = style.editorFamily
-        if (!changed) return
+        md.font = style.transcriptFont
+        md.codeFont = style.editorFamily
+        md.foreground = style.editorForeground
         refresh()
     }
 

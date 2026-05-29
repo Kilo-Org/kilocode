@@ -3599,6 +3599,7 @@ export class Session2 extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      snapshotInitialization?: "wait"
       editorContext?: {
         visibleFiles?: Array<string>
         openTabs?: Array<string>
@@ -3625,6 +3626,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "snapshotInitialization" },
             { in: "body", key: "editorContext" },
             { in: "body", key: "parts" },
           ],
@@ -3959,6 +3961,7 @@ export class Session2 extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      snapshotInitialization?: "wait"
       editorContext?: {
         visibleFiles?: Array<string>
         openTabs?: Array<string>
@@ -3985,6 +3988,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "snapshotInitialization" },
             { in: "body", key: "editorContext" },
             { in: "body", key: "parts" },
           ],
@@ -4019,6 +4023,7 @@ export class Session2 extends HeyApiClient {
       arguments?: string
       command?: string
       variant?: string
+      snapshotInitialization?: "wait"
       parts?: Array<{
         id?: string
         type: "file"
@@ -4044,6 +4049,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "arguments" },
             { in: "body", key: "command" },
             { in: "body", key: "variant" },
+            { in: "body", key: "snapshotInitialization" },
             { in: "body", key: "parts" },
           ],
         },
@@ -5802,7 +5808,7 @@ export class Kilo extends HeyApiClient {
   /**
    * Next Edit completion
    *
-   * Proxy a Mercury-style Next Edit request. The user supplies the already-templated sentinel-tagged prompt in `content`; the gateway forwards to the upstream edit endpoint (currently Inception's /v1/edit/completions) and returns the unwrapped reply.
+   * Proxy a Mercury-style Next Edit request. The client supplies structured editor context; the gateway assembles the sentinel-tagged prompt and forwards to the upstream edit endpoint.
    */
   public edit<ThrowOnError extends boolean = false>(
     parameters?: {

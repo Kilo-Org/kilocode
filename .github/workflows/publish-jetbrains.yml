@@ -2,27 +2,61 @@
 name: publish-jetbrains
 
 on:
-  push:
-    tags:
-      - "jetbrains/*"
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
 
 concurrency:
-  group: publish-jetbrains-${{ github.ref }}
+  group: publish-jetbrains-pr-${{ github.event.pull_request.number }}
   cancel-in-progress: false
 
 permissions:
   contents: write
+  pull-requests: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   publish:
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: >-
+      github.repository == 'Kilo-Org/kilocode' &&
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'jetbrains/release/') &&
+      contains(github.event.pull_request.labels.*.name, 'jetbrains-release') &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: blacksmith-8vcpu-ubuntu-2404
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout merged release PR
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      - name: Setup Bun for validation
+        uses: ./.github/actions/setup-bun
+
+      - name: Validate release PR and tag
+        id: release
+        run: bun script/jetbrains-release-validate.ts --pr "$PR_NUMBER"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+
+      - name: Save reviewed changelog
+        run: cp packages/kilo-jetbrains/CHANGELOG.md "$RUNNER_TEMP/jetbrains-CHANGELOG.md"
+
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ steps.release.outputs.tag }}
+
+      - name: Restore reviewed changelog
+        run: cp "$RUNNER_TEMP/jetbrains-CHANGELOG.md" packages/kilo-jetbrains/CHANGELOG.md
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -46,40 +80,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y patchelf zip
 
-      - name: Validate version tag
-        id: version
-        run: |
-          tag="$GITHUB_REF_NAME"
-          if [[ "$tag" != jetbrains/v* ]]; then
-            echo "Unsupported tag '$tag'. Expected jetbrains/v<version>." >&2
-            exit 1
-          fi
-
-          version="${tag#jetbrains/v}"
-          if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$ ]]; then
-            {
-              echo "version=$version"
-              echo "kind=rc"
-              echo "marketplace_channel=eap"
-              echo "cli_channel=rc"
-            } >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            {
-              echo "version=$version"
-              echo "kind=stable"
-              echo "marketplace_channel=default"
-              echo "cli_channel=latest"
-            } >> "$GITHUB_OUTPUT"
-            echo "Stable JetBrains Marketplace publishing is implemented but intentionally disabled; use an rc tag such as jetbrains/v7.0.1-rc.1." >&2
-            exit 1
-          fi
-
-          echo "Unsupported JetBrains plugin version '$version'. Expected jetbrains/vx.y.z-rc.n or jetbrains/vx.y.z." >&2
-          exit 1
-
       - name: Validate publishing secrets
         run: |
           missing=0
@@ -100,22 +100,35 @@ jobs:
         working-directory: packages/kilo-jetbrains
         run: bun script/build.ts --production --prepare-cli
         env:
-          KILO_VERSION: ${{ steps.version.outputs.version }}
-          KILO_CHANNEL: ${{ steps.version.outputs.cli_channel }}
+          KILO_VERSION: ${{ steps.release.outputs.version }}
+          KILO_CHANNEL: ${{ steps.release.outputs.cli_channel }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
 
       - name: Verify plugin
         working-directory: packages/kilo-jetbrains
-        run: ./gradlew verifyPlugin -Pproduction=true -Pkilo.channel="$CHANNEL"
+        run: ./gradlew verifyPlugin -Pproduction=true -Pkilo.version="$VERSION" -Pkilo.channel="$CHANNEL"
         env:
-          CHANNEL: ${{ steps.version.outputs.marketplace_channel }}
+          VERSION: ${{ steps.release.outputs.version }}
+          CHANNEL: ${{ steps.release.outputs.marketplace_channel }}
+
+      - name: Render release notes
+        working-directory: packages/kilo-jetbrains
+        run: |
+          if ! grep -Fq "## [$VERSION]" CHANGELOG.md; then
+            echo "Missing packages/kilo-jetbrains/CHANGELOG.md entry for $VERSION. Review and merge a release PR before publishing." >&2
+            exit 1
+          fi
+          ./gradlew getChangelog --project-version "$VERSION" --no-header --no-empty-sections --output-file=build/release-notes.md
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
 
       - name: Publish to JetBrains Marketplace
         working-directory: packages/kilo-jetbrains
-        run: ./gradlew publishPlugin -Pproduction=true -Pkilo.channel="$CHANNEL"
+        run: ./gradlew publishPlugin -Pproduction=true -Pkilo.version="$VERSION" -Pkilo.channel="$CHANNEL"
         env:
-          CHANNEL: ${{ steps.version.outputs.marketplace_channel }}
+          VERSION: ${{ steps.release.outputs.version }}
+          CHANNEL: ${{ steps.release.outputs.marketplace_channel }}
           JETBRAINS_MARKETPLACE_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
           JETBRAINS_CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
           JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
@@ -145,23 +158,30 @@ jobs:
 
       - name: Upload to GitHub Release
         run: |
-          tag="$GITHUB_REF_NAME"
+          tag="$TAG"
           title="JetBrains $VERSION"
-          notes="JetBrains plugin $VERSION."
+          flags=(--title "$title" --notes-file "$NOTES")
+          if [[ "$KIND" == "rc" ]]; then
+            flags+=(--prerelease)
+          fi
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$tag" "$ARCHIVE" --clobber --repo "$GITHUB_REPOSITORY"
+            gh release edit "$tag" "${flags[@]}" --repo "$GITHUB_REPOSITORY"
             exit 0
           fi
-          gh release create "$tag" "$ARCHIVE" --title "$title" --notes "$notes" --prerelease --repo "$GITHUB_REPOSITORY"
+          gh release create "$tag" "$ARCHIVE" "${flags[@]}" --repo "$GITHUB_REPOSITORY"
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.release.outputs.version }}
+          KIND: ${{ steps.release.outputs.kind }}
           ARCHIVE: ${{ steps.archive.outputs.path }}
+          NOTES: packages/kilo-jetbrains/build/release-notes.md
 
       - name: Upload workflow artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: kilo-jetbrains-${{ steps.version.outputs.version }}
+          name: kilo-jetbrains-${{ steps.release.outputs.version }}
           path: packages/kilo-jetbrains/build/distributions/*.zip
           if-no-files-found: ignore

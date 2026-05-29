@@ -7,7 +7,6 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Npm } from "@opencode-ai/core/npm"
 import { Hash } from "@opencode-ai/core/util/hash"
 import { Plugin } from "../plugin"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { type LanguageModelV3 } from "@ai-sdk/provider"
 import * as ModelsDev from "./models"
 import { Auth } from "../auth"
@@ -1808,17 +1807,6 @@ export function sort<T extends { id: string }>(models: T[]) {
     [(model) => model.id, "desc"],
   )
 }
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise: runProviderPromise } = makeRuntime(Service, defaultLayer)
-export const list = () => runProviderPromise((svc) => svc.list())
-export const getModel = (providerID: ProviderID, modelID: ModelID) =>
-  runProviderPromise((svc) => svc.getModel(providerID, modelID))
-export const getProvider = (providerID: ProviderID) => runProviderPromise((svc) => svc.getProvider(providerID))
-export const getLanguage = (model: Model) => runProviderPromise((svc) => svc.getLanguage(model))
-export const getSmallModel = (providerID: ProviderID) => runProviderPromise((svc) => svc.getSmallModel(providerID))
-export const defaultModel = () => runProviderPromise((svc) => svc.defaultModel())
-// kilocode_change end
 
 export function parseModel(model: string) {
   const [providerID, ...rest] = model.split("/")

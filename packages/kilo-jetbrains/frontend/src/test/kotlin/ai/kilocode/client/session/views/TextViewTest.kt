@@ -97,6 +97,7 @@ class TextViewTest : BasePlatformTestCase() {
         assertSame(component, view.md.component)
         assertTrue(sheet.contains("Courier New"))
         assertTrue(sheet.contains("23pt"))
+        assertEquals(style.editorForeground, view.md.foreground)
     }
 
     // ---- markdown is rendered ------

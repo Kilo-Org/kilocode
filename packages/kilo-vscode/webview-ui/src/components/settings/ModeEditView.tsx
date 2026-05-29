@@ -180,6 +180,8 @@ const ModeEditView: Component<Props> = (props) => {
             placement="bottom-start"
             allowClear
             clearLabel={language.t("settings.providers.notSet")}
+            label={language.t("settings.agentBehaviour.modelOverride.title")}
+            description={language.t("settings.agentBehaviour.modelOverride.description")}
           />
         </SettingsRow>
 

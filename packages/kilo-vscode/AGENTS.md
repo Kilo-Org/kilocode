@@ -88,7 +88,7 @@ The script checks for a prebuilt binary in `packages/opencode/dist/`, builds the
 
 ### Extension ↔ CLI Backend
 
-The extension is a client of the CLI. At startup it spawns `bin/kilo serve --port 0`, captures the dynamically-assigned port from stdout, and communicates over HTTP + SSE. A random password is generated and passed via `KILO_SERVER_PASSWORD` env var for basic auth.
+The extension is a client of the CLI. Activation creates one shared `KiloConnectionService`; on its first connection, which autocomplete may prewarm, `ServerManager` spawns `bin/kilo serve --port 0`, captures the dynamically assigned port from stdout, and communicates over HTTP + SSE. The current child process is reused unless it exits. A random password is generated and passed via `KILO_SERVER_PASSWORD` env var for basic auth.
 
 ```
 Extension (Node.js)                          CLI Backend (child process)
@@ -104,9 +104,10 @@ Extension (Node.js)                          CLI Backend (child process)
 └──────────────────────────┘
 ```
 
-- **`KiloConnectionService`** (`src/services/cli-backend/connection-service.ts`) is a singleton shared across all webviews. It owns the server process, HTTP client, and SSE connection.
-- **`ServerManager`** (`src/services/cli-backend/server-manager.ts`) spawns the CLI binary and manages the process lifecycle.
-- Multiple **`KiloProvider`** instances (sidebar, Agent Manager, "open in tab" panels) subscribe to the shared connection. SSE events are filtered per-webview via a `trackedSessionIds` Set.
+- **`KiloConnectionService`** (`src/services/cli-backend/connection-service.ts`) is created once during extension activation and shared across the sidebar, Kilo editor tabs, and Agent Manager. It owns the current server process, HTTP client, and SSE connection.
+- **`ServerManager`** (`src/services/cli-backend/server-manager.ts`) lazily spawns the CLI binary, reuses its current process, and can start a replacement if that process exits.
+- The sidebar, every **Open in Tab** Kilo panel, and the Agent Manager chat provider reuse this connection. Multiple **`KiloProvider`** instances subscribe to it, with SSE events filtered per-webview via a `trackedSessionIds` Set. Agent Manager terminals may use additional PTY/WebSocket channels to the same backend, not separate `kilo serve` processes.
+- Backend state follows where it is allocated, not the worktree shown in a panel. Snapshot repository state uses directory-keyed `InstanceState`, while `trackState` is created once in the active Snapshot service closure. For these shared VS Code session paths, its slow-track `asked` guard spans worktree requests; choosing **Continue with snapshots** resets `asked` only when continued tracking returns a snapshot hash.
 
 ### Builds
 
@@ -161,7 +162,7 @@ The Agent Manager is a feature within this extension (not a separate product). I
 
 ### Architecture
 
-All Agent Manager sessions share the **single `kilo serve` process** managed by `KiloConnectionService`. No separate server is spawned per session. Session isolation comes from directory scoping — worktree sessions pass the worktree path to the CLI backend, which creates a session scoped to that directory.
+Agent Manager local worktree sessions use the current shared `kilo serve` process owned by `KiloConnectionService`; no session starts its own backend. Their CLI requests pass the worktree path as `directory`, which resolves directory-scoped backend state. Setup scripts, terminal PTYs, git subprocesses, and a separately opened VS Code window are separate process or extension-host boundaries, not per-worktree `kilo serve` instances.
 
 Extension-side code lives in `src/agent-manager/`, webview code in `webview-ui/agent-manager/`. The webview reuses the sidebar's provider chain and `ChatView` component, adding a `WorktreeModeProvider` and a split layout.
 

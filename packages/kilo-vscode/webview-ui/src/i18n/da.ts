@@ -106,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Anbefalet",
   "dialog.provider.opencode.note": "Udvalgte modeller inkl. Claude, GPT, Gemini og flere",
   "dialog.provider.anthropic.note": "Forbind med Claude Pro/Max eller API-nøgle",
+  "dialog.provider.deepseek.note": "DeepSeek-modeller til ræsonnering og kodningsopgaver",
   "dialog.provider.openai.note": "Forbind med ChatGPT Pro/Plus eller API-nøgle",
   "dialog.provider.google.note": "Gemini-modeller til hurtige, strukturerede svar",
   "dialog.provider.openrouter.note": "Adgang til alle understøttede modeller fra én udbyder",
@@ -1021,6 +1022,8 @@ export const dict = {
   "session.delete.confirm": 'Slet session "{{name}}"?',
   "session.delete.button": "Slet session",
   "session.untitled": "Unavngivet",
+  "session.current": "Aktuel session",
+  "session.history.sources": "Historikkilde",
   "session.recent": "Seneste",
   "session.showHistory": "Vis historik",
   "session.search.placeholder": "Søg sessioner...",
@@ -1125,6 +1128,14 @@ export const dict = {
   "session.status.retrying": "Prøver igen (forsøg {{ attempt }})… {{ message }}",
   "session.status.working": "Arbejder…",
   "session.status.offline": "Netværk afbrudt — genopretter forbindelse...",
+  "session.outcome.incomplete": "Tur afsluttet, {{count}} to-dos tilbage",
+  "session.outcome.limit": "Svarbegrænsning nået før fuldførelse",
+  "session.outcome.unknown": "Tur afsluttet uden en model-afslutningsårsag",
+  "session.outcome.filtered": "Udbyderen stoppede dette svar på grund af et indholdsfilter.",
+  "session.outcome.unexpected": "Svaret sluttede uventet og kan være ufuldstændigt.",
+  "session.outcome.interrupted": "Tur afbrudt",
+  "session.outcome.error": "Tur mislykkedes",
+  "session.outcome.finish": "Afslutningsårsag: {{reason}}",
 
   "ui.sessionTurn.cancel": "Annuller",
   "ui.sessionTurn.status.thinking": "Tænker...",
@@ -1188,7 +1199,6 @@ export const dict = {
     'Telemetri styres af VS Codes indbyggede telemetriindstilling. For at deaktivere den, gå til Indstillinger > Telemetry > Telemetry Level og sæt den til "off". Genstart VS Code for at anvende ændringen.',
   "settings.aboutKiloCode.telemetry.openSettings": "Åbn telemetriindstillinger",
 
-  "settings.agentBehaviour.subtab.modes": "Tilstande",
   "settings.agentBehaviour.subtab.agents": "Agenter",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-servere",
   "settings.agentBehaviour.subtab.rules": "Regler",
@@ -1248,9 +1258,6 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Resumér ikke stort indsat indhold",
   "settings.experimental.batch.title": "Batchværktøj",
   "settings.experimental.batch.description": "Aktiver batchbehandling af flere værktøjskald",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Kodesøgning",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig sprogsøgning på tværs af kodebasen",
   "settings.experimental.speechToText.title": "Tale til tekst",
@@ -1302,7 +1309,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Ingen skills fundet. Tilføj skill-mappestier eller URL'er nedenfor for at gøre skills tilgængelige.",
   "settings.agentBehaviour.availableModes": "Tilgængelige brugerdefinerede tilstande",
-  "settings.agentBehaviour.noModesFound": "Ingen tilstande fundet.",
+  "settings.agentBehaviour.noAgentsFound": "Ingen agenter fundet.",
   "settings.agentBehaviour.createMode": "Opret ny tilstand",
   "settings.agentBehaviour.createMode.name": "Navn",
   "settings.agentBehaviour.createMode.name.placeholder": "f.eks. reviewer",
@@ -1345,10 +1352,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Kopiér tilladelser som JSON",
   "settings.agentBehaviour.permissions.hint":
     "Reglerne evalueres i rækkefølge — den sidst matchende regel vinder. Dette er det endelige regelsæt fra CLI-backenden.",
-  "settings.agentBehaviour.removeMode.title": "Fjern tilstand",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Vil du fjerne tilstanden "{{name}}"? Dette vil deaktivere tilstanden ved at opdatere din konfiguration.',
-  "settings.agentBehaviour.removeMode.button": "Fjern",
+  "settings.agentBehaviour.removeAgent.title": "Fjern agent",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Fjern agent "{{name}}"? Dette deaktiverer agenten ved at opdatere din konfiguration.',
+  "settings.agentBehaviour.removeAgent.button": "Fjern",
   "settings.agentBehaviour.removeMcp.title": "Fjern MCP-server",
   "settings.agentBehaviour.removeMcp.confirm":
     'Vil du fjerne MCP-serveren "{{name}}"? Dette vil fjerne den fra din konfiguration.',

@@ -110,6 +110,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Empfohlen",
   "dialog.provider.opencode.note": "Kuratierte Modelle wie Claude, GPT, Gemini und mehr",
   "dialog.provider.anthropic.note": "Mit Claude Pro/Max oder API-Schlüssel verbinden",
+  "dialog.provider.deepseek.note": "DeepSeek-Modelle für Reasoning- und Programmieraufgaben",
   "dialog.provider.openai.note": "Mit ChatGPT Pro/Plus oder API-Schlüssel verbinden",
   "dialog.provider.google.note": "Gemini-Modelle für schnelle, strukturierte Antworten",
   "dialog.provider.openrouter.note": "Zugriff auf alle unterstützten Modelle über einen Anbieter",
@@ -1036,6 +1037,8 @@ export const dict = {
   "session.delete.confirm": 'Sitzung "{{name}}" löschen?',
   "session.delete.button": "Sitzung löschen",
   "session.untitled": "Unbenannt",
+  "session.current": "Aktuelle Sitzung",
+  "session.history.sources": "Quelle des Verlaufs",
   "session.recent": "Kürzlich",
   "session.showHistory": "Verlauf anzeigen",
   "session.search.placeholder": "Sitzungen suchen...",
@@ -1140,6 +1143,14 @@ export const dict = {
   "session.status.retrying": "Erneuter Versuch ({{ attempt }})… {{ message }}",
   "session.status.working": "Wird bearbeitet…",
   "session.status.offline": "Netzwerk getrennt — Verbindung wird wiederhergestellt...",
+  "session.outcome.incomplete": "Zug beendet mit {{count}} verbleibenden To-dos",
+  "session.outcome.limit": "Antwortlimit vor Abschluss erreicht",
+  "session.outcome.unknown": "Zug ohne Modell-Abschlussgrund beendet",
+  "session.outcome.filtered": "Der Anbieter hat diese Antwort aufgrund eines Inhaltsfilters gestoppt.",
+  "session.outcome.unexpected": "Die Antwort wurde unerwartet beendet und ist möglicherweise unvollständig.",
+  "session.outcome.interrupted": "Zug unterbrochen",
+  "session.outcome.error": "Zug fehlgeschlagen",
+  "session.outcome.finish": "Abschlussgrund: {{reason}}",
 
   "ui.sessionTurn.cancel": "Abbrechen",
   "ui.sessionTurn.status.thinking": "Denke nach...",
@@ -1206,7 +1217,6 @@ export const dict = {
     'Die Telemetrie wird durch die integrierte Telemetrie-Einstellung von VS Code gesteuert. Um sie zu deaktivieren, gehen Sie zu Einstellungen > Telemetrie > Telemetrie-Stufe und setzen Sie diese auf "off". Starten Sie VS Code neu, um die Änderung zu übernehmen.',
   "settings.aboutKiloCode.telemetry.openSettings": "Telemetrie-Einstellungen öffnen",
 
-  "settings.agentBehaviour.subtab.modes": "Modi",
   "settings.agentBehaviour.subtab.agents": "Agenten",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-Server",
   "settings.agentBehaviour.subtab.rules": "Regeln",
@@ -1269,9 +1279,6 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Große eingefügte Inhalte nicht zusammenfassen",
   "settings.experimental.batch.title": "Batch-Werkzeug",
   "settings.experimental.batch.description": "Bündelung mehrerer Werkzeugaufrufe aktivieren",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Codebase-Suche",
   "settings.experimental.codebaseSearch.description":
     "KI-gestützte Suche in natürlicher Sprache über die gesamte Codebasis aktivieren",
@@ -1326,7 +1333,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Keine Skills gefunden. Fügen Sie unten Skill-Ordnerpfade oder URLs hinzu, um Skills verfügbar zu machen.",
   "settings.agentBehaviour.availableModes": "Verfügbare benutzerdefinierte Modi",
-  "settings.agentBehaviour.noModesFound": "Keine Modi gefunden.",
+  "settings.agentBehaviour.noAgentsFound": "Keine Agenten gefunden.",
   "settings.agentBehaviour.createMode": "Neuen Modus erstellen",
   "settings.agentBehaviour.createMode.name": "Name",
   "settings.agentBehaviour.createMode.name.placeholder": "z.B. reviewer",
@@ -1371,10 +1378,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Berechtigungen als JSON kopieren",
   "settings.agentBehaviour.permissions.hint":
     "Regeln werden der Reihe nach ausgewertet — die letzte übereinstimmende Regel gewinnt. Dies ist das aufgelöste Regelwerk vom CLI-Backend.",
-  "settings.agentBehaviour.removeMode.title": "Modus entfernen",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Modus "{{name}}" entfernen? Dadurch wird der Modus durch Aktualisierung Ihrer Konfiguration deaktiviert.',
-  "settings.agentBehaviour.removeMode.button": "Entfernen",
+  "settings.agentBehaviour.removeAgent.title": "Agent entfernen",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Agent "{{name}}" entfernen? Dies deaktiviert den Agenten durch Aktualisierung der Konfiguration.',
+  "settings.agentBehaviour.removeAgent.button": "Entfernen",
   "settings.agentBehaviour.removeMcp.title": "MCP-Server entfernen",
   "settings.agentBehaviour.removeMcp.confirm":
     'MCP-Server "{{name}}" entfernen? Dadurch wird er aus Ihrer Konfiguration entfernt.',

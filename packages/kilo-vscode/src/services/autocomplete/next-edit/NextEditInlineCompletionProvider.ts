@@ -22,6 +22,8 @@ export interface NextEditProviderDeps {
   onFatalError?: (status: number | null) => void
   /** Stash for diffs that don't land on the cursor's line — rendered as a jump affordance. */
   suggestionManager?: NextEditSuggestionManager
+  /** Resolves the currently selected (provider, model) at request time. */
+  getModelSelection?: () => { providerId: string; modelId: string }
 }
 
 export interface NextEditSuggestionEvent {
@@ -78,8 +80,11 @@ export class NextEditInlineCompletionProvider implements vscode.InlineCompletion
 
     const abort = this.swapAbortController(token)
     const ctx = await this.buildRequestContext(document, position)
+    const sel = this.deps.getModelSelection?.()
     const provider = new MercuryEditProvider({
       connectionService: this.deps.connectionService,
+      providerId: sel?.providerId,
+      modelId: sel?.modelId,
       signal: abort.signal,
     })
 

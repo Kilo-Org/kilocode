@@ -23,7 +23,7 @@ interface Props {
   items: MarketplaceItem[]
   metadata: MarketplaceInstalledMetadata
   fetching: boolean
-  type: "mcp" | "mode" | "skill"
+  type: "mcp" | "agent" | "skill"
   searchPlaceholder: string
   emptyMessage: string
   onInstall: (item: MarketplaceItem) => void

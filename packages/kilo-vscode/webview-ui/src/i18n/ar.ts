@@ -106,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "موصى به",
   "dialog.provider.opencode.note": "نماذج مختارة تشمل Claude وGPT وGemini والمزيد",
   "dialog.provider.anthropic.note": "اتصل باستخدام Claude Pro/Max أو مفتاح API",
+  "dialog.provider.deepseek.note": "نماذج DeepSeek لمهام الاستدلال والبرمجة",
   "dialog.provider.openai.note": "اتصل باستخدام ChatGPT Pro/Plus أو مفتاح API",
   "dialog.provider.google.note": "نماذج Gemini للاستجابات السريعة والمنظمة",
   "dialog.provider.openrouter.note": "الوصول إلى جميع النماذج المدعومة من موفر واحد",
@@ -972,6 +973,8 @@ export const dict = {
   "session.delete.confirm": 'حذف الجلسة "{{name}}"؟',
   "session.delete.button": "حذف الجلسة",
   "session.untitled": "بدون عنوان",
+  "session.current": "الجلسة الحالية",
+  "session.history.sources": "مصدر السجل",
   "session.recent": "الأخيرة",
   "session.showHistory": "عرض السجل",
   "session.search.placeholder": "البحث في الجلسات...",
@@ -1108,6 +1111,14 @@ export const dict = {
   "session.status.retrying": "...إعادة المحاولة (المحاولة {{ attempt }})… {{ message }}",
   "session.status.working": "...جارٍ العمل",
   "session.status.offline": "انقطع الاتصال بالشبكة — جارٍ إعادة الاتصال...",
+  "session.outcome.incomplete": "انتهى الدور مع تبقي {{count}} مهام",
+  "session.outcome.limit": "تم الوصول إلى حد الاستجابة قبل الاكتمال",
+  "session.outcome.unknown": "انتهى الدور بدون سبب إنهاء من النموذج",
+  "session.outcome.filtered": "أوقف المزود هذه الاستجابة بسبب عامل تصفية المحتوى.",
+  "session.outcome.unexpected": "انتهت الاستجابة بشكل غير متوقع وقد تكون غير مكتملة.",
+  "session.outcome.interrupted": "تمت مقاطعة الدور",
+  "session.outcome.error": "فشل الدور",
+  "session.outcome.finish": "سبب الإنهاء: {{reason}}",
 
   "ui.sessionTurn.cancel": "إلغاء",
   "ui.sessionTurn.status.thinking": "...جارٍ التفكير",
@@ -1168,7 +1179,6 @@ export const dict = {
     'يتم التحكم في Telemetry بواسطة إعداد Telemetry المدمج في VS Code. لتعطيله، انتقل إلى الإعدادات > Telemetry > Telemetry Level واضبطه على "off". أعد تشغيل VS Code لتطبيق التغيير.',
   "settings.aboutKiloCode.telemetry.openSettings": "فتح إعدادات Telemetry",
 
-  "settings.agentBehaviour.subtab.modes": "الأوضاع",
   "settings.agentBehaviour.subtab.agents": "الوكلاء",
   "settings.agentBehaviour.subtab.mcpServers": "خوادم MCP",
   "settings.agentBehaviour.subtab.rules": "القواعد",
@@ -1226,9 +1236,6 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "عدم تلخيص المحتوى الملصق الكبير",
   "settings.experimental.batch.title": "أداة دفعية",
   "settings.experimental.batch.description": "تمكين المعالجة الدفعية لاستدعاءات الأدوات",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "بحث في قاعدة الكود",
   "settings.experimental.codebaseSearch.description": "تمكين البحث بالذكاء الاصطناعي باللغة الطبيعية عبر قاعدة الكود",
   "settings.experimental.speechToText.title": "تحويل الصوت إلى نص",
@@ -1280,7 +1287,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "لم يتم العثور على مهارات. أضف مسارات مجلدات أو عناوين URL أدناه لإتاحة المهارات.",
   "settings.agentBehaviour.availableModes": "الأوضاع المخصصة المتاحة",
-  "settings.agentBehaviour.noModesFound": "لم يتم العثور على أوضاع.",
+  "settings.agentBehaviour.noAgentsFound": "لم يتم العثور على وكلاء.",
   "settings.agentBehaviour.createMode": "إنشاء وضع جديد",
   "settings.agentBehaviour.createMode.name": "الاسم",
   "settings.agentBehaviour.createMode.name.placeholder": "مثال: reviewer",
@@ -1323,10 +1330,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "نسخ الأذونات كـ JSON",
   "settings.agentBehaviour.permissions.hint":
     "يتم تقييم القواعد بالترتيب — القاعدة المطابقة الأخيرة هي التي تُطبق. هذه هي مجموعة القواعد المحلولة من خلفية CLI.",
-  "settings.agentBehaviour.removeMode.title": "إزالة الوضع",
-  "settings.agentBehaviour.removeMode.confirm":
-    'هل تريد إزالة الوضع "{{name}}"؟ سيؤدي هذا إلى تعطيل الوضع عن طريق تحديث الإعدادات.',
-  "settings.agentBehaviour.removeMode.button": "إزالة",
+  "settings.agentBehaviour.removeAgent.title": "إزالة الوكيل",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'هل تريد إزالة الوكيل "{{name}}"؟ سيؤدي هذا إلى تعطيله عن طريق تحديث الإعدادات.',
+  "settings.agentBehaviour.removeAgent.button": "إزالة",
   "settings.agentBehaviour.removeMcp.title": "إزالة خادم MCP",
   "settings.agentBehaviour.removeMcp.confirm": 'هل تريد إزالة خادم MCP "{{name}}"؟ سيؤدي هذا إلى إزالته من الإعدادات.',
   "settings.agentBehaviour.removeMcp.button": "إزالة",

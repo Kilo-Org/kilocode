@@ -74,7 +74,7 @@ function mergeConfigConcatArrays(target: Info, source: Info): Info {
 
 function normalizeLoadedConfig(data: unknown, source: string) {
   if (!isRecord(data)) return data
-  const copy = { ...data }
+  const copy = KilocodeConfig.retireIndexingFlag({ ...data }, source) // kilocode_change
   const hadLegacy = "theme" in copy || "keybinds" in copy || "tui" in copy
   if (!hadLegacy) return copy
   delete copy.theme
@@ -350,9 +350,6 @@ export const Info = Schema.Struct({
       batch_tool: Schema.optional(Schema.Boolean).annotate({ description: "Enable the batch tool" }),
       codebase_search: Schema.optional(Schema.Boolean).annotate({ description: "Enable AI-powered codebase search" }), // kilocode_change
       // kilocode_change start
-      semantic_indexing: Schema.optional(Schema.Boolean).annotate({
-        description: "Enable semantic codebase indexing and the semantic_search tool",
-      }),
       speech_to_text_model: Schema.optional(Schema.String).annotate({
         description: "Speech-to-text transcription model ID to use for voice input",
       }),

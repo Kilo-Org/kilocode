@@ -36,14 +36,33 @@ body.vscode-light
   color: var(--text-on-interactive-base, white);
 }
 
+.session-list .session-row {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  width: 100%;
+}
+
+.session-list .session-row > [data-slot="list-item"] {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+
+.session-list [data-slot="session-row-editor"] {
+  display: flex;
+  width: 100%;
+  padding: 2px 8px;
+}
+
 body.vscode-light
   .session-list
-  [data-slot="list-item"][data-active="true"]
+  .session-row:has([data-slot="list-item"][data-active="true"])
   [data-slot="session-row-action"]
   [data-slot="icon-svg"],
 body.vscode-light
   .session-list
-  [data-slot="list-item"][data-selected="true"]
+  .session-row:has([data-slot="list-item"][data-selected="true"])
   [data-slot="session-row-action"]
   [data-slot="icon-svg"] {
   color: var(--text-on-interactive-base, white);
@@ -58,9 +77,9 @@ body.vscode-light
   transition: opacity 0.15s;
 }
 
-.session-list [data-slot="list-item"]:hover [data-slot="session-row-action"],
-.session-list [data-slot="list-item"][data-active="true"] [data-slot="session-row-action"],
-.session-list [data-slot="session-row-action"]:focus-within {
+.session-list .session-row:hover [data-slot="session-row-action"],
+.session-list .session-row:focus-within [data-slot="session-row-action"],
+.session-list .session-row:has([data-slot="list-item"][data-active="true"]) [data-slot="session-row-action"] {
   opacity: 1;
 }
 
@@ -144,6 +163,10 @@ body.vscode-light
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+.history-view-content[hidden] {
+  display: none;
 }
 
 /* Cloud Session List (inside History View) */

@@ -1,6 +1,8 @@
+import { HEADER_FEATURE } from "../api/constants.js"
 import { DIRECT_EDIT_ENV, extractFencedBody, resolveEditTarget, type EditTarget, type EditUpstreamResponse } from "../edit.js"
 import { buildMercuryEditPrompt, type MercuryEditContext } from "../edit-prompt.js"
 import type { DirectAutocompleteProviderID } from "../autocomplete.js"
+import { buildKiloHeaders } from "../headers.js"
 import type { AuthStore } from "./handlers.js"
 
 type Auth = Pick<AuthStore, "get">
@@ -14,16 +16,33 @@ async function getProviderKey(Auth: Auth, provider: DirectAutocompleteProviderID
   return DIRECT_EDIT_ENV[provider].map((key) => process.env[key]).find(Boolean)
 }
 
+async function getProxyAuth(Auth: Auth) {
+  const auth = await Auth.get("kilo")
+  const token = auth?.type === "api" ? auth.key : auth?.type === "oauth" ? auth.access : undefined
+  return {
+    auth,
+    token,
+    organizationId: auth?.type === "oauth" ? auth.accountId : undefined,
+  }
+}
+
 export function createEditHandler(Auth: Auth) {
   return async (c: any) => {
     const { provider, model, maxTokens, ...context } = c.req.valid("json")
     const target = resolveEditTarget(provider, model)
 
-    if (target.provider !== "inception") {
+    if (target.provider === "kilo" && !target.url) {
       return c.json({ error: "Next Edit currently requires the Inception provider (mercury-edit-2)." }, 400 as any)
     }
 
-    const token = await getProviderKey(Auth, target.provider)
+    const proxy = target.provider === "kilo" ? await getProxyAuth(Auth) : undefined
+    const token =
+      target.provider === "kilo" ? proxy?.token : await getProviderKey(Auth, target.provider as DirectAutocompleteProviderID)
+
+    if (target.provider === "kilo" && !proxy?.auth) {
+      return c.json({ error: "Not authenticated with Kilo Gateway" }, 401 as any)
+    }
+
     if (!token) {
       return c.json({ error: `Missing ${target.provider} provider API key` }, 401 as any)
     }
@@ -40,6 +59,10 @@ export function createEditHandler(Auth: Auth) {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
+          ...(target.provider === "kilo"
+            ? buildKiloHeaders(undefined, { kilocodeOrganizationId: proxy?.organizationId })
+            : {}),
+          ...(target.provider === "kilo" ? { [HEADER_FEATURE]: "autocomplete" } : {}),
         },
         signal,
         body: JSON.stringify({

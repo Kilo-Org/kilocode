@@ -15,6 +15,7 @@ import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
+import java.awt.Rectangle
 import javax.swing.JButton
 import javax.swing.Icon
 import javax.swing.JComponent
@@ -314,6 +315,8 @@ class BaseQuestionView : RoundedContentPanel(
                 val size = preferredSize
                 return Dimension(Int.MAX_VALUE, size.height)
             }
+
+            override fun scrollRectToVisible(aRect: Rectangle) {}
 
             private fun withWidth(fallback: Int): Dimension {
                 val w = availableWidth()

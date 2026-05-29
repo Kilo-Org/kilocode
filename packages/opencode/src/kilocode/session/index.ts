@@ -6,7 +6,6 @@ import { BusEvent } from "@/bus/bus-event"
 import { EffectBridge } from "@/effect/bridge"
 import { Session } from "@/session/session"
 import { MessageID, SessionID } from "@/session/schema"
-import { makeRuntime } from "@/effect/run-service"
 import { fn } from "@/util/fn"
 import { Database, eq, and, gte, isNull, desc, like, inArray, lt, or } from "@/storage/db"
 import type { SQL } from "@/storage/db"
@@ -402,9 +401,14 @@ export namespace KiloSession {
 export const kiloSessionFork = fn(
   z.object({ sessionID: SessionID.zod, messageID: MessageID.zod.optional() }),
   async (input) => {
-    const { runPromise } = makeRuntime(Session.Service, Session.defaultLayer)
-    const session = await runPromise((svc) => svc.fork(input))
-    await KiloSession.remapChildren(session.id)
-    return session
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const session = yield* sessions.fork(input)
+        yield* KiloSession.remapChildren(session.id)
+        return session
+      }),
+    )
   },
 )
