@@ -8,10 +8,11 @@ import { Storage } from "./worker/storage"
 import { Uploader } from "./worker/uploader"
 import { checkBufferCap } from "./worker/buffer-cap"
 import { resolveEndpoint } from "./worker/endpoint"
+import { parseMessage } from "./worker/validate"
 import path from "node:path"
 
 type Scope = {
-  onmessage: (event: MessageEvent<ToWorker>) => void
+  onmessage: (event: MessageEvent<unknown>) => void
   postMessage: (message: FromWorker | { kind: "test_event_count"; count: number }) => void
 }
 
@@ -53,7 +54,11 @@ async function drain(): Promise<void> {
 }
 
 scope.onmessage = (event) => {
-  const msg = event.data
+  const msg = parseMessage(event.data)
+  if (!msg) {
+    scope.postMessage({ kind: "telemetry", name: "session_export.invalid_worker_message" })
+    return
+  }
   switch (msg.kind) {
     case "init":
       storage = new Storage(msg.dbPath)
