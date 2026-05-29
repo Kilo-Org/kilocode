@@ -17,7 +17,9 @@ import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"
 import { PermissionDock } from "./PermissionDock"
 import { StartupErrorBanner } from "./StartupErrorBanner"
+import { SessionTabStrip } from "./SessionTabStrip"
 import { useSession } from "../../context/session"
+import { useLocalTabs } from "../../context/local-tabs"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { useWorktreeMode } from "../../context/worktree-mode"
@@ -41,8 +43,10 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const language = useLanguage()
   const worktreeMode = useWorktreeMode()
   const server = useServer()
+  const tabs = useLocalTabs()
   // Show "Show Changes" only in the standalone sidebar, not inside Agent Manager
   const isSidebar = () => worktreeMode === undefined
+  const pendingSessionID = () => props.pendingSessionID ?? tabs?.pending()
   // Show "Continue in Worktree": only when explicitly enabled via prop
   const canContinueInWorktree = () => props.continueInWorktree === true
 
@@ -308,6 +312,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
   return (
     <div class="chat-view">
+      <Show when={isSidebar() && !props.readonly && (tabs?.ids().length ?? 0) > 1}>
+        <SessionTabStrip />
+      </Show>
       <TaskHeader readonly={props.readonly} />
       <div class="chat-messages-wrapper">
         <div class="chat-messages">
@@ -345,7 +352,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               suggesting={suggesting}
               questioning={questioning}
               boxId={props.promptBoxId}
-              pendingSessionID={props.pendingSessionID}
+              pendingSessionID={pendingSessionID()}
             />
           </Show>
         </div>

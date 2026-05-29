@@ -761,6 +761,9 @@ describe("Agent Manager — provider chain parity with sidebar", () => {
     // which the agent manager already includes in its provider chain.
     "LanguageProvider",
     "DataProvider",
+    // Agent Manager owns its local session tabs and ChatView only reads this
+    // optional context in the standard sidebar/editor webview.
+    "LocalTabsProvider",
   ]
 
   it("agent manager includes all context providers from sidebar App.tsx", () => {

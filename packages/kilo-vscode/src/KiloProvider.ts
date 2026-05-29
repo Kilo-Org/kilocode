@@ -570,6 +570,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
+  private trackOpenSessions(ids: string[]): void {
+    for (const id of ids) this.trackedSessionIds.add(id)
+    this.connectionService.registerOpen(this.instanceId, ids)
+    this.recoverPendingPrompts()
+  }
+
   private async flushPendingPrompts(): Promise<void> {
     while (this.promptRecoveryQueued && this.isWebviewReady) {
       if (!this.client) return
@@ -631,6 +637,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           dir: this.getWorkspaceDirectory(this.currentSession?.id),
           post: (msg) => this.postMessage(msg),
           exportTranscript: (sessionID) => this.handleExportSessionTranscript(sessionID),
+          openSessions: (ids) => this.trackOpenSessions(ids),
         })
       ) {
         return
@@ -3569,6 +3576,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   dispose(): void {
     this.unsubscribeRemote?.()
     this.focusSession()
+    this.connectionService.registerOpen(this.instanceId, [])
     this.statsPoller?.stop()
     this.statsGitOps?.dispose()
     this.unsubscribeEvent?.()

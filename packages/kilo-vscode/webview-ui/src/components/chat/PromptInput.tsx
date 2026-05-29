@@ -13,6 +13,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
+import { useLocalTabs } from "../../context/local-tabs"
 import { useServer } from "../../context/server"
 import { useIndexing } from "../../context/indexing"
 import { useLanguage } from "../../context/language"
@@ -76,6 +77,7 @@ interface PromptInputProps {
 
 export const PromptInput: Component<PromptInputProps> = (props) => {
   const session = useSession()
+  const tabs = useLocalTabs()
   const server = useServer()
   const indexing = useIndexing()
   const { config, features } = useConfig()
@@ -290,10 +292,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const draft = text().trim()
     const comments = reviewComments()
     const imgs = imageAttach.images()
-    session.clearCurrentSession()
-    // After clearing, draftKey() points to the "new" bucket — save there
-    // so the session-switch effect restores the prompt in the new-task view.
-    saveDraft(draftKey(), draft, comments, imgs)
+    const id = tabs?.add()
+    if (!id) session.clearCurrentSession()
+    const key = id ? scopeDraftKey(boxKey(), pendingDraftKey(id) ?? "new") : draftKey()
+    saveDraft(key, draft, comments, imgs)
   }
   window.addEventListener("newTaskRequest", onNewTaskRequest)
   onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))

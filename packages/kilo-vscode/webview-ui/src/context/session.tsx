@@ -416,6 +416,9 @@ export const SessionProvider: ParentComponent = (props) => {
   // Tracks optimistic messageIDs that haven't been confirmed by the server yet.
   // Prevents handleMessagesLoaded from wiping them when it replaces the array.
   const pendingOptimistic = new Map<string, Set<string>>()
+  // Sessions can be created/imported while an older list request is still in flight.
+  // Keep them until a later list payload confirms them or deletion arrives.
+  const freshSessions = new Set<string>()
 
   // Store for sessions, messages, parts, todos, modelSelections, agentSelections
   const [store, setStore] = createStore<SessionStore>({
@@ -956,6 +959,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Event handlers
   function handleSessionCreated(session: SessionInfo, draftID?: string) {
+    freshSessions.add(session.id)
     batch(() => {
       setStore("sessions", session.id, session)
 
@@ -1577,13 +1581,14 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleSessionsLoaded(loaded: SessionInfo[], preserve?: string[]) {
-    const kept = preserve?.length ? new Set(preserve) : undefined
+    const ids = new Set(loaded.map((s) => s.id))
+    for (const id of ids) freshSessions.delete(id)
+    const kept = new Set([...(preserve ?? []), ...freshSessions])
     batch(() => {
       // Reconcile: remove sessions not in the loaded list to prevent stale
       // entries from other projects accumulating in the store.
       // Sessions whose worktree directories failed to list are preserved —
       // their absence is transient, not a real deletion.
-      const ids = new Set(loaded.map((s) => s.id))
       setStore(
         "sessions",
         produce((sessions) => {
@@ -1602,6 +1607,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handleSessionDeleted(sessionID: string) {
     pendingOptimistic.delete(sessionID)
+    freshSessions.delete(sessionID)
     batch(() => {
       // Collect message IDs so we can clean up their parts (store + stash)
       const msgs = store.messages[sessionID] ?? []
@@ -1749,6 +1755,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleCloudSessionImported(cloudSessionId: string, session: SessionInfo) {
+    freshSessions.add(session.id)
     const cloudKey = `cloud:${cloudSessionId}`
     const cloudMessages = store.messages[cloudKey] ?? []
     batch(() => {

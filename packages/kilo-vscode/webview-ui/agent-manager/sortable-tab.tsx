@@ -17,10 +17,10 @@ import { createRoot } from "solid-js"
 import type { SessionInfo } from "../src/types/messages"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
-import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { useLanguage } from "../src/context/language"
+import { SessionTab } from "../src/components/chat/SessionTab"
 import { parseBindingTokens } from "./keybind-tokens"
 
 /** Lock drag movement to the X axis (horizontal-only tab dragging). */
@@ -66,49 +66,18 @@ export const SortableTab: Component<{
     >
       <ContextMenu>
         <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
-          <div
-            class={`am-tab ${props.active ? "am-tab-active" : ""}`}
-            onClick={props.onSelect}
-            onMouseDown={props.onMiddleClick}
-          >
-            <TooltipKeybind
-              title={props.tab.title || t("agentManager.session.untitled")}
-              keybind={props.keybind ?? ""}
-              placement="bottom"
-              gutter={8}
-              class="am-tab-tooltip"
-              openDelay={0}
-            >
-              <span class="am-tab-title">
-                <Show when={props.busy}>
-                  <span class="am-tab-icon">
-                    <Spinner class="am-worktree-spinner" />
-                  </span>
-                </Show>
-                <span class="am-tab-label">{props.tab.title || t("agentManager.session.untitled")}</span>
-              </span>
-            </TooltipKeybind>
-            <TooltipKeybind
-              title={t("agentManager.tab.close")}
-              keybind={props.closeKeybind ?? ""}
-              placement="top"
-              gutter={8}
-              class="am-tab-close-wrap"
-              openDelay={0}
-            >
-              <IconButton
-                icon="close-small"
-                size="small"
-                variant="ghost"
-                label={t("agentManager.tab.closeTab")}
-                class="am-tab-close"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  props.onClose()
-                }}
-              />
-            </TooltipKeybind>
-          </div>
+          <SessionTab
+            title={props.tab.title || t("agentManager.session.untitled")}
+            active={props.active}
+            busy={props.busy}
+            keybind={props.keybind}
+            closeKeybind={props.closeKeybind}
+            closeTitle={t("agentManager.tab.close")}
+            closeLabel={t("agentManager.tab.closeTab")}
+            onSelect={props.onSelect}
+            onMiddleClick={props.onMiddleClick}
+            onClose={props.onClose}
+          />
         </ContextMenu.Trigger>
         <ContextMenu.Portal>
           <ContextMenu.Content class="am-ctx-menu">
