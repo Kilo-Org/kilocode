@@ -1513,7 +1513,6 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       description: string
       agent: string
     }) {
-      yield* prompt(input.parent)
       const exit = yield* prompt(input.child).pipe(Effect.exit)
       const cost = yield* KiloCostPropagation.childCost(sessions, input.child.sessionID)
       yield* KiloCostPropagation.propagate(sessions, input.parent.sessionID, input.messageID, cost - input.cost)
