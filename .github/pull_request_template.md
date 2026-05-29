@@ -67,6 +67,7 @@ Docs-only, config-only, and similar changes still need concrete evidence. For ex
 - [ ] Tests/verification described
 - [ ] Screenshots/video included for visual changes, or marked N/A
 - [ ] Changeset considered for user-facing changes
+- [ ] I personally reviewed the diff and can explain the changes, including any AI-assisted work.
 
 ## Get in Touch
 

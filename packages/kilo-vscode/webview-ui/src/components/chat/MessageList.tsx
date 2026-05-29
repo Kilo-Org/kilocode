@@ -37,12 +37,14 @@ import { RevertBanner } from "./RevertBanner"
 import { AccountSwitcher } from "../shared/AccountSwitcher"
 import { KiloNotifications } from "./KiloNotifications"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
+import { TurnOutcome } from "../shared/TurnOutcome"
 import { QuestionDock } from "./QuestionDock"
 import { Virtualizer } from "virtua/solid"
 import { SuggestBar } from "./SuggestBar"
 import {
   activeUserMessageID as getActiveUserMessageID,
   messageTurns,
+  partitionTurns,
   queuedUserMessageIDs,
   stableMessageTurns,
   type MessageTurn,
@@ -111,8 +113,6 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   const activeUserID = createMemo(() => getActiveUserMessageID(session.messages(), session.statusInfo()))
   const queuedIDs = createMemo(() => new Set(queuedUserMessageIDs(session.messages(), session.statusInfo())))
-  const visibleTurns = createMemo(() => turns().filter((turn) => !queuedIDs().has(turn.user.id)))
-  const queuedTurns = createMemo(() => turns().filter((turn) => queuedIDs().has(turn.user.id)))
 
   const [metrics, setMetrics] = createSignal(false)
   const handler = (e: MessageEvent<ExtensionMessage>) => {
@@ -122,11 +122,40 @@ export const MessageList: Component<MessageListProps> = (props) => {
   onMount(() => vscode.postMessage({ type: "requestTimelineSetting" }))
   onCleanup(() => window.removeEventListener("message", handler))
 
-  const activeUserIndex = createMemo(() => {
-    const active = activeUserID()
-    if (!active) return -1
-    return visibleTurns().findIndex((turn) => turn.user.id === active)
+  const [held, setHeld] = createSignal<{ sid: string; ids: Set<string> }>()
+  createEffect(() => {
+    const id = activeUserID()
+    const sid = session.currentSessionID()
+    const paused = autoScroll.userScrolled()
+    if (!sid || (!id && !paused)) {
+      setHeld(undefined)
+      return
+    }
+    if (!id) return
+    if (!paused) {
+      setHeld({ sid, ids: new Set([id]) })
+      return
+    }
+    setHeld((prev) => {
+      if (prev?.sid === sid && prev.ids.has(id)) return prev
+      const ids = prev?.sid === sid ? new Set(prev.ids) : new Set<string>()
+      ids.add(id)
+      return { sid, ids }
+    })
   })
+  const directIDs = createMemo(() => {
+    const item = held()
+    const ids = item && item.sid === session.currentSessionID() ? new Set(item.ids) : new Set<string>()
+    const active = activeUserID()
+    if (active) ids.add(active)
+    return ids
+  })
+  // Keep the growing live turn out of Virtua. Resizing a tall virtual item while
+  // the user reads within it makes Virtua compensate scrollTop as if earlier
+  // content moved, dragging the viewport downward during streaming. Preserve
+  // direct-rendered tail turns while paused so completion and queue handoffs do
+  // not move a turn being read back into the virtualized history.
+  const partition = createMemo(() => partitionTurns(turns(), directIDs(), queuedIDs()))
 
   const save = (id: string | undefined) => {
     const el = scrollEl()
@@ -248,39 +277,44 @@ export const MessageList: Component<MessageListProps> = (props) => {
                 {language.t("session.messages.loadEarlier")}
               </button>
             </Show>
-            <Show when={scrollEl()}>
-              <Virtualizer
-                data={visibleTurns()}
-                scrollRef={scrollEl()}
-                shift={session.messageMutation() === "prepend"}
-                overscan={6}
-                itemSize={260}
-              >
-                {(turn, index) => {
-                  const queued = createMemo(() => {
-                    const active = activeUserIndex()
-                    if (active === -1) return false
-                    return index() > active
-                  })
-
-                  return (
+            <Show when={partition().virtual.length > 0 || partition().direct.length > 0}>
+              <div class="message-list-turns">
+                <Show when={scrollEl() && partition().virtual.length > 0}>
+                  <Virtualizer
+                    data={partition().virtual}
+                    scrollRef={scrollEl()}
+                    shift={session.messageMutation() === "prepend"}
+                    overscan={6}
+                    itemSize={260}
+                  >
+                    {(turn) => (
+                      <VscodeSessionTurn
+                        turn={turn}
+                        showTokenThroughput={metrics()}
+                        onForkMessage={props.onForkMessage}
+                      />
+                    )}
+                  </Virtualizer>
+                </Show>
+                <For each={partition().direct}>
+                  {(turn) => (
                     <VscodeSessionTurn
                       turn={turn}
-                      queued={queued()}
                       showTokenThroughput={metrics()}
                       onForkMessage={props.onForkMessage}
                     />
-                  )
-                }}
-              </Virtualizer>
+                  )}
+                </For>
+              </div>
             </Show>
             <Show when={boundary()}>
               <RevertBanner />
             </Show>
-            <For each={queuedTurns()}>
+            <For each={partition().queued}>
               {(turn) => <VscodeSessionTurn turn={turn} queued showTokenThroughput={metrics()} />}
             </For>
             <WorkingIndicator />
+            <TurnOutcome />
             <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
             <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
           </Show>

@@ -52,6 +52,14 @@ git checkout -b docs/your-change-description
 - Include appropriate tests for new features
 - Update documentation for any user-facing changes
 
+### Contribution Ownership and AI Assistance
+
+AI and coding agents are welcome in Kilo contributions. Contributors still own the work they submit: you must personally understand the change, test it appropriately, be able to explain the diff, and understand how it interacts with the affected package and the rest of the repo.
+
+When using an agent, start it from the repository root so the root `AGENTS.md` is available. If you work in a package with its own guidance, check and follow the package-specific `AGENTS.md` or contributor docs too.
+
+Maintainers may close PRs that appear to be submitted without credible contributor ownership or understanding, including AI-assisted work that has not been meaningfully reviewed by the contributor.
+
 ### Commit Guidelines
 
 - Write clear, concise commit messages
@@ -131,12 +139,27 @@ Follow the issue-first policy by linking the relevant issue when you open a PR. 
    - Manual/local verification performed
    - Any command blocker plus substitute verification
    - Screenshots or video for visual UI changes, showing the relevant before/after or resulting state
+   - Confirmation that you personally reviewed the diff and can explain the changes, including any AI-assisted work
 
 Keep the description focused on context reviewers cannot infer from the diff. Skip file-by-file summaries, placeholders, and other filler.
 
-Maintainers may close or decline review of PRs presented as review-ready at their discretion when they lack linked issue context, a clear what/why explanation, credible testing evidence, or relevant UI proof for visual UI changes.
+Maintainers may close or decline review of PRs presented as review-ready at their discretion when they lack linked issue context, a clear what/why explanation, credible testing evidence, credible contributor ownership of AI-assisted work, or relevant UI proof for visual UI changes.
 
 When a PR is close to this bar, addresses important work, or would benefit from further shaping, maintainers may ask for specific fixes instead of closing or declining review. Contributors may reopen or resubmit once the PR meets the documented bar.
+
+## Tracker Use and Automation
+
+Please keep the issue and PR trackers useful for maintainers and contributors. Do not submit batches of agent-generated, untested, or weakly reviewed PRs.
+
+Keep concurrent PRs focused and limited. As a rule, open no more than three PRs at a time, especially if you are a new contributor. Prioritize high-impact or high-priority issues first instead of opening many speculative fixes. If a contributor opens a large batch of low-value or duplicative PRs, maintainers may close the batch and ask the contributor to choose one PR to reopen, focus, and bring up to the documented review bar before submitting more.
+
+For issues, do not mass-create tickets through automation or agents. Search existing issues first, open issues only when you have enough context for someone to act, and prioritize the most important reports instead of filing every possible finding. Maintainers may close duplicate, low-signal, automated, or weakly reviewed issues without action.
+
+Maintainers may close issues or PRs that disregard the contribution guide, bypass required context, or lack credible contributor ownership of AI-assisted work. Repeated disregard of this contribution guide, or high-volume automated or agent-generated tracker spam across issues or PRs, may result in maintainers blocking the responsible account.
+
+## Bug Bounties
+
+Kilo has bug bounties. To be eligible, make sure your GitHub account is connected in your Kilo account.
 
 ## Contributing to the Kilo Marketplace
 

@@ -98,6 +98,7 @@ export namespace KiloTask {
     agent: Pick<Agent.Info, "model" | "variant">
     config: Pick<Config.Info, "subagent_model" | "subagent_variant">
     parent: Model
+    provider: Provider.Interface
   }) {
     const state = yield* saved(input.name)
     const cfg = parse(input.config.subagent_model)
@@ -116,10 +117,8 @@ export namespace KiloTask {
     for (const choice of choices) {
       if (!choice) continue
       if (choice.direct) return { model: choice.model, variant: choice.variant }
-      const full = yield* Effect.tryPromise(() =>
-        Provider.getModel(choice.model.providerID, choice.model.modelID),
-      ).pipe(
-        Effect.catch((err) =>
+      const full = yield* input.provider.getModel(choice.model.providerID, choice.model.modelID).pipe(
+        Effect.catchDefect((err) =>
           Effect.sync(() => {
             log.debug("skipping unavailable task subagent model", {
               providerID: choice.model.providerID,

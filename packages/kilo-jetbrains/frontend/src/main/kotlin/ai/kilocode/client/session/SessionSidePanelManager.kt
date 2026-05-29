@@ -12,7 +12,9 @@ import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.wm.IdeFocusManager
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.cancel
 import java.awt.BorderLayout
 import javax.swing.JComponent
@@ -25,6 +27,7 @@ class SessionSidePanelManager(
         service<SessionUiFactory>().create(project, workspace, manager, ref)
     },
     private val resolve: (String) -> Workspace = { dir -> service<KiloWorkspaceService>().workspace(dir) },
+    private val status: () -> Map<String, SessionActivityKind> = { project.service<KiloSessionService>().activity() },
     private val history: ((Disposable, (SessionRef) -> Unit, (String) -> Unit) -> JComponent)? = null,
 ) : SessionManager, Disposable {
     val component: JPanel = object : JPanel(BorderLayout()), DataProvider {
@@ -62,6 +65,30 @@ class SessionSidePanelManager(
         show(ui)
     }
 
+    @RequiresEdt
+    override fun activity(): Map<String, SessionActivityKind> {
+        val base = status()
+        val live = all.mapNotNull { ui ->
+            val id = ui.id ?: return@mapNotNull null
+            val kind = ui.activityKind() ?: return@mapNotNull null
+            id to kind
+        }.toMap()
+        return base + live
+    }
+
+    @RequiresEdt
+    override fun titles(): Map<String, String> = all.mapNotNull { ui ->
+        val id = ui.id ?: return@mapNotNull null
+        val title = ui.title() ?: return@mapNotNull null
+        id to title
+    }.toMap()
+
+    @RequiresEdt
+    override fun activityChanged() {
+        (panel as? HistoryPanel)?.syncActivity()
+        current?.syncActivity()
+    }
+
     private fun create(ref: SessionRef): SessionUi {
         val workspace = when (ref) {
             is SessionRef.Local -> ref.session?.directory?.let(resolve) ?: root
@@ -76,8 +103,9 @@ class SessionSidePanelManager(
     }
 
     override fun showHistory() {
-        register(current)
-        release(current)
+        val active = current
+        register(active)
+        release(active)
         val cached = panel
         val view = cached ?: createHistory().also { panel = it }
         if (cached != null && view is HistoryPanel) view.refresh()
@@ -128,11 +156,7 @@ class SessionSidePanelManager(
 
     private fun removeSession(id: String) {
         val ui = opened.remove(id) ?: return
-        opened.entries.removeIf { it.value === ui }
-        all.remove(ui)
-        if (current === ui) current = null
-        if (latest === ui) latest = null
-        Disposer.dispose(ui)
+        disposeUi(ui)
     }
 
     private fun show(ui: SessionUi) {
@@ -155,13 +179,30 @@ class SessionSidePanelManager(
 
     private fun release(ui: SessionUi?) {
         if (ui == null) return
-        if (ui.cacheKey != null) {
+        if (ui.cacheKey == null) {
+            disposeUi(ui)
+            return
+        }
+        if (!disposeInactiveUi()) {
             register(ui)
             return
         }
+        if (ui.canDisposeInactive()) {
+            disposeUi(ui)
+            return
+        }
+        register(ui)
+    }
+
+    private fun disposeUi(ui: SessionUi) {
+        opened.entries.removeIf { it.value === ui }
         all.remove(ui)
+        if (current === ui) current = null
+        if (latest === ui) latest = null
         Disposer.dispose(ui)
     }
+
+    private fun disposeInactiveUi() = Registry.`is`("kilo.session.inactive.dispose", false)
 
     override fun dispose() {
         val items = all.toList()

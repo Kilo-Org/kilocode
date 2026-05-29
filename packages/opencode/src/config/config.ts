@@ -53,7 +53,6 @@ import {
   IndexingConfig as KiloIndexingConfig,
   IndexingSchema as KiloIndexingSchema,
 } from "@kilocode/kilo-indexing/config"
-import { makeRuntime } from "@/effect/run-service"
 import { unique } from "remeda"
 // kilocode_change end
 
@@ -75,7 +74,7 @@ function mergeConfigConcatArrays(target: Info, source: Info): Info {
 
 function normalizeLoadedConfig(data: unknown, source: string) {
   if (!isRecord(data)) return data
-  const copy = { ...data }
+  const copy = KilocodeConfig.retireIndexingFlag({ ...data }, source) // kilocode_change
   const hadLegacy = "theme" in copy || "keybinds" in copy || "tui" in copy
   if (!hadLegacy) return copy
   delete copy.theme
@@ -351,15 +350,6 @@ export const Info = Schema.Struct({
       batch_tool: Schema.optional(Schema.Boolean).annotate({ description: "Enable the batch tool" }),
       codebase_search: Schema.optional(Schema.Boolean).annotate({ description: "Enable AI-powered codebase search" }), // kilocode_change
       // kilocode_change start
-      semantic_indexing: Schema.optional(Schema.Boolean).annotate({
-        description: "Enable semantic codebase indexing and the semantic_search tool",
-      }),
-      agent_manager_tool: Schema.optional(Schema.Boolean).annotate({
-        description: "Enable the VS Code Agent Manager orchestration tool",
-      }),
-      speech_to_text: Schema.optional(Schema.Boolean).annotate({
-        description: "Enable speech-to-text voice input in Kilo clients",
-      }),
       speech_to_text_model: Schema.optional(Schema.String).annotate({
         description: "Speech-to-text transcription model ID to use for voice input",
       }),
@@ -584,7 +574,7 @@ export const layer = Layer.effect(
         yield* fs
           .writeFileString(
             gitignore,
-            // kilocode_change start - added pnpm-lock.yaml and yarn.lock (not in upstream)
+            // kilocode_change start - added pnpm-lock.yaml, yarn.lock, agent-manager.json (not in upstream)
             [
               "node_modules",
               "package.json",
@@ -593,6 +583,7 @@ export const layer = Layer.effect(
               "bun.lock",
               "yarn.lock",
               ".gitignore",
+              "agent-manager.json",
             ].join("\n"),
             // kilocode_change end
           )
@@ -1102,45 +1093,5 @@ export const defaultLayer = layer.pipe(
   Layer.provide(Account.defaultLayer),
   Layer.provide(Npm.defaultLayer),
 )
-
-// kilocode_change start - keep async wrappers for Kilo callsites during Effect migration
-const { runPromise } = makeRuntime(Service, defaultLayer)
-
-export async function get() {
-  return runPromise((svc) => svc.get())
-}
-
-export async function getGlobal() {
-  return runPromise((svc) => svc.getGlobal())
-}
-
-export async function getConsoleState() {
-  return runPromise((svc) => svc.getConsoleState())
-}
-
-export async function update(config: Info) {
-  return runPromise((svc) => svc.update(config))
-}
-
-export async function updateGlobal(config: Info, options?: { dispose?: boolean }) {
-  return runPromise((svc) => svc.updateGlobal(config, options))
-}
-
-export async function invalidate() {
-  return runPromise((svc) => svc.invalidate())
-}
-
-export async function directories() {
-  return runPromise((svc) => svc.directories())
-}
-
-export async function waitForDependencies() {
-  return runPromise((svc) => svc.waitForDependencies())
-}
-
-export async function warnings() {
-  return runPromise((svc) => svc.warnings())
-}
-// kilocode_change end
 
 export * as Config from "./config"

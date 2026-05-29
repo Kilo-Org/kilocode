@@ -13,6 +13,7 @@ import { ModelID, ProviderID } from "@/provider/schema"
 import * as Log from "@opencode-ai/core/util/log"
 import z from "zod"
 import { zodObject } from "@/util/effect-zod"
+import { Effect } from "effect"
 
 type Provide = typeof import("@/project/with-instance").provide
 
@@ -72,6 +73,11 @@ export namespace RemoteSender {
     }
     subscribe?: (callback: (event: any) => void) => () => void
     provide?: Provide
+    permission?: {
+      readonly list: () => Promise<ReadonlyArray<Permission.Request>>
+      readonly reply: (input: Permission.ReplyInput) => Promise<boolean>
+    }
+    prompt?: (input: SessionPrompt.PromptInput) => Promise<unknown>
   }
 
   export type Sender = {
@@ -83,6 +89,22 @@ export namespace RemoteSender {
     const sessions = new Set<string>()
     const children = new Map<string, string>() // childId → parentId
     let unsub: (() => void) | undefined
+    const permission = options.permission ?? {
+      list: async () => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        return AppRuntime.runPromise(Permission.Service.use((svc) => svc.list()))
+      },
+      reply: async (input: Permission.ReplyInput) => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        return AppRuntime.runPromise(Permission.Service.use((svc) => svc.reply(input)))
+      },
+    }
+    const prompt =
+      options.prompt ??
+      (async (input: SessionPrompt.PromptInput) => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        return AppRuntime.runPromise(SessionPrompt.Service.use((svc) => svc.prompt(input)))
+      })
 
     const sub =
       options.subscribe ??
@@ -95,7 +117,10 @@ export namespace RemoteSender {
       })
 
     async function directoryFor(sid: string): Promise<string> {
-      const info = await Session.get(SessionID.make(sid)).catch(() => undefined)
+      const { AppRuntime } = await import("@/effect/app-runtime")
+      const info = await AppRuntime.runPromise(
+        Session.Service.use((svc) => svc.get(SessionID.make(sid)).pipe(Effect.orElseSucceed(() => undefined))),
+      )
       return info?.directory ?? options.directory
     }
 
@@ -133,7 +158,7 @@ export namespace RemoteSender {
       const [suggestions, questions, permissions] = await Promise.all([
         Suggestion.list(),
         Question.list(),
-        Permission.list(),
+        permission.list(),
       ])
       for (const suggestion of suggestions) {
         if (suggestion.sessionID !== sessionId) continue
@@ -178,7 +203,10 @@ export namespace RemoteSender {
     }
 
     async function discoverChildren(parentId: string) {
-      const childSessions = await Session.children(SessionID.make(parentId))
+      const { AppRuntime } = await import("@/effect/app-runtime")
+      const childSessions = await AppRuntime.runPromise(
+        Session.Service.use((svc) => svc.children(SessionID.make(parentId))),
+      )
       for (const child of childSessions) {
         children.set(child.id, parentId)
         const root = rootOf(child.id) ?? parentId
@@ -280,7 +308,7 @@ export namespace RemoteSender {
           return
         }
         dispatchLongRunning(msg, directoryFor(input.data.sessionID), async () => {
-          await SessionPrompt.prompt(input.data as SessionPrompt.PromptInput)
+          await prompt(input.data as SessionPrompt.PromptInput)
         })
         return
       }
@@ -359,12 +387,7 @@ export namespace RemoteSender {
         }
         const dir = msg.sessionId ? directoryFor(msg.sessionId) : Promise.resolve(options.directory)
         dispatchQuick(msg, dir, async () => {
-          const { AppRuntime } = await import("@/effect/app-runtime")
-          await AppRuntime.runPromise(
-            Permission.Service.use((svc) =>
-              svc.reply({ ...parsed.data, requestID: PermissionID.make(parsed.data.requestID) }),
-            ),
-          )
+          await permission.reply({ ...parsed.data, requestID: PermissionID.make(parsed.data.requestID) })
         })
         return
       }

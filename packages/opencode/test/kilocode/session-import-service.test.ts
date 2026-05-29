@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test"
 import { Database } from "../../src/storage/db"
 import { SessionImportService } from "../../src/kilocode/session-import/service"
+import { resetDatabase } from "../fixture/db"
+import { tmpdir } from "../fixture/fixture"
 
 let spy: ReturnType<typeof spyOn>
 
@@ -75,6 +77,37 @@ function input(force?: boolean) {
     ...(force ? { force: true } : {}),
   }
 }
+
+function project(worktree: string) {
+  return {
+    id: "legacy_project",
+    worktree,
+    timeCreated: 1,
+    timeUpdated: 1,
+    sandboxes: [],
+  }
+}
+
+describe("SessionImportService.project", () => {
+  afterEach(async () => {
+    await resetDatabase()
+  })
+
+  test("rejects an empty legacy worktree", async () => {
+    await expect(SessionImportService.project(project("  "))).rejects.toThrow(
+      "Legacy project import requires a non-empty worktree",
+    )
+  })
+
+  test("resolves a valid legacy project through Project.Service", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    const result = await SessionImportService.project(project(tmp.path))
+
+    expect(result.ok).toBe(true)
+    expect(result.id).not.toBe("global")
+  })
+})
 
 describe("SessionImportService.session", () => {
   beforeEach(() => {

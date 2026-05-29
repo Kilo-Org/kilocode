@@ -5,6 +5,7 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionManager
+import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
@@ -12,6 +13,7 @@ import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -113,6 +115,133 @@ class HistoryControllerTest : BasePlatformTestCase() {
 
         assertEquals(listOf("ses_1" to "/test"), rpc.deletes)
         assertTrue(controller.local.items.isEmpty())
+    }
+
+    fun `test activity returns typed items`() {
+        rpc.statuses.value = mapOf(
+            "ses_busy" to SessionStatusDto("busy"),
+            "ses_idle" to SessionStatusDto("idle"),
+            "ses_retry" to SessionStatusDto("retry"),
+            "ses_offline" to SessionStatusDto("offline"),
+        )
+        flush()
+
+        val activity = sessions.activity()
+
+        assertEquals(mapOf("ses_busy" to SessionActivityKind.RUNNING), activity)
+    }
+
+    fun `test controller activity returns service activity`() {
+        rpc.statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
+        flush()
+
+        val activity = controller().activity()
+
+        assertEquals(mapOf("ses_1" to SessionActivityKind.RUNNING), activity)
+    }
+
+    fun `test local history renderer shows running badge for active id`() {
+        val item = LocalHistoryItem(session("ses_1", "Running"))
+        val controller = controller()
+        controller.local.replace(listOf(item))
+        val renderer = LocalHistoryRenderer(controller.local, activity = { mapOf("ses_1" to SessionActivityKind.RUNNING) })
+
+        renderer.getListCellRendererComponent(javax.swing.JList(arrayOf(item)), item, 0, false, false)
+
+        assertTrue(renderer.runningVisible())
+    }
+
+    fun `test local history renderer uses title overlay`() {
+        val item = LocalHistoryItem(session("ses_1", "Stored"))
+        val controller = controller()
+        controller.local.replace(listOf(item))
+        val renderer = LocalHistoryRenderer(controller.local, titles = { mapOf("ses_1" to "Live") })
+
+        renderer.getListCellRendererComponent(javax.swing.JList(arrayOf(item)), item, 0, false, false)
+
+        assertEquals("Live", renderer.titleText())
+    }
+
+    fun `test cloud history renderer hides running badge for inactive id`() {
+        val item = CloudHistoryItem(cloud("cloud_1", "Cloud"))
+        val controller = controller()
+        controller.cloud.replace(listOf(item), null)
+        val renderer = CloudHistoryRenderer(controller.cloud) { emptyMap() }
+
+        renderer.getListCellRendererComponent(javax.swing.JList(arrayOf(item)), item, 0, false, false)
+
+        assertFalse(renderer.runningVisible())
+    }
+
+    fun `test history panel sync updates running badges`() {
+        rpc.listed += session("ses_1", "Local One")
+        val panel = HistoryPanel(parent, controller())
+        flush()
+        assertFalse(panel.runningBadgeVisible(0))
+
+        rpc.statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
+        flush()
+        panel.syncActivity()
+
+        assertTrue(panel.runningBadgeVisible(0))
+        assertEquals(KiloBundle.message("session.part.tool.running"), panel.badgeText(0))
+    }
+
+    fun `test history panel overlay shows specific badge`() {
+        rpc.listed += session("ses_1", "Local One")
+        val panel = HistoryPanel(parent, controller(), manager = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory() {}
+            override fun openSession(ref: SessionRef) {}
+            override fun activity() = mapOf("ses_1" to SessionActivityKind.PERMISSION)
+        })
+        flush()
+
+        panel.syncActivity()
+
+        assertEquals(KiloBundle.message("history.badge.permission"), panel.badgeText(0))
+    }
+
+    fun `test history panel sync repaints activity kind change`() {
+        rpc.listed += session("ses_1", "Local One")
+        var kind: SessionActivityKind? = null
+        val panel = HistoryPanel(parent, controller(), manager = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory() {}
+            override fun openSession(ref: SessionRef) {}
+            override fun activity() = sessions.activity() + kind?.let { mapOf("ses_1" to it) }.orEmpty()
+        })
+        rpc.statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
+        flush()
+
+        panel.syncActivity()
+        assertEquals(KiloBundle.message("session.part.tool.running"), panel.badgeText(0))
+
+        kind = SessionActivityKind.QUESTION
+        panel.syncActivity()
+
+        assertEquals(KiloBundle.message("history.badge.question"), panel.badgeText(0))
+    }
+
+    fun `test history panel sync uses live title overlay`() {
+        rpc.listed += session("ses_1", "Stored")
+        var title = "Live"
+        val panel = HistoryPanel(parent, controller(), manager = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory() {}
+            override fun openSession(ref: SessionRef) {}
+            override fun titles() = title.takeIf { it.isNotBlank() }?.let { mapOf("ses_1" to it) }.orEmpty()
+        })
+        flush()
+
+        panel.syncActivity()
+
+        assertEquals("Live", panel.titleText(0))
+
+        title = ""
+        panel.syncActivity()
+
+        assertEquals("Stored", panel.titleText(0))
     }
 
     fun `test panel filters and switches source`() {

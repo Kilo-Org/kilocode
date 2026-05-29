@@ -13,7 +13,6 @@ import { SessionID, MessageID, PartID } from "./schema"
 import { MessageV2 } from "./message-v2"
 import * as Log from "@opencode-ai/core/util/log"
 import { SessionRevert } from "./revert"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import * as Session from "./session"
 import { Agent } from "../agent/agent"
 import { Provider } from "@/provider/provider"
@@ -1446,7 +1445,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         return yield* KiloSessionPromptQueue.enqueue(
           input.sessionID,
           message.info.id,
-          loop({ sessionID: input.sessionID }),
+          loop({ sessionID: input.sessionID, snapshotInitialization: input.snapshotInitialization }), // kilocode_change
           lastAssistant(input.sessionID),
         )
         // kilocode_change end
@@ -1469,8 +1468,11 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     // kilocode_change — mutable close-reason per session, set by runLoop and read by loop
     const closeReasons = new Map<string, KiloSession.CloseReason>()
 
-    const runLoop: (sessionID: SessionID) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.run")(
-      function* (sessionID: SessionID) {
+    // kilocode_change start - retain request-scoped snapshot initialization policy
+    const runLoop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.run")(
+      function* (input: LoopInput) {
+        const sessionID = input.sessionID
+        // kilocode_change end
         // kilocode_change — cache environment details per turn (prompt caching)
         const envCache: KiloSessionPrompt.EnvCache = {}
         closeReasons.delete(sessionID) // kilocode_change
@@ -1652,6 +1654,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             sessionID,
             model,
             telemetry, // kilocode_change
+            snapshotInitialization: input.snapshotInitialization, // kilocode_change
           })
 
           const outcome: "break" | "continue" = yield* Effect.gen(function* () {
@@ -1846,7 +1849,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
       yield* bus.publish(KiloSession.Event.TurnOpen, { sessionID: input.sessionID })
       return yield* Effect.onExit(
-        state.ensureRunning(input.sessionID, lastAssistant(input.sessionID), runLoop(input.sessionID)),
+        state.ensureRunning(input.sessionID, lastAssistant(input.sessionID), runLoop(input)), // kilocode_change
         Effect.fnUntraced(function* (exit) {
           yield* bus.publish(KiloSession.Event.TurnClose, {
             sessionID: input.sessionID,
@@ -1976,6 +1979,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         agent: userAgent,
         parts,
         variant: input.variant,
+        snapshotInitialization: input.snapshotInitialization, // kilocode_change
       })
       yield* bus.publish(Command.Event.Executed, {
         name: input.command,
@@ -2046,6 +2050,11 @@ export const PromptInput = Schema.Struct({
   format: Schema.optional(MessageV2.Format),
   system: Schema.optional(Schema.String),
   variant: Schema.optional(Schema.String),
+  // kilocode_change start - managed product slow-snapshot policy
+  snapshotInitialization: Schema.optional(Schema.Literal("wait")).annotate({
+    description: "Wait silently if snapshot initialization is slow instead of asking the user.",
+  }),
+  // kilocode_change end
   // kilocode_change start - reuse shared editor context schema
   editorContext: Schema.optional(MessageV2.EditorContext),
   // kilocode_change end
@@ -2074,6 +2083,7 @@ export type PromptInput = Omit<Schema.Schema.Type<typeof PromptInput>, "parts" |
 
 export class LoopInput extends Schema.Class<LoopInput>("SessionPrompt.LoopInput")({
   sessionID: SessionID,
+  snapshotInitialization: Schema.optional(Schema.Literal("wait")), // kilocode_change
 }) {
   static readonly zod = zod(this)
 }
@@ -2095,6 +2105,11 @@ export const CommandInput = Schema.Struct({
   arguments: Schema.String,
   command: Schema.String,
   variant: Schema.optional(Schema.String),
+  // kilocode_change start - managed product slow-snapshot policy
+  snapshotInitialization: Schema.optional(Schema.Literal("wait")).annotate({
+    description: "Wait silently if snapshot initialization is slow instead of asking the user.",
+  }),
+  // kilocode_change end
   // Inlined (no identifier annotation) to keep the original SDK output — the
   // PromptInput call site below references FilePartInput by ref via the
   // Schema export in message-v2.ts.
@@ -2148,12 +2163,5 @@ const bashRegex = /!`([^`]+)`/g
 const argsRegex = /(?:\[Image\s+\d+\]|"[^"]*"|'[^']*'|[^\s"']+)/gi
 const placeholderRegex = /\$(\d+)/g
 const quoteTrimRegex = /^["']|["']$/g
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const prompt = (input: PromptInput) => runPromise((svc) => svc.prompt(input))
-export const loop = (input: LoopInput) => runPromise((svc) => svc.loop(input))
-export const cancel = (sessionID: SessionID) => runPromise((svc) => svc.cancel(sessionID))
-// kilocode_change end
 
 export * as SessionPrompt from "./prompt"

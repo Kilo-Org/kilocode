@@ -29,7 +29,7 @@ class UiStyleTest : BasePlatformTestCase() {
     fun `test hover blends from panel toward border`() {
         val panel = Color(0, 0, 0)
         val border = UiStyle.Colors.contrast(panel, SessionUiStyle.View.BORDER_DELTA)
-        val hover = UiStyle.Colors.blend(panel, border, SessionUiStyle.View.HOVER_ALPHA)
+        val hover = UiStyle.Colors.blend(panel, border, SessionUiStyle.View.HOVER_FILL_ALPHA)
 
         assertTrue(hover.red > panel.red)
         assertTrue(hover.red < border.red)

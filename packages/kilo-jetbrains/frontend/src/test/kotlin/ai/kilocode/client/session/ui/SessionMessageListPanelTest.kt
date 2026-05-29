@@ -10,15 +10,18 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.views.LoginRequiredView
+import ai.kilocode.client.session.views.PlanExitView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionResultView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.views.TextView
 import ai.kilocode.client.session.views.ToolView
+import ai.kilocode.client.session.views.todo.TodoWriteView
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
+import ai.kilocode.rpc.dto.TodoDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -37,12 +40,13 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     private lateinit var model: SessionModel
     private lateinit var parent: Disposable
     private lateinit var panel: SessionMessageListPanel
+    private val openFile: (String) -> Unit = {}
 
     override fun setUp() {
         super.setUp()
         parent = Disposer.newDisposable("test")
         model = SessionModel()
-        panel = SessionMessageListPanel(model, parent)
+        panel = SessionMessageListPanel(model, parent, openFile = openFile)
     }
 
     override fun tearDown() {
@@ -159,6 +163,18 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         val mv = panel.findMessage("a1")!!
         assertEquals(listOf("p1"), mv.partIds())
         assertTrue(mv.part("p1") is TextView)
+    }
+
+    fun `test text markdown link uses panel url opener`() {
+        val urls = mutableListOf<String>()
+        val item = SessionMessageListPanel(model, parent, openFile = openFile, openUrl = { urls.add(it) })
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p1", "a1", "text", text = "[docs](https://kilocode.ai/docs)"))
+
+        val view = item.findMessage("a1")!!.part("p1") as TextView
+        view.md.simulateLink("https://kilocode.ai/docs")
+
+        assertEquals(listOf("https://kilocode.ai/docs"), urls)
     }
 
     fun `test ContentDelta appends text to TextView`() {
@@ -426,6 +442,27 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertTrue(mv.part("tp1") is ToolView)
     }
 
+    fun `test todo tools are suppressed until todowrite completes`() {
+        val item = panelWithPrompts()
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", toolPart("read", "a1", "todoread", "call1", state = "completed"))
+        model.updateContent("a1", toolPart("write", "a1", "todowrite", "call2", state = "running"))
+
+        val mv = item.findMessage("a1")!!
+        assertEquals(emptyList<String>(), mv.partIds())
+
+        model.updateContent(
+            "a1",
+            toolPart(
+                "write", "a1", "todowrite", "call2", state = "completed",
+                todos = listOf(TodoDto("Done", "completed", "high")),
+            ),
+        )
+
+        assertEquals(listOf("write"), mv.partIds())
+        assertTrue(mv.part("write") is TodoWriteView)
+    }
+
     fun `test completed question update replaces generic tool view with question result view`() {
         val item = panelWithPrompts()
         model.upsertMessage(msg("a1", "assistant"))
@@ -449,19 +486,42 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertEquals(listOf("tp1"), mv.partIds())
     }
 
+    fun `test completed plan update replaces tool view and keeps open file action`() {
+        val opened = mutableListOf<String>()
+        val item = SessionMessageListPanel(model, parent, openFile = { opened.add(it) })
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", toolPart("tp1", "a1", "plan_exit", "call1", state = "running"))
+
+        val mv = item.findMessage("a1")!!
+        assertTrue(mv.part("tp1") is ToolView)
+
+        model.updateContent(
+            "a1",
+            toolPart(
+                "tp1", "a1", "plan_exit", "call1", state = "completed",
+                metadata = mapOf("plan" to ".kilo/plans/x.md"),
+            ),
+        )
+
+        val view = mv.part("tp1") as PlanExitView
+        view.simulateLink(".kilo/plans/x.md")
+
+        assertEquals(listOf(".kilo/plans/x.md"), opened)
+    }
+
     // ------ helpers ------
 
     private fun panelWithPrompts(): SessionMessageListPanel {
         val q = QuestionView(
             project = project,
-            reply = { _, _ -> },
+            reply = { _, _, _ -> },
             reject = { _ -> },
         )
         val p = PermissionView(
             reply = { _, _ -> },
         )
         val l = LoginRequiredView(openProfile = {}, dismiss = {})
-        return SessionMessageListPanel(model, parent, q, p, l)
+        return SessionMessageListPanel(model, parent, q, p, l, openFile)
     }
 
     private inline fun <reified T> find(root: Container): T? = findCls(root, T::class.java)
@@ -517,8 +577,9 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         state: String = "running",
         input: Map<String, String> = emptyMap(),
         metadata: Map<String, String> = emptyMap(),
+        todos: List<TodoDto> = emptyList(),
     ) = PartDto(
         id = id, sessionID = "ses", messageID = mid, type = "tool", tool = tool, callID = callId, state = state,
-        input = input, metadata = metadata,
+        input = input, metadata = metadata, todos = todos,
     )
 }

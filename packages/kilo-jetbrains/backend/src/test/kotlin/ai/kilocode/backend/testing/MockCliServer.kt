@@ -94,6 +94,9 @@ class MockCliServer : AutoCloseable {
     /** Optional gate for REST responses; SSE stays unblocked so the app can enter Loading. */
     @Volatile var responseGate: CountDownLatch? = null
 
+    /** Optional gate for config warnings only. */
+    @Volatile var warningsGate: CountDownLatch? = null
+
     /** Request counts by bare path (e.g. "/session" or "/global/config"). Thread-safe. */
     private val counts = ConcurrentHashMap<String, AtomicInteger>()
 
@@ -223,6 +226,7 @@ class MockCliServer : AutoCloseable {
             val delay = responseDelay
             if (delay > 0) Thread.sleep(delay)
             if (bare != "/global/event") responseGate?.await()
+            if (bare.startsWith("/config/warnings")) warningsGate?.await()
 
             when {
                 path == "/global/health" -> respond(output, 200, health)

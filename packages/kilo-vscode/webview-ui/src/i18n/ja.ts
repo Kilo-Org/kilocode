@@ -106,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "推奨",
   "dialog.provider.opencode.note": "Claude、GPT、Geminiなどの厳選されたモデル",
   "dialog.provider.anthropic.note": "Claude Pro/MaxまたはAPIキーで接続",
+  "dialog.provider.deepseek.note": "推論とコーディングタスク向けのDeepSeekモデル",
   "dialog.provider.openai.note": "ChatGPT Pro/PlusまたはAPIキーで接続",
   "dialog.provider.google.note": "高速で構造化された応答のためのGeminiモデル",
   "dialog.provider.openrouter.note": "1つのプロバイダーからすべてのモデルにアクセス",
@@ -283,7 +284,7 @@ export const dict = {
     "「プロンプトを強化」ボタンは、追加コンテキスト、説明、または言い換えを提供することで、リクエストを改善します。ここにリクエストを入力し、ボタンを再度クリックして動作を確認してください。",
   "prompt.action.indexing": "インデックス設定",
 
-  "speechToText.tooltip.start": "音声入力を開始",
+  "speechToText.tooltip.start": "Kilo Gatewayで音声入力を開始",
   "speechToText.tooltip.stop": "音声キャプチャを停止",
   "speechToText.tooltip.transcribing": "文字起こし中... クリックしてキャンセル。",
   "speechToText.tooltip.error": "音声入力に失敗しました。クリックしてクリア。",
@@ -448,6 +449,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "セッションの共有解除に失敗しました",
   "toast.session.unshare.failed.description": "セッションの共有解除中にエラーが発生しました",
 
+  "toast.session.rename.invalid.title": "無効なセッションタイトル",
   "toast.session.listFailed.title": "{{project}}のセッション読み込みに失敗しました",
 
   "toast.update.title": "アップデートが利用可能です",
@@ -1014,6 +1016,8 @@ export const dict = {
   "session.delete.confirm": 'セッション "{{name}}" を削除しますか？',
   "session.delete.button": "セッションを削除",
   "session.untitled": "無題",
+  "session.current": "現在のセッション",
+  "session.history.sources": "履歴のソース",
   "session.recent": "最近",
   "session.showHistory": "履歴を表示",
   "session.search.placeholder": "セッションを検索...",
@@ -1119,6 +1123,14 @@ export const dict = {
   "session.status.retrying": "再試行中（{{ attempt }}回目）… {{ message }}",
   "session.status.working": "作業中…",
   "session.status.offline": "ネットワークが切断されました — 再接続中…",
+  "session.outcome.incomplete": "{{count}} 個の To-Do を残してターンが終了しました",
+  "session.outcome.limit": "完了前に応答制限に達しました",
+  "session.outcome.unknown": "モデルの終了理由なしでターンが終了しました",
+  "session.outcome.filtered": "コンテンツフィルターにより、プロバイダーがこの応答を停止しました。",
+  "session.outcome.unexpected": "応答が予期せず終了したため、不完全である可能性があります。",
+  "session.outcome.interrupted": "ターンが中断されました",
+  "session.outcome.error": "ターンが失敗しました",
+  "session.outcome.finish": "終了理由: {{reason}}",
 
   "ui.sessionTurn.cancel": "キャンセル",
   "ui.sessionTurn.status.thinking": "考え中...",
@@ -1183,7 +1195,6 @@ export const dict = {
     "テレメトリは VS Code の組み込みテレメトリ設定によって制御されます。無効にするには、設定 > テレメトリ > Telemetry Level に移動して「off」に設定してください。変更を適用するには、VS Code を再起動してください。",
   "settings.aboutKiloCode.telemetry.openSettings": "テレメトリ設定を開く",
 
-  "settings.agentBehaviour.subtab.modes": "モード",
   "settings.agentBehaviour.subtab.agents": "エージェント",
   "settings.agentBehaviour.subtab.mcpServers": "MCPサーバー",
   "settings.agentBehaviour.subtab.rules": "ルール",
@@ -1242,19 +1253,13 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "大量のペーストコンテンツを要約しない",
   "settings.experimental.batch.title": "バッチツール",
   "settings.experimental.batch.description": "複数のツール呼び出しのバッチ処理を有効にする",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "コードベース検索",
   "settings.experimental.codebaseSearch.description": "コードベース全体でAIによる自然言語検索を有効にする",
-  "settings.experimental.agentManagerTool.title": "Agent Manager ツール",
-  "settings.experimental.agentManagerTool.description":
-    "エージェントがツール呼び出しから Agent Manager のローカルセッションとワークツリーセッションを開始できるようにする",
   "settings.experimental.speechToText.title": "音声認識",
   "settings.experimental.speechToText.description":
     "Kilo Gateway経由でKiloアカウントを使用して、プロンプトフィールドでの音声入力を有効にします。",
   "settings.experimental.speechToText.disabledDescription":
-    "プロンプトフィールドで音声入力を使用するには、Kilo providerを有効にしてサインインしてください。",
+    "Speech to Text を使用するには、Kilo プロバイダーを有効にしてサインインしてください。現在、Speech to Text は Kilo Gateway でのみサポートされています。",
   "settings.experimental.speechToTextModel.title": "音声認識モデル",
   "settings.experimental.speechToTextModel.description": "音声入力に使用するKilo Gateway文字起こしモデルを選択します。",
   "settings.experimental.continueOnDeny.title": "拒否時に続行",
@@ -1278,6 +1283,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "設定するエージェントを選択…",
   "settings.agentBehaviour.modelOverride.title": "モデルオーバーライド",
   "settings.agentBehaviour.modelOverride.description": "このエージェントのデフォルトモデルを上書き",
+  "settings.agentBehaviour.variantOverride.title": "バリアントオーバーライド",
+  "settings.agentBehaviour.variantOverride.description": "このエージェントのモデルバリアントを上書き",
   "settings.agentBehaviour.prompt.title": "カスタムプロンプト",
   "settings.agentBehaviour.prompt.description": "このエージェントの追加システムプロンプト",
   "settings.agentBehaviour.temperature.title": "温度",
@@ -1297,7 +1304,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "スキルが見つかりません。スキルを利用可能にするには、以下にスキルフォルダパスまたはURLを追加してください。",
   "settings.agentBehaviour.availableModes": "利用可能なカスタムモード",
-  "settings.agentBehaviour.noModesFound": "モードが見つかりません。",
+  "settings.agentBehaviour.noAgentsFound": "エージェントが見つかりません。",
   "settings.agentBehaviour.createMode": "新しいモードを作成",
   "settings.agentBehaviour.createMode.name": "名前",
   "settings.agentBehaviour.createMode.name.placeholder": "例: reviewer",
@@ -1342,10 +1349,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "権限をJSONとしてコピー",
   "settings.agentBehaviour.permissions.hint":
     "ルールは順番に評価され、最後に一致したルールが適用されます。これはCLIバックエンドから解決されたルールセットです。",
-  "settings.agentBehaviour.removeMode.title": "モードを削除",
-  "settings.agentBehaviour.removeMode.confirm":
-    'モード "{{name}}" を削除しますか？設定を更新してモードを無効にします。',
-  "settings.agentBehaviour.removeMode.button": "削除",
+  "settings.agentBehaviour.removeAgent.title": "エージェントを削除",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'エージェント "{{name}}" を削除しますか？設定を更新してエージェントを無効にします。',
+  "settings.agentBehaviour.removeAgent.button": "削除",
   "settings.agentBehaviour.removeMcp.title": "MCPサーバーを削除",
   "settings.agentBehaviour.removeMcp.confirm": 'MCPサーバー "{{name}}" を削除しますか？設定から削除されます。',
   "settings.agentBehaviour.removeMcp.button": "削除",
