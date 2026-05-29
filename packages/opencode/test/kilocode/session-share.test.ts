@@ -3,14 +3,13 @@ import { Effect, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Auth } from "../../src/auth"
 import { Config } from "../../src/config/config"
-import { EffectBridge } from "../../src/effect/bridge"
 import { Session } from "../../src/session/session"
 import { SessionShare } from "../../src/share/session"
 import { Storage } from "../../src/storage/storage"
 import { SyncEvent } from "../../src/sync"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Layer.mergeAll(Auth.defaultLayer, CrossSpawnSpawner.defaultLayer))
+const it = testEffect(Layer.mergeAll(Auth.defaultLayer, Storage.defaultLayer, CrossSpawnSpawner.defaultLayer))
 
 const layer = SessionShare.layer.pipe(
   Layer.provideMerge(Session.defaultLayer),
@@ -37,12 +36,11 @@ it.instance("shares and unshares sessions through Kilo public URLs", () => {
     const auth = yield* Auth.Service
     const share = yield* SessionShare.Service
     const session = yield* Session.Service
+    const storage = yield* Storage.Service
     yield* auth.set("kilo", { type: "api", key: "test-token" })
 
     const info = yield* share.create({ title: "share-test" })
-    yield* EffectBridge.fromPromise(() =>
-      Storage.write(["session_share", info.id], { id: "remote-1", ingestPath: "/api/ingest/session-1" }),
-    )
+    yield* storage.write(["session_share", info.id], { id: "remote-1", ingestPath: "/api/ingest/session-1" })
 
     const result = yield* share.share(info.id)
     expect(result.url).toBe("https://app.kilo.ai/s/public-1")
