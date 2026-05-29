@@ -13,6 +13,7 @@ import { ModelID, ProviderID } from "@/provider/schema"
 import * as Log from "@opencode-ai/core/util/log"
 import z from "zod"
 import { zodObject } from "@/util/effect-zod"
+import { Effect } from "effect"
 
 type Provide = typeof import("@/project/with-instance").provide
 
@@ -116,7 +117,10 @@ export namespace RemoteSender {
       })
 
     async function directoryFor(sid: string): Promise<string> {
-      const info = await Session.get(SessionID.make(sid)).catch(() => undefined)
+      const { AppRuntime } = await import("@/effect/app-runtime")
+      const info = await AppRuntime.runPromise(
+        Session.Service.use((svc) => svc.get(SessionID.make(sid)).pipe(Effect.orElseSucceed(() => undefined))),
+      )
       return info?.directory ?? options.directory
     }
 
@@ -199,7 +203,10 @@ export namespace RemoteSender {
     }
 
     async function discoverChildren(parentId: string) {
-      const childSessions = await Session.children(SessionID.make(parentId))
+      const { AppRuntime } = await import("@/effect/app-runtime")
+      const childSessions = await AppRuntime.runPromise(
+        Session.Service.use((svc) => svc.children(SessionID.make(parentId))),
+      )
       for (const child of childSessions) {
         children.set(child.id, parentId)
         const root = rootOf(child.id) ?? parentId

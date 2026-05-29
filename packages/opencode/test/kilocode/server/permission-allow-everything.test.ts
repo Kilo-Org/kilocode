@@ -17,6 +17,7 @@ const bus = Bus.layer
 const env = Layer.mergeAll(
   Permission.layer.pipe(Layer.provide(bus), Layer.provide(Config.defaultLayer)),
   Config.defaultLayer,
+  Session.defaultLayer,
   bus,
   CrossSpawnSpawner.defaultLayer,
 )
@@ -72,10 +73,11 @@ describe("AllowEverythingPermission", () => {
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
+          const sessions = yield* Session.Service
           expect(yield* AllowEverythingPermission.effect({ enable: true })).toBe(true)
           expect(yield* AllowEverythingPermission.effect({ enable: false })).toBe(true)
 
-          const session = yield* Effect.promise(() => Session.create({}))
+          const session = yield* sessions.create({})
           const pending = yield* ask({
             id: PermissionID.make("permission_global_disable"),
             sessionID: session.id,
@@ -106,16 +108,15 @@ describe("AllowEverythingPermission", () => {
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
-          const session = yield* Effect.promise(() =>
-            Session.create({
-              permission: [{ permission: "*", pattern: "*", action: "allow" }],
-            }),
-          )
+          const sessions = yield* Session.Service
+          const session = yield* sessions.create({
+            permission: [{ permission: "*", pattern: "*", action: "allow" }],
+          })
 
           expect(yield* AllowEverythingPermission.effect({ enable: true, sessionID: session.id })).toBe(true)
           expect(yield* AllowEverythingPermission.effect({ enable: false, sessionID: session.id })).toBe(true)
 
-          const next = yield* Effect.promise(() => Session.get(session.id))
+          const next = yield* sessions.get(session.id)
           expect(next.permission ?? []).toEqual([])
 
           const pending = yield* ask({
@@ -140,7 +141,7 @@ describe("AllowEverythingPermission", () => {
             expect(Cause.squash(exit.cause)).toBeInstanceOf(Permission.RejectedError)
           }
 
-          const other = yield* Effect.promise(() => Session.create({}))
+          const other = yield* sessions.create({})
           const blocked = yield* ask({
             id: PermissionID.make("permission_other_session"),
             sessionID: other.id,

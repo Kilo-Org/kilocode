@@ -16,7 +16,11 @@ const it = testEffect(CrossSpawnSpawner.defaultLayer)
 
 function layer(overrides: Partial<Config.Interface> = {}) {
   return Layer.merge(
-    KiloSessions.layer.pipe(Layer.provideMerge(Bus.layer), Layer.provide(TestConfig.layer(overrides))),
+    KiloSessions.layer.pipe(
+      Layer.provideMerge(Bus.layer),
+      Layer.provide(TestConfig.layer(overrides)),
+      Layer.provide(Session.defaultLayer),
+    ),
     Auth.defaultLayer,
   )
 }
