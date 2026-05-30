@@ -834,14 +834,8 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
   // kilocode_change end
 
   // kilocode_change start - show completion toast for background subagents
-  event.subscribe((event) => {
-    const evt = event as { type: string; properties?: unknown }
-    if (evt.type !== "session.background_subagent.close") return
-    const props = evt.properties as {
-      reason: "completed" | "error" | "interrupted"
-      agent: string
-      description: string
-    }
+  event.on("session.background_subagent.close", (evt) => {
+    const props = evt.properties
     const reason = props.reason
     toast.show({
       title: reason === "completed" ? "Subagent complete" : "Subagent stopped",

@@ -31,6 +31,7 @@ export type Event =
   | EventBackgroundProcessDeleted
   | EventSessionTurnOpen
   | EventSessionTurnClose
+  | EventSessionBackgroundSubagentClose
   | EventSessionDiff
   | EventSessionError
   | EventInstallationUpdated
