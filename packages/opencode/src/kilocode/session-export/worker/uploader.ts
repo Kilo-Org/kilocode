@@ -13,6 +13,8 @@ export type UploaderDeps = {
   surface: string
   anonId?: string
   anonIdPath?: string
+  now?: () => number
+  sleep?: (ms: number) => Promise<void>
 }
 
 export class Uploader {
@@ -20,6 +22,7 @@ export class Uploader {
   private periodic: ReturnType<typeof setInterval> | undefined
   private active: Promise<void> | undefined
   private requested = false
+  private next = 0
 
   constructor(private readonly deps: UploaderDeps) {
     this.periodic = setInterval(() => this.scheduleFlush("periodic"), Config.flushIntervalMs)
@@ -103,6 +106,7 @@ export class Uploader {
           })),
         }
         const body = JSON.stringify(batch)
+        await this.throttle()
         const res = await this.deps.fetch(this.deps.endpoint, {
           method: "POST",
           headers: await headers({
@@ -140,6 +144,18 @@ export class Uploader {
       this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.upload_network_error", props: { message: String(err) } })
     }
   }
+
+  private async throttle(): Promise<void> {
+    const now = this.deps.now?.() ?? Date.now()
+    const wait = this.next - now
+    if (wait > 0) await (this.deps.sleep ?? sleep)(wait)
+    const after = this.deps.now?.() ?? Date.now()
+    this.next = Math.max(after, this.next) + Config.uploadRateLimitIntervalMs
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 export function backoffFor(attempts: number): number {

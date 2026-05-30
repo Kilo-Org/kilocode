@@ -447,6 +447,61 @@ describe("Uploader", () => {
     expect(seqs).toEqual([[1], [0], [2]])
   })
 
+  test("paces upload requests at the configured rate limit", async () => {
+    storage.insertEvent({
+      id: "02",
+      schemaVersion: 1,
+      sessionId: "s2",
+      rootSessionId: "s2",
+      seq: 0,
+      type: "llm_request_started",
+      ts: 101,
+      agentVersion: "v0",
+      dataJson: "{}",
+      clientScrubbed: 1,
+    })
+    storage.insertEvent({
+      id: "03",
+      schemaVersion: 1,
+      sessionId: "s3",
+      rootSessionId: "s3",
+      seq: 0,
+      type: "llm_request_started",
+      ts: 102,
+      agentVersion: "v0",
+      dataJson: "{}",
+      clientScrubbed: 1,
+    })
+    const clock = { now: 1_000 }
+    const calls: number[] = []
+    const waits: number[] = []
+    const uploader = new Uploader({
+      storage,
+      endpoint: "https://example.test/ingest",
+      fetch: async () => {
+        calls.push(clock.now)
+        return new Response("", { status: 204 })
+      },
+      reportTelemetry: () => {},
+      agentVersion: "v0",
+      surface: "test",
+      now: () => clock.now,
+      sleep: async (ms) => {
+        waits.push(ms)
+        clock.now += ms
+      },
+    })
+
+    await uploader.flush("test")
+
+    expect(calls).toEqual([
+      1_000,
+      1_000 + Config.uploadRateLimitIntervalMs,
+      1_000 + Config.uploadRateLimitIntervalMs * 2,
+    ])
+    expect(waits).toEqual([Config.uploadRateLimitIntervalMs, Config.uploadRateLimitIntervalMs])
+  })
+
   test("backoffFor grows exponentially and caps at retryBackoffMaxMs", () => {
     expect(backoffFor(0)).toBe(Config.retryBackoffMinMs)
     expect(backoffFor(1)).toBe(Config.retryBackoffMinMs * 2)
