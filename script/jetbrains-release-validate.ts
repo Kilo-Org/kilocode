@@ -69,8 +69,8 @@ if (existing.exitCode !== 0) throw new Error(`${tag} does not exist`)
 const sha = (await $`git rev-list -n 1 ${tag}`.text()).trim()
 if (sha !== commit) throw new Error(`${tag} points at ${sha}, expected ${commit}`)
 
-const pkg = await Bun.file("packages/kilo-jetbrains/package.json").json()
-if (pkg.version !== ver) throw new Error(`packages/kilo-jetbrains/package.json version is ${pkg.version}, expected ${ver}`)
+const prop = await props()
+if (prop !== ver) throw new Error(`packages/kilo-jetbrains/gradle.properties kilo.jetbrains.version is ${prop}, expected ${ver}`)
 
 const changelog = await Bun.file("packages/kilo-jetbrains/CHANGELOG.md").text()
 if (!changelog.includes(`## [${ver}]`)) throw new Error(`CHANGELOG.md is missing section for ${ver}`)
@@ -100,5 +100,13 @@ function marker(body: string, key: string) {
 function need(body: string, key: string) {
   const value = marker(body, key)
   if (!value) throw new Error(`PR body is missing ${key}`)
+  return value
+}
+
+async function props() {
+  const text = await Bun.file("packages/kilo-jetbrains/gradle.properties").text()
+  const line = text.split(/\r?\n/).find((item) => item.startsWith("kilo.jetbrains.version="))
+  const value = line?.split("=", 2)[1]?.trim()
+  if (!value) throw new Error("packages/kilo-jetbrains/gradle.properties is missing kilo.jetbrains.version")
   return value
 }

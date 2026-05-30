@@ -181,6 +181,12 @@ New webview features must use **`@kilocode/kilo-ui`** components instead of raw 
 - **Prefer kilo-ui styles**: Always reuse existing kilo-ui CSS variables, tokens, and component styles instead of writing custom CSS. If a style doesn't exist in kilo-ui yet, add it there and reuse it rather than inlining or duplicating styles in the webview.
 - **Icons**: kilo-ui has 75+ custom SVG icons in [`packages/ui/src/components/icon.tsx`](../../packages/ui/src/components/icon.tsx). To list all available icon names: `node -e "const c=require('fs').readFileSync('../../packages/ui/src/components/icon.tsx','utf8');[...c.matchAll(/^\\s{2}[\"']?([\\w-]+)[\"']?:\\s*\x60/gm)].map(m=>m[1]).sort().forEach(n=>console.log(n))"`. Icon names use both hyphenated (`arrow-left`) and bare-word (`brain`, `console`, `providers`) keys.
 
+### Diff Rendering Performance
+
+- Preserve hunk-bounded unified `patch` data through Changes/review detail flows and pass patch-derived `FileDiffMetadata` to Pierre when available. Do not eagerly render Pierre from complete `before`/`after` contents based only on changed-line counts: a tiny patch in a large source file can otherwise parse and render the entire file while the user sees a placeholder.
+- Pierre workers can offload highlighted updates, but they do not make an expensive synchronous initial render safe. Keep initial rendering hunk-bounded, and keep patch parsing behind deferred visibility/activation where session-switch responsiveness depends on it.
+- When changing diff scheduling, verify both rapid session switching and fast scrolling through a review. Improving one by shifting work into the other is a regression, not an optimization.
+
 ## Docs Screenshot Stories
 
 When adding or updating Storybook stories for screenshots used by docs, make the story content match the docs page closely before replacing the docs image. Do not replace screenshots from VSCode Legacy docs tabs or sections.
@@ -191,6 +197,7 @@ Generated screenshot baselines live under `packages/kilo-docs/public/img/screens
 
 - Extension logs: "Extension Host" output channel (not Debug Console)
 - Webview logs: Command Palette → "Developer: Open Webview Developer Tools"
+- In Chrome/VS Code performance traces, associate CPU `ProfileChunk` events to their `Profile.id` target before attributing work to a thread. `v8:ProfEvntProc` is a profile delivery thread, not evidence that application work ran off the webview main thread.
 - All debug output must be prepended with `[Kilo New]` for easy filtering
 
 ## Naming Conventions

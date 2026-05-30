@@ -117,6 +117,7 @@ export const layer = Layer.effect(
     const commands = yield* Command.Service
     const config = yield* Config.Service
     const permission = yield* Permission.Service
+    const question = yield* Question.Service // kilocode_change - dismiss superseded pending questions through the shared service
     const fsys = yield* AppFileSystem.Service
     const mcp = yield* MCP.Service
     const lsp = yield* LSP.Service
@@ -1440,12 +1441,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         // runLoop checks hasFollowup between steps to break out once it has been
         // enqueued during the turn.
         yield* Effect.promise(() => Suggestion.dismissAll(input.sessionID))
-        yield* Effect.promise(() => Question.dismissAll(input.sessionID))
+        yield* question.dismissAll(input.sessionID)
         if (input.noReply === true) return message
         return yield* KiloSessionPromptQueue.enqueue(
           input.sessionID,
           message.info.id,
-          loop({ sessionID: input.sessionID }),
+          loop({ sessionID: input.sessionID, snapshotInitialization: input.snapshotInitialization }), // kilocode_change
           lastAssistant(input.sessionID),
         )
         // kilocode_change end
@@ -1468,8 +1469,11 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     // kilocode_change — mutable close-reason per session, set by runLoop and read by loop
     const closeReasons = new Map<string, KiloSession.CloseReason>()
 
-    const runLoop: (sessionID: SessionID) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.run")(
-      function* (sessionID: SessionID) {
+    // kilocode_change start - retain request-scoped snapshot initialization policy
+    const runLoop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.run")(
+      function* (input: LoopInput) {
+        const sessionID = input.sessionID
+        // kilocode_change end
         // kilocode_change — cache environment details per turn (prompt caching)
         const envCache: KiloSessionPrompt.EnvCache = {}
         closeReasons.delete(sessionID) // kilocode_change
@@ -1651,6 +1655,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             sessionID,
             model,
             telemetry, // kilocode_change
+            snapshotInitialization: input.snapshotInitialization, // kilocode_change
           })
 
           const outcome: "break" | "continue" = yield* Effect.gen(function* () {
@@ -1845,7 +1850,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
       yield* bus.publish(KiloSession.Event.TurnOpen, { sessionID: input.sessionID })
       return yield* Effect.onExit(
-        state.ensureRunning(input.sessionID, lastAssistant(input.sessionID), runLoop(input.sessionID)),
+        state.ensureRunning(input.sessionID, lastAssistant(input.sessionID), runLoop(input)), // kilocode_change
         Effect.fnUntraced(function* (exit) {
           yield* bus.publish(KiloSession.Event.TurnClose, {
             sessionID: input.sessionID,
@@ -1975,6 +1980,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         agent: userAgent,
         parts,
         variant: input.variant,
+        snapshotInitialization: input.snapshotInitialization, // kilocode_change
       })
       yield* bus.publish(Command.Event.Executed, {
         name: input.command,
@@ -2004,6 +2010,7 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(SessionProcessor.defaultLayer),
     Layer.provide(Command.defaultLayer),
     Layer.provide(Permission.defaultLayer),
+    Layer.provide(Question.defaultLayer), // kilocode_change - provide pending question dismissal dependency
     Layer.provide(MCP.defaultLayer),
     Layer.provide(LSP.defaultLayer),
     Layer.provide(ToolRegistry.defaultLayer),
@@ -2045,6 +2052,11 @@ export const PromptInput = Schema.Struct({
   format: Schema.optional(MessageV2.Format),
   system: Schema.optional(Schema.String),
   variant: Schema.optional(Schema.String),
+  // kilocode_change start - managed product slow-snapshot policy
+  snapshotInitialization: Schema.optional(Schema.Literal("wait")).annotate({
+    description: "Wait silently if snapshot initialization is slow instead of asking the user.",
+  }),
+  // kilocode_change end
   // kilocode_change start - reuse shared editor context schema
   editorContext: Schema.optional(MessageV2.EditorContext),
   // kilocode_change end
@@ -2073,6 +2085,7 @@ export type PromptInput = Omit<Schema.Schema.Type<typeof PromptInput>, "parts" |
 
 export class LoopInput extends Schema.Class<LoopInput>("SessionPrompt.LoopInput")({
   sessionID: SessionID,
+  snapshotInitialization: Schema.optional(Schema.Literal("wait")), // kilocode_change
 }) {
   static readonly zod = zod(this)
 }
@@ -2094,6 +2107,11 @@ export const CommandInput = Schema.Struct({
   arguments: Schema.String,
   command: Schema.String,
   variant: Schema.optional(Schema.String),
+  // kilocode_change start - managed product slow-snapshot policy
+  snapshotInitialization: Schema.optional(Schema.Literal("wait")).annotate({
+    description: "Wait silently if snapshot initialization is slow instead of asking the user.",
+  }),
+  // kilocode_change end
   // Inlined (no identifier annotation) to keep the original SDK output — the
   // PromptInput call site below references FilePartInput by ref via the
   // Schema export in message-v2.ts.

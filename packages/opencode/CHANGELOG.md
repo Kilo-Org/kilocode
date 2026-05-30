@@ -1,5 +1,31 @@
 # @kilocode/cli
 
+## 7.3.18
+
+### Patch Changes
+
+- [#10736](https://github.com/Kilo-Org/kilocode/pull/10736) [`57bc6ee`](https://github.com/Kilo-Org/kilocode/commit/57bc6eea583e22e4c3b8b00ad1c64fed62dc85e8) - Use Kilo session share links when sharing conversations from the CLI.
+
+- [#10737](https://github.com/Kilo-Org/kilocode/pull/10737) [`f574294`](https://github.com/Kilo-Org/kilocode/commit/f5742940ccd06bafd2708e32af30023eef241241) - Support reading text from DOCX files through the read tool.
+
+- [#10740](https://github.com/Kilo-Org/kilocode/pull/10740) [`2081af2`](https://github.com/Kilo-Org/kilocode/commit/2081af2b3344890481cb4bd44260e60a8cccba80) - Support reading XLSX spreadsheets as labelled tabular text
+
+## 7.3.17
+
+### Patch Changes
+
+- [#10721](https://github.com/Kilo-Org/kilocode/pull/10721) [`2efa216`](https://github.com/Kilo-Org/kilocode/commit/2efa216ee5bfffa6e01f51ae5add7c5b9034833c) - Keep Agent Manager turns running while slow snapshot baselines initialize instead of stopping for an interactive question.
+
+- [#10703](https://github.com/Kilo-Org/kilocode/pull/10703) [`eeff6d9`](https://github.com/Kilo-Org/kilocode/commit/eeff6d9df8d378c561c4ca212d650be1dfbd912a) Thanks [@barzhomi](https://github.com/barzhomi)! - Fix LanceDB metadata corruption that caused a full re-index on every VS Code restart
+
+- [#10733](https://github.com/Kilo-Org/kilocode/pull/10733) [`4967c22`](https://github.com/Kilo-Org/kilocode/commit/4967c228611f58bb84c0b762eee88d306ab1b624) - Read Jupyter notebooks as ordered markdown and code cell content instead of raw notebook payloads.
+
+- [#10669](https://github.com/Kilo-Org/kilocode/pull/10669) [`0107a01`](https://github.com/Kilo-Org/kilocode/commit/0107a0163cf73004ee13b0ae5fd46811a273d80a) - Guide Agent Manager orchestration to recall completed session context only when needed.
+
+- [#10668](https://github.com/Kilo-Org/kilocode/pull/10668) [`ef2390d`](https://github.com/Kilo-Org/kilocode/commit/ef2390d7a4ffafc379d1e15db94d3a2cd6dcce9b) - Access semantic indexing without an experimental feature toggle while keeping indexing disabled until enabled globally or for a project.
+
+## 7.3.16
+
 ## 7.3.15
 
 ## 7.3.14

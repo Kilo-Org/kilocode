@@ -7,6 +7,8 @@ import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
 import { tmpdir } from "../fixture/fixture"
 import { RemoteSender } from "../../src/kilo-sessions/remote-sender"
+import { Effect } from "effect"
+import { Session } from "../../src/session/session"
 
 beforeEach(() => {
   spyOn(RemoteSender, "create").mockReturnValue({ handle() {}, dispose() {} })
@@ -19,6 +21,9 @@ afterEach(async () => {
   await resetDatabase()
 })
 
+const create = (title: string) =>
+  Effect.runPromise(Session.Service.use((svc) => svc.create({ title })).pipe(Effect.provide(Session.defaultLayer)))
+
 describe("experimental.session.list", () => {
   test("filters sessions by repo worktree family even when project IDs drift", async () => {
     await using first = await tmpdir({ git: true })
@@ -30,12 +35,11 @@ describe("experimental.session.list", () => {
 
       try {
         const { Server } = await import("../../src/server/server")
-        const { Session } = await import("../../src/session/session")
 
         // Create worktree session first so it computes its own project ID via rev-list
         const branch = await WithInstance.provide({
           directory: worktree,
-          fn: async () => Session.create({ title: "worktree-session" }),
+          fn: () => create("worktree-session"),
         })
 
         // Now write a stale project ID to .git/kilo — this overrides the root's cached ID
@@ -48,14 +52,14 @@ describe("experimental.session.list", () => {
             project: await Server.Default().app.request("/project/current", {
               headers: { "x-kilo-directory": first.path },
             }),
-            session: await Session.create({ title: "root-session" }),
+            session: await create("root-session"),
           }),
         })
         await Bun.file(path.join(first.path, ".git", "kilo")).delete()
 
         await WithInstance.provide({
           directory: second.path,
-          fn: async () => Session.create({ title: "other-project-session" }),
+          fn: () => create("other-project-session"),
         })
 
         const app = root.app
@@ -96,11 +100,10 @@ describe("experimental.session.list", () => {
 
       try {
         const { Server } = await import("../../src/server/server")
-        const { Session } = await import("../../src/session/session")
 
         const branch = await WithInstance.provide({
           directory: worktree,
-          fn: async () => Session.create({ title: "worktree-session" }),
+          fn: () => create("worktree-session"),
         })
 
         const root = await WithInstance.provide({
@@ -110,13 +113,13 @@ describe("experimental.session.list", () => {
             project: await Server.Default().app.request("/project/current", {
               headers: { "x-kilo-directory": first.path },
             }),
-            session: await Session.create({ title: "root-session" }),
+            session: await create("root-session"),
           }),
         })
 
         await WithInstance.provide({
           directory: second.path,
-          fn: async () => Session.create({ title: "other-project-session" }),
+          fn: () => create("other-project-session"),
         })
 
         const app = root.app

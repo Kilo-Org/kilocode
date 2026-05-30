@@ -42,10 +42,11 @@ fun gitTag(): String? {
 
 val release = providers.gradleProperty("production").map { it.toBoolean() }.orElse(false).get()
 val override = providers.gradleProperty("kilo.version").orNull?.trim()?.takeIf { it.isNotEmpty() }
-val ver = override?.let(::checked) ?: if (release) checked(
-    gitTag()?.removePrefix("jetbrains/v")
-        ?: error("Missing JetBrains plugin version. Publish builds must run from a jetbrains/v<version> tag."),
-) else checked(gitTag()?.removePrefix("jetbrains/v") ?: "0.0.0-dev")
+val prop = providers.gradleProperty("kilo.jetbrains.version").orNull?.trim()?.takeIf { it.isNotEmpty() }
+val tag = gitTag()?.removePrefix("jetbrains/v")
+val ver = override?.let(::checked) ?: prop?.let(::checked) ?: if (release) checked(
+    tag ?: error("Missing JetBrains plugin version. Publish builds must set kilo.jetbrains.version or run from a jetbrains/v<version> tag."),
+) else checked(tag ?: "0.0.0-dev")
 
 val channel = providers.gradleProperty("kilo.channel").map { it.trim() }.orElse("default")
 val splitPort = providers.gradleProperty("kilo.splitModeServerPort").orNull?.let(::port) ?: fallback()

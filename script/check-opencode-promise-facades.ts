@@ -23,9 +23,7 @@ const allow: Record<string, string> = {
   "bus/index.ts": "core bus callback and synchronous runtime boundary",
   "cli/cmd/tui/config/tui.ts": "separately tracked TUI config facade",
   "installation/index.ts": "existing installation facade outside #10655",
-  "question/index.ts": "transitional facade deferred for upstream reconciliation in #10655",
   "session/compaction.ts": "existing compaction facade outside #10655",
-  "session/session.ts": "transitional facade tracked by #10655",
   "sync/index.ts": "sync event runtime boundary",
 }
 
@@ -37,7 +35,6 @@ const testAllow: Record<string, { count: number; reason: string }> = {
   "kilocode/config-resilience.test.ts": { count: 4, reason: "existing runtime integration test" },
   "kilocode/config-validation.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/plan-followup.test.ts": { count: 7, reason: "existing runtime integration test" },
-  "kilocode/session-list.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/session/platform-attribution.test.ts": { count: 5, reason: "existing runtime integration test" },
   "kilocode/session/session.test.ts": { count: 4, reason: "existing runtime integration test" },
   "mcp/headers.test.ts": { count: 4, reason: "existing runtime integration test" },
@@ -86,7 +83,9 @@ const testInvalid = testHits.filter((hit) => !testAllow[hit.file])
 const testDrift = Object.entries(testAllow).flatMap(([file, entry]) => {
   const count = testHits.filter((hit) => hit.file === file).length
   if (count === entry.count) return []
-  return [`  packages/opencode/test/${file}: expected ${entry.count} classified reference(s), found ${count} (${entry.reason})`]
+  return [
+    `  packages/opencode/test/${file}: expected ${entry.count} classified reference(s), found ${count} (${entry.reason})`,
+  ]
 })
 
 if (invalid.length > 0 || drift.length > 0 || testInvalid.length > 0 || testDrift.length > 0) {

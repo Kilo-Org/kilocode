@@ -5966,6 +5966,7 @@ export type SessionPromptData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    snapshotInitialization?: "wait"
     editorContext?: {
       visibleFiles?: Array<string>
       openTabs?: Array<string>
@@ -6307,6 +6308,7 @@ export type SessionPromptAsyncData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    snapshotInitialization?: "wait"
     editorContext?: {
       visibleFiles?: Array<string>
       openTabs?: Array<string>
@@ -6355,6 +6357,7 @@ export type SessionCommandData = {
     arguments: string
     command: string
     variant?: string
+    snapshotInitialization?: "wait"
     parts?: Array<{
       id?: string
       type: "file"

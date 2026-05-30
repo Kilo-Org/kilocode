@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { Effect } from "effect"
 import fs from "fs/promises"
 import path from "path"
 import { Identifier } from "../../src/id/id"
@@ -6,8 +7,7 @@ import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Instance } from "../../src/project/instance"
 import { WithInstance } from "../../src/project/with-instance"
-import { PlanFollowup } from "../../src/kilocode/plan-followup"
-import { Question } from "../../src/question"
+import { PlanFollowup, PlanFollowupRuntime } from "../../src/kilocode/plan-followup"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionPrompt } from "../../src/session/prompt"
@@ -15,6 +15,19 @@ import * as Log from "@opencode-ai/core/util/log"
 import { tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
+
+const sessions = {
+  create: (input?: Parameters<Session.Interface["create"]>[0]) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.create(input)).pipe(Effect.provide(Session.defaultLayer))),
+  get: (id: SessionID) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.get(id)).pipe(Effect.provide(Session.defaultLayer))),
+  messages: (input: Parameters<Session.Interface["messages"]>[0]) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.messages(input)).pipe(Effect.provide(Session.defaultLayer))),
+  updateMessage: <T extends MessageV2.Info>(msg: T) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.updateMessage(msg)).pipe(Effect.provide(Session.defaultLayer))),
+  updatePart: <T extends MessageV2.Part>(part: T) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.updatePart(part)).pipe(Effect.provide(Session.defaultLayer))),
+}
 
 const model = {
   providerID: ProviderID.make("openai"),
@@ -32,8 +45,8 @@ async function seed(input: {
   tools?: Array<{ tool: string; input: Record<string, unknown>; output: string }>
   finish?: string
 }) {
-  const session = await Session.create({})
-  const user = await Session.updateMessage({
+  const session = await sessions.create({})
+  const user = await sessions.updateMessage({
     id: MessageID.ascending(),
     role: "user",
     sessionID: session.id,
@@ -41,7 +54,7 @@ async function seed(input: {
     agent: input.agent ?? "plan",
     model,
   })
-  await Session.updatePart({
+  await sessions.updatePart({
     id: PartID.ascending(),
     messageID: user.id,
     sessionID: session.id,
@@ -73,9 +86,9 @@ async function seed(input: {
     },
     finish: (input.finish as MessageV2.Assistant["finish"]) ?? "end_turn",
   }
-  await Session.updateMessage(assistant)
+  await sessions.updateMessage(assistant)
   if (input.text !== undefined) {
-    await Session.updatePart({
+    await sessions.updatePart({
       id: PartID.ascending(),
       messageID: assistant.id,
       sessionID: session.id,
@@ -85,7 +98,7 @@ async function seed(input: {
   }
 
   for (const t of input.tools ?? []) {
-    await Session.updatePart({
+    await sessions.updatePart({
       id: PartID.ascending(),
       messageID: assistant.id,
       sessionID: session.id,
@@ -103,13 +116,13 @@ async function seed(input: {
     } satisfies MessageV2.ToolPart)
   }
 
-  const messages = await Session.messages({ sessionID: session.id })
+  const messages = await sessions.messages({ sessionID: session.id })
   return { sessionID: session.id, messages }
 }
 
 async function waitQuestion(sessionID: string) {
   for (let i = 0; i < 50; i++) {
-    const list = await Question.list()
+    const list = await PlanFollowupRuntime.question.list()
     const question = list.find((item) => item.sessionID === sessionID)
     if (question) return question
     await Bun.sleep(10)
@@ -141,7 +154,7 @@ describe("plan_exit detection", () => {
       expect(question).toBeDefined()
       if (!question) return
       expect(question.questions[0].header).toBe("Implement")
-      await Question.reject(question.id)
+      await PlanFollowupRuntime.question.reject(question.id)
       await expect(pending).resolves.toBe("break")
     }))
 
@@ -180,7 +193,7 @@ describe("plan_exit detection", () => {
           PlanFollowup.ANSWER_CONTINUE,
         ])
         expect(question.questions[0].options.find((item) => item.label === PlanFollowup.ANSWER_CONTINUE)?.mode).toBe("code")
-        await Question.reject(question.id)
+        await PlanFollowupRuntime.question.reject(question.id)
         await expect(pending).resolves.toBe("break")
       } finally {
         if (prev === undefined) delete process.env.KILO_CLIENT
@@ -210,14 +223,14 @@ describe("plan_exit detection", () => {
       const question = await waitQuestion(seeded.sessionID)
       expect(question).toBeDefined()
       if (!question) return
-      await Question.reply({
+      await PlanFollowupRuntime.question.reply({
         requestID: question.id,
         answers: [[PlanFollowup.ANSWER_CONTINUE]],
       })
 
       await expect(pending).resolves.toBe("continue")
 
-      const messages = await Session.messages({ sessionID: seeded.sessionID })
+      const messages = await sessions.messages({ sessionID: seeded.sessionID })
       const user = messages
         .slice()
         .reverse()
@@ -233,14 +246,14 @@ describe("plan_exit detection", () => {
         text: "Here is a partial plan, I have questions",
       })
       expect(SessionPrompt.shouldAskPlanFollowup({ messages: seeded.messages, abort: AbortSignal.any([]) })).toBe(false)
-      const list = await Question.list()
+      const list = await PlanFollowupRuntime.question.list()
       expect(list).toHaveLength(0)
     }))
 
   test("plan_exit with non-completed status does NOT trigger", () =>
     withInstance(async () => {
-      const session = await Session.create({})
-      const user = await Session.updateMessage({
+      const session = await sessions.create({})
+      const user = await sessions.updateMessage({
         id: MessageID.ascending(),
         role: "user",
         sessionID: session.id,
@@ -248,7 +261,7 @@ describe("plan_exit detection", () => {
         agent: "plan",
         model,
       })
-      await Session.updatePart({
+      await sessions.updatePart({
         id: PartID.ascending(),
         messageID: user.id,
         sessionID: session.id,
@@ -277,15 +290,15 @@ describe("plan_exit detection", () => {
         },
         finish: "end_turn",
       }
-      await Session.updateMessage(assistant)
-      await Session.updatePart({
+      await sessions.updateMessage(assistant)
+      await sessions.updatePart({
         id: PartID.ascending(),
         messageID: assistant.id,
         sessionID: session.id,
         type: "text",
         text: "Here is the plan",
       })
-      await Session.updatePart({
+      await sessions.updatePart({
         id: PartID.ascending(),
         messageID: assistant.id,
         sessionID: session.id,
@@ -301,7 +314,7 @@ describe("plan_exit detection", () => {
         },
       } satisfies MessageV2.ToolPart)
 
-      const messages = await Session.messages({ sessionID: session.id })
+      const messages = await sessions.messages({ sessionID: session.id })
 
       // Verify the tool part IS present but errored (not completed)
       const toolPart = messages.flatMap((msg) => msg.parts).find((p) => p.type === "tool" && p.tool === "plan_exit")
@@ -312,16 +325,16 @@ describe("plan_exit detection", () => {
       expect(SessionPrompt.shouldAskPlanFollowup({ messages, abort: AbortSignal.any([]) })).toBe(false)
 
       // Confirm no questions were posted
-      const list = await Question.list()
+      const list = await PlanFollowupRuntime.question.list()
       expect(list).toHaveLength(0)
     }))
 
   test("plan_exit on earlier assistant message triggers when later message has text only", () =>
     withInstance(async () => {
-      const session = await Session.create({})
+      const session = await sessions.create({})
       // Use explicit timestamps to ensure deterministic message ordering
       const now = Date.now()
-      const user = await Session.updateMessage({
+      const user = await sessions.updateMessage({
         id: MessageID.ascending(),
         role: "user",
         sessionID: session.id,
@@ -329,7 +342,7 @@ describe("plan_exit detection", () => {
         agent: "plan",
         model,
       })
-      await Session.updatePart({
+      await sessions.updatePart({
         id: PartID.ascending(),
         messageID: user.id,
         sessionID: session.id,
@@ -353,8 +366,8 @@ describe("plan_exit detection", () => {
         tokens: { total: 0, input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
         finish: "tool-calls",
       }
-      await Session.updateMessage(assistant1)
-      await Session.updatePart({
+      await sessions.updateMessage(assistant1)
+      await sessions.updatePart({
         id: PartID.ascending(),
         messageID: assistant1.id,
         sessionID: session.id,
@@ -387,8 +400,8 @@ describe("plan_exit detection", () => {
         tokens: { total: 0, input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
         finish: "end_turn",
       }
-      await Session.updateMessage(assistant2)
-      await Session.updatePart({
+      await sessions.updateMessage(assistant2)
+      await sessions.updatePart({
         id: PartID.ascending(),
         messageID: assistant2.id,
         sessionID: session.id,
@@ -396,7 +409,7 @@ describe("plan_exit detection", () => {
         text: "The plan is complete. I've called plan_exit.",
       })
 
-      const messages = await Session.messages({ sessionID: session.id })
+      const messages = await sessions.messages({ sessionID: session.id })
       expect(SessionPrompt.shouldAskPlanFollowup({ messages, abort: AbortSignal.any([]) })).toBe(true)
     }))
 
@@ -412,7 +425,7 @@ describe("plan_exit detection", () => {
         ],
       })
 
-      const session = await Session.get(seeded.sessionID)
+      const session = await sessions.get(seeded.sessionID)
       const plan = Session.plan(session, Instance.current)
       await fs.mkdir(path.dirname(plan), { recursive: true })
       await Bun.write(plan, "Do implementation step 1")
@@ -426,7 +439,7 @@ describe("plan_exit detection", () => {
       const question = await waitQuestion(seeded.sessionID)
       expect(question).toBeDefined()
       if (!question) return
-      await Question.reply({
+      await PlanFollowupRuntime.question.reply({
         requestID: question.id,
         answers: [[PlanFollowup.ANSWER_CONTINUE]],
       })
@@ -435,10 +448,10 @@ describe("plan_exit detection", () => {
 
   test("PlanFollowup.ask shows prompt when plan text is on earlier assistant and last assistant is empty", () =>
     withInstance(async () => {
-      const session = await Session.create({})
+      const session = await sessions.create({})
       // Use explicit timestamps to ensure deterministic message ordering
       const now = Date.now()
-      const user = await Session.updateMessage({
+      const user = await sessions.updateMessage({
         id: MessageID.ascending(),
         role: "user",
         sessionID: session.id,
@@ -446,7 +459,7 @@ describe("plan_exit detection", () => {
         agent: "plan",
         model,
       })
-      await Session.updatePart({
+      await sessions.updatePart({
         id: PartID.ascending(),
         messageID: user.id,
         sessionID: session.id,
@@ -470,15 +483,15 @@ describe("plan_exit detection", () => {
         tokens: { total: 0, input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
         finish: "tool-calls",
       }
-      await Session.updateMessage(assistant1)
-      await Session.updatePart({
+      await sessions.updateMessage(assistant1)
+      await sessions.updatePart({
         id: PartID.ascending(),
         messageID: assistant1.id,
         sessionID: session.id,
         type: "text",
         text: "Here is the detailed plan:\n\n## Step 1\nDo something\n\n## Step 2\nDo something else",
       })
-      await Session.updatePart({
+      await sessions.updatePart({
         id: PartID.ascending(),
         messageID: assistant1.id,
         sessionID: session.id,
@@ -511,9 +524,9 @@ describe("plan_exit detection", () => {
         tokens: { total: 0, input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
         finish: "end_turn",
       }
-      await Session.updateMessage(assistant2)
+      await sessions.updateMessage(assistant2)
 
-      const messages = await Session.messages({ sessionID: session.id })
+      const messages = await sessions.messages({ sessionID: session.id })
 
       // shouldAskPlanFollowup should detect plan_exit on the earlier message
       expect(SessionPrompt.shouldAskPlanFollowup({ messages, abort: AbortSignal.any([]) })).toBe(true)
@@ -529,7 +542,7 @@ describe("plan_exit detection", () => {
       expect(question).toBeDefined()
       if (!question) return
       expect(question.questions[0].header).toBe("Implement")
-      await Question.reply({
+      await PlanFollowupRuntime.question.reply({
         requestID: question.id,
         answers: [[PlanFollowup.ANSWER_CONTINUE]],
       })

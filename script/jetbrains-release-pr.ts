@@ -5,7 +5,7 @@ import { $ } from "bun"
 import semver from "semver"
 import { parseArgs } from "util"
 
-const pkgfile = new URL("../packages/kilo-jetbrains/package.json", import.meta.url).pathname
+const props = new URL("../packages/kilo-jetbrains/gradle.properties", import.meta.url).pathname
 const log = new URL("../packages/kilo-jetbrains/CHANGELOG.md", import.meta.url).pathname
 const repo = process.env.GH_REPO ?? process.env.GITHUB_REPOSITORY ?? "Kilo-Org/kilocode"
 
@@ -67,9 +67,9 @@ if (dry) {
 }
 
 await $`git checkout -B ${branch} ${sha}`
-await writepkg(ver)
+await writeprops(ver)
 await writelog(ver, entry)
-await $`git add packages/kilo-jetbrains/package.json packages/kilo-jetbrains/CHANGELOG.md`
+await $`git add packages/kilo-jetbrains/gradle.properties packages/kilo-jetbrains/CHANGELOG.md`
 
 const changed = await $`git diff --cached --quiet`.nothrow()
 if (changed.exitCode !== 0) await $`git commit -m ${`release(jetbrains): v${ver}`}`
@@ -203,10 +203,13 @@ function entries(notes: string) {
   return groups
 }
 
-async function writepkg(ver: string) {
-  const pkg = await Bun.file(pkgfile).json()
-  pkg.version = ver
-  await Bun.write(pkgfile, `${JSON.stringify(pkg, null, 2)}\n`)
+async function writeprops(ver: string) {
+  const current = await Bun.file(props).text()
+  const line = `kilo.jetbrains.version=${ver}`
+  const next = current.match(/^kilo\.jetbrains\.version=/m)
+    ? current.replace(/^kilo\.jetbrains\.version=.*$/m, line)
+    : `${current.trim()}\n${line}\n`
+  await Bun.write(props, next.endsWith("\n") ? next : `${next}\n`)
 }
 
 async function writelog(ver: string, entry: string) {
@@ -229,7 +232,7 @@ function regex(ver: string) {
 function body(ver: string, kind: string, from: string, tag: string, sha: string, notes: string) {
   return `## Summary
 - Prepare JetBrains ${kind} release ${ver}.
-- Review and edit \`packages/kilo-jetbrains/CHANGELOG.md\` before merging.
+- Review \`packages/kilo-jetbrains/gradle.properties\` and edit \`packages/kilo-jetbrains/CHANGELOG.md\` before merging.
 
 JetBrains-Version: ${ver}
 JetBrains-Kind: ${kind}

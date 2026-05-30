@@ -9,7 +9,8 @@
 //
 //   1. Runs the real `track()` in a forked fiber.
 //   2. Waits up to `TIMEOUT_MS` for it to complete.
-//   3. If it times out AND we have a sessionID to target, asks the user:
+//   3. If it times out AND we have a sessionID to target, either waits
+//      silently when the caller selected that product policy, or asks the user:
 //        - "Continue with snapshots": keep waiting on this turn; snapshot
 //          finishes eventually and undo/redo stays functional. Future turns
 //          are fast because the snapshot index is built.
@@ -140,6 +141,9 @@ export namespace KiloSnapshotTrack {
   /** Answer shape returned by `askUser`. Three-valued because dismiss !== disable. */
   export type Answer = "continue" | "disable" | "dismissed"
 
+  /** Managed callers can retain snapshots without blocking on the interactive warning. */
+  export type SnapshotInitialization = "wait"
+
   /**
    * Hooks injected by the snapshot layer. Split out so the unit tests can
    * substitute fakes without reaching for the real Question/filesystem stack.
@@ -181,6 +185,7 @@ export namespace KiloSnapshotTrack {
   export interface WrapInput {
     readonly inner: Effect.Effect<string | undefined>
     readonly state: State
+    readonly snapshotInitialization?: SnapshotInitialization
     readonly sessionID?: SessionID
     /**
      * When provided, the wrapper injects an in-message "initializing snapshot…"
@@ -302,6 +307,22 @@ export namespace KiloSnapshotTrack {
       // animating so the user still sees live progress while the slow-repo
       // dialog is visible. The progress fiber is only torn down once we've
       // decided whether to keep waiting, disable, or skip below.
+
+      // Managed products such as Agent Manager expect concurrent snapshot
+      // initialization and cannot stop started turns for an inline question.
+      // Retain the snapshot baseline, but wait silently after the threshold.
+      if (input.snapshotInitialization === "wait") {
+        log.info("snapshot track slow; waiting without question")
+        const finished = yield* Fiber.join(fiber).pipe(
+          Effect.catch((err) => {
+            log.warn("snapshot track failed while waiting without question", { err })
+            return Effect.succeed(undefined as string | undefined)
+          }),
+        )
+        if (progressFiber) yield* Fiber.interrupt(progressFiber)
+        yield* clearProgress()
+        return finished
+      }
 
       // Slow path. No target session to prompt against, or we've already
       // prompted through this service scope — skip silently.

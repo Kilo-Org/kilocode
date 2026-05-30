@@ -196,7 +196,9 @@ export namespace KiloSessions {
     ).filter((p) => p.sessionID === sessionID)
     if (permissions.length > 0) return "permission"
 
-    const questions = (await Question.list()).filter((q) => q.sessionID === sessionID)
+    const questions = (
+      await AppRuntime.runPromise(Question.Service.use((svc) => svc.list()))
+    ).filter((q) => q.sessionID === sessionID)
     if (questions.length > 0) return "question"
 
     const status = await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.get(SessionID.make(sessionID))))
@@ -214,6 +216,7 @@ export namespace KiloSessions {
     Effect.gen(function* () {
       const bus = yield* Bus.Service
       const config = yield* Config.Service
+      const sessions = yield* Session.Service
       const state = yield* InstanceState.make(
         Effect.fn("KiloSessions.state")(function* () {
           if (ingestDisabled) return
@@ -239,7 +242,7 @@ export namespace KiloSessions {
           })
           yield* watch(Session.Event.Updated, async (evt) => {
             const sessionID = evt.properties.sessionID
-            const session = await Session.get(sessionID).catch(() => null)
+            const session = await Effect.runPromise(sessions.get(sessionID).pipe(Effect.orElseSucceed(() => null)))
             if (!session) return
             await ingest.sync(sessionID, [
               { type: "kilo_meta", data: await meta(sessionID) },
@@ -326,7 +329,11 @@ export namespace KiloSessions {
     }),
   )
 
-  export const defaultLayer = layer.pipe(Layer.provide(Bus.layer), Layer.provide(Config.defaultLayer))
+  export const defaultLayer = layer.pipe(
+    Layer.provide(Bus.layer),
+    Layer.provide(Config.defaultLayer),
+    Layer.provide(Session.defaultLayer),
+  )
 
   export async function enableRemote() {
     if (remote) return
@@ -364,19 +371,24 @@ export namespace KiloSessions {
         const ids = new Set(Object.keys(statuses))
         for (const id of focused) ids.add(id)
         for (const id of opened) ids.add(id)
-        const results = await Promise.all(
-          [...ids].map(async (id) => {
-            const session = await Session.get(SessionID.make(id)).catch(() => undefined)
-            if (!session) return undefined
-            return {
-              id,
-              status: statuses[id]?.type ?? "idle",
-              title: session.title,
-              parentSessionId: session.parentID,
-              gitUrl,
-              gitBranch,
-            }
-          }),
+        const results = await AppRuntime.runPromise(
+          Session.Service.use((svc) =>
+            Effect.all(
+              [...ids].map((id) =>
+                svc.get(SessionID.make(id)).pipe(
+                  Effect.map((session) => ({
+                    id,
+                    status: statuses[id]?.type ?? "idle" as const,
+                    title: session.title,
+                    parentSessionId: session.parentID,
+                    gitUrl,
+                    gitBranch,
+                  })),
+                  Effect.orElseSucceed(() => undefined),
+                ),
+              ),
+            ),
+          ),
         )
         const sessions = results.filter((r): r is NonNullable<typeof r> => !!r)
         return {
@@ -646,10 +658,16 @@ export namespace KiloSessions {
   async function fullSync(sessionId: string) {
     log.info("full sync", { sessionId })
 
-    const session = await Session.get(SessionID.make(sessionId))
     const { AppRuntime } = await import("@/effect/app-runtime")
-    const diffs = await AppRuntime.runPromise(
-      SessionSummary.Service.use((svc) => svc.diff({ sessionID: SessionID.make(sessionId) })),
+    const [session, diffs] = await AppRuntime.runPromise(
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const summary = yield* SessionSummary.Service
+        return yield* Effect.all([
+          sessions.get(SessionID.make(sessionId)),
+          summary.diff({ sessionID: SessionID.make(sessionId) }),
+        ])
+      }),
     )
     const messages = await Array.fromAsync(MessageV2.stream(SessionID.make(sessionId)))
     messages.reverse()

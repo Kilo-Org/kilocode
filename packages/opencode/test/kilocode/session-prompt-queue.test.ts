@@ -4,7 +4,6 @@ import { Effect } from "effect"
 import { Bus } from "../../src/bus"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Suggestion } from "../../src/kilocode/suggestion"
-import { Question } from "../../src/question"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { WithInstance } from "../../src/project/with-instance"
 import { Session } from "../../src/session/session"
@@ -16,6 +15,15 @@ import * as Log from "@opencode-ai/core/util/log"
 import { provideInstance, tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
+
+const sessions = {
+  create: (input?: Parameters<Session.Interface["create"]>[0]) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.create(input)).pipe(Effect.provide(Session.defaultLayer))),
+  messages: (input: Parameters<Session.Interface["messages"]>[0]) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.messages(input)).pipe(Effect.provide(Session.defaultLayer))),
+  updateMessage: <T extends MessageV2.Info>(msg: T) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.updateMessage(msg)).pipe(Effect.provide(Session.defaultLayer))),
+}
 
 function line(input: unknown) {
   return `data: ${JSON.stringify(input)}\n\n`
@@ -259,14 +267,14 @@ describe("session prompt queue", () => {
     await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
-        const session = await Session.create({ title: "Queued compaction regression" })
+        const session = await sessions.create({ title: "Queued compaction regression" })
         const first = MessageID.ascending()
         const ans = MessageID.ascending()
         const queued = MessageID.ascending()
 
-        await Session.updateMessage(user(session.id, first).info)
-        await Session.updateMessage(assistant(session.id, ans, first).info)
-        await Session.updateMessage(user(session.id, queued).info)
+        await sessions.updateMessage(user(session.id, first).info)
+        await sessions.updateMessage(assistant(session.id, ans, first).info)
+        await sessions.updateMessage(user(session.id, queued).info)
 
         const result = await Effect.runPromise(
           KiloSessionPromptQueue.enqueue(
@@ -280,7 +288,7 @@ describe("session prompt queue", () => {
                 auto: true,
                 overflow: true,
               })
-              const messages = await Session.messages({ sessionID: session.id })
+              const messages = await sessions.messages({ sessionID: session.id })
               const compact = messages.find((msg) => msg.parts.some((part) => part.type === "compaction"))?.info.id
               return { compact, ids: KiloSessionPromptQueue.scope(session.id, messages).map((item) => item.info.id) }
             }),
@@ -426,7 +434,7 @@ describe("session prompt queue", () => {
         directory: tmp.path,
         fn: async () =>
           scoped(tmp.path, async (prompt) => {
-            const session = await Session.create({ title: "Queued prompt regression" })
+            const session = await sessions.create({ title: "Queued prompt regression" })
             const first = Effect.runPromise(
               prompt.prompt({
                 sessionID: session.id,
@@ -457,7 +465,7 @@ describe("session prompt queue", () => {
             expect(hasText(one, "first reply")).toBe(true)
             expect(hasText(two, "second reply")).toBe(true)
 
-            const msgs = await Session.messages({ sessionID: session.id })
+            const msgs = await sessions.messages({ sessionID: session.id })
             const users = msgs.filter((msg) => msg.info.role === "user")
             const assistants = msgs.filter((msg) => msg.info.role === "assistant")
             const prompts = users.flatMap((msg) =>
@@ -548,7 +556,7 @@ describe("session prompt queue", () => {
         directory: tmp.path,
         fn: async () =>
           scoped(tmp.path, async (prompt) => {
-            const session = await Session.create({ title: "Queued cancel regression" })
+            const session = await sessions.create({ title: "Queued cancel regression" })
             const first = Effect.runPromise(
               prompt.prompt({
                 sessionID: session.id,
@@ -582,7 +590,7 @@ describe("session prompt queue", () => {
 
             // The queued prompts must never reach the LLM once cancel flushes the queue.
             expect(calls).toHaveLength(1)
-            const msgs = await Session.messages({ sessionID: session.id })
+            const msgs = await sessions.messages({ sessionID: session.id })
             const assistants = msgs.filter((msg) => msg.info.role === "assistant")
             expect(assistants).toHaveLength(1)
             expect(msgs.filter((msg) => msg.info.role === "user")).toHaveLength(3)
@@ -614,7 +622,7 @@ describe("session prompt queue", () => {
       directory: tmp.path,
       fn: async () =>
         scoped(tmp.path, async (prompt) => {
-          const session = await Session.create({ title: "Suggestion unblock regression" })
+          const session = await sessions.create({ title: "Suggestion unblock regression" })
           const offShown = Bus.subscribe(Suggestion.Event.Shown, (event) => {
             if (event.properties.sessionID === session.id) shown.resolve()
           })
@@ -648,62 +656,6 @@ describe("session prompt queue", () => {
           } finally {
             offShown()
             offDismissed()
-          }
-        }),
-    })
-  })
-
-  test("new prompt dismisses a pending question", async () => {
-    const asked = Promise.withResolvers<void>()
-    const rejected = Promise.withResolvers<void>()
-    await using tmp = await tmpdir({ git: true })
-
-    await WithInstance.provide({
-      directory: tmp.path,
-      fn: async () =>
-        scoped(tmp.path, async (prompt) => {
-          const session = await Session.create({ title: "Question unblock regression" })
-          const offAsked = Bus.subscribe(Question.Event.Asked, (event) => {
-            if (event.properties.sessionID === session.id) asked.resolve()
-          })
-          const offRejected = Bus.subscribe(Question.Event.Rejected, (event) => {
-            if (event.properties.sessionID === session.id) rejected.resolve()
-          })
-
-          try {
-            const pending = Question.ask({
-              sessionID: session.id,
-              questions: [
-                {
-                  header: "Continue?",
-                  question: "Should I continue?",
-                  options: [
-                    { label: "Yes", description: "Go ahead" },
-                    { label: "No", description: "Stop" },
-                  ],
-                },
-              ],
-            }).catch((err) => {
-              if (err instanceof Question.RejectedError) return "rejected"
-              throw err
-            })
-
-            await asked.promise
-            await Effect.runPromise(
-              prompt.prompt({
-                sessionID: session.id,
-                agent: "code",
-                parts: [{ type: "text", text: "replacement prompt" }],
-                noReply: true,
-              }),
-            )
-            await rejected.promise
-
-            expect(await pending).toBe("rejected")
-            expect(await Question.list()).toEqual([])
-          } finally {
-            offAsked()
-            offRejected()
           }
         }),
     })
@@ -774,70 +726,4 @@ describe("session prompt queue", () => {
     })
   })
 
-  test("auto-dismisses a question shown after a queued prompt", async () => {
-    await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        const sessionID = SessionID.make("ses_auto_question")
-        const started = Promise.withResolvers<void>()
-        const release = Promise.withResolvers<void>()
-
-        const first = Effect.runPromise(
-          KiloSessionPromptQueue.enqueue(
-            sessionID,
-            MessageID.make("message_auto_q_1"),
-            Effect.gen(function* () {
-              started.resolve()
-              yield* Effect.promise(() => release.promise)
-              return "first" as const
-            }),
-            Effect.succeed("first-cancelled" as const),
-          ),
-        )
-        await started.promise
-
-        const second = Effect.runPromise(
-          KiloSessionPromptQueue.enqueue(
-            sessionID,
-            MessageID.make("message_auto_q_2"),
-            Effect.succeed("second" as const),
-            Effect.succeed("second-cancelled" as const),
-          ),
-        )
-        await Bun.sleep(10)
-        expect(KiloSessionPromptQueue.hasFollowup(sessionID)).toBe(true)
-
-        let asked = 0
-        const offAsked = Bus.subscribe(Question.Event.Asked, (event) => {
-          if (event.properties.sessionID === sessionID) asked++
-        })
-        try {
-          await expect(
-            Question.ask({
-              sessionID,
-              questions: [
-                {
-                  header: "Continue?",
-                  question: "Should I continue?",
-                  options: [
-                    { label: "Yes", description: "Go ahead" },
-                    { label: "No", description: "Stop" },
-                  ],
-                },
-              ],
-            }),
-          ).rejects.toBeInstanceOf(Question.RejectedError)
-        } finally {
-          offAsked()
-        }
-        expect(asked).toBe(0)
-        expect(await Question.list()).toEqual([])
-
-        release.resolve()
-        expect(await first).toBe("first")
-        expect(await second).toBe("second")
-      },
-    })
-  })
 })
