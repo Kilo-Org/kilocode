@@ -36,6 +36,7 @@ import {
   isSmall,
   providerSortKey,
   isFree,
+  freeDataLabel,
   buildTriggerLabel,
   sanitizeName,
 } from "./model-selector-utils"
@@ -584,6 +585,8 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const controlLabel = () => `${label()}: ${triggerLabel()}`
   const searchLabel = () => `${controlLabel()}. ${language.t("dialog.model.search.placeholder")}`
   const describedBy = () => (props.description ? descriptionID : undefined)
+  const freeLabel = () => freeDataLabel(language.t("model.tag.free"), language.t("model.tag.dataCollected"))
+  const freeTip = () => language.t("model.tag.freeData.tooltip")
 
   return (
     <>
@@ -624,6 +627,13 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
         trigger={
           <>
             <span class="model-selector-trigger-label">{triggerLabel()}</span>
+            <Show when={activeModel()?.isFree}>
+              <Tooltip value={freeTip()} placement="top">
+                <span class="model-selector-trigger-free-data" aria-label={freeTip()}>
+                  <Icon name="warning" size="small" />
+                </span>
+              </Tooltip>
+            </Show>
             <svg class="model-selector-trigger-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
               <path d="M8 4l4 5H4l4-5z" />
             </svg>
@@ -813,7 +823,11 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                                         })()}
                                       </span>
                                       <Show when={isFree(model)}>
-                                        <Tag data-variant="member">{language.t("model.tag.free")}</Tag>
+                                        <Tooltip value={freeTip()} placement="top">
+                                          <span class="model-selector-free-data">
+                                            <Tag data-variant="member">{freeLabel()}</Tag>
+                                          </span>
+                                        </Tooltip>
                                       </Show>
                                       <Show when={showProvider()}>
                                         <span class="model-selector-item-provider-tag">{model.providerName}</span>

@@ -22,6 +22,10 @@ export function isFree(model: Pick<EnrichedModel, "isFree">): boolean {
   return model.isFree === true
 }
 
+export function freeDataLabel(free: string, data: string): string {
+  return `${free} - ${data}`
+}
+
 // Strips trailing "(free)" parenthesized suffix from model display names, e.g.
 // "Llama 3 (free)" → "Llama 3". A separate "Free" label/tag is rendered
 // elsewhere, so preserve bare trailing "Free" words (e.g. "Kilo Auto Free").

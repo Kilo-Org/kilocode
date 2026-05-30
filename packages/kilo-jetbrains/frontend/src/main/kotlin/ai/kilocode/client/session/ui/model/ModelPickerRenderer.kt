@@ -1,6 +1,5 @@
 package ai.kilocode.client.session.ui.model
 
-import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
@@ -66,7 +65,7 @@ internal class ModelPickerRenderer(
     }
     private val title = SimpleColoredComponent()
     private val badge = FilledBadgeIcon(
-        KiloBundle.message("model.picker.free"),
+        ModelText.freeLabel(),
         ModelText.freeBg(),
         JBColor.namedColor("Kilo.ModelPicker.freeBadgeForeground", JBColor.WHITE),
     )
@@ -154,6 +153,8 @@ internal class ModelPickerRenderer(
     internal fun starIcon(): Icon? = star.icon
 
     internal fun badgeVisible(): Boolean = head.getComponent(1).isVisible
+
+    internal fun badgeText(): String = badge.text
 
     private class BadgeLabel(icon: Icon) : JBLabel(icon)
 }

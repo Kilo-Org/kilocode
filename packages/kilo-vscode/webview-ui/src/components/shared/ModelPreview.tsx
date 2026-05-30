@@ -5,7 +5,7 @@ import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
-import { sanitizeName } from "./model-selector-utils"
+import { freeDataLabel, sanitizeName } from "./model-selector-utils"
 import { avgPrice, fmtCachedPrice, fmtPrice } from "./model-preview-utils"
 
 interface Props {
@@ -46,6 +46,8 @@ export const ModelPreview: Component<Props> = (props) => {
             return fmtCachedPrice(cost()!) ?? language.t("model.preview.value.notSupported")
           }
           const avg = () => (cost() ? avgPrice(cost()!) : undefined)
+          const freeLabel = () => freeDataLabel(language.t("model.tag.free"), language.t("model.tag.dataCollected"))
+          const freeTip = () => language.t("model.tag.freeData.tooltip")
           const ctx = () => model().limit?.context ?? model().contextLength
           const caps = () => model().capabilities
           const inputs = () => caps()?.input
@@ -62,9 +64,11 @@ export const ModelPreview: Component<Props> = (props) => {
           return (
             <>
               <Show when={model().isFree}>
-                <span class="model-preview-badge model-preview-badge--free model-preview-badge--top-right">
-                  {language.t("model.tag.free")}
-                </span>
+                <Tooltip value={freeTip()} placement="top">
+                  <span class="model-preview-badge model-preview-badge--free model-preview-badge--top-right">
+                    {freeLabel()}
+                  </span>
+                </Tooltip>
               </Show>
               {/* Header — name + provider + star */}
               <div class="model-preview-header">

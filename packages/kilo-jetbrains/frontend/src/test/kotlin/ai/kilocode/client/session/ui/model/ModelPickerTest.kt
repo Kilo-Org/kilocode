@@ -153,6 +153,14 @@ class ModelPickerTest : BasePlatformTestCase() {
         assertEquals(listOf("low", "high"), item.variants)
     }
 
+    fun `test selected free model indicates data collection`() {
+        val picker = ModelPicker()
+
+        picker.setItems(listOf(item("auto", "Auto Free", "kilo", "Kilo", free = true)))
+
+        assertTrue(picker.text.contains("Data collected"))
+    }
+
     fun `test display parts split provider prefix`() {
         val parts = ModelText.parts(item("claude-opus", "Anthropic Claude Opus 4.7", "anthropic", "Anthropic"))
 
@@ -261,6 +269,7 @@ class ModelPickerTest : BasePlatformTestCase() {
         renderer.getListCellRendererComponent(list, row, 0, false, false)
 
         assertTrue(renderer.badgeVisible())
+        assertEquals("Free - Data collected", renderer.badgeText())
     }
 
     private fun item(

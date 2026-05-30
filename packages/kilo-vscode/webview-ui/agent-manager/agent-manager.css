@@ -2801,6 +2801,25 @@ body.am-wt-dragging-active * {
   white-space: nowrap;
 }
 
+.am-mm-free-data {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  max-width: 132px;
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  color: var(--vscode-inputValidation-warningForeground, var(--text-weaker));
+  background: var(--surface-inset-base);
+  font-size: var(--kilo-font-size-10);
+  white-space: nowrap;
+}
+
+.am-mm-free-data span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .am-mm-count-select {
   flex-shrink: 0;
   padding: 2px 4px;

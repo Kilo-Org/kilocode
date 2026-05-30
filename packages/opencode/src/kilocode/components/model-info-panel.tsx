@@ -3,6 +3,7 @@ import { useTerminalDimensions } from "@opentui/solid"
 import { createMemo, Show } from "solid-js"
 import { useTheme } from "@tui/context/theme"
 import type { Model } from "@kilocode/sdk/v2"
+import { FreeModelDisclosure } from "./free-model-disclosure"
 import { avgPrice, fmtCachedPrice, fmtContext, fmtDate, fmtPrice } from "./model-info-panel-utils"
 
 interface Props {
@@ -67,8 +68,11 @@ export function ModelInfoPanel(props: Props) {
           <text fg={theme.textMuted}>{props.provider ?? m().providerID ?? ""}</text>
         </box>
         <Show when={m().isFree}>
-          <box>
-            <text fg={theme.text}>Free</text>
+          <box flexDirection="column">
+            <text fg={theme.text}>{FreeModelDisclosure.label}</text>
+            <text fg={theme.textMuted} width={23}>
+              {FreeModelDisclosure.description}
+            </text>
           </box>
         </Show>
         <Show when={m().family}>

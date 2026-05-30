@@ -158,7 +158,6 @@
 .model-preview-badge--free {
   background: var(--vscode-testing-iconPassed, #4caf50);
   color: #fff;
-  text-transform: uppercase;
 }
 
 .model-preview-badge--top-right {
@@ -388,10 +387,21 @@
   flex-shrink: 0;
   background: var(--vscode-testing-iconPassed, #4caf50) !important;
   color: #fff !important;
-  text-transform: uppercase;
   font-size: var(--kilo-font-size-10) !important;
   padding: 1px 3px !important;
   opacity: 0.8;
+}
+
+.model-selector-free-data {
+  display: inline-flex;
+  min-width: 0;
+}
+
+.model-selector-trigger-free-data {
+  display: inline-flex;
+  align-items: center;
+  color: var(--vscode-inputValidation-warningForeground, var(--vscode-descriptionForeground));
+  flex-shrink: 0;
 }
 
 .model-selector-item-provider-tag {

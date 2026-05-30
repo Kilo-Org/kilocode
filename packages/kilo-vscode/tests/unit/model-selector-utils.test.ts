@@ -6,6 +6,7 @@ import {
   sanitizeName,
   KILO_GATEWAY_ID,
   PROVIDER_ORDER,
+  freeDataLabel,
 } from "../../webview-ui/src/components/shared/model-selector-utils"
 
 const labels = { select: "Select model", noProviders: "No providers", notSet: "Not set" }
@@ -91,6 +92,12 @@ describe("sanitizeName", () => {
   it("handles extra whitespace around (free) suffix", () => {
     expect(sanitizeName("Llama 3 (free)  ")).toBe("Llama 3")
     expect(sanitizeName("Model  (free)  ")).toBe("Model")
+  })
+})
+
+describe("freeDataLabel", () => {
+  it("combines free and data collection labels", () => {
+    expect(freeDataLabel("Free", "Data collected")).toBe("Free - Data collected")
   })
 })
 

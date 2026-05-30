@@ -103,8 +103,11 @@ class ModelPicker : PickerButton() {
             cursor = Cursor.getDefaultCursor()
             return
         }
-        val display = selected?.display ?: items.firstOrNull()?.display ?: ""
-        text = "${ModelText.sanitize(display)} ▴"
+        val item = selected ?: items.firstOrNull()
+        val display = item?.display ?: ""
+        val suffix = if (item?.free == true) " · ${ModelText.dataCollected()}" else ""
+        text = "${ModelText.sanitize(display)}$suffix ▴"
+        toolTipText = if (item?.free == true) ModelText.freeTip() else KiloBundle.message("model.picker.tooltip")
         isEnabled = true
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
     }
@@ -405,6 +408,12 @@ internal object ModelText {
     fun small(item: ModelPicker.Item): Boolean = item.provider == "kilo" && item.id in small
 
     fun providerSort(id: String): Int = if (id == "kilo") 0 else 1
+
+    fun dataCollected(): String = KiloBundle.message("model.picker.dataCollected")
+
+    fun freeLabel(): String = "${KiloBundle.message("model.picker.free")} - ${dataCollected()}"
+
+    fun freeTip(): String = KiloBundle.message("model.picker.freeData.tooltip")
 
     fun freeBg(): JBColor = JBColor.namedColor("Kilo.ModelPicker.freeBadgeBackground", JBColor(0x95D6AC, 0x7FCA99))
 }

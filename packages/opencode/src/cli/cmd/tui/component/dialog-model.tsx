@@ -12,6 +12,7 @@ import type { Model } from "@kilocode/sdk/v2" // kilocode_change
 import * as fuzzysort from "fuzzysort"
 import { useConnected } from "./use-connected"
 import { ModelInfoPanel } from "@/kilocode/components/model-info-panel" // kilocode_change
+import { FreeModelDisclosure } from "@/kilocode/components/free-model-disclosure" // kilocode_change
 
 export function DialogModel(props: { providerID?: string }) {
   const local = useLocal()
@@ -63,6 +64,12 @@ export function DialogModel(props: { providerID?: string }) {
     if (!next) return
     setPreview(next)
   })
+
+  const footer = (providerID: string, model: Model) => {
+    if (model.isFree) return FreeModelDisclosure.label
+    if (model.cost?.input === 0 && providerID === "opencode") return "Free"
+    return undefined
+  }
   // kilocode_change end
 
   const options = createMemo(() => {
@@ -86,7 +93,7 @@ export function DialogModel(props: { providerID?: string }) {
             description: provider.name,
             category,
             disabled: provider.id === "opencode" && model.id.includes("-nano"),
-            footer: model.cost?.input === 0 && provider.id === "opencode" ? "Free" : undefined,
+            footer: footer(provider.id, model),
             onSelect: () => {
               onSelect(provider.id, model.id)
             },
@@ -129,7 +136,7 @@ export function DialogModel(props: { providerID?: string }) {
               : undefined,
             // kilocode_change end
             disabled: provider.id === "opencode" && model.includes("-nano"),
-            footer: info.cost?.input === 0 && provider.id === "opencode" ? "Free" : undefined,
+            footer: footer(provider.id, info),
             onSelect() {
               onSelect(provider.id, model)
             },
@@ -149,7 +156,7 @@ export function DialogModel(props: { providerID?: string }) {
             // kilocode_change start - Sort within Recommended / Kilo Gateway
             (x) => (x.value.providerID === "kilo" ? (kiloRank().get(x.value.modelID) ?? Infinity) : 0),
             // kilocode_change end
-            (x) => x.footer !== "Free",
+            (x) => x.footer === undefined,
             (x) => x.title,
           ),
         ),
