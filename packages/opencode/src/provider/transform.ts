@@ -611,16 +611,9 @@ function anthropicAdaptiveEfforts(apiId: string): string[] | null {
     return ["low", "medium", "high", "xhigh", "max"]
   }
   if (
-    [
-      "opus-4-6",
-      "opus-4.6",
-      "4-6-opus",
-      "4.6-opus",
-      "sonnet-4-6",
-      "sonnet-4.6",
-      "4-6-sonnet",
-      "4.6-sonnet",
-    ].some((v) => apiId.includes(v))
+    ["opus-4-6", "opus-4.6", "4-6-opus", "4.6-opus", "sonnet-4-6", "sonnet-4.6", "4-6-sonnet", "4.6-sonnet"].some((v) =>
+      apiId.includes(v),
+    )
   ) {
     return ["low", "medium", "high", "max"]
   }
