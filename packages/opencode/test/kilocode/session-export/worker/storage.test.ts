@@ -79,6 +79,23 @@ describe("Storage", () => {
     expect(storage.getChunk("h1")).toBeUndefined()
   })
 
+  test("does not duplicate chunked references", () => {
+    storage.insertEvent({
+      id: "e1",
+      schemaVersion: 1,
+      sessionId: "s1",
+      rootSessionId: "s1",
+      seq: 0,
+      type: "tool_executed",
+      ts: 100,
+      agentVersion: "v0",
+      dataJson: JSON.stringify({ output: { textParts: [{ __chunked: true, chunkIds: ["h1"], size: 3, encoding: "utf8" }] } }),
+      clientScrubbed: 1,
+    })
+
+    expect(storage.chunkRefsForEvents(["e1"])).toEqual(["h1"])
+  })
+
   test("pendingEvents respects next_attempt_at backoff", () => {
     storage.insertEvent({
       id: "02",

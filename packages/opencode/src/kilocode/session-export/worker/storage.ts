@@ -272,7 +272,6 @@ function collectChunkRefs(node: unknown, out: string[]): void {
     return
   }
   const record = node as Record<string, unknown>
-  if (record.__chunked === true && Array.isArray(record.chunkIds)) push(record.chunkIds, out)
   if (Array.isArray(record.chunkIds)) push(record.chunkIds, out)
   if (Array.isArray(record.patchChunkIds)) push(record.patchChunkIds, out)
   if (Array.isArray(record.inputChunkIds)) push(record.inputChunkIds, out)
