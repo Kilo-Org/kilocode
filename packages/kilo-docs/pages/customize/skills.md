@@ -93,12 +93,28 @@ You can configure extra skill locations and remote skill URLs in your `kilo.json
 {
   "skills": {
     "paths": ["/path/to/shared/skills", "~/my-skills", "relative/skills"],
-    "urls": ["https://example.com/skills/my-skill/SKILL.md"],
+    "urls": ["https://example.com/.well-known/skills/"],
   },
 }
 ```
 
-The `skills.paths` key accepts absolute paths, `~/` home-relative paths, or paths relative to the project root. The `skills.urls` key accepts URLs pointing to remote `SKILL.md` files that are fetched on demand.
+The `skills.paths` key accepts absolute paths, `~/` home-relative paths, or paths relative to the project root. The `skills.urls` key accepts URLs to remote skill directories that serve an `index.json` manifest.
+
+The remote server must serve an `index.json` file at the URL path with the following structure:
+
+```json
+{
+  "skills": [
+    { "name": "skill-name", "files": ["SKILL.md", "references/file.md"] }
+  ]
+}
+```
+
+Each skill object contains:
+- `name`: The skill name (must match the directory name)
+- `files`: Array of files to fetch for this skill (must include `SKILL.md`)
+
+Files are downloaded from `{url}/{skill-name}/{file}` paths.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -146,12 +162,28 @@ You can configure extra skill locations and remote skill URLs in your `kilo.json
 {
   "skills": {
     "paths": ["/path/to/shared/skills", "~/my-skills", "relative/skills"],
-    "urls": ["https://example.com/skills/my-skill/SKILL.md"],
+    "urls": ["https://example.com/.well-known/skills/"],
   },
 }
 ```
 
-The `skills.paths` key accepts absolute paths, `~/` home-relative paths, or paths relative to the project root. The `skills.urls` key accepts URLs pointing to remote `SKILL.md` files that are fetched on demand.
+The `skills.paths` key accepts absolute paths, `~/` home-relative paths, or paths relative to the project root. The `skills.urls` key accepts URLs to remote skill directories that serve an `index.json` manifest.
+
+The remote server must serve an `index.json` file at the URL path with the following structure:
+
+```json
+{
+  "skills": [
+    { "name": "skill-name", "files": ["SKILL.md", "references/file.md"] }
+  ]
+}
+```
+
+Each skill object contains:
+- `name`: The skill name (must match the directory name)
+- `files`: Array of files to fetch for this skill (must include `SKILL.md`)
+
+Files are downloaded from `{url}/{skill-name}/{file}` paths.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
