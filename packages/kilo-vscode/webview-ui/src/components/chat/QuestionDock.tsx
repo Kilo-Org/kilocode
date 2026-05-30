@@ -4,7 +4,7 @@
  * Uses kilo-ui's DockPrompt component for proper surface styling.
  */
 
-import { For, Show, createMemo, createEffect } from "solid-js"
+import { For, Show, createMemo, createEffect, createUniqueId } from "solid-js"
 import type { Component } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Button } from "@kilocode/kilo-ui/button"
@@ -23,6 +23,13 @@ import {
 export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
   const session = useSession()
   const language = useLanguage()
+  const id = createUniqueId()
+  const aria = (state: boolean) => (state ? "true" : "false")
+  const bodyID = `${id}-body`
+  const titleID = `${id}-title`
+  const textID = () => `${id}-text-${store.tab}`
+  const hintID = () => `${id}-hint-${store.tab}`
+  const customID = () => `${id}-custom-${store.tab}`
 
   const questions = createMemo(() => props.request.questions)
   const single = createMemo(() => questions().length === 1 && questions()[0]?.multiple !== true)
@@ -56,11 +63,19 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   const options = createMemo(() => question()?.options ?? [])
   const input = createMemo(() => store.custom[store.tab] ?? "")
   const multi = createMemo(() => question()?.multiple === true)
-  const customPicked = createMemo(() => {
-    const value = input()
-    if (!value) return false
-    return store.answers[store.tab]?.includes(value) ?? false
-  })
+  const role = createMemo(() => (multi() ? "checkbox" : "radio"))
+  const group = createMemo(() => (multi() ? "group" : "radiogroup"))
+  const customPicked = createMemo(
+    () =>
+      (!multi() && store.editing) ||
+      (store.answers[store.tab] ?? []).some((answer) => store.kinds[store.tab]?.[answer] === "custom"),
+  )
+  const tabIndex = (picked: boolean, index: number) => {
+    if (multi()) return undefined
+    if (picked) return 0
+    if ((store.answers[store.tab]?.length ?? 0) > 0 || store.editing) return -1
+    return index === 0 ? 0 : -1
+  }
 
   const total = createMemo(() => questions().length)
   const last = createMemo(() => store.tab >= total() - 1)
@@ -131,7 +146,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     session.selectAgent(next.agent)
   }
 
-  const pick = (answer: string, custom = false) => {
+  const pick = (answer: string, custom = false, advance = true) => {
     const answers = [...store.answers]
     answers[store.tab] = [answer]
     setStore("answers", answers)
@@ -147,6 +162,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     }
 
     syncAgent(answers, kinds)
+    if (!advance) return
 
     const outcome = pickOutcome({ single: single(), multi: multi(), custom })
     if (outcome.kind === "advance") {
@@ -173,11 +189,24 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     setStore("editing", false)
   }
 
+  const edit = () => {
+    setStore("editing", true)
+    if (multi()) return
+
+    const answers = [...store.answers]
+    answers[store.tab] = []
+    setStore("answers", answers)
+    const kinds = [...store.kinds]
+    kinds[store.tab] = {}
+    setStore("kinds", kinds)
+    syncAgent(answers, kinds)
+  }
+
   const selectOption = (optIndex: number) => {
     if (store.sending) return
 
     if (optIndex === options().length) {
-      setStore("editing", true)
+      edit()
       return
     }
 
@@ -190,8 +219,15 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     pick(opt.label)
   }
 
+  const step = (key: string) => {
+    if (key === "ArrowDown" || key === "ArrowRight") return 1
+    if (key === "ArrowUp" || key === "ArrowLeft") return -1
+    return 0
+  }
+
   const onKey = (e: KeyboardEvent) => {
-    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return
+    const delta = step(e.key)
+    if (!delta) return
     if ((e.target as HTMLElement).tagName === "INPUT") return
     e.preventDefault()
     const el = e.currentTarget as HTMLElement
@@ -200,15 +236,15 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     )
     if (!items.length) return
     const idx = items.findIndex((b) => b === document.activeElement)
-    const next =
-      e.key === "ArrowDown"
-        ? idx === -1
-          ? 0
-          : (idx + 1) % items.length
-        : idx === -1
-          ? items.length - 1
-          : (idx - 1 + items.length) % items.length
+    const next = idx === -1 ? (delta > 0 ? 0 : items.length - 1) : (idx + delta + items.length) % items.length
     items[next]?.focus()
+    if (multi()) return
+    if (next === options().length) {
+      edit()
+      return
+    }
+    const opt = options()[next]
+    if (opt) pick(opt.label, false, false)
   }
 
   const handleCustomSubmit = (e: Event) => {
@@ -295,13 +331,17 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       ref={root}
       data-component="question-dock"
       data-collapsed={store.collapsed ? "true" : "false"}
+      role="region"
+      aria-labelledby={titleID}
       onClick={(e: MouseEvent) => e.stopPropagation()}
       onKeyDown={onRoot}
     >
       {/* Single unified header row — always visible */}
       <div data-slot="question-dock-header" onClick={toggleCollapse}>
         <div data-slot="question-dock-header-content">
-          <div data-slot="question-header-title">{summary()}</div>
+          <div id={titleID} data-slot="question-header-title">
+            {summary()}
+          </div>
           <Show when={store.collapsed}>
             <div data-slot="question-collapsed-preview">{questionText()}</div>
           </Show>
@@ -336,6 +376,8 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
             data-slot="question-collapse-toggle"
             onClick={toggleCollapse}
             aria-label={store.collapsed ? "Expand" : "Collapse"}
+            aria-expanded={aria(!store.collapsed)}
+            aria-controls={bodyID}
           >
             <Icon name="chevron-down" size="small" />
           </button>
@@ -343,22 +385,47 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       </div>
 
       {/* Animated body — hidden when collapsed */}
-      <div data-slot="question-dock-body" inert={store.collapsed || undefined}>
+      <div id={bodyID} data-slot="question-dock-body" inert={store.collapsed || undefined}>
         <div data-slot="question-dock-body-inner">
           <Show when={!confirm()}>
-            <div data-slot="question-text">{questionText()}</div>
-            <Show when={multi()} fallback={<div data-slot="question-hint">{language.t("ui.question.singleHint")}</div>}>
-              <div data-slot="question-hint">{language.t("ui.question.multiHint")}</div>
+            <div id={textID()} data-slot="question-text">
+              {questionText()}
+            </div>
+            <Show
+              when={multi()}
+              fallback={
+                <div id={hintID()} data-slot="question-hint">
+                  {language.t("ui.question.singleHint")}
+                </div>
+              }
+            >
+              <div id={hintID()} data-slot="question-hint">
+                {language.t("ui.question.multiHint")}
+              </div>
             </Show>
-            <div data-slot="question-options" onKeyDown={onKey}>
+            <div
+              data-slot="question-options"
+              role={group()}
+              aria-labelledby={textID()}
+              aria-describedby={hintID()}
+              onKeyDown={onKey}
+            >
               <For each={options()}>
                 {(opt, i) => {
                   const picked = () => store.answers[store.tab]?.includes(opt.label) ?? false
                   const localized = translateOption(opt)
                   return (
                     <button
+                      type="button"
                       data-slot="question-option"
                       data-picked={picked()}
+                      role={role()}
+                      aria-checked={aria(picked())}
+                      aria-labelledby={`${id}-choice-${store.tab}-${i()}-label`}
+                      aria-describedby={
+                        localized.description() ? `${id}-choice-${store.tab}-${i()}-description` : undefined
+                      }
+                      tabIndex={tabIndex(picked(), i())}
                       disabled={store.sending}
                       onClick={() => selectOption(i())}
                     >
@@ -374,9 +441,13 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                         </span>
                       </span>
                       <span data-slot="question-option-main">
-                        <span data-slot="option-label">{localized.label()}</span>
+                        <span id={`${id}-choice-${store.tab}-${i()}-label`} data-slot="option-label">
+                          {localized.label()}
+                        </span>
                         <Show when={localized.description()}>
-                          <span data-slot="option-description">{localized.description()}</span>
+                          <span id={`${id}-choice-${store.tab}-${i()}-description`} data-slot="option-description">
+                            {localized.description()}
+                          </span>
                         </Show>
                       </span>
                     </button>
@@ -385,9 +456,15 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
               </For>
               <Show when={question()?.custom !== false}>
                 <button
+                  type="button"
                   data-slot="question-option"
                   data-custom="true"
                   data-picked={customPicked()}
+                  role={role()}
+                  aria-checked={aria(customPicked())}
+                  aria-labelledby={customID()}
+                  aria-describedby={!store.editing ? `${customID()}-description` : undefined}
+                  tabIndex={tabIndex(customPicked(), options().length)}
                   disabled={store.sending}
                   onClick={() => selectOption(options().length)}
                 >
@@ -403,9 +480,11 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                     </span>
                   </span>
                   <span data-slot="question-option-main">
-                    <span data-slot="option-label">{language.t("ui.messagePart.option.typeOwnAnswer")}</span>
+                    <span id={customID()} data-slot="option-label">
+                      {language.t("ui.messagePart.option.typeOwnAnswer")}
+                    </span>
                     <Show when={!store.editing}>
-                      <span data-slot="option-description" data-placeholder={!input()}>
+                      <span id={`${customID()}-description`} data-slot="option-description" data-placeholder={!input()}>
                         {input() || language.t("ui.question.custom.placeholder")}
                       </span>
                     </Show>
@@ -422,6 +501,8 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                       }}
                       type="text"
                       data-slot="custom-input"
+                      aria-labelledby={customID()}
+                      aria-describedby={textID()}
                       placeholder={language.t("ui.question.custom.placeholder")}
                       value={input()}
                       disabled={store.sending}

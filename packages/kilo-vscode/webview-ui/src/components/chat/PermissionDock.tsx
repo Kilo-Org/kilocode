@@ -9,7 +9,7 @@
  * The command buttons (Deny / Run) control the current command.
  */
 
-import { Component, For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
+import { Component, For, Show, createEffect, createMemo, createSignal, createUniqueId, onCleanup } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { DockPrompt } from "@kilocode/kilo-ui/dock-prompt"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -34,6 +34,10 @@ export const PermissionDock: Component<{
   const session = useSession()
   const language = useLanguage()
   const { config } = useConfig()
+  const id = createUniqueId()
+  const aria = (state: boolean) => (state ? "true" : "false")
+  const titleID = `${id}-title`
+  const rulesID = `${id}-rules`
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
   // Bash sends fine-grained rules via metadata.rules; other tools use the always array.
@@ -46,6 +50,11 @@ export const PermissionDock: Component<{
     if (typeof cmd !== "string") return undefined
     // Normalize IDN/Unicode hostnames to punycode ASCII to prevent homograph attacks.
     return normalizeUrls(cmd)
+  }
+  const ruleText = (rule: string) => {
+    if (command()) return label(rule) || resolveLabel(props.request.toolName, language.t)
+    if (rule === "*") return resolveLabel(props.request.toolName, language.t)
+    return `${resolveLabel(props.request.toolName, language.t)} ${rule}`
   }
   const description = createMemo(() =>
     command() ? null : describePatterns(props.request.toolName, props.request.patterns, language.t),
@@ -185,7 +194,7 @@ export const PermissionDock: Component<{
   })
 
   return (
-    <div ref={root} data-component="permission-shortcuts" onKeyDown={onRoot}>
+    <div ref={root} data-component="permission-shortcuts" role="region" aria-labelledby={titleID} onKeyDown={onRoot}>
       <DockPrompt
         kind="permission"
         header={
@@ -193,7 +202,9 @@ export const PermissionDock: Component<{
             <span data-slot="permission-icon">
               <Icon name="warning" size="small" />
             </span>
-            <div data-slot="permission-header-title">{title()}</div>
+            <div id={titleID} data-slot="permission-header-title">
+              {title()}
+            </div>
           </div>
         }
         footer={
@@ -204,7 +215,8 @@ export const PermissionDock: Component<{
                 data-slot="permission-rules-header"
                 data-open={expanded() ? "" : undefined}
                 onClick={toggleExpanded}
-                aria-expanded={expanded()}
+                aria-expanded={aria(expanded())}
+                aria-controls={rulesID}
               >
                 <span data-slot="permission-rules-header-chevron" data-open={expanded() ? "" : undefined}>
                   <Icon name="chevron-down" size="small" />
@@ -212,44 +224,55 @@ export const PermissionDock: Component<{
                 <span data-slot="permission-rules-header-title">{language.t("ui.permission.manageAutoApprove")}</span>
               </button>
 
-              <div data-slot="permission-rules-collapse" data-open={expanded() ? "" : undefined}>
+              <div
+                id={rulesID}
+                data-slot="permission-rules-collapse"
+                data-open={expanded() ? "" : undefined}
+                inert={!expanded() || undefined}
+                aria-hidden={aria(!expanded())}
+              >
                 <div data-slot="permission-rules-collapse-inner">
                   <div data-slot="permission-rules">
                     <For each={rules()}>
                       {(rule, index) => (
-                        <div data-slot="permission-rule-row" data-decision={decision(index())}>
+                        <div
+                          data-slot="permission-rule-row"
+                          data-decision={decision(index())}
+                          role="group"
+                          aria-labelledby={`${id}-rule-${index()}`}
+                        >
                           <div data-slot="permission-rule-actions">
                             <Tooltip value={approveTooltip(index())} placement="top">
                               <button
+                                type="button"
                                 data-slot="permission-rule-toggle"
                                 data-variant="approve"
                                 data-active={decision(index()) === "approved" ? "" : undefined}
                                 disabled={props.responding}
                                 onClick={() => toggleRule(index(), "approved")}
-                                aria-label={approveTooltip(index())}
+                                aria-label={`${language.t("ui.permission.allowAlways")}: ${ruleText(rule)}`}
+                                aria-pressed={aria(decision(index()) === "approved")}
                               >
                                 <Icon name="check-small" size="small" />
                               </button>
                             </Tooltip>
                             <Tooltip value={denyTooltip(index())} placement="top">
                               <button
+                                type="button"
                                 data-slot="permission-rule-toggle"
                                 data-variant="deny"
                                 data-active={decision(index()) === "denied" ? "" : undefined}
                                 disabled={props.responding}
                                 onClick={() => toggleRule(index(), "denied")}
-                                aria-label={denyTooltip(index())}
+                                aria-label={`${language.t("ui.permission.deny")}: ${ruleText(rule)}`}
+                                aria-pressed={aria(decision(index()) === "denied")}
                               >
                                 <Icon name="close-small" size="small" />
                               </button>
                             </Tooltip>
                           </div>
-                          <code data-slot="permission-rule">
-                            {command()
-                              ? label(rule)
-                              : rule === "*"
-                                ? resolveLabel(props.request.toolName, language.t)
-                                : `${resolveLabel(props.request.toolName, language.t)} ${rule}`}
+                          <code id={`${id}-rule-${index()}`} data-slot="permission-rule">
+                            {ruleText(rule)}
                           </code>
                         </div>
                       )}
@@ -286,23 +309,13 @@ export const PermissionDock: Component<{
           <Button
             variant="primary"
             size="small"
-            onClick={() => {
-              const { approved, denied } = collectRules()
-              props.onDecide("once", approved, denied)
-            }}
+            onClick={() => submit("once")}
+            aria-label={`${language.t("ui.permission.run")}, ${language.t("ui.permission.allowOnce")}`}
             disabled={props.responding}
           >
             {language.t("ui.permission.run")}
           </Button>
-          <Button
-            variant="ghost"
-            size="small"
-            onClick={() => {
-              const { approved, denied } = collectRules()
-              props.onDecide("reject", approved, denied)
-            }}
-            disabled={props.responding}
-          >
+          <Button variant="ghost" size="small" onClick={() => submit("reject")} disabled={props.responding}>
             {language.t("ui.permission.deny")}
           </Button>
         </div>

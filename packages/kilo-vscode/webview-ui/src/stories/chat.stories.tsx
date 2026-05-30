@@ -45,6 +45,24 @@ const singleQuestion: QuestionRequest = {
   tool: { messageID: "asst-msg-001", callID: "call-question-001" },
 }
 
+const multipleChoiceQuestion: QuestionRequest = {
+  id: "q-multiple-choice-001",
+  sessionID: SESSION_ID,
+  questions: [
+    {
+      question: "Which checks should I run before submitting?",
+      header: "Choose checks",
+      multiple: true,
+      options: [
+        { label: "Typecheck", description: "Validate TypeScript types" },
+        { label: "Lint", description: "Find style and correctness issues" },
+        { label: "Unit tests", description: "Verify component behavior" },
+      ],
+    },
+  ],
+  tool: { messageID: "asst-msg-001", callID: "call-question-multiple-choice-001" },
+}
+
 const multiQuestion: QuestionRequest = {
   id: "q-multi-001",
   sessionID: SESSION_ID,
@@ -208,6 +226,17 @@ export const QuestionDockMulti: Story = {
     <StoryProviders sessionID={SESSION_ID} questions={[multiQuestion]}>
       <div style={{ width: "100%" }}>
         <QuestionDock request={multiQuestion} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const QuestionDockMultipleChoice: Story = {
+  name: "QuestionDock — multiple choice interaction fixture",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} questions={[multipleChoiceQuestion]}>
+      <div style={{ width: "100%" }}>
+        <QuestionDock request={multipleChoiceQuestion} />
       </div>
     </StoryProviders>
   ),

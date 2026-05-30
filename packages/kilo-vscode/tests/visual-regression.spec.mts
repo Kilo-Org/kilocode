@@ -50,6 +50,7 @@ async function disableAnimations(page: Page) {
 // Permission dock config-preloaded has non-deterministic toggle rendering.
 const SKIP = new Set<string>([
   "agentmanager--worktree-item-busy",
+  "chat--question-dock-multiple-choice",
   "composite-webview--permission-dock-config-preloaded",
 ])
 
