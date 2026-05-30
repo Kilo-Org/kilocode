@@ -7,7 +7,8 @@ const MAX_SIZE = 50 * 1024 * 1024
 const MAX_SIZE_LABEL = `${MAX_SIZE / (1024 * 1024)} MB`
 
 export function is(filepath: string) {
-  return path.extname(filepath).toLowerCase() === ".xlsx"
+  const ext = path.extname(filepath).toLowerCase()
+  return ext === ".xlsx" || ext === ".ods"
 }
 
 export async function open(filepath: string) {
@@ -17,7 +18,7 @@ export async function open(filepath: string) {
   }
   const bytes = new Uint8Array(await file.arrayBuffer())
   if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) {
-    throw new Error(`Cannot read spreadsheet file: ${filepath} is not a valid XLSX workbook`)
+    throw new Error(`Cannot read spreadsheet file: ${filepath} is not a valid spreadsheet`)
   }
 
   try {
