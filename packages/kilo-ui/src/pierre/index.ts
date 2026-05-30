@@ -48,6 +48,11 @@ type DiffShared<T> = FileDiffOptions<T> & {
   commentedLines?: SelectedLineRange[]
   onLineNumberSelectionEnd?: (selection: SelectedLineRange | null) => void
   onRendered?: () => void
+  // When false, render the supplied diff once instead of row-virtualizing it.
+  // Callers should supply hunk-bounded `fileDiff`/`patch` data for large source
+  // files so eager rendering does not expand full before/after content.
+  // Defaults to virtualized.
+  virtualized?: boolean
   class?: string
   classList?: ComponentProps<"div">["classList"]
 }
@@ -55,6 +60,8 @@ type DiffShared<T> = FileDiffOptions<T> & {
 type DiffPair<T> = DiffShared<T> & {
   before: FileContents
   after: FileContents
+  /** Unified patch used to parse only rendered hunks instead of full file contents. */
+  patch?: string
   fileDiff?: undefined
 }
 
@@ -62,6 +69,7 @@ type DiffPatch<T> = DiffShared<T> & {
   fileDiff: FileDiffMetadata
   before?: undefined
   after?: undefined
+  patch?: undefined
 }
 
 export type DiffProps<T = {}> = DiffPair<T> | DiffPatch<T>

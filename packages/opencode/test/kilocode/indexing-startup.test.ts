@@ -16,9 +16,6 @@ const fetch = global.fetch
 
 const cfg: Partial<Config.Info> = {
   plugin: ["@kilocode/kilo-indexing"],
-  experimental: {
-    semantic_indexing: true,
-  },
   indexing: {
     enabled: true,
     provider: "ollama",
@@ -29,13 +26,9 @@ const cfg: Partial<Config.Info> = {
   },
 }
 
-const off: Partial<Config.Info> = {
+const unset: Partial<Config.Info> = {
   plugin: ["@kilocode/kilo-indexing"],
-  experimental: {
-    semantic_indexing: false,
-  },
   indexing: {
-    enabled: true,
     provider: "ollama",
     vectorStore: "qdrant",
     ollama: {
@@ -45,9 +38,6 @@ const off: Partial<Config.Info> = {
 }
 const inactive: Partial<Config.Info> = {
   plugin: ["@kilocode/kilo-indexing"],
-  experimental: {
-    semantic_indexing: true,
-  },
   indexing: {
     enabled: false,
     provider: "ollama",
@@ -56,9 +46,6 @@ const inactive: Partial<Config.Info> = {
 }
 const kilo: Partial<Config.Info> = {
   plugin: ["@kilocode/kilo-indexing"],
-  experimental: {
-    semantic_indexing: true,
-  },
   indexing: {
     enabled: true,
     vectorStore: "qdrant",
@@ -66,9 +53,6 @@ const kilo: Partial<Config.Info> = {
 }
 const implicitOpenAi: Partial<Config.Info> = {
   plugin: ["@kilocode/kilo-indexing"],
-  experimental: {
-    semantic_indexing: true,
-  },
   indexing: {
     enabled: true,
     vectorStore: "qdrant",
@@ -79,9 +63,6 @@ const implicitOpenAi: Partial<Config.Info> = {
 }
 const staleKilo: Partial<Config.Info> = {
   plugin: ["@kilocode/kilo-indexing"],
-  experimental: {
-    semantic_indexing: true,
-  },
   indexing: {
     enabled: true,
     provider: "kilo",
@@ -303,23 +284,23 @@ describe("indexing startup degradation", () => {
     }
   })
 
-  test("stays disabled when semantic indexing flag is off", async () => {
-    await using tmp = await tmpdir({ git: true, config: off })
+  test("stays disabled when indexing enablement is unset", async () => {
+    await using tmp = await tmpdir({ git: true, config: unset })
     process.env["KILO_CONFIG_DIR"] = tmp.path
     const init = spyOn(CodeIndexManager.prototype, "initialize")
 
     await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
-        const status = await KiloIndexing.current()
+        const status = await wait(() => KiloIndexing.current(), "Disabled")
 
         expect(status).toMatchObject({
           state: "Disabled",
-          message: "Semantic indexing is disabled. Enable it in the Experimental settings.",
+          message: "Indexing disabled.",
         })
         expect(await KiloIndexing.available()).toBe(false)
         expect(KiloIndexing.ready()).toBe(false)
-        expect(await KiloIndexing.search("flag off")).toEqual([])
+        expect(await KiloIndexing.search("disabled")).toEqual([])
         expect(init).not.toHaveBeenCalled()
       },
     })

@@ -214,6 +214,7 @@ function makeHttp() {
       Layer.provideMerge(proc),
       Layer.provideMerge(registry),
       Layer.provideMerge(trunc),
+      Layer.provideMerge(question), // kilocode_change - SessionPrompt now dismisses questions via its service dependency
       Layer.provide(Instruction.defaultLayer),
       Layer.provide(SystemPrompt.defaultLayer),
       Layer.provideMerge(deps),
@@ -427,6 +428,51 @@ it.live("loop calls LLM and returns assistant message", () =>
     { git: true, config: providerCfg },
   ),
 )
+
+// kilocode_change start - replacement prompts unblock pending Question service requests
+it.live("new prompt dismisses a pending question", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* () {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const question = yield* Question.Service
+      const chat = yield* sessions.create({ title: "Question unblock regression" })
+      const pending = yield* question
+        .ask({
+          sessionID: chat.id,
+          questions: [
+            {
+              header: "Continue?",
+              question: "Should I continue?",
+              options: [
+                { label: "Yes", description: "Go ahead" },
+                { label: "No", description: "Stop" },
+              ],
+            },
+          ],
+        })
+        .pipe(Effect.forkScoped)
+      yield* waitFor(
+        "pending question",
+        question.list().pipe(Effect.map((items) => items.find((item) => item.sessionID === chat.id))),
+      )
+
+      yield* prompt.prompt({
+        sessionID: chat.id,
+        agent: "build",
+        parts: [{ type: "text", text: "replacement prompt" }],
+        noReply: true,
+      })
+
+      const exit = yield* Fiber.await(pending)
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) expect(Cause.squash(exit.cause)).toBeInstanceOf(Question.RejectedError)
+      expect(yield* question.list()).toEqual([])
+    }),
+    { git: true, config: providerCfg },
+  ),
+)
+// kilocode_change end
 
 it.live("prompt emits v2 prompted and synthetic events", () =>
   provideTmpdirServer(

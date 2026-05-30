@@ -54,9 +54,6 @@ async function writeConfig(dir: string, config: object, name = "kilo.json") {
 
 const cfg: Partial<Config.Info> = {
   plugin: ["@kilocode/kilo-indexing"],
-  experimental: {
-    semantic_indexing: true,
-  },
   indexing: {
     provider: "ollama",
     vectorStore: "qdrant",
@@ -93,6 +90,22 @@ describe("markdown substitutions", () => {
 })
 
 describe("kilocode indexing config", () => {
+  test("ignores retired semantic indexing flags in existing configs", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await writeConfig(tmp.path, {
+      experimental: { semantic_indexing: true, batch_tool: true },
+    })
+
+    await WithInstance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const config = await load()
+        expect(config.experimental?.batch_tool).toBe(true)
+        expect(config.experimental).not.toHaveProperty("semantic_indexing")
+      },
+    })
+  })
+
   test("keeps global indexing enabled in global config", async () => {
     await using globalTmp = await tmpdir()
     await using tmp = await tmpdir()

@@ -35,6 +35,8 @@
   <!-- packages/opencode/src/plugin/xai.ts -->
 - <https://auth.x.ai/oauth2/token>
   <!-- packages/opencode/src/plugin/xai.ts -->
+- <https://blog.kilo.ai/p/kilo-gateway-now-supports-byok-20-providers>
+  <!-- packages/kilo-vscode/webview-ui/src/components/settings/ProviderConnectDialog.tsx -->
 - <https://blog.kilo.ai/p/new-kilo-for-vs-code-is-live>
   <!-- packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx -->
 - <https://chatgpt.com/explore/plus>

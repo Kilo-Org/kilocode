@@ -363,7 +363,8 @@ class PromptPanel(
 
     @RequiresEdt
     private fun syncEditorHeight() {
-        val lines = (editor.document.lineCount + SessionUiStyle.View.Prompt.EDITOR_SPARE_LINES).coerceIn(
+        val count = ApplicationManager.getApplication().runReadAction<Int> { editor.document.lineCount }
+        val lines = (count + SessionUiStyle.View.Prompt.EDITOR_SPARE_LINES).coerceIn(
             SessionUiStyle.View.Prompt.EDITOR_LINES,
             SessionUiStyle.View.Prompt.EDITOR_MAX_LINES,
         )

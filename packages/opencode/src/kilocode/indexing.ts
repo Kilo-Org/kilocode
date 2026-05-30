@@ -242,15 +242,6 @@ export namespace KiloIndexing {
       return track(hit, await inert(() => missing()))
     }
 
-    if (cfg.experimental?.semantic_indexing !== true) {
-      return track(
-        hit,
-        await inert(() =>
-          disabledIndexingStatus("Semantic indexing is disabled. Enable it in the Experimental settings."),
-        ),
-      )
-    }
-
     if (isWorktreePath(dir)) {
       return track(hit, await inert(() => worktreeDisabled()))
     }

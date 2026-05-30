@@ -25,8 +25,10 @@ import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 void Log.init({ print: false })
 
-function run<A>(body: (snapshot: Snapshot.Interface) => Effect.Effect<A>) {
-  return Effect.runPromise(Snapshot.Service.use(body).pipe(Effect.provide(Snapshot.defaultLayer)))
+function run<A>(body: (snapshot: Snapshot.Interface) => Effect.Effect<A, never, Session.Service>) {
+  return Effect.runPromise(
+    Snapshot.Service.use(body).pipe(Effect.provide(Snapshot.defaultLayer), Effect.provide(Session.defaultLayer)),
+  )
 }
 
 afterEach(async () => {
@@ -55,7 +57,8 @@ test("pathological diffFull workload finishes quickly and does not block abort",
     fn: () =>
       run((snapshot) =>
         Effect.gen(function* () {
-          const session = yield* Effect.promise(() => Session.create({}))
+          const sessions = yield* Session.Service
+          const session = yield* sessions.create({})
 
           const before = yield* snapshot.track()
           expect(before).toBeTruthy()

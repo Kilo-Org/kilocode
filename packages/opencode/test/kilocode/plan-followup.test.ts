@@ -1,4 +1,5 @@
 import { describe, expect, spyOn, test } from "bun:test"
+import { Effect } from "effect"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { TuiEvent } from "../../src/cli/cmd/tui/event"
@@ -45,6 +46,19 @@ const todo = {
   },
 }
 
+const store = {
+  create: (input?: Parameters<Session.Interface["create"]>[0]) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.create(input)).pipe(Effect.provide(Session.defaultLayer))),
+  get: (id: SessionID) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.get(id)).pipe(Effect.provide(Session.defaultLayer))),
+  messages: (input: Parameters<Session.Interface["messages"]>[0]) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.messages(input)).pipe(Effect.provide(Session.defaultLayer))),
+  updateMessage: <T extends MessageV2.Info>(msg: T) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.updateMessage(msg)).pipe(Effect.provide(Session.defaultLayer))),
+  updatePart: <T extends MessageV2.Part>(part: T) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.updatePart(part)).pipe(Effect.provide(Session.defaultLayer))),
+}
+
 const model = {
   providerID: ProviderID.make("openai"),
   modelID: ModelID.make("gpt-4"),
@@ -89,8 +103,8 @@ async function seed(input: {
   variant?: string
   tools?: Array<{ tool: string; input: Record<string, unknown>; output: string }>
 }) {
-  const session = await Session.create({})
-  const user = await Session.updateMessage({
+  const session = await store.create({})
+  const user = await store.updateMessage({
     id: MessageID.ascending(),
     role: "user",
     sessionID: session.id,
@@ -100,7 +114,7 @@ async function seed(input: {
     agent: "plan",
     model: input.variant ? { ...model, variant: input.variant } : model,
   })
-  await Session.updatePart({
+  await store.updatePart({
     id: PartID.ascending(),
     messageID: user.id,
     sessionID: session.id,
@@ -137,8 +151,8 @@ async function seed(input: {
     },
     finish: "end_turn",
   }
-  await Session.updateMessage(assistant)
-  await Session.updatePart({
+  await store.updateMessage(assistant)
+  await store.updatePart({
     id: PartID.ascending(),
     messageID: assistant.id,
     sessionID: session.id,
@@ -147,7 +161,7 @@ async function seed(input: {
   })
 
   for (const t of input.tools ?? []) {
-    await Session.updatePart({
+    await store.updatePart({
       id: PartID.ascending(),
       messageID: assistant.id,
       sessionID: session.id,
@@ -165,7 +179,7 @@ async function seed(input: {
     } satisfies MessageV2.ToolPart)
   }
 
-  const messages = await Session.messages({ sessionID: session.id })
+  const messages = await store.messages({ sessionID: session.id })
   return {
     sessionID: session.id,
     messages,
@@ -173,7 +187,7 @@ async function seed(input: {
 }
 
 async function latestUser(sessionID: SessionID) {
-  const messages = await Session.messages({ sessionID })
+  const messages = await store.messages({ sessionID })
   return messages
     .slice()
     .reverse()
@@ -499,7 +513,7 @@ describe("plan follow-up", () => {
       await expect(pending).resolves.toBe("continue")
 
       // The injected user message must be visible when scoped
-      const all = await Session.messages({ sessionID: seeded.sessionID })
+      const all = await store.messages({ sessionID: seeded.sessionID })
       const scoped = KiloSessionPromptQueue.scope(seeded.sessionID, all)
       const injected = scoped.findLast((m) => m.info.role === "user")
       expect(injected).toBeDefined()
@@ -628,8 +642,8 @@ describe("plan follow-up", () => {
       if (!newSessionID || !next) throw new Error("expected follow-up session")
       expect(next.id).toBe(newSessionID)
       expect(next.parentID).toBeUndefined()
-      const planPath = Session.plan(await Session.get(seeded.sessionID), Instance.current)
-      const messages = await Session.messages({ sessionID: newSessionID })
+      const planPath = Session.plan(await store.get(seeded.sessionID), Instance.current)
+      const messages = await store.messages({ sessionID: newSessionID })
       const user = messages.find((item) => item.info.role === "user")
       expect(user?.info.role).toBe("user")
       if (!user || user.info.role !== "user") throw new Error("expected seeded user message")
@@ -736,9 +750,9 @@ describe("plan follow-up", () => {
       if (next) {
         const planPath = await WithInstance.provide({
           directory: dir,
-          fn: async () => Session.plan(await Session.get(seeded.sessionID), Instance.current),
+          fn: async () => Session.plan(await store.get(seeded.sessionID), Instance.current),
         })
-        const messages = await Session.messages({ sessionID: next.id })
+        const messages = await store.messages({ sessionID: next.id })
         const user = messages.find((item) => item.info.role === "user")
         if (!user || user.info.role !== "user") throw new Error("expected user message")
         const part = user.parts.find((item) => item.type === "text")
@@ -946,7 +960,7 @@ describe("plan follow-up", () => {
 
       const newSessionID = created[0]
       if (!newSessionID) throw new Error("expected follow-up session")
-      const messages = await Session.messages({ sessionID: newSessionID })
+      const messages = await store.messages({ sessionID: newSessionID })
       const user = messages.find((item) => item.info.role === "user")
       if (!user || user.info.role !== "user") throw new Error("expected user message")
       const part = user.parts.find((item) => item.type === "text")
@@ -1110,7 +1124,7 @@ describe("plan follow-up", () => {
       // deferred has not resolved yet.
       for (let i = 0; i < 100; i++) {
         if (followup) {
-          const msgs = await Session.messages({ sessionID: followup })
+          const msgs = await store.messages({ sessionID: followup })
           const user = msgs.find((m) => m.info.role === "user")
           const part = user?.parts.find((p) => p.type === "text")
           if (part?.type === "text" && part.text.includes("Implement the following plan:")) break
@@ -1120,7 +1134,7 @@ describe("plan follow-up", () => {
 
       expect(followup).toBeDefined()
       if (!followup) return
-      const initial = await Session.messages({ sessionID: followup })
+      const initial = await store.messages({ sessionID: followup })
       const initialUser = initial.find((m) => m.info.role === "user")
       const initialPart = initialUser?.parts.find((p) => p.type === "text")
       expect(initialPart?.type).toBe("text")
@@ -1134,7 +1148,7 @@ describe("plan follow-up", () => {
       await expect(pending).resolves.toBe("break")
 
       // Same part ID updated in-place — handover section now present.
-      const final = await Session.messages({ sessionID: followup })
+      const final = await store.messages({ sessionID: followup })
       const finalUser = final.find((m) => m.info.role === "user")
       const finalPart = finalUser?.parts.find((p) => p.type === "text")
       if (finalPart?.type !== "text") return
@@ -1211,10 +1225,16 @@ describe("plan follow-up", () => {
 
       expect(followup).toBeDefined()
       if (!followup) return
-      expect(states.some((x) => x.sessionID === followup && x.type === "busy")).toBe(true)
+      const sid = followup
+      expect(states.some((x) => x.sessionID === sid && x.type === "busy")).toBe(true)
 
       const { SessionPrompt } = await import("../../src/session/prompt")
-      await SessionPrompt.cancel(followup)
+      await Effect.runPromise(
+        SessionPrompt.Service.use((svc) => svc.cancel(sid)).pipe(
+          Effect.provide(SessionPrompt.defaultLayer),
+          Effect.scoped,
+        ),
+      )
       deferred.resolve("## Discoveries\n\nexample")
       await expect(pending).resolves.toBe("break")
 
@@ -1287,7 +1307,7 @@ describe("plan follow-up", () => {
       })
 
       await expect(pending).resolves.toBe("break")
-      expect((await Session.messages({ sessionID: seeded.sessionID })).length).toBe(2)
+      expect((await store.messages({ sessionID: seeded.sessionID })).length).toBe(2)
     }))
 
   test("formatTodos - returns empty string for no todos", () => {

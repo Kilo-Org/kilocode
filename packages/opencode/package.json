@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.3.14",
+  "version": "7.3.18",
   "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",
@@ -166,6 +166,7 @@
     "ignore": "7.0.5",
     "immer": "11.1.4",
     "jsonc-parser": "3.3.1",
+    "mammoth": "1.12.0",
     "mime-types": "3.0.2",
     "minimatch": "10.2.5",
     "npm-package-arg": "13.0.2",
@@ -191,6 +192,7 @@
     "web-tree-sitter": "0.25.10",
     "which": "6.0.1",
     "xdg-basedir": "5.1.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "yargs": "18.0.0",
     "zod": "catalog:",
     "zod-to-json-schema": "3.24.5"

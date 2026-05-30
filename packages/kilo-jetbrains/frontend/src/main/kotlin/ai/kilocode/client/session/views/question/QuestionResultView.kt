@@ -18,6 +18,7 @@ import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Font
+import java.awt.Rectangle
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.BoxLayout
@@ -212,6 +213,8 @@ class QuestionResultView(tool: Tool) : PartView() {
                 val size = preferredSize
                 return Dimension(Int.MAX_VALUE, size.height)
             }
+
+            override fun scrollRectToVisible(aRect: Rectangle) {}
 
             private fun withWidth(fallback: Int): Dimension {
                 val width = space()

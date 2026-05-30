@@ -6,6 +6,7 @@ import { MessageV2 } from "../session/message-v2"
 import { Agent } from "../agent/agent"
 import type { SessionPrompt } from "../session/prompt"
 import { Config } from "@/config/config"
+import { Provider } from "@/provider/provider" // kilocode_change
 import { KiloTask } from "../kilocode/tool/task" // kilocode_change
 import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode_change
@@ -56,6 +57,7 @@ export const TaskTool = Tool.define(
     const agent = yield* Agent.Service
     const config = yield* Config.Service
     const sessions = yield* Session.Service
+    const provider = yield* Provider.Service // kilocode_change
 
     const run = Effect.fn("TaskTool.execute")(function* (
       params: Schema.Schema.Type<typeof Parameters>,
@@ -151,6 +153,7 @@ export const TaskTool = Tool.define(
           modelID: msg.info.modelID,
           providerID: msg.info.providerID,
         },
+        provider,
       })
       const model = selected.model
       const variant = selected.variant

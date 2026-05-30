@@ -32,7 +32,8 @@ export namespace WorktreeFamily {
       }
     }
 
-    const dirs = [ctx.worktree, ...(yield* Effect.promise(() => Project.sandboxes(ctx.project.id)))]
+    const project = yield* Project.Service
+    const dirs = [ctx.worktree, ...(yield* project.sandboxes(ctx.project.id))]
     return [...new Set(dirs.map((dir) => Filesystem.resolve(dir)))]
   })
 }

@@ -2,6 +2,8 @@
 
 AI coding agent plugin for JetBrains IDEs.
 
+To try the v7 Early Access Program plugin, follow the [JetBrains EAP installation guide](https://kilo.ai/docs/code-with-ai/platforms/jetbrains#jetbrains-early-access).
+
 ---
 
 ## Set up your environment

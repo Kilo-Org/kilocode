@@ -1,8 +1,10 @@
+import { Effect } from "effect" // kilocode_change - translate Question not-found failures for the legacy route
 import { Hono } from "hono"
 import { describeRoute, validator } from "hono-openapi"
 import { resolver } from "hono-openapi"
 import { QuestionID } from "@/question/schema"
 import { Question } from "@/question"
+import { NotFoundError } from "@/storage/storage" // kilocode_change - expose upstream Question not-found behavior on legacy routes
 import z from "zod"
 import { errors } from "../../error"
 import { lazy } from "@/util/lazy"
@@ -69,10 +71,18 @@ export const QuestionRoutes = lazy(() =>
           const params = c.req.valid("param")
           const json = c.req.valid("json")
           const svc = yield* Question.Service
-          yield* svc.reply({
-            requestID: params.requestID,
-            answers: json.answers,
-          })
+          // kilocode_change start - preserve documented 404 for unknown requests
+          yield* svc
+            .reply({
+              requestID: params.requestID,
+              answers: json.answers,
+            })
+            .pipe(
+              Effect.mapError(
+                () => new NotFoundError({ message: `Question request not found: ${params.requestID}` }),
+              ),
+            )
+          // kilocode_change end
           return true
         }),
     )
@@ -104,7 +114,15 @@ export const QuestionRoutes = lazy(() =>
         jsonRequest("QuestionRoutes.reject", c, function* () {
           const params = c.req.valid("param")
           const svc = yield* Question.Service
-          yield* svc.reject(params.requestID)
+          // kilocode_change start - preserve documented 404 for unknown requests
+          yield* svc
+            .reject(params.requestID)
+            .pipe(
+              Effect.mapError(
+                () => new NotFoundError({ message: `Question request not found: ${params.requestID}` }),
+              ),
+            )
+          // kilocode_change end
           return true
         }),
     ),

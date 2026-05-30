@@ -111,6 +111,20 @@ export namespace KiloSessions {
     })
   }
 
+  async function model(providerID: ProviderID, modelID: ModelID) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(Provider.Service.use((svc) => svc.getModel(providerID, modelID)))
+  }
+
+  async function models(refs: Array<{ providerID: string; modelID: string }>) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(
+      Provider.Service.use((svc) =>
+        Effect.all(refs.map((ref) => svc.getModel(ProviderID.make(ref.providerID), ModelID.make(ref.modelID)))),
+      ),
+    )
+  }
+
   type Client = {
     url: string
     fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -176,13 +190,17 @@ export namespace KiloSessions {
   const STATUS_TIMEOUT_MS = 3_000
 
   async function deriveStatus(sessionID: string): Promise<"idle" | "busy" | "question" | "permission" | "retry"> {
-    const permissions = (await Permission.list()).filter((p) => p.sessionID === sessionID)
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    const permissions = (
+      await AppRuntime.runPromise(Permission.Service.use((svc) => svc.list()))
+    ).filter((p) => p.sessionID === sessionID)
     if (permissions.length > 0) return "permission"
 
-    const questions = (await Question.list()).filter((q) => q.sessionID === sessionID)
+    const questions = (
+      await AppRuntime.runPromise(Question.Service.use((svc) => svc.list()))
+    ).filter((q) => q.sessionID === sessionID)
     if (questions.length > 0) return "question"
 
-    const { AppRuntime } = await import("@/effect/app-runtime")
     const status = await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.get(SessionID.make(sessionID))))
     if (status.type === "offline") return "retry"
     return status.type
@@ -198,6 +216,7 @@ export namespace KiloSessions {
     Effect.gen(function* () {
       const bus = yield* Bus.Service
       const config = yield* Config.Service
+      const sessions = yield* Session.Service
       const state = yield* InstanceState.make(
         Effect.fn("KiloSessions.state")(function* () {
           if (ingestDisabled) return
@@ -223,7 +242,7 @@ export namespace KiloSessions {
           })
           yield* watch(Session.Event.Updated, async (evt) => {
             const sessionID = evt.properties.sessionID
-            const session = await Session.get(sessionID).catch(() => null)
+            const session = await Effect.runPromise(sessions.get(sessionID).pipe(Effect.orElseSucceed(() => null)))
             if (!session) return
             await ingest.sync(sessionID, [
               { type: "kilo_meta", data: await meta(sessionID) },
@@ -233,11 +252,8 @@ export namespace KiloSessions {
           yield* watch(MessageV2.Event.Updated, async (evt) => {
             await ingest.sync(evt.properties.info.sessionID, [{ type: "message", data: evt.properties.info }])
             if (evt.properties.info.role !== "user") return
-            const model = await Provider.getModel(
-              evt.properties.info.model.providerID,
-              evt.properties.info.model.modelID,
-            )
-            await ingest.sync(evt.properties.info.sessionID, [{ type: "model", data: [model] }])
+            const mdl = await model(evt.properties.info.model.providerID, evt.properties.info.model.modelID)
+            await ingest.sync(evt.properties.info.sessionID, [{ type: "model", data: [mdl] }])
           })
           yield* watch(MessageV2.Event.PartUpdated, (evt) =>
             ingest.sync(evt.properties.part.sessionID, [{ type: "part", data: evt.properties.part }]),
@@ -313,7 +329,11 @@ export namespace KiloSessions {
     }),
   )
 
-  export const defaultLayer = layer.pipe(Layer.provide(Bus.layer), Layer.provide(Config.defaultLayer))
+  export const defaultLayer = layer.pipe(
+    Layer.provide(Bus.layer),
+    Layer.provide(Config.defaultLayer),
+    Layer.provide(Session.defaultLayer),
+  )
 
   export async function enableRemote() {
     if (remote) return
@@ -343,7 +363,7 @@ export namespace KiloSessions {
       const getSessions = async () => {
         const [gitUrl, gitBranch] = await Promise.all([
           getGitUrl().catch(() => undefined),
-          Vcs.branch().catch(() => undefined),
+          branch().catch(() => undefined),
         ])
         const { AppRuntime } = await import("@/effect/app-runtime")
         const statusMap = await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.list()))
@@ -351,19 +371,24 @@ export namespace KiloSessions {
         const ids = new Set(Object.keys(statuses))
         for (const id of focused) ids.add(id)
         for (const id of opened) ids.add(id)
-        const results = await Promise.all(
-          [...ids].map(async (id) => {
-            const session = await Session.get(SessionID.make(id)).catch(() => undefined)
-            if (!session) return undefined
-            return {
-              id,
-              status: statuses[id]?.type ?? "idle",
-              title: session.title,
-              parentSessionId: session.parentID,
-              gitUrl,
-              gitBranch,
-            }
-          }),
+        const results = await AppRuntime.runPromise(
+          Session.Service.use((svc) =>
+            Effect.all(
+              [...ids].map((id) =>
+                svc.get(SessionID.make(id)).pipe(
+                  Effect.map((session) => ({
+                    id,
+                    status: statuses[id]?.type ?? "idle" as const,
+                    title: session.title,
+                    parentSessionId: session.parentID,
+                    gitUrl,
+                    gitBranch,
+                  })),
+                  Effect.orElseSucceed(() => undefined),
+                ),
+              ),
+            ),
+          ),
         )
         const sessions = results.filter((r): r is NonNullable<typeof r> => !!r)
         return {
@@ -633,15 +658,21 @@ export namespace KiloSessions {
   async function fullSync(sessionId: string) {
     log.info("full sync", { sessionId })
 
-    const session = await Session.get(SessionID.make(sessionId))
-    const diffs = await SessionSummary.diff({ sessionID: SessionID.make(sessionId) })
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    const [session, diffs] = await AppRuntime.runPromise(
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const summary = yield* SessionSummary.Service
+        return yield* Effect.all([
+          sessions.get(SessionID.make(sessionId)),
+          summary.diff({ sessionID: SessionID.make(sessionId) }),
+        ])
+      }),
+    )
     const messages = await Array.fromAsync(MessageV2.stream(SessionID.make(sessionId)))
     messages.reverse()
-    const models = await Promise.all(
-      messages
-        .filter((m) => m.info.role === "user")
-        .map((m) => (m.info as SDK.UserMessage).model)
-        .map((m) => Provider.getModel(ProviderID.make(m.providerID), ModelID.make(m.modelID)).then((m) => m)),
+    const mdls = await models(
+      messages.filter((m) => m.info.role === "user").map((m) => (m.info as SDK.UserMessage).model),
     )
 
     await ingest.sync(sessionId, [
@@ -664,7 +695,7 @@ export namespace KiloSessions {
       },
       {
         type: "model",
-        data: models,
+        data: mdls,
       },
       {
         type: "session_status",
@@ -712,11 +743,16 @@ export namespace KiloSessions {
     })
   }
 
+  async function branch() {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(Vcs.Service.use((svc) => svc.branch()))
+  }
+
   async function meta(sessionId?: string) {
     const override = sessionId ? KiloSession.resolvePlatform(sessionId) : undefined
     const platform = override || process.env["KILO_PLATFORM"] || "cli"
     const orgId = await getOrgId()
-    const gitBranch = await Vcs.branch().catch(() => undefined)
+    const gitBranch = await branch().catch(() => undefined)
     const gitUrl = await getGitUrl().catch(() => undefined)
 
     return {

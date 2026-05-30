@@ -6,6 +6,9 @@ export const dict = {
   "provider.connect.kiloGateway.visit.prefix": "",
   "provider.connect.kiloGateway.visit.link": "kilo.ai",
   "provider.connect.kiloGateway.visit.suffix": "를 방문하여 API 키를 받으세요.",
+  "provider.connect.kiloGateway.byok.prefix": "더 많은 사용 통계를 보려면 ",
+  "provider.connect.kiloGateway.byok.link": "Kilo's Gateway를 통해 BYOK",
+  "provider.connect.kiloGateway.byok.suffix": "를 사용하세요.",
 
   // Provider dialog translations
   "dialog.provider.group.recommended": "추천",

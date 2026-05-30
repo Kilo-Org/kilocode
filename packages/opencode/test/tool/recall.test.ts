@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { $ } from "bun"
 import { Effect } from "effect"
+import { Session } from "../../src/session/session"
 import path from "path"
 import { WithInstance } from "../../src/project/with-instance"
 import { RecallTool } from "../../src/tool/recall"
@@ -32,6 +33,9 @@ afterEach(async () => {
   await resetDatabase()
 })
 
+const create = (title: string) =>
+  Effect.runPromise(Session.Service.use((svc) => svc.create({ title })).pipe(Effect.provide(Session.defaultLayer)))
+
 describe("tool.recall", () => {
   test("search is limited to the current project worktrees", async () => {
     await using first = await tmpdir({ git: true })
@@ -43,18 +47,17 @@ describe("tool.recall", () => {
       await Bun.write(path.join(first.path, ".git", "opencode"), "stale-project-id")
 
       try {
-        const { Session } = await import("../../src/session/session")
         await WithInstance.provide({
           directory: first.path,
-          fn: async () => Session.create({ title: "search-target root" }),
+          fn: () => create("search-target root"),
         })
         await WithInstance.provide({
           directory: worktree,
-          fn: async () => Session.create({ title: "search-target worktree" }),
+          fn: () => create("search-target worktree"),
         })
         await WithInstance.provide({
           directory: second.path,
-          fn: async () => Session.create({ title: "search-target other" }),
+          fn: () => create("search-target other"),
         })
 
         const result = await WithInstance.provide({
@@ -82,10 +85,9 @@ describe("tool.recall", () => {
     await using second = await tmpdir({ git: true })
 
     try {
-      const { Session } = await import("../../src/session/session")
       const session = await WithInstance.provide({
         directory: second.path,
-        fn: async () => Session.create({ title: "other-project-session" }),
+        fn: () => create("other-project-session"),
       })
 
       const err = await WithInstance.provide({
@@ -115,10 +117,9 @@ describe("tool.recall", () => {
       await Bun.write(path.join(first.path, ".git", "opencode"), "stale-project-id")
 
       try {
-        const { Session } = await import("../../src/session/session")
         const session = await WithInstance.provide({
           directory: worktree,
-          fn: async () => Session.create({ title: "worktree readable" }),
+          fn: () => create("worktree readable"),
         })
 
         const result = await WithInstance.provide({
