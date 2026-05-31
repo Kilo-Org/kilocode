@@ -1,5 +1,6 @@
 import { Agent } from "@/agent/agent"
-import { Bus } from "@/bus"
+import { SessionLegacy } from "@opencode-ai/core/session/legacy"
+import { EventV2Bridge } from "@/event-v2-bridge"
 import { Command } from "@/command"
 import { Permission } from "@/permission"
 import { PermissionID } from "@/permission/schema"
@@ -56,7 +57,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     const statusSvc = yield* SessionStatus.Service
     const todoSvc = yield* Todo.Service
     const summary = yield* SessionSummary.Service
-    const bus = yield* Bus.Service
+    const events = yield* EventV2Bridge.Service
     const scope = yield* Scope.Scope
 
     const list = Effect.fn("SessionHttpApi.list")(function* (ctx: { query: typeof ListQuery.Type }) {
@@ -316,7 +317,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
             yield* Effect.logError("prompt_async failed").pipe(
               Effect.annotateLogs({ sessionID: ctx.params.sessionID, cause }),
             )
-            yield* bus.publish(Session.Event.Error, {
+            yield* events.publish(Session.Event.Error, {
               sessionID: ctx.params.sessionID,
               error: new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(),
             })
@@ -395,10 +396,10 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
 
     const updatePart = Effect.fn("SessionHttpApi.updatePart")(function* (ctx: {
       params: { sessionID: SessionID; messageID: MessageID; partID: PartID }
-      payload: typeof MessageV2.Part.Type
+      payload: typeof SessionLegacy.Part.Type
     }) {
       yield* requireSession(ctx.params.sessionID)
-      const payload = ctx.payload as MessageV2.Part
+      const payload = ctx.payload as SessionLegacy.Part
       if (
         payload.id !== ctx.params.partID ||
         payload.messageID !== ctx.params.messageID ||
