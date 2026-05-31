@@ -36,13 +36,14 @@ describe("LocationServiceMap", () => {
               const transform = yield* catalog.transform()
               yield* transform((editor) => editor.provider.update(ProviderV2.ID.make("test"), () => {}))
               return yield* catalog.provider.all()
-            }).pipe(
-              Effect.scoped,
-              Effect.provide(LocationServiceMap.get({ directory: AbsolutePath.make(directory) })),
-            )
+            }).pipe(Effect.scoped, Effect.provide(LocationServiceMap.get({ directory: AbsolutePath.make(directory) })))
 
-          expect((yield* update(blocked.path)).some((provider) => provider.id === ProviderV2.ID.make("test"))).toBe(false)
-          expect((yield* update(allowed.path)).some((provider) => provider.id === ProviderV2.ID.make("test"))).toBe(true)
+          expect((yield* update(blocked.path)).some((provider) => provider.id === ProviderV2.ID.make("test"))).toBe(
+            false,
+          )
+          expect((yield* update(allowed.path)).some((provider) => provider.id === ProviderV2.ID.make("test"))).toBe(
+            true,
+          )
         }),
       ),
     ),
