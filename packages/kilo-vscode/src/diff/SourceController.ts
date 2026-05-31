@@ -181,8 +181,12 @@ export class SourceController {
       return
     }
     const diff = await source.fetchFile(file).catch(() => null)
-    // Drop the response if the source has been disposed/swapped while we waited.
-    if (this.epoch !== epoch) return
+    // Discard stale content after disposal/swap, but still complete the request
+    // so consumers can clear per-file loading state.
+    if (this.epoch !== epoch) {
+      this.send(this.messages.diffFile(source, file, null))
+      return
+    }
     this.send(this.messages.diffFile(source, file, diff))
   }
 

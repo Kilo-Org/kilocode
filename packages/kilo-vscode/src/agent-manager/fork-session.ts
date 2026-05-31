@@ -3,10 +3,12 @@ import { getErrorMessage } from "../kilo-provider-utils"
 import { TelemetryProxy, TelemetryEventName } from "../services/telemetry"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import { PLATFORM } from "./constants"
+import { recordForkHandoff } from "./fork-handoff"
 
 export interface ForkContext {
   getClient: () => KiloClient
   state: WorktreeStateManager | undefined
+  directory: string | undefined
   postError: (message: string) => void
   registerWorktreeSession: (sessionId: string, directory: string) => void
   pushState: () => void
@@ -37,8 +39,8 @@ export async function forkSession(
   }
 
   const directory = (() => {
-    if (!worktreeId || !ctx.state) return undefined
-    return ctx.state.getWorktree(worktreeId)?.path
+    if (!worktreeId || !ctx.state) return ctx.directory
+    return ctx.state.getWorktree(worktreeId)?.path ?? ctx.directory
   })()
 
   let forked: Session
@@ -62,6 +64,10 @@ export async function forkSession(
     ctx.state.addSession(forked.id, worktreeId)
     if (directory) ctx.registerWorktreeSession(forked.id, directory)
   }
+
+  await recordForkHandoff({ client, sessionId: forked.id, directory }).catch((err) => {
+    ctx.log("forkSession: failed to record fork handoff:", getErrorMessage(err))
+  })
 
   ctx.pushState()
   ctx.notifyForked(forked, sessionId, worktreeId)

@@ -3,6 +3,7 @@ import { prettifyError } from "zod/v4"
 import type { CloudSessionMessage, IndexingStatus } from "./services/cli-backend/types"
 import type { PartBatch, PartUpdate } from "./kilo-provider/session-stream-scheduler"
 import type { PartRemove } from "./shared/stream-messages"
+import * as path from "path"
 
 export { SessionStreamScheduler } from "./kilo-provider/session-stream-scheduler"
 
@@ -222,6 +223,7 @@ export interface SessionRefreshContext {
   connectionState: "connecting" | "connected" | "disconnected" | "error"
   listSessions: ((dir: string) => Promise<Session[]>) | null
   sessionDirectories: Map<string, string>
+  worktreeDirectories?: () => string[]
   workspaceDirectory: string
   postMessage(message: unknown): void
 }
@@ -245,7 +247,7 @@ export async function loadSessions(ctx: SessionRefreshContext): Promise<string |
 
   const sessions = await list(ctx.workspaceDirectory)
   const projectID = sessions[0]?.projectID
-  const worktreeDirs = new Set(ctx.sessionDirectories.values())
+  const worktreeDirs = new Set([...(ctx.worktreeDirectories?.() ?? []), ...ctx.sessionDirectories.values()])
   const failed = new Set<string>()
   const extra = await Promise.all(
     [...worktreeDirs].map((dir) =>
@@ -339,6 +341,7 @@ export function resolveNewSessionDirectory(input: {
   currentSessionID?: string
   contextSessionID?: string
   agentManagerContext?: string
+  contextDirectory?: string
   sessionDirectories: Map<string, string>
   workspaceDirectory: string
 }) {
@@ -350,6 +353,8 @@ export function resolveNewSessionDirectory(input: {
     })
   }
 
+  if (input.contextDirectory) return input.contextDirectory
+
   return resolveContextDirectory({
     currentSessionID: input.currentSessionID,
     contextSessionID: input.contextSessionID,
@@ -357,6 +362,17 @@ export function resolveNewSessionDirectory(input: {
     workspaceDirectory: input.workspaceDirectory,
     forceWorkspaceRoot: input.agentManagerContext === "local",
   })
+}
+
+export function sameDirectory(a: string, b: string): boolean {
+  if (!a || !b) return false
+
+  const left = path.resolve(a)
+  const right = path.resolve(b)
+  if (path.relative(left, right) === "") return true
+
+  if (process.platform !== "win32") return false
+  return path.relative(left.toLowerCase(), right.toLowerCase()) === ""
 }
 
 export type WebviewMessage =
@@ -372,6 +388,7 @@ export type WebviewMessage =
       message: Record<string, unknown>
     }
   | { type: "sessionStatus"; sessionID: string; status: string; attempt?: number; message?: string; next?: number }
+  | { type: "sessionTurnClosed"; sessionID: string; reason: "completed" | "error" | "interrupted" }
   | {
       type: "permissionRequest"
       permission: {
@@ -493,6 +510,12 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
         ...extra,
       }
     }
+    case "session.turn.close":
+      return {
+        type: "sessionTurnClosed",
+        sessionID: event.properties.sessionID,
+        reason: event.properties.reason,
+      }
     case "permission.asked":
       return {
         type: "permissionRequest",

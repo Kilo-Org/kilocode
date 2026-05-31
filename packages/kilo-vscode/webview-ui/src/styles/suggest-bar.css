@@ -45,5 +45,17 @@
     align-items: center;
     gap: 6px;
     flex-shrink: 0;
+
+    [data-component="button"] {
+      min-width: 100px;
+      white-space: normal;
+    }
+  }
+}
+
+@media (max-width: 700px) {
+  [data-component="suggest-bar"] {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

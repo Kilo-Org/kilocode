@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "本地",
+  "agentManager.sidebar.collapse": "折叠侧边栏",
+  "agentManager.sidebar.expand": "显示侧边栏",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "会话",
   "agentManager.notGitRepo": "不是 git 仓库",
@@ -53,7 +55,6 @@ export const dict = {
   "agentManager.tabsMenu.search": "搜索标签页...",
   "agentManager.tabsMenu.empty": "无匹配标签页",
   "agentManager.tabsMenu.status.waiting": "等待",
-  "agentManager.tabsMenu.status.working": "工作中",
   "agentManager.tabsMenu.status.retry": "重试",
 
   "agentManager.terminal.new": "新建终端标签页",

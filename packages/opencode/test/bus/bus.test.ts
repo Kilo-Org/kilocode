@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { Schema } from "effect"
 import { Bus } from "../../src/bus"
 import { BusEvent } from "../../src/bus/bus-event"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 const TestEvent = {
@@ -11,7 +11,7 @@ const TestEvent = {
 }
 
 function withInstance(directory: string, fn: () => Promise<void>) {
-  return Instance.provide({ directory, fn })
+  return WithInstance.provide({ directory, fn })
 }
 
 describe("Bus", () => {

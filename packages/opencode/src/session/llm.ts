@@ -22,9 +22,16 @@ import { Auth } from "@/auth"
 // kilocode_change start
 import { DEFAULT_HEADERS } from "@/kilocode/const"
 import { getKiloProjectId } from "@/kilocode/project-id"
-import { HEADER_PROJECTID, HEADER_MACHINEID, HEADER_TASKID } from "@kilocode/kilo-gateway"
+import {
+  HEADER_FEATURE,
+  HEADER_PARENT_TASKID,
+  HEADER_PROJECTID,
+  HEADER_MACHINEID,
+  HEADER_TASKID,
+} from "@kilocode/kilo-gateway"
 import { Identity } from "@kilocode/kilo-telemetry"
-import { makeRuntime } from "@/effect/run-service"
+import { KiloSession } from "@/kilocode/session"
+import { KiloLLM } from "@/kilocode/session/llm"
 // kilocode_change end
 import { Installation } from "@/installation"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
@@ -63,7 +70,6 @@ export type Event = Result["fullStream"] extends AsyncIterable<infer T> ? T : ne
 
 export interface Interface {
   readonly stream: (input: StreamInput) => Stream.Stream<Event, unknown>
-  readonly raw: (input: StreamRequest) => Effect.Effect<Result> // kilocode_change - raw streamText result for Kilo helpers
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/LLM") {}
@@ -104,6 +110,9 @@ const live: Layer.Layer<
         ],
         { concurrency: "unbounded" },
       )
+      // kilocode_change start - attribute Kilo gateway usage to the root product session
+      const attr = KiloSession.attribution(input.sessionID)
+      // kilocode_change end
 
       // TODO: move this to a proper hook
       const isOpenaiOauth = item.id === "openai" && info?.type === "oauth"
@@ -223,6 +232,14 @@ const live: Layer.Layer<
       // kilocode_change end
 
       const tools = resolveTools(input)
+      // kilocode_change start - cap maxOutputTokens to fit within context after estimating real input size
+      params.maxOutputTokens = KiloLLM.capOutputTokens({
+        model: input.model,
+        messages,
+        tools,
+        configured: params.maxOutputTokens,
+      })
+      // kilocode_change end
 
       // LiteLLM and some Anthropic proxies require the tools parameter to be present
       // when message history contains tool calls, even if no tools are being used.
@@ -418,6 +435,8 @@ const live: Layer.Layer<
           ...(isKilo && kiloProjectId ? { [HEADER_PROJECTID]: kiloProjectId } : {}),
           ...(isKilo && machineId ? { [HEADER_MACHINEID]: machineId } : {}),
           ...(isKilo ? { [HEADER_TASKID]: input.sessionID } : {}),
+          ...(isKilo && input.parentSessionID ? { [HEADER_PARENT_TASKID]: input.parentSessionID } : {}),
+          ...(isKilo && attr.feature ? { [HEADER_FEATURE]: attr.feature } : {}),
           // kilocode_change end
           ...input.model.headers,
           ...headers,
@@ -460,8 +479,7 @@ const live: Layer.Layer<
         ),
       )
 
-    // kilocode_change - expose raw streamText result for Kilo helpers; Effect.orDie collapses AuthError into a defect
-    return Service.of({ stream, raw: (input) => run(input).pipe(Effect.orDie) })
+    return Service.of({ stream })
   }),
 )
 
@@ -475,13 +493,6 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(Plugin.defaultLayer),
   ),
 )
-
-// kilocode_change start - keep raw async stream wrapper for Kilo callsites during Effect migration
-const runtime = makeRuntime(Service, defaultLayer)
-export async function stream(input: StreamRequest) {
-  return runtime.runPromise((svc) => svc.raw(input), { signal: input.abort })
-}
-// kilocode_change end
 
 function resolveTools(input: Pick<StreamInput, "tools" | "agent" | "permission" | "user">) {
   const disabled = Permission.disabled(

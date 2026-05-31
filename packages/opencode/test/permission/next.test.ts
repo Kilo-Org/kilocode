@@ -10,13 +10,26 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Permission } from "../../src/permission"
 import { PermissionID } from "../../src/permission/schema"
 import { Instance } from "../../src/project/instance"
-import { InstanceStore } from "../../src/project/instance-store"
-import { disposeAllInstances, provideInstance, provideTmpdirInstance, tmpdirScoped } from "../fixture/fixture"
+import { WithInstance } from "../../src/project/with-instance"
+import { InstanceRuntime } from "../../src/project/instance-runtime"
+import {
+  disposeAllInstances,
+  provideInstance,
+  provideTmpdirInstance,
+  reloadTestInstance,
+  tmpdirScoped,
+} from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { MessageID, SessionID } from "../../src/session/schema"
 
 const bus = Bus.layer
-const env = Layer.mergeAll(Permission.layer.pipe(Layer.provide(bus)), bus, CrossSpawnSpawner.defaultLayer)
+// kilocode_change start
+const env = Layer.mergeAll(
+  Permission.layer.pipe(Layer.provide(bus), Layer.provide(Config.defaultLayer)),
+  bus,
+  CrossSpawnSpawner.defaultLayer,
+)
+// kilocode_change end
 const it = testEffect(env)
 
 afterEach(async () => {
@@ -29,7 +42,10 @@ afterAll(async () => {
   for (const file of ["kilo.jsonc", "kilo.json", "config.json", "opencode.json", "opencode.jsonc"]) {
     await fs.rm(path.join(dir, file), { force: true }).catch(() => {})
   }
-  await Config.invalidate(true)
+  await Effect.runPromise(
+    Config.Service.use((svc) => svc.invalidate()).pipe(Effect.scoped, Effect.provide(Config.defaultLayer)),
+  )
+  await InstanceRuntime.disposeAllInstances()
 })
 // kilocode_change end
 
@@ -1112,7 +1128,7 @@ it.live("pending permission rejects on instance dispose", () =>
 
     expect(yield* waitForPending(1).pipe(run)).toHaveLength(1)
     yield* Effect.promise(() =>
-      Instance.provide({ directory: dir, fn: () => void InstanceStore.disposeInstance(Instance.current) }),
+      WithInstance.provide({ directory: dir, fn: () => void InstanceRuntime.disposeInstance(Instance.current) }),
     )
 
     const exit = yield* Fiber.await(fiber)
@@ -1136,7 +1152,7 @@ it.live("pending permission rejects on instance reload", () =>
     }).pipe(run, Effect.forkScoped)
 
     expect(yield* waitForPending(1).pipe(run)).toHaveLength(1)
-    yield* Effect.promise(() => InstanceStore.reloadInstance({ directory: dir }))
+    yield* Effect.promise(() => reloadTestInstance({ directory: dir }))
 
     const exit = yield* Fiber.await(fiber)
     expect(Exit.isFailure(exit)).toBe(true)
@@ -1233,7 +1249,7 @@ it.live("ask - abort should clear pending request", () =>
 
     const pending = yield* waitForPending(1).pipe(run)
     expect(pending).toHaveLength(1)
-    yield* Effect.promise(() => InstanceStore.reloadInstance({ directory: dir }))
+    yield* Effect.promise(() => reloadTestInstance({ directory: dir }))
 
     const exit = yield* Fiber.await(fiber)
     expect(Exit.isFailure(exit)).toBe(true)

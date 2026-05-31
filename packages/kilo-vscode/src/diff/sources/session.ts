@@ -71,6 +71,7 @@ export function toSessionDiffFile(raw: SnapshotFileDiff): DiffFile {
     file: raw.file,
     before: view ? text(view, "deletions") : "",
     after: view ? text(view, "additions") : "",
+    patch: raw.patch,
     additions: raw.additions,
     deletions: raw.deletions,
     status: raw.status,

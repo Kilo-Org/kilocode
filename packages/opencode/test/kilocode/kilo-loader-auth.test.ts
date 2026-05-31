@@ -1,169 +1,139 @@
 // kilocode_change - new file
-//
-// Tests that the kilo custom loader keeps paid models visible without authentication.
-// Mocks fetchKiloModels from @kilocode/kilo-gateway to avoid real network
-// calls (which fail on Windows CI).
+// Tests that unauthenticated Kilo models are assembled with paid models and autoloaded anonymously.
 
-import { test, expect, mock } from "bun:test"
-import path from "path"
-import { unlink } from "fs/promises"
-
-// Bun's mock.module() is process-wide and permanent — it replaces the module
-// for ALL test files in the same runner process. To avoid breaking other tests
-// that import @kilocode/kilo-gateway, we spread the real exports and only
-// override fetchKiloModels with a stub that returns both free and paid models.
-const real = await import("@kilocode/kilo-gateway")
-
-mock.module("@kilocode/kilo-gateway", () => ({
-  ...real,
-  fetchKiloModels: async () => ({
-    models: {
-      "free-model": {
-        id: "free-model",
-        name: "Free Model",
-        cost: { input: 0, output: 0 },
-        limit: { context: 128000, output: 4096 },
-      },
-      "paid-model": {
-        id: "paid-model",
-        name: "Paid Model",
-        cost: { input: 1.0, output: 2.0 },
-        limit: { context: 128000, output: 4096 },
-      },
-    },
-  }),
-}))
-
-import { tmpdir } from "../fixture/fixture"
-import { Global } from "@opencode-ai/core/global"
-import { Instance } from "../../src/project/instance"
-import { Provider } from "../../src/provider/provider"
-import { ProviderID } from "../../src/provider/schema"
-import { Filesystem } from "../../src/util/filesystem"
-import { ModelCache } from "../../src/provider/model-cache"
+import { expect } from "bun:test"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { Effect, Layer } from "effect"
+import { FetchHttpClient } from "effect/unstable/http"
+import { kiloCustomLoaders } from "../../src/kilocode/provider/provider"
 import { Auth } from "../../src/auth"
+import { ModelCache } from "../../src/provider/model-cache"
+import { ModelsDev } from "../../src/provider/models"
+import { Provider } from "../../src/provider/provider"
+import { TestConfig } from "../fixture/config"
+import { testEffect } from "../lib/effect"
 
-function paid(providers: Awaited<ReturnType<typeof Provider.list>>) {
-  const item = providers[ProviderID.kilo]
-  expect(item).toBeDefined()
-  return Object.values(item.models).filter((model) => model.cost.input > 0).length
+const input = {
+  id: "kilo",
+  env: ["KILO_API_KEY"],
+  models: {
+    "free-model": {
+      id: "free-model",
+      name: "Free Model",
+      cost: { input: 0, output: 0 },
+      limit: { context: 128000, output: 4096 },
+    },
+    "paid-model": {
+      id: "paid-model",
+      name: "Paid Model",
+      cost: { input: 1, output: 2 },
+      limit: { context: 128000, output: 4096 },
+    },
+  },
 }
 
-test("kilo loader keeps paid models without auth and when config apiKey is present", async () => {
-  // Reset state that may be stale from other test files sharing this process.
-  // Auth.set from other tests persists in the shared auth.json,
-  // and ModelCache keeps fetched models in a TTL map.
-  // ModelsDev.Data was removed in v1.14.33 — instance-store disposal handles cache invalidation.
-  await Auth.remove("kilo")
-  ModelCache.clear("kilo")
+const seed: Record<string, ModelsDev.Provider> = {
+  apertis: {
+    id: "apertis",
+    name: "Apertis",
+    env: ["APERTIS_API_KEY"],
+    models: {},
+  },
+}
 
-  await using base = await tmpdir({
-    init: async (dir) => {
-      await Bun.write(
-        path.join(dir, "kilo.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-        }),
-      )
-    },
-  })
+const auth = Layer.mock(Auth.Service)({
+  get: () => Effect.succeed(undefined),
+})
 
-  const none = await Instance.provide({
-    directory: base.path,
-    fn: async () => paid(await Provider.list()),
-  })
+const files = Layer.effect(
+  AppFileSystem.Service,
+  Effect.gen(function* () {
+    const fs = yield* AppFileSystem.Service
+    return AppFileSystem.Service.of({
+      ...fs,
+      readJson: () => Effect.succeed(seed),
+      stat: () => fs.stat(import.meta.path),
+    })
+  }),
+).pipe(Layer.provide(AppFileSystem.defaultLayer))
 
-  await using keyed = await tmpdir({
-    init: async (dir) => {
-      await Bun.write(
-        path.join(dir, "kilo.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          provider: {
-            kilo: {
-              options: {
-                apiKey: "test-key",
-              },
+function load(data?: { auth?: object; config?: object; env?: Record<string, string | undefined> }) {
+  return kiloCustomLoaders({
+    auth: () => Effect.succeed(data?.auth),
+    config: () => Effect.succeed(data?.config ?? {}),
+    env: () => Effect.succeed(data?.env ?? {}),
+    get: () => Effect.succeed(undefined),
+  }).kilo(input)
+}
+
+function layer() {
+  const cfg = TestConfig.layer()
+  const models = Layer.succeed(
+    ModelCache.KiloModelsService,
+    ModelCache.KiloModelsService.of({
+      fetch: () =>
+        Effect.succeed({
+          models: {
+            "paid-model": {
+              id: "paid-model",
+              name: "Paid Model",
+              cost: { input: 1, output: 2 },
+              limit: { context: 128000, output: 4096 },
             },
           },
         }),
-      )
-    },
-  })
+    }),
+  )
+  const cache = Layer.fresh(ModelCache.layer).pipe(
+    Layer.provide(FetchHttpClient.layer),
+    Layer.provide(cfg),
+    Layer.provide(auth),
+    Layer.provide(models),
+  )
+  return Layer.fresh(ModelsDev.layer).pipe(
+    Layer.provide(FetchHttpClient.layer),
+    Layer.provide(files),
+    Layer.provide(cfg),
+    Layer.provide(auth),
+    Layer.provide(cache),
+  )
+}
 
-  const count = await Instance.provide({
-    directory: keyed.path,
-    fn: async () => paid(await Provider.list()),
-  })
+const it = testEffect(Layer.empty)
 
-  expect(none).toBeGreaterThan(0)
-  expect(count).toBeGreaterThan(0)
-})
+it.live("assembles paid Kilo models without auth", () =>
+  Effect.gen(function* () {
+    const providers = yield* ModelsDev.Service.use((models) => models.get()).pipe(Effect.provide(layer()))
+    const kilo = Provider.fromModelsDevProvider(providers.kilo)
 
-test("kilo loader keeps paid models without auth and when auth exists", async () => {
-  await Auth.remove("kilo")
-  ModelCache.clear("kilo")
-
-  await using base = await tmpdir({
-    init: async (dir) => {
-      await Bun.write(
-        path.join(dir, "kilo.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-        }),
-      )
-    },
-  })
-
-  const none = await Instance.provide({
-    directory: base.path,
-    fn: async () => paid(await Provider.list()),
-  })
-
-  await using keyed = await tmpdir({
-    init: async (dir) => {
-      await Bun.write(
-        path.join(dir, "kilo.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-        }),
-      )
-    },
-  })
-
-  const authPath = path.join(Global.Path.data, "auth.json")
-  let prev: string | undefined
-
-  try {
-    prev = await Filesystem.readText(authPath)
-  } catch {}
-
-  try {
-    await Filesystem.write(
-      authPath,
-      JSON.stringify({
-        kilo: {
-          type: "api",
-          key: "test-key",
-        },
-      }),
-    )
-
-    const count = await Instance.provide({
-      directory: keyed.path,
-      fn: async () => paid(await Provider.list()),
+    expect(kilo.models["paid-model"]).toMatchObject({
+      id: "paid-model",
+      providerID: "kilo",
+      cost: { input: 1, output: 2 },
     })
+  }),
+)
 
-    expect(none).toBeGreaterThan(0)
-    expect(count).toBeGreaterThan(0)
-  } finally {
-    if (prev !== undefined) {
-      await Filesystem.write(authPath, prev)
-    }
-    if (prev === undefined) {
-      try {
-        await unlink(authPath)
-      } catch {}
-    }
-  }
-})
+it.effect("enables a paid catalog anonymously without auth", () =>
+  Effect.gen(function* () {
+    const result = yield* load()
+    expect(result.autoload).toBe(true)
+    expect(result.options).toEqual({ apiKey: "anonymous" })
+  }),
+)
+
+it.effect("enables a paid catalog when config apiKey is present", () =>
+  Effect.gen(function* () {
+    const result = yield* load({ config: { provider: { kilo: { options: { apiKey: "test-key" } } } } })
+    expect(result.autoload).toBe(true)
+    expect(result.options).toEqual({})
+  }),
+)
+
+it.effect("enables a paid catalog when auth exists", () =>
+  Effect.gen(function* () {
+    const result = yield* load({ auth: { type: "api", key: "test-key" } })
+    expect(result.autoload).toBe(true)
+    expect(result.options).toEqual({})
+  }),
+)

@@ -3,7 +3,6 @@ import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { formatPatch, structuredPatch } from "diff"
 import path from "path"
 import z from "zod"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { InstanceState } from "@/effect/instance-state"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
@@ -65,9 +64,12 @@ type State = Omit<Interface, "init">
 export interface Interface {
   readonly init: () => Effect.Effect<void>
   readonly cleanup: () => Effect.Effect<void>
-  // kilocode_change start - accept optional sessionID/messageID so the slow-repo prompt can target
-  // a client and the in-message "initializing snapshot" indicator can attach to the live turn
-  readonly track: (opts?: { sessionID?: SessionID; messageID?: MessageID }) => Effect.Effect<string | undefined>
+  // kilocode_change start - accept prompt context so slow snapshots can target UI or honor managed caller policy
+  readonly track: (opts?: {
+    sessionID?: SessionID
+    messageID?: MessageID
+    snapshotInitialization?: KiloSnapshotTrack.SnapshotInitialization
+  }) => Effect.Effect<string | undefined>
   // kilocode_change end
   readonly patch: (hash: string) => Effect.Effect<Patch>
   readonly restore: (snapshot: string) => Effect.Effect<void>
@@ -787,7 +789,7 @@ export const layer: Layer.Layer<
       }),
     )
 
-    // kilocode_change start - per-instance state for the slow-repo track wrapper
+    // kilocode_change start - Snapshot.Service-scoped state for the slow-repo track wrapper
     const trackState = KiloSnapshotTrack.makeState()
     // kilocode_change end
 
@@ -798,11 +800,12 @@ export const layer: Layer.Layer<
       cleanup: Effect.fn("Snapshot.cleanup")(function* () {
         return yield* InstanceState.useEffect(state, (s) => s.cleanup())
       }),
-      // kilocode_change start - timeout + interactive "disable for this project" prompt
+      // kilocode_change start - timeout guard with interactive and managed wait policies
       track: Effect.fn("Snapshot.track")(function* (opts) {
         return yield* KiloSnapshotTrack.wrap({
           inner: InstanceState.useEffect(state, (s) => s.track()),
           state: trackState,
+          snapshotInitialization: opts?.snapshotInitialization,
           sessionID: opts?.sessionID,
           messageID: opts?.messageID,
         })
@@ -850,17 +853,5 @@ export const defaultLayer = layer.pipe(
   Layer.provide(AppFileSystem.defaultLayer),
   Layer.provide(Config.defaultLayer),
 )
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const track = () => runPromise((svc) => svc.track())
-export const patch = (hash: string) => runPromise((svc) => svc.patch(hash))
-export const restore = (snapshot: string) => runPromise((svc) => svc.restore(snapshot))
-export const revert = (patches: Patch[]) => runPromise((svc) => svc.revert(patches))
-export const diff = (hash: string) => runPromise((svc) => svc.diff(hash))
-export const diffFull = (from: string, to: string) => runPromise((svc) => svc.diffFull(from, to))
-export const cleanup = () => runPromise((svc) => svc.cleanup())
-export const init = () => runPromise((svc) => svc.init())
-// kilocode_change end
 
 export * as Snapshot from "."

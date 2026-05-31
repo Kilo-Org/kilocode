@@ -7,16 +7,17 @@
   "packageManager": "bun@1.3.13",
   "scripts": {
     "dev": "bun run --cwd packages/opencode --conditions=browser src/index.ts",
-    "dev-setup": "bun run --cwd packages/opencode --conditions=browser src/index.ts dev-setup",
     "dev:storybook": "bun --cwd packages/storybook storybook",
     "lint": "oxlint",
     "typecheck": "bun turbo typecheck",
+    "test:ci": "bun turbo test:ci",
     "postinstall": "bun run --cwd packages/opencode fix-node-pty && bun run script/setup-git.ts",
     "prepare": "husky",
     "random": "echo 'Random script'",
     "hello": "echo 'Hello World!'",
     "test": "echo 'do not run tests from root' && exit 1",
-    "extension": "bun --cwd packages/kilo-vscode script/launch.ts"
+    "extension": "bun --cwd packages/kilo-vscode script/launch.ts",
+    "dev-setup": "bun run --cwd packages/opencode --conditions=browser src/index.ts dev-setup"
   },
   "workspaces": {
     "packages": [
@@ -36,13 +37,13 @@
       "ulid": "3.0.1",
       "@kobalte/core": "0.13.11",
       "@types/luxon": "3.7.1",
-      "@types/node": "22.13.9",
+      "@types/node": "24.12.2",
       "@types/semver": "7.7.1",
       "@tsconfig/node22": "22.0.2",
       "@tsconfig/bun": "1.0.9",
       "@cloudflare/workers-types": "4.20251008.0",
       "@openauthjs/openauth": "0.0.0-20250322224806",
-      "@pierre/diffs": "1.1.0-beta.18",
+      "@pierre/diffs": "1.1.22",
       "opentui-spinner": "0.0.6",
       "@solid-primitives/storage": "4.3.3",
       "@tailwindcss/vite": "4.1.11",
@@ -50,7 +51,7 @@
       "dompurify": "3.4.2",
       "drizzle-kit": "1.0.0-beta.19-d95b7a4",
       "drizzle-orm": "1.0.0-beta.19-d95b7a4",
-      "effect": "4.0.0-beta.57",
+      "effect": "4.0.0-beta.59",
       "ai": "6.0.168",
       "cross-spawn": "7.0.6",
       "hono": "4.12.12",
@@ -91,7 +92,7 @@
     "prettier": "3.6.2",
     "semver": "^7.6.0",
     "sst": "3.18.10",
-    "turbo": "2.8.13",
+    "turbo": "2.9.14",
     "@types/bun": "catalog:",
     "@changesets/changelog-github": "^0.5.1",
     "@changesets/cli": "^2.27.10"
@@ -114,6 +115,16 @@
     "semi": false,
     "printWidth": 120
   },
+  "trustedDependencies": [
+    "esbuild",
+    "node-pty",
+    "protobufjs",
+    "tree-sitter",
+    "tree-sitter-bash",
+    "tree-sitter-powershell",
+    "web-tree-sitter",
+    "electron"
+  ],
   "overrides": {
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
@@ -128,13 +139,17 @@
     "fastify": ">=5.8.3",
     "diff": "8.0.4",
     "dompurify": "3.4.2",
-    "happy-dom": ">=20.8.9"
+    "happy-dom": ">=20.8.9",
+    "@opentui/core": "catalog:",
+    "@opentui/solid": "catalog:",
+    "solid-js": "catalog:"
   },
   "patchedDependencies": {
     "@npmcli/agent@4.0.0": "patches/@npmcli%2Fagent@4.0.0.patch",
     "@standard-community/standard-openapi@0.2.9": "patches/@standard-community%2Fstandard-openapi@0.2.9.patch",
-    "solid-js@1.9.10": "patches/solid-js@1.9.10.patch"
+    "solid-js@1.9.10": "patches/solid-js@1.9.10.patch",
+    "mammoth@1.12.0": "patches/mammoth@1.12.0.patch"
   },
-  "version": "7.2.52",
+  "version": "7.3.18",
   "peerDependencies": {}
 }

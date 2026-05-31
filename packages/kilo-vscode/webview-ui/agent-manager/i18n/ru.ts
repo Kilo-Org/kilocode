@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "локальный",
+  "agentManager.sidebar.collapse": "Свернуть боковую панель",
+  "agentManager.sidebar.expand": "Показать боковую панель",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "СЕССИИ",
   "agentManager.notGitRepo": "Не является git-репозиторием",
@@ -53,7 +55,6 @@ export const dict = {
   "agentManager.tabsMenu.search": "Поиск вкладок...",
   "agentManager.tabsMenu.empty": "Нет подходящих вкладок",
   "agentManager.tabsMenu.status.waiting": "Ожидание",
-  "agentManager.tabsMenu.status.working": "Работа",
   "agentManager.tabsMenu.status.retry": "Повтор",
 
   "agentManager.terminal.new": "Новая вкладка терминала",

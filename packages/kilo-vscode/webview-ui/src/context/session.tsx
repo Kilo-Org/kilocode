@@ -20,6 +20,7 @@ import type {
   PartDelta,
   SessionStatus,
   SessionStatusInfo,
+  SessionCloseReason,
   PermissionRequest,
   QuestionRequest,
   SuggestionRequest,
@@ -33,22 +34,28 @@ import type {
   SendMessageFailedMessage,
   McpStatusEntry,
   MessageLoadMode,
+  ToolPart,
 } from "../types/messages"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
 import {
   computeStatus,
   calcContextUsage,
   buildFamilyCosts,
-  buildFamilyParents,
-  buildFamilyLabels,
+  buildFamilyParentsFromTools,
+  buildFamilyLabelsFromTools,
   buildCostBreakdown,
+  buildSessionToolParts,
   childID,
+  removeSessionToolPart,
+  removeSessionToolPartsForMessage,
+  upsertSessionToolPart,
 } from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
 import { resolveMessagePrefs } from "./session-preferences"
 import { errorIDs } from "./session-errors"
 import { PartStash } from "./part-stash"
+import { mergeParts, sameParts } from "./session-parts"
 import { state as todoState } from "./todo-revert"
 import { getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
@@ -80,6 +87,7 @@ interface SessionStore {
   sessions: Record<string, SessionInfo>
   messages: Record<string, Message[]> // sessionID -> messages
   parts: Record<string, Part[]> // messageID -> parts
+  toolParts: Record<string, ToolPart[]> // sessionID -> compact per-session tool index
   todos: Record<string, TodoItem[]> // sessionID -> todos
   modelSelections: Record<string, ModelSelection | null> // agentName -> model (global, extension-lifetime)
   sessionOverrides: Record<string, ModelSelection> // sessionID -> per-session model override (compare mode)
@@ -101,6 +109,7 @@ interface SessionContextValue {
   // Session status
   status: Accessor<SessionStatus>
   statusInfo: Accessor<SessionStatusInfo>
+  closeReason: Accessor<SessionCloseReason | undefined>
   statusText: Accessor<string | undefined>
   busySince: Accessor<number | undefined>
   loading: Accessor<boolean>
@@ -128,6 +137,10 @@ interface SessionContextValue {
 
   // Parts for a specific message
   getParts: (messageID: string) => Part[]
+
+  // Tool parts for a specific session, maintained incrementally for streaming views
+  getSessionToolParts: (sessionID: string) => ToolPart[]
+  getSessionToolCount: (sessionID: string) => number
 
   // Hidden after model changes so switching models can clear stale provider errors
   // without removing messages and their checkpoint restore actions.
@@ -174,7 +187,7 @@ interface SessionContextValue {
   // Agent/mode selection (per-session)
   agents: Accessor<AgentInfo[]>
   allAgents: Accessor<AgentInfo[]>
-  removeMode: (name: string) => void
+  removeAgent: (name: string) => void
   removeMcp: (name: string) => void
 
   // MCP server status (runtime connect/disconnect)
@@ -248,6 +261,7 @@ interface SessionContextValue {
   selectSession: (id: string) => void
   deleteSession: (id: string) => void
   renameSession: (id: string, title: string) => void
+  exportSessionTranscript: (id: string) => void
   syncSession: (sessionID: string) => void
 
   // Cloud session preview
@@ -272,6 +286,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Per-session status map — keyed by sessionID
   const [statusMap, setStatusMap] = createStore<Record<string, SessionStatusInfo>>({})
+  const [closeMap, setCloseMap] = createStore<Record<string, SessionCloseReason | undefined>>({})
   const [busySinceMap, setBusySinceMap] = createStore<Record<string, number>>({})
 
   const idle: SessionStatusInfo = { type: "idle" }
@@ -282,6 +297,16 @@ export const SessionProvider: ParentComponent = (props) => {
     return id ? (statusMap[id] ?? idle) : idle
   }
   const status = () => statusInfo().type as SessionStatus
+  const closeReason = () => {
+    const id = currentSessionID()
+    return id ? closeMap[id] : undefined
+  }
+  const clearClose = (id: string) =>
+    setCloseMap(
+      produce((map) => {
+        delete map[id]
+      }),
+    )
   const busySince = () => {
     const id = currentSessionID()
     return id ? busySinceMap[id] : undefined
@@ -324,7 +349,7 @@ export const SessionProvider: ParentComponent = (props) => {
   // Skills loaded from the CLI backend
   const [skills, setSkills] = createSignal<SkillInfo[]>([])
 
-  const removeMode = (name: string) => {
+  const removeAgent = (name: string) => {
     setAgents((prev) => prev.filter((a) => a.name !== name))
 
     // Clear stale selections so selectedAgentName() falls back to the default
@@ -340,7 +365,7 @@ export const SessionProvider: ParentComponent = (props) => {
       }),
     )
 
-    vscode.postMessage({ type: "removeMode", name })
+    vscode.postMessage({ type: "removeAgent", name })
   }
 
   const removeMcp = (name: string) => {
@@ -397,6 +422,7 @@ export const SessionProvider: ParentComponent = (props) => {
     sessions: {},
     messages: {},
     parts: {},
+    toolParts: {},
     todos: {},
     modelSelections: {},
     sessionOverrides: {},
@@ -812,6 +838,7 @@ export const SessionProvider: ParentComponent = (props) => {
           mode: message.mode,
           cursor: message.cursor,
           hasMore: message.hasMore,
+          since: message.since,
         })
         break
 
@@ -821,6 +848,10 @@ export const SessionProvider: ParentComponent = (props) => {
 
       case "sessionStatus":
         handleSessionStatus(message.sessionID, message.status, message.attempt, message.message, message.next)
+        break
+
+      case "sessionTurnClosed":
+        setCloseMap(message.sessionID, message.reason)
         break
 
       case "todoUpdated":
@@ -936,6 +967,7 @@ export const SessionProvider: ParentComponent = (props) => {
       if (!store.messages[session.id]?.length) {
         setStore("messages", session.id, [])
       }
+      if (!store.toolParts[session.id]) setStore("toolParts", session.id, [])
 
       const pendingAgent = draftID ? store.agentSelections[draftID] : pendingAgentSelection()
       const pendingModel = draftID ? store.sessionOverrides[draftID] : undefined
@@ -1029,25 +1061,55 @@ export const SessionProvider: ParentComponent = (props) => {
     return [...messages, ...orphans]
   }
 
-  // Cheap shape check: same ids in same order AND same part counts per message.
-  // Short-circuits reconcile when the server snapshot matches local state
-  // (the common case — SSE didn't actually miss anything), avoiding the
-  // 80 setStore("parts", ...) calls per session switch.
+  // Cheap tail check: same ids in the same order and no visible streamed-part
+  // correction to apply. It skips store churn when SSE already matches the
+  // snapshot, but lets reconcile heal part removals and finalized text.
   function sameReconcileShape(current: Message[], incoming: Message[]): boolean {
     if (current.length !== incoming.length) return false
-    for (let i = 0; i < incoming.length; i++) {
+    for (const [i, n] of incoming.entries()) {
       const c = current[i]!
-      const n = incoming[i]!
       if (c.id !== n.id) return false
-      if ((c.parts?.length ?? 0) !== (n.parts?.length ?? 0)) return false
+      if (!sameParts(store.parts[c.id] ?? c.parts, n.parts)) return false
     }
     return true
+  }
+
+  function rebuildToolParts(sessionID: string, messages: Message[], parts?: Record<string, Part[]>) {
+    const tools = buildSessionToolParts(
+      messages,
+      (msg) => parts?.[msg.id] ?? store.parts[msg.id] ?? stash.peek(msg.id) ?? msg.parts,
+    )
+    setStore("toolParts", sessionID, tools)
+  }
+
+  function messageParts(messages: Message[]): Record<string, Part[]> {
+    const parts: Record<string, Part[]> = {}
+    for (const msg of messages) {
+      if (msg.parts && msg.parts.length > 0) parts[msg.id] = msg.parts
+    }
+    return parts
+  }
+
+  function patchToolPart(sessionID: string | undefined, messageID: string, part: Part) {
+    const sid = sessionID ?? part.sessionID
+    if (!sid) return
+    if (part.type !== "tool") return
+    setStore("toolParts", sid, (tools = []) => upsertSessionToolPart(tools, part, { id: messageID, sessionID: sid }))
+  }
+
+  function dropToolPart(sessionID: string | undefined, partID: string) {
+    if (!sessionID) return
+    setStore("toolParts", sessionID, (tools = []) => removeSessionToolPart(tools, partID))
+  }
+
+  function dropMessageTools(sessionID: string, messageID: string) {
+    setStore("toolParts", sessionID, (tools = []) => removeSessionToolPartsForMessage(tools, messageID))
   }
 
   function handleMessagesLoaded(
     sessionID: string,
     messages: Message[],
-    input: { mode?: Exclude<MessageLoadMode, "focus">; cursor?: string; hasMore?: boolean } = {},
+    input: { mode?: Exclude<MessageLoadMode, "focus">; cursor?: string; hasMore?: boolean; since?: number } = {},
   ) {
     const mode = input.mode ?? "replace"
     const reset = mode === "prepend"
@@ -1056,6 +1118,11 @@ export const SessionProvider: ParentComponent = (props) => {
     // message+part-count already agrees with the server. Skip the reactive
     // store churn entirely — virtualizer and rendering stay untouched.
     if (mode === "reconcile" && sameReconcileShape(store.messages[sessionID] ?? [], messages)) {
+      const parts = messageParts(messages)
+      for (const msg of messages) {
+        if (store.parts[msg.id]) delete parts[msg.id]
+      }
+      rebuildToolParts(sessionID, messages, parts)
       patchPage(sessionID, { initialLoaded: true, lastMutation: "update" })
       return
     }
@@ -1074,6 +1141,7 @@ export const SessionProvider: ParentComponent = (props) => {
         mode === "prepend" || mode === "reconcile"
           ? mergeMessages(current, messages, mode)
           : withPending(sessionID, messages)
+      const loadedParts: Record<string, Part[]> = {}
       // "replace" mode (session switch): assign directly — reconcile's O(n)
       // diff is unnecessary when the entire list is new, and its reactive
       // proxy creation for each message object dominated the trace (~900ms).
@@ -1085,20 +1153,27 @@ export const SessionProvider: ParentComponent = (props) => {
       }
 
       for (const msg of messages) {
-        if (!msg.parts || msg.parts.length === 0) continue
+        const parts = msg.parts ?? []
         if (mode === "reconcile" && store.parts[msg.id]) {
           // Reconcile on a message already hydrated into the reactive store:
-          // write parts directly so visible turns pick up the server-
-          // authoritative state immediately instead of waiting for the
-          // virtualizer to re-render.
-          setStore("parts", msg.id, reconcile(msg.parts, { key: "id" }))
+          // write parts directly so visible turns pick up server corrections,
+          // but do not erase proven newer streamed text absent from a stale snapshot.
+          const merged = mergeParts(store.parts[msg.id], parts, input.since ?? Number.POSITIVE_INFINITY)
+          setStore("parts", msg.id, reconcile(merged, { key: "id" }))
           stash.remove(msg.id)
-        } else {
-          // Stash parts outside the reactive store — they'll be hydrated
-          // on demand when the virtualizer renders the corresponding turn.
-          stash.put(msg.id, msg.parts)
+          continue
         }
+        if (parts.length > 0) {
+          loadedParts[msg.id] = parts
+          // Stash parts outside the reactive store. They hydrate on demand
+          // when the virtualizer renders the corresponding turn.
+          stash.put(msg.id, parts)
+          continue
+        }
+        if (mode === "reconcile") stash.remove(msg.id)
       }
+
+      rebuildToolParts(sessionID, merged, loadedParts)
 
       // "reconcile" is a background tail refresh, not a page navigation —
       // preserve the existing pagination cursor/hasMore so "load earlier"
@@ -1162,6 +1237,7 @@ export const SessionProvider: ParentComponent = (props) => {
       stash.remove(message.id)
       setStore("parts", message.id, message.parts)
     }
+    rebuildToolParts(message.sessionID, store.messages[message.sessionID] ?? [])
   }
 
   function handlePartUpdated(
@@ -1179,6 +1255,7 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     if (sessionID) patchPage(sessionID, { lastMutation: "update" })
+    patchToolPart(sessionID, effectiveMessageID, part)
 
     // If the stash has parts for this message, hydrate them first so the
     // SSE update merges into the full part list rather than an empty array.
@@ -1226,6 +1303,8 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handlePartRemoved(sessionID: string | undefined, messageID: string, partID: string) {
     if (sessionID) patchPage(sessionID, { lastMutation: "update" })
+    dropToolPart(sessionID, partID)
+    stash.removePart(messageID, partID)
 
     setStore(
       "parts",
@@ -1254,8 +1333,9 @@ export const SessionProvider: ParentComponent = (props) => {
           ? { type: "offline", message: message ?? "" }
           : { type: newStatus }
     setStatusMap(sessionID, info)
-    // Track busy start time
+    // Track busy start time and discard the previous turn's terminal state.
     if (prev.type === "idle" && newStatus !== "idle") {
+      clearClose(sessionID)
       setBusySinceMap(sessionID, Date.now())
     }
     if (newStatus === "idle") {
@@ -1264,7 +1344,7 @@ export const SessionProvider: ParentComponent = (props) => {
           delete map[sessionID]
         }),
       )
-      // Session is idle — any remaining pending optimistic IDs are either
+      // Session is idle - any remaining pending optimistic IDs are either
       // already confirmed (messageCreated removed them) or orphaned (queued
       // callbacks were dropped on abort). Clean up the tracking set; the
       // messages themselves will be reconciled on the next messagesLoaded.
@@ -1391,6 +1471,7 @@ export const SessionProvider: ParentComponent = (props) => {
       stash.remove(message.messageID)
       batch(() => {
         setStore("messages", message.sessionID!, (msgs = []) => msgs.filter((m) => m.id !== message.messageID))
+        dropMessageTools(message.sessionID!, message.messageID!)
         setStore(
           "parts",
           produce((parts) => {
@@ -1411,6 +1492,11 @@ export const SessionProvider: ParentComponent = (props) => {
     }
   }
 
+  function visibleToolParts(sessionID: string, messages: Message[]): ToolPart[] {
+    const ids = new Set(messages.map((msg) => msg.id))
+    return (store.toolParts[sessionID] ?? []).filter((part) => !part.messageID || ids.has(part.messageID))
+  }
+
   /**
    * BFS walk over message parts to discover all session IDs in a session's
    * family tree (self + subagents + sub-subagents). Reads directly from the
@@ -1421,25 +1507,19 @@ export const SessionProvider: ParentComponent = (props) => {
     const queue = [rootID]
     while (queue.length > 0) {
       const sid = queue.pop()!
-      const msgs = source(sid)
-      for (const msg of msgs) {
-        const parts = store.parts[msg.id]
-        if (!parts) continue
-        for (const p of parts) {
-          if (p.type !== "tool") continue
-          // Webview ToolState omits runtime metadata; task parts still carry it from the backend.
-          const child = childID(
-            p as {
-              type: string
-              tool?: string
-              metadata?: { sessionId?: string }
-              state?: { metadata?: { sessionId?: string } }
-            },
-          )
-          if (child && !ids.has(child)) {
-            ids.add(child)
-            queue.push(child)
-          }
+      for (const p of visibleToolParts(sid, source(sid))) {
+        // Webview ToolState omits runtime metadata; task parts still carry it from the backend.
+        const child = childID(
+          p as {
+            type: string
+            tool?: string
+            metadata?: { sessionId?: string }
+            state?: { metadata?: { sessionId?: string } }
+          },
+        )
+        if (child && !ids.has(child)) {
+          ids.add(child)
+          queue.push(child)
         }
       }
     }
@@ -1492,6 +1572,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const next = session.revert ?? undefined
     setStore("sessions", session.id, session)
     if (prev?.messageID === next?.messageID && prev?.partID === next?.partID) return
+    clearClose(session.id)
     resetTodos(session.id, next)
   }
 
@@ -1549,6 +1630,12 @@ export const SessionProvider: ParentComponent = (props) => {
         }),
       )
       setStore(
+        "toolParts",
+        produce((parts) => {
+          delete parts[sessionID]
+        }),
+      )
+      setStore(
         "todos",
         produce((todos) => {
           delete todos[sessionID]
@@ -1602,6 +1689,7 @@ export const SessionProvider: ParentComponent = (props) => {
           delete map[sessionID]
         }),
       )
+      clearClose(sessionID)
       setBusySinceMap(
         produce((map) => {
           delete map[sessionID]
@@ -1617,6 +1705,7 @@ export const SessionProvider: ParentComponent = (props) => {
   // Splices the message from the store and deletes its parts.
   function handleMessageRemoved(sessionID: string, messageID: string) {
     setStore("messages", sessionID, (msgs = []) => msgs.filter((m) => m.id !== messageID))
+    dropMessageTools(sessionID, messageID)
     clearHiddenErrors([messageID])
     setStore(
       "parts",
@@ -1653,6 +1742,7 @@ export const SessionProvider: ParentComponent = (props) => {
           setStore("parts", msg.id, msg.parts)
         }
       }
+      rebuildToolParts(key, messages)
       setCurrentSessionID(key)
       setLoading(false)
     })
@@ -1677,6 +1767,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
       // Carry over cloud messages so there's no loading flash
       setStore("messages", session.id, cloudMessages)
+      rebuildToolParts(session.id, cloudMessages)
 
       setCloudPreviewId(null)
       setCurrentSessionID(session.id)
@@ -1715,6 +1806,12 @@ export const SessionProvider: ParentComponent = (props) => {
         "messages",
         produce((messages) => {
           delete messages[cloudKey]
+        }),
+      )
+      setStore(
+        "toolParts",
+        produce((parts) => {
+          delete parts[cloudKey]
         }),
       )
     })
@@ -1829,7 +1926,10 @@ export const SessionProvider: ParentComponent = (props) => {
     for (const q of scopedQuestions(sid)) {
       rejectQuestion(q.id)
     }
-    if (sid) addOptimistic(sid, messageID, text, files)
+    if (sid) {
+      clearClose(sid)
+      addOptimistic(sid, messageID, text, files)
+    }
 
     const scope = draftID ?? sid
     const agent = promptAgent(scope)
@@ -1892,7 +1992,10 @@ export const SessionProvider: ParentComponent = (props) => {
       rejectQuestion(q.id)
     }
 
-    if (sid) addOptimistic(sid, messageID, `/${command} ${args}`.trim(), files)
+    if (sid) {
+      clearClose(sid)
+      addOptimistic(sid, messageID, `/${command} ${args}`.trim(), files)
+    }
 
     const scope = draftID ?? sid
     const agent = promptAgent(scope)
@@ -2141,6 +2244,18 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "renameSession", sessionID: id, title })
   }
 
+  function exportSessionTranscript(id: string) {
+    if (!server.isConnected()) {
+      console.warn("[Kilo New] Cannot export session transcript: not connected")
+      return
+    }
+    if (id.startsWith("cloud:")) {
+      console.warn("[Kilo New] Cannot export cloud session transcript")
+      return
+    }
+    vscode.postMessage({ type: "exportSessionTranscript", sessionID: id })
+  }
+
   // Computed values
   const currentSession = () => {
     const id = currentSessionID()
@@ -2164,6 +2279,10 @@ export const SessionProvider: ParentComponent = (props) => {
   const getParts = (messageID: string) => {
     return store.parts[messageID] || stash.peek(messageID) || []
   }
+
+  const getSessionToolParts = (sessionID: string) => store.toolParts[sessionID] ?? []
+
+  const getSessionToolCount = (sessionID: string) => store.toolParts[sessionID]?.length ?? 0
 
   function hydrateParts(ids: string[]) {
     const pending = stash.take(ids, (id) => Boolean(store.parts[id]))
@@ -2213,6 +2332,7 @@ export const SessionProvider: ParentComponent = (props) => {
   function revertSession(messageID: string, partID?: string) {
     const id = currentSessionID()
     if (!id) return
+    clearClose(id)
     // Restore the reverted user message's prompt text into the input.
     // Dispatch as a window message so PromptInput picks it up via onMessage.
     const parts = store.parts[messageID]
@@ -2261,7 +2381,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const family = visibleFamily(id)
     const msgs: Record<string, Message[]> = {}
     for (const sid of family) msgs[sid] = visible(sid)
-    const parents = buildFamilyParents(family, msgs, store.parts)
+    const parents = buildFamilyParentsFromTools(family, (sid) => visibleToolParts(sid, msgs[sid] ?? []))
     return buildFamilyCosts(family, msgs, store.sessions, parents)
   })
 
@@ -2272,7 +2392,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const family = visibleFamily(id)
     const msgs: Record<string, Message[]> = {}
     for (const sid of family) msgs[sid] = visible(sid)
-    return buildFamilyLabels(family, msgs, store.parts)
+    return buildFamilyLabelsFromTools(family, (sid) => visibleToolParts(sid, msgs[sid] ?? []))
   })
 
   /** Combined cost breakdown with labels. */
@@ -2330,6 +2450,7 @@ export const SessionProvider: ParentComponent = (props) => {
     sessions,
     status,
     statusInfo,
+    closeReason,
     statusText,
     busySince,
     loading,
@@ -2340,6 +2461,8 @@ export const SessionProvider: ParentComponent = (props) => {
     visibleMessages,
     userMessages,
     getParts,
+    getSessionToolParts,
+    getSessionToolCount,
     isErrorHidden: (messageID: string) => hiddenErrors().has(messageID),
     hydrateParts,
     todos,
@@ -2364,7 +2487,7 @@ export const SessionProvider: ParentComponent = (props) => {
     skills,
     refreshSkills,
     removeSkill,
-    removeMode,
+    removeAgent,
     removeMcp,
     mcpStatus,
     mcpLoading,
@@ -2429,6 +2552,7 @@ export const SessionProvider: ParentComponent = (props) => {
     selectSession,
     deleteSession,
     renameSession,
+    exportSessionTranscript,
     syncSession,
     cloudPreviewId,
     selectCloudSession,

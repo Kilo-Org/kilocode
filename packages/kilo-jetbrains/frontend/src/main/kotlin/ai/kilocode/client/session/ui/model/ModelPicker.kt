@@ -9,8 +9,8 @@ import com.intellij.openapi.ui.popup.PopupShowOptions
 import com.intellij.openapi.ui.popup.util.PopupUtil
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.DocumentAdapter
-import com.intellij.ui.ExperimentalUI
 import com.intellij.ui.JBColor
+import com.intellij.ui.NewUI
 import com.intellij.ui.ListUtil
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.ScrollPaneFactory
@@ -38,7 +38,7 @@ import javax.swing.SwingUtilities
 import javax.swing.event.DocumentEvent
 
 private val popupBackground: Color
-    get() = if (ExperimentalUI.isNewUI()) JBUI.CurrentTheme.Popup.BACKGROUND else UIUtil.getListBackground()
+    get() = if (NewUI.isEnabled()) JBUI.CurrentTheme.Popup.BACKGROUND else UIUtil.getListBackground()
 
 private const val MODEL_PICKER_MIN_WIDTH = 420
 private const val MODEL_PICKER_MAX_WIDTH = 760

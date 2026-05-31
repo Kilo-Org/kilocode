@@ -1,16 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { mkdir } from "node:fs/promises"
 import type { Config } from "../../src/config/config"
-import { getBootstrapRunEffect } from "../../src/effect/app-runtime"
 import { KiloIndexing } from "../../src/kilocode/indexing"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 const cfg: Partial<Config.Info> = {
   plugin: ["@kilocode/kilo-indexing"],
-  experimental: {
-    semantic_indexing: true,
-  },
   indexing: {
     enabled: true,
     provider: "ollama",
@@ -36,9 +32,8 @@ describe("indexing worktree disable", () => {
     const dir = `${tmp.path}/.kilo/worktrees/feature`
     await mkdir(dir, { recursive: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: dir,
-      init: await getBootstrapRunEffect(),
       fn: async () => {
         const status = await KiloIndexing.current()
 
@@ -57,9 +52,8 @@ describe("indexing worktree disable", () => {
     const dir = `${tmp.path}/.kilocode/worktrees/feature`
     await mkdir(dir, { recursive: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: dir,
-      init: await getBootstrapRunEffect(),
       fn: async () => {
         const status = await KiloIndexing.current()
 

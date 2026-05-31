@@ -302,10 +302,9 @@ export class CodeIndexConfigManager {
   }
 
   public get currentModelDimension(): number | undefined {
+    if (this.modelDimension && this.modelDimension > 0) return this.modelDimension
     const id = this.modelId ?? getDefaultModelId(this.embedderProvider)
-    const dim = getModelDimension(this.embedderProvider, id)
-    if (!dim && this.modelDimension && this.modelDimension > 0) return this.modelDimension
-    return dim
+    return getModelDimension(this.embedderProvider, id)
   }
 
   public get currentSearchMinScore(): number {

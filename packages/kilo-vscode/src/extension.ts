@@ -14,7 +14,7 @@ import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
 import { BrowserAutomationService } from "./services/browser-automation"
-import { TelemetryProxy } from "./services/telemetry"
+import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
 import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
@@ -23,6 +23,14 @@ import { RemoteStatusService } from "./services/RemoteStatusService"
 import { markWorkspace } from "./util/spotlight"
 
 let agentManager: AgentManagerProvider | undefined
+let shuttingDown = false
+
+const RESTORE_KEY = "kilo.workbench.restore"
+
+type RestoreState = {
+  sidebar?: boolean
+  agentManager?: boolean
+}
 
 const panelTitleHandler = (panel: vscode.WebviewPanel) => (title: string) => {
   panel.title = title || EXTENSION_DISPLAY_NAME
@@ -34,11 +42,21 @@ const panelTitleHandler = (panel: vscode.WebviewPanel) => (title: string) => {
 // it starts lazily when a webview connects or when ensureBackendForAutocomplete() triggers it.
 export function activate(context: vscode.ExtensionContext) {
   console.log("Kilo Code extension is now active")
+  shuttingDown = false
 
   const telemetry = TelemetryProxy.getInstance()
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(context)
+  let restore = context.workspaceState.get<RestoreState>(RESTORE_KEY) ?? {}
+  const closeSidebar = restore.sidebar === false
+  const remember = (patch: RestoreState) => {
+    const next = { ...restore, ...patch }
+    if (shuttingDown && patch.sidebar === false) next.sidebar = restore.sidebar
+    if (shuttingDown && patch.agentManager === false) next.agentManager = restore.agentManager
+    restore = next
+    void context.workspaceState.update(RESTORE_KEY, restore)
+  }
 
   // Create browser automation service (manages Playwright MCP registration)
   const browserAutomationService = new BrowserAutomationService(connectionService)
@@ -105,7 +123,9 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   // Create the provider with shared service
-  const provider = new KiloProvider(context.extensionUri, connectionService, context)
+  const provider = new KiloProvider(context.extensionUri, connectionService, context, {
+    onSidebarVisibilityChange: (visible) => remember({ sidebar: visible }),
+  })
   provider.setRemoteService(remoteService)
 
   // Register the webview view provider for the sidebar.
@@ -115,6 +135,7 @@ export function activate(context: vscode.ExtensionContext) {
       webviewOptions: { retainContextWhenHidden: true },
     }),
   )
+  if (closeSidebar) void vscode.commands.executeCommand("workbench.action.closeSidebar")
 
   // Ensure Agent Manager navigation keybindings work when a VS Code terminal has focus.
   // The terminal intercepts all keystrokes unless the command is listed in
@@ -131,6 +152,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Create Agent Manager provider for editor panel
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context)
   const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService)
+  agentManagerProvider.onPanelVisibilityChange((visible) => remember({ agentManager: visible }))
   agentManager = agentManagerProvider
   context.subscriptions.push(agentManagerProvider)
 
@@ -169,8 +191,13 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerWebviewPanelSerializer(AgentManagerProvider.viewType, {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
+        if (restore.agentManager === false) {
+          panel.dispose()
+          return Promise.resolve()
+        }
         const ctx = agentManagerHost.wrapExistingPanel(panel, {
           onBeforeMessage: (msg) => agentManagerProvider.handleMessage(msg),
+          worktreeDirectories: () => agentManagerProvider.getWorktreeDirectories(),
         })
         agentManagerProvider.deserializePanel(ctx)
         return Promise.resolve()
@@ -278,8 +305,39 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   )
 
+  // Sidebar menus use wrapper commands so this event measures real title button presses,
+  // not programmatic opens, shortcuts, or editor title commands.
+  const track = (button: string, command: string) => {
+    TelemetryProxy.capture(TelemetryEventName.TITLE_BUTTON_CLICKED, {
+      button,
+      surface: "sidebar_title",
+    })
+    void vscode.commands.executeCommand(command)
+  }
+
   // Register toolbar button command handlers
   context.subscriptions.push(
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.plusButtonClicked", () => {
+      track("new_task", "kilo-code.new.plusButtonClicked")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.historyButtonClicked", () => {
+      track("history", "kilo-code.new.historyButtonClicked")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.agentManagerOpen", () => {
+      track("agent_manager", "kilo-code.new.agentManagerOpen")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.kiloClawOpen", () => {
+      track("kiloclaw", "kilo-code.new.kiloClawOpen")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.marketplaceButtonClicked", () => {
+      track("marketplace", "kilo-code.new.marketplaceButtonClicked")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.profileButtonClicked", () => {
+      track("profile", "kilo-code.new.profileButtonClicked")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.settingsButtonClicked", () => {
+      track("settings", "kilo-code.new.settingsButtonClicked")
+    }),
     vscode.commands.registerCommand("kilo-code.new.plusButtonClicked", () => {
       const tab = activeTabProvider()
       if (tab) tab.postMessage({ type: "action", action: "plusButtonClicked" })
@@ -429,7 +487,7 @@ export function activate(context: vscode.ExtensionContext) {
   )
 
   // Register autocomplete provider
-  registerAutocompleteProvider(context, connectionService)
+  void registerAutocompleteProvider(context, connectionService)
 
   // Register commit message generation
   registerCommitMessageService(context, connectionService)
@@ -452,6 +510,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Dispose services when extension deactivates (kills the server)
   context.subscriptions.push({
     dispose: () => {
+      shuttingDown = true
       unsubscribeStateChange()
       browserAutomationService.dispose()
       provider.dispose()
@@ -461,6 +520,7 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export async function deactivate() {
+  shuttingDown = true
   await agentManager?.shutdown()
   TelemetryProxy.getInstance().shutdown()
 }

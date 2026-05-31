@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "Podijeli ovu sesiju i kopiraj URL u međuspremnik",
   "command.session.unshare": "Ukini dijeljenje sesije",
   "command.session.unshare.description": "Zaustavi dijeljenje ove sesije",
+  "command.session.export": "Izvezi transkript sesije",
 
   "palette.search.placeholder": "Pretraži datoteke, komande i sesije",
   "palette.empty": "Nema rezultata",
@@ -105,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Preporučeno",
   "dialog.provider.opencode.note": "Kurirani modeli uključujući Claude, GPT, Gemini i druge",
   "dialog.provider.anthropic.note": "Direktan pristup Claude modelima, uključujući Pro i Max",
+  "dialog.provider.deepseek.note": "DeepSeek modeli za zadatke zaključivanja i kodiranja",
   "dialog.provider.copilot.note": "Claude modeli za pomoć pri kodiranju",
   "dialog.provider.openai.note": "GPT modeli za brze, sposobne opšte AI zadatke",
   "dialog.provider.google.note": "Gemini modeli za brze, strukturirane odgovore",
@@ -177,6 +179,8 @@ export const dict = {
   "model.tag.latest": "Najnovije",
   "model.group.recommended": "Preporučeno",
   "model.group.favorites": "Favoriti",
+  "model.group.collapse": "Sakrij {{group}}",
+  "model.group.expand": "Prikaži {{group}}",
   "model.favorite.add": "Dodaj u favorite",
   "model.favorite.remove": "Ukloni iz favorita",
   "model.provider.anthropic": "Anthropic",
@@ -270,6 +274,7 @@ export const dict = {
   "prompt.attachment.remove": "Ukloni prilog",
   "prompt.action.send": "Pošalji",
   "prompt.action.send.blocked": "Prvo odgovorite ili odbacite pitanje na čekanju",
+  "prompt.action.send.recording": "Transkribuj i pošalji",
   "prompt.action.stop": "Zaustavi",
   "prompt.action.enhance": "Poboljšaj prompt",
   "prompt.action.autoApprove.enable": "Uključi automatsko odobravanje",
@@ -281,6 +286,20 @@ export const dict = {
   "prompt.action.resetModel": "Resetuj model na zadani",
   "prompt.action.enhanceDescription":
     "Dugme 'Poboljšaj prompt' pomaže poboljšati vaš zahtjev pružajući dodatni kontekst, pojašnjenje ili preformulaciju. Pokušajte upisati zahtjev ovdje i ponovo kliknite na dugme da vidite kako funkcioniše.",
+
+  "speechToText.tooltip.start": "Započni glasovni unos sa Kilo Gateway",
+  "speechToText.tooltip.stop": "Zaustavi hvatanje zvuka",
+  "speechToText.tooltip.transcribing": "Prepisivanje... Kliknite da otkažete.",
+  "speechToText.tooltip.error": "Glasovni unos nije uspio. Kliknite da očistite.",
+  "speechToText.error.title": "Glasovni unos nije uspio",
+  "speechToText.error.loginRequired": "Prijavite se na Kilo da koristite glasovni unos.",
+  "speechToText.error.permission": "Dozvola za mikrofon je odbijena.",
+  "speechToText.error.microphone": "Nije moguće pokrenuti mikrofon.",
+  "speechToText.error.recording": "Snimanje nije uspjelo.",
+  "speechToText.error.emptyRecording": "Zvuk nije snimljen.",
+  "speechToText.error.emptyTranscript": "Govor nije otkriven.",
+  "speechToText.error.encoding": "Nije moguće kodirati snimak.",
+  "speechToText.toast.transcribed": "Prijepis ubačen",
 
   "prompt.toast.pasteUnsupported.title": "Nepodržano lijepljenje",
   "prompt.toast.pasteUnsupported.description": "Ovdje se mogu zalijepiti samo slike ili PDF-ovi.",
@@ -436,6 +455,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Neuspjelo ukidanje dijeljenja",
   "toast.session.unshare.failed.description": "Došlo je do greške prilikom ukidanja dijeljenja",
 
+  "toast.session.rename.invalid.title": "Nevažeći naslov sesije",
   "toast.session.listFailed.title": "Neuspjelo učitavanje sesija za {{project}}",
 
   "toast.update.title": "Dostupno ažuriranje",
@@ -842,6 +862,9 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "Povezano iz vaših varijabli okruženja",
   "settings.providers.action.signInChatGPT": "Prijavi se putem ChatGPT",
   "settings.providers.custom.description": "Dodaj OpenAI-kompatibilan provajder putem osnovnog URL-a.",
+  "settings.providers.subagentModel.title": "Model podagenta",
+  "settings.providers.subagentModel.description":
+    "Zadani model i napor zaključivanja za podagente task-tool-a. Ostavite nepodešeno da naslijedi model pozivnog agenta.",
   "settings.providers.modeModels": "Model po režimu",
   "settings.providers.custom.note": "Dodajte provajdera kompatibilnog s OpenAI putem osnovnog URL-a.",
   "settings.providers.modeModels.description":
@@ -1007,6 +1030,8 @@ export const dict = {
   "session.delete.confirm": 'Izbriši sesiju "{{name}}"?',
   "session.delete.button": "Izbriši sesiju",
   "session.untitled": "Bez naslova",
+  "session.current": "Trenutna sesija",
+  "session.history.sources": "Izvor historije",
   "session.recent": "Nedavne",
   "session.showHistory": "Prikaži historiju",
   "session.search.placeholder": "Pretraži sesije...",
@@ -1111,6 +1136,14 @@ export const dict = {
   "session.status.retrying": "Ponovni pokušaj (pokušaj {{ attempt }})… {{ message }}",
   "session.status.working": "Radim…",
   "session.status.offline": "Mreža prekinuta — ponovno povezivanje...",
+  "session.outcome.incomplete": "Potez završen sa {{count}} preostalih zadataka",
+  "session.outcome.limit": "Ograničenje odgovora dosegnuto prije završetka",
+  "session.outcome.unknown": "Potez završen bez razloga završetka modela",
+  "session.outcome.filtered": "Provajder je zaustavio ovaj odgovor zbog filtera sadržaja.",
+  "session.outcome.unexpected": "Odgovor je neočekivano završen i može biti nepotpun.",
+  "session.outcome.interrupted": "Potez prekinut",
+  "session.outcome.error": "Potez nije uspio",
+  "session.outcome.finish": "Razlog završetka: {{reason}}",
 
   "ui.sessionTurn.cancel": "Otkaži",
   "ui.sessionTurn.status.thinking": "Razmišljam...",
@@ -1173,7 +1206,6 @@ export const dict = {
     'Telemetrija je kontrolisana ugrađenom postavkom za telemetriju u VS Code-u. Da biste je onemogućili, idite na Postavke > Telemetrija > Nivo telemetrije i postavite na "off". Ponovo pokrenite VS Code da biste primijenili promjenu.',
   "settings.aboutKiloCode.telemetry.openSettings": "Otvori postavke telemetrije",
 
-  "settings.agentBehaviour.subtab.modes": "Modovi",
   "settings.agentBehaviour.subtab.agents": "Agenti",
   "settings.agentBehaviour.subtab.mcpServers": "MCP serveri",
   "settings.agentBehaviour.subtab.rules": "Pravila",
@@ -1233,14 +1265,16 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Ne sažimaj veliki zalijepljeni sadržaj",
   "settings.experimental.batch.title": "Batch alat",
   "settings.experimental.batch.description": "Omogući batch obradu poziva alata",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Pretraga koda",
   "settings.experimental.codebaseSearch.description": "Omogući AI pretragu prirodnim jezikom kroz bazu koda",
-  "settings.experimental.agentManagerTool.title": "Agent Manager alat",
-  "settings.experimental.agentManagerTool.description":
-    "Dozvoli agentima da pokreću lokalne Agent Manager sesije i worktree sesije iz poziva alata",
+  "settings.experimental.speechToText.title": "Govor u tekst",
+  "settings.experimental.speechToText.description":
+    "Omogućite glasovni unos u poljima za promptove koristeći vaš Kilo račun preko Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Omogućite i prijavite se na Kilo provajder da biste koristili Speech to Text. Speech to Text je trenutno podržan samo uz Kilo Gateway.",
+  "settings.experimental.speechToTextModel.title": "Model govora u tekst",
+  "settings.experimental.speechToTextModel.description":
+    "Odaberite Kilo Gateway model za transkripciju za glasovni unos.",
   "settings.experimental.continueOnDeny.title": "Nastavi pri odbijanju",
   "settings.experimental.continueOnDeny.description": "Nastavi petlju agenta kada je dozvola odbijena",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
@@ -1262,6 +1296,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Odaberi agenta za konfiguraciju…",
   "settings.agentBehaviour.modelOverride.title": "Zamjena modela",
   "settings.agentBehaviour.modelOverride.description": "Zamijeni zadani model za ovog agenta",
+  "settings.agentBehaviour.variantOverride.title": "Zamjena varijante",
+  "settings.agentBehaviour.variantOverride.description": "Zamijeni varijantu modela za ovog agenta",
   "settings.agentBehaviour.prompt.title": "Prilagođeni prompt",
   "settings.agentBehaviour.prompt.description": "Dodatni sistemski prompt za ovog agenta",
   "settings.agentBehaviour.temperature.title": "Temperatura",
@@ -1281,7 +1317,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Nisu pronađene vještine. Dodajte putanje mapa ili URL-ove ispod kako biste učinili vještine dostupnim.",
   "settings.agentBehaviour.availableModes": "Dostupni prilagođeni modovi",
-  "settings.agentBehaviour.noModesFound": "Nisu pronađeni modovi.",
+  "settings.agentBehaviour.noAgentsFound": "Nisu pronađeni agenti.",
   "settings.agentBehaviour.createMode": "Kreiraj novi mod",
   "settings.agentBehaviour.createMode.name": "Naziv",
   "settings.agentBehaviour.createMode.name.placeholder": "npr. reviewer",
@@ -1325,10 +1361,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Kopiraj dozvole kao JSON",
   "settings.agentBehaviour.permissions.hint":
     "Pravila se evaluiraju po redoslijedu — zadnje pravilo koje se podudara pobjeđuje. Ovo je riješeni skup pravila iz CLI backenda.",
-  "settings.agentBehaviour.removeMode.title": "Ukloni mod",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Ukloniti mod "{{name}}"? Ovo će onemogućiti mod ažuriranjem vaše konfiguracije.',
-  "settings.agentBehaviour.removeMode.button": "Ukloni",
+  "settings.agentBehaviour.removeAgent.title": "Ukloni agenta",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Ukloniti agenta "{{name}}"? Ovo će ga onemogućiti ažuriranjem konfiguracije.',
+  "settings.agentBehaviour.removeAgent.button": "Ukloni",
   "settings.agentBehaviour.removeMcp.title": "Ukloni MCP server",
   "settings.agentBehaviour.removeMcp.confirm":
     'Ukloniti MCP server "{{name}}"? Ovo će ga ukloniti iz vaše konfiguracije.',
@@ -1601,4 +1637,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "No matching branches",
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "Plan je spreman:",
 }

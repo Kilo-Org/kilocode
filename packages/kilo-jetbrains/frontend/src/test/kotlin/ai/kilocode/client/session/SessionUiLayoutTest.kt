@@ -10,13 +10,20 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.ConnectionPanel
 import ai.kilocode.client.session.ui.EmptySessionPanel
 import ai.kilocode.client.session.ui.LoadingPanel
-import ai.kilocode.client.session.ui.PermissionPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
-import ai.kilocode.client.session.ui.QuestionPanel
+import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.controller.SessionControllerEvent
+import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.ProfileDto
+import com.intellij.util.ui.JBUI
+import ai.kilocode.client.session.views.permission.PermissionView
+import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import com.intellij.ui.components.JBScrollPane
 import javax.swing.JLayeredPane
@@ -24,34 +31,48 @@ import javax.swing.JLayeredPane
 @Suppress("UnstableApiUsage")
 class SessionUiLayoutTest : SessionUiTestBase() {
 
-    fun `test root contains content and overlay layers`() {
+    fun `test root contains content overlay and blocker layers`() {
         val root = find<SessionRootPanel>(ui)
 
-        assertEquals(2, root.componentCount)
+        assertEquals(3, root.componentCount)
         assertSame(root.content, root.components.first { it === root.content })
         assertSame(root.overlay, root.components.first { it === root.overlay })
+        assertSame(root.blocker, root.components.first { it === root.blocker })
         assertEquals(JLayeredPane.DEFAULT_LAYER, root.getLayer(root.content))
         assertEquals(JLayeredPane.PALETTE_LAYER, root.getLayer(root.overlay))
+        assertEquals(JLayeredPane.MODAL_LAYER, root.getLayer(root.blocker))
+        assertFalse(root.blocker.isVisible)
     }
 
-    fun `test connection panel is docked between permission and prompt`() {
+    fun `test bottom stack contains connection and prompt only`() {
         val root = find<SessionRootPanel>(ui)
-        val question = find<QuestionPanel>(ui)
-        val permission = find<PermissionPanel>(ui)
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
         val stack = prompt.parent
 
         assertSame(root.content, stack.parent)
         assertSame(stack, connection.parent)
-        assertEquals(1, root.overlay.componentCount)
-        assertEquals(listOf(question, permission, connection, prompt), stack.components.toList())
+        assertTrue(root.overlay.components.any { it is SessionAccountOverlay })
+        assertEquals(listOf(connection, prompt), stack.components.toList())
+    }
+
+    fun `test active views are children of message list panel`() {
+        ui = newUi(id = "ses_test")
+        settle()
+
+        val messages = find<SessionMessageListPanel>(ui)
+        val qv = find<QuestionView>(ui)
+        val pv = find<PermissionView>(ui)
+
+        assertSame(messages, qv.parent)
+        assertSame(messages, pv.parent)
     }
 
     fun `test header is docked above shared scroll pane and hidden while empty`() {
         val root = find<SessionRootPanel>(ui)
         val header = find<SessionHeaderPanel>(ui)
-        val scroll = find<JBScrollPane>(ui)
+        // Search from root.content to avoid finding the migration wizard scroll panes
+        val scroll = find<JBScrollPane>(root.content)
 
         assertSame(root.content, header.parent.parent)
         assertSame(scroll.parent, header.parent)
@@ -80,42 +101,68 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertTrue(connection.y + connection.height <= prompt.y)
     }
 
-    fun `test connection panel moves after visible question panel`() {
-        val connection = find<ConnectionPanel>(ui)
-        val question = find<QuestionPanel>(ui)
-        val prompt = find<PromptPanel>(ui)
-
+    fun `test connection panel is unaffected by active question view`() {
+        ui = newUi(id = "ses_test")
+        settle()
         showConnection()
         layout()
-        assertFalse(question.isVisible)
+        val connection = find<ConnectionPanel>(ui)
+        val prompt = find<PromptPanel>(ui)
         val top = connection.y
 
         controller().model.setState(questionStateChanged())
         layout()
 
-        assertTrue(question.isVisible)
-        assertTrue(question.y < connection.y)
-        assertTrue(top < connection.y)
+        assertTrue(find<QuestionView>(ui).isVisible)
+        assertSame(find<SessionMessageListPanel>(ui), find<QuestionView>(ui).parent)
+        assertEquals(top, connection.y)
         assertTrue(connection.y + connection.height <= prompt.y)
+        assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
-    fun `test connection panel moves after visible permission panel`() {
-        val connection = find<ConnectionPanel>(ui)
-        val permission = find<PermissionPanel>(ui)
-        val prompt = find<PromptPanel>(ui)
-
+    fun `test connection panel is unaffected by active permission view`() {
+        ui = newUi(id = "ses_test")
+        settle()
         showConnection()
         layout()
-        assertFalse(permission.isVisible)
+        val connection = find<ConnectionPanel>(ui)
+        val prompt = find<PromptPanel>(ui)
         val top = connection.y
 
         controller().model.setState(permissionStateChanged())
         layout()
 
-        assertTrue(permission.isVisible)
-        assertTrue(permission.y < connection.y)
-        assertTrue(top < connection.y)
+        assertTrue(find<PermissionView>(ui).isVisible)
+        assertSame(find<SessionMessageListPanel>(ui), find<PermissionView>(ui).parent)
+        assertEquals(top, connection.y)
         assertTrue(connection.y + connection.height <= prompt.y)
+        assertSame(find<SessionMessageListPanel>(ui), scrollView())
+    }
+
+    fun `test active question view renders inside message scroll view`() {
+        ui = newUi(id = "ses_test")
+        settle()
+
+        controller().model.setState(questionStateChanged())
+        layout()
+
+        assertSame(find<SessionMessageListPanel>(ui), scrollView())
+        assertTrue(find<QuestionView>(ui).isVisible)
+        assertSame(find<SessionMessageListPanel>(ui), find<QuestionView>(ui).parent)
+        assertTrue(find<QuestionView>(ui).parent !== find<PromptPanel>(ui).parent)
+    }
+
+    fun `test active permission view renders inside message scroll view`() {
+        ui = newUi(id = "ses_test")
+        settle()
+
+        controller().model.setState(permissionStateChanged())
+        layout()
+
+        assertSame(find<SessionMessageListPanel>(ui), scrollView())
+        assertTrue(find<PermissionView>(ui).isVisible)
+        assertSame(find<SessionMessageListPanel>(ui), find<PermissionView>(ui).parent)
+        assertTrue(find<PermissionView>(ui).parent !== find<PromptPanel>(ui).parent)
     }
 
     fun `test empty and message bodies share the same scroll pane`() {
@@ -180,6 +227,37 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
+    fun `test retry status renders in loading panel instead of message body`() {
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test")
+        settle()
+
+        controller().model.setState(SessionState.Retry("Cannot connect to API", attempt = 2, next = 1_234L))
+        layout()
+
+        val panel = find<LoadingPanel>(ui)
+        assertSame(panel, scrollView())
+        assertEquals("Cannot connect to API", panel.labelText())
+
+        controller().model.setState(SessionState.Idle)
+        layout()
+
+        assertSame(find<SessionMessageListPanel>(ui), scrollView())
+    }
+
+    fun `test offline status renders in loading panel with fallback`() {
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test")
+        settle()
+
+        controller().model.setState(SessionState.Offline("", requestId = "req1"))
+        layout()
+
+        val panel = find<LoadingPanel>(ui)
+        assertSame(panel, scrollView())
+        assertEquals("Connection offline", panel.labelText())
+    }
+
     fun `test empty explicit session id shows message body`() {
         rpc.recent.add(session("ses_recent"))
         settle()
@@ -237,14 +315,13 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     fun `test existing session history shows header above scroll pane`() {
         rpc.history.add(MessageWithPartsDto(message("msg1"), emptyList()))
 
-        ui = SessionUi(project, workspace, sessions, app, scope, ref = SessionRef.Local("ses_test"), displayMs = 0).apply {
-            setSize(800, 600)
-        }
+        ui = newUi(id = "ses_test")
         settle()
         layout()
 
+        val root = find<SessionRootPanel>(ui)
         val header = find<SessionHeaderPanel>(ui)
-        val scroll = find<JBScrollPane>(ui)
+        val scroll = find<JBScrollPane>(root.content)
         assertTrue(header.isVisible)
         assertTrue(header.y + header.height <= scroll.y)
     }
@@ -313,4 +390,79 @@ class SessionUiLayoutTest : SessionUiTestBase() {
             meta = PermissionMeta(raw = emptyMap()),
         )
     )
+
+    // --- account overlay layout tests ---
+
+    fun `test account overlay is registered in root overlay layer`() {
+        val root = find<SessionRootPanel>(ui)
+        val overlay = find<SessionAccountOverlay>(ui)
+
+        assertSame(root.overlay, overlay.parent)
+    }
+
+    fun `test account overlay hidden before recents complete`() {
+        rpc.recentGate = kotlinx.coroutines.CompletableDeferred()
+        rpc.recent.add(session("ses_1"))
+        ui = newUi(displayMs = 1_000)
+
+        settleShort(100)
+
+        val overlay = find<SessionAccountOverlay>(ui)
+        assertFalse(overlay.isVisible)
+
+        rpc.recentGate!!.complete(Unit)
+    }
+
+    fun `test account overlay shows after recents complete`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = ProfileDto(email = "user@example.com"))
+        rpc.recent.add(session("ses_1"))
+        ui = newUi(displayMs = 1_000)
+
+        settle()
+
+        val overlay = find<SessionAccountOverlay>(ui)
+        assertTrue(overlay.isVisible)
+    }
+
+    fun `test account overlay hides after first prompt`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = ProfileDto(email = "user@example.com"))
+        rpc.recent.add(session("ses_1"))
+        ui = newUi(displayMs = 1_000)
+        settle()
+
+        val overlay = find<SessionAccountOverlay>(ui)
+        assertTrue(overlay.isVisible)
+
+        com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
+            controller().prompt("hello")
+        }
+        settle()
+
+        assertFalse(overlay.isVisible)
+    }
+
+    fun `test explicit session does not show overlay`() {
+        ui = newUi(id = "ses_test")
+        settle()
+
+        val overlay = find<SessionAccountOverlay>(ui)
+        assertFalse(overlay.isVisible)
+    }
+
+    fun `test account overlay uses prompt panel top and right insets`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = ProfileDto(email = "user@example.com"))
+        rpc.recent.add(session("ses_1"))
+        ui = newUi(displayMs = 1_000)
+        settle()
+        layout()
+
+        val root = find<SessionRootPanel>(ui)
+        val overlay = find<SessionAccountOverlay>(ui)
+        val top = JBUI.scale(SessionUiStyle.View.Prompt.PANEL_VERTICAL_PADDING)
+        val right = JBUI.scale(SessionUiStyle.View.Prompt.PANEL_HORIZONTAL_PADDING)
+
+        assertTrue(overlay.isVisible)
+        assertEquals(top, overlay.y)
+        assertEquals(root.overlay.width - overlay.width - right, overlay.x)
+    }
 }

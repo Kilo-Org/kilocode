@@ -33,6 +33,7 @@ import { recordPromotionHandoff } from "./promotion-handoff"
 import { restoreWorktrees } from "./state-recovery"
 import { diffSummary as localDiffSummary, diffFile as localDiffFile } from "./local-diff"
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
+import { stopSessionProcesses } from "../kilo-provider/background-process"
 
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
@@ -71,6 +72,7 @@ export class AgentManagerProvider implements Disposable {
   private cachedLocalStats: { type: "agentManager.localStats"; stats: LocalStats } | undefined
   private unsubTool: (() => void) | undefined
   private closing: Promise<void> | undefined
+  private onVisibilityChange: ((visible: boolean) => void) | undefined
 
   /** Session ID most recently loaded via a `loadMessages` message from the webview.
    *  Updated synchronously — unlike the session provider's currentSession which depends on
@@ -181,8 +183,13 @@ export class AgentManagerProvider implements Disposable {
     this.attachPanel(
       this.host.openPanel({
         onBeforeMessage: (msg) => this.onMessage(msg),
+        worktreeDirectories: () => this.getWorktreeDirectories(),
       }),
     )
+  }
+
+  public onPanelVisibilityChange(cb: (visible: boolean) => void): void {
+    this.onVisibilityChange = cb
   }
 
   /** Restore the Agent Manager panel from a previously serialized state.
@@ -212,6 +219,7 @@ export class AgentManagerProvider implements Disposable {
     this.panel = ctx
 
     this.statsPoller.setVisible(ctx.visible)
+    this.onVisibilityChange?.(ctx.visible)
     ctx.onDidChangeVisibility((visible) => {
       this.statsPoller.setVisible(visible)
     })
@@ -233,6 +241,7 @@ export class AgentManagerProvider implements Disposable {
         this.prBridge.poller.stop()
         this.diffs.stop()
         this.panel = undefined
+        this.onVisibilityChange?.(false)
       }
       ctx.sessions.dispose()
     })
@@ -378,7 +387,7 @@ export class AgentManagerProvider implements Disposable {
     if (m.type === "agentManager.deleteWorktree") return this.onDeleteWorktree(m.worktreeId)
     if (m.type === "agentManager.removeStaleWorktree") return this.onRemoveStaleWorktree(m.worktreeId)
     if (m.type === "agentManager.promoteSession") return this.onPromoteSession(m.sessionId)
-    if (m.type === "agentManager.addSessionToWorktree") return this.onAddSessionToWorktree(m.worktreeId)
+    if (m.type === "agentManager.addSessionToWorktree") return this.onAddSessionToWorktree(m.worktreeId, m.sessionId)
     if (m.type === "agentManager.forkSession") return this.onForkSession(m.sessionId, m.worktreeId, m.messageId)
     if (m.type === "agentManager.closeSession") return this.onCloseSession(m.sessionId)
   }
@@ -416,6 +425,15 @@ export class AgentManagerProvider implements Disposable {
         state.removeSession(m.sessionId)
       })
       return null
+    }
+
+    if ((m.type === "sendMessage" || m.type === "sendCommand") && !m.sessionID) {
+      const ctx = typeof m.agentManagerContext === "string" ? m.agentManagerContext : undefined
+      const worktree = ctx && ctx !== "local" ? this.getStateManager()?.getWorktree(ctx) : undefined
+      if (worktree) {
+        if (m.draftID) this.activeSessionId = m.draftID
+        return { ...msg, contextDirectory: worktree.path }
+      }
     }
 
     if ((m.type === "sendMessage" || m.type === "sendCommand") && m.draftID && !m.sessionID) {
@@ -526,6 +544,10 @@ export class AgentManagerProvider implements Disposable {
     }
     if (m.type === "agentManager.setSessionsCollapsed") {
       this.state?.setSessionsCollapsed(m.collapsed)
+      return null
+    }
+    if (m.type === "agentManager.setSidebarCollapsed") {
+      this.state?.setSidebarCollapsed(m.collapsed)
       return null
     }
     if (this.handleSection(m)) return null
@@ -854,6 +876,7 @@ export class AgentManagerProvider implements Disposable {
       case "agentManager.setTabOrder":
       case "agentManager.setWorktreeOrder":
       case "agentManager.setSessionsCollapsed":
+      case "agentManager.setSidebarCollapsed":
       case "agentManager.setReviewDiffStyle":
       case "agentManager.setDefaultBaseBranch":
       case "agentManager.createSection":
@@ -1044,7 +1067,7 @@ export class AgentManagerProvider implements Disposable {
   }
 
   /** Add a new session to an existing worktree. */
-  private async onAddSessionToWorktree(worktreeId: string): Promise<null> {
+  private async onAddSessionToWorktree(worktreeId: string, sessionId?: string): Promise<null> {
     let client: KiloClient
     try {
       client = this.connectionService.getClient()
@@ -1060,6 +1083,26 @@ export class AgentManagerProvider implements Disposable {
     const worktree = state.getWorktree(worktreeId)
     if (!worktree) {
       this.log(`Worktree ${worktreeId} not found`)
+      return null
+    }
+
+    if (sessionId) {
+      if (state.getSession(sessionId)) state.moveSession(sessionId, worktreeId)
+      else state.addSession(sessionId, worktreeId)
+      this.registerWorktreeSession(sessionId, worktree.path)
+      this.pushState()
+      this.postToWebview({
+        type: "agentManager.sessionAdded",
+        sessionId,
+        worktreeId,
+      })
+      this.host.capture("Agent Manager Session Started", {
+        source: PLATFORM,
+        sessionId,
+        worktreeId,
+        existing: true,
+      })
+      this.log(`Added existing session ${sessionId} to worktree ${worktreeId}`)
       return null
     }
 
@@ -1109,6 +1152,7 @@ export class AgentManagerProvider implements Disposable {
       {
         getClient: () => this.connectionService.getClient(),
         state: this.getStateManager(),
+        directory: this.getRoot(),
         postError: (msg) => this.postToWebview({ type: "error", message: msg }),
         registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
         pushState: () => this.pushState(),
@@ -1133,7 +1177,16 @@ export class AgentManagerProvider implements Disposable {
     const state = this.getStateManager()
     if (!state) return null
 
+    const dirs = this.panel?.sessions.getSessionDirectories()
+    const dir = state.directoryFor(sessionId) ?? dirs?.get(sessionId) ?? this.getRoot() ?? process.cwd()
+    try {
+      await stopSessionProcesses(this.connectionService.getClient(), sessionId, dir)
+    } catch (err) {
+      this.log("onCloseSession: client not available:", err)
+    }
+
     state.removeSession(sessionId)
+    this.panel?.sessions.clearSessionDirectory(sessionId)
     this.pushState()
     this.log(`Closed session ${sessionId}`)
     return null
@@ -1496,6 +1549,7 @@ export class AgentManagerProvider implements Disposable {
       tabOrder: state.getTabOrder(),
       worktreeOrder: state.getWorktreeOrder(),
       sessionsCollapsed: state.getSessionsCollapsed(),
+      sidebarCollapsed: state.getSidebarCollapsed(),
       reviewDiffStyle: state.getReviewDiffStyle(),
       reviewMarkdownRender: getDiffMarkdownRender(),
       isGitRepo: true,
@@ -1640,6 +1694,14 @@ export class AgentManagerProvider implements Disposable {
   /** Expose worktree session→directory mappings for the auto-approve toggle. */
   public getSessionDirectories(): ReadonlyMap<string, string> {
     return this.panel?.sessions.getSessionDirectories() ?? new Map()
+  }
+
+  public getWorktreeDirectories(): string[] {
+    return (
+      this.getStateManager()
+        ?.getWorktrees()
+        .map((wt) => wt.path) ?? []
+    )
   }
 
   /**

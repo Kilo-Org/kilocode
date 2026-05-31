@@ -425,6 +425,40 @@ describe("WorktreeStateManager", () => {
     })
   })
 
+  describe("sidebarCollapsed", () => {
+    it("defaults to false", () => {
+      expect(manager.getSidebarCollapsed()).toBe(false)
+    })
+
+    it("sets and gets collapsed state", () => {
+      manager.setSidebarCollapsed(true)
+      expect(manager.getSidebarCollapsed()).toBe(true)
+
+      manager.setSidebarCollapsed(false)
+      expect(manager.getSidebarCollapsed()).toBe(false)
+    })
+
+    it("persists and loads collapsed state", async () => {
+      manager.setSidebarCollapsed(true)
+      await manager.flush()
+      await manager.save()
+
+      const loaded = new WorktreeStateManager(root, () => {})
+      await loaded.load()
+      expect(loaded.getSidebarCollapsed()).toBe(true)
+    })
+
+    it("does not persist when false", async () => {
+      manager.setSidebarCollapsed(false)
+      await manager.flush()
+      await manager.save()
+
+      const content = fs.readFileSync(path.join(root, ".kilo", "agent-manager.json"), "utf-8")
+      const data = JSON.parse(content)
+      expect(data.sidebarCollapsed).toBeUndefined()
+    })
+  })
+
   describe("validate", () => {
     it("removes worktrees whose directories do not exist and prunes their sessions", async () => {
       const existing = path.join(root, "wt-exists")

@@ -29,6 +29,7 @@ export interface SendMessageRequest {
   variant?: string
   files?: FileAttachment[]
   agentManagerContext?: string
+  contextDirectory?: string
 }
 
 export interface AbortRequest {
@@ -129,6 +130,12 @@ export interface OpenFileRequest {
   filePath: string
   line?: number
   column?: number
+}
+
+export interface OpenContentRequest {
+  type: "openContent"
+  content: string
+  language?: string
 }
 
 export interface CancelLoginRequest {
@@ -234,6 +241,7 @@ export interface SendCommandRequest {
   variant?: string
   files?: FileAttachment[]
   agentManagerContext?: string
+  contextDirectory?: string
 }
 
 export interface RemoveSkillMessage {
@@ -242,7 +250,7 @@ export interface RemoveSkillMessage {
 }
 
 export interface RemoveModeMessage {
-  type: "removeMode"
+  type: "removeAgent"
   name: string
 }
 
@@ -312,6 +320,11 @@ export interface RenameSessionRequest {
   title: string
 }
 
+export interface ExportSessionTranscriptRequest {
+  type: "exportSessionTranscript"
+  sessionID: string
+}
+
 export interface RequestAutocompleteSettingsMessage {
   type: "requestAutocompleteSettings"
 }
@@ -319,6 +332,23 @@ export interface RequestAutocompleteSettingsMessage {
 export interface RequestChatCompletionMessage {
   type: "requestChatCompletion"
   text: string
+  requestId: string
+}
+
+export interface SpeechToTextStartMessage {
+  type: "speechToTextStart"
+  requestId: string
+  model: string
+  language?: string
+}
+
+export interface SpeechToTextStopMessage {
+  type: "speechToTextStop"
+  requestId: string
+}
+
+export interface SpeechToTextCancelMessage {
+  type: "speechToTextCancel"
   requestId: string
 }
 
@@ -354,6 +384,12 @@ export interface UpdateSettingRequest {
 
 export interface RequestTimelineSettingMessage {
   type: "requestTimelineSetting"
+}
+
+export interface StreamSessionVisibleMessage {
+  type: "streamSessionVisible"
+  sessionID: string
+  visible: boolean
 }
 
 export interface RequestBrowserSettingsMessage {
@@ -473,6 +509,7 @@ export interface OpenLocallyRequest {
 export interface AddSessionToWorktreeRequest {
   type: "agentManager.addSessionToWorktree"
   worktreeId: string
+  sessionId?: string
 }
 
 // Fork an existing session (copies conversation history)
@@ -633,6 +670,12 @@ export interface SetWorktreeOrderRequest {
 // Persist sessions collapsed state
 export interface SetSessionsCollapsedRequest {
   type: "agentManager.setSessionsCollapsed"
+  collapsed: boolean
+}
+
+// Persist sidebar collapsed state
+export interface SetSidebarCollapsedRequest {
+  type: "agentManager.setSidebarCollapsed"
   collapsed: boolean
 }
 
@@ -1017,6 +1060,10 @@ export interface RemoveInstalledMarketplaceItemMessage {
   mpInstallOptions: InstallMarketplaceItemOptions
 }
 
+export interface DismissAgentMigrationBannerMessage {
+  type: "dismissAgentMigrationBanner"
+}
+
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
@@ -1064,14 +1111,19 @@ export type WebviewMessage =
   | SuggestionDismissRequest
   | DeleteSessionRequest
   | RenameSessionRequest
+  | ExportSessionTranscriptRequest
   | RequestAutocompleteSettingsMessage
   | RequestChatCompletionMessage
+  | SpeechToTextStartMessage
+  | SpeechToTextStopMessage
+  | SpeechToTextCancelMessage
   | RequestFileSearchMessage
   | RequestTerminalContextMessage
   | RequestGitChangesContextMessage
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
+  | StreamSessionVisibleMessage
   | RequestBrowserSettingsMessage
   | RequestClaudeCompatSettingMessage
   | RequestConfigMessage
@@ -1116,6 +1168,7 @@ export type WebviewMessage =
   | SetTabOrderRequest
   | SetWorktreeOrderRequest
   | SetSessionsCollapsedRequest
+  | SetSidebarCollapsedRequest
   | SetReviewDiffStyleRequest
   | SetReviewMarkdownRenderRequest
   | PersistVariantRequest
@@ -1167,6 +1220,7 @@ export type WebviewMessage =
   | FilterMarketplaceItemsMessage
   | InstallMarketplaceItemMessage
   | RemoveInstalledMarketplaceItemMessage
+  | DismissAgentMigrationBannerMessage
   | ConnectProviderMessage
   | AuthorizeProviderOAuthMessage
   | CompleteProviderOAuthMessage
@@ -1191,6 +1245,7 @@ export type WebviewMessage =
   | ToggleSectionCollapsedRequest
   | MoveToSectionRequest
   | MoveSectionRequest
+  | OpenContentRequest
   | AgentManagerTerminalCreateRequest
   | AgentManagerTerminalCloseRequest
   | AgentManagerTerminalResizeRequest

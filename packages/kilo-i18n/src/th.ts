@@ -7,6 +7,9 @@ export const dict = {
   "provider.connect.kiloGateway.visit.prefix": "เยี่ยมชม ",
   "provider.connect.kiloGateway.visit.link": "kilo.ai",
   "provider.connect.kiloGateway.visit.suffix": " เพื่อรับ API key ของคุณ",
+  "provider.connect.kiloGateway.byok.prefix": "สำหรับสถิติการใช้งานเพิ่มเติม โปรดใช้ ",
+  "provider.connect.kiloGateway.byok.link": "BYOK ผ่าน Kilo's Gateway",
+  "provider.connect.kiloGateway.byok.suffix": "",
 
   // Provider dialog translations
   "dialog.provider.group.recommended": "แนะนำ",
@@ -19,7 +22,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "ทักษะ",
   "marketplace.tab.mcpServers": "เซิร์ฟเวอร์ MCP",
-  "marketplace.tab.modes": "โหมด",
   "marketplace.category.all": "ทั้งหมด",
   "marketplace.placeholder": "ยังไม่ได้ดำเนินการ",
   "marketplace.card.installed": "ติดตั้งแล้ว",
@@ -45,6 +47,7 @@ export const dict = {
   "marketplace.remove.cancel": "ยกเลิก",
   "marketplace.remove.confirm.button": "ลบ",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "เอเจนต์",
   "marketplace.search": "ค้นหา...",
   "marketplace.filter.all": "รายการทั้งหมด",
   "marketplace.filter.notInstalled": "ยังไม่ได้ติดตั้ง",
@@ -60,7 +63,7 @@ export const dict = {
   "marketplace.scope.global": "โกลบอล",
   "marketplace.remove.type.mcp": "เซิร์ฟเวอร์ MCP",
   "marketplace.remove.type.skill": "ทักษะ",
-  "marketplace.remove.type.mode": "โหมด",
+  "marketplace.remove.type.agent": "เอเจนต์",
   "marketplace.remove.failed": "ไม่สามารถลบ {{name}} ได้",
   "marketplace.install": "ติดตั้ง",
   "marketplace.filter.installed": "ติดตั้งแล้ว",
@@ -69,8 +72,10 @@ export const dict = {
   "marketplace.warning.busyMany": "มีหลายเซสชันกำลังทำงานและจะถูกขัดจังหวะ",
   "marketplace.warning.installAnyway": "ติดตั้งต่อไป",
   "marketplace.warning.cancel": "ยกเลิก",
-  "marketplace.contribute.prompt": "ไม่พบทักษะ โหมด หรือเซิร์ฟเวอร์ MCP ที่ต้องการ?",
+  "marketplace.contribute.prompt": "ขาดสกิล เอเจนต์ หรือเซิร์ฟเวอร์ MCP?",
   "marketplace.contribute.cta": "ร่วมสมทบบน GitHub",
+  "marketplace.migration.notice":
+    "โหมดถูกแทนที่ด้วยเอเจนต์แล้ว หากคุณเคยติดตั้งโหมดจาก marketplace กรุณาลบและติดตั้งใหม่เป็นเอเจนต์เพื่อย้ายไปยังรูปแบบใหม่",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "ดำเนินการ",
@@ -91,7 +96,11 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "ปิดสแน็ปช็อตของ Kilo สำหรับโปรเจกต์นี้ คุณจะสูญเสียการยกเลิก/ทำซ้ำสำหรับการเปลี่ยนแปลงของ Kilo แต่ git ยังคงติดตามทุกอย่าง",
 
+  // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "เปิดในตัวดูความแตกต่าง",
+  "ui.messagePart.shell.command": "คำสั่ง",
+  "ui.messagePart.shell.output": "ผลลัพธ์",
+  "ui.messagePart.openInEditor": "เปิดในตัวแก้ไข",
 
   // Message feedback (thumbs up/down per assistant response)
   "ui.message.feedback.helpful": "สิ่งนี้มีประโยชน์",

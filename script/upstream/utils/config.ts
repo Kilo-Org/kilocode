@@ -156,6 +156,7 @@ export const defaultConfig: MergeConfig = {
     "packages/app/**",
     "packages/desktop/**",
     "packages/desktop-electron/**",
+    "sdks/vscode/**",
     // GitHub Action - Kilo version is fully ported and complete
     "github/index.ts",
     "github/package.json",
@@ -204,6 +205,7 @@ export const defaultConfig: MergeConfig = {
     "packages/kilo-gateway",
     "packages/kilo-telemetry",
     "packages/kilo-vscode",
+    "packages/kilo-jetbrains",
     "packages/kilo-ui",
     "packages/kilo-docs",
     "packages/kilo-i18n",

@@ -44,6 +44,7 @@ data class SseEvent(val type: String, val data: String)
  *
  * Uses two separate OkHttp clients mirroring the VS Code architecture:
  * - [apiClient]: no call/read timeout — used for the generated API client and SSE
+ * - app-load client: bounded timeout — used for startup REST calls
  * - [healthClient]: 3 s timeout — used only for `/global/health` polling
  *
  * The generated [DefaultApi] is configured with [apiClient] and exposed via [api]
@@ -59,8 +60,22 @@ class KiloConnectionService(
   private val cs: CoroutineScope,
   private val server: CliServer,
   private val onReconnect: () -> Unit,
-  private val log: KiloLog = KiloLog.create(KiloConnectionService::class.java),
+  private val log: KiloLog,
+  private val appLoadTimeoutMs: Long,
 ) {
+
+    constructor(
+      cs: CoroutineScope,
+      server: CliServer,
+      onReconnect: () -> Unit,
+    ) : this(cs, server, onReconnect, KiloLog.create(KiloConnectionService::class.java), 30_000L)
+
+    constructor(
+      cs: CoroutineScope,
+      server: CliServer,
+      onReconnect: () -> Unit,
+      log: KiloLog,
+    ) : this(cs, server, onReconnect, log, 30_000L)
 
     companion object {
         private const val HEARTBEAT_TIMEOUT_MS = 15_000L
@@ -81,6 +96,9 @@ class KiloConnectionService(
     /** OkHttp client used for API calls — no call/read timeout. Null when disconnected. */
     var apiClient: OkHttpClient? = null
         private set
+    var appLoadApi: DefaultApi? = null
+        private set
+    private var appLoadClient: OkHttpClient? = null
     private var healthClient: OkHttpClient? = null
     /** Port the CLI server is listening on. Zero when disconnected. */
     var port = 0
@@ -175,12 +193,15 @@ class KiloConnectionService(
 
         // Create dual OkHttp clients (bundled — no IntelliJ platform deps)
         val ac = KiloBackendHttpClients.api(password)
+        val lc = KiloBackendHttpClients.appLoad(password, appLoadTimeoutMs)
         val hc = KiloBackendHttpClients.health(password)
         apiClient = ac
+        appLoadClient = lc
         healthClient = hc
 
         // Configure generated API client with the no-timeout api client
         api = DefaultApi(basePath = "http://127.0.0.1:$port", client = ac)
+        appLoadApi = DefaultApi(basePath = "http://127.0.0.1:$port", client = lc)
 
         startSse()
         startHeartbeatWatcher()
@@ -327,8 +348,11 @@ class KiloConnectionService(
 
     private fun close() {
         api = null
+        appLoadApi = null
         apiClient?.let { KiloBackendHttpClients.shutdown(it) }
         apiClient = null
+        appLoadClient?.let { KiloBackendHttpClients.shutdown(it) }
+        appLoadClient = null
         healthClient?.let { KiloBackendHttpClients.shutdown(it) }
         healthClient = null
     }

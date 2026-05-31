@@ -1,0 +1,39 @@
+/* ============================================
+   Plan Exit Card
+   ============================================ */
+
+[data-component="tool-part-wrapper"]:has([data-component="plan-exit-card"]) {
+  border: none !important;
+  border-radius: 0;
+  overflow: visible;
+}
+
+[data-component="plan-exit-card"] {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 0;
+  font-family: var(--font-family-sans);
+  font-size: var(--kilo-font-size-13);
+  line-height: var(--line-height-large);
+
+  [data-slot="plan-exit-label"] {
+    color: var(--text-base);
+    font-weight: var(--font-weight-medium);
+  }
+
+  [data-slot="plan-exit-link"] {
+    cursor: pointer;
+    color: var(--text-interactive-base);
+    text-decoration: none;
+    text-underline-offset: 2px;
+    font-family: var(--font-family-mono);
+    font-size: var(--kilo-font-size-12);
+    word-break: break-all;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

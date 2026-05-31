@@ -28,6 +28,7 @@ import { dict as uiBs } from "@kilocode/kilo-ui/i18n/bs"
 import { dict as uiTr } from "@kilocode/kilo-ui/i18n/tr"
 import { dict as uiNl } from "@kilocode/kilo-ui/i18n/nl"
 import { dict as uiUk } from "@kilocode/kilo-ui/i18n/uk"
+import { dict as uiIt } from "@kilocode/kilo-ui/i18n/it"
 import { dict as appEn } from "../i18n/en"
 import { dict as appZh } from "../i18n/zh"
 import { dict as appZht } from "../i18n/zht"
@@ -47,6 +48,7 @@ import { dict as appBs } from "../i18n/bs"
 import { dict as appTr } from "../i18n/tr"
 import { dict as appNl } from "../i18n/nl"
 import { dict as appUk } from "../i18n/uk"
+import { dict as appIt } from "../i18n/it"
 import { dict as amEn } from "../../agent-manager/i18n/en"
 import { dict as amZh } from "../../agent-manager/i18n/zh"
 import { dict as amZht } from "../../agent-manager/i18n/zht"
@@ -66,6 +68,7 @@ import { dict as amBs } from "../../agent-manager/i18n/bs"
 import { dict as amTr } from "../../agent-manager/i18n/tr"
 import { dict as amNl } from "../../agent-manager/i18n/nl"
 import { dict as amUk } from "../../agent-manager/i18n/uk"
+import { dict as amIt } from "../../agent-manager/i18n/it"
 import { dict as kiloEn } from "@kilocode/kilo-i18n/en"
 import { dict as kiloZh } from "@kilocode/kilo-i18n/zh"
 import { dict as kiloZht } from "@kilocode/kilo-i18n/zht"
@@ -85,6 +88,7 @@ import { dict as kiloBs } from "@kilocode/kilo-i18n/bs"
 import { dict as kiloTr } from "@kilocode/kilo-i18n/tr"
 import { dict as kiloNl } from "@kilocode/kilo-i18n/nl"
 import { dict as kiloUk } from "@kilocode/kilo-i18n/uk"
+import { dict as kiloIt } from "@kilocode/kilo-i18n/it"
 import { useVSCode } from "./vscode"
 import { normalizeLocale as _normalizeLocale, resolveTemplate as _resolveTemplate } from "./language-utils"
 
@@ -113,6 +117,7 @@ export const LOCALE_LABELS: Record<Locale, string> = {
   tr: "Türkçe",
   nl: "Nederlands",
   uk: "Українська",
+  it: "Italiano",
 }
 
 // Merge 4 dict layers: app + ui + kilo + agent manager (kilo and agent manager override last)
@@ -137,6 +142,7 @@ const dicts: Record<Locale, Record<string, string>> = {
   tr: { ...base, ...appTr, ...uiTr, ...kiloTr, ...amEn, ...amTr },
   nl: { ...base, ...appNl, ...uiNl, ...kiloNl, ...amEn, ...amNl },
   uk: { ...base, ...appUk, ...uiUk, ...kiloUk, ...amEn, ...amUk },
+  it: { ...base, ...appIt, ...uiIt, ...kiloIt, ...amEn, ...amIt },
 }
 
 function normalizeLocale(lang: string): Locale {

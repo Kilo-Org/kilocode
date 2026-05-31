@@ -15,6 +15,7 @@ import { LANGUAGE_EXTENSIONS } from "@/lsp/language"
 import { Keybind } from "@/util/keybind"
 import { Locale } from "@/util/locale"
 import { Global } from "@opencode-ai/core/global"
+import { ShellID } from "@/tool/shell/id"
 import { useDialog } from "../../ui/dialog"
 import { getScrollAcceleration } from "../../util/scroll"
 import { useTuiConfig } from "../../context/tui-config"
@@ -307,10 +308,21 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
               }
             }
 
-            if (permission === "bash") {
-              const title =
-                typeof data.description === "string" && data.description ? data.description : "Shell command"
-              const command = normalizeUrls(typeof data.command === "string" ? data.command : "") // kilocode_change
+            if (permission === ShellID.ToolID) {
+              // kilocode_change start
+              const meta = props.request.metadata ?? {}
+              const desc =
+                typeof data.description === "string" && data.description
+                  ? data.description
+                  : typeof meta.description === "string" && meta.description
+                    ? meta.description
+                    : undefined
+              const bg = meta.backgroundProcess === true
+              const title = bg ? `Start background process${desc ? `: ${desc}` : ""}` : (desc ?? "Shell command")
+              const command = normalizeUrls(
+                typeof data.command === "string" ? data.command : typeof meta.command === "string" ? meta.command : "",
+              )
+              // kilocode_change end
               return {
                 icon: "#",
                 title,

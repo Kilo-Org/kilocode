@@ -2,13 +2,12 @@ import { Hono } from "hono"
 import { describeRoute, validator } from "hono-openapi"
 import { resolver } from "hono-openapi"
 import { Instance } from "@/project/instance"
-import { InstanceStore } from "@/project/instance-store"
+import { InstanceRuntime } from "@/project/instance-runtime"
 import { Project } from "@/project/project"
 import z from "zod"
 import { ProjectID } from "@/project/schema"
 import { errors } from "../../error"
 import { lazy } from "@/util/lazy"
-import { getBootstrapRunEffect } from "@/effect/app-runtime"
 import { jsonRequest, runRequest } from "./trace"
 
 export const ProjectRoutes = lazy(() =>
@@ -83,11 +82,10 @@ export const ProjectRoutes = lazy(() =>
         )
         if (next.id === prev.id && next.vcs === prev.vcs && next.worktree === prev.worktree) return c.json(next)
         // kilocode_change start
-        await InstanceStore.reloadInstance({
+        await InstanceRuntime.reloadInstance({
           directory: dir,
           worktree: dir,
           project: next,
-          init: await getBootstrapRunEffect(),
         })
         // kilocode_change end
         return c.json(next)

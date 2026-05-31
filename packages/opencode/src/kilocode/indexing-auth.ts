@@ -1,3 +1,5 @@
+import type { IndexingConfig } from "@kilocode/kilo-indexing/config"
+
 type Auth = unknown
 
 type Env = {
@@ -106,9 +108,10 @@ export function shouldDefaultIndexingToKilo(indexing: unknown, auth: KiloIndexin
   return !hasOtherProvider(cfg)
 }
 
-export function indexingWithKiloDefault(config: unknown, auth: KiloIndexingAuth) {
-  const cfg = record(config)
-  const indexing = cfg.indexing
+export function indexingWithKiloDefault(
+  indexing: IndexingConfig | undefined,
+  auth: KiloIndexingAuth,
+): IndexingConfig | undefined {
   if (!shouldDefaultIndexingToKilo(indexing, auth)) return indexing
-  return { ...record(indexing), provider: "kilo" }
+  return { ...indexing, provider: "kilo" }
 }

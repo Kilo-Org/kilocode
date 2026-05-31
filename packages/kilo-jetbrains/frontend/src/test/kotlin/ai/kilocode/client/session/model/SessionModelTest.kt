@@ -13,6 +13,7 @@ import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import ai.kilocode.rpc.dto.TodoDto
+import ai.kilocode.rpc.dto.TodoViewDto
 import ai.kilocode.rpc.dto.TokensDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
@@ -171,6 +172,8 @@ class SessionModelTest : UsefulTestCase() {
 
     fun `test updateContent tool stores rich fields`() {
         model.addMessage(msg("m1", "assistant"))
+        val todos = listOf(TodoDto("Write tests", "completed", "high", changed = true))
+        val view = TodoViewDto("compact", todos, hiddenBefore = 1, hiddenAfter = 2, changed = 1)
 
         model.updateContent(
             "m1",
@@ -184,6 +187,8 @@ class SessionModelTest : UsefulTestCase() {
                 output = "abc123 init",
                 error = "failed",
                 time = PartTimeDto(1.0, 2.0),
+                todos = todos,
+                todoView = view,
             ),
         )
 
@@ -195,6 +200,8 @@ class SessionModelTest : UsefulTestCase() {
         assertEquals("failed", p.error)
         assertEquals(1.0, p.time?.start)
         assertEquals(2.0, p.time?.end)
+        assertEquals(todos, p.todos)
+        assertEquals(view, p.todoView)
     }
 
     fun `test updateContent tool updates lifecycle`() {
@@ -214,15 +221,24 @@ class SessionModelTest : UsefulTestCase() {
         model.addMessage(msg("m1", "assistant"))
         model.updateContent("m1", part("p1", "m1", "tool", tool = "bash", state = "pending"))
         events.clear()
+        val todos = listOf(TodoDto("Review", "pending", "medium"))
 
         model.updateContent(
             "m1",
-            part("p1", "m1", "tool", tool = "bash", state = "completed", input = mapOf("command" to "git remote -v"), output = "origin"),
+            part(
+                "p1", "m1", "tool",
+                tool = "bash",
+                state = "completed",
+                input = mapOf("command" to "git remote -v"),
+                output = "origin",
+                todos = todos,
+            ),
         )
 
         val p = model.message("m1")!!.parts["p1"] as Tool
         assertEquals("git remote -v", p.input["command"])
         assertEquals("origin", p.output)
+        assertEquals(todos, p.todos)
         assertTrue(events.single() is SessionModelEvent.ContentUpdated)
     }
 
@@ -493,16 +509,27 @@ class SessionModelTest : UsefulTestCase() {
         assertEquals("snapshot", (entry.parts["p2"] as Generic).type)
     }
 
-    fun `test loadHistory drops step-start and preserves step-finish parts`() {
+    fun `test loadHistory drops silent parts and preserves step-finish parts`() {
         val text = PartDto(id = "p1", sessionID = "s1", messageID = "m1", type = "text", text = "visible")
         val stepStart = PartDto(id = "p2", sessionID = "s1", messageID = "m1", type = "step-start")
         val stepFinish = PartDto(id = "p3", sessionID = "s1", messageID = "m1", type = "step-finish")
+        val patch = PartDto(id = "p4", sessionID = "s1", messageID = "m1", type = "patch")
 
-        model.loadHistory(listOf(MessageWithPartsDto(msg("m1", "assistant"), listOf(text, stepStart, stepFinish))))
+        model.loadHistory(listOf(MessageWithPartsDto(msg("m1", "assistant"), listOf(text, stepStart, stepFinish, patch))))
 
         val entry = model.message("m1")!!
         assertEquals(listOf("p1", "p3"), entry.parts.keys.toList())
         assertTrue(entry.parts["p3"] is StepFinish)
+    }
+
+    fun `test updateContent drops patch parts`() {
+        model.addMessage(msg("m1", "assistant"))
+        events.clear()
+
+        model.updateContent("m1", PartDto(id = "p1", sessionID = "s1", messageID = "m1", type = "patch"))
+
+        assertFalse(model.message("m1")!!.parts.containsKey("p1"))
+        assertTrue(events.isEmpty())
     }
 
     fun `test upsertMessage adds new message and returns true`() {
@@ -808,6 +835,8 @@ class SessionModelTest : UsefulTestCase() {
         reason: String? = null,
         cost: Double? = null,
         tokens: TokensDto? = null,
+        todos: List<TodoDto> = emptyList(),
+        todoView: TodoViewDto? = null,
     ) = PartDto(
         id = id,
         sessionID = "ses",
@@ -822,6 +851,8 @@ class SessionModelTest : UsefulTestCase() {
         output = output,
         error = error,
         time = time,
+        todos = todos,
+        todoView = todoView,
         reason = reason,
         cost = cost,
         tokens = tokens,

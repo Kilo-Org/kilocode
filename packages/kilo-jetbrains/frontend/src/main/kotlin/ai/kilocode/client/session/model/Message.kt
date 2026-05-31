@@ -3,6 +3,7 @@ package ai.kilocode.client.session.model
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.TodoDto
+import ai.kilocode.rpc.dto.TodoViewDto
 import ai.kilocode.rpc.dto.TokensDto
 
 data class SessionHeaderSnapshot(
@@ -68,12 +69,15 @@ class Reasoning(id: String) : Content(id) {
 /** Tool invocation with lifecycle state. */
 class Tool(id: String, val name: String, var kind: ToolKind) : Content(id) {
     var state: ToolExecState = ToolExecState.PENDING
+    var callId: String? = null
     var title: String? = null
     var input: Map<String, String> = emptyMap()
     var metadata: Map<String, String> = emptyMap()
     var output: String? = null
     var error: String? = null
     var time: PartTimeDto? = null
+    var todos: List<TodoDto> = emptyList()
+    var todoView: TodoViewDto? = null
 }
 
 /** Context compaction marker. */

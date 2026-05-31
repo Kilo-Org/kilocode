@@ -35,7 +35,7 @@ class SessionModel {
 
     companion object {
         /** Part types that are internal server markers and must never be stored or rendered. */
-        val SILENT_PART_TYPES = setOf("step-start")
+        val SILENT_PART_TYPES = setOf("step-start", "patch")
     }
 
     private val entries = LinkedHashMap<String, Message>()
@@ -352,12 +352,15 @@ class SessionModel {
             is Tool -> {
                 existing.kind = toolKind(dto.tool)
                 existing.state = parseToolState(dto.state)
+                existing.callId = dto.callID
                 existing.title = dto.title
                 existing.input = dto.input
                 existing.metadata = dto.metadata
                 existing.output = dto.output
                 existing.error = dto.error
                 existing.time = dto.time
+                existing.todos = dto.todos
+                existing.todoView = dto.todoView
             }
             is Compaction -> return
             is StepFinish -> {
@@ -383,12 +386,15 @@ class SessionModel {
             }
             "tool" -> Tool(dto.id, dto.tool ?: "unknown", toolKind(dto.tool)).apply {
                 state = parseToolState(dto.state)
+                callId = dto.callID
                 title = dto.title
                 input = dto.input
                 metadata = dto.metadata
                 output = dto.output
                 error = dto.error
                 time = dto.time
+                todos = dto.todos
+                todoView = dto.todoView
             }
             "compaction" -> Compaction(dto.id)
             "step-finish" -> StepFinish(dto.id).apply {

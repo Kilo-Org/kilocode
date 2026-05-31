@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "Share this session and copy the URL to clipboard",
   "command.session.unshare": "Unshare session",
   "command.session.unshare.description": "Stop sharing this session",
+  "command.session.export": "Export session transcript",
 
   "palette.search.placeholder": "Search files, commands, and sessions",
   "palette.empty": "No results found",
@@ -105,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Recommended",
   "dialog.provider.opencode.note": "Curated models including Claude, GPT, Gemini and more",
   "dialog.provider.anthropic.note": "Direct access to Claude models, including Pro and Max",
+  "dialog.provider.deepseek.note": "DeepSeek models for reasoning and coding tasks",
   "dialog.provider.copilot.note": "Claude models for coding assistance",
   "dialog.provider.openai.note": "GPT and Codex models with API key or ChatGPT login",
   "dialog.provider.google.note": "Gemini models for fast, structured responses",
@@ -177,6 +179,8 @@ export const dict = {
   "model.tag.latest": "Latest",
   "model.group.recommended": "Recommended",
   "model.group.favorites": "Favorites",
+  "model.group.collapse": "Collapse {{group}}",
+  "model.group.expand": "Expand {{group}}",
   "model.favorite.add": "Add to favorites",
   "model.favorite.remove": "Remove from favorites",
   "model.provider.anthropic": "Anthropic",
@@ -270,6 +274,7 @@ export const dict = {
   "prompt.attachment.remove": "Remove attachment",
   "prompt.action.send": "Send",
   "prompt.action.send.blocked": "Answer or dismiss the pending question first",
+  "prompt.action.send.recording": "Transcribe and send",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Enhance prompt",
   "prompt.action.indexing": "Indexing settings",
@@ -280,6 +285,19 @@ export const dict = {
   "prompt.action.resetModel": "Reset model to default",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
+  "speechToText.tooltip.start": "Start voice input with Kilo Gateway",
+  "speechToText.tooltip.stop": "Stop capturing",
+  "speechToText.tooltip.transcribing": "Transcribing... Click to cancel.",
+  "speechToText.tooltip.error": "Speech input failed. Click to clear.",
+  "speechToText.error.title": "Speech input failed",
+  "speechToText.error.loginRequired": "Sign in to Kilo to use speech input.",
+  "speechToText.error.permission": "Microphone permission was denied.",
+  "speechToText.error.microphone": "Could not start the microphone.",
+  "speechToText.error.recording": "Recording failed.",
+  "speechToText.error.emptyRecording": "No audio was recorded.",
+  "speechToText.error.emptyTranscript": "No speech was detected.",
+  "speechToText.error.encoding": "Could not encode the recording.",
+  "speechToText.toast.transcribed": "Transcription inserted",
 
   "prompt.toast.pasteUnsupported.title": "Unsupported paste",
   "prompt.toast.pasteUnsupported.description": "Only images or PDFs can be pasted here.",
@@ -434,6 +452,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Failed to unshare session",
   "toast.session.unshare.failed.description": "An error occurred while unsharing the session",
 
+  "toast.session.rename.invalid.title": "Invalid session title",
   "toast.session.listFailed.title": "Failed to load sessions for {{project}}",
 
   "toast.update.title": "Update available",
@@ -929,8 +948,10 @@ export const dict = {
   "session.delete.confirm": 'Delete session "{{name}}"?',
   "session.delete.button": "Delete session",
   "session.untitled": "Untitled",
+  "session.current": "Current session",
   "session.recent": "Recent",
   "session.showHistory": "Show History",
+  "session.history.sources": "History source",
   "session.search.placeholder": "Search sessions...",
   "session.empty": "No sessions yet. Click + to start a new conversation.",
   "session.tab.local": "Local",
@@ -1062,6 +1083,14 @@ export const dict = {
   "session.status.retrying": "Retrying (attempt {{ attempt }})… {{ message }}",
   "session.status.working": "Working...",
   "session.status.offline": "Network disconnected — reconnecting...",
+  "session.outcome.incomplete": "Turn ended with {{count}} to-dos remaining.",
+  "session.outcome.limit": "Response reached its output limit and may be incomplete.",
+  "session.outcome.unknown": "Response ended without a finish reason and may be incomplete.",
+  "session.outcome.filtered": "The provider stopped this response because of a content filter.",
+  "session.outcome.unexpected": "Response ended unexpectedly and may be incomplete.",
+  "session.outcome.interrupted": "Turn interrupted.",
+  "session.outcome.error": "Turn failed.",
+  "session.outcome.finish": "Technical finish reason: {{reason}}",
   "sidebar.session.newSession": "New Session",
   "sidebar.session.newSession.tooltip": "Start a fresh conversation while keeping the current session intact.",
   "sidebar.session.newSession.disabled": "This session is already new. Start chatting or create a worktree instead.",
@@ -1153,7 +1182,6 @@ export const dict = {
     'Telemetry is controlled by VS Code\'s built-in telemetry setting. To disable it, go to Settings > Telemetry > Telemetry Level and set it to "off". Restart VS Code to apply the change.',
   "settings.aboutKiloCode.telemetry.openSettings": "Open Telemetry Settings",
 
-  "settings.agentBehaviour.subtab.modes": "Modes",
   "settings.agentBehaviour.subtab.agents": "Agents",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
   "settings.agentBehaviour.subtab.rules": "Rules",
@@ -1217,14 +1245,15 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Don't summarize large pasted content",
   "settings.experimental.batch.title": "Batch Tool",
   "settings.experimental.batch.description": "Enable batching of multiple tool calls",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Codebase Search",
   "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
-  "settings.experimental.agentManagerTool.title": "Agent Manager Tool",
-  "settings.experimental.agentManagerTool.description":
-    "Allow agents to start Agent Manager local sessions and worktree sessions from a tool call",
+  "settings.experimental.speechToText.title": "Speech to Text",
+  "settings.experimental.speechToText.description":
+    "Enable voice input in prompt fields using your Kilo account through Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Enable and sign in to the Kilo provider to use Speech to Text. Speech to Text is currently only supported through Kilo Gateway.",
+  "settings.experimental.speechToTextModel.title": "Speech to Text Model",
+  "settings.experimental.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
@@ -1247,6 +1276,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Select an agent to configure…",
   "settings.agentBehaviour.modelOverride.title": "Model Override",
   "settings.agentBehaviour.modelOverride.description": "Override the default model for this agent",
+  "settings.agentBehaviour.variantOverride.title": "Variant Override",
+  "settings.agentBehaviour.variantOverride.description": "Override the model variant for this agent",
   "settings.agentBehaviour.prompt.title": "Custom Prompt",
   "settings.agentBehaviour.prompt.description": "Additional system prompt for this agent",
   "settings.agentBehaviour.temperature.title": "Temperature",
@@ -1266,11 +1297,11 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "No skills discovered. Add skill folder paths or URLs below to make skills available.",
   "settings.agentBehaviour.availableModes": "Available Custom Modes",
-  "settings.agentBehaviour.noModesFound": "No modes found.",
-  "settings.agentBehaviour.removeMode.title": "Remove mode",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Remove mode "{{name}}"? This will disable the mode by updating your config.',
-  "settings.agentBehaviour.removeMode.button": "Remove",
+  "settings.agentBehaviour.noAgentsFound": "No agents found.",
+  "settings.agentBehaviour.removeAgent.title": "Remove agent",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Remove agent "{{name}}"? This will disable the agent by updating your config.',
+  "settings.agentBehaviour.removeAgent.button": "Remove",
   "settings.agentBehaviour.skillPaths": "Skill Folder Paths",
   "settings.agentBehaviour.skillUrls": "Skill URLs",
   "settings.agentBehaviour.removeSkill.title": "Remove skill",
@@ -1436,6 +1467,9 @@ export const dict = {
   "settings.providers.smallModel.title": "Small Model",
   "settings.providers.smallModel.description":
     "Lightweight model for title generation, commit message generation, prompt enhancement, and other quick tasks",
+  "settings.providers.subagentModel.title": "Subagent Model",
+  "settings.providers.subagentModel.description":
+    "Default model and reasoning effort for task-tool subagents. Leave unset to inherit the calling agent's model.",
   "settings.providers.modeModels": "Model per Mode",
   "settings.providers.modeModels.description":
     "Override the default model for specific modes. If not set, the global default model is used.",
@@ -1592,4 +1626,6 @@ export const dict = {
   "diffViewer.baseBranch.empty": "No matching branches",
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
+
+  "plan.exit.ready": "Plan is ready:",
 }
