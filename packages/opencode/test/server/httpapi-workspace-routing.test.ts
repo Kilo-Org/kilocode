@@ -170,7 +170,11 @@ const insertRemoteWorkspaceWithoutSync = (input: {
     const id = WorkspaceV2.ID.ascending()
     registerAdapter(input.projectID, input.type, remoteAdapter(path.join(input.dir, `.${input.type}`), input.url))
     const { db } = yield* Database.Service
-    yield* db.insert(WorkspaceTable).values({ id, type: input.type, project_id: input.projectID }).run().pipe(Effect.orDie)
+    yield* db
+      .insert(WorkspaceTable)
+      .values({ id, type: input.type, project_id: input.projectID })
+      .run()
+      .pipe(Effect.orDie)
     return id
   })
 
@@ -331,7 +335,9 @@ describe("HttpApi workspace routing middleware", () => {
       const project = yield* Project.use.fromDirectory(dir)
       const workspaceID = WorkspaceV2.ID.ascending()
       const type = "remote-http-fence-target"
-      const waited = yield* Ref.make<{ workspaceID: WorkspaceV2.ID; state: Record<string, number> } | undefined>(undefined)
+      const waited = yield* Ref.make<{ workspaceID: WorkspaceV2.ID; state: Record<string, number> } | undefined>(
+        undefined,
+      )
 
       const remoteUrl = yield* startRemoteWorkspaceHttpServer(() =>
         HttpServerResponse.json(

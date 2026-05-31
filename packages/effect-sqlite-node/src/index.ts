@@ -162,5 +162,7 @@ export const make = (
 
 export const layer = (config: SqliteClientConfig): Layer.Layer<SqliteClient | Client.SqlClient> =>
   Layer.effectContext(
-    Effect.map(make(config), (client) => Context.make(SqliteClient, client).pipe(Context.add(Client.SqlClient, client))),
+    Effect.map(make(config), (client) =>
+      Context.make(SqliteClient, client).pipe(Context.add(Client.SqlClient, client)),
+    ),
   ).pipe(Layer.provide(Reactivity.layer))

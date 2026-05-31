@@ -88,7 +88,8 @@ export const tuiHandlers = HttpApiBuilder.group(InstanceHttpApi, "tui", (handler
         yield* events.publish(TuiEvent.PromptAppend, ctx.payload.properties)
       if (ctx.payload.type === TuiEvent.CommandExecute.type)
         yield* events.publish(TuiEvent.CommandExecute, ctx.payload.properties)
-      if (ctx.payload.type === TuiEvent.ToastShow.type) yield* events.publish(TuiEvent.ToastShow, ctx.payload.properties)
+      if (ctx.payload.type === TuiEvent.ToastShow.type)
+        yield* events.publish(TuiEvent.ToastShow, ctx.payload.properties)
       if (ctx.payload.type === TuiEvent.SessionSelect.type)
         yield* events.publish(TuiEvent.SessionSelect, ctx.payload.properties)
       return true

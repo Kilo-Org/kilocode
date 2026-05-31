@@ -1,2 +1,1 @@
-export function initProjectors() {
-}
+export function initProjectors() {}

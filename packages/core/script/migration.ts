@@ -25,7 +25,10 @@ const sqlMigrations = (await Array.fromAsync(new Bun.Glob("*/migration.sql").sca
 
 for (const name of sqlMigrations) {
   if (await Bun.file(path.join(tsDir, `${name}.ts`)).exists()) continue
-  await Bun.write(path.join(tsDir, `${name}.ts`), renderMigration(name, await Bun.file(path.join(sqlDir, name, "migration.sql")).text()))
+  await Bun.write(
+    path.join(tsDir, `${name}.ts`),
+    renderMigration(name, await Bun.file(path.join(sqlDir, name, "migration.sql")).text()),
+  )
 }
 
 await Bun.write(registry, renderRegistry(sqlMigrations))
@@ -47,7 +50,9 @@ export default { ...config, out: ${JSON.stringify(output)} }
     await $`bun drizzle-kit generate --config ${config}`.cwd(path.join(root, "packages/core"))
     const after = await snapshot(output)
     if (JSON.stringify(after) !== JSON.stringify(before)) {
-      throw new Error("Core schema has ungenerated database migrations. Run `bun script/migration.ts` from packages/core.")
+      throw new Error(
+        "Core schema has ungenerated database migrations. Run `bun script/migration.ts` from packages/core.",
+      )
     }
 
     const migrations = before
@@ -56,7 +61,9 @@ export default { ...config, out: ${JSON.stringify(output)} }
       .sort()
     for (const name of migrations) {
       if (await Bun.file(path.join(tsDir, `${name}.ts`)).exists()) continue
-      throw new Error(`Database migration TypeScript wrapper is missing for ${name}. Run \`bun script/migration.ts\` from packages/core.`)
+      throw new Error(
+        `Database migration TypeScript wrapper is missing for ${name}. Run \`bun script/migration.ts\` from packages/core.`,
+      )
     }
     if ((await Bun.file(registry).text()) !== renderRegistry(migrations)) {
       throw new Error("Database migration registry is stale. Run `bun script/migration.ts` from packages/core.")

@@ -26,7 +26,11 @@ function createReasoningPart(text: string): SessionLegacy.Part {
   }
 }
 
-function createToolPart(tool: string, title: string, status: "completed" | "running" = "completed"): SessionLegacy.Part {
+function createToolPart(
+  tool: string,
+  title: string,
+  status: "completed" | "running" = "completed",
+): SessionLegacy.Part {
   if (status === "completed") {
     return {
       id: PartID.ascending(),

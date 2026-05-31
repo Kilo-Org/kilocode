@@ -1024,14 +1024,20 @@ export type Error = ModelNotFoundError | InitError | NoProvidersError | NoModels
 export interface Interface {
   readonly list: () => Effect.Effect<Record<ProviderV2.ID, Info>>
   readonly getProvider: (providerID: ProviderV2.ID) => Effect.Effect<Info>
-  readonly getModel: (providerID: ProviderV2.ID, modelID: ProviderV2.ModelID) => Effect.Effect<Model, ModelNotFoundError>
+  readonly getModel: (
+    providerID: ProviderV2.ID,
+    modelID: ProviderV2.ModelID,
+  ) => Effect.Effect<Model, ModelNotFoundError>
   readonly getLanguage: (model: Model) => Effect.Effect<LanguageModelV3, ModelNotFoundError>
   readonly closest: (
     providerID: ProviderV2.ID,
     query: string[],
   ) => Effect.Effect<{ providerID: ProviderV2.ID; modelID: string } | undefined>
   readonly getSmallModel: (providerID: ProviderV2.ID) => Effect.Effect<Model | undefined>
-  readonly defaultModel: () => Effect.Effect<{ providerID: ProviderV2.ID; modelID: ProviderV2.ModelID }, DefaultModelError>
+  readonly defaultModel: () => Effect.Effect<
+    { providerID: ProviderV2.ID; modelID: ProviderV2.ModelID },
+    DefaultModelError
+  >
 }
 
 interface State {

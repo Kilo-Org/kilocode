@@ -503,14 +503,14 @@ export function stream(sessionID: SessionID) {
 export function parts(messageID: MessageID) {
   return Effect.gen(function* () {
     const { db } = yield* Database.Service
-      const rows = yield* db
-        .select()
-        .from(PartTable)
-        .where(eq(PartTable.message_id, messageID))
-        .orderBy(PartTable.id)
-        .all()
-        .pipe(Effect.orDie)
-      return rows.map(part)
+    const rows = yield* db
+      .select()
+      .from(PartTable)
+      .where(eq(PartTable.message_id, messageID))
+      .orderBy(PartTable.id)
+      .all()
+      .pipe(Effect.orDie)
+    return rows.map(part)
   })
 }
 

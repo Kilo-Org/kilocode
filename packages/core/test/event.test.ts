@@ -211,7 +211,12 @@ describe("EventV2", () => {
       const aggregateID = EventV2.ID.create()
 
       yield* events.publish(SyncMessage, { id: aggregateID, text: "first" })
-      const rows = yield* db.select().from(EventTable).where(eq(EventTable.aggregate_id, aggregateID)).all().pipe(Effect.orDie)
+      const rows = yield* db
+        .select()
+        .from(EventTable)
+        .where(eq(EventTable.aggregate_id, aggregateID))
+        .all()
+        .pipe(Effect.orDie)
 
       expect(rows).toHaveLength(1)
       expect(rows[0]?.type).toBe(EventV2.versionedType(SyncMessage.type, 1))
@@ -227,7 +232,12 @@ describe("EventV2", () => {
 
       yield* events.publish(SyncMessage, { id: aggregateID, text: "first" })
       yield* events.publish(SyncMessage, { id: aggregateID, text: "second" })
-      const rows = yield* db.select().from(EventTable).where(eq(EventTable.aggregate_id, aggregateID)).all().pipe(Effect.orDie)
+      const rows = yield* db
+        .select()
+        .from(EventTable)
+        .where(eq(EventTable.aggregate_id, aggregateID))
+        .all()
+        .pipe(Effect.orDie)
 
       expect(rows.map((row) => row.seq)).toEqual([0, 1])
     }),
@@ -240,7 +250,12 @@ describe("EventV2", () => {
       const aggregateID = EventV2.ID.create()
 
       yield* events.publish(SyncSent, { messageID: aggregateID, text: "sent" })
-      const rows = yield* db.select().from(EventTable).where(eq(EventTable.aggregate_id, aggregateID)).all().pipe(Effect.orDie)
+      const rows = yield* db
+        .select()
+        .from(EventTable)
+        .where(eq(EventTable.aggregate_id, aggregateID))
+        .all()
+        .pipe(Effect.orDie)
 
       expect(rows).toHaveLength(1)
       expect(rows[0]?.aggregate_id).toBe(aggregateID)
@@ -284,7 +299,12 @@ describe("EventV2", () => {
         aggregateID,
         data: { id: aggregateID, text: "replayed" },
       })
-      const rows = yield* db.select().from(EventTable).where(eq(EventTable.aggregate_id, aggregateID)).all().pipe(Effect.orDie)
+      const rows = yield* db
+        .select()
+        .from(EventTable)
+        .where(eq(EventTable.aggregate_id, aggregateID))
+        .all()
+        .pipe(Effect.orDie)
 
       expect(rows).toHaveLength(1)
       expect(rows[0]?.aggregate_id).toBe(aggregateID)
@@ -397,7 +417,12 @@ describe("EventV2", () => {
           data: { id: aggregateID, text: "four" },
         },
       ])
-      const rows = yield* db.select().from(EventTable).where(eq(EventTable.aggregate_id, aggregateID)).all().pipe(Effect.orDie)
+      const rows = yield* db
+        .select()
+        .from(EventTable)
+        .where(eq(EventTable.aggregate_id, aggregateID))
+        .all()
+        .pipe(Effect.orDie)
 
       expect(one).toBe(aggregateID)
       expect(two).toBe(aggregateID)
@@ -486,7 +511,12 @@ describe("EventV2", () => {
         },
         { ownerID: "owner-2" },
       )
-      const rows = yield* db.select().from(EventTable).where(eq(EventTable.aggregate_id, aggregateID)).all().pipe(Effect.orDie)
+      const rows = yield* db
+        .select()
+        .from(EventTable)
+        .where(eq(EventTable.aggregate_id, aggregateID))
+        .all()
+        .pipe(Effect.orDie)
       const sequence = yield* db
         .select({ seq: EventSequenceTable.seq, ownerID: EventSequenceTable.owner_id })
         .from(EventSequenceTable)

@@ -50,7 +50,9 @@ describe("PTY websocket tickets", () => {
       const workspaceID = WorkspaceV2.ID.ascending()
       const issued = yield* tickets.issue({ ptyID, workspaceID })
 
-      expect(yield* tickets.consume({ ptyID, workspaceID: WorkspaceV2.ID.ascending(), ticket: issued.ticket })).toBe(false)
+      expect(yield* tickets.consume({ ptyID, workspaceID: WorkspaceV2.ID.ascending(), ticket: issued.ticket })).toBe(
+        false,
+      )
       expect(yield* tickets.consume({ ptyID, workspaceID, ticket: issued.ticket })).toBe(true)
     }),
   )

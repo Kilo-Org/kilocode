@@ -94,5 +94,4 @@ describe("event HttpApi", () => {
       }),
     { git: true, config: { formatter: false, lsp: false } },
   )
-
 })

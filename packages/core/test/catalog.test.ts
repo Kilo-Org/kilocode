@@ -16,10 +16,7 @@ const locationLayer = Layer.succeed(
   Location.Service.of(location({ directory: AbsolutePath.make("test") })),
 )
 const it = testEffect(
-  Catalog.locationLayer.pipe(
-    Layer.provideMerge(EventV2.defaultLayer),
-    Layer.provideMerge(locationLayer),
-  ),
+  Catalog.locationLayer.pipe(Layer.provideMerge(EventV2.defaultLayer), Layer.provideMerge(locationLayer)),
 )
 
 describe("CatalogV2", () => {

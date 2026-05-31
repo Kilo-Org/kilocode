@@ -353,7 +353,9 @@ export const layer = Layer.effect(
         throw new Error(`Compaction parent must be a user message: ${input.parentID}`)
       }
       const userMessage = parent.info
-      const compactionPart = parent.parts.find((part): part is SessionLegacy.CompactionPart => part.type === "compaction")
+      const compactionPart = parent.parts.find(
+        (part): part is SessionLegacy.CompactionPart => part.type === "compaction",
+      )
 
       let messages = input.messages
       let replay:

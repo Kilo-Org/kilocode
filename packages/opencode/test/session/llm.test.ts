@@ -1617,7 +1617,10 @@ describe("session.llm.stream", () => {
         ]
         const request = waitRequest("/messages", createEventResponse(chunks))
 
-        const resolved = yield* Provider.use.getModel(ProviderV2.ID.make("anthropic"), ProviderV2.ModelID.make(model.id))
+        const resolved = yield* Provider.use.getModel(
+          ProviderV2.ID.make("anthropic"),
+          ProviderV2.ModelID.make(model.id),
+        )
         const sessionID = SessionID.make("session-test-anthropic-tools")
         const agent = {
           name: "test",
@@ -1816,7 +1819,10 @@ describe("session.llm.stream", () => {
         ]
         const request = waitRequest(pathSuffix, createEventResponse(chunks))
 
-        const resolved = yield* Provider.use.getModel(ProviderV2.ID.make(geminiFixture.providerID), ProviderV2.ModelID.make(model.id))
+        const resolved = yield* Provider.use.getModel(
+          ProviderV2.ID.make(geminiFixture.providerID),
+          ProviderV2.ModelID.make(model.id),
+        )
         const sessionID = SessionID.make("session-test-4")
         const agent = {
           name: "test",

@@ -64,74 +64,74 @@ afterEach(async () => {
 describe("plugin.workspace", () => {
   it.instance("plugin can install a workspace adapter", () =>
     Effect.gen(function* () {
-        const dir = (yield* TestInstance).directory
-        const type = `plug-${Math.random().toString(36).slice(2)}`
-        const file = path.join(dir, "plugin.ts")
-        const mark = path.join(dir, "created.json")
-        const space = path.join(dir, "space")
-        yield* Effect.promise(() =>
-          Bun.write(
-            file,
-            [
-              "export default async ({ experimental_workspace }) => {",
-              `  experimental_workspace.register(${JSON.stringify(type)}, {`,
-              '    name: "plug",',
-              '    description: "plugin workspace adapter",',
-              "    configure(input) {",
-              `      return { ...input, name: "plug", branch: "plug/main", directory: ${JSON.stringify(space)} }`,
-              "    },",
-              "    async create(input) {",
-              `      await Bun.write(${JSON.stringify(mark)}, JSON.stringify(input))`,
-              "    },",
-              "    async remove() {},",
-              "    target(input) {",
-              '      return { type: "local", directory: input.directory }',
-              "    },",
-              "  })",
-              "  return {}",
-              "}",
-              "",
-            ].join("\n"),
+      const dir = (yield* TestInstance).directory
+      const type = `plug-${Math.random().toString(36).slice(2)}`
+      const file = path.join(dir, "plugin.ts")
+      const mark = path.join(dir, "created.json")
+      const space = path.join(dir, "space")
+      yield* Effect.promise(() =>
+        Bun.write(
+          file,
+          [
+            "export default async ({ experimental_workspace }) => {",
+            `  experimental_workspace.register(${JSON.stringify(type)}, {`,
+            '    name: "plug",',
+            '    description: "plugin workspace adapter",',
+            "    configure(input) {",
+            `      return { ...input, name: "plug", branch: "plug/main", directory: ${JSON.stringify(space)} }`,
+            "    },",
+            "    async create(input) {",
+            `      await Bun.write(${JSON.stringify(mark)}, JSON.stringify(input))`,
+            "    },",
+            "    async remove() {},",
+            "    target(input) {",
+            '      return { type: "local", directory: input.directory }',
+            "    },",
+            "  })",
+            "  return {}",
+            "}",
+            "",
+          ].join("\n"),
+        ),
+      )
+
+      yield* Effect.promise(() =>
+        Bun.write(
+          path.join(dir, "opencode.json"),
+          JSON.stringify(
+            {
+              $schema: "https://opencode.ai/config.json",
+              plugin: [pathToFileURL(file).href],
+            },
+            null,
+            2,
           ),
-        )
+        ),
+      )
 
-        yield* Effect.promise(() =>
-          Bun.write(
-            path.join(dir, "opencode.json"),
-            JSON.stringify(
-              {
-                $schema: "https://opencode.ai/config.json",
-                plugin: [pathToFileURL(file).href],
-              },
-              null,
-              2,
-            ),
-          ),
-        )
+      const plugin = yield* Plugin.Service
+      yield* plugin.init()
+      const workspace = yield* Workspace.Service
+      const ctx = yield* InstanceState.context
+      const info = yield* workspace.create({
+        type,
+        branch: null,
+        extra: { key: "value" },
+        projectID: ctx.project.id,
+      })
 
-        const plugin = yield* Plugin.Service
-        yield* plugin.init()
-        const workspace = yield* Workspace.Service
-        const ctx = yield* InstanceState.context
-        const info = yield* workspace.create({
-          type,
-          branch: null,
-          extra: { key: "value" },
-          projectID: ctx.project.id,
-        })
-
-        expect(info.type).toBe(type)
-        expect(info.name).toBe("plug")
-        expect(info.branch).toBe("plug/main")
-        expect(info.directory).toBe(space)
-        expect(info.extra).toEqual({ key: "value" })
-        expect(JSON.parse(yield* Effect.promise(() => Bun.file(mark).text()))).toMatchObject({
-          type,
-          name: "plug",
-          branch: "plug/main",
-          directory: space,
-          extra: { key: "value" },
-        })
+      expect(info.type).toBe(type)
+      expect(info.name).toBe("plug")
+      expect(info.branch).toBe("plug/main")
+      expect(info.directory).toBe(space)
+      expect(info.extra).toEqual({ key: "value" })
+      expect(JSON.parse(yield* Effect.promise(() => Bun.file(mark).text()))).toMatchObject({
+        type,
+        name: "plug",
+        branch: "plug/main",
+        directory: space,
+        extra: { key: "value" },
+      })
     }),
   )
 })

@@ -48,17 +48,9 @@ export const layer = Layer.effect(
       effect.pipe(Effect.mapError((cause) => new AccountRepoError({ message: "Database operation failed", cause })))
 
     const current = Effect.fnUntraced(function* () {
-      const state = yield* db
-        .select()
-        .from(AccountStateTable)
-        .where(eq(AccountStateTable.id, ACCOUNT_STATE_ID))
-        .get()
+      const state = yield* db.select().from(AccountStateTable).where(eq(AccountStateTable.id, ACCOUNT_STATE_ID)).get()
       if (!state?.active_account_id) return
-      const account = yield* db
-        .select()
-        .from(AccountTable)
-        .where(eq(AccountTable.id, state.active_account_id))
-        .get()
+      const account = yield* db.select().from(AccountTable).where(eq(AccountTable.id, state.active_account_id)).get()
       if (!account) return
       return { ...account, active_org_id: state.active_org_id ?? null }
     })

@@ -148,7 +148,12 @@ export const layer = Layer.effect(
     const { db } = yield* Database.Service
     const state = yield* InstanceState.make<State>(
       Effect.fn("Permission.state")(function* (ctx) {
-        const row = yield* db.select().from(PermissionTable).where(eq(PermissionTable.project_id, ctx.project.id)).get().pipe(Effect.orDie)
+        const row = yield* db
+          .select()
+          .from(PermissionTable)
+          .where(eq(PermissionTable.project_id, ctx.project.id))
+          .get()
+          .pipe(Effect.orDie)
         const state = {
           pending: new Map<PermissionID, PendingEntry>(),
           approved: [...(row?.data ?? [])],

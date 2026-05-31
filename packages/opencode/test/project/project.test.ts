@@ -238,10 +238,25 @@ describe("Project.fromDirectory", () => {
       const result = yield* projects.fromDirectory(tmp)
 
       expect(result.project.id).toBe(remoteID)
-      expect(yield* db.select().from(ProjectTable).where(eq(ProjectTable.id, rootProject.id)).get().pipe(Effect.orDie)).toBeUndefined()
-      expect((yield* db.select().from(SessionTable).where(eq(SessionTable.id, sessionID)).get().pipe(Effect.orDie))?.project_id).toBe(remoteID)
-      expect(yield* db.select().from(PermissionTable).where(eq(PermissionTable.project_id, remoteID)).get().pipe(Effect.orDie)).toBeDefined()
-      expect((yield* db.select().from(WorkspaceTable).where(eq(WorkspaceTable.id, workspaceID)).get().pipe(Effect.orDie))?.project_id).toBe(remoteID)
+      expect(
+        yield* db.select().from(ProjectTable).where(eq(ProjectTable.id, rootProject.id)).get().pipe(Effect.orDie),
+      ).toBeUndefined()
+      expect(
+        (yield* db.select().from(SessionTable).where(eq(SessionTable.id, sessionID)).get().pipe(Effect.orDie))
+          ?.project_id,
+      ).toBe(remoteID)
+      expect(
+        yield* db
+          .select()
+          .from(PermissionTable)
+          .where(eq(PermissionTable.project_id, remoteID))
+          .get()
+          .pipe(Effect.orDie),
+      ).toBeDefined()
+      expect(
+        (yield* db.select().from(WorkspaceTable).where(eq(WorkspaceTable.id, workspaceID)).get().pipe(Effect.orDie))
+          ?.project_id,
+      ).toBe(remoteID)
     }),
   )
 })

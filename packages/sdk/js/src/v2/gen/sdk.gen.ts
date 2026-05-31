@@ -25,10 +25,10 @@ import type {
   ConfigUpdateErrors,
   ConfigUpdateResponses,
   EventSubscribeResponses,
-  EventTuiCommandExecute2,
-  EventTuiPromptAppend2,
-  EventTuiSessionSelect2,
-  EventTuiToastShow2,
+  EventTuiCommandExecute,
+  EventTuiPromptAppend,
+  EventTuiSessionSelect,
+  EventTuiToastShow,
   ExperimentalConsoleGetErrors,
   ExperimentalConsoleGetResponses,
   ExperimentalConsoleListOrgsErrors,
@@ -4950,7 +4950,7 @@ export class Tui extends HeyApiClient {
     parameters?: {
       directory?: string
       workspace?: string
-      body?: EventTuiPromptAppend2 | EventTuiCommandExecute2 | EventTuiToastShow2 | EventTuiSessionSelect2
+      body?: EventTuiPromptAppend | EventTuiCommandExecute | EventTuiToastShow | EventTuiSessionSelect
     },
     options?: Options<never, ThrowOnError>,
   ) {

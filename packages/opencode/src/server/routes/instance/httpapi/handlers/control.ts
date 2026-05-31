@@ -19,7 +19,9 @@ export const controlHandlers = HttpApiBuilder.group(RootHttpApi, "control", (han
       return true
     })
 
-    const authRemove = Effect.fn("ControlHttpApi.authRemove")(function* (ctx: { params: { providerID: ProviderV2.ID } }) {
+    const authRemove = Effect.fn("ControlHttpApi.authRemove")(function* (ctx: {
+      params: { providerID: ProviderV2.ID }
+    }) {
       yield* auth.remove(ctx.params.providerID).pipe(Effect.orDie)
       return true
     })

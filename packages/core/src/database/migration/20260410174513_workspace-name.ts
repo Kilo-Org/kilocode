@@ -18,7 +18,9 @@ export default {
           CONSTRAINT \`fk_workspace_project_id_project_id_fk\` FOREIGN KEY (\`project_id\`) REFERENCES \`project\`(\`id\`) ON DELETE CASCADE
         );
       `)
-      yield* tx.run(`INSERT INTO \`__new_workspace\`(\`id\`, \`type\`, \`branch\`, \`name\`, \`directory\`, \`extra\`, \`project_id\`) SELECT \`id\`, \`type\`, \`branch\`, \`name\`, \`directory\`, \`extra\`, \`project_id\` FROM \`workspace\`;`)
+      yield* tx.run(
+        `INSERT INTO \`__new_workspace\`(\`id\`, \`type\`, \`branch\`, \`name\`, \`directory\`, \`extra\`, \`project_id\`) SELECT \`id\`, \`type\`, \`branch\`, \`name\`, \`directory\`, \`extra\`, \`project_id\` FROM \`workspace\`;`,
+      )
       yield* tx.run(`DROP TABLE \`workspace\`;`)
       yield* tx.run(`ALTER TABLE \`__new_workspace\` RENAME TO \`workspace\`;`)
       yield* tx.run(`PRAGMA foreign_keys=ON;`)

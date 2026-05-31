@@ -328,7 +328,8 @@ export const layer: Layer.Layer<Service, never, Git.Service | EventV2Bridge.Serv
         log.info("initialized", { branch: value.current, default_branch: value.root?.name })
 
         const unsubscribe = yield* events.listen((event) => {
-          if (event.type !== FileWatcher.Event.Updated.type || event.location?.directory !== ctx.directory) return Effect.void
+          if (event.type !== FileWatcher.Event.Updated.type || event.location?.directory !== ctx.directory)
+            return Effect.void
           const data = event.data as EventV2.Data<typeof FileWatcher.Event.Updated>
           if (!data.file.endsWith("HEAD")) return Effect.void
           return Effect.gen(function* () {
@@ -429,9 +430,6 @@ export const layer: Layer.Layer<Service, never, Git.Service | EventV2Bridge.Serv
   }),
 )
 
-export const defaultLayer = layer.pipe(
-  Layer.provide(Git.defaultLayer),
-  Layer.provide(EventV2Bridge.defaultLayer),
-)
+export const defaultLayer = layer.pipe(Layer.provide(Git.defaultLayer), Layer.provide(EventV2Bridge.defaultLayer))
 
 export * as Vcs from "./vcs"

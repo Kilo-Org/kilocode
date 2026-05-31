@@ -536,11 +536,7 @@ export type Patch = Omit<Partial<Info>, "time" | "share" | "summary" | "revert" 
 export const layer: Layer.Layer<
   Service,
   never,
-  | BackgroundJob.Service
-  | Storage.Service
-  | RuntimeFlags.Service
-  | Database.Service
-  | EventV2Bridge.Service
+  BackgroundJob.Service | Storage.Service | RuntimeFlags.Service | Database.Service | EventV2Bridge.Service
 > = Layer.effect(
   Service,
   Effect.gen(function* () {

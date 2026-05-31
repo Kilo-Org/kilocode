@@ -247,7 +247,12 @@ const env = Layer.mergeAll(
 
 const it = testEffect(env)
 
-const compactionEnv = Layer.mergeAll(SessionNs.defaultLayer, Database.defaultLayer, EventV2Bridge.defaultLayer, CrossSpawnSpawner.defaultLayer)
+const compactionEnv = Layer.mergeAll(
+  SessionNs.defaultLayer,
+  Database.defaultLayer,
+  EventV2Bridge.defaultLayer,
+  CrossSpawnSpawner.defaultLayer,
+)
 const itCompaction = testEffect(compactionEnv)
 
 type CompactionProcessOptions = {
@@ -587,7 +592,6 @@ describe("session.compaction.create", () => {
           auto: true,
           overflow: true,
         })
-
       }),
     ),
   )
@@ -852,7 +856,8 @@ describe("session.compaction.process", () => {
       let seen = false
       const unsub = yield* events.listen((evt) => {
         if (evt.type !== SessionCompaction.Event.Compacted.type) return Effect.void
-        if ((evt.data as typeof SessionCompaction.Event.Compacted.data.Type).sessionID !== session.id) return Effect.void
+        if ((evt.data as typeof SessionCompaction.Event.Compacted.data.Type).sessionID !== session.id)
+          return Effect.void
         seen = true
         Deferred.doneUnsafe(done, Effect.void)
         return Effect.void

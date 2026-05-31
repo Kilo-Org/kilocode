@@ -75,7 +75,12 @@ function wired(client: HttpClient.HttpClient) {
 const share = (id: SessionID) =>
   Effect.gen(function* () {
     const { db } = yield* Database.Service
-    return yield* db.select().from(SessionShareTable).where(eq(SessionShareTable.session_id, id)).get().pipe(Effect.orDie)
+    return yield* db
+      .select()
+      .from(SessionShareTable)
+      .where(eq(SessionShareTable.session_id, id))
+      .get()
+      .pipe(Effect.orDie)
   })
 
 const seed = (url: string, org?: string) =>

@@ -17,7 +17,10 @@ function migrations() {
     .map((entry) => ({
       name: entry.name,
       timestamp: Number(entry.name.split("_")[0]),
-      sql: readFileSync(path.join(import.meta.dirname, "../../../core/migration", entry.name, "migration.sql"), "utf-8"),
+      sql: readFileSync(
+        path.join(import.meta.dirname, "../../../core/migration", entry.name, "migration.sql"),
+        "utf-8",
+      ),
     }))
     .sort((a, b) => a.timestamp - b.timestamp)
 }

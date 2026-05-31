@@ -657,7 +657,8 @@ it.instance(
       const events = yield* EventV2Bridge.Service
       const seen = yield* Deferred.make<Permission.Request>()
       const unsub = yield* events.listen((event) => {
-        if (event.type === Permission.Event.Asked.type) Deferred.doneUnsafe(seen, Effect.succeed(event.data as Permission.Request))
+        if (event.type === Permission.Event.Asked.type)
+          Deferred.doneUnsafe(seen, Effect.succeed(event.data as Permission.Request))
         return Effect.void
       })
       yield* Effect.addFinalizer(() => unsub)
@@ -932,7 +933,10 @@ it.instance(
 
       const unsub = yield* events.listen((event) => {
         if (event.type === Permission.Event.Replied.type)
-          Deferred.doneUnsafe(seen, Effect.succeed(event.data as { sessionID: SessionID; requestID: PermissionID; reply: Permission.Reply }))
+          Deferred.doneUnsafe(
+            seen,
+            Effect.succeed(event.data as { sessionID: SessionID; requestID: PermissionID; reply: Permission.Reply }),
+          )
         return Effect.void
       })
       yield* Effect.addFinalizer(() => unsub)

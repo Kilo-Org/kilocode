@@ -49,7 +49,9 @@ const make = (options: Config) =>
     const native = (yield* Sqlite.Native) as DatabaseSync
 
     const compiler = Statement.makeCompilerSqlite(options.transformQueryNames)
-    const transformRows = options.transformResultNames ? Statement.defaultTransforms(options.transformResultNames).array : undefined
+    const transformRows = options.transformResultNames
+      ? Statement.defaultTransforms(options.transformResultNames).array
+      : undefined
 
     const run = (query: string, params: ReadonlyArray<unknown> = []) =>
       Effect.withFiber<Array<Record<string, unknown>>, SqlError>((fiber) => {
@@ -72,7 +74,9 @@ const make = (options: Config) =>
         statement.setReadBigInts(Context.get(fiber.context, Client.SafeIntegers))
         statement.setReturnArrays(true)
         try {
-          return Effect.succeed(statement.all(...(params as SQLInputValue[])) as unknown as ReadonlyArray<ReadonlyArray<unknown>>)
+          return Effect.succeed(
+            statement.all(...(params as SQLInputValue[])) as unknown as ReadonlyArray<ReadonlyArray<unknown>>,
+          )
         } catch (cause) {
           return Effect.fail(
             new SqlError({
@@ -113,7 +117,10 @@ const make = (options: Config) =>
     const transactionAcquirer = Effect.uninterruptibleMask((restore) => {
       const fiber = Fiber.getCurrent()!
       const scope = Context.getUnsafe(fiber.context, Scope.Scope)
-      return Effect.as(Effect.tap(restore(semaphore.take(1)), () => Scope.addFinalizer(scope, semaphore.release(1))), connection)
+      return Effect.as(
+        Effect.tap(restore(semaphore.take(1)), () => Scope.addFinalizer(scope, semaphore.release(1))),
+        connection,
+      )
     })
 
     const client = Object.assign(
@@ -167,6 +174,4 @@ export const layer = (config: Config) =>
   Layer.merge(
     nativeLayer(config),
     Layer.merge(sqliteLayer(config), drizzleLayer).pipe(Layer.provide(nativeLayer(config))),
-  ).pipe(
-    Layer.provide(Reactivity.layer),
-  )
+  ).pipe(Layer.provide(Reactivity.layer))

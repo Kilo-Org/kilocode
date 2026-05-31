@@ -43,7 +43,10 @@ function eventResponse(events: EventV2.Interface) {
       Stream.map((event) => ({ id: event.id, type: event.type, properties: event.data })),
     )
     const disposed = Stream.callback<{ id: string; type: string; properties: unknown }>((queue) => {
-      const listener = (event: { directory?: string; payload: { id?: string; type?: string; properties?: unknown } }) => {
+      const listener = (event: {
+        directory?: string
+        payload: { id?: string; type?: string; properties?: unknown }
+      }) => {
         if (event.directory !== instance.directory || event.payload.type !== "server.instance.disposed") return
         Queue.offerUnsafe(queue, {
           id: event.payload.id ?? eventID(),
@@ -56,7 +59,10 @@ function eventResponse(events: EventV2.Interface) {
         () => Effect.sync(() => GlobalBus.off("event", listener)),
       )
     })
-    const output = stream.pipe(Stream.merge(disposed, { haltStrategy: "left" }), Stream.takeUntil((event) => event.type === "server.instance.disposed"))
+    const output = stream.pipe(
+      Stream.merge(disposed, { haltStrategy: "left" }),
+      Stream.takeUntil((event) => event.type === "server.instance.disposed"),
+    )
     const heartbeat = Stream.tick("10 seconds").pipe(
       Stream.drop(1),
       Stream.map(() => ({ id: eventID(), type: "server.heartbeat", properties: {} })),

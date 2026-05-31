@@ -20,7 +20,9 @@ afterEach(async () => {
   await disposeAllInstances()
 })
 
-const it = testEffect(Layer.mergeAll(CrossSpawnSpawner.defaultLayer, AppFileSystem.defaultLayer, testInstanceStoreLayer))
+const it = testEffect(
+  Layer.mergeAll(CrossSpawnSpawner.defaultLayer, AppFileSystem.defaultLayer, testInstanceStoreLayer),
+)
 
 function withTmp<T, A, E, R>(
   init: (dir: string) => Promise<T>,

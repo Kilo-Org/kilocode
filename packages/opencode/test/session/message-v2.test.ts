@@ -991,7 +991,9 @@ describe("session.message-v2.toModelMessage", () => {
     const assistantID1 = "m-assistant-1"
     const assistantID2 = "m-assistant-2"
 
-    const aborted = new SessionLegacy.AbortedError({ message: "aborted" }).toObject() as SessionLegacy.Assistant["error"]
+    const aborted = new SessionLegacy.AbortedError({
+      message: "aborted",
+    }).toObject() as SessionLegacy.Assistant["error"]
 
     const input: SessionLegacy.WithParts[] = [
       {

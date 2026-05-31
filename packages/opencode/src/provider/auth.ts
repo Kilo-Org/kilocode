@@ -184,7 +184,9 @@ export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service> =
       }
     })
 
-    const callback = Effect.fn("ProviderAuth.callback")(function* (input: { providerID: ProviderV2.ID } & CallbackInput) {
+    const callback = Effect.fn("ProviderAuth.callback")(function* (
+      input: { providerID: ProviderV2.ID } & CallbackInput,
+    ) {
       const pending = (yield* InstanceState.get(state)).pending
       const match = pending.get(input.providerID)
       if (!match) return yield* new OauthMissing({ providerID: input.providerID })

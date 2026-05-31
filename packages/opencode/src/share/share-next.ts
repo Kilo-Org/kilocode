@@ -173,7 +173,9 @@ export const layer = Layer.effect(
           events.listen((event) => {
             if (event.type !== def.type || event.location?.directory !== _ctx.directory) return Effect.void
             return fn(event.data as EventV2.Data<D>).pipe(
-              Effect.catchCause((cause) => Effect.sync(() => log.error("share subscriber failed", { type: def.type, cause }))),
+              Effect.catchCause((cause) =>
+                Effect.sync(() => log.error("share subscriber failed", { type: def.type, cause })),
+              ),
             )
           })
 

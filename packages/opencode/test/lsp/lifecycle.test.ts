@@ -43,12 +43,12 @@ describe("LSP service lifecycle", () => {
   )
 
   it.instance("hasClients() returns false for .ts files in instance when LSP is unset", () =>
-      LSP.Service.use((lsp) =>
-        Effect.gen(function* () {
-          const result = yield* lsp.hasClients(path.join((yield* TestInstance).directory, "test.ts"))
-          expect(result).toBe(false)
-        }),
-      ),
+    LSP.Service.use((lsp) =>
+      Effect.gen(function* () {
+        const result = yield* lsp.hasClients(path.join((yield* TestInstance).directory, "test.ts"))
+        expect(result).toBe(false)
+      }),
+    ),
   )
 
   it.instance(

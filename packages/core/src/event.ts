@@ -261,7 +261,8 @@ export const layer = Layer.effect(
     function publish<D extends Definition>(definition: D, data: Data<D>, options?: PublishOptions) {
       return Effect.gen(function* () {
         const serviceLocation = Option.getOrUndefined(yield* Effect.serviceOption(Location.Service))
-        const location = options?.location ??
+        const location =
+          options?.location ??
           (serviceLocation
             ? { directory: serviceLocation.directory, workspaceID: serviceLocation.workspaceID }
             : undefined)

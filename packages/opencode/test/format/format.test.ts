@@ -105,7 +105,9 @@ describe("Format", () => {
     { config: { formatter: false } },
   )
 
-  testEffect(Layer.mergeAll(Format.defaultLayer, CrossSpawnSpawner.defaultLayer, NodeFileSystem.layer, testInstanceStoreLayer)).live("status() initializes formatter state per directory", () =>
+  testEffect(
+    Layer.mergeAll(Format.defaultLayer, CrossSpawnSpawner.defaultLayer, NodeFileSystem.layer, testInstanceStoreLayer),
+  ).live("status() initializes formatter state per directory", () =>
     Effect.gen(function* () {
       const a = yield* provideTmpdirInstance(() => Format.use.status(), {
         config: { formatter: false },

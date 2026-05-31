@@ -245,9 +245,9 @@ it.instance(
     expect(provider.models["deepseek-r1"].capabilities.interleaved).toEqual({ field: "reasoning_content" })
     expect(provider.models["deepseek-details"].capabilities.interleaved).toEqual({ field: "reasoning_details" })
     expect(provider.models["custom-model"].capabilities.interleaved).toBe(false)
-    expect(providers[ProviderV2.ID.make("custom-anthropic-provider")].models["deepseek-r1"].capabilities.interleaved).toBe(
-      false,
-    )
+    expect(
+      providers[ProviderV2.ID.make("custom-anthropic-provider")].models["deepseek-r1"].capabilities.interleaved,
+    ).toBe(false)
   }),
   {
     config: {
@@ -305,7 +305,9 @@ it.instance("getModel returns model for valid provider/model", () =>
 it.instance("getModel throws ModelNotFoundError for invalid model", () =>
   Effect.gen(function* () {
     yield* set("ANTHROPIC_API_KEY", "test-api-key")
-    const exit = yield* Provider.use.getModel(ProviderV2.ID.anthropic, ProviderV2.ModelID.make("nonexistent-model")).pipe(Effect.exit)
+    const exit = yield* Provider.use
+      .getModel(ProviderV2.ID.anthropic, ProviderV2.ModelID.make("nonexistent-model"))
+      .pipe(Effect.exit)
     expect(exit._tag).toBe("Failure")
   }),
 )
@@ -977,8 +979,14 @@ it.instance(
 it.instance("getModel returns consistent results", () =>
   Effect.gen(function* () {
     yield* set("ANTHROPIC_API_KEY", "test-api-key")
-    const model1 = yield* Provider.use.getModel(ProviderV2.ID.anthropic, ProviderV2.ModelID.make("claude-sonnet-4-20250514"))
-    const model2 = yield* Provider.use.getModel(ProviderV2.ID.anthropic, ProviderV2.ModelID.make("claude-sonnet-4-20250514"))
+    const model1 = yield* Provider.use.getModel(
+      ProviderV2.ID.anthropic,
+      ProviderV2.ModelID.make("claude-sonnet-4-20250514"),
+    )
+    const model2 = yield* Provider.use.getModel(
+      ProviderV2.ID.anthropic,
+      ProviderV2.ModelID.make("claude-sonnet-4-20250514"),
+    )
     expect(model1.providerID).toEqual(model2.providerID)
     expect(model1.id).toEqual(model2.id)
     expect(model1).toEqual(model2)
@@ -1008,7 +1016,9 @@ it.instance(
 it.instance("ModelNotFoundError includes suggestions for typos", () =>
   Effect.gen(function* () {
     yield* set("ANTHROPIC_API_KEY", "test-api-key")
-    const error = yield* Provider.use.getModel(ProviderV2.ID.anthropic, ProviderV2.ModelID.make("claude-sonet-4")).pipe(Effect.flip)
+    const error = yield* Provider.use
+      .getModel(ProviderV2.ID.anthropic, ProviderV2.ModelID.make("claude-sonet-4"))
+      .pipe(Effect.flip)
     expect(error.suggestions).toBeDefined()
     expect((error.suggestions ?? []).length).toBeGreaterThan(0)
   }),
@@ -1565,7 +1575,10 @@ it.instance("Google Vertex: uses REP endpoint for Claude continental multi-regio
     yield* set("GOOGLE_CLOUD_PROJECT", "test-project")
     yield* set("VERTEX_LOCATION", "eu")
     const provider = yield* Provider.Service
-    const model = yield* provider.getModel(ProviderV2.ID.make("google-vertex"), ProviderV2.ModelID.make("claude-sonnet-4-6@default"))
+    const model = yield* provider.getModel(
+      ProviderV2.ID.make("google-vertex"),
+      ProviderV2.ModelID.make("claude-sonnet-4-6@default"),
+    )
     const language = yield* provider.getLanguage(model)
     expect(languageBaseURL(language)).toBe(
       "https://aiplatform.eu.rep.googleapis.com/v1/projects/test-project/locations/eu/publishers/anthropic/models",
@@ -1594,7 +1607,10 @@ it.instance("Google Vertex: keeps regional Claude endpoints unchanged", () =>
     yield* set("GOOGLE_CLOUD_PROJECT", "test-project")
     yield* set("VERTEX_LOCATION", "europe-west1")
     const provider = yield* Provider.Service
-    const model = yield* provider.getModel(ProviderV2.ID.make("google-vertex"), ProviderV2.ModelID.make("claude-sonnet-4-6@default"))
+    const model = yield* provider.getModel(
+      ProviderV2.ID.make("google-vertex"),
+      ProviderV2.ModelID.make("claude-sonnet-4-6@default"),
+    )
     const language = yield* provider.getLanguage(model)
     expect(languageBaseURL(language)).toBe(
       "https://europe-west1-aiplatform.googleapis.com/v1/projects/test-project/locations/europe-west1/publishers/anthropic/models",

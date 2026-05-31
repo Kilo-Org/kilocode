@@ -20,7 +20,9 @@ export default {
       yield* tx.run(`DROP INDEX IF EXISTS \`session_entry_session_type_idx\`;`)
       yield* tx.run(`DROP INDEX IF EXISTS \`session_entry_time_created_idx\`;`)
       yield* tx.run(`CREATE INDEX \`session_message_session_idx\` ON \`session_message\` (\`session_id\`);`)
-      yield* tx.run(`CREATE INDEX \`session_message_session_type_idx\` ON \`session_message\` (\`session_id\`,\`type\`);`)
+      yield* tx.run(
+        `CREATE INDEX \`session_message_session_type_idx\` ON \`session_message\` (\`session_id\`,\`type\`);`,
+      )
       yield* tx.run(`CREATE INDEX \`session_message_time_created_idx\` ON \`session_message\` (\`time_created\`);`)
       yield* tx.run(`DROP TABLE \`session_entry\`;`)
     })

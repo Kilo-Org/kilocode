@@ -149,7 +149,13 @@ type GitResult = { code: number; text: string; stderr: string }
 export const layer: Layer.Layer<
   Service,
   never,
-  AppFileSystem.Service | Path.Path | AppProcess.Service | Git.Service | Project.Service | InstanceStore.Service | Database.Service
+  | AppFileSystem.Service
+  | Path.Path
+  | AppProcess.Service
+  | Git.Service
+  | Project.Service
+  | InstanceStore.Service
+  | Database.Service
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -484,7 +490,12 @@ export const layer: Layer.Layer<
       directory: string,
       input: { projectID: ProjectV2.ID; extra?: string },
     ) {
-      const row = yield* db.select().from(ProjectTable).where(eq(ProjectTable.id, input.projectID)).get().pipe(Effect.orDie)
+      const row = yield* db
+        .select()
+        .from(ProjectTable)
+        .where(eq(ProjectTable.id, input.projectID))
+        .get()
+        .pipe(Effect.orDie)
       const project = row ? Project.fromRow(row) : undefined
       const startup = project?.commands?.start?.trim() ?? ""
       const ok = yield* runStartScript(directory, startup, "project")

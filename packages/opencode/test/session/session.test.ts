@@ -49,7 +49,10 @@ describe("session.created event", () => {
 
       const unsub = yield* events.listen((event) => {
         if (event.type === SessionNs.Event.Created.type)
-          Deferred.doneUnsafe(received, Effect.succeed((event.data as typeof SessionNs.Event.Created.data.Type).info as SessionNs.Info))
+          Deferred.doneUnsafe(
+            received,
+            Effect.succeed((event.data as typeof SessionNs.Event.Created.data.Type).info as SessionNs.Info),
+          )
         return Effect.void
       })
       yield* Effect.addFinalizer(() => unsub)
@@ -127,7 +130,10 @@ describe("step-finish token propagation via event", () => {
         const received = yield* Deferred.make<SessionLegacy.Part>()
         const unsub = yield* events.listen((event) => {
           if (event.type === MessageV2.Event.PartUpdated.type)
-            Deferred.doneUnsafe(received, Effect.succeed((event.data as typeof MessageV2.Event.PartUpdated.data.Type).part as SessionLegacy.Part))
+            Deferred.doneUnsafe(
+              received,
+              Effect.succeed((event.data as typeof MessageV2.Event.PartUpdated.data.Type).part as SessionLegacy.Part),
+            )
           return Effect.void
         })
         yield* Effect.addFinalizer(() => unsub)

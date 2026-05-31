@@ -14,7 +14,11 @@ const it = testEffect(
   Layer.mergeAll(Question.layer.pipe(Layer.provideMerge(EventV2Bridge.defaultLayer)), CrossSpawnSpawner.defaultLayer),
 )
 const lifecycle = testEffect(
-  Layer.mergeAll(Question.layer.pipe(Layer.provideMerge(EventV2Bridge.defaultLayer)), CrossSpawnSpawner.defaultLayer, testInstanceStoreLayer),
+  Layer.mergeAll(
+    Question.layer.pipe(Layer.provideMerge(EventV2Bridge.defaultLayer)),
+    CrossSpawnSpawner.defaultLayer,
+    testInstanceStoreLayer,
+  ),
 )
 
 const askEffect = Effect.fn("QuestionTest.ask")(function* (input: {

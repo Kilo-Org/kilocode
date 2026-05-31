@@ -170,6 +170,4 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(
-  Layer.provide(PluginV2.locationLayer.pipe(Layer.provide(EventV2.defaultLayer))),
-)
+export const defaultLayer = layer.pipe(Layer.provide(PluginV2.locationLayer.pipe(Layer.provide(EventV2.defaultLayer))))

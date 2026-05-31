@@ -539,7 +539,12 @@ noLLMServer.instance.skip(
         Effect.provide(SessionV2.defaultLayer),
       )
       const { db } = yield* Database.Service
-      const row = yield* db.select().from(SessionMessageTable).where(eq(SessionMessageTable.session_id, chat.id)).get().pipe(Effect.orDie)
+      const row = yield* db
+        .select()
+        .from(SessionMessageTable)
+        .where(eq(SessionMessageTable.session_id, chat.id))
+        .get()
+        .pipe(Effect.orDie)
       expect(messages.find((message) => message.type === "user")).toMatchObject({ type: "user", text: "hello v2" })
       expect(typeof row?.data.time.created).toBe("number")
       expect(messages).toEqual(

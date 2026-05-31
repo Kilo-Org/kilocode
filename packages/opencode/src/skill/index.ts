@@ -232,7 +232,11 @@ const discoverSkills = Effect.fnUntraced(function* (
   }
 })
 
-const loadSkills = Effect.fnUntraced(function* (state: State, discovered: DiscoveryState, events: EventV2Bridge.Service["Service"]) {
+const loadSkills = Effect.fnUntraced(function* (
+  state: State,
+  discovered: DiscoveryState,
+  events: EventV2Bridge.Service["Service"],
+) {
   yield* Effect.forEach(discovered.matches, (match) => add(state, match, events), {
     concurrency: "unbounded",
     discard: true,

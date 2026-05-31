@@ -10,14 +10,18 @@ import sessionUsageMigration from "@opencode-ai/core/database/migration/20260510
 import type { SqlClient as SqlClientService } from "effect/unstable/sql/SqlClient"
 
 const run = <A, E>(effect: Effect.Effect<A, E, SqlClientService>) =>
-  Effect.runPromise(effect.pipe(Effect.provide(SqliteClient.layer({ filename: ":memory:", disableWAL: true })), Effect.scoped))
+  Effect.runPromise(
+    effect.pipe(Effect.provide(SqliteClient.layer({ filename: ":memory:", disableWAL: true })), Effect.scoped),
+  )
 
 const makeDb = EffectDrizzleSqlite.makeWithDefaults()
 
 describe("DatabaseMigration", () => {
   if (process.platform === "linux") {
     test("declared schema has no ungenerated migrations", async () => {
-      const result = await $`bun ${fileURLToPath(new URL("../script/migration.ts", import.meta.url))} --check`.quiet().nothrow()
+      const result = await $`bun ${fileURLToPath(new URL("../script/migration.ts", import.meta.url))} --check`
+        .quiet()
+        .nothrow()
       expect(result.exitCode, result.stderr.toString()).toBe(0)
       expect(result.stdout.toString()).toContain("No schema changes, nothing to migrate")
     }, 30_000)
@@ -70,7 +74,9 @@ describe("DatabaseMigration", () => {
     await run(
       Effect.gen(function* () {
         const db = yield* makeDb
-        yield* db.run(sql`CREATE TABLE __drizzle_migrations (id INTEGER PRIMARY KEY, hash text NOT NULL, created_at numeric, name text, applied_at TEXT)`)
+        yield* db.run(
+          sql`CREATE TABLE __drizzle_migrations (id INTEGER PRIMARY KEY, hash text NOT NULL, created_at numeric, name text, applied_at TEXT)`,
+        )
         yield* db.run(sql`
           INSERT INTO __drizzle_migrations (hash, created_at, name, applied_at)
           VALUES ('hash', 1, '20260127222353_familiar_lady_ursula', ${new Date().toISOString()})
@@ -89,7 +95,9 @@ describe("DatabaseMigration", () => {
         const db = yield* makeDb
         yield* db.run(sql`CREATE TABLE migration (id TEXT PRIMARY KEY, time_completed INTEGER NOT NULL)`)
         yield* db.run(sql`INSERT INTO migration (id, time_completed) VALUES ('existing', 1)`)
-        yield* db.run(sql`CREATE TABLE __drizzle_migrations (id INTEGER PRIMARY KEY, hash text NOT NULL, created_at numeric, name text, applied_at TEXT)`)
+        yield* db.run(
+          sql`CREATE TABLE __drizzle_migrations (id INTEGER PRIMARY KEY, hash text NOT NULL, created_at numeric, name text, applied_at TEXT)`,
+        )
         yield* db.run(sql`
           INSERT INTO __drizzle_migrations (hash, created_at, name, applied_at)
           VALUES ('hash', 1, '20260127222353_familiar_lady_ursula', ${new Date().toISOString()})

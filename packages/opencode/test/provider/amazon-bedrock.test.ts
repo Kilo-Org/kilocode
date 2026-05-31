@@ -180,7 +180,9 @@ it.instance(
       yield* set("AWS_PROFILE", "default")
       const providers = yield* list
       expect(providers[ProviderV2.ID.amazonBedrock]).toBeDefined()
-      expect(providers[ProviderV2.ID.amazonBedrock].models["global.anthropic.claude-opus-4-5-20251101-v1:0"]).toBeDefined()
+      expect(
+        providers[ProviderV2.ID.amazonBedrock].models["global.anthropic.claude-opus-4-5-20251101-v1:0"],
+      ).toBeDefined()
     }),
   {
     config: {

@@ -76,7 +76,11 @@ export interface Interface {
   readonly ids: () => Effect.Effect<string[]>
   readonly all: () => Effect.Effect<Tool.Def[]>
   readonly named: () => Effect.Effect<{ task: TaskDef; read: ReadDef }>
-  readonly tools: (model: { providerID: ProviderV2.ID; modelID: ProviderV2.ModelID; agent: Agent.Info }) => Effect.Effect<Tool.Def[]>
+  readonly tools: (model: {
+    providerID: ProviderV2.ID
+    modelID: ProviderV2.ModelID
+    agent: Agent.Info
+  }) => Effect.Effect<Tool.Def[]>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/ToolRegistry") {}

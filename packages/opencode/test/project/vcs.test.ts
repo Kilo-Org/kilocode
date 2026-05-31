@@ -5,7 +5,13 @@ import { Deferred, Effect, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import fs from "fs/promises"
 import path from "path"
-import { disposeAllInstances, provideInstance, testInstanceStoreLayer, TestInstance, tmpdirScoped } from "../fixture/fixture"
+import {
+  disposeAllInstances,
+  provideInstance,
+  testInstanceStoreLayer,
+  TestInstance,
+  tmpdirScoped,
+} from "../fixture/fixture"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { FileWatcher } from "../../src/file/watcher"
 import { Git } from "../../src/git"
