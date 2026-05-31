@@ -15,7 +15,7 @@ import { isPdfAttachment, sniffAttachmentMime } from "@/util/media"
 // kilocode_change start
 import * as Encoding from "../kilocode/encoding"
 import * as TextStream from "../kilocode/text-stream"
-import * as Notebook from "../kilocode/tool/notebook"
+import * as Extract from "../kilocode/tool/read-extract"
 // kilocode_change end
 
 const DEFAULT_READ_LIMIT = 2000
@@ -301,7 +301,8 @@ export const ReadTool = Tool.define(
         }
       }
 
-      if (isBinaryFile(filepath, sample)) {
+      // kilocode_change start - route extractable binary documents through lines()
+      if (!Extract.binary(filepath) && isBinaryFile(filepath, sample)) {
         return yield* Effect.fail(new Error(`Cannot read binary file: ${filepath}`))
       }
 
@@ -313,6 +314,7 @@ export const ReadTool = Tool.define(
           new Error(`Offset ${file.offset} is out of range for this file (${file.count} lines)`),
         )
       }
+      // kilocode_change end
 
       let output = [`<path>${filepath}</path>`, `<type>file</type>`, "<content>\n"].join("\n")
       output += file.raw.map((line, i) => `${i + file.offset}: ${line}`).join("\n")
@@ -359,7 +361,7 @@ export const ReadTool = Tool.define(
 // routed through TextStream.withFallback so non-UTF-8 files are decoded via
 // iconv. The body otherwise matches upstream.
 export async function lines(filepath: string, opts: { limit: number; offset: number }) {
-  const extracted = await Notebook.open(filepath) // kilocode_change - extract readable notebook cells before paging
+  const extracted = await Extract.open(filepath) // kilocode_change - extract supported document contents before paging
   if (extracted) return readLines(extracted, opts) // kilocode_change
   return TextStream.withFallback(filepath, (stream) => readLines(stream, opts))
 }

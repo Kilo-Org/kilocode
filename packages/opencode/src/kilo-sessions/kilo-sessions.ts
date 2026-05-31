@@ -196,7 +196,9 @@ export namespace KiloSessions {
     ).filter((p) => p.sessionID === sessionID)
     if (permissions.length > 0) return "permission"
 
-    const questions = (await Question.list()).filter((q) => q.sessionID === sessionID)
+    const questions = (
+      await AppRuntime.runPromise(Question.Service.use((svc) => svc.list()))
+    ).filter((q) => q.sessionID === sessionID)
     if (questions.length > 0) return "question"
 
     const status = await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.get(SessionID.make(sessionID))))

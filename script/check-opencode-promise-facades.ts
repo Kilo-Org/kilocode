@@ -23,7 +23,6 @@ const allow: Record<string, string> = {
   "bus/index.ts": "core bus callback and synchronous runtime boundary",
   "cli/cmd/tui/config/tui.ts": "separately tracked TUI config facade",
   "installation/index.ts": "existing installation facade outside #10655",
-  "question/index.ts": "transitional facade deferred for upstream reconciliation in #10655",
   "session/compaction.ts": "existing compaction facade outside #10655",
   "sync/index.ts": "sync event runtime boundary",
 }

@@ -1,5 +1,47 @@
 # kilo-code
 
+## 7.3.18
+
+### Patch Changes
+
+- [#10594](https://github.com/Kilo-Org/kilocode/pull/10594) [`56d2ac4`](https://github.com/Kilo-Org/kilocode/commit/56d2ac40da6710adfe3de94f6b09bd53d9bb6db9) Thanks [@Ipsumlorem](https://github.com/Ipsumlorem)! - Fix Windows speech input device detection when FFmpeg lists DirectShow microphones by section.
+
+- [#10730](https://github.com/Kilo-Org/kilocode/pull/10730) [`51ce1b8`](https://github.com/Kilo-Org/kilocode/commit/51ce1b82b3374a9d573e3fe5ecbe19f4a22db9a4) - Reduce lag and gray placeholders in the diff and Changes views by enabling worker-backed highlighting and rendering patch-backed review hunks without rebuilding full source files.
+
+- Updated dependencies [[`51ce1b8`](https://github.com/Kilo-Org/kilocode/commit/51ce1b82b3374a9d573e3fe5ecbe19f4a22db9a4)]:
+  - @kilocode/kilo-ui@7.3.18
+
+## 7.3.17
+
+### Minor Changes
+
+- [#10674](https://github.com/Kilo-Org/kilocode/pull/10674) [`41729dc`](https://github.com/Kilo-Org/kilocode/commit/41729dcb596dfa37c32bac1b9e9143197e862252) - Link to Kilo Gateway BYOK usage information from provider API key connection dialogs.
+
+### Patch Changes
+
+- [#10721](https://github.com/Kilo-Org/kilocode/pull/10721) [`2efa216`](https://github.com/Kilo-Org/kilocode/commit/2efa216ee5bfffa6e01f51ae5add7c5b9034833c) - Keep Agent Manager turns running while slow snapshot baselines initialize instead of stopping for an interactive question.
+
+- [#10686](https://github.com/Kilo-Org/kilocode/pull/10686) [`d3c5f28`](https://github.com/Kilo-Org/kilocode/commit/d3c5f2886f07dbcd7669ee691a6a2a0b72a6f6e1) - Correct screen reader and keyboard operation for session history rows and Local or Cloud history navigation.
+
+- [#10688](https://github.com/Kilo-Org/kilocode/pull/10688) [`38fcaa6`](https://github.com/Kilo-Org/kilocode/commit/38fcaa65e7320e3befa73066ee1a890057d7173b) - Make model selection in chat and settings operable with screen readers by announcing searchable options, keyboard navigation, selected values, and model-setting purpose.
+
+- [#10609](https://github.com/Kilo-Org/kilocode/pull/10609) [`4e6f366`](https://github.com/Kilo-Org/kilocode/commit/4e6f366a75c71b6c5a2e3499e116b61c21355fbe) - Preserve prior context in forked sessions while recognizing the selected direction and current worktree context.
+
+- [#10668](https://github.com/Kilo-Org/kilocode/pull/10668) [`ef2390d`](https://github.com/Kilo-Org/kilocode/commit/ef2390d7a4ffafc379d1e15db94d3a2cd6dcce9b) - Access semantic indexing without an experimental feature toggle while keeping indexing disabled until enabled globally or for a project.
+
+- [#10680](https://github.com/Kilo-Org/kilocode/pull/10680) [`63f39f6`](https://github.com/Kilo-Org/kilocode/commit/63f39f6ae49dd7f9d5a8115f3907d53a3b92a4dd) - Support accessibility regression checks and assistive-technology testing for VS Code webviews.
+
+## 7.3.16
+
+### Patch Changes
+
+- [#9796](https://github.com/Kilo-Org/kilocode/pull/9796) [`663fbdb`](https://github.com/Kilo-Org/kilocode/commit/663fbdb58547ac5b946ba4610918239b8a7e336f) Thanks [@ale-saglia](https://github.com/ale-saglia)! - Support Italian as a display language in the VS Code extension.
+
+- Updated dependencies [[`663fbdb`](https://github.com/Kilo-Org/kilocode/commit/663fbdb58547ac5b946ba4610918239b8a7e336f)]:
+  - @opencode-ai/ui@7.3.16
+  - @kilocode/kilo-ui@7.3.16
+  - @kilocode/kilo-i18n@7.3.16
+
 ## 7.3.15
 
 ### Patch Changes

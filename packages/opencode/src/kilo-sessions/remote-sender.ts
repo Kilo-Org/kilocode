@@ -77,6 +77,11 @@ export namespace RemoteSender {
       readonly list: () => Promise<ReadonlyArray<Permission.Request>>
       readonly reply: (input: Permission.ReplyInput) => Promise<boolean>
     }
+    question?: {
+      readonly list: () => Promise<ReadonlyArray<Question.Request>>
+      readonly reply: (input: Parameters<Question.Interface["reply"]>[0]) => Promise<void>
+      readonly reject: (requestID: QuestionID) => Promise<void>
+    }
     prompt?: (input: SessionPrompt.PromptInput) => Promise<unknown>
   }
 
@@ -97,6 +102,20 @@ export namespace RemoteSender {
       reply: async (input: Permission.ReplyInput) => {
         const { AppRuntime } = await import("@/effect/app-runtime")
         return AppRuntime.runPromise(Permission.Service.use((svc) => svc.reply(input)))
+      },
+    }
+    const question = options.question ?? {
+      list: async () => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        return AppRuntime.runPromise(Question.Service.use((svc) => svc.list()))
+      },
+      reply: async (input: Parameters<Question.Interface["reply"]>[0]) => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        return AppRuntime.runPromise(Question.Service.use((svc) => svc.reply(input)))
+      },
+      reject: async (requestID: QuestionID) => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        return AppRuntime.runPromise(Question.Service.use((svc) => svc.reject(requestID)))
       },
     }
     const prompt =
@@ -157,7 +176,7 @@ export namespace RemoteSender {
     async function replay(sessionId: string) {
       const [suggestions, questions, permissions] = await Promise.all([
         Suggestion.list(),
-        Question.list(),
+        question.list(),
         permission.list(),
       ])
       for (const suggestion of suggestions) {
@@ -324,7 +343,7 @@ export namespace RemoteSender {
         }
         const dir = msg.sessionId ? directoryFor(msg.sessionId) : Promise.resolve(options.directory)
         dispatchQuick(msg, dir, () =>
-          Question.reply({ ...parsed.data, requestID: QuestionID.make(parsed.data.requestID) }),
+          question.reply({ ...parsed.data, requestID: QuestionID.make(parsed.data.requestID) }),
         )
         return
       }
@@ -339,7 +358,7 @@ export namespace RemoteSender {
           return
         }
         const dir = msg.sessionId ? directoryFor(msg.sessionId) : Promise.resolve(options.directory)
-        dispatchQuick(msg, dir, () => Question.reject(QuestionID.make(parsed.data.requestID)))
+        dispatchQuick(msg, dir, () => question.reject(QuestionID.make(parsed.data.requestID)))
         return
       }
       if (msg.command === "suggestion_accept") {

@@ -25,9 +25,11 @@ const render = (kind: "markdown" | "code", text: string) => {
   return `<${kind}_cell>\n${body}</${kind}_cell>`
 }
 
-export async function open(filepath: string): Promise<Readable | undefined> {
-  if (path.extname(filepath).toLowerCase() !== ".ipynb") return undefined
+export function isFile(filepath: string) {
+  return path.extname(filepath).toLowerCase() === ".ipynb"
+}
 
+export async function open(filepath: string): Promise<Readable> {
   const raw = (await Encoding.read(filepath)).text
   const data = parse(raw)
   if (!object(data) || !Array.isArray(data.cells)) return Readable.from([raw])

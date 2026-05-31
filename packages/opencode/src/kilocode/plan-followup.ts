@@ -48,6 +48,9 @@ export const PlanFollowupRuntime = {
     reject(requestID: Parameters<Question.Interface["reject"]>[0]) {
       return questions().runPromise((svc) => svc.reject(requestID))
     },
+    reply(input: Parameters<Question.Interface["reply"]>[0]) {
+      return questions().runPromise((svc) => svc.reply(input))
+    },
   },
   todo: {
     get(sessionID: SessionID) {

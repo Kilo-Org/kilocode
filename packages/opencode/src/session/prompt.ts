@@ -117,6 +117,7 @@ export const layer = Layer.effect(
     const commands = yield* Command.Service
     const config = yield* Config.Service
     const permission = yield* Permission.Service
+    const question = yield* Question.Service // kilocode_change - dismiss superseded pending questions through the shared service
     const fsys = yield* AppFileSystem.Service
     const mcp = yield* MCP.Service
     const lsp = yield* LSP.Service
@@ -1440,7 +1441,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         // runLoop checks hasFollowup between steps to break out once it has been
         // enqueued during the turn.
         yield* Effect.promise(() => Suggestion.dismissAll(input.sessionID))
-        yield* Effect.promise(() => Question.dismissAll(input.sessionID))
+        yield* question.dismissAll(input.sessionID)
         if (input.noReply === true) return message
         return yield* KiloSessionPromptQueue.enqueue(
           input.sessionID,
@@ -2009,6 +2010,7 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(SessionProcessor.defaultLayer),
     Layer.provide(Command.defaultLayer),
     Layer.provide(Permission.defaultLayer),
+    Layer.provide(Question.defaultLayer), // kilocode_change - provide pending question dismissal dependency
     Layer.provide(MCP.defaultLayer),
     Layer.provide(LSP.defaultLayer),
     Layer.provide(ToolRegistry.defaultLayer),

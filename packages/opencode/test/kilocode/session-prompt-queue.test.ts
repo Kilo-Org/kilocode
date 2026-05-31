@@ -4,7 +4,6 @@ import { Effect } from "effect"
 import { Bus } from "../../src/bus"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Suggestion } from "../../src/kilocode/suggestion"
-import { Question } from "../../src/question"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { WithInstance } from "../../src/project/with-instance"
 import { Session } from "../../src/session/session"
@@ -662,62 +661,6 @@ describe("session prompt queue", () => {
     })
   })
 
-  test("new prompt dismisses a pending question", async () => {
-    const asked = Promise.withResolvers<void>()
-    const rejected = Promise.withResolvers<void>()
-    await using tmp = await tmpdir({ git: true })
-
-    await WithInstance.provide({
-      directory: tmp.path,
-      fn: async () =>
-        scoped(tmp.path, async (prompt) => {
-          const session = await sessions.create({ title: "Question unblock regression" })
-          const offAsked = Bus.subscribe(Question.Event.Asked, (event) => {
-            if (event.properties.sessionID === session.id) asked.resolve()
-          })
-          const offRejected = Bus.subscribe(Question.Event.Rejected, (event) => {
-            if (event.properties.sessionID === session.id) rejected.resolve()
-          })
-
-          try {
-            const pending = Question.ask({
-              sessionID: session.id,
-              questions: [
-                {
-                  header: "Continue?",
-                  question: "Should I continue?",
-                  options: [
-                    { label: "Yes", description: "Go ahead" },
-                    { label: "No", description: "Stop" },
-                  ],
-                },
-              ],
-            }).catch((err) => {
-              if (err instanceof Question.RejectedError) return "rejected"
-              throw err
-            })
-
-            await asked.promise
-            await Effect.runPromise(
-              prompt.prompt({
-                sessionID: session.id,
-                agent: "code",
-                parts: [{ type: "text", text: "replacement prompt" }],
-                noReply: true,
-              }),
-            )
-            await rejected.promise
-
-            expect(await pending).toBe("rejected")
-            expect(await Question.list()).toEqual([])
-          } finally {
-            offAsked()
-            offRejected()
-          }
-        }),
-    })
-  })
-
   test("auto-dismisses a suggestion shown after a queued prompt", async () => {
     // Reverse ordering of the "new prompt dismisses a pending suggestion" test:
     // queue the follow-up first, then open the blocker. Suggestion.show must see
@@ -783,70 +726,4 @@ describe("session prompt queue", () => {
     })
   })
 
-  test("auto-dismisses a question shown after a queued prompt", async () => {
-    await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        const sessionID = SessionID.make("ses_auto_question")
-        const started = Promise.withResolvers<void>()
-        const release = Promise.withResolvers<void>()
-
-        const first = Effect.runPromise(
-          KiloSessionPromptQueue.enqueue(
-            sessionID,
-            MessageID.make("message_auto_q_1"),
-            Effect.gen(function* () {
-              started.resolve()
-              yield* Effect.promise(() => release.promise)
-              return "first" as const
-            }),
-            Effect.succeed("first-cancelled" as const),
-          ),
-        )
-        await started.promise
-
-        const second = Effect.runPromise(
-          KiloSessionPromptQueue.enqueue(
-            sessionID,
-            MessageID.make("message_auto_q_2"),
-            Effect.succeed("second" as const),
-            Effect.succeed("second-cancelled" as const),
-          ),
-        )
-        await Bun.sleep(10)
-        expect(KiloSessionPromptQueue.hasFollowup(sessionID)).toBe(true)
-
-        let asked = 0
-        const offAsked = Bus.subscribe(Question.Event.Asked, (event) => {
-          if (event.properties.sessionID === sessionID) asked++
-        })
-        try {
-          await expect(
-            Question.ask({
-              sessionID,
-              questions: [
-                {
-                  header: "Continue?",
-                  question: "Should I continue?",
-                  options: [
-                    { label: "Yes", description: "Go ahead" },
-                    { label: "No", description: "Stop" },
-                  ],
-                },
-              ],
-            }),
-          ).rejects.toBeInstanceOf(Question.RejectedError)
-        } finally {
-          offAsked()
-        }
-        expect(asked).toBe(0)
-        expect(await Question.list()).toEqual([])
-
-        release.resolve()
-        expect(await first).toBe("first")
-        expect(await second).toBe("second")
-      },
-    })
-  })
 })

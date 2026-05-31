@@ -58,12 +58,12 @@ The PR updates:
 
 | File | Purpose |
 |---|---|
-| `packages/kilo-jetbrains/package.json` | JetBrains plugin package version. |
+| `packages/kilo-jetbrains/gradle.properties` | JetBrains plugin version in `kilo.jetbrains.version`. |
 | `packages/kilo-jetbrains/CHANGELOG.md` | Release notes packaged into the plugin. |
 
-Review and edit `packages/kilo-jetbrains/CHANGELOG.md` before merging. This changelog entry is rendered into JetBrains `<change-notes>`, so it appears on the Marketplace and inside IntelliJ plugin UI.
+Review `packages/kilo-jetbrains/gradle.properties` and edit `packages/kilo-jetbrains/CHANGELOG.md` before merging. This changelog entry is rendered into JetBrains `<change-notes>`, so it appears on the Marketplace and inside IntelliJ plugin UI.
 
-The PR can change release metadata such as `packages/kilo-jetbrains/package.json` and `packages/kilo-jetbrains/CHANGELOG.md`, but it does not change the tagged source code that will be built.
+The PR can change release metadata such as `packages/kilo-jetbrains/gradle.properties` and `packages/kilo-jetbrains/CHANGELOG.md`, but it does not change the tagged source code that will be built.
 
 ## Merge and Publish
 
@@ -84,7 +84,7 @@ Publishing behavior:
 | `x.y.z-rc.n` | `eap` | Prerelease |
 | `x.y.z` | default | Stable release |
 
-The workflow checks out `jetbrains/v<version>` for verification, signing, and Marketplace publishing. It overlays the reviewed `packages/kilo-jetbrains/CHANGELOG.md` from the merged PR before rendering release notes and before `publishPlugin`, so Marketplace metadata and the GitHub Release use the reviewed changelog.
+The workflow checks out `jetbrains/v<version>` for verification, signing, and Marketplace publishing. It overlays the reviewed `packages/kilo-jetbrains/gradle.properties` and `packages/kilo-jetbrains/CHANGELOG.md` from the merged PR before rendering release notes and before `publishPlugin`, so the Marketplace plugin version, Marketplace notes, and GitHub Release use the reviewed metadata.
 
 ## Installing RC Builds
 
