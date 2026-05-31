@@ -1,5 +1,68 @@
 # @kilocode/cli
 
+## 7.3.18
+
+### Patch Changes
+
+- [#10736](https://github.com/Kilo-Org/kilocode/pull/10736) [`57bc6ee`](https://github.com/Kilo-Org/kilocode/commit/57bc6eea583e22e4c3b8b00ad1c64fed62dc85e8) - Use Kilo session share links when sharing conversations from the CLI.
+
+- [#10737](https://github.com/Kilo-Org/kilocode/pull/10737) [`f574294`](https://github.com/Kilo-Org/kilocode/commit/f5742940ccd06bafd2708e32af30023eef241241) - Support reading text from DOCX files through the read tool.
+
+- [#10740](https://github.com/Kilo-Org/kilocode/pull/10740) [`2081af2`](https://github.com/Kilo-Org/kilocode/commit/2081af2b3344890481cb4bd44260e60a8cccba80) - Support reading XLSX spreadsheets as labelled tabular text
+
+## 7.3.17
+
+### Patch Changes
+
+- [#10721](https://github.com/Kilo-Org/kilocode/pull/10721) [`2efa216`](https://github.com/Kilo-Org/kilocode/commit/2efa216ee5bfffa6e01f51ae5add7c5b9034833c) - Keep Agent Manager turns running while slow snapshot baselines initialize instead of stopping for an interactive question.
+
+- [#10703](https://github.com/Kilo-Org/kilocode/pull/10703) [`eeff6d9`](https://github.com/Kilo-Org/kilocode/commit/eeff6d9df8d378c561c4ca212d650be1dfbd912a) Thanks [@barzhomi](https://github.com/barzhomi)! - Fix LanceDB metadata corruption that caused a full re-index on every VS Code restart
+
+- [#10733](https://github.com/Kilo-Org/kilocode/pull/10733) [`4967c22`](https://github.com/Kilo-Org/kilocode/commit/4967c228611f58bb84c0b762eee88d306ab1b624) - Read Jupyter notebooks as ordered markdown and code cell content instead of raw notebook payloads.
+
+- [#10669](https://github.com/Kilo-Org/kilocode/pull/10669) [`0107a01`](https://github.com/Kilo-Org/kilocode/commit/0107a0163cf73004ee13b0ae5fd46811a273d80a) - Guide Agent Manager orchestration to recall completed session context only when needed.
+
+- [#10668](https://github.com/Kilo-Org/kilocode/pull/10668) [`ef2390d`](https://github.com/Kilo-Org/kilocode/commit/ef2390d7a4ffafc379d1e15db94d3a2cd6dcce9b) - Access semantic indexing without an experimental feature toggle while keeping indexing disabled until enabled globally or for a project.
+
+## 7.3.16
+
+## 7.3.15
+
+## 7.3.14
+
+### Patch Changes
+
+- [#8761](https://github.com/Kilo-Org/kilocode/pull/8761) [`74e01b1`](https://github.com/Kilo-Org/kilocode/commit/74e01b1d485ee77943d2d46f05dce1c7cd2daf82) Thanks [@brendandebeasi](https://github.com/brendandebeasi)! - Fix packaged CLI startup crashes caused by duplicate OpenTUI/Solid renderer instances.
+
+- [#10648](https://github.com/Kilo-Org/kilocode/pull/10648) [`9fbd547`](https://github.com/Kilo-Org/kilocode/commit/9fbd5479b09739b21ca636612a85501f0d0f548f) - Keep the extension responsive while semantic indexing processes large workspaces.
+
+- [#10619](https://github.com/Kilo-Org/kilocode/pull/10619) [`117691e`](https://github.com/Kilo-Org/kilocode/commit/117691e4d6fe48f91223bb7d7e24103c67cde73f) - Use supported hosted model presets for Kilo indexing and clear obsolete model and dimension overrides.
+
+- [#10657](https://github.com/Kilo-Org/kilocode/pull/10657) [`d883ad9`](https://github.com/Kilo-Org/kilocode/commit/d883ad96ab7bd1b31a83d227065ad231a225a4c4) - Keep the extension usable on fresh startup when semantic indexing is enabled globally.
+
+- [#10618](https://github.com/Kilo-Org/kilocode/pull/10618) [`dcfadac`](https://github.com/Kilo-Org/kilocode/commit/dcfadac83ed45a109a402a2f71f4d214347804f1) - Prevent saved global indexing provider changes from temporarily reverting in active workspaces.
+
+- Updated dependencies [[`117691e`](https://github.com/Kilo-Org/kilocode/commit/117691e4d6fe48f91223bb7d7e24103c67cde73f), [`db38888`](https://github.com/Kilo-Org/kilocode/commit/db388889e867021c6bae42cbd03df6b67941b208)]:
+  - @kilocode/kilo-indexing@7.3.13
+  - @kilocode/sdk@7.3.13
+  - @kilocode/kilo-gateway@7.4.0
+  - @kilocode/plugin@7.3.13
+  - @kilocode/kilo-telemetry@7.3.13
+
+## 7.3.11
+
+### Patch Changes
+
+- [#10485](https://github.com/Kilo-Org/kilocode/pull/10485) [`7025c77`](https://github.com/Kilo-Org/kilocode/commit/7025c779f74b2c68afa05bd2f70ce1123ae9cecc) - Surface failed sub-agent tasks as tool errors so parent sessions can recover.
+
+- [#10443](https://github.com/Kilo-Org/kilocode/pull/10443) [`8e76807`](https://github.com/Kilo-Org/kilocode/commit/8e7680794da86c6d938d6626066157c9cd18adbb) - Support configuring the default task subagent model and reasoning effort while safely inheriting the calling agent model when the override is unavailable.
+
+## 7.3.10
+
+### Patch Changes
+
+- [#10302](https://github.com/Kilo-Org/kilocode/pull/10302) [`8ba138d`](https://github.com/Kilo-Org/kilocode/commit/8ba138def73897d7c19208a067f8a2b4be947fd6) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Export all messages from TUI instead of truncated store
+
 ## 7.3.9
 
 ### Minor Changes

@@ -292,6 +292,17 @@ The Kilo AI Gateway works with any framework that supports OpenAI-compatible API
 | [LlamaIndex](https://www.llamaindex.ai) | Use OpenAI-compatible configuration |
 | [Haystack](https://haystack.deepset.ai) | Use OpenAI generator with custom URL |
 | [Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/) | Use OpenAI connector with custom endpoint |
+| [Pi](https://pi.dev) | Install the [Kilo provider extension](https://github.com/Kilo-Org/kilo-pi-provider) |
+
+### Pi coding agent
+
+Use the Kilo-maintained [Pi provider extension](https://github.com/Kilo-Org/kilo-pi-provider) to access Kilo Gateway models from the [Pi coding agent](https://pi.dev).
+
+```bash
+pi install git:github.com/Kilo-Org/kilo-pi-provider
+```
+
+Run `/login kilo` in Pi to connect your account, or use supported free models without signing in. See the provider repository for organization configuration and model-specific behavior.
 
 ### LangChain example
 

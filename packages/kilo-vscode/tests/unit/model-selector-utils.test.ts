@@ -38,9 +38,9 @@ describe("providerSortKey", () => {
   })
 
   it("sorts providers correctly when used with sort", () => {
-    const ids = ["google", "anthropic", "kilo", "openai", "github-copilot"]
+    const ids = ["google", "anthropic", "kilo", "openai", "deepseek"]
     const sorted = ids.slice().sort((a, b) => providerSortKey(a) - providerSortKey(b))
-    expect(sorted).toEqual(["kilo", "anthropic", "github-copilot", "openai", "google"])
+    expect(sorted).toEqual(["kilo", "anthropic", "deepseek", "openai", "google"])
   })
 })
 

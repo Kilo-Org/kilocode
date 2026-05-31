@@ -7,6 +7,9 @@ export const dict = {
   "provider.connect.kiloGateway.visit.prefix": "Visita ",
   "provider.connect.kiloGateway.visit.link": "kilo.ai",
   "provider.connect.kiloGateway.visit.suffix": " para obtener tu clave API.",
+  "provider.connect.kiloGateway.byok.prefix": "Para más estadísticas de uso, utiliza ",
+  "provider.connect.kiloGateway.byok.link": "BYOK a través de Kilo's Gateway",
+  "provider.connect.kiloGateway.byok.suffix": ".",
 
   // Provider dialog translations
   "dialog.provider.group.recommended": "Recomendados",
@@ -19,7 +22,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Skills",
   "marketplace.tab.mcpServers": "Servidores MCP",
-  "marketplace.tab.modes": "Modos",
   "marketplace.category.all": "Todos",
   "marketplace.placeholder": "Por implementar",
   "marketplace.card.installed": "Instalado",
@@ -45,6 +47,7 @@ export const dict = {
   "marketplace.remove.cancel": "Cancelar",
   "marketplace.remove.confirm.button": "Eliminar",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "Agentes",
   "marketplace.search": "Buscar...",
   "marketplace.filter.all": "Todos los elementos",
   "marketplace.filter.notInstalled": "No instalado",
@@ -60,7 +63,7 @@ export const dict = {
   "marketplace.scope.global": "global",
   "marketplace.remove.type.mcp": "servidor MCP",
   "marketplace.remove.type.skill": "habilidad",
-  "marketplace.remove.type.mode": "modo",
+  "marketplace.remove.type.agent": "agente",
   "marketplace.remove.failed": "Error al eliminar {{name}}",
   "marketplace.install": "Instalar",
   "marketplace.filter.installed": "Instalado",
@@ -69,8 +72,10 @@ export const dict = {
   "marketplace.warning.busyMany": "Varias sesiones están en ejecución y se interrumpirán",
   "marketplace.warning.installAnyway": "Instalar de todas formas",
   "marketplace.warning.cancel": "Cancelar",
-  "marketplace.contribute.prompt": "¿Falta una skill, modo o servidor MCP?",
+  "marketplace.contribute.prompt": "¿Falta una skill, agente o servidor MCP?",
   "marketplace.contribute.cta": "Contribuir en GitHub",
+  "marketplace.migration.notice":
+    "Los modos han sido reemplazados por agentes. Si anteriormente instalaste modos del marketplace, elimínalos y reinstálalos como agentes para migrar al nuevo formato.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "Implementar",

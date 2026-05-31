@@ -21,10 +21,7 @@ console.log("=== publishing ===\n")
         .catch(() => ""),
     )
   }
-  const res = await $`bunx changeset version`.nothrow()
-  if (res.exitCode !== 0) {
-    console.warn("changeset version failed (exit " + res.exitCode + ")")
-  }
+  await $`bunx changeset version`
   // Changeset computes its own version from package.json, but we use
   // Script.version. Fix the heading in any changelog that was modified.
   for (const p of paths) {

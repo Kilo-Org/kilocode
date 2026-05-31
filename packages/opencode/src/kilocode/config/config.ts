@@ -115,6 +115,14 @@ export namespace KilocodeConfig {
     return stripGlobalIndexing(info)
   }
 
+  export function retireIndexingFlag(info: Record<string, unknown>, source: string) {
+    if (!isRecord(info.experimental) || !("semantic_indexing" in info.experimental)) return info
+    const experimental = { ...info.experimental }
+    delete experimental.semantic_indexing
+    log.warn("ignored retired experimental.semantic_indexing config; use indexing.enabled instead", { path: source })
+    return { ...info, experimental }
+  }
+
   function stripGlobalIndexing(info: Config.Info): Config.Info {
     // Indexing provider/storage settings can be global, but enablement is exposed separately from project enablement.
     if (info.indexing?.enabled === undefined) return info

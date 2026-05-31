@@ -7,7 +7,6 @@ import { withStatics } from "@/util/schema"
 import * as Session from "./session"
 import { MessageV2 } from "./message-v2"
 import { SessionID, MessageID } from "./schema"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 
 function unquoteGitPath(input: string) {
   if (!input.startsWith('"')) return input
@@ -170,10 +169,5 @@ export const DiffInput = Schema.Struct({
   messageID: Schema.optional(MessageID),
 }).pipe(withStatics((s) => ({ zod: zod(s) })))
 export type DiffInput = Schema.Schema.Type<typeof DiffInput>
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const diff = (input: { sessionID: SessionID; messageID?: MessageID }) => runPromise((svc) => svc.diff(input))
-// kilocode_change end
 
 export * as SessionSummary from "./summary"

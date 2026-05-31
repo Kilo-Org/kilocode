@@ -179,7 +179,7 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
       // kilocode_change start
       const state = yield* InstanceState.context
       const projectID = ctx.query.worktrees && !ctx.query.projectID ? state.project.id : ctx.query.projectID
-      const directories = ctx.query.worktrees ? yield* EffectBridge.fromPromise(() => WorktreeFamily.list()) : undefined
+      const directories = ctx.query.worktrees ? yield* WorktreeFamily.list() : undefined
       const sorted = directories ? [...directories].sort((a, b) => b.length - a.length) : undefined
       // kilocode_change end
       const sessions = Array.from(

@@ -4,6 +4,7 @@ package ai.kilocode.client.app
 
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.KiloSessionRpcApi
+import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
@@ -84,6 +85,11 @@ class KiloSessionService internal constructor(
             }
         }
     }
+
+    internal fun activity(): Map<String, SessionActivityKind> =
+        statuses.value
+            .filterValues { it.type == "busy" }
+            .mapValues { SessionActivityKind.RUNNING }
 
     suspend fun list(dir: String): SessionListDto {
         val result = call { list(dir) }

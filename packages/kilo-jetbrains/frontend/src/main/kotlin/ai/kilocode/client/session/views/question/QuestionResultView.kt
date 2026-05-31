@@ -18,6 +18,7 @@ import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Font
+import java.awt.Rectangle
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.BoxLayout
@@ -213,6 +214,8 @@ class QuestionResultView(tool: Tool) : PartView() {
                 return Dimension(Int.MAX_VALUE, size.height)
             }
 
+            override fun scrollRectToVisible(aRect: Rectangle) {}
+
             private fun withWidth(fallback: Int): Dimension {
                 val width = space()
                 if (width <= 0) return Dimension(super.getPreferredSize().width, fallback)
@@ -258,7 +261,9 @@ class QuestionResultView(tool: Tool) : PartView() {
         val color = if (value) SessionUiStyle.View.headerHover() else SessionUiStyle.View.header()
         if (header.background?.rgb == color.rgb) return
         header.background = color
+        root.border = if (value) SessionUiStyle.View.card(SessionUiStyle.View.hoverLine()) else SessionUiStyle.View.card()
         header.repaint()
+        root.repaint()
     }
 
     private fun inside(e: MouseEvent): Boolean {
