@@ -65,6 +65,7 @@ export class MarketplaceService {
 
 export type {
   MarketplaceItem,
+  AgentMarketplaceItem,
   InstallMarketplaceItemOptions,
   MarketplaceDataResponse,
   InstallResult,

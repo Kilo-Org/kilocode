@@ -69,6 +69,7 @@ describe("createSessionDiffSource.fetch", () => {
     expect(foo.file).toBe("foo.ts")
     expect(foo.before).toBe("keep\nold\n")
     expect(foo.after).toBe("keep\nnew\n")
+    expect(foo.patch).toBe(modifiedPatch)
     expect(foo.additions).toBe(1)
     expect(foo.deletions).toBe(1)
     expect(foo.status).toBe("modified")

@@ -2,6 +2,7 @@ package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import javax.swing.ScrollPaneConstants
 
@@ -10,8 +11,10 @@ class ReasoningViewTest : BasePlatformTestCase() {
 
     fun `test completed reasoning is collapsed by default`() {
         val view = ReasoningView(reasoning("p1", done = true, text = "one\ntwo\nthree\nfour"))
+        val base: Any = view
 
         assertFalse(view.isExpanded())
+        assertTrue(base is SecondarySessionPartView)
         assertEquals("Reasoning", view.headerText())
         assertEquals("one\ntwo\nthree\nfour", view.markdown())
         assertTrue(view.hasToggle())
@@ -158,6 +161,17 @@ class ReasoningViewTest : BasePlatformTestCase() {
 
         assertEquals(5, view.bodyMaxRows())
         assertTrue(view.preferredSize.height > 0)
+    }
+
+    fun `test link opens url callback`() {
+        val urls = mutableListOf<String>()
+        val view = ReasoningView(reasoning("p1", done = true, text = "[docs](https://kilocode.ai/docs)"), openUrl = {
+            urls.add(it)
+        })
+
+        view.md.simulateLink("https://kilocode.ai/docs")
+
+        assertEquals(listOf("https://kilocode.ai/docs"), urls)
     }
 
     private fun assertEditorSheet(sheet: String, style: SessionEditorStyle) {

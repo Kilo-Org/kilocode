@@ -11,7 +11,7 @@ import java.awt.font.FontRenderContext
 import javax.swing.Icon
 
 internal class FilledBadgeIcon(
-    private val text: String,
+    internal val text: String,
     private val bg: Color,
     private val fg: Color,
 ) : Icon {

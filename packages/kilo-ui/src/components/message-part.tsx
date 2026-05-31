@@ -1377,7 +1377,12 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     <Show when={throttledText() && showSyntheticPart()}>
       <div data-component="text-part">
         <div data-slot="text-part-body">
-          <Markdown text={throttledText()} cacheKey={part().id} onClick={handleMarkdownClick} />
+          <Markdown
+            text={throttledText()}
+            cacheKey={part().id}
+            streaming={streaming()}
+            onClick={handleMarkdownClick}
+          />
         </div>
         <Show when={showCopy()}>
           <div data-slot="assistant-copy-wrapper">
@@ -1575,7 +1580,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
           </Collapsible.Trigger>
           <Collapsible.Content>
             <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
-              <Markdown text={view().body} cacheKey={id} />
+              <Markdown text={view().body} cacheKey={id} streaming={!done()} />
             </div>
           </Collapsible.Content>
         </Collapsible>

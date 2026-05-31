@@ -78,6 +78,10 @@ const clear = async (wait = false) => {
 }
 const listDirs = () =>
   Effect.runPromise(Config.Service.use((svc) => svc.directories()).pipe(Effect.scoped, Effect.provide(layer)))
+// kilocode_change start
+const warnings = () =>
+  Effect.runPromise(Config.Service.use((svc) => svc.warnings()).pipe(Effect.scoped, Effect.provide(layer)))
+// kilocode_change end
 const ready = () =>
   Effect.runPromise(Config.Service.use((svc) => svc.waitForDependencies()).pipe(Effect.scoped, Effect.provide(layer)))
 
@@ -406,6 +410,7 @@ test("jsonc overrides json in the same directory", async () => {
   })
 })
 
+// kilocode_change start
 test("prefers .kilo directory config over legacy .kilocode", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
@@ -429,11 +434,12 @@ test("prefers .kilo directory config over legacy .kilocode", async () => {
   await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
-      const config = await Config.get()
+      const config = await load()
       expect(config.model).toBe("new/model")
     },
   })
 })
+// kilocode_change end
 
 test("handles environment variable substitution", async () => {
   const originalEnv = process.env["TEST_VAR"]
@@ -605,6 +611,7 @@ test("handles file inclusion with replacement tokens", async () => {
   })
 })
 
+// kilocode_change start
 test("validates config schema and reports warning on invalid fields", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
@@ -617,14 +624,16 @@ test("validates config schema and reports warning on invalid fields", async () =
   await provideTestInstance({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change - invalid schema surfaces as warnings, not a throw
+      // invalid schema surfaces as warnings, not a throw
       await load()
-      const warnings = await Config.warnings()
-      expect(warnings.length).toBeGreaterThan(0)
+      const issues = await warnings()
+      expect(issues.length).toBeGreaterThan(0)
     },
   })
 })
+// kilocode_change end
 
+// kilocode_change start
 test("reports warning for invalid JSON", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
@@ -634,13 +643,14 @@ test("reports warning for invalid JSON", async () => {
   await provideTestInstance({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change - invalid JSON surfaces as a warning, not a throw
+      // invalid JSON surfaces as a warning, not a throw
       await load()
-      const warnings = await Config.warnings()
-      expect(warnings.length).toBeGreaterThan(0)
+      const issues = await warnings()
+      expect(issues.length).toBeGreaterThan(0)
     },
   })
 })
+// kilocode_change end
 
 test("handles agent configuration", async () => {
   await using tmp = await tmpdir({
@@ -985,6 +995,7 @@ Nested command template`,
   })
 })
 
+// kilocode_change start
 test("prefers .kilo commands over legacy .kilocode commands", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
@@ -1008,7 +1019,7 @@ Hello from new command`,
   await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
-      const config = await Config.get()
+      const config = await load()
 
       expect(config.command?.["hello"]).toEqual({
         description: "New command",
@@ -1017,6 +1028,7 @@ Hello from new command`,
     },
   })
 })
+// kilocode_change end
 
 test("gets config directories", async () => {
   await using tmp = await tmpdir()

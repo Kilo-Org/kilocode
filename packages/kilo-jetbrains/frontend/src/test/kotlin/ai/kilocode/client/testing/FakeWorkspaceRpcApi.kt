@@ -3,6 +3,7 @@ package ai.kilocode.client.testing
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
+import ai.kilocode.rpc.dto.WorkspaceFileDto
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -20,6 +21,10 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     val state = MutableStateFlow(KiloWorkspaceStateDto(KiloWorkspaceStatusDto.PENDING))
     var reloads = 0
         private set
+    var fileMatches = emptyList<WorkspaceFileDto>()
+    var openResult = true
+    val fileCalls = mutableListOf<Pair<String, String>>()
+    val opened = mutableListOf<String>()
 
     override suspend fun resolveProjectDirectory(hint: String): String {
         assertNotEdt("resolveProjectDirectory")
@@ -34,5 +39,17 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     override suspend fun reload(directory: String) {
         assertNotEdt("reload")
         reloads += 1
+    }
+
+    override suspend fun files(directory: String, path: String): List<WorkspaceFileDto> {
+        assertNotEdt("files")
+        fileCalls.add(directory to path)
+        return fileMatches
+    }
+
+    override suspend fun openFile(path: String): Boolean {
+        assertNotEdt("openFile")
+        opened.add(path)
+        return openResult
     }
 }

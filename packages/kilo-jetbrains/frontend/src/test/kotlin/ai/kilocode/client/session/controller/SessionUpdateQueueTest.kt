@@ -6,8 +6,12 @@ import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.DiffFileDto
+import ai.kilocode.rpc.dto.QuestionInfoDto
+import ai.kilocode.rpc.dto.QuestionOptionDto
+import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.TodoDto
+import ai.kilocode.rpc.dto.ToolRefDto
 
 class SessionUpdateQueueTest : SessionControllerTestBase() {
 
@@ -34,6 +38,66 @@ class SessionUpdateQueueTest : SessionControllerTestBase() {
             StateChanged Busy
             MessageAdded msg1
             TurnAdded msg1 [msg1]
+        """, modelEvents)
+        assertTrue(m.model.state is SessionState.Busy)
+    }
+
+    fun `test hidden controller applies question metadata without flushing transcript`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test", flushMs = 250L)
+        val modelEvents = collectModelEvents(m)
+        flush()
+        modelEvents.clear()
+
+        hide(m)
+        emit(ChatEventDto.QuestionAsked("ses_test", question("q1")), flush = false)
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")), flush = false)
+        settle()
+
+        assertModelEvents("""
+            StateChanged AwaitingQuestion
+        """, modelEvents)
+        assertTrue(m.model.state is SessionState.AwaitingQuestion)
+        assertNull(m.model.message("msg1"))
+
+        show(m)
+        settle()
+
+        assertTrue(m.model.state is SessionState.AwaitingQuestion)
+        assertNotNull(m.model.message("msg1"))
+    }
+
+    fun `test hidden controller applies session title metadata without show`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test", flushMs = 250L)
+        flush()
+
+        hide(m)
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test", title = "Hidden title")), flush = false)
+        settle()
+
+        assertEquals("Hidden title", m.model.session?.title)
+        assertNull(m.model.message("msg1"))
+    }
+
+    fun `test hidden controller consumes matching question reply metadata`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test", flushMs = 250L)
+        val modelEvents = collectModelEvents(m)
+        flush()
+        modelEvents.clear()
+
+        hide(m)
+        emit(ChatEventDto.QuestionAsked("ses_test", question("q1")), flush = false)
+        emit(ChatEventDto.QuestionReplied("ses_test", "q1"), flush = false)
+        settle()
+
+        assertModelEvents("""
+            StateChanged AwaitingQuestion
+            StateChanged Busy
         """, modelEvents)
         assertTrue(m.model.state is SessionState.Busy)
     }
@@ -362,6 +426,21 @@ class SessionUpdateQueueTest : SessionControllerTestBase() {
         assertNotNull(m.model.message("msg1"))
         assertTrue(m.model.state is SessionState.Busy)
     }
+
+    private fun question(id: String) = QuestionRequestDto(
+        id = id,
+        sessionID = "ses_test",
+        questions = listOf(
+            QuestionInfoDto(
+                question = "Pick one",
+                header = "Choice",
+                options = listOf(QuestionOptionDto("A", "Option A")),
+                multiple = false,
+                custom = true,
+            ),
+        ),
+        tool = ToolRefDto("msg1", "call1"),
+    )
 
     private fun corpus(): List<ChatEventDto> = buildList {
         add(ChatEventDto.TurnOpen("ses_test"))

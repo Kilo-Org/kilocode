@@ -1152,6 +1152,7 @@ export class AgentManagerProvider implements Disposable {
       {
         getClient: () => this.connectionService.getClient(),
         state: this.getStateManager(),
+        directory: this.getRoot(),
         postError: (msg) => this.postToWebview({ type: "error", message: msg }),
         registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
         pushState: () => this.pushState(),
