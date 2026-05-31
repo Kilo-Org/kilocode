@@ -38,7 +38,8 @@ describe("Codex auth refresh", () => {
       name: "ProviderAuthError",
       data: {
         providerID: "openai",
-        message: "Your ChatGPT sign-in expired or was revoked. Sign in with ChatGPT again to continue using Codex models.",
+        message:
+          "Your ChatGPT sign-in expired or was revoked. Sign in with ChatGPT again to continue using Codex models.",
       },
     })
   })

@@ -159,6 +159,11 @@ function stateApi(sync: ReturnType<typeof useSync>): TuiPluginApi["state"] {
       todo(sessionID) {
         return sync.data.todo[sessionID] ?? []
       },
+      // kilocode_change start
+      processes(sessionID) {
+        return sync.data.background_process[sessionID] ?? []
+      },
+      // kilocode_change end
       messages(sessionID) {
         return sync.data.message[sessionID] ?? []
       },

@@ -29,6 +29,7 @@ const DIR = path.join(ROOT, ".github", "workflows")
 const active = new Set([
   "auto-docs.yml",
   "beta.yml",
+  "check-forbidden-strings.yml",
   "check-kilo-generated-artifacts.yml",
   "check-md-table-padding.yml",
   "check-opencode-annotations.yml",
@@ -42,6 +43,7 @@ const active = new Set([
   "generate.yml",
   "nix-eval.yml",
   "nix-hashes.yml",
+  "prepare-jetbrains-release.yml",
   "publish-jetbrains.yml",
   "publish.yml",
   "smoke-test.yml",

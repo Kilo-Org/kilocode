@@ -3,6 +3,7 @@ import { prettifyError } from "zod/v4"
 import type { CloudSessionMessage, IndexingStatus } from "./services/cli-backend/types"
 import type { PartBatch, PartUpdate } from "./kilo-provider/session-stream-scheduler"
 import type { PartRemove } from "./shared/stream-messages"
+import * as path from "path"
 
 export { SessionStreamScheduler } from "./kilo-provider/session-stream-scheduler"
 
@@ -363,6 +364,17 @@ export function resolveNewSessionDirectory(input: {
   })
 }
 
+export function sameDirectory(a: string, b: string): boolean {
+  if (!a || !b) return false
+
+  const left = path.resolve(a)
+  const right = path.resolve(b)
+  if (path.relative(left, right) === "") return true
+
+  if (process.platform !== "win32") return false
+  return path.relative(left.toLowerCase(), right.toLowerCase()) === ""
+}
+
 export type WebviewMessage =
   | PartUpdate
   | PartBatch
@@ -376,6 +388,7 @@ export type WebviewMessage =
       message: Record<string, unknown>
     }
   | { type: "sessionStatus"; sessionID: string; status: string; attempt?: number; message?: string; next?: number }
+  | { type: "sessionTurnClosed"; sessionID: string; reason: "completed" | "error" | "interrupted" }
   | {
       type: "permissionRequest"
       permission: {
@@ -497,6 +510,12 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
         ...extra,
       }
     }
+    case "session.turn.close":
+      return {
+        type: "sessionTurnClosed",
+        sessionID: event.properties.sessionID,
+        reason: event.properties.reason,
+      }
     case "permission.asked":
       return {
         type: "permissionRequest",

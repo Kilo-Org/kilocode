@@ -5,7 +5,6 @@ on:
     paths:
       - ".github/**"
       - "github/**"
-      - "sdks/vscode/**"
       - "packages/extensions/**"
       - "packages/opencode/**"
       - "packages/script/**"
@@ -39,6 +38,9 @@ jobs:
           fi
 
       # kilocode_change start
+      - name: Check Effect Promise facade allowlist
+        run: bun run script/check-opencode-promise-facades.ts
+
       - name: Check workflow allowlist
         run: bun run script/check-workflows.ts
       # kilocode_change end

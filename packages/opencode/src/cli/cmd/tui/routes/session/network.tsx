@@ -1,6 +1,6 @@
 // kilocode_change - new file
 /** @jsxImportSource @opentui/solid */
-import { Show } from "solid-js"
+import { Show, createEffect, createSignal, onCleanup } from "solid-js"
 import { useKeyboard } from "@opentui/solid"
 import { useTheme } from "../../context/theme"
 import { SplitBorder } from "../../component/border"
@@ -14,6 +14,7 @@ export function NetworkPrompt(props: { request: SessionNetworkWait }) {
   const { theme } = useTheme()
   const keybind = useKeybind()
   const dialog = useDialog()
+  const [countdown, setCountdown] = createSignal(10)
 
   function reply() {
     void sdk.client.network.reply({ requestID: props.request.id }).catch(() => {})
@@ -22,6 +23,22 @@ export function NetworkPrompt(props: { request: SessionNetworkWait }) {
   function reject() {
     void sdk.client.network.reject({ requestID: props.request.id }).catch(() => {})
   }
+
+  createEffect(() => {
+    if (!props.request.restored) {
+      setCountdown(10)
+      return
+    }
+    const started = Date.now()
+    const remaining = () => Math.max(0, 10 - Math.floor((Date.now() - started) / 1000))
+    setCountdown(remaining())
+    const timer = setInterval(() => {
+      const next = remaining()
+      setCountdown(next)
+      if (next <= 0) clearInterval(timer)
+    }, 250)
+    onCleanup(() => clearInterval(timer))
+  })
 
   useKeyboard((evt) => {
     if (dialog.stack.length > 0) return
@@ -56,8 +73,8 @@ export function NetworkPrompt(props: { request: SessionNetworkWait }) {
           }
         >
           <text fg={theme.success}>Network reconnected</text>
-          <text fg={theme.text}>Connection restored.</text>
-          <text fg={theme.textMuted}>Press Enter to resume this turn.</text>
+          <text fg={theme.text}>Connection restored. Retrying in {countdown()}s.</text>
+          <text fg={theme.textMuted}>Press Enter to resume now.</text>
           <text fg={theme.textMuted}>Press Esc to stop.</text>
         </Show>
       </box>

@@ -1,5 +1,121 @@
 # @kilocode/cli
 
+## 7.3.18
+
+### Patch Changes
+
+- [#10736](https://github.com/Kilo-Org/kilocode/pull/10736) [`57bc6ee`](https://github.com/Kilo-Org/kilocode/commit/57bc6eea583e22e4c3b8b00ad1c64fed62dc85e8) - Use Kilo session share links when sharing conversations from the CLI.
+
+- [#10737](https://github.com/Kilo-Org/kilocode/pull/10737) [`f574294`](https://github.com/Kilo-Org/kilocode/commit/f5742940ccd06bafd2708e32af30023eef241241) - Support reading text from DOCX files through the read tool.
+
+- [#10740](https://github.com/Kilo-Org/kilocode/pull/10740) [`2081af2`](https://github.com/Kilo-Org/kilocode/commit/2081af2b3344890481cb4bd44260e60a8cccba80) - Support reading XLSX spreadsheets as labelled tabular text
+
+## 7.3.17
+
+### Patch Changes
+
+- [#10721](https://github.com/Kilo-Org/kilocode/pull/10721) [`2efa216`](https://github.com/Kilo-Org/kilocode/commit/2efa216ee5bfffa6e01f51ae5add7c5b9034833c) - Keep Agent Manager turns running while slow snapshot baselines initialize instead of stopping for an interactive question.
+
+- [#10703](https://github.com/Kilo-Org/kilocode/pull/10703) [`eeff6d9`](https://github.com/Kilo-Org/kilocode/commit/eeff6d9df8d378c561c4ca212d650be1dfbd912a) Thanks [@barzhomi](https://github.com/barzhomi)! - Fix LanceDB metadata corruption that caused a full re-index on every VS Code restart
+
+- [#10733](https://github.com/Kilo-Org/kilocode/pull/10733) [`4967c22`](https://github.com/Kilo-Org/kilocode/commit/4967c228611f58bb84c0b762eee88d306ab1b624) - Read Jupyter notebooks as ordered markdown and code cell content instead of raw notebook payloads.
+
+- [#10669](https://github.com/Kilo-Org/kilocode/pull/10669) [`0107a01`](https://github.com/Kilo-Org/kilocode/commit/0107a0163cf73004ee13b0ae5fd46811a273d80a) - Guide Agent Manager orchestration to recall completed session context only when needed.
+
+- [#10668](https://github.com/Kilo-Org/kilocode/pull/10668) [`ef2390d`](https://github.com/Kilo-Org/kilocode/commit/ef2390d7a4ffafc379d1e15db94d3a2cd6dcce9b) - Access semantic indexing without an experimental feature toggle while keeping indexing disabled until enabled globally or for a project.
+
+## 7.3.16
+
+## 7.3.15
+
+## 7.3.14
+
+### Patch Changes
+
+- [#8761](https://github.com/Kilo-Org/kilocode/pull/8761) [`74e01b1`](https://github.com/Kilo-Org/kilocode/commit/74e01b1d485ee77943d2d46f05dce1c7cd2daf82) Thanks [@brendandebeasi](https://github.com/brendandebeasi)! - Fix packaged CLI startup crashes caused by duplicate OpenTUI/Solid renderer instances.
+
+- [#10648](https://github.com/Kilo-Org/kilocode/pull/10648) [`9fbd547`](https://github.com/Kilo-Org/kilocode/commit/9fbd5479b09739b21ca636612a85501f0d0f548f) - Keep the extension responsive while semantic indexing processes large workspaces.
+
+- [#10619](https://github.com/Kilo-Org/kilocode/pull/10619) [`117691e`](https://github.com/Kilo-Org/kilocode/commit/117691e4d6fe48f91223bb7d7e24103c67cde73f) - Use supported hosted model presets for Kilo indexing and clear obsolete model and dimension overrides.
+
+- [#10657](https://github.com/Kilo-Org/kilocode/pull/10657) [`d883ad9`](https://github.com/Kilo-Org/kilocode/commit/d883ad96ab7bd1b31a83d227065ad231a225a4c4) - Keep the extension usable on fresh startup when semantic indexing is enabled globally.
+
+- [#10618](https://github.com/Kilo-Org/kilocode/pull/10618) [`dcfadac`](https://github.com/Kilo-Org/kilocode/commit/dcfadac83ed45a109a402a2f71f4d214347804f1) - Prevent saved global indexing provider changes from temporarily reverting in active workspaces.
+
+- Updated dependencies [[`117691e`](https://github.com/Kilo-Org/kilocode/commit/117691e4d6fe48f91223bb7d7e24103c67cde73f), [`db38888`](https://github.com/Kilo-Org/kilocode/commit/db388889e867021c6bae42cbd03df6b67941b208)]:
+  - @kilocode/kilo-indexing@7.3.13
+  - @kilocode/sdk@7.3.13
+  - @kilocode/kilo-gateway@7.4.0
+  - @kilocode/plugin@7.3.13
+  - @kilocode/kilo-telemetry@7.3.13
+
+## 7.3.11
+
+### Patch Changes
+
+- [#10485](https://github.com/Kilo-Org/kilocode/pull/10485) [`7025c77`](https://github.com/Kilo-Org/kilocode/commit/7025c779f74b2c68afa05bd2f70ce1123ae9cecc) - Surface failed sub-agent tasks as tool errors so parent sessions can recover.
+
+- [#10443](https://github.com/Kilo-Org/kilocode/pull/10443) [`8e76807`](https://github.com/Kilo-Org/kilocode/commit/8e7680794da86c6d938d6626066157c9cd18adbb) - Support configuring the default task subagent model and reasoning effort while safely inheriting the calling agent model when the override is unavailable.
+
+## 7.3.10
+
+### Patch Changes
+
+- [#10302](https://github.com/Kilo-Org/kilocode/pull/10302) [`8ba138d`](https://github.com/Kilo-Org/kilocode/commit/8ba138def73897d7c19208a067f8a2b4be947fd6) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Export all messages from TUI instead of truncated store
+
+## 7.3.9
+
+### Minor Changes
+
+- [#10500](https://github.com/Kilo-Org/kilocode/pull/10500) [`4ef3717`](https://github.com/Kilo-Org/kilocode/commit/4ef371768a1b8cc2cea895339b46d4a1322a6738) - Support xAI Grok OAuth and device-code login for SuperGrok users.
+
+### Patch Changes
+
+- [#10510](https://github.com/Kilo-Org/kilocode/pull/10510) [`c076058`](https://github.com/Kilo-Org/kilocode/commit/c076058bfcbd4f561abc634f3aa109dee598f396) - Use the fallback logo in old Windows terminal emulators while keeping the Unicode logo available over SSH.
+
+- [#9951](https://github.com/Kilo-Org/kilocode/pull/9951) [`0d12909`](https://github.com/Kilo-Org/kilocode/commit/0d12909a9edb49482365d826d0d91e908d40eb24) - Support optional review focus for `/local-review` and `/local-review-uncommitted`, optional base selection for `/local-review`, and focus both prompts on high-confidence security, performance, business logic, deploy safety, duplication, and dead-code findings.
+
+- [#10510](https://github.com/Kilo-Org/kilocode/pull/10510) [`656572c`](https://github.com/Kilo-Org/kilocode/commit/656572c2cfeff16034769381acfb60f9f85091a1) - Avoid leaving mouse and advanced keyboard modes enabled after exiting the TUI in mintty and MINGW terminals.
+
+## 7.3.8
+
+### Patch Changes
+
+- [#8403](https://github.com/Kilo-Org/kilocode/pull/8403) [`42844e5`](https://github.com/Kilo-Org/kilocode/commit/42844e505475650c16f92251421ad792c6429184) Thanks [@saschabuehrle](https://github.com/saschabuehrle)! - Accept `env` as an alias for `environment` in local MCP server configuration. Configurations using the more common `env` key (matching Docker, npm, and VS Code conventions) are now normalised on load instead of failing strict validation.
+
+- [#10495](https://github.com/Kilo-Org/kilocode/pull/10495) [`ae0fbe8`](https://github.com/Kilo-Org/kilocode/commit/ae0fbe89dc5859fcea3c5d1e459a77eb459a8f71) - Show recent and favorited models in provider-specific model lists.
+
+## 7.3.7
+
+### Patch Changes
+
+- [#10297](https://github.com/Kilo-Org/kilocode/pull/10297) [`74e8604`](https://github.com/Kilo-Org/kilocode/commit/74e860431f3f9fcbfcea764711b8c1487d9a8f8d) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Vertically center TUI dialogs on screen
+
+## 7.3.5
+
+### Patch Changes
+
+- Updated dependencies [[`205e22e`](https://github.com/Kilo-Org/kilocode/commit/205e22ee4672305d3cb2e0c34b607a4950f8f4e8)]:
+  - @kilocode/kilo-indexing@7.3.5
+
+## 7.3.3
+
+### Patch Changes
+
+- [#10155](https://github.com/Kilo-Org/kilocode/pull/10155) [`371b7e8`](https://github.com/Kilo-Org/kilocode/commit/371b7e8ae6057f0fefae3982eee6923f2c0a61f0) - Resolve bundled tree-sitter WASM resources from the installed CLI layout so codebase indexing works in packaged CLI and VS Code builds.
+
+## 7.3.2
+
+## 7.3.1
+
+### Patch Changes
+
+- [#10285](https://github.com/Kilo-Org/kilocode/pull/10285) [`d23e162`](https://github.com/Kilo-Org/kilocode/commit/d23e162051f118beb993f84cebad1002d974ad79) - Capture aggregate usage telemetry for experimental Morph-backed codebase search.
+
+- [#10358](https://github.com/Kilo-Org/kilocode/pull/10358) [`413222f`](https://github.com/Kilo-Org/kilocode/commit/413222f0137a29c5cf09666ea3b515032c81f9b8) - Resume interrupted CLI turns automatically after network recovery while giving users 10 seconds to cancel.
+
+- [#10293](https://github.com/Kilo-Org/kilocode/pull/10293) [`af115af`](https://github.com/Kilo-Org/kilocode/commit/af115afe20893f4d24d22a40411ebdbd398781d7) - Harden Mermaid diagram rendering with upstream security fixes.
+
 ## 7.3.0
 
 ### Patch Changes

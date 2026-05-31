@@ -7,8 +7,8 @@ description: "Index your codebase for improved AI understanding"
 
 Codebase Indexing enables semantic code search across your entire project using AI embeddings. Instead of searching for exact text matches, it understands the _meaning_ of your queries, helping Kilo Code find relevant code even when you don't know specific function names or file locations.
 
-{% callout type="warning" title="Experimental" %}
-Codebase Indexing is currently **experimental** in the CLI and the new VS Code extension. You must explicitly opt in before the feature becomes available — see the **Setup** section below. Behavior, configuration, and defaults may change in future releases.
+{% callout type="info" title="Opt-in indexing" %}
+Codebase Indexing is disabled by default. It starts only after you enable indexing globally or for an individual project. Configuring an embedding provider without enabling one of those toggles does not start indexing.
 {% /callout %}
 
 ## What It Does
@@ -34,28 +34,10 @@ This enables natural language queries like "user authentication logic" or "datab
 {% tabs %}
 {% tab label="VSCode" %}
 
-### 1. Enable the experimental flag
-
-Codebase Indexing is gated behind an experimental flag. Until the flag is on, the Indexing UI is hidden and `semantic_search` is unavailable.
-
-1. Open Kilo Code **Settings** → **Experimental**.
-2. Toggle **Semantic Indexing** on.
-3. The **Indexing** tab will appear in Settings and the indexing status indicator will appear at the bottom of the prompt input panel.
-
-Alternatively, set `experimental.semantic_indexing` to `true` in your `kilo.jsonc`:
-
-```json
-{
-  "experimental": {
-    "semantic_indexing": true
-  }
-}
-```
-
-### 2. Configure indexing
+### Configure indexing
 
 1. Open Kilo Code **Settings** → **Indexing**, or click the indexing indicator at the bottom of the prompt input panel.
-2. Toggle **Enable Indexing** on.
+2. Turn on **Global Enable** to index every workspace, or turn on **Enable for This Project** to index only the current workspace. Both toggles are off until explicitly enabled.
 3. Pick an **Embedding Provider** and fill in its required fields.
 4. Pick a **Vector Store** (`Qdrant` or `LanceDB`) and configure it.
 5. Optionally adjust **Tuning Parameters** (search score, batch size, retries, max results).
@@ -106,23 +88,9 @@ The prompt input panel shows a compact indexing status indicator that reflects t
 {% /tab %}
 {% tab label="CLI" %}
 
-### 1. Enable the experimental flag
+### Configure indexing
 
-Codebase Indexing is gated behind an experimental flag. Until the flag is on, the `/indexing` command is hidden and `semantic_search` is unavailable.
-
-Set the flag in your `kilo.jsonc`:
-
-```json
-{
-  "experimental": {
-    "semantic_indexing": true
-  }
-}
-```
-
-Restart the CLI for the change to take effect. The `/indexing` command (and aliases `/index`, `/embedding`) will appear in the command palette once the flag is active.
-
-### 2. Configure indexing
+The `/indexing` command (and aliases `/index`, `/embedding`) is available when the indexing plugin is installed. Indexing remains disabled until it is enabled globally or for the current project.
 
 Open a Kilo TUI session and run:
 
@@ -198,7 +166,7 @@ When indexing is enabled, the CLI shows an indexing status badge at the bottom o
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
-The legacy extension does not require an experimental flag.
+The legacy extension uses its own Codebase Indexing settings panel.
 
 ### Open Codebase Indexing Settings
 

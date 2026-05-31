@@ -14,13 +14,15 @@ import { RemoteRoutes } from "../../server/routes/instance/remote"
 import { NetworkRoutes } from "../../server/routes/instance/network"
 import { SuggestionRoutes } from "../suggestion/routes"
 import { IndexingRoutes } from "./routes/indexing"
+import { BackgroundProcessRoutes } from "./routes/background-process"
 import { createKiloRoutes } from "@kilocode/kilo-gateway"
 import { Auth } from "../../auth"
+import { AppRuntime } from "../../effect/app-runtime"
 import { errors } from "../../server/error"
 import { ModelCache } from "../../provider/model-cache"
 import { Database } from "../../storage/db"
 import { Instance } from "../../project/instance"
-import { InstanceStore } from "../../project/instance-store"
+import { InstanceRuntime } from "../../project/instance-runtime"
 import { Session } from "../../session/session"
 import { Identifier } from "../../id/id"
 import { SessionTable, MessageTable, PartTable } from "../../session/session.sql"
@@ -28,6 +30,7 @@ import { Bus } from "@/bus"
 
 export function register(app: Hono): Hono {
   return app
+    .route("/background-process", BackgroundProcessRoutes())
     .route("/permission", PermissionKilocodeRoutes())
     .route("/network", NetworkRoutes())
     .route("/indexing", IndexingRoutes()) // kilocode_change
@@ -45,11 +48,14 @@ export function register(app: Hono): Hono {
         validator,
         resolver,
         errors,
-        Auth,
+        Auth: {
+          get: (id: string) => AppRuntime.runPromise(Auth.Service.use((svc) => svc.get(id))),
+          set: (id: string, info: Auth.Info) => AppRuntime.runPromise(Auth.Service.use((svc) => svc.set(id, info))),
+        },
         z,
         Database,
         Instance,
-        InstanceStore,
+        Instances: InstanceRuntime,
         SessionTable,
         MessageTable,
         PartTable,
@@ -57,7 +63,10 @@ export function register(app: Hono): Hono {
         Bus,
         SessionCreatedEvent: Session.Event.Created,
         Identifier,
-        ModelCache,
+        ModelCache: {
+          clear: (providerID: string) =>
+            AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.clear(providerID))),
+        },
       }),
     )
 }

@@ -1,4 +1,5 @@
 import { OpenApi } from "effect/unstable/httpapi"
+import { matchLegacyKiloOpenApi } from "@/kilocode/server/httpapi/public" // kilocode_change
 import { OpenCodeHttpApi } from "./api"
 
 type OpenApiParameter = {
@@ -75,6 +76,8 @@ const QueryNumberParameters = new Set(["start", "cursor", "limit", "method"])
 const QueryBooleanParameters = new Set(["roots", "archived"])
 const QueryParameterSchemas = {
   "GET /find/file limit": { type: "integer", minimum: 1, maximum: 200 },
+  "GET /experimental/session worktrees": { type: "boolean" }, // kilocode_change
+  "GET /kilo/cloud-sessions cursor": { type: "string" }, // kilocode_change
   "GET /session/{sessionID}/diff messageID": { type: "string", pattern: "^msg.*" },
   "GET /session/{sessionID}/message limit": { type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
 } satisfies Record<string, OpenApiSchema>
@@ -89,7 +92,7 @@ const PathParameterSchemas = {
 
 const LegacyComponentDescriptions = {
   LogLevel: "Log level",
-  ServerConfig: "Server configuration for opencode serve and web commands",
+  ServerConfig: "Server configuration for the kilo serve command", // kilocode_change
   LayoutConfig: "@deprecated Always uses stretch layout.",
 } satisfies Record<string, string>
 
@@ -146,6 +149,16 @@ function matchLegacyOpenApi(input: Record<string, unknown>) {
           if (properties?.branch) properties.branch = { anyOf: [properties.branch, { type: "null" }] }
           if (properties?.extra) properties.extra = { anyOf: [properties.extra, { type: "null" }] }
         }
+        if (path === "/experimental/workspace/warp" && method === "post") {
+          const ref = operation.requestBody.content?.["application/json"]?.schema?.$ref?.replace(
+            "#/components/schemas/",
+            "",
+          )
+          const properties = ref
+            ? spec.components?.schemas?.[ref]?.properties
+            : operation.requestBody.content?.["application/json"]?.schema?.properties
+          if (properties?.id) properties.id = { anyOf: [properties.id, { type: "null" }] }
+        }
       }
       for (const response of Object.values(operation.responses ?? {})) {
         for (const content of Object.values(response.content ?? {})) {
@@ -183,6 +196,7 @@ function matchLegacyOpenApi(input: Record<string, unknown>) {
       for (const param of operation.parameters) normalizeParameter(param, `${method.toUpperCase()} ${path}`)
     }
   }
+  matchLegacyKiloOpenApi(input) // kilocode_change
   return input
 }
 
@@ -276,6 +290,11 @@ function applyLegacySchemaOverrides(spec: OpenApiSpec) {
   const model = schemas.ProviderConfig?.properties?.models?.additionalProperties
   const variants = typeof model === "object" ? model.properties?.variants?.additionalProperties : undefined
   if (variants && typeof variants === "object") variants.additionalProperties = {}
+  // kilocode_change start - preserve model reset sentinels in indexing config patches
+  const indexing = schemas.IndexingConfig?.properties
+  if (indexing?.model) indexing.model = nullable(indexing.model)
+  if (indexing?.dimension) indexing.dimension = nullable(indexing.dimension)
+  // kilocode_change end
   const syncInfo = schemas.SyncEventSessionUpdated?.properties?.data?.properties?.info
   if (syncInfo?.properties) makePropertiesNullable(syncInfo.properties)
 }
@@ -520,8 +539,11 @@ function pathParameterSchema(route: string, name: string) {
   if (name in PathParameterSchemas) return PathParameterSchemas[name as keyof typeof PathParameterSchemas]
   if (name === "id" && route.startsWith("DELETE /experimental/workspace/")) return { type: "string", pattern: "^wrk.*" }
   if (name === "id" && route.startsWith("POST /experimental/workspace/")) return { type: "string", pattern: "^wrk.*" }
+  if (name === "processID" && route.includes(" /background-process/")) return { type: "string", pattern: "^bgp.*" } // kilocode_change
   if (name === "requestID" && route.startsWith("POST /permission/")) return { type: "string", pattern: "^per.*" }
   if (name === "requestID" && route.startsWith("POST /question/")) return { type: "string", pattern: "^que.*" }
+  // /network/* reuses QuestionID (prefix "que"), not a separate brand. // kilocode_change
+  if (name === "requestID" && route.startsWith("POST /network/")) return { type: "string", pattern: "^que.*" } // kilocode_change
   return undefined
 }
 

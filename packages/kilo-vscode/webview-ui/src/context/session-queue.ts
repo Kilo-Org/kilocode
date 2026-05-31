@@ -62,6 +62,10 @@ export function messageTurns(messages: Message[], boundary?: string): MessageTur
       turn.assistant.push(msg)
       continue
     }
+    if (msg.parentID) {
+      lead.push(msg)
+      continue
+    }
     const last = result[result.length - 1]
     if (last) {
       last.assistant.push(msg)
@@ -111,7 +115,8 @@ function active(messages: Message[]) {
     if (msg.finish && !["tool-calls", "unknown"].includes(msg.finish)) continue
     if (!msg.parentID) break
     const parent = messages.find((item) => item.id === msg.parentID)
-    if (parent?.role === "user") return parent.id
+    if (!parent) return msg.parentID
+    if (parent.role === "user") return parent.id
     break
   }
 
@@ -150,8 +155,22 @@ export function activeUserMessageID(messages: Message[], status: SessionStatusIn
 export function queuedUserMessageIDs(messages: Message[], status: SessionStatusInfo) {
   if (status.type === "idle") return []
   const users = messages.filter((msg) => msg.role === "user")
-  const id = active(messages) ?? pending(messages)
+  const running = active(messages)
+  if (running) {
+    const idx = users.findIndex((msg) => msg.id === running)
+    if (idx < 0) return users.map((msg) => msg.id)
+    return users.slice(idx + 1).map((msg) => msg.id)
+  }
+  const id = pending(messages)
   const idx = id ? users.findIndex((msg) => msg.id === id) : -1
   if (idx < 0) return []
   return users.slice(idx + 1).map((msg) => msg.id)
+}
+
+export function partitionTurns(turns: MessageTurn[], ids: ReadonlySet<string>, queued: ReadonlySet<string>) {
+  const visible = turns.filter((turn) => !queued.has(turn.user.id))
+  const waiting = turns.filter((turn) => queued.has(turn.user.id))
+  const idx = visible.findIndex((turn) => ids.has(turn.user.id))
+  if (idx === -1) return { virtual: visible, direct: [] as MessageTurn[], queued: waiting }
+  return { virtual: visible.slice(0, idx), direct: visible.slice(idx), queued: waiting }
 }

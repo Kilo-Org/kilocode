@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import path from "path"
 import { pathToFileURL } from "url"
 import { existsSync } from "fs"
@@ -114,6 +113,14 @@ export namespace KilocodeConfig {
   export function scopeIndexing(info: Config.Info, scope: "global" | "local"): Config.Info {
     if (scope !== "global") return info
     return stripGlobalIndexing(info)
+  }
+
+  export function retireIndexingFlag(info: Record<string, unknown>, source: string) {
+    if (!isRecord(info.experimental) || !("semantic_indexing" in info.experimental)) return info
+    const experimental = { ...info.experimental }
+    delete experimental.semantic_indexing
+    log.warn("ignored retired experimental.semantic_indexing config; use indexing.enabled instead", { path: source })
+    return { ...info, experimental }
   }
 
   function stripGlobalIndexing(info: Config.Info): Config.Info {

@@ -41,6 +41,7 @@ import { createReviewAnnotationSpeechRenderer } from "./review-annotation-speech
 import {
   LONG_DIFF_MARKER_FILE_COUNT,
   allOpenFiles,
+  eagerDiffFiles,
   initialOpenFiles,
   isLargeDiffFile,
   toggleOpenFiles,
@@ -81,10 +82,10 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const vscode = useVSCode()
   const server = useServer()
   const provider = useProvider()
-  const { config, settings } = useConfig()
+  const { config } = useConfig()
   const speech = useSpeechToText(vscode, server, { t })
-  const canUseSpeech = () => canUseSpeechToText(settings(), config(), provider.connected(), server.profileData())
-  const speechModel = () => selectedSpeechToTextModel(settings())
+  const canUseSpeech = () => canUseSpeechToText(config(), provider.connected(), server.profileData())
+  const speechModel = () => selectedSpeechToTextModel(config())
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
   const sendAllKeybind = () =>
     isMac ? t("agentManager.review.sendAllShortcut.mac") : t("agentManager.review.sendAllShortcut.other")
@@ -135,6 +136,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   // Reorder diffs to match the file-tree's depth-first visual order so
   // scrolling through the diff panel matches the tree on the left.
   const sorted = createMemo(() => treeOrder(props.diffs))
+  const eager = createMemo(() => eagerDiffFiles(sorted()))
 
   const comments = () => props.comments
   const setComments = (next: ReviewComment[]) => props.onCommentsChange(next)
@@ -708,7 +710,9 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                   <Diff<AnnotationMeta>
                                     before={{ name: diff.file, contents: diff.before }}
                                     after={{ name: diff.file, contents: diff.after }}
+                                    patch={diff.patch}
                                     diffStyle={props.diffStyle}
+                                    virtualized={!eager().has(diff.file)}
                                     annotations={annotationsForFile(diff.file)}
                                     renderAnnotation={buildAnnotation}
                                     enableGutterUtility={props.canComment !== false}

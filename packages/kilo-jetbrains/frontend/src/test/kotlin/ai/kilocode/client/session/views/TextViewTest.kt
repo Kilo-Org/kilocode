@@ -97,6 +97,7 @@ class TextViewTest : BasePlatformTestCase() {
         assertSame(component, view.md.component)
         assertTrue(sheet.contains("Courier New"))
         assertTrue(sheet.contains("23pt"))
+        assertEquals(style.editorForeground, view.md.foreground)
     }
 
     // ---- markdown is rendered ------
@@ -112,5 +113,14 @@ class TextViewTest : BasePlatformTestCase() {
         view.appendDelta("**bold")
         view.appendDelta("**")
         assertTrue(view.md.html().contains("<strong>"))
+    }
+
+    fun `test link opens url callback`() {
+        val urls = mutableListOf<String>()
+        val view = TextView(Text("p1"), openUrl = { urls.add(it) })
+
+        view.md.simulateLink("https://kilocode.ai/docs")
+
+        assertEquals(listOf("https://kilocode.ai/docs"), urls)
     }
 }

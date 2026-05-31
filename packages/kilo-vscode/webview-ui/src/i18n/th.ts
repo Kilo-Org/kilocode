@@ -106,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "แนะนำ",
   "dialog.provider.opencode.note": "โมเดลที่คัดสรร รวมถึง Claude, GPT, Gemini และอื่น ๆ",
   "dialog.provider.anthropic.note": "เข้าถึงโมเดล Claude โดยตรง รวมถึง Pro และ Max",
+  "dialog.provider.deepseek.note": "โมเดล DeepSeek สำหรับงานการให้เหตุผลและการเขียนโค้ด",
   "dialog.provider.copilot.note": "โมเดล Claude สำหรับการช่วยเหลือในการเขียนโค้ด",
   "dialog.provider.openai.note": "โมเดล GPT สำหรับงาน AI ทั่วไปที่รวดเร็วและมีความสามารถ",
   "dialog.provider.google.note": "โมเดล Gemini สำหรับการตอบสนองที่รวดเร็วและมีโครงสร้าง",
@@ -177,6 +178,8 @@ export const dict = {
   "model.tag.latest": "ล่าสุด",
   "model.group.recommended": "แนะนำ",
   "model.group.favorites": "รายการโปรด",
+  "model.group.collapse": "ย่อ {{group}}",
+  "model.group.expand": "ขยาย {{group}}",
   "model.favorite.add": "เพิ่มในรายการโปรด",
   "model.favorite.remove": "ลบออกจากรายการโปรด",
   "model.provider.anthropic": "Anthropic",
@@ -282,7 +285,7 @@ export const dict = {
     "ปุ่ม 'ปรับปรุงพรอมต์' ช่วยปรับปรุงพรอมต์ของคุณโดยให้บริบทเพิ่มเติม ชี้แจง หรือเขียนใหม่ ลองพิมพ์พรอมต์ที่นี่และคลิกปุ่มอีกครั้งเพื่อดูว่ามันทำงานอย่างไร",
   "prompt.action.indexing": "การตั้งค่าการสร้างดัชนี",
 
-  "speechToText.tooltip.start": "เริ่มการป้อนข้อมูลด้วยเสียง",
+  "speechToText.tooltip.start": "เริ่มการป้อนข้อมูลด้วยเสียงด้วย Kilo Gateway",
   "speechToText.tooltip.stop": "หยุดจับเสียง",
   "speechToText.tooltip.transcribing": "กำลังถอดเสียง... คลิกเพื่อยกเลิก",
   "speechToText.tooltip.error": "การป้อนข้อมูลด้วยเสียงล้มเหลว คลิกเพื่อล้าง",
@@ -448,6 +451,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "ไม่สามารถยกเลิกการแชร์เซสชัน",
   "toast.session.unshare.failed.description": "เกิดข้อผิดพลาดระหว่างการยกเลิกการแชร์เซสชัน",
 
+  "toast.session.rename.invalid.title": "ชื่อเซสชันไม่ถูกต้อง",
   "toast.session.listFailed.title": "ไม่สามารถโหลดเซสชันสำหรับ {{project}}",
 
   "toast.update.title": "มีการอัปเดต",
@@ -844,6 +848,9 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "เชื่อมต่อจากตัวแปรสภาพแวดล้อมของคุณ",
   "settings.providers.action.signInChatGPT": "ลงชื่อเข้าใช้ด้วย ChatGPT",
   "settings.providers.custom.description": "เพิ่มผู้ให้บริการที่เข้ากันได้กับ OpenAI ด้วย URL พื้นฐาน",
+  "settings.providers.subagentModel.title": "โมเดลตัวแทนย่อย",
+  "settings.providers.subagentModel.description":
+    "โมเดลเริ่มต้นและระดับการใช้เหตุผลสำหรับตัวแทนย่อยของ task-tool ปล่อยว่างไว้เพื่อรับค่าโมเดลจากตัวแทนที่เรียก",
   "settings.providers.modeModels": "โมเดลต่อโหมด",
   "settings.providers.custom.note": "เพิ่มผู้ให้บริการที่รองรับ OpenAI ด้วย Base URL",
   "settings.providers.modeModels.description":
@@ -1006,6 +1013,8 @@ export const dict = {
   "session.delete.confirm": 'ลบเซสชัน "{{name}}" หรือไม่?',
   "session.delete.button": "ลบเซสชัน",
   "session.untitled": "ไม่มีชื่อ",
+  "session.current": "เซสชันปัจจุบัน",
+  "session.history.sources": "แหล่งที่มาของประวัติ",
   "session.recent": "ล่าสุด",
   "session.showHistory": "แสดงประวัติ",
   "session.search.placeholder": "ค้นหาเซสชัน...",
@@ -1109,6 +1118,14 @@ export const dict = {
   "session.status.retrying": "กำลังลองใหม่ (ครั้งที่ {{ attempt }})… {{ message }}",
   "session.status.working": "กำลังทำงาน...",
   "session.status.offline": "เครือข่ายถูกตัดการเชื่อมต่อ — กำลังเชื่อมต่อใหม่...",
+  "session.outcome.incomplete": "เทิร์นสิ้นสุดโดยเหลือสิ่งที่ต้องทำอีก {{count}} รายการ",
+  "session.outcome.limit": "ถึงขีดจำกัดการตอบกลับก่อนเสร็จสิ้น",
+  "session.outcome.unknown": "เทิร์นสิ้นสุดโดยไม่มีเหตุผลการเสร็จสิ้นของโมเดล",
+  "session.outcome.filtered": "ผู้ให้บริการหยุดการตอบกลับนี้เนื่องจากตัวกรองเนื้อหา",
+  "session.outcome.unexpected": "การตอบกลับสิ้นสุดลงโดยไม่คาดคิดและอาจไม่สมบูรณ์",
+  "session.outcome.interrupted": "เทิร์นถูกขัดจังหวะ",
+  "session.outcome.error": "เทิร์นล้มเหลว",
+  "session.outcome.finish": "เหตุผลการเสร็จสิ้น: {{reason}}",
 
   "ui.sessionTurn.cancel": "ยกเลิก",
   "ui.sessionTurn.status.thinking": "กำลังคิด...",
@@ -1170,7 +1187,6 @@ export const dict = {
     'Telemetry ถูกควบคุมโดยการตั้งค่า Telemetry ในตัวของ VS Code หากต้องการปิดใช้งาน ให้ไปที่ Settings > Telemetry > Telemetry Level แล้วตั้งค่าเป็น "off" รีสตาร์ท VS Code เพื่อให้การเปลี่ยนแปลงมีผล',
   "settings.aboutKiloCode.telemetry.openSettings": "เปิดการตั้งค่า Telemetry",
 
-  "settings.agentBehaviour.subtab.modes": "โหมด",
   "settings.agentBehaviour.subtab.agents": "ตัวแทน",
   "settings.agentBehaviour.subtab.mcpServers": "เซิร์ฟเวอร์ MCP",
   "settings.agentBehaviour.subtab.rules": "กฎ",
@@ -1228,19 +1244,13 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "ไม่สรุปเนื้อหาที่วางขนาดใหญ่",
   "settings.experimental.batch.title": "เครื่องมือแบทช์",
   "settings.experimental.batch.description": "เปิดใช้งานการประมวลผลแบทช์ของการเรียกเครื่องมือ",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "ค้นหาโค้ดเบส",
   "settings.experimental.codebaseSearch.description": "เปิดใช้งานการค้นหาด้วยภาษาธรรมชาติโดย AI ทั่วทั้งโค้ดเบส",
-  "settings.experimental.agentManagerTool.title": "เครื่องมือ Agent Manager",
-  "settings.experimental.agentManagerTool.description":
-    "อนุญาตให้เอเจนต์เริ่มเซสชัน Agent Manager ในเครื่องและเซสชัน worktree จากการเรียกเครื่องมือ",
   "settings.experimental.speechToText.title": "แปลงเสียงเป็นข้อความ",
   "settings.experimental.speechToText.description":
     "เปิดใช้งานการป้อนข้อมูลด้วยเสียงในช่องพรอมต์โดยใช้บัญชี Kilo ของคุณผ่าน Kilo Gateway",
   "settings.experimental.speechToText.disabledDescription":
-    "เปิดใช้งานและลงชื่อเข้าใช้ Kilo provider เพื่อใช้การป้อนข้อมูลด้วยเสียงในช่องพรอมต์",
+    "เปิดใช้งานและลงชื่อเข้าใช้ผู้ให้บริการ Kilo เพื่อใช้ Speech to Text ปัจจุบัน Speech to Text รองรับเฉพาะกับ Kilo Gateway เท่านั้น",
   "settings.experimental.speechToTextModel.title": "โมเดลแปลงเสียงเป็นข้อความ",
   "settings.experimental.speechToTextModel.description":
     "เลือกโมเดลการถอดเสียง Kilo Gateway สำหรับการป้อนข้อมูลด้วยเสียง",
@@ -1265,6 +1275,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "เลือกเอเจนต์เพื่อกำหนดค่า…",
   "settings.agentBehaviour.modelOverride.title": "แทนที่โมเดล",
   "settings.agentBehaviour.modelOverride.description": "แทนที่โมเดลเริ่มต้นของเอเจนต์นี้",
+  "settings.agentBehaviour.variantOverride.title": "แทนที่ตัวแปรโมเดล",
+  "settings.agentBehaviour.variantOverride.description": "แทนที่ตัวแปรของโมเดลสำหรับเอเจนต์นี้",
   "settings.agentBehaviour.prompt.title": "พรอมต์กำหนดเอง",
   "settings.agentBehaviour.prompt.description": "พรอมต์ระบบเพิ่มเติมสำหรับเอเจนต์นี้",
   "settings.agentBehaviour.temperature.title": "อุณหภูมิ",
@@ -1283,7 +1295,7 @@ export const dict = {
   "settings.agentBehaviour.discoveredSkills": "ทักษะที่ค้นพบ",
   "settings.agentBehaviour.noSkillsFound": "ไม่พบทักษะ เพิ่มเส้นทางโฟลเดอร์หรือ URL ด้านล่างเพื่อทำให้ทักษะพร้อมใช้งาน",
   "settings.agentBehaviour.availableModes": "โหมดกำหนดเองที่ใช้ได้",
-  "settings.agentBehaviour.noModesFound": "ไม่พบโหมด",
+  "settings.agentBehaviour.noAgentsFound": "ไม่พบเอเจนต์",
   "settings.agentBehaviour.createMode": "สร้างโหมดใหม่",
   "settings.agentBehaviour.createMode.name": "ชื่อ",
   "settings.agentBehaviour.createMode.name.placeholder": "เช่น reviewer",
@@ -1326,10 +1338,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "คัดลอกสิทธิ์เป็น JSON",
   "settings.agentBehaviour.permissions.hint":
     "กฎจะถูกประเมินตามลำดับ — กฎที่ตรงกันล่าสุดจะมีผล นี่คือชุดกฎที่ประมวลผลแล้วจากแบ็กเอนด์ CLI",
-  "settings.agentBehaviour.removeMode.title": "ลบโหมด",
-  "settings.agentBehaviour.removeMode.confirm":
-    'ต้องการลบโหมด "{{name}}" หรือไม่? การดำเนินการนี้จะปิดใช้งานโหมดโดยอัปเดตการกำหนดค่าของคุณ',
-  "settings.agentBehaviour.removeMode.button": "ลบ",
+  "settings.agentBehaviour.removeAgent.title": "ลบเอเจนต์",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'ลบเอเจนต์ "{{name}}" หรือไม่? การดำเนินการนี้จะปิดใช้งานเอเจนต์โดยการอัปเดตการตั้งค่า',
+  "settings.agentBehaviour.removeAgent.button": "ลบ",
   "settings.agentBehaviour.removeMcp.title": "ลบเซิร์ฟเวอร์ MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'ต้องการลบเซิร์ฟเวอร์ MCP "{{name}}" หรือไม่? การดำเนินการนี้จะลบออกจากการกำหนดค่าของคุณ',
@@ -1592,4 +1604,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "No matching branches",
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "แผนพร้อมแล้ว:",
 }

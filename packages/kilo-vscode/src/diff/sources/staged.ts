@@ -90,11 +90,17 @@ export function createStagedDiffSource(): DiffSource {
       // For added: HEAD has no blob. For deleted: index has no blob.
       const before = entry.status === "added" ? "" : await showBlob(git, dir, "HEAD", file)
       const after = entry.status === "deleted" ? "" : await showBlob(git, dir, INDEX_REF, file)
+      const result = await git.execGit(
+        ["-c", "core.quotepath=false", "diff", "--cached", "--no-ext-diff", "--no-renames", "HEAD", "--", file],
+        dir,
+      )
+      const patch = result.code === 0 ? result.stdout : undefined
       const summarized = before === "" && after === "" && entry.status === "modified"
       return {
         file,
         before,
         after,
+        patch,
         additions: entry.additions,
         deletions: entry.deletions,
         status: entry.status,

@@ -4,7 +4,7 @@ import { SyncEvent } from "@/sync"
 import { Effect, Layer, Scope, Context } from "effect"
 import { Config } from "@/config/config"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import * as ShareNext from "./share-next"
+import { KiloSession } from "@/kilocode/session" // kilocode_change
 
 export interface Interface {
   readonly create: (input?: Session.CreateInput) => Effect.Effect<Session.Info>
@@ -19,20 +19,19 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const cfg = yield* Config.Service
     const session = yield* Session.Service
-    const shareNext = yield* ShareNext.Service
     const scope = yield* Scope.Scope
     const sync = yield* SyncEvent.Service
 
     const share = Effect.fn("SessionShare.share")(function* (sessionID: SessionID) {
       const conf = yield* cfg.get()
       if (conf.share === "disabled") throw new Error("Sharing is disabled in configuration")
-      const result = yield* shareNext.create(sessionID)
+      const result = yield* KiloSession.shareSession(sessionID) // kilocode_change - use Kilo public share URLs
       yield* sync.run(Session.Event.Updated, { sessionID, info: { share: { url: result.url } } })
       return result
     })
 
     const unshare = Effect.fn("SessionShare.unshare")(function* (sessionID: SessionID) {
-      yield* shareNext.remove(sessionID)
+      yield* KiloSession.unshareSession(sessionID) // kilocode_change - use Kilo public share URLs
       yield* sync.run(Session.Event.Updated, { sessionID, info: { share: { url: null } } })
     })
 
@@ -50,7 +49,6 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer.pipe(
-  Layer.provide(ShareNext.defaultLayer),
   Layer.provide(Session.defaultLayer),
   Layer.provide(Config.defaultLayer),
   Layer.provide(SyncEvent.defaultLayer),

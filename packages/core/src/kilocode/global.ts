@@ -12,7 +12,10 @@ import fs from "fs/promises"
  */
 export async function ensureRealDir(p: string) {
   await fs.mkdir(p, { recursive: true })
-  const ok = await fs.stat(p).then(() => true).catch(() => false)
+  const ok = await fs
+    .stat(p)
+    .then(() => true)
+    .catch(() => false)
   if (!ok) {
     await fs.rm(p, { force: true })
     await fs.mkdir(p, { recursive: true })

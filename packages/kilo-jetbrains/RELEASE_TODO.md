@@ -13,7 +13,8 @@
 
 - Create a JetBrains Marketplace permanent token from Marketplace `My Tokens`.
 - Add `JETBRAINS_MARKETPLACE_TOKEN` to GitHub Actions secrets or the protected environment.
-- Confirm `GITHUB_TOKEN` has `contents: write` permission for creating and updating GitHub Releases from `jetbrains/v*` tags.
+- Confirm `GITHUB_TOKEN` has `contents: write` permission for creating and updating GitHub Releases for `jetbrains/v*` tags.
+- Confirm `KILO_MAINTAINER_APP_ID` and `KILO_MAINTAINER_APP_SECRET` are available to create release PRs and immediate release tags.
 - Optionally create a protected `jetbrains-marketplace` GitHub Environment with required reviewers.
 - If using an environment, move the Marketplace and signing secrets there and set the workflow job environment.
 
@@ -29,16 +30,23 @@
 ## Per-RC Release
 
 - Choose an RC version in the form `x.y.z-rc.n`.
-- Push tag `jetbrains/vx.y.z-rc.n`, for example `jetbrains/v7.0.1-rc.1`.
+- Run the `prepare-jetbrains-release` workflow with `kind=rc` and version `x.y.z-rc.n`.
+- Confirm the workflow created `jetbrains/vx.y.z-rc.n` immediately at the intended source commit.
+- Review and edit `packages/kilo-jetbrains/CHANGELOG.md` in the generated release PR.
+- Merge the release PR to trigger publish from `jetbrains/vx.y.z-rc.n`, for example `jetbrains/v7.0.1-rc.1`.
 - Watch the `publish-jetbrains` workflow.
 - Download and retain the workflow artifact if needed.
 - Confirm the update appears on the JetBrains Marketplace `eap` channel.
 - Confirm the GitHub Release for the `jetbrains/vx.y.z-rc.n` tag exists and contains the JetBrains plugin ZIP asset.
 - Share `https://plugins.jetbrains.com/plugins/eap/list` with testers.
 
-## Stable Release Guard
+## Per-Stable Release
 
-- Stable tags like `jetbrains/vx.y.z` are intentionally rejected for now.
-- Before enabling stable releases, remove the workflow stable guard.
-- Verify `kilo.channel=default` publishes to the default Marketplace channel.
-- Update this checklist before stable releases are enabled.
+- Choose a stable version in the form `x.y.z`.
+- Run the `prepare-jetbrains-release` workflow with `kind=stable` and version `x.y.z`.
+- Confirm the workflow created `jetbrains/vx.y.z` immediately at the intended source commit.
+- Review and edit `packages/kilo-jetbrains/CHANGELOG.md` in the generated release PR.
+- Merge the release PR to trigger publish from `jetbrains/vx.y.z`.
+- Watch the `publish-jetbrains` workflow.
+- Confirm the update appears on the default JetBrains Marketplace channel.
+- Confirm the GitHub Release for the `jetbrains/vx.y.z` tag exists and contains the JetBrains plugin ZIP asset.

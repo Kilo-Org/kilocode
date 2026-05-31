@@ -362,12 +362,29 @@
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-gutter: stable;
-  z-index: 0;
+  z-index: 2;
   color: var(--vscode-input-foreground);
 }
 
 .prompt-input-file-mention {
   color: var(--vscode-textLink-foreground, #3794ff);
+  background-color: color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 15%, transparent);
+  border-radius: 3px;
+  box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 25%, transparent);
+}
+
+.prompt-input-file-mention--file {
+  pointer-events: auto;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.prompt-input-file-mention--file:hover {
+  background-color: color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 25%, transparent);
+  box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 40%, transparent);
+  text-decoration: underline;
 }
 
 .prompt-input-ghost-text {

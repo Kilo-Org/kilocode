@@ -1,9 +1,10 @@
 import type { Argv } from "yargs"
-import { Instance } from "../../../project/instance"
+import { WithInstance } from "../../../project/with-instance"
 import { Provider } from "../../../provider/provider"
 import { ProviderTransform } from "../../../provider/transform"
 import { cmd } from "../../../cli/cmd/cmd"
 import { UI } from "../../../cli/ui"
+import { AppRuntime } from "../../../effect/app-runtime"
 import { generateText } from "ai"
 import { randomUUID } from "crypto"
 
@@ -125,8 +126,16 @@ interface Result {
   errorMessage: string | null
 }
 
+function list() {
+  return AppRuntime.runPromise(Provider.Service.use((svc) => svc.list()))
+}
+
+function lang(model: Provider.Model) {
+  return AppRuntime.runPromise(Provider.Service.use((svc) => svc.getLanguage(model)))
+}
+
 export async function handle(args: ArgumentsCamelCase) {
-  const list = args.list ?? Provider.list
+  const load = args.list ?? list
 
   if (args.parallel < 1) {
     UI.error("--parallel must be at least 1")
@@ -150,16 +159,18 @@ export async function handle(args: ArgumentsCamelCase) {
   const structured = json || args.output === "md"
 
   if (!args.quiet && !structured) {
-    UI.println(`${color(UI.Style.TEXT_INFO)}Starting roll call for models with prompt: "${args.prompt}"${color(UI.Style.TEXT_NORMAL)}`)
+    UI.println(
+      `${color(UI.Style.TEXT_INFO)}Starting roll call for models with prompt: "${args.prompt}"${color(UI.Style.TEXT_NORMAL)}`,
+    )
     UI.println(
       `${color(UI.Style.TEXT_INFO)}Timeout per model: ${args.timeout}ms, Parallel calls: ${args.parallel}${color(UI.Style.TEXT_NORMAL)}`,
     )
   }
 
-  await Instance.provide({
+  await WithInstance.provide({
     directory: process.cwd(),
     async fn() {
-      const providers = await list()
+      const providers = await load()
       const regex = (() => {
         try {
           return new RegExp(args.filter, "i")
@@ -178,7 +189,8 @@ export async function handle(args: ArgumentsCamelCase) {
       )
 
       if (models.length === 0) {
-        if (!args.quiet && !structured) UI.println(`${color(UI.Style.TEXT_WARNING)}No models to test after filtering.${color(UI.Style.TEXT_NORMAL)}`)
+        if (!args.quiet && !structured)
+          UI.println(`${color(UI.Style.TEXT_WARNING)}No models to test after filtering.${color(UI.Style.TEXT_NORMAL)}`)
         if (json) console.log(JSON.stringify([], null, 2))
         if (args.output === "md") console.log(formatMarkdown([]))
         if (structured) return
@@ -262,9 +274,14 @@ export async function handle(args: ArgumentsCamelCase) {
   })
 }
 
-async function call(model: Provider.Model, prompt: string, timeout: number, start: number): Promise<Omit<Result, "model">> {
+async function call(
+  model: Provider.Model,
+  prompt: string,
+  timeout: number,
+  start: number,
+): Promise<Omit<Result, "model">> {
   try {
-    const language = await Provider.getLanguage(model)
+    const language = await lang(model)
     const sessionID = randomUUID()
     const options = ProviderTransform.options({ model, sessionID })
     const providerOptions = ProviderTransform.providerOptions(model, options)
@@ -305,7 +322,10 @@ async function call(model: Provider.Model, prompt: string, timeout: number, star
 }
 
 function error(cause: unknown) {
-  if (cause instanceof Error && (cause.name === "AbortError" || cause.message.includes("abort") || cause.message.includes("timeout"))) {
+  if (
+    cause instanceof Error &&
+    (cause.name === "AbortError" || cause.message.includes("abort") || cause.message.includes("timeout"))
+  ) {
     return { type: "timeout", message: "The operation timed out." }
   }
 
@@ -331,5 +351,5 @@ type ArgumentsCamelCase = {
   output: "table" | "json" | "md"
   verbose: boolean
   quiet: boolean
-  list?: typeof Provider.list
+  list?: typeof list
 }

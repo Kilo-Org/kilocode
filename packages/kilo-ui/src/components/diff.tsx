@@ -1,5 +1,12 @@
 import { sampledChecksum } from "@opencode-ai/core/util/encode"
-import { FileDiff, type FileDiffOptions, type SelectedLineRange, VirtualizedFileDiff } from "@pierre/diffs"
+import {
+  FileDiff,
+  type FileDiffMetadata,
+  type FileDiffOptions,
+  processFile,
+  type SelectedLineRange,
+  VirtualizedFileDiff,
+} from "@pierre/diffs"
 import { createMediaQuery } from "@solid-primitives/media"
 import { createEffect, createMemo, createSignal, on, onCleanup, splitProps, untrack } from "solid-js"
 import { createDefaultOptions, type DiffProps, styleVariables } from "../pierre"
@@ -142,6 +149,7 @@ export function Diff<T>(props: DiffProps<T>) {
   let container!: HTMLDivElement
   let observer: MutationObserver | undefined
   let sharedVirtualizer: NonNullable<ReturnType<typeof acquireVirtualizer>> | undefined
+  let parsed: { patch: string; diff: FileDiffMetadata } | undefined
   let renderToken = 0
   let selectionFrame: number | undefined
   let dragFrame: number | undefined
@@ -156,6 +164,7 @@ export function Diff<T>(props: DiffProps<T>) {
   const [local, others] = splitProps(props, [
     "before",
     "after",
+    "patch",
     "fileDiff",
     "class",
     "classList",
@@ -163,6 +172,7 @@ export function Diff<T>(props: DiffProps<T>) {
     "selectedLines",
     "commentedLines",
     "onRendered",
+    "virtualized",
   ])
 
   const mobile = createMediaQuery("(max-width: 640px)")
@@ -178,10 +188,23 @@ export function Diff<T>(props: DiffProps<T>) {
   })
 
   const estimate = createMemo(() => {
-    const value = Math.max(lines(before()), lines(after())) * ESTIMATED_LINE_HEIGHT
+    // A tracked detail response already carries a hunk-bounded git patch. Base
+    // placeholder height on that patch instead of the full source file so a
+    // tiny change in a large file does not reserve a large gray body.
+    const patch = "patch" in local && typeof local.patch === "string" ? local.patch : ""
+    const value = (patch ? lines(patch) : Math.max(lines(before()), lines(after()))) * ESTIMATED_LINE_HEIGHT
     if (value === 0) return MIN_PLACEHOLDER_HEIGHT
     return Math.max(MIN_PLACEHOLDER_HEIGHT, Math.min(value, MAX_PLACEHOLDER_HEIGHT))
   })
+
+  const patchDiff = () => {
+    if (!("patch" in local) || typeof local.patch !== "string" || local.patch.length === 0) return
+    if (parsed?.patch === local.patch) return parsed.diff
+    const diff = processFile(local.patch, { cacheKey: local.patch })
+    if (!diff) return
+    parsed = { patch: local.patch, diff }
+    return diff
+  }
 
   const large = createMemo(() => {
     return Math.max(before().length, after().length) > 500_000
@@ -681,8 +704,19 @@ export function Diff<T>(props: DiffProps<T>) {
 
     const opts = options()
     const workerPool = large() ? getWorkerPool("unified") : getWorkerPool(props.diffStyle)
-    const virtualizer = getVirtualizer()
+    // Eager (non-virtualized) patch-backed diffs render their visible hunks once
+    // and never re-render on scroll or height changes, avoiding Pierre's
+    // re-render-all storms. Full-content or oversized diffs keep virtualizing.
+    const virtualizer = local.virtualized === false ? undefined : getVirtualizer()
+    if (local.virtualized === false && sharedVirtualizer) {
+      sharedVirtualizer.release()
+      sharedVirtualizer = undefined
+    }
     const annotations = untrack(() => local.annotations)
+    // Parse hunk-bounded patches only after the deferred visibility gate. This
+    // preserves quick session switching while avoiding a full before/after diff
+    // reconstruction for tiny changes inside large source files.
+    const metadata = local.fileDiff ?? patchDiff()
 
     // Preserve container height during re-render to prevent scroll jumps.
     // When Pierre tears down the DOM (innerHTML = ""), the container collapses
@@ -699,9 +733,9 @@ export function Diff<T>(props: DiffProps<T>) {
 
     container.innerHTML = ""
 
-    if (local.fileDiff) {
+    if (metadata) {
       instance.render({
-        fileDiff: local.fileDiff,
+        fileDiff: metadata,
         lineAnnotations: annotations,
         containerWrapper: container,
       })
