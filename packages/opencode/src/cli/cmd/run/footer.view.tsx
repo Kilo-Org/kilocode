@@ -155,23 +155,30 @@ export function RunFooterView(props: RunFooterViewProps) {
     const current = route()
     return current.type === "subagent" ? subagent().details[current.sessionID] : undefined
   })
-  const command = useKeymapSelector((keymap: OpenTuiKeymap) =>
-    formatKeyBindings(
-      keymap.getCommandBindings({ visibility: "registered", commands: ["command.palette.show"] }).get("command.palette.show"),
-      props.tuiConfig,
-    ) ?? "",
+  const command = useKeymapSelector(
+    (keymap: OpenTuiKeymap) =>
+      formatKeyBindings(
+        keymap
+          .getCommandBindings({ visibility: "registered", commands: ["command.palette.show"] })
+          .get("command.palette.show"),
+        props.tuiConfig,
+      ) ?? "",
   )
-  const interrupt = useKeymapSelector((keymap: OpenTuiKeymap) =>
-    formatKeyBindings(
-      keymap.getCommandBindings({ visibility: "registered", commands: ["session.interrupt"] }).get("session.interrupt"),
-      props.tuiConfig,
-    ) ?? "",
+  const interrupt = useKeymapSelector(
+    (keymap: OpenTuiKeymap) =>
+      formatKeyBindings(
+        keymap
+          .getCommandBindings({ visibility: "registered", commands: ["session.interrupt"] })
+          .get("session.interrupt"),
+        props.tuiConfig,
+      ) ?? "",
   )
-  const variantCycle = useKeymapSelector((keymap: OpenTuiKeymap) =>
-    formatKeyBindings(
-      keymap.getCommandBindings({ visibility: "registered", commands: ["variant.cycle"] }).get("variant.cycle"),
-      props.tuiConfig,
-    ) ?? "",
+  const variantCycle = useKeymapSelector(
+    (keymap: OpenTuiKeymap) =>
+      formatKeyBindings(
+        keymap.getCommandBindings({ visibility: "registered", commands: ["variant.cycle"] }).get("variant.cycle"),
+        props.tuiConfig,
+      ) ?? "",
   )
   const hints = createMemo(() => hintFlags(term().width))
   const busy = createMemo(() => props.state().phase === "running")

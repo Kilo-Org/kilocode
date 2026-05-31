@@ -185,11 +185,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput): Promise<void> {
               variant: undefined,
             })
       const savedTask = resolveSavedVariant(ctx.model)
-      const [tuiConfig, session, savedVariant] = await Promise.all([
-        tuiConfigTask,
-        sessionTask,
-        savedTask,
-      ])
+      const [tuiConfig, session, savedVariant] = await Promise.all([tuiConfigTask, sessionTask, savedTask])
       const state: RuntimeState = {
         shown: !session.first,
         aborting: false,

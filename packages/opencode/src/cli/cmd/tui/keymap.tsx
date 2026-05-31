@@ -196,10 +196,7 @@ export function formatKeySequence(parts: Parameters<typeof formatKeySequenceExtr
   return formatKeySequenceExtra(parts, formatOptions(config))
 }
 
-export function formatKeyBindings(
-  bindings: Parameters<typeof formatCommandBindingsExtra>[0],
-  config: FormatConfig,
-) {
+export function formatKeyBindings(bindings: Parameters<typeof formatCommandBindingsExtra>[0], config: FormatConfig) {
   return formatCommandBindingsExtra(bindings, formatOptions(config))
 }
 

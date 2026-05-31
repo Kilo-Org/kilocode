@@ -178,18 +178,18 @@ async function renderFooter(input: { tuiConfig?: RunTuiConfig; onCycle?: () => v
           tuiConfig={config}
           agent="opencode"
           onSubmit={() => true}
-          onPermissionReply={() => { }}
-          onQuestionReply={() => { }}
-          onQuestionReject={() => { }}
-          onCycle={input.onCycle ?? (() => { })}
+          onPermissionReply={() => {}}
+          onQuestionReply={() => {}}
+          onQuestionReject={() => {}}
+          onCycle={input.onCycle ?? (() => {})}
           onInterrupt={() => false}
-          onInputClear={() => { }}
-          onExit={() => { }}
-          onModelSelect={() => { }}
-          onVariantSelect={() => { }}
-          onRows={() => { }}
-          onLayout={() => { }}
-          onStatus={() => { }}
+          onInputClear={() => {}}
+          onExit={() => {}}
+          onModelSelect={() => {}}
+          onVariantSelect={() => {}}
+          onRows={() => {}}
+          onLayout={() => {}}
+          onStatus={() => {}}
         />
       </OpencodeKeymapProvider>
     )
@@ -278,14 +278,14 @@ test("direct command panel renders grouped command palette", async () => {
           subagents={subagents}
           variants={variants}
           variantCycle="ctrl+t"
-          onClose={() => { }}
-          onModel={() => { }}
-          onSubagent={() => { }}
-          onVariant={() => { }}
-          onVariantCycle={() => { }}
-          onCommand={() => { }}
-          onNew={() => { }}
-          onExit={() => { }}
+          onClose={() => {}}
+          onModel={() => {}}
+          onSubagent={() => {}}
+          onVariant={() => {}}
+          onVariantCycle={() => {}}
+          onCommand={() => {}}
+          onNew={() => {}}
+          onExit={() => {}}
         />
       </box>
     ),
@@ -336,14 +336,14 @@ test("direct command panel shows subagent entry when available", async () => {
           subagents={subagents}
           variants={variants}
           variantCycle="ctrl+t"
-          onClose={() => { }}
-          onModel={() => { }}
-          onSubagent={() => { }}
-          onVariant={() => { }}
-          onVariantCycle={() => { }}
-          onCommand={() => { }}
-          onNew={() => { }}
-          onExit={() => { }}
+          onClose={() => {}}
+          onModel={() => {}}
+          onSubagent={() => {}}
+          onVariant={() => {}}
+          onVariantCycle={() => {}}
+          onCommand={() => {}}
+          onNew={() => {}}
+          onExit={() => {}}
         />
       </box>
     ),
@@ -379,8 +379,8 @@ test("direct subagent panel renders active subagents", async () => {
           theme={() => RUN_THEME_FALLBACK.footer}
           tabs={tabs}
           current={current}
-          onClose={() => { }}
-          onSelect={() => { }}
+          onClose={() => {}}
+          onSelect={() => {}}
           onRows={(value) => {
             rows = value
           }}
@@ -506,18 +506,18 @@ test("direct footer shows subagent indicator while prompt is running", async () 
           tuiConfig={tuiConfig}
           agent="opencode"
           onSubmit={() => true}
-          onPermissionReply={() => { }}
-          onQuestionReply={() => { }}
-          onQuestionReject={() => { }}
-          onCycle={() => { }}
+          onPermissionReply={() => {}}
+          onQuestionReply={() => {}}
+          onQuestionReject={() => {}}
+          onCycle={() => {}}
           onInterrupt={() => false}
-          onInputClear={() => { }}
-          onExit={() => { }}
-          onModelSelect={() => { }}
-          onVariantSelect={() => { }}
-          onRows={() => { }}
-          onLayout={() => { }}
-          onStatus={() => { }}
+          onInputClear={() => {}}
+          onExit={() => {}}
+          onModelSelect={() => {}}
+          onVariantSelect={() => {}}
+          onRows={() => {}}
+          onLayout={() => {}}
+          onStatus={() => {}}
         />
       </OpencodeKeymapProvider>
     )
@@ -572,7 +572,7 @@ test("direct question body separates single-select checkmark from label", async 
           onReply={(input) => {
             replies.push(input)
           }}
-          onReject={() => { }}
+          onReject={() => {}}
         />
       </box>
     ),
@@ -622,7 +622,7 @@ test("direct custom answer submits through keymap return binding", async () => {
           onReply={(input) => {
             questions.push(input)
           }}
-          onReject={() => { }}
+          onReject={() => {}}
         />
       </OpencodeKeymapProvider>
     )
@@ -676,7 +676,7 @@ test("direct permission rejection submits through keymap return binding", async 
           onConfirm={() => {
             submits.push(text)
           }}
-          onCancel={() => { }}
+          onCancel={() => {}}
         />
       </OpencodeKeymapProvider>
     )
@@ -718,8 +718,8 @@ test("direct model panel renders current model selector", async () => {
           theme={() => RUN_THEME_FALLBACK.footer}
           providers={providers}
           current={current}
-          onClose={() => { }}
-          onSelect={() => { }}
+          onClose={() => {}}
+          onSelect={() => {}}
         />
       </box>
     ),
@@ -757,8 +757,8 @@ test("direct variant panel renders current variant selector", async () => {
           theme={() => RUN_THEME_FALLBACK.footer}
           variants={variants}
           current={current}
-          onClose={() => { }}
-          onSelect={() => { }}
+          onClose={() => {}}
+          onSelect={() => {}}
         />
       </box>
     ),
