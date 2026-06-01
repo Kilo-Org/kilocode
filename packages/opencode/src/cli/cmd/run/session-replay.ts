@@ -187,7 +187,11 @@ export function replaySession(input: ReplayInput): SessionReplay {
   }
 }
 
-export function replayLocalRows(messages: SessionMessages, commits: StreamCommit[], rows: LocalReplayRow[]): StreamCommit[] {
+export function replayLocalRows(
+  messages: SessionMessages,
+  commits: StreamCommit[],
+  rows: LocalReplayRow[],
+): StreamCommit[] {
   const persisted = new Set(messages.map((message) => message.info.id))
   return rows.reduce((out, local) => {
     const row = local.commit

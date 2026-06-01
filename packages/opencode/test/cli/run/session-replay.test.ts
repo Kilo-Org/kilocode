@@ -180,11 +180,9 @@ describe("run session replay", () => {
       messageID: "msg-user-1",
     } as const
 
-    expect(replayLocalRows([userMessage("msg-user-2", "successful")], [persisted], [{ commit: failed }, { commit: error }])).toEqual([
-      failed,
-      error,
-      persisted,
-    ])
+    expect(
+      replayLocalRows([userMessage("msg-user-2", "successful")], [persisted], [{ commit: failed }, { commit: error }]),
+    ).toEqual([failed, error, persisted])
   })
 
   test("retains local errors but not duplicate local prompts once a prompt persists", () => {
@@ -203,10 +201,13 @@ describe("run session replay", () => {
       messageID: "msg-user-1",
     } as const
 
-    expect(replayLocalRows([userMessage("msg-user-1", "failed after persistence")], [persisted], [{ commit: persisted }, { commit: error }])).toEqual([
-      persisted,
-      error,
-    ])
+    expect(
+      replayLocalRows(
+        [userMessage("msg-user-1", "failed after persistence")],
+        [persisted],
+        [{ commit: persisted }, { commit: error }],
+      ),
+    ).toEqual([persisted, error])
   })
 
   test("keeps a local turn failure below assistant output already visible for that turn", () => {
@@ -308,19 +309,23 @@ describe("run session replay", () => {
     } as const
 
     expect(
-      replayLocalRows([userMessage("msg-user-1", "start")], [first, complete], [
-        {
-          commit: error,
-          after: {
-            kind: "assistant",
-            text: "before ",
-            phase: "progress",
-            messageID: "msg-assistant-1",
-            partID: "part-1",
-            visible: "before ",
+      replayLocalRows(
+        [userMessage("msg-user-1", "start")],
+        [first, complete],
+        [
+          {
+            commit: error,
+            after: {
+              kind: "assistant",
+              text: "before ",
+              phase: "progress",
+              messageID: "msg-assistant-1",
+              partID: "part-1",
+              visible: "before ",
+            },
           },
-        },
-      ]),
+        ],
+      ),
     ).toEqual([first, { ...complete, text: "before " }, error, { ...complete, text: "after" }])
   })
 
@@ -348,13 +353,17 @@ describe("run session replay", () => {
     } as const
 
     expect(
-      replayLocalRows([], [answer], [
-        { commit: prompt },
-        {
-          commit: error,
-          after: { kind: "assistant", text: "partial answer", phase: "progress", messageID: "msg-2" },
-        },
-      ]),
+      replayLocalRows(
+        [],
+        [answer],
+        [
+          { commit: prompt },
+          {
+            commit: error,
+            after: { kind: "assistant", text: "partial answer", phase: "progress", messageID: "msg-2" },
+          },
+        ],
+      ),
     ).toEqual([prompt, answer, error])
   })
 
@@ -393,19 +402,23 @@ describe("run session replay", () => {
     } as const
 
     expect(
-      replayLocalRows([userMessage("msg-user-1", "run ls")], [prompt, running, completed], [
-        {
-          commit: error,
-          after: {
-            kind: "tool",
-            text: "running bash",
-            phase: "start",
-            messageID: "msg-assistant-1",
-            partID: "part-tool-1",
-            toolState: "running",
+      replayLocalRows(
+        [userMessage("msg-user-1", "run ls")],
+        [prompt, running, completed],
+        [
+          {
+            commit: error,
+            after: {
+              kind: "tool",
+              text: "running bash",
+              phase: "start",
+              messageID: "msg-assistant-1",
+              partID: "part-tool-1",
+              toolState: "running",
+            },
           },
-        },
-      ]),
+        ],
+      ),
     ).toEqual([prompt, running, error, completed])
   })
 
@@ -433,9 +446,11 @@ describe("run session replay", () => {
     } as const
 
     expect(
-      replayLocalRows([userMessage("msg-user-1", "before"), userMessage("msg-user-3", "after")], [first, second], [
-        { commit: error },
-      ]),
+      replayLocalRows(
+        [userMessage("msg-user-1", "before"), userMessage("msg-user-3", "after")],
+        [first, second],
+        [{ commit: error }],
+      ),
     ).toEqual([first, error, second])
   })
 })
