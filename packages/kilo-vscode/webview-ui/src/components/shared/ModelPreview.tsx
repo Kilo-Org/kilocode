@@ -5,7 +5,7 @@ import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
-import { sanitizeName } from "./model-selector-utils"
+import { freeDataLabel, isDataCollectedModel, sanitizeName } from "./model-selector-utils"
 import { avgPrice, fmtCachedPrice, fmtPrice } from "./model-preview-utils"
 
 interface Props {
@@ -46,6 +46,8 @@ export const ModelPreview: Component<Props> = (props) => {
             return fmtCachedPrice(cost()!) ?? language.t("model.preview.value.notSupported")
           }
           const avg = () => (cost() ? avgPrice(cost()!) : undefined)
+          const freeLabel = () => language.t("model.tag.free")
+          const dataLabel = () => freeDataLabel(language.t("model.tag.free"), language.t("model.tag.dataCollected"))
           const ctx = () => model().limit?.context ?? model().contextLength
           const caps = () => model().capabilities
           const inputs = () => caps()?.input
@@ -61,35 +63,44 @@ export const ModelPreview: Component<Props> = (props) => {
 
           return (
             <>
-              <Show when={model().isFree}>
-                <span class="model-preview-badge model-preview-badge--free model-preview-badge--top-right">
-                  {language.t("model.tag.free")}
-                </span>
-              </Show>
               {/* Header — name + provider + star */}
               <div class="model-preview-header">
-                <div class="model-preview-name-row">
-                  <span class="model-preview-name">{sanitizeName(model().name)}</span>
-                  <Show when={session}>
-                    {(() => {
-                      const starred = () =>
-                        session!
-                          .favoriteModels()
-                          .some((f) => f.providerID === model().providerID && f.modelID === model().id)
-                      return (
-                        <button
-                          type="button"
-                          class={`model-selector-star model-selector-star--preview${starred() ? " model-selector-star--active" : ""}`}
-                          aria-label={
-                            starred() ? language.t("model.favorite.remove") : language.t("model.favorite.add")
-                          }
-                          aria-pressed={starred()}
-                          onClick={() => session!.toggleFavorite(model().providerID, model().id)}
-                        >
-                          <Icon name={starred() ? "star-filled" : "star"} size="small" />
-                        </button>
-                      )
-                    })()}
+                <div class="model-preview-title-row">
+                  <div class="model-preview-name-row">
+                    <span class="model-preview-name">{sanitizeName(model().name)}</span>
+                    <Show when={session}>
+                      {(() => {
+                        const starred = () =>
+                          session!
+                            .favoriteModels()
+                            .some((f) => f.providerID === model().providerID && f.modelID === model().id)
+                        return (
+                          <button
+                            type="button"
+                            class={`model-selector-star model-selector-star--preview${starred() ? " model-selector-star--active" : ""}`}
+                            aria-label={
+                              starred() ? language.t("model.favorite.remove") : language.t("model.favorite.add")
+                            }
+                            aria-pressed={starred()}
+                            onClick={() => session!.toggleFavorite(model().providerID, model().id)}
+                          >
+                            <Icon name={starred() ? "star-filled" : "star"} size="small" />
+                          </button>
+                        )
+                      })()}
+                    </Show>
+                  </div>
+                  <Show when={model().isFree}>
+                    <span class="model-preview-free-data">
+                      <span class="model-preview-badge model-preview-badge--free">{freeLabel()}</span>
+                      <Show when={isDataCollectedModel(model())}>
+                        <Tooltip value={dataLabel()} placement="top">
+                          <span class="model-preview-free-data-icon" aria-label={dataLabel()}>
+                            <Icon name="warning" size="small" />
+                          </span>
+                        </Tooltip>
+                      </Show>
+                    </span>
                   </Show>
                 </div>
                 <span class="model-preview-provider">{model().providerName}</span>
@@ -117,6 +128,13 @@ export const ModelPreview: Component<Props> = (props) => {
                     </span>
                   </Tooltip>
                   <span class="model-preview-value">{fmtPrice(avg()!)}</span>
+                </Show>
+
+                <Show when={isDataCollectedModel(model())}>
+                  <span class="model-preview-data-line" aria-label={dataLabel()}>
+                    <Icon name="warning" size="small" />
+                    <span>- {dataLabel()}</span>
+                  </span>
                 </Show>
 
                 {/* Context window */}
