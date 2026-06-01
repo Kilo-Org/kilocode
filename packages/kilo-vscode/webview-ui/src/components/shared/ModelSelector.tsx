@@ -627,9 +627,11 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
           <>
             <span class="model-selector-trigger-label">{triggerLabel()}</span>
             <Show when={activeModel()?.isFree}>
-              <span class="model-selector-trigger-free-data model-selector-data-badge">
-                <Tag data-variant="member">{freeLabel()}</Tag>
-              </span>
+              <Tooltip value={freeLabel()} placement="top">
+                <span class="model-selector-trigger-free-data" aria-label={freeLabel()}>
+                  <Icon name="warning" size="small" />
+                </span>
+              </Tooltip>
             </Show>
             <svg class="model-selector-trigger-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
               <path d="M8 4l4 5H4l4-5z" />

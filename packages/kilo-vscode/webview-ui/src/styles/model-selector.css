@@ -407,6 +407,7 @@
 .model-selector-trigger-free-data {
   display: inline-flex;
   align-items: center;
+  color: var(--vscode-inputValidation-warningForeground, var(--vscode-descriptionForeground));
   flex-shrink: 0;
 }
 
