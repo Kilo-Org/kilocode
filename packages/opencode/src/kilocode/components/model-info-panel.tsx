@@ -68,11 +68,8 @@ export function ModelInfoPanel(props: Props) {
           <text fg={theme.textMuted}>{props.provider ?? m().providerID ?? ""}</text>
         </box>
         <Show when={m().isFree}>
-          <box flexDirection="column">
+          <box>
             <text fg={theme.text}>{FreeModelDisclosure.label}</text>
-            <text fg={theme.textMuted} width={23}>
-              {FreeModelDisclosure.description}
-            </text>
           </box>
         </Show>
         <Show when={m().family}>
