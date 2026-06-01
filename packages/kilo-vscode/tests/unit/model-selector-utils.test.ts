@@ -7,6 +7,7 @@ import {
   KILO_GATEWAY_ID,
   PROVIDER_ORDER,
   freeDataLabel,
+  isDataCollectedModel,
 } from "../../webview-ui/src/components/shared/model-selector-utils"
 
 const labels = { select: "Select model", noProviders: "No providers", notSet: "Not set" }
@@ -98,6 +99,14 @@ describe("sanitizeName", () => {
 describe("freeDataLabel", () => {
   it("uses the data collection label without repeating free", () => {
     expect(freeDataLabel("Free", "Data collected")).toBe("Data collected")
+  })
+})
+
+describe("isDataCollectedModel", () => {
+  it("only marks free Kilo Gateway models as data collected", () => {
+    expect(isDataCollectedModel({ providerID: KILO_GATEWAY_ID, isFree: true })).toBe(true)
+    expect(isDataCollectedModel({ providerID: "openrouter", isFree: true })).toBe(false)
+    expect(isDataCollectedModel({ providerID: KILO_GATEWAY_ID, isFree: false })).toBe(false)
   })
 })
 

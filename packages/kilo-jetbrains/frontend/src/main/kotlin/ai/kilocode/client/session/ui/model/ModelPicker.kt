@@ -109,10 +109,10 @@ class ModelPicker : PickerButton() {
         val item = selected ?: items.firstOrNull()
         val display = item?.display ?: ""
         text = "${ModelText.sanitize(display)} ▴"
-        icon = if (item?.free == true) AllIcons.General.Warning else null
+        icon = if (item?.let(ModelText::collectsData) == true) AllIcons.General.Warning else null
         horizontalTextPosition = SwingConstants.LEFT
         iconTextGap = JBUI.CurrentTheme.ActionsList.elementIconGap()
-        toolTipText = if (item?.free == true) ModelText.dataCollected() else KiloBundle.message("model.picker.tooltip")
+        toolTipText = if (item?.let(ModelText::collectsData) == true) ModelText.dataCollected() else KiloBundle.message("model.picker.tooltip")
         isEnabled = true
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
     }
@@ -417,6 +417,8 @@ internal object ModelText {
     fun dataCollected(): String = KiloBundle.message("model.picker.dataCollected")
 
     fun freeLabel(): String = KiloBundle.message("model.picker.free")
+
+    fun collectsData(item: ModelPicker.Item): Boolean = item.free && item.provider == "kilo"
 
     fun freeBg(): JBColor = JBColor.namedColor("Kilo.ModelPicker.freeBadgeBackground", JBColor(0x95D6AC, 0x7FCA99))
 }

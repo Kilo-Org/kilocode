@@ -5,7 +5,7 @@ import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
-import { freeDataLabel, sanitizeName } from "./model-selector-utils"
+import { freeDataLabel, isDataCollectedModel, sanitizeName } from "./model-selector-utils"
 import { avgPrice, fmtCachedPrice, fmtPrice } from "./model-preview-utils"
 
 interface Props {
@@ -93,11 +93,13 @@ export const ModelPreview: Component<Props> = (props) => {
                   <Show when={model().isFree}>
                     <span class="model-preview-free-data">
                       <span class="model-preview-badge model-preview-badge--free">{freeLabel()}</span>
-                      <Tooltip value={dataLabel()} placement="top">
-                        <span class="model-preview-free-data-icon" aria-label={dataLabel()}>
-                          <Icon name="warning" size="small" />
-                        </span>
-                      </Tooltip>
+                      <Show when={isDataCollectedModel(model())}>
+                        <Tooltip value={dataLabel()} placement="top">
+                          <span class="model-preview-free-data-icon" aria-label={dataLabel()}>
+                            <Icon name="warning" size="small" />
+                          </span>
+                        </Tooltip>
+                      </Show>
                     </span>
                   </Show>
                 </div>
@@ -128,7 +130,7 @@ export const ModelPreview: Component<Props> = (props) => {
                   <span class="model-preview-value">{fmtPrice(avg()!)}</span>
                 </Show>
 
-                <Show when={model().isFree}>
+                <Show when={isDataCollectedModel(model())}>
                   <span class="model-preview-data-line" aria-label={dataLabel()}>
                     <Icon name="warning" size="small" />
                     <span>- {dataLabel()}</span>

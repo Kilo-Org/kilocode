@@ -139,7 +139,7 @@ internal class ModelPickerRenderer(
         title.append(name.model, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, fg))
 
         head.getComponent(1).isVisible = value.item.free
-        warn.isVisible = value.item.free
+        warn.isVisible = ModelText.collectsData(value.item)
         provider.isVisible = value.favorite
         provider.text = value.item.providerName
         provider.foreground = weak

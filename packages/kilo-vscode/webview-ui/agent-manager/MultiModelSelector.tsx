@@ -4,7 +4,12 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useProvider } from "../src/context/provider"
 import type { EnrichedModel } from "../src/context/provider"
 import { useLanguage } from "../src/context/language"
-import { KILO_GATEWAY_ID, freeDataLabel, providerSortKey } from "../src/components/shared/model-selector-utils"
+import {
+  KILO_GATEWAY_ID,
+  freeDataLabel,
+  isDataCollectedModel,
+  providerSortKey,
+} from "../src/components/shared/model-selector-utils"
 import {
   type ModelAllocations,
   MAX_MULTI_VERSIONS,
@@ -113,11 +118,13 @@ export const MultiModelSelector: Component<{
                         <Show when={model.isFree}>
                           <span class="am-mm-free-data">
                             <span class="am-mm-free-badge">{freeLabel()}</span>
-                            <Tooltip value={dataLabel()} placement="top">
-                              <span class="am-mm-free-data-icon" aria-label={dataLabel()}>
-                                <Icon name="warning" size="small" />
-                              </span>
-                            </Tooltip>
+                            <Show when={isDataCollectedModel(model)}>
+                              <Tooltip value={dataLabel()} placement="top">
+                                <span class="am-mm-free-data-icon" aria-label={dataLabel()}>
+                                  <Icon name="warning" size="small" />
+                                </span>
+                              </Tooltip>
+                            </Show>
                           </span>
                         </Show>
                       </label>

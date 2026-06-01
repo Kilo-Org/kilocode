@@ -66,7 +66,7 @@ export function DialogModel(props: { providerID?: string }) {
   })
 
   const footer = (providerID: string, model: Model) => {
-    if (model.isFree) return FreeModelDisclosure.label
+    if (providerID === "kilo" && FreeModelDisclosure.collectsData(model)) return FreeModelDisclosure.label
     if (model.cost?.input === 0 && providerID === "opencode") return "Free"
     return undefined
   }

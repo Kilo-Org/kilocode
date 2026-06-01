@@ -163,6 +163,15 @@ class ModelPickerTest : BasePlatformTestCase() {
         assertEquals("Data collected", picker.toolTipText)
     }
 
+    fun `test selected non-kilo free model does not indicate data collection`() {
+        val picker = ModelPicker()
+
+        picker.setItems(listOf(item("free", "OpenRouter Free", "openrouter", "OpenRouter", free = true)))
+
+        assertNull(picker.icon)
+        assertEquals("Select model", picker.toolTipText)
+    }
+
     fun `test display parts split provider prefix`() {
         val parts = ModelText.parts(item("claude-opus", "Anthropic Claude Opus 4.7", "anthropic", "Anthropic"))
 
@@ -274,6 +283,19 @@ class ModelPickerTest : BasePlatformTestCase() {
         assertEquals("Free", renderer.badgeText())
         assertTrue(renderer.warningVisible())
         assertEquals("Data collected", renderer.warningTooltip())
+    }
+
+    fun `test renderer hides data collection warning for non-kilo free model`() {
+        val row = ModelPickerRow(ModelPicker.Item("free", "Free", "openrouter", "OpenRouter", free = true), "OpenRouter", false)
+        val model = CollectionListModel(listOf(row))
+        val renderer = ModelPickerRenderer(model, { null }, { emptySet() })
+        val list = JBList(model)
+
+        renderer.getListCellRendererComponent(list, row, 0, false, false)
+
+        assertTrue(renderer.badgeVisible())
+        assertEquals("Free", renderer.badgeText())
+        assertFalse(renderer.warningVisible())
     }
 
     private fun item(

@@ -14,6 +14,7 @@ describe("model preview data collection line", () => {
     expect(data).toBeGreaterThanOrEqual(0)
     expect(context).toBeGreaterThan(data)
     expect(preview).toContain('Icon name="warning"')
+    expect(preview).toContain("isDataCollectedModel(model())")
     expect(preview).toContain('language.t("model.tag.dataCollected")')
     expect(styles).toContain(".model-preview-data-line")
   })
