@@ -2127,7 +2127,7 @@ it.live(
       }),
       { git: true, config: providerCfg },
     ),
-  10_000,
+  10_000, // kilocode_change
 )
 
 // Agent variant
