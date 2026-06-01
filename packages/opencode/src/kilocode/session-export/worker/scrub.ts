@@ -27,6 +27,7 @@ const RISK: RegExp[] = [
   /^\.env(\.|$)/,
   /(^|\/)\.env(\.|$)/,
   /(^|\/)\.aws\/credentials$/,
+  /(^|\/)credentials\.json$/,
   /(^|\/)\.netrc$/,
   /(^|\/)\.ssh\/id_/,
   /\.pem$/,
