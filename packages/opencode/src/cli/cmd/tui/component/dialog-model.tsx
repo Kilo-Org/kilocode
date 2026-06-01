@@ -93,7 +93,7 @@ export function DialogModel(props: { providerID?: string }) {
             description: provider.name,
             category,
             disabled: provider.id === "opencode" && model.id.includes("-nano"),
-            footer: footer(provider.id, model),
+            footer: footer(provider.id, model), // kilocode_change
             onSelect: () => {
               onSelect(provider.id, model.id)
             },
@@ -136,7 +136,7 @@ export function DialogModel(props: { providerID?: string }) {
               : undefined,
             // kilocode_change end
             disabled: provider.id === "opencode" && model.includes("-nano"),
-            footer: footer(provider.id, info),
+            footer: footer(provider.id, info), // kilocode_change
             onSelect() {
               onSelect(provider.id, model)
             },
@@ -156,7 +156,9 @@ export function DialogModel(props: { providerID?: string }) {
             // kilocode_change start - Sort within Recommended / Kilo Gateway
             (x) => (x.value.providerID === "kilo" ? (kiloRank().get(x.value.modelID) ?? Infinity) : 0),
             // kilocode_change end
+            // kilocode_change start - free model footers include Kilo disclosure labels
             (x) => x.footer === undefined,
+            // kilocode_change end
             (x) => x.title,
           ),
         ),
