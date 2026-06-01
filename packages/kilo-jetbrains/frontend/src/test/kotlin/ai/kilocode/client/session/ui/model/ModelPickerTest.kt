@@ -158,7 +158,9 @@ class ModelPickerTest : BasePlatformTestCase() {
 
         picker.setItems(listOf(item("auto", "Auto Free", "kilo", "Kilo", free = true)))
 
-        assertTrue(picker.text.contains("Data collected"))
+        assertFalse(picker.text.contains("Data collected"))
+        assertSame(AllIcons.General.Warning, picker.icon)
+        assertEquals("Data collected", picker.toolTipText)
     }
 
     fun `test display parts split provider prefix`() {
@@ -269,7 +271,7 @@ class ModelPickerTest : BasePlatformTestCase() {
         renderer.getListCellRendererComponent(list, row, 0, false, false)
 
         assertTrue(renderer.badgeVisible())
-        assertEquals("Free - Data collected", renderer.badgeText())
+        assertEquals("Data collected", renderer.badgeText())
     }
 
     private fun item(

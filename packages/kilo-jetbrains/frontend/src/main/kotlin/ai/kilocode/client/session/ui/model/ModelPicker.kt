@@ -3,6 +3,7 @@ package ai.kilocode.client.session.ui.model
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.PickerButton
 import ai.kilocode.rpc.dto.ModelSelectionDto
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.PopupShowOptions
@@ -34,6 +35,7 @@ import javax.swing.JScrollPane
 import javax.swing.KeyStroke
 import javax.swing.ListSelectionModel
 import javax.swing.ScrollPaneConstants
+import javax.swing.SwingConstants
 import javax.swing.SwingUtilities
 import javax.swing.event.DocumentEvent
 
@@ -100,14 +102,17 @@ class ModelPicker : PickerButton() {
         if (items.isEmpty()) {
             isEnabled = false
             text = " "
+            icon = null
             cursor = Cursor.getDefaultCursor()
             return
         }
         val item = selected ?: items.firstOrNull()
         val display = item?.display ?: ""
-        val suffix = if (item?.free == true) " · ${ModelText.dataCollected()}" else ""
-        text = "${ModelText.sanitize(display)}$suffix ▴"
-        toolTipText = if (item?.free == true) ModelText.freeTip() else KiloBundle.message("model.picker.tooltip")
+        text = "${ModelText.sanitize(display)} ▴"
+        icon = if (item?.free == true) AllIcons.General.Warning else null
+        horizontalTextPosition = SwingConstants.LEFT
+        iconTextGap = JBUI.CurrentTheme.ActionsList.elementIconGap()
+        toolTipText = if (item?.free == true) ModelText.dataCollected() else KiloBundle.message("model.picker.tooltip")
         isEnabled = true
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
     }
@@ -411,9 +416,7 @@ internal object ModelText {
 
     fun dataCollected(): String = KiloBundle.message("model.picker.dataCollected")
 
-    fun freeLabel(): String = "${KiloBundle.message("model.picker.free")} - ${dataCollected()}"
-
-    fun freeTip(): String = KiloBundle.message("model.picker.freeData.tooltip")
+    fun freeLabel(): String = dataCollected()
 
     fun freeBg(): JBColor = JBColor.namedColor("Kilo.ModelPicker.freeBadgeBackground", JBColor(0x95D6AC, 0x7FCA99))
 }
