@@ -1,0 +1,2354 @@
+diff --git a/bun.lock b/bun.lock
+index 1028ef07ec4..924f2148757 100644
+--- a/bun.lock
++++ b/bun.lock
+@@ -337,6 +337,7 @@
+         "@kilocode/kilo-indexing": "workspace:*",
+         "@kilocode/kilo-telemetry": "workspace:*",
+         "@kilocode/plugin": "workspace:*",
++        "@kilocode/plugin-atomic-chat": "workspace:*",
+         "@kilocode/sdk": "workspace:*",
+         "@lydell/node-pty": "catalog:",
+         "@modelcontextprotocol/sdk": "1.29.0",
+@@ -475,6 +476,20 @@
+         "@opentui/solid",
+       ],
+     },
++    "packages/plugin-atomic-chat": {
++      "name": "@kilocode/plugin-atomic-chat",
++      "version": "0.1.0",
++      "dependencies": {
++        "@kilocode/plugin": "workspace:*",
++      },
++      "devDependencies": {
++        "@tsconfig/node22": "catalog:",
++        "@types/node": "catalog:",
++        "@typescript/native-preview": "catalog:",
++        "typescript": "catalog:",
++        "vitest": "^4.0.16",
++      },
++    },
+     "packages/script": {
+       "name": "@opencode-ai/script",
+       "version": "7.3.8",
+@@ -1295,6 +1310,8 @@
+ 
+     "@kilocode/plugin": ["@kilocode/plugin@workspace:packages/plugin"],
+ 
++    "@kilocode/plugin-atomic-chat": ["@kilocode/plugin-atomic-chat@workspace:packages/plugin-atomic-chat"],
++
+     "@kilocode/sdk": ["@kilocode/sdk@workspace:packages/sdk/js"],
+ 
+     "@kobalte/core": ["@kobalte/core@0.13.11", "", { "dependencies": { "@floating-ui/dom": "^1.5.1", "@internationalized/date": "^3.4.0", "@internationalized/number": "^3.2.1", "@kobalte/utils": "^0.9.1", "@solid-primitives/props": "^3.1.8", "@solid-primitives/resize-observer": "^2.0.26", "solid-presence": "^0.1.8", "solid-prevent-scroll": "^0.1.4" }, "peerDependencies": { "solid-js": "^1.8.15" } }, "sha512-hK7TYpdib/XDb/r/4XDBFaO9O+3ZHz4ZWryV4/3BfES+tSQVgg2IJupDnztKXB0BqbSRy/aWlHKw1SPtNPYCFQ=="],
+@@ -2879,7 +2896,7 @@
+ 
+     "es-errors": ["es-errors@1.3.0", "", {}, "sha512-Zf5H2Kxt2xjTvbJvP2ZWLEICxA6j+hAmMzIlypy4xcBg1vKVnx89Wy0GbS+kf5cwCVFFzdCFh2XSCFNULS6csw=="],
+ 
+-    "es-module-lexer": ["es-module-lexer@1.7.0", "", {}, "sha512-jEQoCwk8hyb2AZziIOLhDqpm5+2ww5uIE6lkO/6jcOCusfk6LhMHpXXfBLXTZ7Ydyt0j4VoUQv6uGNYbdW+kBA=="],
++    "es-module-lexer": ["es-module-lexer@2.1.0", "", {}, "sha512-n27zTYMjYu1aj4MjCWzSP7G9r75utsaoc8m61weK+W8JMBGGQybd43GstCXZ3WNmSFtGT9wi59qQTW6mhTR5LQ=="],
+ 
+     "es-object-atoms": ["es-object-atoms@1.1.1", "", { "dependencies": { "es-errors": "^1.3.0" } }, "sha512-FGgH2h8zKNim9ljj7dankFPcICIK9Cp5bm+c2gQSYePhpaG5+esrLODihIorn+Pe6FGJzWhXQotPv73jTaldXA=="],
+ 
+@@ -3653,6 +3670,8 @@
+ 
+     "object-inspect": ["object-inspect@1.13.4", "", {}, "sha512-W67iLl4J2EXEGTbfeHCffrjDfitvLANg0UlX3wFUUSTx92KXRFegMHUVgSqE+wvhAbi4WqjGg9czysTV2Epbew=="],
+ 
++    "obug": ["obug@2.1.1", "", {}, "sha512-uTqF9MuPraAQ+IsnPf366RG4cP9RtUi7MLO1N3KEc+wb0a6yKpeL0lmk2IB1jY5KHPAlTc6T/JRdC/YqxHNwkQ=="],
++
+     "ohash": ["ohash@2.0.11", "", {}, "sha512-RdR9FQrFwNBNXAr4GixM8YaRZRJ5PUWbKYbE5eOsrwAjJW0q2REGcf79oYPsLyskQCZG1PLN+S/K1V00joZAoQ=="],
+ 
+     "oidc-token-hash": ["oidc-token-hash@5.2.0", "", {}, "sha512-6gj2m8cJZ+iSW8bm0FXdGF0YhIQbKrfP4yWTNzxc31U6MOjfEmB1rHvlYvxI1B7t7BCi1F2vYTT6YhtQRG4hxw=="],
+@@ -4659,6 +4678,7 @@
+ 
+     "@kilocode/kilo-indexing/glob": ["glob@13.0.6", "", { "dependencies": { "minimatch": "^10.2.2", "minipass": "^7.1.3", "path-scurry": "^2.0.2" } }, "sha512-Wjlyrolmm8uDpm/ogGyXZXb1Z+Ca2B8NbJwqBVg0axK9GbBeoS7yGV6vjXnYdGm6X53iehEuxxbyiKp8QmN4Vw=="],
+ 
++    "@kilocode/plugin-atomic-chat/vitest": ["vitest@4.1.6", "", { "dependencies": { "@vitest/expect": "4.1.6", "@vitest/mocker": "4.1.6", "@vitest/pretty-format": "4.1.6", "@vitest/runner": "4.1.6", "@vitest/snapshot": "4.1.6", "@vitest/spy": "4.1.6", "@vitest/utils": "4.1.6", "es-module-lexer": "^2.0.0", "expect-type": "^1.3.0", "magic-string": "^0.30.21", "obug": "^2.1.1", "pathe": "^2.0.3", "picomatch": "^4.0.3", "std-env": "^4.0.0-rc.1", "tinybench": "^2.9.0", "tinyexec": "^1.0.2", "tinyglobby": "^0.2.15", "tinyrainbow": "^3.1.0", "vite": "^6.0.0 || ^7.0.0 || ^8.0.0", "why-is-node-running": "^2.3.0" }, "peerDependencies": { "@edge-runtime/vm": "*", "@opentelemetry/api": "^1.9.0", "@types/node": "^20.0.0 || ^22.0.0 || >=24.0.0", "@vitest/browser-playwright": "4.1.6", "@vitest/browser-preview": "4.1.6", "@vitest/browser-webdriverio": "4.1.6", "@vitest/coverage-istanbul": "4.1.6", "@vitest/coverage-v8": "4.1.6", "@vitest/ui": "4.1.6", "happy-dom": "*", "jsdom": "*" }, "optionalPeers": ["@edge-runtime/vm", "@opentelemetry/api", "@types/node", "@vitest/browser-playwright", "@vitest/browser-preview", "@vitest/browser-webdriverio", "@vitest/coverage-istanbul", "@vitest/coverage-v8", "@vitest/ui", "happy-dom", "jsdom"], "bin": { "vitest": "vitest.mjs" } }, "sha512-6lvjbS3p9b4CrdCmguzbh2/4uoXhGE2q71R4OX5sqF9R1bo9Xd6fGrMAfvp5wnCzlBnFVdCOp6onuTQVbo8iUQ=="],
+     "@manypkg/find-root/@types/node": ["@types/node@22.13.9", "", { "dependencies": { "undici-types": "~6.20.0" } }, "sha512-acBjXdRJ3A6Pb3tqnw9HZmyR3Fiol3aGxRCK1x3d+6CDAMjl7I649wpSd+yNURCjbOUGu9tqtLKnTGxmK6CyGw=="],
+ 
+     "@manypkg/find-root/find-up": ["find-up@4.1.0", "", { "dependencies": { "locate-path": "^5.0.0", "path-exists": "^4.0.0" } }, "sha512-PpOwAdQ/YlXQ2vj8a3h8IipDuYRi3wceVQQGYWxNINccq40Anw7BlsEXCMbt1Zt+OLA6Fq9suIpIWD0OsnISlw=="],
+@@ -5207,6 +5227,8 @@
+ 
+     "validate-npm-package-license/spdx-expression-parse": ["spdx-expression-parse@3.0.1", "", { "dependencies": { "spdx-exceptions": "^2.1.0", "spdx-license-ids": "^3.0.0" } }, "sha512-cbqHunsQWnJNE6KhVSMsMeH5H/L9EpymbzqTQ3uLwNCLZ1Q481oWaofqH7nO6V07xlXwY6PhQdQ2IedWx/ZK4Q=="],
+ 
++    "vite-node/es-module-lexer": ["es-module-lexer@1.7.0", "", {}, "sha512-jEQoCwk8hyb2AZziIOLhDqpm5+2ww5uIE6lkO/6jcOCusfk6LhMHpXXfBLXTZ7Ydyt0j4VoUQv6uGNYbdW+kBA=="],
++
+     "vite-plugin-icons-spritesheet/glob": ["glob@11.1.0", "", { "dependencies": { "foreground-child": "^3.3.1", "jackspeak": "^4.1.1", "minimatch": "^10.1.1", "minipass": "^7.1.2", "package-json-from-dist": "^1.0.0", "path-scurry": "^2.0.0" }, "bin": { "glob": "dist/esm/bin.mjs" } }, "sha512-vuNwKSaKiqm7g0THUBu2x7ckSs3XJLXE+2ssL7/MfTGPLLcrJQ/4Uq1CjPTtO5cCIiRxqvN6Twy1qOwhL0Xjcw=="],
+ 
+     "vite-plugin-solid/babel-preset-solid": ["babel-preset-solid@1.9.10", "", { "dependencies": { "babel-plugin-jsx-dom-expressions": "^0.40.3" }, "peerDependencies": { "@babel/core": "^7.0.0", "solid-js": "^1.9.10" }, "optionalPeers": ["solid-js"] }, "sha512-HCelrgua/Y+kqO8RyL04JBWS/cVdrtUv/h45GntgQY+cJl4eBcKkCDV3TdMjtKx1nXwRaR9QXslM/Npm1dxdZQ=="],
+@@ -5741,6 +5763,10 @@
+ 
+     "@kilocode/kilo-gateway/@opentui/solid/@babel/core/semver": ["semver@6.3.1", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA=="],
+ 
++    "@kilocode/plugin-atomic-chat/vitest/@vitest/expect/@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
++
++    "@kilocode/plugin-atomic-chat/vitest/@vitest/expect/chai": ["chai@6.2.2", "", {}, "sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg=="],
++
+     "@manypkg/find-root/find-up/locate-path/p-locate": ["p-locate@4.1.0", "", { "dependencies": { "p-limit": "^2.2.0" } }, "sha512-R79ZZ/0wAxKGu3oYMlz8jy/kbhsNrS7SKZ7PxEHBgJ5+F2mtFW2fK2cOtBh1cHYkQsbzFV7I+EoRKe6Yt0oK7A=="],
+ 
+     "@morphllm/morphsdk/ai/@ai-sdk/gateway/@vercel/oidc": ["@vercel/oidc@3.1.0", "", {}, "sha512-Fw28YZpRnA3cAHHDlkt7xQHiJ0fcL+NRcIqsocZQUSmbzeIKRpwttJjik5ZGanXP+vlA4SbTg+AbA3bP363l+w=="],
+diff --git a/packages/kilo-docs/lib/nav/ai-providers.ts b/packages/kilo-docs/lib/nav/ai-providers.ts
+index 408598f0f52..0711ee81510 100644
+--- a/packages/kilo-docs/lib/nav/ai-providers.ts
++++ b/packages/kilo-docs/lib/nav/ai-providers.ts
+@@ -55,6 +55,7 @@ export const AiProvidersNav: NavSection[] = [
+     links: [
+       { href: "/ai-providers/ollama", children: "Ollama" },
+       { href: "/ai-providers/lmstudio", children: "LM Studio" },
++      { href: "/ai-providers/atomic-chat", children: "Atomic Chat" },
+       { href: "/ai-providers/vscode-lm", children: "VS Code LM API" },
+       {
+         href: "/ai-providers/openai-compatible",
+diff --git a/packages/kilo-docs/pages/ai-providers/atomic-chat.md b/packages/kilo-docs/pages/ai-providers/atomic-chat.md
+new file mode 100644
+index 00000000000..206927faadd
+--- /dev/null
++++ b/packages/kilo-docs/pages/ai-providers/atomic-chat.md
+@@ -0,0 +1,96 @@
++---
++title: "Using Atomic Chat with Kilo Code | Local LLMs"
++description: "Run local models in Kilo Code via Atomic Chat's OpenAI-compatible API. Setup for VS Code and the CLI."
++sidebar_label: Atomic Chat
++---
++
++# Using Atomic Chat With Kilo Code
++
++[Kilo Code](https://kilocode.ai/) supports [Atomic Chat](https://atomic.chat/) as a local provider. Atomic Chat runs models on your machine and exposes an OpenAI-compatible API (default `http://127.0.0.1:1337/v1`).
++
++**Website:** [https://atomic.chat/](https://atomic.chat/)  
++**Repository:** [https://github.com/AtomicBot-ai/Atomic-Chat](https://github.com/AtomicBot-ai/Atomic-Chat)
++
++## Prerequisites
++
++1. Install [Atomic Chat](https://atomic.chat/) (macOS or Windows).
++2. Download and load a model in the app.
++3. Enable the **local API server** (default port **1337**).
++4. Confirm the API responds:
++
++```bash
++curl http://127.0.0.1:1337/v1/models
++```
++
++## Configuration in Kilo Code
++
++Kilo Code ships the `@kilocode/plugin-atomic-chat` plugin by default. It auto-detects Atomic Chat on ports **1337** and **1338**, discovers models from `GET /v1/models`, and can warn if the selected model is not loaded.
++
++{% tabs %}
++{% tab label="VSCode" %}
++
++Open **Settings** (gear icon) → **Providers** → **Atomic Chat**. No API key is required for the default local server. Adjust the base URL if Atomic Chat uses a non-default host or port.
++
++{% /tab %}
++{% tab label="CLI" %}
++
++**Config file** (`~/.config/kilo/kilo.jsonc` or `./kilo.jsonc`):
++
++```jsonc
++{
++  "provider": {
++    "atomic-chat": {
++      "options": {
++        "baseURL": "http://127.0.0.1:1337/v1",
++      },
++    },
++  },
++}
++```
++
++Set your default model (use an id from `curl http://127.0.0.1:1337/v1/models`):
++
++```jsonc
++{
++  "model": "atomic-chat/gemma-4-E4B-it-IQ4_XS",
++}
++```
++
++The built-in plugin is enabled automatically. To disable auto-discovery, remove `@kilocode/plugin-atomic-chat` from the `plugin` array in your config.
++
++{% /tab %}
++{% /tabs %}
++
++## Custom or unlisted models
++
++If a loaded model does not appear in the picker, register it under `provider.atomic-chat.models`:
++
++```jsonc
++{
++  "model": "atomic-chat/my-local-model",
++  "provider": {
++    "atomic-chat": {
++      "models": {
++        "my-local-model": {
++          "id": "exact-id-from-v1-models",
++          "name": "My Local Model",
++        },
++      },
++    },
++  },
++}
++```
++
++See [Custom Models](/docs/code-with-ai/agents/custom-models) for all model fields.
++
++## Tips
++
++- Prefer capable models with large context windows; agent workflows use long prompts.
++- Keep only the models you need loaded in Atomic Chat to save memory.
++- For embeddings via Atomic Chat, use the **openai-compatible** indexing provider with the same base URL.
++
++## Related
++
++- [LM Studio](/docs/ai-providers/lmstudio)
++- [Ollama](/docs/ai-providers/ollama)
++- [Local models overview](/docs/automate/extending/local-models)
+diff --git a/packages/kilo-docs/pages/ai-providers/index.md b/packages/kilo-docs/pages/ai-providers/index.md
+index a7c8c05fee3..ef843690443 100644
+--- a/packages/kilo-docs/pages/ai-providers/index.md
++++ b/packages/kilo-docs/pages/ai-providers/index.md
+@@ -33,6 +33,7 @@ Major AI companies offering powerful models via API:
+ 
+ Run models on your own hardware for privacy and offline use:
+ 
++- **[Atomic Chat](/docs/ai-providers/atomic-chat)** - Local models with TurboQuant inference and auto-discovery in Kilo Code
+ - **[Ollama](/docs/ai-providers/ollama)** - Easy local model management
+ - **[LM Studio](/docs/ai-providers/lmstudio)** - Desktop app for local models
+ - **[OpenAI Compatible](/docs/ai-providers/openai-compatible)** - Any OpenAI-compatible endpoint
+diff --git a/packages/kilo-docs/pages/automate/extending/local-models.md b/packages/kilo-docs/pages/automate/extending/local-models.md
+index 81921bdfb88..071263ff846 100644
+--- a/packages/kilo-docs/pages/automate/extending/local-models.md
++++ b/packages/kilo-docs/pages/automate/extending/local-models.md
+@@ -5,7 +5,7 @@ description: "Run AI models locally with Kilo Code"
+ 
+ # Using Local Models
+ 
+-Kilo Code supports running language models locally on your own machine using [Ollama](https://ollama.com/) and [LM Studio](https://lmstudio.ai/). This offers several advantages:
++Kilo Code supports running language models locally on your own machine using [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/), and [Atomic Chat](https://atomic.chat/). This offers several advantages:
+ 
+ - **Privacy:** Your code and data never leave your computer.
+ - **Offline Access:** You can use Kilo Code even without an internet connection.
+@@ -21,23 +21,23 @@ Kilo Code supports running language models locally on your own machine using [Ol
+ 
+ ## Supported Local Model Providers
+ 
+-Kilo Code currently supports two main local model providers:
++Kilo Code supports several local model providers:
+ 
+-1.  **Ollama:** A popular open-source tool for running large language models locally. It supports a wide range of models.
+-2.  **LM Studio:** A user-friendly desktop application that simplifies the process of downloading, configuring, and running local models. It also provides a local server that emulates the OpenAI API.
++1.  **[Atomic Chat](https://atomic.chat/):** Open-source local AI with TurboQuant-optimized inference, a built-in chat UI, and an OpenAI-compatible API on port **1337**. Kilo Code auto-detects a running Atomic Chat instance and discovers loaded models via the plugin.
++2.  **Ollama:** A popular open-source tool for running large language models locally. It supports a wide range of models.
++3.  **LM Studio:** A user-friendly desktop application that simplifies downloading and running local models, with a local server that emulates the OpenAI API.
+ 
+ ## Setting Up Local Models
+ 
+ For detailed setup instructions, see:
+ 
++- [Setting up Atomic Chat](/docs/ai-providers/atomic-chat) (recommended for Kilo Code — auto-discovery on `localhost:1337`)
+ - [Setting up Ollama](/docs/ai-providers/ollama)
+ - [Setting up LM Studio](/docs/ai-providers/lmstudio)
+ 
+-Both providers offer similar capabilities but with different user interfaces and workflows. Ollama provides more control through its command-line interface, while LM Studio offers a more user-friendly graphical interface.
+-
+ ## Troubleshooting
+ 
+-- **"No connection could be made because the target machine actively refused it":** This usually means that the Ollama or LM Studio server isn't running, or is running on a different port/address than Kilo Code is configured to use. Double-check the Base URL setting.
++- **"No connection could be made because the target machine actively refused it":** This usually means that Atomic Chat, Ollama, or LM Studio isn't running, or is on a different port than Kilo Code expects (Atomic Chat: `http://127.0.0.1:1337/v1`, LM Studio: `http://127.0.0.1:1234/v1`, Ollama: `http://127.0.0.1:11434`). Double-check the Base URL setting.
+ 
+ - **Slow Response Times:** Local models can be slower than cloud-based models, especially on less powerful hardware. If performance is an issue, try using a smaller model.
+ 
+diff --git a/packages/kilo-vscode/webview-ui/src/components/settings/ProviderConnectDialog.tsx b/packages/kilo-vscode/webview-ui/src/components/settings/ProviderConnectDialog.tsx
+index 6dbfd0174ef..0d7bd8ef9db 100644
+--- a/packages/kilo-vscode/webview-ui/src/components/settings/ProviderConnectDialog.tsx
++++ b/packages/kilo-vscode/webview-ui/src/components/settings/ProviderConnectDialog.tsx
+@@ -12,6 +12,10 @@ import { useLanguage } from "../../context/language"
+ import { useProvider } from "../../context/provider"
+ import { useVSCode } from "../../context/vscode"
+ import { createProviderAction } from "../../utils/provider-action"
++import {
++  isLocalProviderOptionalApiKey,
++  LOCAL_PROVIDER_API_KEY_PLACEHOLDER,
++} from "../../utils/local-providers"
+ 
+ interface ProviderConnectDialogProps {
+   providerID: string
+@@ -265,7 +269,9 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) =>
+           <For each={methods()}>
+             {(item, index) => (
+               <Button variant="secondary" size="large" onClick={() => selectMethod(index())}>
+-                {item.type === "api" ? language.t("provider.connect.method.apiKey") : item.label}
++                {item.type === "api"
++                  ? item.label || language.t("provider.connect.method.apiKey")
++                  : item.label}
+               </Button>
+             )}
+           </For>
+@@ -283,10 +289,29 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) =>
+     const [value, setValue] = createSignal("")
+     const [fields, setFields] = createStore<Record<string, string>>({})
+     const prompts = createMemo(() => method()?.prompts?.filter((prompt) => visible(prompt, fields)) ?? [])
++    const apiKeyOptional = () => isLocalProviderOptionalApiKey(props.providerID)
++
++    function apiKeyDescription() {
++      if (props.providerID === "atomic-chat") {
++        return language.t("provider.connect.atomicChat.description")
++      }
++      if (apiKeyOptional()) {
++        return language.t("provider.connect.apiKey.description.local", { provider: name() })
++      }
++      return language.t("provider.connect.apiKey.description", { provider: name() })
++    }
++
++    function apiKeyLabel() {
++      if (apiKeyOptional()) {
++        return language.t("provider.connect.apiKey.label.optional", { provider: name() })
++      }
++      return language.t("provider.connect.apiKey.label", { provider: name() })
++    }
+ 
+     function submit(e: SubmitEvent) {
+       e.preventDefault()
+-      const apiKey = value().trim()
++      const trimmed = value().trim()
++      const apiKey = trimmed || (apiKeyOptional() ? LOCAL_PROVIDER_API_KEY_PLACEHOLDER : "")
+       if (!apiKey) {
+         setState({ ...state, error: language.t("provider.connect.apiKey.required"), field: "apiKey" })
+         return
+@@ -313,14 +338,16 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) =>
+         style={{ display: "flex", "flex-direction": "column", gap: "16px" }}
+         onSubmit={submit}
+       >
+-        <div class="provider-connect-body">
+-          {language.t("provider.connect.apiKey.description", { provider: name() })}
+-        </div>
++        <div class="provider-connect-body">{apiKeyDescription()}</div>
+         <TextField
+           autofocus
+           type="password"
+-          label={language.t("provider.connect.apiKey.label", { provider: name() })}
+-          placeholder={language.t("provider.connect.apiKey.placeholder")}
++          label={apiKeyLabel()}
++          placeholder={
++            apiKeyOptional()
++              ? language.t("provider.connect.apiKey.placeholder.optional")
++              : language.t("provider.connect.apiKey.placeholder")
++          }
+           value={value()}
+           onChange={setValue}
+           validationState={state.field === "apiKey" ? "invalid" : undefined}
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/en.ts b/packages/kilo-vscode/webview-ui/src/i18n/en.ts
+index 37ca13c028a..3ae55ac1c58 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/en.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/en.ts
+@@ -135,8 +135,14 @@ export const dict = {
+   "provider.connect.status.failed": "Authorization failed: {{error}}",
+   "provider.connect.apiKey.description":
+     "Enter your {{provider}} API key to connect your account and use {{provider}} models in Kilo.",
++  "provider.connect.apiKey.description.local":
++    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
++  "provider.connect.atomicChat.description":
++    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
+   "provider.connect.apiKey.label": "{{provider}} API key",
++  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
+   "provider.connect.apiKey.placeholder": "API key",
++  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
+   "provider.connect.apiKey.required": "API key is required",
+   "provider.connect.prompt.required": "{{field}} is required",
+   "provider.connect.azure.endpointType.label": "Select Azure endpoint configuration",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/ru.ts b/packages/kilo-vscode/webview-ui/src/i18n/ru.ts
+index c0c242109b0..c387c1df58d 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/ru.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/ru.ts
+@@ -135,8 +135,14 @@ export const dict = {
+   "provider.connect.status.failed": "Ошибка авторизации: {{error}}",
+   "provider.connect.apiKey.description":
+     "Введите ваш API ключ {{provider}} для подключения аккаунта и использования моделей {{provider}} в Kilo.",
++  "provider.connect.apiKey.description.local":
++    "Подключение к локальному серверу {{provider}}. Оставьте ключ пустым, если сервер его не требует (обычно для localhost).",
++  "provider.connect.atomicChat.description":
++    "Подключение к Atomic Chat на этом компьютере (по умолчанию http://127.0.0.1:1337). Для локального API ключ не нужен — запустите Atomic Chat, загрузите модель и нажмите Connect.",
+   "provider.connect.apiKey.label": "{{provider}} API ключ",
++  "provider.connect.apiKey.label.optional": "{{provider}} API ключ (необязательно)",
+   "provider.connect.apiKey.placeholder": "API ключ",
++  "provider.connect.apiKey.placeholder.optional": "Пусто для локального сервера",
+   "provider.connect.apiKey.required": "API ключ обязателен",
+   "provider.connect.prompt.required": "{{field}} обязательно",
+   "provider.connect.azure.endpointType.label": "Выберите конфигурацию конечной точки Azure",
+diff --git a/packages/kilo-vscode/webview-ui/src/utils/local-providers.ts b/packages/kilo-vscode/webview-ui/src/utils/local-providers.ts
+new file mode 100644
+index 00000000000..dc7a9b5741c
+--- /dev/null
++++ b/packages/kilo-vscode/webview-ui/src/utils/local-providers.ts
+@@ -0,0 +1,9 @@
++/** Local OpenAI-compatible providers where the API key is not required (localhost). */
++export const LOCAL_PROVIDER_OPTIONAL_API_KEY = new Set(["atomic-chat", "lmstudio"])
++
++export function isLocalProviderOptionalApiKey(providerID: string): boolean {
++  return LOCAL_PROVIDER_OPTIONAL_API_KEY.has(providerID)
++}
++
++/** Placeholder stored when the user connects without an API key. */
++export const LOCAL_PROVIDER_API_KEY_PLACEHOLDER = "local"
+diff --git a/packages/opencode/package.json b/packages/opencode/package.json
+index 3ff9a2ccf37..a806485bfa8 100644
+--- a/packages/opencode/package.json
++++ b/packages/opencode/package.json
+@@ -118,6 +118,7 @@
+     "@kilocode/kilo-indexing": "workspace:*",
+     "@kilocode/kilo-telemetry": "workspace:*",
+     "@kilocode/plugin": "workspace:*",
++    "@kilocode/plugin-atomic-chat": "workspace:*",
+     "@kilocode/sdk": "workspace:*",
+     "@lydell/node-pty": "catalog:",
+     "@modelcontextprotocol/sdk": "1.29.0",
+diff --git a/packages/opencode/src/cli/cmd/tui/component/dialog-provider.tsx b/packages/opencode/src/cli/cmd/tui/component/dialog-provider.tsx
+index c79c1fcb5cd..d511b4b12eb 100644
+--- a/packages/opencode/src/cli/cmd/tui/component/dialog-provider.tsx
++++ b/packages/opencode/src/cli/cmd/tui/component/dialog-provider.tsx
+@@ -361,18 +361,21 @@ function ApiMethod(props: ApiMethodProps) {
+   const toast = useToast()
+   const { theme } = useTheme()
+ 
++  const optionalApiKey = KiloProvider.isLocalOptionalApiKey(props.providerID) // kilocode_change
++
+   return (
+     <DialogPrompt
+       title={props.title}
+-      placeholder="API key"
++      placeholder={KiloProvider.apiKeyPlaceholder(props.providerID)} // kilocode_change
+       description={KiloProvider.renderApiDescription(props.providerID, theme)} // kilocode_change
+       onConfirm={async (value) => {
+-        if (!value) return
++        const key = value.trim() || (optionalApiKey ? KiloProvider.LOCAL_API_KEY_PLACEHOLDER : "") // kilocode_change
++        if (!key) return
+         await sdk.client.auth.set({
+           providerID: props.providerID,
+           auth: {
+             type: "api",
+-            key: value,
++            key,
+             ...(props.metadata ? { metadata: props.metadata } : {}),
+           },
+         })
+diff --git a/packages/opencode/src/kilocode/atomic-chat-feature.ts b/packages/opencode/src/kilocode/atomic-chat-feature.ts
+new file mode 100644
+index 00000000000..daef896213b
+--- /dev/null
++++ b/packages/opencode/src/kilocode/atomic-chat-feature.ts
+@@ -0,0 +1,37 @@
++import { pathToFileURL } from "url"
++import { ATOMIC_CHAT_PLUGIN } from "@kilocode/plugin-atomic-chat"
++
++type PluginSpec = string | [string, Record<string, unknown>]
++
++type Req = {
++  resolve: (id: string) => string
++}
++
++type LogLike = {
++  debug: (msg: string, data?: Record<string, unknown>) => void
++}
++
++export function hasAtomicChatPlugin(plugins: readonly PluginSpec[]): boolean {
++  return plugins.some((item) => {
++    const spec = typeof item === "string" ? item : item[0]
++    return spec.includes("plugin-atomic-chat") || spec === ATOMIC_CHAT_PLUGIN
++  })
++}
++
++export function resolveAtomicChatPlugin(req: Req, log?: LogLike): string {
++  try {
++    const file = req.resolve(ATOMIC_CHAT_PLUGIN)
++    return pathToFileURL(file).href
++  } catch (err) {
++    const error = err instanceof Error ? err.message : String(err)
++    log?.debug("failed to resolve atomic chat plugin package, using package marker", { error })
++    return ATOMIC_CHAT_PLUGIN
++  }
++}
++
++export function ensureAtomicChatPlugin(items: readonly PluginSpec[], plugin?: string): PluginSpec[] {
++  const plugins = [...items]
++  if (!plugin) return plugins
++  if (hasAtomicChatPlugin(plugins)) return plugins
++  return [...plugins, plugin]
++}
+diff --git a/packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx b/packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx
+index 1b38f8b0d43..21912638987 100644
+--- a/packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx
++++ b/packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx
+@@ -67,6 +67,15 @@ export const PROVIDER_TITLES: Record<string, string> = {
+   openai: "OpenAI / Codex",
+ }
+ 
++/** Local OpenAI-compatible providers where API key is optional (localhost). */
++export const LOCAL_OPTIONAL_API_KEY = new Set(["atomic-chat", "lmstudio"])
++
++export function isLocalOptionalApiKey(providerID: string) {
++  return LOCAL_OPTIONAL_API_KEY.has(providerID)
++}
++
++export const LOCAL_API_KEY_PLACEHOLDER = "local"
++
+ // ---------------------------------------------------------------------------
+ // Auto-method renderer
+ // ---------------------------------------------------------------------------
+@@ -113,6 +122,13 @@ export function renderApiDescription(
+   providerID: string,
+   theme: { textMuted: RGBA; text: RGBA; primary: RGBA },
+ ): (() => JSX.Element) | undefined {
++  if (providerID === "atomic-chat") {
++    return () => (
++      <text fg={theme.textMuted}>
++        Connect to Atomic Chat on this machine (default http://127.0.0.1:1337). Leave API key empty for local server.
++      </text>
++    )
++  }
+   if (providerID !== "kilo") return undefined
+   return () => (
+     <box gap={1}>
+@@ -125,3 +141,7 @@ export function renderApiDescription(
+     </box>
+   )
+ }
++
++export function apiKeyPlaceholder(providerID: string) {
++  return isLocalOptionalApiKey(providerID) ? "Optional for localhost" : "API key"
++}
+diff --git a/packages/opencode/src/kilocode/config/default-plugins.ts b/packages/opencode/src/kilocode/config/default-plugins.ts
+index 393226f93e0..004f1824af6 100644
+--- a/packages/opencode/src/kilocode/config/default-plugins.ts
++++ b/packages/opencode/src/kilocode/config/default-plugins.ts
+@@ -1,5 +1,6 @@
+ import { createRequire } from "module"
+ import type { ConfigPlugin } from "@/config/plugin"
++import { ensureAtomicChatPlugin, resolveAtomicChatPlugin } from "@/kilocode/atomic-chat-feature"
+ import { ensureIndexingPlugin, resolveIndexingPlugin } from "@/kilocode/indexing-feature"
+ 
+ type Log = {
+@@ -13,17 +14,37 @@ export namespace KilocodeDefaultPlugins {
+     cfg: T,
+     opts: { disabled: boolean; log?: Log },
+   ): T {
+-    const before = cfg.plugin ?? []
+-    const plugin = opts.disabled ? undefined : resolveIndexingPlugin(req, opts.log)
+-    const after = ensureIndexingPlugin(before, plugin)
+-    if (after.length > before.length) {
+-      const added = after[after.length - 1]
+-      cfg.plugin_origins = [
+-        ...(cfg.plugin_origins ?? []),
+-        { spec: added, source: "builtin", scope: "global" as ConfigPlugin.Scope },
+-      ]
++    let plugins = cfg.plugin ?? []
++    const origins = [...(cfg.plugin_origins ?? [])]
++
++    if (!opts.disabled) {
++      const indexingPlugin = resolveIndexingPlugin(req, opts.log)
++      const beforeIndexing = plugins.length
++      plugins = ensureIndexingPlugin(plugins, indexingPlugin)
++      if (plugins.length > beforeIndexing) {
++        origins.push({
++          spec: plugins[plugins.length - 1]!,
++          source: "builtin",
++          scope: "global" as ConfigPlugin.Scope,
++        })
++      }
++
++      const atomicChatPlugin = resolveAtomicChatPlugin(req, opts.log)
++      const beforeAtomic = plugins.length
++      plugins = ensureAtomicChatPlugin(plugins, atomicChatPlugin)
++      if (plugins.length > beforeAtomic) {
++        origins.push({
++          spec: plugins[plugins.length - 1]!,
++          source: "builtin",
++          scope: "global" as ConfigPlugin.Scope,
++        })
++      }
++    }
++
++    cfg.plugin = plugins
++    if (origins.length > (cfg.plugin_origins ?? []).length) {
++      cfg.plugin_origins = origins
+     }
+-    cfg.plugin = after
+     return cfg
+   }
+ }
+diff --git a/packages/opencode/src/plugin/index.ts b/packages/opencode/src/plugin/index.ts
+index 6c4c3a8081e..f72c67ed375 100644
+--- a/packages/opencode/src/plugin/index.ts
++++ b/packages/opencode/src/plugin/index.ts
+@@ -92,7 +92,8 @@ function getLegacyPlugins(mod: Record<string, unknown>) {
+     if (seen.has(entry)) continue
+     seen.add(entry)
+     const plugin = getServerPlugin(entry)
+-    if (!plugin) throw new TypeError("Plugin export is not a function")
++    // kilocode_change: skip named exports (e.g. constants from @kilocode/plugin-atomic-chat)
++    if (!plugin) continue
+     result.push(plugin)
+   }
+ 
+diff --git a/packages/opencode/test/kilocode/config/atomic-chat-default-plugin.test.ts b/packages/opencode/test/kilocode/config/atomic-chat-default-plugin.test.ts
+new file mode 100644
+index 00000000000..24806d65236
+--- /dev/null
++++ b/packages/opencode/test/kilocode/config/atomic-chat-default-plugin.test.ts
+@@ -0,0 +1,24 @@
++import { describe, expect, test } from "bun:test"
++import { hasAtomicChatPlugin } from "@/kilocode/atomic-chat-feature"
++import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins"
++
++describe("kilocode default atomic chat plugin", () => {
++  test("apply adds atomic chat plugin when default plugins are enabled", () => {
++    const cfg = { plugin: [] as string[] }
++    KilocodeDefaultPlugins.apply(cfg, { disabled: false })
++    expect(hasAtomicChatPlugin(cfg.plugin ?? [])).toBe(true)
++  })
++
++  test("apply does not add atomic chat plugin when default plugins are disabled", () => {
++    const cfg = { plugin: ["global-plugin-1"] as string[] }
++    KilocodeDefaultPlugins.apply(cfg, { disabled: true })
++    expect(hasAtomicChatPlugin(cfg.plugin ?? [])).toBe(false)
++    expect(cfg.plugin).toEqual(["global-plugin-1"])
++  })
++
++  test("apply does not duplicate atomic chat plugin", () => {
++    const cfg = { plugin: ["@kilocode/plugin-atomic-chat"] as string[] }
++    KilocodeDefaultPlugins.apply(cfg, { disabled: false })
++    expect(cfg.plugin?.filter((p) => hasAtomicChatPlugin([p])).length).toBe(1)
++  })
++})
+diff --git a/packages/opencode/test/tool/fixtures/models-api.json b/packages/opencode/test/tool/fixtures/models-api.json
+index 5a3eb7e8010..d560eced207 100644
+--- a/packages/opencode/test/tool/fixtures/models-api.json
++++ b/packages/opencode/test/tool/fixtures/models-api.json
+@@ -17742,6 +17742,91 @@
+       }
+     }
+   },
++  "atomic-chat": {
++    "id": "atomic-chat",
++    "env": ["ATOMIC_CHAT_API_KEY"],
++    "npm": "@ai-sdk/openai-compatible",
++    "api": "http://127.0.0.1:1337/v1",
++    "name": "Atomic Chat",
++    "doc": "https://atomic.chat",
++    "models": {
++      "gemma-4-E4B-it-IQ4_XS": {
++        "id": "gemma-4-E4B-it-IQ4_XS",
++        "name": "Gemma 4 E4B Instruct (IQ4_XS)",
++        "family": "gemma",
++        "attachment": false,
++        "reasoning": false,
++        "tool_call": false,
++        "temperature": true,
++        "release_date": "2026-04-02",
++        "last_updated": "2026-04-02",
++        "modalities": {"input":["text"],"output":["text"]},
++        "open_weights": true,
++        "cost": {"input":0,"output":0},
++        "limit": {"context":32768,"output":8192}
++      },
++      "gemma-4-E4B-it-MLX-4bit": {
++        "id": "gemma-4-E4B-it-MLX-4bit",
++        "name": "Gemma 4 E4B Instruct (MLX 4-bit)",
++        "family": "gemma",
++        "attachment": false,
++        "reasoning": false,
++        "tool_call": false,
++        "temperature": true,
++        "release_date": "2026-04-02",
++        "last_updated": "2026-04-02",
++        "modalities": {"input":["text"],"output":["text"]},
++        "open_weights": true,
++        "cost": {"input":0,"output":0},
++        "limit": {"context":32768,"output":8192}
++      },
++      "Qwen3_5-9B-Q4_K_M": {
++        "id": "Qwen3_5-9B-Q4_K_M",
++        "name": "Qwen 3.5 9B (Q4_K_M)",
++        "family": "qwen",
++        "attachment": true,
++        "reasoning": false,
++        "tool_call": true,
++        "temperature": true,
++        "release_date": "2026-03-05",
++        "last_updated": "2026-04-04",
++        "modalities": {"input":["text","image"],"output":["text"]},
++        "open_weights": true,
++        "cost": {"input":0,"output":0},
++        "limit": {"context":32768,"output":8192}
++      },
++      "Meta-Llama-3_1-8B-Instruct-GGUF": {
++        "id": "Meta-Llama-3_1-8B-Instruct-GGUF",
++        "name": "Meta Llama 3.1 8B Instruct (GGUF)",
++        "family": "llama",
++        "attachment": false,
++        "reasoning": false,
++        "tool_call": true,
++        "temperature": true,
++        "release_date": "2024-07-23",
++        "last_updated": "2024-07-23",
++        "modalities": {"input":["text"],"output":["text"]},
++        "open_weights": true,
++        "cost": {"input":0,"output":0},
++        "limit": {"context":131072,"output":4096}
++      },
++      "Qwen3_5-9B-MLX-4bit": {
++        "id": "Qwen3_5-9B-MLX-4bit",
++        "name": "Qwen 3.5 9B (MLX 4-bit)",
++        "family": "qwen",
++        "attachment": true,
++        "reasoning": false,
++        "tool_call": true,
++        "temperature": true,
++        "release_date": "2026-03-05",
++        "last_updated": "2026-04-04",
++        "modalities": {"input":["text","image"],"output":["text"]},
++        "open_weights": true,
++        "cost": {"input":0,"output":0},
++        "limit": {"context":32768,"output":8192}
++      }
++    }
++  },
+   "lmstudio": {
+     "id": "lmstudio",
+     "env": ["LMSTUDIO_API_KEY"],
+diff --git a/packages/plugin-atomic-chat/package.json b/packages/plugin-atomic-chat/package.json
+new file mode 100644
+index 00000000000..60eed149db9
+--- /dev/null
++++ b/packages/plugin-atomic-chat/package.json
+@@ -0,0 +1,34 @@
++{
++  "$schema": "https://json.schemastore.org/package.json",
++  "name": "@kilocode/plugin-atomic-chat",
++  "version": "0.1.0",
++  "description": "Kilo Code plugin for Atomic Chat: auto-detection and dynamic model discovery (OpenAI-compatible local API)",
++  "type": "module",
++  "license": "MIT",
++  "exports": {
++    ".": "./src/index.ts"
++  },
++  "files": [
++    "src"
++  ],
++  "scripts": {
++    "typecheck": "tsgo --noEmit",
++    "test": "vitest run",
++    "test:watch": "vitest"
++  },
++  "dependencies": {
++    "@kilocode/plugin": "workspace:*"
++  },
++  "devDependencies": {
++    "@tsconfig/node22": "catalog:",
++    "@types/node": "catalog:",
++    "typescript": "catalog:",
++    "@typescript/native-preview": "catalog:",
++    "vitest": "^4.0.16"
++  },
++  "repository": {
++    "type": "git",
++    "url": "https://github.com/Kilo-Org/kilocode",
++    "directory": "packages/plugin-atomic-chat"
++  }
++}
+diff --git a/packages/plugin-atomic-chat/src/cache/model-status-cache.ts b/packages/plugin-atomic-chat/src/cache/model-status-cache.ts
+new file mode 100644
+index 00000000000..5b176c78696
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/cache/model-status-cache.ts
+@@ -0,0 +1,105 @@
++import type { CacheStats } from '../types'
++import { LOG_PREFIX } from '../constants'
++
++export class ModelStatusCache {
++  private cache = new Map<
++    string,
++    {
++      models: string[]
++      timestamp: number
++      ttl: number
++    }
++  >()
++
++  private readonly DEFAULT_TTL = 15000
++  private readonly MAX_CACHE_SIZE = 50
++
++  async getModels(baseURL: string, fetchFn: () => Promise<string[]>): Promise<string[]> {
++    const now = Date.now()
++    const cached = this.cache.get(baseURL)
++
++    if (cached && now - cached.timestamp < cached.ttl) {
++      return cached.models
++    }
++
++    try {
++      const models = await fetchFn()
++      this.cache.set(baseURL, {
++        models: [...models],
++        timestamp: now,
++        ttl: this.DEFAULT_TTL,
++      })
++
++      if (this.cache.size > this.MAX_CACHE_SIZE) {
++        this.cleanup()
++      }
++
++      return models
++    } catch (error) {
++      if (cached) {
++        console.warn(`${LOG_PREFIX} Using stale cache data due to fetch error`, {
++          baseURL,
++          age: now - cached.timestamp,
++          error: error instanceof Error ? error.message : String(error),
++        })
++        if (now - cached.timestamp > cached.ttl * 5) {
++          this.invalidate(baseURL)
++        }
++        return cached.models
++      }
++      throw error
++    }
++  }
++
++  invalidate(baseURL: string): void {
++    this.cache.delete(baseURL)
++  }
++
++  invalidateAll(): void {
++    this.cache.clear()
++  }
++
++  async forceRefresh(baseURL: string, fetchFn: () => Promise<string[]>): Promise<string[]> {
++    this.invalidate(baseURL)
++    return this.getModels(baseURL, fetchFn)
++  }
++
++  getStats(): CacheStats {
++    const now = Date.now()
++    return {
++      size: this.cache.size,
++      entries: Array.from(this.cache.entries()).map(([baseURL, data]) => ({
++        baseURL,
++        age: now - data.timestamp,
++        modelCount: data.models.length,
++        ttl: data.ttl,
++      })),
++    }
++  }
++
++  private cleanup(): void {
++    const now = Date.now()
++    const toDelete: string[] = []
++
++    for (const [baseURL, data] of this.cache.entries()) {
++      if (now - data.timestamp > data.ttl * 5 || this.cache.size > this.MAX_CACHE_SIZE) {
++        toDelete.push(baseURL)
++      }
++    }
++
++    toDelete.forEach((baseURL) => this.cache.delete(baseURL))
++  }
++
++  setTTL(baseURL: string, ttl: number): void {
++    const cached = this.cache.get(baseURL)
++    if (cached) {
++      cached.ttl = ttl
++    }
++  }
++
++  isValid(baseURL: string): boolean {
++    const cached = this.cache.get(baseURL)
++    const now = Date.now()
++    return cached !== undefined && now - cached.timestamp < cached.ttl
++  }
++}
+diff --git a/packages/plugin-atomic-chat/src/constants.ts b/packages/plugin-atomic-chat/src/constants.ts
+new file mode 100644
+index 00000000000..e7fa6aa9f7e
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/constants.ts
+@@ -0,0 +1,11 @@
++/** Provider id and `kilo.json` key (see https://atomic.chat and models.dev). */
++export const ATOMIC_CHAT_PROVIDER_KEY = 'atomic-chat' as const
++
++export const DEFAULT_ATOMIC_CHAT_ORIGIN = 'http://127.0.0.1:1337'
++
++/** Ports tried when auto-detecting a running Atomic Chat API (default is 1337). */
++export const ATOMIC_CHAT_PROBE_PORTS = [1337, 1338] as const
++
++export const LOG_PREFIX = '[@kilocode/plugin-atomic-chat]' as const
++
++export const ATOMIC_CHAT_PLUGIN = '@kilocode/plugin-atomic-chat' as const
+diff --git a/packages/plugin-atomic-chat/src/index.ts b/packages/plugin-atomic-chat/src/index.ts
+new file mode 100644
+index 00000000000..375dabcbfa5
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/index.ts
+@@ -0,0 +1,12 @@
++import { AtomicChatPlugin } from './plugin'
++
++export { AtomicChatPlugin }
++export {
++  ATOMIC_CHAT_PROVIDER_KEY,
++  ATOMIC_CHAT_PLUGIN,
++  DEFAULT_ATOMIC_CHAT_ORIGIN,
++  ATOMIC_CHAT_PROBE_PORTS,
++  LOG_PREFIX,
++} from './constants'
++
++export default AtomicChatPlugin
+diff --git a/packages/plugin-atomic-chat/src/plugin/auth-hook.ts b/packages/plugin-atomic-chat/src/plugin/auth-hook.ts
+new file mode 100644
+index 00000000000..5ccc0bb1a4e
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/plugin/auth-hook.ts
+@@ -0,0 +1,14 @@
++import type { Hooks } from '@kilocode/plugin'
++import { ATOMIC_CHAT_PROVIDER_KEY } from '../constants'
++
++export function createAuthHook(): NonNullable<Hooks['auth']> {
++  return {
++    provider: ATOMIC_CHAT_PROVIDER_KEY,
++    methods: [
++      {
++        type: 'api',
++        label: 'Local server',
++      },
++    ],
++  }
++}
+diff --git a/packages/plugin-atomic-chat/src/plugin/chat-params-hook.ts b/packages/plugin-atomic-chat/src/plugin/chat-params-hook.ts
+new file mode 100644
+index 00000000000..63dfdf7d0d0
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/plugin/chat-params-hook.ts
+@@ -0,0 +1,144 @@
++import { ModelStatusCache } from '../cache/model-status-cache'
++import { ToastNotifier } from '../ui/toast-notifier'
++import { findSimilarModels, retryWithBackoff, categorizeError, generateAutoFixSuggestions } from '../utils'
++import { getLoadedModels } from './get-loaded-models'
++import { normalizeBaseURL } from '../utils/atomic-chat-api'
++import { safeAsyncOperation, isPluginHookInput, isAtomicChatProvider, isValidModel } from '../utils/validation'
++import { DEFAULT_ATOMIC_CHAT_ORIGIN, LOG_PREFIX } from '../constants'
++
++const modelStatusCache = new ModelStatusCache()
++
++export function createChatParamsHook(toastNotifier: ToastNotifier) {
++  return async (input: any, output: any) => {
++    if (!isPluginHookInput(input)) {
++      console.error(`${LOG_PREFIX} Invalid chat.params input`)
++      return
++    }
++
++    const { sessionID, agent, model, provider } = input
++
++    if (!isValidModel(model)) {
++      console.error(`${LOG_PREFIX} Invalid model object`)
++      return
++    }
++
++    if (!isAtomicChatProvider(provider)) {
++      return
++    }
++
++    void sessionID
++    void agent
++
++    const baseURL = normalizeBaseURL(provider.options?.baseURL || DEFAULT_ATOMIC_CHAT_ORIGIN)
++
++    await safeAsyncOperation(
++      () => toastNotifier.progress(`Checking model ${model.id}...`, 'Model Validation', 10),
++      undefined,
++      (error: Error) => console.warn(`${LOG_PREFIX} Failed to show progress toast:`, error)
++    )
++
++    const validationResult = await retryWithBackoff(
++      async () => {
++        const loadedModels = await getLoadedModels(baseURL)
++        const isModelLoaded = loadedModels.includes(model.id)
++        if (!isModelLoaded) {
++          throw new Error(`Model '${model.id}' not loaded`)
++        }
++        return loadedModels
++      },
++      2,
++      500
++    )
++
++    if (!validationResult.success || !validationResult.result) {
++      const errorCategory = categorizeError(validationResult.error || 'Validation operation failed', {
++        baseURL,
++        modelId: model.id,
++      })
++      const autoFixSuggestions = generateAutoFixSuggestions(errorCategory)
++
++      console.warn(`${LOG_PREFIX} Model validation failed`, {
++        model: model.id,
++        error: validationResult.error,
++        errorType: errorCategory.type,
++        baseURL,
++      })
++
++      let availableModels: string[] = []
++      try {
++        availableModels = await getLoadedModels(baseURL)
++      } catch (e) {
++        console.warn(`${LOG_PREFIX} Failed to get available models for suggestions`, { error: e })
++      }
++
++      const similarModels = findSimilarModels(model.id, availableModels)
++
++      await toastNotifier.error(
++        `Model '${model.id}' not ready: ${errorCategory.message}`,
++        'Model Validation Failed',
++        8000
++      )
++
++      if (!output.options) {
++        output.options = {}
++      }
++      output.options.atomicChatValidation = {
++        status: 'error',
++        model: model.id,
++        availableModels,
++        errorCategory: errorCategory.type,
++        severity: errorCategory.severity,
++        message: errorCategory.message,
++        canRetry: errorCategory.canRetry,
++        autoFixAvailable: errorCategory.autoFixAvailable,
++        autoFixSuggestions,
++        steps:
++          errorCategory.type === 'not_found'
++            ? [
++                '1. Open Atomic Chat',
++                '2. Load the model you want to use',
++                '3. Confirm curl http://127.0.0.1:1337/v1/models lists that model id',
++                '4. Retry in Kilo Code',
++              ]
++            : [
++                '1. Ensure Atomic Chat is running',
++                '2. Verify the API URL in kilo.json matches Atomic Chat settings',
++                '3. Retry your request',
++              ],
++        similarModels: similarModels.map((item) => ({
++          model: item.model,
++          similarity: Math.round(item.similarity * 100),
++          reason: item.reason,
++        })),
++      }
++    } else {
++      const cacheStats = modelStatusCache.getStats()
++      const cacheEntry = cacheStats.entries.find((entry) => entry.baseURL === baseURL)
++      const cacheAge = cacheEntry ? cacheEntry.age : 0
++      const loadedModels = validationResult.result || []
++
++      await toastNotifier.success(`Model '${model.id}' is ready to use`, 'Model Validated')
++
++      if (!output.options) {
++        output.options = {}
++      }
++      output.options.atomicChatValidation = {
++        status: 'success',
++        model: model.id,
++        availableModels: loadedModels,
++        message: `Model '${model.id}' is listed by Atomic Chat and ready.`,
++        cacheInfo: {
++          age: cacheAge,
++          valid: modelStatusCache.isValid(baseURL),
++          totalCacheEntries: cacheStats.size,
++        },
++        performanceHint:
++          loadedModels.length > 1
++            ? `Note: ${loadedModels.length} models reported. Unload unused models in Atomic Chat if performance suffers.`
++            : cacheAge > 20000
++              ? `Cache is ${Math.round(cacheAge / 1000)}s old; refresh if model status seems wrong.`
++              : undefined,
++      }
++    }
++  }
++}
+diff --git a/packages/plugin-atomic-chat/src/plugin/config-hook.ts b/packages/plugin-atomic-chat/src/plugin/config-hook.ts
+new file mode 100644
+index 00000000000..f9ba80d3e69
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/plugin/config-hook.ts
+@@ -0,0 +1,76 @@
++import { ToastNotifier } from '../ui/toast-notifier'
++import { validateConfig } from '../utils/validation'
++import { enhanceConfig } from './enhance-config'
++import type { PluginInput } from '@kilocode/plugin'
++import { ATOMIC_CHAT_PROVIDER_KEY, LOG_PREFIX } from '../constants'
++
++export function createConfigHook(client: PluginInput['client'], toastNotifier: ToastNotifier) {
++  return async (config: any) => {
++    const section = config?.provider?.[ATOMIC_CHAT_PROVIDER_KEY]
++    const initialModelCount = section?.models ? Object.keys(section.models).length : 0
++
++    if (config && (Object.isFrozen?.(config) || Object.isSealed?.(config))) {
++      console.warn(`${LOG_PREFIX} Config object is frozen/sealed - cannot modify directly`)
++      return
++    }
++
++    const validation = validateConfig(config)
++    if (!validation.isValid) {
++      console.error(`${LOG_PREFIX} Invalid config provided:`, validation.errors)
++      toastNotifier.error('Plugin configuration is invalid', 'Configuration Error').catch(() => {})
++      return
++    }
++
++    if (validation.warnings.length > 0) {
++      console.warn(`${LOG_PREFIX} Config warnings:`, validation.warnings)
++    }
++
++    if (!section) {
++      try {
++        const response = await fetch(`http://127.0.0.1:1337/v1/models`, {
++          method: 'GET',
++          signal: AbortSignal.timeout(1000),
++        })
++        if (response.ok) {
++          if (!config.provider) {
++            config.provider = {}
++          }
++          if (!config.provider[ATOMIC_CHAT_PROVIDER_KEY]) {
++            config.provider[ATOMIC_CHAT_PROVIDER_KEY] = {
++              npm: '@ai-sdk/openai-compatible',
++              name: 'Atomic Chat (local)',
++              options: {
++                baseURL: 'http://127.0.0.1:1337/v1',
++              },
++              models: {},
++            }
++          }
++        }
++      } catch {
++        // enhanceConfig / auto-detect will handle
++      }
++    }
++
++    const discoveryPromise = enhanceConfig(config, client, toastNotifier)
++    const timeoutMs = 5000
++    try {
++      await Promise.race([
++        discoveryPromise,
++        new Promise<void>((resolve) => {
++          setTimeout(() => resolve(), timeoutMs)
++        }),
++      ])
++    } catch (error) {
++      console.error(`${LOG_PREFIX} Config enhancement failed:`, error)
++    }
++
++    const finalSection = config?.provider?.[ATOMIC_CHAT_PROVIDER_KEY]
++    const finalModelCount = finalSection?.models ? Object.keys(finalSection.models).length : 0
++
++    if (finalModelCount === 0 && finalSection) {
++      console.warn(`${LOG_PREFIX} No models discovered — Atomic Chat may be offline or no model loaded`)
++    } else if (finalModelCount > 0) {
++      console.log(`${LOG_PREFIX} Loaded ${finalModelCount} models (was ${initialModelCount})`)
++    }
++  }
++}
+diff --git a/packages/plugin-atomic-chat/src/plugin/enhance-config.ts b/packages/plugin-atomic-chat/src/plugin/enhance-config.ts
+new file mode 100644
+index 00000000000..49e3be929ed
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/plugin/enhance-config.ts
+@@ -0,0 +1,142 @@
++import { ModelStatusCache } from '../cache/model-status-cache'
++import { ToastNotifier } from '../ui/toast-notifier'
++import { categorizeModel, formatModelName, extractModelOwner } from '../utils'
++import {
++  normalizeBaseURL,
++  checkAtomicChatHealth,
++  discoverAtomicChatModels,
++  autoDetectAtomicChat,
++} from '../utils/atomic-chat-api'
++import type { PluginInput } from '@kilocode/plugin'
++import type { AtomicChatModel } from '../types'
++import { ATOMIC_CHAT_PROVIDER_KEY, LOG_PREFIX } from '../constants'
++
++const modelStatusCache = new ModelStatusCache()
++
++function getAtomicSection(config: any) {
++  return config?.provider?.[ATOMIC_CHAT_PROVIDER_KEY]
++}
++
++function setAtomicSection(config: any, value: Record<string, unknown>) {
++  if (!config.provider) {
++    config.provider = {}
++  }
++  config.provider[ATOMIC_CHAT_PROVIDER_KEY] = value
++}
++
++export async function enhanceConfig(
++  config: any,
++  _client: PluginInput['client'],
++  toastNotifier: ToastNotifier
++): Promise<void> {
++  try {
++    let atomicProvider = getAtomicSection(config)
++    let baseURL: string
++
++    if (atomicProvider) {
++      baseURL = normalizeBaseURL(atomicProvider.options?.baseURL || 'http://127.0.0.1:1337')
++    } else {
++      const detectedURL = await autoDetectAtomicChat()
++      if (!detectedURL) {
++        return
++      }
++      baseURL = detectedURL
++      setAtomicSection(config, {
++        npm: '@ai-sdk/openai-compatible',
++        name: 'Atomic Chat (local)',
++        options: {
++          baseURL: `${baseURL}/v1`,
++        },
++        models: {},
++      })
++      atomicProvider = getAtomicSection(config)
++    }
++
++    const isHealthy = await checkAtomicChatHealth(baseURL)
++    if (!isHealthy) {
++      console.warn(`${LOG_PREFIX} Atomic Chat API appears unreachable`, { baseURL })
++      return
++    }
++
++    let models: AtomicChatModel[]
++    try {
++      models = await discoverAtomicChatModels(baseURL)
++    } catch (error) {
++      console.warn(`${LOG_PREFIX} Model discovery failed`, {
++        error: error instanceof Error ? error.message : String(error),
++      })
++      return
++    }
++
++    if (models.length > 0) {
++      const existingModels = atomicProvider.models || {}
++      const discoveredModels: Record<string, any> = {}
++      let chatModelsCount = 0
++      let embeddingModelsCount = 0
++
++      for (const model of models) {
++        let modelKey = model.id
++        if (!/^[a-zA-Z0-9_-]+$/.test(modelKey)) {
++          modelKey = model.id.replace(/[^a-zA-Z0-9_-]/g, '_')
++        }
++
++        if (!existingModels[modelKey] && !existingModels[model.id]) {
++          const modelType = categorizeModel(model.id)
++          const owner = extractModelOwner(model.id)
++          const modelConfig: any = {
++            id: model.id,
++            name: formatModelName(model),
++          }
++
++          if (owner) {
++            modelConfig.organizationOwner = owner
++          }
++
++          if (modelType === 'embedding') {
++            embeddingModelsCount++
++            modelConfig.modalities = {
++              input: ['text'],
++              output: ['embedding'],
++            }
++          } else if (modelType === 'chat') {
++            chatModelsCount++
++            modelConfig.modalities = {
++              input: ['text', 'image'],
++              output: ['text'],
++            }
++          }
++
++          discoveredModels[modelKey] = modelConfig
++        }
++      }
++
++      if (Object.keys(discoveredModels).length > 0) {
++        const section = getAtomicSection(config)
++        if (!section) {
++          return
++        }
++        section.models = {
++          ...existingModels,
++          ...discoveredModels,
++        }
++
++        if (chatModelsCount === 0 && embeddingModelsCount > 0) {
++          console.warn(`${LOG_PREFIX} Only embedding-style models detected; load a chat model in Atomic Chat for coding agents.`)
++        }
++      }
++    } else {
++      console.warn(`${LOG_PREFIX} No models returned from Atomic Chat. Load a model and ensure the server is running.`)
++    }
++
++    try {
++      await modelStatusCache.getModels(baseURL, async () => {
++        return await discoverAtomicChatModels(baseURL).then((m) => m.map((x) => x.id))
++      })
++    } catch {
++      // non-fatal
++    }
++  } catch (error) {
++    console.error(`${LOG_PREFIX} Unexpected error in enhanceConfig:`, error)
++    toastNotifier.warning('Plugin configuration failed', 'Configuration Error').catch(() => {})
++  }
++}
+diff --git a/packages/plugin-atomic-chat/src/plugin/event-hook.ts b/packages/plugin-atomic-chat/src/plugin/event-hook.ts
+new file mode 100644
+index 00000000000..87309d0679a
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/plugin/event-hook.ts
+@@ -0,0 +1,16 @@
++import { validateHookInput } from '../utils/validation'
++import { LOG_PREFIX } from '../constants'
++
++export function createEventHook() {
++  return async ({ event }: { event: any }) => {
++    const validation = validateHookInput('event', { event })
++    if (!validation.isValid) {
++      console.error(`${LOG_PREFIX} Invalid event input:`, validation.errors)
++      return
++    }
++
++    if (event.type === 'session.created' || event.type === 'session.updated') {
++      // reserved for future health hooks
++    }
++  }
++}
+diff --git a/packages/plugin-atomic-chat/src/plugin/get-loaded-models.ts b/packages/plugin-atomic-chat/src/plugin/get-loaded-models.ts
+new file mode 100644
+index 00000000000..ac9463eafa0
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/plugin/get-loaded-models.ts
+@@ -0,0 +1,10 @@
++import { ModelStatusCache } from '../cache/model-status-cache'
++import { fetchModelsDirect } from '../utils/atomic-chat-api'
++
++const modelStatusCache = new ModelStatusCache()
++
++export function getLoadedModels(baseURL: string = 'http://127.0.0.1:1337'): Promise<string[]> {
++  return modelStatusCache.getModels(baseURL, async () => {
++    return await fetchModelsDirect(baseURL)
++  })
++}
+diff --git a/packages/plugin-atomic-chat/src/plugin/index.ts b/packages/plugin-atomic-chat/src/plugin/index.ts
+new file mode 100644
+index 00000000000..2d661fe8af0
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/plugin/index.ts
+@@ -0,0 +1,31 @@
++import type { Plugin, PluginInput } from '@kilocode/plugin'
++import { ToastNotifier } from '../ui/toast-notifier'
++import { createConfigHook } from './config-hook'
++import { createEventHook } from './event-hook'
++import { createChatParamsHook } from './chat-params-hook'
++import { createAuthHook } from './auth-hook'
++import { LOG_PREFIX } from '../constants'
++
++export const AtomicChatPlugin: Plugin = async (input: PluginInput) => {
++  console.log(`${LOG_PREFIX} Atomic Chat plugin initialized`)
++
++  const { client } = input
++
++  if (!client || typeof client !== 'object') {
++    console.error(`${LOG_PREFIX} Invalid client provided to plugin`)
++    return {
++      config: async () => {},
++      event: async () => {},
++      'chat.params': async () => {},
++    }
++  }
++
++  const toastNotifier = new ToastNotifier(client)
++
++  return {
++    auth: createAuthHook(),
++    config: createConfigHook(client, toastNotifier),
++    event: createEventHook(),
++    'chat.params': createChatParamsHook(toastNotifier),
++  }
++}
+diff --git a/packages/plugin-atomic-chat/src/types/index.ts b/packages/plugin-atomic-chat/src/types/index.ts
+new file mode 100644
+index 00000000000..deeabde4547
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/types/index.ts
+@@ -0,0 +1,47 @@
++// OpenAI-compatible /v1/models entry
++export interface AtomicChatModel {
++  id: string
++  object: string
++  created: number
++  owned_by: string
++}
++
++export interface AtomicChatModelsResponse {
++  object: string
++  data: AtomicChatModel[]
++}
++
++export type ModelType = 'chat' | 'embedding' | 'unknown'
++
++export type LoadingStatus = 'not_loaded' | 'loading' | 'loaded' | 'error'
++
++export interface ModelValidationError {
++  type: 'offline' | 'not_found' | 'network' | 'permission' | 'timeout' | 'unknown'
++  severity: 'low' | 'medium' | 'high' | 'critical'
++  message: string
++  canRetry: boolean
++  autoFixAvailable: boolean
++}
++
++export interface AutoFixSuggestion {
++  action: string
++  command?: string
++  steps?: string[]
++  automated: boolean
++}
++
++export interface SimilarModel {
++  model: string
++  similarity: number
++  reason: string
++}
++
++export interface CacheStats {
++  size: number
++  entries: Array<{
++    baseURL: string
++    age: number
++    modelCount: number
++    ttl: number
++  }>
++}
+diff --git a/packages/plugin-atomic-chat/src/ui/toast-notifier.ts b/packages/plugin-atomic-chat/src/ui/toast-notifier.ts
+new file mode 100644
+index 00000000000..57afe86d8eb
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/ui/toast-notifier.ts
+@@ -0,0 +1,81 @@
++import { LOG_PREFIX } from '../constants'
++
++export class ToastNotifier {
++  constructor(private readonly client: any) {}
++
++  async success(message: string, title?: string, duration?: number): Promise<void> {
++    try {
++      if (!this.client?.tui?.showToast) {
++        console.warn(`${LOG_PREFIX} Toast API not available (client.tui.showToast missing)`)
++        return
++      }
++      await this.client.tui.showToast({
++        body: {
++          title,
++          message,
++          variant: 'success',
++          duration: duration || 3000,
++        },
++      })
++    } catch (error) {
++      console.error(`${LOG_PREFIX} Failed to show success toast`, error)
++    }
++  }
++
++  async error(message: string, title?: string, duration?: number): Promise<void> {
++    try {
++      if (!this.client?.tui?.showToast) {
++        console.warn(`${LOG_PREFIX} Toast API not available (client.tui.showToast missing)`)
++        return
++      }
++      await this.client.tui.showToast({
++        body: {
++          title,
++          message,
++          variant: 'error',
++          duration: duration || 5000,
++        },
++      })
++    } catch (error) {
++      console.error(`${LOG_PREFIX} Failed to show error toast`, error)
++    }
++  }
++
++  async warning(message: string, title?: string, duration?: number): Promise<void> {
++    try {
++      if (!this.client?.tui?.showToast) {
++        console.warn(`${LOG_PREFIX} Toast API not available (client.tui.showToast missing)`)
++        return
++      }
++      await this.client.tui.showToast({
++        body: {
++          title,
++          message,
++          variant: 'warning',
++          duration: duration || 4000,
++        },
++      })
++    } catch (error) {
++      console.error(`${LOG_PREFIX} Failed to show warning toast`, error)
++    }
++  }
++
++  async progress(message: string, title?: string, progress?: number): Promise<void> {
++    try {
++      if (!this.client?.tui?.showToast) {
++        console.warn(`${LOG_PREFIX} Toast API not available (client.tui.showToast missing)`)
++        return
++      }
++      await this.client.tui.showToast({
++        body: {
++          title,
++          message: progress !== undefined ? `${message} (${progress}%)` : message,
++          variant: 'info',
++          duration: progress !== undefined ? 0 : 2000,
++        },
++      })
++    } catch (error) {
++      console.error(`${LOG_PREFIX} Failed to show progress toast`, error)
++    }
++  }
++}
+diff --git a/packages/plugin-atomic-chat/src/utils/atomic-chat-api.ts b/packages/plugin-atomic-chat/src/utils/atomic-chat-api.ts
+new file mode 100644
+index 00000000000..53245de2714
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/utils/atomic-chat-api.ts
+@@ -0,0 +1,76 @@
++import type { AtomicChatModel, AtomicChatModelsResponse } from '../types'
++import { ATOMIC_CHAT_PROBE_PORTS, DEFAULT_ATOMIC_CHAT_ORIGIN } from '../constants'
++
++const MODELS_ENDPOINT = '/v1/models'
++
++export function normalizeBaseURL(baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN): string {
++  let normalized = baseURL.replace(/\/+$/, '')
++  if (normalized.endsWith('/v1')) {
++    normalized = normalized.slice(0, -3)
++  }
++  return normalized
++}
++
++export function buildAPIURL(baseURL: string, endpoint: string = MODELS_ENDPOINT): string {
++  const normalized = normalizeBaseURL(baseURL)
++  return `${normalized}${endpoint}`
++}
++
++export async function checkAtomicChatHealth(baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN): Promise<boolean> {
++  try {
++    const url = buildAPIURL(baseURL)
++    const response = await fetch(url, {
++      method: 'GET',
++      signal: AbortSignal.timeout(3000),
++    })
++    return response.ok
++  } catch {
++    return false
++  }
++}
++
++export async function discoverAtomicChatModels(baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN): Promise<AtomicChatModel[]> {
++  try {
++    const url = buildAPIURL(baseURL)
++    const response = await fetch(url, {
++      method: 'GET',
++      headers: { 'Content-Type': 'application/json' },
++      signal: AbortSignal.timeout(3000),
++    })
++    if (!response.ok) {
++      return []
++    }
++    const data = (await response.json()) as AtomicChatModelsResponse
++    return data.data ?? []
++  } catch (error) {
++    throw new Error(`Failed to discover models: ${error instanceof Error ? error.message : String(error)}`)
++  }
++}
++
++export async function fetchModelsDirect(baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN): Promise<string[]> {
++  try {
++    const url = buildAPIURL(baseURL)
++    const response = await fetch(url, {
++      method: 'GET',
++      signal: AbortSignal.timeout(3000),
++    })
++    if (!response.ok) {
++      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
++    }
++    const data = (await response.json()) as AtomicChatModelsResponse
++    return data.data?.map((model) => model.id) || []
++  } catch {
++    return []
++  }
++}
++
++export async function autoDetectAtomicChat(): Promise<string | null> {
++  for (const port of ATOMIC_CHAT_PROBE_PORTS) {
++    const baseURL = `http://127.0.0.1:${port}`
++    const ok = await checkAtomicChatHealth(baseURL)
++    if (ok) {
++      return baseURL
++    }
++  }
++  return null
++}
+diff --git a/packages/plugin-atomic-chat/src/utils/format-model-name.ts b/packages/plugin-atomic-chat/src/utils/format-model-name.ts
+new file mode 100644
+index 00000000000..d24fc37a14a
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/utils/format-model-name.ts
+@@ -0,0 +1,42 @@
++import type { AtomicChatModel } from '../types'
++
++export function extractModelOwner(modelId: string): string | undefined {
++  const parts = modelId.split('/')
++  if (parts.length > 1) {
++    return parts[0]
++  }
++  return undefined
++}
++
++export function formatModelName(model: AtomicChatModel): string {
++  const { id } = model
++  const parts = id.split('/')
++  const modelPart = parts.length > 1 ? parts[1] : parts[0]
++  const acronyms = new Set(['gpt', 'oss', 'api', 'gguf', 'ggml', 'nomic', 'vl', 'it', 'mlx'])
++
++  const tokens = modelPart
++    .split(/[-_]/)
++    .filter(Boolean)
++    .map((token) => {
++      const lowerToken = token.toLowerCase()
++      if (acronyms.has(lowerToken)) {
++        return token.toUpperCase()
++      }
++      if (/^\d+[bkmg]$/i.test(token)) {
++        return token.toUpperCase()
++      }
++      if (/^q\d+$/i.test(token)) {
++        return token.toUpperCase()
++      }
++      if (/^\d+\.\d+/.test(token)) {
++        return token
++      }
++      if (/^[a-z]\d+[a-z]$/i.test(token) || /^\d+[a-z]$/i.test(token)) {
++        return token.toUpperCase()
++      }
++      return token.charAt(0).toUpperCase() + token.slice(1).toLowerCase()
++    })
++    .join(' ')
++
++  return tokens
++}
+diff --git a/packages/plugin-atomic-chat/src/utils/index.ts b/packages/plugin-atomic-chat/src/utils/index.ts
+new file mode 100644
+index 00000000000..6dfc8d545c0
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/utils/index.ts
+@@ -0,0 +1,197 @@
++import type { ModelValidationError, AutoFixSuggestion, SimilarModel } from '../types'
++import { LOG_PREFIX } from '../constants'
++
++export { formatModelName, extractModelOwner } from './format-model-name'
++
++export function categorizeModel(modelId: string): 'chat' | 'embedding' | 'unknown' {
++  const lowerId = modelId.toLowerCase()
++  if (lowerId.includes('embedding') || lowerId.includes('embed')) {
++    return 'embedding'
++  }
++  if (
++    lowerId.includes('gpt') ||
++    lowerId.includes('llama') ||
++    lowerId.includes('claude') ||
++    lowerId.includes('qwen') ||
++    lowerId.includes('mistral') ||
++    lowerId.includes('gemma') ||
++    lowerId.includes('phi') ||
++    lowerId.includes('falcon') ||
++    lowerId.includes('deepseek')
++  ) {
++    return 'chat'
++  }
++  return 'unknown'
++}
++
++export function findSimilarModels(targetModel: string, availableModels: string[]): SimilarModel[] {
++  const target = targetModel.toLowerCase()
++  const targetTokens = target.split(/[-_\s]/).filter(Boolean)
++
++  return availableModels
++    .map((model) => {
++      const candidate = model.toLowerCase()
++      const candidateTokens = candidate.split(/[-_\s]/).filter(Boolean)
++      let similarity = 0
++      const reasons: string[] = []
++
++      if (candidate === target) {
++        similarity = 1.0
++        reasons.push('Exact match')
++      }
++
++      const targetPrefix = targetTokens[0]
++      const candidatePrefix = candidateTokens[0]
++      if (targetPrefix && candidatePrefix && targetPrefix === candidatePrefix) {
++        similarity += 0.5
++        reasons.push(`Same family: ${targetPrefix}`)
++      }
++
++      const commonSuffixes = ['3b', '7b', '13b', '70b', 'q4', 'q8', 'instruct', 'chat', 'base']
++      for (const suffix of commonSuffixes) {
++        if (target.includes(suffix) && candidate.includes(suffix)) {
++          similarity += 0.2
++          reasons.push(`Shared suffix: ${suffix}`)
++        }
++      }
++
++      const commonTokens = targetTokens.filter((token) => candidateTokens.includes(token))
++      if (commonTokens.length > 0) {
++        similarity += (commonTokens.length / Math.max(targetTokens.length, candidateTokens.length)) * 0.3
++        reasons.push(`Common tokens: ${commonTokens.join(', ')}`)
++      }
++
++      return {
++        model,
++        similarity: Math.min(similarity, 1.0),
++        reason: reasons.join(', '),
++      }
++    })
++    .filter((item) => item.similarity > 0.1)
++    .sort((a, b) => b.similarity - a.similarity)
++    .slice(0, 5)
++}
++
++export async function retryWithBackoff<T>(
++  operation: () => Promise<T>,
++  maxRetries: number = 3,
++  baseDelay: number = 1000
++): Promise<{ success: boolean; result?: T; error?: string }> {
++  for (let attempt = 0; attempt <= maxRetries; attempt++) {
++    try {
++      const result = await operation()
++      return { success: true, result }
++    } catch (error) {
++      if (attempt === maxRetries) {
++        return {
++          success: false,
++          error: error instanceof Error ? error.message : String(error),
++        }
++      }
++      const delay = baseDelay * Math.pow(2, attempt)
++      console.warn(`${LOG_PREFIX} Retrying operation after ${delay}ms`, {
++        attempt: attempt + 1,
++        maxRetries: maxRetries + 1,
++        error: error instanceof Error ? error.message : String(error),
++      })
++      await new Promise((resolve) => setTimeout(resolve, delay))
++    }
++  }
++  return { success: false, error: 'Max retries exceeded' }
++}
++
++export function categorizeError(error: unknown, context: { baseURL: string; modelId: string }): ModelValidationError {
++  const errorStr = String(error).toLowerCase()
++  const { baseURL, modelId } = context
++
++  if (errorStr.includes('econnrefused') || errorStr.includes('fetch failed') || errorStr.includes('network')) {
++    return {
++      type: 'offline',
++      severity: 'critical',
++      message: `Cannot reach Atomic Chat at ${baseURL}. Start Atomic Chat and enable the local OpenAI-compatible server.`,
++      canRetry: true,
++      autoFixAvailable: true,
++    }
++  }
++
++  if (errorStr.includes('timeout') || errorStr.includes('aborted')) {
++    return {
++      type: 'timeout',
++      severity: 'medium',
++      message: `Request to Atomic Chat timed out.`,
++      canRetry: true,
++      autoFixAvailable: false,
++    }
++  }
++
++  if (errorStr.includes('404') || errorStr.includes('not found')) {
++    return {
++      type: 'not_found',
++      severity: 'high',
++      message: `Model '${modelId}' not found. Load the model in Atomic Chat and confirm GET /v1/models lists it.`,
++      canRetry: false,
++      autoFixAvailable: false,
++    }
++  }
++
++  if (errorStr.includes('401') || errorStr.includes('403') || errorStr.includes('unauthorized')) {
++    return {
++      type: 'permission',
++      severity: 'high',
++      message: `Authentication or permission issue with Atomic Chat.`,
++      canRetry: false,
++      autoFixAvailable: false,
++    }
++  }
++
++  return {
++    type: 'unknown',
++    severity: 'medium',
++    message: `Unexpected error: ${errorStr}`,
++    canRetry: true,
++    autoFixAvailable: false,
++  }
++}
++
++export function generateAutoFixSuggestions(errorCategory: ModelValidationError): AutoFixSuggestion[] {
++  const suggestions: AutoFixSuggestion[] = []
++
++  switch (errorCategory.type) {
++    case 'offline':
++      suggestions.push({
++        action: 'Start Atomic Chat',
++        steps: [
++          '1. Open the Atomic Chat application',
++          '2. Ensure the local API server is running (default http://127.0.0.1:1337/v1)',
++          '3. Check firewall settings if the port is blocked',
++        ],
++        automated: false,
++      })
++      break
++    case 'not_found':
++      suggestions.push({
++        action: 'Load a model in Atomic Chat',
++        steps: [
++          '1. Open Atomic Chat',
++          '2. Download or select a model and load it',
++          '3. Run curl http://127.0.0.1:1337/v1/models to verify the model id',
++          '4. Retry in Kilo Code',
++        ],
++        automated: false,
++      })
++      break
++    case 'timeout':
++      suggestions.push({
++        action: 'Retry or reduce load',
++        steps: [
++          '1. Try a smaller / faster model',
++          '2. Close other heavy apps',
++          '3. Retry the request',
++        ],
++        automated: false,
++      })
++      break
++  }
++
++  return suggestions
++}
+diff --git a/packages/plugin-atomic-chat/src/utils/validation/index.ts b/packages/plugin-atomic-chat/src/utils/validation/index.ts
+new file mode 100644
+index 00000000000..69af870d5ee
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/utils/validation/index.ts
+@@ -0,0 +1,5 @@
++export type { ValidationResult } from './validation-result'
++export { validateConfig } from './validate-config'
++export { validateHookInput } from './validate-hook-input'
++export { isPluginHookInput, isAtomicChatProvider, isValidModel } from './type-guards'
++export { safeAsyncOperation } from './safe-operations'
+diff --git a/packages/plugin-atomic-chat/src/utils/validation/safe-operations.ts b/packages/plugin-atomic-chat/src/utils/validation/safe-operations.ts
+new file mode 100644
+index 00000000000..0891cc0a1c2
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/utils/validation/safe-operations.ts
+@@ -0,0 +1,13 @@
++export async function safeAsyncOperation<T>(
++  operation: () => Promise<T>,
++  fallback?: T,
++  onError?: (error: Error) => void
++): Promise<T | undefined> {
++  try {
++    return await operation()
++  } catch (error) {
++    const err = error instanceof Error ? error : new Error(String(error))
++    onError?.(err)
++    return fallback
++  }
++}
+diff --git a/packages/plugin-atomic-chat/src/utils/validation/type-guards.ts b/packages/plugin-atomic-chat/src/utils/validation/type-guards.ts
+new file mode 100644
+index 00000000000..5bfc29598a3
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/utils/validation/type-guards.ts
+@@ -0,0 +1,25 @@
++import { ATOMIC_CHAT_PROVIDER_KEY } from '../../constants'
++
++export function isPluginHookInput(input: any): input is {
++  sessionID?: string
++  agent?: string
++  model?: any
++  provider?: any
++  message?: any
++  event?: any
++} {
++  return input && typeof input === 'object'
++}
++
++export function isAtomicChatProvider(provider: any): boolean {
++  return (
++    provider &&
++    typeof provider === 'object' &&
++    provider.info &&
++    provider.info.id === ATOMIC_CHAT_PROVIDER_KEY
++  )
++}
++
++export function isValidModel(model: any): model is { id: string; [key: string]: any } {
++  return model && typeof model === 'object' && typeof model.id === 'string' && model.id.length > 0
++}
+diff --git a/packages/plugin-atomic-chat/src/utils/validation/validate-config.ts b/packages/plugin-atomic-chat/src/utils/validation/validate-config.ts
+new file mode 100644
+index 00000000000..b94e2335117
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/utils/validation/validate-config.ts
+@@ -0,0 +1,57 @@
++import type { ValidationResult } from './validation-result'
++import { ATOMIC_CHAT_PROVIDER_KEY } from '../../constants'
++
++export function validateConfig(config: any): ValidationResult {
++  const errors: string[] = []
++  const warnings: string[] = []
++
++  if (!config || typeof config !== 'object') {
++    errors.push('Config must be an object')
++    return { isValid: false, errors, warnings }
++  }
++
++  if (config.provider && typeof config.provider === 'object') {
++    const atomic = config.provider[ATOMIC_CHAT_PROVIDER_KEY]
++    if (atomic) {
++      if (!atomic.npm) {
++        atomic.npm = '@ai-sdk/openai-compatible'
++        warnings.push(`Atomic Chat provider missing npm field, auto-set to @ai-sdk/openai-compatible`)
++      }
++      if (!atomic.name) {
++        atomic.name = 'Atomic Chat (local)'
++        warnings.push('Atomic Chat provider missing name field, auto-set to "Atomic Chat (local)"')
++      }
++      if (!atomic.options) {
++        atomic.options = {}
++        warnings.push('Atomic Chat provider missing options field, auto-created empty options')
++      } else {
++        if (!atomic.options.baseURL) {
++          warnings.push('Atomic Chat provider missing baseURL, will use default')
++        } else if (typeof atomic.options.baseURL !== 'string') {
++          errors.push('Atomic Chat provider baseURL must be a string')
++        } else if (!isValidURL(atomic.options.baseURL)) {
++          warnings.push('Atomic Chat provider baseURL may be invalid')
++        }
++      }
++
++      if (atomic.models && typeof atomic.models !== 'object') {
++        errors.push('Atomic Chat provider models must be an object')
++      }
++    }
++  }
++
++  return {
++    isValid: errors.length === 0,
++    errors,
++    warnings,
++  }
++}
++
++function isValidURL(url: string): boolean {
++  try {
++    new URL(url)
++    return true
++  } catch {
++    return false
++  }
++}
+diff --git a/packages/plugin-atomic-chat/src/utils/validation/validate-hook-input.ts b/packages/plugin-atomic-chat/src/utils/validation/validate-hook-input.ts
+new file mode 100644
+index 00000000000..f659e507343
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/utils/validation/validate-hook-input.ts
+@@ -0,0 +1,47 @@
++import type { ValidationResult } from './validation-result'
++
++export function validateHookInput(hookName: string, input: any): ValidationResult {
++  const errors: string[] = []
++  const warnings: string[] = []
++
++  if (!input || typeof input !== 'object') {
++    errors.push(`${hookName}: Input must be an object`)
++    return { isValid: false, errors, warnings }
++  }
++
++  switch (hookName) {
++    case 'chat.params':
++      if (!input.sessionID || typeof input.sessionID !== 'string') {
++        errors.push('chat.params: sessionID is required and must be a string')
++      }
++      if (!input.model || typeof input.model !== 'object') {
++        errors.push('chat.params: model is required and must be an object')
++      } else {
++        if (!input.model.id || typeof input.model.id !== 'string') {
++          errors.push('chat.params: model.id is required and must be a string')
++        }
++      }
++      if (!input.provider || typeof input.provider !== 'object') {
++        errors.push('chat.params: provider is required and must be an object')
++      } else {
++        if (!input.provider.info || !input.provider.info.id) {
++          warnings.push('chat.params: provider.info.id is missing')
++        }
++      }
++      break
++
++    case 'event':
++      if (!input.event || typeof input.event !== 'object') {
++        errors.push('event: event is required and must be an object')
++      } else if (!input.event.type) {
++        warnings.push('event: event.type is missing')
++      }
++      break
++  }
++
++  return {
++    isValid: errors.length === 0,
++    errors,
++    warnings,
++  }
++}
+diff --git a/packages/plugin-atomic-chat/src/utils/validation/validation-result.ts b/packages/plugin-atomic-chat/src/utils/validation/validation-result.ts
+new file mode 100644
+index 00000000000..1235d33c7f6
+--- /dev/null
++++ b/packages/plugin-atomic-chat/src/utils/validation/validation-result.ts
+@@ -0,0 +1,5 @@
++export interface ValidationResult {
++  isValid: boolean
++  errors: string[]
++  warnings: string[]
++}
+diff --git a/packages/plugin-atomic-chat/test/plugin.test.ts b/packages/plugin-atomic-chat/test/plugin.test.ts
+new file mode 100644
+index 00000000000..d9694206db4
+--- /dev/null
++++ b/packages/plugin-atomic-chat/test/plugin.test.ts
+@@ -0,0 +1,252 @@
++import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
++import { AtomicChatPlugin } from '../src/index'
++import { ATOMIC_CHAT_PROVIDER_KEY } from '../src/constants'
++
++const mockFetch = vi.fn()
++global.fetch = mockFetch
++
++if (!global.AbortSignal.timeout) {
++  global.AbortSignal.timeout = vi.fn(() => {
++    const controller = new AbortController()
++    setTimeout(() => controller.abort(), 3000)
++    return controller.signal
++  })
++}
++
++describe('AtomicChatPlugin', () => {
++  let mockClient: any
++  let pluginHooks: any
++
++  beforeEach(async () => {
++    mockFetch.mockClear()
++    mockClient = {
++      tui: {
++        showToast: vi.fn().mockResolvedValue(true),
++      },
++    }
++    const mockInput: any = {
++      client: mockClient,
++      project: {
++        id: 'test-project',
++        name: 'test',
++        path: '/tmp',
++        worktree: '',
++        time: { created: Date.now() },
++      },
++      directory: '/tmp',
++      worktree: '',
++      $: vi.fn(),
++    }
++    pluginHooks = await AtomicChatPlugin(mockInput)
++  })
++
++  afterEach(() => {
++    vi.restoreAllMocks()
++  })
++
++  it('initializes hooks', async () => {
++    const mockInput: any = {
++      client: mockClient,
++      project: {
++        id: 'test-project',
++        name: 'test',
++        path: '/tmp',
++        worktree: '',
++        time: { created: Date.now() },
++      },
++      directory: '/tmp',
++      worktree: '',
++      $: vi.fn(),
++    }
++    const hooks = await AtomicChatPlugin(mockInput)
++    expect(hooks.config).toBeTypeOf('function')
++    expect(hooks.event).toBeTypeOf('function')
++    expect(hooks['chat.params']).toBeTypeOf('function')
++  })
++
++  it('registers optional local-server auth (no API key required)', async () => {
++    expect(pluginHooks.auth?.provider).toBe(ATOMIC_CHAT_PROVIDER_KEY)
++    expect(pluginHooks.auth?.methods[0]?.type).toBe('api')
++    expect(pluginHooks.auth?.methods[0]?.label).toBe('Local server')
++  })
++
++  it('handles invalid client', async () => {
++    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
++    const hooks = await AtomicChatPlugin({ client: null } as any)
++    expect(hooks.config).toBeTypeOf('function')
++    expect(consoleSpy).toHaveBeenCalledWith('[@kilocode/plugin-atomic-chat] Invalid client provided to plugin')
++    consoleSpy.mockRestore()
++  })
++
++  describe('config hook', () => {
++    it('rejects invalid config', async () => {
++      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
++      await pluginHooks.config(null)
++      expect(consoleSpy).toHaveBeenCalled()
++      consoleSpy.mockRestore()
++    })
++
++    it('auto-detects Atomic Chat when not configured', async () => {
++      mockFetch.mockResolvedValueOnce({ ok: true })
++      mockFetch.mockResolvedValueOnce({
++        ok: true,
++        json: async () => ({
++          data: [
++            { id: 'm1', object: 'model', created: 1, owned_by: 'local' },
++            { id: 'm2', object: 'model', created: 1, owned_by: 'local' },
++          ],
++        }),
++      })
++
++      const config: any = {}
++      await pluginHooks.config(config)
++
++      expect(config.provider?.[ATOMIC_CHAT_PROVIDER_KEY]).toBeDefined()
++      expect(config.provider[ATOMIC_CHAT_PROVIDER_KEY].npm).toBe('@ai-sdk/openai-compatible')
++      expect(config.provider[ATOMIC_CHAT_PROVIDER_KEY].options.baseURL).toBe('http://127.0.0.1:1337/v1')
++    })
++
++    it('merges discovered models', async () => {
++      mockFetch.mockResolvedValue({
++        ok: true,
++        json: async () => ({
++          data: [{ id: 'new-model', object: 'model', created: 1, owned_by: 'local' }],
++        }),
++      })
++
++      const config: any = {
++        provider: {
++          [ATOMIC_CHAT_PROVIDER_KEY]: {
++            npm: '@ai-sdk/openai-compatible',
++            name: 'Atomic Chat (local)',
++            options: { baseURL: 'http://127.0.0.1:1337/v1' },
++            models: {
++              'existing-model': { name: 'Existing Model' },
++            },
++          },
++        },
++      }
++
++      await pluginHooks.config(config)
++
++      expect(config.provider[ATOMIC_CHAT_PROVIDER_KEY].models).toEqual({
++        'existing-model': { name: 'Existing Model' },
++        'new-model': expect.objectContaining({
++          id: 'new-model',
++          name: 'New Model',
++        }),
++      })
++    })
++
++    it('handles offline API', async () => {
++      mockFetch.mockRejectedValue(new Error('Connection refused'))
++      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
++      const config: any = {
++        provider: {
++          [ATOMIC_CHAT_PROVIDER_KEY]: {
++            npm: '@ai-sdk/openai-compatible',
++            name: 'Atomic Chat (local)',
++            options: { baseURL: 'http://127.0.0.1:1337/v1' },
++          },
++        },
++      }
++      await pluginHooks.config(config)
++      expect(consoleSpy).toHaveBeenCalled()
++      consoleSpy.mockRestore()
++    })
++  })
++
++  describe('event hook', () => {
++    it('validates event', async () => {
++      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
++      await pluginHooks.event({ event: null })
++      expect(consoleSpy).toHaveBeenCalled()
++      consoleSpy.mockRestore()
++    })
++
++    it('accepts session events', async () => {
++      await pluginHooks.event({ event: { type: 'session.created' } })
++      expect(true).toBe(true)
++    })
++  })
++
++  describe('chat.params hook', () => {
++    it('rejects invalid input', async () => {
++      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
++      await pluginHooks['chat.params'](null, {})
++      expect(consoleSpy).toHaveBeenCalled()
++      consoleSpy.mockRestore()
++    })
++
++    it('skips other providers', async () => {
++      const output: any = {}
++      await pluginHooks['chat.params'](
++        {
++          model: { id: 'x' },
++          provider: { info: { id: 'anthropic' } },
++        },
++        output
++      )
++      expect(output).toEqual({})
++      expect(mockClient.tui.showToast).not.toHaveBeenCalled()
++    })
++
++    it('validates model availability', async () => {
++      mockFetch.mockResolvedValue({
++        ok: true,
++        json: async () => ({
++          data: [{ id: 'test-model', object: 'model', created: 1, owned_by: 'local' }],
++        }),
++      })
++
++      const output: any = {}
++      await pluginHooks['chat.params'](
++        {
++          sessionID: 's1',
++          model: { id: 'test-model' },
++          provider: {
++            info: { id: ATOMIC_CHAT_PROVIDER_KEY },
++            options: { baseURL: 'http://127.0.0.1:1337/v1' },
++          },
++        },
++        output
++      )
++
++      expect(mockClient.tui.showToast).toHaveBeenCalledWith(
++        expect.objectContaining({
++          body: expect.objectContaining({
++            variant: 'success',
++            message: "Model 'test-model' is ready to use",
++          }),
++        })
++      )
++      expect(output.options?.atomicChatValidation).toEqual(
++        expect.objectContaining({ status: 'success', model: 'test-model' })
++      )
++    })
++
++    it('handles missing model', async () => {
++      mockFetch.mockResolvedValue({
++        ok: true,
++        json: async () => ({ data: [] }),
++      })
++
++      const output: any = {}
++      await pluginHooks['chat.params'](
++        {
++          sessionID: 's1',
++          model: { id: 'missing' },
++          provider: {
++            info: { id: ATOMIC_CHAT_PROVIDER_KEY },
++            options: { baseURL: 'http://127.0.0.1:1337/v1' },
++          },
++        },
++        output
++      )
++
++      expect(output.options?.atomicChatValidation).toEqual(
++        expect.objectContaining({ status: 'error', model: 'missing' })
++      )
++    })
++  })
++})
+diff --git a/packages/plugin-atomic-chat/tsconfig.json b/packages/plugin-atomic-chat/tsconfig.json
+new file mode 100644
+index 00000000000..7c3ad88a0bf
+--- /dev/null
++++ b/packages/plugin-atomic-chat/tsconfig.json
+@@ -0,0 +1,14 @@
++{
++  "$schema": "https://json.schemastore.org/tsconfig.json",
++  "extends": "@tsconfig/node22/tsconfig.json",
++  "compilerOptions": {
++    "module": "ESNext",
++    "moduleResolution": "bundler",
++    "strict": true,
++    "skipLibCheck": true,
++    "noEmit": true,
++    "lib": ["es2022", "dom", "dom.iterable"],
++    "types": ["node"]
++  },
++  "include": ["src/**/*", "test/**/*"]
++}
+diff --git a/packages/ui/src/assets/icons/provider/atomic-chat.svg b/packages/ui/src/assets/icons/provider/atomic-chat.svg
+new file mode 100644
+index 00000000000..09f93dcbcf1
+--- /dev/null
++++ b/packages/ui/src/assets/icons/provider/atomic-chat.svg
+@@ -0,0 +1 @@
++<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 200 200" width="200" height="200"><image width="200" height="200" xlink:href="data:image/png;base64,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"/></svg>
+\ No newline at end of file
+diff --git a/packages/ui/src/components/provider-icons/sprite.svg b/packages/ui/src/components/provider-icons/sprite.svg
+index 7c848819997..190d2d8661b 100644
+--- a/packages/ui/src/components/provider-icons/sprite.svg
++++ b/packages/ui/src/components/provider-icons/sprite.svg
+@@ -1859,6 +1859,15 @@ OjAwvs/J9QAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNi0wMy0yNVQwODowMToxNyswMDowMOna
+         stroke-linejoin="round"
+       ></path>
+     </symbol>
++    <symbol viewBox="0 0 200 200" id="atomic-chat">
++      <g fill="currentColor">
++        <rect x="83" y="15" width="34" height="170" rx="17"></rect>
++        <rect x="83" y="15" width="34" height="170" rx="17" transform="rotate(45 100 100)"></rect>
++        <rect x="83" y="15" width="34" height="170" rx="17" transform="rotate(90 100 100)"></rect>
++        <rect x="83" y="15" width="34" height="170" rx="17" transform="rotate(135 100 100)"></rect>
++        <rect x="83" y="5" width="34" height="190" rx="17" transform="rotate(45 100 100)"></rect>
++      </g>
++    </symbol>
+     <symbol viewBox="0 0 40 40" id="anthropic">
+       <path
+         d="M26.9568 9.88184H22.1265L30.7753 31.7848H35.4917L26.9568 9.88184ZM13.028 9.88184L4.4917 31.7848H9.32203L11.2305 27.1793H20.2166L22.0126 31.6724H26.8444L18.0832 9.88184H13.028ZM12.5783 23.1361L15.4987 15.3853L18.5315 23.1361H12.5783Z"
+diff --git a/packages/ui/src/components/provider-icons/types.ts b/packages/ui/src/components/provider-icons/types.ts
+index 2f22f2e1bb6..d73b912f817 100644
+--- a/packages/ui/src/components/provider-icons/types.ts
++++ b/packages/ui/src/components/provider-icons/types.ts
+@@ -110,6 +110,7 @@ export const iconNames = [
+   "bailing",
+   "azure",
+   "azure-cognitive-services",
++  "atomic-chat",
+   "anthropic",
+   "amazon-bedrock",
+   "alibaba",
