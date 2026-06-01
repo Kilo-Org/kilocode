@@ -214,13 +214,13 @@ export const layer: Layer.Layer<Service, never, Requirements> = Layer.effect(
 
       if (fastrouterAllowed) {
         const cfgKey = config.provider?.["fastrouter"]?.options?.apiKey
-        const authEntry = yield* Effect.promise(() => Auth.get("fastrouter").catch(() => undefined))
+        const authEntry = yield* auth.get("fastrouter").pipe(Effect.catch(() => Effect.succeed(undefined)))
         const authKey = authEntry?.type === "api" ? authEntry.key : undefined
         const envKey = process.env["FASTROUTER_API_KEY"]
         const hasKey = Boolean(cfgKey || authKey || envKey)
 
         if (hasKey) {
-          const fr = yield* Effect.promise(() => ModelCache.fetch("fastrouter").catch(() => ({})))
+          const fr = yield* cache.fetch("fastrouter").pipe(Effect.catch(() => Effect.succeed({})))
           providers["fastrouter"] = {
             id: "fastrouter",
             name: "FastRouter",
@@ -230,7 +230,7 @@ export const layer: Layer.Layer<Service, never, Requirements> = Layer.effect(
             models: fr,
           }
           if (Object.keys(fr).length === 0) {
-            yield* Effect.sync(() => void ModelCache.refresh("fastrouter").catch(() => {}))
+            yield* cache.refresh("fastrouter").pipe(Effect.ignore, Effect.forkDetach)
           }
         }
       }

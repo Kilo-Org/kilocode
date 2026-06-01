@@ -161,6 +161,11 @@ export const layer: Layer.Layer<
     const fetchModels = (providerID: string, options: Options): Effect.Effect<Result, unknown> => {
       if (providerID === "kilo") return kilo.fetch(options)
       if (providerID === "apertis") return fetchApertisModels(options).pipe(Effect.map((models) => ({ models })))
+      // kilocode_change start
+      if (providerID === "fastrouter") {
+        return Effect.tryPromise(() => fetchFastRouterModels()).pipe(Effect.map((models) => ({ models })))
+      }
+      // kilocode_change end
       log.debug("provider not implemented", { providerID })
       return Effect.succeed({ models: {} })
     }
