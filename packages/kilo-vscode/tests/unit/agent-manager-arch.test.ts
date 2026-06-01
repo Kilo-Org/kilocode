@@ -206,7 +206,7 @@ describe("Agent Manager Model Picker", () => {
   it("discloses data collection for free models in compare picker", () => {
     const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/MultiModelSelector.tsx"), "utf-8")
 
-    expect(source).toContain("model.tag.freeData.tooltip")
+    expect(source).toContain("model.tag.dataCollected")
     expect(source).toContain("model.isFree")
   })
 })

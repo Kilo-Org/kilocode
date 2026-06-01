@@ -177,7 +177,6 @@ export const dict = {
 
   "model.tag.free": "Gratis",
   "model.tag.dataCollected": "Gegevens verzameld",
-  "model.tag.freeData.tooltip": "Gebruik van gratis Kilo-modellen wordt verzameld voor modelverbetering.",
   "model.tag.latest": "Nieuwste",
   "model.group.recommended": "Aanbevolen",
   "model.group.favorites": "Favorieten",

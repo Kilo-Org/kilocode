@@ -175,7 +175,6 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "{{provider}}のモデルは利用できなくなりました。",
   "model.tag.free": "無料",
   "model.tag.dataCollected": "データ収集あり",
-  "model.tag.freeData.tooltip": "無料のKiloモデルの使用状況は、モデル改善のために収集されます。",
   "model.tag.latest": "最新",
   "model.group.recommended": "推奨",
   "model.group.favorites": "お気に入り",

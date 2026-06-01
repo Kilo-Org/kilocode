@@ -179,7 +179,6 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "Modeller fra {{provider}} er ikke lenger tilgjengelige.",
   "model.tag.free": "Gratis",
   "model.tag.dataCollected": "Data samles inn",
-  "model.tag.freeData.tooltip": "Bruk av gratis Kilo-modeller samles inn for å forbedre modellene.",
   "model.tag.latest": "Nyeste",
   "model.group.recommended": "Anbefalt",
   "model.group.favorites": "Favoritter",

@@ -177,7 +177,6 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "Los modelos de {{provider}} ya no están disponibles.",
   "model.tag.free": "Gratis",
   "model.tag.dataCollected": "Datos recopilados",
-  "model.tag.freeData.tooltip": "El uso de modelos gratuitos de Kilo se recopila para mejorar los modelos.",
   "model.tag.latest": "Último",
   "model.group.recommended": "Recomendado",
   "model.group.favorites": "Favoritos",

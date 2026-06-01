@@ -175,7 +175,6 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "لم تعد نماذج {{provider}} متاحة.",
   "model.tag.free": "مجاني",
   "model.tag.dataCollected": "يتم جمع البيانات",
-  "model.tag.freeData.tooltip": "يتم جمع استخدام نماذج Kilo المجانية لتحسين النماذج.",
   "model.tag.latest": "الأحدث",
   "model.group.recommended": "موصى به",
   "model.group.favorites": "المفضلة",

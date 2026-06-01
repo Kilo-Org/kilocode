@@ -47,7 +47,6 @@ export const ModelPreview: Component<Props> = (props) => {
           }
           const avg = () => (cost() ? avgPrice(cost()!) : undefined)
           const freeLabel = () => freeDataLabel(language.t("model.tag.free"), language.t("model.tag.dataCollected"))
-          const freeTip = () => language.t("model.tag.freeData.tooltip")
           const ctx = () => model().limit?.context ?? model().contextLength
           const caps = () => model().capabilities
           const inputs = () => caps()?.input
@@ -63,37 +62,35 @@ export const ModelPreview: Component<Props> = (props) => {
 
           return (
             <>
-              <Show when={model().isFree}>
-                <Tooltip value={freeTip()} placement="top">
-                  <span class="model-preview-badge model-preview-badge--free model-preview-badge--top-right">
-                    {freeLabel()}
-                  </span>
-                </Tooltip>
-              </Show>
               {/* Header — name + provider + star */}
               <div class="model-preview-header">
-                <div class="model-preview-name-row">
-                  <span class="model-preview-name">{sanitizeName(model().name)}</span>
-                  <Show when={session}>
-                    {(() => {
-                      const starred = () =>
-                        session!
-                          .favoriteModels()
-                          .some((f) => f.providerID === model().providerID && f.modelID === model().id)
-                      return (
-                        <button
-                          type="button"
-                          class={`model-selector-star model-selector-star--preview${starred() ? " model-selector-star--active" : ""}`}
-                          aria-label={
-                            starred() ? language.t("model.favorite.remove") : language.t("model.favorite.add")
-                          }
-                          aria-pressed={starred()}
-                          onClick={() => session!.toggleFavorite(model().providerID, model().id)}
-                        >
-                          <Icon name={starred() ? "star-filled" : "star"} size="small" />
-                        </button>
-                      )
-                    })()}
+                <div class="model-preview-title-row">
+                  <div class="model-preview-name-row">
+                    <span class="model-preview-name">{sanitizeName(model().name)}</span>
+                    <Show when={session}>
+                      {(() => {
+                        const starred = () =>
+                          session!
+                            .favoriteModels()
+                            .some((f) => f.providerID === model().providerID && f.modelID === model().id)
+                        return (
+                          <button
+                            type="button"
+                            class={`model-selector-star model-selector-star--preview${starred() ? " model-selector-star--active" : ""}`}
+                            aria-label={
+                              starred() ? language.t("model.favorite.remove") : language.t("model.favorite.add")
+                            }
+                            aria-pressed={starred()}
+                            onClick={() => session!.toggleFavorite(model().providerID, model().id)}
+                          >
+                            <Icon name={starred() ? "star-filled" : "star"} size="small" />
+                          </button>
+                        )
+                      })()}
+                    </Show>
+                  </div>
+                  <Show when={model().isFree}>
+                    <span class="model-preview-badge model-preview-badge--free">{freeLabel()}</span>
                   </Show>
                 </div>
                 <span class="model-preview-provider">{model().providerName}</span>

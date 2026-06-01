@@ -176,7 +176,6 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "{{provider}} 模型已不再可用。",
   "model.tag.free": "免費",
   "model.tag.dataCollected": "已收集資料",
-  "model.tag.freeData.tooltip": "使用免費 Kilo 模型時，使用情況會被收集用於模型改進。",
   "model.tag.latest": "最新",
   "model.group.recommended": "推薦",
   "model.group.favorites": "我的最愛",
