@@ -142,6 +142,15 @@
   font-variant-numeric: tabular-nums;
 }
 
+.model-preview-data-line {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--kilo-font-size-11);
+  color: var(--vscode-inputValidation-warningForeground, var(--vscode-descriptionForeground));
+}
+
 /* Capability badge row */
 .model-preview-caps {
   display: flex;

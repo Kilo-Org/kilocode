@@ -128,6 +128,13 @@ export const ModelPreview: Component<Props> = (props) => {
                   <span class="model-preview-value">{fmtPrice(avg()!)}</span>
                 </Show>
 
+                <Show when={model().isFree}>
+                  <span class="model-preview-data-line" aria-label={dataLabel()}>
+                    <Icon name="warning" size="small" />
+                    <span>- {dataLabel()}</span>
+                  </span>
+                </Show>
+
                 {/* Context window */}
                 <Show when={ctx()}>
                   <span class="model-preview-label">{language.t("model.preview.label.context")}</span>
