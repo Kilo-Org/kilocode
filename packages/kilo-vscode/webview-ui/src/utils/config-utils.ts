@@ -41,6 +41,11 @@ export function resolveConfig(server: Config, draft: Partial<Config>, dirty: boo
   return server
 }
 
+/** Merge global then project config the same way the CLI does (project wins). */
+export function mergedConfig(global: Config, project: Config): Config {
+  return stripNulls(deepMerge(global, project))
+}
+
 /**
  * Plain-object config state machine — mirrors the SolidJS ConfigProvider
  * logic without signals so the message-handling behavior is unit-testable.

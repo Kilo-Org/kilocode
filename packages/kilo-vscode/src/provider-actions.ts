@@ -9,7 +9,8 @@ import {
   sanitizeCustomProviderConfig,
   withCustomProviderDeletions,
 } from "./shared/custom-provider"
-import { CUSTOM_PROVIDER_PACKAGE, KILO_AUTO, parseModelString } from "./shared/provider-model"
+import { CUSTOM_PROVIDER_PACKAGE, KILO_AUTO, parseModelString, kiloGatewayHidden } from "./shared/provider-model"
+import { mergedConfig } from "./shared/config-merge"
 import { configFeatures } from "./features"
 
 /**
@@ -133,13 +134,22 @@ export function validateModelSelections(raw: unknown): Record<string, { provider
 }
 
 export function computeDefaultSelection(
-  cachedConfig: { config?: { model?: string } } | null,
+  cached: {
+    config?: { model?: string; disabled_providers?: string[]; enabled_providers?: string[] }
+    globalConfig?: { model?: string; disabled_providers?: string[]; enabled_providers?: string[] }
+  } | null,
   vscodePID: string,
   vscodeMID: string,
 ): { providerID: string; modelID: string } {
-  const configured = parseModelString(cachedConfig?.config?.model)
+  const cfg = cached ? mergedConfig(cached.globalConfig ?? {}, cached.config ?? {}) : {}
+  const configured = parseModelString(typeof cfg.model === "string" ? cfg.model : undefined)
   if (configured) return configured
   if (vscodePID && vscodeMID) return { providerID: vscodePID, modelID: vscodeMID }
+  if (kiloGatewayHidden(cfg)) {
+    const enabled = cfg.enabled_providers?.[0]
+    const model = parseModelString(typeof cfg.model === "string" ? cfg.model : undefined)
+    if (enabled && model && model.providerID === enabled) return model
+  }
   return { ...KILO_AUTO }
 }
 

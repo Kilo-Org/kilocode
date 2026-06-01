@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import * as path from "path"
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
@@ -21,6 +22,9 @@ import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
 import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
 import { markWorkspace } from "./util/spotlight"
+import { customApiEnv, startEnterpriseConfig, whenEnterpriseConfigReady } from "./enterprise-config"
+import { registerEnterpriseAbout } from "./enterprise/about"
+import { ensureLicense, licenseBlocksConnect } from "./enterprise/license"
 
 let agentManager: AgentManagerProvider | undefined
 let shuttingDown = false
@@ -43,6 +47,19 @@ const panelTitleHandler = (panel: vscode.WebviewPanel) => (title: string) => {
 export function activate(context: vscode.ExtensionContext) {
   console.log("Kilo Code extension is now active")
   shuttingDown = false
+
+  // Write custom API config before any CLI spawn.
+  startEnterpriseConfig(context)
+  registerEnterpriseAbout(context)
+
+  void whenEnterpriseConfigReady().then(async () => {
+    const license = await ensureLicense(context)
+    if (licenseBlocksConnect(license)) {
+      void vscode.window.showErrorMessage(
+        `License verification failed (${license.reason}). AI features are disabled until a valid license is configured.`,
+      )
+    }
+  })
 
   const telemetry = TelemetryProxy.getInstance()
 
@@ -69,7 +86,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Re-register browser automation MCP server on CLI backend reconnect, configure telemetry,
   // set remote service client, and reload autocomplete so it picks up the now-available backend connection.
-  const unsubscribeStateChange = connectionService.onStateChange((state) => {
+  const unsubscribeStateChange = connectionService.onStateChange(async (state) => {
     if (state === "connected") {
       browserAutomationService.reregisterIfEnabled()
       const config = connectionService.getServerConfig()
@@ -104,7 +121,7 @@ export function activate(context: vscode.ExtensionContext) {
   )
 
   // Prewarm the CLI backend early so autocomplete is ready before first editor use.
-  ensureBackendForAutocomplete(connectionService)
+  void whenEnterpriseConfigReady().then(() => ensureBackendForAutocomplete(connectionService))
 
   for (const folder of vscode.workspace.workspaceFolders ?? []) {
     void markWorkspace(folder.uri.fsPath, (msg) => console.warn(`[Kilo New] ${msg}`))

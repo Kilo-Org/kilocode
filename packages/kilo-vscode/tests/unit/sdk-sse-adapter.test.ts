@@ -134,7 +134,12 @@ describe("KiloConnectionService SSE startup", () => {
     }) as typeof fetch
 
     const service = new KiloConnectionService({} as any)
-    ;(service as any).serverManager.getServer = async () => ({ port: 52512, password: "secret", process: {} })
+    ;(service as any).serverManager.getServer = async () => ({
+      port: 52512,
+      password: "secret",
+      process: {},
+      baseUrl: "http://127.0.0.1:52512",
+    })
 
     try {
       await expect(service.connect("/tmp/workspace")).resolves.toBeUndefined()

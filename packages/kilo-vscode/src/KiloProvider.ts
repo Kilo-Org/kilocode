@@ -1723,7 +1723,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             connected: response.connected,
             defaults: response.default,
             defaultSelection: computeDefaultSelection(
-              this.cachedConfigMessage as { config?: { model?: string } } | null,
+              this.cachedConfigMessage as {
+                config?: { model?: string; disabled_providers?: string[]; enabled_providers?: string[] }
+                globalConfig?: { model?: string; disabled_providers?: string[]; enabled_providers?: string[] }
+              } | null,
               settings.get<string>("providerID", ""),
               settings.get<string>("modelID", ""),
             ),

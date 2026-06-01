@@ -2,6 +2,11 @@ import type { Provider, ProviderModel, ModelSelection } from "../types/messages"
 
 export type EnrichedModel = ProviderModel & { providerID: string; providerName: string }
 
+function isConfigProvider(provider: Provider) {
+  const source = (provider as Provider & { source?: string }).source
+  return source === "config" || source === "custom"
+}
+
 /**
  * Flatten a provider map into a list of models enriched with provider info.
  */
@@ -41,6 +46,8 @@ export function isModelValid(
   if (!selection) return false
   const provider = providers[selection.providerID]
   if (!provider) return false
-  if (selection.providerID !== "kilo" && !connected.includes(selection.providerID)) return false
+  if (selection.providerID !== "kilo" && !connected.includes(selection.providerID) && !isConfigProvider(provider)) {
+    return false
+  }
   return !!provider.models[selection.modelID]
 }

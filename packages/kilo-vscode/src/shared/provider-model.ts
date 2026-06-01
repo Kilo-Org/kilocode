@@ -3,6 +3,17 @@ export const KILO_AUTO = { providerID: KILO_PROVIDER_ID, modelID: "kilo-auto/fre
 export const CUSTOM_PROVIDER_PACKAGE = "@ai-sdk/openai-compatible"
 export const PROVIDER_ID_PATTERN = /^[a-z0-9][a-z0-9-_]*$/
 
+export function kiloGatewayHidden(cfg: {
+  disabled_providers?: string[]
+  enabled_providers?: string[]
+}) {
+  const disabled = cfg.disabled_providers ?? []
+  if (disabled.includes(KILO_PROVIDER_ID)) return true
+  const enabled = cfg.enabled_providers
+  if (enabled && !enabled.includes(KILO_PROVIDER_ID)) return true
+  return false
+}
+
 export const PROVIDER_PRIORITY = [
   KILO_PROVIDER_ID,
   "anthropic",

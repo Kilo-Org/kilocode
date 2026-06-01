@@ -1,0 +1,17 @@
+apisix:
+  node_listen: 9080
+  enable_ipv6: false
+  enable_control: true
+  control:
+    ip: 0.0.0.0
+    port: 9092
+
+deployment:
+  role: data_plane
+  role_data_plane:
+    config_provider: yaml
+
+nginx_config:
+  error_log: /usr/local/apisix/logs/error.log
+  http:
+    access_log: /usr/local/apisix/logs/access.log

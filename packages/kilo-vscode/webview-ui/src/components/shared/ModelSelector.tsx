@@ -16,6 +16,8 @@ import { Tag } from "@kilocode/kilo-ui/tag"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useProvider } from "../../context/provider"
+import { useConfig } from "../../context/config"
+import { mergedConfig } from "../../utils/config-utils"
 import type { EnrichedModel } from "../../context/provider"
 import { useSession, SessionContext } from "../../context/session"
 import { useLanguage } from "../../context/language"
@@ -27,6 +29,7 @@ import {
   isFree,
   buildTriggerLabel,
   sanitizeName,
+  kiloGatewayHidden,
 } from "./model-selector-utils"
 import { ModelPreview } from "./ModelPreview"
 import { searchMatch } from "../../utils/search-match"
@@ -102,7 +105,9 @@ export interface ModelSelectorBaseProps {
 
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const { connected, models, findModel } = useProvider()
+  const { config, globalConfig } = useConfig()
   const language = useLanguage()
+  const effective = createMemo(() => mergedConfig(globalConfig(), config()))
   // Session context is optional — ModelSelectorBase is also used in Settings
   // where SessionProvider may not be mounted.
   const session = useContext(SessionContext)
@@ -165,14 +170,18 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     window.addEventListener("mouseup", onUp)
   }
 
-  // Only show models from Kilo Gateway or connected providers.
-  // kilo-auto/small is excluded unless includeAutoSmall is explicitly true.
+  // Show Kilo Gateway, connected providers, and config-defined custom providers.
   const visibleModels = createMemo(() => {
     if (props.models) return props.models
     const c = connected()
+    const cfg = effective()
+    const hideKilo = kiloGatewayHidden(cfg)
     return models().filter((m) => {
       if (!props.includeAutoSmall && isSmall(m)) return false
-      return m.providerID === KILO_GATEWAY_ID || c.includes(m.providerID)
+      if (m.providerID === KILO_GATEWAY_ID) return !hideKilo
+      if (c.includes(m.providerID)) return true
+      const item = cfg.provider?.[m.providerID]
+      return !!item && Object.keys(item.models ?? {}).length > 0
     })
   })
 

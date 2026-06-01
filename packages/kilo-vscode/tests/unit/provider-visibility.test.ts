@@ -61,19 +61,37 @@ describe("disabledProviderOptions", () => {
 
 describe("providersWithKiloFallback", () => {
   it("adds Kilo when backend providers omit it", () => {
-    const providers = providersWithKiloFallback({
-      anthropic: { id: "anthropic", name: "Anthropic", env: [], models: {} },
-    })
+    const providers = providersWithKiloFallback(
+      {
+        anthropic: { id: "anthropic", name: "Anthropic", env: [], models: {} },
+      },
+      {},
+    )
 
     expect(providers.kilo?.name).toBe("Kilo Gateway")
     expect(providers.anthropic?.name).toBe("Anthropic")
   })
 
   it("keeps the backend Kilo provider when present", () => {
-    const providers = providersWithKiloFallback({
-      kilo: { id: "kilo", name: "Custom Kilo Name", env: [], models: {} },
-    })
+    const providers = providersWithKiloFallback(
+      {
+        kilo: { id: "kilo", name: "Custom Kilo Name", env: [], models: {} },
+      },
+      {},
+    )
 
     expect(providers.kilo?.name).toBe("Custom Kilo Name")
+  })
+
+  it("skips Kilo fallback when custom API mode disables it", () => {
+    const providers = providersWithKiloFallback(
+      {
+        ruiyumaas: { id: "ruiyumaas", name: "Ruiyu MaaS", env: [], models: {} },
+      },
+      { disabled_providers: ["kilo"], enabled_providers: ["ruiyumaas"] },
+    )
+
+    expect(providers.kilo).toBeUndefined()
+    expect(providers.ruiyumaas?.name).toBe("Ruiyu MaaS")
   })
 })

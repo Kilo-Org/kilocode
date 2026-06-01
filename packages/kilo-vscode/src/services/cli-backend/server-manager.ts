@@ -7,11 +7,15 @@ import * as vscode from "vscode"
 import { resolveTreeSitterEnv } from "./cli-resources"
 import { t } from "./i18n"
 import { parseServerPort } from "./server-utils"
+import { customApiEnv, whenEnterpriseConfigReady } from "../../enterprise-config"
+import { remoteEndpoint } from "../../enterprise/remote-server"
+import { enterpriseSettings } from "../../enterprise/settings"
 
 export interface ServerInstance {
   port: number
   password: string
-  process: ChildProcess
+  process: ChildProcess | null
+  baseUrl: string
 }
 
 const STARTUP_TIMEOUT_SECONDS = 30
@@ -38,6 +42,7 @@ export class ServerManager {
    */
   async getServer(): Promise<ServerInstance> {
     console.log("[Kilo New] ServerManager: 🔍 getServer called")
+    await whenEnterpriseConfigReady()
     if (this.instance) {
       console.log("[Kilo New] ServerManager: ♻️ Returning existing instance:", { port: this.instance.port })
       return this.instance
@@ -48,14 +53,31 @@ export class ServerManager {
       return this.startupPromise
     }
 
-    console.log("[Kilo New] ServerManager: 🚀 Starting new server instance...")
-    this.startupPromise = this.startServer()
+    console.log("[Kilo New] ServerManager: 🚀 Starting server...")
+    const remote = remoteEndpoint(enterpriseSettings().remote)
+    this.startupPromise = remote ? this.connectRemote(remote) : this.startServer()
     try {
       this.instance = await this.startupPromise
       console.log("[Kilo New] ServerManager: ✅ Server started successfully:", { port: this.instance.port })
       return this.instance
     } finally {
       this.startupPromise = null
+    }
+  }
+
+  private async connectRemote(remote: { baseUrl: string; port: number; password: string }): Promise<ServerInstance> {
+    const authHeader = `Basic ${Buffer.from(`kilo:${remote.password}`).toString("base64")}`
+    const healthUrl = `${remote.baseUrl}/global/health`
+    console.log("[Kilo New] ServerManager: 🌐 Remote engine:", healthUrl)
+    const res = await fetch(healthUrl, { headers: { Authorization: authHeader } })
+    if (!res.ok) {
+      throw new Error(`Remote Kilo Engine health check failed (${res.status}): ${healthUrl}`)
+    }
+    return {
+      port: remote.port,
+      password: remote.password,
+      process: null,
+      baseUrl: remote.baseUrl,
     }
   }
 
@@ -131,6 +153,7 @@ export class ServerManager {
           KILO_APP_VERSION: this.context.extension.packageJSON.version,
           KILO_VSCODE_VERSION: vscode.version,
           KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
+          ...customApiEnv(),
           ...(!claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
           ...resolveTreeSitterEnv(this.context.extensionPath),
         },
@@ -150,7 +173,12 @@ export class ServerManager {
         if (port !== null && !resolved) {
           resolved = true
           console.log("[Kilo New] ServerManager: 🎯 Port detected:", port)
-          resolve({ port, password, process: serverProcess })
+          resolve({
+            port,
+            password,
+            process: serverProcess,
+            baseUrl: `http://127.0.0.1:${port}`,
+          })
         }
       })
 
@@ -232,6 +260,10 @@ export class ServerManager {
     }
     const proc = this.instance.process
     this.instance = null
+    if (!proc) {
+      console.log("[Kilo New] ServerManager: 🔴 Disposed remote engine connection")
+      return
+    }
 
     console.log("[Kilo New] ServerManager: 🔴 Disposing — sending SIGTERM to process group, PID:", proc.pid)
     ServerManager.killProcess(proc, "SIGTERM")

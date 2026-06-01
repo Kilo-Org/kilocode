@@ -16,16 +16,18 @@ import CustomProviderDialog from "./CustomProviderDialog"
 import ProviderConnectDialog from "./ProviderConnectDialog"
 import ProviderSelectDialog from "./ProviderSelectDialog"
 import { CUSTOM_PROVIDER_ID, isPopularProvider, providerIcon, providerNoteKey, sortProviders } from "./provider-catalog"
+import { customApiOnly, providersFromConfig } from "./provider-config"
 import { disabledProviderOptions, providersWithKiloFallback, visibleConnectedIds } from "./provider-visibility"
-import { KILO_PROVIDER_ID, CUSTOM_PROVIDER_PACKAGE } from "../../../../src/shared/provider-model"
+import { KILO_PROVIDER_ID, CUSTOM_PROVIDER_PACKAGE, kiloGatewayHidden } from "../../../../src/shared/provider-model"
 import { createProviderAction } from "../../utils/provider-action"
+import { mergedConfig } from "../../utils/config-utils"
 
 type ProviderSource = "env" | "api" | "config" | "custom"
 type ProviderOption = { value: string; label: string }
 
 const ProvidersTab: Component = () => {
   const dialog = useDialog()
-  const { config, updateConfig } = useConfig()
+  const { config, globalConfig, updateConfig } = useConfig()
   const provider = useProvider()
   const language = useLanguage()
   const server = useServer()
@@ -37,18 +39,26 @@ const ProvidersTab: Component = () => {
 
   const kiloLoggedIn = createMemo(() => !!server.profileData())
 
+  const effective = createMemo(() => mergedConfig(globalConfig(), config()))
+
   const connectedProviders = createMemo(() => {
-    const ids = visibleConnectedIds(provider.connected(), provider.authStates())
+    const ids = new Set(visibleConnectedIds(provider.connected(), provider.authStates()))
+    for (const item of providersFromConfig(effective(), provider.providers())) {
+      ids.add(item.id)
+    }
     const all = provider.providers()
-    return ids
+    return [...ids]
       .filter((id) => id !== KILO_PROVIDER_ID)
-      .map((id) => all[id])
+      .map((id) => all[id] ?? providersFromConfig(effective(), all).find((item) => item.id === id))
       .filter((item): item is Provider => !!item)
   })
 
   const popularProviders = createMemo(() => {
+    if (customApiOnly(effective())) return []
     const connected = new Set(provider.connected())
-    const disabled = new Set(config().disabled_providers ?? [])
+    const disabled = new Set(effective().disabled_providers ?? [])
+    const enabled = effective().enabled_providers
+    const enabledSet = enabled ? new Set(enabled) : null
     const all = Object.values(provider.providers())
     return sortProviders(
       all.filter(
@@ -56,17 +66,20 @@ const ProvidersTab: Component = () => {
           item.id !== KILO_PROVIDER_ID &&
           isPopularProvider(item.id) &&
           !connected.has(item.id) &&
-          !disabled.has(item.id),
+          !disabled.has(item.id) &&
+          (!enabledSet || enabledSet.has(item.id)),
       ),
     )
   })
 
-  const disabledProviders = createMemo(() => config().disabled_providers ?? [])
+  const disabledProviders = createMemo(() => effective().disabled_providers ?? [])
   const disabledIds = createMemo(() => new Set(disabledProviders()))
-  const providers = createMemo(() => providersWithKiloFallback(provider.providers()))
+  const hideKilo = createMemo(() => kiloGatewayHidden(effective()))
+  const hideManualCustom = createMemo(() => customApiOnly(effective()))
+  const providers = createMemo(() => providersWithKiloFallback(provider.providers(), effective()))
   const disabledOptions = createMemo(() => disabledProviderOptions(providers(), disabledProviders()))
 
-  function source(item: Provider): ProviderSource | undefined {
+  function source(item: Provider) {
     if (!("source" in item)) return
     const value = (item as Provider & { source?: string }).source
     if (value === "env" || value === "api" || value === "config" || value === "custom") return value
@@ -78,7 +91,7 @@ const ProvidersTab: Component = () => {
     if (current === "env") return language.t("settings.providers.tag.environment")
     if (current === "api") return language.t("provider.connect.method.apiKey")
     if (current === "config") {
-      const cfg = config().provider?.[item.id]
+      const cfg = effective().provider?.[item.id]
       if (cfg?.npm === "@ai-sdk/openai-compatible") return language.t("settings.providers.tag.custom")
       return language.t("settings.providers.tag.config")
     }
@@ -92,12 +105,12 @@ const ProvidersTab: Component = () => {
   }
 
   function isCustom(item: Provider) {
-    const cfg = config().provider?.[item.id]
+    const cfg = effective().provider?.[item.id]
     return cfg?.npm === CUSTOM_PROVIDER_PACKAGE
   }
 
   function editProvider(item: Provider) {
-    const cfg = config().provider?.[item.id]
+    const cfg = effective().provider?.[item.id]
     if (!cfg) return
     dialog.show(() => <CustomProviderDialog existing={{ providerID: item.id, name: item.name, config: cfg }} />)
   }
@@ -162,8 +175,8 @@ const ProvidersTab: Component = () => {
 
   return (
     <div>
-      <Show when={!disabledIds().has(KILO_PROVIDER_ID)}>
-        {/* Kilo Gateway — always at the top, not editable */}
+      <Show when={!hideKilo()}>
+        {/* Kilo Gateway — hidden when disabled via config (custom API mode) */}
         <Card>
           <div
             style={{
@@ -282,11 +295,12 @@ const ProvidersTab: Component = () => {
       </Card>
 
       {/* Popular providers */}
-      <h4 style={{ "margin-top": "24px", "margin-bottom": "8px" }}>
-        {language.t("settings.providers.section.popular")}
-      </h4>
-      <Card>
-        <For each={popularProviders()}>
+      <Show when={popularProviders().length > 0}>
+        <h4 style={{ "margin-top": "24px", "margin-bottom": "8px" }}>
+          {language.t("settings.providers.section.popular")}
+        </h4>
+        <Card>
+          <For each={popularProviders()}>
           {(item) => {
             const noteKey = providerNoteKey(item.id)
             return (
@@ -337,18 +351,18 @@ const ProvidersTab: Component = () => {
           }}
         </For>
 
-        {/* Custom provider entry */}
-        <div
-          style={{
-            display: "flex",
-            "flex-wrap": "wrap",
-            "align-items": "center",
-            "justify-content": "space-between",
-            gap: "16px",
-            "min-height": "56px",
-            padding: "12px 0",
-          }}
-        >
+        <Show when={!hideManualCustom()}>
+          <div
+            style={{
+              display: "flex",
+              "flex-wrap": "wrap",
+              "align-items": "center",
+              "justify-content": "space-between",
+              gap: "16px",
+              "min-height": "56px",
+              padding: "12px 0",
+            }}
+          >
           <div style={{ display: "flex", "flex-direction": "column", "min-width": 0 }}>
             <div style={{ display: "flex", "flex-wrap": "wrap", "align-items": "center", gap: "12px" }}>
               <ProviderIcon id="synthetic" width={20} height={20} />
@@ -381,15 +395,18 @@ const ProvidersTab: Component = () => {
           >
             {language.t("common.connect")}
           </Button>
-        </div>
-      </Card>
+          </div>
+        </Show>
+        </Card>
+      </Show>
 
-      {/* View all providers link */}
-      <div style={{ "margin-top": "16px" }}>
-        <Button variant="ghost" onClick={() => dialog.show(() => <ProviderSelectDialog />)} style={{ padding: "0" }}>
-          {language.t("dialog.provider.viewAll")}
-        </Button>
-      </div>
+      <Show when={!hideManualCustom()}>
+        <div style={{ "margin-top": "16px" }}>
+          <Button variant="ghost" onClick={() => dialog.show(() => <ProviderSelectDialog />)} style={{ padding: "0" }}>
+            {language.t("dialog.provider.viewAll")}
+          </Button>
+        </div>
+      </Show>
 
       {/* Disabled providers */}
       <h4 style={{ "margin-top": "24px", "margin-bottom": "8px" }}>{language.t("settings.providers.disabled")}</h4>

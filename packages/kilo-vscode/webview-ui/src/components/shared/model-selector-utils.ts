@@ -4,9 +4,10 @@ import {
   KILO_PROVIDER_ID as KILO_GATEWAY_ID,
   PROVIDER_PRIORITY as PROVIDER_ORDER,
   providerOrderIndex,
+  kiloGatewayHidden,
 } from "../../../../src/shared/provider-model"
 
-export { KILO_GATEWAY_ID, PROVIDER_ORDER }
+export { KILO_GATEWAY_ID, PROVIDER_ORDER, kiloGatewayHidden }
 
 export const KILO_AUTO_SMALL_IDS = new Set(["kilo-auto/small", "auto-small"])
 

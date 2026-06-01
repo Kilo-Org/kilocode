@@ -1,0 +1,39 @@
+routes:
+  - id: kilo-engine
+    uri: /kilo/*
+    methods:
+      - GET
+      - POST
+      - PUT
+      - PATCH
+      - DELETE
+      - OPTIONS
+    upstream:
+      type: roundrobin
+      nodes:
+        "kilo-engine:4096": 1
+    plugins:
+      proxy-rewrite:
+        regex_uri:
+          - "^/kilo/(.*)"
+          - "/$1"
+      limit-count:
+        count: 100
+        time_window: 60
+        rejected_code: 429
+        key: remote_addr
+      http-logger:
+        uri: file:///usr/local/apisix/logs/enterprise-audit.log
+    # SSE: disable buffering via plugin metadata where supported;
+    # for nginx upstream, set via custom nginx snippet in production.
+  - id: license-verify
+    uri: /api/v1/license/*
+    methods:
+      - GET
+      - POST
+    upstream:
+      type: roundrobin
+      nodes:
+        "license-mock:19090": 1
+
+#END

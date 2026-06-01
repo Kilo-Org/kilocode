@@ -1,0 +1,75 @@
+# Phase 1 MVP — Kilo Engine + Qdrant (+ optional vLLM / APISIX)
+# Build engine image first: see docs/enterprise/PHASE1-DEPLOY.md
+
+services:
+  kilo-engine:
+    image: ${KILO_ENGINE_IMAGE:-kilo-engine:local}
+    build:
+      context: ../../packages/opencode
+      dockerfile: Dockerfile
+    command: ["serve", "--port", "4096", "--hostname", "0.0.0.0"]
+    environment:
+      KILO_SERVER_PASSWORD: ${KILO_SERVER_PASSWORD:?set KILO_SERVER_PASSWORD in .env}
+      KILO_CUSTOM_API_KEY: ${KILO_CUSTOM_API_KEY:-}
+      KILO_CUSTOM_API_BASE_URL: ${KILO_CUSTOM_API_BASE_URL:-http://vllm:8000/v1}
+    ports:
+      - "${KILO_ENGINE_PORT:-4096}:4096"
+    volumes:
+      - kilo-data:/root/.local/share/kilo
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.13.4
+    ports:
+      - "${QDRANT_PORT:-6333}:6333"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    restart: unless-stopped
+
+  vllm:
+    profiles: ["vllm"]
+    image: vllm/vllm-openai:latest
+    command:
+      - --model
+      - ${VLLM_MODEL:-Qwen/Qwen2.5-Coder-14B-Instruct}
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+    ports:
+      - "${VLLM_PORT:-8000}:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  apisix:
+    profiles: ["gateway"]
+    image: apache/apisix:3.11.0-debian
+    volumes:
+      - ./apisix/config.yaml:/usr/local/apisix/conf/config.yaml:ro
+      - ./apisix/apisix.yaml:/usr/local/apisix/conf/apisix.yaml:ro
+    ports:
+      - "${APISIX_HTTP_PORT:-9080}:9080"
+    depends_on:
+      - kilo-engine
+    restart: unless-stopped
+
+  license-mock:
+    profiles: ["license"]
+    image: oven/bun:1.2
+    working_dir: /app
+    volumes:
+      - ./mock-license.mjs:/app/mock-license.mjs:ro
+    command: ["bun", "/app/mock-license.mjs"]
+    ports:
+      - "${LICENSE_MOCK_PORT:-19090}:19090"
+    restart: unless-stopped
+
+volumes:
+  kilo-data:
+  qdrant-data:

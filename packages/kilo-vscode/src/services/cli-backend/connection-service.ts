@@ -4,6 +4,7 @@ import { createKiloClient, type KiloClient, type Event } from "@kilocode/sdk/v2/
 import { SdkSSEAdapter } from "./sdk-sse-adapter"
 import type { ServerConfig } from "./types"
 import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
+import { ensureLicense, licenseBlocksConnect } from "../../enterprise/license"
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
 type SSEEventListener = (event: Event, directory?: string) => void
@@ -92,7 +93,7 @@ export class KiloConnectionService {
   private debounceTimer: ReturnType<typeof setTimeout> | null = null
   private unsubRemote: (() => void) | null = null
 
-  constructor(context: vscode.ExtensionContext) {
+  constructor(private readonly context: vscode.ExtensionContext) {
     this.serverManager = new ServerManager(context)
   }
 
@@ -559,6 +560,11 @@ export class KiloConnectionService {
   }
 
   private async doConnect(workspaceDir: string): Promise<void> {
+    const license = await ensureLicense(this.context)
+    if (licenseBlocksConnect(license)) {
+      throw new Error(`License verification failed (${license.reason}). Configure enterprise license settings or offline license file.`)
+    }
+
     // If we reconnect, ensure the previous SSE connection is cleaned up first.
     this.stopHealthPoll()
     this.sseClient?.dispose()
@@ -567,7 +573,7 @@ export class KiloConnectionService {
     this.info = { port: server.port }
 
     const config: ServerConfig = {
-      baseUrl: `http://127.0.0.1:${server.port}`,
+      baseUrl: server.baseUrl,
       password: server.password,
     }
 

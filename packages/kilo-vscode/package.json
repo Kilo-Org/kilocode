@@ -1,14 +1,14 @@
 {
-  "name": "kilo-code",
-  "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
+  "name": "yoyo-code",
+  "displayName": "yoyo code",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.3.7",
+  "version": "7.3.10",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
     "theme": "light"
   },
-  "publisher": "kilocode",
+  "publisher": "yoyo-local",
   "repository": {
     "type": "git",
     "url": "https://github.com/Kilo-Org/kilocode.git",
@@ -80,7 +80,7 @@
       "activitybar": [
         {
           "id": "kilo-code-ActivityBar",
-          "title": "Kilo Code",
+          "title": "yoyo code",
           "icon": "assets/icons/kilo-light.png",
           "darkIcon": "assets/icons/kilo-dark.png"
         }
@@ -91,11 +91,16 @@
         {
           "type": "webview",
           "id": "kilo-code.SidebarProvider",
-          "name": "Kilo Code"
+          "name": "yoyo code"
         }
       ]
     },
     "commands": [
+      {
+        "command": "kilo-code.new.enterprise.showAbout",
+        "title": "Enterprise: About & Open Source Notice",
+        "category": "Kilo Code"
+      },
       {
         "command": "kilo-code.new.plusButtonClicked",
         "title": "New Task",
@@ -168,7 +173,7 @@
       },
       {
         "command": "kilo-code.new.openInTab",
-        "title": "Kilo Code",
+        "title": "yoyo code",
         "icon": {
           "light": "assets/icons/kilo-light.svg",
           "dark": "assets/icons/kilo-dark.svg"
@@ -759,7 +764,7 @@
       }
     ],
     "configuration": {
-      "title": "Kilo Code",
+      "title": "yoyo code",
       "properties": {
         "kilo-code.new.language": {
           "type": "string",
@@ -812,13 +817,98 @@
         },
         "kilo-code.new.model.providerID": {
           "type": "string",
-          "default": "kilo",
+          "default": "ruiyumaas",
           "description": "Default model provider ID for new sessions"
         },
         "kilo-code.new.model.modelID": {
           "type": "string",
-          "default": "kilo-auto/free",
+          "default": "glm-5.1",
           "description": "Default model ID for new sessions"
+        },
+        "kilo-code.new.customApi.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use a custom OpenAI-compatible API instead of the Kilo Gateway. Writes provider config to the global opencode.json on startup."
+        },
+        "kilo-code.new.customApi.providerId": {
+          "type": "string",
+          "default": "ruiyumaas",
+          "description": "Provider ID for the custom API (used in provider/model format)."
+        },
+        "kilo-code.new.customApi.baseUrl": {
+          "type": "string",
+          "default": "https://ruiyumaas.com/v1",
+          "description": "Base URL for the custom OpenAI-compatible API."
+        },
+        "kilo-code.new.customApi.apiKey": {
+          "type": "string",
+          "default": "sk-t0nSV1N7CwyDvbr969cFApmE2LA835V4QkfnoALrbxX1oJwr",
+          "description": "API key for the custom provider. Prefer setting KILO_CUSTOM_API_KEY in the environment for shared machines."
+        },
+        "kilo-code.new.customApi.defaultModel": {
+          "type": "string",
+          "default": "glm-5.1",
+          "description": "Default chat model ID on the custom provider."
+        },
+        "kilo-code.new.customApi.smallModel": {
+          "type": "string",
+          "default": "glm-5",
+          "description": "Small model ID for titles and summaries."
+        },
+        "kilo-code.new.customApi.overwriteOnStartup": {
+          "type": "boolean",
+          "default": true,
+          "description": "Rewrite the global opencode.json with custom API settings each time VS Code starts. Disable to keep a manually edited config."
+        },
+        "kilo-code.new.enterprise.productName": {
+          "type": "string",
+          "default": "",
+          "description": "Override the product name shown in panel titles. Empty uses the extension displayName from package.json."
+        },
+        "kilo-code.new.enterprise.remoteServer.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Connect to a remote Kilo Engine (kilo serve) instead of spawning a local CLI process. Use for Docker/K8s privatization deployments."
+        },
+        "kilo-code.new.enterprise.remoteServer.url": {
+          "type": "string",
+          "default": "http://127.0.0.1:4096",
+          "description": "Base URL of the remote Kilo Engine (through APISIX or direct)."
+        },
+        "kilo-code.new.enterprise.remoteServer.password": {
+          "type": "string",
+          "default": "",
+          "description": "KILO_SERVER_PASSWORD for the remote engine. Prefer KILO_REMOTE_SERVER_PASSWORD in the environment."
+        },
+        "kilo-code.new.enterprise.license.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Verify enterprise license before connecting to the CLI backend."
+        },
+        "kilo-code.new.enterprise.license.serverUrl": {
+          "type": "string",
+          "default": "",
+          "description": "License service base URL (e.g. APISIX gateway). POSTs to /api/v1/license/verify."
+        },
+        "kilo-code.new.enterprise.license.key": {
+          "type": "string",
+          "default": "",
+          "description": "License key or activation code."
+        },
+        "kilo-code.new.enterprise.license.offlinePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to offline license JSON file (Phase 1 prototype: expiry validation only)."
+        },
+        "kilo-code.new.enterprise.license.cacheHours": {
+          "type": "number",
+          "default": 24,
+          "description": "Hours to cache a successful online license verification."
+        },
+        "kilo-code.new.enterprise.license.graceDays": {
+          "type": "number",
+          "default": 7,
+          "description": "Days to allow AI features when the license server is unreachable after a prior successful verification."
         },
         "kilo-code.new.autocomplete.model": {
           "type": "string",
