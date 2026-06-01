@@ -612,6 +612,11 @@ function TopModelsChart(props: {
       role="img"
       aria-label="Stacked top model usage chart"
       style={{ "--top-models-count": props.data.length } as JSX.CSSProperties}
+      onPointerLeave={(event) => {
+        if (event.pointerType === "touch") return
+        setActiveIndex(undefined)
+        props.onActiveModelChange(undefined)
+      }}
     >
       <div data-slot="top-models-axis" aria-hidden="true">
         <For each={props.data}>
@@ -632,7 +637,14 @@ function TopModelsChart(props: {
           )}
         </For>
       </div>
-      <div data-slot="top-models-bars">
+      <div
+        data-slot="top-models-bars"
+        onPointerLeave={(event) => {
+          if (event.pointerType === "touch") return
+          setActiveIndex(undefined)
+          props.onActiveModelChange(undefined)
+        }}
+      >
         <For each={props.data}>
           {(day, dayIndex) => (
             <div
@@ -648,14 +660,14 @@ function TopModelsChart(props: {
                 setActiveIndex(dayIndex())
                 props.onActiveModelChange(undefined)
               }}
-              onPointerEnter={() => {
+              onPointerEnter={(event) => {
                 setActiveIndex(dayIndex())
-                props.onActiveModelChange(undefined)
+                if (isTopModelsBlankHover(event.currentTarget, event.clientY)) props.onActiveModelChange(undefined)
               }}
-              onPointerLeave={(event) => {
+              onPointerMove={(event) => {
                 if (event.pointerType === "touch") return
-                setActiveIndex(undefined)
-                props.onActiveModelChange(undefined)
+                setActiveIndex(dayIndex())
+                if (isTopModelsBlankHover(event.currentTarget, event.clientY)) props.onActiveModelChange(undefined)
               }}
               onClick={() => {
                 setActiveIndex(dayIndex())
@@ -754,6 +766,12 @@ function TopModelsChart(props: {
       </div>
     </div>
   )
+}
+
+function isTopModelsBlankHover(bar: HTMLElement, clientY: number) {
+  const stack = bar.querySelector<HTMLElement>('[data-slot="top-models-stack"]')
+  if (!stack) return true
+  return clientY < stack.getBoundingClientRect().top - 6
 }
 
 function getTopModelsBarHeight(total: number, max: number) {
