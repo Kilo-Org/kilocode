@@ -25,7 +25,7 @@ function modelRefUsesAtomicChat(ref: unknown): boolean {
   if (record.providerID === ATOMIC_CHAT_PROVIDER_KEY) {
     return true
   }
-  if (typeof record.id === 'string' && record.providerID === ATOMIC_CHAT_PROVIDER_KEY) {
+  if (typeof record.id === 'string' && record.modelID === ATOMIC_CHAT_PROVIDER_KEY) {
     return true
   }
   return false
