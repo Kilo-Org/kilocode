@@ -147,7 +147,12 @@ async function scan(root: string, limit: number): Promise<{ files: Map<string, F
 }
 
 async function repository(root: string): Promise<string | undefined> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], { cwd: root, stdout: "pipe", stderr: "pipe" })
+  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
+    cwd: root,
+    stdout: "pipe",
+    stderr: "pipe",
+    windowsHide: true,
+  })
   const [text, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited])
   if (code !== 0) return
   const repo = text.trim()
@@ -160,6 +165,7 @@ async function tracked(root: string): Promise<string[]> {
     cwd: root,
     stdout: "pipe",
     stderr: "pipe",
+    windowsHide: true,
   })
   const [text, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited])
   if (code !== 0) return []

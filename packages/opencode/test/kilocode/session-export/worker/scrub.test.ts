@@ -49,6 +49,8 @@ describe("scrubber", () => {
     expect(isHighRiskPath(".env")).toBe(true)
     expect(isHighRiskPath(".env.local")).toBe(true)
     expect(isHighRiskPath(".aws/credentials")).toBe(true)
+    expect(isHighRiskPath("credentials.json")).toBe(true)
+    expect(isHighRiskPath("config/gcp/credentials.json")).toBe(true)
     expect(isHighRiskPath("server.pem")).toBe(true)
     expect(isHighRiskPath("server.key")).toBe(true)
     expect(isHighRiskPath(".ssh/id_rsa")).toBe(true)
