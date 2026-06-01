@@ -96,8 +96,8 @@ describe("sanitizeName", () => {
 })
 
 describe("freeDataLabel", () => {
-  it("combines free and data collection labels", () => {
-    expect(freeDataLabel("Free", "Data collected")).toBe("Free - Data collected")
+  it("uses the data collection label without repeating free", () => {
+    expect(freeDataLabel("Free", "Data collected")).toBe("Data collected")
   })
 })
 
