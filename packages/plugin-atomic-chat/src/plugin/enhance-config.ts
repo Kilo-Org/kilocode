@@ -7,15 +7,19 @@ import {
   discoverAtomicChatModels,
   autoDetectAtomicChat,
 } from '../utils/atomic-chat-api'
+import {
+  getAtomicSection,
+  hasAtomicChatProviderSection,
+  isAtomicChatAutoDetectEnabled,
+  shouldProbeAtomicChat,
+} from '../utils/should-probe-atomic-chat'
 import type { PluginInput } from '@kilocode/plugin'
 import type { AtomicChatModel } from '../types'
 import { ATOMIC_CHAT_PROVIDER_KEY, LOG_PREFIX } from '../constants'
 
-const modelStatusCache = new ModelStatusCache()
+export { shouldProbeAtomicChat } from '../utils/should-probe-atomic-chat'
 
-function getAtomicSection(config: any) {
-  return config?.provider?.[ATOMIC_CHAT_PROVIDER_KEY]
-}
+const modelStatusCache = new ModelStatusCache()
 
 function setAtomicSection(config: any, value: Record<string, unknown>) {
   if (!config.provider) {
@@ -29,13 +33,17 @@ export async function enhanceConfig(
   _client: PluginInput['client'],
   toastNotifier: ToastNotifier
 ): Promise<void> {
+  if (!shouldProbeAtomicChat(config)) {
+    return
+  }
+
   try {
     let atomicProvider = getAtomicSection(config)
     let baseURL: string
 
     if (atomicProvider) {
       baseURL = normalizeBaseURL(atomicProvider.options?.baseURL || 'http://127.0.0.1:1337')
-    } else {
+    } else if (isAtomicChatAutoDetectEnabled(config)) {
       const detectedURL = await autoDetectAtomicChat()
       if (!detectedURL) {
         return
@@ -50,6 +58,20 @@ export async function enhanceConfig(
         models: {},
       })
       atomicProvider = getAtomicSection(config)
+    } else {
+      // Model references atomic-chat but provider block is missing — use default origin only.
+      baseURL = normalizeBaseURL('http://127.0.0.1:1337')
+      if (!atomicProvider) {
+        setAtomicSection(config, {
+          npm: '@ai-sdk/openai-compatible',
+          name: 'Atomic Chat (local)',
+          options: {
+            baseURL: `${baseURL}/v1`,
+          },
+          models: {},
+        })
+        atomicProvider = getAtomicSection(config)
+      }
     }
 
     const isHealthy = await checkAtomicChatHealth(baseURL)
@@ -128,12 +150,14 @@ export async function enhanceConfig(
       console.warn(`${LOG_PREFIX} No models returned from Atomic Chat. Load a model and ensure the server is running.`)
     }
 
-    try {
-      await modelStatusCache.getModels(baseURL, async () => {
-        return await discoverAtomicChatModels(baseURL).then((m) => m.map((x) => x.id))
-      })
-    } catch {
-      // non-fatal
+    if (hasAtomicChatProviderSection(config) || isAtomicChatAutoDetectEnabled(config)) {
+      try {
+        await modelStatusCache.getModels(baseURL, async () => {
+          return await discoverAtomicChatModels(baseURL).then((m) => m.map((x) => x.id))
+        })
+      } catch {
+        // non-fatal
+      }
     }
   } catch (error) {
     console.error(`${LOG_PREFIX} Unexpected error in enhanceConfig:`, error)

@@ -1,6 +1,6 @@
 import { ToastNotifier } from '../ui/toast-notifier'
 import { validateConfig } from '../utils/validation'
-import { enhanceConfig } from './enhance-config'
+import { enhanceConfig, shouldProbeAtomicChat } from './enhance-config'
 import type { PluginInput } from '@kilocode/plugin'
 import { ATOMIC_CHAT_PROVIDER_KEY, LOG_PREFIX } from '../constants'
 
@@ -25,30 +25,8 @@ export function createConfigHook(client: PluginInput['client'], toastNotifier: T
       console.warn(`${LOG_PREFIX} Config warnings:`, validation.warnings)
     }
 
-    if (!section) {
-      try {
-        const response = await fetch(`http://127.0.0.1:1337/v1/models`, {
-          method: 'GET',
-          signal: AbortSignal.timeout(1000),
-        })
-        if (response.ok) {
-          if (!config.provider) {
-            config.provider = {}
-          }
-          if (!config.provider[ATOMIC_CHAT_PROVIDER_KEY]) {
-            config.provider[ATOMIC_CHAT_PROVIDER_KEY] = {
-              npm: '@ai-sdk/openai-compatible',
-              name: 'Atomic Chat (local)',
-              options: {
-                baseURL: 'http://127.0.0.1:1337/v1',
-              },
-              models: {},
-            }
-          }
-        }
-      } catch {
-        // enhanceConfig / auto-detect will handle
-      }
+    if (!shouldProbeAtomicChat(config)) {
+      return
     }
 
     const discoveryPromise = enhanceConfig(config, client, toastNotifier)

@@ -86,23 +86,27 @@ describe('AtomicChatPlugin', () => {
       consoleSpy.mockRestore()
     })
 
-    it('auto-detects Atomic Chat when not configured', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: true })
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          data: [
-            { id: 'm1', object: 'model', created: 1, owned_by: 'local' },
-            { id: 'm2', object: 'model', created: 1, owned_by: 'local' },
-          ],
-        }),
-      })
-
+    it('does not probe localhost when Atomic Chat is not configured', async () => {
       const config: any = {}
       await pluginHooks.config(config)
 
+      expect(mockFetch).not.toHaveBeenCalled()
+      expect(config.provider?.[ATOMIC_CHAT_PROVIDER_KEY]).toBeUndefined()
+    })
+
+    it('auto-detects only when atomicChat.autoDetect is enabled', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          data: [{ id: 'm1', object: 'model', created: 1, owned_by: 'local' }],
+        }),
+      })
+
+      const config: any = { atomicChat: { autoDetect: true } }
+      await pluginHooks.config(config)
+
+      expect(mockFetch).toHaveBeenCalled()
       expect(config.provider?.[ATOMIC_CHAT_PROVIDER_KEY]).toBeDefined()
-      expect(config.provider[ATOMIC_CHAT_PROVIDER_KEY].npm).toBe('@ai-sdk/openai-compatible')
       expect(config.provider[ATOMIC_CHAT_PROVIDER_KEY].options.baseURL).toBe('http://127.0.0.1:1337/v1')
     })
 

@@ -24,7 +24,15 @@ curl http://127.0.0.1:1337/v1/models
 
 ## Configuration in Kilo Code
 
-Kilo Code ships the `@kilocode/plugin-atomic-chat` plugin by default. It auto-detects Atomic Chat on ports **1337** and **1338**, discovers models from `GET /v1/models`, and can warn if the selected model is not loaded.
+Kilo Code ships the `@kilocode/plugin-atomic-chat` plugin by default. It **does not** call localhost unless you opt in (see below). When enabled, it discovers models from `GET /v1/models` and can warn if the selected model is not loaded.
+
+**Localhost HTTP runs only when one of these is true:**
+
+- You configure `provider.atomic-chat` in `kilo.jsonc`
+- You set `"model": "atomic-chat/..."` (or per-agent model uses `atomic-chat`)
+- You enable optional auto-detect: `"atomicChat": { "autoDetect": true }` (probes ports **1337** and **1338**)
+
+Otherwise no requests are made to Atomic Chat (suitable for restricted environments).
 
 {% tabs %}
 {% tab label="VSCode" %}
@@ -56,7 +64,15 @@ Set your default model (use an id from `curl http://127.0.0.1:1337/v1/models`):
 }
 ```
 
-The built-in plugin is enabled automatically. To disable auto-discovery, remove `@kilocode/plugin-atomic-chat` from the `plugin` array in your config.
+Optional auto-detect without a provider block:
+
+```jsonc
+{
+  "atomicChat": { "autoDetect": true },
+}
+```
+
+To disable the provider entirely, use `disabled_providers: ["atomic-chat"]` or remove `@kilocode/plugin-atomic-chat` from the `plugin` array in your config.
 
 {% /tab %}
 {% /tabs %}
