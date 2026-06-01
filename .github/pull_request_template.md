@@ -1,3 +1,9 @@
+## Issue
+
+<!-- Reference an existing issue with `Fixes #123`, `Closes #123`, or equivalent linked issue wording. -->
+
+Fixes #
+
 ## Context
 
 <!-- Brief description of WHAT you’re doing and WHY. -->
@@ -6,11 +12,13 @@
 
 <!--
 
-Some description of HOW you achieved it. Perhaps give a high level description of the program flow. Did you need to refactor something? What tradeoffs did you take? Are there things in here which you’d particularly like people to pay close attention to?
+Some description of HOW you achieved it. Perhaps give a high level description of the program flow. Did you need to refactor something? What tradeoffs did you take? Are there things in here which you’d particularly like people to pay close attention to? Keep this focused on context reviewers cannot infer from the diff; skip file-by-file summaries, placeholders, and other filler.
 
 -->
 
-## Screenshots
+## Screenshots / Video
+
+<!-- Required for visual changes. Include the relevant before/after or resulting state. -->
 
 | before | after |
 |---|---|
@@ -52,6 +60,14 @@ Every PR marked ready for review must include testing evidence. A bare "Not test
 
 Docs-only, config-only, and similar changes still need concrete evidence. For examples, see [Testing Evidence for Pull Requests](https://kilo.ai/docs/contributing/development-environment#testing-evidence-for-pull-requests). Draft PRs may be incomplete until marked ready for review.
 -->
+
+## Checklist
+
+- [ ] Issue linked above, or exception explained
+- [ ] Tests/verification described
+- [ ] Screenshots/video included for visual changes, or marked N/A
+- [ ] Changeset considered for user-facing changes
+- [ ] I personally reviewed the diff and can explain the changes, including any AI-assisted work.
 
 ## Get in Touch
 

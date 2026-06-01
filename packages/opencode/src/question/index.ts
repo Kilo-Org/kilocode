@@ -7,7 +7,6 @@ import { zod } from "@/util/effect-zod"
 import * as Log from "@opencode-ai/core/util/log"
 import { withStatics } from "@/util/schema"
 import { QuestionID } from "./schema"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { KiloQuestion } from "@/kilocode/question" // kilocode_change
 
 const log = Log.create({ service: "question" })
@@ -134,6 +133,10 @@ export class RejectedError extends Schema.TaggedErrorClass<RejectedError>()("Que
   }
 }
 
+export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()("Question.NotFoundError", {
+  requestID: QuestionID,
+}) {}
+
 interface PendingEntry {
   info: Request
   deferred: Deferred.Deferred<ReadonlyArray<Answer>, RejectedError>
@@ -152,8 +155,8 @@ export interface Interface {
     blocking?: boolean // kilocode_change
     tool?: Tool
   }) => Effect.Effect<ReadonlyArray<Answer>, RejectedError>
-  readonly reply: (input: { requestID: QuestionID; answers: ReadonlyArray<Answer> }) => Effect.Effect<void>
-  readonly reject: (requestID: QuestionID) => Effect.Effect<void>
+  readonly reply: (input: { requestID: QuestionID; answers: ReadonlyArray<Answer> }) => Effect.Effect<void, NotFoundError>
+  readonly reject: (requestID: QuestionID) => Effect.Effect<void, NotFoundError>
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
   readonly dismissAll: (sessionID: SessionID) => Effect.Effect<void> // kilocode_change
 }
@@ -225,7 +228,7 @@ export const layer = Layer.effect(
       const existing = pending.get(input.requestID)
       if (!existing) {
         log.warn("reply for unknown request", { requestID: input.requestID })
-        return
+        return yield* new NotFoundError({ requestID: input.requestID })
       }
       pending.delete(input.requestID)
       log.info("replied", { requestID: input.requestID, answers: input.answers })
@@ -242,7 +245,7 @@ export const layer = Layer.effect(
       const existing = pending.get(requestID)
       if (!existing) {
         log.warn("reject for unknown request", { requestID })
-        return
+        return yield* new NotFoundError({ requestID })
       }
       pending.delete(requestID)
       log.info("rejected", { requestID })
@@ -272,14 +275,5 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer.pipe(Layer.provide(Bus.layer))
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const list = () => runPromise((svc) => svc.list())
-export const ask = (input: Parameters<Interface["ask"]>[0]) => runPromise((svc) => svc.ask(input))
-export const reply = (input: Parameters<Interface["reply"]>[0]) => runPromise((svc) => svc.reply(input))
-export const reject = (requestID: QuestionID) => runPromise((svc) => svc.reject(requestID))
-export const dismissAll = (sessionID: string) => runPromise((svc) => svc.dismissAll(SessionID.make(sessionID)))
-// kilocode_change end
 
 export * as Question from "."

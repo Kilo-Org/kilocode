@@ -16,6 +16,7 @@ export function resolveEventSessionId(
     case "session.updated":
       return event.properties.info.id
     case "session.status":
+    case "session.turn.close":
     case "session.idle":
     case "session.error":
     case "todo.updated":

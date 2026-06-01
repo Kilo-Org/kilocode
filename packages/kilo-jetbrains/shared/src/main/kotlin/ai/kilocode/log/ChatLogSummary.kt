@@ -21,6 +21,7 @@ object ChatLogSummary {
         is ChatEventDto.PartRemoved -> event.sessionID
         is ChatEventDto.TurnOpen -> event.sessionID
         is ChatEventDto.TurnClose -> event.sessionID
+        is ChatEventDto.SessionCreated -> event.sessionID
         is ChatEventDto.Error -> event.sessionID
         is ChatEventDto.MessageRemoved -> event.sessionID
         is ChatEventDto.PermissionAsked -> event.sessionID
@@ -131,6 +132,12 @@ object ChatLogSummary {
             sid(event.sessionID),
             "evt=session.turn.close",
             "reason=${event.reason}",
+        )
+
+        is ChatEventDto.SessionCreated -> join(
+            sid(event.sessionID),
+            "evt=session.created",
+            "title=${event.info.title.length}",
         )
 
         is ChatEventDto.Error -> join(

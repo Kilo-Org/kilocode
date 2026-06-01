@@ -16,7 +16,6 @@ import { Env } from "../../src/env"
 import { Effect } from "effect"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { makeRuntime } from "../../src/effect/run-service"
-import { Auth } from "../../src/auth" // kilocode_change
 
 const env = makeRuntime(Env.Service, Env.defaultLayer)
 const set = (k: string, v: string) => env.runSync((svc) => svc.set(k, v))
@@ -101,15 +100,22 @@ test("provider loaded from env variable", async () => {
 
 // kilocode_change start
 test("provider OAuth auth overrides inherited env variable", async () => {
-  await Auth.remove("openai")
-  await Auth.set("openai", {
-    type: "oauth",
-    refresh: "test-refresh-token",
-    access: "test-access-token",
-    expires: Date.now() + 60_000,
-  })
+  const authPath = path.join(Global.Path.data, "auth.json")
+  const prev = await Filesystem.readText(authPath).catch(() => undefined)
 
   try {
+    await Filesystem.write(
+      authPath,
+      JSON.stringify({
+        openai: {
+          type: "oauth",
+          refresh: "test-refresh-token",
+          access: "test-access-token",
+          expires: Date.now() + 60_000,
+        },
+      }),
+    )
+
     await using tmp = await tmpdir({
       init: async (dir) => {
         await Bun.write(
@@ -136,7 +142,12 @@ test("provider OAuth auth overrides inherited env variable", async () => {
       },
     })
   } finally {
-    await Auth.remove("openai")
+    if (prev !== undefined) {
+      await Filesystem.write(authPath, prev)
+    }
+    if (prev === undefined) {
+      await unlink(authPath).catch(() => undefined)
+    }
   }
 })
 // kilocode_change end

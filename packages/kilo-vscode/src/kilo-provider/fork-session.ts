@@ -32,6 +32,7 @@ export async function handleForkSession(ctx: ForkContext, sessionId: string, mes
     {
       getClient: () => ctx.connection.getClient(),
       state: undefined,
+      directory: ctx.directory(sessionId),
       postError: (message) => ctx.post({ type: "error", message }),
       registerWorktreeSession: () => {},
       pushState: () => {},

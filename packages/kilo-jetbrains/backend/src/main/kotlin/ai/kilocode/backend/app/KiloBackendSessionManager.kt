@@ -67,8 +67,16 @@ class KiloBackendSessionManager(
                 if (event.type == "session.status") {
                     val pair = KiloCliDataParser.parseSessionStatus(event.data)
                     if (pair != null) {
+                        val prev = _statuses.value[pair.first]
                         _statuses.update { it + pair }
+                        val total = _statuses.value.size
                         log.debug { "${ChatLogSummary.sid(pair.first)} evt=session.status ${ChatLogSummary.status(pair.second)}" }
+                        if (pair.second.type != "busy") {
+                            log.info(
+                                "${ChatLogSummary.sid(pair.first)} kind=status route=session-map " +
+                                    "${ChatLogSummary.status(pair.second)} prev=${prev?.type ?: "none"} total=$total bytes=${event.data.length}",
+                            )
+                        }
                     }
                 }
             }

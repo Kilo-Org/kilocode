@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Children, isValidElement, ReactNode, ReactElement } from "react"
+import React, { useState, useEffect, useRef, Children, isValidElement, ReactNode, ReactElement } from "react"
 
 const TAB_SYNC_EVENT = "kilo-tab-select"
 
@@ -18,6 +18,17 @@ function slugify(label: string) {
     .replace(/[^a-z0-9-]/g, "")
 }
 
+function contains(node: ReactNode, hash: string): boolean {
+  return Children.toArray(node).some((child) => {
+    if (!isValidElement(child)) return false
+
+    const props = child.props as { children?: ReactNode; id?: string }
+    if (props.id === hash) return true
+
+    return contains(props.children, hash)
+  })
+}
+
 export function Tab({ children }: TabProps) {
   return <>{children}</>
 }
@@ -32,19 +43,31 @@ export function Tabs({ children }: TabsProps) {
     const hash = window.location.hash.slice(1)
     if (!hash) return 0
     const found = tabs.findIndex((tab) => slugify(tab.props.label) === hash)
-    return found >= 0 ? found : 0
+    if (found >= 0) return found
+
+    const child = tabs.findIndex((tab) => contains(tab.props.children, hash))
+    return child >= 0 ? child : 0
   }
 
   const [activeIndex, setActiveIndex] = useState(0)
+  const scroll = useRef(false)
 
   useEffect(() => {
-    setActiveIndex(indexFromHash())
-    const onHashChange = () => setActiveIndex(indexFromHash())
+    const activate = () => {
+      const hash = window.location.hash.slice(1)
+      const index = indexFromHash()
+      scroll.current = Boolean(hash && contains(tabs[index]?.props.children, hash))
+      setActiveIndex(index)
+    }
+
+    activate()
+    const onHashChange = activate
     window.addEventListener("hashchange", onHashChange)
 
     const onSync = (e: Event) => {
       const label = (e as CustomEvent<string>).detail
       const found = tabs.findIndex((tab) => tab.props.label === label)
+      scroll.current = false
       if (found >= 0) setActiveIndex(found)
     }
     window.addEventListener(TAB_SYNC_EVENT, onSync)
@@ -54,6 +77,14 @@ export function Tabs({ children }: TabsProps) {
       window.removeEventListener(TAB_SYNC_EVENT, onSync)
     }
   }, [])
+
+  useEffect(() => {
+    const hash = window.location.hash.slice(1)
+    if (!hash || !scroll.current) return
+
+    scroll.current = false
+    requestAnimationFrame(() => document.getElementById(hash)?.scrollIntoView())
+  }, [activeIndex])
 
   const selectTab = (index: number) => {
     setActiveIndex(index)

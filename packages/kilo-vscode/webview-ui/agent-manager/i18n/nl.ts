@@ -59,7 +59,6 @@ export const dict = {
   "agentManager.tabsMenu.search": "Tabbladen zoeken...",
   "agentManager.tabsMenu.empty": "Geen overeenkomende tabbladen",
   "agentManager.tabsMenu.status.waiting": "Wacht",
-  "agentManager.tabsMenu.status.working": "Bezig",
   "agentManager.tabsMenu.status.retry": "Opnieuw",
 
   "agentManager.terminal.new": "Nieuw terminaltabblad",

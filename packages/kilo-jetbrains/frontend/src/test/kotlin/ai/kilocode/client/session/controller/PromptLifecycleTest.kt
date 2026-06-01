@@ -1,22 +1,39 @@
 package ai.kilocode.client.session.controller
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.PermissionFileDiff
 import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.SessionRef
+import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.ModelDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionFileDiffDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.ToolRefDto
-import com.intellij.ide.util.PropertiesComponent
 
 class PromptLifecycleTest : SessionControllerTestBase() {
+
+    override fun setUp() {
+        super.setUp()
+        edt { KiloPluginSettings.unsetAutoApprove() }
+    }
+
+    override fun tearDown() {
+        try {
+            edt { KiloPluginSettings.unsetAutoApprove() }
+        } finally {
+            super.tearDown()
+        }
+    }
 
     fun `test PermissionAsked moves state to AwaitingPermission`() {
         val (m, _, _) = prompted()
@@ -113,6 +130,103 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertTrue(m.model.state is SessionState.AwaitingPermission)
     }
 
+    fun `test auto approve replies once to permission request`() {
+        val (m, _, _) = prompted()
+
+        edt { m.setAutoApprove(true) }
+        emit(ChatEventDto.PermissionAsked("ses_test", permission("perm1")))
+
+        assertEquals(1, rpc.permissionReplies.size)
+        assertEquals("perm1", rpc.permissionReplies[0].first)
+        assertEquals("once", rpc.permissionReplies[0].third.reply)
+        assertSession(
+            """
+            [code] [kilo/gpt-5] [busy] [considering next steps]
+            """,
+            m,
+        )
+    }
+
+    fun `test disabling auto approve before reply restores awaiting permission`() {
+        val (m, _, _) = prompted()
+
+        edt { m.setAutoApprove(true) }
+        emit(ChatEventDto.PermissionAsked("ses_test", permission("perm1")), flush = false)
+        edt { m.setAutoApprove(false) }
+        flush()
+
+        assertTrue(rpc.permissionReplies.isEmpty())
+        assertSession(
+            """
+            permission#perm1
+            tool: msg1/call1
+            name: edit
+            patterns: *.kt
+            always: <none>
+            file: src/A.kt
+            state: RESPONDING
+            metadata: kind=edit
+
+            [code] [kilo/gpt-5] [awaiting-permission]
+            """,
+            m,
+        )
+    }
+
+    fun `test enabling auto approve drains current permission`() {
+        val (m, _, _) = prompted()
+        emit(ChatEventDto.PermissionAsked("ses_test", permission("perm1")))
+
+        edt { m.setAutoApprove(true) }
+        flush()
+
+        assertEquals(1, rpc.permissionReplies.size)
+        assertEquals("perm1", rpc.permissionReplies[0].first)
+        assertEquals("once", rpc.permissionReplies[0].third.reply)
+        assertSession(
+            """
+            [code] [kilo/gpt-5] [busy] [considering next steps]
+            """,
+            m,
+        )
+    }
+
+    fun `test enabling auto approve drains pending permissions`() {
+        val (m, _, _) = prompted()
+        rpc.pendingPermissionList.add(permission("perm_pending"))
+
+        edt { m.setAutoApprove(true) }
+        flush()
+
+        assertEquals(1, rpc.permissionReplies.size)
+        assertEquals("perm_pending", rpc.permissionReplies[0].first)
+        assertEquals("once", rpc.permissionReplies[0].third.reply)
+    }
+
+    fun `test auto approve drains pending permissions during recovery`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        rpc.pendingPermissionList.add(permission("perm_pending"))
+        edt { KiloPluginSettings.setAutoApprove(true) }
+
+        val m = controller("ses_test")
+        flush()
+
+        assertEquals(1, rpc.permissionReplies.size)
+        assertEquals("perm_pending", rpc.permissionReplies[0].first)
+        assertFalse(m.model.state is SessionState.AwaitingPermission)
+    }
+
+    fun `test auto approve persists in properties`() {
+        val (m, _, _) = prompted()
+
+        assertFalse(KiloPluginSettings.getAutoApprove())
+        edt { m.setAutoApprove(true) }
+
+        assertTrue(KiloPluginSettings.getAutoApprove())
+        assertTrue(m.autoApprove)
+    }
+
     fun `test QuestionReplied with wrong requestID is ignored`() {
         val (m, _, _) = prompted()
 
@@ -167,6 +281,153 @@ class PromptLifecycleTest : SessionControllerTestBase() {
 
         assertEquals(1, rpc.questionReplies.size)
         assertEquals("q1", rpc.questionReplies[0].first)
+    }
+
+    fun `test plan follow-up question enters awaiting state`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.QuestionAsked("ses_test", planQuestion("q_plan")))
+
+        assertSession(
+            """
+            question#q_plan
+            tool: <none>
+            header: Implement
+            prompt: Ready to implement?
+            option: Start new session - Implement in a fresh session with a clean context
+            option: Continue here - Implement the plan in this session
+            multiple: false
+            custom: true
+
+            [code] [kilo/gpt-5] [awaiting-question]
+            """,
+            m,
+        )
+    }
+
+    fun `test continue here reflects CLI mode after canonical reply`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = planWorkspace()
+        val m = controller()
+        val events = collect(m)
+        flush()
+        edt { m.prompt("go") }
+        flush()
+        events.clear()
+        edt { m.model.agent = "plan" }
+        emit(ChatEventDto.QuestionAsked("ses_test", planQuestion("q_plan")))
+
+        edt {
+            m.replyQuestion(
+                "q_plan",
+                QuestionReplyDto(listOf(listOf("Continue here"))),
+                listOf(listOf("Continue here")),
+            )
+        }
+        flush()
+
+        assertEquals("plan", m.model.agent)
+        assertTrue(rpc.configs.none { it.second.agent == "code" })
+        assertQuestionReply("q_plan /test [[Continue here]]", rpc.questionReplies)
+
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg_code", "ses_test", "user").copy(
+            agent = "code",
+            providerID = "anthropic",
+            modelID = "claude",
+        )))
+
+        assertEquals("code", m.model.agent)
+        assertEquals("anthropic/claude", m.model.model)
+        assertFalse(m.model.modelOverride)
+        assertTrue(rpc.configs.none { it.second.agent == "code" })
+        assertControllerEvents("WorkspaceReady", events)
+    }
+
+    fun `test custom plan follow-up answer does not switch mode`() {
+        val (m, _, _) = prompted()
+        edt { m.model.agent = "plan" }
+        emit(ChatEventDto.QuestionAsked("ses_test", planQuestion("q_plan")))
+
+        edt {
+            m.replyQuestion(
+                "q_plan",
+                QuestionReplyDto(listOf(listOf("Need to adjust scope"))),
+                listOf(emptyList()),
+            )
+        }
+        flush()
+
+        assertEquals("plan", m.model.agent)
+        assertTrue(rpc.configs.none { it.second.agent == "code" })
+        assertQuestionReply("q_plan /test [[Need to adjust scope]]", rpc.questionReplies)
+    }
+
+    fun `test start new session adopts matching created session from selected option`() {
+        val opened = mutableListOf<SessionRef>()
+        val m = controller(open = { opened.add(it) })
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        flush()
+        edt { m.prompt("go") }
+        flush()
+        emit(ChatEventDto.QuestionAsked("ses_test", planQuestion("q_plan")))
+
+        edt {
+            m.replyQuestion(
+                "q_plan",
+                QuestionReplyDto(listOf(listOf("Use a fresh implementation session"))),
+                listOf(listOf("Start new session")),
+            )
+        }
+        emit(ChatEventDto.SessionCreated("ses_new", session("ses_new", dir = "/test")))
+        flush()
+
+        assertEquals("ses_new", (opened.last() as SessionRef.Local).id)
+        assertEquals(1, rpc.prompts.size)
+    }
+
+    fun `test start new session reply text without selected option is ignored`() {
+        val opened = mutableListOf<SessionRef>()
+        val m = controller(open = { opened.add(it) })
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        flush()
+        edt { m.prompt("go") }
+        flush()
+        emit(ChatEventDto.QuestionAsked("ses_test", planQuestion("q_plan")))
+
+        edt {
+            m.replyQuestion(
+                "q_plan",
+                QuestionReplyDto(listOf(listOf("Start new session"))),
+                listOf(emptyList()),
+            )
+        }
+        emit(ChatEventDto.SessionCreated("ses_new", session("ses_new", dir = "/test")))
+
+        assertTrue(opened.none { it is SessionRef.Local && it.id == "ses_new" })
+    }
+
+    fun `test unrelated session created is ignored`() {
+        val opened = mutableListOf<SessionRef>()
+        val m = controller(open = { opened.add(it) })
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        flush()
+        edt { m.prompt("go") }
+        flush()
+        emit(ChatEventDto.QuestionAsked("ses_test", planQuestion("q_plan")))
+        edt {
+            m.replyQuestion(
+                "q_plan",
+                QuestionReplyDto(listOf(listOf("Start new session"))),
+                listOf(listOf("Start new session")),
+            )
+        }
+
+        emit(ChatEventDto.SessionCreated("ses_new", session("ses_new", dir = "/other")))
+
+        assertTrue(opened.none { it is SessionRef.Local && it.id == "ses_new" })
     }
 
     fun `test rejectQuestion calls RPC`() {
@@ -347,5 +608,44 @@ class PromptLifecycleTest : SessionControllerTestBase() {
             ),
         ),
         tool = ToolRefDto("msg1", "call1"),
+    )
+
+    private fun planQuestion(id: String) = QuestionRequestDto(
+        id = id,
+        sessionID = "ses_test",
+        questions = listOf(
+            QuestionInfoDto(
+                question = "Ready to implement?",
+                header = "Implement",
+                options = listOf(
+                    QuestionOptionDto("Start new session", "Implement in a fresh session with a clean context"),
+                    QuestionOptionDto("Continue here", "Implement the plan in this session", mode = "code"),
+                ),
+                multiple = false,
+                custom = true,
+            ),
+        ),
+    )
+
+    private fun planWorkspace() = workspaceReady(
+        agents = listOf(
+            AgentDto(name = "plan", displayName = "Plan", mode = "plan"),
+            AgentDto(name = "code", displayName = "Code", mode = "code"),
+        ),
+        default = "plan",
+        providers = listOf(
+            ProviderDto(
+                id = "kilo",
+                name = "Kilo",
+                models = mapOf("gpt-5" to ModelDto(id = "gpt-5", name = "GPT-5")),
+            ),
+            ProviderDto(
+                id = "anthropic",
+                name = "Anthropic",
+                models = mapOf("claude" to ModelDto(id = "claude", name = "Claude")),
+            ),
+        ),
+        connected = listOf("kilo", "anthropic"),
+        defaults = mapOf("plan" to "kilo/gpt-5", "code" to "kilo/gpt-5"),
     )
 }

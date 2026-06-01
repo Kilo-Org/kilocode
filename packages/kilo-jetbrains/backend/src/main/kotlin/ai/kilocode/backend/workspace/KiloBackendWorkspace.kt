@@ -291,8 +291,8 @@ class KiloBackendWorkspace(
     }
 
     private fun setWorkspaceError(message: String, errors: List<LoadError>) {
-        _state.value = KiloWorkspaceState.Error(message, errors)
         log.warn("Workspace error [$directory]: $message")
+        _state.value = KiloWorkspaceState.Error(message, errors)
     }
 
     private data class FetchResult<T>(val value: T?, val error: LoadError?) {

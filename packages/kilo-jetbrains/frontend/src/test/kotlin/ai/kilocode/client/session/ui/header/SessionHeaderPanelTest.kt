@@ -90,6 +90,39 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         assertEquals(1, rpc.compacts.size)
     }
 
+    fun `test todo list starts collapsed and toggles independently`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+
+        panel.expandButton().doClick()
+        assertTrue(panel.isExpanded())
+        assertTrue(panel.todoVisible())
+        assertFalse(panel.todoListVisible())
+
+        click(panel.todoRowPanel())
+
+        assertTrue(panel.isExpanded())
+        assertTrue(panel.todoListVisible())
+        assertEquals(2, panel.todoListPanel().rowCount())
+        assertTrue(panel.todoListPanel().rowText(0).contains("Write tests"))
+        assertTrue(panel.todoListPanel().rowChecked(0))
+        assertFalse(panel.todoListPanel().rowChecked(1))
+
+        click(panel.todoLabel())
+        assertTrue(panel.isExpanded())
+        assertFalse(panel.todoListVisible())
+    }
+
+    fun `test all done todos use success foreground`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+
+        emit(ChatEventDto.TodoUpdated("ses_test", listOf(TodoDto("Done", "completed", "high"))))
+
+        assertEquals("All 1 todos complete", panel.todoText())
+        assertEquals(ai.kilocode.client.session.ui.style.SessionUiStyle.Timeline.SUCCESS, panel.foregrounds()[3])
+    }
+
     fun `test retained labels update on later header event`() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)
@@ -567,6 +600,19 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
             panel.timelineBarWidth() * index + 1,
             panel.timelinePreferredSize().height - 1,
             0,
+            false,
+        ))
+    }
+
+    private fun click(component: java.awt.Component) {
+        component.dispatchEvent(MouseEvent(
+            component,
+            MouseEvent.MOUSE_CLICKED,
+            System.currentTimeMillis(),
+            0,
+            1,
+            1,
+            1,
             false,
         ))
     }

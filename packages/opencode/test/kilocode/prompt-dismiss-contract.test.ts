@@ -36,9 +36,9 @@ describe("prompt.ts Kilo-specific invariants", () => {
     // an in-flight handle.process blocked on a pending tool prompt can return.
     // Critically, the block must NOT call state.cancel or KiloSessionPromptQueue.reserve —
     // either of those would abort the running streamText mid-tokens, which was
-    // the #9332 regression. Order: dismissAll(Suggestion) → dismissAll(Question) → enqueue.
+    // the #9332 regression. Order: dismissAll(Suggestion), question.dismissAll, enqueue.
     const block = content.match(
-      /kilocode_change start[^\n]*unblock tools[\s\S]*?Suggestion\.dismissAll[\s\S]*?Question\.dismissAll[\s\S]*?KiloSessionPromptQueue\.enqueue/,
+      /kilocode_change start[^\n]*unblock tools[\s\S]*?Suggestion\.dismissAll[\s\S]*?question\.dismissAll[\s\S]*?KiloSessionPromptQueue\.enqueue/,
     )
     expect(block).not.toBeNull()
     expect(content).not.toMatch(/state\.cancel\(input\.sessionID\)/)

@@ -11,7 +11,6 @@
   <!-- packages/opencode/src/cli/cmd/github.ts -->
 - <https://api.orcarouter.ai/v1>
   <!-- packages/opencode/src/kilocode/provider/orcarouter.ts -->
-  <!-- packages/opencode/src/provider/models.ts -->
 - <https://api.x.ai/v1>
   <!-- packages/opencode/src/plugin/xai.ts -->
 - <https://app.kilo.ai>
@@ -38,6 +37,8 @@
   <!-- packages/opencode/src/plugin/xai.ts -->
 - <https://auth.x.ai/oauth2/token>
   <!-- packages/opencode/src/plugin/xai.ts -->
+- <https://blog.kilo.ai/p/kilo-gateway-now-supports-byok-20-providers>
+  <!-- packages/kilo-vscode/webview-ui/src/components/settings/ProviderConnectDialog.tsx -->
 - <https://blog.kilo.ai/p/new-kilo-for-vs-code-is-live>
   <!-- packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx -->
 - <https://chatgpt.com/explore/plus>
@@ -50,8 +51,12 @@
   <!-- packages/opencode/src/provider/sdk/copilot/responses/openai-responses-language-model.ts -->
 - <https://docs.github.com/en/actions/how-tos/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services>
   <!-- packages/opencode/src/cli/cmd/github.ts -->
+- <https://docs.inceptionlabs.ai/capabilities/next-edit>
+  <!-- packages/opencode/src/kilocode/server/httpapi/groups/kilo-gateway.ts -->
 - <https://docs.mistral.ai/capabilities/reasoning/adjustable>
   <!-- packages/opencode/src/provider/transform.ts -->
+- <https://docs.orcarouter.ai/advanced/reasoning>
+  <!-- packages/opencode/src/kilocode/provider/orcarouter.ts -->
 - <https://docs.orcarouter.ai/routing/auto-router>
   <!-- packages/opencode/src/kilocode/provider/provider.ts -->
 - <https://docs.venice.ai/overview/guides/reasoning-models#reasoning-effort>
