@@ -27,8 +27,5 @@ export function expandTrackedPastedText(text: string, ranges: { start: number; e
   return ranges
     .slice()
     .sort((a, b) => b.start - a.start)
-    .reduce(
-      (result, part) => displaySlice(result, 0, part.start) + part.text + displaySlice(result, part.end),
-      text,
-    )
+    .reduce((result, part) => displaySlice(result, 0, part.start) + part.text + displaySlice(result, part.end), text)
 }

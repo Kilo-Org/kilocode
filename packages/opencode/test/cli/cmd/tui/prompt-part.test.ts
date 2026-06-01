@@ -57,9 +57,7 @@ describe("prompt part", () => {
           text: "public:\n\tvoid ExecuteTask();\nprivate:",
         },
       ]),
-    ).toBe(
-      "你好你好\npublic:\n\tvoid ExecuteTask();\nprivate:\n阿斯顿法国红酒看来",
-    )
+    ).toBe("你好你好\npublic:\n\tvoid ExecuteTask();\nprivate:\n阿斯顿法国红酒看来")
   })
 
   test("expandTrackedPastedText only expands the tracked placeholder occurrence", () => {
