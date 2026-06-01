@@ -585,7 +585,8 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const controlLabel = () => `${label()}: ${triggerLabel()}`
   const searchLabel = () => `${controlLabel()}. ${language.t("dialog.model.search.placeholder")}`
   const describedBy = () => (props.description ? descriptionID : undefined)
-  const freeLabel = () => freeDataLabel(language.t("model.tag.free"), language.t("model.tag.dataCollected"))
+  const freeLabel = () => language.t("model.tag.free")
+  const dataLabel = () => freeDataLabel(language.t("model.tag.free"), language.t("model.tag.dataCollected"))
 
   return (
     <>
@@ -627,8 +628,8 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
           <>
             <span class="model-selector-trigger-label">{triggerLabel()}</span>
             <Show when={activeModel()?.isFree}>
-              <Tooltip value={freeLabel()} placement="top">
-                <span class="model-selector-trigger-free-data" aria-label={freeLabel()}>
+              <Tooltip value={dataLabel()} placement="top">
+                <span class="model-selector-trigger-free-data" aria-label={dataLabel()}>
                   <Icon name="warning" size="small" />
                 </span>
               </Tooltip>
@@ -822,8 +823,15 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                                         })()}
                                       </span>
                                       <Show when={isFree(model)}>
-                                        <span class="model-selector-free-data model-selector-data-badge">
-                                          <Tag data-variant="member">{freeLabel()}</Tag>
+                                        <span class="model-selector-free-data">
+                                          <span class="model-selector-data-badge">
+                                            <Tag data-variant="member">{freeLabel()}</Tag>
+                                          </span>
+                                          <Tooltip value={dataLabel()} placement="top">
+                                            <span class="model-selector-free-data-icon" aria-label={dataLabel()}>
+                                              <Icon name="warning" size="small" />
+                                            </span>
+                                          </Tooltip>
                                         </span>
                                       </Show>
                                       <Show when={showProvider()}>

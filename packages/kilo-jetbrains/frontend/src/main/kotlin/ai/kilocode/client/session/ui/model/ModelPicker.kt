@@ -416,7 +416,7 @@ internal object ModelText {
 
     fun dataCollected(): String = KiloBundle.message("model.picker.dataCollected")
 
-    fun freeLabel(): String = dataCollected()
+    fun freeLabel(): String = KiloBundle.message("model.picker.free")
 
     fun freeBg(): JBColor = JBColor.namedColor("Kilo.ModelPicker.freeBadgeBackground", JBColor(0x95D6AC, 0x7FCA99))
 }

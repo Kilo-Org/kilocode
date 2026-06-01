@@ -69,7 +69,7 @@ export function ModelInfoPanel(props: Props) {
         </box>
         <Show when={m().isFree}>
           <box>
-            <text fg={theme.text}>{FreeModelDisclosure.label}</text>
+            <text fg={theme.text}>{FreeModelDisclosure.panel}</text>
           </box>
         </Show>
         <Show when={m().family}>

@@ -46,7 +46,8 @@ export const ModelPreview: Component<Props> = (props) => {
             return fmtCachedPrice(cost()!) ?? language.t("model.preview.value.notSupported")
           }
           const avg = () => (cost() ? avgPrice(cost()!) : undefined)
-          const freeLabel = () => freeDataLabel(language.t("model.tag.free"), language.t("model.tag.dataCollected"))
+          const freeLabel = () => language.t("model.tag.free")
+          const dataLabel = () => freeDataLabel(language.t("model.tag.free"), language.t("model.tag.dataCollected"))
           const ctx = () => model().limit?.context ?? model().contextLength
           const caps = () => model().capabilities
           const inputs = () => caps()?.input
@@ -90,7 +91,14 @@ export const ModelPreview: Component<Props> = (props) => {
                     </Show>
                   </div>
                   <Show when={model().isFree}>
-                    <span class="model-preview-badge model-preview-badge--free">{freeLabel()}</span>
+                    <span class="model-preview-free-data">
+                      <span class="model-preview-badge model-preview-badge--free">{freeLabel()}</span>
+                      <Tooltip value={dataLabel()} placement="top">
+                        <span class="model-preview-free-data-icon" aria-label={dataLabel()}>
+                          <Icon name="warning" size="small" />
+                        </span>
+                      </Tooltip>
+                    </span>
                   </Show>
                 </div>
                 <span class="model-preview-provider">{model().providerName}</span>

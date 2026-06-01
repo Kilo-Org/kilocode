@@ -1,5 +1,6 @@
 import { type Component, createSignal, createMemo, For, Show, onMount } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useProvider } from "../src/context/provider"
 import type { EnrichedModel } from "../src/context/provider"
 import { useLanguage } from "../src/context/language"
@@ -32,7 +33,8 @@ export const MultiModelSelector: Component<{
   const { t } = useLanguage()
   const [search, setSearch] = createSignal("")
   let searchRef: HTMLInputElement | undefined
-  const freeLabel = () => freeDataLabel(t("model.tag.free"), t("model.tag.dataCollected"))
+  const freeLabel = () => t("model.tag.free")
+  const dataLabel = () => freeDataLabel(t("model.tag.free"), t("model.tag.dataCollected"))
 
   const visibleModels = createMemo(() => {
     const c = connected()
@@ -110,7 +112,12 @@ export const MultiModelSelector: Component<{
                         <span class="am-mm-item-name">{model.name}</span>
                         <Show when={model.isFree}>
                           <span class="am-mm-free-data">
-                            <span>{freeLabel()}</span>
+                            <span class="am-mm-free-badge">{freeLabel()}</span>
+                            <Tooltip value={dataLabel()} placement="top">
+                              <span class="am-mm-free-data-icon" aria-label={dataLabel()}>
+                                <Icon name="warning" size="small" />
+                              </span>
+                            </Tooltip>
                           </span>
                         </Show>
                       </label>

@@ -271,7 +271,9 @@ class ModelPickerTest : BasePlatformTestCase() {
         renderer.getListCellRendererComponent(list, row, 0, false, false)
 
         assertTrue(renderer.badgeVisible())
-        assertEquals("Data collected", renderer.badgeText())
+        assertEquals("Free", renderer.badgeText())
+        assertTrue(renderer.warningVisible())
+        assertEquals("Data collected", renderer.warningTooltip())
     }
 
     private fun item(
