@@ -3,6 +3,7 @@ import { For } from "solid-js"
 import { testRender, type JSX } from "@opentui/solid"
 import {
   formatCompletedSubagentDetail,
+  formatSubagentRetry,
   formatSubagentTitle,
   formatSubagentToolcalls,
   InlineToolRow,
@@ -152,6 +153,12 @@ describe("TUI inline tool wrapping", () => {
     expect(formatSubagentTitle("Explore", "Inspect renderer", false)).toBe("Explore Task — Inspect renderer")
     expect(formatSubagentTitle("Explore", "Inspect renderer", true)).toBe(
       "Explore Task (background) — Inspect renderer",
+    )
+  })
+
+  test("keeps retry status ahead of wrapping messages", () => {
+    expect(formatSubagentRetry(2, "Rate limited by provider")).toBe(
+      "Retrying (attempt 2) · Rate limited by provider",
     )
   })
 
