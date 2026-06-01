@@ -36,6 +36,7 @@ const testAllow: Record<string, { count: number; reason: string }> = {
   "kilocode/config-validation.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/plan-followup.test.ts": { count: 7, reason: "existing runtime integration test" },
   "kilocode/session/platform-attribution.test.ts": { count: 5, reason: "existing runtime integration test" },
+  "kilocode/session-prompt-queue.test.ts": { count: 5, reason: "prompt queue legacy instance bridge regression" },
   "kilocode/session/session.test.ts": { count: 4, reason: "existing runtime integration test" },
   "mcp/headers.test.ts": { count: 4, reason: "existing runtime integration test" },
   "mcp/oauth-browser.test.ts": { count: 4, reason: "existing runtime integration test" },
