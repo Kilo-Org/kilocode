@@ -98,6 +98,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
     registerDirectoryProvider: () => () => undefined,
     getServerInfo: () => ({ port: 12345 }),
     getConnectionState: () => "connected" as const,
+    getConnectionError: () => null,
     resolveEventSessionId: () => undefined,
     recordMessageSessionId: () => undefined,
     notifyNotificationDismissed: () => undefined,
