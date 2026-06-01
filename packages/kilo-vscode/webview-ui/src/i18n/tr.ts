@@ -175,6 +175,8 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "{{provider}} modelleri artık kullanılabilir değil.",
 
   "model.tag.free": "Ücretsiz",
+  "model.tag.dataCollected": "Veri toplanır",
+  "model.tag.freeData.tooltip": "Ücretsiz Kilo modellerinin kullanımı model iyileştirmesi için toplanır.",
   "model.tag.latest": "En yeni",
   "model.group.recommended": "Önerilen",
   "model.group.favorites": "Favoriler",

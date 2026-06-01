@@ -176,6 +176,8 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "{{provider}} modeli više nisu dostupni.",
 
   "model.tag.free": "Besplatno",
+  "model.tag.dataCollected": "Podaci se prikupljaju",
+  "model.tag.freeData.tooltip": "Korištenje besplatnih Kilo modela prikuplja se radi poboljšanja modela.",
   "model.tag.latest": "Najnovije",
   "model.group.recommended": "Preporučeno",
   "model.group.favorites": "Favoriti",

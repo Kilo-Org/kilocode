@@ -175,6 +175,8 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "โมเดล {{provider}} ไม่พร้อมใช้งานอีกต่อไป",
 
   "model.tag.free": "ฟรี",
+  "model.tag.dataCollected": "มีการเก็บข้อมูล",
+  "model.tag.freeData.tooltip": "การใช้งานโมเดล Kilo ฟรีจะถูกเก็บรวบรวมเพื่อปรับปรุงโมเดล",
   "model.tag.latest": "ล่าสุด",
   "model.group.recommended": "แนะนำ",
   "model.group.favorites": "รายการโปรด",
