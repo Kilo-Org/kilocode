@@ -117,6 +117,10 @@ describe("Extension — package.json command sync", () => {
 describe("Extension — KiloProvider handler wiring", () => {
   const ext = fs.readFileSync(EXTENSION_FILE, "utf-8")
 
+  it("does not close the global primary sidebar during Kilo restore", () => {
+    expect(ext).not.toContain("workbench.action.closeSidebar")
+  })
+
   /**
    * Every `new KiloProvider(` in extension.ts must be followed (before the
    * next `new KiloProvider(`) by a `setContinueInWorktreeHandler` call.
