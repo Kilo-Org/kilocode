@@ -157,9 +157,7 @@ describe("TUI inline tool wrapping", () => {
   })
 
   test("keeps retry status ahead of wrapping messages", () => {
-    expect(formatSubagentRetry(2, "Rate limited by provider")).toBe(
-      "Retrying (attempt 2) · Rate limited by provider",
-    )
+    expect(formatSubagentRetry(2, "Rate limited by provider")).toBe("Retrying (attempt 2) · Rate limited by provider")
   })
 
   test("snapshots consecutive grep, glob, and read rows at a narrow width", async () => {
