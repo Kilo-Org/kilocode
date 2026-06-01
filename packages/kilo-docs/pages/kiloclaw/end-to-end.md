@@ -21,7 +21,7 @@ We recommend creating **separate accounts** for your KiloClaw rather than connec
 
 ### Chat platform options
 
-- **[Kilo Chat](https://app.kilo.ai)** — available in the web app and coming soon to iOS and Android; requires zero configuration
+- **[Kilo Chat](https://app.kilo.ai)** — available in the Kilo web and mobile apps, plus supported Kilo Code editor and TUI surfaces; requires zero configuration
 - **[Telegram](/docs/kiloclaw/chat-platforms/telegram)** — easy to set up, private by default
 - **[Discord](/docs/kiloclaw/chat-platforms/discord)** — moderate setup
 - **[Slack](/docs/kiloclaw/chat-platforms/slack)** — most involved setup
@@ -66,7 +66,7 @@ A Workspace-managed account benefits from your organization's admin policies, ma
 
 ## Set up a messaging platform
 
-Your Claw needs a way to communicate with you. **[Kilo Chat](https://app.kilo.ai)** requires no setup — just open the web app. For other platforms, follow the relevant guide:
+Your Claw needs a way to communicate with you. **[Kilo Chat](https://app.kilo.ai)** requires no setup — open the Kilo web or mobile app, or use a supported Kilo Code editor or TUI surface. For other platforms, follow the relevant guide:
 
 - [Telegram](/docs/kiloclaw/chat-platforms/telegram) — about 2 minutes
 - [Discord](/docs/kiloclaw/chat-platforms/discord) — about 10 minutes
@@ -160,4 +160,4 @@ Or ask your Claw to build a custom skill from scratch — it has a built-in skil
 
 **Model picker:** Balanced is a good starting point. Frontier is more capable but significantly more expensive.
 
-You can also use your KiloPass credits — find this under **Profile** in the dashboard.
+You can also use your [Kilo Pass](https://kilo.ai/pricing/kilo-pass) credits — find this under **Profile** in the dashboard.

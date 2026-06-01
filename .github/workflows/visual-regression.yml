@@ -26,6 +26,7 @@ jobs:
               - "packages/kilo-vscode/.storybook/**"
               - "packages/kilo-vscode/tests/visual-regression*"
               - "packages/kilo-vscode/tests/permission-dock-dropdown*"
+              - "packages/kilo-vscode/tests/accessibility*" # kilocode_change
               - "packages/kilo-docs/public/img/screenshot-tests/**"
               - ".github/workflows/visual-regression.yml"
       - name: Check if PR is from a fork
@@ -277,7 +278,7 @@ jobs:
         run: bun run build-storybook
         working-directory: packages/kilo-vscode
 
-      - name: Generate baselines for new/missing stories
+      - name: Generate baselines and enforce webview accessibility checks # kilocode_change
         run: bun run test:visual:update
         working-directory: packages/kilo-vscode
         env:

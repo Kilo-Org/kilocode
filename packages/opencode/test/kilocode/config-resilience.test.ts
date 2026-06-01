@@ -1,13 +1,17 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import path from "path"
 import { Config } from "../../src/config/config"
+import { AppRuntime } from "../../src/effect/app-runtime"
 import { WithInstance } from "../../src/project/with-instance"
 import { Filesystem } from "../../src/util/filesystem"
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
+const load = () => AppRuntime.runPromise(Config.Service.use((svc) => svc.get()))
+const warnings = () => AppRuntime.runPromise(Config.Service.use((svc) => svc.warnings()))
+
 afterEach(async () => {
   await disposeAllInstances()
-  await Config.invalidate()
+  await AppRuntime.runPromise(Config.Service.use((svc) => svc.invalidate()))
 })
 
 describe("config resilience", () => {
@@ -34,7 +38,7 @@ Valid agent prompt`,
     await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
-        const cfg = await Config.get()
+        const cfg = await load()
 
         expect(cfg.agent?.["skip"]).toBeUndefined()
         expect(cfg.agent?.["keep"]).toMatchObject({
@@ -62,8 +66,8 @@ Broken agent prompt`,
     await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
-        await Config.get()
-        const warns = await Config.warnings()
+        await load()
+        const warns = await warnings()
 
         expect(warns.some((w) => w.path.includes("skip.md") && w.message.includes("mode"))).toBe(true)
       },
@@ -93,7 +97,7 @@ Valid command template`,
     await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
-        const cfg = await Config.get()
+        const cfg = await load()
 
         expect(cfg.command?.["skip"]).toBeUndefined()
         expect(cfg.command?.["keep"]).toEqual({
@@ -120,8 +124,8 @@ Broken command template`,
     await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
-        await Config.get()
-        const warns = await Config.warnings()
+        await load()
+        const warns = await warnings()
 
         expect(warns.some((w) => w.path.includes("skip.md") && w.message.includes("subtask"))).toBe(true)
       },
@@ -144,8 +148,8 @@ Broken agent`,
     await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
-        await Config.get()
-        const warns = await Config.warnings()
+        await load()
+        const warns = await warnings()
 
         expect(warns.some((w) => w.path.includes("broken.md") && w.message.includes("invalid"))).toBe(true)
       },
@@ -168,8 +172,8 @@ Broken command`,
     await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
-        await Config.get()
-        const warns = await Config.warnings()
+        await load()
+        const warns = await warnings()
 
         expect(warns.some((w) => w.path.includes("broken.md") && w.message.includes("invalid"))).toBe(true)
       },
@@ -186,8 +190,8 @@ Broken command`,
     await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
-        const cfg = await Config.get()
-        const warns = await Config.warnings()
+        const cfg = await load()
+        const warns = await warnings()
 
         // Config loading should not crash
         expect(cfg).toBeDefined()
@@ -207,8 +211,8 @@ Broken command`,
     await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
-        const cfg = await Config.get()
-        const warns = await Config.warnings()
+        const cfg = await load()
+        const warns = await warnings()
 
         expect(cfg).toBeDefined()
         expect(warns.some((w) => w.path.includes("kilo.json") && w.message.includes("invalid"))).toBe(true)
@@ -224,8 +228,8 @@ Broken command`,
     await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
-        await Config.get()
-        const warns = await Config.warnings()
+        await load()
+        const warns = await warnings()
 
         expect(warns).toEqual([])
       },

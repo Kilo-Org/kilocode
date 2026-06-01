@@ -309,9 +309,20 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
             }
 
             if (permission === ShellID.ToolID) {
-              const title =
-                typeof data.description === "string" && data.description ? data.description : "Shell command"
-              const command = normalizeUrls(typeof data.command === "string" ? data.command : "") // kilocode_change
+              // kilocode_change start
+              const meta = props.request.metadata ?? {}
+              const desc =
+                typeof data.description === "string" && data.description
+                  ? data.description
+                  : typeof meta.description === "string" && meta.description
+                    ? meta.description
+                    : undefined
+              const bg = meta.backgroundProcess === true
+              const title = bg ? `Start background process${desc ? `: ${desc}` : ""}` : (desc ?? "Shell command")
+              const command = normalizeUrls(
+                typeof data.command === "string" ? data.command : typeof meta.command === "string" ? meta.command : "",
+              )
+              // kilocode_change end
               return {
                 icon: "#",
                 title,

@@ -22,6 +22,7 @@ import { WorkspaceApi } from "./groups/workspace"
 import { V2Api } from "./groups/v2"
 // kilocode_change start - Kilo HttpApi groups
 import { CommitMessageApi } from "@/kilocode/server/httpapi/groups/commit-message"
+import { BackgroundProcessApi } from "@/kilocode/server/httpapi/groups/background-process"
 import { EnhancePromptApi } from "@/kilocode/server/httpapi/groups/enhance-prompt"
 import { IndexingApi } from "@/kilocode/server/httpapi/groups/indexing"
 import { KiloGatewayApi } from "@/kilocode/server/httpapi/groups/kilo-gateway"
@@ -57,6 +58,7 @@ export const InstanceHttpApi = HttpApi.make("opencode-instance")
   .addHttpApi(TuiApi)
   .addHttpApi(WorkspaceApi)
   // kilocode_change start - Kilo HttpApi groups
+  .addHttpApi(BackgroundProcessApi)
   .addHttpApi(CommitMessageApi)
   .addHttpApi(EnhancePromptApi)
   .addHttpApi(IndexingApi)

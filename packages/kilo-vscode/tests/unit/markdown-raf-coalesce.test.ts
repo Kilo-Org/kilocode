@@ -24,6 +24,7 @@ import { join } from "node:path"
  */
 describe("Markdown rAF-coalesced parse — regression guard", () => {
   const path = join(__dirname, "..", "..", "..", "ui", "src", "components", "markdown.tsx")
+  const helper = join(__dirname, "..", "..", "..", "ui", "src", "kilocode", "markdown-stream-highlight.ts")
 
   const stripComments = (src: string): string =>
     src
@@ -32,6 +33,7 @@ describe("Markdown rAF-coalesced parse — regression guard", () => {
       .replace(/^\s*\/\/.*$/gm, "")
 
   const src = stripComments(readFileSync(path, "utf8"))
+  const body = stripComments(readFileSync(helper, "utf8"))
 
   it("render effect uses requestAnimationFrame to coalesce parses", () => {
     // Locate the createEffect that owns the morphdom call.
@@ -49,5 +51,12 @@ describe("Markdown rAF-coalesced parse — regression guard", () => {
     // Any of these forms count. We just need the state to exist so that
     // rapid updates can collapse into it.
     expect(src).toMatch(/\b(pendingFrame|pendingContent)\b/)
+  })
+
+  it("delegates streamed Shiki refreshes to the Kilo-owned helper", () => {
+    expect(src).toContain("preserveStreamingHighlight(fromEl, toEl, local.streaming ?? false)")
+    expect(body).toContain("export function preserveStreamingHighlight")
+    expect(body).toMatch(/continues\(before, after\)[\s\S]*queue\(from, after, lang\)/)
+    expect(body).toMatch(/const done = \(\) => \{\s*job\.busy = false\s*if \(!pre\.isConnected\) return/)
   })
 })

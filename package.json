@@ -9,7 +9,8 @@
     "dev": "bun run --cwd packages/opencode --conditions=browser src/index.ts",
     "dev:storybook": "bun --cwd packages/storybook storybook",
     "lint": "oxlint",
-    "typecheck": "bun turbo typecheck --filter=!@kilocode/kilo-jetbrains",
+    "typecheck": "bun turbo typecheck",
+    "test:ci": "bun turbo test:ci",
     "postinstall": "bun run --cwd packages/opencode fix-node-pty && bun run script/setup-git.ts",
     "prepare": "husky",
     "random": "echo 'Random script'",
@@ -36,7 +37,7 @@
       "ulid": "3.0.1",
       "@kobalte/core": "0.13.11",
       "@types/luxon": "3.7.1",
-      "@types/node": "22.13.9",
+      "@types/node": "24.12.2",
       "@types/semver": "7.7.1",
       "@tsconfig/node22": "22.0.2",
       "@tsconfig/bun": "1.0.9",
@@ -138,13 +139,17 @@
     "fastify": ">=5.8.3",
     "diff": "8.0.4",
     "dompurify": "3.4.2",
-    "happy-dom": ">=20.8.9"
+    "happy-dom": ">=20.8.9",
+    "@opentui/core": "catalog:",
+    "@opentui/solid": "catalog:",
+    "solid-js": "catalog:"
   },
   "patchedDependencies": {
     "@npmcli/agent@4.0.0": "patches/@npmcli%2Fagent@4.0.0.patch",
     "@standard-community/standard-openapi@0.2.9": "patches/@standard-community%2Fstandard-openapi@0.2.9.patch",
-    "solid-js@1.9.10": "patches/solid-js@1.9.10.patch"
+    "solid-js@1.9.10": "patches/solid-js@1.9.10.patch",
+    "mammoth@1.12.0": "patches/mammoth@1.12.0.patch"
   },
-  "version": "7.3.6",
+  "version": "7.3.18",
   "peerDependencies": {}
 }

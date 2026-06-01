@@ -8,17 +8,18 @@
  * session activity) and a context window progress bar.
  */
 
-import { Component, For, Show, createMemo, createSignal, onMount, onCleanup } from "solid-js"
+import { Component, For, Show, createMemo, createSignal, createEffect, onMount, onCleanup } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
-import { collapseCostBreakdown } from "../../context/session-utils"
+import { calcTokenUsage, collapseCostBreakdown } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
 import { ContextProgress } from "./ContextProgress"
+import { SessionRenameEditor } from "../shared/SessionRenameEditor"
 import { target as todoTarget } from "../../context/todo-revert"
 import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
 
@@ -31,6 +32,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const language = useLanguage()
 
   const title = createMemo(() => session.currentSession()?.title ?? language.t("command.session.new"))
+  const canRename = createMemo(() => !props.readonly && !!session.currentSession())
   const hasMessages = createMemo(() => session.messages().length > 0)
   const busy = createMemo(() => session.status() === "busy")
   const canCompact = createMemo(() => !busy() && session.visibleMessages().length > 0 && !!session.selected())
@@ -66,18 +68,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     return { tokens, pct }
   })
 
-  // Token breakdown from the last assistant message — only return if at least one value is > 0
-  const tokens = createMemo(() => {
-    const msgs = session.visibleMessages()
-    for (let i = msgs.length - 1; i >= 0; i--) {
-      const m = msgs[i]
-      if (m.role !== "assistant" || !m.tokens) continue
-      const tk = m.tokens
-      const has = tk.input > 0 || tk.output > 0 || (tk.cache?.write ?? 0) > 0 || (tk.cache?.read ?? 0) > 0
-      if (has) return tk
-    }
-    return undefined
-  })
+  const tokens = createMemo(() => calcTokenUsage(session.visibleMessages()))
 
   const hasTimeline = createMemo(() => {
     for (const m of session.visibleMessages()) {
@@ -125,6 +116,31 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   })
 
   const [todosOpen, setTodosOpen] = createSignal(false)
+  const [renaming, setRenaming] = createSignal<{ id: string; title: string }>()
+
+  const startRename = () => {
+    if (props.readonly) return
+    const info = session.currentSession()
+    if (!info) return
+    setRenaming({ id: info.id, title: info.title ?? "" })
+  }
+
+  const commitRename = (title: string) => {
+    const info = renaming()
+    if (!info) return
+    setRenaming(undefined)
+    if (title === info.title) return
+    session.renameSession(info.id, title)
+  }
+
+  const cancelRename = () => {
+    setRenaming(undefined)
+  }
+
+  createEffect(() => {
+    const info = renaming()
+    if (info && session.currentSession()?.id !== info.id) setRenaming(undefined)
+  })
 
   const donePart = (idx: number): Part | undefined =>
     todoTarget({ messages: session.messages(), parts: session.allParts() }, idx)
@@ -139,8 +155,34 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   return (
     <Show when={hasMessages()}>
       <div data-component="task-header">
-        <div data-slot="task-header-title" title={title()}>
-          {title()}
+        <div data-slot="task-header-title">
+          <Show
+            when={!renaming()}
+            fallback={
+              <SessionRenameEditor
+                title={renaming()?.title ?? ""}
+                autosize
+                onSave={commitRename}
+                onCancel={cancelRename}
+              />
+            }
+          >
+            <span
+              data-slot="task-header-title-trigger"
+              data-renamable={canRename() ? "" : undefined}
+              title={canRename() ? language.t("agentManager.worktree.doubleClickRename") : title()}
+              tabIndex={canRename() ? 0 : undefined}
+              role={canRename() ? "button" : undefined}
+              onDblClick={startRename}
+              onKeyDown={(e) => {
+                if (!canRename() || (e.key !== "Enter" && e.key !== " ")) return
+                e.preventDefault()
+                startRename()
+              }}
+            >
+              <span data-slot="task-header-title-label">{title()}</span>
+            </span>
+          </Show>
         </div>
         <div data-slot="task-header-stats">
           <Show when={cost()}>
@@ -207,16 +249,10 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                     {fmtNum(tk().output)}
                   </span>
                 </Show>
-                <Show when={tk().cache?.write && tk().cache!.write > 0}>
-                  <span class="task-header-tokens-value">
-                    <Icon name="arrow-up" size="small" />
-                    cache {fmtNum(tk().cache!.write)}
-                  </span>
-                </Show>
-                <Show when={tk().cache?.read && tk().cache!.read > 0}>
+                <Show when={tk().cached > 0}>
                   <span class="task-header-tokens-value">
                     <Icon name="arrow-down-to-line" size="small" />
-                    cache {fmtNum(tk().cache!.read)}
+                    cache {fmtNum(tk().cached)}
                   </span>
                 </Show>
               </div>

@@ -78,6 +78,10 @@ const clear = async (wait = false) => {
 }
 const listDirs = () =>
   Effect.runPromise(Config.Service.use((svc) => svc.directories()).pipe(Effect.scoped, Effect.provide(layer)))
+// kilocode_change start
+const warnings = () =>
+  Effect.runPromise(Config.Service.use((svc) => svc.warnings()).pipe(Effect.scoped, Effect.provide(layer)))
+// kilocode_change end
 const ready = () =>
   Effect.runPromise(Config.Service.use((svc) => svc.waitForDependencies()).pipe(Effect.scoped, Effect.provide(layer)))
 
@@ -386,6 +390,7 @@ test("jsonc overrides json in the same directory", async () => {
   })
 })
 
+// kilocode_change start
 test("prefers .kilo directory config over legacy .kilocode", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
@@ -409,11 +414,12 @@ test("prefers .kilo directory config over legacy .kilocode", async () => {
   await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
-      const config = await Config.get()
+      const config = await load()
       expect(config.model).toBe("new/model")
     },
   })
 })
+// kilocode_change end
 
 test("handles environment variable substitution", async () => {
   const originalEnv = process.env["TEST_VAR"]
@@ -585,6 +591,7 @@ test("handles file inclusion with replacement tokens", async () => {
   })
 })
 
+// kilocode_change start
 test("validates config schema and reports warning on invalid fields", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
@@ -597,14 +604,16 @@ test("validates config schema and reports warning on invalid fields", async () =
   await provideTestInstance({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change - invalid schema surfaces as warnings, not a throw
+      // invalid schema surfaces as warnings, not a throw
       await load()
-      const warnings = await Config.warnings()
-      expect(warnings.length).toBeGreaterThan(0)
+      const issues = await warnings()
+      expect(issues.length).toBeGreaterThan(0)
     },
   })
 })
+// kilocode_change end
 
+// kilocode_change start
 test("reports warning for invalid JSON", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
@@ -614,13 +623,14 @@ test("reports warning for invalid JSON", async () => {
   await provideTestInstance({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change - invalid JSON surfaces as a warning, not a throw
+      // invalid JSON surfaces as a warning, not a throw
       await load()
-      const warnings = await Config.warnings()
-      expect(warnings.length).toBeGreaterThan(0)
+      const issues = await warnings()
+      expect(issues.length).toBeGreaterThan(0)
     },
   })
 })
+// kilocode_change end
 
 test("handles agent configuration", async () => {
   await using tmp = await tmpdir({
@@ -965,6 +975,7 @@ Nested command template`,
   })
 })
 
+// kilocode_change start
 test("prefers .kilo commands over legacy .kilocode commands", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
@@ -988,7 +999,7 @@ Hello from new command`,
   await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
-      const config = await Config.get()
+      const config = await load()
 
       expect(config.command?.["hello"]).toEqual({
         description: "New command",
@@ -997,6 +1008,7 @@ Hello from new command`,
     },
   })
 })
+// kilocode_change end
 
 test("gets config directories", async () => {
   await using tmp = await tmpdir()
@@ -1779,6 +1791,73 @@ test("Effect config parser preserves permission order while rejecting unknown to
 
 // MCP config merging tests
 
+// kilocode_change start - regression for `env` alias on local MCP entries
+test("local mcp accepts `env` as an alias for `environment`", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Filesystem.write(
+        path.join(dir, "kilo.json"),
+        JSON.stringify({
+          $schema: "https://app.kilo.ai/config.json",
+          mcp: {
+            context7: {
+              type: "local",
+              command: ["npx", "-y", "@upstash/context7-mcp"],
+              env: { CONTEXT7_API_KEY: "test-key" },
+              enabled: true,
+            },
+          },
+        }),
+      )
+    },
+  })
+  await WithInstance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await load()
+      expect(config.mcp?.context7).toEqual({
+        type: "local",
+        command: ["npx", "-y", "@upstash/context7-mcp"],
+        environment: { CONTEXT7_API_KEY: "test-key" },
+        enabled: true,
+      })
+    },
+  })
+})
+
+test("local mcp prefers `environment` over `env` when both are present", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Filesystem.write(
+        path.join(dir, "kilo.json"),
+        JSON.stringify({
+          $schema: "https://app.kilo.ai/config.json",
+          mcp: {
+            context7: {
+              type: "local",
+              command: ["npx", "-y", "@upstash/context7-mcp"],
+              environment: { CONTEXT7_API_KEY: "from-environment" },
+              env: { CONTEXT7_API_KEY: "from-env" },
+            },
+          },
+        }),
+      )
+    },
+  })
+  await WithInstance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await load()
+      expect(config.mcp?.context7).toEqual({
+        type: "local",
+        command: ["npx", "-y", "@upstash/context7-mcp"],
+        environment: { CONTEXT7_API_KEY: "from-environment" },
+      })
+    },
+  })
+})
+// kilocode_change end
+
 test("project config can override MCP server enabled status", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
@@ -2046,6 +2125,83 @@ test("wellknown URL with trailing slash is normalized", async () => {
     ).pipe(Effect.scoped, Effect.provide(layer), Effect.runPromise)
   } finally {
     globalThis.fetch = originalFetch
+  }
+})
+
+test("wellknown remote_config supports templated env vars in headers", async () => {
+  const originalFetch = globalThis.fetch
+  const originalToken = process.env.TEST_TOKEN
+  let wellknownFetchedUrl: string | undefined
+  let remoteFetchedUrl: string | undefined
+  let remoteHeaders: HeadersInit | undefined
+  globalThis.fetch = mock((url: string | URL | Request, init?: RequestInit) => {
+    const urlStr = url instanceof Request ? url.url : url instanceof URL ? url.href : url
+    if (urlStr.includes(".well-known/opencode")) {
+      wellknownFetchedUrl = urlStr
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            remote_config: {
+              url: "https://config.example.com/opencode.json",
+              headers: {
+                Authorization: "Bearer {env:TEST_TOKEN}",
+              },
+            },
+          }),
+          { status: 200 },
+        ),
+      )
+    }
+    if (urlStr.includes("config.example.com")) {
+      remoteFetchedUrl = urlStr
+      remoteHeaders = init?.headers
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            mcp: { confluence: { type: "remote", url: "https://confluence.example.com/mcp", enabled: true } },
+          }),
+          { status: 200 },
+        ),
+      )
+    }
+    return originalFetch(url, init)
+  }) as unknown as typeof fetch
+
+  const fakeAuth = Layer.mock(Auth.Service)({
+    all: () =>
+      Effect.succeed({
+        "https://example.com": new Auth.WellKnown({ type: "wellknown", key: "TEST_TOKEN", token: "test-token" }),
+      }),
+  })
+
+  const layer = Config.layer.pipe(
+    Layer.provide(testFlock),
+    Layer.provide(AppFileSystem.defaultLayer),
+    Layer.provide(Env.defaultLayer),
+    Layer.provide(fakeAuth),
+    Layer.provide(emptyAccount),
+    Layer.provideMerge(infra),
+    Layer.provide(noopNpm),
+  )
+
+  try {
+    await provideTmpdirInstance(
+      () =>
+        Config.Service.use((svc) =>
+          Effect.gen(function* () {
+            const config = yield* svc.get()
+            expect(wellknownFetchedUrl).toBe("https://example.com/.well-known/opencode")
+            expect(remoteFetchedUrl).toBe("https://config.example.com/opencode.json")
+            expect(remoteHeaders).toEqual({ Authorization: "Bearer test-token" })
+            expect(config.mcp?.confluence?.enabled).toBe(true)
+          }),
+        ),
+      { git: true },
+    ).pipe(Effect.scoped, Effect.provide(layer), Effect.runPromise)
+  } finally {
+    globalThis.fetch = originalFetch
+    if (originalToken === undefined) delete process.env.TEST_TOKEN
+    else process.env.TEST_TOKEN = originalToken
   }
 })
 

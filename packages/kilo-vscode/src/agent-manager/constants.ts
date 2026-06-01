@@ -13,6 +13,9 @@ export const MAX_MULTI_VERSIONS = 4
 /** Telemetry source identifier for all Agent Manager events. */
 export const PLATFORM = "agent-manager" as const
 
+/** Keep baseline snapshots without interrupting concurrently started agents. */
+export const SNAPSHOT_INITIALIZATION = "wait" as const
+
 /** Kilo config directory name (project-level and inside worktrees). */
 export const KILO_DIR = ".kilo"
 

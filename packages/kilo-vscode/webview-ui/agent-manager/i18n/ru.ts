@@ -55,7 +55,6 @@ export const dict = {
   "agentManager.tabsMenu.search": "Поиск вкладок...",
   "agentManager.tabsMenu.empty": "Нет подходящих вкладок",
   "agentManager.tabsMenu.status.waiting": "Ожидание",
-  "agentManager.tabsMenu.status.working": "Работа",
   "agentManager.tabsMenu.status.retry": "Повтор",
 
   "agentManager.terminal.new": "Новая вкладка терминала",

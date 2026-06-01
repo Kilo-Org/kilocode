@@ -136,7 +136,7 @@ export class LanceDBVectorStore implements IVectorStore {
     return [
       {
         key: KEY.size,
-        value: this.vectorSize,
+        value: String(this.vectorSize),
       },
       {
         key: KEY.provider,
@@ -148,11 +148,11 @@ export class LanceDBVectorStore implements IVectorStore {
       },
       {
         key: KEY.dimension,
-        value: this.profile.dimension,
+        value: String(this.profile.dimension),
       },
       {
         key: KEY.complete,
-        value: false,
+        value: "false",
       },
     ]
   }
@@ -572,7 +572,7 @@ export class LanceDBVectorStore implements IVectorStore {
       }
       const metadataTable = await db.openTable(this.metadataTableName)
       const metadataResults = await metadataTable.query().where(`key = '${KEY.complete}'`).toArray()
-      const indexed = metadataResults.length > 0 ? metadataResults[0].value : false
+      const indexed = metadataResults.length > 0 ? String(metadataResults[0].value) === "true" : false
       log.info("LanceDB indexing metadata evaluated", {
         workspacePath: this.workspacePath,
         pointCount,
@@ -590,7 +590,9 @@ export class LanceDBVectorStore implements IVectorStore {
       throw new Error(`Invalid metadata key: ${key}`)
     }
     await metadataTable.delete(`key = '${key}'`)
-    await metadataTable.add([{ key, value }])
+    // All values must be strings to prevent LanceDB from inferring the value column
+    // type as number from the first row, which corrupts subsequent string/boolean values.
+    await metadataTable.add([{ key, value: String(value) }])
   }
 
   private async _persistEmbeddingProfile(metadataTable: Table): Promise<void> {
@@ -609,7 +611,7 @@ export class LanceDBVectorStore implements IVectorStore {
       const db = await this.getDb()
       const metadataTable = await db.openTable(this.metadataTableName)
       await this._persistEmbeddingProfile(metadataTable)
-      await this._upsertMetadata(metadataTable, KEY.complete, true)
+      await this._upsertMetadata(metadataTable, KEY.complete, "true")
       log.info("Marked indexing as complete")
     } catch (error) {
       log.error("Failed to mark indexing as complete", { error })
@@ -626,7 +628,7 @@ export class LanceDBVectorStore implements IVectorStore {
       const db = await this.getDb()
       const metadataTable = await db.openTable(this.metadataTableName)
       await this._persistEmbeddingProfile(metadataTable)
-      await this._upsertMetadata(metadataTable, KEY.complete, false)
+      await this._upsertMetadata(metadataTable, KEY.complete, "false")
       log.info("Marked indexing as incomplete (in progress)")
     } catch (error) {
       log.error("Failed to mark indexing as incomplete", { error })

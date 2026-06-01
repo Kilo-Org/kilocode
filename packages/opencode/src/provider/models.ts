@@ -123,10 +123,15 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/ModelsDev") {}
 
-export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClient.HttpClient> = Layer.effect(
+type Requirements = AppFileSystem.Service | HttpClient.HttpClient | Config.Service | Auth.Service | ModelCache.Service // kilocode_change
+
+export const layer: Layer.Layer<Service, never, Requirements> = Layer.effect(
   Service,
   Effect.gen(function* () {
     const fs = yield* AppFileSystem.Service
+    const cfg = yield* Config.Service // kilocode_change
+    const auth = yield* Auth.Service // kilocode_change
+    const cache = yield* ModelCache.Service // kilocode_change
     const http = HttpClient.filterStatusOk(withTransientReadRetry(yield* HttpClient.HttpClient))
 
     const source = Flag.KILO_MODELS_URL || "https://models.dev"
@@ -196,7 +201,7 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
       // FastRouter ships its own /models endpoint; never trust models.dev for it.
       delete providers["fastrouter"]
 
-      const config = yield* Effect.promise(() => Config.get())
+      const config = yield* cfg.get()
       const disabled = new Set(config.disabled_providers ?? [])
       const enabled = config.enabled_providers ? new Set(config.enabled_providers) : undefined
       const kiloAllowed = (!enabled || enabled.has("kilo")) && !disabled.has("kilo")
@@ -232,8 +237,8 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
 
       if (kiloAllowed) {
         const opts = config.provider?.kilo?.options
-        const auth = yield* Effect.promise(() => Auth.get("kilo"))
-        const org = opts?.kilocodeOrganizationId ?? (auth?.type === "oauth" ? auth.accountId : undefined)
+        const info = yield* auth.get("kilo").pipe(Effect.catch(() => Effect.succeed(undefined)))
+        const org = opts?.kilocodeOrganizationId ?? (info?.type === "oauth" ? info.accountId : undefined)
         const base = normalizeKiloBaseURL(opts?.baseURL, org)
         const fetch = {
           ...(base ? { baseURL: base } : {}),
@@ -241,10 +246,10 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
         }
         const [kilo, apertis] = yield* Effect.all(
           [
-            Effect.promise(() => ModelCache.fetch("kilo", fetch).catch(() => ({}))),
+            cache.fetch("kilo", fetch).pipe(Effect.catch(() => Effect.succeed({}))),
             providers["apertis"]
               ? Effect.succeed(null)
-              : Effect.promise(() => ModelCache.fetch("apertis", aptFetch).catch(() => ({}))),
+              : cache.fetch("apertis", aptFetch).pipe(Effect.catch(() => Effect.succeed({}))),
           ],
           { concurrency: 2 },
         )
@@ -258,7 +263,7 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
           models: kilo,
         }
         if (Object.keys(kilo).length === 0) {
-          yield* Effect.sync(() => void ModelCache.refresh("kilo", fetch).catch(() => {}))
+          yield* cache.refresh("kilo", fetch).pipe(Effect.ignore, Effect.forkDetach)
         }
         if (!providers["apertis"] && apertis !== null) {
           providers["apertis"] = {
@@ -270,14 +275,14 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
             models: apertis,
           }
           if (Object.keys(apertis).length === 0) {
-            yield* Effect.sync(() => void ModelCache.refresh("apertis", aptFetch).catch(() => {}))
+            yield* cache.refresh("apertis", aptFetch).pipe(Effect.ignore, Effect.forkDetach)
           }
         }
         return providers
       }
 
       if (!providers["apertis"]) {
-        const apertis = yield* Effect.promise(() => ModelCache.fetch("apertis", aptFetch).catch(() => ({})))
+        const apertis = yield* cache.fetch("apertis", aptFetch).pipe(Effect.catch(() => Effect.succeed({})))
         providers["apertis"] = {
           id: "apertis",
           name: "Apertis",
@@ -287,7 +292,7 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
           models: apertis,
         }
         if (Object.keys(apertis).length === 0) {
-          yield* Effect.sync(() => void ModelCache.refresh("apertis", aptFetch).catch(() => {}))
+          yield* cache.refresh("apertis", aptFetch).pipe(Effect.ignore, Effect.forkDetach)
         }
       }
       return providers
@@ -323,6 +328,9 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
 export const defaultLayer: Layer.Layer<Service> = layer.pipe(
   Layer.provide(FetchHttpClient.layer),
   Layer.provide(AppFileSystem.defaultLayer),
+  Layer.provide(Config.defaultLayer), // kilocode_change
+  Layer.provide(Auth.defaultLayer), // kilocode_change
+  Layer.provide(ModelCache.defaultLayer), // kilocode_change
 )
 
 export * as ModelsDev from "./models"

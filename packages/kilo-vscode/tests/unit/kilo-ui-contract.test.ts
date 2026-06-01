@@ -137,6 +137,19 @@ describe("DataProvider contract (runtime)", () => {
   })
 })
 
+describe("Assistant Markdown streaming contract (source)", () => {
+  const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+  const block =
+    src.match(
+      /PART_MAPPING\["text"\]\s*=\s*function TextPartDisplay[\s\S]*?(?=\/\/ Expanded mode|PART_MAPPING\["reasoning"\])/,
+    )?.[0] ?? ""
+
+  it("passes active text streams through Markdown's streaming mode", () => {
+    expect(block).not.toBe("")
+    expect(block).toContain("streaming={streaming()}")
+  })
+})
+
 describe("Edit tool diff-first click contract (source)", () => {
   const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
 

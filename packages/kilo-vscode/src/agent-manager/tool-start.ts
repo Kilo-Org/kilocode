@@ -3,7 +3,7 @@ import { sanitizeBranchName, versionedName } from "./branch-name"
 import type { CreateWorktreeResult } from "./WorktreeManager"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import type { PanelContext } from "./host"
-import { PLATFORM } from "./constants"
+import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
 
 const LABEL_MAX = 28
 const PREFIX = new Set(["feat", "fix", "chore", "bug", "issue", "task", "branch"])
@@ -103,6 +103,7 @@ async function prompt(client: KiloClient, sid: string, dir: string, task: ToolTa
       sessionID: sid,
       directory: dir,
       parts: [{ type: "text", text: body }],
+      snapshotInitialization: SNAPSHOT_INITIALIZATION,
     },
     { throwOnError: true },
   )

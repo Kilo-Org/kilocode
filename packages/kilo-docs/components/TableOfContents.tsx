@@ -1,16 +1,46 @@
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
 
+const TAB_SYNC_EVENT = "kilo-tab-select"
+
+function slugify(label: string) {
+  return label
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+}
+
 export function TableOfContents({ toc }) {
-  const items = toc.filter((item) => item.id && (item.level === 2 || item.level === 3))
+  const [tab, setTab] = useState("")
   const [activeHash, setActiveHash] = useState("")
+  const items = toc.filter((item) => {
+    if (!item.id || (item.level !== 2 && item.level !== 3)) return false
+
+    return !item.tab || item.tab.slug === tab
+  })
 
   useEffect(() => {
-    const updateHash = () => setActiveHash(window.location.hash)
-    updateHash()
-    window.addEventListener("hashchange", updateHash)
-    return () => window.removeEventListener("hashchange", updateHash)
-  }, [])
+    const update = () => {
+      const hash = window.location.hash.slice(1)
+      const item = toc.find((entry) => entry.id === hash && entry.tab)
+      setActiveHash(window.location.hash)
+      setTab(item?.tab?.slug ?? (toc.some((entry) => entry.tab?.slug === hash) ? hash : ""))
+    }
+
+    const sync = (e: Event) => {
+      const label = (e as CustomEvent<string>).detail
+      setActiveHash(window.location.hash)
+      setTab(slugify(label))
+    }
+
+    update()
+    window.addEventListener("hashchange", update)
+    window.addEventListener(TAB_SYNC_EVENT, sync)
+    return () => {
+      window.removeEventListener("hashchange", update)
+      window.removeEventListener(TAB_SYNC_EVENT, sync)
+    }
+  }, [toc])
 
   if (items.length <= 1) {
     return null
@@ -22,14 +52,27 @@ export function TableOfContents({ toc }) {
         {items.map((item) => {
           const href = `#${item.id}`
           const active = activeHash === href
+          const select = (e: React.MouseEvent<HTMLAnchorElement>) => {
+            if (!item.tab) return
+
+            e.preventDefault()
+            window.dispatchEvent(new CustomEvent(TAB_SYNC_EVENT, { detail: item.tab.label }))
+            setActiveHash(href)
+            setTab(item.tab.slug)
+            history.pushState(null, "", href)
+            requestAnimationFrame(() => document.getElementById(item.id)?.scrollIntoView())
+          }
+
           return (
             <li
-              key={item.title}
+              key={`${item.tab?.slug ?? "page"}-${item.id}`}
               className={[active ? "active" : undefined, item.level === 3 ? "padded" : undefined]
                 .filter(Boolean)
                 .join(" ")}
             >
-              <Link href={href}>{item.title}</Link>
+              <Link href={href} onClick={select}>
+                {item.title}
+              </Link>
             </li>
           )
         })}

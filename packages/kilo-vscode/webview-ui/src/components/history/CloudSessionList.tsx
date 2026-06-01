@@ -63,9 +63,11 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
   const [gitUrl, setGitUrl] = createSignal<string | null>(null)
   const [repoOnly, setRepoOnly] = createSignal(true)
   const [initialized, setInitialized] = createSignal(false)
+  const [notice, setNotice] = createSignal("")
 
   let loadGen = 0
   let activeGen = 0
+  let seq = 0
 
   const unsub = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "cloudSessionsLoaded") {
@@ -110,6 +112,16 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
     })
   })
 
+  function announce(s: DisplaySession | undefined) {
+    const id = ++seq
+    setNotice("")
+    if (!s) return
+    queueMicrotask(() => {
+      if (id !== seq) return
+      setNotice(s.title)
+    })
+  }
+
   function loadMore() {
     const cursor = nextCursor()
     if (!cursor || loading()) return
@@ -130,6 +142,7 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
         items={sessions()}
         key={(s) => s.id}
         filterKeys={["title"]}
+        onMove={announce}
         onSelect={(s) => {
           if (s) props.onSelectSession?.(s.id)
         }}
@@ -161,6 +174,9 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
           </>
         )}
       </List>
+      <div data-slot="session-list-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {notice()}
+      </div>
       <Show when={nextCursor() && !loading()}>
         <div class="cloud-session-load-more">
           <button class="cloud-session-load-more-btn" onClick={loadMore}>

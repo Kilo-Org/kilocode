@@ -25,6 +25,7 @@ import { dict as uiEn } from "@kilocode/kilo-ui/i18n/en"
 import { dict as appEn } from "../i18n/en"
 import { dict as kiloEn } from "@kilocode/kilo-i18n/en"
 import SessionList from "../components/history/SessionList"
+import HistoryView from "../components/history/HistoryView"
 
 const dict: Record<string, string> = { ...appEn, ...uiEn, ...kiloEn }
 function t(key: string) {
@@ -150,12 +151,32 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 
+const SessionListDemo = () => {
+  const [selected, setSelected] = createSignal("")
+
+  return (
+    <WithSessions sessions={mockSessions as any}>
+      <div style={{ height: "500px" }}>
+        <SessionList onSelectSession={setSelected} />
+        <output class="sr-only" data-slot="selected-session">
+          {selected()}
+        </output>
+      </div>
+    </WithSessions>
+  )
+}
+
 export const WithItems: Story = {
   name: "With sessions",
+  render: () => <SessionListDemo />,
+}
+
+export const Sources: Story = {
+  name: "Local and cloud sources",
   render: () => (
     <WithSessions sessions={mockSessions as any}>
       <div style={{ height: "500px" }}>
-        <SessionList onSelectSession={noop} />
+        <HistoryView onSelectSession={noop} onBack={noop} />
       </div>
     </WithSessions>
   ),

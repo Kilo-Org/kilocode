@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { describe, expect, it } from "bun:test"
 import { parseFilePath, extractFilePathFromHref } from "./file-path"
 
@@ -154,6 +155,18 @@ describe("extractFilePathFromHref", () => {
     it("path with multiple extensions", () => {
       expect(extractFilePathFromHref("config.test.ts")).toBe("config.test.ts")
     })
+
+    it("file:// URL on Unix", () => {
+      expect(extractFilePathFromHref("file:///foo/bar.ts")).toBe("/foo/bar.ts")
+    })
+
+    it("file:// URL with Windows drive", () => {
+      expect(extractFilePathFromHref("file:///C:/Users/dev/file.ts")).toBe("C:/Users/dev/file.ts")
+    })
+
+    it("file:// URL with encoded characters", () => {
+      expect(extractFilePathFromHref("file:///foo%20bar/baz.ts")).toBe("/foo bar/baz.ts")
+    })
   })
 
   describe("strips fragments and queries", () => {
@@ -193,10 +206,6 @@ describe("extractFilePathFromHref", () => {
 
     it("javascript scheme", () => {
       expect(extractFilePathFromHref("javascript:void(0)")).toBeUndefined()
-    })
-
-    it("file:// URL", () => {
-      expect(extractFilePathFromHref("file:///foo/bar.ts")).toBeUndefined()
     })
 
     it("ftp URL", () => {

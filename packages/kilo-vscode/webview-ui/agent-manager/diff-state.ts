@@ -38,6 +38,7 @@ export function mergeWorktreeDiffs(prev: WorktreeFileDiff[], next: WorktreeFileD
       existing.file === diff.file &&
       existing.before === diff.before &&
       existing.after === diff.after &&
+      existing.patch === diff.patch &&
       sameDiffMeta(existing, diff)
     )
       return existing
@@ -45,8 +46,19 @@ export function mergeWorktreeDiffs(prev: WorktreeFileDiff[], next: WorktreeFileD
     if (!diff.summarized) return diff
     // Metadata matches — restore cached content as before.
     if (sameDiffMeta({ ...existing, summarized: true }, diff)) {
-      const merged = { ...diff, before: existing.before, after: existing.after, summarized: false }
-      if (existing.before === merged.before && existing.after === merged.after && sameDiffMeta(existing, merged))
+      const merged = {
+        ...diff,
+        before: existing.before,
+        after: existing.after,
+        patch: existing.patch,
+        summarized: false,
+      }
+      if (
+        existing.before === merged.before &&
+        existing.after === merged.after &&
+        existing.patch === merged.patch &&
+        sameDiffMeta(existing, merged)
+      )
         return existing
       return merged
     }

@@ -59,7 +59,6 @@ export const dict = {
   "agentManager.tabsMenu.search": "Sekmelerde ara...",
   "agentManager.tabsMenu.empty": "Eşleşen sekme yok",
   "agentManager.tabsMenu.status.waiting": "Bekliyor",
-  "agentManager.tabsMenu.status.working": "Çalışıyor",
   "agentManager.tabsMenu.status.retry": "Yeniden",
 
   "agentManager.terminal.new": "Yeni Terminal Sekmesi",

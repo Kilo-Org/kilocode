@@ -13,6 +13,16 @@ import type {
   AuthRemoveResponses,
   AuthSetErrors,
   AuthSetResponses,
+  BackgroundProcessGetErrors,
+  BackgroundProcessGetResponses,
+  BackgroundProcessListResponses,
+  BackgroundProcessLogsErrors,
+  BackgroundProcessLogsResponses,
+  BackgroundProcessRestartErrors,
+  BackgroundProcessRestartResponses,
+  BackgroundProcessStopErrors,
+  BackgroundProcessStopResponses,
+  BackgroundProcessStopSessionResponses,
   CommandListResponses,
   CommitMessageGenerateErrors,
   CommitMessageGenerateResponses,
@@ -40,9 +50,9 @@ import type {
   ExperimentalWorkspaceListResponses,
   ExperimentalWorkspaceRemoveErrors,
   ExperimentalWorkspaceRemoveResponses,
-  ExperimentalWorkspaceSessionRestoreErrors,
-  ExperimentalWorkspaceSessionRestoreResponses,
   ExperimentalWorkspaceStatusResponses,
+  ExperimentalWorkspaceWarpErrors,
+  ExperimentalWorkspaceWarpResponses,
   FileListResponses,
   FilePartInput,
   FilePartSource,
@@ -87,6 +97,8 @@ import type {
   KilocodeSessionImportProjectResponses,
   KilocodeSessionImportSessionErrors,
   KilocodeSessionImportSessionResponses,
+  KiloEditErrors,
+  KiloEditResponses,
   KiloFimErrors,
   KiloFimResponses,
   KiloModesResponses,
@@ -183,6 +195,7 @@ import type {
   SessionDeleteResponses,
   SessionDelivery,
   SessionDiffResponses,
+  SessionForkErrors,
   SessionForkResponses,
   SessionGetErrors,
   SessionGetResponses,
@@ -227,6 +240,8 @@ import type {
   SyncReplayErrors,
   SyncReplayResponses,
   SyncStartResponses,
+  SyncStealErrors,
+  SyncStealResponses,
   TelemetryCaptureErrors,
   TelemetryCaptureResponses,
   TelemetrySetEnabledErrors,
@@ -261,8 +276,12 @@ import type {
   V2SessionMessagesResponses,
   V2SessionPromptResponses,
   V2SessionWaitResponses,
+  VcsApplyErrors,
+  VcsApplyResponses,
+  VcsDiffRawResponses,
   VcsDiffResponses,
   VcsGetResponses,
+  VcsStatusResponses,
   WorktreeCreateErrors,
   WorktreeCreateInput,
   WorktreeCreateResponses,
@@ -1111,16 +1130,17 @@ export class Workspace extends HeyApiClient {
   }
 
   /**
-   * Restore session into workspace
+   * Warp session into workspace
    *
-   * Replay a session's sync events into the target workspace in batches.
+   * Move a session's sync history into the target workspace, or detach it to the local project.
    */
-  public sessionRestore<ThrowOnError extends boolean = false>(
-    parameters: {
-      id: string
+  public warp<ThrowOnError extends boolean = false>(
+    parameters?: {
       directory?: string
       workspace?: string
+      id?: string | null
       sessionID?: string
+      copyChanges?: boolean
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -1129,20 +1149,21 @@ export class Workspace extends HeyApiClient {
       [
         {
           args: [
-            { in: "path", key: "id" },
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
+            { in: "body", key: "id" },
             { in: "body", key: "sessionID" },
+            { in: "body", key: "copyChanges" },
           ],
         },
       ],
     )
     return (options?.client ?? this.client).post<
-      ExperimentalWorkspaceSessionRestoreResponses,
-      ExperimentalWorkspaceSessionRestoreErrors,
+      ExperimentalWorkspaceWarpResponses,
+      ExperimentalWorkspaceWarpErrors,
       ThrowOnError
     >({
-      url: "/experimental/workspace/{id}/session-restore",
+      url: "/experimental/workspace/warp",
       ...options,
       ...params,
       headers: {
@@ -1752,6 +1773,38 @@ export class Path extends HeyApiClient {
   }
 }
 
+export class Diff extends HeyApiClient {
+  /**
+   * Get raw VCS diff
+   *
+   * Retrieve a raw patch for current uncommitted changes.
+   */
+  public raw<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<VcsDiffRawResponses, unknown, ThrowOnError>({
+      url: "/vcs/diff/raw",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Vcs extends HeyApiClient {
   /**
    * Get VCS info
@@ -1778,6 +1831,36 @@ export class Vcs extends HeyApiClient {
     )
     return (options?.client ?? this.client).get<VcsGetResponses, unknown, ThrowOnError>({
       url: "/vcs",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get VCS status
+   *
+   * Retrieve changed files in the current working tree without patches.
+   */
+  public status<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<VcsStatusResponses, unknown, ThrowOnError>({
+      url: "/vcs/status",
       ...options,
       ...params,
     })
@@ -1813,6 +1896,48 @@ export class Vcs extends HeyApiClient {
       ...options,
       ...params,
     })
+  }
+
+  /**
+   * Apply VCS patch
+   *
+   * Apply a raw patch to the current working tree.
+   */
+  public apply<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      patch?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "patch" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<VcsApplyResponses, VcsApplyErrors, ThrowOnError>({
+      url: "/vcs/apply",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  private _diff?: Diff
+  get diff2(): Diff {
+    return (this._diff ??= new Diff({ client: this.client }))
   }
 }
 
@@ -3474,6 +3599,7 @@ export class Session2 extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      snapshotInitialization?: "wait"
       editorContext?: {
         visibleFiles?: Array<string>
         openTabs?: Array<string>
@@ -3500,6 +3626,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "snapshotInitialization" },
             { in: "body", key: "editorContext" },
             { in: "body", key: "parts" },
           ],
@@ -3617,7 +3744,7 @@ export class Session2 extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).post<SessionForkResponses, unknown, ThrowOnError>({
+    return (options?.client ?? this.client).post<SessionForkResponses, SessionForkErrors, ThrowOnError>({
       url: "/session/{sessionID}/fork",
       ...options,
       ...params,
@@ -3834,6 +3961,7 @@ export class Session2 extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      snapshotInitialization?: "wait"
       editorContext?: {
         visibleFiles?: Array<string>
         openTabs?: Array<string>
@@ -3860,6 +3988,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "snapshotInitialization" },
             { in: "body", key: "editorContext" },
             { in: "body", key: "parts" },
           ],
@@ -3894,6 +4023,7 @@ export class Session2 extends HeyApiClient {
       arguments?: string
       command?: string
       variant?: string
+      snapshotInitialization?: "wait"
       parts?: Array<{
         id?: string
         type: "file"
@@ -3919,6 +4049,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "arguments" },
             { in: "body", key: "command" },
             { in: "body", key: "variant" },
+            { in: "body", key: "snapshotInitialization" },
             { in: "body", key: "parts" },
           ],
         },
@@ -4291,6 +4422,43 @@ export class Sync extends HeyApiClient {
     )
     return (options?.client ?? this.client).post<SyncReplayResponses, SyncReplayErrors, ThrowOnError>({
       url: "/sync/replay",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Steal session into workspace
+   *
+   * Update a session to belong to the current workspace through the sync event system.
+   */
+  public steal<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      sessionID?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "sessionID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<SyncStealResponses, SyncStealErrors, ThrowOnError>({
+      url: "/sync/steal",
       ...options,
       ...params,
       headers: {
@@ -4962,6 +5130,214 @@ export class Tui extends HeyApiClient {
   }
 }
 
+export class BackgroundProcess extends HeyApiClient {
+  /**
+   * List background processes
+   *
+   * List tracked background processes for the current instance.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<BackgroundProcessListResponses, unknown, ThrowOnError>({
+      url: "/background-process",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get background process
+   *
+   * Get status and retained output for one background process.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters: {
+      processID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "processID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      BackgroundProcessGetResponses,
+      BackgroundProcessGetErrors,
+      ThrowOnError
+    >({
+      url: "/background-process/{processID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get background process logs
+   *
+   * Get the retained output tail for one background process.
+   */
+  public logs<ThrowOnError extends boolean = false>(
+    parameters: {
+      processID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "processID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      BackgroundProcessLogsResponses,
+      BackgroundProcessLogsErrors,
+      ThrowOnError
+    >({
+      url: "/background-process/{processID}/logs",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Stop background process
+   *
+   * Terminate a background process and its child process tree.
+   */
+  public stop<ThrowOnError extends boolean = false>(
+    parameters: {
+      processID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "processID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      BackgroundProcessStopResponses,
+      BackgroundProcessStopErrors,
+      ThrowOnError
+    >({
+      url: "/background-process/{processID}/stop",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Restart background process
+   *
+   * Stop and restart a background process with its original command.
+   */
+  public restart<ThrowOnError extends boolean = false>(
+    parameters: {
+      processID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "processID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      BackgroundProcessRestartResponses,
+      BackgroundProcessRestartErrors,
+      ThrowOnError
+    >({
+      url: "/background-process/{processID}/restart",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Stop session background processes
+   *
+   * Terminate and forget all background processes associated with one session.
+   */
+  public stopSession<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<BackgroundProcessStopSessionResponses, unknown, ThrowOnError>({
+      url: "/background-process/session/{sessionID}/stop",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class CommitMessage extends HeyApiClient {
   /**
    * Generate commit message
@@ -5393,6 +5769,7 @@ export class Kilo extends HeyApiClient {
       workspace?: string
       prefix?: string
       suffix?: string
+      provider?: string
       model?: string
       maxTokens?: number
       temperature?: number
@@ -5408,6 +5785,7 @@ export class Kilo extends HeyApiClient {
             { in: "query", key: "workspace" },
             { in: "body", key: "prefix" },
             { in: "body", key: "suffix" },
+            { in: "body", key: "provider" },
             { in: "body", key: "model" },
             { in: "body", key: "maxTokens" },
             { in: "body", key: "temperature" },
@@ -5417,6 +5795,66 @@ export class Kilo extends HeyApiClient {
     )
     return (options?.client ?? this.client).sse.post<KiloFimResponses, KiloFimErrors, ThrowOnError>({
       url: "/kilo/fim",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Next Edit completion
+   *
+   * Proxy a Mercury-style Next Edit request. The client supplies structured editor context; the gateway assembles the sentinel-tagged prompt and forwards to the upstream edit endpoint.
+   */
+  public edit<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      provider?: string
+      model?: string
+      maxTokens?: number
+      currentFilePath?: string
+      currentFileContent?: string
+      cursorLine?: number
+      cursorCharacter?: number
+      editableRegionStartLine?: number
+      editableRegionEndLine?: number
+      recentlyViewedSnippets?: Array<{
+        filepath: string
+        content: string
+      }>
+      editDiffHistory?: Array<string>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "provider" },
+            { in: "body", key: "model" },
+            { in: "body", key: "maxTokens" },
+            { in: "body", key: "currentFilePath" },
+            { in: "body", key: "currentFileContent" },
+            { in: "body", key: "cursorLine" },
+            { in: "body", key: "cursorCharacter" },
+            { in: "body", key: "editableRegionStartLine" },
+            { in: "body", key: "editableRegionEndLine" },
+            { in: "body", key: "recentlyViewedSnippets" },
+            { in: "body", key: "editDiffHistory" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<KiloEditResponses, KiloEditErrors, ThrowOnError>({
+      url: "/kilo/edit",
       ...options,
       ...params,
       headers: {
@@ -6538,6 +6976,11 @@ export class KiloClient extends HeyApiClient {
   private _tui?: Tui
   get tui(): Tui {
     return (this._tui ??= new Tui({ client: this.client }))
+  }
+
+  private _backgroundProcess?: BackgroundProcess
+  get backgroundProcess(): BackgroundProcess {
+    return (this._backgroundProcess ??= new BackgroundProcess({ client: this.client }))
   }
 
   private _commitMessage?: CommitMessage
