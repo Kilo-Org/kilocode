@@ -16,6 +16,7 @@ import { Permission } from "@/permission"
 import { environmentDetails, type EditorContext } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
+import { InstanceState } from "@/effect/instance-state"
 import PROMPT_PLAN from "@/session/prompt/plan.txt"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
@@ -48,7 +49,8 @@ export namespace KiloSessionPrompt {
     abort: AbortSignal
   }): Promise<"continue" | "break"> {
     if (!shouldAskPlanFollowup({ messages: input.messages, abort: input.abort })) return "break"
-    const action = await PlanFollowup.ask({
+    const ask = InstanceState.bind(PlanFollowup.ask)
+    const action = await ask({
       sessionID: input.sessionID,
       messages: input.messages,
       abort: input.abort,
@@ -227,23 +229,29 @@ export namespace KiloSessionPrompt {
    * Ensures the plan file directory exists and tells the agent where to write.
    */
   export async function insertPlanReminders(input: {
-    agent: { name: string }
+    agent: { name: string; options?: Record<string, unknown> }
     session: Session.Info
     userMessage: MessageV2.WithParts
   }) {
-    if (input.agent.name !== "plan") return
-    const plan = Session.plan(input.session, Instance.current)
+    if (input.agent.name !== "plan" && input.agent.options?.id !== "architect") return
+    // keep bind(): inside Effect.promise the project context is lost, so Instance.current throws without it
+    const plan = InstanceState.bind(() => Session.plan(input.session, Instance.current))()
     const exists = await Filesystem.exists(plan)
     if (!exists) await ensurePlanDir(path.dirname(plan))
     const info = exists
       ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.`
       : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`
+    const planFile = `## Plan File\n${info}\nThis is the ONLY file you are allowed to write to or edit.`
+    const text =
+      input.agent.name === "plan"
+        ? `${PROMPT_PLAN}\n\n${planFile}`
+        : `<system-reminder>\n${planFile} Before writing this file or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the complete plan to this exact file, then call plan_exit with no arguments.\n</system-reminder>`
     input.userMessage.parts.push({
       id: PartID.ascending(),
       messageID: input.userMessage.info.id,
       sessionID: input.userMessage.info.sessionID,
       type: "text",
-      text: PROMPT_PLAN + `\n\n## Plan File\n${info}\nThis is the ONLY file you are allowed to write to or edit.`,
+      text,
       synthetic: true,
     })
   }
