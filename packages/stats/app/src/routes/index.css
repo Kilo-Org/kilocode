@@ -1032,6 +1032,8 @@
 
 [data-page="stats"] [data-component="top-models-chart"] {
   --top-models-bar-gap: 12px;
+  --top-models-dot-size: 6px;
+  --top-models-dot-offset: 2px;
   position: relative;
   display: grid;
   grid-template-rows: 34px minmax(0, 1fr);
@@ -1165,17 +1167,27 @@
 
 [data-page="stats"] [data-slot="top-models-bar"]::before {
   position: absolute;
-  inset: 0 calc(var(--top-models-bar-gap) / 2);
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: calc(100% - var(--top-models-bar-gap));
+  transform: translateX(-50%);
   content: "";
   background: var(--stats-dot);
   mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0H2V2H0V0Z' fill='black'/%3E%3C/svg%3E");
-  mask-position: center top;
+  mask-position: var(--top-models-dot-offset) top;
   mask-repeat: repeat;
-  mask-size: 6px 6px;
+  mask-size: var(--top-models-dot-size) var(--top-models-dot-size);
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0H2V2H0V0Z' fill='black'/%3E%3C/svg%3E");
-  -webkit-mask-position: center top;
+  -webkit-mask-position: var(--top-models-dot-offset) top;
   -webkit-mask-repeat: repeat;
-  -webkit-mask-size: 6px 6px;
+  -webkit-mask-size: var(--top-models-dot-size) var(--top-models-dot-size);
+}
+
+@supports (width: round(down, 100%, 1px)) {
+  [data-page="stats"] [data-slot="top-models-bar"]::before {
+    width: round(down, calc(100% - var(--top-models-bar-gap)), var(--top-models-dot-size));
+  }
 }
 
 [data-page="stats"] [data-slot="top-models-stack"] {
