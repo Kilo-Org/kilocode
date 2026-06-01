@@ -347,6 +347,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  private postConnectionState(error = this.connectionService.getConnectionError()): void {
+    this.postMessage({
+      type: "connectionState",
+      state: this.connectionState,
+      ...(this.connectionState === "error" && {
+        error: getErrorMessage(error) || "Connection to CLI backend lost. Retry to reconnect.",
+      }),
+    })
+  }
+
   // Strip edit-tool metadata.filediff.before/after (multi-MB for edit-heavy
   // sessions) to keep session switches fast. Logic in kilo-provider/slim-metadata.ts.
   private slimPart<T>(part: T): T {
@@ -386,7 +396,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     // Always push connection state first so the UI can render appropriately.
-    this.postMessage({ type: "connectionState", state: this.connectionState })
+    this.postConnectionState()
     pushTelemetryState((m) => this.postMessage(m))
 
     // Re-send ready so the webview can recover after refresh.
@@ -1228,9 +1238,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       )
 
       // Subscribe to connection state changes
-      this.unsubscribeState = this.connectionService.onStateChange(async (state) => {
+      this.unsubscribeState = this.connectionService.onStateChange(async (state, error) => {
         this.connectionState = state
-        this.postMessage({ type: "connectionState", state })
+        this.postConnectionState(error)
 
         if (state === "connected") {
           // Fire config warnings independently so a failure in the
@@ -1309,7 +1319,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           workspaceDirectory: this.getProjectDirectory(this.currentSession?.id),
         })
       }
-      this.postMessage({ type: "connectionState", state: this.connectionState })
+      this.postConnectionState()
 
       // connect() can resolve after SSE reaches "connected" but before this
       // provider subscribes to onStateChange(). In that case the initial

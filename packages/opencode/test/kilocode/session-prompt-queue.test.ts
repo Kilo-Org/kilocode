@@ -2,9 +2,12 @@ import path from "path"
 import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { Bus } from "../../src/bus"
+import { AppRuntime } from "../../src/effect/app-runtime"
+import { InstanceRef } from "../../src/effect/instance-ref"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Suggestion } from "../../src/kilocode/suggestion"
 import { ModelID, ProviderID } from "../../src/provider/schema"
+import { InstanceStore } from "../../src/project/instance-store"
 import { WithInstance } from "../../src/project/with-instance"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -509,6 +512,77 @@ describe("session prompt queue", () => {
             expect(JSON.stringify(tail?.content)).toContain("second prompt")
           }),
       })
+    } finally {
+      server.stop(true)
+    }
+  })
+
+  test("bridges legacy instance context for prompts after a completed turn", async () => {
+    const calls: number[] = []
+    const server = Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) return new Response("not found", { status: 404 })
+
+        calls.push(Date.now())
+        const text = calls.length === 1 ? "first reply" : "second reply"
+        return new Response(reply({ text }), {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    try {
+      await using tmp = await tmpdir({
+        git: true,
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, "opencode.json"),
+            JSON.stringify({
+              $schema: "https://opencode.ai/config.json",
+              enabled_providers: ["alibaba"],
+              provider: {
+                alibaba: {
+                  options: { apiKey: "test-key", baseURL: `${server.url.origin}/v1` },
+                },
+              },
+              agent: { plan: { model: "alibaba/qwen-plus" } },
+            }),
+          )
+        },
+      })
+
+      const ctx = await AppRuntime.runPromise(InstanceStore.Service.use((store) => store.load({ directory: tmp.path })))
+      const session = await AppRuntime.runPromise(
+        Session.Service.use((svc) => svc.create({ title: "Sequential prompt context regression" })).pipe(
+          Effect.provideService(InstanceRef, ctx),
+        ),
+      )
+
+      const first = await AppRuntime.runPromise(
+        SessionPrompt.Service.use((prompt) =>
+          prompt.prompt({
+            sessionID: session.id,
+            agent: "plan",
+            parts: [{ type: "text", text: "first prompt" }],
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+      const second = await AppRuntime.runPromise(
+        SessionPrompt.Service.use((prompt) =>
+          prompt.prompt({
+            sessionID: session.id,
+            agent: "plan",
+            parts: [{ type: "text", text: "second prompt" }],
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      expect(calls).toHaveLength(2)
+      expect(hasText(first, "first reply")).toBe(true)
+      expect(hasText(second, "second reply")).toBe(true)
     } finally {
       server.stop(true)
     }

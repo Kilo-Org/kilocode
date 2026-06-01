@@ -1443,11 +1443,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         yield* Effect.promise(() => Suggestion.dismissAll(input.sessionID))
         yield* question.dismissAll(input.sessionID)
         if (input.noReply === true) return message
+        // Queue tails and runner fibers can resume outside the HTTP request's
+        // ambient instance context; bridge both Effect refs and legacy ALS.
+        const bridge = yield* runner()
         return yield* KiloSessionPromptQueue.enqueue(
           input.sessionID,
           message.info.id,
-          loop({ sessionID: input.sessionID, snapshotInitialization: input.snapshotInitialization }), // kilocode_change
-          lastAssistant(input.sessionID),
+          bridge.run(loop({ sessionID: input.sessionID, snapshotInitialization: input.snapshotInitialization })), // kilocode_change
+          bridge.run(lastAssistant(input.sessionID)),
         )
         // kilocode_change end
       },

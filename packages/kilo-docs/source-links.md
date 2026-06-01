@@ -146,7 +146,7 @@
   <!-- packages/opencode/src/cli/cmd/tui/config/tui-migrate.ts -->
 - <https://opencode.ai/zen>
   <!-- packages/kilo-vscode/webview-ui/src/i18n/en.ts -->
-- <https://openrouter.ai/docs/use-cases/usage-accounting>
+- <https://openrouter.ai/docs/cookbook/administration/usage-accounting>
   <!-- packages/opencode/src/kilocode/session/index.ts -->
 - <https://opentelemetry.io/blog/2025/how-to-name-your-span-attributes/>
   <!-- packages/opencode/src/server/routes/instance/trace.ts -->

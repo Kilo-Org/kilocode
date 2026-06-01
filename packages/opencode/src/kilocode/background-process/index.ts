@@ -8,6 +8,7 @@ import { SessionID } from "@/session/schema"
 import { Shell } from "@/shell/shell"
 import { NonNegativeInt, PositiveInt, optionalOmitUndefined, withStatics } from "@/util/schema"
 import { zod, ZodOverride } from "@/util/effect-zod"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import * as Log from "@opencode-ai/core/util/log"
 import { spawn, type ChildProcess } from "child_process"
 import { Context, Effect, Layer, Schema, Types } from "effect"
@@ -172,7 +173,8 @@ export namespace BackgroundProcess {
       return changed
     }
     const fallback = active.info.ready && active.start.ready?.port ? [active.start.ready.port] : []
-    const next = Array.from(new Set([...(await Ports.list(pid)), ...fallback])).toSorted((a, b) => a - b)
+    const ports = Flag.KILO_CLIENT === "cli" ? await Ports.list(pid) : []
+    const next = Array.from(new Set([...ports, ...fallback])).toSorted((a, b) => a - b)
     if (same(active.info.ports, next)) return false
     active.info.ports = next
     active.info.time.updated = Date.now()
@@ -209,6 +211,7 @@ export namespace BackgroundProcess {
 
   function poll(active: Active) {
     if (active.disposed) return
+    if (Flag.KILO_CLIENT !== "cli") return
     if (terminal(active.info.status)) return
     if (active.poll) return
     active.poll = setTimeout(() => {
