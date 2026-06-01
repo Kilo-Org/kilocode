@@ -192,11 +192,7 @@ function buildQueries(limit: number, tiers: string[]): QuerySpec[] {
       tier,
       metricQuery(["date", "tier", "stat_provider_2", "stat_model_2"], limit, tierFilters(tier)),
     ),
-    querySpec(
-      "provider-day",
-      tier,
-      metricQuery(["date", "tier", "stat_provider_2"], limit, tierFilters(tier)),
-    ),
+    querySpec("provider-day", tier, metricQuery(["date", "tier", "stat_provider_2"], limit, tierFilters(tier))),
     querySpec("geo-day", tier, metricQuery(["date", "tier", "country", "continent"], limit, tierFilters(tier))),
     querySpec(
       "geo-model-day",
@@ -214,11 +210,7 @@ function buildQueries(limit: number, tiers: string[]): QuerySpec[] {
       tier,
       metricQuery(["week", "tier", "stat_provider_2", "stat_model_2"], limit, tierFilters(tier)),
     ),
-    querySpec(
-      "provider-week",
-      tier,
-      metricQuery(["week", "tier", "stat_provider_2"], limit, tierFilters(tier)),
-    ),
+    querySpec("provider-week", tier, metricQuery(["week", "tier", "stat_provider_2"], limit, tierFilters(tier))),
     querySpec("geo-week", tier, metricQuery(["week", "tier", "country", "continent"], limit, tierFilters(tier))),
     querySpec(
       "geo-model-week",

@@ -2,12 +2,7 @@ import { Resource } from "sst/resource"
 import type { AthenaData } from "../athena"
 import type { GeoStatAggregate } from "./geo"
 import type { ModelStatAggregate } from "./model"
-import {
-  EXCLUDED_MODELS,
-  MODEL_AUTHOR_RULES,
-  statModel,
-  statProvider,
-} from "./model-normalization"
+import { EXCLUDED_MODELS, MODEL_AUTHOR_RULES, statModel, statProvider } from "./model-normalization"
 import type { ProviderStatAggregate } from "./provider"
 import { normalizeCountry, normalizeTier, type StatBaseAggregate } from "./stat"
 
