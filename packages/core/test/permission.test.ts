@@ -160,14 +160,12 @@ describe("PermissionV2", () => {
       yield* Fiber.join(fiber)
 
       const { db } = yield* Database.Service
-      expect(yield* db.select().from(PermissionTable).where(eq(PermissionTable.project_id, Project.ID.global)).all()).toMatchObject([
-        { action: "read", resource: "src/*" },
-      ])
+      expect(
+        yield* db.select().from(PermissionTable).where(eq(PermissionTable.project_id, Project.ID.global)).all(),
+      ).toMatchObject([{ action: "read", resource: "src/*" }])
       const saved = yield* PermissionSaved.Service
       const id = (yield* saved.list())[0]!.id
-      expect(yield* saved.list()).toEqual([
-        { id, projectID: Project.ID.global, action: "read", resource: "src/*" },
-      ])
+      expect(yield* saved.list()).toEqual([{ id, projectID: Project.ID.global, action: "read", resource: "src/*" }])
       yield* service.assert(assertion({ id: PermissionV2.ID.create("per_next"), resources: ["src/next.ts"] }))
       yield* saved.remove(id)
       expect(yield* saved.list()).toEqual([])

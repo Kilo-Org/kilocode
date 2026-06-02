@@ -58,7 +58,9 @@ export const SessionPermissionGroup = HttpApiGroup.make("v2.session.permission")
       }),
     ),
   )
-  .annotateMerge(OpenApi.annotations({ title: "v2 session permissions", description: "Experimental v2 session permission routes." }))
+  .annotateMerge(
+    OpenApi.annotations({ title: "v2 session permissions", description: "Experimental v2 session permission routes." }),
+  )
   .middleware(V2Authorization)
 
 export const PermissionSavedGroup = HttpApiGroup.make("v2.permission.saved")
@@ -86,5 +88,7 @@ export const PermissionSavedGroup = HttpApiGroup.make("v2.permission.saved")
       }),
     ),
   )
-  .annotateMerge(OpenApi.annotations({ title: "v2 saved permissions", description: "Experimental v2 saved permission routes." }))
+  .annotateMerge(
+    OpenApi.annotations({ title: "v2 saved permissions", description: "Experimental v2 saved permission routes." }),
+  )
   .middleware(V2Authorization)

@@ -38,7 +38,11 @@ interface State {
   approved: PermissionLegacy.Rule[]
 }
 
-export function evaluate(permission: string, pattern: string, ...rulesets: PermissionLegacy.Ruleset[]): PermissionLegacy.Rule {
+export function evaluate(
+  permission: string,
+  pattern: string,
+  ...rulesets: PermissionLegacy.Ruleset[]
+): PermissionLegacy.Rule {
   return (
     rulesets
       .flat()
@@ -134,7 +138,9 @@ export const layer = Layer.effect(
       if (input.reply === "reject") {
         yield* Deferred.fail(
           existing.deferred,
-          input.message ? new PermissionLegacy.CorrectedError({ feedback: input.message }) : new PermissionLegacy.RejectedError(),
+          input.message
+            ? new PermissionLegacy.CorrectedError({ feedback: input.message })
+            : new PermissionLegacy.RejectedError(),
         )
 
         for (const [id, item] of pending.entries()) {

@@ -158,9 +158,7 @@ export const Plugin = PluginV2.define({
         item.description =
           "General-purpose agent for researching complex questions and executing multi-step tasks. Use this agent to execute multiple units of work in parallel."
         item.mode = "subagent"
-        item.permissions.push(
-          ...PermissionV2.merge(defaults, [{ action: "todowrite", resource: "*", effect: "deny" }]),
-        )
+        item.permissions.push(...PermissionV2.merge(defaults, [{ action: "todowrite", resource: "*", effect: "deny" }]))
       })
 
       editor.update(AgentV2.ID.make("explore"), (item) => {

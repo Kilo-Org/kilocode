@@ -54,14 +54,23 @@ export const layer = Layer.effect(
         .where(input?.projectID ? eq(PermissionTable.project_id, input.projectID) : undefined)
         .all()
         .pipe(Effect.orDie)
-      return rows.map((row): Info => ({ id: row.id, projectID: row.project_id, action: row.action, resource: row.resource }))
+      return rows.map(
+        (row): Info => ({ id: row.id, projectID: row.project_id, action: row.action, resource: row.resource }),
+      )
     })
 
     const add = Effect.fn("PermissionSaved.add")(function* (input: AddInput) {
       if (!input.resources.length) return
       yield* db
         .insert(PermissionTable)
-        .values(input.resources.map((resource) => ({ id: ID.create(), project_id: input.projectID, action: input.action, resource })))
+        .values(
+          input.resources.map((resource) => ({
+            id: ID.create(),
+            project_id: input.projectID,
+            action: input.action,
+            resource,
+          })),
+        )
         .onConflictDoNothing()
         .run()
         .pipe(Effect.orDie)

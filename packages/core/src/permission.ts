@@ -254,7 +254,11 @@ export const layer = Layer.effect(
       }
 
       if (input.reply === "always" && existing.request.save?.length) {
-        yield* saved.add({ projectID: location.project.id, action: existing.request.action, resources: existing.request.save })
+        yield* saved.add({
+          projectID: location.project.id,
+          action: existing.request.action,
+          resources: existing.request.save,
+        })
       }
       yield* Deferred.succeed(existing.deferred, undefined)
       if (input.reply !== "always" || !existing.request.save?.length) return
@@ -269,7 +273,9 @@ export const layer = Layer.effect(
         if (denied(input, rules)) continue
         const effective = [...rules, ...rememberedRules]
         if (
-          !item.request.resources.every((resource) => evaluate(item.request.action, resource, effective).effect === "allow")
+          !item.request.resources.every(
+            (resource) => evaluate(item.request.action, resource, effective).effect === "allow",
+          )
         )
           continue
         pending.delete(id)

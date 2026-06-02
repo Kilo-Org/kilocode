@@ -917,7 +917,11 @@ it.instance(
   () =>
     Effect.gen(function* () {
       const events = yield* EventV2Bridge.Service
-      const seen = yield* Deferred.make<{ sessionID: SessionID; requestID: PermissionLegacy.ID; reply: PermissionLegacy.Reply }>()
+      const seen = yield* Deferred.make<{
+        sessionID: SessionID
+        requestID: PermissionLegacy.ID
+        reply: PermissionLegacy.Reply
+      }>()
 
       const fiber = yield* ask({
         id: PermissionLegacy.ID.make("per_test7"),
@@ -935,7 +939,9 @@ it.instance(
         if (event.type === Permission.Event.Replied.type)
           Deferred.doneUnsafe(
             seen,
-            Effect.succeed(event.data as { sessionID: SessionID; requestID: PermissionLegacy.ID; reply: PermissionLegacy.Reply }),
+            Effect.succeed(
+              event.data as { sessionID: SessionID; requestID: PermissionLegacy.ID; reply: PermissionLegacy.Reply },
+            ),
           )
         return Effect.void
       })
