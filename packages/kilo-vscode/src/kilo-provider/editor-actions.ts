@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "../image-preview"
 import { isAbsolutePath } from "../path-utils"
-import type { DiffVirtualProvider } from "../DiffVirtualProvider"
+import type { DiffVirtualFile, DiffVirtualProvider } from "../DiffVirtualProvider"
 
 type EditorOpenMessage = {
   type?: string
@@ -19,7 +19,7 @@ function openExternal(url: unknown): void {
 
 function openDiffVirtual(provider: DiffVirtualProvider | undefined, diff: unknown, initialDiffStyle?: unknown): void {
   if (!provider || !diff) return
-  const file = diff as import("../DiffVirtualProvider").DiffVirtualFile
+  const file = diff as DiffVirtualFile
   file.initialDiffStyle = initialDiffStyle === "split" ? "split" : "unified"
   provider.open(file)
 }
