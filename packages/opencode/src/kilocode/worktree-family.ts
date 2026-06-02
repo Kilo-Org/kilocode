@@ -30,7 +30,7 @@ export namespace WorktreeFamily {
         // In a git submodule, `git worktree list --porcelain` reports the
         // gitdir (`<repo>/.git/modules/<sub>`) instead of the actual working
         // tree, so the parsed list never contains the directory sessions are
-        // recorded under. Including ctx.worktree keeps submodule sessions
+        // recorded under. Including the context worktree keeps submodule sessions
         // in scope without affecting normal repos (already present) or linked
         // worktrees (also already present).
         dirs.push(Filesystem.resolve(ctx.worktree))

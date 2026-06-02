@@ -14,26 +14,6 @@ export function snapshotProgress(part: SnapshotPart | undefined): boolean {
   return (part.text ?? "").includes("Initializing snapshot")
 }
 
-function tokenCount(tokens: Message["tokens"] | undefined): number {
-  if (!tokens) return 0
-  return tokens.input + tokens.output + (tokens.reasoning ?? 0) + (tokens.cache?.read ?? 0) + (tokens.cache?.write ?? 0)
-}
-
-export function snapshotOnlyAssistant(msg: Message, parts: Part[] | undefined): boolean {
-  if (msg.role !== "assistant") return false
-  if (msg.finish !== "other") return false
-  if (msg.error) return false
-  if ((msg.cost ?? 0) !== 0) return false
-  if (tokenCount(msg.tokens) !== 0) return false
-  if (!parts?.length) return false
-
-  const snapshot = parts.some(snapshotProgress)
-  const allowed = parts.every(
-    (part) => snapshotProgress(part) || part.type === "step-start" || part.type === "step-finish",
-  )
-  return snapshot && allowed
-}
-
 type ParentSession = { parentID?: string | null }
 
 type RecentSession = ParentSession & { updatedAt: string }

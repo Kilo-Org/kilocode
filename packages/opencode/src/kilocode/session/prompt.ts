@@ -1,8 +1,8 @@
+// kilocode_change - new file
 import path from "path"
 import fs from "fs/promises"
 import { StringDecoder } from "string_decoder"
 import { Cause, Effect, Exit } from "effect"
-import { Bus } from "@/bus"
 import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
@@ -19,13 +19,9 @@ import { Filesystem } from "@/util/filesystem"
 import { InstanceState } from "@/effect/instance-state"
 import PROMPT_PLAN from "@/session/prompt/plan.txt"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
-import * as Log from "@opencode-ai/core/util/log"
 
 export namespace KiloSessionPrompt {
-  const log = Log.create({ service: "session.prompt.kilo" })
   const modes = ["ask", "plan"]
-  export const PAYLOAD_OVERFLOW_MESSAGE =
-    "The conversation is still too large to send after pruning old tool output. Start a new message to retry after compaction."
 
   /**
    * Determines whether the plan follow-up prompt should be shown.
@@ -121,32 +117,6 @@ export namespace KiloSessionPrompt {
       rules.filter((rule) => rule.action === "deny"),
     )
   }
-
-  export function payloadOverflowError(input: { size: number; limit: number }) {
-    return new MessageV2.ContextOverflowError({
-      message: `${PAYLOAD_OVERFLOW_MESSAGE} Payload size: ${input.size} bytes; limit: ${input.limit} bytes.`,
-    }).toObject()
-  }
-
-  export const rejectPayloadOverflow = Effect.fn("KiloSessionPrompt.rejectPayloadOverflow")(function* (input: {
-    sessionID: SessionID
-    msg: MessageV2.Assistant
-    size: number
-    limit: number
-    sessions: Pick<Session.Interface, "updateMessage">
-    bus: Pick<Bus.Interface, "publish">
-    status: Pick<SessionStatus.Interface, "set">
-    close: Map<string, KiloSession.CloseReason>
-  }) {
-    if (input.size <= input.limit) return false
-    log.warn("payload still large after pruning", { size: input.size })
-    input.msg.error = payloadOverflowError({ size: input.size, limit: input.limit })
-    yield* input.sessions.updateMessage(input.msg)
-    yield* input.bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: input.msg.error })
-    yield* input.status.set(input.sessionID, { type: "idle" })
-    input.close.set(input.sessionID, "error")
-    return true
-  })
 
   export function hardPermissions(input: { agent: { name: string; permission: Permission.Ruleset } }) {
     if (!modes.includes(input.agent.name)) return
