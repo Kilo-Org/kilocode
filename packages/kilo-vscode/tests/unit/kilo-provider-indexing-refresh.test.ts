@@ -12,7 +12,7 @@ type Internals = {
   reloadAfterAuthChange: () => Promise<void>
   handleUpdateConfig: (partial: Partial<Config>) => Promise<void>
   fetchAndSendConfig: () => Promise<void>
-  fetchAndSendProviders: () => Promise<void>
+  catalog: { refresh: () => Promise<void> }
   fetchAndSendAgents: () => Promise<void>
   fetchAndSendSkills: () => Promise<void>
   fetchAndSendCommands: () => Promise<void>
@@ -55,7 +55,7 @@ describe("KiloProvider indexing refresh", () => {
     internal.fetchAndSendConfig = async () => {
       calls.push("config")
     }
-    internal.fetchAndSendProviders = async () => {
+    internal.catalog.refresh = async () => {
       calls.push("providers")
     }
     internal.fetchAndSendAgents = async () => {

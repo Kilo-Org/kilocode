@@ -13,7 +13,7 @@ type Internals = {
   initializeConnection: () => Promise<void>
   syncWebviewState: () => Promise<void>
   flushPendingSessionRefresh: () => Promise<void>
-  fetchAndSendProviders: () => Promise<void>
+  catalog: { refresh: () => Promise<void> }
   fetchAndSendAgents: () => Promise<void>
   fetchAndSendSkills: () => Promise<void>
   fetchAndSendCommands: () => Promise<void>
@@ -92,7 +92,7 @@ describe("KiloProvider follow-up sessions", () => {
     }
     internal.syncWebviewState = async () => {}
     internal.flushPendingSessionRefresh = async () => {}
-    internal.fetchAndSendProviders = async () => {}
+    internal.catalog.refresh = async () => {}
     internal.fetchAndSendAgents = async () => {}
     internal.fetchAndSendSkills = async () => {}
     internal.fetchAndSendCommands = async () => {}
@@ -142,7 +142,7 @@ describe("KiloProvider follow-up sessions", () => {
     internal.webview = { postMessage: async () => true }
     internal.syncWebviewState = async () => {}
     internal.flushPendingSessionRefresh = async () => {}
-    internal.fetchAndSendProviders = async () => {}
+    internal.catalog.refresh = async () => {}
     internal.fetchAndSendAgents = async () => {}
     internal.fetchAndSendSkills = async () => {}
     internal.fetchAndSendCommands = async () => {}
