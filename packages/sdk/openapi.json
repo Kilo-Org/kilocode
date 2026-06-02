@@ -18304,7 +18304,7 @@
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/SessionInfo"
+              "$ref": "#/components/schemas/SessionV2Info"
             }
           },
           "cursor": {
@@ -20995,7 +20995,20 @@
         "required": ["action", "effect", "resource"],
         "additionalProperties": false
       },
-      "SessionInfo": {
+      "LocationRef": {
+        "type": "object",
+        "properties": {
+          "directory": {
+            "type": "string"
+          },
+          "workspaceID": {
+            "type": "string"
+          }
+        },
+        "required": ["directory"],
+        "additionalProperties": false
+      },
+      "SessionV2Info": {
         "type": "object",
         "properties": {
           "id": {
@@ -21007,13 +21020,6 @@
             "pattern": "^ses"
           },
           "projectID": {
-            "type": "string"
-          },
-          "workspaceID": {
-            "type": "string",
-            "pattern": "^wrk"
-          },
-          "path": {
             "type": "string"
           },
           "agent": {
@@ -21085,9 +21091,15 @@
           },
           "title": {
             "type": "string"
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "subpath": {
+            "type": "string"
           }
         },
-        "required": ["id", "projectID", "cost", "tokens", "time", "title"],
+        "required": ["id", "projectID", "cost", "tokens", "time", "title", "location"],
         "additionalProperties": false
       },
       "SessionDelivery": {
