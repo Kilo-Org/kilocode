@@ -247,20 +247,18 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
             yield* Effect.sync(() => void ModelCache.refresh("apertis", aptFetch).catch(() => {}))
           }
         }
-      } else {
-        if (!providers["apertis"]) {
-          const apertis = yield* Effect.promise(() => ModelCache.fetch("apertis", aptFetch).catch(() => ({})))
-          providers["apertis"] = {
-            id: "apertis",
-            name: "Apertis",
-            env: ["APERTIS_API_KEY"],
-            api: aptBase,
-            npm: "@ai-sdk/openai-compatible",
-            models: apertis,
-          }
-          if (Object.keys(apertis).length === 0) {
-            yield* Effect.sync(() => void ModelCache.refresh("apertis", aptFetch).catch(() => {}))
-          }
+      } else if (!providers["apertis"]) {
+        const apertis = yield* Effect.promise(() => ModelCache.fetch("apertis", aptFetch).catch(() => ({})))
+        providers["apertis"] = {
+          id: "apertis",
+          name: "Apertis",
+          env: ["APERTIS_API_KEY"],
+          api: aptBase,
+          npm: "@ai-sdk/openai-compatible",
+          models: apertis,
+        }
+        if (Object.keys(apertis).length === 0) {
+          yield* Effect.sync(() => void ModelCache.refresh("apertis", aptFetch).catch(() => {}))
         }
       }
 
@@ -294,7 +292,7 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
               reasoning: false,
               temperature: true,
               tool_call: true,
-              limit: { context: 131072, output: 8192 },
+              limit: { context: 262144, output: 262144 },
               modalities: { input: ["text"], output: ["text"] },
             },
             "z-ai/glm-5": {
@@ -306,7 +304,7 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
               reasoning: false,
               temperature: true,
               tool_call: true,
-              limit: { context: 131072, output: 16384 },
+              limit: { context: 204800, output: 131072 },
               modalities: { input: ["text"], output: ["text"] },
             },
             "minimax/minimax-m2.5": {
@@ -318,7 +316,7 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
               reasoning: false,
               temperature: true,
               tool_call: true,
-              limit: { context: 1000000, output: 1000000 },
+              limit: { context: 196608, output: 131072 },
               modalities: { input: ["text"], output: ["text"] },
             },
           },
