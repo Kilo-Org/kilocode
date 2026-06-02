@@ -106,13 +106,17 @@ export function stableMessageTurns(next: MessageTurn[], prev: MessageTurn[] = []
   })
 }
 
-function active(messages: Message[]) {
+function active(messages: Message[], status: SessionStatusInfo) {
+  let latest = true
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const msg = messages[i]
     if (!msg || msg.role !== "assistant") continue
-    if (typeof msg.time?.completed === "number") continue
+    const resumable = msg.finish === "tool-calls" || msg.finish === "unknown"
+    const running = latest && status.type !== "idle" && resumable
+    latest = false
+    if (typeof msg.time?.completed === "number" && !running) continue
     if (msg.error) continue
-    if (msg.finish && !["tool-calls", "unknown"].includes(msg.finish)) continue
+    if (msg.finish && !resumable) continue
     if (!msg.parentID) break
     const parent = messages.find((item) => item.id === msg.parentID)
     if (!parent) return msg.parentID
@@ -146,7 +150,7 @@ function pending(messages: Message[]) {
 // Find the user message whose turn the server is actively processing.
 // Any user message after this one is "queued" (waiting for its turn).
 export function activeUserMessageID(messages: Message[], status: SessionStatusInfo) {
-  const id = active(messages)
+  const id = active(messages, status)
   if (id) return id
   if (status.type === "idle") return undefined
   return pending(messages)
@@ -155,7 +159,7 @@ export function activeUserMessageID(messages: Message[], status: SessionStatusIn
 export function queuedUserMessageIDs(messages: Message[], status: SessionStatusInfo) {
   if (status.type === "idle") return []
   const users = messages.filter((msg) => msg.role === "user")
-  const running = active(messages)
+  const running = active(messages, status)
   if (running) {
     const idx = users.findIndex((msg) => msg.id === running)
     if (idx < 0) return users.map((msg) => msg.id)

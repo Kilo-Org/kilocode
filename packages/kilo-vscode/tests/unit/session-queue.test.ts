@@ -34,6 +34,19 @@ const layout = (messages: Message[], status: SessionStatusInfo, boundary?: strin
   )
 }
 
+const expectLayout = (
+  messages: Message[],
+  status: SessionStatusInfo,
+  expected: { virtual: string[]; direct: string[]; queued: string[] },
+) => {
+  const result = layout(messages, status)
+  expect({
+    virtual: result.virtual.map((turn) => turn.user.id),
+    direct: result.direct.map((turn) => turn.user.id),
+    queued: result.queued.map((turn) => turn.user.id),
+  }).toEqual(expected)
+}
+
 describe("queuedUserMessageIDs", () => {
   it("keeps follow-ups queued before the first assistant exists", () => {
     const messages = [user("message_1"), user("message_2")]
@@ -107,6 +120,58 @@ describe("partitionTurns", () => {
     expect(result.virtual).toEqual([])
     expect(result.direct.map((turn) => turn.user.id)).toEqual(["message_1"])
     expect(result.queued).toEqual([])
+  })
+
+  it("keeps completed resumable assistants direct while the session is active", () => {
+    const messages = (finish: string) => [
+      user("message_1"),
+      assistant("message_2", "message_1", { finish, time: { created: 1, completed: 2 } }),
+      user("message_3"),
+    ]
+    const expected = { virtual: [], direct: ["message_1"], queued: ["message_3"] }
+
+    expectLayout(messages("tool-calls"), { type: "busy" }, expected)
+    expectLayout(messages("unknown"), { type: "busy" }, expected)
+    expectLayout(messages("tool-calls"), { type: "retry", attempt: 1, message: "retrying", next: 2 }, expected)
+    expectLayout(messages("tool-calls"), { type: "offline", message: "offline" }, expected)
+  })
+
+  it("does not retain a completed tool-call assistant with an error", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1", {
+        finish: "tool-calls",
+        time: { created: 1, completed: 2 },
+        error: { name: "MessageAbortedError" },
+      }),
+      user("message_3"),
+    ]
+
+    expectLayout(messages, { type: "busy" }, { virtual: ["message_1"], direct: ["message_3"], queued: [] })
+  })
+
+  it("does not revive a completed tool-call step behind an errored assistant", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1", { finish: "tool-calls", time: { created: 1, completed: 2 } }),
+      assistant("message_3", "message_1", { error: { name: "MessageAbortedError" } }),
+      user("message_4"),
+    ]
+
+    expectLayout(messages, { type: "busy" }, { virtual: ["message_1"], direct: ["message_4"], queued: [] })
+  })
+
+  it("does not revive completed resumable steps behind a terminal assistant", () => {
+    const messages = (finish: string) => [
+      user("message_1"),
+      assistant("message_2", "message_1", { finish, time: { created: 1, completed: 2 } }),
+      assistant("message_3", "message_1", { finish: "stop", time: { created: 3, completed: 4 } }),
+      user("message_4"),
+    ]
+    const expected = { virtual: ["message_1"], direct: ["message_4"], queued: [] }
+
+    expectLayout(messages("tool-calls"), { type: "busy" }, expected)
+    expectLayout(messages("unknown"), { type: "busy" }, expected)
   })
 
   it("keeps an active partial turn direct when later loaded prompts are queued", () => {
@@ -370,6 +435,15 @@ describe("activeUserMessageID", () => {
     ]
 
     expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_1")
+  })
+
+  it("ignores completed tool-call assistants after the session becomes idle", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1", { finish: "tool-calls", time: { created: 1, completed: 2 } }),
+    ]
+
+    expect(activeUserMessageID(messages, { type: "idle" })).toBeUndefined()
   })
 
   it("keeps unknown assistants active until cleanup finishes", () => {
