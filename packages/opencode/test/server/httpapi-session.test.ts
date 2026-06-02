@@ -323,11 +323,25 @@ describe("session HttpApi", () => {
         })
         expect(updated).toMatchObject({ id: created.id, title: "updated", time: { archived: 1 } })
 
-        const forked = yield* requestJson<Session.Info>(pathFor(SessionPaths.fork, { sessionID: created.id }), {
+        const fork = pathFor(SessionPaths.fork, { sessionID: created.id })
+        const forked = yield* requestJson<Session.Info>(fork, {
           method: "POST",
           headers,
         })
         expect(forked.id).not.toBe(created.id)
+
+        const message = yield* createTextMessage(tmp.path, created.id, "fork boundary")
+        const forkedAtMessage = yield* requestJson<Session.Info>(fork, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ messageID: message.info.id }),
+        })
+        expect(forkedAtMessage.id).not.toBe(created.id)
+
+        expect((yield* request(fork, { method: "POST", headers, body: "{" })).status).toBe(400)
+        expect((yield* request(fork, { method: "POST", headers, body: JSON.stringify({ messageID: 1 }) })).status).toBe(
+          400,
+        )
 
         expect(
           yield* requestJson<boolean>(pathFor(SessionPaths.abort, { sessionID: created.id }), {
