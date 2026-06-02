@@ -22,13 +22,7 @@ function modelRefUsesAtomicChat(ref: unknown): boolean {
     return false
   }
   const record = ref as Record<string, unknown>
-  if (record.providerID === ATOMIC_CHAT_PROVIDER_KEY) {
-    return true
-  }
-  if (typeof record.id === 'string' && record.modelID === ATOMIC_CHAT_PROVIDER_KEY) {
-    return true
-  }
-  return false
+  return record.providerID === ATOMIC_CHAT_PROVIDER_KEY
 }
 
 /** Default or per-agent model points at Atomic Chat (explicit opt-in). */
