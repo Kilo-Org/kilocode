@@ -41,7 +41,7 @@ import { DevSetupCommand, DevAliasCommand } from "./kilocode/cli/dev-setup" // k
 import { DaemonCommand } from "./kilocode/cli/cmd/daemon" // kilocode_change
 import { KiloConsoleCommand } from "./kilocode/cli/cmd/console" // kilocode_change
 // kilocode_change start - Import telemetry, instance disposal, and legacy migration
-import { Identity, Telemetry } from "@kilocode/kilo-telemetry"
+import { Telemetry } from "@kilocode/kilo-telemetry"
 import { InstanceRuntime } from "./project/instance-runtime" // kilocode_change
 import { migrateLegacyKiloAuth, ENV_FEATURE, ENV_VERSION } from "@kilocode/kilo-gateway"
 import { SessionExport } from "./kilocode/session-export" // kilocode_change
@@ -173,20 +173,9 @@ let cli = yargs(args) // kilocode_change
     }
 
     Telemetry.trackCliStart()
-    if (process.argv.includes("serve")) {
-      const anon = await Identity.getMachineId().catch((err) => {
-        Log.Default.warn("session export identity failed", { err })
-        return undefined
-      })
-      SessionExport.init({
-        agentVersion: InstallationVersion,
-        anonId: anon,
-        dbPath: path.join(Global.Path.data, "session-export.db"),
-        subscribeAll: () => () => {},
-      })
-    }
     // kilocode_change end
 
+    // kilocode_change start - one-time database migration progress
     const marker = path.join(Global.Path.data, "kilo.db")
     if (!(await Filesystem.exists(marker))) {
       const tty = process.stderr.isTTY
@@ -223,6 +212,7 @@ let cli = yargs(args) // kilocode_change
       }
       process.stderr.write("Database migration complete." + EOL)
     }
+    // kilocode_change end
   })
   .usage("")
   .completion("completion", "generate shell completion script")
@@ -350,5 +340,5 @@ try {
   // Most notably, some docker-container-based MCP servers don't handle such signals unless
   // run using `docker run --init`.
   // Explicitly exit to avoid any hanging subprocesses.
-  process.exit()
+  process.exit() // kilocode_change
 }
