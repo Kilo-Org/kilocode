@@ -32,7 +32,7 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.3"
+    "vitest": "4.1.0"
   },
   "peerDependencies": {}
 }
