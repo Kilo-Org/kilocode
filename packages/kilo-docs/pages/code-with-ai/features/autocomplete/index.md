@@ -12,12 +12,13 @@ Kilo Code's autocomplete feature provides intelligent code suggestions and compl
 
 ## How Autocomplete Works
 
-The extension uses **Fill-in-the-Middle (FIM)** completion routed through the **Kilo Gateway**. It analyzes the code before and after your cursor to generate contextually accurate inline suggestions.
+By default, autocomplete requests are routed through the **Kilo Gateway**. **Codestral** and **Mercury Edit 2** use Fill-in-the-Middle (FIM) completion, which analyzes the code before and after your cursor. **Mercury Next Edit** uses a separate edit-completions pipeline for multi-line predictions with a jump-to-edit workflow.
 
-You can choose between two FIM models:
+You can choose between two FIM models and one Next Edit mode:
 
 - **Codestral** (`mistralai/codestral-2508`) by Mistral AI — the default, billed through your Kilo account.
-- **Mercury Edit 2** (`inception/mercury-edit-2`) by Inception — temporarily available via **BYOK** (Bring Your Own Key) only; Kilo Gateway support is coming soon.
+- **Mercury Edit 2** (`inception/mercury-edit-2`) by Inception — fast diffusion-based FIM completion.
+- **Mercury Next Edit** (`inception/mercury-next-edit`) by Inception — multi-line edit predictions with a jump-to-edit workflow.
 
 ## Triggering Options
 
@@ -35,13 +36,20 @@ This keybinding requires `kilo-code.new.autocomplete.enableSmartInlineTaskKeybin
 
 ## Provider and Model
 
-Autocomplete requests are routed through the **Kilo Gateway**. You can pick the FIM model under **Settings → Models → Autocomplete model**:
+Autocomplete requests use the **Kilo Gateway** by default. You can pick the provider and model under **Settings → Models**:
 
-- **Codestral** (`mistralai/codestral-2508`) — the default. Billed through your Kilo account, or free when you add your own Mistral Codestral key via BYOK. See [Setting Up Mistral for Free Autocomplete](/docs/code-with-ai/features/autocomplete/mistral-setup).
-- **Mercury Edit 2** (`inception/mercury-edit-2`) — a fast diffusion-based FIM model by Inception. Temporarily requires an **Inception BYOK key** until Kilo Gateway support lands. Add one from the [BYOK page](https://app.kilo.ai/byok) in the Kilo platform. See [Bring Your Own Key (BYOK)](/docs/getting-started/byok) for setup details.
+- **Codestral** (`mistralai/codestral-2508`) — the default FIM model. With Kilo Gateway selected, requests use your Kilo credits unless the Gateway finds a matching Codestral BYOK key. A Codestral key can use Mistral's free tier. See [Setting Up Mistral for Free Autocomplete](/docs/code-with-ai/features/autocomplete/mistral-setup).
+- **Mercury Edit 2** (`inception/mercury-edit-2`) — a fast diffusion-based FIM model by Inception.
+- **Mercury Next Edit** (`inception/mercury-next-edit`) — multi-line edit predictions with a jump-to-edit workflow, powered by Inception's Mercury Edit 2 model.
 
 {% callout type="note" %}
-Mercury Edit 2 is only available through BYOK for now — Kilo Gateway support is coming soon. If you select Mercury Edit 2 without a valid Inception BYOK key configured, autocomplete requests will fail — switch back to Codestral or add an Inception key to continue.
+All three options are available through Kilo Gateway. Keys saved on the Kilo [BYOK page](https://app.kilo.ai/byok) are Gateway BYOK keys: keep Kilo Gateway selected, and the Gateway automatically uses a matching organization key when you are working in an organization context or a matching personal key otherwise.
+
+To bypass Kilo Gateway instead, connect a Mistral or Inception provider API key in Kilo Code and choose the matching model under that provider in **Settings → Models**. Direct-provider requests go straight from your local Kilo backend to the provider and do not use Kilo credits.
+{% /callout %}
+
+{% callout type="note" %}
+**Mercury Next Edit and organization privacy settings:** Mercury Next Edit is unavailable through Kilo Gateway when your organization denies provider data collection, because Inception's standard edit endpoint does not provide a per-request opt-out.
 {% /callout %}
 
 ## Status Bar
@@ -49,7 +57,7 @@ Mercury Edit 2 is only available through BYOK for now — Kilo Gateway support i
 The extension displays an **autocomplete status indicator** in the VS Code status bar, including:
 
 - Current autocomplete state (active/snoozed)
-- Cumulative cost tracking for autocomplete requests
+- Kilo balance cost tracking for requests billed through Kilo Gateway
 
 ### Snooze / Unsnooze
 
