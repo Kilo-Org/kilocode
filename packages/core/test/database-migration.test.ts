@@ -180,11 +180,19 @@ describe("DatabaseMigration", () => {
           })
           .run()
 
-        expect(yield* db.get<{ worktree: string; sandboxes: string }>(sql`SELECT worktree, sandboxes FROM project WHERE id = ${projectID}`)).toEqual({
+        expect(
+          yield* db.get<{ worktree: string; sandboxes: string }>(
+            sql`SELECT worktree, sandboxes FROM project WHERE id = ${projectID}`,
+          ),
+        ).toEqual({
           worktree: "C:/Repo/Thing",
           sandboxes: JSON.stringify(["C:/Repo/Thing/sandbox"]),
         })
-        expect(yield* db.get<{ directory: string; path: string }>(sql`SELECT directory, path FROM session WHERE id = ${sessionID}`)).toEqual({
+        expect(
+          yield* db.get<{ directory: string; path: string }>(
+            sql`SELECT directory, path FROM session WHERE id = ${sessionID}`,
+          ),
+        ).toEqual({
           directory: "C:/Repo/Thing/packages/api",
           path: "packages/api",
         })
@@ -210,14 +218,22 @@ describe("DatabaseMigration", () => {
         expect(updated?.worktree).toBe(moved)
         expect(updated?.sandboxes).toEqual([moved])
         expect(
-          yield* db.get<{ worktree: string; sandboxes: string }>(sql`SELECT worktree, sandboxes FROM project WHERE id = ${projectID}`),
+          yield* db.get<{ worktree: string; sandboxes: string }>(
+            sql`SELECT worktree, sandboxes FROM project WHERE id = ${projectID}`,
+          ),
         ).toEqual({ worktree: "D:/Moved/Thing", sandboxes: JSON.stringify(["D:/Moved/Thing"]) })
-        expect((yield* db.select().from(ProjectTable).where(inArray(ProjectTable.worktree, [moved])).get())?.id).toBe(
-          projectID,
-        )
+        expect(
+          (yield* db
+            .select()
+            .from(ProjectTable)
+            .where(inArray(ProjectTable.worktree, [moved]))
+            .get())?.id,
+        ).toBe(projectID)
 
         yield* db.run(sql`UPDATE project SET worktree = ${"not-absolute"} WHERE id = ${projectID}`)
-        expect(() => Effect.runSync(db.select().from(ProjectTable).where(eq(ProjectTable.id, projectID)).get())).toThrow()
+        expect(() =>
+          Effect.runSync(db.select().from(ProjectTable).where(eq(ProjectTable.id, projectID)).get()),
+        ).toThrow()
       }),
     )
   })
