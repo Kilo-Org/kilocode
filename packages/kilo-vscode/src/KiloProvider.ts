@@ -47,12 +47,7 @@ import { GitOps } from "./agent-manager/GitOps"
 import { GitStatsPoller, type LocalStats } from "./agent-manager/GitStatsPoller"
 import { diffSummary as localDiffSummary } from "./agent-manager/local-diff"
 import { getWorkspaceRoot } from "./review-utils"
-import {
-  MarketplaceService,
-  type MarketplaceItem,
-  type AgentMarketplaceItem,
-  type RemoveResult,
-} from "./services/marketplace"
+import type { MarketplaceItem, RemoveResult } from "./services/marketplace/types"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 import { resolveProjectDirectory } from "./project-directory"
 import { getBusySessionCount, seedSessionStatuses } from "./session-status"
@@ -239,7 +234,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private ignoreController: FileIgnoreController | null = null
   private ignoreControllerDir: string | null = null
-  private marketplace: MarketplaceService | null = null
   private chatAutocomplete: ChatTextAreaAutocomplete | null = null
   private projectDirectory: string | null | undefined
   private slimEditMetadata = true
@@ -1109,10 +1103,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         }
         case "installMarketplaceItem": {
-          const workspace = this.getProjectDirectory(this.currentSession?.id)
           const scope = message.mpInstallOptions?.target ?? "project"
-          const result = await this.getMarketplace().install(message.mpItem, message.mpInstallOptions, workspace)
+          const item = message.mpItem as MarketplaceItem
+          const result = await this.installMarketplaceItem(item, message.mpInstallOptions)
           if (result.success) {
+            vscode.window.showInformationMessage(`Successfully installed ${item.name}`)
             await this.invalidateAfterMarketplaceChange(scope)
           }
           this.postMessage({
@@ -1125,7 +1120,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
         case "removeInstalledMarketplaceItem": {
           const scope = message.mpInstallOptions?.target ?? "project"
-          const result = await this.removeMarketplaceItem(message.mpItem, scope)
+          const item = message.mpItem as MarketplaceItem
+          const result = await this.removeMarketplaceItem(item, scope)
+          if (result.success) {
+            vscode.window.showInformationMessage(`Successfully removed ${item.name}`)
+          }
           this.postMessage({
             type: "marketplaceRemoveResult",
             success: result.success,
@@ -1152,10 +1151,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private async handleFetchMarketplaceData(): Promise<void> {
-    const workspace = this.getProjectDirectory(this.currentSession?.id)
-    const mp = this.getMarketplace()
-    const skills = await this.fetchCliSkills()
-    const data = await mp.fetchData(workspace, skills)
+    if (!this.client) return
+    const directory = this.getProjectDirectory(this.currentSession?.id) ?? this.getWorkspaceDirectory()
+    const { data } = await retry(() => this.client!.kilocode.marketplace.list({ directory }, { throwOnError: true }))
     const dismissed = this.extensionContext?.globalState.get<boolean>("kilo.agentMigrationBannerDismissed") ?? false
     this.postMessage({ type: "marketplaceData", ...data, showAgentMigrationBanner: !dismissed })
   }
@@ -1909,18 +1907,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  private async fetchCliSkills(): Promise<Array<{ name: string; location: string }> | undefined> {
-    if (!this.client) return undefined
-    try {
-      const dir = this.getWorkspaceDirectory()
-      const { data } = await retry(() => this.client!.app.skills({ directory: dir }, { throwOnError: true }))
-      return data
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to fetch CLI skills for marketplace:", error)
-      return undefined
-    }
-  }
-
   /**
    * Remove a skill via the CLI backend (deletes from disk + clears cache), then refresh.
    * Returns true on success, false on failure.
@@ -1964,75 +1950,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     } catch {
       // fall through to kilo.json removal
     }
-    const stub: AgentMarketplaceItem = {
-      id: name,
-      type: "agent",
-      name,
-      description: "",
-      content: { mode: "primary", description: "", prompt: "" },
-    }
-    if (!(await this.removeMarketplaceItemFromAllScopes(stub))) {
+    if (!(await this.removeMarketplaceItemFromAllScopes(name, "agent"))) {
       console.error("[Kilo New] KiloProvider: Failed to remove agent:", name)
     }
   }
 
   private async handleRemoveMcp(name: string): Promise<void> {
-    // Remove from legacy files first so that the subsequent invalidation
-    // causes the CLI to re-read config without the legacy entry.
-    await this.removeLegacyMcp(name)
-
-    const stub = { id: name, type: "mcp" as const, name, description: "", url: "", content: "" }
-    const removed = await this.removeMarketplaceItemFromAllScopes(stub)
+    const removed = await this.removeMarketplaceItemFromAllScopes(name, "mcp")
     if (!removed) {
       console.error("[Kilo New] KiloProvider: Failed to remove MCP server:", name)
     }
-  }
-
-  /**
-   * Remove an MCP server from legacy config files (.kilo/mcp.json, .kilocode/mcp.json,
-   * and the VS Code global storage mcp_settings.json). These files are read by the
-   * CLI-side McpMigrator and merged into config at the lowest precedence level.
-   * Returns true if the entry was found and removed from at least one file.
-   */
-  private async removeLegacyMcp(name: string): Promise<boolean> {
-    const workspace = this.getProjectDirectory(this.currentSession?.id)
-    const files: vscode.Uri[] = []
-
-    // Project-level legacy files
-    if (workspace) {
-      files.push(vscode.Uri.file(path.join(workspace, ".kilo", "mcp.json")))
-      files.push(vscode.Uri.file(path.join(workspace, ".kilocode", "mcp.json")))
-    }
-
-    // Global legacy file (VS Code extension global storage)
-    const storage = this.extensionContext?.globalStorageUri
-    if (storage) {
-      files.push(vscode.Uri.joinPath(storage, "settings", "mcp_settings.json"))
-    }
-
-    let removed = false
-    for (const uri of files) {
-      const bytes = await vscode.workspace.fs.readFile(uri).then(
-        (b) => b,
-        () => null,
-      )
-      if (!bytes) continue
-
-      try {
-        const parsed = JSON.parse(Buffer.from(bytes).toString("utf8")) as Record<string, unknown>
-        const servers = parsed.mcpServers as Record<string, unknown> | undefined
-        if (!servers?.[name]) continue
-
-        delete servers[name]
-        const content = Buffer.from(JSON.stringify(parsed, null, 2), "utf8")
-        await vscode.workspace.fs.writeFile(uri, content)
-        removed = true
-      } catch (err) {
-        console.warn("[Kilo New] KiloProvider: Failed to remove legacy MCP from", uri.fsPath, err)
-      }
-    }
-
-    return removed
   }
 
   private async fetchAndSendMcpStatus(): Promise<void> {
@@ -2060,12 +1987,33 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Remove a marketplace item from a single scope and invalidate CLI caches.
    */
   private async removeMarketplaceItem(item: MarketplaceItem, scope: "project" | "global"): Promise<RemoveResult> {
-    const workspace = this.getProjectDirectory(this.currentSession?.id)
-    const result = await this.getMarketplace().remove(item, scope, workspace)
+    if (!this.client) return { success: false, slug: item.id, error: "Not connected to CLI backend" }
+    const directory = this.getProjectDirectory(this.currentSession?.id) ?? this.getWorkspaceDirectory()
+    const { data: result } = await retry(() =>
+      this.client!.kilocode.marketplace.uninstall(
+        { id: item.id, type: item.type, target: scope, directory },
+        { throwOnError: true },
+      ),
+    )
     if (result.success) {
       await this.invalidateAfterMarketplaceChange(scope)
     }
     return result
+  }
+
+  private async installMarketplaceItem(
+    item: MarketplaceItem,
+    options?: { target?: "project" | "global"; parameters?: Record<string, unknown> },
+  ): Promise<RemoveResult> {
+    if (!this.client) return { success: false, slug: item.id, error: "Not connected to CLI backend" }
+    const directory = this.getProjectDirectory(this.currentSession?.id) ?? this.getWorkspaceDirectory()
+    const { data } = await retry(() =>
+      this.client!.kilocode.marketplace.install(
+        { id: item.id, type: item.type, target: options?.target, parameters: options?.parameters, directory },
+        { throwOnError: true },
+      ),
+    )
+    return data
   }
 
   /**
@@ -2074,14 +2022,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * so we must attempt both scopes to cover dual-scope installations.
    * Returns true if at least one scope removal succeeded.
    */
-  private async removeMarketplaceItemFromAllScopes(item: MarketplaceItem): Promise<boolean> {
-    const workspace = this.getProjectDirectory(this.currentSession?.id)
-    const mp = this.getMarketplace()
-    const project = await mp.remove(item, "project", workspace)
-    const global = await mp.remove(item, "global", workspace)
+  private async removeMarketplaceItemFromAllScopes(id: string, type: "agent" | "mcp" | "skill"): Promise<boolean> {
+    if (!this.client) return false
+    const directory = this.getProjectDirectory(this.currentSession?.id) ?? this.getWorkspaceDirectory()
+    const project = await retry(() =>
+      this.client!.kilocode.marketplace.uninstall({ id, type, target: "project", directory }, { throwOnError: true }),
+    )
+    const global = await retry(() =>
+      this.client!.kilocode.marketplace.uninstall({ id, type, target: "global", directory }, { throwOnError: true }),
+    )
 
-    if (project.success || global.success) {
-      const scope = global.success ? "global" : "project"
+    if (project.data.success || global.data.success) {
+      const scope = global.data.success ? "global" : "project"
       await this.invalidateAfterMarketplaceChange(scope)
       return true
     }
@@ -2089,40 +2041,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
-   * Invalidate CLI caches and refresh the webview after a marketplace install/remove.
-   *
-   * For global scope: uses global.config.update with the freshly-written config file
-   * contents rather than global.dispose. This goes through Config.updateGlobal() which
-   * calls Config.global.reset() to invalidate the lazy-cached global config, ensuring
-   * the newly installed/removed MCP entry is visible on the next config.get call.
-   * (global.dispose alone is not sufficient on older CLI versions that lack the
-   * Config.global.reset() call in the dispose handler.)
-   *
-   * For project scope: instance.dispose is sufficient because the per-instance
-   * Config.state is cleared and re-reads all files (including global) on next access.
+   * Refresh local webview caches after the CLI marketplace endpoint updates backend state.
    */
-  private async invalidateAfterMarketplaceChange(scope: "project" | "global"): Promise<void> {
-    if (!this.client) return
-    if (scope === "global") {
-      // Use global.config.update with an empty config to trigger Config.updateGlobal()
-      // which calls Config.global.reset(). This invalidates the lazy-cached global
-      // config in the CLI process so it re-reads kilo.json from disk.
-      // An empty object merge is a no-op for the file content but resets the cache.
-      // (global.dispose alone is insufficient on older CLI versions that lack
-      // the Config.global.reset() call in the dispose handler.)
-      await this.client.global.config.update({ config: {} }).catch((e: unknown) => {
-        console.warn("[Kilo New] global.config.update after marketplace change failed:", e)
-      })
-    }
-    // Always dispose the per-project instance so it rebuilds state from
-    // the (possibly updated) global + project config on the next request.
-    const dir = this.getWorkspaceDirectory()
-    await this.client.instance.dispose({ directory: dir }).catch((e: unknown) => {
-      console.warn("[Kilo New] instance.dispose() after marketplace change failed:", e)
-    })
+  private async invalidateAfterMarketplaceChange(_scope: "project" | "global"): Promise<void> {
     this.cachedAgentsMessage = null
     this.cachedConfigMessage = null
-    await Promise.all([this.fetchAndSendAgents(), this.fetchAndSendConfig()])
+    this.cachedSkillsMessage = null
+    this.cachedMcpStatusMessage = null
+    this.clearCommandsCache()
+    await Promise.all([
+      this.fetchAndSendAgents(),
+      this.fetchAndSendConfig(),
+      this.fetchAndSendSkills(),
+      this.fetchAndSendCommands(),
+      this.fetchAndSendMcpStatus(),
+    ])
   }
 
   /**
@@ -3426,12 +3359,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   // legacy-migration end ---------------------------------------------------------
 
-  private getMarketplace(): MarketplaceService {
-    if (this.marketplace) return this.marketplace
-    this.marketplace = new MarketplaceService()
-    return this.marketplace
-  }
-
   // ── Worktree stats polling (sidebar diff badge) ──────────────────
   private startStatsPolling(): void {
     this.statsPoller?.stop()
@@ -3497,6 +3424,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.sessionStatusMap.clear()
     this.ignoreController?.dispose()
     this.chatAutocomplete?.dispose()
-    ;(this.marketplace?.dispose(), disposeGitChangesTarget())
+    disposeGitChangesTarget()
   }
 }

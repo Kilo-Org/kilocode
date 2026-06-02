@@ -100,6 +100,12 @@ import type {
   KiloCloudSessionsResponses,
   KilocodeHeapSnapshotErrors,
   KilocodeHeapSnapshotResponses,
+  KilocodeMarketplaceInstallErrors,
+  KilocodeMarketplaceInstallResponses,
+  KilocodeMarketplaceListErrors,
+  KilocodeMarketplaceListResponses,
+  KilocodeMarketplaceUninstallErrors,
+  KilocodeMarketplaceUninstallResponses,
   KilocodeRemoveAgentErrors,
   KilocodeRemoveAgentResponses,
   KilocodeRemoveSkillErrors,
@@ -6603,6 +6609,136 @@ export class Heap extends HeyApiClient {
   }
 }
 
+export class Marketplace extends HeyApiClient {
+  /**
+   * List marketplace items
+   *
+   * Return marketplace items and installed metadata for the request directory.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeMarketplaceListResponses,
+      KilocodeMarketplaceListErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/marketplace",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Install marketplace item
+   *
+   * Install a marketplace item by id, type, and target scope.
+   */
+  public install<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      id?: string
+      type?: "agent" | "mcp" | "skill"
+      target?: "global" | "project"
+      parameters?: {
+        [key: string]: unknown
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "id" },
+            { in: "body", key: "type" },
+            { in: "body", key: "target" },
+            { in: "body", key: "parameters" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeMarketplaceInstallResponses,
+      KilocodeMarketplaceInstallErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/marketplace/install",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Uninstall marketplace item
+   *
+   * Uninstall a marketplace item by id, type, and target scope.
+   */
+  public uninstall<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      id?: string
+      type?: "agent" | "mcp" | "skill"
+      target?: "global" | "project"
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "id" },
+            { in: "body", key: "type" },
+            { in: "body", key: "target" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeMarketplaceUninstallResponses,
+      KilocodeMarketplaceUninstallErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/marketplace/uninstall",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class SessionImport extends HeyApiClient {
   /**
    * Insert project for session import
@@ -7069,6 +7205,11 @@ export class Kilocode extends HeyApiClient {
   private _heap?: Heap
   get heap(): Heap {
     return (this._heap ??= new Heap({ client: this.client }))
+  }
+
+  private _marketplace?: Marketplace
+  get marketplace(): Marketplace {
+    return (this._marketplace ??= new Marketplace({ client: this.client }))
   }
 
   private _sessionImport?: SessionImport
