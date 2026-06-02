@@ -180,9 +180,9 @@ describe("kilocode indexing config", () => {
     }
   })
 
-  test("global indexing enabled applies when project indexing is disabled", async () => {
+  test("project indexing disabled overrides global indexing enabled", async () => {
     const input = KiloIndexing.input({ enabled: false }, { enabled: true })
-    expect(input.enabled).toBe(true)
+    expect(input.enabled).toBe(false)
   })
 
   test("accepts delete sentinels for indexing model overrides", () => {

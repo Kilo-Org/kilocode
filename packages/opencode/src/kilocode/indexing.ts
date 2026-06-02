@@ -188,7 +188,7 @@ export namespace KiloIndexing {
   export function input(config?: IndexingConfig, global?: IndexingConfig) {
     return toIndexingConfigInput({
       ...config,
-      enabled: config?.enabled === true || global?.enabled === true,
+      enabled: config?.enabled ?? global?.enabled ?? false,
     })
   }
 
