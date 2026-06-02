@@ -26,7 +26,9 @@ export interface MarketplaceContext {
   getProjectDirectory(): string | undefined
   clearAgentsCache(): void
   clearSkillsCache(): void
+  /** Clear the webview message and module-level command caches after an API error. */
   clearCommandsCache(): void
+  /** Clear only the webview message cache after a thrown error or successful removal. */
   clearCommandsMessageCache(): void
   clearConfigCache(): void
   fetchAndSendAgents(): Promise<void>
@@ -49,12 +51,13 @@ export class MarketplaceHandler {
   }
 
   async install(item: MarketplaceItem, options: InstallMarketplaceItemOptions): Promise<void> {
+    const ctx = this.ctx()
     const scope = options?.target ?? "project"
-    const result = await this.getService().install(item, options, this.ctx().getProjectDirectory())
+    const result = await this.getService().install(item, options, ctx.getProjectDirectory())
     if (result.success) {
       await this.invalidate(scope)
     }
-    this.ctx().postMessage({
+    ctx.postMessage({
       type: "marketplaceInstallResult",
       success: result.success,
       slug: result.slug,
