@@ -2494,7 +2494,7 @@ export type SessionBusyError = {
 }
 
 export type V2SessionsResponse = {
-  items: Array<SessionInfo>
+  items: Array<SessionV2Info>
   cursor: {
     previous?: string
     next?: string
@@ -3369,12 +3369,15 @@ export type ConfigV2ExperimentalPolicy = {
   resource: string
 }
 
-export type SessionInfo = {
+export type LocationRef = {
+  directory: string
+  workspaceID?: string
+}
+
+export type SessionV2Info = {
   id: string
   parentID?: string
   projectID: string
-  workspaceID?: string
-  path?: string
   agent?: string
   model?: {
     id: string
@@ -3397,6 +3400,8 @@ export type SessionInfo = {
     archived?: number
   }
   title: string
+  location: LocationRef
+  subpath?: string
 }
 
 export type SessionDelivery = "immediate" | "deferred"
