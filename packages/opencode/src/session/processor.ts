@@ -602,7 +602,7 @@ export const layer: Layer.Layer<
                 ignored: true,
               })
             }
-            const providerError = KiloSessionProcessor.providerFinishError(ctx.assistantMessage)
+            const providerError = KiloSessionProcessor.providerFinishError(ctx.assistantMessage, ctx.step)
             if (providerError) {
               yield* bus.publish(Session.Event.Error, {
                 sessionID: ctx.assistantMessage.sessionID,

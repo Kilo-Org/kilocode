@@ -25,6 +25,8 @@ export namespace KiloSessionProcessor {
     "The model hit its output limit while reasoning and produced no actionable output. Try disabling reasoning or increasing the output limit."
   export const PROVIDER_FINISH_ERROR_MESSAGE =
     "The provider ended the response with an error before returning details. Start a new message to retry; Kilo will compact the oversized conversation first if needed."
+  export const EMPTY_PROVIDER_RESPONSE_MESSAGE =
+    "The provider ended the response without returning output. Start a new message to retry; Kilo will compact the oversized conversation first if needed."
 
   export function reviewTelemetry(command: string | undefined): ReviewTelemetry | undefined {
     if (!isReviewCommand(command)) return
@@ -209,15 +211,25 @@ export namespace KiloSessionProcessor {
     return OUTPUT_LENGTH_WARNING
   }
 
-  export function providerFinishError(msg: MessageV2.Assistant) {
-    if (msg.finish !== "error") return false
+  export function providerFinishError(
+    msg: MessageV2.Assistant,
+    step?: { reasoning: boolean; text: boolean; tool: boolean },
+  ) {
+    const empty =
+      msg.finish === "other" &&
+      msg.tokens.output === 0 &&
+      step &&
+      !step.reasoning &&
+      !step.text &&
+      !step.tool
+    if (msg.finish !== "error" && !empty) return false
     if (msg.error) return false
     const err = new MessageV2.APIError({
-      message: PROVIDER_FINISH_ERROR_MESSAGE,
+      message: empty ? EMPTY_PROVIDER_RESPONSE_MESSAGE : PROVIDER_FINISH_ERROR_MESSAGE,
       isRetryable: true,
     }).toObject()
     msg.error = err
-    log.warn("provider finish error", { messageID: msg.id })
+    log.warn(empty ? "empty provider response" : "provider finish error", { messageID: msg.id })
     return err
   }
 }

@@ -338,6 +338,154 @@ describe("session processor empty tool-calls", () => {
     ),
   )
 
+  it.effect("treats empty provider responses with other finish as retryable API errors", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const test = yield* TestLLM
+          const processors = yield* SessionProcessor.Service
+          const session = yield* Session.Service
+
+          yield* test.reply(
+            { type: "start" },
+            { type: "start-step" } as LLM.Event,
+            {
+              type: "finish-step",
+              finishReason: "other",
+              usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+              providerMetadata: undefined,
+            } as LLM.Event,
+            { type: "finish" } as LLM.Event,
+          )
+
+          const chat = yield* session.create({})
+          const parent = yield* session.updateMessage({
+            id: MessageID.ascending(),
+            role: "user",
+            sessionID: chat.id,
+            agent: "code",
+            model: ref,
+            time: { created: Date.now() },
+          })
+          const msg: MessageV2.Assistant = {
+            id: MessageID.ascending(),
+            role: "assistant",
+            sessionID: chat.id,
+            parentID: parent.id,
+            mode: "code",
+            agent: "code",
+            path: { cwd: path.resolve(dir), root: path.resolve(dir) },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ref.modelID,
+            providerID: ref.providerID,
+            time: { created: Date.now() },
+          }
+          yield* session.updateMessage(msg)
+
+          const mdl = model()
+          const handle = yield* processors.create({
+            assistantMessage: msg,
+            sessionID: chat.id,
+            model: mdl,
+          })
+
+          const input: LLM.StreamInput = {
+            user: parent as MessageV2.User,
+            sessionID: chat.id,
+            model: mdl,
+            agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
+            system: [],
+            messages: [],
+            tools: {},
+          }
+
+          const result = yield* handle.process(input)
+          expect(result).toBe("stop")
+          expect(handle.message.finish).toBe("other")
+          expect(handle.message.error?.name).toBe("APIError")
+          if (handle.message.error?.name !== "APIError") return
+          expect(handle.message.error.data.isRetryable).toBe(true)
+          expect(handle.message.error.data.message).toContain("without returning output")
+        }),
+      { git: true },
+    ),
+  )
+
+  it.effect("preserves other finish when provider returns visible output", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const test = yield* TestLLM
+          const processors = yield* SessionProcessor.Service
+          const session = yield* Session.Service
+
+          yield* test.reply(
+            { type: "start" },
+            { type: "start-step" } as LLM.Event,
+            { type: "text-start", id: "text", providerMetadata: undefined } as LLM.Event,
+            { type: "text-delta", id: "text", text: "answer", providerMetadata: undefined } as LLM.Event,
+            { type: "text-end", id: "text", providerMetadata: undefined } as LLM.Event,
+            {
+              type: "finish-step",
+              finishReason: "other",
+              usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+              providerMetadata: undefined,
+            } as LLM.Event,
+            { type: "finish" } as LLM.Event,
+          )
+
+          const chat = yield* session.create({})
+          const parent = yield* session.updateMessage({
+            id: MessageID.ascending(),
+            role: "user",
+            sessionID: chat.id,
+            agent: "code",
+            model: ref,
+            time: { created: Date.now() },
+          })
+          const msg: MessageV2.Assistant = {
+            id: MessageID.ascending(),
+            role: "assistant",
+            sessionID: chat.id,
+            parentID: parent.id,
+            mode: "code",
+            agent: "code",
+            path: { cwd: path.resolve(dir), root: path.resolve(dir) },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ref.modelID,
+            providerID: ref.providerID,
+            time: { created: Date.now() },
+          }
+          yield* session.updateMessage(msg)
+
+          const mdl = model()
+          const handle = yield* processors.create({
+            assistantMessage: msg,
+            sessionID: chat.id,
+            model: mdl,
+          })
+
+          const input: LLM.StreamInput = {
+            user: parent as MessageV2.User,
+            sessionID: chat.id,
+            model: mdl,
+            agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
+            system: [],
+            messages: [],
+            tools: {},
+          }
+
+          const result = yield* handle.process(input)
+          expect(result).toBe("continue")
+          expect(handle.message.finish).toBe("other")
+          expect(handle.message.error).toBeUndefined()
+        }),
+      { git: true },
+    ),
+  )
+
   it.effect("adds generic warning when model stops after text length finish", () =>
     provideTmpdirInstance(
       (dir) =>
