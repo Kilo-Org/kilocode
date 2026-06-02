@@ -241,11 +241,15 @@ export namespace KiloSessionPrompt {
     const info = exists
       ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.`
       : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`
-    const planFile = `## Plan File\n${info}\nThis is the ONLY file you are allowed to write to or edit.`
+    const limit =
+      input.agent.name === "plan"
+        ? "This is the ONLY file you are allowed to write to or edit."
+        : "Use this as the main plan file to write or edit. Do not write or edit other files unless the user explicitly asks and your permissions allow it."
+    const planFile = `## Plan File\n${info}\n${limit}`
     const text =
       input.agent.name === "plan"
         ? `${PROMPT_PLAN}\n\n${planFile}`
-        : `<system-reminder>\n${planFile} Before writing this file or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the complete plan to this exact file, then call plan_exit with no arguments.\n</system-reminder>`
+        : `<system-reminder>\n${planFile} Before writing this file or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the main plan to this exact file, then call plan_exit with no arguments. If the user explicitly asks for additional plan files and your permissions allow it, you may create them and reference them from the main plan.\n</system-reminder>`
     input.userMessage.parts.push({
       id: PartID.ascending(),
       messageID: input.userMessage.info.id,
