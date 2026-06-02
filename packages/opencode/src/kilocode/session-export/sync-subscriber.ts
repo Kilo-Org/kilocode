@@ -135,7 +135,8 @@ export class SyncSubscriber {
       agentVersion: this.deps.agentVersion,
       messageId: text(data.messageID) ?? text(data.messageId) ?? "",
       rating,
-      previousRating: text(data.previousRating) === "down" ? "down" : text(data.previousRating) === "up" ? "up" : undefined,
+      previousRating:
+        text(data.previousRating) === "down" ? "down" : text(data.previousRating) === "up" ? "up" : undefined,
     }
     this.deps.dispatch(env)
   }

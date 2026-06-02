@@ -233,6 +233,16 @@ export function prepare(cfg: Config.Info): KiloData {
   return { mcpRules, defaultsPatch }
 }
 
+export function cacheKey(cfg: Config.Info) {
+  return JSON.stringify({
+    agent: cfg.agent,
+    default_agent: cfg.default_agent,
+    mcp: cfg.mcp,
+    mode: cfg.mode,
+    permission: cfg.permission,
+  })
+}
+
 // Map "build" config key to "code" for backward compatibility.
 export function resolveKey(name: string): string {
   return name === "build" ? "code" : name

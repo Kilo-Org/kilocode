@@ -23,7 +23,9 @@ export const EventTable = sqliteTable(
   },
   (t) => [
     index("event_session_seq").on(t.session_id, t.seq),
-    index("event_pending").on(t.uploaded_at, t.next_attempt_at).where(sql`${t.uploaded_at} IS NULL`),
+    index("event_pending")
+      .on(t.uploaded_at, t.next_attempt_at)
+      .where(sql`${t.uploaded_at} IS NULL`),
   ],
 )
 

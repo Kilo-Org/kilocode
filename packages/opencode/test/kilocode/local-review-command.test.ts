@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test"
-import { localReviewCommand, localReviewUncommittedCommand, parseReviewCommand } from "../../src/kilocode/review/command"
+import {
+  localReviewCommand,
+  localReviewUncommittedCommand,
+  parseReviewCommand,
+} from "../../src/kilocode/review/command"
 
 describe("review command parsing", () => {
   test("parses review slash commands", () => {

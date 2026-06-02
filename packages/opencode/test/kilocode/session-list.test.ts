@@ -22,7 +22,9 @@ describe("Kilo Session.list", () => {
       directory: tmp.path,
       fn: async () => {
         const session = await Effect.runPromise(
-          Session.Service.use((svc) => svc.create({ title: "legacy-session" })).pipe(Effect.provide(Session.defaultLayer)),
+          Session.Service.use((svc) => svc.create({ title: "legacy-session" })).pipe(
+            Effect.provide(Session.defaultLayer),
+          ),
         )
         const project = ProjectID.make("legacy-project")
         Database.use((db) => {

@@ -89,7 +89,9 @@ describe("Storage", () => {
       type: "tool_executed",
       ts: 100,
       agentVersion: "v0",
-      dataJson: JSON.stringify({ output: { textParts: [{ __chunked: true, chunkIds: ["h1"], size: 3, encoding: "utf8" }] } }),
+      dataJson: JSON.stringify({
+        output: { textParts: [{ __chunked: true, chunkIds: ["h1"], size: 3, encoding: "utf8" }] },
+      }),
       clientScrubbed: 1,
     })
 

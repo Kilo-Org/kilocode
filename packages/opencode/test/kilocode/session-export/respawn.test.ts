@@ -89,7 +89,9 @@ describe("SessionExport worker respawn", () => {
     })
 
     SessionExport.beforeRequest(request("s1"))
-    await waitFor(() => worker.messages.some((msg) => msg.kind === "event" && msg.envelope?.type === "workspace_baseline_completed"))
+    await waitFor(() =>
+      worker.messages.some((msg) => msg.kind === "event" && msg.envelope?.type === "workspace_baseline_completed"),
+    )
 
     expect(worker.messages.filter((msg) => msg.kind === "init").length).toBe(1)
   })
@@ -121,7 +123,11 @@ describe("SessionExport worker respawn", () => {
 
     SessionExport.beforeRequest(request("s-a", "workspace-a"))
     SessionExport.beforeRequest(request("s-b", "workspace-b"))
-    await waitFor(() => worker.messages.filter((msg) => msg.kind === "event" && msg.envelope?.type === "workspace_baseline_completed").length === 2)
+    await waitFor(
+      () =>
+        worker.messages.filter((msg) => msg.kind === "event" && msg.envelope?.type === "workspace_baseline_completed")
+          .length === 2,
+    )
 
     const files = worker.messages
       .filter((msg) => msg.kind === "event" && msg.envelope?.type === "workspace_baseline_completed")
@@ -156,7 +162,8 @@ class FakeWorker {
   onmessage: ((event: MessageEvent) => void) | null = null
   onerror: ((event: ErrorEvent) => void) | null = null
   terminated = false
-  messages: Array<{ kind?: string; surface?: string; envelope?: { type?: string; files?: Array<{ path?: string }> } }> = []
+  messages: Array<{ kind?: string; surface?: string; envelope?: { type?: string; files?: Array<{ path?: string }> } }> =
+    []
 
   constructor(private failures: number) {}
 

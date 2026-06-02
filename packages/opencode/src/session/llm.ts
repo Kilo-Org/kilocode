@@ -2,7 +2,15 @@ import { Provider } from "@/provider/provider"
 import * as Log from "@opencode-ai/core/util/log"
 import { Context, Effect, Layer, Record } from "effect"
 import * as Stream from "effect/Stream"
-import { streamText, wrapLanguageModel, type LanguageModelUsage, type ModelMessage, type Tool, tool, jsonSchema } from "ai"
+import {
+  streamText,
+  wrapLanguageModel,
+  type LanguageModelUsage,
+  type ModelMessage,
+  type Tool,
+  tool,
+  jsonSchema,
+} from "ai"
 import { mergeDeep } from "remeda"
 import { GitLabWorkflowLanguageModel } from "gitlab-ai-provider"
 import { ProviderTransform } from "@/provider/transform"
@@ -275,6 +283,7 @@ const live: Layer.Layer<
           execute: async () => ({ output: "", title: "", metadata: {} }),
         })
       }
+      const sortedTools = Object.fromEntries(Object.entries(tools).toSorted(([a], [b]) => a.localeCompare(b)))
 
       // Wire up toolExecutor for DWS workflow models so that tool calls
       // from the workflow service are executed via opencode's tool system
@@ -288,7 +297,7 @@ const live: Layer.Layer<
         workflowModel.sessionID = input.sessionID
         workflowModel.systemPrompt = system.join("\n")
         workflowModel.toolExecutor = async (toolName, argsJson, _requestID) => {
-          const t = tools[toolName]
+          const t = sortedTools[toolName]
           if (!t || !t.execute) {
             return { result: "", error: `Unknown tool: ${toolName}` }
           }
@@ -310,7 +319,7 @@ const live: Layer.Layer<
         }
 
         const ruleset = Permission.merge(input.agent.permission ?? [], input.permission ?? [])
-        workflowModel.sessionPreapprovedTools = Object.keys(tools).filter((name) => {
+        workflowModel.sessionPreapprovedTools = Object.keys(sortedTools).filter((name) => {
           const match = ruleset.findLast((rule) => Wildcard.match(name, rule.permission))
           return !match || match.action !== "ask"
         })
@@ -383,12 +392,15 @@ const live: Layer.Layer<
       const opencodeProjectID = input.model.providerID.startsWith("opencode") ? instance.project.id : undefined
 
       // kilocode_change start - capture eligible session export request start
-      const org = yield* isKilo && input.model.isFree === true ? Effect.promise(() => getActiveOrg()) : Effect.succeed({ type: "unknown" as const })
+      const org = yield* isKilo && input.model.isFree === true
+        ? Effect.promise(() => getActiveOrg())
+        : Effect.succeed({ type: "unknown" as const })
       const started = Date.now()
       const parent = input.parentSessionID ?? KiloSession.resolveParent(input.sessionID)
       const found = KiloSession.resolveRoot(input.sessionID)
       const root = parent ? (found === input.sessionID ? parent : found) : input.sessionID
-      const exportable = isKilo && input.model.isFree === true && org.type === "personal" && input.agent.name !== "title"
+      const exportable =
+        isKilo && input.model.isFree === true && org.type === "personal" && input.agent.name !== "title"
       if (exportable) {
         SessionExport.beforeRequest({
           input: { model: input.model, org },
@@ -415,7 +427,8 @@ const live: Layer.Layer<
       }
       // kilocode_change end
 
-      const result = streamText({ // kilocode_change
+      const result = streamText({
+        // kilocode_change
         onError(error) {
           l.error("stream error", {
             error,
@@ -423,7 +436,7 @@ const live: Layer.Layer<
         },
         async experimental_repairToolCall(failed) {
           const lower = failed.toolCall.toolName.toLowerCase()
-          if (lower !== failed.toolCall.toolName && tools[lower]) {
+          if (lower !== failed.toolCall.toolName && sortedTools[lower]) {
             l.info("repairing tool call", {
               tool: failed.toolCall.toolName,
               repaired: lower,
@@ -446,8 +459,8 @@ const live: Layer.Layer<
         topP: params.topP,
         topK: params.topK,
         providerOptions: ProviderTransform.providerOptions(input.model, params.options),
-        activeTools: Object.keys(tools).filter((x) => x !== "invalid"),
-        tools,
+        activeTools: Object.keys(sortedTools).filter((x) => x !== "invalid"),
+        tools: sortedTools,
         toolChoice: input.toolChoice,
         maxOutputTokens: params.maxOutputTokens,
         abortSignal: input.abort,
@@ -562,7 +575,9 @@ export function observeFullStreamForExport(
   const reasoningParts: string[] = []
   const toolCalls: Event[] = []
   let finishReason: string | undefined
-  let usage: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number } | undefined
+  let usage:
+    | { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number }
+    | undefined
   let finished = false
   let reported = false
   const done = (error?: unknown) => {
@@ -613,7 +628,11 @@ function collectPart(
     reasoningParts: string[]
     toolCalls: Event[]
     setFinish: (value: string | undefined) => void
-    setUsage: (value: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number } | undefined) => void
+    setUsage: (
+      value:
+        | { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number }
+        | undefined,
+    ) => void
   },
 ): void {
   switch (part.type) {

@@ -88,7 +88,8 @@ if (view.exitCode === 0 && view.stdout.toString().trim()) {
   process.exit(0)
 }
 
-const create = await $`gh pr create --repo ${repo} --base main --head ${branch} --title ${`release(jetbrains): v${ver}`} --body ${text}`.text()
+const create =
+  await $`gh pr create --repo ${repo} --base main --head ${branch} --title ${`release(jetbrains): v${ver}`} --body ${text}`.text()
 await $`gh pr edit ${branch} --repo ${repo} --add-label jetbrains-release`
 await $`gh pr edit ${branch} --repo ${repo} --add-label release`.nothrow()
 console.log(create.trim())
@@ -141,9 +142,10 @@ async function lock(tag: string, sha: string, dry: boolean) {
 }
 
 async function release(from: string, tag: string, sha: string) {
-  const res = await $`gh api repos/${repo}/releases/generate-notes --method POST -f tag_name=${tag} -f target_commitish=${sha} -f previous_tag_name=${from} --jq .body`
-    .quiet()
-    .nothrow()
+  const res =
+    await $`gh api repos/${repo}/releases/generate-notes --method POST -f tag_name=${tag} -f target_commitish=${sha} -f previous_tag_name=${from} --jq .body`
+      .quiet()
+      .nothrow()
   if (res.exitCode === 0) return res.stdout.toString().trim()
 
   const base = await $`git rev-parse -q --verify ${from}`.nothrow()
@@ -213,10 +215,12 @@ async function writeprops(ver: string) {
 }
 
 async function writelog(ver: string, entry: string) {
-  const current = await Bun.file(log).text().catch((err: NodeJS.ErrnoException) => {
-    if (err.code === "ENOENT") return "# Changelog\n\n## [Unreleased]\n"
-    throw err
-  })
+  const current = await Bun.file(log)
+    .text()
+    .catch((err: NodeJS.ErrnoException) => {
+      if (err.code === "ENOENT") return "# Changelog\n\n## [Unreleased]\n"
+      throw err
+    })
   const clean = current.replace(regex(ver), "").replace(/\n{3,}/g, "\n\n")
   const marker = "## [Unreleased]"
   if (!clean.includes(marker)) throw new Error("CHANGELOG.md must contain ## [Unreleased]")

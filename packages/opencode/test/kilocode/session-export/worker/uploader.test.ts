@@ -321,7 +321,9 @@ describe("Uploader", () => {
     expect(event?.agentInfo).toBeUndefined()
     expect(body.systemPrompts?.[input?.systemRef as string]).toEqual(["sys"])
     expect(body.toolSchemas?.[input?.toolSchemaRef as string]).toEqual({ bash: { description: "run" } })
-    expect(body.permissionSets?.[input?.permissionRef as string]).toEqual([{ permission: "*", pattern: "*", action: "allow" }])
+    expect(body.permissionSets?.[input?.permissionRef as string]).toEqual([
+      { permission: "*", pattern: "*", action: "allow" },
+    ])
     expect(body.agents?.[event?.agentRef as string]).toEqual({ name: "code" })
   })
 
@@ -352,7 +354,9 @@ describe("Uploader", () => {
       surface: "test",
     })
     await uploader.flush("test")
-    const body = JSON.parse(bodies[0]) as { chunks: Array<{ id: string; bytes: unknown; size: number; encoding: string }> }
+    const body = JSON.parse(bodies[0]) as {
+      chunks: Array<{ id: string; bytes: unknown; size: number; encoding: string }>
+    }
     expect(body.chunks).toEqual([{ id: "h1", bytes: "AQIDBA==", size: 10, encoding: "zstd+base64" }])
     expect(storage.getChunk("h1")).toBeUndefined()
   })
@@ -443,7 +447,9 @@ describe("Uploader", () => {
 
     await uploader.flush("test")
 
-    const seqs = bodies.map((body) => (JSON.parse(body) as { events: Array<{ seq: number }> }).events.map((event) => event.seq))
+    const seqs = bodies.map((body) =>
+      (JSON.parse(body) as { events: Array<{ seq: number }> }).events.map((event) => event.seq),
+    )
     expect(seqs).toEqual([[1], [0], [2]])
   })
 

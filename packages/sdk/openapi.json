@@ -741,6 +741,16 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "InternalServerError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerError"
+                }
+              }
+            }
           }
         },
         "description": "Get the active Console org name and the set of provider IDs managed by that Console org.",
@@ -815,6 +825,16 @@
                   "required": ["orgs"],
                   "additionalProperties": false,
                   "description": "Switchable Console orgs"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "InternalServerError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerError"
                 }
               }
             }
@@ -2544,7 +2564,7 @@
                         "type": "string"
                       }
                     },
-                    "required": ["name", "description", "location", "content"],
+                    "required": ["name", "location", "content"],
                     "additionalProperties": false
                   },
                   "description": "List of skills"
@@ -3772,6 +3792,16 @@
                   "title": {
                     "type": "string"
                   },
+                  "sessionID": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "size": {
                     "type": "object",
                     "properties": {
@@ -4266,7 +4296,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -4350,7 +4380,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -6252,22 +6282,22 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          },
           "404": {
             "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "InternalServerError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerError"
                 }
               }
             }
@@ -6323,22 +6353,22 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          },
           "404": {
             "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "InternalServerError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerError"
                 }
               }
             }
@@ -9009,6 +9039,43 @@
         ]
       }
     },
+    "/experimental/workspace/sync-list": {
+      "post": {
+        "tags": ["workspace"],
+        "operationId": "experimental.workspace.syncList",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Workspace list synced"
+          }
+        },
+        "description": "Register missing workspaces returned by workspace adapters.",
+        "summary": "Sync workspace list",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.syncList({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/experimental/workspace/status": {
       "get": {
         "tags": ["workspace"],
@@ -9210,6 +9277,311 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.warp({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/agent-builder/preview": {
+      "post": {
+        "tags": ["agent-builder"],
+        "operationId": "agentBuilder.preview",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent markdown preview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+                    },
+                    "scope": {
+                      "type": "string",
+                      "enum": ["global", "project"]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "markdown": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["id", "scope", "path", "markdown"],
+                  "additionalProperties": false,
+                  "description": "Agent markdown preview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Validate an agent builder payload and return the canonical agent markdown without writing it.",
+        "summary": "Preview agent markdown",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": ["global", "project"]
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": ["primary", "subagent", "all"]
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "color": {
+                    "type": "string"
+                  },
+                  "steps": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "tools": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "permission": {
+                    "type": "object"
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "pattern": "\\S"
+                  }
+                },
+                "required": ["id", "prompt"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.agentBuilder.preview({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/agent-builder/{id}": {
+      "put": {
+        "tags": ["agent-builder"],
+        "operationId": "agentBuilder.save",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved agent markdown",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+                    },
+                    "scope": {
+                      "type": "string",
+                      "enum": ["global", "project"]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "markdown": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["id", "scope", "path", "markdown"],
+                  "additionalProperties": false,
+                  "description": "Saved agent markdown"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Save an agent builder payload as a canonical agent markdown file.",
+        "summary": "Save agent markdown",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": ["global", "project"]
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": ["primary", "subagent", "all"]
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "color": {
+                    "type": "string"
+                  },
+                  "steps": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "tools": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "permission": {
+                    "type": "object"
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "pattern": "\\S"
+                  }
+                },
+                "required": ["prompt"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.agentBuilder.save({\n  ...\n})"
           }
         ]
       }
@@ -9652,6 +10024,731 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.commitMessage.generate({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/config/overlay": {
+      "get": {
+        "tags": ["config-console"],
+        "operationId": "config.overlay",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["global", "project"],
+              "default": "project"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resolved config overlay",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigOverlayResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Resolve global, project, and effective config values with source metadata for inheritance-aware settings UI.",
+        "summary": "Get config overlay",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.overlay({\n  ...\n})"
+          }
+        ]
+      },
+      "patch": {
+        "tags": ["config-console"],
+        "operationId": "config.overlayUpdate",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Effective configuration after patch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Config"
+                }
+              }
+            }
+          }
+        },
+        "description": "Apply a minimal global or project config patch, including unset paths for reverting local overrides.",
+        "summary": "Patch config overlay",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scope": {
+                    "type": "string",
+                    "enum": ["global", "project"],
+                    "default": "project"
+                  },
+                  "set": {
+                    "type": "object"
+                  },
+                  "unset": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.overlayUpdate({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/config/sources": {
+      "get": {
+        "tags": ["config-console"],
+        "operationId": "config.sources",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Config source inventory",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigSourcesResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "List config source metadata in load order without exposing config contents or secrets.",
+        "summary": "List config sources",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.sources({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/config/effective": {
+      "get": {
+        "tags": ["config-console"],
+        "operationId": "config.effective",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Effective config info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Config"
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieve effective config for the current instance directory.",
+        "summary": "Get effective configuration",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.effective({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/config/rules": {
+      "get": {
+        "tags": ["config-console"],
+        "operationId": "config.rules",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "const": "project",
+              "default": "project",
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project rules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigRulesResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "List project instruction files used by Kilo and return their current contents.",
+        "summary": "Get project rules",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.rules({\n  ...\n})"
+          }
+        ]
+      },
+      "put": {
+        "tags": ["config-console"],
+        "operationId": "config.rulesUpdate",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project rules after update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigRulesResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Create or update the project AGENTS.md rules file.",
+        "summary": "Update project rules",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scope": {
+                    "type": "string",
+                    "enum": ["project"],
+                    "default": "project"
+                  },
+                  "content": {
+                    "type": "string"
+                  }
+                },
+                "required": ["content"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.rulesUpdate({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/config/model-state": {
+      "get": {
+        "tags": ["config-console"],
+        "operationId": "config.modelState",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Model state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigModelStateResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieve TUI-compatible recent and favorite model selections.",
+        "summary": "Get model state",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.modelState({\n  ...\n})"
+          }
+        ]
+      },
+      "patch": {
+        "tags": ["config-console"],
+        "operationId": "config.modelStateUpdate",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated model state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigModelStateResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Patch TUI-compatible model selections shared with Kilo Console.",
+        "summary": "Update model state",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "favorite": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "providerID": {
+                          "type": "string"
+                        },
+                        "modelID": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["providerID", "modelID"],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.modelStateUpdate({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/tui/config": {
+      "get": {
+        "tags": ["config-console"],
+        "operationId": "tui.config.get",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Effective TUI configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuiConfigGetResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieve the effective TUI configuration for the current instance directory.",
+        "summary": "Get TUI configuration",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.config.get({\n  ...\n})"
+          }
+        ]
+      },
+      "patch": {
+        "tags": ["config-console"],
+        "operationId": "tui.config.update",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["project", "global"],
+              "default": "project"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Effective TUI configuration after the update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuiConfigGetResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Patch global or project TUI configuration and return the effective TUI configuration.",
+        "summary": "Update TUI configuration",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "$schema": {
+                    "type": "string"
+                  },
+                  "theme": {
+                    "type": "string"
+                  },
+                  "keybinds": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "plugin": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "prefixItems": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object"
+                            }
+                          ],
+                          "maxItems": 2,
+                          "minItems": 2
+                        }
+                      ]
+                    }
+                  },
+                  "plugin_enabled": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "boolean"
+                    }
+                  },
+                  "scroll_speed": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "scroll_acceleration": {
+                    "type": "object",
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": ["enabled"],
+                    "additionalProperties": false
+                  },
+                  "diff_style": {
+                    "type": "string",
+                    "enum": ["auto", "stacked"]
+                  },
+                  "mouse": {
+                    "type": "boolean"
+                  },
+                  "attention": {
+                    "type": "object",
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean"
+                      },
+                      "notifications": {
+                        "type": "boolean"
+                      },
+                      "sound": {
+                        "type": "boolean"
+                      },
+                      "volume": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["NaN"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["Infinity"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["-Infinity"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["Infinity", "-Infinity", "NaN"]
+                          }
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.config.update({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/tui/keybinds": {
+      "get": {
+        "tags": ["config-console"],
+        "operationId": "tui.keybind.list",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "TUI keybind metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuiKeybindListResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "List valid TUI keybind commands, descriptions, groups, and default bindings from the CLI schema.",
+        "summary": "List TUI keybinds",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.keybind.list({\n  ...\n})"
           }
         ]
       }
@@ -10157,6 +11254,151 @@
         ]
       }
     },
+    "/kilo/edit": {
+      "post": {
+        "tags": ["kilo"],
+        "operationId": "kilo.edit",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Next Edit completion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "content": {
+                      "type": "string"
+                    },
+                    "usage": {
+                      "type": "object",
+                      "properties": {
+                        "prompt_tokens": {
+                          "type": "number"
+                        },
+                        "completion_tokens": {
+                          "type": "number"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["content"],
+                  "additionalProperties": false,
+                  "description": "Next Edit completion"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Proxy a Mercury-style Next Edit request. The client supplies structured editor context; the gateway assembles the sentinel-tagged prompt and forwards to the upstream edit endpoint.",
+        "summary": "Next Edit completion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "maxTokens": {
+                    "type": "number"
+                  },
+                  "currentFilePath": {
+                    "type": "string"
+                  },
+                  "currentFileContent": {
+                    "type": "string"
+                  },
+                  "cursorLine": {
+                    "type": "number"
+                  },
+                  "cursorCharacter": {
+                    "type": "number"
+                  },
+                  "editableRegionStartLine": {
+                    "type": "number"
+                  },
+                  "editableRegionEndLine": {
+                    "type": "number"
+                  },
+                  "recentlyViewedSnippets": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "filepath": {
+                          "type": "string"
+                        },
+                        "content": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["filepath", "content"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "editDiffHistory": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "currentFilePath",
+                  "currentFileContent",
+                  "cursorLine",
+                  "cursorCharacter",
+                  "editableRegionStartLine",
+                  "editableRegionEndLine",
+                  "recentlyViewedSnippets",
+                  "editDiffHistory"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.edit({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilo/audio/transcriptions": {
       "post": {
         "tags": ["kilo"],
@@ -10235,6 +11477,9 @@
                     "additionalProperties": false
                   },
                   "language": {
+                    "type": "string"
+                  },
+                  "prompt": {
                     "type": "string"
                   },
                   "temperature": {
@@ -12758,13 +14003,31 @@
             "$ref": "#/components/schemas/EventGlobalConfigUpdated"
           },
           {
+            "$ref": "#/components/schemas/Event.tui.prompt.append"
+          },
+          {
+            "$ref": "#/components/schemas/Event.tui.command.execute"
+          },
+          {
+            "$ref": "#/components/schemas/EventTuiToastShow1"
+          },
+          {
+            "$ref": "#/components/schemas/Event.tui.session.select"
+          },
+          {
+            "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
+          },
+          {
+            "$ref": "#/components/schemas/EventIndexingStatus"
+          },
+          {
             "$ref": "#/components/schemas/EventServerInstanceDisposed"
           },
           {
-            "$ref": "#/components/schemas/EventLspClientDiagnostics"
+            "$ref": "#/components/schemas/EventFileEdited"
           },
           {
-            "$ref": "#/components/schemas/EventLspUpdated"
+            "$ref": "#/components/schemas/EventFileWatcherUpdated"
           },
           {
             "$ref": "#/components/schemas/EventQuestionAsked"
@@ -12776,16 +14039,10 @@
             "$ref": "#/components/schemas/EventQuestionRejected"
           },
           {
-            "$ref": "#/components/schemas/Event.tui.prompt.append"
+            "$ref": "#/components/schemas/EventLspClientDiagnostics"
           },
           {
-            "$ref": "#/components/schemas/Event.tui.command.execute"
-          },
-          {
-            "$ref": "#/components/schemas/EventTuiToastShow1"
-          },
-          {
-            "$ref": "#/components/schemas/Event.tui.session.select"
+            "$ref": "#/components/schemas/EventLspUpdated"
           },
           {
             "$ref": "#/components/schemas/EventMcpToolsChanged"
@@ -12839,12 +14096,6 @@
             "$ref": "#/components/schemas/EventInstallationUpdate-available"
           },
           {
-            "$ref": "#/components/schemas/EventFileEdited"
-          },
-          {
-            "$ref": "#/components/schemas/EventFileWatcherUpdated"
-          },
-          {
             "$ref": "#/components/schemas/EventTodoUpdated"
           },
           {
@@ -12870,9 +14121,6 @@
           },
           {
             "$ref": "#/components/schemas/EventProjectUpdated"
-          },
-          {
-            "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
           },
           {
             "$ref": "#/components/schemas/EventVcsBranchUpdated"
@@ -13005,9 +14253,6 @@
           },
           {
             "$ref": "#/components/schemas/EventSessionNextCompactionEnded"
-          },
-          {
-            "$ref": "#/components/schemas/EventIndexingStatus"
           }
         ]
       },
@@ -13087,141 +14332,6 @@
             "$ref": "#/components/schemas/WellKnownAuth"
           }
         ]
-      },
-      "QuestionOption": {
-        "type": "object",
-        "properties": {
-          "label": {
-            "type": "string",
-            "description": "Display text (1-5 words, concise)"
-          },
-          "description": {
-            "type": "string",
-            "description": "Explanation of choice"
-          },
-          "labelKey": {
-            "type": "string"
-          },
-          "descriptionKey": {
-            "type": "string"
-          },
-          "mode": {
-            "type": "string"
-          }
-        },
-        "required": ["label", "description"],
-        "additionalProperties": false
-      },
-      "QuestionInfo": {
-        "type": "object",
-        "properties": {
-          "question": {
-            "type": "string",
-            "description": "Complete question"
-          },
-          "header": {
-            "type": "string",
-            "description": "Very short label (max 30 chars)"
-          },
-          "options": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/QuestionOption"
-            },
-            "description": "Available choices"
-          },
-          "multiple": {
-            "type": "boolean"
-          },
-          "questionKey": {
-            "type": "string"
-          },
-          "headerKey": {
-            "type": "string"
-          },
-          "custom": {
-            "type": "boolean"
-          }
-        },
-        "required": ["question", "header", "options"],
-        "additionalProperties": false
-      },
-      "QuestionTool": {
-        "type": "object",
-        "properties": {
-          "messageID": {
-            "type": "string"
-          },
-          "callID": {
-            "type": "string"
-          }
-        },
-        "required": ["messageID", "callID"],
-        "additionalProperties": false
-      },
-      "QuestionRequest": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "sessionID": {
-            "type": "string"
-          },
-          "questions": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/QuestionInfo"
-            },
-            "description": "Questions to ask"
-          },
-          "blocking": {
-            "type": "boolean"
-          },
-          "tool": {
-            "$ref": "#/components/schemas/QuestionTool"
-          }
-        },
-        "required": ["id", "sessionID", "questions"],
-        "additionalProperties": false
-      },
-      "QuestionAnswer": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
-      },
-      "QuestionReplied": {
-        "type": "object",
-        "properties": {
-          "sessionID": {
-            "type": "string"
-          },
-          "requestID": {
-            "type": "string"
-          },
-          "answers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/QuestionAnswer"
-            }
-          }
-        },
-        "required": ["sessionID", "requestID", "answers"],
-        "additionalProperties": false
-      },
-      "QuestionRejected": {
-        "type": "object",
-        "properties": {
-          "sessionID": {
-            "type": "string"
-          },
-          "requestID": {
-            "type": "string"
-          }
-        },
-        "required": ["sessionID", "requestID"],
-        "additionalProperties": false
       },
       "Event.tui.prompt.append": {
         "type": "object",
@@ -13356,11 +14466,180 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "IndexingStatusState": {
+        "type": "string",
+        "enum": ["Disabled", "In Progress", "Complete", "Error", "Standby"]
+      },
+      "IndexingStatus": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/IndexingStatusState"
+          },
+          "message": {
+            "type": "string"
+          },
+          "processedFiles": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalFiles": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "percent": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": ["state", "message", "processedFiles", "totalFiles", "percent"],
+        "additionalProperties": false
+      },
+      "QuestionOption": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Display text (1-5 words, concise)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Explanation of choice"
+          },
+          "labelKey": {
+            "type": "string"
+          },
+          "descriptionKey": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          }
+        },
+        "required": ["label", "description"],
+        "additionalProperties": false
+      },
+      "QuestionInfo": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string",
+            "description": "Complete question"
+          },
+          "header": {
+            "type": "string",
+            "description": "Very short label (max 30 chars)"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionOption"
+            },
+            "description": "Available choices"
+          },
+          "multiple": {
+            "type": "boolean"
+          },
+          "questionKey": {
+            "type": "string"
+          },
+          "headerKey": {
+            "type": "string"
+          },
+          "custom": {
+            "type": "boolean"
+          }
+        },
+        "required": ["question", "header", "options"],
+        "additionalProperties": false
+      },
+      "QuestionTool": {
+        "type": "object",
+        "properties": {
+          "messageID": {
+            "type": "string"
+          },
+          "callID": {
+            "type": "string"
+          }
+        },
+        "required": ["messageID", "callID"],
+        "additionalProperties": false
+      },
+      "QuestionRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^que"
+          },
+          "sessionID": {
+            "type": "string"
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionInfo"
+            },
+            "description": "Questions to ask"
+          },
+          "blocking": {
+            "type": "boolean"
+          },
+          "tool": {
+            "$ref": "#/components/schemas/QuestionTool"
+          }
+        },
+        "required": ["id", "sessionID", "questions"],
+        "additionalProperties": false
+      },
+      "QuestionAnswer": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "QuestionReplied": {
+        "type": "object",
+        "properties": {
+          "sessionID": {
+            "type": "string"
+          },
+          "requestID": {
+            "type": "string",
+            "pattern": "^que"
+          },
+          "answers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionAnswer"
+            }
+          }
+        },
+        "required": ["sessionID", "requestID", "answers"],
+        "additionalProperties": false
+      },
+      "QuestionRejected": {
+        "type": "object",
+        "properties": {
+          "sessionID": {
+            "type": "string"
+          },
+          "requestID": {
+            "type": "string",
+            "pattern": "^que"
+          }
+        },
+        "required": ["sessionID", "requestID"],
+        "additionalProperties": false
+      },
       "SessionNetworkWait": {
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^que"
           },
           "sessionID": {
             "type": "string"
@@ -13392,7 +14671,8 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^per"
           },
           "sessionID": {
             "type": "string"
@@ -13745,6 +15025,31 @@
               "message": {
                 "type": "string"
               },
+              "action": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string"
+                  },
+                  "provider": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "link": {
+                    "type": "string"
+                  }
+                },
+                "required": ["reason", "provider", "title", "message", "label"],
+                "additionalProperties": false
+              },
               "next": {
                 "type": "integer",
                 "minimum": 0
@@ -13772,7 +15077,8 @@
                 "enum": ["offline"]
               },
               "requestID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^que"
               },
               "message": {
                 "type": "string"
@@ -13936,6 +15242,16 @@
           "pid": {
             "type": "integer",
             "exclusiveMinimum": 0
+          },
+          "sessionID": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": ["id", "title", "command", "args", "cwd", "status", "pid"],
@@ -15212,36 +16528,6 @@
         "required": ["text"],
         "additionalProperties": false
       },
-      "IndexingStatusState": {
-        "type": "string",
-        "enum": ["Disabled", "In Progress", "Complete", "Error", "Standby"]
-      },
-      "IndexingStatus": {
-        "type": "object",
-        "properties": {
-          "state": {
-            "$ref": "#/components/schemas/IndexingStatusState"
-          },
-          "message": {
-            "type": "string"
-          },
-          "processedFiles": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "totalFiles": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "percent": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 100
-          }
-        },
-        "required": ["state", "message", "processedFiles", "totalFiles", "percent"],
-        "additionalProperties": false
-      },
       "GlobalEvent": {
         "type": "object",
         "properties": {
@@ -15266,13 +16552,31 @@
                 "$ref": "#/components/schemas/EventGlobalConfigUpdated"
               },
               {
+                "$ref": "#/components/schemas/Event.tui.prompt.append"
+              },
+              {
+                "$ref": "#/components/schemas/Event.tui.command.execute"
+              },
+              {
+                "$ref": "#/components/schemas/Event.tui.toast.show"
+              },
+              {
+                "$ref": "#/components/schemas/Event.tui.session.select"
+              },
+              {
+                "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
+              },
+              {
+                "$ref": "#/components/schemas/EventIndexingStatus"
+              },
+              {
                 "$ref": "#/components/schemas/EventServerInstanceDisposed"
               },
               {
-                "$ref": "#/components/schemas/EventLspClientDiagnostics"
+                "$ref": "#/components/schemas/EventFileEdited"
               },
               {
-                "$ref": "#/components/schemas/EventLspUpdated"
+                "$ref": "#/components/schemas/EventFileWatcherUpdated"
               },
               {
                 "$ref": "#/components/schemas/EventQuestionAsked"
@@ -15284,16 +16588,10 @@
                 "$ref": "#/components/schemas/EventQuestionRejected"
               },
               {
-                "$ref": "#/components/schemas/Event.tui.prompt.append"
+                "$ref": "#/components/schemas/EventLspClientDiagnostics"
               },
               {
-                "$ref": "#/components/schemas/Event.tui.command.execute"
-              },
-              {
-                "$ref": "#/components/schemas/Event.tui.toast.show"
-              },
-              {
-                "$ref": "#/components/schemas/Event.tui.session.select"
+                "$ref": "#/components/schemas/EventLspUpdated"
               },
               {
                 "$ref": "#/components/schemas/EventMcpToolsChanged"
@@ -15347,12 +16645,6 @@
                 "$ref": "#/components/schemas/EventInstallationUpdate-available"
               },
               {
-                "$ref": "#/components/schemas/EventFileEdited"
-              },
-              {
-                "$ref": "#/components/schemas/EventFileWatcherUpdated"
-              },
-              {
                 "$ref": "#/components/schemas/EventTodoUpdated"
               },
               {
@@ -15378,9 +16670,6 @@
               },
               {
                 "$ref": "#/components/schemas/EventProjectUpdated"
-              },
-              {
-                "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
               },
               {
                 "$ref": "#/components/schemas/EventVcsBranchUpdated"
@@ -15513,9 +16802,6 @@
               },
               {
                 "$ref": "#/components/schemas/EventSessionNextCompactionEnded"
-              },
-              {
-                "$ref": "#/components/schemas/EventIndexingStatus"
               },
               {
                 "$ref": "#/components/schemas/SyncEventMessageUpdated"
@@ -15652,6 +16938,44 @@
         },
         "additionalProperties": false,
         "description": "Server configuration for the kilo serve command"
+      },
+      "ReferenceConfigEntry": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "repository": {
+                "type": "string",
+                "description": "Git repository URL, host/path reference, or GitHub owner/repo shorthand"
+              },
+              "branch": {
+                "type": "string"
+              }
+            },
+            "required": ["repository"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "description": "Absolute path, ~/ path, or workspace-relative path to a local reference directory"
+              }
+            },
+            "required": ["path"],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "ReferenceConfig": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/components/schemas/ReferenceConfigEntry"
+        }
       },
       "IndexingConfig": {
         "type": "object",
@@ -15909,6 +17233,15 @@
               "websearch": {
                 "$ref": "#/components/schemas/PermissionActionConfig"
               },
+              "codesearch": {
+                "$ref": "#/components/schemas/PermissionActionConfig"
+              },
+              "repo_clone": {
+                "$ref": "#/components/schemas/PermissionRuleConfig"
+              },
+              "repo_overview": {
+                "$ref": "#/components/schemas/PermissionRuleConfig"
+              },
               "lsp": {
                 "$ref": "#/components/schemas/PermissionRuleConfig"
               },
@@ -16089,6 +17422,13 @@
                     "ling",
                     "gpt55"
                   ]
+                },
+                "isFree": {
+                  "type": "boolean"
+                },
+                "ai_sdk_provider": {
+                  "type": "string",
+                  "enum": ["alibaba", "anthropic", "openai", "openai-compatible", "openrouter"]
                 },
                 "release_date": {
                   "type": "string"
@@ -16405,6 +17745,9 @@
             },
             "additionalProperties": false
           },
+          "reference": {
+            "$ref": "#/components/schemas/ReferenceConfig"
+          },
           "watcher": {
             "type": "object",
             "properties": {
@@ -16541,6 +17884,9 @@
                 "$ref": "#/components/schemas/AgentConfig"
               },
               "explore": {
+                "$ref": "#/components/schemas/AgentConfig"
+              },
+              "scout": {
                 "$ref": "#/components/schemas/AgentConfig"
               },
               "title": {
@@ -17108,6 +18454,17 @@
           }
         },
         "required": ["consoleManagedProviders", "switchableOrgCount"],
+        "additionalProperties": false
+      },
+      "effect_HttpApiError_InternalServerError": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["InternalServerError"]
+          }
+        },
+        "required": ["_tag"],
         "additionalProperties": false
       },
       "ToolListItem": {
@@ -18420,9 +19777,32 @@
           },
           "projectID": {
             "type": "string"
+          },
+          "timeUsed": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity", "-Infinity", "NaN"]
+              }
+            ]
           }
         },
-        "required": ["id", "type", "name", "branch", "directory", "extra", "projectID"],
+        "required": ["id", "type", "name", "branch", "directory", "extra", "projectID", "timeUsed"],
         "additionalProperties": false
       },
       "WorkspaceWarpError": {
@@ -18460,6 +19840,501 @@
           }
         },
         "required": ["id", "sessionID", "output"],
+        "additionalProperties": false
+      },
+      "ConfigOverlayResponse": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": ["global", "project"]
+          },
+          "effective": {
+            "$ref": "#/components/schemas/Config"
+          },
+          "global": {
+            "$ref": "#/components/schemas/Config"
+          },
+          "project": {
+            "$ref": "#/components/schemas/Config"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "order": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "enum": ["NaN"]
+                    },
+                    {
+                      "type": "string",
+                      "enum": ["Infinity"]
+                    },
+                    {
+                      "type": "string",
+                      "enum": ["-Infinity"]
+                    },
+                    {
+                      "type": "string",
+                      "enum": ["Infinity", "-Infinity", "NaN"]
+                    }
+                  ]
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "scope": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "exists": {
+                  "type": "boolean"
+                },
+                "editable": {
+                  "type": "boolean"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "required": ["order", "kind", "scope", "label", "source", "exists", "editable"],
+              "additionalProperties": false
+            }
+          },
+          "targets": {
+            "type": "object",
+            "properties": {
+              "global": {
+                "type": "string"
+              },
+              "project": {
+                "type": "string"
+              },
+              "active": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "value": {},
+                "global": {},
+                "local": {},
+                "source": {
+                  "type": "string",
+                  "enum": ["project", "global", "system", "default"]
+                },
+                "inherited": {
+                  "type": "boolean"
+                },
+                "overridden": {
+                  "type": "boolean"
+                },
+                "editable": {
+                  "type": "boolean"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "required": ["key", "path", "source", "inherited", "overridden", "editable"],
+              "additionalProperties": false
+            }
+          },
+          "collections": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "path": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "value": {},
+                  "global": {},
+                  "local": {},
+                  "source": {
+                    "type": "string",
+                    "enum": ["project", "global", "system", "default"]
+                  },
+                  "inherited": {
+                    "type": "boolean"
+                  },
+                  "overridden": {
+                    "type": "boolean"
+                  },
+                  "editable": {
+                    "type": "boolean"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": ["key", "path", "source", "inherited", "overridden", "editable"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "required": ["scope", "effective", "global", "project", "sources", "targets", "fields", "collections"],
+        "additionalProperties": false
+      },
+      "ConfigSourcesResponse": {
+        "type": "object",
+        "properties": {
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "order": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "enum": ["NaN"]
+                    },
+                    {
+                      "type": "string",
+                      "enum": ["Infinity"]
+                    },
+                    {
+                      "type": "string",
+                      "enum": ["-Infinity"]
+                    },
+                    {
+                      "type": "string",
+                      "enum": ["Infinity", "-Infinity", "NaN"]
+                    }
+                  ]
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "scope": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "exists": {
+                  "type": "boolean"
+                },
+                "editable": {
+                  "type": "boolean"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "required": ["order", "kind", "scope", "label", "source", "exists", "editable"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["sources"],
+        "additionalProperties": false
+      },
+      "ConfigRulesResponse": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": ["project"]
+          },
+          "target": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "exists": {
+                  "type": "boolean"
+                },
+                "editable": {
+                  "type": "boolean"
+                },
+                "content": {
+                  "type": "string"
+                }
+              },
+              "required": ["name", "path", "exists", "editable", "content"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["scope", "target", "files"],
+        "additionalProperties": false
+      },
+      "ConfigModelStateResponse": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "providerID": {
+                  "type": "string"
+                },
+                "modelID": {
+                  "type": "string"
+                }
+              },
+              "required": ["providerID", "modelID"],
+              "additionalProperties": false
+            }
+          },
+          "recent": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "providerID": {
+                  "type": "string"
+                },
+                "modelID": {
+                  "type": "string"
+                }
+              },
+              "required": ["providerID", "modelID"],
+              "additionalProperties": false
+            }
+          },
+          "favorite": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "providerID": {
+                  "type": "string"
+                },
+                "modelID": {
+                  "type": "string"
+                }
+              },
+              "required": ["providerID", "modelID"],
+              "additionalProperties": false
+            }
+          },
+          "variant": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["model", "recent", "favorite", "variant"],
+        "additionalProperties": false
+      },
+      "TuiConfigGetResponse": {
+        "type": "object",
+        "properties": {
+          "$schema": {
+            "type": "string"
+          },
+          "theme": {
+            "type": "string"
+          },
+          "keybinds": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "plugin": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "object"
+                    }
+                  ],
+                  "maxItems": 2,
+                  "minItems": 2
+                }
+              ]
+            }
+          },
+          "plugin_enabled": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          },
+          "scroll_speed": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity", "-Infinity", "NaN"]
+              }
+            ]
+          },
+          "scroll_acceleration": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              }
+            },
+            "required": ["enabled"],
+            "additionalProperties": false
+          },
+          "diff_style": {
+            "type": "string",
+            "enum": ["auto", "stacked"]
+          },
+          "mouse": {
+            "type": "boolean"
+          },
+          "attention": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "notifications": {
+                "type": "boolean"
+              },
+              "sound": {
+                "type": "boolean"
+              },
+              "volume": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["NaN"]
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["Infinity"]
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["-Infinity"]
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["Infinity", "-Infinity", "NaN"]
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "TuiKeybindInfo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "group": {
+            "type": "string"
+          },
+          "default": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "label", "group", "default", "description"],
+        "additionalProperties": false
+      },
+      "TuiKeybindListResponse": {
+        "type": "object",
+        "properties": {
+          "keybinds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TuiKeybindInfo"
+            }
+          }
+        },
+        "required": ["keybinds"],
         "additionalProperties": false
       },
       "effect_HttpApiError_Unauthorized": {
@@ -20330,6 +22205,84 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventKilocodeAgent_managerStart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["kilocode.agent_manager.start"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "requestID": {
+                "type": "string"
+              },
+              "sessionID": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string",
+                "enum": ["worktree", "local"]
+              },
+              "versions": {
+                "type": "boolean"
+              },
+              "tasks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "prompt": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "branchName": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "minItems": 1,
+                "maxItems": 20
+              }
+            },
+            "required": ["requestID", "sessionID", "mode", "tasks"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventIndexingStatus": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["indexing.status"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "$ref": "#/components/schemas/IndexingStatus"
+              }
+            },
+            "required": ["status"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "EventServerInstanceDisposed": {
         "type": "object",
         "properties": {
@@ -20354,7 +22307,7 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
-      "EventLspClientDiagnostics": {
+      "EventFileEdited": {
         "type": "object",
         "properties": {
           "id": {
@@ -20362,26 +22315,23 @@
           },
           "type": {
             "type": "string",
-            "enum": ["lsp.client.diagnostics"]
+            "enum": ["file.edited"]
           },
           "properties": {
             "type": "object",
             "properties": {
-              "serverID": {
-                "type": "string"
-              },
-              "path": {
+              "file": {
                 "type": "string"
               }
             },
-            "required": ["serverID", "path"],
+            "required": ["file"],
             "additionalProperties": false
           }
         },
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
-      "EventLspUpdated": {
+      "EventFileWatcherUpdated": {
         "type": "object",
         "properties": {
           "id": {
@@ -20389,11 +22339,21 @@
           },
           "type": {
             "type": "string",
-            "enum": ["lsp.updated"]
+            "enum": ["file.watcher.updated"]
           },
           "properties": {
             "type": "object",
-            "properties": {}
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "event": {
+                "type": "string",
+                "enum": ["add", "change", "unlink"]
+              }
+            },
+            "required": ["file", "event"],
+            "additionalProperties": false
           }
         },
         "required": ["id", "type", "properties"],
@@ -20445,6 +22405,51 @@
           },
           "properties": {
             "$ref": "#/components/schemas/QuestionRejected"
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventLspClientDiagnostics": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["lsp.client.diagnostics"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "serverID": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": ["serverID", "path"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventLspUpdated": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["lsp.updated"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {}
           }
         },
         "required": ["id", "type", "properties"],
@@ -20535,7 +22540,8 @@
                 "type": "string"
               },
               "requestID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^que"
               }
             },
             "required": ["sessionID", "requestID"],
@@ -20562,7 +22568,8 @@
                 "type": "string"
               },
               "requestID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^que"
               }
             },
             "required": ["sessionID", "requestID"],
@@ -20589,7 +22596,8 @@
                 "type": "string"
               },
               "requestID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^que"
               },
               "time": {
                 "type": "number"
@@ -20672,7 +22680,8 @@
                 "type": "string"
               },
               "requestID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^per"
               },
               "reply": {
                 "type": "string",
@@ -20909,58 +22918,6 @@
               }
             },
             "required": ["version"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventFileEdited": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["file.edited"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "file": {
-                "type": "string"
-              }
-            },
-            "required": ["file"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventFileWatcherUpdated": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["file.watcher.updated"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "file": {
-                "type": "string"
-              },
-              "event": {
-                "type": "string",
-                "enum": ["add", "change", "unlink"]
-              }
-            },
-            "required": ["file", "event"],
             "additionalProperties": false
           }
         },
@@ -21210,60 +23167,6 @@
           },
           "properties": {
             "$ref": "#/components/schemas/Project"
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventKilocodeAgent_managerStart": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["kilocode.agent_manager.start"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "requestID": {
-                "type": "string"
-              },
-              "sessionID": {
-                "type": "string"
-              },
-              "mode": {
-                "type": "string",
-                "enum": ["worktree", "local"]
-              },
-              "versions": {
-                "type": "boolean"
-              },
-              "tasks": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "prompt": {
-                      "type": "string"
-                    },
-                    "name": {
-                      "type": "string"
-                    },
-                    "branchName": {
-                      "type": "string"
-                    }
-                  },
-                  "additionalProperties": false
-                },
-                "minItems": 1,
-                "maxItems": 20
-              }
-            },
-            "required": ["requestID", "sessionID", "mode", "tasks"],
-            "additionalProperties": false
           }
         },
         "required": ["id", "type", "properties"],
@@ -22831,30 +24734,6 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
-      "EventIndexingStatus": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["indexing.status"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "status": {
-                "$ref": "#/components/schemas/IndexingStatus"
-              }
-            },
-            "required": ["status"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
       "SessionInfo": {
         "type": "object",
         "properties": {
@@ -23626,12 +25505,20 @@
       "description": "Experimental HttpApi workspace routes."
     },
     {
+      "name": "agent-builder",
+      "description": "Kilo agent builder routes."
+    },
+    {
       "name": "background-process",
       "description": "Kilo background process routes."
     },
     {
       "name": "commit-message",
       "description": "Kilo commit message routes."
+    },
+    {
+      "name": "config-console",
+      "description": "Kilo Console config routes."
     },
     {
       "name": "enhance-prompt",

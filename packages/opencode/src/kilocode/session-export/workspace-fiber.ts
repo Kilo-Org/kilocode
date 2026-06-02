@@ -1,4 +1,11 @@
-import type { CaptureMetadata, DeltaEntry, ExportEvent, FileEntry, WorkspaceBaselineCompleted, WorkspaceDeltaCaptured } from "./events"
+import type {
+  CaptureMetadata,
+  DeltaEntry,
+  ExportEvent,
+  FileEntry,
+  WorkspaceBaselineCompleted,
+  WorkspaceDeltaCaptured,
+} from "./events"
 import { ulid } from "ulid"
 
 export type BaselineFiberArgs = {
@@ -101,7 +108,13 @@ async function resolveBaseline(args: BaselineFiberArgs): Promise<{
     const winner = await Promise.race([pending, timeout])
     if (winner === "timeout") {
       void pending.then(
-        (eventual) => emitBaseline(args, { consistency: "eventual", snapshotId: eventual.snapshotId, files: eventual.files, capture: eventual.capture }),
+        (eventual) =>
+          emitBaseline(args, {
+            consistency: "eventual",
+            snapshotId: eventual.snapshotId,
+            files: eventual.files,
+            capture: eventual.capture,
+          }),
         (err) => console.warn("[session-export] eventual baseline failed", err),
       )
       return { consistency: "missing", files: [] }

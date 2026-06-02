@@ -9,7 +9,6 @@ import type { Provider } from "@/provider/provider"
 
 const realLog = await import("@opencode-ai/core/util/log")
 const realAgent = await import("@/agent/agent")
-const realGitContext = await import("@/kilocode/commit-message/git-context")
 
 let mockStreamText = "feat(src): add hello world logging"
 
@@ -28,14 +27,6 @@ const defaultGitContext: GitContext = {
 let mockGitContext: GitContext = { ...defaultGitContext }
 let captured: { path: string; selected?: string[] } = { path: "" }
 
-mock.module("@/kilocode/commit-message/git-context", () => ({
-  ...realGitContext,
-  getGitContext: async (repoPath: string, selectedFiles?: string[]) => {
-    captured = { path: repoPath, selected: selectedFiles }
-    return mockGitContext
-  },
-}))
-
 mock.module("@/agent/agent", () => ({
   ...realAgent,
   Agent: {},
@@ -53,6 +44,10 @@ mock.module("@opencode-ai/core/util/log", () => ({
 
 import { CommitMessageRuntime, generateCommitMessage } from "../../../src/kilocode/commit-message/generate"
 
+const context = spyOn(CommitMessageRuntime, "context").mockImplementation(async (repoPath, selectedFiles) => {
+  captured = { path: repoPath, selected: selectedFiles }
+  return mockGitContext
+})
 const stream = spyOn(CommitMessageRuntime, "generate").mockImplementation(async () => mockStreamText)
 const model = spyOn(CommitMessageRuntime, "model").mockImplementation(
   async () => ({ providerID: "test", id: "test-small-model" }) as Provider.Model,
@@ -60,6 +55,10 @@ const model = spyOn(CommitMessageRuntime, "model").mockImplementation(
 
 describe("commit-message.generate", () => {
   beforeEach(() => {
+    context.mockImplementation(async (repoPath, selectedFiles) => {
+      captured = { path: repoPath, selected: selectedFiles }
+      return mockGitContext
+    })
     stream.mockImplementation(async () => mockStreamText)
     model.mockImplementation(async () => ({ providerID: "test", id: "test-small-model" }) as Provider.Model)
     mockStreamText = "feat(src): add hello world logging"

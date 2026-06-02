@@ -5,7 +5,7 @@
 
 export interface TUIDependencies {
   // UI Hooks
-  useCommandDialog: () => any
+  useCommandPalette: () => any
   useSync: () => any
   useDialog: () => any
   useToast: () => any

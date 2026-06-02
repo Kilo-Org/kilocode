@@ -10,7 +10,10 @@ type Pattern = { name: string; regex: RegExp }
 
 const PATTERNS: Pattern[] = [
   { name: "aws_access_key", regex: /\bAKIA[0-9A-Z]{16}\b/g },
-  { name: "aws_secret_key", regex: /(?:aws[_-]?secret[_-]?(?:access[_-]?)?key)\s*[=:]\s*["']?[0-9a-zA-Z/+]{40}["']?/gi },
+  {
+    name: "aws_secret_key",
+    regex: /(?:aws[_-]?secret[_-]?(?:access[_-]?)?key)\s*[=:]\s*["']?[0-9a-zA-Z/+]{40}["']?/gi,
+  },
   { name: "gcp_service_key", regex: /\bAIza[0-9A-Za-z\-_]{35}\b/g },
   { name: "openai_key", regex: /\bsk-[A-Za-z0-9_-]{20,}(?=\b|[^A-Za-z0-9_-])/g },
   { name: "anthropic_key", regex: /\bsk-ant-[A-Za-z0-9_\-]{20,}\b/g },
@@ -38,17 +41,7 @@ const CONFIG = {
   rules: [{ id: "@secretlint/secretlint-rule-preset-recommend", rule: creator }],
 }
 
-const FIELDS = new Set([
-  "TOKEN",
-  "KEY",
-  "SECRET",
-  "PASSWORD",
-  "URL",
-  "URI",
-  "CONTENT",
-  "VALUE",
-  "CREDENTIAL",
-])
+const FIELDS = new Set(["TOKEN", "KEY", "SECRET", "PASSWORD", "URL", "URI", "CONTENT", "VALUE", "CREDENTIAL"])
 
 type Message = {
   ruleId: string
@@ -81,7 +74,10 @@ async function scrubSecretlint(input: string): Promise<ScrubResult> {
   let value = input
   const redactionsByType: Record<string, number> = {}
   for (const [secret, rule] of secrets) {
-    const name = `secretlint_${rule.replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "").toLowerCase()}`
+    const name = `secretlint_${rule
+      .replace(/[^a-z0-9]+/gi, "_")
+      .replace(/^_+|_+$/g, "")
+      .toLowerCase()}`
     const count = value.split(secret).length - 1
     if (count === 0) continue
     value = value.split(secret).join(`<<REDACTED:${name}>>`)
@@ -110,7 +106,11 @@ export function isHighRiskPath(path: string): boolean {
 
 export type ScrubbedEvent<T> =
   | { success: true; data: T; report: { client_scrubbed: true; redactionsByType: Record<string, number> } }
-  | { success: false; data: T; report: { client_scrubbed: false; redactionsByType: Record<string, number>; failureReason: string } }
+  | {
+      success: false
+      data: T
+      report: { client_scrubbed: false; redactionsByType: Record<string, number>; failureReason: string }
+    }
 
 export class Scrubber {
   constructor(private readonly opts: { patterns?: Pattern[] } = {}) {}

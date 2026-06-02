@@ -6,6 +6,7 @@ import { Cause, Effect, Exit } from "effect"
 import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
+import { Agent } from "@/agent/agent"
 import { Instance } from "@/project/instance"
 import type { SessionStatus } from "@/session/status"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -119,6 +120,25 @@ export namespace KiloSessionPrompt {
     if (!modes.includes(input.agent.name)) return
     return input.agent.permission
   }
+
+  export const askPermission = Effect.fn("KiloSessionPrompt.askPermission")(function* (input: {
+    permission: Pick<Permission.Interface, "ask">
+    agents: Pick<Agent.Interface, "get">
+    sessions: Pick<Session.Interface, "get">
+    agent: Agent.Info
+    session: Session.Info
+    request: Omit<Permission.AskInput, "ruleset" | "hardRuleset">
+  }) {
+    const agent = (yield* input.agents.get(input.agent.name)) ?? input.agent
+    const session = yield* input.sessions
+      .get(input.session.id)
+      .pipe(Effect.catchCause(() => Effect.succeed(input.session)))
+    yield* input.permission.ask({
+      ...input.request,
+      ruleset: Permission.merge(agent.permission, guardPermissions({ agent, session })),
+      hardRuleset: hardPermissions({ agent }),
+    })
+  })
 
   /**
    * Mutable cache for environment details, keyed by user message ID

@@ -30,7 +30,11 @@ describe("session export worker e2e", () => {
     worker.terminate()
 
     const out = rows(db)
-    expect(out.map((row) => row.type)).toEqual(["llm_request_started", "workspace_baseline_completed", "llm_request_completed"])
+    expect(out.map((row) => row.type)).toEqual([
+      "llm_request_started",
+      "workspace_baseline_completed",
+      "llm_request_completed",
+    ])
     const data = JSON.parse(out[0].data_json) as { input: { messages: Array<{ content: string }> } }
     expect(data.input.messages[0].content).toContain("<<REDACTED:aws_access_key>>")
     expect(out[0].client_scrubbed).toBe(1)

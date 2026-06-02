@@ -179,6 +179,7 @@ export const AudioTranscriptionsBody = Schema.Struct({
     format: Schema.String,
   }),
   language: Schema.optional(Schema.String),
+  prompt: Schema.optional(Schema.String),
   temperature: Schema.optional(Schema.Finite),
 })
 

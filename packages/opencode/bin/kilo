@@ -5,6 +5,8 @@ const fs = require("fs")
 const path = require("path")
 const os = require("os")
 
+const forwardedSignals = ["SIGINT", "SIGTERM", "SIGHUP"]
+
 // kilocode_change start - point packaged binaries at co-located tree-sitter WASM resources
 function configureTreeSitterResources(target) {
   const wasmDir = path.join(path.dirname(target), "tree-sitter")
@@ -14,42 +16,76 @@ function configureTreeSitterResources(target) {
 }
 // kilocode_change end
 
-function run(target) {
+function run(target, fallback) {
+  // kilocode_change - preserve cached binary fallback
   configureTreeSitterResources(target) // kilocode_change
-  const result = childProcess.spawnSync(target, process.argv.slice(2), {
-    stdio: "inherit",
-  })
-  if (result.error) {
-    console.error(result.error.message)
-    process.exit(1)
+  // kilocode_change start - fall through if the cached binary cannot be spawned
+  const child = (() => {
+    try {
+      return childProcess.spawn(target, process.argv.slice(2), {
+        stdio: "inherit",
+      })
+    } catch (error) {
+      if (fallback) {
+        run(fallback)
+        return
+      }
+      console.error(error.message)
+      process.exit(1)
+    }
+  })()
+  if (!child) return
+  // kilocode_change end
+
+  const forwarders = {}
+  const clear = () => {
+    // kilocode_change - remove listeners before cached binary fallback
+    for (const signal of forwardedSignals) {
+      process.removeListener(signal, forwarders[signal])
+    }
   }
-  const code = typeof result.status === "number" ? result.status : 0
-  process.exit(code)
+
+  child.on("error", (error) => {
+    clear() // kilocode_change
+    // kilocode_change start - fall through to findBinary() if cached binary fails
+    if (fallback) {
+      run(fallback)
+      return
+    }
+    // kilocode_change end
+    console.error(error.message)
+    process.exit(1)
+  })
+
+  for (const signal of forwardedSignals) {
+    forwarders[signal] = () => {
+      try {
+        child.kill(signal)
+      } catch {
+        // The child may have already exited.
+      }
+    }
+    process.on(signal, forwarders[signal])
+  }
+
+  child.on("exit", (code, signal) => {
+    clear() // kilocode_change
+
+    if (signal) {
+      process.kill(process.pid, signal)
+      return
+    }
+
+    process.exit(typeof code === "number" ? code : 0)
+  })
 }
 
 const envPath = process.env.KILO_BIN_PATH
-if (envPath) {
-  run(envPath)
-}
 
 const scriptPath = fs.realpathSync(__filename)
 const scriptDir = path.dirname(scriptPath)
 
-// kilocode_change start - fall through to findBinary() if cached binary fails
 const cached = path.join(scriptDir, ".kilo")
-if (fs.existsSync(cached)) {
-  configureTreeSitterResources(cached)
-  const result = childProcess.spawnSync(cached, process.argv.slice(2), {
-    stdio: "inherit",
-  })
-  if (!result.error) {
-    const code = typeof result.status === "number" ? result.status : 0
-    process.exit(code)
-  }
-  // cached binary failed (e.g. wrong platform/arch, missing dynamic linker),
-  // fall through to findBinary() which has better variant detection
-}
-// kilocode_change end
 
 const platformMap = {
   darwin: "darwin",
@@ -186,7 +222,7 @@ function findBinary(startDir) {
   }
 }
 
-const resolved = findBinary(scriptDir)
+const resolved = envPath || (fs.existsSync(cached) ? cached : findBinary(scriptDir))
 if (!resolved) {
   console.error(
     "It seems that your package manager failed to install the right version of the Kilo CLI for your platform. You can try manually installing " +
@@ -196,4 +232,4 @@ if (!resolved) {
   process.exit(1)
 }
 
-run(resolved)
+run(resolved, resolved === cached ? findBinary(scriptDir) : undefined) // kilocode_change - preserve cached binary fallback

@@ -11,7 +11,10 @@ const auth = makeRuntime(Auth.Service, Auth.defaultLayer)
 
 export async function getAuthOrgId(): Promise<OrgState> {
   try {
-    const [cfg, info] = await Promise.all([config.runPromise((svc) => svc.get()), auth.runPromise((svc) => svc.get("kilo"))])
+    const [cfg, info] = await Promise.all([
+      config.runPromise((svc) => svc.get()),
+      auth.runPromise((svc) => svc.get("kilo")),
+    ])
     const id = resolveKiloIndexingAuth({ config: cfg, auth: info }).organizationId
     if (id) return { type: "org", id }
     return { type: "personal" }

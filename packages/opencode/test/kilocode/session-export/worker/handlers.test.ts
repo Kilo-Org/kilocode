@@ -66,7 +66,9 @@ describe("handlers", () => {
     const env = completed("01L", "x".repeat(100_000))
     await handleEvent(env, { storage, chunker, scrubber: new Scrubber(), inlineThresholdBytes: 64 * 1024 })
     const rows = storage.pendingEvents({ now: 1000, limitBytes: 5_000_000 })
-    const data = JSON.parse(rows[0].dataJson) as { output: { textParts: Array<string | { chunkIds: string[]; size: number }> } }
+    const data = JSON.parse(rows[0].dataJson) as {
+      output: { textParts: Array<string | { chunkIds: string[]; size: number }> }
+    }
     expect(typeof data.output.textParts[0]).toBe("object")
     expect((data.output.textParts[0] as { chunkIds: string[] }).chunkIds.length).toBeGreaterThan(0)
   })
@@ -151,7 +153,11 @@ describe("handlers", () => {
       { storage, chunker, scrubber: new Scrubber(), inlineThresholdBytes: 64 * 1024 },
     )
     const rows = storage.pendingEvents({ now: 1000, limitBytes: 5_000_000 })
-    const data = JSON.parse(rows[0].dataJson) as { inputChunkIds: string[]; outputChunkIds: string[]; toolOutput?: string }
+    const data = JSON.parse(rows[0].dataJson) as {
+      inputChunkIds: string[]
+      outputChunkIds: string[]
+      toolOutput?: string
+    }
     expect(data.inputChunkIds.length).toBeGreaterThan(0)
     expect(data.outputChunkIds.length).toBeGreaterThan(0)
     expect(data.toolOutput).toBeUndefined()
@@ -212,7 +218,9 @@ describe("handlers", () => {
     }
     await handleEvent(env, { storage, chunker, scrubber: new Scrubber(), inlineThresholdBytes: 64 * 1024 })
     const rows = storage.pendingEvents({ now: 1000, limitBytes: 1_000_000 })
-    const data = JSON.parse(rows[0].dataJson) as { files: Array<{ content?: string; chunkIds?: string[]; encoding?: string }> }
+    const data = JSON.parse(rows[0].dataJson) as {
+      files: Array<{ content?: string; chunkIds?: string[]; encoding?: string }>
+    }
     expect(data.files[0].content).toBeUndefined()
     expect(data.files[0].encoding).toBe("utf8")
     expect(data.files[0].chunkIds?.length).toBe(1)
@@ -231,7 +239,13 @@ describe("handlers", () => {
       agentVersion: "v0",
       consistency: "stable",
       snapshotId: "snap-1",
-      capture: { mode: "git-tracked-and-untracked", fileCount: 1, totalBytes: 21, omittedCountsByReason: {}, truncated: false },
+      capture: {
+        mode: "git-tracked-and-untracked",
+        fileCount: 1,
+        totalBytes: 21,
+        omittedCountsByReason: {},
+        truncated: false,
+      },
       truncated: false,
       originalFileCount: 1,
       originalTotalSize: 21,
@@ -347,7 +361,13 @@ describe("handlers", () => {
     await handleEvent(env, { storage, chunker, scrubber: new Scrubber(), inlineThresholdBytes: 64 * 1024 })
     const rows = storage.pendingEvents({ now: 1000, limitBytes: 1_000_000 })
     const data = JSON.parse(rows[0].dataJson) as {
-      input: { inputMessagesSnapshot?: unknown[]; selectedContext?: unknown; previousSummary?: string; prompt?: string; tailStartId?: string }
+      input: {
+        inputMessagesSnapshot?: unknown[]
+        selectedContext?: unknown
+        previousSummary?: string
+        prompt?: string
+        tailStartId?: string
+      }
       output: { summary?: string; assistantMessageId?: string }
       modelId?: string
       usage?: unknown

@@ -44,7 +44,11 @@ async function drain(): Promise<void> {
           })
           uploader?.scheduleFlush("event_persisted")
         } catch (err) {
-          scope.postMessage({ kind: "telemetry", name: "session_export.handler_error", props: { message: String(err) } })
+          scope.postMessage({
+            kind: "telemetry",
+            name: "session_export.handler_error",
+            props: { message: String(err) },
+          })
         }
       }
     }

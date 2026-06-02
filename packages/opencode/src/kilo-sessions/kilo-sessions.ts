@@ -191,14 +191,14 @@ export namespace KiloSessions {
 
   async function deriveStatus(sessionID: string): Promise<"idle" | "busy" | "question" | "permission" | "retry"> {
     const { AppRuntime } = await import("@/effect/app-runtime")
-    const permissions = (
-      await AppRuntime.runPromise(Permission.Service.use((svc) => svc.list()))
-    ).filter((p) => p.sessionID === sessionID)
+    const permissions = (await AppRuntime.runPromise(Permission.Service.use((svc) => svc.list()))).filter(
+      (p) => p.sessionID === sessionID,
+    )
     if (permissions.length > 0) return "permission"
 
-    const questions = (
-      await AppRuntime.runPromise(Question.Service.use((svc) => svc.list()))
-    ).filter((q) => q.sessionID === sessionID)
+    const questions = (await AppRuntime.runPromise(Question.Service.use((svc) => svc.list()))).filter(
+      (q) => q.sessionID === sessionID,
+    )
     if (questions.length > 0) return "question"
 
     const status = await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.get(SessionID.make(sessionID))))
@@ -378,7 +378,7 @@ export namespace KiloSessions {
                 svc.get(SessionID.make(id)).pipe(
                   Effect.map((session) => ({
                     id,
-                    status: statuses[id]?.type ?? "idle" as const,
+                    status: statuses[id]?.type ?? ("idle" as const),
                     title: session.title,
                     parentSessionId: session.parentID,
                     gitUrl,

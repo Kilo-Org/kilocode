@@ -16,7 +16,12 @@ describe("SyncSubscriber", () => {
       aggregateID: "s1",
       seq: 5,
       data: {
-        part: { type: "tool", state: { status: "completed", input: { path: "a.ts" }, output: "ok", time: { start: 1, end: 4 } }, callID: "c1", tool: "read_file" },
+        part: {
+          type: "tool",
+          state: { status: "completed", input: { path: "a.ts" }, output: "ok", time: { start: 1, end: 4 } },
+          callID: "c1",
+          tool: "read_file",
+        },
       },
     })
     const tool = posted.find((item) => (item as { type?: string }).type === "tool_executed") as

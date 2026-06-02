@@ -48,6 +48,7 @@ export function permissionExceptions(
   return Object.entries(rule)
     .filter(([key, action]) => key !== "*" && action !== null)
     .map(([pattern, action]) => ({ pattern, action: action as PermissionLevel }))
+    .sort((a, b) => a.pattern.localeCompare(b.pattern))
 }
 
 export function setGroupedPatch(ids: string[], level: PermissionLevel): PermissionPatch {

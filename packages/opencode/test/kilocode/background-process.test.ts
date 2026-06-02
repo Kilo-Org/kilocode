@@ -150,7 +150,9 @@ setInterval(() => {}, 1_000)
         ),
       )
       const client = process.env["KILO_CLIENT"]
+      const scans = process.env["KILO_BACKGROUND_PROCESS_PORTS"]
       process.env["KILO_CLIENT"] = "cli"
+      process.env["KILO_BACKGROUND_PROCESS_PORTS"] = "true"
 
       try {
         const info = yield* Effect.promise(() =>
@@ -173,6 +175,48 @@ setInterval(() => {}, 1_000)
         yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID))
         if (client === undefined) delete process.env["KILO_CLIENT"]
         else process.env["KILO_CLIENT"] = client
+        if (scans === undefined) delete process.env["KILO_BACKGROUND_PROCESS_PORTS"]
+        else process.env["KILO_BACKGROUND_PROCESS_PORTS"] = scans
+      }
+    }),
+  )
+
+  it.instance("does not infer ports for CLI clients without opt in", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const sessionID = SessionID.descending()
+      const listen = port()
+      const command = yield* Effect.promise(() =>
+        script(
+          test.directory,
+          "cli-no-port.mjs",
+          `Bun.serve({ hostname: "127.0.0.1", port: ${listen}, fetch: () => new Response() })
+`,
+        ),
+      )
+      const client = process.env["KILO_CLIENT"]
+      const scans = process.env["KILO_BACKGROUND_PROCESS_PORTS"]
+      process.env["KILO_CLIENT"] = "cli"
+      delete process.env["KILO_BACKGROUND_PROCESS_PORTS"]
+
+      try {
+        const info = yield* Effect.promise(() =>
+          BackgroundProcess.start({
+            sessionID,
+            command,
+            cwd: test.directory,
+          }),
+        )
+
+        yield* Effect.promise(() => Bun.sleep(1_000))
+        const found = yield* Effect.promise(() => BackgroundProcess.get(info.id))
+        expect(found?.ports).toEqual([])
+      } finally {
+        yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID))
+        if (client === undefined) delete process.env["KILO_CLIENT"]
+        else process.env["KILO_CLIENT"] = client
+        if (scans === undefined) delete process.env["KILO_BACKGROUND_PROCESS_PORTS"]
+        else process.env["KILO_BACKGROUND_PROCESS_PORTS"] = scans
       }
     }),
   )

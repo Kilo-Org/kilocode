@@ -133,7 +133,10 @@ function save(file: string | undefined, state: State): void {
   writeFileSync(file, JSON.stringify(state))
 }
 
-async function scan(root: string, limit: number): Promise<{ files: Map<string, File>; mode: CaptureMetadata["mode"]; truncated: boolean }> {
+async function scan(
+  root: string,
+  limit: number,
+): Promise<{ files: Map<string, File>; mode: CaptureMetadata["mode"]; truncated: boolean }> {
   const repo = await repository(root)
   if (!repo) return { files: new Map(), mode: "none", truncated: false }
   const paths = await tracked(repo)
@@ -172,7 +175,11 @@ async function tracked(root: string): Promise<string[]> {
   return Array.from(new Set(text.split("\0").filter(Boolean))).sort((a, b) => a.localeCompare(b))
 }
 
-async function inspect(root: string, rel: string, budget: { used: number; limit: number; truncated: boolean }): Promise<File | undefined> {
+async function inspect(
+  root: string,
+  rel: string,
+  budget: { used: number; limit: number; truncated: boolean },
+): Promise<File | undefined> {
   const full = path.join(root, rel)
   const info = await lstat(full).catch(() => undefined)
   if (!info) return undefined

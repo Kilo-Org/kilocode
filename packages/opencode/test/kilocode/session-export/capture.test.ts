@@ -364,7 +364,10 @@ describe("Capture", () => {
           state.max = Math.max(state.max, state.active)
           if (state.calls === 1) await gate.promise
           state.active -= 1
-          return { snapshotHash: `h${state.calls}`, diff: [{ path: "src/a.ts", status: "modified", patchChunkIds: [] }] }
+          return {
+            snapshotHash: `h${state.calls}`,
+            diff: [{ path: "src/a.ts", status: "modified", patchChunkIds: [] }],
+          }
         },
       },
     })
@@ -442,7 +445,8 @@ describe("Capture", () => {
       durationMs: 42,
       usage: { inputTokens: 100, outputTokens: 50 },
     })
-    const env = (posted[0] as { envelope: { type: string; input: { prompt: string }; output: { summary: string } } }).envelope
+    const env = (posted[0] as { envelope: { type: string; input: { prompt: string }; output: { summary: string } } })
+      .envelope
     expect(env.type).toBe("compaction_captured")
     expect(env.input.prompt).toContain("Summarize")
     expect(env.output.summary).toBe("Discussed X.")

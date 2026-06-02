@@ -12,6 +12,8 @@ describe("session export endpoint", () => {
   })
 
   test("allows custom endpoints with explicit dev override", () => {
-    expect(resolveEndpoint({ endpoint: "http://127.0.0.1:8787/batch", allowCustom: true })).toBe("http://127.0.0.1:8787/batch")
+    expect(resolveEndpoint({ endpoint: "http://127.0.0.1:8787/batch", allowCustom: true })).toBe(
+      "http://127.0.0.1:8787/batch",
+    )
   })
 })

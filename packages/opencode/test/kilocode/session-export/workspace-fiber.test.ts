@@ -75,7 +75,8 @@ describe("workspace fiber", () => {
       now: () => 0,
       syncSeq: () => 1,
       agentVersion: "v0",
-      requestSnapshot: () => new Promise((resolve) => setTimeout(() => resolve({ snapshotId: "snap-1", files: [] }), 60)),
+      requestSnapshot: () =>
+        new Promise((resolve) => setTimeout(() => resolve({ snapshotId: "snap-1", files: [] }), 60)),
       dispatch: (event) => dispatched.push(event),
     })
     expect((dispatched[0] as { consistency: string }).consistency).toBe("missing")
@@ -110,7 +111,10 @@ describe("workspace fiber", () => {
       now: () => 0,
       syncSeq: () => 1,
       agentVersion: "v0",
-      requestDiff: async () => ({ snapshotHash: "h1", diff: [{ path: "src/a.ts", status: "modified", patchChunkIds: [] }] }),
+      requestDiff: async () => ({
+        snapshotHash: "h1",
+        diff: [{ path: "src/a.ts", status: "modified", patchChunkIds: [] }],
+      }),
       dispatch: (event) => dispatched.push(event),
     })
     expect((dispatched[0] as { trigger: string }).trigger).toBe("session_close")

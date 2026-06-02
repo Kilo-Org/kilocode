@@ -3,6 +3,7 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Effect } from "effect"
 import { HttpClient, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { createHash } from "node:crypto"
+import { ConsoleAssets } from "@/kilocode/console/assets" // kilocode_change
 
 const embeddedUIPromise = Flag.KILO_DISABLE_EMBEDDED_WEB_UI
   ? Promise.resolve(null)
@@ -61,6 +62,17 @@ export function serveUIEffect(
   return Effect.gen(function* () {
     const embeddedWebUI = yield* Effect.promise(() => embeddedUI())
     const path = new URL(request.url, "http://localhost").pathname
+
+    // kilocode_change start - serve Kilo Console under /console
+    const asset = yield* Effect.promise(() => ConsoleAssets.resolve(path))
+    if (asset && "file" in asset) {
+      return yield* services.fs.readFile(asset.file).pipe(
+        Effect.map((body) => embeddedUIResponse(asset.file, body)),
+        Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(notFound())),
+      )
+    }
+    if (asset?.missing) return notFound()
+    // kilocode_change end
 
     if (embeddedWebUI) return yield* serveEmbeddedUIEffect(path, services.fs, embeddedWebUI)
 

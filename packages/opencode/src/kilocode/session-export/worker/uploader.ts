@@ -76,17 +76,19 @@ export class Uploader {
         const batchId = await sha256Hex(rows.map((row) => row.id).join("\n"))
         const chunks = this.deps.storage.chunksForEvents(rows.map((row) => row.id))
         const compact = await compactEvents(
-          rows.map((row): UploadedEvent => ({
-            ...parseObject(row.dataJson),
-            id: row.id,
-            type: row.type,
-            sessionId: row.sessionId,
-            rootSessionId: row.rootSessionId,
-            ...(row.parentSessionId ? { parentSessionId: row.parentSessionId } : {}),
-            ...(row.requestId ? { requestId: row.requestId } : {}),
-            seq: row.seq,
-            ts: row.ts,
-          })),
+          rows.map(
+            (row): UploadedEvent => ({
+              ...parseObject(row.dataJson),
+              id: row.id,
+              type: row.type,
+              sessionId: row.sessionId,
+              rootSessionId: row.rootSessionId,
+              ...(row.parentSessionId ? { parentSessionId: row.parentSessionId } : {}),
+              ...(row.requestId ? { requestId: row.requestId } : {}),
+              seq: row.seq,
+              ts: row.ts,
+            }),
+          ),
         )
         const batch: BatchEnvelope = {
           schemaVersion: 1,
@@ -124,24 +126,40 @@ export class Uploader {
         const chunkIds = this.deps.storage.chunkRefsForEvents(eventIds)
         if (res.ok) {
           const deleted = this.deps.storage.commitUploaded(eventIds, chunkIds)
-          this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.uploaded", props: { events: deleted.events, chunks: deleted.chunks, batchId } })
+          this.deps.reportTelemetry({
+            kind: "telemetry",
+            name: "session_export.uploaded",
+            props: { events: deleted.events, chunks: deleted.chunks, batchId },
+          })
           continue
         }
         if (terminal(res.status)) {
           this.deps.storage.commitUploaded(eventIds, chunkIds)
-          this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.upload_4xx", props: { status: res.status, batchId } })
+          this.deps.reportTelemetry({
+            kind: "telemetry",
+            name: "session_export.upload_4xx",
+            props: { status: res.status, batchId },
+          })
           continue
         }
         const retryAt = Date.now()
         const delay = retryAfter(res.headers) ?? backoffFor(rows[0]?.uploadAttempts ?? 0)
         for (const row of rows) this.deps.storage.markRetry(row.id, retryAt + delay)
-        this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.upload_retryable", props: { status: res.status, batchId } })
+        this.deps.reportTelemetry({
+          kind: "telemetry",
+          name: "session_export.upload_retryable",
+          props: { status: res.status, batchId },
+        })
         return
       }
     } catch (err) {
       const retryAt = Date.now()
       for (const row of rows) this.deps.storage.markRetry(row.id, retryAt + backoffFor(row.uploadAttempts))
-      this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.upload_network_error", props: { message: String(err) } })
+      this.deps.reportTelemetry({
+        kind: "telemetry",
+        name: "session_export.upload_network_error",
+        props: { message: String(err) },
+      })
     }
   }
 
@@ -248,7 +266,8 @@ async function sha256Hex(value: string): Promise<string> {
 
 function parseObject(value: string): JsonObject {
   const json = JSON.parse(value) as JsonValue
-  if (!json || typeof json !== "object" || Array.isArray(json)) throw new Error("stored event payload must be a JSON object")
+  if (!json || typeof json !== "object" || Array.isArray(json))
+    throw new Error("stored event payload must be a JSON object")
   return json
 }
 

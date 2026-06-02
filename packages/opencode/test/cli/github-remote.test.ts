@@ -33,6 +33,16 @@ test("parses ssh:// URL without .git suffix", () => {
 })
 // kilocode_change end
 
+test("parses git protocol URLs from package metadata", () => {
+  expect(parseGitHubRemote("git://github.com/facebook/react.git")).toEqual({ owner: "facebook", repo: "react" })
+  expect(parseGitHubRemote("git+https://github.com/facebook/react.git")).toEqual({ owner: "facebook", repo: "react" })
+  expect(parseGitHubRemote("git+ssh://git@github.com/facebook/react.git")).toEqual({ owner: "facebook", repo: "react" })
+})
+
+test("parses npm-style github shorthand", () => {
+  expect(parseGitHubRemote("github:facebook/react")).toBeNull()
+})
+
 test("parses http URL", () => {
   expect(parseGitHubRemote("http://github.com/owner/repo")).toEqual({ owner: "owner", repo: "repo" })
 })

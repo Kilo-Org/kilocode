@@ -32,6 +32,7 @@ import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
+import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.log.ChatLogSummary
 import com.intellij.util.ui.JBUI
@@ -285,7 +286,13 @@ class SessionUi(
         }
         prompt.setAutoApprove(controller.autoApprove)
         prompt.model.favorites = { app.favorites.value }
-        prompt.model.onFavoriteToggle = { item -> app.toggleModelFavorite(item.provider, item.id) }
+        prompt.model.onFavoriteToggle = { item ->
+            Telemetry.send(
+                "Model Favorite Toggled",
+                mapOf("provider" to item.provider, "modelId" to item.id),
+            )
+            app.toggleModelFavorite(item.provider, item.id)
+        }
 
         controller.addListener(this) { event ->
             when (event) {

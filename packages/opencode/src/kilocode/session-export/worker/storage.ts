@@ -130,7 +130,12 @@ export class Storage {
     const rows = this.db
       .select()
       .from(EventTable)
-      .where(and(isNull(EventTable.uploaded_at), or(isNull(EventTable.next_attempt_at), lte(EventTable.next_attempt_at, opts.now))))
+      .where(
+        and(
+          isNull(EventTable.uploaded_at),
+          or(isNull(EventTable.next_attempt_at), lte(EventTable.next_attempt_at, opts.now)),
+        ),
+      )
       .orderBy(asc(EventTable.ts))
       .limit(500)
       .all()
@@ -172,8 +177,16 @@ export class Storage {
   }
 
   deleteUploaded(): { events: number; chunks: number } {
-    const events = this.db.delete(EventTable).where(isNotNull(EventTable.uploaded_at)).returning({ id: EventTable.id }).all().length
-    const chunks = this.db.delete(ChunkTable).where(lte(ChunkTable.ref_count, 0)).returning({ id: ChunkTable.id }).all().length
+    const events = this.db
+      .delete(EventTable)
+      .where(isNotNull(EventTable.uploaded_at))
+      .returning({ id: EventTable.id })
+      .all().length
+    const chunks = this.db
+      .delete(ChunkTable)
+      .where(lte(ChunkTable.ref_count, 0))
+      .returning({ id: ChunkTable.id })
+      .all().length
     return { events, chunks }
   }
 
@@ -199,8 +212,16 @@ export class Storage {
             .run()
         }
       }
-      const events = tx.delete(EventTable).where(isNotNull(EventTable.uploaded_at)).returning({ id: EventTable.id }).all().length
-      const chunks = tx.delete(ChunkTable).where(lte(ChunkTable.ref_count, 0)).returning({ id: ChunkTable.id }).all().length
+      const events = tx
+        .delete(EventTable)
+        .where(isNotNull(EventTable.uploaded_at))
+        .returning({ id: EventTable.id })
+        .all().length
+      const chunks = tx
+        .delete(ChunkTable)
+        .where(lte(ChunkTable.ref_count, 0))
+        .returning({ id: ChunkTable.id })
+        .all().length
       return { events, chunks }
     })
   }
@@ -210,7 +231,11 @@ export class Storage {
   chunkRefsForEvents(ids: string | string[]): string[] {
     const keys = Array.isArray(ids) ? ids : [ids]
     if (keys.length === 0) return []
-    const rows = this.db.select({ data_json: EventTable.data_json }).from(EventTable).where(inArray(EventTable.id, keys)).all()
+    const rows = this.db
+      .select({ data_json: EventTable.data_json })
+      .from(EventTable)
+      .where(inArray(EventTable.id, keys))
+      .all()
     const out: string[] = []
     for (const row of rows) collectChunkRefs(JSON.parse(row.data_json), out)
     return out
@@ -220,14 +245,18 @@ export class Storage {
     if (ids.length === 0) return []
     const chunkIds = new Set(this.chunkRefsForEvents(ids))
     if (chunkIds.size === 0) return []
-    const chunks = this.db.select().from(ChunkTable).where(inArray(ChunkTable.id, [...chunkIds])).all()
+    const chunks = this.db
+      .select()
+      .from(ChunkTable)
+      .where(inArray(ChunkTable.id, [...chunkIds]))
+      .all()
     return chunks.map((row) => ({ id: row.id, bytes: row.bytes, size: row.size, encoding: row.encoding }))
   }
 
   dbSize(): number {
-    const row = this.sqlite.query("SELECT page_count * page_size AS size FROM pragma_page_count(), pragma_page_size()").get() as
-      | { size: number }
-      | undefined
+    const row = this.sqlite
+      .query("SELECT page_count * page_size AS size FROM pragma_page_count(), pragma_page_size()")
+      .get() as { size: number } | undefined
     return row?.size ?? 0
   }
 

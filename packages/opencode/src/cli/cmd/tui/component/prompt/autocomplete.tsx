@@ -1,4 +1,4 @@
-import type { BoxRenderable, TextareaRenderable, KeyEvent, ScrollBoxRenderable } from "@opentui/core"
+import type { BoxRenderable, TextareaRenderable, ScrollBoxRenderable } from "@opentui/core"
 import { pathToFileURL } from "bun"
 import fuzzysort from "fuzzysort"
 import path from "path"
@@ -12,11 +12,12 @@ import { getScrollAcceleration } from "../../util/scroll"
 import { useTuiConfig } from "../../context/tui-config"
 import { useTheme, selectedForeground } from "@tui/context/theme"
 import { SplitBorder } from "@tui/component/border"
-import { useCommandDialog } from "@tui/component/dialog-command"
+import { useCommandPalette } from "../../context/command-palette"
 import { useTerminalDimensions } from "@opentui/solid"
 import { Locale } from "@/util/locale"
 import type { PromptInfo } from "./history"
 import { useFrecency } from "./frecency"
+import { useBindings } from "../../keymap"
 
 function removeLineRange(input: string) {
   const hashIndex = input.lastIndexOf("#")
@@ -52,9 +53,8 @@ function extractLineRange(input: string) {
 
 export type AutocompleteRef = {
   onInput: (value: string) => void
-  onKeyDown: (e: KeyEvent) => void
+  // kilocode_change start - validate cursor moves and close overlays without mutating draft text
   onCursorChange: () => void
-  // kilocode_change start - let the prompt close autocomplete without mutating draft text
   dismiss: () => void
   // kilocode_change end
   visible: false | "@" | "/"
@@ -86,12 +86,11 @@ export function Autocomplete(props: {
   const editor = useEditorContext()
   const sdk = useSDK()
   const sync = useSync()
-  const command = useCommandDialog()
+  const command = useCommandPalette()
   const { theme } = useTheme()
   const dimensions = useTerminalDimensions()
   const frecency = useFrecency()
   const tuiConfig = useTuiConfig()
-
   const [store, setStore] = createStore({
     index: 0,
     selected: 0,
@@ -286,7 +285,7 @@ export function Autocomplete(props: {
     const { filename, part } = createFilePart(item, lineRange)
     const index = store.visible === "@" ? store.index : props.input().cursorOffset
 
-    command.keybinds(true)
+    command.suspend(false)
     setStore("visible", false)
     setStore("index", index)
     insertPart(filename, part)
@@ -524,8 +523,81 @@ export function Autocomplete(props: {
     setStore("selected", 0)
   }
 
+  useBindings(() => ({
+    target: props.input,
+    enabled: () => Boolean(store.visible),
+    commands: [
+      {
+        name: "prompt.autocomplete.prev",
+        title: "Previous autocomplete item",
+        category: "Autocomplete",
+        run() {
+          setStore("input", "keyboard")
+          move(-1)
+        },
+      },
+      {
+        name: "prompt.autocomplete.next",
+        title: "Next autocomplete item",
+        category: "Autocomplete",
+        run() {
+          setStore("input", "keyboard")
+          move(1)
+        },
+      },
+      {
+        name: "prompt.autocomplete.hide",
+        title: "Hide autocomplete",
+        category: "Autocomplete",
+        run() {
+          hide()
+        },
+      },
+      {
+        name: "prompt.autocomplete.select",
+        title: "Select autocomplete item",
+        category: "Autocomplete",
+        run() {
+          select()
+        },
+      },
+      {
+        name: "prompt.autocomplete.complete",
+        title: "Complete autocomplete item",
+        category: "Autocomplete",
+        run() {
+          const selected = options()[store.selected]
+          if (selected?.isDirectory) {
+            expandDirectory()
+            return
+          }
+
+          select()
+        },
+      },
+    ],
+    bindings: [
+      ...tuiConfig.keybinds.gather("prompt.autocomplete", [
+        "prompt.autocomplete.prev",
+        "prompt.autocomplete.next",
+        "prompt.autocomplete.hide",
+        "prompt.autocomplete.select",
+        "prompt.autocomplete.complete",
+      ]),
+      // kilocode_change start - close stale suggestions while allowing normal cursor movement
+      {
+        key: "right",
+        fallthrough: true,
+        cmd: () => {
+          if (props.input().cursorOffset <= store.index) dismiss()
+        },
+      },
+      // kilocode_change end
+    ],
+  }))
+
   function show(mode: "@" | "/") {
-    command.keybinds(false)
+    command.suspend(true)
     setStore({
       visible: mode,
       index: props.input().cursorOffset,
@@ -536,7 +608,7 @@ export function Autocomplete(props: {
   // but still allow normal autocomplete dismissal to clean it up.
   function dismiss() {
     if (!store.visible) return
-    command.keybinds(true)
+    command.suspend(false)
     setStore("visible", false)
   }
 
@@ -610,83 +682,14 @@ export function Autocomplete(props: {
           setStore("index", idx)
         }
       },
-      onKeyDown(e: KeyEvent) {
-        if (store.visible) {
-          const name = e.name?.toLowerCase()
-          const ctrlOnly = e.ctrl && !e.meta && !e.shift
-          const isNavUp = name === "up" || (ctrlOnly && name === "p")
-          const isNavDown = name === "down" || (ctrlOnly && name === "n")
-
-          if (isNavUp) {
-            setStore("input", "keyboard")
-            move(-1)
-            e.preventDefault()
-            return
-          }
-          if (isNavDown) {
-            setStore("input", "keyboard")
-            move(1)
-            e.preventDefault()
-            return
-          }
-          if (name === "escape") {
-            hide()
-            e.preventDefault()
-            return
-          }
-          if (name === "return") {
-            select()
-            e.preventDefault()
-            return
-          }
-          if (name === "tab") {
-            const selected = options()[store.selected]
-            if (selected?.isDirectory) {
-              expandDirectory()
-            } else {
-              select()
-            }
-            e.preventDefault()
-            return
-          }
-          // kilocode_change start
-          if (name === "right") {
-            // Right arrow should not accept the suggestion when cursor is not
-            // within the filter region (not near where the suggestion is being added)
-            const cursor = props.input().cursorOffset
-            if (cursor <= store.index) {
-              hide()
-              // Don't preventDefault - let cursor move normally
-              return
-            }
-          }
-          // kilocode_change end
-        }
-        if (!store.visible) {
-          if (e.name === "@") {
-            const cursorOffset = props.input().cursorOffset
-            const charBeforeCursor =
-              cursorOffset === 0 ? undefined : props.input().getTextRange(cursorOffset - 1, cursorOffset)
-            const canTrigger = charBeforeCursor === undefined || charBeforeCursor === "" || /\s/.test(charBeforeCursor)
-            if (canTrigger) show("@")
-          }
-
-          if (e.name === "/") {
-            if (props.input().cursorOffset === 0) show("/")
-          }
-        }
-      },
-      // kilocode_change start
+      // kilocode_change start - dismiss stale popup after cursor leaves active filter region
       onCursorChange() {
         if (!store.visible) return
         const cursor = props.input().cursorOffset
         const value = props.input().plainText
         if (
-          // Cursor moved before the trigger
           cursor <= store.index ||
-          // There is a space between the trigger and the cursor
           props.input().getTextRange(store.index, cursor).match(/\s/) ||
-          // "/<command>" is not the sole content — dismiss slash popup once args are typed
           (store.visible === "/" && value.match(/^\S+\s+\S+\s*$/))
         ) {
           hide()

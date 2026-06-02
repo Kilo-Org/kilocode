@@ -51,7 +51,7 @@
   <!-- packages/opencode/src/cli/cmd/github.ts -->
 - <https://docs.inceptionlabs.ai/capabilities/next-edit>
   <!-- packages/opencode/src/kilocode/server/httpapi/groups/kilo-gateway.ts -->
-- <https://docs.mistral.ai/capabilities/reasoning/adjustable>
+- <https://docs.mistral.ai/studio-api/conversations/reasoning>
   <!-- packages/opencode/src/provider/transform.ts -->
 - <https://docs.venice.ai/overview/guides/reasoning-models#reasoning-effort>
   <!-- packages/opencode/src/provider/transform.ts -->
@@ -102,6 +102,7 @@
   <!-- packages/opencode/src/session/network.ts -->
 - <https://kilo.ai/>
   <!-- packages/opencode/src/cli/cmd/generate.ts -->
+  <!-- packages/opencode/src/kilocode/server/httpapi/public.ts -->
   <!-- packages/opencode/src/provider/provider.ts -->
 - <https://kilo.ai/discord>
   <!-- packages/kilo-vscode/webview-ui/src/components/chat/FeedbackDialog.tsx -->
@@ -131,6 +132,7 @@
   <!-- packages/opencode/src/config/model-id.ts -->
 - <https://opencode.ai/>
   <!-- packages/opencode/src/cli/cmd/generate.ts -->
+  <!-- packages/opencode/src/kilocode/server/httpapi/public.ts -->
 - <https://opencode.ai/auth>
   <!-- packages/opencode/src/cli/cmd/providers.ts -->
 - <https://opencode.ai/docs/agents>
@@ -140,16 +142,13 @@
 - <https://opencode.ai/docs/providers/#cloudflare-ai-gateway>
   <!-- packages/opencode/src/cli/cmd/providers.ts -->
 - <https://opencode.ai/go>
-  <!-- packages/opencode/src/cli/cmd/tui/component/dialog-go-upsell.tsx -->
-  <!-- packages/opencode/src/session/retry.ts -->
+  <!-- packages/opencode/src/cli/cmd/tui/component/dialog-retry-action.tsx -->
 - <https://opencode.ai/tui.json>
   <!-- packages/opencode/src/cli/cmd/tui/config/tui-migrate.ts -->
 - <https://opencode.ai/zen>
   <!-- packages/kilo-vscode/webview-ui/src/i18n/en.ts -->
 - <https://openrouter.ai/docs/cookbook/administration/usage-accounting>
   <!-- packages/opencode/src/kilocode/session/index.ts -->
-- <https://opentelemetry.io/blog/2025/how-to-name-your-span-attributes/>
-  <!-- packages/opencode/src/server/routes/instance/trace.ts -->
 - <https://opncd.ai>
   <!-- packages/opencode/src/share/share-next.ts -->
 - <https://platform.openai.com/docs/api-reference/responses/create>
@@ -160,6 +159,8 @@
   <!-- packages/opencode/src/provider/sdk/copilot/responses/openai-responses-language-model.ts -->
 - <https://reddit.com/r/kilocode>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
+- <https://search.parallel.ai/mcp>
+  <!-- packages/opencode/src/tool/mcp-websearch.ts -->
 - <https://v5.ai-sdk.dev/providers/ai-sdk-providers/amazon-bedrock>
   <!-- packages/opencode/src/provider/transform.ts -->
 - <https://v5.ai-sdk.dev/providers/ai-sdk-providers/anthropic>

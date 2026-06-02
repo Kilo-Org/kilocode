@@ -75,7 +75,14 @@ export class Capture {
 
   beforeRequest(args: {
     input: EligibilityInput & {
-      model: EligibilityInput["model"] & { providerId?: string; providerID?: string; modelId?: string; modelID?: string; id?: string; variant?: string }
+      model: EligibilityInput["model"] & {
+        providerId?: string
+        providerID?: string
+        modelId?: string
+        modelID?: string
+        id?: string
+        variant?: string
+      }
     }
     requestMeta: RequestMeta
     assembled: {
