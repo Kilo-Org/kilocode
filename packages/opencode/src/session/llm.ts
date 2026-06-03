@@ -435,7 +435,8 @@ const live: Layer.Layer<
           })
         },
         async experimental_repairToolCall(failed) {
-          const lower = failed.toolCall.toolName.toLowerCase()
+          const trimmed = failed.toolCall.toolName.trim()
+          const lower = trimmed.toLowerCase()
           if (lower !== failed.toolCall.toolName && sortedTools[lower]) {
             l.info("repairing tool call", {
               tool: failed.toolCall.toolName,
@@ -679,6 +680,18 @@ function resolveTools(input: Pick<StreamInput, "tools" | "agent" | "permission" 
     Permission.merge(input.agent.permission, input.permission ?? []),
   )
   return Record.filter(input.tools, (_, k) => input.user.tools?.[k] !== false && !disabled.has(k))
+}
+
+export function repairToolCall(
+  toolName: string,
+  sortedTools: Record<string, Tool>,
+): string | undefined {
+  const trimmed = toolName.trim()
+  const lower = trimmed.toLowerCase()
+  if (lower !== toolName && sortedTools[lower]) {
+    return lower
+  }
+  return undefined
 }
 
 // Check if messages contain any tool-call content
