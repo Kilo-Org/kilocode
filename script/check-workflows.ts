@@ -36,6 +36,7 @@ const active = new Set([
   "check-org-member.yml",
   "close-issues.yml",
   "close-stale-prs.yml",
+  "codeql.yml",
   "containers.yml",
   "docs-build.yml",
   "docs-check-links.yml",
