@@ -6,8 +6,8 @@ import {
   getDirectory,
   getFilename,
   type ReviewComment,
-} from "../../webview-ui/agent-manager/review-comments"
-import { markdownCommentBlocks } from "../../webview-ui/agent-manager/markdown-comment-ranges"
+} from "../../webview-ui/diff-viewer/review-comments"
+import { markdownCommentBlocks } from "../../webview-ui/diff-viewer/markdown-comment-ranges"
 import {
   buildFileAnnotations,
   clearReviewComposer,
@@ -17,7 +17,7 @@ import {
   reviewComposerEdit,
   reviewDraftSpeechKey,
   reviewEditSpeechKey,
-} from "../../webview-ui/agent-manager/review-annotations"
+} from "../../webview-ui/diff-viewer/review-annotations"
 import type { WorktreeFileDiff } from "../../webview-ui/src/types/messages"
 
 function diff(file: string, before: string, after: string): WorktreeFileDiff {
