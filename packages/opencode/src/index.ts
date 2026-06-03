@@ -36,11 +36,15 @@ import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
 import { RemoteCommand } from "./cli/cmd/remote" // kilocode_change
 import { RollCallCommand } from "./kilocode/cli/cmd/roll-call" // kilocode_change
+import { ProfileCommand } from "./kilocode/cli/cmd/profile" // kilocode_change
 import { DevSetupCommand, DevAliasCommand } from "./kilocode/cli/dev-setup" // kilocode_change
+import { DaemonCommand } from "./kilocode/cli/cmd/daemon" // kilocode_change
+import { KiloConsoleCommand } from "./kilocode/cli/cmd/console" // kilocode_change
 // kilocode_change start - Import telemetry, instance disposal, and legacy migration
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { InstanceRuntime } from "./project/instance-runtime" // kilocode_change
 import { migrateLegacyKiloAuth, ENV_FEATURE, ENV_VERSION } from "@kilocode/kilo-gateway"
+import { SessionExport } from "./kilocode/session-export" // kilocode_change
 
 // kilocode_change - set feature for tracking. 'serve' is spawned by other services
 // (extension, cloud) which set their own KILOCODE_FEATURE env var. Direct CLI use
@@ -171,6 +175,7 @@ let cli = yargs(args) // kilocode_change
     Telemetry.trackCliStart()
     // kilocode_change end
 
+    // kilocode_change start - one-time database migration progress
     const marker = path.join(Global.Path.data, "kilo.db")
     if (!(await Filesystem.exists(marker))) {
       const tty = process.stderr.isTTY
@@ -207,6 +212,7 @@ let cli = yargs(args) // kilocode_change
       }
       process.stderr.write("Database migration complete." + EOL)
     }
+    // kilocode_change end
   })
   .usage("")
   .completion("completion", "generate shell completion script")
@@ -232,6 +238,7 @@ let cli = yargs(args) // kilocode_change
   // .command(WebCommand) // kilocode_change (Disabled unsupported opencode web UI)
   .command(ModelsCommand)
   .command(RollCallCommand) // kilocode_change
+  .command(ProfileCommand) // kilocode_change
   .command(StatsCommand)
   .command(ExportCommand)
   .command(ImportCommand)
@@ -239,6 +246,8 @@ let cli = yargs(args) // kilocode_change
   .command(PrCommand)
   .command(SessionCommand)
   .command(RemoteCommand) // kilocode_change
+  .command(DaemonCommand) // kilocode_change
+  .command(KiloConsoleCommand) // kilocode_change
   .command(ConfigCLICommand) // kilocode_change
   .command(PluginCommand)
   .command(DbCommand)
@@ -296,6 +305,7 @@ try {
     })
   }
 
+  // kilocode_change start - log extra Bun resolve metadata for startup failures
   if (e instanceof ResolveMessage) {
     Object.assign(data, {
       name: e.name,
@@ -307,11 +317,12 @@ try {
       importKind: e.importKind,
     })
   }
-  Log.Default.error("fatal", data)
+  // kilocode_change end
+  Log.Default.error("fatal", data) // kilocode_change
   const formatted = FormatError(e)
   if (formatted) UI.error(formatted)
   if (formatted === undefined) {
-    UI.error("Unexpected error, check log file at " + Log.file() + " for more details" + EOL)
+    UI.error("Unexpected error, check log file at " + Log.file() + " for more details" + EOL) // kilocode_change
     process.stderr.write(errorMessage(e) + EOL)
   }
   process.exitCode = 1
@@ -319,6 +330,7 @@ try {
   // kilocode_change start - Track CLI exit and shutdown telemetry
   const exitCode = typeof process.exitCode === "number" ? process.exitCode : undefined
   Telemetry.trackCliExit(exitCode)
+  await SessionExport.shutdown()
   await Telemetry.shutdown()
   // kilocode_change end
 
@@ -328,5 +340,5 @@ try {
   // Most notably, some docker-container-based MCP servers don't handle such signals unless
   // run using `docker run --init`.
   // Explicitly exit to avoid any hanging subprocesses.
-  process.exit()
+  process.exit() // kilocode_change
 }

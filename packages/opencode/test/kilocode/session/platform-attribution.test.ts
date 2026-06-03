@@ -47,6 +47,24 @@ describe("session platform attribution", () => {
       },
     })
   })
+
+  test("child sessions expose parent and root lineage", async () => {
+    await WithInstance.provide({
+      directory: projectRoot,
+      fn: async () => {
+        const root = await create({})
+        const child = await create({ parentID: root.id, title: "child" })
+        const leaf = await create({ parentID: child.id, title: "leaf" })
+
+        expect(KiloSession.resolveParent(root.id)).toBeUndefined()
+        expect(KiloSession.resolveParent(child.id)).toBe(root.id)
+        expect(KiloSession.resolveParent(leaf.id)).toBe(child.id)
+        expect(KiloSession.resolveRoot(leaf.id)).toBe(root.id)
+
+        await remove(root.id)
+      },
+    })
+  })
 })
 
 describe("step-finish token propagation via Bus event", () => {

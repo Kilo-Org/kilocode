@@ -1,5 +1,5 @@
 /**
- * Architecture test: FullScreenDiffView CSS co-location.
+ * Architecture test: FullScreenDiffView CSS imports.
  *
  * `FullScreenDiffView` and its children (`FileTree`, etc.) rely on classes
  * defined in BOTH `agent-manager.css` and `agent-manager-review.css`. The
@@ -22,10 +22,10 @@ import fs from "node:fs"
 import path from "node:path"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
-const FULL_SCREEN_DIFF_VIEW = path.join(ROOT, "webview-ui/agent-manager/FullScreenDiffView.tsx")
-const REQUIRED = ["./agent-manager.css", "./agent-manager-review.css"] as const
+const FULL_SCREEN_DIFF_VIEW = path.join(ROOT, "webview-ui/diff-viewer/FullScreenDiffView.tsx")
+const REQUIRED = ["../agent-manager/agent-manager.css", "../agent-manager/agent-manager-review.css"] as const
 
-describe("FullScreenDiffView — CSS co-location", () => {
+describe("FullScreenDiffView — CSS imports", () => {
   it("imports every stylesheet required to render correctly", () => {
     const src = fs.readFileSync(FULL_SCREEN_DIFF_VIEW, "utf-8")
     const missing = REQUIRED.filter((css) => !src.includes(`import "${css}"`))

@@ -10,7 +10,9 @@ import { remove as cleanup } from "./kilocode/cleanup" // kilocode_change
 const dir = path.join(os.tmpdir(), "opencode-test-data-" + process.pid)
 await fs.mkdir(dir, { recursive: true })
 afterAll(async () => {
+  const { SessionExport } = await import("../src/kilocode/session-export") // kilocode_change
   const { Database } = await import("../src/storage/db")
+  await SessionExport.shutdown() // kilocode_change
   Database.close()
   await cleanup(dir) // kilocode_change
 })

@@ -20,6 +20,8 @@
 
 When looking for IntelliJ Platform API usage, implementation examples, extension points, services, actions, inspections, PSI/VFS/editor behavior, or plugin patterns, prefer real IntelliJ source code over Gradle caches, downloaded jars, generated parser artifacts, or decompiled classes.
 
+Do not use IntelliJ Platform APIs marked as internal in the IntelliJ source repository. Find a public API alternative or keep the integration behind supported extension points. Experimental APIs are acceptable when needed, but warn the user that the integration relies on an experimental IntelliJ API.
+
 Use this priority order:
 
 1. Check whether `$INTELLIJ_REPO` is set and points to a readable IntelliJ Community checkout.
@@ -226,6 +228,7 @@ Rules:
 ### Primary UI Rules
 
 - Use IntelliJ platform components instead of raw Swing where an equivalent exists (see [Platform Components](#platform-components-and-utilities) table below).
+- When implementing a new user-facing action, consider adding metrics so usage can be tracked.
 - Do not set default Swing properties explicitly. Avoid `isOpaque = false` unless the component default differs or there is a documented rendering reason.
 - Avoid hardcoded dimensions, colors, and font sizes — use the platform style APIs described in [Theme-Derived Colors](#theme-derived-colors), [Theme-Derived Fonts](#theme-derived-fonts), and [Borders, Insets, and Spacing](#borders-insets-and-spacing).
 - Put user-visible strings in `*.properties` files.

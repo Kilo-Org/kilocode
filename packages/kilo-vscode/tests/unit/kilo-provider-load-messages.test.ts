@@ -98,6 +98,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
     registerDirectoryProvider: () => () => undefined,
     getServerInfo: () => ({ port: 12345 }),
     getConnectionState: () => "connected" as const,
+    getConnectionError: () => null,
     resolveEventSessionId: () => undefined,
     recordMessageSessionId: () => undefined,
     notifyNotificationDismissed: () => undefined,
@@ -115,6 +116,7 @@ type ProviderInternals = {
   sessionDirectories: Map<string, string>
   trackedSessionIds: Set<string>
   stopCurrentSessionProcesses: (next?: string) => void
+  handleEvent: (event: unknown) => void
   handleLoadMessages: (sid: string, opts?: { mode?: string; before?: string; limit?: number }) => Promise<void>
   handleDeleteSession: (sid: string) => Promise<void>
 }
@@ -298,6 +300,74 @@ describe("KiloProvider.handleDeleteSession / background processes", () => {
     await internal.handleDeleteSession("s1")
 
     expect(client.stopped).toEqual([{ sessionID: "s1", directory: "/repo/worktree" }])
+  })
+})
+
+describe("KiloProvider.handleLoadMessages / slim payload", () => {
+  it("strips transcript-only metadata before posting messages to the webview", async () => {
+    const user = mkMessage("m1", "user", 1)
+    const assistant = mkMessage("m2", "assistant", 2)
+    const client = createClient({
+      messagesData: [
+        {
+          ...user,
+          info: {
+            ...user.info,
+            summary: { diffs: [{ file: "a.ts", patch: "full patch", additions: 2, deletions: 1 }] },
+          },
+        },
+        {
+          ...assistant,
+          parts: [
+            {
+              type: "reasoning",
+              id: "r1",
+              text: "Considering options",
+              metadata: { openai: { reasoningEncryptedContent: "encrypted", itemId: "item-1" } },
+            },
+          ],
+        },
+      ],
+    })
+    const { provider, sent } = makeProvider(client)
+
+    await provider.loadMessages("s1")
+
+    const loaded = sent.find(
+      (msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "messagesLoaded",
+    ) as
+      | {
+          messages: Array<{
+            summary?: { diffs?: Array<Record<string, unknown>> }
+            parts: Array<{ metadata?: { openai?: Record<string, unknown> } }>
+          }>
+        }
+      | undefined
+    expect(loaded?.messages[0]?.summary?.diffs?.[0]).toEqual({ file: "a.ts", additions: 2, deletions: 1 })
+    expect(loaded?.messages[1]?.parts[0]?.metadata?.openai).toEqual({ itemId: "item-1" })
+  })
+
+  it("strips summary patches from live message updates", () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+
+    internal.handleEvent({
+      type: "message.updated",
+      properties: {
+        info: {
+          id: "m1",
+          sessionID: "s1",
+          role: "user",
+          time: { created: 1 },
+          summary: { diffs: [{ file: "a.ts", patch: "full patch", additions: 2, deletions: 1 }] },
+        },
+      },
+    })
+
+    const created = sent.find(
+      (msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "messageCreated",
+    ) as { message?: { summary?: { diffs?: Array<Record<string, unknown>> } } } | undefined
+    expect(created?.message?.summary?.diffs?.[0]).toEqual({ file: "a.ts", additions: 2, deletions: 1 })
   })
 })
 

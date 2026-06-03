@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-docs",
-  "version": "7.3.18",
+  "version": "7.3.22",
   "private": true,
   "scripts": {
     "dev": "next dev --webpack --port 3002",
@@ -32,7 +32,7 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.3"
+    "vitest": "4.1.0"
   },
   "peerDependencies": {}
 }

@@ -110,6 +110,38 @@ describe("SdkSSEAdapter", () => {
   })
 })
 
+describe("KiloConnectionService backend crash", () => {
+  it("invalidates the stale SDK client and reports a retryable error", () => {
+    const service = new KiloConnectionService({} as any)
+    const states: Array<{ state: string; error?: string }> = []
+    ;(service as any).client = {}
+    ;(service as any).config = { baseUrl: "http://127.0.0.1:52512", password: "secret" }
+    ;(service as any).info = { port: 52512 }
+    ;(service as any).state = "connected"
+    service.onStateChange((state, error) => states.push({ state, error: error?.message }))
+    ;(service as any).handleServerExit(9)
+
+    expect(service.getConnectionState()).toBe("error")
+    expect(service.getConnectionError()?.message).toContain("CLI background process exited with code 9")
+    expect(service.getServerConfig()).toBeNull()
+    expect(service.getServerInfo()).toBeNull()
+    expect(() => service.getClient()).toThrow("Not connected")
+    expect(states).toEqual([
+      { state: "error", error: "CLI background process exited with code 9. Retry to reconnect." },
+    ])
+    service.dispose()
+  })
+
+  it("does not expose an SDK client while a replacement server is connecting", () => {
+    const service = new KiloConnectionService({} as any)
+    ;(service as any).client = {}
+    ;(service as any).state = "connecting"
+
+    expect(() => service.getClient()).toThrow("Not connected")
+    service.dispose()
+  })
+})
+
 describe("KiloConnectionService SSE startup", () => {
   it("waits through an initial SSE fetch failure until the stream opens", async () => {
     const original = globalThis.fetch

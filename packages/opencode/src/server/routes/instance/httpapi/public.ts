@@ -1,5 +1,6 @@
 import { OpenApi } from "effect/unstable/httpapi"
 import { matchLegacyKiloOpenApi } from "@/kilocode/server/httpapi/public" // kilocode_change
+import * as KiloServer from "@/kilocode/server/server" // kilocode_change
 import { OpenCodeHttpApi } from "./api"
 
 type OpenApiParameter = {
@@ -549,9 +550,9 @@ function pathParameterSchema(route: string, name: string) {
 
 export const PublicApi = OpenCodeHttpApi.annotateMerge(
   OpenApi.annotations({
-    title: "opencode",
+    title: KiloServer.DOC_TITLE, // kilocode_change
     version: "1.0.0",
-    description: "opencode api",
+    description: KiloServer.DOC_DESCRIPTION, // kilocode_change
     transform: matchLegacyOpenApi,
   }),
 )

@@ -5,6 +5,7 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.history.HistoryController
 import ai.kilocode.client.session.history.HistoryPanel
+import ai.kilocode.client.telemetry.Telemetry
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataProvider
 import com.intellij.openapi.application.ApplicationManager
@@ -62,6 +63,8 @@ class SessionSidePanelManager(
                 existing
             } else create(ref)
         }
+        if (current === ui) return
+        Telemetry.send("Session Opened", mapOf("source" to ref.type.name.lowercase(), "sessionId" to ref.id))
         show(ui)
     }
 

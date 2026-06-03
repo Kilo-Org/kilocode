@@ -40,11 +40,7 @@ function collectHeadings(node, sections = [], tab = undefined) {
     if (node.name === "Tabs") {
       for (const child of node.children || []) {
         const label = child.attributes?.label
-        collectHeadings(
-          child,
-          sections,
-          typeof label === "string" ? { label, slug: slugify(label) } : undefined,
-        )
+        collectHeadings(child, sections, typeof label === "string" ? { label, slug: slugify(label) } : undefined)
       }
       return sections
     }

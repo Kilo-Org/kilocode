@@ -27,6 +27,7 @@ import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.ProvidersDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
+import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
@@ -167,6 +168,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
             open = open,
             beforeUpdate = beforeUpdate,
             afterUpdate = afterUpdate,
+            telemetry = { event, props -> appRpc.telemetry.add(TelemetryCaptureDto(event, props)) },
         )
         controllers.add(m)
         roots[m] = root
