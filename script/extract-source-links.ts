@@ -44,6 +44,7 @@ const EXCLUDE_PATTERNS = [
   /^https?:\/\/synthetic\.new/,
   // API endpoints (not user-facing)
   /^https?:\/\/api\.kilo\.ai\/api\//,
+  /^https?:\/\/supermassive-black-hole\.kiloapps\.io\/v1\/session-export\//, // kilocode_change
   /^https?:\/\/ingest\.kilosessions\.ai/,
   /^https?:\/\/api\.openai\.com/,
   /^https?:\/\/api\.github\.com/,

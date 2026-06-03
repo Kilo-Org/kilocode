@@ -180,6 +180,9 @@ class TurnLifecycleTest : SessionControllerTestBase() {
         ))
 
         assertTrue(m.model.state is SessionState.LoginRequired)
+        assertTrue(appRpc.telemetry.any {
+            it.event == "Account Overlay Shown" && it.properties["reason"] == "paid_model_auth"
+        })
         assertSession(
             """
             [code] [kilo/gpt-5] [login-required] [Go to User Profile settings to sign in, then continue this session.]
@@ -346,6 +349,9 @@ class TurnLifecycleTest : SessionControllerTestBase() {
         edt { m.dismissLoginRequired() }
         flush()
 
+        assertTrue(appRpc.telemetry.any {
+            it.event == "Account Overlay Dismissed" && it.properties["reason"] == "paid_model_auth"
+        })
         assertSession(
             """
             [code] [kilo/gpt-5] [idle]

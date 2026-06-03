@@ -4,6 +4,7 @@
 
 import { describe, expect, test } from "bun:test"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
+import { KiloSessionMessageOrder } from "../../src/kilocode/session/message-order"
 import { MessageV2 } from "../../src/session/message-v2"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
@@ -65,6 +66,29 @@ function syntheticTextPart(messageID: string, text: string, partID = "p_syn_" + 
     type: "text",
     text,
     synthetic: true,
+  }
+}
+
+function compactionPart(messageID: string, tailStartID: string): MessageV2.CompactionPart {
+  return {
+    id: PartID.make("p_compact_" + messageID),
+    sessionID,
+    messageID: MessageID.make(messageID),
+    type: "compaction",
+    auto: false,
+    tail_start_id: MessageID.make(tailStartID),
+  }
+}
+
+function subtaskPart(messageID: string): MessageV2.SubtaskPart {
+  return {
+    id: PartID.make("p_subtask_" + messageID),
+    sessionID,
+    messageID: MessageID.make(messageID),
+    type: "subtask",
+    prompt: "continue",
+    description: "Continue queued task",
+    agent: "test",
   }
 }
 
@@ -149,6 +173,11 @@ function assistant(
   return { info: assistantInfo(id, parentID, opts), parts }
 }
 
+function created(msg: MessageV2.WithParts, time: number) {
+  msg.info.time.created = time
+  return msg
+}
+
 const apiError = new MessageV2.APIError({
   message: "boom",
   isRetryable: true,
@@ -175,6 +204,54 @@ describe("KiloSessionPrompt.hasCompletedSummary", () => {
   test("returns true when summary has finish and no error", () => {
     const msgs = [user("msg_u1"), assistant("msg_a1", "msg_u1", [], { summary: true, finish: "end_turn" })]
     expect(KiloSessionPrompt.hasCompletedSummary(msgs)).toBe(true)
+  })
+})
+
+describe("MessageV2.latest", () => {
+  test("selects chronological state after retained pre-compaction tail", () => {
+    const msgs = MessageV2.filterCompacted([
+      created(assistant("msg_summary", "msg_compact", [], { summary: true, finish: "end_turn" }), 4),
+      created(user("msg_compact", [compactionPart("msg_compact", "msg_tail")]), 3),
+      created(assistant("msg_tail_reply", "msg_tail", [], { finish: "end_turn" }), 2),
+      created(user("msg_tail", [textPart("msg_tail", "historical retained prompt")]), 1),
+    ])
+
+    expect(msgs.map((m) => m.info.id)).toEqual([
+      MessageID.make("msg_compact"),
+      MessageID.make("msg_summary"),
+      MessageID.make("msg_tail"),
+      MessageID.make("msg_tail_reply"),
+    ])
+
+    const state = KiloSessionMessageOrder.latest(msgs)
+    expect(state.user?.id).toBe(MessageID.make("msg_compact"))
+    expect(state.assistant?.id).toBe(MessageID.make("msg_summary"))
+    expect(state.finished?.id).toBe(MessageID.make("msg_summary"))
+    expect(state.tasks).toEqual([])
+  })
+
+  test("keeps queued subtasks moved after a chronologically later assistant", () => {
+    const part = subtaskPart("msg_queued")
+    const active = created(user("msg_active"), 1)
+    const queued = created(user("msg_queued", [part]), 2)
+    const done = created(assistant("msg_done", "msg_active", [], { finish: "end_turn" }), 3)
+    KiloSessionMessageOrder.annotate([active, queued, done])
+
+    const state = KiloSessionMessageOrder.latest([active, done, queued])
+    expect(state.user?.id).toBe(MessageID.make("msg_queued"))
+    expect(state.finished?.id).toBe(MessageID.make("msg_done"))
+    expect(state.tasks).toEqual([part])
+  })
+
+  test("processes projected tasks in queue order", () => {
+    const first = subtaskPart("msg_first")
+    const second = subtaskPart("msg_second")
+    const msgs = [created(user("msg_first", [first]), 1), created(user("msg_second", [second]), 2)]
+
+    const state = KiloSessionMessageOrder.latest(msgs)
+    expect(state.user?.id).toBe(MessageID.make("msg_second"))
+    expect(state.tasks).toEqual([second, first])
+    expect(state.tasks.pop()).toBe(first)
   })
 })
 
@@ -226,6 +303,31 @@ describe("KiloSessionPrompt.trimBeforeLastSummary", () => {
       MessageID.make("msg_s3"),
       MessageID.make("msg_u4"),
     ])
+  })
+
+  test("keeps the newest summary when retained history contains an older summary", () => {
+    const filtered = MessageV2.filterCompacted([
+      created(assistant("msg_s8", "msg_c7", [], { summary: true, finish: "end_turn" }), 8),
+      created(user("msg_c7", [compactionPart("msg_c7", "msg_u1")]), 7),
+      created(assistant("msg_a6", "msg_u5", [], { finish: "end_turn" }), 6),
+      created(user("msg_u5"), 5),
+      created(assistant("msg_s4", "msg_c3", [], { summary: true, finish: "end_turn" }), 4),
+      created(user("msg_c3", [compactionPart("msg_c3", "msg_u1")]), 3),
+      created(assistant("msg_a2", "msg_u1", [], { finish: "end_turn" }), 2),
+      created(user("msg_u1"), 1),
+    ])
+
+    expect(filtered.map((m) => m.info.id)).toEqual([
+      MessageID.make("msg_c7"),
+      MessageID.make("msg_s8"),
+      MessageID.make("msg_u1"),
+      MessageID.make("msg_a2"),
+      MessageID.make("msg_c3"),
+      MessageID.make("msg_s4"),
+      MessageID.make("msg_u5"),
+      MessageID.make("msg_a6"),
+    ])
+    expect(KiloSessionPrompt.trimBeforeLastSummary(filtered)).toBe(filtered)
   })
 
   test("ignores errored and unfinished summaries when choosing boundary", () => {

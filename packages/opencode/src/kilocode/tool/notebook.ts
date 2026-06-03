@@ -4,7 +4,8 @@ import * as Encoding from "../encoding"
 
 type ObjectValue = Record<string, unknown>
 
-const object = (value: unknown): value is ObjectValue => typeof value === "object" && value !== null && !Array.isArray(value)
+const object = (value: unknown): value is ObjectValue =>
+  typeof value === "object" && value !== null && !Array.isArray(value)
 
 const parse = (text: string): unknown => {
   try {

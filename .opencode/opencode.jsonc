@@ -18,4 +18,5 @@
     "github-triage": false,
     "github-pr-search": false,
   },
+  "disabled_providers": [],
 }

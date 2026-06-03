@@ -1,0 +1,637 @@
+.kilo-console {
+  --app-header-height: 3.5rem;
+  --app-rail-width: 3.5rem;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.kilo-console.console-shell {
+  display: grid;
+  grid-template-rows: var(--app-header-height) minmax(0, 1fr);
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.kilo-console .app-header {
+  position: relative;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: minmax(10rem, 15rem) minmax(12rem, 1fr) minmax(8rem, 15rem);
+  gap: 0.75rem;
+  align-items: center;
+  width: 100%;
+  height: var(--app-header-height);
+  min-height: var(--app-header-height);
+  border-bottom: 1px solid var(--border);
+  background: var(--background);
+  padding: 0 0.75rem;
+  backdrop-filter: none;
+}
+
+.omni-search-open .kilo-console .app-header {
+  z-index: 10000;
+}
+
+.kilo-console .header-brand {
+  grid-column: 1;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  height: 1.75rem;
+  gap: 0.5rem;
+  border-radius: var(--radius-md);
+  color: var(--foreground);
+  padding: 0 0.5rem;
+  text-decoration: none;
+}
+
+.kilo-console .header-mark {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1;
+}
+
+.kilo-console .header-title {
+  display: inline-flex;
+  align-items: baseline;
+  min-width: 0;
+  gap: 0.5rem;
+}
+
+.kilo-console .header-title strong,
+.kilo-console .header-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kilo-console .header-title strong {
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1rem;
+}
+
+.kilo-console .header-title span {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  line-height: 1rem;
+}
+
+.kilo-console .omni-search {
+  --omni-popover: lab(9.03835 1.15298 1.92955);
+  --omni-foreground: oklch(0.985 0.001 106.423);
+  --omni-muted: oklch(0.268 0.007 34.298);
+  --omni-muted-foreground: oklch(0.709 0.01 56.259);
+  --omni-border: oklch(1 0 0 / 10%);
+  --omni-input: oklch(1 0 0 / 15%);
+
+  position: relative;
+  grid-column: 2;
+  justify-self: center;
+  width: min(35rem, 100%);
+  height: 2.5rem;
+  min-width: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--omni-popover);
+  color: var(--omni-foreground);
+  box-shadow: 0 0 0 1px var(--omni-border);
+  padding: 0;
+  transition:
+    background 100ms ease,
+    box-shadow 100ms ease;
+}
+
+.kilo-console .omni-search.expanded {
+  position: fixed;
+  top: calc((var(--app-header-height) - 2.5rem) / 2);
+  left: 50%;
+  z-index: 10001;
+  display: grid;
+  grid-template-rows: auto auto auto;
+  width: min(35rem, calc(100vw - 2rem));
+  height: auto;
+  max-height: min(70vh, calc(100vh - 1rem));
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  background: var(--omni-popover);
+  box-shadow:
+    0 1rem 3rem oklch(0.147 0.004 49.25 / 45%),
+    0 0 0 1px var(--omni-border);
+  transform: translateX(-50%);
+}
+
+.kilo-console .omni-search.expanded .omni-search-head,
+.kilo-console .omni-search.expanded .omni-results,
+.kilo-console .omni-search.expanded .omni-footer {
+  background: var(--omni-popover);
+}
+
+.kilo-console .omni-search.expanded::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: oklch(0.147 0.004 49.25 / 72%);
+  backdrop-filter: blur(4px);
+}
+
+.kilo-console .omni-search-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  height: 100%;
+  gap: 0.5rem;
+  padding: 0 0.75rem;
+}
+
+.kilo-console .omni-search.expanded .omni-search-head {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  height: auto;
+  min-height: 0;
+  border-bottom: 1px solid var(--omni-border);
+  padding: 0.625rem 0.75rem;
+}
+
+.kilo-console .omni-escape,
+.kilo-console .omni-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: var(--omni-muted);
+  color: var(--omni-muted-foreground);
+  font-size: 0.625rem;
+  font-weight: 500;
+}
+
+.kilo-console .omni-command {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--omni-muted-foreground);
+}
+
+.kilo-console .omni-command-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.kilo-console .omni-search.expanded .omni-escape {
+  min-width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--radius-xs);
+  font-size: 0.625rem;
+}
+
+.kilo-console .omni-escape {
+  display: none;
+  cursor: pointer;
+  font: inherit;
+  text-transform: lowercase;
+}
+
+.kilo-console .omni-search.expanded .omni-escape {
+  display: inline-flex;
+}
+
+.kilo-console .omni-escape:hover,
+.kilo-console .omni-escape:focus-visible {
+  background: color-mix(in oklab, var(--omni-muted) 70%, var(--omni-foreground) 10%);
+  color: var(--omni-foreground);
+  outline: 0;
+}
+
+.kilo-console .omni-search input {
+  height: 1.25rem;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--omni-foreground);
+  font-size: 0.875rem;
+  line-height: 1.75rem;
+  padding: 0;
+}
+
+.kilo-console .omni-search input:focus {
+  border-color: transparent;
+  outline: 0;
+}
+
+.kilo-console .omni-search input::placeholder {
+  color: var(--omni-muted-foreground);
+}
+
+.kilo-console .omni-search.expanded input {
+  font-size: 0.875rem;
+}
+
+.kilo-console .omni-results {
+  display: grid;
+  align-content: start;
+  min-height: 0;
+  overflow-y: auto;
+  max-height: 50vh;
+  padding: 0.25rem;
+}
+
+.kilo-console .omni-entry {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  width: 100%;
+  min-height: 2rem;
+  gap: 0.625rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--omni-foreground);
+  cursor: pointer;
+  font: inherit;
+  padding: 0.5rem 0.625rem;
+  text-align: left;
+}
+
+.kilo-console .omni-entry:hover,
+.kilo-console .omni-entry:focus-visible,
+.kilo-console .omni-entry.active {
+  background: var(--omni-muted);
+  outline: 0;
+}
+
+.kilo-console .omni-kind {
+  color: var(--omni-muted-foreground);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kilo-console .omni-label,
+.kilo-console .omni-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kilo-console .omni-label {
+  color: var(--omni-foreground);
+  font-size: 0.75rem;
+  line-height: 1.625;
+}
+
+.kilo-console .omni-label.mono,
+.kilo-console .omni-sub {
+  font-family: var(--font-family-mono, "SFMono-Regular", Consolas, monospace);
+}
+
+.kilo-console .omni-sub {
+  max-width: 7rem;
+  color: var(--omni-muted-foreground);
+  font-size: 0.6875rem;
+}
+
+.kilo-console .omni-enter {
+  color: var(--omni-muted-foreground);
+  font-size: 0.875rem;
+}
+
+.kilo-console .omni-empty {
+  color: var(--omni-muted-foreground);
+  font-size: 0.875rem;
+  padding: 2.5rem 1rem;
+  text-align: center;
+}
+
+.kilo-console .omni-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2rem;
+  border-top: 1px solid var(--omni-border);
+  color: var(--omni-muted-foreground);
+  font-size: 0.6875rem;
+  padding: 0.375rem 0.75rem;
+}
+
+.kilo-console .omni-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.kilo-console .omni-kbd {
+  min-width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.6875rem;
+}
+
+.kilo-console .notification-zone {
+  grid-column: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  gap: 0.125rem;
+}
+
+.kilo-console .console-body {
+  display: grid;
+  grid-template-columns: var(--app-rail-width) minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+  background: var(--background);
+}
+
+.kilo-console .rail {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  background: color-mix(in oklab, var(--card) 45%, transparent);
+  padding: 0.5rem;
+}
+
+.kilo-console .rail-nav,
+.kilo-console .rail-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.kilo-console .rail-bottom {
+  margin-top: auto;
+}
+
+.kilo-console .rail-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-sm);
+  color: var(--muted-foreground);
+  text-decoration: none;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.kilo-console .rail-glyph {
+  width: 1rem;
+  height: 1rem;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.kilo-console .rail-action.active,
+.kilo-console .rail-action:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.kilo-console .rail-action.active {
+  font-weight: 500;
+}
+
+.kilo-console .rail-favorites {
+  display: grid;
+  width: 100%;
+  gap: 0.5rem;
+  margin-top: 0.625rem;
+}
+
+.kilo-console .favorite-project {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  margin: 0 auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--foreground);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+}
+
+.kilo-console .favorite-project:hover,
+.kilo-console .favorite-project:focus-visible {
+  border-color: var(--ring);
+  background: transparent;
+  color: var(--foreground);
+  outline: 0;
+}
+
+.kilo-console .favorite-project.active {
+  border-color: var(--border);
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.kilo-console .favorite-project.status-error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 0.1875rem color-mix(in oklab, #ef4444 18%, transparent);
+}
+
+.kilo-console .favorite-project.status-attention {
+  border-color: #f97316;
+  box-shadow: 0 0 0 0.1875rem color-mix(in oklab, #f97316 18%, transparent);
+}
+
+.kilo-console .favorite-project.status-unread {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 0.1875rem color-mix(in oklab, #22c55e 18%, transparent);
+}
+
+.kilo-console .favorite-project.status-busy {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 0.1875rem color-mix(in oklab, var(--primary) 18%, transparent);
+}
+
+.kilo-console .console-main {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kilo-console .config-shell {
+  display: grid;
+  grid-template-columns: 13.75rem minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kilo-console .config-sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  background: var(--background);
+}
+
+.kilo-console .config-sidebar-title {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.25rem;
+  min-height: 4.25rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  padding: 0.75rem 1rem;
+}
+
+.kilo-console .config-sidebar-scope {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  gap: 0.375rem;
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.kilo-console .config-sidebar-scope > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kilo-console .config-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 0.5rem;
+}
+
+.kilo-console .config-group {
+  display: grid;
+  gap: 0;
+}
+
+.kilo-console .config-group-title,
+.kilo-console .config-top-option,
+.kilo-console .config-option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 1.75rem;
+  border: 0;
+  border-left: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0 0.5rem;
+  text-align: left;
+  text-decoration: none;
+}
+
+.kilo-console .config-group-title {
+  min-height: 1.25rem;
+  color: var(--text-weaker);
+  cursor: default;
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  text-transform: uppercase;
+}
+
+.kilo-console .config-group-title:hover,
+.kilo-console .config-group-title:focus-visible {
+  background: transparent;
+  color: var(--text-weaker);
+  cursor: default;
+  outline: 0;
+}
+
+.kilo-console .config-group-title [data-component="icon"],
+.kilo-console .config-top-option [data-component="icon"],
+.kilo-console .config-option [data-component="icon"] {
+  display: none;
+}
+
+.kilo-console .config-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.kilo-console .config-option {
+  padding-left: 0.5rem;
+}
+
+.kilo-console .config-top-option:hover,
+.kilo-console .config-top-option:focus-visible,
+.kilo-console .config-top-option.active,
+.kilo-console .config-option:hover,
+.kilo-console .config-option:focus-visible,
+.kilo-console .config-option.active {
+  background: var(--muted);
+  color: var(--foreground);
+  outline: 0;
+}
+
+.kilo-console .config-top-option.active,
+.kilo-console .config-option.active {
+  font-weight: 500;
+}
+
+.kilo-console .content,
+.kilo-console .route-empty {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--background);
+  padding: clamp(1rem, 2.4vw, 2rem);
+}
+
+.kilo-console .route-empty {
+  display: block;
+  height: calc(100vh - var(--app-header-height));
+}

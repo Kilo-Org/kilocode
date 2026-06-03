@@ -2,6 +2,7 @@ package ai.kilocode.client.settings.profile
 
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileDto
@@ -53,7 +54,10 @@ internal class ProfileUi(
         browse = browse,
     )
     private val account = LoggedInProfileUi(
-        dashboard = { browse(DASHBOARD_URL) },
+        dashboard = {
+            telemetry("Dashboard Opened", mapOf("surface" to "settings"))
+            browse(DASHBOARD_URL)
+        },
         logout = ::logout,
         organization = ::organization,
         refresh = ::refreshProfile,
@@ -180,6 +184,7 @@ internal class ProfileUi(
     private fun start() {
         val id = ++attempt
         login = LoginState.Initiating
+        telemetry("Account Connect Clicked", mapOf("surface" to "settings"))
         sync()
         cs.launch {
             try {
@@ -191,6 +196,7 @@ internal class ProfileUi(
                     browse(next.verificationUrl)
                 }
                 val profile = app.completeLogin()
+                telemetry("Account Connect Success", mapOf("surface" to "settings", "hasOrganizations" to ((profile?.organizations?.isNotEmpty()) == true).toString()))
                 val state = app.state.value
                 withContext(edt) {
                     if (id != attempt) return@withContext
@@ -200,6 +206,7 @@ internal class ProfileUi(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                telemetry("Account Connect Failed", mapOf("stage" to "complete", "errorClass" to e::class.java.name))
                 withContext(edt) {
                     if (id != attempt) return@withContext
                     login = LoginState.Error(compactLoginError(e))
@@ -212,14 +219,17 @@ internal class ProfileUi(
     private fun cancel() {
         attempt++
         login = LoginState.Idle
+        telemetry("Account Connect Failed", mapOf("stage" to "cancel", "errorClass" to "cancelled"))
         sync()
     }
 
     private fun logout() {
+        telemetry("Account Logout Clicked", mapOf("surface" to "settings"))
         cs.launch {
             try {
                 val ok = app.logout()
                 if (!ok) return@launch
+                telemetry("Account Logout Success", mapOf("surface" to "settings"))
                 withContext(edt) {
                     login = LoginState.Idle
                     applyState()
@@ -238,6 +248,7 @@ internal class ProfileUi(
         cs.launch {
             try {
                 val profile = app.setOrganization(org)
+                telemetry("Organization Switched", mapOf("target" to if (org == null) "personal" else "organization"))
                 val state = app.state.value
                 withContext(edt) {
                     update(profile ?: state.profile, state.status)
@@ -270,6 +281,10 @@ internal class ProfileUi(
                 }
             }
         }
+    }
+
+    private fun telemetry(event: String, props: Map<String, String>) {
+        Telemetry.send(event, props)
     }
 }
 

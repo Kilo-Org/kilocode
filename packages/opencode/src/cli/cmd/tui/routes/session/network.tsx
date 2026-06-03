@@ -1,18 +1,18 @@
 // kilocode_change - new file
 /** @jsxImportSource @opentui/solid */
 import { Show, createEffect, createSignal, onCleanup } from "solid-js"
-import { useKeyboard } from "@opentui/solid"
 import { useTheme } from "../../context/theme"
 import { SplitBorder } from "../../component/border"
 import { useSDK } from "../../context/sdk"
 import { useDialog } from "../../ui/dialog"
 import type { SessionNetworkWait } from "@kilocode/sdk/v2"
-import { useKeybind } from "../../context/keybind"
+import { useTuiConfig } from "../../context/tui-config"
+import { useBindings } from "../../keymap"
 
 export function NetworkPrompt(props: { request: SessionNetworkWait }) {
   const sdk = useSDK()
   const { theme } = useTheme()
-  const keybind = useKeybind()
+  const config = useTuiConfig()
   const dialog = useDialog()
   const [countdown, setCountdown] = createSignal(10)
 
@@ -40,18 +40,14 @@ export function NetworkPrompt(props: { request: SessionNetworkWait }) {
     onCleanup(() => clearInterval(timer))
   })
 
-  useKeyboard((evt) => {
-    if (dialog.stack.length > 0) return
-    if (evt.name === "return" && props.request.restored) {
-      evt.preventDefault()
-      reply()
-      return
-    }
-    if (evt.name === "escape" || keybind.match("app_exit", evt)) {
-      evt.preventDefault()
-      reject()
-    }
-  })
+  useBindings(() => ({
+    enabled: dialog.stack.length === 0,
+    bindings: [
+      ...(props.request.restored ? [{ key: "return", desc: "Resume now", group: "Network", cmd: reply }] : []),
+      { key: "escape", desc: "Stop turn", group: "Network", cmd: reject },
+      ...config.keybinds.get("app.exit").map((binding) => ({ ...binding, cmd: reject })),
+    ],
+  }))
 
   return (
     <box

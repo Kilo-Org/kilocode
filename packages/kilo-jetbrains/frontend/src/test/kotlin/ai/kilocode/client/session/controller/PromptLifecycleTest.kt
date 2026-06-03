@@ -35,6 +35,15 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         }
     }
 
+    fun `test prompt records send intent telemetry`() {
+        prompted()
+
+        val event = appRpc.telemetry.single { it.event == "Conversation Send Clicked" }
+        assertEquals("user", event.properties["source"])
+        assertEquals("false", event.properties["hasExistingSession"])
+        assertEquals("short", event.properties["textLength"])
+    }
+
     fun `test PermissionAsked moves state to AwaitingPermission`() {
         val (m, _, _) = prompted()
 

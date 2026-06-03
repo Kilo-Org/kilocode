@@ -5,7 +5,6 @@ import { useSync } from "@tui/context/sync"
 import { createMemo, createResource, createSignal, onMount, type JSX } from "solid-js"
 import { Locale } from "@/util/locale"
 import { useProject } from "@tui/context/project"
-import { useKeybind } from "../context/keybind"
 import { useTheme } from "../context/theme"
 import { useSDK } from "../context/sdk"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -18,19 +17,20 @@ import path from "path" // kilocode_change
 import { errorMessage } from "@/util/error"
 import { DialogSessionDeleteFailed } from "./dialog-session-delete-failed"
 import { WorkspaceLabel } from "./workspace-label"
+import { useCommandShortcut } from "../keymap"
 
 export function DialogSessionList() {
   const dialog = useDialog()
   const route = useRoute()
   const sync = useSync()
   const project = useProject()
-  const keybind = useKeybind()
   const { theme } = useTheme()
   const sdk = useSDK()
   const toast = useToast()
   const [toDelete, setToDelete] = createSignal<string>()
   const [search, setSearch] = createDebouncedSignal("", 150)
   const [global, setGlobal] = createSignal(true) // kilocode_change - show all worktrees by default
+  const deleteHint = useCommandShortcut("session.delete")
 
   // kilocode_change start - always fetch from experimental endpoint (returns GlobalSession with worktree info)
   // TODO: extend /experimental/session to accept `scope`/`path` so this dialog can respect the
@@ -130,6 +130,7 @@ export function DialogSessionList() {
             dialog,
             sdk,
             sync,
+            project,
             toast,
             onSelect: (selection) => {
               void warp(selection)
@@ -141,16 +142,30 @@ export function DialogSessionList() {
     ))
   }
 
+  // kilocode_change - support local and global sessions
+  function orderByRecency(sessionsList: { id: string; parentID?: string; time: { updated: number } }[]) {
+    return sessionsList
+      .filter((x) => x.parentID === undefined)
+      .toSorted((a, b) => b.time.updated - a.time.updated)
+      .map((x) => x.id)
+  }
+
+  const [browseOrder] = createSignal<string[]>(orderByRecency(sync.data.session))
+
   const options = createMemo(() => {
     const today = new Date().toDateString()
     const all = global() // kilocode_change
-    return sessions()
-      .filter((x) => x.parentID === undefined)
-      .toSorted((a, b) => {
-        const updatedDay = new Date(b.time.updated).setHours(0, 0, 0, 0) - new Date(a.time.updated).setHours(0, 0, 0, 0)
-        if (updatedDay !== 0) return updatedDay
-        return b.time.created - a.time.created
-      })
+    const sessionMap = new Map(
+      sessions()
+        .filter((x) => x.parentID === undefined)
+        .map((x) => [x.id, x]),
+    )
+
+    const searchResult = searchResults()
+    const displayOrder = searchResult ? orderByRecency(searchResult) : browseOrder()
+    return displayOrder
+      .map((id) => sessionMap.get(id))
+      .filter((x) => x !== undefined)
       .map((x) => {
         const workspace = x.workspaceID ? project.workspace.get(x.workspaceID) : undefined
 
@@ -178,9 +193,9 @@ export function DialogSessionList() {
         }
         const isDeleting = toDelete() === x.id
         const status = sync.data.session_status?.[x.id]
-        const isWorking = status?.type === "busy"
+        const isWorking = status?.type === "busy" || status?.type === "retry"
         return {
-          title: isDeleting ? `Press ${keybind.print("session_delete")} again to confirm` : x.title,
+          title: isDeleting ? `Press ${deleteHint()} again to confirm` : x.title,
           description: all && x.worktreeName ? `(${x.worktreeName})` : undefined, // kilocode_change - worktree label
           bg: isDeleting ? theme.error : undefined,
           value: x.id,
@@ -212,9 +227,9 @@ export function DialogSessionList() {
         })
         dialog.clear()
       }}
-      keybind={[
+      actions={[
         {
-          keybind: keybind.all.session_delete?.[0],
+          command: "session.delete",
           title: "delete",
           onTrigger: async (option) => {
             if (toDelete() === option.value) {
@@ -262,7 +277,7 @@ export function DialogSessionList() {
           },
         },
         {
-          keybind: keybind.all.session_rename?.[0],
+          command: "session.rename",
           title: "rename", // kilocode_change
           // kilocode_change start
           onTrigger: async (option) => {
@@ -279,7 +294,7 @@ export function DialogSessionList() {
           },
         },
         {
-          keybind: { name: "a", ctrl: true, meta: false, shift: false, leader: false },
+          command: "session.scope.toggle",
           title: global() ? "current" : "all",
           onTrigger: async () => {
             setToDelete(undefined)
@@ -288,6 +303,9 @@ export function DialogSessionList() {
         },
         // kilocode_change end
       ]}
+      // kilocode_change start - preserve Ctrl+A worktree scope toggle with the upstream keymap engine
+      bindings={[{ key: "ctrl+a", cmd: "session.scope.toggle" }]}
+      // kilocode_change end
     />
   )
 }

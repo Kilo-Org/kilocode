@@ -4,6 +4,7 @@ import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.SessionDto
 import com.intellij.openapi.application.ApplicationManager
@@ -21,6 +22,7 @@ class HistoryController(
     open: (SessionRef) -> Unit = {},
     private val deleted: (String) -> Unit = {},
     private val gitUrlProvider: () -> String? = { resolveGitRemoteUrl(workspace.directory) },
+    private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
 ) {
     companion object {
         const val CLOUD_LIMIT = 50
@@ -70,6 +72,7 @@ class HistoryController(
                 val items = result.sessions.map(::localItem)
                 edt { local.replace(items) }
             } catch (e: Exception) {
+                capture("History Load Failed", mapOf("source" to "local", "errorClass" to e::class.java.name))
                 edt { local.fail(e.message ?: KiloBundle.message("history.error.local")) }
             }
         }
@@ -81,12 +84,33 @@ class HistoryController(
 
     fun loadMoreCloud() {
         if (cloud.cursor == null || cloud.loading) return
+        capture("History Cloud Load More Clicked")
         loadCloud(reset = false)
     }
 
     fun applyRepoOnly(value: Boolean) {
         updateRepoOnly(value)
+        capture("History Cloud Repo Filter Toggled", mapOf(
+            "enabled" to value.toString(),
+            "hasGitUrl" to (gitUrl != null).toString(),
+        ))
         edt { reloadCloud() }
+    }
+
+    fun requestDelete(count: Int) {
+        capture("History Session Delete Clicked", mapOf("count" to count.toString()))
+    }
+
+    fun cancelDelete(count: Int) {
+        capture("History Session Delete Cancelled", mapOf("count" to count.toString()))
+    }
+
+    fun requestRename() {
+        capture("History Session Rename Clicked")
+    }
+
+    fun cancelRename(reason: String) {
+        capture("History Session Rename Cancelled", mapOf("reason" to reason))
     }
 
     fun delete(item: LocalHistoryItem) {
@@ -103,6 +127,7 @@ class HistoryController(
                     edt {
                         deleting.remove(item.id)
                         local.remove(item.id)
+                        capture("History Session Deleted", mapOf("sessionId" to item.id))
                         deleted(item.id)
                     }
                 } catch (e: Exception) {
@@ -120,7 +145,10 @@ class HistoryController(
         cs.launch {
             try {
                 val updated = sessions.renameSession(item.id, dir, title)
-                edt { local.update(LocalHistoryItem(updated)) }
+                edt {
+                    local.update(LocalHistoryItem(updated))
+                    capture("History Session Renamed", mapOf("sessionId" to item.id))
+                }
             } catch (e: Exception) {
                 edt { local.fail(e.message ?: KiloBundle.message("history.error.local.rename")) }
             }
@@ -130,10 +158,12 @@ class HistoryController(
     fun deleting(item: LocalHistoryItem): Boolean = item.id in deleting
 
     fun open(item: LocalHistoryItem) {
+        capture("History Session Opened", mapOf("source" to "local"))
         edt { opener(SessionRef.Local(item.session)) }
     }
 
     fun open(item: CloudHistoryItem) {
+        capture("History Session Opened", mapOf("source" to "cloud"))
         edt { opener(SessionRef.Cloud(item.session)) }
     }
 
@@ -146,14 +176,25 @@ class HistoryController(
             try {
                 val result = sessions.cloudSessions(workspace.directory, cursor, CLOUD_LIMIT, filter)
                 val items = result.sessions.map(::cloudItem)
+                capture("History Cloud Page Loaded", mapOf(
+                    "reset" to reset.toString(),
+                    "count" to items.size.toString(),
+                    "hasNextCursor" to (result.nextCursor != null).toString(),
+                    "repoOnly" to (filter != null).toString(),
+                ))
                 edt {
                     if (reset) cloud.replace(items, result.nextCursor)
                     else cloud.append(items, result.nextCursor)
                 }
             } catch (e: Exception) {
+                capture("History Load Failed", mapOf("source" to "cloud", "errorClass" to e::class.java.name))
                 edt { cloud.fail(e.message ?: KiloBundle.message("history.error.cloud")) }
             }
         }
+    }
+
+    private fun capture(event: String, props: Map<String, String> = emptyMap()) {
+        telemetry(event, props)
     }
 
     /**

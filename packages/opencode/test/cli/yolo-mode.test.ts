@@ -133,7 +133,11 @@ describe("cli run auto-approve mode", () => {
           return { data: true }
         },
       },
+      path: {
+        get: async () => ({ data: { directory: process.cwd() } }),
+      },
       session: {
+        get: async () => ({ data: { id: "ses_test" } }),
         prompt: async () => {
           q.push(permission("ses_test"))
           return { data: undefined }
@@ -165,7 +169,11 @@ describe("cli run auto-approve mode", () => {
           return { data: true }
         },
       },
+      path: {
+        get: async () => ({ data: { directory: process.cwd() } }),
+      },
       session: {
+        get: async () => ({ data: { id: "ses_test" } }),
         prompt: async () => {
           q.push(permission("ses_test"))
           return { data: undefined }
@@ -197,7 +205,11 @@ describe("cli run auto-approve mode", () => {
           return { data: true }
         },
       },
+      path: {
+        get: async () => ({ data: { directory: process.cwd() } }),
+      },
       session: {
+        get: async () => ({ data: { id: "ses_test" } }),
         prompt: async () => {
           q.push(permission("ses_test"))
           return { data: undefined }

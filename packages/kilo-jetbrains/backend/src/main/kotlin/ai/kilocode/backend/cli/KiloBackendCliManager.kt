@@ -1,10 +1,10 @@
 package ai.kilocode.backend.cli
 
+import ai.kilocode.KiloPlugin
+import ai.kilocode.backend.dev.KiloDevMode
 import ai.kilocode.log.KiloLog
-import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.application.PathManager
-import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.system.CpuArch
 import kotlinx.coroutines.Dispatchers
@@ -130,6 +130,7 @@ class KiloBackendCliManager(
         put("KILO_ENABLE_QUESTION_TOOL", "true")
         put("KILO_PLATFORM", "jetbrains")
         put("KILO_APP_NAME", "kilo-code")
+        put("KILO_TELEMETRY_LEVEL", if (KiloDevMode.enabled()) "off" else "all")
         put("KILO_DISABLE_CLAUDE_CODE", "true")
         put("KILOCODE_FEATURE", "jetbrains-plugin")
         putIfAbsent("KILO_CONFIG_CONTENT", DEFAULT_CONFIG)
@@ -178,7 +179,12 @@ class KiloBackendCliManager(
 
             log.info("Starting CLI: ${cmd.joinToString(" ")}")
             log.info("CLI env: KILO_CLIENT=jetbrains KILO_PLATFORM=jetbrains KILO_APP_NAME=kilo-code")
-            val proc = builder.start()
+            val proc = try {
+                builder.start()
+            } catch (e: Exception) {
+                log.warn("CLI process failed to start: ${e.message}", e)
+                throw e
+            }
             log.info("CLI process started (pid=${proc.pid()})")
             process = proc
             install(proc)
@@ -212,6 +218,7 @@ class KiloBackendCliManager(
             val details = synchronized(stderr) { stderr.toString().trim() }
             process = null
             uninstall()
+            log.warn("CLI process exited with code $code before announcing a port: $details")
             CliServer.State.Error(
                 message = "CLI process exited with code $code before announcing a port",
                 details = details.ifEmpty { null },
@@ -288,8 +295,7 @@ class KiloBackendCliManager(
         }.onFailure { log.info("Could not read ApplicationInfo: ${it.message}") }
 
         runCatching {
-            val version = PluginManagerCore
-                .getPlugin(PluginId.getId("ai.kilocode"))?.version
+            val version = KiloPlugin.version()
             if (version != null) put("KILO_APP_VERSION", version)
         }.onFailure { log.info("Could not read plugin version: ${it.message}") }
 
