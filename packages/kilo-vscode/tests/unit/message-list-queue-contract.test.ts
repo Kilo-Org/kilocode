@@ -11,9 +11,13 @@ function virtualizer() {
   return source.slice(start, end)
 }
 
-describe("MessageList queued rendering", () => {
+describe("MessageList rendering", () => {
   it("marks only partitioned queued turns as queued", () => {
     expect(virtualizer()).not.toContain("queued=")
     expect(source).toMatch(/<For each=\{partition\(\)\.queued\}>[\s\S]*?<VscodeSessionTurn turn=\{turn\} queued \/>/)
+  })
+
+  it("disables automatic history expansion when configured", () => {
+    expect(source).toContain("config().auto_expand_history === false")
   })
 })

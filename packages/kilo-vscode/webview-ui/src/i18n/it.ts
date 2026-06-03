@@ -1305,6 +1305,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Comprimi automaticamente ragionamento",
   "settings.display.reasoningAutoCollapse.description":
     "Comprimi i blocchi di ragionamento dopo che l'agente ha finito di scriverli. Lascia disattivato per tenerli espansi finché non li comprimi manualmente.",
+  "settings.display.autoExpandHistory.title": "Espandi automaticamente la cronologia dei messaggi",
+  "settings.display.autoExpandHistory.description":
+    "Carica automaticamente i messaggi precedenti quando scorri verso l'alto",
   "settings.display.terminalCommand.title": "Blocchi comando terminale",
   "settings.display.terminalCommand.description": "Scegli se i blocchi comando terminale iniziano espansi o compressi.",
   "settings.display.terminalCommand.expanded": "Espansi",

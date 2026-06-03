@@ -182,54 +182,51 @@ function slimBash(state: Record<string, unknown>): Record<string, unknown> {
   return next
 }
 
-/** websearch: preserve only query/count metadata, strip results/output. */
+/** websearch: preserve provider metadata and cap rendered results. */
 function slimWebsearch(state: Record<string, unknown>): Record<string, unknown> {
-  const next = { ...state }
+  const next = slimOutput(state)
   const meta = state.metadata
   if (isObj(meta)) {
     const slim: Record<string, unknown> = {}
-    if (typeof meta.query === "string") slim.query = meta.query
-    if (typeof meta.count === "number") slim.count = meta.count
+    if (typeof meta.provider === "string") slim.provider = meta.provider
     next.metadata = slim
   }
   return next
 }
 
-/** webfetch: preserve only url/title from input, strip response content. */
+/** webfetch: preserve the requested URL and cap rendered response content. */
 function slimWebfetch(state: Record<string, unknown>): Record<string, unknown> {
-  const next = { ...state }
+  const next = slimOutput(state)
   const input = state.input
   if (isObj(input)) {
     const slim: Record<string, unknown> = {}
     if (typeof input.url === "string") slim.url = input.url
-    if (typeof input.title === "string") slim.title = input.title
     next.input = slim
   }
   return next
 }
 
-/** codesearch: preserve query/limit from input, strip results. */
+/** codesearch: preserve query/token count and cap rendered results. */
 function slimCodesearch(state: Record<string, unknown>): Record<string, unknown> {
-  const next = { ...state }
+  const next = slimOutput(state)
   const input = state.input
   if (isObj(input)) {
     const slim: Record<string, unknown> = {}
     if (typeof input.query === "string") slim.query = input.query
-    if (typeof input.limit === "number") slim.limit = input.limit
-    if (typeof input.type === "string") slim.type = input.type
+    if (typeof input.tokensNum === "number") slim.tokensNum = input.tokensNum
     next.input = slim
   }
   return next
 }
 
-/** task: preserve sessionId for sub-agent linking, strip heavy input/output. */
+/** task: preserve rendered labels and sessionId while capping sub-agent output. */
 function slimTask(state: Record<string, unknown>): Record<string, unknown> {
-  const next = { ...state }
+  const next = slimOutput(state)
   const input = state.input
   if (isObj(input)) {
     const slim: Record<string, unknown> = {}
+    if (typeof input.description === "string") slim.description = input.description
     if (typeof input.subagent_type === "string") slim.subagent_type = input.subagent_type
-    if (typeof input.prompt === "string") slim.prompt = input.prompt
     if (typeof input.sessionId === "string") slim.sessionId = input.sessionId
     next.input = slim
   }

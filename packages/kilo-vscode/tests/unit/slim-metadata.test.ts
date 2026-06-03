@@ -367,4 +367,72 @@ describe("slimPart", () => {
       expect(bytes(slimPart(heavy))).toBeLessThan(MAX_SLIM_BYTES)
     })
   })
+
+  // -----------------------------------------------------------------------
+  // websearch / webfetch / codesearch / task
+  // -----------------------------------------------------------------------
+  describe("web tools", () => {
+    it("caps websearch output and preserves provider metadata", () => {
+      const heavy = part("websearch", {
+        status: "completed",
+        input: { query: "renderer memory" },
+        output: BIG,
+        metadata: { provider: "exa", results: BIG },
+      })
+      const slim = slimPart(heavy) as Record<string, any>
+
+      expect(slim.state.output.length).toBeLessThan(BIG.length)
+      expect(slim.state.metadata).toEqual({ provider: "exa" })
+      expect(bytes(slim)).toBeLessThan(MAX_SLIM_BYTES)
+    })
+
+    it("caps webfetch output and preserves only the URL input", () => {
+      const heavy = part("webfetch", {
+        status: "completed",
+        input: { url: "https://example.com", format: "markdown" },
+        output: BIG,
+        metadata: {},
+      })
+      const slim = slimPart(heavy) as Record<string, any>
+
+      expect(slim.state.output.length).toBeLessThan(BIG.length)
+      expect(slim.state.input).toEqual({ url: "https://example.com" })
+      expect(bytes(slim)).toBeLessThan(MAX_SLIM_BYTES)
+    })
+
+    it("caps codesearch output and preserves query/token inputs", () => {
+      const heavy = part("codesearch", {
+        status: "completed",
+        input: { query: "SolidJS createMemo", tokensNum: 5000, extra: BIG },
+        output: BIG,
+        metadata: {},
+      })
+      const slim = slimPart(heavy) as Record<string, any>
+
+      expect(slim.state.output.length).toBeLessThan(BIG.length)
+      expect(slim.state.input).toEqual({ query: "SolidJS createMemo", tokensNum: 5000 })
+      expect(bytes(slim)).toBeLessThan(MAX_SLIM_BYTES)
+    })
+  })
+
+  describe("task", () => {
+    it("caps output and preserves only rendered input plus child session metadata", () => {
+      const heavy = part("task", {
+        status: "completed",
+        input: { description: "Explore renderer", prompt: BIG, subagent_type: "explore", sessionId: "child" },
+        output: BIG,
+        metadata: { sessionId: "child", model: BIG },
+      })
+      const slim = slimPart(heavy) as Record<string, any>
+
+      expect(slim.state.output.length).toBeLessThan(BIG.length)
+      expect(slim.state.input).toEqual({
+        description: "Explore renderer",
+        subagent_type: "explore",
+        sessionId: "child",
+      })
+      expect(slim.state.metadata).toEqual({ sessionId: "child" })
+      expect(bytes(slim)).toBeLessThan(MAX_SLIM_BYTES)
+    })
+  })
 })

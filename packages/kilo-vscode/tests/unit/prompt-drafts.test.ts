@@ -1,10 +1,5 @@
 import { beforeEach, describe, it, expect } from "bun:test"
-import {
-  deleteDraftsForSession,
-  drafts,
-  imageDrafts,
-  reviewDrafts,
-} from "../../webview-ui/src/utils/draft-store"
+import { deleteDraftsForSession, drafts, imageDrafts, reviewDrafts } from "../../webview-ui/src/utils/draft-store"
 import { pendingDraftKey, scopeDraftKey, sessionDraftKey } from "../../webview-ui/src/utils/prompt-drafts"
 
 beforeEach(() => {

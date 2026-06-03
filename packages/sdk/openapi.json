@@ -17833,6 +17833,9 @@
           "auto_collapse_reasoning": {
             "type": "boolean"
           },
+          "auto_expand_history": {
+            "type": "boolean"
+          },
           "indexing": {
             "$ref": "#/components/schemas/IndexingConfig"
           },

@@ -17,6 +17,7 @@ import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
+import { useConfig } from "../../context/config"
 import { recentSessions } from "../../context/session-utils"
 import { formatRelativeDate } from "../../utils/date"
 import { FeedbackDialog } from "./FeedbackDialog"
@@ -68,6 +69,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const session = useSession()
   const server = useServer()
   const language = useLanguage()
+  const { config } = useConfig()
   const dialog = useDialog()
 
   const autoScroll = createAutoScroll({
@@ -143,7 +145,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   const maybeLoadOlder = () => {
     const el = scrollEl()
-    if (!el || el.scrollTop > 600) return
+    if (!el || el.scrollTop > 600 || config().auto_expand_history === false) return
     session.loadOlderMessages()
   }
 

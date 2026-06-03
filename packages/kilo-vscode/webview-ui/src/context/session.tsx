@@ -2198,6 +2198,7 @@ export const SessionProvider: ParentComponent = (props) => {
       const msgs = store.messages[oldID] ?? []
       const msgIds = msgs.map((m) => m.id)
       queueMicrotask(() => {
+        for (const mid of msgIds) stash.remove(mid)
         setStore(
           "messages",
           produce((messages) => {
@@ -2222,6 +2223,11 @@ export const SessionProvider: ParentComponent = (props) => {
           "agentSelections",
           produce((selections) => {
             delete selections[oldID]
+          }),
+        )
+        setPages(
+          produce((map) => {
+            delete map[oldID]
           }),
         )
         setLoaded((prev) => {

@@ -91,6 +91,11 @@ describe("session draft retention contract", () => {
     expect(input).toContain('import { drafts, imageDrafts, reviewDrafts } from "../../utils/draft-store"')
     expect(remove).toContain("deleteDraftsForSession(sessionID)")
   })
+
+  it("clears off-store transcript caches when switching sessions", () => {
+    expect(select).toContain("stash.remove(mid)")
+    expect(select).toContain("delete map[oldID]")
+  })
 })
 
 describe("ChatView prompt-block contract", () => {
