@@ -33,6 +33,14 @@ function part(tool: string, metadata: Record<string, unknown>): MessageV2.Part {
 }
 
 describe("session message metadata stripping", () => {
+  test("keeps bounded edit diffs for live renderers", () => {
+    const input = part("edit", { diff: patch })
+    const stripped = MessageV2.stripPartMetadata(input) as Extract<MessageV2.Part, { type: "tool" }>
+    const meta = stripped.state.status === "completed" ? stripped.state.metadata : {}
+
+    expect(meta.diff).toBe(patch)
+  })
+
   test("keeps bounded edit filediff patches and strips heavy fields", () => {
     const input = part("edit", {
       diff: blob(200_000),

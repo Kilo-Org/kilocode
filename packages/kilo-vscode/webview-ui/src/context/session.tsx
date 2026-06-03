@@ -1702,7 +1702,6 @@ export const SessionProvider: ParentComponent = (props) => {
       }
     })
     deleteDraftsForSession(sessionID)
-    window.dispatchEvent(new CustomEvent("sessionDeleted", { detail: { sessionID } }))
   }
 
   // Splices the message from the store and deletes its parts.
@@ -2231,7 +2230,6 @@ export const SessionProvider: ParentComponent = (props) => {
           next.delete(oldID)
           return next
         })
-        window.dispatchEvent(new CustomEvent("sessionDeleted", { detail: { sessionID: oldID } }))
       })
     }
     setCurrentSessionID(id)

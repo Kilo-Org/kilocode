@@ -17,6 +17,7 @@ import path from "node:path"
 const ROOT = path.resolve(import.meta.dir, "../..")
 const SESSION_FILE = path.join(ROOT, "webview-ui/src/context/session.tsx")
 const CHATVIEW_FILE = path.join(ROOT, "webview-ui/src/components/chat/ChatView.tsx")
+const PROMPT_INPUT_FILE = path.join(ROOT, "webview-ui/src/components/chat/PromptInput.tsx")
 const PROMPT_UTILS_FILE = path.join(ROOT, "webview-ui/src/components/chat/prompt-input-utils.ts")
 
 function readFile(filePath: string): string {
@@ -72,6 +73,23 @@ describe("sendCommand dismisses pending tool requests", () => {
 
   it("rejects questions before sending", () => {
     expect(body).toContain("rejectQuestion")
+  })
+})
+
+describe("session draft retention contract", () => {
+  const source = readFile(SESSION_FILE)
+  const input = readFile(PROMPT_INPUT_FILE)
+  const select = extractFunctionBody(source, "selectSession")
+  const remove = extractFunctionBody(source, "handleSessionDeleted")
+
+  it("does not treat a session switch as draft deletion", () => {
+    expect(select).not.toContain("deleteDraftsForSession")
+    expect(select).not.toContain("sessionDeleted")
+  })
+
+  it("cleans the draft maps only on real deletion", () => {
+    expect(input).toContain('import { drafts, imageDrafts, reviewDrafts } from "../../utils/draft-store"')
+    expect(remove).toContain("deleteDraftsForSession(sessionID)")
   })
 })
 

@@ -1,5 +1,35 @@
-import { describe, it, expect } from "bun:test"
+import { beforeEach, describe, it, expect } from "bun:test"
+import {
+  deleteDraftsForSession,
+  drafts,
+  imageDrafts,
+  reviewDrafts,
+} from "../../webview-ui/src/utils/draft-store"
 import { pendingDraftKey, scopeDraftKey, sessionDraftKey } from "../../webview-ui/src/utils/prompt-drafts"
+
+beforeEach(() => {
+  drafts.clear()
+  reviewDrafts.clear()
+  imageDrafts.clear()
+})
+
+describe("deleteDraftsForSession", () => {
+  it("clears deleted-session drafts without touching other sessions", () => {
+    drafts.set("prompt:default:session:a", "draft a")
+    drafts.set("prompt:default:pending:a", "pending a")
+    drafts.set("prompt:default:session:b", "draft b")
+    reviewDrafts.set("prompt:default:session:a", [])
+    imageDrafts.set("prompt:default:session:a", [])
+
+    deleteDraftsForSession("a")
+
+    expect(drafts.has("prompt:default:session:a")).toBe(false)
+    expect(drafts.has("prompt:default:pending:a")).toBe(false)
+    expect(drafts.get("prompt:default:session:b")).toBe("draft b")
+    expect(reviewDrafts.has("prompt:default:session:a")).toBe(false)
+    expect(imageDrafts.has("prompt:default:session:a")).toBe(false)
+  })
+})
 
 describe("sessionDraftKey", () => {
   it("prefixes session ids", () => {

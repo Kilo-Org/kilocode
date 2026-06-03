@@ -3,7 +3,7 @@
  * Text input with send/abort buttons, ghost-text autocomplete, and @ file mention support
  */
 
-import { createSignal, createEffect, on, For, Index, onMount, onCleanup, Show, untrack, type Component } from "solid-js"
+import { createSignal, createEffect, on, For, Index, onCleanup, Show, untrack, type Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -48,12 +48,8 @@ import {
 } from "./prompt-input-utils"
 import type { ReviewComment, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
+import { drafts, imageDrafts, reviewDrafts } from "../../utils/draft-store"
 import { pendingDraftKey, scopeDraftKey, sessionDraftKey } from "../../utils/prompt-drafts"
-
-// Per-session input text storage (module-level so it survives remounts)
-const drafts = new Map<string, string>()
-const reviewDrafts = new Map<string, ReviewComment[]>()
-const imageDrafts = new Map<string, ImageAttachment[]>()
 
 function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]): ReviewComment[] {
   if (incoming.length === 0) return current
@@ -75,27 +71,6 @@ interface PromptInputProps {
 }
 
 export const PromptInput: Component<PromptInputProps> = (props) => {
-  onMount(() => {
-    const handler = (e: Event) => {
-      const { sessionID } = (e as CustomEvent).detail as { sessionID: string }
-      const suffix = `:session:${sessionID}`
-      const pendingSuffix = `:pending:${sessionID}`
-      for (const map of [drafts, reviewDrafts, imageDrafts] as [
-        Map<string, string>,
-        Map<string, ReviewComment[]>,
-        Map<string, ImageAttachment[]>,
-      ]) {
-        for (const key of [...map.keys()]) {
-          if (typeof key === "string" && (key.endsWith(suffix) || key.endsWith(pendingSuffix))) {
-            map.delete(key)
-          }
-        }
-      }
-    }
-    window.addEventListener("sessionDeleted", handler)
-    onCleanup(() => window.removeEventListener("sessionDeleted", handler))
-  })
-
   const session = useSession()
   const server = useServer()
   const indexing = useIndexing()

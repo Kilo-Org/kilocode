@@ -681,9 +681,11 @@ export const cursor = {
 
 // kilocode_change start - strip bloated metadata fields from stored parts to prevent multi-MB payloads
 // This handles both legacy data that was stored with full file contents and keeps the API response lean.
-function stripPatch(value: unknown) {
+const MAX_INLINE_DIFF_SIZE = 64 * 1024
+
+function stripPatch(value: unknown, limit = Snapshot.MAX_DIFF_SIZE) {
   if (typeof value !== "string") return undefined
-  if (Buffer.byteLength(value) > Snapshot.MAX_DIFF_SIZE) return undefined
+  if (Buffer.byteLength(value) > limit) return undefined
   return value
 }
 
@@ -705,7 +707,8 @@ export function stripPartMetadata(part: Part): Part {
 
   if (meta.diff !== undefined) {
     const { diff, ...rest } = next
-    next = rest
+    const kept = stripPatch(diff, MAX_INLINE_DIFF_SIZE)
+    next = { ...rest, ...(kept ? { diff: kept } : {}) }
     changed = true
   }
 
