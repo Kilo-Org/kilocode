@@ -93,7 +93,7 @@ function getLegacyPlugins(mod: Record<string, unknown>) {
     seen.add(entry)
     const plugin = getServerPlugin(entry)
     // kilocode_change: skip named exports (e.g. constants from @kilocode/plugin-atomic-chat)
-    if (!plugin) continue
+    if (!plugin) continue // kilocode_change
     result.push(plugin)
   }
 

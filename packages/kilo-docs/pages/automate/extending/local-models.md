@@ -23,7 +23,7 @@ Kilo Code supports running language models locally on your own machine using [Ol
 
 Kilo Code supports several local model providers:
 
-1.  **[Atomic Chat](https://atomic.chat/):** Open-source local AI with TurboQuant-optimized inference, a built-in chat UI, and an OpenAI-compatible API on port **1337**. Kilo Code auto-detects a running Atomic Chat instance and discovers loaded models via the plugin.
+1.  **[Atomic Chat](https://atomic.chat/):** Open-source local AI with TurboQuant-optimized inference, a built-in chat UI, and an OpenAI-compatible API on port **1337**. Kilo Code can discover loaded models when you opt in (`provider.atomic-chat`, `atomicChat.autoDetect`, or an `atomic-chat/...` model).
 2.  **Ollama:** A popular open-source tool for running large language models locally. It supports a wide range of models.
 3.  **LM Studio:** A user-friendly desktop application that simplifies downloading and running local models, with a local server that emulates the OpenAI API.
 

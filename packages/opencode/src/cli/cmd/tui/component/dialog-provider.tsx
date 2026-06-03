@@ -10,12 +10,12 @@ import { useTheme } from "../context/theme"
 import { TextAttributes } from "@opentui/core"
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2"
 import { DialogModel } from "./dialog-model"
+import { useKeyboard } from "@opentui/solid"
 import * as Clipboard from "@tui/util/clipboard"
 import { useToast } from "../ui/toast"
 import { isConsoleManagedProvider } from "@tui/util/provider-origin"
 import * as KiloProvider from "@/kilocode/cli/cmd/tui/component/dialog-provider" // kilocode_change
 import { useConnected } from "./use-connected"
-import { useBindings } from "../keymap"
 
 const PROVIDER_PRIORITY: Record<string, number> = KiloProvider.PROVIDER_PRIORITY // kilocode_change
 
@@ -259,22 +259,14 @@ function AutoMethod(props: AutoMethodProps) {
   const sync = useSync()
   const toast = useToast()
 
-  useBindings(() => ({
-    bindings: [
-      {
-        key: "c",
-        desc: "Copy provider code",
-        group: "Dialog",
-        cmd: () => {
-          const code =
-            props.authorization.instructions.match(/[A-Z0-9]{4}-[A-Z0-9]{4,5}/)?.[0] ?? props.authorization.url
-          Clipboard.copy(code)
-            .then(() => toast.show({ message: "Copied to clipboard", variant: "info" }))
-            .catch(toast.error)
-        },
-      },
-    ],
-  }))
+  useKeyboard((evt) => {
+    if (evt.name === "c" && !evt.ctrl && !evt.meta) {
+      const code = props.authorization.instructions.match(/[A-Z0-9]{4}-[A-Z0-9]{4,5}/)?.[0] ?? props.authorization.url
+      Clipboard.copy(code)
+        .then(() => toast.show({ message: "Copied to clipboard", variant: "info" }))
+        .catch(toast.error)
+    }
+  })
 
   onMount(async () => {
     const result = await sdk.client.provider.oauth.callback({
@@ -377,7 +369,8 @@ function ApiMethod(props: ApiMethodProps) {
       placeholder={KiloProvider.apiKeyPlaceholder(props.providerID)} // kilocode_change
       description={KiloProvider.renderApiDescription(props.providerID, theme)} // kilocode_change
       onConfirm={async (value) => {
-        const key = value.trim() || (optionalApiKey ? KiloProvider.LOCAL_API_KEY_PLACEHOLDER : "") // kilocode_change
+        // kilocode_change start
+        const key = value.trim() || (optionalApiKey ? KiloProvider.LOCAL_API_KEY_PLACEHOLDER : "")
         if (!key) return
         await sdk.client.auth.set({
           providerID: props.providerID,
@@ -392,11 +385,12 @@ function ApiMethod(props: ApiMethodProps) {
         if (props.custom && !sync.data.provider_next.all.some((provider) => provider.id === props.providerID)) {
           toast.show({
             variant: "info",
-            message: `Saved credential for ${props.providerID}. Configure it in kilo.json to use it.`, // kilocode_change
+            message: `Saved credential for ${props.providerID}. Configure it in kilo.json to use it.`,
           })
           dialog.clear()
           return
         }
+        // kilocode_change end
         dialog.replace(() => <DialogModel providerID={props.providerID} />)
       }}
     />
