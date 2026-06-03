@@ -60,6 +60,7 @@ export interface SkillMarketplaceItem extends MarketplaceItemBase {
 }
 
 export type MarketplaceItem = McpMarketplaceItem | AgentMarketplaceItem | SkillMarketplaceItem
+export type MarketplaceItemRef = Pick<MarketplaceItem, "id" | "type">
 
 export interface InstallMarketplaceItemOptions {
   target?: "global" | "project"
