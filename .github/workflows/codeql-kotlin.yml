@@ -6,10 +6,12 @@ on:
     branches: ["main"]
     paths:
       - "packages/kilo-jetbrains/**"
+      - ".github/workflows/codeql-kotlin.yml"
   pull_request:
     branches: ["main"]
     paths:
       - "packages/kilo-jetbrains/**"
+      - ".github/workflows/codeql-kotlin.yml"
   schedule:
     - cron: "29 10 * * 5"
   workflow_dispatch:
