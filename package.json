@@ -37,7 +37,7 @@
       "ulid": "3.0.1",
       "@kobalte/core": "0.13.11",
       "@types/luxon": "3.7.1",
-      "@types/node": "24.12.2",
+      "@types/node": "24.12.4",
       "@types/semver": "7.7.1",
       "@tsconfig/node22": "22.0.2",
       "@tsconfig/bun": "1.0.9",
