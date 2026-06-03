@@ -16,7 +16,7 @@ import { clearInFlightCache, withInFlightCache } from "@/kilo-sessions/inflight-
 import type * as SDK from "@kilocode/sdk/v2"
 import z from "zod"
 import { Context, Effect, Layer, Schema, Stream } from "effect"
-import { KILO_API_BASE } from "@kilocode/kilo-gateway"
+import { getApiKey, getKiloOrganizationId, KILO_API_BASE } from "@kilocode/kilo-gateway"
 import { Config } from "@/config/config"
 import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
@@ -103,13 +103,13 @@ export namespace KiloSessions {
 
   async function kilocodeToken() {
     return withInFlightCache(tokenKey, ttlMs, async () => {
+      const key = getApiKey()
+      if (key) return key
+
       const auth = await runtime.runPromise((svc) => svc.get("kilo"))
       if (auth?.type === "api" && auth.key.length > 0) return auth.key
       if (auth?.type === "oauth" && auth.access.length > 0) return auth.access
       if (auth?.type === "wellknown" && auth.token.length > 0) return auth.token
-
-      const key = process.env["KILO_API_KEY"]?.trim()
-      if (key) return key
       return undefined
     })
   }
@@ -767,8 +767,8 @@ export namespace KiloSessions {
   }
 
   async function getOrgId(): Promise<Uuid | undefined> {
-    const env = process.env["KILO_ORG_ID"]
-    if (isUuid(env)) return env
+    const env = getKiloOrganizationId()
+    if (env) return isUuid(env) ? env : undefined
 
     return withInFlightCache(orgKey, ttlMs, async () => {
       const auth = await runtime.runPromise((svc) => svc.get("kilo"))

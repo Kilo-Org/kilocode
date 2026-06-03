@@ -350,7 +350,13 @@ describe("indexing startup degradation", () => {
     const key = process.env.KILO_API_KEY
     const org = process.env.KILO_ORG_ID
 
-    await using tmp = await tmpdir({ git: true, config: kilo })
+    await using tmp = await tmpdir({
+      git: true,
+      config: {
+        ...kilo,
+        indexing: { ...kilo.indexing, kilo: { apiKey: "config-token", organizationId: "org_config" } },
+      },
+    })
     process.env["KILO_CONFIG_DIR"] = tmp.path
     process.env.KILO_API_KEY = "kilo-token"
     process.env.KILO_ORG_ID = "org_123"

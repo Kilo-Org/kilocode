@@ -162,11 +162,9 @@ let cli = yargs(args) // kilocode_change
     )
 
     const kiloAuth = await AppRuntime.runPromise(Auth.Service.use((svc) => svc.get("kilo")))
-    if (kiloAuth) {
-      const token = kiloAuth.type === "oauth" ? kiloAuth.access : kiloAuth.key
-      const accountId = kiloAuth.type === "oauth" ? kiloAuth.accountId : undefined
-      await Telemetry.updateIdentity(token, accountId)
-    }
+    const token = kiloAuth?.type === "oauth" ? kiloAuth.access : kiloAuth?.type === "api" ? kiloAuth.key : null
+    const accountId = kiloAuth?.type === "oauth" ? kiloAuth.accountId : undefined
+    await Telemetry.updateIdentity(token, accountId)
 
     Telemetry.trackCliStart()
     // kilocode_change end

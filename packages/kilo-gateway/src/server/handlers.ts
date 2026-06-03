@@ -4,6 +4,7 @@ import { clearModesCache } from "../api/modes.js"
 import { HEADER_ORGANIZATIONID, KILO_API_BASE, KILO_CHAT_URL, KILO_EVENT_SERVICE_URL } from "../api/constants.js"
 import type { KilocodeBalance, KilocodeProfile } from "../types.js"
 import { buildKiloHeaders } from "../headers.js"
+import { getApiKey, getEnvApiKey, getKiloOrganizationId } from "../auth/token.js"
 
 export type KiloAuth =
   | { type: "api"; key: string }
@@ -52,25 +53,22 @@ export class GatewayError extends Error {
 }
 
 export function getToken(auth: KiloAuth | undefined) {
-  if (auth?.type === "api") return auth.key
-  if (auth?.type === "oauth") return auth.access
-  return undefined
+  const token =
+    auth?.type === "api" ? auth.key : auth?.type === "oauth" ? auth.access : auth?.type === "wellknown" ? auth.token : undefined
+  return getApiKey({ kilocodeToken: token })
 }
 
 export function getOrganizationId(auth: KiloAuth | undefined) {
-  if (auth?.type === "oauth") return auth.accountId
-  return undefined
+  return getKiloOrganizationId({ kilocodeOrganizationId: auth?.type === "oauth" ? auth.accountId : undefined })
 }
 
 export async function getProfile(auth: AuthStore): Promise<KiloProfileResult> {
   const info = await auth.get("kilo")
-  if (!info || info.type !== "oauth") throw new UnauthorizedError("Not authenticated with Kilo Gateway")
+  const token = getToken(info)
+  if (!token) throw new UnauthorizedError("Not authenticated with Kilo Gateway")
 
-  const currentOrgId = info.accountId ?? null
-  const [profile, balance] = await Promise.all([
-    fetchProfile(info.access),
-    fetchBalance(info.access, currentOrgId ?? undefined),
-  ])
+  const currentOrgId = getOrganizationId(info) ?? null
+  const [profile, balance] = await Promise.all([fetchProfile(token), fetchBalance(token, currentOrgId ?? undefined)])
   return { profile, balance, currentOrgId }
 }
 
@@ -125,7 +123,7 @@ export async function getClawChatCredentials(auth: AuthStore): Promise<ClawChatC
   const token = getToken(info)
   if (!token) throw new UnauthorizedError("No valid token found")
 
-  const expires = info?.type === "oauth" ? info.expires : Date.now() + 365 * 24 * 60 * 60 * 1000
+  const expires = !getEnvApiKey() && info?.type === "oauth" ? info.expires : Date.now() + 365 * 24 * 60 * 60 * 1000
   return {
     token,
     expiresAt: new Date(expires).toISOString(),

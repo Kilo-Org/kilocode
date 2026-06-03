@@ -1,5 +1,5 @@
 import * as path from "path"
-import { fetchProfile } from "@kilocode/kilo-gateway"
+import { fetchProfile, getApiKey, getKiloOrganizationId } from "@kilocode/kilo-gateway"
 
 export namespace Identity {
   let machineId: string | null = null
@@ -52,14 +52,15 @@ export namespace Identity {
   }
 
   export async function updateFromKiloAuth(token: string | null, accountId?: string): Promise<void> {
-    organizationId = accountId || null
+    const key = getApiKey({ kilocodeToken: token ?? undefined })
+    organizationId = getKiloOrganizationId({ kilocodeOrganizationId: accountId }) ?? null
 
-    if (!token) {
+    if (!key) {
       userId = null
       return
     }
 
-    const profile = await fetchProfile(token).catch(() => null)
+    const profile = await fetchProfile(key).catch(() => null)
     userId = profile?.email || null
   }
 

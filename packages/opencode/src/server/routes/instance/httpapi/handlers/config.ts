@@ -5,6 +5,11 @@ import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { InstanceHttpApi } from "../api"
 import { markInstanceForDisposal } from "../lifecycle"
+// kilocode_change start
+import { fetchDefaultModel } from "@kilocode/kilo-gateway"
+import { Auth } from "@/auth"
+import { ModelID, ProviderID } from "@/provider/schema"
+// kilocode_change end
 
 export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (handlers) =>
   Effect.gen(function* () {
@@ -29,9 +34,24 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
 
     const providers = Effect.fn("ConfigHttpApi.providers")(function* () {
       const providers = yield* providerSvc.list()
+      const defaults = Provider.defaultModelIDs(providers)
+
+      // kilocode_change start - Keep Kilo API default-model lookup aligned with the legacy Hono route.
+      if (providers[ProviderID.kilo]) {
+        const auth = yield* Auth.Service
+        const kiloAuth = yield* auth.get("kilo").pipe(Effect.orDie)
+        const token = kiloAuth?.type === "oauth" ? kiloAuth.access : kiloAuth?.key
+        const organizationId = kiloAuth?.type === "oauth" ? kiloAuth.accountId : undefined
+        const kiloApiDefault = yield* Effect.promise(() => fetchDefaultModel(token, organizationId))
+        if (kiloApiDefault && providers[ProviderID.kilo]?.models[kiloApiDefault]) {
+          defaults[ProviderID.kilo] = ModelID.make(kiloApiDefault)
+        }
+      }
+      // kilocode_change end
+
       return {
         providers: Object.values(providers),
-        default: Provider.defaultModelIDs(providers),
+        default: defaults, // kilocode_change
       }
     })
 

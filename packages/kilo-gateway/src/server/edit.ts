@@ -3,7 +3,7 @@ import { DIRECT_EDIT_ENV, extractFencedBody, resolveEditTarget, type EditTarget,
 import { buildMercuryEditPrompt, type MercuryEditContext } from "../edit-prompt.js"
 import type { DirectAutocompleteProviderID } from "../autocomplete.js"
 import { buildKiloHeaders } from "../headers.js"
-import type { AuthStore } from "./handlers.js"
+import { getOrganizationId, getToken, type AuthStore } from "./handlers.js"
 
 type Auth = Pick<AuthStore, "get">
 
@@ -18,11 +18,9 @@ async function getProviderKey(Auth: Auth, provider: DirectAutocompleteProviderID
 
 async function getProxyAuth(Auth: Auth) {
   const auth = await Auth.get("kilo")
-  const token = auth?.type === "api" ? auth.key : auth?.type === "oauth" ? auth.access : undefined
   return {
-    auth,
-    token,
-    organizationId: auth?.type === "oauth" ? auth.accountId : undefined,
+    token: getToken(auth),
+    organizationId: getOrganizationId(auth),
   }
 }
 
@@ -38,10 +36,6 @@ export function createEditHandler(Auth: Auth) {
     const proxy = target.provider === "kilo" ? await getProxyAuth(Auth) : undefined
     const token =
       target.provider === "kilo" ? proxy?.token : await getProviderKey(Auth, target.provider as DirectAutocompleteProviderID)
-
-    if (target.provider === "kilo" && !proxy?.auth) {
-      return c.json({ error: "Not authenticated with Kilo Gateway" }, 401 as any)
-    }
 
     if (!token) {
       return c.json({ error: `Missing ${target.provider} provider API key` }, 401 as any)

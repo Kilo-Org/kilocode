@@ -4,9 +4,9 @@ import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import type { KiloProvider, KiloProviderOptions } from "./types.js"
-import { getApiKey } from "./auth/token.js"
+import { getApiKey, getEnvOrganizationId, getKiloOrganizationId } from "./auth/token.js"
 import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
-import { ANONYMOUS_API_KEY } from "./api/constants.js"
+import { ANONYMOUS_API_KEY, HEADER_ORGANIZATIONID } from "./api/constants.js"
 import { resolveKiloOpenRouterBaseUrl } from "./api/url.js"
 import { sanitizeResponsesBody } from "./responses.js"
 
@@ -41,13 +41,16 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   const openRouterUrl = resolveKiloOpenRouterBaseUrl({ baseURL: options.baseURL, token: apiKey })
 
   // Merge custom headers with defaults
+  const organizationId = getKiloOrganizationId(options)
+  const override = getEnvOrganizationId()
   const customHeaders = {
     ...getDefaultHeaders(),
     ...buildKiloHeaders(undefined, {
-      kilocodeOrganizationId: options.kilocodeOrganizationId,
+      kilocodeOrganizationId: organizationId,
       kilocodeTesterWarningsDisabledUntil: undefined,
     }),
     ...options.headers,
+    ...(override ? { [HEADER_ORGANIZATIONID]: override } : {}),
   }
 
   // Create custom fetch wrapper to add dynamic headers
@@ -55,6 +58,8 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   const wrappedFetch = async (input: string | URL | Request, init?: RequestInit) => {
     const headers = buildRequestHeaders(customHeaders, init?.headers)
     const body = sanitizeResponsesBody(input, init?.body)
+
+    if (override) headers.set(HEADER_ORGANIZATIONID, override)
 
     // Add authorization if API key exists
     if (apiKey) {

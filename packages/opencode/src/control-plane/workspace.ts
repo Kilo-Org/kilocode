@@ -552,6 +552,8 @@ export const layer = Layer.effect(
 
       const env = {
         KILO_AUTH_CONTENT: JSON.stringify(yield* auth.all()),
+        KILO_API_KEY: process.env.KILO_API_KEY, // kilocode_change
+        KILO_ORG_ID: process.env.KILO_ORG_ID, // kilocode_change
         KILO_WORKSPACE_ID: config.id,
         KILO_EXPERIMENTAL_WORKSPACES: "true",
         OTEL_EXPORTER_OTLP_HEADERS: process.env.OTEL_EXPORTER_OTLP_HEADERS,

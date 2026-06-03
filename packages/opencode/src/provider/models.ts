@@ -12,7 +12,7 @@ import { withTransientReadRetry } from "@/util/effect-http-client"
 import { Config } from "../config/config"
 import { ModelCache } from "./model-cache"
 import { Auth } from "../auth"
-import { AI_SDK_PROVIDERS, KILO_OPENROUTER_BASE, PROMPTS } from "@kilocode/kilo-gateway"
+import { AI_SDK_PROVIDERS, getKiloOrganizationId, KILO_OPENROUTER_BASE, PROMPTS } from "@kilocode/kilo-gateway"
 // kilocode_change end
 
 // kilocode_change start
@@ -20,7 +20,7 @@ const normalizeKiloBaseURL = (baseURL: string | undefined, org: string | undefin
   if (!baseURL) return undefined
   const trimmed = baseURL.replace(/\/+$/, "")
   if (org) {
-    if (trimmed.includes("/api/organizations/")) return trimmed
+    if (trimmed.includes("/api/organizations/")) return trimmed.replace(/\/api\/organizations\/[^/]+/, `/api/organizations/${org}`)
     if (trimmed.endsWith("/api")) return `${trimmed}/organizations/${org}`
     return `${trimmed}/api/organizations/${org}`
   }
@@ -212,7 +212,9 @@ export const layer: Layer.Layer<Service, never, Requirements> = Layer.effect(
       if (kiloAllowed) {
         const opts = config.provider?.kilo?.options
         const info = yield* auth.get("kilo").pipe(Effect.catch(() => Effect.succeed(undefined)))
-        const org = opts?.kilocodeOrganizationId ?? (info?.type === "oauth" ? info.accountId : undefined)
+        const org = getKiloOrganizationId({
+          kilocodeOrganizationId: opts?.kilocodeOrganizationId ?? (info?.type === "oauth" ? info.accountId : undefined),
+        })
         const base = normalizeKiloBaseURL(opts?.baseURL, org)
         const fetch = {
           ...(base ? { baseURL: base } : {}),

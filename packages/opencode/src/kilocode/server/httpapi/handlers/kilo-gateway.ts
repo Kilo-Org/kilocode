@@ -3,6 +3,7 @@ import {
   fetchCloudSession,
   fetchCloudSessionForImport,
   getCloudSessions,
+  getEnvApiKey,
   getOrganizationId,
   getToken,
   importSessionToDb,
@@ -50,11 +51,12 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
 
     const profile = Effect.fn("KiloGatewayHttpApi.profile")(function* () {
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
-      if (!info || info.type !== "oauth") return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      const token = getToken(info)
+      if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
-      const currentOrgId = info.accountId ?? null
+      const currentOrgId = getOrganizationId(info) ?? null
       const [profile, balance] = yield* Effect.tryPromise({
-        try: () => Promise.all([fetchProfile(info.access), fetchBalance(info.access, currentOrgId ?? undefined)]),
+        try: () => Promise.all([fetchProfile(token), fetchBalance(token, currentOrgId ?? undefined)]),
         catch: () => new HttpApiError.BadRequest({}),
       })
       return { profile, balance, currentOrgId }
@@ -63,7 +65,6 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     const proxyAuth = Effect.fn("KiloGatewayHttpApi.proxyAuth")(function* () {
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
       return {
-        auth: info,
         token: getToken(info),
         organizationId: getOrganizationId(info),
       }
@@ -71,10 +72,11 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
 
     const modes = Effect.fn("KiloGatewayHttpApi.modes")(function* () {
       const info = yield* auth.get("kilo").pipe(Effect.catch(() => Effect.succeed(undefined)))
-      if (!info || info.type !== "oauth" || !info.access || !info.accountId) return { modes: [] }
+      const token = getToken(info)
+      const org = getOrganizationId(info)
+      if (!token || !org) return { modes: [] }
 
-      const org = info.accountId
-      return yield* Effect.promise(() => fetchOrganizationModes(info.access, org)).pipe(
+      return yield* Effect.promise(() => fetchOrganizationModes(token, org)).pipe(
         Effect.map((modes) => ({ modes })),
         Effect.catch(() => Effect.succeed({ modes: [] })),
       )
@@ -90,7 +92,6 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
         return DIRECT_FIM_ENV[target.provider].map((key) => process.env[key]).find(Boolean)
       })
 
-      if (target.provider === "kilo" && !info?.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
       if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
       const request = yield* HttpServerRequest.HttpServerRequest
@@ -158,10 +159,12 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
 
     const edit = Effect.fn("KiloGatewayHttpApi.edit")(function* (ctx: { payload: typeof EditBody.Type }) {
       const target = resolveEditTarget(ctx.payload.provider, ctx.payload.model)
-      if (target.provider !== "inception") {
+      if (target.provider === "kilo" && !target.url) {
         return yield* Effect.fail(new HttpApiError.BadRequest({}))
       }
+      const info = target.provider === "kilo" ? yield* proxyAuth() : undefined
       const token = yield* Effect.gen(function* () {
+        if (target.provider === "kilo") return info?.token
         const item = yield* auth.get(target.provider).pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
         if (item?.type === "api") return item.key
         return DIRECT_EDIT_ENV[target.provider].map((key) => process.env[key]).find(Boolean)
@@ -193,6 +196,10 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
+            ...(target.provider === "kilo"
+              ? buildKiloHeaders(undefined, { kilocodeOrganizationId: info?.organizationId })
+              : {}),
+            ...(target.provider === "kilo" ? { [HEADER_FEATURE]: "autocomplete" } : {}),
           },
           signal,
           body: JSON.stringify({
@@ -236,7 +243,6 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       payload: typeof AudioTranscriptionsBody.Type
     }) {
       const info = yield* proxyAuth()
-      if (!info.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
       if (!info.token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
       const request = yield* HttpServerRequest.HttpServerRequest
@@ -325,7 +331,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       const token = getToken(info)
       if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
-      const expires = info?.type === "oauth" ? info.expires : Date.now() + 365 * 24 * 60 * 60 * 1000
+      const expires = !getEnvApiKey() && info?.type === "oauth" ? info.expires : Date.now() + 365 * 24 * 60 * 60 * 1000
       return {
         token,
         expiresAt: new Date(expires).toISOString(),

@@ -1,4 +1,5 @@
 import type { IndexingConfig } from "@kilocode/kilo-indexing/config"
+import { getApiKey, getKiloOrganizationId } from "@kilocode/kilo-gateway"
 
 type Auth = unknown
 
@@ -78,23 +79,27 @@ export function resolveKiloIndexingAuth(input: {
   const providerOptions = record(provider.options)
   const providerConfig = record(options.options)
   const kilo = record(record(config.indexing).kilo)
-  const env = input.env ?? process.env
+  const env = input.env ?? { KILO_API_KEY: process.env.KILO_API_KEY, KILO_ORG_ID: process.env.KILO_ORG_ID }
 
   return {
-    apiKey:
-      text(kilo.apiKey) ??
-      text(providerConfig.apiKey) ??
-      token(input.auth) ??
-      text(provider.key) ??
-      text(providerOptions.kilocodeToken) ??
-      text(env.KILO_API_KEY),
+    apiKey: getApiKey({
+      env,
+      kilocodeToken:
+        text(kilo.apiKey) ??
+        text(providerConfig.apiKey) ??
+        token(input.auth) ??
+        text(provider.key) ??
+        text(providerOptions.kilocodeToken),
+    }),
     baseUrl: text(kilo.baseUrl) ?? text(providerConfig.baseURL) ?? text(providerConfig.baseUrl),
-    organizationId:
-      text(kilo.organizationId) ??
-      text(providerConfig.kilocodeOrganizationId) ??
-      org(input.auth) ??
-      text(providerOptions.kilocodeOrganizationId) ??
-      text(env.KILO_ORG_ID),
+    organizationId: getKiloOrganizationId({
+      env,
+      kilocodeOrganizationId:
+        text(kilo.organizationId) ??
+        text(providerConfig.kilocodeOrganizationId) ??
+        org(input.auth) ??
+        text(providerOptions.kilocodeOrganizationId),
+    }),
   }
 }
 

@@ -567,9 +567,13 @@ Anyone with access to your Kilo account can send messages to your computer when 
 
 The CLI supports overriding config values with environment variables. The supported environment variables are:
 
-- `KILO_PROVIDER`: Override the active provider ID
-- For `kilocode` provider: `KILOCODE_<FIELD_NAME>` (e.g., `KILOCODE_MODEL` → `kilocodeModel`)
-- For other providers: `KILO_<FIELD_NAME>` (e.g., `KILO_API_KEY` → `apiKey`)
+- `KILO_PROVIDER`: Override the active provider ID.
+- For the `kilocode` provider: `KILOCODE_<FIELD_NAME>` (for example, `KILOCODE_MODEL` → `kilocodeModel`).
+- For other providers: `KILO_<FIELD_NAME>` (for example, `KILO_API_KEY` → `apiKey`).
+
+`KILO_API_KEY` is the highest-priority Kilo Gateway credential. When it is set to a non-empty value, it overrides credentials saved by `kilo auth login` and tokens configured under `provider.kilo.options`. The override applies consistently to the TUI, `kilo run`, `kilo serve`, VS Code clients connected to that server, model discovery, indexing, session synchronization, sharing, and remote mode.
+
+`KILO_ORG_ID` is the corresponding highest-priority organization override. Account-management actions such as changing the saved `/teams` selection still require an interactive OAuth login.
 
 ## Using the CLI in an Organization
 

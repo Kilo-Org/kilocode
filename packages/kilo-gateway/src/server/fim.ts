@@ -2,7 +2,7 @@ import { HEADER_FEATURE } from "../api/constants.js"
 import type { DirectAutocompleteProviderID } from "../autocomplete.js"
 import { DIRECT_FIM_ENV, requestMistralFim, resolveFimTarget, type FimTarget } from "../fim.js"
 import { buildKiloHeaders } from "../headers.js"
-import type { AuthStore } from "./handlers.js"
+import { getOrganizationId, getToken, type AuthStore } from "./handlers.js"
 
 type Auth = Pick<AuthStore, "get">
 
@@ -10,11 +10,9 @@ const FIM_TIMEOUT_MS = 30_000
 
 async function getProxyAuth(Auth: Auth) {
   const auth = await Auth.get("kilo")
-  const token = auth?.type === "api" ? auth.key : auth?.type === "oauth" ? auth.access : undefined
   return {
-    auth,
-    token,
-    organizationId: auth?.type === "oauth" ? auth.accountId : undefined,
+    token: getToken(auth),
+    organizationId: getOrganizationId(auth),
   }
 }
 
@@ -72,10 +70,6 @@ export function createFimHandler(Auth: Auth) {
     const fimTemperature = temperature ?? 0.2
     const proxy = target.provider === "kilo" ? await getProxyAuth(Auth) : undefined
     const token = target.provider === "kilo" ? proxy?.token : await getProviderKey(Auth, target.provider)
-
-    if (target.provider === "kilo" && !proxy?.auth) {
-      return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
-    }
 
     if (target.provider === "kilo" && !token) {
       return c.json({ error: "No valid token found" }, 401)

@@ -81,6 +81,40 @@ it.live("model fetch without OAuth accountId does not set kilocodeOrganizationId
   }),
 )
 
+it.live("environment overrides win over caller and stored model fetch options", () => {
+  const key = process.env.KILO_API_KEY
+  const org = process.env.KILO_ORG_ID
+  process.env.KILO_API_KEY = " env-token "
+  process.env.KILO_ORG_ID = " org-env "
+
+  return Effect.gen(function* () {
+    const captured = yield* Ref.make<Options | undefined>(undefined)
+    const info = new Auth.Oauth({
+      type: "oauth",
+      access: "oauth-token",
+      refresh: "refresh-token",
+      expires: Date.now() + 3600000,
+      accountId: "org-oauth",
+    })
+    yield* ModelCache.Service.use((cache) =>
+      cache.fetch("kilo", { kilocodeToken: "caller-token", kilocodeOrganizationId: "org-caller" }),
+    ).pipe(Effect.provide(layer(info, captured)))
+    expect(yield* Ref.get(captured)).toMatchObject({
+      kilocodeToken: "env-token",
+      kilocodeOrganizationId: "org-env",
+    })
+  }).pipe(
+    Effect.ensuring(
+      Effect.sync(() => {
+        if (key === undefined) delete process.env.KILO_API_KEY
+        else process.env.KILO_API_KEY = key
+        if (org === undefined) delete process.env.KILO_ORG_ID
+        else process.env.KILO_ORG_ID = org
+      }),
+    ),
+  )
+})
+
 it.live("ModelCache.clear removes cached entry so next fetch hits the network", () =>
   Effect.gen(function* () {
     const captured = yield* Ref.make<Options | undefined>(undefined)

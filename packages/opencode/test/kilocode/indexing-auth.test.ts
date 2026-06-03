@@ -34,6 +34,26 @@ describe("Kilo indexing auth resolution", () => {
     })
   })
 
+  test("prefers environment overrides over every other Kilo auth source", () => {
+    const auth = resolveKiloIndexingAuth({
+      config: {
+        indexing: { kilo: { apiKey: "idx-token", organizationId: "org_idx" } },
+        provider: { kilo: { options: { apiKey: "cfg-token", kilocodeOrganizationId: "org_cfg" } } },
+      },
+      provider: { key: "provider-key", options: { kilocodeToken: "provider-token", kilocodeOrganizationId: "org_provider" } },
+      auth: { type: "oauth", access: "oauth-token", accountId: "org_oauth" },
+      env: { KILO_API_KEY: " env-token ", KILO_ORG_ID: " org_env " },
+    })
+
+    expect(auth).toEqual({ apiKey: "env-token", organizationId: "org_env" })
+  })
+
+  test("ignores empty environment overrides", () => {
+    expect(resolveKiloIndexingAuth({ config: { indexing: { kilo: { apiKey: "idx-token" } } }, env: { KILO_API_KEY: " " } }).apiKey).toBe(
+      "idx-token",
+    )
+  })
+
   test("defaults to Kilo only when no provider or other embedder config is present", () => {
     const auth = { apiKey: "kilo-token" }
 

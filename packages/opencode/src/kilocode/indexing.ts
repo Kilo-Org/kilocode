@@ -73,9 +73,9 @@ function enrichKilo(input: ReturnType<typeof toIndexingConfigInput>, auth: KiloI
 
   return {
     ...input,
-    kiloApiKey: input.kiloApiKey ?? auth.apiKey,
+    kiloApiKey: auth.apiKey ?? input.kiloApiKey,
     kiloBaseUrl: input.kiloBaseUrl ?? auth.baseUrl,
-    kiloOrganizationId: input.kiloOrganizationId ?? auth.organizationId,
+    kiloOrganizationId: auth.organizationId ?? input.kiloOrganizationId,
   }
 }
 

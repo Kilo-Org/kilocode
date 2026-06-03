@@ -1,9 +1,9 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import type { Provider as SDK } from "ai"
 import type { KiloProviderOptions } from "./types.js"
-import { getApiKey } from "./auth/token.js"
+import { getApiKey, getEnvApiKey, getEnvOrganizationId, getKiloOrganizationId } from "./auth/token.js"
 import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
-import { ANONYMOUS_API_KEY } from "./api/constants.js"
+import { ANONYMOUS_API_KEY, HEADER_ORGANIZATIONID } from "./api/constants.js"
 import { resolveKiloOpenRouterBaseUrl } from "./api/url.js"
 import { buildRequestHeaders } from "./provider.js"
 
@@ -17,20 +17,23 @@ export function createKiloDebug(options: KiloProviderOptions = {}): SDK {
   // Get API key from options or environment
   const apiKey = getApiKey(options)
   console.log("🔑 [KILO DEBUG] API Key extracted:")
-  console.log("  - Source:", options.kilocodeToken ? "kilocodeToken" : options.apiKey ? "apiKey" : "none")
+  console.log("  - Source:", getEnvApiKey() ? "KILO_API_KEY" : options.kilocodeToken ? "kilocodeToken" : options.apiKey ? "apiKey" : "none")
   console.log("  - Value:", apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 8)}` : "MISSING!")
 
   const openRouterUrl = resolveKiloOpenRouterBaseUrl({ baseURL: options.baseURL, token: apiKey })
   console.log("🔗 [KILO DEBUG] OpenRouter URL:", openRouterUrl)
 
   // Merge custom headers with defaults
+  const organizationId = getKiloOrganizationId(options)
+  const override = getEnvOrganizationId()
   const customHeaders = {
     ...getDefaultHeaders(),
     ...buildKiloHeaders(undefined, {
-      kilocodeOrganizationId: options.kilocodeOrganizationId,
+      kilocodeOrganizationId: organizationId,
       kilocodeTesterWarningsDisabledUntil: undefined,
     }),
     ...options.headers,
+    ...(override ? { [HEADER_ORGANIZATIONID]: override } : {}),
   }
   console.log("📝 [KILO DEBUG] Custom headers:", JSON.stringify(customHeaders, null, 2))
 
@@ -42,6 +45,8 @@ export function createKiloDebug(options: KiloProviderOptions = {}): SDK {
     console.log("  - Method:", init?.method || "GET")
 
     const headers = buildRequestHeaders(customHeaders, init?.headers)
+
+    if (override) headers.set(HEADER_ORGANIZATIONID, override)
 
     // Add authorization if API key exists
     if (apiKey) {

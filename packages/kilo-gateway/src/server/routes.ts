@@ -20,7 +20,9 @@ import {
   getClawStatus,
   getCloudSessions,
   getNotifications,
+  getOrganizationId,
   getProfile,
+  getToken,
   setOrganization,
 } from "./handlers.js"
 
@@ -152,11 +154,9 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
 
   const getProxyAuth = async () => {
     const auth = await Auth.get("kilo")
-    const token = auth?.type === "api" ? auth.key : auth?.type === "oauth" ? auth.access : undefined
     return {
-      auth,
-      token,
-      organizationId: auth?.type === "oauth" ? auth.accountId : undefined,
+      token: getToken(auth),
+      organizationId: getOrganizationId(auth),
     }
   }
 
@@ -282,20 +282,11 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
       }),
       async (c: any) => {
         const auth = await Auth.get("kilo")
+        const token = getToken(auth)
+        if (!token) return c.json({ modes: [] })
 
-        if (!auth || auth.type !== "oauth") {
-          return c.json({ modes: [] })
-        }
-
-        const token = auth.access
-        if (!token) {
-          return c.json({ modes: [] })
-        }
-
-        const orgId = auth.accountId
-        if (!orgId) {
-          return c.json({ modes: [] })
-        }
+        const orgId = getOrganizationId(auth)
+        if (!orgId) return c.json({ modes: [] })
 
         try {
           const modes = await fetchOrganizationModes(token, orgId)
@@ -407,8 +398,6 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
       ),
       async (c: any) => {
         const proxy = await getProxyAuth()
-        if (!proxy.auth) return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
-
         if (!proxy.token) return c.json({ error: "No valid token found" }, 401)
 
         const body = c.req.valid("json")
@@ -479,8 +468,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
       async (c: any) => {
         try {
           const auth = await Auth.get("kilo")
-          if (!auth) return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
-          const token = auth.type === "api" ? auth.key : auth.type === "oauth" ? auth.access : undefined
+          const token = getToken(auth)
           if (!token) return c.json({ error: "No valid token found" }, 401)
 
           const { id } = c.req.valid("param")
@@ -522,8 +510,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           const { sessionId } = c.req.valid("json")
 
           const auth = await Auth.get("kilo")
-          if (!auth) return c.json({ error: "Not authenticated with Kilo" }, 401)
-          const token = auth.type === "api" ? auth.key : auth.type === "oauth" ? auth.access : undefined
+          const token = getToken(auth)
           if (!token) return c.json({ error: "No valid token found" }, 401)
 
           const fetched = await fetchCloudSessionForImport(token, sessionId)
@@ -694,9 +681,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
       async (c: any) => {
         try {
           const auth = await Auth.get("kilo")
-          if (!auth) return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
-
-          const token = auth.type === "api" ? auth.key : auth.type === "oauth" ? auth.access : undefined
+          const token = getToken(auth)
           if (!token) return c.json({ error: "No valid token found" }, 401)
 
           return c.json(await getCloudSessions(token, c.req.valid("query")))

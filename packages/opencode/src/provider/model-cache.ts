@@ -1,5 +1,5 @@
 // kilocode_change - new file
-import { fetchKiloModels, type KiloModelsResult } from "@kilocode/kilo-gateway"
+import { fetchKiloModels, getApiKey, getKiloOrganizationId, type KiloModelsResult } from "@kilocode/kilo-gateway"
 import { Context, Duration, Effect, Layer, Schema } from "effect"
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import { Config } from "../config/config"
@@ -129,8 +129,10 @@ export const layer: Layer.Layer<
           if (info.accountId) options.kilocodeOrganizationId = info.accountId
         }
 
-        if (process.env.KILO_API_KEY) options.kilocodeToken = process.env.KILO_API_KEY
-        if (process.env.KILO_ORG_ID) options.kilocodeOrganizationId = process.env.KILO_ORG_ID
+        options.kilocodeToken = getApiKey({ kilocodeToken: options.kilocodeToken })
+        options.kilocodeOrganizationId = getKiloOrganizationId({
+          kilocodeOrganizationId: options.kilocodeOrganizationId,
+        })
         log.debug("auth options resolved", {
           providerID,
           hasToken: !!options.kilocodeToken,
@@ -173,7 +175,13 @@ export const layer: Layer.Layer<
           }),
         ),
       )
-      return yield* fetchModels(providerID, { ...resolved, ...options })
+      const merged = { ...resolved, ...options }
+      if (providerID !== "kilo") return yield* fetchModels(providerID, merged)
+      return yield* fetchModels(providerID, {
+        ...merged,
+        kilocodeToken: getApiKey({ kilocodeToken: merged.kilocodeToken, apiKey: merged.apiKey }),
+        kilocodeOrganizationId: getKiloOrganizationId({ kilocodeOrganizationId: merged.kilocodeOrganizationId }),
+      })
     })
 
     const key = (providerID: string, options?: Options) => {

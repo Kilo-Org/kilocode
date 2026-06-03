@@ -15,7 +15,7 @@ import { ConfigError } from "../../config/error"
 import type { Config } from "../../config/config"
 import type { ConfigAgent } from "../../config/agent"
 import { ModesMigrator } from "../modes-migrator"
-import { fetchOrganizationModes } from "@kilocode/kilo-gateway"
+import { fetchOrganizationModes, getApiKey, getKiloOrganizationId } from "@kilocode/kilo-gateway"
 import { RulesMigrator } from "../rules-migrator"
 import { WorkflowsMigrator } from "../workflows-migrator"
 import { McpMigrator } from "../mcp-migrator"
@@ -304,8 +304,10 @@ export namespace KilocodeConfig {
     const warnings: Config.Warning[] = []
     try {
       const kilo = auth["kilo"]
-      if (kilo?.type === "oauth" && kilo.access && kilo.accountId) {
-        const modes = await fetchOrganizationModes(kilo.access, kilo.accountId)
+      const token = getApiKey({ kilocodeToken: kilo?.type === "oauth" ? kilo.access : undefined })
+      const org = getKiloOrganizationId({ kilocodeOrganizationId: kilo?.type === "oauth" ? kilo.accountId : undefined })
+      if (token && org) {
+        const modes = await fetchOrganizationModes(token, org)
         if (modes.length > 0) {
           const agents = ModesMigrator.convertOrganizationModes(modes)
           log.debug("loaded organization custom modes", {

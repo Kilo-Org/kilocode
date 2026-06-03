@@ -48,6 +48,8 @@ const it = testEffect(testServerLayer)
 const originalWorkspacesFlag = Flag.KILO_EXPERIMENTAL_WORKSPACES
 const originalEnv = {
   KILO_AUTH_CONTENT: process.env.KILO_AUTH_CONTENT,
+  KILO_API_KEY: process.env.KILO_API_KEY, // kilocode_change
+  KILO_ORG_ID: process.env.KILO_ORG_ID, // kilocode_change
   OTEL_EXPORTER_OTLP_HEADERS: process.env.OTEL_EXPORTER_OTLP_HEADERS,
   OTEL_EXPORTER_OTLP_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
   OTEL_RESOURCE_ATTRIBUTES: process.env.OTEL_RESOURCE_ATTRIBUTES,
@@ -407,6 +409,8 @@ describe("workspace-old CRUD", () => {
   test("create configures, persists, creates, starts local sync, and passes environment", async () => {
     await withInstance(async (dir) => {
       process.env.KILO_AUTH_CONTENT = JSON.stringify({ test: { type: "api", key: "secret" } })
+      process.env.KILO_API_KEY = "env-token" // kilocode_change
+      process.env.KILO_ORG_ID = "env-org" // kilocode_change
       process.env.OTEL_EXPORTER_OTLP_HEADERS = "authorization=otel"
       process.env.OTEL_EXPORTER_OTLP_ENDPOINT = "https://otel.test"
       process.env.OTEL_RESOURCE_ATTRIBUTES = "service.name=opencode-test"
@@ -459,6 +463,8 @@ describe("workspace-old CRUD", () => {
       expect(JSON.parse(recorded.calls.create[0].env.KILO_AUTH_CONTENT ?? "{}")).toEqual({
         test: { type: "api", key: "secret" },
       })
+      expect(recorded.calls.create[0].env.KILO_API_KEY).toBe("env-token") // kilocode_change
+      expect(recorded.calls.create[0].env.KILO_ORG_ID).toBe("env-org") // kilocode_change
       expect(recorded.calls.create[0].env.KILO_WORKSPACE_ID).toBe(workspaceID)
       expect(recorded.calls.create[0].env.KILO_EXPERIMENTAL_WORKSPACES).toBe("true")
       expect(recorded.calls.create[0].env.OTEL_EXPORTER_OTLP_HEADERS).toBe("authorization=otel")

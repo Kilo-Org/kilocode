@@ -102,10 +102,11 @@ export namespace Telemetry {
     await Identity.updateFromKiloAuth(token, accountId)
 
     const email = Identity.getUserId()
+    const org = Identity.getOrganizationId()
     if (email && previousId && email !== previousId) {
       // Identify the user with their email and properties
       Client.identify(email, {
-        ...(accountId && { kilocodeOrganizationId: accountId }),
+        ...(org && { kilocodeOrganizationId: org }),
         appName: props.appName,
         appVersion: props.appVersion,
         platform: props.platform,

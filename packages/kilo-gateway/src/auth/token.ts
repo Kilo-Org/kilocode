@@ -26,9 +26,42 @@ export function isValidKilocodeToken(token: string): boolean {
   return token.length > 10
 }
 
+type KiloEnv = {
+  KILO_API_KEY?: string
+  KILO_ORG_ID?: string
+}
+
+function text(value: string | undefined) {
+  const trimmed = value?.trim()
+  return trimmed || undefined
+}
+
+function runtime(env?: KiloEnv): KiloEnv {
+  if (env) return env
+  if (typeof process === "undefined") return {}
+  return {
+    KILO_API_KEY: process.env.KILO_API_KEY,
+    KILO_ORG_ID: process.env.KILO_ORG_ID,
+  }
+}
+
+export function getEnvApiKey(env?: KiloEnv) {
+  return text(runtime(env).KILO_API_KEY)
+}
+
+export function getEnvOrganizationId(env?: KiloEnv) {
+  return text(runtime(env).KILO_ORG_ID)
+}
+
 /**
- * Get API key from options or environment
+ * Get the Kilo API key, preferring the explicit environment override.
  */
-export function getApiKey(options: { kilocodeToken?: string; apiKey?: string }): string | undefined {
-  return options.kilocodeToken ?? options.apiKey
+export function getApiKey(options: { kilocodeToken?: string; apiKey?: string; env?: KiloEnv } = {}): string | undefined {
+  return getEnvApiKey(options.env) ?? text(options.kilocodeToken) ?? text(options.apiKey)
+}
+
+export function getKiloOrganizationId(
+  options: { kilocodeOrganizationId?: string; env?: KiloEnv } = {},
+): string | undefined {
+  return getEnvOrganizationId(options.env) ?? text(options.kilocodeOrganizationId)
 }

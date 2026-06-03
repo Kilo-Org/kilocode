@@ -1,5 +1,7 @@
 ---
 "@kilocode/cli": patch
+"@kilocode/kilo-gateway": patch
+"@kilocode/kilo-telemetry": patch
 ---
 
-Sync CLI sessions to Kilo session history when authenticated with `KILO_API_KEY`, and make it override other options when present.
+Make `KILO_API_KEY` consistently override stored Kilo credentials and configured provider tokens across CLI modes, including inference, indexing, server-backed clients, and session synchronization.
