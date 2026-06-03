@@ -12,10 +12,7 @@ import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import { useVSCode } from "../../context/vscode"
 import { createProviderAction } from "../../utils/provider-action"
-import {
-  isLocalProviderOptionalApiKey,
-  LOCAL_PROVIDER_API_KEY_PLACEHOLDER,
-} from "../../utils/local-providers"
+import { isLocalProviderOptionalApiKey, LOCAL_PROVIDER_API_KEY_PLACEHOLDER } from "../../utils/local-providers"
 
 interface ProviderConnectDialogProps {
   providerID: string
@@ -269,9 +266,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
           <For each={methods()}>
             {(item, index) => (
               <Button variant="secondary" size="large" onClick={() => selectMethod(index())}>
-                {item.type === "api"
-                  ? item.label || language.t("provider.connect.method.apiKey")
-                  : item.label}
+                {item.type === "api" ? item.label || language.t("provider.connect.method.apiKey") : item.label}
               </Button>
             )}
           </For>

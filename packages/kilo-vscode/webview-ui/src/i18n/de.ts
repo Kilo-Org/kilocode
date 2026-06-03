@@ -140,11 +140,11 @@ export const dict = {
   "provider.connect.status.failed": "Autorisierung fehlgeschlagen: {{error}}",
   "provider.connect.apiKey.description":
     "Geben Sie Ihren {{provider}} API-Schlüssel ein, um Ihr Konto zu verbinden und {{provider}} Modelle in Kilo zu nutzen.",
-    "provider.connect.apiKey.description.local":
+  "provider.connect.apiKey.description.local":
     "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
   "provider.connect.atomicChat.description":
     "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
-"provider.connect.apiKey.label": "{{provider}} API-Schlüssel",
+  "provider.connect.apiKey.label": "{{provider}} API-Schlüssel",
   "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API-Schlüssel",
   "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",

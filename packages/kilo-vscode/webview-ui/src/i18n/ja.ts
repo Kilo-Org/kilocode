@@ -136,11 +136,11 @@ export const dict = {
   "provider.connect.status.failed": "認証に失敗しました: {{error}}",
   "provider.connect.apiKey.description":
     "{{provider}}のAPIキーを入力してアカウントを接続し、Kiloで{{provider}}モデルを使用します。",
-    "provider.connect.apiKey.description.local":
+  "provider.connect.apiKey.description.local":
     "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
   "provider.connect.atomicChat.description":
     "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
-"provider.connect.apiKey.label": "{{provider}} APIキー",
+  "provider.connect.apiKey.label": "{{provider}} APIキー",
   "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "APIキー",
   "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
