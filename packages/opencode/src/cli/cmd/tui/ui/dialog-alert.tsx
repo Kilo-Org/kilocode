@@ -1,7 +1,8 @@
 import { TextAttributes } from "@opentui/core"
 import { useTheme } from "../context/theme"
 import { useDialog, type DialogContext } from "./dialog"
-import { useKeyboard } from "@opentui/solid"
+import { useBindings } from "../keymap"
+import { For } from "solid-js" // kilocode_change
 
 export type DialogAlertProps = {
   title: string
@@ -13,14 +14,19 @@ export function DialogAlert(props: DialogAlertProps) {
   const dialog = useDialog()
   const { theme } = useTheme()
 
-  useKeyboard((evt) => {
-    if (evt.name === "return") {
-      evt.preventDefault()
-      evt.stopPropagation()
-      props.onConfirm?.()
-      dialog.clear()
-    }
-  })
+  useBindings(() => ({
+    bindings: [
+      {
+        key: "return",
+        desc: "Confirm alert",
+        group: "Dialog",
+        cmd: () => {
+          props.onConfirm?.()
+          dialog.clear()
+        },
+      },
+    ],
+  }))
   return (
     <box paddingLeft={2} paddingRight={2} gap={1}>
       <box flexDirection="row" justifyContent="space-between">
@@ -31,9 +37,13 @@ export function DialogAlert(props: DialogAlertProps) {
           esc
         </text>
       </box>
-      <box paddingBottom={1}>
-        <text fg={theme.textMuted}>{props.message}</text>
+      {/* kilocode_change start - render escaped and literal newlines on separate rows */}
+      <box paddingBottom={1} flexDirection="column">
+        <For each={props.message.replace(/\\n/g, "\n").split("\n")}>
+          {(line) => <text fg={theme.textMuted}>{line}</text>}
+        </For>
       </box>
+      {/* kilocode_change end */}
       <box flexDirection="row" justifyContent="flex-end" paddingBottom={1}>
         <box
           paddingLeft={3}

@@ -7,7 +7,7 @@ import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
 type SSEEventListener = (event: Event, directory?: string) => void
-type StateListener = (state: ConnectionState) => void
+type StateListener = (state: ConnectionState, error?: Error) => void
 type SSEEventFilter = (event: Event, directory?: string) => boolean
 type NotificationDismissListener = (notificationId: string) => void
 type LanguageChangeListener = (locale: string) => void
@@ -65,6 +65,7 @@ export class KiloConnectionService {
   private info: { port: number } | null = null
   private config: ServerConfig | null = null
   private state: ConnectionState = "disconnected"
+  private error: Error | null = null
   private connectPromise: Promise<void> | null = null
   private healthPollTimer: ReturnType<typeof setInterval> | null = null
   private remoteService: import("../RemoteStatusService").RemoteStatusService | null = null
@@ -93,7 +94,7 @@ export class KiloConnectionService {
   private unsubRemote: (() => void) | null = null
 
   constructor(context: vscode.ExtensionContext) {
-    this.serverManager = new ServerManager(context)
+    this.serverManager = new ServerManager(context, (code) => this.handleServerExit(code))
   }
 
   /**
@@ -115,7 +116,7 @@ export class KiloConnectionService {
       await this.connectPromise
     } catch (error) {
       // If doConnect() fails before SSE can emit a state transition, avoid leaving consumers stuck in "connecting".
-      this.setState("error")
+      this.setState("error", this.error ?? (error instanceof Error ? error : new Error(String(error))))
       throw error
     } finally {
       this.connectPromise = null
@@ -126,7 +127,7 @@ export class KiloConnectionService {
    * Get the shared SDK client. Throws if not connected.
    */
   getClient(): KiloClient {
-    if (!this.client) {
+    if (!this.client || this.state !== "connected") {
       throw new Error("Not connected — call connect() first")
     }
     return this.client
@@ -139,11 +140,11 @@ export class KiloConnectionService {
    * or if the connection fails.
    */
   async getClientAsync(dir?: string): Promise<KiloClient> {
-    if (this.client) return this.client
+    if (this.client && this.state === "connected") return this.client
     const root = dir ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
     if (!root) throw new Error("No workspace folder open")
     await this.connect(root)
-    return this.client!
+    return this.getClient()
   }
 
   /**
@@ -187,6 +188,13 @@ export class KiloConnectionService {
    */
   getConnectionState(): ConnectionState {
     return this.state
+  }
+
+  /**
+   * Last connection error. Cleared when a new connection attempt begins.
+   */
+  getConnectionError(): Error | null {
+    return this.error
   }
 
   /**
@@ -503,12 +511,14 @@ export class KiloConnectionService {
     this.config = null
     this.info = null
     this.state = "disconnected"
+    this.error = null
   }
 
-  private setState(state: ConnectionState): void {
+  private setState(state: ConnectionState, error?: Error): void {
     this.state = state
+    this.error = state === "error" ? (error ?? this.error) : null
     for (const listener of this.stateListeners) {
-      listener(state)
+      listener(state, this.error ?? undefined)
     }
   }
 
@@ -558,10 +568,28 @@ export class KiloConnectionService {
     }
   }
 
-  private async doConnect(workspaceDir: string): Promise<void> {
-    // If we reconnect, ensure the previous SSE connection is cleaned up first.
+  private resetConnection(): void {
     this.stopHealthPoll()
-    this.sseClient?.dispose()
+    const sse = this.sseClient
+    this.sseClient = null
+    sse?.disconnect()
+    this.client = null
+    this.config = null
+    this.info = null
+  }
+
+  private handleServerExit(code: number | null): void {
+    console.warn("[Kilo New] ConnectionService: CLI background process exited:", code)
+    this.resetConnection()
+    this.setState(
+      "error",
+      new Error(`CLI background process exited with code ${code ?? "unknown"}. Retry to reconnect.`),
+    )
+  }
+
+  private async doConnect(workspaceDir: string): Promise<void> {
+    // Never expose a stale SDK client while its replacement server is starting.
+    this.resetConnection()
 
     const server = await this.serverManager.getServer()
     this.info = { port: server.port }
@@ -575,14 +603,15 @@ export class KiloConnectionService {
 
     // Create SDK client with Basic Auth header
     const authHeader = `Basic ${Buffer.from(`kilo:${server.password}`).toString("base64")}`
-    this.client = createKiloClient({
+    const client = createKiloClient({
       baseUrl: config.baseUrl,
       headers: {
         Authorization: authHeader,
       },
     })
-
-    this.sseClient = new SdkSSEAdapter(this.client)
+    const sse = new SdkSSEAdapter(client)
+    this.client = client
+    this.sseClient = sse
 
     // Wait until SSE yields its first server event before resolving connect().
     // Initial stream failures are handled by the adapter reconnect loop.
@@ -596,18 +625,29 @@ export class KiloConnectionService {
     let didConnect = false
 
     // Wire SSE events → broadcast to all registered listeners
-    this.sseClient.onEvent((event, directory) => {
+    sse.onEvent((event, directory) => {
+      if (this.sseClient !== sse) return
       for (const listener of this.eventListeners) {
         listener(event, directory)
       }
     })
 
-    this.sseClient.onError(() => {
-      this.setState("error")
+    sse.onError((error) => {
+      if (this.sseClient !== sse) return
+      this.setState("error", error)
     })
 
     // Wire SSE state → broadcast to all registered state listeners
-    this.sseClient.onStateChange((sseState) => {
+    sse.onStateChange((sseState) => {
+      if (this.sseClient !== sse) {
+        if (!didConnect && sseState === "disconnected") {
+          rejectConnected?.(new Error(`SSE connection ended in state: ${sseState}`))
+          resolveConnected = null
+          rejectConnected = null
+        }
+        return
+      }
+
       this.setState(sseState)
 
       if (sseState === "connected") {
@@ -625,7 +665,7 @@ export class KiloConnectionService {
       }
     })
 
-    this.sseClient.connect()
+    sse.connect()
 
     await connectedPromise
 

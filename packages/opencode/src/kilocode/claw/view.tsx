@@ -1,5 +1,3 @@
-// kilocode_change - new file
-
 /**
  * KiloClaw full-screen view
  *
@@ -9,11 +7,10 @@
  */
 
 import { createMemo } from "solid-js"
-import { useKeyboard } from "@opentui/solid"
 import { useRoute } from "@tui/context/route"
 import { useSDK } from "@tui/context/sdk"
 import { useDialog } from "@tui/ui/dialog"
-import { useCommandDialog, type CommandOption } from "@tui/component/dialog-command"
+import { useBindings } from "@tui/keymap"
 import { Toast } from "@tui/ui/toast"
 import { ClawChat } from "./chat"
 import { ClawSidebar } from "./sidebar"
@@ -24,7 +21,6 @@ import type { ClawSlashOption } from "./autocomplete"
 export function KiloClawView() {
   const route = useRoute()
   const sdk = useSDK()
-  const command = useCommandDialog()
   const dialog = useDialog()
 
   // Poll instance status
@@ -45,74 +41,75 @@ export function KiloClawView() {
   // matching the web UI's fallback chain.
   const botName = createMemo(() => status()?.botName ?? "KiloClaw")
 
-  // Register escape to navigate back
-  useKeyboard((evt) => {
-    if (evt.name === "escape") {
-      route.back()
-      evt.preventDefault()
-      evt.stopPropagation()
-    }
-  })
-
   // KiloClaw view commands — single source of truth for both the global
   // command palette / keybinds and the in-chat slash autocomplete.
   // The list is reactive on `chat.connected` so the slash menu only
   // exposes `/new` and `/conversations` once we're connected to kilo-chat.
-  const kiloCommands = createMemo<CommandOption[]>(() => {
+  const kiloCommands = createMemo(() => {
     const ready = chat.connected()
     return [
       {
-        value: "kiloclaw.back",
+        name: "kiloclaw.back",
         title: "Back",
-        description: "Return to the previous view",
+        desc: "Return to the previous view",
         category: "KiloClaw",
-        slash: { name: "back" },
-        keybind: "escape" as any,
-        onSelect: () => {
+        namespace: "palette",
+        slashName: "back",
+        slashAliases: [] as string[],
+        enabled: true,
+        hidden: false,
+        run: () => {
           dialog.clear()
           route.back()
         },
       },
       {
-        value: "kiloclaw.new",
+        name: "kiloclaw.new",
         title: "New conversation",
-        description: "Start a new KiloClaw conversation",
+        desc: "Start a new KiloClaw conversation",
         category: "KiloClaw",
-        slash: { name: "new" },
+        namespace: "palette",
+        slashName: "new",
+        slashAliases: [] as string[],
         enabled: ready,
         hidden: !ready,
-        onSelect: async () => {
+        run: async () => {
           dialog.clear()
           await chat.newConversation()
         },
       },
       {
-        value: "kiloclaw.conversations",
+        name: "kiloclaw.conversations",
         title: "Conversations",
-        description: "Browse, rename, and delete KiloClaw conversations",
+        desc: "Browse, rename, and delete KiloClaw conversations",
         category: "KiloClaw",
-        slash: { name: "conversations", aliases: ["chats"] },
+        namespace: "palette",
+        slashName: "conversations",
+        slashAliases: ["chats"],
         enabled: ready,
         hidden: !ready,
-        onSelect: () => {
+        run: () => {
           dialog.replace(() => <DialogConversationList chat={chat} />)
         },
       },
     ]
   })
 
-  command.register(() => kiloCommands())
+  useBindings(() => ({
+    commands: kiloCommands(),
+    bindings: [{ key: "escape", cmd: "kiloclaw.back" }],
+  }))
 
   // Slashes for the in-chat autocomplete — derived from the same list so
   // renames flow through automatically. We pad displays to a common width
   // so the descriptions line up like in the main prompt's autocomplete.
   const clawSlashes = createMemo<ClawSlashOption[]>(() => {
-    const visible = kiloCommands().filter((c) => c.enabled !== false && !c.hidden && c.slash)
+    const visible = kiloCommands().filter((c) => c.enabled !== false && !c.hidden && c.slashName)
     const items = visible.map((c) => ({
-      display: "/" + c.slash!.name,
-      description: c.description ?? c.title,
-      aliases: c.slash!.aliases?.map((a) => "/" + a),
-      onSelect: () => c.onSelect?.(dialog),
+      display: "/" + c.slashName,
+      description: c.desc ?? c.title,
+      aliases: c.slashAliases?.map((alias) => "/" + alias),
+      onSelect: () => c.run(),
     }))
     const max = items.reduce((m, i) => Math.max(m, i.display.length), 0)
     if (!max) return items

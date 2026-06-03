@@ -41,12 +41,10 @@ Important current facts:
 
 - there is no `packages/core` or `packages/cli` workspace yet
 - there is no `packages/server` workspace yet on this branch
-- the main host server is still Hono-based in `src/server/server.ts`
-- current OpenAPI generation is Hono-based through `Server.openapi()` and `cli/cmd/generate.ts`
+- the main host server uses Effect `HttpApi` in `src/server/server.ts`
+- current OpenAPI generation uses Effect `HttpApi` through `Server.openapi()` and `cli/cmd/generate.ts`
 - the Effect runtime and app layer are centralized in `src/effect/app-runtime.ts` and `src/effect/run-service.ts`
-- there are already bridged Effect `HttpApi` slices under `src/server/routes/instance/httpapi/*`
-- those slices are mounted into the Hono server behind `KILO_EXPERIMENTAL_HTTPAPI`
-- the bridge currently covers `question`, `permission`, `provider`, partial `config`, and partial `project` routes
+- Effect `HttpApi` routes live under `src/server/routes/instance/httpapi/*`
 
 This means the package split should start from an extraction path, not from greenfield package ownership.
 

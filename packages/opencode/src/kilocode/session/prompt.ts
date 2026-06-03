@@ -6,15 +6,18 @@ import { Cause, Effect, Exit } from "effect"
 import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
+import { Agent } from "@/agent/agent"
 import { Instance } from "@/project/instance"
 import type { SessionStatus } from "@/session/status"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { PlanFollowup } from "@/kilocode/plan-followup"
 import { KiloSession } from "@/kilocode/session"
+import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { Permission } from "@/permission"
 import { environmentDetails, type EditorContext } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
+import { InstanceState } from "@/effect/instance-state"
 import PROMPT_PLAN from "@/session/prompt/plan.txt"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
@@ -47,7 +50,8 @@ export namespace KiloSessionPrompt {
     abort: AbortSignal
   }): Promise<"continue" | "break"> {
     if (!shouldAskPlanFollowup({ messages: input.messages, abort: input.abort })) return "break"
-    const action = await PlanFollowup.ask({
+    const ask = InstanceState.bind(PlanFollowup.ask)
+    const action = await ask({
       sessionID: input.sessionID,
       messages: input.messages,
       abort: input.abort,
@@ -119,6 +123,25 @@ export namespace KiloSessionPrompt {
     if (!modes.includes(input.agent.name)) return
     return input.agent.permission
   }
+
+  export const askPermission = Effect.fn("KiloSessionPrompt.askPermission")(function* (input: {
+    permission: Pick<Permission.Interface, "ask">
+    agents: Pick<Agent.Interface, "get">
+    sessions: Pick<Session.Interface, "get">
+    agent: Agent.Info
+    session: Session.Info
+    request: Omit<Permission.AskInput, "ruleset" | "hardRuleset">
+  }) {
+    const agent = (yield* input.agents.get(input.agent.name)) ?? input.agent
+    const session = yield* input.sessions
+      .get(input.session.id)
+      .pipe(Effect.catchCause(() => Effect.succeed(input.session)))
+    yield* input.permission.ask({
+      ...input.request,
+      ruleset: Permission.merge(agent.permission, guardPermissions({ agent, session })),
+      hardRuleset: hardPermissions({ agent }),
+    })
+  })
 
   /**
    * Mutable cache for environment details, keyed by user message ID
@@ -207,23 +230,33 @@ export namespace KiloSessionPrompt {
    * Ensures the plan file directory exists and tells the agent where to write.
    */
   export async function insertPlanReminders(input: {
-    agent: { name: string }
+    agent: { name: string; options?: Record<string, unknown> }
     session: Session.Info
     userMessage: MessageV2.WithParts
   }) {
-    if (input.agent.name !== "plan") return
-    const plan = Session.plan(input.session, Instance.current)
+    if (input.agent.name !== "plan" && input.agent.options?.id !== "architect") return
+    // keep bind(): inside Effect.promise the project context is lost, so Instance.current throws without it
+    const plan = InstanceState.bind(() => Session.plan(input.session, Instance.current))()
     const exists = await Filesystem.exists(plan)
     if (!exists) await ensurePlanDir(path.dirname(plan))
     const info = exists
       ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.`
       : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`
+    const limit =
+      input.agent.name === "plan"
+        ? "This is the ONLY file you are allowed to write to or edit."
+        : "Use this as the main plan file to write or edit. Do not write or edit other files unless the user explicitly asks and your permissions allow it."
+    const planFile = `## Plan File\n${info}\n${limit}`
+    const text =
+      input.agent.name === "plan"
+        ? `${PROMPT_PLAN}\n\n${planFile}`
+        : `<system-reminder>\n${planFile} Before writing this file or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the main plan to this exact file, then call plan_exit with no arguments. If the user explicitly asks for additional plan files and your permissions allow it, you may create them and reference them from the main plan.\n</system-reminder>`
     input.userMessage.parts.push({
       id: PartID.ascending(),
       messageID: input.userMessage.info.id,
       sessionID: input.userMessage.info.sessionID,
       type: "text",
-      text: PROMPT_PLAN + `\n\n## Plan File\n${info}\nThis is the ONLY file you are allowed to write to or edit.`,
+      text,
       synthetic: true,
     })
   }
@@ -310,14 +343,18 @@ export namespace KiloSessionPrompt {
    * `msgs`, `msgs` is returned unchanged.
    */
   export function trimBeforeLastSummary(msgs: MessageV2.WithParts[]): MessageV2.WithParts[] {
-    for (let i = msgs.length - 1; i >= 0; i--) {
-      const info = msgs[i].info
-      if (info.role !== "assistant" || info.summary !== true || !info.finish || info.error) continue
-      const parentIdx = msgs.findIndex((m) => m.info.id === info.parentID)
-      if (parentIdx === -1) return msgs
-      return parentIdx === 0 ? msgs : msgs.slice(parentIdx)
-    }
-    return msgs
+    const summary = msgs.reduce<{ msg: MessageV2.WithParts; index: number } | undefined>((latest, msg, index) => {
+      const info = msg.info
+      if (info.role !== "assistant" || info.summary !== true || !info.finish || info.error) return latest
+      if (!latest || KiloSessionMessageOrder.compare(msg, latest.msg, index, latest.index) > 0) return { msg, index }
+      return latest
+    }, undefined)
+    if (!summary) return msgs
+    const info = summary.msg.info
+    if (info.role !== "assistant") return msgs
+    const parentIdx = msgs.findIndex((m) => m.info.id === info.parentID)
+    if (parentIdx === -1) return msgs
+    return parentIdx === 0 ? msgs : msgs.slice(parentIdx)
   }
 
   /**

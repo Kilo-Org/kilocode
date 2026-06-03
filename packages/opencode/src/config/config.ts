@@ -41,6 +41,7 @@ import { ConfigPaths } from "./paths"
 import { ConfigPermission } from "./permission"
 import { ConfigPlugin } from "./plugin"
 import { ConfigProvider } from "./provider"
+import { ConfigReference } from "./reference"
 import { ConfigServer } from "./server"
 import { ConfigSkills } from "./skills"
 import { ConfigVariable } from "./variable"
@@ -49,6 +50,7 @@ import { Npm } from "@opencode-ai/core/npm"
 import { ZodOverride } from "@/util/effect-zod"
 import { KilocodeConfig } from "../kilocode/config/config"
 import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins"
+import { KilocodeGlobalConfigStamp } from "@/kilocode/config/global-stamp"
 import {
   IndexingConfig as KiloIndexingConfig,
   IndexingSchema as KiloIndexingSchema,
@@ -153,12 +155,12 @@ const Percent = Schema.Number.check(Schema.isGreaterThan(0), Schema.isLessThanOr
 const IndexingRef = KiloIndexingSchema.annotate({ [ZodOverride]: KiloIndexingConfig }) // kilocode_change
 
 // The Effect Schema is the canonical source of truth. The `.zod` compatibility
-// surface is derived so existing Hono validators keep working without a parallel
-// Zod definition.
+// surface is derived from it so plugin/SDK Zod consumers keep working without
+// a parallel hand-maintained Zod definition.
 //
 // The walker emits `z.object({...})` which is non-strict by default. Config
 // historically uses `.strict()` (additionalProperties: false in openapi.json),
-// so layer that on after derivation.  Re-apply the Config ref afterward
+// so layer that on after derivation. Re-apply the Config ref afterward
 // since `.strict()` strips the walker's meta annotation.
 export const Info = Schema.Struct({
   $schema: Schema.optional(Schema.String).annotate({
@@ -175,6 +177,9 @@ export const Info = Schema.Struct({
     description: "Command configuration, see https://opencode.ai/docs/commands",
   }),
   skills: Schema.optional(ConfigSkills.Info).annotate({ description: "Additional skill folder paths" }),
+  reference: Schema.optional(ConfigReference.Info).annotate({
+    description: "Named git or local directory references that can be @ mentioned as Scout-backed subagents",
+  }),
   watcher: Schema.optional(
     Schema.Struct({
       ignore: Schema.optional(Schema.mutable(Schema.Array(Schema.String))),
@@ -263,6 +268,7 @@ export const Info = Schema.Struct({
         // subagent
         general: Schema.optional(ConfigAgent.Info),
         explore: Schema.optional(ConfigAgent.Info),
+        scout: Schema.optional(ConfigAgent.Info),
         // specialized
         title: Schema.optional(ConfigAgent.Info),
         summary: Schema.optional(ConfigAgent.Info),
@@ -531,8 +537,11 @@ export const layer = Layer.effect(
       return yield* loadConfig(text, { path: filepath })
     })
 
+    let globalStamp = "" // kilocode_change
+
     const loadGlobal = Effect.fnUntraced(function* () {
       yield* Effect.promise(() => KilocodeConfig.migrateBashPermission()) // kilocode_change
+      globalStamp = yield* KilocodeGlobalConfigStamp.read(fs, Global.Path.config) // kilocode_change
       let result: Info = {}
       result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "config.json")))
       // kilocode_change start
@@ -571,7 +580,18 @@ export const layer = Layer.effect(
       Duration.infinity,
     )
 
+    // kilocode_change start - detect global config edits made by other Kilo processes
+    const refreshGlobal = Effect.fnUntraced(function* () {
+      const stamp = yield* KilocodeGlobalConfigStamp.read(fs, Global.Path.config)
+      if (!globalStamp || stamp === globalStamp) return false
+      globalStamp = stamp
+      yield* invalidateGlobal
+      return true
+    })
+    // kilocode_change end
+
     const getGlobal = Effect.fn("Config.getGlobal")(function* () {
+      yield* refreshGlobal() // kilocode_change
       return yield* cachedGlobal
     })
 
@@ -990,6 +1010,11 @@ export const layer = Layer.effect(
     )
 
     const get = Effect.fn("Config.get")(function* () {
+      // kilocode_change start - reload instance config when global config changed elsewhere
+      if (yield* refreshGlobal()) {
+        yield* InstanceState.invalidate(state).pipe(Effect.catchCause(() => Effect.void))
+      }
+      // kilocode_change end
       return yield* InstanceState.use(state, (s) => s.config)
     })
 
@@ -1020,6 +1045,16 @@ export const layer = Layer.effect(
         patch: (input, patch) => patchJsonc(input, patch),
         writable,
       })
+      yield* InstanceState.invalidate(state)
+      yield* Effect.sync(() =>
+        GlobalBus.emit("event", {
+          directory: ctx.directory,
+          payload: {
+            type: Event.ConfigUpdated.type,
+            properties: {},
+          },
+        }),
+      )
       // kilocode_change end
     })
 
@@ -1061,7 +1096,7 @@ export const layer = Layer.effect(
       // kilocode_change start - skip dispose when caller opts out
       if (!dispose) {
         yield* invalidateGlobal
-        yield* InstanceState.invalidate(state)
+        yield* InstanceState.invalidate(state).pipe(Effect.catchCause(() => Effect.void))
         yield* Effect.sync(() =>
           GlobalBus.emit("event", {
             directory: "global",
@@ -1070,12 +1105,26 @@ export const layer = Layer.effect(
               properties: {},
             },
           }),
-        )
+        ).pipe(Effect.catchCause(() => Effect.void))
         return { info: next, changed }
       }
       // kilocode_change end
 
       if (changed) yield* invalidate()
+      // kilocode_change start - hot-reload global config changes in the active instance
+      if (changed) {
+        yield* InstanceState.invalidate(state).pipe(Effect.catchCause(() => Effect.void))
+        yield* Effect.sync(() =>
+          GlobalBus.emit("event", {
+            directory: "global",
+            payload: {
+              type: Event.ConfigUpdated.type,
+              properties: {},
+            },
+          }),
+        ).pipe(Effect.catchCause(() => Effect.void))
+      }
+      // kilocode_change end
       return { info: next, changed }
     })
 

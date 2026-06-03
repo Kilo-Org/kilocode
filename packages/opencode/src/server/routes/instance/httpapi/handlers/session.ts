@@ -1,5 +1,6 @@
 import * as InstanceState from "@/effect/instance-state"
 import { InstanceRef, WorkspaceRef } from "@/effect/instance-ref"
+import { KiloSessionHttpApi } from "@/kilocode/server/httpapi/session-fork" // kilocode_change
 import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
 import { Command } from "@/command"
@@ -195,6 +196,8 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       )
     })
 
+    const forkRaw = KiloSessionHttpApi.forkRaw(fork) // kilocode_change - carry upstream bodyless full-session fork support
+
     const abort = Effect.fn("SessionHttpApi.abort")(function* (ctx: { params: { sessionID: SessionID } }) {
       yield* promptSvc.cancel(ctx.params.sessionID)
       return true
@@ -214,13 +217,20 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       return true
     })
 
+    // share/unshare errors aren't all client-induced — storage and network
+    // failures from SessionShare are real possibilities. Map to a typed 500
+    // (matches the legacy Hono path which routed any failure through
+    // ErrorMiddleware → NamedError.Unknown 500) instead of blanket-mapping
+    // every failure to a 400 BadRequest.
     const share = Effect.fn("SessionHttpApi.share")(function* (ctx: { params: { sessionID: SessionID } }) {
-      yield* shareSvc.share(ctx.params.sessionID).pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
+      yield* shareSvc.share(ctx.params.sessionID).pipe(Effect.mapError(() => new HttpApiError.InternalServerError({})))
       return yield* SessionError.mapStorageNotFound(session.get(ctx.params.sessionID))
     })
 
     const unshare = Effect.fn("SessionHttpApi.unshare")(function* (ctx: { params: { sessionID: SessionID } }) {
-      yield* shareSvc.unshare(ctx.params.sessionID).pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
+      yield* shareSvc
+        .unshare(ctx.params.sessionID)
+        .pipe(Effect.mapError(() => new HttpApiError.InternalServerError({})))
       return yield* SessionError.mapStorageNotFound(session.get(ctx.params.sessionID))
     })
 
@@ -374,7 +384,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       .handleRaw("create", createRaw)
       .handle("remove", remove)
       .handle("update", update)
-      .handle("fork", fork)
+      .handleRaw("fork", forkRaw) // kilocode_change - carry upstream bodyless full-session fork support
       .handle("abort", abort)
       .handle("init", init)
       .handle("share", share)

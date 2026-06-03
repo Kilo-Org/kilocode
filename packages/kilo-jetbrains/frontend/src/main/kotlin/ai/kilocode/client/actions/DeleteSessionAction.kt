@@ -41,7 +41,11 @@ class DeleteSessionAction : AnAction() {
         else
             KiloBundle.message("history.delete.confirm.message.multiple", items.size)
 
-        if (!confirm(e.project, msg)) return
+        controller.requestDelete(items.size)
+        if (!confirm(e.project, msg)) {
+            controller.cancelDelete(items.size)
+            return
+        }
         items.forEach { controller.delete(it) }
     }
 }

@@ -10,6 +10,8 @@ import type { CloudSessionData, EditorContext } from "../../services/cli-backend
 import { getErrorMessage, sessionToWebview, mapCloudSessionMessageToWebviewMessage } from "../../kilo-provider-utils"
 import type { MessageFile } from "../message-files"
 
+const TIMEOUT = 30_000
+
 export interface CloudSessionContext {
   readonly client: KiloClient | null
   currentSession: Session | null
@@ -73,7 +75,7 @@ export async function handleRequestCloudSessionData(ctx: CloudSessionContext, se
   }
 
   try {
-    const result = await ctx.client.kilo.cloud.session.get({ id: sessionId })
+    const result = await ctx.client.kilo.cloud.session.get({ id: sessionId }, { signal: AbortSignal.timeout(TIMEOUT) })
     const data = result.data as CloudSessionData | undefined
     if (!data) {
       ctx.postMessage({
@@ -135,10 +137,13 @@ export async function handleImportAndSend(
   // Step 1: Import the cloud session with fresh IDs
   let session: Session | undefined
   try {
-    const result = await ctx.client.kilo.cloud.session.import({
-      sessionId: cloudSessionId,
-      directory: dir,
-    })
+    const result = await ctx.client.kilo.cloud.session.import(
+      {
+        sessionId: cloudSessionId,
+        directory: dir,
+      },
+      { signal: AbortSignal.timeout(TIMEOUT) },
+    )
     session = result.data as Session | undefined
   } catch (error) {
     console.error("[Kilo New] KiloProvider: ❌ Cloud session import failed:", error)

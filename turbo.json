@@ -19,6 +19,10 @@
       "outputs": [],
       "passThroughEnv": ["*"]
     },
+    "test:ci": {
+      "outputs": [".artifacts/unit/junit.xml"],
+      "passThroughEnv": ["*"]
+    },
     "@kilocode/cli#test:ci": {
       "dependsOn": ["^build"],
       "outputs": [".artifacts/unit/junit.xml"],

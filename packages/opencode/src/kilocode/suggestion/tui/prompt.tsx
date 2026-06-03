@@ -1,11 +1,11 @@
 /** @jsxImportSource @opentui/solid */
 
-import { useKeyboard } from "@opentui/solid"
 import type { SuggestionRequest } from "@kilocode/sdk/v2"
 import { createMemo, createSignal, For } from "solid-js"
 import { SplitBorder } from "../../../cli/cmd/tui/component/border"
-import { useKeybind } from "../../../cli/cmd/tui/context/keybind"
 import { useSDK } from "../../../cli/cmd/tui/context/sdk"
+import { useTuiConfig } from "../../../cli/cmd/tui/context/tui-config"
+import { useBindings } from "../../../cli/cmd/tui/keymap"
 import { tint, useTheme } from "../../../cli/cmd/tui/context/theme"
 import { useDialog } from "../../../cli/cmd/tui/ui/dialog"
 
@@ -16,7 +16,7 @@ import { useDialog } from "../../../cli/cmd/tui/ui/dialog"
 export function SuggestPrompt(props: { request: SuggestionRequest }) {
   const sdk = useSDK()
   const { theme } = useTheme()
-  const keybind = useKeybind()
+  const config = useTuiConfig()
   const dialog = useDialog()
 
   const options = createMemo(() => props.request.actions)
@@ -52,49 +52,49 @@ export function SuggestPrompt(props: { request: SuggestionRequest }) {
     accept(index)
   }
 
-  useKeyboard((evt) => {
-    if (dialog.stack.length > 0) return
-    if (evt.defaultPrevented) return
-
-    if (evt.name === "escape") {
-      evt.preventDefault()
-      reject()
-      return
-    }
-
+  useBindings(() => {
     const total = options().length
     const max = Math.min(total, 9)
-    const digit = Number(evt.name)
-
-    if (!Number.isNaN(digit) && digit >= 1 && digit <= max) {
-      evt.preventDefault()
-      const index = digit - 1
-      setSelected(index)
-      choose(index)
-      return
-    }
-
-    if (evt.name === "up" || evt.name === "k") {
-      evt.preventDefault()
-      setSelected((selected() - 1 + total) % total)
-      return
-    }
-
-    if (evt.name === "down" || evt.name === "j") {
-      evt.preventDefault()
-      setSelected((selected() + 1) % total)
-      return
-    }
-
-    if (evt.name === "return") {
-      evt.preventDefault()
-      choose(selected())
-      return
-    }
-
-    if (keybind.match("app_exit", evt)) {
-      evt.preventDefault()
-      reject()
+    return {
+      enabled: dialog.stack.length === 0,
+      bindings: [
+        { key: "escape", desc: "Dismiss suggestion", group: "Suggestion", cmd: reject },
+        ...Array.from({ length: max }, (_, index) => ({
+          key: String(index + 1),
+          desc: `Choose suggestion ${index + 1}`,
+          group: "Suggestion",
+          cmd: () => {
+            setSelected(index)
+            choose(index)
+          },
+        })),
+        {
+          key: "up",
+          desc: "Previous suggestion",
+          group: "Suggestion",
+          cmd: () => setSelected((selected() - 1 + total) % total),
+        },
+        {
+          key: "k",
+          desc: "Previous suggestion",
+          group: "Suggestion",
+          cmd: () => setSelected((selected() - 1 + total) % total),
+        },
+        {
+          key: "down",
+          desc: "Next suggestion",
+          group: "Suggestion",
+          cmd: () => setSelected((selected() + 1) % total),
+        },
+        {
+          key: "j",
+          desc: "Next suggestion",
+          group: "Suggestion",
+          cmd: () => setSelected((selected() + 1) % total),
+        },
+        { key: "return", desc: "Choose suggestion", group: "Suggestion", cmd: () => choose(selected()) },
+        ...config.keybinds.get("app.exit").map((binding) => ({ ...binding, cmd: reject })),
+      ],
     }
   })
 

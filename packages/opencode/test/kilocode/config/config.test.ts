@@ -47,6 +47,8 @@ const layer = Config.layer.pipe(
 const load = () => Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(layer)))
 const clear = () =>
   Effect.runPromise(Config.Service.use((svc) => svc.invalidate()).pipe(Effect.scoped, Effect.provide(layer)))
+const saveGlobal = (config: Config.Info) =>
+  Effect.runPromise(Config.Service.use((svc) => svc.updateGlobal(config)).pipe(Effect.scoped, Effect.provide(layer)))
 
 async function writeConfig(dir: string, config: object, name = "kilo.json") {
   await Filesystem.write(path.join(dir, name), JSON.stringify(config))
@@ -200,5 +202,84 @@ describe("kilocode indexing config", () => {
     expect(merged.indexing).toEqual({ provider: "openai" })
     expect(input.modelId).toBeUndefined()
     expect(input.modelDimension).toBeUndefined()
+  })
+})
+
+describe("agent config", () => {
+  test("accepts delete sentinels for agent model and variant overrides", () => {
+    const patch = Config.Info.zod.parse({ agent: { explore: { model: null, variant: null } } })
+    const merged = KilocodeConfig.mergeConfig(
+      {
+        agent: {
+          explore: {
+            model: "kilo/anthropic/claude-sonnet-4-6",
+            variant: "high",
+          },
+        },
+      },
+      patch,
+    )
+
+    expect(patch.agent?.explore?.model).toBeNull()
+    expect(patch.agent?.explore?.variant).toBeNull()
+    expect(merged.agent).toBeUndefined()
+  })
+
+  test("removes an agent variant override without removing its model", () => {
+    const patch = Config.Info.zod.parse({ agent: { explore: { variant: null } } })
+    const merged = KilocodeConfig.mergeConfig(
+      {
+        agent: {
+          explore: {
+            model: "kilo/anthropic/claude-sonnet-4-6",
+            variant: "high",
+          },
+        },
+      },
+      patch,
+    )
+
+    expect(patch.agent?.explore?.variant).toBeNull()
+    expect(merged.agent?.explore).toEqual({ model: "kilo/anthropic/claude-sonnet-4-6" })
+  })
+
+  test("removes agent model and variant overrides from global JSONC config", async () => {
+    await using globalTmp = await tmpdir()
+    const file = path.join(globalTmp.path, "kilo.jsonc")
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await Filesystem.write(
+        file,
+        [
+          "{",
+          "  // Preserve this comment while clearing overrides.",
+          '  "agent": {',
+          '    "explore": {',
+          '      "model": "kilo/anthropic/claude-sonnet-4-6",',
+          '      "variant": "high",',
+          '      "description": "Keep me"',
+          "    }",
+          "  }",
+          "}",
+        ].join("\n"),
+      )
+      const patch = Config.Info.zod.parse({ agent: { explore: { model: null, variant: null } } })
+
+      await saveGlobal(patch)
+
+      const written = await Bun.file(file).text()
+      expect(written).toContain("// Preserve this comment while clearing overrides.")
+      expect(written).not.toContain('"model"')
+      expect(written).not.toContain('"variant"')
+      expect(written).toContain('"description": "Keep me"')
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
   })
 })

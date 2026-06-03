@@ -192,9 +192,18 @@ html[data-theme="kilo-vscode"] {
   --border-warning-base: var(--vscode-charts-yellow);
   --border-warning-hover: var(--vscode-charts-yellow);
   --border-warning-selected: var(--vscode-charts-yellow);
-  --border-critical-base: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground, var(--vscode-charts-red)));
-  --border-critical-hover: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground, var(--vscode-charts-red)));
-  --border-critical-selected: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground, var(--vscode-charts-red)));
+  --border-critical-base: var(
+    --vscode-inputValidation-errorBorder,
+    var(--vscode-errorForeground, var(--vscode-charts-red))
+  );
+  --border-critical-hover: var(
+    --vscode-inputValidation-errorBorder,
+    var(--vscode-errorForeground, var(--vscode-charts-red))
+  );
+  --border-critical-selected: var(
+    --vscode-inputValidation-errorBorder,
+    var(--vscode-errorForeground, var(--vscode-charts-red))
+  );
   --border-info-base: var(--vscode-charts-blue);
   --border-info-hover: var(--vscode-charts-blue);
   --border-info-selected: var(--vscode-charts-blue);

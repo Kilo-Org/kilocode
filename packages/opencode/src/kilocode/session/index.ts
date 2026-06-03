@@ -92,6 +92,10 @@ export namespace KiloSession {
     return roots.get(id) ?? id
   }
 
+  export function resolveParent(id: string): string | undefined {
+    return parents.get(id)
+  }
+
   export function featureForPlatform(platform: string | undefined): string | undefined {
     switch (platform) {
       case "agent-manager":
@@ -179,7 +183,7 @@ export namespace KiloSession {
    * Returns `undefined` when no provider cost is available, so the caller
    * should fall back to the standard token-based calculation.
    *
-   * Reference: https://openrouter.ai/docs/use-cases/usage-accounting
+   * Reference: https://openrouter.ai/docs/cookbook/administration/usage-accounting
    */
   export function providerCost(input: {
     metadata?: ProviderMetadata

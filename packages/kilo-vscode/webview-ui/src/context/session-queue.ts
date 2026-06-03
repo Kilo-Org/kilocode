@@ -42,27 +42,52 @@ function partials(messages: Message[]): MessageTurn[] {
     .map(partial)
 }
 
-export function messageTurns(messages: Message[], boundary?: string): MessageTurn[] {
+function isCompact(msg: Message, parts?: (msg: Message) => Message["parts"]) {
+  return msg.role === "user" && (parts?.(msg) ?? msg.parts)?.some((part) => part.type === "compaction")
+}
+
+function target(messages: Message[], index: number, id: string, parts?: (msg: Message) => Message["parts"]) {
+  const parent = messages.findIndex((msg) => msg.id === id)
+  for (let i = index - 1; i > parent; i -= 1) {
+    const msg = messages[i]
+    if (msg && isCompact(msg, parts)) return msg.id
+  }
+  return id
+}
+
+export function messageTurns(
+  messages: Message[],
+  boundary?: string,
+  parts?: (msg: Message) => Message["parts"],
+): MessageTurn[] {
   const result: MessageTurn[] = []
   const lead: Message[] = []
-  const by = new Map<string, MessageTurn>()
+  const by = new Map<string, { turn: MessageTurn; index: number }>()
+  let compact: { turn: MessageTurn; index: number } | undefined
 
   for (const msg of messages) {
     if (msg.role === "user") {
       if (boundary && msg.id >= boundary) break
       const turn = { id: msg.id, user: msg, assistant: [] }
+      const item = { turn, index: result.length }
       result.push(turn)
-      by.set(msg.id, turn)
+      by.set(msg.id, item)
+      if (isCompact(msg, parts)) compact = item
       continue
     }
 
     if (msg.role !== "assistant") continue
-    const turn = msg.parentID ? by.get(msg.parentID) : undefined
-    if (turn) {
+    const parent = msg.parentID ? by.get(msg.parentID) : undefined
+    if (parent) {
+      const turn = compact && parent.index < compact.index ? compact.turn : parent.turn
       turn.assistant.push(msg)
       continue
     }
     if (msg.parentID) {
+      if (compact) {
+        compact.turn.assistant.push(msg)
+        continue
+      }
       lead.push(msg)
       continue
     }
@@ -78,8 +103,12 @@ export function messageTurns(messages: Message[], boundary?: string): MessageTur
   return [...partials(lead), ...result]
 }
 
-export function visibleMessages(messages: Message[], boundary?: string): Message[] {
-  return messageTurns(messages, boundary).flatMap((turn) =>
+export function visibleMessages(
+  messages: Message[],
+  boundary?: string,
+  parts?: (msg: Message) => Message["parts"],
+): Message[] {
+  return messageTurns(messages, boundary, parts).flatMap((turn) =>
     turn.partial ? turn.assistant : [turn.user, ...turn.assistant],
   )
 }
@@ -106,16 +135,21 @@ export function stableMessageTurns(next: MessageTurn[], prev: MessageTurn[] = []
   })
 }
 
-function active(messages: Message[]) {
+function active(messages: Message[], status: SessionStatusInfo, parts?: (msg: Message) => Message["parts"]) {
+  let latest = true
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const msg = messages[i]
     if (!msg || msg.role !== "assistant") continue
-    if (typeof msg.time?.completed === "number") continue
+    const resumable = msg.finish === "tool-calls" || msg.finish === "unknown"
+    const running = latest && status.type !== "idle" && resumable
+    latest = false
+    if (typeof msg.time?.completed === "number" && !running) continue
     if (msg.error) continue
-    if (msg.finish && !["tool-calls", "unknown"].includes(msg.finish)) continue
+    if (msg.finish && !resumable) continue
     if (!msg.parentID) break
-    const parent = messages.find((item) => item.id === msg.parentID)
-    if (!parent) return msg.parentID
+    const id = target(messages, i, msg.parentID, parts)
+    const parent = messages.find((item) => item.id === id)
+    if (!parent) return id
     if (parent.role === "user") return parent.id
     break
   }
@@ -123,20 +157,20 @@ function active(messages: Message[]) {
   return undefined
 }
 
-function done(messages: Message[]) {
+function done(messages: Message[], parts?: (msg: Message) => Message["parts"]) {
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const msg = messages[i]
-    if (!msg || msg.role !== "assistant") continue
-    if (typeof msg.time?.completed === "number") return msg.parentID
-    if (msg.error) return msg.parentID
-    if (msg.finish && !["tool-calls", "unknown"].includes(msg.finish)) return msg.parentID
+    if (!msg || msg.role !== "assistant" || !msg.parentID) continue
+    if (typeof msg.time?.completed === "number") return target(messages, i, msg.parentID, parts)
+    if (msg.error) return target(messages, i, msg.parentID, parts)
+    if (msg.finish && !["tool-calls", "unknown"].includes(msg.finish)) return target(messages, i, msg.parentID, parts)
   }
   return undefined
 }
 
-function pending(messages: Message[]) {
+function pending(messages: Message[], parts?: (msg: Message) => Message["parts"]) {
   const users = messages.filter((msg) => msg.role === "user")
-  const id = done(messages)
+  const id = done(messages, parts)
   if (!id) return users[0]?.id
 
   const idx = users.findIndex((msg) => msg.id === id)
@@ -145,23 +179,31 @@ function pending(messages: Message[]) {
 
 // Find the user message whose turn the server is actively processing.
 // Any user message after this one is "queued" (waiting for its turn).
-export function activeUserMessageID(messages: Message[], status: SessionStatusInfo) {
-  const id = active(messages)
+export function activeUserMessageID(
+  messages: Message[],
+  status: SessionStatusInfo,
+  parts?: (msg: Message) => Message["parts"],
+) {
+  const id = active(messages, status, parts)
   if (id) return id
   if (status.type === "idle") return undefined
-  return pending(messages)
+  return pending(messages, parts)
 }
 
-export function queuedUserMessageIDs(messages: Message[], status: SessionStatusInfo) {
+export function queuedUserMessageIDs(
+  messages: Message[],
+  status: SessionStatusInfo,
+  parts?: (msg: Message) => Message["parts"],
+) {
   if (status.type === "idle") return []
   const users = messages.filter((msg) => msg.role === "user")
-  const running = active(messages)
+  const running = active(messages, status, parts)
   if (running) {
     const idx = users.findIndex((msg) => msg.id === running)
     if (idx < 0) return users.map((msg) => msg.id)
     return users.slice(idx + 1).map((msg) => msg.id)
   }
-  const id = pending(messages)
+  const id = pending(messages, parts)
   const idx = id ? users.findIndex((msg) => msg.id === id) : -1
   if (idx < 0) return []
   return users.slice(idx + 1).map((msg) => msg.id)

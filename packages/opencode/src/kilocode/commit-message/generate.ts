@@ -11,6 +11,9 @@ import { getGitContext } from "./git-context"
 const log = Log.create({ service: "commit-message" })
 
 export const CommitMessageRuntime = {
+  context(repoPath: string, selectedFiles?: string[]) {
+    return getGitContext(repoPath, selectedFiles)
+  },
   model() {
     return AppRuntime.runPromise(
       Provider.Service.use((svc) =>
@@ -141,7 +144,7 @@ function clean(text: string): string {
 const TIMEOUT_MS = 30_000
 
 export async function generateCommitMessage(request: CommitMessageRequest): Promise<CommitMessageResponse> {
-  const ctx = await getGitContext(request.path, request.selectedFiles)
+  const ctx = await CommitMessageRuntime.context(request.path, request.selectedFiles)
   if (ctx.files.length === 0) {
     throw new Error("No changes found to generate a commit message for")
   }

@@ -1,0 +1,35 @@
+[data-slot="separator"] {
+  background: var(--border);
+}
+
+[data-slot="separator"][data-orientation="horizontal"] {
+  width: 100%;
+  height: 1px;
+}
+[data-slot="separator"][data-orientation="vertical"] {
+  width: 1px;
+  min-height: 1rem;
+  align-self: stretch;
+}
+
+[data-slot="skeleton"] {
+  min-height: 1rem;
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--muted),
+    color-mix(in oklab, var(--muted) 70%, var(--foreground) 12%),
+    var(--muted)
+  );
+  background-size: 200% 100%;
+  animation: kw-skeleton 1.4s ease-in-out infinite;
+}
+
+@keyframes kw-skeleton {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
