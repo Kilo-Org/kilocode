@@ -68,6 +68,10 @@ jobs:
     # or others). This is typically only required for manual builds.
     # - name: Setup runtime (example)
     #   uses: actions/setup-example@v1
+    - name: Setup Bun
+      if: matrix.language == 'java-kotlin'
+      uses: ./.github/actions/setup-bun
+
     - name: Setup Java
       if: matrix.language == 'java-kotlin'
       uses: actions/setup-java@v4
@@ -101,8 +105,8 @@ jobs:
     # to build your code.
     # ℹ️ Command-line programs to run using the OS shell.
     # 📚 See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
-    - name: Run manual build steps
-      if: matrix.build-mode == 'manual'
+    - name: Build Java/Kotlin
+      if: matrix.language == 'java-kotlin'
       shell: bash
       run: ./gradlew typecheck
       working-directory: packages/kilo-jetbrains
