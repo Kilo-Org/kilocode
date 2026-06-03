@@ -33,6 +33,20 @@ object UiStyle {
         fun component() = com.intellij.util.ui.JBValue.UIInteger("Component.arc", 8).get()
     }
 
+    /** Platform balloon styling used by lightweight contextual overlays. */
+    object Balloon {
+        fun bg(): Color = UIUtil.getPanelBackground()
+
+        fun border(): Color = JBUI.CurrentTheme.Popup.borderColor(true)
+
+        /** New UI parameter-info balloon insets: symmetric vertical padding with wider sides. */
+        fun insets() = JBUI.insets(6, 12, 6, 12)
+
+        fun pointer() = JBUI.size(16, 8)
+
+        fun arc() = JBUI.scale(8)
+    }
+
     /** Theme-aware colors and color math used by multiple UI surfaces. */
     object Colors {
         fun bg(): Color = UIUtil.getPanelBackground()
@@ -110,6 +124,18 @@ object UiStyle {
                 ?: UIManager.getColor("Label.warningForeground")
                 ?: UIUtil.getContextHelpForeground()
         }
+
+        fun infoOverlayBackground(): Color = JBUI.CurrentTheme.NotificationInfo.backgroundColor()
+
+        fun infoOverlayForeground(): Color = JBUI.CurrentTheme.NotificationInfo.foregroundColor()
+
+        fun infoOverlayBorder(): Color = JBUI.CurrentTheme.NotificationInfo.borderColor()
+
+        fun errorOverlayBackground(): Color = JBUI.CurrentTheme.NotificationError.backgroundColor()
+
+        fun errorOverlayForeground(): Color = JBUI.CurrentTheme.NotificationError.foregroundColor()
+
+        fun errorOverlayBorder(): Color = JBUI.CurrentTheme.NotificationError.borderColor()
 
         internal fun contrast(base: Color, delta: Int): Color {
             val step = if (bright(base)) -delta else delta

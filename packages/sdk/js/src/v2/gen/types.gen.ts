@@ -282,8 +282,8 @@ export type BackgroundProcessInfo = {
 }
 
 export type SnapshotFileDiff = {
-  file: string
-  patch: string
+  file?: string
+  patch?: string
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
@@ -804,7 +804,7 @@ export type Part =
   | CompactionPart
 
 export type SnapshotSummaryFileDiff = {
-  file: string
+  file?: string
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
@@ -1246,7 +1246,7 @@ export type ProviderConfig = {
         output: Array<"text" | "audio" | "image" | "video" | "pdf">
       }
       experimental?: boolean
-      status?: "alpha" | "beta" | "deprecated"
+      status?: "alpha" | "beta" | "deprecated" | "active"
       provider?: {
         npm?: string
         api?: string
@@ -1603,8 +1603,8 @@ export type WorktreeResetInput = {
 }
 
 export type WorktreeDiffItem = {
-  file: string
-  patch: string
+  file?: string
+  patch?: string
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
@@ -1740,7 +1740,7 @@ export type VcsFileStatus = {
 
 export type VcsFileDiff = {
   file: string
-  patch: string
+  patch?: string
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
@@ -6301,6 +6301,10 @@ export type SessionForkData = {
 
 export type SessionForkErrors = {
   /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
    * NotFoundError
    */
   404: NotFoundError
@@ -6987,6 +6991,16 @@ export type V2SessionListData = {
   query?: {
     directory?: string
     workspace?: string
+    limit?: number
+    order?: "asc" | "desc"
+    path?: string
+    roots?: boolean | "true" | "false"
+    start?: number
+    search?: string
+    /**
+     * Opaque pagination cursor returned as cursor.previous or cursor.next in the previous response. Do not combine with order or filters.
+     */
+    cursor?: string
   }
   url: "/api/session"
 }
@@ -7104,6 +7118,12 @@ export type V2SessionMessagesData = {
   query?: {
     directory?: string
     workspace?: string
+    limit?: number
+    order?: "asc" | "desc"
+    /**
+     * Opaque pagination cursor returned as cursor.previous or cursor.next in the previous response. Do not combine with order.
+     */
+    cursor?: string
   }
   url: "/api/session/{sessionID}/message"
 }
@@ -8264,8 +8284,8 @@ export type KiloProfileResponses = {
     }
     balance: {
       balance: number
-    }
-    currentOrgId: string
+    } | null
+    currentOrgId: string | null
   }
 }
 
@@ -8553,19 +8573,20 @@ export type KiloClawStatusResponses = {
       | "stopped"
       | "destroying"
       | "restoring"
+      | null
     sandboxId?: string
     flyRegion?: string
     machineSize?: {
       cpus: number
       memory_mb: number
     }
-    openclawVersion?: string
-    lastStartedAt?: string
-    lastStoppedAt?: string
+    openclawVersion?: string | null
+    lastStartedAt?: string | null
+    lastStoppedAt?: string | null
     channelCount?: number
     secretCount?: number
     userId?: string
-    botName?: string
+    botName?: string | null
   }
 }
 
@@ -8590,7 +8611,7 @@ export type KiloClawChatCredentialsResponses = {
     expiresAt: string
     kiloChatUrl: string
     eventServiceUrl: string
-  }
+  } | null
 }
 
 export type KiloClawChatCredentialsResponse = KiloClawChatCredentialsResponses[keyof KiloClawChatCredentialsResponses]
@@ -8624,12 +8645,12 @@ export type KiloCloudSessionsResponses = {
   200: {
     cliSessions: Array<{
       session_id: string
-      title: string
+      title: string | null
       created_at: string
       updated_at: string
       version: number
     }>
-    nextCursor: string
+    nextCursor: string | null
   }
 }
 

@@ -12,6 +12,7 @@ import type { SessionStatus } from "@/session/status"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { PlanFollowup } from "@/kilocode/plan-followup"
 import { KiloSession } from "@/kilocode/session"
+import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { Permission } from "@/permission"
 import { environmentDetails, type EditorContext } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
@@ -121,6 +122,11 @@ export namespace KiloSessionPrompt {
   export function hardPermissions(input: { agent: { name: string; permission: Permission.Ruleset } }) {
     if (!modes.includes(input.agent.name)) return
     return input.agent.permission
+  }
+
+  export function mergeToolPermissions(input: { existing: Permission.Ruleset; toggles: Permission.Ruleset }) {
+    const names = new Set(input.toggles.map((rule) => rule.permission))
+    return [...input.existing.filter((rule) => !names.has(rule.permission)), ...input.toggles]
   }
 
   export const askPermission = Effect.fn("KiloSessionPrompt.askPermission")(function* (input: {
@@ -342,14 +348,18 @@ export namespace KiloSessionPrompt {
    * `msgs`, `msgs` is returned unchanged.
    */
   export function trimBeforeLastSummary(msgs: MessageV2.WithParts[]): MessageV2.WithParts[] {
-    for (let i = msgs.length - 1; i >= 0; i--) {
-      const info = msgs[i].info
-      if (info.role !== "assistant" || info.summary !== true || !info.finish || info.error) continue
-      const parentIdx = msgs.findIndex((m) => m.info.id === info.parentID)
-      if (parentIdx === -1) return msgs
-      return parentIdx === 0 ? msgs : msgs.slice(parentIdx)
-    }
-    return msgs
+    const summary = msgs.reduce<{ msg: MessageV2.WithParts; index: number } | undefined>((latest, msg, index) => {
+      const info = msg.info
+      if (info.role !== "assistant" || info.summary !== true || !info.finish || info.error) return latest
+      if (!latest || KiloSessionMessageOrder.compare(msg, latest.msg, index, latest.index) > 0) return { msg, index }
+      return latest
+    }, undefined)
+    if (!summary) return msgs
+    const info = summary.msg.info
+    if (info.role !== "assistant") return msgs
+    const parentIdx = msgs.findIndex((m) => m.info.id === info.parentID)
+    if (parentIdx === -1) return msgs
+    return parentIdx === 0 ? msgs : msgs.slice(parentIdx)
   }
 
   /**

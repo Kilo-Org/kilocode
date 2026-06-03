@@ -1,7 +1,7 @@
 import { Schema } from "effect"
 import { INDEXING_STATUS_STATES } from "@kilocode/kilo-indexing/status"
 import { BusEvent } from "@/bus/bus-event"
-import { NonNegativeInt } from "@/util/schema"
+import { NonNegativeInt } from "@opencode-ai/core/schema"
 
 export const IndexingStatusState = Schema.Literals(INDEXING_STATUS_STATES).annotate({
   identifier: "IndexingStatusState",

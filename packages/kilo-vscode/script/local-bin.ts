@@ -23,6 +23,7 @@ const kiloVscodeDir = join(import.meta.dir, "..")
 const packagesDir = join(kiloVscodeDir, "..")
 const opencodeDir = join(packagesDir, "opencode")
 const coreDir = join(packagesDir, "core")
+const gatewayDir = join(packagesDir, "kilo-gateway")
 const indexingDir = join(packagesDir, "kilo-indexing")
 
 const targetBinDir = join(kiloVscodeDir, "bin")
@@ -38,8 +39,12 @@ async function cliSourceHash(): Promise<string | null> {
   try {
     const opencodeResult = await $`git log -1 --format=%H -- .`.cwd(opencodeDir).quiet()
     const coreResult = await $`git log -1 --format=%H -- .`.cwd(coreDir).quiet()
+    const gatewayResult = await $`git log -1 --format=%H -- .`.cwd(gatewayDir).quiet()
     const indexingResult = await $`git log -1 --format=%H -- .`.cwd(indexingDir).quiet()
-    return `${opencodeResult.text().trim()}-${coreResult.text().trim()}-${indexingResult.text().trim()}` || null
+    return (
+      `${opencodeResult.text().trim()}-${coreResult.text().trim()}-${gatewayResult.text().trim()}-${indexingResult.text().trim()}` ||
+      null
+    )
   } catch {
     return null
   }
@@ -49,10 +54,12 @@ async function isDirty(): Promise<boolean> {
   try {
     const opencodeResult = await $`git status --porcelain -- .`.cwd(opencodeDir).quiet()
     const coreResult = await $`git status --porcelain -- .`.cwd(coreDir).quiet()
+    const gatewayResult = await $`git status --porcelain -- .`.cwd(gatewayDir).quiet()
     const indexingResult = await $`git status --porcelain -- .`.cwd(indexingDir).quiet()
     return (
       opencodeResult.text().trim().length > 0 ||
       coreResult.text().trim().length > 0 ||
+      gatewayResult.text().trim().length > 0 ||
       indexingResult.text().trim().length > 0
     )
   } catch {

@@ -69,7 +69,7 @@ internal class ModelPickerRenderer(
         ModelText.freeBg(),
         JBColor.namedColor("Kilo.ModelPicker.freeBadgeForeground", JBColor.WHITE),
     )
-    private val warn = JBLabel(AllIcons.General.Warning).apply {
+    private val warn = JBLabel(ModelPickerIcons.DATA_COLLECTED).apply {
         toolTipText = ModelText.dataCollected()
     }
     private val provider = JBLabel()
@@ -129,23 +129,33 @@ internal class ModelPickerRenderer(
         sep.setHideLine(index == 0)
         top.isVisible = section != null
 
-        check.icon = if (value.item.key == active()) checked else empty
+        check.icon = if (value.key == active()) checked else empty
         title.clear()
-        val name = ModelText.parts(value.item)
+        val item = value.item
+        if (item == null) {
+            title.append(value.emptyText, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, fg))
+            head.getComponent(1).isVisible = false
+            warn.isVisible = false
+            provider.isVisible = false
+            star.icon = EmptyIcon.ICON_16
+            top.invalidate()
+            return this
+        }
+        val name = ModelText.parts(item)
         if (name.provider != null) {
             title.append(name.provider, SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, weak))
             title.append(" ", SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, weak))
         }
         title.append(name.model, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, fg))
 
-        head.getComponent(1).isVisible = value.item.free
-        warn.isVisible = ModelText.collectsData(value.item)
+        head.getComponent(1).isVisible = item.free
+        warn.isVisible = ModelText.collectsData(item)
         provider.isVisible = value.favorite
-        provider.text = value.item.providerName
+        provider.text = item.providerName
         provider.foreground = weak
         provider.border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
 
-        val fav = value.item.key in favorites()
+        val fav = item.key in favorites()
         star.icon = when {
             fav -> AllIcons.Nodes.Favorite
             selected -> AllIcons.Nodes.NotFavoriteOnHover

@@ -8,6 +8,7 @@ import ai.kilocode.backend.workspace.ProviderInfo
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
@@ -425,6 +426,31 @@ object KiloCliDataParser {
             val target = agent ?: "ask"
             sep(); sb.append(""""agent":{"$target":{"temperature":$temp}}""")
         }
+        sb.append("}")
+        return sb.toString()
+    }
+
+    fun buildConfigPatch(patch: ConfigPatchDto): String {
+        val allowed = setOf("model", "small_model", "subagent_model", "subagent_variant")
+        val sb = StringBuilder("{")
+        var first = true
+        fun sep() { if (!first) sb.append(","); first = false }
+        fun value(value: String?) = value?.let(::escape) ?: "null"
+
+        for ((key, value) in patch.values) {
+            if (key !in allowed) continue
+            sep(); sb.append("\"$key\":${value(value)}")
+        }
+
+        if (patch.agents.isNotEmpty()) {
+            sep(); sb.append("\"agent\":{")
+            patch.agents.entries.forEachIndexed { idx, (name, agent) ->
+                if (idx > 0) sb.append(",")
+                sb.append("${escape(name)}:{\"model\":${value(agent.model)}}")
+            }
+            sb.append("}")
+        }
+
         sb.append("}")
         return sb.toString()
     }

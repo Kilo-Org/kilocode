@@ -1625,15 +1625,22 @@ unix(
         (_dir) =>
           Effect.gen(function* () {
             const { prompt, run, chat } = yield* boot()
+            // kilocode_change start - wait for shell to actually be running before cancelling
+            const status = yield* SessionStatus.Service
+            // kilocode_change end
 
             const sh = yield* prompt
               .shell({ sessionID: chat.id, agent: "build", command: "sleep 30" })
               .pipe(Effect.forkChild)
-            yield* Effect.sleep(50)
+            // kilocode_change start - avoid racing cancellation against async shell startup on Linux CI
+            yield* waitFor(
+              "shell busy",
+              status.get(chat.id).pipe(Effect.map((s) => (s.type === "busy" ? s : undefined))),
+            )
+            // kilocode_change end
 
             yield* prompt.cancel(chat.id)
 
-            const status = yield* SessionStatus.Service
             expect((yield* status.get(chat.id)).type).toBe("idle")
             const busy = yield* run.assertNotBusy(chat.id).pipe(Effect.exit)
             expect(Exit.isSuccess(busy)).toBe(true)

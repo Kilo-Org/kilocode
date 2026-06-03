@@ -4,11 +4,11 @@ import { createTwoFilesPatch } from "diff"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { Schema } from "effect"
-import { zod } from "@/util/effect-zod"
+import { zod } from "@opencode-ai/core/effect-zod"
 import { FileIgnore } from "@/file/ignore"
 import { Snapshot } from "@/snapshot"
 import * as Log from "@opencode-ai/core/util/log"
-import { withStatics } from "@/util/schema"
+import { withStatics } from "@opencode-ai/core/schema"
 
 export namespace WorktreeDiff {
   export const Item = Schema.Struct({

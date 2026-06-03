@@ -2,13 +2,14 @@ import path from "path"
 import os from "os"
 import fs from "fs/promises"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
-import * as EffectZod from "@/util/effect-zod"
+import * as EffectZod from "@opencode-ai/core/effect-zod"
 import { SessionID, MessageID, PartID } from "./schema"
 import { MessageV2 } from "./message-v2"
 import * as Log from "@opencode-ai/core/util/log"
@@ -53,8 +54,8 @@ import { Truncate } from "@/tool/truncate"
 import { decodeDataUrl } from "@/util/data-url"
 import { Process } from "@/util/process"
 import { Cause, Effect, Exit, Latch, Layer, Option, Scope, Context, Schema, Types } from "effect"
-import { zod } from "@/util/effect-zod"
-import { withStatics } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { withStatics } from "@opencode-ai/core/schema"
 import * as EffectLogger from "@opencode-ai/core/effect/logger"
 import { InstanceState } from "@/effect/instance-state"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
@@ -1428,8 +1429,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           permissions.push({ permission: t, action: enabled ? "allow" : "deny", pattern: "*" })
         }
         if (permissions.length > 0) {
-          session.permission = permissions
-          yield* sessions.setPermission({ sessionID: session.id, permission: permissions })
+          // kilocode_change start - preserve inherited task restrictions while refreshing prompt tool toggles
+          const merged = KiloSessionPrompt.mergeToolPermissions({
+            existing: session.permission ?? [],
+            toggles: permissions,
+          })
+          session.permission = merged
+          yield* sessions.setPermission({ sessionID: session.id, permission: merged })
+          // kilocode_change end
         }
 
         // kilocode_change start — unblock tools waiting on user input so any in-flight
@@ -1496,19 +1503,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         msgs = KiloSessionPromptQueue.scope(sessionID, msgs) // kilocode_change - hide later queued prompts
         msgs = KiloSessionPrompt.trimBeforeLastSummary(msgs) // kilocode_change - trim on any completed summary (e.g. manual /compact against a text user)
 
-        let lastUser: MessageV2.User | undefined
-        let lastAssistant: MessageV2.Assistant | undefined
-        let lastFinished: MessageV2.Assistant | undefined
-        let tasks: (MessageV2.CompactionPart | MessageV2.SubtaskPart)[] = []
-        for (let i = msgs.length - 1; i >= 0; i--) {
-          const msg = msgs[i]
-          if (!lastUser && msg.info.role === "user") lastUser = msg.info
-          if (!lastAssistant && msg.info.role === "assistant") lastAssistant = msg.info
-          if (!lastFinished && msg.info.role === "assistant" && msg.info.finish) lastFinished = msg.info
-          if (lastUser && lastFinished) break
-          const task = msg.parts.filter((part) => part.type === "compaction" || part.type === "subtask")
-          if (task && !lastFinished) tasks.push(...task)
-        }
+        // kilocode_change start - select loop state by chronology after retained-tail projection
+        const latest = KiloSessionMessageOrder.latest(msgs)
+        const { user: lastUser, assistant: lastAssistant, finished: lastFinished, tasks } = latest
         // kilocode_change end
 
         if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
@@ -1516,6 +1513,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         const lastAssistantMsg = msgs.findLast(
           (msg) => msg.info.role === "assistant" && msg.info.id === lastAssistant?.id,
         )
+        // kilocode_change start - compare chronology, not generated IDs
+        const userBeforeAssistant =
+          latest.userMessage &&
+          latest.assistantMessage &&
+          KiloSessionMessageOrder.compare(latest.userMessage, latest.assistantMessage) < 0
+        // kilocode_change end
         // kilocode_change start - carry local review command marker into LLM telemetry
         const telemetry =
           KiloSessionProcessor.extractReviewTelemetry(
@@ -1537,7 +1540,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           lastAssistant?.finish &&
           hasToolCalls &&
           lastAssistant.parentID === lastUser.id &&
-          lastUser.id < lastAssistant.id &&
+          userBeforeAssistant &&
           KiloSessionPrompt.shouldAskPlanFollowup({ messages: msgs, abort: AbortSignal.any([]) })
         ) {
           const action = yield* Effect.promise((signal) =>
@@ -1554,7 +1557,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           !["tool-calls"].includes(lastAssistant.finish) &&
           !hasToolCalls &&
           lastAssistant.parentID === lastUser.id && // kilocode_change - unrelated later assistants do not answer this turn
-          lastUser.id < lastAssistant.id
+          userBeforeAssistant // kilocode_change - compare chronology, not generated IDs
         ) {
           // kilocode_change start - ask follow-up when plan_exit tool was called
           const action = yield* Effect.promise((signal) =>
@@ -1690,7 +1693,11 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
           if (step > 1 && lastFinished) {
             for (const m of msgs) {
-              if (m.info.role !== "user" || m.info.id <= lastFinished.id) continue
+              // kilocode_change start - compare chronology, not generated IDs
+              const finishedBeforeMessage =
+                latest.finishedMessage && KiloSessionMessageOrder.compare(latest.finishedMessage, m) < 0
+              if (m.info.role !== "user" || !finishedBeforeMessage) continue
+              // kilocode_change end
               for (const p of m.parts) {
                 if (p.type !== "text" || p.ignored || p.synthetic) continue
                 if (!p.text.trim()) continue

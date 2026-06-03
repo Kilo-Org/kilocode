@@ -130,6 +130,20 @@ export namespace KiloSessions {
     fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
   }
 
+  function transport(info: Session.Info): SDK.Session {
+    return {
+      ...info,
+      summary: info.summary
+        ? {
+            ...info.summary,
+            diffs: info.summary.diffs?.filter(
+              (diff): diff is typeof diff & { file: string } => diff.file !== undefined,
+            ),
+          }
+        : undefined,
+    }
+  }
+
   async function getClient(): Promise<Client | undefined> {
     return withInFlightCache(clientKey, ttlMs, async () => {
       const token = await kilocodeToken()
@@ -246,7 +260,7 @@ export namespace KiloSessions {
             if (!session) return
             await ingest.sync(sessionID, [
               { type: "kilo_meta", data: await meta(sessionID) },
-              { type: "session", data: session },
+              { type: "session", data: transport(session) },
             ])
           })
           yield* watch(MessageV2.Event.Updated, async (evt) => {
@@ -682,7 +696,7 @@ export namespace KiloSessions {
       },
       {
         type: "session",
-        data: session,
+        data: transport(session),
       },
       ...messages.map((x) => ({
         type: "message" as const,

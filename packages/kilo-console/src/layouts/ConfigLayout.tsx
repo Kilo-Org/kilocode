@@ -1,6 +1,7 @@
 import { Show } from "solid-js"
 import type { JSX } from "solid-js"
 import { Card } from "@kilocode/kilo-web-ui/card"
+import { LoadingScreen } from "../components/LoadingScreen"
 import { ConfigProvider } from "../context/ConfigProvider"
 import { useConfig } from "../context/config"
 import { ConfigSidebar } from "../routes/config/ConfigSidebar"
@@ -43,9 +44,7 @@ function ConfigContent(props: { children?: JSX.Element }) {
           </Card>
         </Show>
         <Show when={ctx.data.loading && !ctx.data()}>
-          <Card class="banner" variant="info">
-            Loading dashboard data...
-          </Card>
+          <LoadingScreen variant="content" />
         </Show>
         {props.children}
       </section>

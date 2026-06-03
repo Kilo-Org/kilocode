@@ -49,6 +49,26 @@ export function matchLegacyKiloOpenApi(input: Record<string, unknown>) {
   const props = ref ? spec.components?.schemas?.[ref]?.properties : body?.properties
   if (props?.organizationId) props.organizationId = nullable(props.organizationId)
 
+  const json = (path: string) => spec.paths?.[path]?.get?.responses?.["200"]?.content?.["application/json"]
+  const profile = json("/kilo/profile")?.schema?.properties
+  if (profile?.balance) profile.balance = nullable(profile.balance)
+  if (profile?.currentOrgId) profile.currentOrgId = nullable(profile.currentOrgId)
+
+  const sessions = json("/kilo/cloud-sessions")?.schema?.properties
+  const session = sessions?.cliSessions?.items?.properties
+  if (session?.title) session.title = nullable(session.title)
+  if (sessions?.nextCursor) sessions.nextCursor = nullable(sessions.nextCursor)
+
+  const claw = json("/kilo/claw/status")?.schema?.properties
+  if (claw?.status) claw.status = nullable(claw.status)
+  if (claw?.openclawVersion) claw.openclawVersion = nullable(claw.openclawVersion)
+  if (claw?.lastStartedAt) claw.lastStartedAt = nullable(claw.lastStartedAt)
+  if (claw?.lastStoppedAt) claw.lastStoppedAt = nullable(claw.lastStoppedAt)
+  if (claw?.botName) claw.botName = nullable(claw.botName)
+
+  const credentials = json("/kilo/claw/chat-credentials")
+  if (credentials?.schema) credentials.schema = nullable(credentials.schema)
+
   const provider = spec.components?.schemas?.Config?.properties?.provider
   if (provider?.additionalProperties && typeof provider.additionalProperties === "object")
     provider.additionalProperties = nullable(provider.additionalProperties)

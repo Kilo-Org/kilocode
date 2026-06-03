@@ -24,6 +24,35 @@ export interface AnnotationMeta {
   line: number
   endLine?: number
   editing?: boolean
+  text?: string
+}
+
+export type ReviewDraft = Pick<AnnotationMeta, "file" | "side" | "line" | "endLine">
+
+export interface ReviewComposer {
+  draft: AnnotationMeta | null
+  edit: AnnotationMeta | null
+}
+
+export function createReviewComposer(): ReviewComposer {
+  return { draft: null, edit: null }
+}
+
+export function clearReviewComposer(composer: ReviewComposer): void {
+  composer.draft = null
+  composer.edit = null
+}
+
+export function reviewComposerDraft(composer: ReviewComposer): ReviewDraft | null {
+  const draft = composer.draft
+  if (!draft || draft.type !== "draft") return null
+  return { file: draft.file, side: draft.side, line: draft.line, endLine: draft.endLine }
+}
+
+export function reviewComposerEdit(composer: ReviewComposer): string | null {
+  const edit = composer.edit
+  if (!edit || edit.type !== "comment") return null
+  return edit.comment?.id ?? null
 }
 
 type SpeechDraft = Pick<AnnotationMeta, "file" | "side" | "line" | "endLine">
@@ -71,6 +100,14 @@ function focusWhenConnected(el: HTMLTextAreaElement): void {
   requestAnimationFrame(tick)
 }
 
+// Keep composer text off the disposable annotation DOM without making each keystroke reactive.
+function trackText(meta: AnnotationMeta, textarea: HTMLTextAreaElement, fallback = ""): void {
+  textarea.value = meta.text ?? fallback
+  textarea.addEventListener("input", () => {
+    meta.text = textarea.value
+  })
+}
+
 function makeIcon(pathData: string): SVGSVGElement {
   const ns = "http://www.w3.org/2000/svg"
   const svg = document.createElementNS(ns, "svg")
@@ -100,21 +137,48 @@ export function buildFileAnnotations(
   file: string,
   fileComments: ReviewComment[],
   edit: string | null,
-  draft: { file: string; side: AnnotationSide; line: number; endLine?: number } | null,
+  draft: ReviewDraft | null,
   draftMeta: AnnotationMeta | null,
-): { annotations: DiffLineAnnotation<AnnotationMeta>[]; draftMeta: AnnotationMeta | null } {
-  const result: DiffLineAnnotation<AnnotationMeta>[] = fileComments.map((c) => ({
-    side: c.side,
-    lineNumber: c.line,
-    metadata: {
-      type: "comment" as const,
-      comment: c,
-      file: c.file,
-      side: c.side,
-      line: c.line,
-      editing: c.id === edit,
-    },
-  }))
+  editMeta: AnnotationMeta | null,
+): {
+  annotations: DiffLineAnnotation<AnnotationMeta>[]
+  draftMeta: AnnotationMeta | null
+  editMeta: AnnotationMeta | null
+} {
+  if (!edit) editMeta = null
+  const result: DiffLineAnnotation<AnnotationMeta>[] = fileComments.map((c) => {
+    if (c.id !== edit) {
+      return {
+        side: c.side,
+        lineNumber: c.line,
+        metadata: {
+          type: "comment" as const,
+          comment: c,
+          file: c.file,
+          side: c.side,
+          line: c.line,
+        },
+      }
+    }
+    if (
+      !editMeta ||
+      editMeta.comment?.id !== c.id ||
+      editMeta.file !== c.file ||
+      editMeta.side !== c.side ||
+      editMeta.line !== c.line
+    ) {
+      editMeta = {
+        type: "comment",
+        comment: c,
+        file: c.file,
+        side: c.side,
+        line: c.line,
+        editing: true,
+      }
+    }
+    editMeta.comment = c
+    return { side: c.side, lineNumber: c.line, metadata: editMeta }
+  })
 
   if (draft && draft.file === file) {
     if (
@@ -135,7 +199,7 @@ export function buildFileAnnotations(
     }
     result.push({ side: draft.side, lineNumber: draft.line, metadata: draftMeta })
   }
-  return { annotations: result, draftMeta }
+  return { annotations: result, draftMeta, editMeta }
 }
 
 export function buildReviewAnnotation(
@@ -158,6 +222,7 @@ export function buildReviewAnnotation(
     textarea.className = "am-annotation-textarea"
     textarea.rows = 3
     textarea.placeholder = handlers.labels.placeholder
+    trackText(meta, textarea)
 
     const actions = document.createElement("div")
     actions.className = "am-annotation-actions"
@@ -226,7 +291,7 @@ export function buildReviewAnnotation(
     const textarea = document.createElement("textarea")
     textarea.className = "am-annotation-textarea"
     textarea.rows = 3
-    textarea.value = comment.comment
+    trackText(meta, textarea, comment.comment)
 
     const actions = document.createElement("div")
     actions.className = "am-annotation-actions"

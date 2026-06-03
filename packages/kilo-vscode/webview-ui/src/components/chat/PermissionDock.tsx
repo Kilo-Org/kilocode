@@ -47,6 +47,10 @@ export const PermissionDock: Component<{
     // Normalize IDN/Unicode hostnames to punycode ASCII to prevent homograph attacks.
     return normalizeUrls(cmd)
   }
+  const cmdDescription = () => {
+    const val = props.request.args?.description
+    return typeof val === "string" && val.length > 0 ? val : undefined
+  }
   const description = createMemo(() =>
     command() ? null : describePatterns(props.request.toolName, props.request.patterns, language.t),
   )
@@ -261,6 +265,7 @@ export const PermissionDock: Component<{
           </Show>
         }
       >
+        <Show when={cmdDescription()}>{(desc) => <div data-slot="permission-hint">{desc()}</div>}</Show>
         <Show when={command()}>{(cmd) => <PermissionCommand command={cmd()} />}</Show>
 
         {(() => {

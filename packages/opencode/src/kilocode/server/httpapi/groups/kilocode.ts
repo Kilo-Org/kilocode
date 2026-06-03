@@ -2,7 +2,10 @@ import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/middleware/instance-context"
-import { WorkspaceRoutingMiddleware } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
+import {
+  WorkspaceRoutingMiddleware,
+  WorkspaceRoutingQuery,
+} from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 import * as Marketplace from "@/kilocode/marketplace/types"
 
@@ -30,6 +33,7 @@ export const KilocodeApi = HttpApi.make("kilocode")
     HttpApiGroup.make("kilocode")
       .add(
         HttpApiEndpoint.post("heapSnapshot", KilocodePaths.heapSnapshot, {
+          query: WorkspaceRoutingQuery,
           success: described(Schema.String, "Heap snapshot file path"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
@@ -40,6 +44,7 @@ export const KilocodeApi = HttpApi.make("kilocode")
           }),
         ),
         HttpApiEndpoint.post("removeSkill", KilocodePaths.removeSkill, {
+          query: WorkspaceRoutingQuery,
           payload: RemoveSkillPayload,
           success: described(Schema.Boolean, "Skill removed"),
           error: HttpApiError.BadRequest,
@@ -51,6 +56,7 @@ export const KilocodeApi = HttpApi.make("kilocode")
           }),
         ),
         HttpApiEndpoint.post("removeAgent", KilocodePaths.removeAgent, {
+          query: WorkspaceRoutingQuery,
           payload: RemoveAgentPayload,
           success: described(Schema.Boolean, "Agent removed"),
           error: HttpApiError.BadRequest,
