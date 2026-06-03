@@ -159,8 +159,8 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     try {
       const client = this.connection.getClient()
       await seedSessionStatuses(client, this.directory(), this.statuses, (msg) => this.post(msg), reconcile)
-    } catch {
-      // Connection state above is sufficient while the shared client reconnects.
+    } catch (err) {
+      console.warn("[Kilo New] Marketplace session status sync failed:", err)
     }
   }
 
@@ -199,7 +199,7 @@ export class MarketplacePanelProvider implements vscode.Disposable {
   private async fetchData(): Promise<void> {
     try {
       const project = this.project ?? undefined
-      const data = await fetchMarketplaceData(this.marketplaceCtx, project, project)
+      const data = await fetchMarketplaceData(this.marketplaceCtx, project, this.directory())
       const dismissed = this.context.globalState.get<boolean>("kilo.agentMigrationBannerDismissed") ?? false
       this.post({ type: "marketplaceData", ...data, showAgentMigrationBanner: !dismissed })
     } catch (err) {
