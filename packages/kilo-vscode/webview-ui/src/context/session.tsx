@@ -2198,6 +2198,7 @@ export const SessionProvider: ParentComponent = (props) => {
       const msgs = store.messages[oldID] ?? []
       const msgIds = msgs.map((m) => m.id)
       queueMicrotask(() => {
+        if (currentSessionID() === oldID) return
         for (const mid of msgIds) stash.remove(mid)
         setStore(
           "messages",

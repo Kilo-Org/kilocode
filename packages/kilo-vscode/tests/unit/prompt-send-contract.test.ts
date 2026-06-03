@@ -92,8 +92,12 @@ describe("session draft retention contract", () => {
     expect(remove).toContain("deleteDraftsForSession(sessionID)")
   })
 
-  it("clears off-store transcript caches when switching sessions", () => {
-    expect(select).toContain("stash.remove(mid)")
+  it("clears off-store transcript caches unless the session becomes active again", () => {
+    const guard = select.indexOf("if (currentSessionID() === oldID) return")
+    const cleanup = select.indexOf("stash.remove(mid)")
+
+    expect(guard).toBeGreaterThan(-1)
+    expect(cleanup).toBeGreaterThan(guard)
     expect(select).toContain("delete map[oldID]")
   })
 })
