@@ -96,7 +96,7 @@ export const ModelPreview: Component<Props> = (props) => {
                       <Show when={isDataCollectedModel(model())}>
                         <Tooltip value={dataLabel()} placement="top">
                           <span class="model-preview-free-data-icon" aria-label={dataLabel()}>
-                            <Icon name="warning" size="small" />
+                            <Icon name="brain-circuit" size="small" />
                           </span>
                         </Tooltip>
                       </Show>
@@ -132,7 +132,7 @@ export const ModelPreview: Component<Props> = (props) => {
 
                 <Show when={isDataCollectedModel(model())}>
                   <span class="model-preview-data-line" aria-label={dataLabel()}>
-                    <Icon name="warning" size="small" />
+                    <Icon name="brain-circuit" size="small" />
                     <span>- {dataLabel()}</span>
                   </span>
                 </Show>
