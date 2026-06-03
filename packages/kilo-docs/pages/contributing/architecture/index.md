@@ -232,10 +232,9 @@ Prefer importing the specific export when possible. Use the namespace re-export 
 
 ### CLI Server API
 
-The CLI server is Hono-based and publishes an OpenAPI-compatible HTTP + SSE API consumed by `@kilocode/sdk`. Some route groups are being migrated behind the experimental Effect `HttpApi` bridge while preserving the generated SDK shape.
+The CLI server uses Effect `HttpApi` and publishes an OpenAPI-compatible HTTP + SSE API consumed by `@kilocode/sdk`.
 
-- Keep the SDK output stable when moving routes between Hono and Effect `HttpApi`.
-- Use `KILO_EXPERIMENTAL_HTTPAPI` only for migration testing; public clients should not depend on the bridge detail.
+- Keep the generated SDK output stable when updating Effect `HttpApi` routes.
 - Regenerate `packages/sdk/js/` after server endpoint changes.
 - Keep request handling observable with route spans and stable attributes where possible.
 

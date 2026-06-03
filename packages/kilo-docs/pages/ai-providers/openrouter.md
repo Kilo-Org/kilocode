@@ -70,7 +70,7 @@ Then set your default model:
 
 ## Supported Transforms
 
-OpenRouter provides an [optional "middle-out" message transform](https://openrouter.ai/docs/features/message-transforms) to help with prompts that exceed the maximum context size of a model.
+OpenRouter provides an [optional "middle-out" message transform](https://openrouter.ai/docs/guides/features/message-transforms) to help with prompts that exceed the maximum context size of a model.
 
 {% tabs %}
 {% tab label="VSCode & CLI" %}

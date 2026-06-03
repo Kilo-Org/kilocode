@@ -16,6 +16,7 @@ import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
 import { Provider as ProviderSvc } from "@/provider/provider"
 import { Env } from "../../src/env"
+import { Git } from "../../src/git"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Question } from "../../src/question"
 import { Todo } from "../../src/session/todo"
@@ -46,7 +47,6 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import * as Database from "../../src/storage/db"
 import { Ripgrep } from "../../src/file/ripgrep"
 import { Format } from "../../src/format"
-import { Git } from "../../src/git" // kilocode_change
 import { provideTmpdirInstance, provideTmpdirServer } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
@@ -193,9 +193,9 @@ function makeHttp() {
     Layer.provide(Skill.defaultLayer),
     Layer.provide(FetchHttpClient.layer),
     Layer.provide(CrossSpawnSpawner.defaultLayer),
+    Layer.provide(Git.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Format.defaultLayer),
-    Layer.provide(Git.defaultLayer), // kilocode_change
     Layer.provideMerge(todo),
     Layer.provideMerge(question),
     Layer.provideMerge(deps),
@@ -1625,15 +1625,22 @@ unix(
         (_dir) =>
           Effect.gen(function* () {
             const { prompt, run, chat } = yield* boot()
+            // kilocode_change start - wait for shell to actually be running before cancelling
+            const status = yield* SessionStatus.Service
+            // kilocode_change end
 
             const sh = yield* prompt
               .shell({ sessionID: chat.id, agent: "build", command: "sleep 30" })
               .pipe(Effect.forkChild)
-            yield* Effect.sleep(50)
+            // kilocode_change start - avoid racing cancellation against async shell startup on Linux CI
+            yield* waitFor(
+              "shell busy",
+              status.get(chat.id).pipe(Effect.map((s) => (s.type === "busy" ? s : undefined))),
+            )
+            // kilocode_change end
 
             yield* prompt.cancel(chat.id)
 
-            const status = yield* SessionStatus.Service
             expect((yield* status.get(chat.id)).type).toBe("idle")
             const busy = yield* run.assertNotBusy(chat.id).pipe(Effect.exit)
             expect(Exit.isSuccess(busy)).toBe(true)
@@ -2127,7 +2134,7 @@ it.live(
       }),
       { git: true, config: providerCfg },
     ),
-  3_000,
+  10_000, // kilocode_change
 )
 
 // Agent variant

@@ -4,6 +4,7 @@ package ai.kilocode.client.migration
 
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.autocomplete.KiloAutocompleteSettingsService
+import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloMigrationRpcApi
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -105,6 +106,7 @@ class KiloMigrationService internal constructor(
             return
         }
         LOG.info("Migration wizard: user started migration ${selectionSummary(selections)}")
+        telemetry("Migration Started", selectionProps(selections))
         lastSelections.set(selections)
 
         val dto = MigrationSelectionBuilder.toDto(selections)
@@ -125,6 +127,7 @@ class KiloMigrationService internal constructor(
                 val flow = try {
                     call { migrate(dto) }
                 } catch (e: Exception) {
+                    telemetry("Migration Failed", mapOf("itemCount" to initialProgress.size.toString(), "errorCount" to "1", "stage" to "start"))
                     LOG.warn("migration start failed", e)
                     finishWithError(e.message ?: "Migration failed")
                     return@launch
@@ -142,6 +145,8 @@ class KiloMigrationService internal constructor(
      */
     override fun skip() {
         LOG.info("Migration wizard: user chose skip")
+        val current = _state.value as? MigrationUiState.Needed
+        if (current != null) telemetry("Migration Skipped", detectionProps(current.detection))
         cs.launch {
             try {
                 call { skip() }
@@ -165,6 +170,7 @@ class KiloMigrationService internal constructor(
         val status = if (hasErrors) LegacyMigrationStatusDto.completed_with_errors else LegacyMigrationStatusDto.completed
         val selections = lastSelections.get()
         LOG.info("Migration wizard: user finished migration status=$status results=${current.results.size} errors=${current.results.count { it.status == MigrationItemStatusDto.error }}")
+        telemetry("Migration Finished", mapOf("status" to status.name, "cleanupRequested" to (selections?.keepLegacySettingsFile == false).toString()))
         cs.launch {
             try {
                 call { finalize(status) }
@@ -225,6 +231,11 @@ class KiloMigrationService internal constructor(
                 val phase = if (hasErrors) MigrationUiPhase.error else MigrationUiPhase.done
                 val progress = if (hasErrors) current.progress else finishSilentProgress(current.progress)
                 LOG.info("Migration wizard: migration complete phase=$phase items=${items.size} errors=${items.count { it.status == MigrationItemStatusDto.error }}")
+                if (hasErrors) {
+                    telemetry("Migration Failed", mapOf("itemCount" to items.size.toString(), "errorCount" to items.count { it.status == MigrationItemStatusDto.error }.toString(), "stage" to "complete"))
+                } else {
+                    telemetry("Migration Completed", mapOf("itemCount" to items.size.toString(), "sessionImportedCount" to current.sessionSummary.imported.size.toString()))
+                }
                 _state.value = current.copy(
                     running = false,
                     phase = phase,
@@ -234,6 +245,7 @@ class KiloMigrationService internal constructor(
             }
             is LegacyMigrationEventDto.Error -> {
                 LOG.warn("Migration wizard: migration error message=${event.message}")
+                telemetry("Migration Failed", mapOf("itemCount" to current.progress.size.toString(), "errorCount" to "1", "stage" to "event"))
                 finishWithError(event.message)
             }
         }
@@ -245,6 +257,7 @@ class KiloMigrationService internal constructor(
             val current = _state.value
             if (current is MigrationUiState.Needed && current.detection == migration && current.phase != MigrationUiPhase.selecting) return
             LOG.info("Migration wizard: showing because backend requires migration ${detectionSummary(migration)}")
+            telemetry("Migration Shown", detectionProps(migration))
             _state.value = MigrationUiState.Needed(migration)
             return
         }
@@ -297,6 +310,28 @@ class KiloMigrationService internal constructor(
 
     private fun detectionSummary(detection: ai.kilocode.rpc.dto.LegacyMigrationDetectionDto): String =
         "providers=${detection.providers.size} mcp=${detection.mcpServers.size} modes=${detection.customModes.size} sessions=${detection.sessions.size} model=${detection.defaultModel != null} settings=${detection.settings != null}"
+
+    private fun detectionProps(detection: ai.kilocode.rpc.dto.LegacyMigrationDetectionDto): Map<String, String> = mapOf(
+        "settings" to (detection.settings != null).toString(),
+        "providers" to detection.providers.size.toString(),
+        "mcpServers" to detection.mcpServers.size.toString(),
+        "customModes" to detection.customModes.size.toString(),
+        "sessions" to detection.sessions.size.toString(),
+        "defaultModel" to (detection.defaultModel != null).toString(),
+    )
+
+    private fun selectionProps(selections: MigrationUiSelections): Map<String, String> = mapOf(
+        "providers" to selections.providers.size.toString(),
+        "mcpServers" to selections.mcpServers.size.toString(),
+        "customModes" to selections.customModes.size.toString(),
+        "sessions" to selections.sessions.size.toString(),
+        "defaultModel" to selections.defaultModel.toString(),
+        "keepLegacySettingsFile" to selections.keepLegacySettingsFile.toString(),
+    )
+
+    private fun telemetry(event: String, props: Map<String, String>) {
+        Telemetry.send(event, props)
+    }
 
     private fun buildInitialProgress(
         selections: MigrationUiSelections,

@@ -233,12 +233,14 @@ class KiloConnectionService(
 
     private val listener = object : EventSourceListener() {
         override fun onOpen(src: EventSource, response: Response) {
+            if (source.get() !== src) return
             log.info("SSE: connected")
             setState(ConnectionState.Connected(port, password))
             lastEvent.set(System.currentTimeMillis())
         }
 
         override fun onEvent(src: EventSource, id: String?, type: String?, data: String) {
+            if (source.get() !== src) return
             lastEvent.set(System.currentTimeMillis())
             val kind = type ?: KiloCliDataParser.extractEventType(data)
             log.debug { "evt=$kind bytes=${data.length} hasId=${id != null} ${ChatLogSummary.body(data)}" }
@@ -246,11 +248,13 @@ class KiloConnectionService(
         }
 
         override fun onClosed(src: EventSource) {
+            if (source.get() !== src) return
             log.info("SSE: stream closed — scheduling reconnect")
             scheduleReconnect()
         }
 
         override fun onFailure(src: EventSource, t: Throwable?, response: Response?) {
+            if (source.get() !== src) return
             val detail = when {
                 t != null -> t.stackTraceToString()
                 response != null -> response.body?.string()

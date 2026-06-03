@@ -1,7 +1,8 @@
-import { describe, expect } from "bun:test"
+import { afterAll, beforeAll, describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { Skill } from "../../src/skill"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { provideInstance, provideTmpdirInstance, tmpdir } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import path from "path"
@@ -44,6 +45,16 @@ const withHome = <A, E, R>(home: string, self: Effect.Effect<A, E, R>) =>
 
 const discovered = <T extends { location: string }>(list: readonly T[]) =>
   list.filter((s) => s.location !== Skill.BUILTIN_LOCATION) // kilocode_change
+
+const disabled = Flag.KILO_DISABLE_CLAUDE_CODE_SKILLS
+
+beforeAll(() => {
+  Flag.KILO_DISABLE_CLAUDE_CODE_SKILLS = false
+})
+
+afterAll(() => {
+  Flag.KILO_DISABLE_CLAUDE_CODE_SKILLS = disabled
+})
 
 describe("skill", () => {
   // kilocode_change start
@@ -165,6 +176,37 @@ Just some content without YAML frontmatter.
 
           const skill = yield* Skill.Service
           expect(discovered(yield* skill.all())).toEqual([]) // kilocode_change
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("discovers skills without descriptions", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(() =>
+            Bun.write(
+              path.join(dir, ".opencode", "skill", "manual-skill", "SKILL.md"),
+              `---
+name: manual-skill
+---
+
+# Manual Skill
+
+Instructions here.
+`,
+            ),
+          )
+
+          const skill = yield* Skill.Service
+          const list = discovered(yield* skill.all()) // kilocode_change
+          expect(list.length).toBe(1)
+          const item = list.find((x) => x.name === "manual-skill")
+          expect(item).toBeDefined()
+          expect(item!.description).toBeUndefined()
+          expect(Skill.fmt(list, { verbose: false })).toBe("No skills are currently available.")
+          expect(Skill.fmt(list, { verbose: true })).toBe("No skills are currently available.")
         }),
       { git: true },
     ),

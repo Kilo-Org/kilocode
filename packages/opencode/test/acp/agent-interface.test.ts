@@ -25,7 +25,8 @@ describe("acp.agent interface compliance", () => {
   type ACPRuntimeMethod = ACPAgentMethods | "resumeSession" | "closeSession" // kilocode_change
 
   // Methods that the SDK's router explicitly checks for at runtime
-  const sdkCheckedMethods: ACPRuntimeMethod[] = [ // kilocode_change
+  const sdkCheckedMethods: ACPRuntimeMethod[] = [
+    // kilocode_change
     // Required
     "initialize",
     "newSession",

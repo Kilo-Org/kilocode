@@ -103,10 +103,11 @@ import { renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-render
 import { useTabScroll } from "./tab-scroll"
 import { DiffPanel } from "./DiffPanel"
 import { createRevertFile } from "./revert-file"
-import { FullScreenDiffView } from "./FullScreenDiffView"
+import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { ApplyDialog } from "./ApplyDialog"
 import { groupApplyConflicts } from "./apply-conflicts"
-import type { ReviewComment } from "./review-comments"
+import type { ReviewComment } from "../diff-viewer/review-comments"
+import { clearReviewComposer, createReviewComposer } from "../diff-viewer/review-annotations"
 import { CurrentTabsMenu, createCurrentTabItems, focusCurrentTab } from "./CurrentTabsMenu"
 import { BranchSelect } from "../src/components/shared/BranchSelect"
 import { WorktreeItem } from "./WorktreeItem"
@@ -124,7 +125,7 @@ import {
 } from "./section-helpers"
 import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
-import { mergeWorktreeDiffs } from "./diff-state"
+import { mergeWorktreeDiffs } from "../diff-viewer/diff-state"
 import { initialMessage, seedInitialVariant } from "./initial-message"
 import { createMarkdownRender } from "./review-preferences"
 import { createSidebarCollapse } from "./sidebar-collapse"
@@ -246,6 +247,7 @@ const AgentManagerContent: Component = () => {
 
   const [reviewOpenByContext, setReviewOpenByContext] = createSignal<Record<string, boolean>>({})
   const [reviewCommentsByContext, setReviewCommentsByContext] = createSignal<Record<string, ReviewComment[]>>({})
+  const reviewComposer = createReviewComposer()
   const [reviewActive, setReviewActive] = createSignal(false)
   const [reviewDiffStyle, setReviewDiffStyle] = createSignal<"unified" | "split">("unified")
   const markdown = createMarkdownRender(vscode)
@@ -285,6 +287,7 @@ const AgentManagerContent: Component = () => {
     setPendingDelete(null)
   }
   createEffect(on(selection, () => cancelPendingDelete(), { defer: true }))
+  createEffect(on(selection, () => clearReviewComposer(reviewComposer), { defer: true }))
   onCleanup(() => clearTimeout(pendingDeleteTimer))
 
   // Per-context tab memory: maps sidebar selection key -> last active session/pending ID
@@ -3063,6 +3066,7 @@ const AgentManagerContent: Component = () => {
                         onMarkdownRenderChange={markdown.update}
                         comments={reviewComments()}
                         onCommentsChange={setReviewCommentsForSelection}
+                        composer={reviewComposer}
                         onClose={() => setSidePanel(null)}
                         onExpand={selection() !== null ? openReviewTab : undefined}
                         onRequestDiff={requestDiffFile}
@@ -3092,6 +3096,7 @@ const AgentManagerContent: Component = () => {
                   sessionKey={diffSessionKey()}
                   comments={reviewComments()}
                   onCommentsChange={setReviewCommentsForSelection}
+                  composer={reviewComposer}
                   onSendAll={closeReviewTab}
                   diffStyle={reviewDiffStyle()}
                   onDiffStyleChange={setSharedDiffStyle}

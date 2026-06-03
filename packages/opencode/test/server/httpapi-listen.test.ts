@@ -10,7 +10,6 @@ import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 void Log.init({ print: false })
 
 const original = {
-  KILO_EXPERIMENTAL_HTTPAPI: Flag.KILO_EXPERIMENTAL_HTTPAPI,
   KILO_SERVER_PASSWORD: Flag.KILO_SERVER_PASSWORD,
   KILO_SERVER_USERNAME: Flag.KILO_SERVER_USERNAME,
   envPassword: process.env.KILO_SERVER_PASSWORD,
@@ -20,7 +19,6 @@ const auth = { username: "opencode", password: "listen-secret" }
 const testPty = process.platform === "win32" ? test.skip : test
 
 afterEach(async () => {
-  Flag.KILO_EXPERIMENTAL_HTTPAPI = original.KILO_EXPERIMENTAL_HTTPAPI
   Flag.KILO_SERVER_PASSWORD = original.KILO_SERVER_PASSWORD
   Flag.KILO_SERVER_USERNAME = original.KILO_SERVER_USERNAME
   if (original.envPassword === undefined) delete process.env.KILO_SERVER_PASSWORD
@@ -31,8 +29,7 @@ afterEach(async () => {
   await resetDatabase()
 })
 
-async function startListener(backend: "effect-httpapi" | "hono" = "effect-httpapi") {
-  Flag.KILO_EXPERIMENTAL_HTTPAPI = backend === "effect-httpapi"
+async function startListener() {
   Flag.KILO_SERVER_PASSWORD = auth.password
   Flag.KILO_SERVER_USERNAME = auth.username
   process.env.KILO_SERVER_PASSWORD = auth.password
@@ -40,8 +37,7 @@ async function startListener(backend: "effect-httpapi" | "hono" = "effect-httpap
   return Server.listen({ hostname: "127.0.0.1", port: 0 })
 }
 
-async function startNoAuthListener(backend: "effect-httpapi" | "hono" = "effect-httpapi") {
-  Flag.KILO_EXPERIMENTAL_HTTPAPI = backend === "effect-httpapi"
+async function startNoAuthListener() {
   Flag.KILO_SERVER_PASSWORD = undefined
   Flag.KILO_SERVER_USERNAME = auth.username
   delete process.env.KILO_SERVER_PASSWORD
@@ -212,22 +208,6 @@ describe("HttpApi Server.listen", () => {
     }
   })
 
-  testPty("serves PTY websocket tickets through legacy Hono Server.listen", async () => {
-    await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
-    const listener = await startListener("hono")
-    try {
-      const info = await createCat(listener, tmp.path)
-      const ticket = await connectTicket(listener, info.id, tmp.path)
-      const ws = await openSocket(socketURL(listener, info.id, tmp.path, ticket.ticket))
-      const message = waitForMessage(ws, (message) => message.includes("ping-hono-ticket"))
-      ws.send("ping-hono-ticket\n")
-      expect(await message).toContain("ping-hono-ticket")
-      ws.close(1000)
-    } finally {
-      await stop(listener, "timed out cleaning up hono listener").catch(() => undefined)
-    }
-  })
-
   testPty("rejects unsafe PTY ticket mint and connect requests", async () => {
     await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
     const listener = await startListener()
@@ -300,20 +280,18 @@ describe("HttpApi Server.listen", () => {
     }
   })
 
-  for (const backend of ["effect-httpapi", "hono"] as const) {
-    testPty(`keeps PTY websocket tickets optional when server auth is disabled (${backend})`, async () => {
-      await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
-      const listener = await startNoAuthListener(backend)
-      try {
-        const info = await createCat(listener, tmp.path)
-        const ws = await openSocket(socketURL(listener, info.id, tmp.path))
-        const message = waitForMessage(ws, (message) => message.includes(`ping-no-auth-${backend}`))
-        ws.send(`ping-no-auth-${backend}\n`)
-        expect(await message).toContain(`ping-no-auth-${backend}`)
-        ws.close(1000)
-      } finally {
-        await stop(listener, "timed out cleaning up no-auth listener").catch(() => undefined)
-      }
-    })
-  }
+  testPty("keeps PTY websocket tickets optional when server auth is disabled", async () => {
+    await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
+    const listener = await startNoAuthListener()
+    try {
+      const info = await createCat(listener, tmp.path)
+      const ws = await openSocket(socketURL(listener, info.id, tmp.path))
+      const message = waitForMessage(ws, (message) => message.includes("ping-no-auth"))
+      ws.send("ping-no-auth\n")
+      expect(await message).toContain("ping-no-auth")
+      ws.close(1000)
+    } finally {
+      await stop(listener, "timed out cleaning up no-auth listener").catch(() => undefined)
+    }
+  })
 })

@@ -1,6 +1,5 @@
 package ai.kilocode.client.session.ui.model
 
-import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
@@ -66,14 +65,20 @@ internal class ModelPickerRenderer(
     }
     private val title = SimpleColoredComponent()
     private val badge = FilledBadgeIcon(
-        KiloBundle.message("model.picker.free"),
+        ModelText.freeLabel(),
         ModelText.freeBg(),
         JBColor.namedColor("Kilo.ModelPicker.freeBadgeForeground", JBColor.WHITE),
     )
+    private val warn = JBLabel(ModelPickerIcons.DATA_COLLECTED).apply {
+        toolTipText = ModelText.dataCollected()
+    }
     private val provider = JBLabel()
     private val head = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
         add(title)
         add(BadgeLabel(badge).apply {
+            border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
+        })
+        add(warn.apply {
             border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
         })
         add(provider)
@@ -92,7 +97,7 @@ internal class ModelPickerRenderer(
     init {
         isOpaque = true
         top.isOpaque = true
-        UiStyle.Components.transparent(row, check, title, head, provider, star)
+        UiStyle.Components.transparent(row, check, title, head, warn, provider, star)
         row.border = JBUI.Borders.empty(
             UiStyle.Gap.md(),
             UiStyle.Gap.lg(),
@@ -134,6 +139,7 @@ internal class ModelPickerRenderer(
         title.append(name.model, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, fg))
 
         head.getComponent(1).isVisible = value.item.free
+        warn.isVisible = ModelText.collectsData(value.item)
         provider.isVisible = value.favorite
         provider.text = value.item.providerName
         provider.foreground = weak
@@ -154,6 +160,12 @@ internal class ModelPickerRenderer(
     internal fun starIcon(): Icon? = star.icon
 
     internal fun badgeVisible(): Boolean = head.getComponent(1).isVisible
+
+    internal fun badgeText(): String = badge.text
+
+    internal fun warningVisible(): Boolean = warn.isVisible
+
+    internal fun warningTooltip(): String? = warn.toolTipText
 
     private class BadgeLabel(icon: Icon) : JBLabel(icon)
 }

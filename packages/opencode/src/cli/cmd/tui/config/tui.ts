@@ -1,19 +1,20 @@
 export * as TuiConfig from "./tui"
 
-import z from "zod"
+import type z from "zod"
+import { createBindingLookup } from "@opentui/keymap/extras"
 import { mergeDeep, unique } from "remeda"
 import { Context, Effect, Fiber, Layer } from "effect"
 import { ConfigParse } from "@/config/parse"
 import * as ConfigPaths from "@/config/paths"
 import { migrateTuiConfig } from "./tui-migrate"
-import { TuiInfo } from "./tui-schema"
+import { KeymapLeaderTimeoutDefault, TuiInfo, TuiJsonSchemaInfo } from "./tui-schema"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { isRecord } from "@/util/record"
 import { Global } from "@opencode-ai/core/global"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { CurrentWorkingDirectory } from "./cwd"
 import { ConfigPlugin } from "@/config/plugin"
-import { ConfigKeybinds } from "@/config/keybinds"
+import { TuiKeybind } from "./keybind"
 import { InstallationLocal, InstallationVersion } from "@opencode-ai/core/installation/version"
 import { makeRuntime } from "@opencode-ai/core/effect/runtime"
 import { Filesystem } from "@/util/filesystem"
@@ -25,23 +26,24 @@ import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins" // ki
 const log = Log.create({ service: "tui.config" })
 
 export const Info = TuiInfo
+export const JsonSchemaInfo = TuiJsonSchemaInfo
+export type Info = z.output<typeof Info>
 
 type Acc = {
   result: Info
+  plugin_origins: ConfigPlugin.Origin[]
 }
 
-type State = {
-  config: Info
-  deps: Array<Fiber.Fiber<void, AppFileSystem.Error>>
-}
-
-export type Info = z.output<typeof Info> & {
+export type Resolved = Omit<Info, "keybinds" | "leader_timeout"> & {
+  keybinds: TuiKeybind.BindingLookupView
+  leader_timeout: number
   // Internal resolved plugin list used by runtime loading.
   plugin_origins?: ConfigPlugin.Origin[]
 }
 
 export interface Interface {
-  readonly get: () => Effect.Effect<Info>
+  readonly get: () => Effect.Effect<Resolved>
+  readonly info: () => Effect.Effect<Info>
   readonly waitForDependencies: () => Effect.Effect<void>
 }
 
@@ -66,6 +68,37 @@ function normalize(raw: Record<string, unknown>) {
   return {
     ...tui,
     ...data,
+  }
+}
+
+export function effective(config: Info): Info {
+  const keybinds = { ...(config.keybinds ?? {}) }
+  if (process.platform === "win32") {
+    // Native Windows terminals do not support POSIX suspend, so prefer prompt undo.
+    keybinds.terminal_suspend = "none"
+    keybinds.input_undo ??= unique([
+      "ctrl+z",
+      ...String(TuiKeybind.Keybinds.shape.input_undo.parse(undefined)).split(","),
+    ]).join(",")
+  }
+  return {
+    ...config,
+    keybinds: TuiKeybind.Keybinds.parse(keybinds),
+    leader_timeout: config.leader_timeout ?? KeymapLeaderTimeoutDefault,
+  }
+}
+
+export function resolve(config: Info, origins?: ConfigPlugin.Origin[]): Resolved {
+  const info = effective(config)
+  const keybinds = TuiKeybind.Keybinds.parse(info.keybinds ?? {})
+  return {
+    ...info,
+    keybinds: createBindingLookup(TuiKeybind.toBindingConfig(keybinds), {
+      commandMap: TuiKeybind.CommandMap,
+      bindingDefaults: TuiKeybind.bindingDefaults(),
+    }),
+    leader_timeout: info.leader_timeout ?? KeymapLeaderTimeoutDefault,
+    plugin_origins: origins?.length ? origins : undefined,
   }
 }
 
@@ -129,11 +162,11 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
 
       const scope = pluginScope(file, ctx)
       const plugins = ConfigPlugin.deduplicatePluginOrigins([
-        ...(acc.result.plugin_origins ?? []),
+        ...acc.plugin_origins,
         ...data.plugin.map((spec) => ({ spec, scope, source: file })),
       ])
       acc.result.plugin = plugins.map((item) => item.spec)
-      acc.result.plugin_origins = plugins
+      acc.plugin_origins = plugins
     })
 
   // Every config dir we may read from: global config dir, any `.opencode`
@@ -145,6 +178,7 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
 
   const acc: Acc = {
     result: {},
+    plugin_origins: [],
   }
 
   // 1. Global tui config (lowest precedence).
@@ -181,24 +215,18 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
     }
   }
 
-  const keybinds = { ...(acc.result.keybinds ?? {}) }
-  if (process.platform === "win32") {
-    // Native Windows terminals do not support POSIX suspend, so prefer prompt undo.
-    keybinds.terminal_suspend = "none"
-    keybinds.input_undo ??= unique([
-      "ctrl+z",
-      ...ConfigKeybinds.Keybinds.shape.input_undo.parse(undefined).split(","),
-    ]).join(",")
-  }
-  acc.result.keybinds = ConfigKeybinds.Keybinds.parse(keybinds)
+  const info = effective(acc.result)
+  const result = resolve(info, acc.plugin_origins)
 
   // kilocode_change start — inject Kilo default plugins to keep TUI aligned with server config
-  KilocodeDefaultPlugins.apply(acc.result, { disabled: Flag.KILO_DISABLE_DEFAULT_PLUGINS, log })
+  KilocodeDefaultPlugins.apply(result, { disabled: Flag.KILO_DISABLE_DEFAULT_PLUGINS, log })
+  info.plugin = result.plugin
   // kilocode_change end
 
   return {
-    config: acc.result,
-    dirs: acc.result.plugin?.length ? dirs : [],
+    config: result,
+    info,
+    dirs: result.plugin?.length ? dirs : [],
   }
 })
 
@@ -227,11 +255,12 @@ export const layer = Layer.effect(
     )
 
     const get = Effect.fn("TuiConfig.get")(() => Effect.succeed(data.config))
+    const info = Effect.fn("TuiConfig.info")(() => Effect.succeed(data.info))
 
     const waitForDependencies = Effect.fn("TuiConfig.waitForDependencies")(() =>
       Effect.forEach(deps, Fiber.join, { concurrency: "unbounded" }).pipe(Effect.ignore(), Effect.asVoid),
     )
-    return Service.of({ get, waitForDependencies })
+    return Service.of({ get, info, waitForDependencies })
   }).pipe(Effect.withSpan("TuiConfig.layer")),
 )
 

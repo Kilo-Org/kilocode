@@ -6,6 +6,7 @@ import { Authorization } from "../middleware/authorization"
 import { InstanceContextMiddleware } from "../middleware/instance-context"
 import { WorkspaceRoutingMiddleware } from "../middleware/workspace-routing"
 import { described } from "./metadata"
+import { ApiNotFoundError } from "../errors" // kilocode_change
 
 const root = "/permission"
 const ReplyPayload = Schema.Struct({
@@ -43,7 +44,7 @@ export const PermissionApi = HttpApi.make("permission")
           params: { requestID: PermissionID },
           payload: ReplyPayload,
           success: described(Schema.Boolean, "Permission processed successfully"),
-          error: [HttpApiError.BadRequest, HttpApiError.NotFound],
+          error: [HttpApiError.BadRequest, ApiNotFoundError], // kilocode_change
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "permission.reply",
@@ -56,7 +57,7 @@ export const PermissionApi = HttpApi.make("permission")
           params: { requestID: PermissionID },
           payload: SaveAlwaysRulesBody,
           success: described(Schema.Boolean, "Always-rules saved"),
-          error: [HttpApiError.NotFound],
+          error: [ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "permission.saveAlwaysRules",

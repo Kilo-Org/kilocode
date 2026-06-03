@@ -18,8 +18,6 @@ import { join } from "node:path"
  *   char already handles the fade over `--text-shimmer-swap` (220ms).
  *
  * This static test fails if someone re-introduces the timer pattern.
- * For the matching runtime assertion, see
- * `tests/webview-reactivity/textshimmer-perf.test.ts`.
  */
 describe("TextShimmer JS-timer regression guard", () => {
   const tsxPath = join(__dirname, "..", "..", "..", "ui", "src", "components", "text-shimmer.tsx")
@@ -51,23 +49,13 @@ describe("TextShimmer JS-timer regression guard", () => {
     expect(tsx).not.toMatch(/data-run/)
   })
 
-  it("text-shimmer.css gates the sweep animation on data-active, not data-run", () => {
-    expect(css).not.toMatch(/\[data-run="true"\]/)
-    expect(css).toMatch(
-      /\[data-component="text-shimmer"\]\[data-active="true"\]\s*\[data-slot="text-shimmer-char-shimmer"\]\s*\{[^}]*animation-name:\s*text-shimmer-sweep/,
-    )
+  it("text-shimmer.tsx renders plain text until an instance has been active", () => {
+    expect(tsx).toMatch(/createMemo<boolean>\(\(seen\) => seen \|\| active\(\), false\)/)
+    expect(tsx).toMatch(/<Show when=\{shimmer\(\)\} fallback=\{text\(\)\}>/)
   })
 
-  it("text-shimmer.tsx does not use clearTimeout", () => {
-    expect(tsx).not.toMatch(/\bclearTimeout\b/)
-  })
-
-  it("text-shimmer.tsx has no createEffect (animation is CSS-driven)", () => {
-    expect(tsx).not.toMatch(/\bcreateEffect\b/)
-  })
-
-  it("text-shimmer.tsx does not render a data-run attribute", () => {
-    expect(tsx).not.toMatch(/data-run/)
+  it("text-shimmer.css preserves whitespace for plain inactive labels", () => {
+    expect(css).toMatch(/\[data-component="text-shimmer"\]\s*\{[^}]*white-space:\s*pre;/)
   })
 
   it("text-shimmer.css gates the sweep animation on data-active, not data-run", () => {

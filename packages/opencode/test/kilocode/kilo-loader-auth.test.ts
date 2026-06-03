@@ -74,6 +74,12 @@ function layer() {
       fetch: () =>
         Effect.succeed({
           models: {
+            "free-model": {
+              id: "free-model",
+              name: "Free Model",
+              cost: { input: 0, output: 0 },
+              limit: { context: 128000, output: 4096 },
+            },
             "paid-model": {
               id: "paid-model",
               name: "Paid Model",
@@ -111,6 +117,15 @@ it.live("assembles paid Kilo models without auth", () =>
       providerID: "kilo",
       cost: { input: 1, output: 2 },
     })
+  }),
+)
+
+it.live("marks zero-cost Kilo models as free when the catalog omits isFree", () =>
+  Effect.gen(function* () {
+    const providers = yield* ModelsDev.Service.use((models) => models.get()).pipe(Effect.provide(layer()))
+    const kilo = Provider.fromModelsDevProvider(providers.kilo)
+
+    expect(kilo.models["free-model"].isFree).toBe(true)
   }),
 )
 
