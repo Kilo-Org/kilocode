@@ -39,6 +39,7 @@ import type { IndexingStatus } from "@kilocode/kilo-indexing/status" // kilocode
 import { KiloIndexing } from "@/kilocode/indexing" // kilocode_change
 import path from "path"
 import { useKV } from "./kv"
+import { aggregateFailures } from "./aggregate-failures"
 
 export const { use: useSync, provider: SyncProvider } = createSimpleContext({
   name: "Sync",
@@ -296,14 +297,12 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           break
         }
 
-        // kilocode_change start
         case "suggestion.accepted":
         case "suggestion.dismissed":
         case "suggestion.shown": {
           handleSuggestionEvent(event, store, setStore)
           break
         }
-        // kilocode_change end
 
         case "session.network.restored": {
           const requests = store.network[event.properties.sessionID]
@@ -590,17 +589,24 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       const agentsPromise = sdk.client.app.agents({ workspace }, { throwOnError: true })
       const configPromise = sdk.client.config.get({ workspace }, { throwOnError: true })
       const globalConfigPromise = sdk.client.global.config.get({ throwOnError: true }) // kilocode_change
-      const blockingRequests: Promise<unknown>[] = [
-        providersPromise,
-        providerListPromise,
-        agentsPromise,
-        configPromise,
-        globalConfigPromise, // kilocode_change
-        projectPromise,
-        ...(args.continue ? [sessionListPromise] : []),
+      const blockingRequests: { name: string; promise: Promise<unknown> }[] = [
+        { name: "config.providers", promise: providersPromise },
+        { name: "provider.list", promise: providerListPromise },
+        { name: "app.agents", promise: agentsPromise },
+        { name: "config.get", promise: configPromise },
+        { name: "global.config", promise: globalConfigPromise }, // kilocode_change
+        { name: "project.sync", promise: projectPromise },
+        ...(args.continue ? [{ name: "session.list", promise: sessionListPromise }] : []),
       ]
 
-      await Promise.all(blockingRequests)
+      await Promise.allSettled(blockingRequests.map((r) => r.promise))
+        .then((settled) => {
+          // Surface every failed endpoint in one labeled message instead of
+          // letting the first rejection drown its siblings as unhandled
+          // rejections.
+          const failure = aggregateFailures(blockingRequests.map((r, i) => ({ name: r.name, result: settled[i] })))
+          if (failure) throw failure
+        })
         .then(async () => {
           const providersResponse = providersPromise.then((x) => x.data!)
           const providerListResponse = providerListPromise.then((x) => x.data!)
@@ -798,10 +804,12 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
               if (match.found) draft.session[match.index] = session.data!
               if (!match.found) draft.session.splice(match.index, 0, session.data!)
               draft.todo[sessionID] = todo.data ?? []
-              draft.message[sessionID] = messages.data!.map((x) => strip(x.info)) // kilocode_change
-              for (const message of messages.data!) {
+              const infos: (typeof draft.message)[string] = []
+              for (const message of messages.data ?? []) {
+                infos.push(strip(message.info)) // kilocode_change
                 draft.part[message.info.id] = message.parts
               }
+              draft.message[sessionID] = infos
               draft.session_diff[sessionID] = diff.data ?? []
             }),
           )

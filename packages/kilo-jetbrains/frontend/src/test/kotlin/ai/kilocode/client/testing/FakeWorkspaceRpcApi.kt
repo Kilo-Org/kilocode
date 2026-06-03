@@ -1,9 +1,12 @@
 package ai.kilocode.client.testing
 
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
+import ai.kilocode.rpc.dto.ConfigTargetDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
+import ai.kilocode.rpc.dto.ModelsWorkspaceDto
 import ai.kilocode.rpc.dto.WorkspaceFileDto
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -21,10 +24,24 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     val state = MutableStateFlow(KiloWorkspaceStateDto(KiloWorkspaceStatusDto.PENDING))
     var reloads = 0
         private set
+    var models = ModelsWorkspaceDto()
+    var modelsGate: CompletableDeferred<Unit>? = null
     var fileMatches = emptyList<WorkspaceFileDto>()
     var openResult = true
+    var localConfigPath = "/test/.kilo/kilo.jsonc"
+    var globalConfigPath = "/config/kilo.jsonc"
+    var localConfigDisplayPath = localConfigPath
+    var globalConfigDisplayPath = globalConfigPath
+    var localConfigExists = true
+    var globalConfigExists = true
     val fileCalls = mutableListOf<Pair<String, String>>()
     val opened = mutableListOf<String>()
+    val localConfigs = mutableListOf<String>()
+    var globalConfigs = 0
+    var localConfigPathCalls = 0
+        private set
+    var globalConfigPathCalls = 0
+        private set
 
     override suspend fun resolveProjectDirectory(hint: String): String {
         assertNotEdt("resolveProjectDirectory")
@@ -41,6 +58,12 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
         reloads += 1
     }
 
+    override suspend fun models(directory: String): ModelsWorkspaceDto {
+        assertNotEdt("models")
+        modelsGate?.await()
+        return models
+    }
+
     override suspend fun files(directory: String, path: String): List<WorkspaceFileDto> {
         assertNotEdt("files")
         fileCalls.add(directory to path)
@@ -50,6 +73,30 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     override suspend fun openFile(path: String): Boolean {
         assertNotEdt("openFile")
         opened.add(path)
+        return openResult
+    }
+
+    override suspend fun localConfigTarget(directory: String): ConfigTargetDto {
+        assertNotEdt("localConfigTarget")
+        localConfigPathCalls += 1
+        return ConfigTargetDto(localConfigPath, localConfigDisplayPath, localConfigExists)
+    }
+
+    override suspend fun globalConfigTarget(): ConfigTargetDto {
+        assertNotEdt("globalConfigTarget")
+        globalConfigPathCalls += 1
+        return ConfigTargetDto(globalConfigPath, globalConfigDisplayPath, globalConfigExists)
+    }
+
+    override suspend fun openLocalConfig(directory: String): Boolean {
+        assertNotEdt("openLocalConfig")
+        localConfigs.add(directory)
+        return openResult
+    }
+
+    override suspend fun openGlobalConfig(): Boolean {
+        assertNotEdt("openGlobalConfig")
+        globalConfigs += 1
         return openResult
     }
 }

@@ -34,6 +34,7 @@ class SessionSidePanelManager(
     val component: JPanel = object : JPanel(BorderLayout()), DataProvider {
         override fun getData(dataId: String): Any? {
             if (SessionManager.KEY.`is`(dataId)) return this@SessionSidePanelManager
+            if (SessionManager.WORKSPACE_KEY.`is`(dataId)) return root
             return null
         }
     }

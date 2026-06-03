@@ -124,6 +124,11 @@ export namespace KiloSessionPrompt {
     return input.agent.permission
   }
 
+  export function mergeToolPermissions(input: { existing: Permission.Ruleset; toggles: Permission.Ruleset }) {
+    const names = new Set(input.toggles.map((rule) => rule.permission))
+    return [...input.existing.filter((rule) => !names.has(rule.permission)), ...input.toggles]
+  }
+
   export const askPermission = Effect.fn("KiloSessionPrompt.askPermission")(function* (input: {
     permission: Pick<Permission.Interface, "ask">
     agents: Pick<Agent.Interface, "get">
