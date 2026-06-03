@@ -8268,8 +8268,8 @@ export type KiloProfileResponses = {
     }
     balance: {
       balance: number
-    }
-    currentOrgId: string
+    } | null
+    currentOrgId: string | null
   }
 }
 
@@ -8557,19 +8557,20 @@ export type KiloClawStatusResponses = {
       | "stopped"
       | "destroying"
       | "restoring"
+      | null
     sandboxId?: string
     flyRegion?: string
     machineSize?: {
       cpus: number
       memory_mb: number
     }
-    openclawVersion?: string
-    lastStartedAt?: string
-    lastStoppedAt?: string
+    openclawVersion?: string | null
+    lastStartedAt?: string | null
+    lastStoppedAt?: string | null
     channelCount?: number
     secretCount?: number
     userId?: string
-    botName?: string
+    botName?: string | null
   }
 }
 
@@ -8594,7 +8595,7 @@ export type KiloClawChatCredentialsResponses = {
     expiresAt: string
     kiloChatUrl: string
     eventServiceUrl: string
-  }
+  } | null
 }
 
 export type KiloClawChatCredentialsResponse = KiloClawChatCredentialsResponses[keyof KiloClawChatCredentialsResponses]
@@ -8628,12 +8629,12 @@ export type KiloCloudSessionsResponses = {
   200: {
     cliSessions: Array<{
       session_id: string
-      title: string
+      title: string | null
       created_at: string
       updated_at: string
       version: number
     }>
-    nextCursor: string
+    nextCursor: string | null
   }
 }
 

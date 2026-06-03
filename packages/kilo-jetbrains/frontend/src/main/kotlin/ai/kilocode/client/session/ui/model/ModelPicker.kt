@@ -3,7 +3,6 @@ package ai.kilocode.client.session.ui.model
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.PickerButton
 import ai.kilocode.rpc.dto.ModelSelectionDto
-import com.intellij.icons.AllIcons
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.PopupShowOptions
@@ -109,7 +108,7 @@ class ModelPicker : PickerButton() {
         val item = selected ?: items.firstOrNull()
         val display = item?.display ?: ""
         text = "${ModelText.sanitize(display)} ▴"
-        icon = if (item?.let(ModelText::collectsData) == true) AllIcons.General.Warning else null
+        icon = if (item?.let(ModelText::collectsData) == true) ModelPickerIcons.DATA_COLLECTED else null
         horizontalTextPosition = SwingConstants.LEFT
         iconTextGap = JBUI.CurrentTheme.ActionsList.elementIconGap()
         toolTipText = if (item?.let(ModelText::collectsData) == true) ModelText.dataCollected() else KiloBundle.message("model.picker.tooltip")

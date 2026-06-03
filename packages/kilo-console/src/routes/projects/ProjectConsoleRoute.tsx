@@ -2,6 +2,7 @@ import { A, useLocation, useParams } from "@solidjs/router"
 import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show } from "solid-js"
 import { Card } from "@kilocode/kilo-web-ui/card"
 import { Icon } from "@kilocode/kilo-web-ui/icon"
+import { LoadingScreen } from "../../components/LoadingScreen"
 import {
   createProjectPty,
   createProjectWorktree,
@@ -89,9 +90,12 @@ function eventSession(event: ProjectConsoleEvent) {
 }
 
 function eventType(event: ProjectConsoleEvent) {
-  const payload = event.payload
+  const payload = event.payload as { type?: string; name?: unknown; syncEvent?: { type?: unknown } }
+  if (!payload.type) return ""
   if (payload.type !== "sync") return payload.type
-  return payload.name
+  if (typeof payload.name === "string") return payload.name
+  if (typeof payload.syncEvent?.type === "string") return payload.syncEvent.type
+  return ""
 }
 
 function messageEvent(event: ProjectConsoleEvent) {
@@ -674,14 +678,10 @@ export function ProjectConsoleRoute() {
 
       <main class="project-console-main">
         <Show when={!query() && discoverable(search())}>
-          <Card class="banner" variant="info">
-            Discovering Kilo server...
-          </Card>
+          <LoadingScreen variant="fullscreen" />
         </Show>
         <Show when={snap.loading && !snap()}>
-          <Card class="banner" variant="info">
-            Loading project console...
-          </Card>
+          <LoadingScreen variant="fullscreen" />
         </Show>
         <Show when={snap.error || failure()}>
           <Card class="banner" variant="error">
@@ -699,7 +699,7 @@ export function ProjectConsoleRoute() {
               return { url: base.url, dir: item.directory, scope: "project" }
             })
             return (
-              <Show keyed when={input()}>
+              <Show when={input()}>
                 {(target) => {
                   const item = pty()
                   if (!item) return null
@@ -710,7 +710,7 @@ export function ProjectConsoleRoute() {
                       aria-hidden={terminal() !== key}
                     >
                       <GhosttyTerminal
-                        query={target}
+                        query={target()}
                         pty={item.id}
                         active={terminal() === key}
                         onExit={() => {
@@ -751,7 +751,7 @@ export function ProjectConsoleRoute() {
         </div>
         <div class="project-info-card grow">
           <div class="project-panel-heading">Changes</div>
-          <Show when={diffs.loading}>
+          <Show when={diffs.loading && !diffs()}>
             <p class="empty">Loading diff...</p>
           </Show>
           <Show when={diffs.error}>

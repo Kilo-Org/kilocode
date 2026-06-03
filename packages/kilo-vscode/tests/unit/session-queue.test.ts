@@ -17,6 +17,11 @@ const base = {
 
 const user = (id: string): Message => ({ ...base, id, role: "user" })
 
+const compact = (id: string): Message => ({
+  ...user(id),
+  parts: [{ id: `part_${id}`, sessionID: base.sessionID, messageID: id, type: "compaction", auto: false }],
+})
+
 const assistant = (id: string, parentID: string, opts: Partial<Message> = {}): Message => ({
   ...base,
   id,
@@ -316,6 +321,42 @@ describe("messageTurns", () => {
     ])
   })
 
+  it("keeps resumed replies after a persisted compaction turn", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1"),
+      compact("message_3"),
+      assistant("message_4", "message_3", { summary: true, finish: "stop" }),
+      assistant("message_5", "message_1", { finish: "stop" }),
+    ]
+
+    expect(
+      messageTurns(messages).map((turn) => ({
+        user: turn.user.id,
+        assistant: turn.assistant.map((msg) => msg.id),
+      })),
+    ).toEqual([
+      { user: "message_1", assistant: ["message_2"] },
+      { user: "message_3", assistant: ["message_4", "message_5"] },
+    ])
+  })
+
+  it("detects persisted compaction parts through the lazy lookup", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1"),
+      user("message_3"),
+      assistant("message_4", "message_3", { summary: true, finish: "stop" }),
+      assistant("message_5", "message_1", { finish: "stop" }),
+    ]
+
+    expect(
+      visibleMessages(messages, undefined, (msg) => (msg.id === "message_3" ? compact(msg.id).parts : msg.parts)).map(
+        (msg) => msg.id,
+      ),
+    ).toEqual(["message_1", "message_2", "message_3", "message_4", "message_5"])
+  })
+
   it("surfaces leading assistant output as partial turns grouped by parent", () => {
     const messages = [
       assistant("message_2", "message_1"),
@@ -435,6 +476,49 @@ describe("activeUserMessageID", () => {
     ]
 
     expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_1")
+  })
+
+  it("maps resumed post-compaction tool calls to the compaction turn", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1"),
+      compact("message_3"),
+      assistant("message_4", "message_3", { summary: true, finish: "stop" }),
+      assistant("message_5", "message_1", { finish: "tool-calls" }),
+      user("message_6"),
+    ]
+
+    expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_3")
+    expectLayout(messages, { type: "busy" }, { virtual: ["message_1"], direct: ["message_3"], queued: ["message_6"] })
+  })
+
+  it("uses lazy compaction parts when mapping resumed tool calls", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1"),
+      user("message_3"),
+      assistant("message_4", "message_3", { summary: true, finish: "stop" }),
+      assistant("message_5", "message_1", { finish: "tool-calls" }),
+    ]
+
+    expect(
+      activeUserMessageID(messages, { type: "busy" }, (msg) =>
+        msg.id === "message_3" ? compact(msg.id).parts : msg.parts,
+      ),
+    ).toBe("message_3")
+  })
+
+  it("advances beyond a completed post-compaction reply", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1", { finish: "stop" }),
+      compact("message_3"),
+      assistant("message_4", "message_3", { summary: true, finish: "stop" }),
+      assistant("message_5", "message_1", { finish: "stop" }),
+      user("message_6"),
+    ]
+
+    expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_6")
   })
 
   it("ignores completed tool-call assistants after the session becomes idle", () => {
