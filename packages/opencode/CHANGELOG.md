@@ -1,5 +1,33 @@
 # @kilocode/cli
 
+## 7.3.21
+
+### Minor Changes
+
+- [#10298](https://github.com/Kilo-Org/kilocode/pull/10298) [`ac7e46d`](https://github.com/Kilo-Org/kilocode/commit/ac7e46d67a7015469bf2edeb573c284308ea05d5) Thanks [@Githubguy132010](https://github.com/Githubguy132010)! - Add a `kilo profile` command for checking the active Kilo account or team balance.
+
+- [#10310](https://github.com/Kilo-Org/kilocode/pull/10310) [`c265fa4`](https://github.com/Kilo-Org/kilocode/commit/c265fa4c4ef18204f8e2741c66953c24bf012f2a) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Show running spinner in subagent footer to indicate when subagent is processing
+
+### Patch Changes
+
+- [#10191](https://github.com/Kilo-Org/kilocode/pull/10191) [`b590f8c`](https://github.com/Kilo-Org/kilocode/commit/b590f8c25f1af82e7df854b5b969ae8749118bba) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Handle newlines in DialogAlert messages
+
+- [#10306](https://github.com/Kilo-Org/kilocode/pull/10306) [`aca8aeb`](https://github.com/Kilo-Org/kilocode/commit/aca8aeb2b91679b52937562d45986562440ac1de) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Toggle export dialog checkboxes on mouse click
+
+## 7.3.20
+
+### Patch Changes
+
+- [#10792](https://github.com/Kilo-Org/kilocode/pull/10792) [`cb1fdb3`](https://github.com/Kilo-Org/kilocode/commit/cb1fdb3b1b824c6f91cb05dc568bd37f6bf494f5) - Allow clearing agent model and variant overrides from settings.
+
+- [#10786](https://github.com/Kilo-Org/kilocode/pull/10786) [`7dd8aab`](https://github.com/Kilo-Org/kilocode/commit/7dd8aabadeb1b5bcf69f5fb9545a57ac91daf54f) - Limit inferred background-process port discovery to the TUI and stop scanning after startup to avoid unnecessary Bun subprocess polling.
+
+- [#10735](https://github.com/Kilo-Org/kilocode/pull/10735) [`593903f`](https://github.com/Kilo-Org/kilocode/commit/593903fb5ce8843d1a84a64787f8103b92a31fee) - Fix Claude Opus 4.8 reasoning on Amazon Bedrock by treating it as an adaptive thinking model like Opus 4.7. This resolves the "thinking.type.enabled is not supported for this model" error and exposes the full low/medium/high/xhigh/max reasoning effort range.
+
+- [#10789](https://github.com/Kilo-Org/kilocode/pull/10789) [`316a662`](https://github.com/Kilo-Org/kilocode/commit/316a6627dc9eccd40bf7aa45366fca40b35f1879) - Fix queued plan prompts stalling in VS Code after a completed turn.
+
+- [#9499](https://github.com/Kilo-Org/kilocode/pull/9499) [`c1c3af8`](https://github.com/Kilo-Org/kilocode/commit/c1c3af8bf42e911d9d2a2cf06937fdf056d851d2) Thanks [@truffle-dev](https://github.com/truffle-dev)! - Fix empty TUI session list when launching kilo from inside a git submodule. `git worktree list --porcelain` reports the submodule's gitdir (`<repo>/.git/modules/<sub>`) instead of the working tree, so the worktree-family filter dropped every session whose directory was the actual submodule path. Include `Instance.worktree` in the returned set so submodule sessions stay in scope.
+
 ## 7.3.18
 
 ### Patch Changes

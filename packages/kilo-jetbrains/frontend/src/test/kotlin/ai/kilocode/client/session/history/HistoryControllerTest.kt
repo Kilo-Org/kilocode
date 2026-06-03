@@ -104,6 +104,21 @@ class HistoryControllerTest : BasePlatformTestCase() {
         assertEquals(FakeSessionRpcApi.CloudCall("/test", "next_1", 50, null), rpc.cloudCalls[1])
     }
 
+    fun `test cloud load records page telemetry`() {
+        rpc.cloud += cloud("cloud_1", "Cloud One")
+        rpc.cloudCursor = "next_1"
+        val events = mutableListOf<Pair<String, Map<String, String>>>()
+        val controller = telemetryController(events)
+
+        controller.reloadCloud()
+        flush()
+
+        val event = events.single { it.first == "History Cloud Page Loaded" }
+        assertEquals("true", event.second["reset"])
+        assertEquals("1", event.second["count"])
+        assertEquals("true", event.second["hasNextCursor"])
+    }
+
     fun `test local delete calls rpc and removes item`() {
         rpc.listed += session("ses_1", "Local One")
         val controller = controller()
@@ -115,6 +130,18 @@ class HistoryControllerTest : BasePlatformTestCase() {
 
         assertEquals(listOf("ses_1" to "/test"), rpc.deletes)
         assertTrue(controller.local.items.isEmpty())
+    }
+
+    fun `test opening history items records source telemetry`() {
+        val events = mutableListOf<Pair<String, Map<String, String>>>()
+        val controller = telemetryController(events)
+
+        controller.open(LocalHistoryItem(session("ses_1", "Local One")))
+        controller.open(CloudHistoryItem(cloud("cloud_1", "Cloud One")))
+        flush()
+
+        val opened = events.filter { it.first == "History Session Opened" }
+        assertEquals(listOf("local", "cloud"), opened.map { it.second["source"] })
     }
 
     fun `test activity returns typed items`() {
@@ -798,6 +825,13 @@ class HistoryControllerTest : BasePlatformTestCase() {
     }
 
     private fun controller() = HistoryController(sessions, workspace, scope)
+
+    private fun telemetryController(events: MutableList<Pair<String, Map<String, String>>>) = HistoryController(
+        sessions,
+        workspace,
+        scope,
+        telemetry = { event, props -> events.add(event to props) },
+    )
 
     private fun controllerWithGit(url: String?) = HistoryController(
         sessions,

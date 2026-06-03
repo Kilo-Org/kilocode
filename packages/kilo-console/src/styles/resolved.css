@@ -1,0 +1,133 @@
+.kilo-console .resolved-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 0.85rem;
+}
+
+.kilo-console .model-defaults {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kilo-console .model-default-fields {
+  gap: 0.5rem;
+}
+
+.kilo-console .model-default-fields .default-model-card {
+  gap: 0;
+  border-color: var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  padding: 1rem;
+}
+
+.kilo-console .model-default-fields .default-model-header {
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.kilo-console .model-default-fields .default-model-header > span {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1rem;
+  text-transform: none;
+}
+
+.kilo-console .model-default-fields .default-model-actions {
+  gap: 0.375rem;
+  margin-top: -0.125rem;
+}
+
+.kilo-console .model-default-fields .default-model-value {
+  gap: 0.25rem;
+}
+
+.kilo-console .model-default-fields .default-model-value strong {
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.kilo-console .model-default-fields .default-model-value .default-model-id {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.kilo-console .resolved-card {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-xl, var(--radius-lg));
+  background: var(--surface-raised-base);
+  padding: 1rem;
+}
+
+.kilo-console .resolved-card > div:first-child {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.kilo-console .resolved-card span:where(:not([data-component="tag"]):not([data-slot="source-badge"])) {
+  color: var(--text-weaker);
+  font-size: var(--font-size-small);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.kilo-console .resolved-card strong {
+  overflow: hidden;
+  color: var(--text-strong);
+  font-family: var(--font-family-mono, monospace);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kilo-console .default-model-card {
+  display: grid;
+  align-items: stretch;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: stretch;
+}
+
+.kilo-console .default-model-header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  width: 100%;
+}
+
+.kilo-console .default-model-actions {
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.kilo-console .default-model-value {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.kilo-console .default-model-value strong {
+  font-family: var(--font-family-sans, Inter, system-ui, sans-serif);
+}
+
+.kilo-console .default-model-value .default-model-id {
+  overflow: hidden;
+  color: var(--text-weaker);
+  font-family: var(--font-family-mono, monospace);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}

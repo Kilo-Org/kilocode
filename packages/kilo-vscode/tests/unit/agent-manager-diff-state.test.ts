@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { mergeWorktreeDiffs } from "../../webview-ui/agent-manager/diff-state"
+import { mergeWorktreeDiffs } from "../../webview-ui/diff-viewer/diff-state"
 import {
   EAGER_DIFF_REVIEW_LINES,
   EXTREME_DIFF_CHANGED_LINES,
@@ -8,7 +8,7 @@ import {
   expandableOpenFiles,
   initialOpenFiles,
   toggleOpenFiles,
-} from "../../webview-ui/agent-manager/diff-open-policy"
+} from "../../webview-ui/diff-viewer/diff-open-policy"
 import type { WorktreeFileDiff } from "../../webview-ui/src/types/messages"
 
 function diff(overrides: Partial<WorktreeFileDiff>): WorktreeFileDiff {

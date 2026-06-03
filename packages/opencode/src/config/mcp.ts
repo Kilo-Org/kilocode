@@ -2,7 +2,8 @@ import { Schema, SchemaGetter } from "effect" // kilocode_change
 import { zod } from "@/util/effect-zod"
 import { PositiveInt, withStatics } from "@/util/schema"
 
-const LocalCanonical = Schema.Struct({ // kilocode_change
+const LocalCanonical = Schema.Struct({
+  // kilocode_change
   type: Schema.Literal("local").annotate({ description: "Type of MCP server connection" }),
   command: Schema.mutable(Schema.Array(Schema.String)).annotate({
     description: "Command and arguments to run the MCP server",
@@ -31,8 +32,14 @@ const LocalInput = Schema.Struct({
 })
 
 const normalizeLocal = (input: Schema.Schema.Type<typeof LocalInput>): Schema.Schema.Type<typeof LocalCanonical> => {
-  const { env, environment, ...rest } = input
-  return { ...rest, environment: environment ?? env }
+  const env = input.environment ?? input.env
+  return {
+    type: input.type,
+    command: input.command,
+    ...(env === undefined ? {} : { environment: env }),
+    ...("enabled" in input ? { enabled: input.enabled } : {}),
+    ...("timeout" in input ? { timeout: input.timeout } : {}),
+  }
 }
 
 export const Local = LocalInput.pipe(

@@ -1,5 +1,5 @@
 import { Schema } from "effect"
-import { PROMPTS } from "@kilocode/kilo-gateway" // kilocode_change
+import { PROMPTS, AI_SDK_PROVIDERS } from "@kilocode/kilo-gateway" // kilocode_change
 import { zod } from "@/util/effect-zod"
 import { PositiveInt, withStatics } from "@/util/schema"
 
@@ -8,6 +8,8 @@ export const Model = Schema.Struct({
   name: Schema.optional(Schema.String),
   family: Schema.optional(Schema.String),
   prompt: Schema.optional(Schema.Literals(PROMPTS)), // kilocode_change
+  isFree: Schema.optional(Schema.Boolean), // kilocode_change
+  ai_sdk_provider: Schema.optional(Schema.Literals(AI_SDK_PROVIDERS)), // kilocode_change
   release_date: Schema.optional(Schema.String),
   attachment: Schema.optional(Schema.Boolean),
   reasoning: Schema.optional(Schema.Boolean),

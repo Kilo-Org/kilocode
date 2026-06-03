@@ -4,8 +4,9 @@ import path from "path"
 import { disposeAllInstances, provideInstance, tmpdir } from "../fixture/fixture"
 import { WithInstance } from "../../src/project/with-instance"
 import { Agent } from "../../src/agent/agent"
-import { Permission } from "../../src/permission"
 import { Global } from "@opencode-ai/core/global"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { Permission } from "../../src/permission"
 
 // Helper to evaluate permission for a tool with wildcard pattern
 function evalPerm(agent: Agent.Info | undefined, permission: string): Permission.Action | undefined {
@@ -17,28 +18,41 @@ function load<A>(dir: string, fn: (svc: Agent.Interface) => Effect.Effect<A>) {
   return Effect.runPromise(provideInstance(dir)(Agent.Service.use(fn)).pipe(Effect.provide(Agent.defaultLayer)))
 }
 
+async function withExperimentalScout(enabled: boolean, fn: () => Promise<void>) {
+  const original = Flag.KILO_EXPERIMENTAL_SCOUT
+  Flag.KILO_EXPERIMENTAL_SCOUT = enabled
+  try {
+    await fn()
+  } finally {
+    Flag.KILO_EXPERIMENTAL_SCOUT = original
+  }
+}
+
 afterEach(async () => {
   await disposeAllInstances()
 })
 
 test("returns default native agents when no config", async () => {
-  await using tmp = await tmpdir()
-  await WithInstance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const agents = await load(tmp.path, (svc) => svc.list())
-      const names = agents.map((a) => a.name)
-      expect(names).toContain("code") // kilocode_change
-      expect(names).toContain("plan")
-      expect(names).toContain("debug") // kilocode_change
-      expect(names).toContain("orchestrator") // kilocode_change
-      expect(names).toContain("ask") // kilocode_change
-      expect(names).toContain("general")
-      expect(names).toContain("explore")
-      expect(names).toContain("compaction")
-      expect(names).toContain("title")
-      expect(names).toContain("summary")
-    },
+  await withExperimentalScout(false, async () => {
+    await using tmp = await tmpdir()
+    await WithInstance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const agents = await load(tmp.path, (svc) => svc.list())
+        const names = agents.map((a) => a.name)
+        expect(names).toContain("code") // kilocode_change
+        expect(names).toContain("plan")
+        expect(names).toContain("debug") // kilocode_change
+        expect(names).toContain("orchestrator") // kilocode_change
+        expect(names).toContain("ask") // kilocode_change
+        expect(names).toContain("general")
+        expect(names).toContain("explore")
+        expect(names).not.toContain("scout")
+        expect(names).toContain("compaction")
+        expect(names).toContain("title")
+        expect(names).toContain("summary")
+      },
+    })
   })
 })
 
@@ -54,6 +68,8 @@ test("code agent has correct default properties", async () => {
       expect(code?.native).toBe(true)
       expect(evalPerm(code, "edit")).toBe("allow")
       expect(evalPerm(code, "bash")).toBe("ask") // kilocode_change - safe-bash default is ask
+      expect(evalPerm(code, "repo_clone")).toBe("deny")
+      expect(evalPerm(code, "repo_overview")).toBe("deny")
     },
   })
 })
@@ -185,6 +201,85 @@ test("explore agent asks for external directories and allows whitelisted externa
         Permission.evaluate("external_directory", path.join(Global.Path.tmp, "agent-work"), explore!.permission).action,
       ).toBe("allow")
     },
+  })
+})
+
+test("scout agent allows repo cloning and repo cache reads", async () => {
+  await withExperimentalScout(true, async () => {
+    await using tmp = await tmpdir()
+    await WithInstance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const scout = await load(tmp.path, (svc) => svc.get("scout"))
+        expect(scout).toBeDefined()
+        expect(scout?.mode).toBe("subagent")
+        expect(evalPerm(scout, "repo_clone")).toBe("allow")
+        expect(evalPerm(scout, "repo_overview")).toBe("allow")
+        expect(evalPerm(scout, "edit")).toBe("deny")
+        expect(
+          Permission.evaluate(
+            "external_directory",
+            path.join(Global.Path.repos, "github.com", "owner", "repo", "README.md"),
+            scout!.permission,
+          ).action,
+        ).toBe("allow")
+      },
+    })
+  })
+})
+
+test("reference config creates scout-backed subagents", async () => {
+  await withExperimentalScout(true, async () => {
+    await using tmp = await tmpdir({
+      config: {
+        reference: {
+          effect: "github.com/effect/effect-smol",
+          effectFull: {
+            repository: "Effect-TS/effect",
+            branch: "main",
+          },
+          localdocs: "../docs",
+          localdocsFull: {
+            path: "../local-docs",
+          },
+        },
+      },
+    })
+    await WithInstance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const effect = await load(tmp.path, (svc) => svc.get("effect"))
+        const effectFull = await load(tmp.path, (svc) => svc.get("effectFull"))
+        const local = await load(tmp.path, (svc) => svc.get("localdocs"))
+        const localFull = await load(tmp.path, (svc) => svc.get("localdocsFull"))
+
+        expect(effect).toBeDefined()
+        expect(effect?.mode).toBe("subagent")
+        expect(effect?.prompt).toContain("Repository: github.com/effect/effect-smol")
+        expect(evalPerm(effect, "repo_clone")).toBe("allow")
+
+        expect(effectFull).toBeDefined()
+        expect(effectFull?.mode).toBe("subagent")
+        expect(effectFull?.prompt).toContain("Repository: Effect-TS/effect")
+        expect(effectFull?.prompt).toContain("Branch/ref: main")
+        expect(evalPerm(effectFull, "repo_clone")).toBe("allow")
+
+        expect(local).toBeDefined()
+        expect(local?.mode).toBe("subagent")
+        expect(local?.prompt).toContain(`Local directory: ${path.resolve(tmp.path, "../docs")}`)
+        expect(
+          Permission.evaluate(
+            "external_directory",
+            path.join(path.resolve(tmp.path, "../docs"), "README.md"),
+            local!.permission,
+          ).action,
+        ).toBe("allow")
+
+        expect(localFull).toBeDefined()
+        expect(localFull?.mode).toBe("subagent")
+        expect(localFull?.prompt).toContain(`Local directory: ${path.resolve(tmp.path, "../local-docs")}`)
+      },
+    })
   })
 })
 

@@ -145,6 +145,7 @@ test("loads config with defaults when no files exist", async () => {
   })
 })
 
+// kilocode_change start
 test("loads JSON config file", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
@@ -164,6 +165,40 @@ test("loads JSON config file", async () => {
     },
   })
 })
+// kilocode_change end
+
+// kilocode_change start
+test("preserves Kilo provider free model metadata", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await writeConfig(dir, {
+        $schema: "https://app.kilo.ai/config.json",
+        model: "kilo/free-e2e",
+        provider: {
+          kilo: {
+            models: {
+              "free-e2e": {
+                id: "free-e2e",
+                isFree: true,
+                ai_sdk_provider: "openai-compatible",
+              },
+            },
+          },
+        },
+      })
+    },
+  })
+  await WithInstance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await load()
+      const model = config.provider?.kilo?.models?.["free-e2e"]
+      expect(model?.isFree).toBe(true)
+      expect(model?.ai_sdk_provider).toBe("openai-compatible")
+    },
+  })
+})
+// kilocode_change end
 
 test("loads shell config field", async () => {
   await using tmp = await tmpdir({

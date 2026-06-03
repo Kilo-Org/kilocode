@@ -2,6 +2,7 @@ package ai.kilocode.client.actions
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionManager
+import ai.kilocode.client.telemetry.Telemetry
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -13,6 +14,7 @@ class HistoryAction : AnAction(
     AllIcons.Vcs.History,
 ), DumbAware {
     override fun actionPerformed(e: AnActionEvent) {
+        Telemetry.send("History Opened", mapOf("surface" to "tool_window"))
         e.getData(SessionManager.KEY)?.showHistory()
     }
 

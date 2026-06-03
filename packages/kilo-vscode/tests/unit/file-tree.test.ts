@@ -5,7 +5,7 @@ import {
   flattenChain,
   treeOrder,
   type FileTreeNode,
-} from "../../webview-ui/agent-manager/file-tree-utils"
+} from "../../webview-ui/diff-viewer/file-tree-utils"
 import type { WorktreeFileDiff } from "../../webview-ui/src/types/messages"
 
 function diff(file: string, status?: "added" | "deleted" | "modified"): WorktreeFileDiff {
