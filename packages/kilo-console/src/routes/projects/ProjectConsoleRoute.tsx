@@ -2,6 +2,7 @@ import { A, useLocation, useParams } from "@solidjs/router"
 import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show } from "solid-js"
 import { Card } from "@kilocode/kilo-web-ui/card"
 import { Icon } from "@kilocode/kilo-web-ui/icon"
+import { LoadingScreen } from "../../components/LoadingScreen"
 import {
   createProjectPty,
   createProjectWorktree,
@@ -677,14 +678,10 @@ export function ProjectConsoleRoute() {
 
       <main class="project-console-main">
         <Show when={!query() && discoverable(search())}>
-          <Card class="banner" variant="info">
-            Discovering Kilo server...
-          </Card>
+          <LoadingScreen variant="fullscreen" />
         </Show>
         <Show when={snap.loading && !snap()}>
-          <Card class="banner" variant="info">
-            Loading project console...
-          </Card>
+          <LoadingScreen variant="fullscreen" />
         </Show>
         <Show when={snap.error || failure()}>
           <Card class="banner" variant="error">

@@ -1,9 +1,9 @@
 import { type Component, createSignal, createMemo, createEffect, on, onCleanup, For, Show } from "solid-js"
-// Styles are co-located with the component so every consumer (sidebar diff viewer,
-// agent manager, storybook) picks them up automatically. Do not move these out —
+// Styles are imported by the component so every consumer (sidebar diff viewer,
+// agent manager, storybook) picks them up automatically. Keep these imports here —
 // see tests/unit/diff-viewer-css-arch.test.ts for the invariant.
-import "./agent-manager.css"
-import "./agent-manager-review.css"
+import "../agent-manager/agent-manager.css"
+import "../agent-manager/agent-manager-review.css"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { Accordion } from "@kilocode/kilo-ui/accordion"
 import { StickyAccordionHeader } from "@kilocode/kilo-ui/sticky-accordion-header"
@@ -32,10 +32,16 @@ import { getDirectory, getFilename, lineCount, sanitizeReviewComments, type Revi
 import {
   buildFileAnnotations,
   buildReviewAnnotation,
+  clearReviewComposer,
+  createReviewComposer,
+  reviewComposerDraft,
+  reviewComposerEdit,
   reviewDraftSpeechKey,
   reviewEditSpeechKey,
   type AnnotationLabels,
   type AnnotationMeta,
+  type ReviewComposer,
+  type ReviewDraft,
 } from "./review-annotations"
 import { createReviewAnnotationSpeechRenderer } from "./review-annotation-speech"
 import {
@@ -60,6 +66,7 @@ interface FullScreenDiffViewProps {
   sessionKey?: string
   comments: ReviewComment[]
   onCommentsChange: (comments: ReviewComment[]) => void
+  composer?: ReviewComposer
   onSendAll?: () => void
   diffStyle: DiffStyle
   onDiffStyleChange: (style: DiffStyle) => void
@@ -100,11 +107,11 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     edit: t("common.edit"),
     delete: t("common.delete"),
   })
+  const localComposer = createReviewComposer()
+  const composer = () => props.composer ?? localComposer
   const [open, setOpen] = createSignal<string[]>([])
-  const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number; endLine?: number } | null>(
-    null,
-  )
-  const [editing, setEditing] = createSignal<string | null>(null)
+  const [draft, setDraft] = createSignal<ReviewDraft | null>(reviewComposerDraft(composer()))
+  const [editing, setEditing] = createSignal<string | null>(reviewComposerEdit(composer()))
   const speechKeys = createMemo(() => {
     const keys = new Set<string>()
     const current = draft()
@@ -123,7 +130,8 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const [activeFile, setActiveFile] = createSignal<string | null>(null)
   const [treeWidth, setTreeWidth] = createSignal(240)
   let nextId = 0
-  let draftMeta: AnnotationMeta | null = null
+  let draftMeta: AnnotationMeta | null = composer().draft
+  let editMeta: AnnotationMeta | null = composer().edit
   // Tracks the session key for which initial open state has already run. When the
   // key changes (different worktree) we expand reviewable files. Within the same key,
   // only pruning happens so the user's manual collapse state is preserved.
@@ -174,6 +182,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     preserveScroll(() => {
       setDraft(null)
       draftMeta = null
+      composer().draft = null
     })
     focusRoot()
   }
@@ -224,7 +233,13 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       () => props.sessionKey,
       () => {
         requested.clear()
+        setDraft(null)
+        draftMeta = null
+        setEditing(null)
+        editMeta = null
+        clearReviewComposer(composer())
       },
+      { defer: true },
     ),
   )
 
@@ -260,6 +275,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       updateComments((prev) => [...prev, { id, file, side, line, comment: text, selectedText }])
       setDraft(null)
       draftMeta = null
+      composer().draft = null
     })
     focusRoot()
   }
@@ -268,6 +284,8 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     preserveScroll(() => {
       updateComments((prev) => prev.map((c) => (c.id === id ? { ...c, comment: text } : c)))
       setEditing(null)
+      editMeta = null
+      composer().edit = null
     })
     focusRoot()
   }
@@ -275,12 +293,20 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const deleteComment = (id: string) => {
     preserveScroll(() => {
       updateComments((prev) => prev.filter((c) => c.id !== id))
-      if (editing() === id) setEditing(null)
+      if (editing() === id) {
+        setEditing(null)
+        editMeta = null
+        composer().edit = null
+      }
     })
     focusRoot()
   }
 
   const setEditState = (id: string | null) => {
+    if (editing() !== id) {
+      editMeta = null
+      composer().edit = null
+    }
     preserveScroll(() => setEditing(id))
     if (id === null) focusRoot()
   }
@@ -302,6 +328,8 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
         const edit = editing()
         if (edit && !valid.some((comment) => comment.id === edit)) {
           setEditing(null)
+          editMeta = null
+          composer().edit = null
         }
 
         const currentDraft = draft()
@@ -310,6 +338,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
         if (!diff) {
           setDraft(null)
           draftMeta = null
+          composer().draft = null
           return
         }
         const content = currentDraft.side === "deletions" ? diff.before : diff.after
@@ -317,11 +346,13 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
         if (currentDraft.line < 1 || currentDraft.line > max) {
           setDraft(null)
           draftMeta = null
+          composer().draft = null
           return
         }
         if (currentDraft.endLine !== undefined && currentDraft.endLine > max) {
           setDraft(null)
           draftMeta = null
+          composer().draft = null
         }
       },
     ),
@@ -340,8 +371,11 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   })
 
   const annotationsForFile = (file: string): DiffLineAnnotation<AnnotationMeta>[] => {
-    const result = buildFileAnnotations(file, commentsByFile().get(file) ?? [], editing(), draft(), draftMeta)
+    const result = buildFileAnnotations(file, commentsByFile().get(file) ?? [], editing(), draft(), draftMeta, editMeta)
     draftMeta = result.draftMeta
+    editMeta = result.editMeta
+    composer().draft = draft() ? draftMeta : null
+    composer().edit = editing() ? editMeta : null
     return result.annotations
   }
 
@@ -365,7 +399,10 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     if (draft()) return
     const side: AnnotationSide = range.side === "deletions" ? "deletions" : "additions"
     preserveScroll(() => {
-      setDraft({ file, side, line: range.start, endLine: range.end })
+      const next = { file, side, line: range.start, endLine: range.end }
+      draftMeta = { type: "draft", comment: null, ...next }
+      composer().draft = draftMeta
+      setDraft(next)
     })
   }
 

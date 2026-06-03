@@ -27,6 +27,7 @@ function insertReviewSpeechText(textarea: HTMLTextAreaElement, value: string): v
 
   textarea.value = result.text
   textarea.setSelectionRange(result.pos, result.pos)
+  textarea.dispatchEvent(new Event("input", { bubbles: true }))
   textarea.focus()
 }
 

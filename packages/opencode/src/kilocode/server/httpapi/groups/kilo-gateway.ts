@@ -188,35 +188,49 @@ export const TranscriptionResponse = Schema.Struct({
   usage: Schema.optional(Schema.Unknown),
 })
 
-export const CloudMessage = Schema.Struct({
-  info: Schema.Struct({
-    id: Schema.String,
-    sessionID: Schema.String,
-    role: Schema.Literals(["user", "assistant"]),
-    time: Schema.Struct({
-      created: Schema.Finite,
-      completed: Schema.optional(Schema.Finite),
-    }),
+const UnknownRecord = Schema.Record(Schema.String, Schema.Unknown)
+
+export const CloudMessage = Schema.StructWithRest(
+  Schema.Struct({
+    info: Schema.StructWithRest(
+      Schema.Struct({
+        id: Schema.String,
+        sessionID: Schema.String,
+        role: Schema.Literals(["user", "assistant"]),
+        time: Schema.Struct({
+          created: Schema.Finite,
+          completed: Schema.optional(Schema.Finite),
+        }),
+      }),
+      [UnknownRecord],
+    ),
+    parts: Schema.Array(
+      Schema.StructWithRest(
+        Schema.Struct({
+          id: Schema.String,
+          sessionID: Schema.String,
+          messageID: Schema.String,
+          type: Schema.String,
+        }),
+        [UnknownRecord],
+      ),
+    ),
   }),
-  parts: Schema.Array(
-    Schema.Struct({
-      id: Schema.String,
-      sessionID: Schema.String,
-      messageID: Schema.String,
-      type: Schema.String,
-    }),
-  ),
-})
+  [UnknownRecord],
+)
 
 export const CloudSessionData = Schema.Struct({
-  info: Schema.Struct({
-    id: Schema.String,
-    title: Schema.String,
-    time: Schema.Struct({
-      created: Schema.Finite,
-      updated: Schema.Finite,
+  info: Schema.StructWithRest(
+    Schema.Struct({
+      id: Schema.String,
+      title: Schema.String,
+      time: Schema.Struct({
+        created: Schema.Finite,
+        updated: Schema.Finite,
+      }),
     }),
-  }),
+    [UnknownRecord],
+  ),
   messages: Schema.Array(CloudMessage),
 })
 

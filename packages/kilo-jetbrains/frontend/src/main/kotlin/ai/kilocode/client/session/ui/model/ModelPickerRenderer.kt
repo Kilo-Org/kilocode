@@ -69,7 +69,7 @@ internal class ModelPickerRenderer(
         ModelText.freeBg(),
         JBColor.namedColor("Kilo.ModelPicker.freeBadgeForeground", JBColor.WHITE),
     )
-    private val warn = JBLabel(AllIcons.General.Warning).apply {
+    private val warn = JBLabel(ModelPickerIcons.DATA_COLLECTED).apply {
         toolTipText = ModelText.dataCollected()
     }
     private val provider = JBLabel()
