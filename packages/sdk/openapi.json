@@ -10950,17 +10950,31 @@
                       "additionalProperties": false
                     },
                     "balance": {
-                      "type": "object",
-                      "properties": {
-                        "balance": {
-                          "type": "number"
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "balance": {
+                              "type": "number"
+                            }
+                          },
+                          "required": ["balance"],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
                         }
-                      },
-                      "required": ["balance"],
-                      "additionalProperties": false
+                      ]
                     },
                     "currentOrgId": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": ["profile", "balance", "currentOrgId"],
@@ -11712,16 +11726,23 @@
                   "type": "object",
                   "properties": {
                     "status": {
-                      "type": "string",
-                      "enum": [
-                        "provisioned",
-                        "starting",
-                        "restarting",
-                        "recovering",
-                        "running",
-                        "stopped",
-                        "destroying",
-                        "restoring"
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "provisioned",
+                            "starting",
+                            "restarting",
+                            "recovering",
+                            "running",
+                            "stopped",
+                            "destroying",
+                            "restoring"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
                       ]
                     },
                     "sandboxId": {
@@ -11744,13 +11765,34 @@
                       "additionalProperties": false
                     },
                     "openclawVersion": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "lastStartedAt": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "lastStoppedAt": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "channelCount": {
                       "type": "number"
@@ -11762,7 +11804,14 @@
                       "type": "string"
                     },
                     "botName": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": ["status"],
@@ -11821,23 +11870,30 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "token": {
-                      "type": "string"
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "token": {
+                          "type": "string"
+                        },
+                        "expiresAt": {
+                          "type": "string"
+                        },
+                        "kiloChatUrl": {
+                          "type": "string"
+                        },
+                        "eventServiceUrl": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["token", "expiresAt", "kiloChatUrl", "eventServiceUrl"],
+                      "additionalProperties": false
                     },
-                    "expiresAt": {
-                      "type": "string"
-                    },
-                    "kiloChatUrl": {
-                      "type": "string"
-                    },
-                    "eventServiceUrl": {
-                      "type": "string"
+                    {
+                      "type": "null"
                     }
-                  },
-                  "required": ["token", "expiresAt", "kiloChatUrl", "eventServiceUrl"],
-                  "additionalProperties": false
+                  ]
                 }
               }
             }
@@ -11916,7 +11972,14 @@
                             "type": "string"
                           },
                           "title": {
-                            "type": "string"
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "created_at": {
                             "type": "string"
@@ -11933,7 +11996,14 @@
                       }
                     },
                     "nextCursor": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": ["cliSessions", "nextCursor"],

@@ -13,6 +13,7 @@
   "dependencies": {
     "@kilocode/kilo-web-ui": "workspace:*",
     "@kilocode/sdk": "workspace:*",
+    "@lottiefiles/dotlottie-web": "0.74.0",
     "@opencode-ai/ui": "workspace:*",
     "@solidjs/router": "catalog:",
     "ghostty-web": "0.4.0",

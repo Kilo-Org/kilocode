@@ -1,31 +1,25 @@
-package ai.kilocode.client.session.ui
+package ai.kilocode.client.session.ui.empty
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
-import ai.kilocode.client.session.SessionRef
-import ai.kilocode.client.session.history.HistoryActivitySnapshot
-import ai.kilocode.client.session.history.HistoryTime
-import ai.kilocode.client.session.history.LocalHistoryItem
-import ai.kilocode.client.session.history.itemAt
-import ai.kilocode.client.session.history.title
+import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.controller.SessionController
-import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Align
 import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
 import ai.kilocode.rpc.dto.SessionDto
 import com.intellij.icons.AllIcons
+import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.IconLoader
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBList
 import com.intellij.util.ui.Centerizer
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -35,19 +29,14 @@ import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
-import java.awt.FlowLayout
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
 import java.awt.event.HierarchyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import java.awt.event.MouseMotionAdapter
-import javax.swing.DefaultListModel
 import javax.swing.JButton
-import javax.swing.JList
-import javax.swing.ListCellRenderer
-import javax.swing.ListSelectionModel
+import javax.swing.JComponent
 import javax.swing.Timer
 
 /**
@@ -63,50 +52,18 @@ class EmptySessionPanel(
     private val history: () -> Unit = {},
     private val activity: () -> Map<String, SessionActivityKind> = { emptyMap() },
     private val titles: () -> Map<String, String> = { emptyMap() },
+    private val browse: (String) -> Unit = BrowserUtil::browse,
 ) : BorderLayoutPanel(), Disposable, SessionEditorStyleTarget {
     val view: Align = align(HAlign.CENTER, VAlign.CENTER)
 
-    private val model = DefaultListModel<LocalHistoryItem>()
-    private var hover = -1
-    private var style = SessionEditorStyle.current()
-    private var snapshot = HistoryActivitySnapshot()
     private val timer = Timer(ACTIVITY_MS) { syncActivity() }
-
-    private val recentTitle = JBLabel(KiloBundle.message("session.empty.recent")).apply {
-        foreground = UIUtil.getContextHelpForeground()
-    }
-
-    private val list = JBList(model).apply {
-        isOpaque = false
-        selectionMode = ListSelectionModel.SINGLE_SELECTION
-        visibleRowCount = SessionUiStyle.RecentSessions.LIMIT
-        cellRenderer = SessionRenderer()
-        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-        emptyText.clear()
-        addMouseListener(object : MouseAdapter() {
-            override fun mouseClicked(e: MouseEvent) {
-                val item = itemAt(this@apply, e) ?: return
-                controller.openSession(SessionRef.Local(item.session))
-            }
-
-            override fun mouseExited(e: MouseEvent) {
-                hover = -1
-                repaint()
-            }
-        })
-        addMouseMotionListener(object : MouseMotionAdapter() {
-            override fun mouseMoved(e: MouseEvent) {
-                val index = index(e)
-                if (hover == index) return
-                hover = index
-                repaint()
-            }
-        })
-    }
+    internal val recent = RecentsList(recents, controller)
 
     private val historyButton = ShowHistoryButton().apply {
         addActionListener { history() }
     }
+
+    private val feedback = EmptySessionFeedback(browse)
 
     private val welcomeLabel = JBLabel(welcomeHtml()).apply {
         foreground = UIUtil.getContextHelpForeground()
@@ -132,9 +89,9 @@ class EmptySessionPanel(
 
     init {
         Disposer.register(parent, this)
+        Disposer.register(this, feedback)
         isOpaque = false
         applyStyle(SessionEditorStyle.current())
-        setSessions(recents)
         addHierarchyListener { e ->
             if (e.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() == 0L) return@addHierarchyListener
             if (isShowing) {
@@ -159,40 +116,28 @@ class EmptySessionPanel(
             add(description.align(HAlign.CENTER, VAlign.CENTER), BorderLayout.CENTER)
         }
 
-        val recent = BorderLayoutPanel().apply {
-            isOpaque = false
-            add(recentTitle, BorderLayout.NORTH)
-            add(list, BorderLayout.CENTER)
-        }
-
         val south = BorderLayoutPanel().apply {
             isOpaque = false
-            add(Centerizer(historyButton, Centerizer.TYPE.HORIZONTAL), BorderLayout.CENTER)
+            add(Stack.vertical(gap = UiStyle.Gap.lg())
+                .next(Centerizer(historyButton, Centerizer.TYPE.HORIZONTAL))
+                .next(Centerizer(feedback.button, Centerizer.TYPE.HORIZONTAL)), BorderLayout.CENTER)
         }
 
         add(header, BorderLayout.NORTH)
-        add(recent, BorderLayout.CENTER)
+        if (recent.hasSessions()) add(recent, BorderLayout.CENTER)
         add(south, BorderLayout.SOUTH)
     }
 
-    private fun setSessions(sessions: List<SessionDto>) {
-        model.clear()
-        sessions.take(SessionUiStyle.RecentSessions.LIMIT).map(::LocalHistoryItem).forEach(model::addElement)
-        revalidate()
-        repaint()
-    }
-
-    internal fun recentCount() = model.size()
+    internal fun recentCount() = recent.count()
 
     internal fun selectRecent(index: Int) {
-        list.selectedIndex = index
+        recent.select(index)
     }
 
-    internal fun selectedRecent() = list.selectedIndex
+    internal fun selectedRecent() = recent.selected()
 
     internal fun clickRecent(index: Int) {
-        list.selectedIndex = index
-        controller.openSession(SessionRef.Local(model.getElementAt(index).session))
+        recent.click(index)
     }
 
     internal fun clickShowHistory() {
@@ -201,13 +146,23 @@ class EmptySessionPanel(
 
     internal fun showHistoryText() = historyButton.text
 
+    internal fun feedbackText() = KiloBundle.message("feedback.button")
+
+    internal fun feedbackCursor() = feedback.button.cursor.type
+
+    internal fun feedbackIcon() = feedback.button.icon
+
+    internal fun feedbackBorderPainted() = feedback.button.isBorderPainted
+
+    internal fun feedbackContent(open: (String) -> Unit = {}): JComponent = EmptySessionFeedback.content(open)
+
+    internal fun feedbackUrls() = EmptySessionFeedback.urls()
+
     internal fun showHistoryBorderPainted() = historyButton.isBorderPainted
 
     internal fun showHistoryCursor() = historyButton.cursor.type
 
-    internal fun recentCursor() = list.cursor.type
-
-    internal fun recentVisible() = true
+    internal fun recentVisible() = recent.hasSessions()
 
     internal fun explanationText() = KiloBundle.message("session.empty.welcome")
 
@@ -226,92 +181,25 @@ class EmptySessionPanel(
     internal fun activeView() = getComponent(0)
 
     internal fun text(session: SessionDto, now: Long = System.currentTimeMillis()) =
-        HistoryTime.relative(LocalHistoryItem(session), now)
+        recent.text(session, now)
 
     internal fun rendererComponent(
         session: SessionDto,
         selected: Boolean = false,
         hover: Boolean = false,
     ): Component {
-        val old = this.hover
-        this.hover = if (hover) 0 else -1
-        return list.cellRenderer.getListCellRendererComponent(list, LocalHistoryItem(session), 0, selected, false).also {
-            this.hover = old
-        }
+        return recent.renderer(session, selected, hover)
     }
 
     @RequiresEdt
     internal fun syncActivity() {
-        val next = HistoryActivitySnapshot(activity(), titles())
-        val changed = snapshot.changed(next)
-        snapshot = next
-        repaintRows(changed)
+        recent.sync(activity(), titles())
     }
 
-    private fun repaintRows(ids: Set<String>) {
-        if (ids.isEmpty()) return
-        repeat(model.size()) { index ->
-            if (model.getElementAt(index).id !in ids) return@repeat
-            list.getCellBounds(index, index)?.let(list::repaint)
-        }
-    }
-
-    private fun index(e: MouseEvent): Int {
-        val idx = list.locationToIndex(e.point)
-        if (idx < 0) return -1
-        val box = list.getCellBounds(idx, idx) ?: return -1
-        if (!box.contains(e.point)) return -1
-        return idx
-    }
-
-    private inner class SessionRenderer : BorderLayoutPanel(), ListCellRenderer<LocalHistoryItem> {
-        private val title = JBLabel()
-        private val badge = JBLabel().apply {
-            border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
-        }
-        private val time = JBLabel()
-        private val head = BorderLayoutPanel().apply {
-            add(BorderLayoutPanel().apply {
-                layout = FlowLayout(FlowLayout.LEFT, 0, 0)
-                isOpaque = false
-                add(title)
-                add(badge)
-            }, BorderLayout.CENTER)
-        }
-
-        init {
-            layout = BorderLayout(UiStyle.Gap.pad(), 0)
-            border = JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.lg(), UiStyle.Gap.lg(), UiStyle.Gap.lg())
-            head.isOpaque = false
-            add(head, BorderLayout.CENTER)
-            add(time, BorderLayout.EAST)
-        }
-
-        override fun getListCellRendererComponent(
-            list: JList<out LocalHistoryItem>,
-            value: LocalHistoryItem?,
-            index: Int,
-            selected: Boolean,
-            focus: Boolean,
-        ): Component {
-            val over = selected || hover == index
-            isOpaque = over
-            background = if (over) list.selectionBackground else list.background
-            title.foreground = if (over) list.selectionForeground else UIUtil.getLabelForeground()
-            time.foreground = if (over) list.selectionForeground else UIUtil.getContextHelpForeground()
-            title.text = value?.let { snapshot.titles[it.id] ?: title(it) } ?: ""
-            time.text = value?.let(HistoryTime::relative) ?: ""
-            setBadge(value?.id?.let(snapshot.activity::get))
-            return this
-        }
-
-        private fun setBadge(kind: SessionActivityKind?) {
-            badge.isVisible = kind != null
-            badge.icon = kind?.let { FilledBadgeIcon(it.label(), it.bg(), it.fg()) }
-        }
-    }
-
-    private inner class ShowHistoryButton : JButton(KiloBundle.message("session.showHistory"), AllIcons.Vcs.History) {
+    internal open class ShowHistoryButton(
+        text: String = KiloBundle.message("session.showHistory"),
+        icon: javax.swing.Icon = AllIcons.Vcs.History,
+    ) : JButton(text, icon) {
         private var over = false
 
         init {
@@ -359,9 +247,8 @@ class EmptySessionPanel(
     }
 
     override fun applyStyle(style: SessionEditorStyle) {
-        this.style = style
         welcomeLabel.font = style.regularFont
-        recentTitle.font = style.smallFont
+        recent.applyStyle(style)
         revalidate()
         repaint()
     }
@@ -373,8 +260,4 @@ class EmptySessionPanel(
     private companion object {
         const val ACTIVITY_MS = 3_000
     }
-}
-
-private fun Map<String, String>.changed(next: Map<String, String>) = (keys + next.keys).filterTo(mutableSetOf()) {
-    this[it] != next[it]
 }
