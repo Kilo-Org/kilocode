@@ -281,7 +281,12 @@ const parse = Effect.fn("ShellTool.parse")(function* (command: string, ps: boole
   return tree
 })
 
-const ask = Effect.fn("ShellTool.ask")(function* (ctx: Tool.Context, scan: Scan, command: string) {
+const ask = Effect.fn("ShellTool.ask")(function* (
+  ctx: Tool.Context,
+  scan: Scan,
+  command: string,
+  description?: string, // kilocode_change
+) {
   // kilocode_change
   if (scan.dirs.size > 0) {
     const globs = Array.from(scan.dirs).map((dir) => {
@@ -292,7 +297,7 @@ const ask = Effect.fn("ShellTool.ask")(function* (ctx: Tool.Context, scan: Scan,
       permission: "external_directory",
       patterns: globs,
       always: globs,
-      metadata: scan.access === "read" ? { command, access: "read" } : {}, // kilocode_change
+      metadata: scan.access === "read" ? { command, access: "read", ...(description ? { description } : {}) } : {}, // kilocode_change
     })
   }
 
@@ -301,7 +306,7 @@ const ask = Effect.fn("ShellTool.ask")(function* (ctx: Tool.Context, scan: Scan,
     permission: ShellID.ToolID,
     patterns: Array.from(scan.patterns),
     always: Array.from(scan.always),
-    metadata: { command: normalizeUrls(command) }, // kilocode_change
+    metadata: { command: normalizeUrls(command), ...(description ? { description } : {}) }, // kilocode_change
   })
 })
 
@@ -644,7 +649,7 @@ export const ShellTool = Tool.define(
                     scan.access = "unknown"
                   }
                   // kilocode_change end
-                  yield* ask(ctx, scan, params.command) // kilocode_change
+                  yield* ask(ctx, scan, params.command, params.description) // kilocode_change
                 }),
               )
 

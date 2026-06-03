@@ -2801,6 +2801,34 @@ body.am-wt-dragging-active * {
   white-space: nowrap;
 }
 
+.am-mm-free-data {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  max-width: 132px;
+  white-space: nowrap;
+}
+
+.am-mm-free-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  background: var(--vscode-testing-iconPassed, #4caf50);
+  font-size: var(--kilo-font-size-10);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.am-mm-free-data-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--vscode-inputValidation-warningForeground, var(--vscode-descriptionForeground));
+  flex-shrink: 0;
+}
+
 .am-mm-count-select {
   flex-shrink: 0;
   padding: 2px 4px;

@@ -174,6 +174,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.title": "{{provider}}が切断されました",
   "provider.disconnect.toast.disconnected.description": "{{provider}}のモデルは利用できなくなりました。",
   "model.tag.free": "無料",
+  "model.tag.dataCollected": "データ収集あり",
   "model.tag.latest": "最新",
   "model.group.recommended": "推奨",
   "model.group.favorites": "お気に入り",

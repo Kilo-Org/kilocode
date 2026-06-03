@@ -131,14 +131,12 @@ describe("SessionRetry.retryable with Kilo errors", () => {
     expect(SessionRetry.retryable(error)).toBeUndefined()
   })
 
-  it("still returns a string for regular 429 errors (retryable)", () => {
+  it("still returns retry details for regular 429 errors", () => {
     const error = makeAPIError({
       statusCode: 429,
       isRetryable: true,
       message: "Too Many Requests",
     })
-    const result = SessionRetry.retryable(error)
-    expect(result).toBeDefined()
-    expect(typeof result).toBe("string")
+    expect(SessionRetry.retryable(error)).toEqual({ message: "Too Many Requests" })
   })
 })

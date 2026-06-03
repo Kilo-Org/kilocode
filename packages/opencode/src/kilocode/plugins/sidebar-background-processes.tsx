@@ -44,9 +44,7 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
                   <span style={{ fg: tone(item, props.api) }}>●</span> {short(label(item))}
                 </text>
                 <text fg={theme().textMuted}>{short(item.command)}</text>
-                <Show when={item.pid}>
-                  {(pid) => <text fg={theme().textMuted}>PID: {pid()}</text>}
-                </Show>
+                <Show when={item.pid}>{(pid) => <text fg={theme().textMuted}>PID: {pid()}</text>}</Show>
                 <Show when={item.ports.length > 0}>
                   <text fg={theme().textMuted}>PORTS: {item.ports.join(", ")}</text>
                 </Show>

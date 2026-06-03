@@ -1,6 +1,7 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.tasks.InstrumentCodeTask
 import org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask
 import org.jetbrains.intellij.platform.gradle.tasks.aware.SplitModeAware.SplitModeTarget
 import java.time.LocalDate
@@ -170,6 +171,10 @@ intellijPlatform {
 }
 
 tasks {
+    withType<InstrumentCodeTask> {
+        enabled = false
+    }
+
     runIdeBackend {
         splitModeServerPort.set(splitPort)
         dependsOn(":backend:prepareLocalCli")

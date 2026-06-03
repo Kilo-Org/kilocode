@@ -42,6 +42,7 @@ export interface PermissionRequest {
     filepath?: string
     filediff?: PermissionFileDiff
     files?: PermissionPatchFile[]
+    description?: string
   }
   message?: string
   tool?: { messageID: string; callID: string }

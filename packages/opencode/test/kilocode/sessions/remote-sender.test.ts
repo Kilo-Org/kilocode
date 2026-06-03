@@ -489,7 +489,7 @@ describe("RemoteSender", () => {
       type: "command",
       id: "req_q",
       command: "question_reply",
-      data: { requestID: "r1", answers: [["yes"]] },
+      data: { requestID: "que_r1", answers: [["yes"]] },
     })
 
     // Response not sent synchronously - waits for provide to finish.
@@ -497,7 +497,7 @@ describe("RemoteSender", () => {
 
     await new Promise((r) => setTimeout(r, 10))
 
-    expect(calls).toEqual([{ requestID: QuestionID.make("r1"), answers: [["yes"]] }])
+    expect(calls).toEqual([{ requestID: QuestionID.make("que_r1"), answers: [["yes"]] }])
     expect(sent).toHaveLength(1)
     expect(sent[0]).toEqual({ type: "response", id: "req_q", result: {} })
   })
@@ -553,7 +553,7 @@ describe("RemoteSender", () => {
       type: "command",
       id: "req_qe",
       command: "question_reply",
-      data: { requestID: "r1", answers: [["yes"]] },
+      data: { requestID: "que_r1", answers: [["yes"]] },
     })
 
     await new Promise((r) => setTimeout(r, 10))
@@ -584,7 +584,7 @@ describe("RemoteSender", () => {
       type: "command",
       id: "req_q_missing",
       command: "question_reply",
-      data: { requestID: "missing", answers: [["yes"]] },
+      data: { requestID: "que_missing", answers: [["yes"]] },
     })
 
     await new Promise((r) => setTimeout(r, 10))
@@ -661,12 +661,12 @@ describe("RemoteSender", () => {
       type: "command",
       id: "req_qr",
       command: "question_reject",
-      data: { requestID: "r1" },
+      data: { requestID: "que_r1" },
     })
 
     await new Promise((r) => setTimeout(r, 10))
 
-    expect(calls).toEqual([QuestionID.make("r1")])
+    expect(calls).toEqual([QuestionID.make("que_r1")])
     expect(sent).toHaveLength(1)
     expect(sent[0]).toEqual({ type: "response", id: "req_qr", result: {} })
   })
@@ -691,7 +691,7 @@ describe("RemoteSender", () => {
       type: "command",
       id: "req_qr_missing",
       command: "question_reject",
-      data: { requestID: "missing" },
+      data: { requestID: "que_missing" },
     })
 
     await new Promise((r) => setTimeout(r, 10))

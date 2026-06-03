@@ -176,6 +176,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "Моделі {{provider}} більше недоступні.",
 
   "model.tag.free": "Безкоштовно",
+  "model.tag.dataCollected": "Дані збираються",
   "model.tag.latest": "Остання",
   "model.group.recommended": "Рекомендовані",
   "model.group.favorites": "Обране",

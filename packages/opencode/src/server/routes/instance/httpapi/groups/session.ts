@@ -231,9 +231,9 @@ export const SessionApi = HttpApi.make("session")
         ),
         HttpApiEndpoint.post("fork", SessionPaths.fork, {
           params: { sessionID: SessionID },
-          payload: ForkPayload,
+          payload: [HttpApiSchema.NoContent, ForkPayload], // kilocode_change - carry upstream bodyless full-session fork support
           success: described(Session.Info, "200"),
-          error: ApiNotFoundError,
+          error: [HttpApiError.BadRequest, ApiNotFoundError], // kilocode_change - carry upstream malformed payload response
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.fork",
@@ -268,7 +268,7 @@ export const SessionApi = HttpApi.make("session")
         HttpApiEndpoint.post("share", SessionPaths.share, {
           params: { sessionID: SessionID },
           success: described(Session.Info, "Successfully shared session"),
-          error: [HttpApiError.BadRequest, ApiNotFoundError],
+          error: [HttpApiError.InternalServerError, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.share",
@@ -279,7 +279,7 @@ export const SessionApi = HttpApi.make("session")
         HttpApiEndpoint.delete("unshare", SessionPaths.share, {
           params: { sessionID: SessionID },
           success: described(Session.Info, "Successfully unshared session"),
-          error: [HttpApiError.BadRequest, ApiNotFoundError],
+          error: [HttpApiError.InternalServerError, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.unshare",

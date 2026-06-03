@@ -43,11 +43,12 @@ export const KILO_MODEL_SCHEMA_EXTENSIONS = {
 // ---------------------------------------------------------------------------
 
 export function patchModelsDevModel(providerID: string, source: any) {
+  const free = providerID === "kilo" && source.cost?.input === 0 && source.cost?.output === 0
   return {
     variants: providerID === "kilo" ? (source.variants ?? {}) : {},
     recommendedIndex: source.recommendedIndex,
     prompt: source.prompt,
-    isFree: source.isFree,
+    isFree: source.isFree ?? (free ? true : undefined),
     ai_sdk_provider: source.ai_sdk_provider,
     options: source.options ?? {},
   }

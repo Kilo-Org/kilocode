@@ -1,5 +1,3 @@
-// kilocode_change - new file
-
 /**
  * KiloClaw chat slash-command autocomplete.
  *
@@ -8,7 +6,7 @@
  * extmark wiring) and only handles `/` slash commands.
  *
  * Source of slash commands is supplied by the caller via the `slashes`
- * prop. We intentionally do NOT pull from `useCommandDialog().slashes()`
+ * prop. We intentionally do NOT pull from `useCommandPalette().slashes()`
  * because that registry holds globally-registered commands across all
  * routes (e.g. the home route's `/new` for sessions), which would clash
  * with kiloclaw's own `/new` for conversations.
@@ -18,19 +16,19 @@
  * popup instead of triggering palette commands.
  */
 
-import type { BoxRenderable, KeyEvent, ScrollBoxRenderable, TextareaRenderable } from "@opentui/core"
+import type { BoxRenderable, ScrollBoxRenderable, TextareaRenderable } from "@opentui/core"
 import fuzzysort from "fuzzysort"
 import { Index, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useTerminalDimensions } from "@opentui/solid"
 import { SplitBorder } from "@tui/component/border"
-import { useCommandDialog } from "@tui/component/dialog-command"
+import { useCommandPalette } from "@tui/context/command-palette"
+import { useBindings } from "@tui/keymap"
 import { selectedForeground, useTheme } from "@tui/context/theme"
 
 export type ClawAutocompleteRef = {
   onInput: (value: string) => void
   onCursorChange: () => void
-  onKeyDown: (e: KeyEvent) => void
   dismiss: () => void
   visible: boolean
 }
@@ -49,7 +47,7 @@ export function ClawAutocomplete(props: {
   input: () => TextareaRenderable | undefined
   ref: (ref: ClawAutocompleteRef) => void
 }) {
-  const command = useCommandDialog()
+  const command = useCommandPalette()
   const { theme } = useTheme()
   const dimensions = useTerminalDimensions()
 
@@ -165,8 +163,30 @@ export function ClawAutocomplete(props: {
     selected.onSelect()
   }
 
+  useBindings(() => ({
+    target: props.input,
+    enabled: () => store.visible,
+    bindings: [
+      { key: "up", desc: "Previous command", group: "KiloClaw", cmd: () => move(-1) },
+      { key: "ctrl+p", desc: "Previous command", group: "KiloClaw", cmd: () => move(-1) },
+      { key: "down", desc: "Next command", group: "KiloClaw", cmd: () => move(1) },
+      { key: "ctrl+n", desc: "Next command", group: "KiloClaw", cmd: () => move(1) },
+      { key: "escape", desc: "Hide autocomplete", group: "KiloClaw", cmd: hide },
+      { key: "return", desc: "Select command", group: "KiloClaw", cmd: select },
+      { key: "tab", desc: "Select command", group: "KiloClaw", cmd: select },
+      {
+        key: "right",
+        fallthrough: true,
+        cmd: () => {
+          const input = props.input()
+          if (input && input.cursorOffset <= store.index) hide()
+        },
+      },
+    ],
+  }))
+
   function show() {
-    command.keybinds(false)
+    command.suspend(true)
     setStore({
       visible: true,
       index: props.input()?.cursorOffset ?? 0,
@@ -175,7 +195,7 @@ export function ClawAutocomplete(props: {
 
   function dismiss() {
     if (!store.visible) return
-    command.keybinds(true)
+    command.suspend(false)
     setStore("visible", false)
   }
 
@@ -228,50 +248,10 @@ export function ClawAutocomplete(props: {
           hide()
         }
       },
-      onKeyDown(e: KeyEvent) {
-        if (store.visible) {
-          const name = e.name?.toLowerCase()
-          const ctrlOnly = e.ctrl && !e.meta && !e.shift
-          const isNavUp = name === "up" || (ctrlOnly && name === "p")
-          const isNavDown = name === "down" || (ctrlOnly && name === "n")
-          if (isNavUp) {
-            move(-1)
-            e.preventDefault()
-            return
-          }
-          if (isNavDown) {
-            move(1)
-            e.preventDefault()
-            return
-          }
-          if (name === "escape") {
-            hide()
-            e.preventDefault()
-            return
-          }
-          if (name === "return" || name === "tab") {
-            select()
-            e.preventDefault()
-            return
-          }
-          if (name === "right") {
-            const inp = props.input()
-            if (inp && inp.cursorOffset <= store.index) {
-              hide()
-              return
-            }
-          }
-          return
-        }
-        if (e.name === "/") {
-          const inp = props.input()
-          if (inp && inp.cursorOffset === 0) show()
-        }
-      },
     })
 
     onCleanup(() => {
-      if (store.visible) command.keybinds(true)
+      if (store.visible) command.suspend(false)
     })
   })
 

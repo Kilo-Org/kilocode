@@ -1377,12 +1377,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     <Show when={throttledText() && showSyntheticPart()}>
       <div data-component="text-part">
         <div data-slot="text-part-body">
-          <Markdown
-            text={throttledText()}
-            cacheKey={part().id}
-            streaming={streaming()}
-            onClick={handleMarkdownClick}
-          />
+          <Markdown text={throttledText()} cacheKey={part().id} streaming={streaming()} onClick={handleMarkdownClick} />
         </div>
         <Show when={showCopy()}>
           <div data-slot="assistant-copy-wrapper">
@@ -2194,6 +2189,11 @@ ToolRegistry.register({
     const subtitle = () => props.input.description ?? props.metadata.description
     const key = () => toolOpenKey(props)
     const [open, setOpen] = createSignal(readToolOpen(key(), props.defaultOpen ?? true) ?? true)
+    const [mounted, setMounted] = createSignal(open())
+
+    createEffect(() => {
+      if (open() || pending()) setMounted(true)
+    })
 
     // also apply processCarriageReturns for Windows CLI tools
     const cmd = createMemo(() => {
@@ -2213,6 +2213,7 @@ ToolRegistry.register({
         {...props}
         icon="console"
         animated
+        hasDetails
         defaultOpen={props.defaultOpen ?? true}
         onOpenChange={setOpen}
         allowPendingToggle
@@ -2227,7 +2228,9 @@ ToolRegistry.register({
           </div>
         }
       >
-        <BashHighlightedOutput cmd={cmd()} output={out()} outputPath={props.metadata.outputPath} active={open()} />
+        <Show when={mounted()}>
+          <BashHighlightedOutput cmd={cmd()} output={out()} outputPath={props.metadata.outputPath} active={open()} />
+        </Show>
       </BasicTool>
     )
   },
@@ -2298,6 +2301,7 @@ ToolRegistry.register({
           {...props}
           icon="code-lines"
           defer
+          hasDetails
           trigger={
             <div data-component="edit-trigger">
               <div data-slot="message-part-title-area">
@@ -2412,6 +2416,7 @@ ToolRegistry.register({
           {...props}
           icon="code-lines"
           defer
+          hasDetails
           trigger={
             <div data-component="write-trigger">
               <div data-slot="message-part-title-area">
@@ -2544,6 +2549,7 @@ ToolRegistry.register({
           {...props}
           icon="code-lines"
           defer
+          hasDetails
           trigger={
             <div data-component={single() ? "edit-trigger" : "write-trigger"}>
               <div data-slot="message-part-title-area">

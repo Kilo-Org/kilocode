@@ -5,7 +5,7 @@ import { Effect, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { ToolRegistry } from "@/tool/registry"
 import { Command } from "@/command" // kilocode_change
-import { Git } from "@/git" // kilocode_change
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { disposeAllInstances, provideTmpdirInstance, TestInstance } from "../fixture/fixture" // kilocode_change
 import { testEffect } from "../lib/effect"
 import { TestConfig } from "../fixture/config"
@@ -17,6 +17,7 @@ import { Skill } from "@/skill"
 import { Agent } from "@/agent/agent"
 import { Session } from "@/session/session"
 import { Provider } from "@/provider/provider"
+import { Git } from "@/git"
 import { LSP } from "@/lsp/lsp"
 import { Instruction } from "@/session/instruction"
 import { Bus } from "@/bus"
@@ -28,6 +29,7 @@ import { InstanceState } from "@/effect/instance-state"
 import { SessionStatus } from "@/session/status" // kilocode_change
 
 const node = CrossSpawnSpawner.defaultLayer
+const originalExperimentalScout = Flag.KILO_EXPERIMENTAL_SCOUT
 const configLayer = TestConfig.layer({
   directories: () => InstanceState.directory.pipe(Effect.map((dir) => [path.join(dir, ".opencode")])),
 })
@@ -41,6 +43,7 @@ const registryLayer = ToolRegistry.layer.pipe(
   Layer.provide(Agent.defaultLayer),
   Layer.provide(Session.defaultLayer),
   Layer.provide(Provider.defaultLayer),
+  Layer.provide(Git.defaultLayer),
   Layer.provide(LSP.defaultLayer),
   Layer.provide(Instruction.defaultLayer),
   Layer.provide(AppFileSystem.defaultLayer),
@@ -51,13 +54,13 @@ const registryLayer = ToolRegistry.layer.pipe(
   Layer.provide(Ripgrep.defaultLayer),
   Layer.provide(Truncate.defaultLayer),
   Layer.provide(Command.defaultLayer), // kilocode_change
-  Layer.provide(Git.defaultLayer), // kilocode_change
   Layer.provide(SessionStatus.defaultLayer), // kilocode_change
 )
 
 const it = testEffect(Layer.mergeAll(registryLayer, node))
 
 afterEach(async () => {
+  Flag.KILO_EXPERIMENTAL_SCOUT = originalExperimentalScout
   await disposeAllInstances()
 })
 
@@ -120,6 +123,30 @@ describe("tool.registry", () => {
     }),
   )
   // kilocode_change end
+
+  it.instance("hides repo research tools unless experimental", () =>
+    Effect.gen(function* () {
+      Flag.KILO_EXPERIMENTAL_SCOUT = false
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+
+      expect(ids).not.toContain("codesearch")
+      expect(ids).not.toContain("repo_clone")
+      expect(ids).not.toContain("repo_overview")
+    }),
+  )
+
+  it.instance("shows repo research tools when experimental scout is enabled", () =>
+    Effect.gen(function* () {
+      Flag.KILO_EXPERIMENTAL_SCOUT = true
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+
+      expect(ids).toContain("codesearch")
+      expect(ids).toContain("repo_clone")
+      expect(ids).toContain("repo_overview")
+    }),
+  )
 
   it.instance("loads tools from .opencode/tool (singular)", () =>
     Effect.gen(function* () {

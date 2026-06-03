@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { isAnnotationMutation } from "../../webview-ui/agent-manager/markdown-annotation-mutation"
+import { isAnnotationMutation } from "../../webview-ui/diff-viewer/markdown-annotation-mutation"
 
 function mutation(target: Node): Pick<MutationRecord, "target"> {
   return { target }

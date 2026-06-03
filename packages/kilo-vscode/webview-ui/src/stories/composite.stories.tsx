@@ -241,9 +241,13 @@ const bashPermission: PermissionRequest = {
   id: "perm-bash-001",
   sessionID: SESSION_ID,
   toolName: "bash",
-  patterns: ["bun test"],
+  patterns: ['if [[ -f ".env" ]]; then source ".env"; fi\nbun test'],
   always: ["bun *"],
-  args: { command: "bun test", rules: ["bun *", "bun test"] },
+  args: {
+    command: 'if [[ -f ".env" ]]; then source ".env"; fi\nbun test',
+    description: "Load environment and run tests",
+    rules: ["bun *", "bun test"],
+  },
   tool: { messageID: ASST_MSG_ID, callID: "call-bash-001" },
 }
 

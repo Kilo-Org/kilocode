@@ -32,6 +32,7 @@ const paths = {
   data,
   bin: path.join(cache, "bin"),
   log: path.join(data, "log"),
+  repos: path.join(data, "repos"),
   cache,
   config,
   state,
@@ -49,6 +50,7 @@ await Promise.all([
   ensureRealDir(Path.tmp), // kilocode_change
   ensureRealDir(Path.log), // kilocode_change
   ensureRealDir(Path.bin), // kilocode_change
+  ensureRealDir(Path.repos), // kilocode_change
 ])
 
 // kilocode_change start - keep generated Kilo data out of macOS Spotlight
@@ -66,6 +68,7 @@ export interface Interface {
   readonly tmp: string
   readonly bin: string
   readonly log: string
+  readonly repos: string
 }
 
 export function make(input: Partial<Interface> = {}): Interface {
@@ -78,6 +81,7 @@ export function make(input: Partial<Interface> = {}): Interface {
     tmp: Path.tmp,
     bin: Path.bin,
     log: Path.log,
+    repos: Path.repos,
     ...input,
   }
 }
