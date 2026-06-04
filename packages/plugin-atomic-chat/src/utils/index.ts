@@ -104,7 +104,12 @@ export function categorizeError(error: unknown, context: { baseURL: string; mode
   const errorStr = String(error).toLowerCase()
   const { baseURL, modelId } = context
 
-  if (errorStr.includes('econnrefused') || errorStr.includes('fetch failed') || errorStr.includes('network')) {
+  if (
+    errorStr.includes('econnrefused') ||
+    errorStr.includes('fetch failed') ||
+    errorStr.includes('failed to fetch') ||
+    errorStr.includes('network')
+  ) {
     return {
       type: 'offline',
       severity: 'critical',

@@ -3,7 +3,7 @@ import { ToastNotifier } from '../ui/toast-notifier'
 import { findSimilarModels, retryWithBackoff, categorizeError, generateAutoFixSuggestions } from '../utils'
 import { getLoadedModels } from './get-loaded-models'
 import { normalizeBaseURL } from '../utils/atomic-chat-api'
-import { safeAsyncOperation, isPluginHookInput, isAtomicChatProvider, isValidModel } from '../utils/validation'
+import { isPluginHookInput, isAtomicChatProvider, isValidModel } from '../utils/validation'
 import { DEFAULT_ATOMIC_CHAT_ORIGIN, LOG_PREFIX } from '../constants'
 
 export function createChatParamsHook(toastNotifier: ToastNotifier) {
@@ -25,12 +25,6 @@ export function createChatParamsHook(toastNotifier: ToastNotifier) {
     }
 
     const baseURL = normalizeBaseURL(provider.options?.baseURL || DEFAULT_ATOMIC_CHAT_ORIGIN)
-
-    await safeAsyncOperation(
-      () => toastNotifier.progress(`Checking model ${model.id}...`, 'Model Validation', 10),
-      undefined,
-      (error: Error) => console.warn(`${LOG_PREFIX} Failed to show progress toast:`, error)
-    )
 
     let lastLoadedModels: string[] = []
     const validationResult = await retryWithBackoff(
@@ -108,8 +102,6 @@ export function createChatParamsHook(toastNotifier: ToastNotifier) {
       const cacheEntry = cacheStats.entries.find((entry) => entry.baseURL === baseURL)
       const cacheAge = cacheEntry ? cacheEntry.age : 0
       const loadedModels = validationResult.result || []
-
-      await toastNotifier.success(`Model '${model.id}' is ready to use`, 'Model Validated')
 
       if (!output.options) {
         output.options = {}

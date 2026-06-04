@@ -10,7 +10,7 @@ import {
 } from '../utils/should-probe-atomic-chat'
 import type { PluginInput } from '@kilocode/plugin'
 import type { AtomicChatModel } from '../types'
-import { ATOMIC_CHAT_PROVIDER_KEY, LOG_PREFIX } from '../constants'
+import { ATOMIC_CHAT_PROVIDER_KEY, DEFAULT_ATOMIC_CHAT_ORIGIN, LOG_PREFIX } from '../constants'
 
 export { shouldProbeAtomicChat } from '../utils/should-probe-atomic-chat'
 
@@ -34,15 +34,17 @@ export async function enhanceConfig(
   try {
     let atomicProvider = getAtomicSection(config)
     let baseURL: string
+    let models: AtomicChatModel[] | undefined
 
     if (atomicProvider) {
-      baseURL = normalizeBaseURL(atomicProvider.options?.baseURL || 'http://127.0.0.1:1337')
+      baseURL = normalizeBaseURL(atomicProvider.options?.baseURL || DEFAULT_ATOMIC_CHAT_ORIGIN)
     } else if (isAtomicChatAutoDetectEnabled(config)) {
-      const detectedURL = await autoDetectAtomicChat()
-      if (!detectedURL || signal?.aborted) {
+      const detected = await autoDetectAtomicChat(signal)
+      if (!detected || signal?.aborted) {
         return
       }
-      baseURL = detectedURL
+      baseURL = detected.baseURL
+      models = detected.models
       setAtomicSection(config, {
         npm: '@ai-sdk/openai-compatible',
         name: 'Atomic Chat (local)',
@@ -53,7 +55,7 @@ export async function enhanceConfig(
       })
       atomicProvider = getAtomicSection(config)
     } else {
-      baseURL = normalizeBaseURL('http://127.0.0.1:1337')
+      baseURL = normalizeBaseURL(DEFAULT_ATOMIC_CHAT_ORIGIN)
       setAtomicSection(config, {
         npm: '@ai-sdk/openai-compatible',
         name: 'Atomic Chat (local)',
@@ -69,22 +71,21 @@ export async function enhanceConfig(
       return
     }
 
-    let ok: boolean
-    let models: AtomicChatModel[]
-    try {
-      const result = await fetchModelsEndpoint(baseURL)
-      ok = result.ok
-      models = result.models
-    } catch (error) {
-      console.warn(`${LOG_PREFIX} Atomic Chat API appears unreachable`, {
-        baseURL,
-        error: error instanceof Error ? error.message : String(error),
-      })
-      return
-    }
-    if (!ok) {
-      console.warn(`${LOG_PREFIX} Atomic Chat API appears unreachable`, { baseURL })
-      return
+    if (models === undefined) {
+      try {
+        const result = await fetchModelsEndpoint(baseURL, signal)
+        if (!result.ok) {
+          console.warn(`${LOG_PREFIX} Atomic Chat API appears unreachable`, { baseURL })
+          return
+        }
+        models = result.models
+      } catch (error) {
+        console.warn(`${LOG_PREFIX} Atomic Chat API appears unreachable`, {
+          baseURL,
+          error: error instanceof Error ? error.message : String(error),
+        })
+        return
+      }
     }
 
     if (signal?.aborted) {
@@ -144,7 +145,9 @@ export async function enhanceConfig(
         }
 
         if (chatModelsCount === 0 && embeddingModelsCount > 0) {
-          console.warn(`${LOG_PREFIX} Only embedding-style models detected; load a chat model in Atomic Chat for coding agents.`)
+          console.warn(
+            `${LOG_PREFIX} Only embedding-style models detected; load a chat model in Atomic Chat for coding agents.`
+          )
         }
       }
     } else {
@@ -167,6 +170,12 @@ export async function enhanceConfig(
     }
   } catch (error) {
     console.error(`${LOG_PREFIX} Unexpected error in enhanceConfig:`, error)
-    toastNotifier.warning('Plugin configuration failed', 'Configuration Error').catch(() => {})
+    toastNotifier
+      .warning('Plugin configuration failed', 'Configuration Error')
+      .catch((err) => {
+        console.warn(`${LOG_PREFIX} Failed to show configuration warning toast`, {
+          error: err instanceof Error ? err.message : String(err),
+        })
+      })
   }
 }

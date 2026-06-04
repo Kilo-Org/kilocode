@@ -1,7 +1,8 @@
 import type { AtomicChatModel, AtomicChatModelsResponse } from '../types'
-import { ATOMIC_CHAT_PROBE_PORTS, DEFAULT_ATOMIC_CHAT_ORIGIN } from '../constants'
+import { ATOMIC_CHAT_PROBE_PORTS, DEFAULT_ATOMIC_CHAT_ORIGIN, LOG_PREFIX } from '../constants'
 
 const MODELS_ENDPOINT = '/v1/models'
+const FETCH_TIMEOUT_MS = 3000
 
 export function normalizeBaseURL(baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN): string {
   let normalized = baseURL.replace(/\/+$/, '')
@@ -21,66 +22,96 @@ export type ModelsEndpointResult = {
   models: AtomicChatModel[]
 }
 
-/** Single GET /v1/models — shared by health, discovery, and direct model-id fetch. */
-export async function fetchModelsEndpoint(baseURL: string): Promise<ModelsEndpointResult> {
-  const url = buildAPIURL(baseURL)
-  try {
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(3000),
-    })
-    if (!response.ok) {
-      return { ok: false, models: [] }
-    }
-    const data = (await response.json()) as AtomicChatModelsResponse
-    return { ok: true, models: data.data ?? [] }
-  } catch (error) {
-    throw new Error(
-      `Failed to fetch models: ${error instanceof Error ? error.message : String(error)}`
-    )
-  }
+export type AutoDetectResult = {
+  baseURL: string
+  models: AtomicChatModel[]
 }
 
-export async function checkAtomicChatHealth(baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN): Promise<boolean> {
+function fetchSignal(outer?: AbortSignal): AbortSignal {
+  const timeout = AbortSignal.timeout(FETCH_TIMEOUT_MS)
+  if (!outer) {
+    return timeout
+  }
+  return AbortSignal.any([outer, timeout])
+}
+
+/** Single GET /v1/models — shared by discovery, health, auto-detect, and chat validation. */
+export async function fetchModelsEndpoint(
+  baseURL: string,
+  signal?: AbortSignal
+): Promise<ModelsEndpointResult> {
+  const url = buildAPIURL(baseURL)
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+    signal: fetchSignal(signal),
+  })
+  if (!response.ok) {
+    return { ok: false, models: [] }
+  }
+  const data = (await response.json()) as AtomicChatModelsResponse
+  return { ok: true, models: data.data ?? [] }
+}
+
+export async function checkAtomicChatHealth(
+  baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN,
+  signal?: AbortSignal
+): Promise<boolean> {
   try {
-    const { ok } = await fetchModelsEndpoint(baseURL)
+    const { ok } = await fetchModelsEndpoint(baseURL, signal)
     return ok
-  } catch {
+  } catch (error) {
+    console.warn(`${LOG_PREFIX} Health check failed`, {
+      baseURL,
+      error: error instanceof Error ? error.message : String(error),
+    })
     return false
   }
 }
 
-export async function discoverAtomicChatModels(baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN): Promise<AtomicChatModel[]> {
+export async function discoverAtomicChatModels(
+  baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN,
+  signal?: AbortSignal
+): Promise<AtomicChatModel[]> {
   try {
-    const { ok, models } = await fetchModelsEndpoint(baseURL)
-    if (!ok) {
-      return []
-    }
-    return models
-  } catch {
+    const { ok, models } = await fetchModelsEndpoint(baseURL, signal)
+    return ok ? models : []
+  } catch (error) {
+    console.warn(`${LOG_PREFIX} Model discovery failed`, {
+      baseURL,
+      error: error instanceof Error ? error.message : String(error),
+    })
     return []
   }
 }
 
-export async function fetchModelsDirect(baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN): Promise<string[]> {
-  const { ok, models } = await fetchModelsEndpoint(baseURL)
+export async function fetchModelsDirect(
+  baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN,
+  signal?: AbortSignal
+): Promise<string[]> {
+  const { ok, models } = await fetchModelsEndpoint(baseURL, signal)
   if (!ok) {
     throw new Error('Atomic Chat models endpoint returned a non-success status')
   }
   return models.map((model) => model.id)
 }
 
-export async function autoDetectAtomicChat(): Promise<string | null> {
+/** Probes local ports; returns the first reachable server and its model list (one HTTP call). */
+export async function autoDetectAtomicChat(signal?: AbortSignal): Promise<AutoDetectResult | null> {
   for (const port of ATOMIC_CHAT_PROBE_PORTS) {
+    if (signal?.aborted) {
+      return null
+    }
     const baseURL = `http://127.0.0.1:${port}`
     try {
-      const { ok } = await fetchModelsEndpoint(baseURL)
+      const { ok, models } = await fetchModelsEndpoint(baseURL, signal)
       if (ok) {
-        return baseURL
+        return { baseURL, models }
       }
-    } catch {
-      continue
+    } catch (error) {
+      console.warn(`${LOG_PREFIX} Auto-detect probe failed for port ${port}`, {
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
   }
   return null

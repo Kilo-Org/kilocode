@@ -19,7 +19,11 @@ export function createConfigHook(client: PluginInput['client'], toastNotifier: T
     const validation = validateConfig(config)
     if (!validation.isValid) {
       console.error(`${LOG_PREFIX} Invalid config provided:`, validation.errors)
-      toastNotifier.error('Plugin configuration is invalid', 'Configuration Error').catch(() => {})
+      toastNotifier.error('Plugin configuration is invalid', 'Configuration Error').catch((err) => {
+        console.warn(`${LOG_PREFIX} Failed to show configuration error toast`, {
+          error: err instanceof Error ? err.message : String(err),
+        })
+      })
       return
     }
 

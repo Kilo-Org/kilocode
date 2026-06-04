@@ -218,14 +218,7 @@ describe('AtomicChatPlugin', () => {
         output
       )
 
-      expect(mockClient.tui.showToast).toHaveBeenCalledWith(
-        expect.objectContaining({
-          body: expect.objectContaining({
-            variant: 'success',
-            message: "Model 'test-model' is ready to use",
-          }),
-        })
-      )
+      expect(mockClient.tui.showToast).not.toHaveBeenCalled()
       expect(output.options?.atomicChatValidation).toEqual(
         expect.objectContaining({ status: 'success', model: 'test-model' })
       )
