@@ -129,11 +129,15 @@ export function categorizeError(error: unknown, context: { baseURL: string; mode
     }
   }
 
-  if (errorStr.includes('404') || errorStr.includes('not found')) {
-  if (errorStr.includes('404') || errorStr.includes('not found') || errorStr.includes('not loaded')) {
+  if (
+    errorStr.includes('404') ||
+    errorStr.includes('not found') ||
+    errorStr.includes('not loaded')
+  ) {
+    return {
       type: 'not_found',
       severity: 'high',
-      message: `Model '${modelId}' not found. Load the model in Atomic Chat and confirm GET /v1/models lists it.`,
+      message: `Model '${modelId}' is not loaded in Atomic Chat. Load it and confirm GET /v1/models lists it.`,
       canRetry: false,
       autoFixAvailable: false,
     }
