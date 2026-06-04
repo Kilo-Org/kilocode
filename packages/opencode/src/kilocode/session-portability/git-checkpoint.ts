@@ -206,10 +206,10 @@ export async function restoreCloudSessionWorkspace(input: {
 }
 
 async function commit(dir: string, sha: string) {
-  const hit = await run(dir, ["cat-file", "-e", `${sha}^{commit}`], { ok: [0, 1] })
+  const hit = await run(dir, ["cat-file", "-e", `${sha}^{commit}`], { ok: [0, 1, 128] })
   if (hit.code === 0) return true
   await run(dir, ["fetch", "--all", "--quiet"], { env: { GIT_TERMINAL_PROMPT: "0" }, ok: [0, 1], timeout: 5000 })
-  return run(dir, ["cat-file", "-e", `${sha}^{commit}`], { ok: [0, 1] }).then((out) => out.code === 0)
+  return run(dir, ["cat-file", "-e", `${sha}^{commit}`], { ok: [0, 1, 128] }).then((out) => out.code === 0)
 }
 
 async function uniqueBranch(dir: string, base: string) {

@@ -106,6 +106,24 @@ describe("workspace git checkpoints", () => {
     expect(restored).toEqual({ status: "skipped", reason: "different_repo" })
   })
 
+  test("skips restore when the checkpoint commit does not exist locally", async () => {
+    const dir = await repo()
+    await git(dir, ["remote", "remove", "origin"])
+    const checkpoint = await captureWorkspaceCheckpoint({ directory: dir })
+
+    const restored = await restoreWorkspaceCheckpoint({
+      directory: dir,
+      checkpoint: {
+        ...checkpoint!,
+        head: "0123456789012345678901234567890123456789",
+      },
+      targetDirectory: path.join(await mkdtemp(path.join(os.tmpdir(), "kilo-checkpoint-missing-")), "session"),
+      branch: "kilo-restore-missing",
+    })
+
+    expect(restored).toEqual({ status: "skipped", reason: "missing_commit" })
+  })
+
   test("removes the created worktree when patch apply fails", async () => {
     const dir = await repo()
     const checkpoint = await captureWorkspaceCheckpoint({ directory: dir })
