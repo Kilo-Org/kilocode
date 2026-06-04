@@ -17,7 +17,9 @@ import ai.kilocode.client.session.model.PermissionRequestState
 import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
+import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.model.ToolCallRef
+import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.telemetry.Telemetry
@@ -48,6 +50,7 @@ import com.intellij.openapi.application.ApplicationManager
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.util.Disposer
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -111,6 +114,7 @@ class SessionController(
     private val directory: String get() = workspace.directory
     private val updates = SessionUpdateQueue(
       parent,
+      cs,
       comp,
       flushMs,
       ::handle,
@@ -143,6 +147,9 @@ class SessionController(
     private var prefModel: String? = null
     private var prefAgent: String? = null
     private var modelTime: Double? = null
+    private val snapshots = mutableMapOf<PartKey, String>()
+
+    private data class PartKey(val messageId: String, val partId: String)
 
     val ready: Boolean get() = model.isReady()
     val autoApprove: Boolean get() = KiloPluginSettings.getAutoApprove()
@@ -217,7 +224,10 @@ class SessionController(
                     val meta = if (LOG.isDebugEnabled) ChatLogSummary.dir(directory) else "kind=session"
                     LOG.info("${ChatLogSummary.sid(session.id)} kind=session $meta created=true")
                     capture("Task Created", sessionProps(session.id) + mapOf("source" to "jetbrains"))
-                    subscribeEvents()
+                    runEdt {
+                        if (disposed) return@runEdt
+                        subscribeEvents()
+                    }
                     session.id
                 }
                 sessions.prompt(id, directory, dto)
@@ -452,7 +462,9 @@ class SessionController(
         }
     }
 
+    @RequiresEdt
     private fun drainAutoApprove(skip: Set<String> = emptySet()) {
+        assertEdt()
         val id = sid ?: return
         val ids = (childIds + id).toSet()
         drainJob?.cancel()
@@ -651,6 +663,7 @@ class SessionController(
                     if (disposed) return@runEdt
                     if (sid != id) return@runEdt
                     updateModel {
+                        snapshots.clear()
                         this@SessionController.model.loadHistory(items)
                         syncHistoryAgent(items)
                         if (session != null) this@SessionController.model.setSession(session)
@@ -699,6 +712,7 @@ class SessionController(
                     ref = SessionRef.Local(session)
                     setRecentSessionsState(RecentsState.Idle)
                     updateModel {
+                        snapshots.clear()
                         this@SessionController.model.loadHistory(items)
                         syncHistoryAgent(items)
                         this@SessionController.model.setSession(session)
@@ -741,13 +755,12 @@ class SessionController(
         if (!model.showSession) setControllerViewState(SessionControllerEvent.ViewChanged.ShowProgress)
     }
 
+    @RequiresEdt
     private fun subscribeEvents() {
+        assertEdt()
         val id = sid ?: return
         LOG.debug { "${ChatLogSummary.sid(id)} kind=subscription subscribe=true" }
-        eventJob?.cancel()
-        childJobs.values.forEach { it.cancel() }
-        childJobs.clear()
-        childIds.clear()
+        cancelSubscriptions()
         eventJob = cs.launch {
             try {
                 sessions.events(id, directory).collect { event ->
@@ -764,7 +777,9 @@ class SessionController(
         }
     }
 
+    @RequiresEdt
     private fun subscribeChild(child: String) {
+        assertEdt()
         if (childJobs.containsKey(child)) return
         LOG.debug { "${ChatLogSummary.sid(sid ?: "pending")} kind=child-subscription child=$child subscribe=true" }
         val job = cs.launch {
@@ -781,10 +796,22 @@ class SessionController(
         childJobs[child] = job
     }
 
+    @RequiresEdt
     private fun trackChild(child: String) {
+        assertEdt()
         if (!childIds.add(child)) return
         subscribeChild(child)
         cs.launch { recoverChildPermissions(child) }
+    }
+
+    @RequiresEdt
+    private fun cancelSubscriptions() {
+        assertEdt()
+        eventJob?.cancel()
+        eventJob = null
+        childJobs.values.forEach { it.cancel() }
+        childJobs.clear()
+        childIds.clear()
     }
 
     private suspend fun recoverChildPermissions(child: String) {
@@ -888,7 +915,15 @@ class SessionController(
             is ChatEventDto.PartUpdated -> {
                 partType = event.part.type
                 tool = event.part.tool
+                val key = PartKey(event.part.messageID, event.part.id)
+                val prev = content(event.part.messageID, event.part.id)
                 model.updateContent(event.part.messageID, event.part)
+                val next = content(event.part.messageID, event.part.id)
+                if (next != null && next != prev) {
+                    snapshots[key] = next
+                } else {
+                    snapshots.remove(key)
+                }
                 if (model.state is SessionState.Busy) {
                     model.setState(SessionState.Busy(status()))
                 }
@@ -897,11 +932,13 @@ class SessionController(
 
             is ChatEventDto.PartDelta -> {
                 if (event.field == "text") {
-                    model.appendDelta(event.messageID, event.partID, event.delta)
+                    val delta = glue(event.messageID, event.partID, event.delta)
+                    if (delta.isNotEmpty()) model.appendDelta(event.messageID, event.partID, delta)
                 }
             }
 
             is ChatEventDto.PartRemoved -> {
+                snapshots.remove(PartKey(event.messageID, event.partID))
                 model.removeContent(event.messageID, event.partID)
             }
 
@@ -935,6 +972,7 @@ class SessionController(
             }
 
             is ChatEventDto.MessageRemoved -> {
+                snapshots.keys.removeAll { it.messageId == event.messageID }
                 model.removeMessage(event.messageID)
             }
 
@@ -975,6 +1013,26 @@ class SessionController(
             is ChatEventDto.SessionDiffChanged -> model.setDiff(event.diff)
             is ChatEventDto.TodoUpdated -> model.setTodos(event.todos)
         }
+    }
+
+    private fun glue(messageId: String, partId: String, delta: String): String {
+        if (delta.isEmpty()) return delta
+        val key = PartKey(messageId, partId)
+        val cur = snapshots[key] ?: return delta
+        val span = (minOf(cur.length, delta.length) downTo 1)
+            .firstOrNull { n -> cur.regionMatches(cur.length - n, delta, 0, n) } ?: 0
+        if (span == delta.length) {
+            snapshots.remove(key)
+            return ""
+        }
+        snapshots.remove(key)
+        return delta.substring(span)
+    }
+
+    private fun content(messageId: String, partId: String): String? = when (val content = model.content(messageId, partId)) {
+        is Text -> content.content.toString()
+        is Reasoning -> content.content.toString()
+        else -> null
     }
 
     private fun handleHidden(event: ChatEventDto): Boolean = when (event) {
@@ -1657,13 +1715,13 @@ class SessionController(
     }
 
     override fun dispose() {
-        disposed = true
-        connectionDelay.dispose()
-        eventJob?.cancel()
-        drainJob?.cancel()
-        childJobs.values.forEach { it.cancel() }
-        childJobs.clear()
-        childIds.clear()
+        runEdt {
+            disposed = true
+            connectionDelay.dispose()
+            cancelSubscriptions()
+            drainJob?.cancel()
+            drainJob = null
+        }
         cs.cancel()
     }
 

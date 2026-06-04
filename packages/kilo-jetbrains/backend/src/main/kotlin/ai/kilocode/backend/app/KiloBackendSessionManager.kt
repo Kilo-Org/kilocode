@@ -329,4 +329,5 @@ class KiloBackendSessionManager(
     }
 
     private fun Long.safeInt() = coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
+    private fun Double.safeInt() = toLong().safeInt()
 }

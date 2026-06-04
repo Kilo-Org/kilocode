@@ -213,11 +213,15 @@ export namespace Daemon {
     return await start(input)
   }
 
-  export function command(input?: string[]) {
+  export function command(
+    input?: string[],
+    proc = { argv: process.argv, execArgv: process.execArgv, execPath: process.execPath },
+  ) {
     if (input?.length) return input
-    const script = process.argv[1]
-    if (script && /\.(ts|js|mjs|cjs)$/.test(script)) return [process.execPath, ...clean(process.execArgv), script]
-    return [process.execPath]
+    const script = proc.argv[1]
+    const bundled = script?.startsWith("/$bunfs/") || (script ? /^[A-Za-z]:[\\/]~BUN[\\/]/.test(script) : false)
+    if (script && !bundled && /\.(ts|js|mjs|cjs)$/.test(script)) return [proc.execPath, ...clean(proc.execArgv), script]
+    return [proc.execPath]
   }
 
   export function clean(input: string[]) {

@@ -26,8 +26,8 @@ import { SessionNetwork } from "./network" // kilocode_change
 import { CodexAuthExpiredError } from "@/kilocode/provider/codex-refresh" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { Effect, Schema, Types } from "effect"
-import { zod, ZodOverride } from "@/util/effect-zod"
-import { NonNegativeInt, withStatics } from "@/util/schema"
+import { zod, ZodOverride } from "@opencode-ai/core/effect-zod"
+import { NonNegativeInt, withStatics } from "@opencode-ai/core/schema"
 import { namedSchemaError } from "@/util/named-schema-error"
 import * as EffectLogger from "@opencode-ai/core/effect/logger"
 
@@ -146,8 +146,8 @@ export type ReasoningPart = Types.DeepMutable<Schema.Schema.Type<typeof Reasonin
 const filePartSourceBase = {
   text: Schema.Struct({
     value: Schema.String,
-    start: NonNegativeInt,
-    end: NonNegativeInt,
+    start: Schema.Finite,
+    end: Schema.Finite,
   }).annotate({ identifier: "FilePartSourceText" }),
 }
 
@@ -273,13 +273,13 @@ export const StepFinishPart = Schema.Struct({
   snapshot: Schema.optional(Schema.String),
   cost: Schema.Finite,
   tokens: Schema.Struct({
-    total: Schema.optional(NonNegativeInt),
-    input: NonNegativeInt,
-    output: NonNegativeInt,
-    reasoning: NonNegativeInt,
+    total: Schema.optional(Schema.Finite),
+    input: Schema.Finite,
+    output: Schema.Finite,
+    reasoning: Schema.Finite,
     cache: Schema.Struct({
-      read: NonNegativeInt,
-      write: NonNegativeInt,
+      read: Schema.Finite,
+      write: Schema.Finite,
     }),
   }),
 })
@@ -570,13 +570,13 @@ export const Assistant = Schema.Struct({
   summary: Schema.optional(Schema.Boolean),
   cost: Schema.Finite,
   tokens: Schema.Struct({
-    total: Schema.optional(NonNegativeInt),
-    input: NonNegativeInt,
-    output: NonNegativeInt,
-    reasoning: NonNegativeInt,
+    total: Schema.optional(Schema.Finite),
+    input: Schema.Finite,
+    output: Schema.Finite,
+    reasoning: Schema.Finite,
     cache: Schema.Struct({
-      read: NonNegativeInt,
-      write: NonNegativeInt,
+      read: Schema.Finite,
+      write: Schema.Finite,
     }),
   }),
   structured: Schema.optional(Schema.Any),

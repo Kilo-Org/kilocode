@@ -1,5 +1,48 @@
 # kilo-code
 
+## 7.3.29
+
+### Patch Changes
+
+- [#9976](https://github.com/Kilo-Org/kilocode/pull/9976) [`56b0834`](https://github.com/Kilo-Org/kilocode/commit/56b0834db524d29737043c250b45e8c973add350) - Reduce JetBrains memory usage by disposing hidden session UIs after a configurable timeout.
+
+- [#9976](https://github.com/Kilo-Org/kilocode/pull/9976) [`750bb77`](https://github.com/Kilo-Org/kilocode/commit/750bb778998a405719d3132d17867d2868e4defd) - Improve JetBrains session stability by keeping controller subscription state on the UI thread.
+
+- [#9976](https://github.com/Kilo-Org/kilocode/pull/9976) [`50f4d28`](https://github.com/Kilo-Org/kilocode/commit/50f4d28e07f5fb0c71d231d9eead8c0b370c05aa) - Show JetBrains markdown code blocks as multiline boxed editors that expand to their full height.
+
+- [#9976](https://github.com/Kilo-Org/kilocode/pull/9976) [`e17c4f9`](https://github.com/Kilo-Org/kilocode/commit/e17c4f936c1c111d7019122b7c794661a610eb52) - Improve JetBrains chat streaming performance by retaining existing markdown and code block views while responses stream, and keep streamed code fences intact without showing raw fence markers during updates.
+
+- [#9976](https://github.com/Kilo-Org/kilocode/pull/9976) [`2a3975e`](https://github.com/Kilo-Org/kilocode/commit/2a3975ea29acfe4e5c4a4cd293de7e6f9b789e86) - Support coherent selection and copy behavior across JetBrains session transcript fragments.
+
+- [#10822](https://github.com/Kilo-Org/kilocode/pull/10822) [`8b1ee66`](https://github.com/Kilo-Org/kilocode/commit/8b1ee6628c7ee552814980465af7233522dd5528) - Preserve worktree routing for Kilo HTTP API clients and keep inherited task-subagent restrictions active.
+
+## 7.3.28
+
+### Patch Changes
+
+- [#10847](https://github.com/Kilo-Org/kilocode/pull/10847) [`cdf46c9`](https://github.com/Kilo-Org/kilocode/commit/cdf46c97354630e2f1b392092ee0ffcc18b19640) - Clarify when free-model data may be used for training and identify it with a brain circuit icon.
+
+- [#10806](https://github.com/Kilo-Org/kilocode/pull/10806) [`ed3e1ac`](https://github.com/Kilo-Org/kilocode/commit/ed3e1ac99bffd2c1fa0480d80907d298f48ce175) - Make Marketplace skill installation resilient to missing project directories and overlapping install attempts.
+
+- [#10831](https://github.com/Kilo-Org/kilocode/pull/10831) [`837a875`](https://github.com/Kilo-Org/kilocode/commit/837a87509cb323dbf212cbf40af112f218221dd0) - Keep post-compaction tool calls and follow-up messages ordered after the compaction summary in the CLI and VS Code transcript.
+
+- [#10849](https://github.com/Kilo-Org/kilocode/pull/10849) [`a6b005d`](https://github.com/Kilo-Org/kilocode/commit/a6b005dfede302731dcbb00ac74e744333db9104) - Restore Cloud Agent transcripts in VS Code session previews and stop cloud session previews or continuation from loading indefinitely when a request stalls.
+
+- [#10692](https://github.com/Kilo-Org/kilocode/pull/10692) [`eadfb2b`](https://github.com/Kilo-Org/kilocode/commit/eadfb2b80a1a7ca4b469d78d85fec023c8c0387b) - Show shell command descriptions in permission approval prompts.
+
+- [#10816](https://github.com/Kilo-Org/kilocode/pull/10816) [`16341a6`](https://github.com/Kilo-Org/kilocode/commit/16341a6647d1a662ce1e9fceec09a9cf33bf0be6) - Keep chat auto-scroll stable while edit, write, and patch tools hand off between assistant steps.
+
+- [#10846](https://github.com/Kilo-Org/kilocode/pull/10846) [`48340fe`](https://github.com/Kilo-Org/kilocode/commit/48340fe2ec44d75c5210a0ebeaf18575f5935774) - Preserve unfinished inline review comments while diffs refresh.
+
+- [#10810](https://github.com/Kilo-Org/kilocode/pull/10810) [`5b34dfc`](https://github.com/Kilo-Org/kilocode/commit/5b34dfce3d62946f3aa2ad8e65f618af05246f4d) - Speed up VS Code session switching for long transcripts by lazily mounting collapsed historical tool details, sharing timeline hover infrastructure across activity bars, omitting transcript metadata that the webview does not use, and avoiding shimmer markup for inactive historical labels.
+
+- Updated dependencies [[`cdf46c9`](https://github.com/Kilo-Org/kilocode/commit/cdf46c97354630e2f1b392092ee0ffcc18b19640), [`fc4cf10`](https://github.com/Kilo-Org/kilocode/commit/fc4cf10b0a65ec2b2949dd695ebec6ebb619cd15), [`a6b005d`](https://github.com/Kilo-Org/kilocode/commit/a6b005dfede302731dcbb00ac74e744333db9104)]:
+  - @kilocode/kilo-ui@7.3.23
+  - @kilocode/sdk@7.3.23
+  - @kilocode/kilo-gateway@7.3.23
+  - @opencode-ai/ui@7.3.23
+  - @kilocode/kilo-indexing@7.3.23
+
 ## 7.3.21
 
 ## 7.3.20

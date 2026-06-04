@@ -48,7 +48,7 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
       // kilocode_change end
 
       return {
-        providers: Object.values(providers),
+        providers: Object.values(providers).map(Provider.toPublicInfo),
         default: defaults,
       }
     })

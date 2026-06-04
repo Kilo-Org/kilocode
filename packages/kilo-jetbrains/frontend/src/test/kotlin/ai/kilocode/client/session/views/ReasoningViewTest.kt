@@ -19,7 +19,7 @@ class ReasoningViewTest : BasePlatformTestCase() {
         assertEquals("one\ntwo\nthree\nfour", view.markdown())
         assertTrue(view.hasToggle())
         assertFalse(view.bodyVisible())
-        assertTrue(view.bodyCreated())
+        assertFalse(view.bodyCreated())
     }
 
     fun `test short completed reasoning is collapsible`() {
@@ -81,32 +81,32 @@ class ReasoningViewTest : BasePlatformTestCase() {
         view.appendDelta("b")
 
         assertEquals("b", view.markdown())
-        assertTrue(view.bodyCreated())
+        assertFalse(view.bodyCreated())
         assertFalse(view.bodyVisible())
         assertTrue(view.hasToggle())
     }
 
-    fun `test collapsed append keeps eager reasoning body detached`() {
+    fun `test collapsed append keeps lazy reasoning body uncreated`() {
         val view = ReasoningView(reasoning("p1", done = false, text = "a"))
 
         view.appendDelta("b")
 
         assertEquals("ab", view.markdown())
-        assertTrue(view.bodyCreated())
+        assertFalse(view.bodyCreated())
         assertFalse(view.bodyVisible())
     }
 
-    fun `test collapsed update keeps eager reasoning body detached`() {
+    fun `test collapsed update keeps lazy reasoning body uncreated`() {
         val view = ReasoningView(reasoning("p1", done = false, text = "a"))
 
         view.update(reasoning("p1", done = false, text = "abc"))
 
         assertEquals("abc", view.markdown())
-        assertTrue(view.bodyCreated())
+        assertFalse(view.bodyCreated())
         assertFalse(view.bodyVisible())
     }
 
-    fun `test reasoning reuses eager markdown body`() {
+    fun `test reasoning creates lazy markdown body once`() {
         val view = ReasoningView(reasoning("p1", done = false, text = "one"))
 
         view.toggle()
@@ -125,20 +125,21 @@ class ReasoningViewTest : BasePlatformTestCase() {
         assertFalse(view.hasToggle())
     }
 
-    fun `test reasoning markdown uses editor font settings`() {
+    fun `test reasoning markdown uses ui font with editor-derived size`() {
         val style = SessionEditorStyle.current()
         val view = ReasoningView(reasoning("p1", done = true, text = "one\ntwo\nthree\nfour"))
+        view.toggle()
 
         assertSmallItalicSheet(view.md.overrideSheet(), style)
         assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, view.horizontalPolicy())
     }
 
-    fun `test reasoning header uses smaller editor-derived font`() {
+    fun `test reasoning header uses smaller ui font with editor-derived size`() {
         val style = SessionEditorStyle.current()
         val view = ReasoningView(reasoning("p1", done = true, text = "one"))
         val font = view.headerFont()
 
-        assertEquals(style.editorFamily, font.name)
+        assertEquals(style.smallEditorFont.name, font.name)
         assertTrue(font.size < style.editorSize)
     }
 
@@ -151,7 +152,7 @@ class ReasoningViewTest : BasePlatformTestCase() {
 
         assertSame(component, view.md.component)
         assertSmallItalicSheet(view.md.overrideSheet(), style)
-        assertEquals("Courier New", view.headerFont().name)
+        assertEquals(style.smallEditorFont.name, view.headerFont().name)
         assertTrue(view.headerFont().size < style.editorSize)
     }
 
@@ -180,7 +181,7 @@ class ReasoningViewTest : BasePlatformTestCase() {
     }
 
     private fun assertSmallItalicSheet(sheet: String, style: SessionEditorStyle) {
-        assertTrue(sheet.contains(style.editorFamily))
+        assertTrue(sheet.contains(style.smallEditorFont.name))
         assertFalse(sheet.contains("${style.editorSize}pt"))
         assertTrue(sheet.contains("font-style: italic"))
     }

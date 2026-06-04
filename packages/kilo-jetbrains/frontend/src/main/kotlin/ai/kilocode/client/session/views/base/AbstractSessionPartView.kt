@@ -16,14 +16,22 @@ import javax.swing.SwingUtilities
 
 abstract class AbstractSessionPartView(
     header: JComponent,
-    protected val body: JComponent,
+    private val makeBody: () -> JComponent,
     expanded: Boolean = false,
     private val expandable: Boolean = true,
 ) : PartView() {
 
+    constructor(
+        header: JComponent,
+        body: JComponent,
+        expanded: Boolean = false,
+        expandable: Boolean = true,
+    ) : this(header, { body }, expanded, expandable)
+
     protected val arrow = JBLabel()
-    protected val row = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP), 0))
+    protected val row = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.SESSION_VIEW_GAP), 0))
     private val bound = linkedSetOf<Component>()
+    private var body: JComponent? = null
 
     private val click = object : MouseAdapter() {
         override fun mouseClicked(e: MouseEvent) {
@@ -49,11 +57,11 @@ abstract class AbstractSessionPartView(
         row.add(arrow, BorderLayout.EAST)
         add(row, BorderLayout.NORTH)
         bindHeader(row, header, arrow)
-        if (expanded && expandable) add(body, BorderLayout.CENTER)
+        if (expanded && expandable) add(body(), BorderLayout.CENTER)
         if (!expandable) syncExpandable(false) else syncArrow()
     }
 
-    fun isExpanded(): Boolean = body.parent === this
+    fun isExpanded(): Boolean = body?.parent === this
 
     fun toggle() {
         if (!expandable || !arrow.isVisible) return
@@ -63,18 +71,23 @@ abstract class AbstractSessionPartView(
         refresh()
     }
 
-    fun expand(): Boolean {
+    open fun expand(): Boolean {
         if (!expandable) return false
         if (isExpanded()) return false
-        add(body, BorderLayout.CENTER)
+        add(body(), BorderLayout.CENTER)
         return true
     }
 
     fun collapse(): Boolean {
-        if (!isExpanded()) return false
-        remove(body)
+        val item = body ?: return false
+        if (item.parent !== this) return false
+        remove(item)
         return true
     }
+
+    protected fun hasBody(): Boolean = body != null
+
+    protected fun bodyComponent(): JComponent = body()
 
     fun syncExpandable(expandable: Boolean): Boolean {
         val active = this.expandable && expandable
@@ -117,6 +130,12 @@ abstract class AbstractSessionPartView(
         bound.add(component)
         component.addMouseListener(click)
         component.addMouseListener(mouse)
+    }
+
+    private fun body(): JComponent {
+        val item = body
+        if (item != null) return item
+        return makeBody().also { body = it }
     }
 
     private fun syncCursor(cursor: Cursor): Boolean {
