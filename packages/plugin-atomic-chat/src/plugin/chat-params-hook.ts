@@ -27,9 +27,12 @@ export function createChatParamsHook(toastNotifier: ToastNotifier) {
     const baseURL = normalizeBaseURL(provider.options?.baseURL || DEFAULT_ATOMIC_CHAT_ORIGIN)
 
     let lastLoadedModels: string[] = []
+    let validationAttempt = 0
     const validationResult = await retryWithBackoff(
       async () => {
-        const loadedModels = await getLoadedModels(baseURL)
+        const refresh = validationAttempt > 0
+        validationAttempt++
+        const loadedModels = await getLoadedModels(baseURL, { refresh })
         lastLoadedModels = loadedModels
         if (!loadedModels.includes(model.id)) {
           throw new Error(`Model '${model.id}' not loaded`)
