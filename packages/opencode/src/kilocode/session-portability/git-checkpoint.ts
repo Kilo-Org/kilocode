@@ -100,6 +100,7 @@ async function patch(dir: string, base: string) {
   const env = { GIT_INDEX_FILE: idx }
   try {
     await run(dir, ["read-tree", base], { env })
+    // Respect normal gitignore rules so checkpoints do not carry ignored build outputs or secrets.
     await run(dir, ["add", "--all", "--", "."], { env })
     return await run(dir, ["diff", "--cached", "--binary", "--full-index", base, "--"], { env, trim: false }).then(
       (out) => out.stdout,
