@@ -168,6 +168,14 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 - The `.kilo-dev/` directory is gitignored and created automatically on first run.
 - The implementation lives in `KiloBackendCliManager.buildEnv()` / `devStorageEnv()`. Tests: `KiloBackendCliManagerEnvTest`.
 
+### Debugging Session Event Logs
+
+- Use `script/dev/part-update.sh client <session-id>` from `packages/kilo-jetbrains/` to print frontend `message.part.delta` text by part id.
+- Use `script/dev/part-update.sh backend <session-id>` from `packages/kilo-jetbrains/` for backend sandbox events.
+- Append with `>> file.txt` when you need to keep the output.
+- For full chat payload previews in JetBrains dev runs, pass `-Pkilo.dev.log.chat.content=<mode>` where `<mode>` is `off` (default, no content), `preview` (cleaned/truncated content), or `full` (cleaned full content).
+- `-Pkilo.dev.log.chat.preview.max=<n>` controls preview length, clamped from 1 to 2000.
+
 ## Build and Verification
 
 - **Marketplace version build**: Use `script/build-version.sh <version>` from `packages/kilo-jetbrains/` to clean, prepare production CLI binaries, build, sign, and verify the JetBrains Marketplace plugin ZIP. Pass `--skip-verification` only when explicitly needed.

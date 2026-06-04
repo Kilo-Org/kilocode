@@ -2,14 +2,20 @@ import { Tag } from "@markdoc/markdoc"
 
 import { Heading } from "../../components"
 
+function text(child) {
+  if (typeof child === "string") return child
+  if (Tag.isTag(child)) return child.children.map(text).join(" ")
+  return ""
+}
+
 function generateID(children, attributes) {
   if (attributes.id && typeof attributes.id === "string") {
     return attributes.id
   }
   return children
-    .filter((child) => typeof child === "string")
+    .map(text)
     .join(" ")
-    .replace(/[?]/g, "")
+    .replace(/[?/]/g, "")
     .replace(/\s+/g, "-")
     .toLowerCase()
 }

@@ -145,7 +145,7 @@ async function resolveOverrideRef(
  */
 function toDiffFile(entry: WorktreeDiffEntry): DiffFile {
   return {
-    file: entry.file,
+    file: entry.file ?? "",
     before: entry.before ?? "",
     after: entry.after ?? "",
     patch: entry.patch,

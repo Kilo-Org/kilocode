@@ -9,15 +9,18 @@ import com.intellij.openapi.util.Disposer
 import java.awt.Component
 import java.awt.event.HierarchyEvent
 import java.awt.event.HierarchyListener
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 internal const val EVENT_FLUSH_MS = 150L
 
 internal class SessionUpdateQueue(
     parent: Disposable,
+    cs: CoroutineScope,
     private val comp: Component?,
     private val flushMs: Long = EVENT_FLUSH_MS,
     private val fire: (List<ChatEventDto>) -> Unit,
@@ -34,8 +37,16 @@ internal class SessionUpdateQueue(
     private val condenser = SessionQueueCondenser()
     private val pending = mutableListOf<ChatEventDto>()
     private val lock = Any()
-    private val exec: ScheduledExecutorService? = if (flushMs == Long.MAX_VALUE) null else Executors.newSingleThreadScheduledExecutor()
-    private val visible = AtomicBoolean(comp?.isShowing ?: true)
+    private val disposed = AtomicBoolean(false)
+    private val visible = AtomicBoolean(comp == null)
+    private val tick: Job? = if (flushMs == Long.MAX_VALUE) null else cs.launch {
+        while (isActive) {
+            delay(flushMs)
+            if (disposed.get()) continue
+            if (!visible.get()) continue
+            requestFlush(false, "tick")
+        }
+    }
     private val watch = comp?.let {
         HierarchyListener { event ->
             if (event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() == 0L) return@HierarchyListener
@@ -47,19 +58,14 @@ internal class SessionUpdateQueue(
 
     init {
         Disposer.register(parent, this)
-        if (comp != null && watch != null) comp.addHierarchyListener(watch)
-        exec?.scheduleAtFixedRate(
-            {
-                if (!visible.get()) return@scheduleAtFixedRate
-                requestFlush(false, "tick")
-            },
-            flushMs,
-            flushMs,
-            TimeUnit.MILLISECONDS,
-        )
+        if (comp != null && watch != null) edt {
+            visible.set(comp.isShowing)
+            comp.addHierarchyListener(watch)
+        }
     }
 
     fun enqueue(event: ChatEventDto) {
+        if (disposed.get()) return
         if (!visible.get() && hidden(event)) {
             LOG.debug { "${ChatLogSummary.sid(sid())} enqueue hidden=true visible=false" }
             return
@@ -74,6 +80,7 @@ internal class SessionUpdateQueue(
     }
 
     fun holdFlush(hold: Boolean) {
+        if (disposed.get()) return
         edt {
             LOG.debug { "${ChatLogSummary.sid(sid())} hold=$hold" }
             this.hold = hold
@@ -81,23 +88,25 @@ internal class SessionUpdateQueue(
     }
 
     fun requestFlush(forced: Boolean, source: String = "api") {
+        if (disposed.get()) return
         if (!forced && !visible.get()) return
         edt { flushNow(forced, source) }
     }
 
     override fun dispose() {
+        if (!disposed.compareAndSet(false, true)) return
         val size = synchronized(lock) { pending.size }
         LOG.debug { "${ChatLogSummary.sid(sid())} dispose pending=$size" }
-        exec?.shutdownNow()
-        if (comp != null && watch != null) comp.removeHierarchyListener(watch)
-        if (app.isDispatchThread) {
+        tick?.cancel()
+        val cleanup = {
+            if (comp != null && watch != null) comp.removeHierarchyListener(watch)
             synchronized(lock) { pending.clear() }
-            return
         }
-        app.invokeLater { synchronized(lock) { pending.clear() } }
+        if (app.isDispatchThread) cleanup() else app.invokeLater(cleanup)
     }
 
     private fun flushNow(forced: Boolean, source: String) {
+        if (disposed.get()) return
         if (hold) return
         if (!forced && !visible.get()) return
         val now = System.currentTimeMillis()
@@ -116,6 +125,7 @@ internal class SessionUpdateQueue(
     }
 
     private fun onVisible(show: Boolean) {
+        if (disposed.get()) return
         val prev = visible.getAndSet(show)
         if (prev == show) return
         LOG.debug { "${ChatLogSummary.sid(sid())} visible=$show" }
@@ -124,10 +134,14 @@ internal class SessionUpdateQueue(
     }
 
     private fun edt(block: () -> Unit) {
+        if (disposed.get()) return
         if (app.isDispatchThread) {
             block()
             return
         }
-        app.invokeLater(block)
+        app.invokeLater {
+            if (disposed.get()) return@invokeLater
+            block()
+        }
     }
 }

@@ -3,17 +3,20 @@ package ai.kilocode.client.settings.profile
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.RoundedContentPanel
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.ProfileDto
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.ui.ComboBox
+import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.RelativeFont
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
-import java.awt.GridBagConstraints
-import java.awt.GridBagLayout
 import java.awt.KeyboardFocusManager
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
@@ -22,6 +25,7 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingConstants
+import java.awt.BorderLayout
 
 /**
  * Retained logged-in UI. Labels, combo box, and buttons are built once and
@@ -42,6 +46,10 @@ internal class LoggedInProfileUi(
     private val emailLabel = JBLabel().apply {
         foreground = UiStyle.Colors.weak()
         setCopyable(true)
+    }
+    private val logoLabel = JBLabel(IconLoader.getIcon("/icons/kilo-profile.svg", LoggedInProfileUi::class.java)).apply {
+        name = "kilo.profile.logo.loggedIn"
+        accessibleContext.accessibleName = KiloBundle.message("settings.kilo.displayName")
     }
 
     private val titleLabel = JBLabel(KiloBundle.message("profile.balance.title")).apply {
@@ -65,16 +73,10 @@ internal class LoggedInProfileUi(
     private val balanceCard = RoundedContentPanel(UiStyle.Gap.pad(), UiStyle.Gap.xl()).apply {
         name = "kilo.profile.balanceCard"
         addToTop(titleLabel)
-        addToCenter(JPanel(GridBagLayout()).apply {
-            isOpaque = false
-            add(valueLabel, GridBagConstraints().apply {
-                gridx = 0; gridy = 0; anchor = GridBagConstraints.CENTER
-            })
-            add(refreshBtn, GridBagConstraints().apply {
-                gridx = 0; gridy = 1; anchor = GridBagConstraints.CENTER
-                insets = JBUI.insetsTop(UiStyle.Gap.pad())
-            })
-        })
+        addToCenter(Stack.vertical(UiStyle.Gap.pad())
+            .next(valueLabel)
+            .next(refreshBtn)
+            .align(HAlign.CENTER, VAlign.CENTER))
     }
 
     private val comboModel = DefaultComboBoxModel<String>()
@@ -85,29 +87,23 @@ internal class LoggedInProfileUi(
     val logoutBtn = JButton(KiloBundle.message("profile.action.logout"))
         .also { it.addActionListener { logout() } }
 
-    private val actionRow = JPanel(GridBagLayout()).apply {
-        add(dashboardBtn, GridBagConstraints().apply {
-            gridx = 0; gridy = 0; anchor = GridBagConstraints.WEST
-        })
-        add(logoutBtn, GridBagConstraints().apply {
-            gridx = 1; gridy = 0; anchor = GridBagConstraints.WEST
-            insets = JBUI.insetsLeft(UiStyle.Gap.md())
-        })
+    private val actionRow = Stack.horizontal(UiStyle.Gap.md())
+        .next(dashboardBtn)
+        .next(logoutBtn)
+
+    private val header = JPanel(BorderLayout()).apply {
+        isOpaque = false
+        add(Stack.vertical(UiStyle.Gap.lg())
+            .next(nameLabel)
+            .next(emailLabel), BorderLayout.CENTER)
+        add(logoLabel, BorderLayout.EAST)
     }
 
-    private val rows: List<java.awt.Component> = listOf(nameLabel, emailLabel, combo, balanceCard, actionRow)
-
-    private val content = JPanel(GridBagLayout()).apply {
-        val gap = UiStyle.Gap.lg()
-        rows.forEachIndexed { i, comp ->
-            add(comp, GridBagConstraints().apply {
-                gridx = 0; gridy = i
-                weightx = 1.0
-                fill = GridBagConstraints.HORIZONTAL
-                anchor = GridBagConstraints.WEST
-                insets = if (i == 0) JBUI.emptyInsets() else JBUI.insetsTop(gap)
-            })
-        }
+    private val content = Stack.vertical(UiStyle.Gap.lg()).apply {
+        next(header)
+        next(combo)
+        next(balanceCard)
+        next(actionRow.align(HAlign.CENTER, VAlign.CENTER))
     }
 
     private var applying = false

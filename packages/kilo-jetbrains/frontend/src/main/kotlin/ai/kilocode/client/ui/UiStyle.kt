@@ -59,11 +59,10 @@ object UiStyle {
         fun editorBackground(): Color = JBColor.lazy { EditorColorsManager.getInstance().globalScheme.defaultBackground }
 
         /**
-         * Card surface background: follows the active theme's text-field/input surface.
-         * Uses [UIUtil.getTextFieldBackground] as the semantic platform surface color for
-         * contained panels. Falls back to the panel background when unavailable.
+         * Contained panel background: follows the active theme's text-field/input surface.
+         * Falls back to the panel background when unavailable.
          */
-        fun cardBg(): Color = JBColor.lazy {
+        fun contentBackground(): Color = JBColor.lazy {
             UIManager.getColor("TextField.background") ?: UIUtil.getPanelBackground()
         }
 
@@ -78,7 +77,7 @@ object UiStyle {
         fun badgeBg(): Color = JBColor.lazy {
             UIManager.getColor("Badge.background")
                 ?: UIManager.getColor("Label.infoBackground")
-                ?: blend(cardBg(), fg(), 0.16f)
+                ?: blend(contentBackground(), fg(), 0.16f)
         }
 
         /** Filled badge text color paired with [badgeBg]. */
@@ -104,8 +103,8 @@ object UiStyle {
             Color.WHITE,
         )
 
-        /** Card border color shared across profile cards. */
-        fun cardBorder(): Color = JBColor.namedColor("Component.borderColor", JBColor.border())
+        /** Border color shared across contained panels. */
+        fun contentBorder(): Color = JBColor.namedColor("Component.borderColor", JBColor.border())
 
         /**
          * Floating panel background: white in light themes, black in dark themes.
@@ -124,6 +123,18 @@ object UiStyle {
                 ?: UIManager.getColor("Label.warningForeground")
                 ?: UIUtil.getContextHelpForeground()
         }
+
+        fun infoOverlayBackground(): Color = JBUI.CurrentTheme.NotificationInfo.backgroundColor()
+
+        fun infoOverlayForeground(): Color = JBUI.CurrentTheme.NotificationInfo.foregroundColor()
+
+        fun infoOverlayBorder(): Color = JBUI.CurrentTheme.NotificationInfo.borderColor()
+
+        fun errorOverlayBackground(): Color = JBUI.CurrentTheme.NotificationError.backgroundColor()
+
+        fun errorOverlayForeground(): Color = JBUI.CurrentTheme.NotificationError.foregroundColor()
+
+        fun errorOverlayBorder(): Color = JBUI.CurrentTheme.NotificationError.borderColor()
 
         internal fun contrast(base: Color, delta: Int): Color {
             val step = if (bright(base)) -delta else delta

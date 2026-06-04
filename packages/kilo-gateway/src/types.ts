@@ -162,6 +162,7 @@ export interface ProviderInfo {
 export type KiloProvider = Provider & {
   alibaba(modelId: string): LanguageModel
   anthropic(modelId: string): LanguageModel
+  mistral(modelId: string): LanguageModel
   openai(modelId: string): LanguageModel
   openaiCompatible(modelId: string): LanguageModel
 }

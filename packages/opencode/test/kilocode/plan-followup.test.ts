@@ -14,6 +14,7 @@ import { Question } from "../../src/question"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { AppRuntime } from "../../src/effect/app-runtime"
+import { makeRuntime } from "../../src/effect/run-service"
 import { SessionStatus } from "../../src/session/status"
 import { Todo } from "../../src/session/todo"
 import { Global } from "@opencode-ai/core/global"
@@ -25,15 +26,19 @@ import { tmpdir } from "../fixture/fixture"
 Log.init({ print: false })
 process.env.KILO_CLIENT = "cli"
 
+const runtime = makeRuntime(Question.Service, Question.defaultLayer)
 const question = {
+  ask(input: Parameters<Question.Interface["ask"]>[0]) {
+    return runtime.runPromise((svc) => svc.ask(input))
+  },
   list() {
-    return AppRuntime.runPromise(Question.Service.use((svc) => svc.list()))
+    return runtime.runPromise((svc) => svc.list())
   },
   reply(input: Parameters<Question.Interface["reply"]>[0]) {
-    return AppRuntime.runPromise(Question.Service.use((svc) => svc.reply(input)))
+    return runtime.runPromise((svc) => svc.reply(input))
   },
   reject(requestID: Parameters<Question.Interface["reject"]>[0]) {
-    return AppRuntime.runPromise(Question.Service.use((svc) => svc.reject(requestID)))
+    return runtime.runPromise((svc) => svc.reject(requestID))
   },
 }
 
@@ -266,6 +271,7 @@ describe("plan follow-up", () => {
     withInstance(async () => {
       const seeded = await seed({ text: "1. Step one\n2. Step two" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -283,6 +289,7 @@ describe("plan follow-up", () => {
     withInstance(async () => {
       const seeded = await seed({ text: "1. Build" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -312,6 +319,7 @@ describe("plan follow-up", () => {
     withInstance(async () => {
       const seeded = await seed({ text: "1. Build" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -343,6 +351,7 @@ describe("plan follow-up", () => {
         process.env.KILO_CLIENT = "vscode"
         const seeded = await seed({ text: "1. Build" })
         const pending = PlanFollowup.ask({
+          question,
           sessionID: seeded.sessionID,
           messages: seeded.messages,
           abort: AbortSignal.any([]),
@@ -370,6 +379,7 @@ describe("plan follow-up", () => {
     withInstance(async () => {
       const seeded = await seed({ text: "1. Build" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -428,6 +438,7 @@ describe("plan follow-up", () => {
       }
       const seeded = await seed({ text: "1. Build\n2. Test" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -460,6 +471,7 @@ describe("plan follow-up", () => {
     withInstance(async () => {
       const seeded = await seed({ text: "1. Build\n2. Test" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -497,6 +509,7 @@ describe("plan follow-up", () => {
       KiloSessionPromptQueue.retarget(seeded.sessionID, original)
 
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -613,6 +626,7 @@ describe("plan follow-up", () => {
       })
 
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -719,6 +733,7 @@ describe("plan follow-up", () => {
         fn: async () => sessions(),
       })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -795,6 +810,7 @@ describe("plan follow-up", () => {
       }
       const seeded = await seed({ text: "1. Build\n2. Test" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -847,6 +863,7 @@ describe("plan follow-up", () => {
       }
       const seeded = await seed({ text: "1. Build\n2. Test" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -882,6 +899,7 @@ describe("plan follow-up", () => {
       }
       const seeded = await seed({ text: "1. Build\n2. Test", variant: planVar })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -942,6 +960,7 @@ describe("plan follow-up", () => {
       })
 
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -1031,6 +1050,7 @@ describe("plan follow-up", () => {
       }
 
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -1107,6 +1127,7 @@ describe("plan follow-up", () => {
       }
 
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -1205,6 +1226,7 @@ describe("plan follow-up", () => {
       }
 
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -1246,6 +1268,7 @@ describe("plan follow-up", () => {
     withInstance(async () => {
       const seeded = await seed({ text: "   " })
       const result = await PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -1261,6 +1284,7 @@ describe("plan follow-up", () => {
       abort.abort()
 
       const result = await PlanFollowup.ask({
+        question,
         sessionID: SessionID.make("ses_test"),
         messages: [],
         abort: abort.signal,
@@ -1274,6 +1298,7 @@ describe("plan follow-up", () => {
       const abort = new AbortController()
       const seeded = await seed({ text: "1. Step one\n2. Step two" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: abort.signal,
@@ -1293,6 +1318,7 @@ describe("plan follow-up", () => {
     withInstance(async () => {
       const seeded = await seed({ text: "1. Build\n2. Test" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),

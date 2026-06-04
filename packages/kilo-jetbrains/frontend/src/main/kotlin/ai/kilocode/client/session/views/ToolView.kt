@@ -8,6 +8,7 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.ToolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.ui.UiStyle
@@ -32,19 +33,31 @@ import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 
 /** Renders non-read tool calls with VS Code-inspired rows/cards. */
-class ToolView(tool: Tool, private val parts: ToolParts = toolParts(tool)) :
-    SecondarySessionPartView(parts.header, parts.scroll) {
+class ToolView(
+    tool: Tool,
+    private val selection: SessionSelection? = null,
+    private val parts: ToolParts = toolParts(tool),
+) :
+    SecondarySessionPartView(parts.header, { parts.scroll(tool) }) {
 
     override val contentId: String = tool.id
 
     private var item = tool
     private var style = SessionEditorStyle.current()
+    private var registered = false
 
     init {
         bindHeader(parts.glyph, parts.title, parts.sub, parts.state, parts.center, parts.controls, parts.slot)
-        parts.text.text = preview(item)
         applyStyle(style)
         sync()
+    }
+
+    override fun expand(): Boolean {
+        val changed = super.expand()
+        if (!changed) return false
+        syncBody()
+        applyBodyStyle()
+        return true
     }
 
     override fun getPreferredSize(): Dimension {
@@ -73,20 +86,20 @@ class ToolView(tool: Tool, private val parts: ToolParts = toolParts(tool)) :
 
     fun outputText(): String = output(item)
     fun bodyText(): String = body(item)
-    internal fun previewText(): String = parts.text.text
+    internal fun previewText(): String = parts.text?.text ?: preview(item)
     fun hasToggle(): Boolean = arrow.isVisible
-    internal fun bodyFont() = parts.text.font
+    internal fun bodyFont() = parts.text?.font ?: style.transcriptFont
     internal fun titleFont() = parts.title.font
     internal fun subtitleFont() = parts.sub.font
     internal fun stateFont() = parts.state.font
-    internal fun bodyEditable() = parts.text.isEditable
-    internal fun bodyCaretVisible() = parts.text.caret.isVisible
-    internal fun bodyVisible() = parts.scroll.parent === this
+    internal fun bodyEditable() = parts.text?.isEditable ?: false
+    internal fun bodyCaretVisible() = parts.text?.caret?.isVisible ?: false
+    internal fun bodyVisible() = parts.scroll?.parent === this
     internal fun controlCount() = if (arrow.isVisible) 1 else 0
-    internal fun horizontalPolicy() = parts.scroll.horizontalScrollBarPolicy
-    internal fun bodyWrap() = parts.text.lineWrap
+    internal fun horizontalPolicy() = parts.scroll?.horizontalScrollBarPolicy ?: ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+    internal fun bodyWrap() = parts.text?.lineWrap ?: true
     internal fun bodyMaxRows() = SessionUiStyle.View.Tool.BODY_LINES
-    internal fun bodyCreated() = true
+    internal fun bodyCreated() = parts.bodyCreated()
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
@@ -95,7 +108,7 @@ class ToolView(tool: Tool, private val parts: ToolParts = toolParts(tool)) :
         changed = setFont(parts.sub, style.smallEditorFont) || changed
         changed = setFont(parts.link, style.smallEditorFont) || changed
         changed = setFont(parts.state, style.smallEditorFont) || changed
-        changed = setFont(parts.text, style.transcriptFont) || changed
+        changed = applyBodyStyle() || changed
         if (changed) refresh()
     }
 
@@ -105,7 +118,8 @@ class ToolView(tool: Tool, private val parts: ToolParts = toolParts(tool)) :
         changed = syncExpandable(expand) || changed
         changed = setVisible(parts.state, !expand) || changed
         changed = syncLabels() || changed
-        changed = setForeground(parts.text, bodyColor()) || changed
+        val text = parts.text
+        if (text != null) changed = setForeground(text, bodyColor()) || changed
         return changed
     }
 
@@ -123,21 +137,32 @@ class ToolView(tool: Tool, private val parts: ToolParts = toolParts(tool)) :
 
     private fun syncBody(): Boolean {
         var changed = false
+        val text = parts.text ?: return false
         val value = preview(item)
-        if (parts.text.text != value) {
-            parts.text.text = value
-            parts.text.caretPosition = 0
+        if (text.text != value) {
+            text.text = value
+            text.caretPosition = 0
             changed = true
         }
-        changed = setForeground(parts.text, bodyColor()) || changed
+        changed = setForeground(text, bodyColor()) || changed
         return changed
+    }
+
+    private fun applyBodyStyle(): Boolean {
+        val text = parts.text ?: return false
+        if (!registered && selection != null && text.parent != null) {
+            registered = true
+            selection.register(text, this)
+        }
+        return setFont(text, style.transcriptFont)
     }
 
     private fun bodyColor() = if (item.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else UiStyle.Colors.fg()
 
     private fun bodyMaxHeight(): Int {
-        return parts.text.getFontMetrics(parts.text.font).height * bodyMaxRows() +
-            JBUI.scale(SessionUiStyle.View.CARD_BODY_EXTRA_HEIGHT)
+        val text = parts.text ?: return 0
+        return text.getFontMetrics(text.font).height * bodyMaxRows() +
+            JBUI.scale(SessionUiStyle.View.SESSION_VIEW_BODY_EXTRA_HEIGHT)
     }
 
     override fun dumpLabel() = "ToolView#$contentId(${labelText()})"
@@ -147,8 +172,9 @@ class ToolView(tool: Tool, private val parts: ToolParts = toolParts(tool)) :
 class ReadToolView(
     tool: Tool,
     openFile: (String) -> Unit = {},
+    private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool, openFile),
-) : SecondarySessionPartView(parts.header, parts.scroll, expandable = false) {
+) : SecondarySessionPartView(parts.header, parts.scroll(tool), expandable = false) {
 
     companion object {
         fun canRender(tool: Tool): Boolean = tool.kind == ToolKind.READ
@@ -160,8 +186,9 @@ class ReadToolView(
     private var style = SessionEditorStyle.current()
 
     init {
+        parts.text?.let { selection?.register(it, this) }
         bindHeader(parts.glyph, parts.title, parts.sub, parts.state, parts.center, parts.controls, parts.slot)
-        parts.text.text = preview(item)
+        parts.text?.text = preview(item)
         applyStyle(style)
         sync()
     }
@@ -185,11 +212,11 @@ class ReadToolView(
         .filter { it.isNotBlank() }
         .joinToString(" ")
     fun bodyText(): String = body(item)
-    internal fun bodyVisible() = parts.scroll.parent === this
+    internal fun bodyVisible() = parts.scroll?.parent === this
     internal fun hasToggle() = arrow.isVisible
-    internal fun horizontalPolicy() = parts.scroll.horizontalScrollBarPolicy
+    internal fun horizontalPolicy() = parts.scroll?.horizontalScrollBarPolicy ?: ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
     internal fun bodyMaxRows() = SessionUiStyle.View.Tool.BODY_LINES
-    internal fun bodyFont() = parts.text.font
+    internal fun bodyFont() = parts.text?.font ?: style.transcriptFont
     internal fun linkVisible() = parts.link.isVisible
     internal fun linkText() = parts.label
     internal fun linkMarkup() = parts.link.text ?: ""
@@ -207,7 +234,7 @@ class ReadToolView(
         changed = setFont(parts.sub, style.transcriptFont) || changed
         changed = setFont(parts.link, style.transcriptFont) || changed
         changed = setFont(parts.state, style.smallEditorFont) || changed
-        changed = setFont(parts.text, style.transcriptFont) || changed
+        parts.text?.let { changed = setFont(it, style.transcriptFont) || changed }
         if (changed) refresh()
     }
 
@@ -224,7 +251,7 @@ class ReadToolView(
         changed = setForeground(parts.link, UiStyle.Colors.fg()) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
-        changed = setForeground(parts.text, bodyColor()) || changed
+        parts.text?.let { changed = setForeground(it, bodyColor()) || changed }
         return changed
     }
 
@@ -253,17 +280,19 @@ class ReadToolView(
 
     private fun syncBody(): Boolean {
         val value = preview(item)
-        if (parts.text.text == value) return false
-        parts.text.text = value
-        parts.text.caretPosition = 0
+        val text = parts.text ?: return false
+        if (text.text == value) return false
+        text.text = value
+        text.caretPosition = 0
         return true
     }
 
     private fun bodyColor() = if (item.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else UiStyle.Colors.fg()
 
     private fun bodyMaxHeight(): Int {
-        return parts.text.getFontMetrics(parts.text.font).height * bodyMaxRows() +
-            JBUI.scale(SessionUiStyle.View.CARD_BODY_EXTRA_HEIGHT)
+        val text = parts.text ?: return 0
+        return text.getFontMetrics(text.font).height * bodyMaxRows() +
+            JBUI.scale(SessionUiStyle.View.SESSION_VIEW_BODY_EXTRA_HEIGHT)
     }
 
     override fun dumpLabel() = "ReadToolView#$contentId(${labelText()})"
@@ -279,18 +308,59 @@ class ToolParts(
     val state: JBLabel,
     val center: JPanel,
     val controls: JComponent,
-    val text: JBTextArea,
-    val scroll: JBScrollPane,
     private val open: ((String) -> Unit)? = null,
 ) {
     var href: String? = null
     var label: String = ""
+    private var body: ToolBody? = null
+
+    val text: JBTextArea?
+        get() = body?.text
+
+    val scroll: JBScrollPane?
+        get() = body?.scroll
+
+    fun scroll(tool: Tool): JBScrollPane = body(tool).scroll
+
+    fun bodyCreated() = body != null
 
     fun openLink() {
         val value = href ?: return
         open?.invoke(value)
     }
+
+    private fun body(tool: Tool): ToolBody {
+        val item = body
+        if (item != null) return item
+        val text = JBTextArea().apply {
+            isEditable = false
+            caret.isVisible = false
+            caret.isSelectionVisible = true
+            lineWrap = true
+            wrapStyleWord = true
+            foreground = if (tool.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else UiStyle.Colors.fg()
+            background = SessionUiStyle.View.surface()
+            border = JBUI.Borders.empty(
+                JBUI.scale(SessionUiStyle.View.SESSION_VIEW_VERTICAL_PADDING),
+                JBUI.scale(SessionUiStyle.View.SESSION_VIEW_HORIZONTAL_PADDING),
+            )
+        }
+        val scroll = JBScrollPane(text).apply {
+            border = SessionUiStyle.View.topOutline()
+            isOpaque = true
+            background = SessionUiStyle.View.surface()
+            viewport.background = SessionUiStyle.View.surface()
+            horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+            verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
+        }
+        return ToolBody(text, scroll).also { body = it }
+    }
 }
+
+class ToolBody(
+    val text: JBTextArea,
+    val scroll: JBScrollPane,
+)
 
 private const val SUB_CARD = "sub"
 private const val LINK_CARD = "link"
@@ -318,30 +388,9 @@ private fun toolParts(tool: Tool, openFile: ((String) -> Unit)? = null): ToolPar
         add(link, LINK_CARD)
     }
     val state = JBLabel().apply { foreground = UiStyle.Colors.weak() }
-    val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP), 0)).apply { isOpaque = false }
-    val text = JBTextArea().apply {
-        isEditable = false
-        caret.isVisible = false
-        caret.isSelectionVisible = false
-        lineWrap = true
-        wrapStyleWord = true
-        foreground = if (tool.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else UiStyle.Colors.fg()
-        background = SessionUiStyle.View.surface()
-        border = JBUI.Borders.empty(
-            JBUI.scale(SessionUiStyle.View.CARD_VERTICAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.CARD_HORIZONTAL_PADDING),
-        )
-    }
-    val scroll = JBScrollPane(text).apply {
-        border = SessionUiStyle.View.cardTop()
-        isOpaque = true
-        background = SessionUiStyle.View.surface()
-        viewport.background = SessionUiStyle.View.surface()
-        horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-        verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
-    }
+    val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.SESSION_VIEW_GAP), 0)).apply { isOpaque = false }
     val controls = Box.createHorizontalBox()
-    val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP), 0)).apply {
+    val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.SESSION_VIEW_GAP), 0)).apply {
         isOpaque = false
         center.add(title, BorderLayout.WEST)
         center.add(slot, BorderLayout.CENTER)
@@ -349,7 +398,7 @@ private fun toolParts(tool: Tool, openFile: ((String) -> Unit)? = null): ToolPar
         add(center, BorderLayout.CENTER)
         add(controls, BorderLayout.EAST)
     }
-    parts = ToolParts(header, glyph, title, sub, link, slot, state, center, controls, text, scroll, openFile)
+    parts = ToolParts(header, glyph, title, sub, link, slot, state, center, controls, openFile)
     return parts.also {
         controls.add(it.state)
     }

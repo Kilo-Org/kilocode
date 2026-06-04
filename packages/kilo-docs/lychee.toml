@@ -32,8 +32,9 @@ exclude = [
   '^https?://api\.voyageai\.com/v1/embeddings/?$',
   '^https?://generativelanguage\.googleapis\.com/v1beta/openai/?$',
   '^https?://search\.parallel\.ai/mcp/?$',
-  # xAI API and OAuth endpoints require request parameters or non-GET methods.
+  # xAI API and OAuth endpoints require request parameters or reject plain link checks.
   '^https?://api\.x\.ai/v1/?$',
+  '^https?://accounts\.x\.ai/?$',
   '^https?://auth\.x\.ai/?$',
   '^https?://auth\.x\.ai/oauth2/(authorize|device/code|token)/?$',
   'https://opencode.ai/pages/config',

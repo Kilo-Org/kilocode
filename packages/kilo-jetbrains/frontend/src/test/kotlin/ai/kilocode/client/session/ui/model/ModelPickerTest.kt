@@ -35,10 +35,10 @@ class ModelPickerTest : BasePlatformTestCase() {
         ), listOf(ModelSelectionDto("openai", "gpt-4o")), "")
 
         assertEquals("Favorites", modelPickerSectionTitle(rows, 0))
-        assertEquals("openai/gpt-4o", rows[0].item.key)
+        assertEquals("openai/gpt-4o", rows[0].key)
         assertEquals("Recommended", modelPickerSectionTitle(rows, 1))
-        assertEquals("kilo/auto", rows[1].item.key)
-        assertEquals("anthropic/claude", rows[2].item.key)
+        assertEquals("kilo/auto", rows[1].key)
+        assertEquals("anthropic/claude", rows[2].key)
     }
 
     fun `test favorites are hidden while filtering`() {
@@ -49,7 +49,7 @@ class ModelPickerTest : BasePlatformTestCase() {
 
 
         assertFalse(rows.indices.any { modelPickerSectionTitle(rows, it) == "Favorites" })
-        assertEquals("openai/gpt-4o", rows.single().item.key)
+        assertEquals("openai/gpt-4o", rows.single().key)
     }
 
     fun `test favorites match provider qualified key when model ids collide`() {
@@ -58,7 +58,7 @@ class ModelPickerTest : BasePlatformTestCase() {
             item("gpt", "Azure GPT", "azure", "Azure"),
         ), listOf(ModelSelectionDto("azure", "gpt")), "")
 
-        assertEquals("azure/gpt", rows[0].item.key)
+        assertEquals("azure/gpt", rows[0].key)
         assertEquals("Favorites", modelPickerSectionTitle(rows, 0))
     }
 
@@ -72,7 +72,7 @@ class ModelPickerTest : BasePlatformTestCase() {
             ModelSelectionDto("openai", "a"),
         ), "")
 
-        assertEquals(listOf("openai/b", "openai/a"), rows.take(2).map { it.item.key })
+        assertEquals(listOf("openai/b", "openai/a"), rows.take(2).map { it.key })
         assertTrue(rows.take(2).all { it.favorite })
     }
 
@@ -82,7 +82,7 @@ class ModelPickerTest : BasePlatformTestCase() {
             item("gpt", "GPT", "openai", "OpenAI"),
         ), emptyList(), "anth")
 
-        assertEquals(listOf("anthropic/claude-sonnet"), rows.map { it.item.key })
+        assertEquals(listOf("anthropic/claude-sonnet"), rows.map { it.key })
     }
 
     fun `test kilo provider group is first and other providers keep source order`() {
@@ -111,7 +111,7 @@ class ModelPickerTest : BasePlatformTestCase() {
         ), listOf(ModelSelectionDto("openai", "b")), "")
 
         assertEquals(1, modelPickerIndex(rows, 1))
-        assertEquals("openai/a", rows[modelPickerIndex(rows, 1)].item.key)
+        assertEquals("openai/a", rows[modelPickerIndex(rows, 1)].key)
     }
 
     fun `test index caps after favorite removal`() {
@@ -121,6 +121,66 @@ class ModelPickerTest : BasePlatformTestCase() {
 
         assertEquals(0, modelPickerIndex(rows, 1))
         assertEquals(-1, modelPickerIndex(emptyList(), 1))
+    }
+
+    fun `test allowEmpty inserts not set row`() {
+        val rows = modelPickerRows(
+            listOf(item("a", "A", "openai", "OpenAI")),
+            emptyList(),
+            "",
+            allowEmpty = true,
+            emptyText = "Not set",
+        )
+
+        assertTrue(rows.first().isEmpty)
+        assertEquals("Not set", rows.first().emptyText)
+        assertEquals(0, modelPickerIndex(rows, null))
+    }
+
+    fun `test allowEmpty filters not set row`() {
+        val rows = modelPickerRows(
+            listOf(item("a", "A", "openai", "OpenAI")),
+            emptyList(),
+            "not",
+            allowEmpty = true,
+            emptyText = "Not set",
+        )
+        val missing = modelPickerRows(
+            listOf(item("a", "A", "openai", "OpenAI")),
+            emptyList(),
+            "openai",
+            allowEmpty = true,
+            emptyText = "Not set",
+        )
+
+        assertTrue(rows.first().isEmpty)
+        assertFalse(missing.any { it.isEmpty })
+    }
+
+    fun `test favorites only apply to real rows`() {
+        val rows = modelPickerRows(
+            listOf(item("a", "A", "openai", "OpenAI")),
+            listOf(ModelSelectionDto("openai", "a")),
+            "",
+            allowEmpty = true,
+            emptyText = "Not set",
+        )
+
+        assertFalse(rows.first().favorite)
+        assertTrue(rows.drop(1).any { it.favorite })
+    }
+
+    fun `test small rows are included only when requested`() {
+        val items = listOf(
+            item("auto-small", "Small", "kilo", "Kilo"),
+            item("auto", "Auto", "kilo", "Kilo"),
+        )
+
+        val default = modelPickerRows(items, emptyList(), "")
+        val small = modelPickerRows(items, emptyList(), "", includeSmall = true)
+
+        assertEquals(listOf("kilo/auto"), default.mapNotNull { it.key })
+        assertEquals(listOf("kilo/auto", "kilo/auto-small"), small.mapNotNull { it.key }.sorted())
     }
 
     fun `test setItems preserves selected model when refreshed without default`() {
@@ -134,6 +194,26 @@ class ModelPickerTest : BasePlatformTestCase() {
         picker.setItems(rows)
 
         assertEquals("openai/b", picker.selectedForTest()?.key)
+    }
+
+    fun `test setItems auto-selects first item by default`() {
+        val picker = ModelPicker()
+
+        picker.setItems(listOf(item("a", "A", "openai", "OpenAI")))
+
+        assertEquals("openai/a", picker.selectionKeyForTest())
+        assertEquals("A ▾", picker.text)
+    }
+
+    fun `test allowEmpty keeps empty selection`() {
+        val picker = ModelPicker()
+        picker.allowEmpty = true
+        picker.emptyText = "Not set"
+
+        picker.setItems(listOf(item("a", "A", "openai", "OpenAI")))
+
+        assertNull(picker.selectionKeyForTest())
+        assertEquals("Not set ▾", picker.text)
     }
 
     fun `test provider qualified default selects duplicate model id from correct provider`() {
@@ -158,9 +238,9 @@ class ModelPickerTest : BasePlatformTestCase() {
 
         picker.setItems(listOf(item("auto", "Auto Free", "kilo", "Kilo", free = true)))
 
-        assertFalse(picker.text.contains("Data collected"))
-        assertSame(ModelPickerIcons.DATA_COLLECTED, picker.icon)
-        assertEquals("Data collected", picker.toolTipText)
+        assertFalse(picker.text.contains("Data may be used for training"))
+        assertSame(ModelPickerRenderer.DATA_COLLECTED, picker.icon)
+        assertEquals("<html><nobr>Select model</nobr><br><nobr>The current selected model may be used for training</nobr></html>", picker.toolTipText)
     }
 
     fun `test selected non-kilo free model does not indicate data collection`() {
@@ -282,7 +362,7 @@ class ModelPickerTest : BasePlatformTestCase() {
         assertTrue(renderer.badgeVisible())
         assertEquals("Free", renderer.badgeText())
         assertTrue(renderer.warningVisible())
-        assertEquals("Data collected", renderer.warningTooltip())
+        assertEquals("Data may be used for training", renderer.warningTooltip())
     }
 
     fun `test renderer hides data collection warning for non-kilo free model`() {
@@ -296,6 +376,18 @@ class ModelPickerTest : BasePlatformTestCase() {
         assertTrue(renderer.badgeVisible())
         assertEquals("Free", renderer.badgeText())
         assertFalse(renderer.warningVisible())
+    }
+
+    fun `test renderer hides favorite and free affordances for empty row`() {
+        val row = ModelPickerRow(null, null, false, "Not set")
+        val model = CollectionListModel(listOf(row))
+        val renderer = ModelPickerRenderer(model, { null }, { setOf("kilo/auto") })
+        val list = JBList(model)
+
+        renderer.getListCellRendererComponent(list, row, 0, true, false)
+
+        assertSame(EmptyIcon.ICON_16, renderer.starIcon())
+        assertFalse(renderer.badgeVisible())
     }
 
     private fun item(

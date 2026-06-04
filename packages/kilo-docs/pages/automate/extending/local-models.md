@@ -5,7 +5,7 @@ description: "Run AI models locally with Kilo Code"
 
 # Using Local Models
 
-Kilo Code supports running language models locally on your own machine using [Ollama](https://ollama.com/) and [LM Studio](https://lmstudio.ai/). This offers several advantages:
+Kilo Code supports running language models locally on your own machine using [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/), and [Atomic Chat](https://atomic.chat/). This offers several advantages:
 
 - **Privacy:** Your code and data never leave your computer.
 - **Offline Access:** You can use Kilo Code even without an internet connection.
@@ -21,10 +21,11 @@ Kilo Code supports running language models locally on your own machine using [Ol
 
 ## Supported Local Model Providers
 
-Kilo Code currently supports two main local model providers:
+Kilo Code supports several local model providers:
 
 1.  **Ollama:** A popular open-source tool for running large language models locally. It supports a wide range of models.
-2.  **LM Studio:** A user-friendly desktop application that simplifies the process of downloading, configuring, and running local models. It also provides a local server that emulates the OpenAI API.
+2.  **LM Studio:** A user-friendly desktop application that simplifies downloading and running local models, with a local server that emulates the OpenAI API.
+3.  **[Atomic Chat](https://atomic.chat/):** Open-source local AI with TurboQuant-optimized inference, a built-in chat UI, and an OpenAI-compatible API on port **1337**. Kilo Code can discover loaded models when you opt in (`provider.atomic-chat`, `atomicChat.autoDetect`, or an `atomic-chat/...` model).
 
 ## Setting Up Local Models
 
@@ -32,12 +33,11 @@ For detailed setup instructions, see:
 
 - [Setting up Ollama](/docs/ai-providers/ollama)
 - [Setting up LM Studio](/docs/ai-providers/lmstudio)
-
-Both providers offer similar capabilities but with different user interfaces and workflows. Ollama provides more control through its command-line interface, while LM Studio offers a more user-friendly graphical interface.
+- [Setting up Atomic Chat](/docs/ai-providers/atomic-chat)
 
 ## Troubleshooting
 
-- **"No connection could be made because the target machine actively refused it":** This usually means that the Ollama or LM Studio server isn't running, or is running on a different port/address than Kilo Code is configured to use. Double-check the Base URL setting.
+- **"No connection could be made because the target machine actively refused it":** This usually means that Atomic Chat, Ollama, or LM Studio isn't running, or is on a different port than Kilo Code expects (Atomic Chat: `http://127.0.0.1:1337/v1`, LM Studio: `http://127.0.0.1:1234/v1`, Ollama: `http://127.0.0.1:11434`). Double-check the Base URL setting.
 
 - **Slow Response Times:** Local models can be slower than cloud-based models, especially on less powerful hardware. If performance is an issue, try using a smaller model.
 

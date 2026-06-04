@@ -17,25 +17,31 @@ object SessionUiStyle {
         const val SCROLL_INCREMENT = 16
     }
 
-    /** Shared tokens for individual transcript views and cards. */
+    /** Shared tokens for individual transcript views and session views. */
     object View {
-        const val CARD_LAYOUT_GAP = 6
-        const val CARD_VERTICAL_PADDING = 8
-        const val CARD_HORIZONTAL_PADDING = 12
-        const val CARD_BODY_EXTRA_HEIGHT = 16
+        const val SESSION_VIEW_GAP = 6
+        const val SESSION_VIEW_VERTICAL_PADDING = 8
+        const val SESSION_VIEW_HORIZONTAL_PADDING = 12
+        const val SESSION_VIEW_BODY_EXTRA_HEIGHT = 16
 
-        internal const val BORDER_DELTA = 64
+        internal const val BORDER_DELTA = 80
         internal const val HOVER_BORDER_ALPHA = 0.18f
         internal const val HOVER_FILL_ALPHA = 0.10f
 
         /** Creates a visible separator against editor-derived transcript surfaces. */
         fun line(): Color = JBColor.lazy { UiStyle.Colors.contrast(UiStyle.Colors.editorBackground(), BORDER_DELTA) }
 
+        fun transcript(): Color = UiStyle.Colors.bg()
+
+        fun sessionViewBackground(): Color = UiStyle.Colors.contentBackground()
+
+        fun sessionViewOutline(): Color = UiStyle.Colors.contentBorder()
+
         fun surface(): Color = UiStyle.Colors.editorBackground()
 
         fun header(): Color = UiStyle.Colors.editorBackground()
 
-        /** Subtle hover fill, softer than the card outline. */
+        /** Subtle hover fill, softer than the session-view outline. */
         fun headerHover(): Color = JBColor.lazy { UiStyle.Colors.blend(header(), hoverLine(), HOVER_FILL_ALPHA) }
 
         /** Subtle hover outline, stronger than the hover fill. */
@@ -43,11 +49,11 @@ object SessionUiStyle {
             UiStyle.Colors.blend(line(), JBUI.CurrentTheme.ActionButton.hoverBackground(), HOVER_BORDER_ALPHA)
         }
 
-        fun card(color: Color = line()): Border = cardBorder(color)
+        fun sessionView(color: Color = line()): Border = outline(color)
 
-        fun cardBorder(color: Color = line()): Border = JBUI.Borders.customLine(color, 1)
+        fun outline(color: Color = line()): Border = JBUI.Borders.customLine(color, 1)
 
-        fun cardTop(): Border = JBUI.Borders.customLineTop(line())
+        fun topOutline(): Border = JBUI.Borders.customLineTop(line())
 
         /** Prompt input dimensions and chrome inside the session view. */
         object Prompt {
@@ -79,12 +85,26 @@ object SessionUiStyle {
             const val USER_BORDER_HORIZONTAL_PADDING = 12
         }
 
-        /** Permission card command preview limits. */
+        /** Markdown code block geometry inside assistant messages. */
+        object Code {
+            const val BLOCK_GAP = 6
+            const val MIN_ROWS = 1
+            const val BORDER_WIDTH = 1
+            const val VIEWPORT_TOP_PADDING = 6
+            const val VIEWPORT_HORIZONTAL_PADDING = 8
+            const val VIEWPORT_BOTTOM_PADDING = 0
+            const val SCROLLBAR_HEIGHT = 12
+            const val WIDTH_PADDING = 16
+
+            fun topPadding(): Int = VIEWPORT_TOP_PADDING + SCROLLBAR_HEIGHT
+        }
+
+        /** Permission session-view command preview limits. */
         object Permission {
             const val COMMAND_LINES = 3
         }
 
-        /** Tool card preview limits and state colors. */
+        /** Tool session-view preview limits and state colors. */
         object Tool {
             const val BODY_LINES = 15
             const val PREVIEW_LIMIT = 20_000
@@ -107,13 +127,13 @@ object SessionUiStyle {
 
     /** Colors for timeline/activity indicators in the session header. */
     object Timeline {
-        val READ: Color = JBColor(Color(0x37, 0x94, 0xff), Color(0x37, 0x94, 0xff))
-        val WRITE: Color = JBColor(Color(0x00, 0x7f, 0xd4), Color(0x00, 0x7f, 0xd4))
-        val TOOL: Color = JBColor(Color(0x00, 0x7a, 0xcc), Color(0x00, 0x7a, 0xcc))
+        val READ: Color = JBColor.namedColor("Kilo.Session.Timeline.Read", Color(0x37, 0x94, 0xff))
+        val WRITE: Color = JBColor.namedColor("Kilo.Session.Timeline.Write", Color(0x00, 0x7f, 0xd4))
+        val TOOL: Color = JBColor.namedColor("Kilo.Session.Timeline.Tool", Color(0x00, 0x7a, 0xcc))
         val SUCCESS: Color = JBColor.namedColor("Label.successForeground", UIUtil.getLabelSuccessForeground())
-        val ERROR: Color = JBColor(Color(0xf4, 0x87, 0x71), Color(0xf4, 0x87, 0x71))
-        val TEXT: Color = JBColor(Color(0x9d, 0x9d, 0x9d), Color(0x9d, 0x9d, 0x9d))
-        val STEP: Color = JBColor(Color(0x4d, 0x4d, 0x4d), Color(0x4d, 0x4d, 0x4d))
+        val ERROR: Color = JBColor.namedColor("Kilo.Session.Timeline.Error", UIUtil.getErrorForeground())
+        val TEXT: Color = JBColor.namedColor("Kilo.Session.Timeline.Text", UIUtil.getContextHelpForeground())
+        val STEP: Color = JBColor.namedColor("Kilo.Session.Timeline.Step", JBColor.border())
     }
 }
 
