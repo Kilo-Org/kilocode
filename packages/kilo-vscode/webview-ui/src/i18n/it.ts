@@ -1488,6 +1488,12 @@ export const dict = {
   "settings.experimental.speechToTextModel.description":
     "Scegli il modello di trascrizione Kilo Gateway per l'input vocale.",
 
+  "settings.display.codeEdit.title": "Blocchi di modifica codice",
+  "settings.display.codeEdit.description":
+    "Scegli se i blocchi di modifica codice e diff iniziano espansi o compressi.",
+  "settings.display.codeEdit.expanded": "Espansi",
+  "settings.display.codeEdit.collapsed": "Compressi",
+
   // Compaction limit
   "settings.context.compactionLimit.title": "Limite compattazione automatica",
   "settings.context.compactionLimit.description":
