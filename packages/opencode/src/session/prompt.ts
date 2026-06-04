@@ -435,20 +435,20 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             }
           }),
         ask: (req) =>
-          permission
-            .ask({
+          // kilocode_change start - refresh agent/session permissions for active tool calls
+          KiloSessionPrompt.askPermission({
+            permission,
+            agents,
+            sessions,
+            agent: input.agent,
+            session: input.session,
+            request: {
               ...req,
               sessionID: input.session.id,
               tool: { messageID: input.processor.message.id, callID: options.toolCallId },
-              // kilocode_change start - reapply Ask/Plan mode guards after session permissions
-              ruleset: Permission.merge(
-                input.agent.permission,
-                KiloSessionPrompt.guardPermissions({ agent: input.agent, session: input.session }),
-              ),
-              hardRuleset: KiloSessionPrompt.hardPermissions({ agent: input.agent }),
-              // kilocode_change end
-            })
-            .pipe(Effect.orDie),
+            },
+          }).pipe(Effect.orDie),
+        // kilocode_change end
       })
 
       for (const item of yield* registry.tools({

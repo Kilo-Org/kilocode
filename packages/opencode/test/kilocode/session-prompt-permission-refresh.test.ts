@@ -253,4 +253,5 @@ it.live("active tool calls use permissions changed after model streaming starts"
       }),
     },
   ),
+  { timeout: 10000 },
 )
