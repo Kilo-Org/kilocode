@@ -4,6 +4,7 @@ import { Provider } from "@/provider/provider"
 import { Session } from "@/session/session"
 import { SessionSummary } from "@/session/summary"
 import { KiloSession } from "@/kilocode/session"
+import { attachWorkspaceCheckpoint } from "@/kilocode/session-portability/git-checkpoint"
 import { SessionID } from "@/session/schema"
 import { ModelID, ProviderID } from "@/provider/schema"
 import { MessageV2 } from "@/session/message-v2"
@@ -130,8 +131,8 @@ export namespace KiloSessions {
     fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
   }
 
-  function transport(info: Session.Info): SDK.Session {
-    return {
+  async function transport(info: Session.Info, opts?: { checkpoint?: boolean }): Promise<SDK.Session> {
+    const session = {
       ...info,
       summary: info.summary
         ? {
@@ -142,6 +143,8 @@ export namespace KiloSessions {
           }
         : undefined,
     }
+    if (!opts?.checkpoint) return session
+    return attachWorkspaceCheckpoint(session)
   }
 
   async function getClient(): Promise<Client | undefined> {
@@ -260,7 +263,7 @@ export namespace KiloSessions {
             if (!session) return
             await ingest.sync(sessionID, [
               { type: "kilo_meta", data: await meta(sessionID) },
-              { type: "session", data: transport(session) },
+              { type: "session", data: await transport(session) },
             ])
           })
           yield* watch(MessageV2.Event.Updated, async (evt) => {
@@ -278,9 +281,14 @@ export namespace KiloSessions {
           yield* watch(Session.Event.TurnOpen, (evt) =>
             ingest.sync(evt.properties.sessionID, [{ type: "session_open", data: {} }]),
           )
-          yield* watch(Session.Event.TurnClose, (evt) =>
-            ingest.sync(evt.properties.sessionID, [{ type: "session_close", data: { reason: evt.properties.reason } }]),
-          )
+          yield* watch(Session.Event.TurnClose, async (evt) => {
+            const sessionID = evt.properties.sessionID
+            const session = await Effect.runPromise(sessions.get(sessionID).pipe(Effect.orElseSucceed(() => null)))
+            await ingest.sync(sessionID, [
+              ...(session ? [{ type: "session" as const, data: await transport(session, { checkpoint: true }) }] : []),
+              { type: "session_close", data: { reason: evt.properties.reason } },
+            ])
+          })
 
           const sync = (evt: { properties: { sessionID: string } }) => {
             const sessionID = evt.properties.sessionID
@@ -696,7 +704,7 @@ export namespace KiloSessions {
       },
       {
         type: "session",
-        data: transport(session),
+        data: await transport(session, { checkpoint: true }),
       },
       ...messages.map((x) => ({
         type: "message" as const,
