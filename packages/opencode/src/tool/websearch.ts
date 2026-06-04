@@ -4,8 +4,8 @@ import * as Tool from "./tool"
 import * as McpWebSearch from "./mcp-websearch"
 import DESCRIPTION from "./websearch.txt"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import { checksum } from "@opencode-ai/core/util/encode"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
+import { KiloWebSearch } from "../kilocode/tool/websearch" // kilocode_change
 
 export const Parameters = Schema.Struct({
   query: Schema.String.annotate({ description: "Websearch query" }),
@@ -36,7 +36,7 @@ export function selectWebSearchProvider(
   if (flags.parallel) return "parallel"
   if (flags.exa) return "exa"
 
-  return Number.parseInt(checksum(sessionID) ?? "0", 36) % 2 === 0 ? "exa" : "parallel"
+  return KiloWebSearch.defaultProvider() // kilocode_change: pin Exa as the default instead of an even Exa/Parallel split
 }
 
 export function webSearchProviderLabel(provider: unknown) {

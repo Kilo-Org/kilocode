@@ -35,6 +35,18 @@ describe("websearch provider", () => {
     expect(selectWebSearchProvider(SESSION_ID, { exa: false, parallel: true })).toBe("parallel")
   })
 
+  test("defaults to Exa when no provider is pinned", () => {
+    const original = process.env.KILO_WEBSEARCH_PROVIDER
+
+    try {
+      delete process.env.KILO_WEBSEARCH_PROVIDER
+      expect(selectWebSearchProvider(SESSION_ID, { exa: false, parallel: false })).toBe("exa")
+    } finally {
+      if (original === undefined) delete process.env.KILO_WEBSEARCH_PROVIDER
+      else process.env.KILO_WEBSEARCH_PROVIDER = original
+    }
+  })
+
   test("is only enabled for kilo or explicit websearch provider flags", () => {
     // kilocode_change
     expect(webSearchEnabled(ProviderID.kilo, { exa: false, parallel: false })).toBe(true) // kilocode_change
