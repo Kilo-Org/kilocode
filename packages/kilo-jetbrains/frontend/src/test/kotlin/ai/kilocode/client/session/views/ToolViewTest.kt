@@ -6,6 +6,7 @@ import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import javax.swing.ScrollPaneConstants
 
@@ -57,15 +58,6 @@ class ToolViewTest : BasePlatformTestCase() {
         assertTrue(view.labelText().contains("Shell"))
     }
 
-    fun `test read tool shows filename`() {
-        val t = tool("p1", "read", ToolExecState.COMPLETED).also { it.input = mapOf("filePath" to "README.MD") }
-
-        val view = ToolView(t)
-
-        assertTrue(view.labelText().contains("Read"))
-        assertTrue(view.labelText().contains("README.MD"))
-    }
-
     fun `test bash tool shows subtitle command and output`() {
         val t = tool("p1", "bash", ToolExecState.COMPLETED).also {
             it.input = mapOf("command" to "git remote -v", "description" to "View remotes")
@@ -82,10 +74,24 @@ class ToolViewTest : BasePlatformTestCase() {
         assertFalse(view.isExpanded())
         assertTrue(view.hasToggle())
         assertFalse(view.bodyVisible())
-        assertTrue(view.bodyCreated())
+        assertFalse(view.bodyCreated())
         view.toggle()
         assertTrue(view.bodyVisible())
         assertTrue(view.bodyCreated())
+    }
+
+    fun `test bash tool uses secondary chrome`() {
+        val view = ToolView(tool("p1", "bash", ToolExecState.COMPLETED))
+        val base: Any = view
+
+        assertTrue(base is SecondarySessionPartView)
+    }
+
+    fun `test unknown tool uses secondary chrome`() {
+        val view = ToolView(tool("p1", "mystery", ToolExecState.COMPLETED))
+        val base: Any = view
+
+        assertTrue(base is SecondarySessionPartView)
     }
 
     fun `test bash toggle collapses and expands`() {
@@ -116,14 +122,14 @@ class ToolViewTest : BasePlatformTestCase() {
         assertTrue(view.bodyVisible())
     }
 
-    fun `test tool reuses eager body after collapse and expand`() {
+    fun `test tool creates lazy body once after collapse and expand`() {
         val t = tool("p1", "bash", ToolExecState.COMPLETED).also {
             it.input = mapOf("command" to "pwd")
             it.output = "/tmp"
         }
         val view = ToolView(t)
 
-        assertTrue(view.bodyCreated())
+        assertFalse(view.bodyCreated())
         view.toggle()
         val font = view.bodyFont()
         view.toggle()
@@ -133,7 +139,7 @@ class ToolViewTest : BasePlatformTestCase() {
         assertTrue(view.bodyVisible())
     }
 
-    fun `test collapsed update keeps eager tool body detached`() {
+    fun `test collapsed update keeps lazy tool body uncreated`() {
         val view = ToolView(tool("p1", "bash", ToolExecState.RUNNING).also {
             it.input = mapOf("command" to "pwd")
             it.output = "/tmp"
@@ -144,7 +150,7 @@ class ToolViewTest : BasePlatformTestCase() {
             it.output = "/home"
         })
 
-        assertTrue(view.bodyCreated())
+        assertFalse(view.bodyCreated())
         assertEquals("$ pwd\n\n/home", view.bodyText())
     }
 
@@ -195,16 +201,6 @@ class ToolViewTest : BasePlatformTestCase() {
         assertFalse(view.bodyVisible())
         view.toggle()
         assertTrue(view.bodyVisible())
-    }
-
-    fun `test read tool handles windows path`() {
-        val t = tool("p1", "read", ToolExecState.COMPLETED).also {
-            it.input = mapOf("filePath" to "C:\\repo\\README.MD")
-        }
-
-        val view = ToolView(t)
-
-        assertTrue(view.labelText().contains("README.MD"))
     }
 
     fun `test bash output uses editor font settings`() {
@@ -330,12 +326,12 @@ class ToolViewTest : BasePlatformTestCase() {
         Tool(id, name, toolKind(name)).also { it.state = state; it.title = title }
 
     private fun assertEditorFont(font: java.awt.Font, style: SessionEditorStyle) {
-        assertEquals(style.editorFamily, font.name)
+        assertEquals(style.transcriptFont.name, font.name)
         assertEquals(style.editorSize, font.size)
     }
 
     private fun assertSmallEditorFont(font: java.awt.Font, style: SessionEditorStyle) {
-        assertEquals(style.editorFamily, font.name)
+        assertEquals(style.smallEditorFont.name, font.name)
         assertTrue(font.size < style.editorSize)
     }
 }

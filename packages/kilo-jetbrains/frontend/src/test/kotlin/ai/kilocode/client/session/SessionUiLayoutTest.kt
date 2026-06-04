@@ -8,7 +8,7 @@ import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.ConnectionPanel
-import ai.kilocode.client.session.ui.EmptySessionPanel
+import ai.kilocode.client.session.ui.empty.EmptySessionPanel
 import ai.kilocode.client.session.ui.LoadingPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
@@ -31,14 +31,17 @@ import javax.swing.JLayeredPane
 @Suppress("UnstableApiUsage")
 class SessionUiLayoutTest : SessionUiTestBase() {
 
-    fun `test root contains content and overlay layers`() {
+    fun `test root contains content overlay and blocker layers`() {
         val root = find<SessionRootPanel>(ui)
 
-        assertEquals(2, root.componentCount)
+        assertEquals(3, root.componentCount)
         assertSame(root.content, root.components.first { it === root.content })
         assertSame(root.overlay, root.components.first { it === root.overlay })
+        assertSame(root.blocker, root.components.first { it === root.blocker })
         assertEquals(JLayeredPane.DEFAULT_LAYER, root.getLayer(root.content))
         assertEquals(JLayeredPane.PALETTE_LAYER, root.getLayer(root.overlay))
+        assertEquals(JLayeredPane.MODAL_LAYER, root.getLayer(root.blocker))
+        assertFalse(root.blocker.isVisible)
     }
 
     fun `test bottom stack contains connection and prompt only`() {
@@ -68,7 +71,8 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     fun `test header is docked above shared scroll pane and hidden while empty`() {
         val root = find<SessionRootPanel>(ui)
         val header = find<SessionHeaderPanel>(ui)
-        val scroll = find<JBScrollPane>(ui)
+        // Search from root.content to avoid finding the migration wizard scroll panes
+        val scroll = find<JBScrollPane>(root.content)
 
         assertSame(root.content, header.parent.parent)
         assertSame(scroll.parent, header.parent)
@@ -223,6 +227,37 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
+    fun `test retry status renders in loading panel instead of message body`() {
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test")
+        settle()
+
+        controller().model.setState(SessionState.Retry("Cannot connect to API", attempt = 2, next = 1_234L))
+        layout()
+
+        val panel = find<LoadingPanel>(ui)
+        assertSame(panel, scrollView())
+        assertEquals("Cannot connect to API", panel.labelText())
+
+        controller().model.setState(SessionState.Idle)
+        layout()
+
+        assertSame(find<SessionMessageListPanel>(ui), scrollView())
+    }
+
+    fun `test offline status renders in loading panel with fallback`() {
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test")
+        settle()
+
+        controller().model.setState(SessionState.Offline("", requestId = "req1"))
+        layout()
+
+        val panel = find<LoadingPanel>(ui)
+        assertSame(panel, scrollView())
+        assertEquals("Connection offline", panel.labelText())
+    }
+
     fun `test empty explicit session id shows message body`() {
         rpc.recent.add(session("ses_recent"))
         settle()
@@ -280,14 +315,13 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     fun `test existing session history shows header above scroll pane`() {
         rpc.history.add(MessageWithPartsDto(message("msg1"), emptyList()))
 
-        ui = SessionUi(project, workspace, sessions, app, scope, ref = SessionRef.Local("ses_test"), displayMs = 0).apply {
-            setSize(800, 600)
-        }
+        ui = newUi(id = "ses_test")
         settle()
         layout()
 
+        val root = find<SessionRootPanel>(ui)
         val header = find<SessionHeaderPanel>(ui)
-        val scroll = find<JBScrollPane>(ui)
+        val scroll = find<JBScrollPane>(root.content)
         assertTrue(header.isVisible)
         assertTrue(header.y + header.height <= scroll.y)
     }

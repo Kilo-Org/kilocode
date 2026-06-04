@@ -45,27 +45,41 @@
 
   [data-slot="permission-command"] {
     position: relative;
-    margin-bottom: 4px;
+    min-width: 0;
+    margin: 4px 0;
+    padding: 8px 34px 8px 10px;
+    border: 1px solid var(--vscode-editorWidget-border, var(--vscode-panel-border, transparent));
+    border-radius: 4px;
+    background: var(--vscode-textCodeBlock-background, var(--vscode-editor-background));
   }
 
-  [data-slot="permission-command-pre"] {
-    font-size: var(--kilo-font-size-12);
-    font-family: var(--vscode-editor-font-family, monospace);
-    color: var(--text-weak, var(--vscode-descriptionForeground));
-    white-space: pre-wrap;
-    word-break: break-all;
-    margin: 0;
-    padding: 0;
-    line-height: 1.5;
+  [data-slot="permission-command-code"] {
+    min-width: 0;
     max-height: 150px;
     overflow-y: auto;
+
+    pre {
+      margin: 0;
+      padding: 0;
+      background: transparent !important;
+    }
+
+    code {
+      font-size: var(--kilo-font-size-12);
+      font-family: var(--vscode-editor-font-family, monospace);
+      color: var(--vscode-editor-foreground, var(--vscode-foreground));
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      line-height: 1.5;
+      background: transparent;
+    }
   }
 
   [data-slot="permission-command-copy"] {
     all: unset;
     position: absolute;
-    top: 0px;
-    right: 8px;
+    top: 6px;
+    right: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -73,13 +87,19 @@
     height: 20px;
     border-radius: 3px;
     cursor: pointer;
-    color: var(--vscode-foreground);
+    color: var(--vscode-icon-foreground, var(--vscode-foreground));
     opacity: 0;
     transition: opacity 0.15s ease;
 
     &:hover {
       background: var(--vscode-toolbar-hoverBackground);
       opacity: 1;
+    }
+
+    &:focus-visible {
+      opacity: 1;
+      outline: 1px solid var(--vscode-focusBorder);
+      outline-offset: 1px;
     }
   }
 

@@ -8,16 +8,15 @@ import { MessageID, SessionID } from "@/session/schema"
 import { PermissionTable } from "@/session/session.sql"
 import { Database } from "@/storage/db"
 import { eq } from "drizzle-orm"
-import { zod } from "@/util/effect-zod"
+import { zod } from "@opencode-ai/core/effect-zod"
 import * as Log from "@opencode-ai/core/util/log"
-import { withStatics } from "@/util/schema"
+import { withStatics } from "@opencode-ai/core/schema"
 import { Wildcard } from "@/util/wildcard"
 import { Deferred, Effect, Layer, Schema, Context } from "effect"
 import os from "os"
 import z from "zod" // kilocode_change
 import { evaluate as evalRule } from "./evaluate"
 import { PermissionID } from "./schema"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { ConfigProtection } from "@/kilocode/permission/config-paths" // kilocode_change
 import { Identifier } from "@/id/id" // kilocode_change
 import { drainCovered } from "@/kilocode/permission/drain" // kilocode_change
@@ -218,6 +217,7 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const bus = yield* Bus.Service
+    const config = yield* Config.Service // kilocode_change
     const state = yield* InstanceState.make<State>(
       Effect.fn("Permission.state")(function* (ctx) {
         const row = Database.use((db) =>
@@ -360,7 +360,7 @@ export const layer = Layer.effect(
           action: "allow" as const,
         }))
         if (alwaysRules.length > 0) {
-          yield* Effect.promise(() => Config.updateGlobal({ permission: toConfig(alwaysRules) }, { dispose: false }))
+          yield* config.updateGlobal({ permission: toConfig(alwaysRules) }, { dispose: false })
         }
       }
       // kilocode_change end
@@ -399,7 +399,7 @@ export const layer = Layer.effect(
       existing.saved = true // kilocode_change
 
       if (newRules.length > 0) {
-        yield* Effect.promise(() => Config.updateGlobal({ permission: toConfig(newRules) }, { dispose: false }))
+        yield* config.updateGlobal({ permission: toConfig(newRules) }, { dispose: false })
       }
 
       yield* drainCovered(
@@ -515,7 +515,7 @@ export function disabled(tools: string[], ruleset: Ruleset): Set<string> {
   return result
 }
 
-export const defaultLayer = layer.pipe(Layer.provide(Bus.layer))
+export const defaultLayer = layer.pipe(Layer.provide(Bus.layer), Layer.provide(Config.defaultLayer)) // kilocode_change
 
 // kilocode_change start — inverse of fromConfig: convert rules back to config format
 const SCALAR_ONLY_PERMISSIONS = new Set([
@@ -550,18 +550,6 @@ export function toConfig(rules: Ruleset): ConfigPermission.Info {
   }
   return result
 }
-// kilocode_change end
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const list = () => runPromise((svc) => svc.list())
-export const ask = (input: AskInput) => runPromise((svc) => svc.ask(input))
-const replyPromise = (input: ReplyInput) => runPromise((svc) => svc.reply(input))
-export { replyPromise as reply }
-export const saveAlwaysRules = (input: z.infer<typeof SaveAlwaysRulesInput>) =>
-  runPromise((svc) => svc.saveAlwaysRules(input))
-export const allowEverything = (input: z.infer<typeof AllowEverythingInput>) =>
-  runPromise((svc) => svc.allowEverything(input))
 // kilocode_change end
 
 export * as Permission from "."

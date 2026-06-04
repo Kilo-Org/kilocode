@@ -68,9 +68,10 @@ export function toSessionDiffFile(raw: SnapshotFileDiff): DiffFile {
   // parse it, so short-circuit to empty strings.
   const view = raw.patch === "" ? null : normalize(raw)
   return {
-    file: raw.file,
+    file: raw.file ?? "",
     before: view ? text(view, "deletions") : "",
     after: view ? text(view, "additions") : "",
+    patch: raw.patch,
     additions: raw.additions,
     deletions: raw.deletions,
     status: raw.status,

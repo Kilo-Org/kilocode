@@ -109,6 +109,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Anbefalt",
   "dialog.provider.opencode.note": "Utvalgte modeller inkludert Claude, GPT, Gemini og flere",
   "dialog.provider.anthropic.note": "Koble til med Claude Pro/Max eller API-nøkkel",
+  "dialog.provider.deepseek.note": "DeepSeek-modeller for resonnering og kodeoppgaver",
   "dialog.provider.openai.note": "Koble til med ChatGPT Pro/Plus eller API-nøkkel",
   "dialog.provider.google.note": "Gemini-modeller for raske, strukturerte svar",
   "dialog.provider.openrouter.note": "Tilgang til alle støttede modeller fra én leverandør",
@@ -177,6 +178,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.title": "{{provider}} frakoblet",
   "provider.disconnect.toast.disconnected.description": "Modeller fra {{provider}} er ikke lenger tilgjengelige.",
   "model.tag.free": "Gratis",
+  "model.tag.dataCollected": "Data kan brukes til trening",
   "model.tag.latest": "Nyeste",
   "model.group.recommended": "Anbefalt",
   "model.group.favorites": "Favoritter",
@@ -289,7 +291,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedre prompt' hjelper med å forbedre forespørselen din ved å gi ekstra kontekst, avklaring eller omformulering. Prøv å skrive en forespørsel her og klikk på knappen igjen for å se hvordan det fungerer.",
 
-  "speechToText.tooltip.start": "Start taleinndata",
+  "speechToText.tooltip.start": "Start taleinndata med Kilo Gateway",
   "speechToText.tooltip.stop": "Stopp lydfangst",
   "speechToText.tooltip.transcribing": "Transkriberer... Klikk for å avbryte.",
   "speechToText.tooltip.error": "Taleinndata mislyktes. Klikk for å tømme.",
@@ -454,6 +456,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Kunne ikke stoppe deling av sesjon",
   "toast.session.unshare.failed.description": "Det oppstod en feil da delingen av sesjonen skulle stoppes",
 
+  "toast.session.rename.invalid.title": "Ugyldig sesjonstittel",
   "toast.session.listFailed.title": "Kunne ikke laste sesjoner for {{project}}",
 
   "toast.update.title": "Oppdatering tilgjengelig",
@@ -821,6 +824,9 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "Koblet til fra dine miljøvariabler",
   "settings.providers.action.signInChatGPT": "Logg inn med ChatGPT",
   "settings.providers.custom.description": "Legg til en OpenAI-kompatibel leverandør via basis-URL.",
+  "settings.providers.subagentModel.title": "Underagentmodell",
+  "settings.providers.subagentModel.description":
+    "Standardmodell og resonneringsinnsats for task-tool-underagenter. La stå tom for å arve den kallende agentens modell.",
   "settings.providers.modeModels": "Modell per modus",
   "settings.providers.custom.note": "Legg til en OpenAI-kompatibel leverandør via basis-URL.",
   "settings.providers.modeModels.description":
@@ -984,6 +990,8 @@ export const dict = {
   "session.delete.confirm": 'Slette sesjonen "{{name}}"?',
   "session.delete.button": "Slett sesjon",
   "session.untitled": "Uten tittel",
+  "session.current": "Gjeldende økt",
+  "session.history.sources": "Historikkilde",
   "session.recent": "Nylige",
   "session.showHistory": "Vis historikk",
   "session.search.placeholder": "Søk i sesjoner...",
@@ -1088,6 +1096,14 @@ export const dict = {
   "session.status.retrying": "Prøver på nytt (forsøk {{ attempt }})… {{ message }}",
   "session.status.working": "Arbeider…",
   "session.status.offline": "Nettverk frakoblet — kobler til på nytt...",
+  "session.outcome.incomplete": "Runden ble avsluttet med {{count}} oppgaver igjen",
+  "session.outcome.limit": "Svarsgrensen ble nådd før fullføring",
+  "session.outcome.unknown": "Runden ble avsluttet uten avslutningsårsak fra modellen",
+  "session.outcome.filtered": "Leverandøren stoppet denne responsen på grunn av et innholdsfilter.",
+  "session.outcome.unexpected": "Responsen ble avsluttet uventet og kan være ufullstendig.",
+  "session.outcome.interrupted": "Runde avbrutt",
+  "session.outcome.error": "Runden feilet",
+  "session.outcome.finish": "Avslutningsårsak: {{reason}}",
 
   "ui.sessionTurn.cancel": "Avbryt",
   "ui.sessionTurn.status.thinking": "Tenker...",
@@ -1150,7 +1166,6 @@ export const dict = {
     'Telemetri styres av den innebygde telemetri-innstillingen i VS Code. For å deaktivere den, gå til Innstillinger > Telemetry > Telemetry Level og sett den til "off". Start VS Code på nytt for å ta i bruk endringen.',
   "settings.aboutKiloCode.telemetry.openSettings": "Åpne innstillinger for telemetri",
 
-  "settings.agentBehaviour.subtab.modes": "Moduser",
   "settings.agentBehaviour.subtab.agents": "Agenter",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-servere",
   "settings.agentBehaviour.subtab.rules": "Regler",
@@ -1210,19 +1225,13 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Ikke oppsummer stort limt innhold",
   "settings.experimental.batch.title": "Batchverktøy",
   "settings.experimental.batch.description": "Aktiver batchbehandling av verktøykall",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Kodesøk",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig språksøk på tvers av kodebasen",
-  "settings.experimental.agentManagerTool.title": "Agent Manager-verktøy",
-  "settings.experimental.agentManagerTool.description":
-    "Tillat agenter å starte lokale Agent Manager-økter og worktree-økter fra et verktøykall",
   "settings.experimental.speechToText.title": "Tale til tekst",
   "settings.experimental.speechToText.description":
     "Aktiver taleinndata i prompt-felt ved å bruke din Kilo-konto gjennom Kilo Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Aktiver Kilo provider og logg på for å bruke taleinndata i prompt-felt.",
+    "Aktiver og logg på Kilo-leverandøren for å bruke Speech to Text. Speech to Text støttes for øyeblikket bare med Kilo Gateway.",
   "settings.experimental.speechToTextModel.title": "Tale-til-tekst-modell",
   "settings.experimental.speechToTextModel.description": "Velg Kilo Gateway-transkripsjonsmodellen for taleinndata.",
   "settings.experimental.continueOnDeny.title": "Fortsett ved avvisning",
@@ -1280,6 +1289,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Velg en agent å konfigurere…",
   "settings.agentBehaviour.modelOverride.title": "Modelloverstying",
   "settings.agentBehaviour.modelOverride.description": "Overstyr standardmodellen for denne agenten",
+  "settings.agentBehaviour.variantOverride.title": "Variantoverstyring",
+  "settings.agentBehaviour.variantOverride.description": "Overstyr modellvarianten for denne agenten",
   "settings.agentBehaviour.prompt.title": "Egendefinert prompt",
   "settings.agentBehaviour.prompt.description": "Ekstra systemprompt for denne agenten",
   "settings.agentBehaviour.temperature.title": "Temperatur",
@@ -1299,7 +1310,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Ingen ferdigheter funnet. Legg til ferdighetsmappestier eller URLer nedenfor for å gjøre ferdigheter tilgjengelige.",
   "settings.agentBehaviour.availableModes": "Tilgjengelige egendefinerte moduser",
-  "settings.agentBehaviour.noModesFound": "Ingen moduser funnet.",
+  "settings.agentBehaviour.noAgentsFound": "Ingen agenter funnet.",
   "settings.agentBehaviour.createMode": "Opprett ny modus",
   "settings.agentBehaviour.createMode.name": "Navn",
   "settings.agentBehaviour.createMode.name.placeholder": "f.eks. reviewer",
@@ -1342,10 +1353,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Kopier tillatelser som JSON",
   "settings.agentBehaviour.permissions.hint":
     "Reglene evalueres i rekkefølge — siste matchende regel vinner. Dette er det gjeldende regelsettet fra CLI-backenden.",
-  "settings.agentBehaviour.removeMode.title": "Fjern modus",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Vil du fjerne modusen "{{name}}"? Dette vil deaktivere modusen ved å oppdatere konfigurasjonen din.',
-  "settings.agentBehaviour.removeMode.button": "Fjern",
+  "settings.agentBehaviour.removeAgent.title": "Fjern agent",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Fjern agent "{{name}}"? Dette deaktiverer agenten ved å oppdatere konfigurasjonen din.',
+  "settings.agentBehaviour.removeAgent.button": "Fjern",
   "settings.agentBehaviour.removeMcp.title": "Fjern MCP-server",
   "settings.agentBehaviour.removeMcp.confirm":
     'Vil du fjerne MCP-serveren "{{name}}"? Dette vil fjerne den fra konfigurasjonen din.',

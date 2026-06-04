@@ -68,6 +68,14 @@ body.vscode-high-contrast-light {
   /* Permission dock */
   [data-component="dock-prompt"][data-kind="permission"] {
     border-color: var(--vscode-contrastBorder, var(--vscode-panel-border));
+
+    [data-slot="permission-command"] {
+      border-color: var(--vscode-contrastBorder, var(--vscode-editorWidget-border));
+    }
+
+    [data-slot="permission-command-copy"]:focus-visible {
+      outline-color: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+    }
   }
 
   /* Question dock */

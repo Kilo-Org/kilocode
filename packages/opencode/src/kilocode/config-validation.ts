@@ -128,8 +128,9 @@ export namespace ConfigValidation {
 
   async function existing(): Promise<string> {
     try {
-      const warns = await Config.warnings()
-      if (!warns || warns.length === 0) return ""
+      const { AppRuntime } = await import("@/effect/app-runtime")
+      const warns = await AppRuntime.runPromise(Config.Service.use((svc) => svc.warnings()))
+      if (warns.length === 0) return ""
       const items = warns.map((w: Config.Warning) => `  ${label(w.path)}: ${w.message}`).join("\n")
       return `Pre-existing config issues (from session start):\n${items}\n\n`
     } catch {
@@ -155,7 +156,6 @@ export namespace ConfigValidation {
     }
 
     const prefix = await existing()
-
     const validation = JSONC_EXT.has(ext) ? await jsonc(filepath) : ext === ".md" ? await markdown(filepath) : ""
 
     if (!validation) return ""

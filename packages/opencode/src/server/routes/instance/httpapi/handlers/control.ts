@@ -1,4 +1,5 @@
 import { Auth } from "@/auth"
+import { invalidateAfterProviderAuthChange } from "@/kilocode/server/provider-auth-lifecycle" // kilocode_change
 import { ProviderID } from "@/provider/schema"
 import * as Log from "@opencode-ai/core/util/log"
 import { Effect } from "effect"
@@ -15,11 +16,13 @@ export const controlHandlers = HttpApiBuilder.group(RootHttpApi, "control", (han
       payload: Auth.Info
     }) {
       yield* auth.set(ctx.params.providerID, ctx.payload).pipe(Effect.orDie)
+      yield* invalidateAfterProviderAuthChange(ctx.params.providerID) // kilocode_change
       return true
     })
 
     const authRemove = Effect.fn("ControlHttpApi.authRemove")(function* (ctx: { params: { providerID: ProviderID } }) {
       yield* auth.remove(ctx.params.providerID).pipe(Effect.orDie)
+      yield* invalidateAfterProviderAuthChange(ctx.params.providerID) // kilocode_change
       return true
     })
 

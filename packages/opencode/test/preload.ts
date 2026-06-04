@@ -10,7 +10,9 @@ import { remove as cleanup } from "./kilocode/cleanup" // kilocode_change
 const dir = path.join(os.tmpdir(), "opencode-test-data-" + process.pid)
 await fs.mkdir(dir, { recursive: true })
 afterAll(async () => {
+  const { SessionExport } = await import("../src/kilocode/session-export") // kilocode_change
   const { Database } = await import("../src/storage/db")
+  await SessionExport.shutdown() // kilocode_change
   Database.close()
   await cleanup(dir) // kilocode_change
 })
@@ -21,6 +23,11 @@ process.env["XDG_CONFIG_HOME"] = path.join(dir, "config")
 process.env["XDG_STATE_HOME"] = path.join(dir, "state")
 process.env["KILO_MODELS_PATH"] = path.join(import.meta.dir, "tool", "fixtures", "models-api.json")
 process.env["KILO_EXPERIMENTAL_EVENT_SYSTEM"] = "true"
+// Tests assert exact skill counts from disk discovery; the built-in
+// customize-opencode skill is opt-in for stable channels and on by default
+// for unstable channels (including "local" where CI runs). Disable it here
+// so disk-discovery tests aren't off-by-one.
+process.env["KILO_EXPERIMENTAL_CUSTOMIZE_SKILL"] = "false"
 
 // Set test home directory to isolate tests from user's actual home directory
 // This prevents tests from picking up real user configs/skills from ~/.claude/skills

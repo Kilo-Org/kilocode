@@ -46,6 +46,10 @@ const mockVscode = {
   version: "1.90.0",
   workspace: {
     workspaceFolders: [{ uri: { fsPath: "/repo" } }],
+    textDocuments: [] as Array<unknown>,
+    onDidOpenTextDocument: () => ({ dispose: noop }),
+    onDidChangeTextDocument: () => ({ dispose: noop }),
+    onDidCloseTextDocument: () => ({ dispose: noop }),
     getConfiguration: () => ({
       get: <T>(_key: string, value?: T) => value,
       update: async () => {},
@@ -132,6 +136,13 @@ const mockVscode = {
     constructor(
       public start: { line: number; character: number },
       public end: { line: number; character: number },
+    ) {}
+  },
+  InlineCompletionItem: class {
+    constructor(
+      public insertText: string,
+      public range?: unknown,
+      public command?: unknown,
     ) {}
   },
   Disposable: class {

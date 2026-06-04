@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.3.8",
+  "version": "7.3.29",
   "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",
@@ -9,9 +9,9 @@
     "typecheck": "tsgo --noEmit",
     "test": "bun run script/test-runner.ts",
     "test:ci": "bun run script/test-runner.ts --ci",
+    "test:httpapi": "bun run script/httpapi-exercise.ts --mode coverage --fail-on-missing --fail-on-skip && bun run script/httpapi-exercise.ts --mode auth --fail-on-missing --fail-on-skip && bun run script/httpapi-exercise.ts --mode effect --fail-on-missing --fail-on-skip",
     "build": "bun run script/build.ts",
     "fix-node-pty": "bun run script/fix-node-pty.ts",
-    "upgrade-opentui": "bun run script/upgrade-opentui.ts",
     "dev": "bun run --conditions=browser ./src/index.ts",
     "dev:temporary": "bun run --conditions=browser ./src/temporary.ts",
     "db": "bun drizzle-kit"
@@ -33,11 +33,6 @@
       "bun": "./src/pty/pty.bun.ts",
       "node": "./src/pty/pty.node.ts",
       "default": "./src/pty/pty.bun.ts"
-    },
-    "#hono": {
-      "bun": "./src/server/adapter.bun.ts",
-      "node": "./src/server/adapter.node.ts",
-      "default": "./src/server/adapter.bun.ts"
     },
     "#httpapi-server": {
       "bun": "./src/server/httpapi-server.node.ts",
@@ -65,6 +60,7 @@
     "@types/bun": "catalog:",
     "@types/cross-spawn": "catalog:",
     "@types/mime-types": "3.0.1",
+    "@types/node": "catalog:",
     "@types/npm-package-arg": "6.1.4",
     "@types/semver": "^7.5.8",
     "@types/turndown": "5.0.5",
@@ -135,9 +131,12 @@
     "@opentelemetry/sdk-trace-base": "2.6.1",
     "@opentelemetry/sdk-trace-node": "2.6.1",
     "@opentui/core": "catalog:",
+    "@opentui/keymap": "catalog:",
     "@opentui/solid": "catalog:",
     "@parcel/watcher": "2.5.1",
     "@pierre/diffs": "catalog:",
+    "@secretlint/core": "10.2.2",
+    "@secretlint/secretlint-rule-preset-recommend": "10.2.2",
     "@solid-primitives/event-bus": "1.1.2",
     "@solid-primitives/scheduled": "1.5.2",
     "@standard-schema/spec": "1.0.0",
@@ -166,6 +165,7 @@
     "ignore": "7.0.5",
     "immer": "11.1.4",
     "jsonc-parser": "3.3.1",
+    "mammoth": "1.12.0",
     "mime-types": "3.0.2",
     "minimatch": "10.2.5",
     "npm-package-arg": "13.0.2",
@@ -191,6 +191,7 @@
     "web-tree-sitter": "0.25.10",
     "which": "6.0.1",
     "xdg-basedir": "5.1.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "yargs": "18.0.0",
     "zod": "catalog:",
     "zod-to-json-schema": "3.24.5"

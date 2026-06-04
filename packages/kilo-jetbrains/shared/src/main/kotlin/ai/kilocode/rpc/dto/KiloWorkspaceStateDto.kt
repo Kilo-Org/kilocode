@@ -29,3 +29,10 @@ data class KiloWorkspaceStateDto(
     val error: String? = null,
     val errors: List<LoadErrorDto> = emptyList(),
 )
+
+@Serializable
+data class ModelsWorkspaceDto(
+    val providers: ProvidersDto? = null,
+    val agents: AgentsDto? = null,
+    val errors: List<LoadErrorDto> = emptyList(),
+)

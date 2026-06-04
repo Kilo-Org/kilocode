@@ -2,12 +2,11 @@ import { Effect, Layer, Context, Schema } from "effect"
 import { Bus } from "@/bus"
 import { Snapshot } from "@/snapshot"
 import { Storage } from "@/storage/storage"
-import { zod } from "@/util/effect-zod"
-import { withStatics } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { withStatics } from "@opencode-ai/core/schema"
 import * as Session from "./session"
 import { MessageV2 } from "./message-v2"
 import { SessionID, MessageID } from "./schema"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 
 function unquoteGitPath(input: string) {
   if (!input.startsWith('"')) return input
@@ -135,10 +134,11 @@ export const layer = Layer.effect(
         .read<Snapshot.FileDiff[]>(["session_diff", input.sessionID])
         .pipe(Effect.catch(() => Effect.succeed([] as Snapshot.FileDiff[])))
       const next = diffs.map((item) => {
+        if (item.file === undefined) return item
         const file = unquoteGitPath(item.file)
 
         // kilocode_change start — scrub oversized diffs from stored session_diff
-        const oversized = Buffer.byteLength(item.patch) > Snapshot.MAX_DIFF_SIZE
+        const oversized = item.patch !== undefined && Buffer.byteLength(item.patch) > Snapshot.MAX_DIFF_SIZE
         if (file === item.file && !oversized) return item
         return {
           ...item,
@@ -170,10 +170,5 @@ export const DiffInput = Schema.Struct({
   messageID: Schema.optional(MessageID),
 }).pipe(withStatics((s) => ({ zod: zod(s) })))
 export type DiffInput = Schema.Schema.Type<typeof DiffInput>
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const diff = (input: { sessionID: SessionID; messageID?: MessageID }) => runPromise((svc) => svc.diff(input))
-// kilocode_change end
 
 export * as SessionSummary from "./summary"

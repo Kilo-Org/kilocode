@@ -5,9 +5,8 @@ import { NamedError } from "@opencode-ai/core/util/error"
 import z from "zod"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Effect, Exit, Layer, Option, RcMap, Schema, Context, TxReentrantLock } from "effect"
-import { NonNegativeInt } from "@/util/schema"
+import { NonNegativeInt } from "@opencode-ai/core/schema"
 import { Git } from "@/git"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 
 const log = Log.create({ service: "storage" })
 
@@ -331,14 +330,5 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer.pipe(Layer.provide(AppFileSystem.defaultLayer), Layer.provide(Git.defaultLayer))
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const read = <T>(key: string[]) => runPromise((svc) => svc.read<T>(key))
-export const write = <T>(key: string[], content: T) => runPromise((svc) => svc.write<T>(key, content))
-export const remove = (key: string[]) => runPromise((svc) => svc.remove(key))
-export const list = (prefix: string[]) => runPromise((svc) => svc.list(prefix))
-export const update = <T>(key: string[], fn: (draft: T) => void) => runPromise((svc) => svc.update<T>(key, fn))
-// kilocode_change end
 
 export * as Storage from "./storage"

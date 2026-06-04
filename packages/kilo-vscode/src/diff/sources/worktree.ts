@@ -139,15 +139,16 @@ async function resolveOverrideRef(
 
 /**
  * Project a `WorktreeDiffEntry` from `local-diff.ts` onto the `DiffFile` shape
- * expected by the diff viewer. Drops `patch` (the webview rebuilds before/after
- * for itself) and coerces optional `before`/`after` to empty strings when the
- * entry is summarized.
+ * expected by the diff viewer. Preserve its hunk-bounded `patch` so Pierre can
+ * parse the git diff directly rather than recomputing a diff from full source
+ * contents; summarized entries still coerce optional content to empty strings.
  */
 function toDiffFile(entry: WorktreeDiffEntry): DiffFile {
   return {
-    file: entry.file,
+    file: entry.file ?? "",
     before: entry.before ?? "",
     after: entry.after ?? "",
+    patch: entry.patch,
     additions: entry.additions,
     deletions: entry.deletions,
     status: entry.status,

@@ -31,6 +31,7 @@ export interface BasicToolProps {
   defaultOpen?: boolean
   forceOpen?: boolean
   defer?: boolean
+  hasDetails?: boolean // kilocode_change
   locked?: boolean
   animated?: boolean
   allowPendingToggle?: boolean // kilocode_change
@@ -51,6 +52,7 @@ export function BasicTool(props: BasicToolProps) {
   const open = () => state.open
   const ready = () => state.ready
   const pending = () => props.status === "pending" || props.status === "running"
+  const hasDetails = () => props.hasDetails ?? !!props.children // kilocode_change
 
   let frame: number | undefined
 
@@ -199,7 +201,7 @@ export function BasicTool(props: BasicToolProps) {
         </div>
       </div>
       {/* kilocode_change start */}
-      <Show when={props.children && !props.hideDetails && !props.locked && (!pending() || props.allowPendingToggle)}>
+      <Show when={hasDetails() && !props.hideDetails && !props.locked && (!pending() || props.allowPendingToggle)}>
         <Collapsible.Arrow />
       </Show>
       {/* kilocode_change end */}
@@ -243,11 +245,13 @@ export function BasicTool(props: BasicToolProps) {
           {props.children}
         </div>
       </Show>
-      <Show when={!props.animated && props.children && !props.hideDetails}>
+      {/* kilocode_change start */}
+      <Show when={!props.animated && hasDetails() && !props.hideDetails}>
         <Collapsible.Content>
           <Show when={!props.defer || ready()}>{props.children}</Show>
         </Collapsible.Content>
       </Show>
+      {/* kilocode_change end */}
     </Collapsible>
   )
 }

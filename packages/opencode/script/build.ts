@@ -77,6 +77,31 @@ async function copyTreeSitterWasms(outputDir: string) {
 }
 // kilocode_change end
 
+// kilocode_change start - embed Kilo Console static assets
+async function buildKiloConsole() {
+  const app = path.resolve(dir, "../kilo-console")
+  const out = path.join(app, "dist")
+  console.log("building Kilo Console")
+  const proc = Bun.spawn([process.execPath, "run", "build"], {
+    cwd: app,
+    env: { ...process.env, KILO_CONSOLE_BASE: "/console/" },
+    stdout: "inherit",
+    stderr: "inherit",
+    windowsHide: true,
+  })
+  const code = await proc.exited
+  if (code !== 0) throw new Error(`Kilo Console build failed with exit code ${code}`)
+  return out
+}
+
+async function copyKiloConsole(input: string, outputDir: string) {
+  const target = path.join(outputDir, "console")
+  await fs.promises.rm(target, { recursive: true, force: true })
+  await fs.promises.cp(input, target, { recursive: true })
+  console.log(`copied Kilo Console assets to ${target}`)
+}
+// kilocode_change end
+
 // kilocode_change start - upstream's createEmbeddedWebUIBundle is intentionally removed because
 // Kilo dropped the packages/app web UI. Kept here as a commented reference so future upstream merges
 // can see the deliberate divergence rather than treating a re-add as a clean re-introduction.
@@ -189,7 +214,9 @@ const targets = singleFlag
     })
   : allTargets
 
-await $`rm -rf dist`
+await $`rm -rf dist` // kilocode_change
+
+const kiloConsoleDist = await buildKiloConsole() // kilocode_change
 
 const binaries: Record<string, string> = {}
 if (!skipInstall) {
@@ -214,15 +241,17 @@ for (const item of targets) {
   const rootPath = path.resolve(dir, "../../node_modules/@opentui/core/parser.worker.js")
   const parserWorker = fs.realpathSync(fs.existsSync(localPath) ? localPath : rootPath)
   const workerPath = "./src/cli/cmd/tui/worker.ts"
+  const sessionExportWorkerPath = "./src/kilocode/session-export/worker.ts" // kilocode_change
+  const indexingWorkerPath = "./src/kilocode/indexing-worker.ts" // kilocode_change
 
-  // Use platform-specific bunfs root path based on target OS
+  // Use platform-specific bunfs root path based on target OS // kilocode_change
   const bunfsRoot = item.os === "win32" ? "B:/~BUN/root/" : "/$bunfs/root/"
   const workerRelativePath = path.relative(dir, parserWorker).replaceAll("\\", "/")
 
   await Bun.build({
     conditions: ["browser"],
     tsconfig: "./tsconfig.json",
-    plugins: [plugin],
+    plugins: [plugin], // kilocode_change
     // kilocode_change start - skip sourcemaps for release builds (each .js.map adds ~50 MB per target → ~600 MB total)
     sourcemap: Script.release ? "none" : "external",
     // kilocode_change end
@@ -242,13 +271,15 @@ for (const item of targets) {
     },
     // kilocode_change start - packages/app was removed; no embedded web UI
     files: {},
-    entrypoints: ["./src/index.ts", parserWorker, workerPath],
+    entrypoints: ["./src/index.ts", parserWorker, workerPath, sessionExportWorkerPath, indexingWorkerPath],
     // kilocode_change end
     define: {
       KILO_VERSION: `'${Script.version}'`,
       KILO_MIGRATIONS: JSON.stringify(migrations),
       OTUI_TREE_SITTER_WORKER_PATH: bunfsRoot + workerRelativePath,
       KILO_WORKER_PATH: workerPath,
+      KILO_SESSION_EXPORT_WORKER_PATH: sessionExportWorkerPath, // kilocode_change
+      KILO_INDEXING_WORKER_PATH: indexingWorkerPath, // kilocode_change
       KILO_CHANNEL: `'${Script.channel}'`,
       KILO_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "",
       KILO_BUILD_KIND: Script.release ? `'release'` : `'source'`, // kilocode_change
@@ -256,6 +287,7 @@ for (const item of targets) {
   })
 
   await copyTreeSitterWasms(path.resolve(dir, `dist/${name}/bin`)) // kilocode_change
+  await copyKiloConsole(kiloConsoleDist, path.resolve(dir, `dist/${name}/bin`)) // kilocode_change
 
   // kilocode_change start - fix Nix-specific ELF interpreter paths for Linux binaries
   if (item.os === "linux") {

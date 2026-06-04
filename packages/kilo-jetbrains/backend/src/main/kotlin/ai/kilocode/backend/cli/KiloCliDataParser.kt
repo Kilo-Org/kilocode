@@ -8,6 +8,7 @@ import ai.kilocode.backend.workspace.ProviderInfo
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
@@ -32,6 +33,7 @@ import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionSummaryDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import ai.kilocode.rpc.dto.TodoDto
+import ai.kilocode.rpc.dto.TodoViewDto
 import ai.kilocode.rpc.dto.TokensDto
 import ai.kilocode.rpc.dto.ToolRefDto
 import kotlinx.serialization.json.Json
@@ -132,6 +134,13 @@ object KiloCliDataParser {
                 ChatEventDto.TurnClose(sid, reason)
             }
 
+            "session.created" -> {
+                val info = props["info"]?.jsonObject ?: return null
+                val dto = parseSessionObject(info)
+                val sid = props.str("sessionID") ?: dto.id.takeIf { it.isNotBlank() } ?: return null
+                ChatEventDto.SessionCreated(sid, dto)
+            }
+
             "session.error" -> {
                 val sid = props.str("sessionID")
                 val err = props["error"]?.jsonObject?.let { parseError(it) }
@@ -216,14 +225,7 @@ object KiloCliDataParser {
 
             "todo.updated" -> {
                 val sid = props.str("sessionID") ?: return null
-                val todos = props["todos"]?.jsonArray?.map { elem ->
-                    val t = elem.jsonObject
-                    TodoDto(
-                        content = t.str("content") ?: "",
-                        status = t.str("status") ?: "pending",
-                        priority = t.str("priority") ?: "medium",
-                    )
-                } ?: emptyList()
+                val todos = parseTodos(props["todos"])
                 ChatEventDto.TodoUpdated(sid, todos)
             }
 
@@ -428,6 +430,31 @@ object KiloCliDataParser {
         return sb.toString()
     }
 
+    fun buildConfigPatch(patch: ConfigPatchDto): String {
+        val allowed = setOf("model", "small_model", "subagent_model", "subagent_variant")
+        val sb = StringBuilder("{")
+        var first = true
+        fun sep() { if (!first) sb.append(","); first = false }
+        fun value(value: String?) = value?.let(::escape) ?: "null"
+
+        for ((key, value) in patch.values) {
+            if (key !in allowed) continue
+            sep(); sb.append("\"$key\":${value(value)}")
+        }
+
+        if (patch.agents.isNotEmpty()) {
+            sep(); sb.append("\"agent\":{")
+            patch.agents.entries.forEachIndexed { idx, (name, agent) ->
+                if (idx > 0) sb.append(",")
+                sb.append("${escape(name)}:{\"model\":${value(agent.model)}}")
+            }
+            sb.append("}")
+        }
+
+        sb.append("}")
+        return sb.toString()
+    }
+
     // ================================================================
     // Internal — message/part/session parsing
     // ================================================================
@@ -460,6 +487,15 @@ object KiloCliDataParser {
         val tokens = obj["tokens"]?.jsonObject
         val top = obj.map("metadata")
         val meta = state.map("metadata") + top
+        val input = state?.get("input").obj()
+        val stateMeta = state?.get("metadata").obj()
+        val topMeta = obj["metadata"].obj()
+        val todos = sequenceOf(topMeta?.get("todos"), stateMeta?.get("todos"), input?.get("todos"))
+            .firstNotNullOfOrNull(::parseTodosOrNull)
+            ?: emptyList()
+        val view = sequenceOf(topMeta?.get("view"), stateMeta?.get("view"))
+            .mapNotNull(::parseTodoView)
+            .firstOrNull()
         return PartDto(
             id = obj.str("id") ?: "",
             sessionID = obj.str("sessionID") ?: "",
@@ -475,9 +511,43 @@ object KiloCliDataParser {
             output = state?.str("output"),
             error = state?.str("error"),
             time = obj.time("time") ?: state.time("time"),
+            todos = todos,
+            todoView = view,
             reason = obj.str("reason"),
             cost = obj.num("cost"),
             tokens = tokens?.let(::parseTokens),
+        )
+    }
+
+    internal fun parseTodos(raw: JsonElement?): List<TodoDto> {
+        return parseTodosOrNull(raw) ?: emptyList()
+    }
+
+    private fun parseTodosOrNull(raw: JsonElement?): List<TodoDto>? {
+        val arr = runCatching { raw?.jsonArray }.getOrNull() ?: return null
+        return arr.mapNotNull { elem ->
+            val obj = runCatching { elem.jsonObject }.getOrNull() ?: return@mapNotNull null
+            parseTodo(obj)
+        }
+    }
+
+    private fun parseTodo(obj: JsonObject) = TodoDto(
+        content = obj.str("content") ?: "",
+        status = obj.str("status") ?: "pending",
+        priority = obj.str("priority") ?: "medium",
+        changed = obj.flag("changed", false),
+    )
+
+    internal fun parseTodoView(raw: JsonElement?): TodoViewDto? {
+        val obj = runCatching { raw?.jsonObject }.getOrNull() ?: return null
+        val rawTodos = runCatching { obj["todos"]?.jsonArray }.getOrNull() ?: return null
+        val todos = parseTodos(rawTodos)
+        return TodoViewDto(
+            mode = obj.str("mode") ?: "full",
+            todos = todos,
+            hiddenBefore = obj.long("hiddenBefore")?.safeInt() ?: 0,
+            hiddenAfter = obj.long("hiddenAfter")?.safeInt() ?: 0,
+            changed = obj.long("changed")?.safeInt() ?: 0,
         )
     }
 
@@ -542,18 +612,26 @@ object KiloCliDataParser {
             val qo = q.jsonObject
             val options = qo["options"]?.jsonArray?.map { o ->
                 val oo = o.jsonObject
-                QuestionOptionDto(oo.str("label") ?: "", oo.str("description") ?: "")
+                QuestionOptionDto(
+                    label = oo.str("label") ?: "",
+                    description = oo.str("description") ?: "",
+                    labelKey = oo.str("labelKey"),
+                    descriptionKey = oo.str("descriptionKey"),
+                    mode = oo.str("mode"),
+                )
             } ?: emptyList()
             QuestionInfoDto(
                 question = qo.str("question") ?: "",
                 header = qo.str("header") ?: "",
                 options = options,
-                multiple = qo.str("multiple") == "true",
-                custom = qo.str("custom") != "false",
+                multiple = qo.flag("multiple", false),
+                custom = qo.flag("custom", true),
+                questionKey = qo.str("questionKey"),
+                headerKey = qo.str("headerKey"),
             )
         } ?: emptyList()
         val ref = toolRef(obj)
-        return QuestionRequestDto(id, sid, questions, ref)
+        return QuestionRequestDto(id, sid, questions, ref, blocking = obj.flag("blocking", false))
     }
 
     internal fun parseModelFavorites(raw: JsonElement?): List<ModelSelectionDto> {
@@ -868,6 +946,11 @@ private fun JsonObject.long(key: String): Long? =
 
 private fun JsonObject?.bool(key: String): Boolean =
     this?.get(key)?.jsonPrimitive?.booleanOrNull ?: false
+
+private fun JsonObject.flag(key: String, default: Boolean): Boolean {
+    val prim = this[key]?.jsonPrimitive ?: return default
+    return prim.booleanOrNull ?: prim.contentOrNull?.toBooleanStrictOrNull() ?: default
+}
 
 private fun Long.safeInt() = coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
 

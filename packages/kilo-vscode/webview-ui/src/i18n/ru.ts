@@ -106,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Рекомендуемые",
   "dialog.provider.opencode.note": "Отобранные модели, включая Claude, GPT, Gemini и другие",
   "dialog.provider.anthropic.note": "Подключитесь с помощью Claude Pro/Max или API ключа",
+  "dialog.provider.deepseek.note": "Модели DeepSeek для задач рассуждения и программирования",
   "dialog.provider.openai.note": "Подключитесь с помощью ChatGPT Pro/Plus или API ключа",
   "dialog.provider.google.note": "Модели Gemini для быстрых структурированных ответов",
   "dialog.provider.openrouter.note": "Доступ ко всем поддерживаемым моделям через одного провайдера",
@@ -174,6 +175,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.title": "{{provider}} отключён",
   "provider.disconnect.toast.disconnected.description": "Модели {{provider}} больше недоступны.",
   "model.tag.free": "Бесплатно",
+  "model.tag.dataCollected": "Данные могут использоваться для обучения",
   "model.tag.latest": "Последняя",
   "model.group.recommended": "Рекомендуемые",
   "model.group.favorites": "Избранное",
@@ -284,7 +286,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Кнопка 'Улучшить запрос' помогает сделать ваш запрос лучше, предоставляя дополнительный контекст, уточнения или переформулировку. Попробуйте ввести запрос и снова нажать кнопку, чтобы увидеть, как это работает.",
 
-  "speechToText.tooltip.start": "Начать голосовой ввод",
+  "speechToText.tooltip.start": "Начать голосовой ввод с Kilo Gateway",
   "speechToText.tooltip.stop": "Остановить захват звука",
   "speechToText.tooltip.transcribing": "Распознавание... Нажмите для отмены.",
   "speechToText.tooltip.error": "Ошибка голосового ввода. Нажмите, чтобы очистить.",
@@ -451,6 +453,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Не удалось отменить публикацию",
   "toast.session.unshare.failed.description": "Произошла ошибка при отмене публикации",
 
+  "toast.session.rename.invalid.title": "Недопустимое название сессии",
   "toast.session.listFailed.title": "Не удалось загрузить сессии для {{project}}",
 
   "toast.update.title": "Доступно обновление",
@@ -857,6 +860,9 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "Подключён из ваших переменных окружения",
   "settings.providers.action.signInChatGPT": "Войти через ChatGPT",
   "settings.providers.custom.description": "Добавьте OpenAI-совместимый провайдер по базовому URL.",
+  "settings.providers.subagentModel.title": "Модель субагента",
+  "settings.providers.subagentModel.description":
+    "Модель по умолчанию и уровень рассуждения для субагентов task-tool. Оставьте пустым, чтобы унаследовать модель вызывающего агента.",
   "settings.providers.modeModels": "Модель для режима",
   "settings.providers.custom.note": "Добавьте OpenAI-совместимого провайдера по базовому URL.",
   "settings.providers.modeModels.description":
@@ -1022,6 +1028,8 @@ export const dict = {
   "session.delete.confirm": 'Удалить сессию "{{name}}"?',
   "session.delete.button": "Удалить сессию",
   "session.untitled": "Без названия",
+  "session.current": "Текущая сессия",
+  "session.history.sources": "Источник истории",
   "session.recent": "Недавние",
   "session.showHistory": "Показать историю",
   "session.search.placeholder": "Поиск сессий...",
@@ -1126,6 +1134,14 @@ export const dict = {
   "session.status.retrying": "Повторная попытка ({{ attempt }})… {{ message }}",
   "session.status.working": "Работаю…",
   "session.status.offline": "Сеть отключена — переподключение...",
+  "session.outcome.incomplete": "Раунд завершен, осталось задач: {{count}}",
+  "session.outcome.limit": "Достигнут лимит ответов до завершения",
+  "session.outcome.unknown": "Раунд завершен без указания причины моделью",
+  "session.outcome.filtered": "Провайдер остановил этот ответ из-за фильтра контента.",
+  "session.outcome.unexpected": "Ответ неожиданно завершился и может быть неполным.",
+  "session.outcome.interrupted": "Раунд прерван",
+  "session.outcome.error": "Раунд завершился с ошибкой",
+  "session.outcome.finish": "Причина завершения: {{reason}}",
 
   "ui.sessionTurn.cancel": "Отмена",
   "ui.sessionTurn.status.thinking": "Думаю...",
@@ -1188,7 +1204,6 @@ export const dict = {
     'Телеметрия управляется встроенной настройкой телеметрии VS Code. Чтобы отключить её, перейдите в Настройки > Телеметрия > Уровень телеметрии и установите значение "off". Перезапустите VS Code, чтобы применить изменение.',
   "settings.aboutKiloCode.telemetry.openSettings": "Открыть настройки телеметрии",
 
-  "settings.agentBehaviour.subtab.modes": "Режимы",
   "settings.agentBehaviour.subtab.agents": "Агенты",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-серверы",
   "settings.agentBehaviour.subtab.rules": "Правила",
@@ -1247,19 +1262,13 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Не суммировать большой вставленный контент",
   "settings.experimental.batch.title": "Пакетный инструмент",
   "settings.experimental.batch.description": "Включить пакетную обработку вызовов инструментов",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Поиск по коду",
   "settings.experimental.codebaseSearch.description": "Включить поиск на естественном языке с ИИ по всей кодовой базе",
-  "settings.experimental.agentManagerTool.title": "Инструмент Agent Manager",
-  "settings.experimental.agentManagerTool.description":
-    "Разрешить агентам запускать локальные сеансы Agent Manager и сеансы worktree через вызов инструмента",
   "settings.experimental.speechToText.title": "Речь в текст",
   "settings.experimental.speechToText.description":
     "Включите голосовой ввод в полях запросов, используя вашу учетную запись Kilo через Kilo Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Включите Kilo provider и войдите в него, чтобы использовать голосовой ввод в полях запросов.",
+    "Включите провайдер Kilo и выполните вход, чтобы использовать Speech to Text. В настоящее время Speech to Text поддерживается только с Kilo Gateway.",
   "settings.experimental.speechToTextModel.title": "Модель речи в текст",
   "settings.experimental.speechToTextModel.description":
     "Выберите модель транскрипции Kilo Gateway для голосового ввода.",
@@ -1284,6 +1293,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Выберите агента для настройки…",
   "settings.agentBehaviour.modelOverride.title": "Переопределение модели",
   "settings.agentBehaviour.modelOverride.description": "Переопределить модель по умолчанию для этого агента",
+  "settings.agentBehaviour.variantOverride.title": "Переопределение варианта",
+  "settings.agentBehaviour.variantOverride.description": "Переопределить вариант модели для этого агента",
   "settings.agentBehaviour.prompt.title": "Пользовательский промпт",
   "settings.agentBehaviour.prompt.description": "Дополнительный системный промпт для этого агента",
   "settings.agentBehaviour.temperature.title": "Температура",
@@ -1303,7 +1314,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Навыки не обнаружены. Добавьте пути к папкам навыков или URL-адреса ниже, чтобы сделать навыки доступными.",
   "settings.agentBehaviour.availableModes": "Доступные пользовательские режимы",
-  "settings.agentBehaviour.noModesFound": "Режимы не найдены.",
+  "settings.agentBehaviour.noAgentsFound": "Агенты не найдены.",
   "settings.agentBehaviour.createMode": "Создать новый режим",
   "settings.agentBehaviour.createMode.name": "Название",
   "settings.agentBehaviour.createMode.name.placeholder": "например, reviewer",
@@ -1349,10 +1360,9 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Скопировать разрешения как JSON",
   "settings.agentBehaviour.permissions.hint":
     "Правила оцениваются по порядку — побеждает последнее совпавшее правило. Это разрешенный набор правил из бэкенда CLI.",
-  "settings.agentBehaviour.removeMode.title": "Удалить режим",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Удалить режим "{{name}}"? Это отключит режим, обновив вашу конфигурацию.',
-  "settings.agentBehaviour.removeMode.button": "Удалить",
+  "settings.agentBehaviour.removeAgent.title": "Удалить агент",
+  "settings.agentBehaviour.removeAgent.confirm": 'Удалить агент "{{name}}"? Это отключит агент, обновив конфигурацию.',
+  "settings.agentBehaviour.removeAgent.button": "Удалить",
   "settings.agentBehaviour.removeMcp.title": "Удалить сервер MCP",
   "settings.agentBehaviour.removeMcp.confirm": 'Удалить сервер MCP "{{name}}"? Это удалит его из вашей конфигурации.',
   "settings.agentBehaviour.removeMcp.button": "Удалить",

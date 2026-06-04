@@ -5,19 +5,23 @@ import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.Cursor
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.event.MouseWheelListener
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JScrollBar
+import javax.swing.SwingUtilities
 
 internal class SessionScroll(
     private val root: SessionRootPanel,
@@ -47,6 +51,10 @@ internal class SessionScroll(
     private var opening = false
     private var stable = -1
     private var seq = 0
+    private var user = false
+    private var value = 0
+    private var question = false
+    private var restoring = false
 
     init {
         jump = JBLabel(ScrollButtonIcon.create()).apply {
@@ -59,6 +67,13 @@ internal class SessionScroll(
                 }
             })
         }
+        component.addMouseWheelListener(MouseWheelListener { user = true })
+        component.verticalScrollBar.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) {
+                user = true
+            }
+        })
+        component.viewport.addChangeListener { onViewport() }
         component.verticalScrollBar.addAdjustmentListener { onScroll() }
         root.addOverlay(jump) { _, child ->
             val size = child.preferredSize
@@ -72,6 +87,7 @@ internal class SessionScroll(
         }
     }
 
+    @RequiresEdt
     fun show(panel: JPanel) {
         if (component.viewport.view === panel) return
         (panel as? SessionEditorStyleTarget)?.applyStyle(style)
@@ -80,6 +96,7 @@ internal class SessionScroll(
         updateJump()
     }
 
+    @RequiresEdt
     fun atBottom(): Boolean {
         val bar = component.verticalScrollBar
         return when {
@@ -89,26 +106,44 @@ internal class SessionScroll(
         }
     }
 
+    @RequiresEdt
     fun followBottom(follow: Boolean) {
         if (!follow) {
             seq++
             updateJump()
             return
         }
+        user = false
         tail = true
         stable = -1
         auto = true
         show(messages)
         auto = false
         val id = ++seq
+        if (SwingUtilities.isEventDispatchThread()) {
+            followPass(id, FOLLOW_PASSES)
+            return
+        }
         ApplicationManager.getApplication().invokeLater {
             followPass(id, FOLLOW_PASSES)
         }
     }
 
+    @RequiresEdt
+    fun followTail() {
+        followBottom(component.viewport.view === messages && tail)
+    }
+
+    @RequiresEdt
+    fun following(): Boolean {
+        return component.viewport.view === messages && tail
+    }
+
+    @RequiresEdt
     fun openBottom(done: () -> Unit) {
         opening = true
         stable = -1
+        user = false
         tail = true
         auto = true
         show(messages)
@@ -119,22 +154,41 @@ internal class SessionScroll(
         }
     }
 
+    @RequiresEdt
     fun refresh() {
         updateJump()
     }
 
+    @RequiresEdt
+    fun setQuestionPending(value: Boolean) {
+        if (question == value) return
+        question = value
+        syncIcon()
+    }
+
+    @RequiresEdt
     fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        jump.icon = ScrollButtonIcon.create()
+        component.background = SessionUiStyle.View.transcript()
+        component.viewport.background = SessionUiStyle.View.transcript()
+        syncIcon()
         messages.applyStyle(style)
         val view = component.viewport.view
         if (view !== messages) (view as? SessionEditorStyleTarget)?.applyStyle(style)
         refresh()
     }
 
+    @RequiresEdt
+    private fun syncIcon() {
+        jump.icon = ScrollButtonIcon.create(question)
+        jump.toolTipText = KiloBundle.message(if (question) "session.scroll.question" else "session.scroll.bottom")
+    }
+
+    @RequiresEdt
     private fun jumpBottom() {
         opening = false
         stable = -1
+        user = false
         tail = true
         auto = true
         show(messages)
@@ -145,6 +199,7 @@ internal class SessionScroll(
         }
     }
 
+    @RequiresEdt
     private fun followPass(id: Int, remaining: Int) {
         if (id != seq || !tail) return
         auto = true
@@ -156,6 +211,7 @@ internal class SessionScroll(
         } finally {
             auto = false
         }
+        syncValue()
         if (remaining <= 0) {
             stable = -1
             return
@@ -168,6 +224,7 @@ internal class SessionScroll(
         }
     }
 
+    @RequiresEdt
     private fun openPass(id: Int, remaining: Int, done: () -> Unit) {
         if (id != seq) {
             opening = false
@@ -184,6 +241,7 @@ internal class SessionScroll(
         } finally {
             auto = false
         }
+        syncValue()
         if (remaining <= 0) {
             opening = false
             stable = -1
@@ -198,10 +256,12 @@ internal class SessionScroll(
         }
     }
 
+    @RequiresEdt
     private fun layoutScroll() {
         root.validate()
     }
 
+    @RequiresEdt
     private fun scrollToBottom() {
         val view = component.viewport.view ?: return
         val y = (view.height - component.viewport.extentSize.height).coerceAtLeast(0)
@@ -211,28 +271,66 @@ internal class SessionScroll(
         bar.value = bottom()
     }
 
+    @RequiresEdt
+    private fun onViewport() {
+        if (restoring || auto || opening || user || tail || component.viewport.view !== messages) return
+        val y = value.coerceIn(0, bottom())
+        if (component.viewport.viewPosition.y == y && bar.value == y) return
+        restoring = true
+        try {
+            component.viewport.viewPosition = Point(0, y)
+            bar.value = y
+        } finally {
+            restoring = false
+        }
+        updateJump()
+    }
+
+    @RequiresEdt
     private fun bottom(): Int {
         val bar = component.verticalScrollBar
         return (bar.maximum - bar.visibleAmount).coerceAtLeast(bar.minimum)
     }
 
+    @RequiresEdt
     private fun onScroll() {
+        val moved = bar.value != value
+        syncValue()
         if (auto || opening) {
             updateJump()
             return
         }
         if (component.viewport.view === messages) {
-            tail = atBottom()
-            if (!tail) seq++
+            val bottom = atBottom()
+            if (bottom) {
+                tail = true
+                user = false
+                updateJump()
+                return
+            }
+            if (tail && (!user || !moved)) {
+                user = false
+                followBottom(true)
+                return
+            }
+            tail = false
+            user = false
+            seq++
         }
         updateJump()
     }
 
+    @RequiresEdt
     private fun updateJump() {
         val visible = component.viewport.view === messages && !atBottom()
         if (jump.isVisible == visible) return
         jump.isVisible = visible
         root.overlay.revalidate()
         root.overlay.repaint()
+    }
+
+    @RequiresEdt
+    private fun syncValue() {
+        value = bar.value
     }
 }

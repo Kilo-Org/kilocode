@@ -28,27 +28,38 @@ import type { MarkdocNextJsPageProps } from "@markdoc/next.js"
 const TITLE = "Kilo Code Documentation"
 const DESCRIPTION = "Build, ship, and iterate faster with the most popular open source coding agent."
 
-function collectHeadings(node, sections = []) {
+function slugify(label) {
+  return label
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+}
+
+function collectHeadings(node, sections = [], tab = undefined) {
   if (node) {
-    // Skip headings inside tabs - they're not always visible
     if (node.name === "Tabs") {
+      for (const child of node.children || []) {
+        const label = child.attributes?.label
+        collectHeadings(child, sections, typeof label === "string" ? { label, slug: slugify(label) } : undefined)
+      }
       return sections
     }
 
     if (node.name === "Heading") {
-      const title = node.children[0]
+      const title = typeof node.children[0] === "string" ? node.children[0].trim() : node.children[0]
 
       if (typeof title === "string") {
         sections.push({
           ...node.attributes,
           title,
+          tab,
         })
       }
     }
 
     if (node.children) {
       for (const child of node.children) {
-        collectHeadings(child, sections)
+        collectHeadings(child, sections, tab)
       }
     }
   }

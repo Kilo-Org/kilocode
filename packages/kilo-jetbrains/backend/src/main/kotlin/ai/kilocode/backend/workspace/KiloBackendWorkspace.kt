@@ -264,7 +264,7 @@ class KiloBackendWorkspace(
     )
 
     private fun fetch(path: String): String {
-        val request = Request.Builder().url("http://localhost:$port$path").get().build()
+        val request = Request.Builder().url("http://127.0.0.1:$port$path").get().build()
         http.newCall(request).execute().use { response ->
             val raw = response.body?.string().orEmpty()
             if (!response.isSuccessful) throw RuntimeException("HTTP ${response.code}: $raw")
@@ -291,8 +291,8 @@ class KiloBackendWorkspace(
     }
 
     private fun setWorkspaceError(message: String, errors: List<LoadError>) {
-        _state.value = KiloWorkspaceState.Error(message, errors)
         log.warn("Workspace error [$directory]: $message")
+        _state.value = KiloWorkspaceState.Error(message, errors)
     }
 
     private data class FetchResult<T>(val value: T?, val error: LoadError?) {

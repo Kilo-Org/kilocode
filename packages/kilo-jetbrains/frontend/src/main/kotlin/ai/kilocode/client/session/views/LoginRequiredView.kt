@@ -3,10 +3,13 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.views.base.BaseQuestionView
+import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.components.BorderLayoutPanel
+import java.awt.Container
+import javax.swing.JButton
 
 /**
  * Retained inline view shown at the bottom of the transcript when a session
@@ -19,11 +22,12 @@ import com.intellij.util.ui.components.BorderLayoutPanel
 class LoginRequiredView(
     private val openProfile: () -> Unit,
     private val dismiss: () -> Unit,
+    selection: SessionSelection? = null,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, SessionView {
 
     override val sessionViewKind = SessionView.Kind.Default
 
-    private val card = BaseQuestionView()
+    private val card = BaseQuestionView(selection)
 
     private val ID_DISMISS = "dismiss"
     private val ID_OPEN = "open"
@@ -63,8 +67,19 @@ class LoginRequiredView(
     }
 
     // Test helpers — return generic JButton to keep SessionQuestionButton internal
-    internal fun openProfileButton() = card.actionButtonsForTest()[ID_OPEN]!!
-    internal fun dismissButton() = card.actionButtonsForTest()[ID_DISMISS]!!
+    internal fun openProfileButton() = button(KiloBundle.message("session.login.required.button"))
+    internal fun dismissButton() = button(KiloBundle.message("session.login.required.dismiss"))
+
+    private fun button(text: String) = buttons(card).first { it.text == text }
+
+    private fun buttons(root: Container): List<JButton> {
+        val result = mutableListOf<JButton>()
+        if (root is JButton) result.add(root)
+        for (child in root.components) {
+            if (child is Container) result.addAll(buttons(child))
+        }
+        return result
+    }
 
     private fun refresh() {
         revalidate()

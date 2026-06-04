@@ -1,5 +1,7 @@
 import type { Part, TokenUsage } from "./parts"
 
+export type SessionCloseReason = "completed" | "error" | "interrupted"
+
 // Message structure (simplified for webview)
 export interface Message {
   id: string

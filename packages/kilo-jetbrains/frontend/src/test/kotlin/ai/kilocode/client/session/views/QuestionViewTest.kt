@@ -25,7 +25,7 @@ import javax.swing.SwingUtilities
 @Suppress("UnstableApiUsage")
 class QuestionViewTest : BasePlatformTestCase() {
 
-    private val replies = mutableListOf<Pair<String, QuestionReplyDto>>()
+    private val replies = mutableListOf<Triple<String, QuestionReplyDto, List<List<String>>>>()
     private val rejects = mutableListOf<String>()
     private var scrolls = 0
     private lateinit var view: QuestionView
@@ -34,7 +34,7 @@ class QuestionViewTest : BasePlatformTestCase() {
         super.setUp()
         view = QuestionView(
             project = project,
-            reply = { id, dto -> replies.add(id to dto) },
+            reply = { id, dto, opts -> replies.add(Triple(id, dto, opts)) },
             reject = { id -> rejects.add(id) },
             scroll = { scrolls++ },
         )
@@ -128,6 +128,12 @@ class QuestionViewTest : BasePlatformTestCase() {
         assertTrue(findAll<JBCheckBox>(view).isEmpty())
     }
 
+    fun `test single question hides progress summary`() {
+        view.show(singleSelectQuestion("req_summary"))
+
+        assertTrue(findAll<JBLabel>(view).none { it.text == "1 of 1 questions" && it.isVisible })
+    }
+
     fun `test single question submit sends selected answer`() {
         view.show(singleSelectQuestion("req_2"))
 
@@ -139,6 +145,7 @@ class QuestionViewTest : BasePlatformTestCase() {
         assertEquals(1, replies.size)
         assertEquals("req_2", replies.single().first)
         assertEquals(listOf(listOf("Minimal")), replies.single().second.answers)
+        assertEquals(listOf(listOf("Minimal")), replies.single().third)
     }
 
     fun `test submit is disabled until question is answered`() {
@@ -508,6 +515,7 @@ class QuestionViewTest : BasePlatformTestCase() {
 
     fun `test selection requests scroll to bottom`() {
         view.show(singleSelectQuestion("q_scroll"))
+        scrolls = 0
 
         option<JBRadioButton>(view, "Minimal").doClick()
 
@@ -516,6 +524,7 @@ class QuestionViewTest : BasePlatformTestCase() {
 
     fun `test question navigation requests scroll to bottom`() {
         view.show(twoItemQuestion("q_nav_scroll"))
+        scrolls = 0
 
         option<JBRadioButton>(view, "Minimal").doClick()
         button(view, "Next").doClick()
@@ -594,6 +603,37 @@ class QuestionViewTest : BasePlatformTestCase() {
         assertFalse(view.isVisible)
         assertEquals(1, replies.size)
         assertEquals(listOf(listOf("my custom answer")), replies.single().second.answers)
+        assertEquals(listOf(emptyList<String>()), replies.single().third)
+    }
+
+    fun `test plan follow-up sends selected option labels separately`() {
+        view.show(
+            Question(
+                id = "q_plan",
+                items = listOf(
+                    QuestionItem(
+                        question = "Ready to implement?",
+                        header = "Implement",
+                        options = listOf(
+                            QuestionOption("Start new session", "Implement in a fresh session with a clean context"),
+                            QuestionOption("Continue here", "Implement the plan in this session", mode = "code"),
+                        ),
+                        multiple = false,
+                        custom = true,
+                    )
+                ),
+            )
+        )
+
+        assertLabelsContain(view, "Ready to implement?")
+        assertLabelsContain(view, "Start new session")
+        assertLabelsContain(view, "Continue here")
+        assertLabelsContain(view, "Add your own response")
+        option<JBRadioButton>(view, "Continue here").doClick()
+        button(view, "Submit").doClick()
+
+        assertEquals(listOf(listOf("Continue here")), replies.single().second.answers)
+        assertEquals(listOf(listOf("Continue here")), replies.single().third)
     }
 
     fun `test custom editor grows for wrapped input`() {
@@ -664,6 +704,18 @@ class QuestionViewTest : BasePlatformTestCase() {
         option<JBRadioButton>(view, "Minimal").doClick()
 
         assertNull("Empty custom editor should be removed after selecting a normal option", findAll<EditorTextField>(view).firstOrNull { it.parent != null })
+    }
+
+    fun `test empty custom editor is detached after forcing underlying editor creation`() {
+        view.show(customSingleQuestion("q_custom_editor_release"))
+        findAll<JBRadioButton>(view).first { it.actionCommand == "" }.doClick()
+        val field = findAll<EditorTextField>(view).first()
+        val editor = field.getEditor(true)
+        assertSame(editor, field.getEditor(false))
+
+        option<JBRadioButton>(view, "Minimal").doClick()
+
+        assertNull(SwingUtilities.getAncestorOfClass(QuestionView::class.java, field))
     }
 
     fun `test focusing retained custom editor reselects custom response`() {

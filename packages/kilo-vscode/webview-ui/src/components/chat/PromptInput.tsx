@@ -801,6 +801,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       return undefined
     })
     if (hasGit() && hasGitChangesMention(message) && !gitFile) return
+    if (isDisabled()) return
 
     const allFiles = [
       ...mentionFiles,

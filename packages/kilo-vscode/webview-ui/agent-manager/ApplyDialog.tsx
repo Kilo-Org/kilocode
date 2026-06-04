@@ -4,7 +4,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import type { AgentManagerApplyWorktreeDiffStatus, WorktreeFileDiff } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
-import { FileTree } from "./FileTree"
+import { FileTree } from "../diff-viewer/FileTree"
 import { mapApplyConflictReason, type ApplyConflictRow } from "./apply-conflicts"
 
 interface ApplyDialogProps {

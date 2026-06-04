@@ -8,7 +8,7 @@ description: "Using Kilo Code on iOS and Android"
 Use Kilo Code from your phone to keep coding sessions moving while you are away from your desk. The mobile app connects to Cloud Agents, KiloClaw, and remote sessions from your local CLI or editor extensions.
 
 {% callout type="info" title="Android app available now" %}
-Install Kilo Code for Android from [Google Play](https://kilocode.onelink.me/ZzZZ/r10ni4zy).
+Install Kilo Code for Android from [Google Play](https://play.google.com/store/apps/details?id=com.kilocode.kiloapp).
 {% /callout %}
 
 ## What you can do
@@ -39,7 +39,7 @@ The mobile app lets you:
 
 The Android app is available now on Google Play.
 
-[Install the Android app →](https://kilocode.onelink.me/ZzZZ/r10ni4zy)
+[Install the Android app →](https://play.google.com/store/apps/details?id=com.kilocode.kiloapp)
 
 ## iOS App
 

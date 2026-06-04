@@ -1,10 +1,10 @@
 package ai.kilocode.backend.cli
 
+import ai.kilocode.KiloPlugin
+import ai.kilocode.backend.dev.KiloDevMode
 import ai.kilocode.log.KiloLog
-import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.application.PathManager
-import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.system.CpuArch
 import kotlinx.coroutines.Dispatchers
@@ -122,45 +122,8 @@ class KiloBackendCliManager(
     }
 
     // Must be called from a background thread — devStorageEnv() performs blocking I/O (mkdirs).
-    internal fun buildEnv(pwd: String, base: Map<String, String> = System.getenv()): Map<String, String> = buildMap {
-        putAll(base)
-        put("KILO_SERVER_PASSWORD", pwd)
-        put("KILO_CLIENT", "jetbrains")
-        put("KILO_ENABLE_QUESTION_TOOL", "true")
-        put("KILO_PLATFORM", "jetbrains")
-        put("KILO_APP_NAME", "kilo-code")
-        put("KILO_DISABLE_CLAUDE_CODE", "true")
-        put("KILOCODE_FEATURE", "jetbrains-plugin")
-        ideEnv().forEach { (k, v) -> put(k, v) }
-        devStorageEnv()?.forEach { (k, v) -> put(k, v) }
-    }
-
-    private fun devStorageEnv(): Map<String, String>? {
-        val enabled = System.getProperty("kilo.dev.storage.isolated", "false").toBoolean()
-        if (!enabled) return null
-        val root = System.getProperty("kilo.dev.worktree.root") ?: run {
-            log.warn("kilo.dev.storage.isolated=true but kilo.dev.worktree.root is not set; skipping dev storage isolation")
-            return null
-        }
-        val dev = File(root, ".kilo-dev")
-        val data = File(dev, "data")
-        val config = File(dev, "config")
-        val state = File(dev, "state")
-        val cache = File(dev, "cache")
-        for (dir in listOf(data, config, state, cache)) {
-            if (!dir.mkdirs() && !dir.isDirectory) {
-                log.warn("Failed to create dev storage dir ${dir.absolutePath}; skipping dev storage isolation")
-                return null
-            }
-        }
-        log.info("Dev storage isolation enabled under ${dev.absolutePath}")
-        return mapOf(
-            "XDG_DATA_HOME" to data.absolutePath,
-            "XDG_CONFIG_HOME" to config.absolutePath,
-            "XDG_STATE_HOME" to state.absolutePath,
-            "XDG_CACHE_HOME" to cache.absolutePath,
-        )
-    }
+    internal fun buildEnv(pwd: String, base: Map<String, String> = System.getenv()): Map<String, String> =
+        buildKiloCliEnv(pwd, base, log)
 
     private suspend fun spawn(cli: File): CliServer.State =
         withContext(Dispatchers.IO) {
@@ -176,7 +139,12 @@ class KiloBackendCliManager(
 
             log.info("Starting CLI: ${cmd.joinToString(" ")}")
             log.info("CLI env: KILO_CLIENT=jetbrains KILO_PLATFORM=jetbrains KILO_APP_NAME=kilo-code")
-            val proc = builder.start()
+            val proc = try {
+                builder.start()
+            } catch (e: Exception) {
+                log.warn("CLI process failed to start: ${e.message}", e)
+                throw e
+            }
             log.info("CLI process started (pid=${proc.pid()})")
             process = proc
             install(proc)
@@ -210,6 +178,7 @@ class KiloBackendCliManager(
             val details = synchronized(stderr) { stderr.toString().trim() }
             process = null
             uninstall()
+            log.warn("CLI process exited with code $code before announcing a port: $details")
             CliServer.State.Error(
                 message = "CLI process exited with code $code before announcing a port",
                 details = details.ifEmpty { null },
@@ -276,38 +245,86 @@ class KiloBackendCliManager(
         return "$os-$arch"
     }
 
-    private fun ideEnv(): Map<String, String> = buildMap {
-        runCatching {
-            val info = ApplicationInfo.getInstance()
-            val name = info.fullApplicationName
-            val build = info.build.asString()
-            put("KILO_EDITOR_NAME", name)
-            put("KILOCODE_EDITOR_NAME", "$name $build")
-        }.onFailure { log.info("Could not read ApplicationInfo: ${it.message}") }
-
-        runCatching {
-            val version = PluginManagerCore
-                .getPlugin(PluginId.getId("ai.kilocode"))?.version
-            if (version != null) put("KILO_APP_VERSION", version)
-        }.onFailure { log.info("Could not read plugin version: ${it.message}") }
-
-        runCatching {
-            put("KILO_MACHINE_ID", machineId())
-        }.onFailure { log.info("Could not read machine ID: ${it.message}") }
-    }
-
-    private fun machineId(): String {
-        val file = File(PathManager.getSystemPath(), "kilo/machine-id")
-        if (file.exists()) return file.readText().trim()
-        val id = UUID.randomUUID().toString()
-        file.parentFile.mkdirs()
-        file.writeText(id)
-        return id
-    }
-
     private fun generatePassword(): String {
         val bytes = ByteArray(32)
         SecureRandom().nextBytes(bytes)
         return bytes.joinToString("") { "%02x".format(it) }
     }
+}
+
+private const val DEFAULT_CONFIG = """{"permission":{"edit":"ask","bash":"ask"}}"""
+
+// Must be called from a background thread — devStorageEnv() performs blocking I/O (mkdirs).
+internal fun buildKiloCliEnv(
+    pwd: String,
+    base: Map<String, String> = System.getenv(),
+    log: KiloLog = KiloLog.create(KiloBackendCliManager::class.java),
+): Map<String, String> = buildMap {
+    putAll(base)
+    put("KILO_SERVER_PASSWORD", pwd)
+    put("KILO_CLIENT", "jetbrains")
+    put("KILO_ENABLE_QUESTION_TOOL", "true")
+    put("KILO_PLATFORM", "jetbrains")
+    put("KILO_APP_NAME", "kilo-code")
+    put("KILO_TELEMETRY_LEVEL", if (KiloDevMode.enabled()) "off" else "all")
+    put("KILO_DISABLE_CLAUDE_CODE", "true")
+    put("KILOCODE_FEATURE", "jetbrains-plugin")
+    putIfAbsent("KILO_CONFIG_CONTENT", DEFAULT_CONFIG)
+    ideEnv(log).forEach { entry -> put(entry.key, entry.value) }
+    devStorageEnv(log)?.forEach { entry -> put(entry.key, entry.value) }
+}
+
+private fun ideEnv(log: KiloLog): Map<String, String> = buildMap {
+    runCatching {
+        val info = ApplicationInfo.getInstance()
+        val name = info.fullApplicationName
+        val build = info.build.asString()
+        put("KILO_EDITOR_NAME", name)
+        put("KILOCODE_EDITOR_NAME", "$name $build")
+    }.onFailure { log.info("Could not read ApplicationInfo: ${it.message}") }
+
+    runCatching {
+        val version = KiloPlugin.version()
+        if (version != null) put("KILO_APP_VERSION", version)
+    }.onFailure { log.info("Could not read plugin version: ${it.message}") }
+
+    runCatching {
+        put("KILO_MACHINE_ID", machineId())
+    }.onFailure { log.info("Could not read machine ID: ${it.message}") }
+}
+
+private fun machineId(): String {
+    val file = File(PathManager.getSystemPath(), "kilo/machine-id")
+    if (file.exists()) return file.readText().trim()
+    val id = UUID.randomUUID().toString()
+    file.parentFile.mkdirs()
+    file.writeText(id)
+    return id
+}
+
+private fun devStorageEnv(log: KiloLog): Map<String, String>? {
+    val enabled = System.getProperty("kilo.dev.storage.isolated", "false").toBoolean()
+    if (!enabled) return null
+    val root = System.getProperty("kilo.dev.worktree.root") ?: run {
+        log.warn("kilo.dev.storage.isolated=true but kilo.dev.worktree.root is not set; skipping dev storage isolation")
+        return null
+    }
+    val dev = File(root, ".kilo-dev")
+    val data = File(dev, "data")
+    val config = File(dev, "config")
+    val state = File(dev, "state")
+    val cache = File(dev, "cache")
+    for (dir in listOf(data, config, state, cache)) {
+        if (!dir.mkdirs() && !dir.isDirectory) {
+            log.warn("Failed to create dev storage dir ${dir.absolutePath}; skipping dev storage isolation")
+            return null
+        }
+    }
+    log.info("Dev storage isolation enabled under ${dev.absolutePath}")
+    return mapOf(
+        "XDG_DATA_HOME" to data.absolutePath,
+        "XDG_CONFIG_HOME" to config.absolutePath,
+        "XDG_STATE_HOME" to state.absolutePath,
+        "XDG_CACHE_HOME" to cache.absolutePath,
+    )
 }

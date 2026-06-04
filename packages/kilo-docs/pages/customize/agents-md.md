@@ -57,21 +57,25 @@ my-project/
 The filename must be uppercase (`AGENTS.md`), not lowercase (`agents.md`). This ensures consistency across different operating systems and tools.
 {% /callout %}
 
-### Subdirectory AGENTS.md Files
+### Per-Directory AGENTS.md Files
 
-You can also place AGENTS.md files in subdirectories to provide context-specific instructions:
+You can place AGENTS.md files in subdirectories to provide context-specific instructions when the agent accesses files in those locations:
 
 ```
 my-project/
 ├── AGENTS.md                    # Root-level instructions
 ├── src/
 │   └── backend/
-│       └── AGENTS.md            # Backend-specific instructions
+│       └── AGENTS.md            # Backend-specific instructions (loaded when reading backend files)
 └── docs/
-    └── AGENTS.md                # Documentation-specific instructions
+    └── AGENTS.md                # Documentation-specific instructions (loaded when reading docs files)
 ```
 
-When working in a subdirectory, Kilo Code will load both the root AGENTS.md and any subdirectory AGENTS.md files, with subdirectory files taking precedence for conflicting instructions.
+{% callout type="info" %}
+Per-directory AGENTS.md files are **dynamically loaded** when the agent reads files in that directory - they are not pre-loaded at session start. When the agent reads a file in `src/backend/`, the corresponding `AGENTS.md` is discovered and its contents are injected into the conversation as `<system-reminder>` tags.
+
+This is useful for providing context-specific guidance for different parts of a monorepo or project.
+{% /callout %}
 
 ## File Protection
 

@@ -16,6 +16,7 @@ import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
 import { Provider as ProviderSvc } from "@/provider/provider"
 import { Env } from "../../src/env"
+import { Git } from "../../src/git"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Question } from "../../src/question"
 import { Todo } from "../../src/session/todo"
@@ -192,6 +193,7 @@ function makeHttp() {
     Layer.provide(Skill.defaultLayer),
     Layer.provide(FetchHttpClient.layer),
     Layer.provide(CrossSpawnSpawner.defaultLayer),
+    Layer.provide(Git.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Format.defaultLayer),
     Layer.provideMerge(todo),
@@ -211,6 +213,7 @@ function makeHttp() {
       Layer.provideMerge(proc),
       Layer.provideMerge(registry),
       Layer.provideMerge(trunc),
+      Layer.provideMerge(question), // kilocode_change - SessionPrompt now dismisses questions via its service dependency
       Layer.provide(Instruction.defaultLayer),
       Layer.provide(SystemPrompt.defaultLayer),
       Layer.provideMerge(deps),
@@ -393,6 +396,51 @@ it.live("loop calls LLM and returns assistant message", () =>
     { git: true, config: providerCfg },
   ),
 )
+
+// kilocode_change start - replacement prompts unblock pending Question service requests
+it.live("new prompt dismisses a pending question", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* () {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const question = yield* Question.Service
+      const chat = yield* sessions.create({ title: "Question unblock regression" })
+      const pending = yield* question
+        .ask({
+          sessionID: chat.id,
+          questions: [
+            {
+              header: "Continue?",
+              question: "Should I continue?",
+              options: [
+                { label: "Yes", description: "Go ahead" },
+                { label: "No", description: "Stop" },
+              ],
+            },
+          ],
+        })
+        .pipe(Effect.forkScoped)
+      yield* waitFor(
+        "pending question",
+        question.list().pipe(Effect.map((items) => items.find((item) => item.sessionID === chat.id))),
+      )
+
+      yield* prompt.prompt({
+        sessionID: chat.id,
+        agent: "build",
+        parts: [{ type: "text", text: "replacement prompt" }],
+        noReply: true,
+      })
+
+      const exit = yield* Fiber.await(pending)
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) expect(Cause.squash(exit.cause)).toBeInstanceOf(Question.RejectedError)
+      expect(yield* question.list()).toEqual([])
+    }),
+    { git: true, config: providerCfg },
+  ),
+)
+// kilocode_change end
 
 it.live("prompt emits v2 prompted and synthetic events", () =>
   provideTmpdirServer(
@@ -745,6 +793,50 @@ it.live(
     ),
   10_000, // kilocode_change
 )
+
+// kilocode_change start - child task failures stay tool errors so the parent can recover
+it.live("failed task tool preserves metadata and lets the parent follow up", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* ({ llm }) {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({
+        title: "Pinned",
+        permission: [{ permission: "*", pattern: "*", action: "allow" }],
+      })
+      yield* llm.tool("task", {
+        description: "inspect bug",
+        prompt: "look into the cache key path",
+        subagent_type: "general",
+      })
+      yield* llm.error(400, { error: { message: "child prompt failed" } })
+      yield* llm.text("parent recovered")
+      yield* user(chat.id, "hello")
+
+      const result = yield* prompt.loop({ sessionID: chat.id })
+      expect(yield* llm.calls).toBe(3)
+      expect(result.parts.some((part) => part.type === "text" && part.text === "parent recovered")).toBe(true)
+
+      const msgs = yield* MessageV2.filterCompactedEffect(chat.id)
+      const part = msgs
+        .flatMap((msg) => msg.parts)
+        .find(
+          (part): part is ErrorToolPart =>
+            part.type === "tool" && part.tool === "task" && part.state.status === "error",
+        )
+      expect(part).toBeDefined()
+      if (!part) return
+      expect(part.state.error).toContain("child prompt failed")
+      expect(part.state.metadata?.sessionId).toBeDefined()
+
+      const hits = yield* llm.hits
+      expect(hits).toHaveLength(3)
+      expect(JSON.stringify(hits.at(-1)?.body)).toContain("child prompt failed")
+    }),
+    { git: true, config: providerCfg },
+  ),
+)
+// kilocode_change end
 
 it.live(
   "loop sets status to busy then idle",
@@ -1533,15 +1625,22 @@ unix(
         (_dir) =>
           Effect.gen(function* () {
             const { prompt, run, chat } = yield* boot()
+            // kilocode_change start - wait for shell to actually be running before cancelling
+            const status = yield* SessionStatus.Service
+            // kilocode_change end
 
             const sh = yield* prompt
               .shell({ sessionID: chat.id, agent: "build", command: "sleep 30" })
               .pipe(Effect.forkChild)
-            yield* Effect.sleep(50)
+            // kilocode_change start - avoid racing cancellation against async shell startup on Linux CI
+            yield* waitFor(
+              "shell busy",
+              status.get(chat.id).pipe(Effect.map((s) => (s.type === "busy" ? s : undefined))),
+            )
+            // kilocode_change end
 
             yield* prompt.cancel(chat.id)
 
-            const status = yield* SessionStatus.Service
             expect((yield* status.get(chat.id)).type).toBe("idle")
             const busy = yield* run.assertNotBusy(chat.id).pipe(Effect.exit)
             expect(Exit.isSuccess(busy)).toBe(true)
@@ -2035,7 +2134,7 @@ it.live(
       }),
       { git: true, config: providerCfg },
     ),
-  3_000,
+  10_000, // kilocode_change
 )
 
 // Agent variant

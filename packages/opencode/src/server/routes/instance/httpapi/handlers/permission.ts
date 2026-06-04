@@ -2,8 +2,9 @@ import { AllowEverythingPermission } from "@/kilocode/permission/allow-everythin
 import { Permission } from "@/permission"
 import { PermissionID } from "@/permission/schema"
 import { Effect, Schema } from "effect"
-import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
+import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { InstanceHttpApi } from "../api"
+import { notFound } from "../errors" // kilocode_change
 import { AllowEverythingBody, SaveAlwaysRulesBody } from "../groups/permission" // kilocode_change
 
 export const permissionHandlers = HttpApiBuilder.group(InstanceHttpApi, "permission", (handlers) =>
@@ -23,7 +24,7 @@ export const permissionHandlers = HttpApiBuilder.group(InstanceHttpApi, "permiss
         reply: ctx.payload.reply,
         message: ctx.payload.message,
       })
-      if (!ok) return yield* new HttpApiError.NotFound({}) // kilocode_change
+      if (!ok) return yield* notFound(`Permission request not found: ${ctx.params.requestID}`) // kilocode_change
       return true
     })
 
@@ -37,7 +38,7 @@ export const permissionHandlers = HttpApiBuilder.group(InstanceHttpApi, "permiss
         approvedAlways: ctx.payload.approvedAlways ? [...ctx.payload.approvedAlways] : undefined,
         deniedAlways: ctx.payload.deniedAlways ? [...ctx.payload.deniedAlways] : undefined,
       })
-      if (!ok) return yield* new HttpApiError.NotFound({})
+      if (!ok) return yield* notFound(`Permission request not found: ${ctx.params.requestID}`)
       return true
     })
     // kilocode_change end

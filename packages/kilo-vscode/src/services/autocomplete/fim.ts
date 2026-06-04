@@ -1,6 +1,8 @@
 import { ResponseMetaData } from "./types"
 import type { KiloConnectionService } from "../cli-backend"
-import { getAutocompleteModel } from "../../shared/autocomplete-models"
+import { getAutocompleteModelById } from "../../shared/autocomplete-models"
+
+const FIM_MAX_TOKENS = 256
 
 /**
  * Generate a FIM (Fill-in-the-Middle) completion via the CLI backend.
@@ -17,7 +19,7 @@ export async function generateFim(
   signal?: AbortSignal,
 ): Promise<ResponseMetaData> {
   const client = await connectionService.getClientAsync()
-
+  const info = getAutocompleteModelById(modelId)
   let cost = 0
   let inputTokens = 0
   let outputTokens = 0
@@ -27,15 +29,16 @@ export async function generateFim(
   // ends the stream. Without this, errors never reach ErrorBackoff.
   let sseError: Error | undefined
 
-  const temp = getAutocompleteModel(modelId).temperature
+  console.info(`[FIM] request provider=${info.providerID} model=${info.requestModel} url=/kilo/fim`)
 
   const { stream } = await client.kilo.fim(
     {
       prefix,
       suffix,
-      model: modelId,
-      maxTokens: 256,
-      temperature: temp,
+      provider: info.providerID,
+      model: info.modelID,
+      maxTokens: FIM_MAX_TOKENS,
+      temperature: info.temperature,
     },
     {
       signal,

@@ -1,18 +1,20 @@
 // kilocode_change - new file
-import { Telemetry } from "@kilocode/kilo-telemetry"
+import { Telemetry, type ReviewCommand } from "@kilocode/kilo-telemetry"
 import { SessionNetwork } from "@/session/network"
 import type { SessionID } from "@/session/schema"
 import type { SessionStatus } from "@/session/status"
 import { MessageV2 } from "@/session/message-v2"
 import { isRecord } from "@/util/record"
+import { isReviewCommand, parseReviewCommand } from "@/kilocode/review/command"
 import * as Log from "@opencode-ai/core/util/log"
 import { Effect } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { EffectBridge } from "@/effect/bridge"
 
 export type ReviewTelemetry = {
   mode: "review"
   feature: "code_reviews"
-  command: "review" | "local-review" | "local-review-uncommitted"
+  command: ReviewCommand
   tool?: "suggest"
 }
 
@@ -25,16 +27,8 @@ export namespace KiloSessionProcessor {
     "The provider ended the response with an error before returning details. Start a new message to retry; Kilo will compact the oversized conversation first if needed."
 
   export function reviewTelemetry(command: string | undefined): ReviewTelemetry | undefined {
-    if (command === "review" || command === "local-review" || command === "local-review-uncommitted") {
-      return { mode: "review", feature: "code_reviews", command }
-    }
-  }
-
-  function command(prompt: string | undefined) {
-    if (!prompt?.startsWith("/")) return
-    const name = prompt.slice(1).split(/\s/, 1)[0]
-    if (!name) return
-    return name
+    if (!isReviewCommand(command)) return
+    return { mode: "review", feature: "code_reviews", command }
   }
 
   /**
@@ -72,7 +66,7 @@ export namespace KiloSessionProcessor {
     if (!isRecord(metadata)) return
     if (!isRecord(metadata.accepted)) return
     const prompt = typeof metadata.accepted.prompt === "string" ? metadata.accepted.prompt : undefined
-    const tel = reviewTelemetry(command(prompt))
+    const tel = reviewTelemetry(parseReviewCommand(prompt))
     if (!tel) return
     return { ...tel, tool: "suggest" }
   }
@@ -134,7 +128,7 @@ export namespace KiloSessionProcessor {
     return Effect.gen(function* () {
       const msg = SessionNetwork.message(input.error)
 
-      const { id, promise } = yield* Effect.promise(() =>
+      const { id, promise } = yield* EffectBridge.fromPromise(() =>
         SessionNetwork.ask({
           sessionID: input.sessionID,
           message: msg,

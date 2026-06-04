@@ -8,16 +8,20 @@ export type Event =
   | EventServerConnected
   | EventGlobalDisposed
   | EventGlobalConfigUpdated
-  | EventServerInstanceDisposed
-  | EventLspClientDiagnostics
-  | EventLspUpdated
-  | EventQuestionAsked
-  | EventQuestionReplied
-  | EventQuestionRejected
   | EventTuiPromptAppend
   | EventTuiCommandExecute
   | EventTuiToastShow1
   | EventTuiSessionSelect
+  | EventKilocodeAgentManagerStart
+  | EventIndexingStatus
+  | EventServerInstanceDisposed
+  | EventFileEdited
+  | EventFileWatcherUpdated
+  | EventQuestionAsked
+  | EventQuestionReplied
+  | EventQuestionRejected
+  | EventLspClientDiagnostics
+  | EventLspUpdated
   | EventMcpToolsChanged
   | EventMcpBrowserOpenFailed
   | EventSessionNetworkAsked
@@ -35,8 +39,6 @@ export type Event =
   | EventSessionError
   | EventInstallationUpdated
   | EventInstallationUpdateAvailable
-  | EventFileEdited
-  | EventFileWatcherUpdated
   | EventTodoUpdated
   | EventSessionStatus
   | EventSessionIdle
@@ -46,7 +48,6 @@ export type Event =
   | EventSessionCompacted
   | EventCommandExecuted
   | EventProjectUpdated
-  | EventKilocodeAgentManagerStart
   | EventVcsBranchUpdated
   | EventKiloSessionsRemoteStatusChanged
   | EventWorkspaceReady
@@ -91,7 +92,6 @@ export type Event =
   | EventSessionNextCompactionStarted
   | EventSessionNextCompactionDelta
   | EventSessionNextCompactionEnded
-  | EventIndexingStatus
 
 export type OAuth = {
   type: "oauth"
@@ -117,6 +117,71 @@ export type WellKnownAuth = {
 }
 
 export type Auth = OAuth | ApiAuth | WellKnownAuth
+
+export type EventTuiPromptAppend = {
+  id: string
+  type: "tui.prompt.append"
+  properties: {
+    text: string
+  }
+}
+
+export type EventTuiCommandExecute = {
+  id: string
+  type: "tui.command.execute"
+  properties: {
+    command:
+      | "session.list"
+      | "session.new"
+      | "session.share"
+      | "session.interrupt"
+      | "session.compact"
+      | "session.page.up"
+      | "session.page.down"
+      | "session.line.up"
+      | "session.line.down"
+      | "session.half.page.up"
+      | "session.half.page.down"
+      | "session.first"
+      | "session.last"
+      | "prompt.clear"
+      | "prompt.submit"
+      | "agent.cycle"
+      | string
+  }
+}
+
+export type EventTuiToastShow = {
+  id: string
+  type: "tui.toast.show"
+  properties: {
+    title?: string
+    message: string
+    variant: "info" | "success" | "warning" | "error"
+    duration?: number
+  }
+}
+
+export type EventTuiSessionSelect = {
+  id: string
+  type: "tui.session.select"
+  properties: {
+    /**
+     * Session ID to navigate to
+     */
+    sessionID: string
+  }
+}
+
+export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
+
+export type IndexingStatus = {
+  state: IndexingStatusState
+  message: string
+  processedFiles: number
+  totalFiles: number
+  percent: number
+}
 
 export type QuestionOption = {
   /**
@@ -180,61 +245,6 @@ export type QuestionRejected = {
   requestID: string
 }
 
-export type EventTuiPromptAppend = {
-  id: string
-  type: "tui.prompt.append"
-  properties: {
-    text: string
-  }
-}
-
-export type EventTuiCommandExecute = {
-  id: string
-  type: "tui.command.execute"
-  properties: {
-    command:
-      | "session.list"
-      | "session.new"
-      | "session.share"
-      | "session.interrupt"
-      | "session.compact"
-      | "session.page.up"
-      | "session.page.down"
-      | "session.line.up"
-      | "session.line.down"
-      | "session.half.page.up"
-      | "session.half.page.down"
-      | "session.first"
-      | "session.last"
-      | "prompt.clear"
-      | "prompt.submit"
-      | "agent.cycle"
-      | string
-  }
-}
-
-export type EventTuiToastShow = {
-  id: string
-  type: "tui.toast.show"
-  properties: {
-    title?: string
-    message: string
-    variant: "info" | "success" | "warning" | "error"
-    duration?: number
-  }
-}
-
-export type EventTuiSessionSelect = {
-  id: string
-  type: "tui.session.select"
-  properties: {
-    /**
-     * Session ID to navigate to
-     */
-    sessionID: string
-  }
-}
-
 export type SessionNetworkWait = {
   id: string
   sessionID: string
@@ -282,8 +292,8 @@ export type BackgroundProcessInfo = {
 }
 
 export type SnapshotFileDiff = {
-  file: string
-  patch: string
+  file?: string
+  patch?: string
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
@@ -373,6 +383,14 @@ export type SessionStatus =
       type: "retry"
       attempt: number
       message: string
+      action?: {
+        reason: string
+        provider: string
+        title: string
+        message: string
+        label: string
+        link?: string
+      }
       next: number
     }
   | {
@@ -438,6 +456,7 @@ export type Pty = {
   cwd: string
   status: "running" | "exited"
   pid: number
+  sessionID?: string | null
 }
 
 export type OutputFormatText = {
@@ -795,7 +814,7 @@ export type Part =
   | CompactionPart
 
 export type SnapshotSummaryFileDiff = {
-  file: string
+  file?: string
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
@@ -857,16 +876,6 @@ export type Prompt = {
   agents?: Array<PromptAgentAttachment>
 }
 
-export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
-
-export type IndexingStatus = {
-  state: IndexingStatusState
-  message: string
-  processedFiles: number
-  totalFiles: number
-  percent: number
-}
-
 export type GlobalEvent = {
   directory: string
   project?: string
@@ -875,16 +884,20 @@ export type GlobalEvent = {
     | EventServerConnected
     | EventGlobalDisposed
     | EventGlobalConfigUpdated
-    | EventServerInstanceDisposed
-    | EventLspClientDiagnostics
-    | EventLspUpdated
-    | EventQuestionAsked
-    | EventQuestionReplied
-    | EventQuestionRejected
     | EventTuiPromptAppend
     | EventTuiCommandExecute
     | EventTuiToastShow
     | EventTuiSessionSelect
+    | EventKilocodeAgentManagerStart
+    | EventIndexingStatus
+    | EventServerInstanceDisposed
+    | EventFileEdited
+    | EventFileWatcherUpdated
+    | EventQuestionAsked
+    | EventQuestionReplied
+    | EventQuestionRejected
+    | EventLspClientDiagnostics
+    | EventLspUpdated
     | EventMcpToolsChanged
     | EventMcpBrowserOpenFailed
     | EventSessionNetworkAsked
@@ -902,8 +915,6 @@ export type GlobalEvent = {
     | EventSessionError
     | EventInstallationUpdated
     | EventInstallationUpdateAvailable
-    | EventFileEdited
-    | EventFileWatcherUpdated
     | EventTodoUpdated
     | EventSessionStatus
     | EventSessionIdle
@@ -913,7 +924,6 @@ export type GlobalEvent = {
     | EventSessionCompacted
     | EventCommandExecuted
     | EventProjectUpdated
-    | EventKilocodeAgentManagerStart
     | EventVcsBranchUpdated
     | EventKiloSessionsRemoteStatusChanged
     | EventWorkspaceReady
@@ -958,7 +968,6 @@ export type GlobalEvent = {
     | EventSessionNextCompactionStarted
     | EventSessionNextCompactionDelta
     | EventSessionNextCompactionEnded
-    | EventIndexingStatus
     | SyncEventMessageUpdated
     | SyncEventMessageRemoved
     | SyncEventMessagePartUpdated
@@ -1010,6 +1019,26 @@ export type ServerConfig = {
   cors?: Array<string>
 }
 
+export type ReferenceConfigEntry =
+  | string
+  | {
+      /**
+       * Git repository URL, host/path reference, or GitHub owner/repo shorthand
+       */
+      repository: string
+      branch?: string
+    }
+  | {
+      /**
+       * Absolute path, ~/ path, or workspace-relative path to a local reference directory
+       */
+      path: string
+    }
+
+export type ReferenceConfig = {
+  [key: string]: ReferenceConfigEntry
+}
+
 export type IndexingConfig = {
   enabled?: boolean
   provider?:
@@ -1023,8 +1052,8 @@ export type IndexingConfig = {
     | "bedrock"
     | "openrouter"
     | "voyage"
-  model?: string
-  dimension?: number
+  model?: string | null
+  dimension?: number | null
   vectorStore?: "lancedb" | "qdrant"
   kilo?: {
     apiKey?: string
@@ -1097,6 +1126,9 @@ export type PermissionConfig =
       question?: PermissionActionConfig
       webfetch?: PermissionActionConfig
       websearch?: PermissionActionConfig
+      codesearch?: PermissionActionConfig
+      repo_clone?: PermissionRuleConfig
+      repo_overview?: PermissionRuleConfig
       lsp?: PermissionRuleConfig
       doom_loop?: PermissionActionConfig
       skill?: PermissionRuleConfig
@@ -1180,6 +1212,8 @@ export type ProviderConfig = {
       name?: string
       family?: string
       prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo" | "ling" | "gpt55"
+      isFree?: boolean
+      ai_sdk_provider?: "alibaba" | "anthropic" | "mistral" | "openai" | "openai-compatible" | "openrouter"
       release_date?: string
       attachment?: boolean
       reasoning?: boolean
@@ -1212,7 +1246,7 @@ export type ProviderConfig = {
         output: Array<"text" | "audio" | "image" | "video" | "pdf">
       }
       experimental?: boolean
-      status?: "alpha" | "beta" | "deprecated"
+      status?: "alpha" | "beta" | "deprecated" | "active"
       provider?: {
         npm?: string
         api?: string
@@ -1299,6 +1333,7 @@ export type Config = {
     paths?: Array<string>
     urls?: Array<string>
   }
+  reference?: ReferenceConfig
   watcher?: {
     ignore?: Array<string>
   }
@@ -1326,6 +1361,8 @@ export type Config = {
   terminal_command_display?: "expanded" | "collapsed"
   model?: string
   small_model?: string
+  subagent_model?: string
+  subagent_variant?: string
   default_agent?: string
   username?: string
   mode?: {
@@ -1341,6 +1378,7 @@ export type Config = {
     ask?: AgentConfig
     general?: AgentConfig
     explore?: AgentConfig
+    scout?: AgentConfig
     title?: AgentConfig
     summary?: AgentConfig
     compaction?: AgentConfig
@@ -1425,9 +1463,6 @@ export type Config = {
     disable_paste_summary?: boolean
     batch_tool?: boolean
     codebase_search?: boolean
-    semantic_indexing?: boolean
-    agent_manager_tool?: boolean
-    speech_to_text?: boolean
     speech_to_text_model?: string
     openTelemetry?: boolean
     primary_tools?: Array<string>
@@ -1508,7 +1543,7 @@ export type Model = {
   recommendedIndex?: number
   prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo" | "ling" | "gpt55"
   isFree?: boolean
-  ai_sdk_provider?: "alibaba" | "anthropic" | "openai" | "openai-compatible" | "openrouter"
+  ai_sdk_provider?: "alibaba" | "anthropic" | "mistral" | "openai" | "openai-compatible" | "openrouter"
 }
 
 export type Provider = {
@@ -1529,6 +1564,10 @@ export type ConsoleState = {
   consoleManagedProviders: Array<string>
   activeOrgName?: string
   switchableOrgCount: number
+}
+
+export type EffectHttpApiErrorInternalServerError = {
+  _tag: "InternalServerError"
 }
 
 export type ToolListItem = {
@@ -1564,8 +1603,8 @@ export type WorktreeResetInput = {
 }
 
 export type WorktreeDiffItem = {
-  file: string
-  patch: string
+  file?: string
+  patch?: string
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
@@ -1701,7 +1740,7 @@ export type VcsFileStatus = {
 
 export type VcsFileDiff = {
   file: string
-  patch: string
+  patch?: string
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
@@ -1969,6 +2008,14 @@ export type Workspace = {
   directory: string | null
   extra: unknown | null
   projectID: string
+  timeUsed: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+}
+
+export type WorkspaceWarpError = {
+  name: "WorkspaceWarpError"
+  data: {
+    message: string
+  }
 }
 
 export type BackgroundProcessLogs = {
@@ -1977,11 +2024,145 @@ export type BackgroundProcessLogs = {
   output: string
 }
 
-export type WorkspaceWarpError = {
-  name: "WorkspaceWarpError"
-  data: {
-    message: string
+export type ConfigOverlayResponse = {
+  scope: "global" | "project"
+  effective: Config
+  global: Config
+  project: Config
+  sources: Array<{
+    order: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    kind: string
+    scope: string
+    label: string
+    source: string
+    path?: string
+    exists: boolean
+    editable: boolean
+    reason?: string
+  }>
+  targets: {
+    global?: string
+    project?: string
+    active?: string
   }
+  fields: {
+    [key: string]: {
+      key: string
+      path: Array<string>
+      value?: unknown
+      global?: unknown
+      local?: unknown
+      source: "project" | "global" | "system" | "default"
+      inherited: boolean
+      overridden: boolean
+      editable: boolean
+      reason?: string
+    }
+  }
+  collections: {
+    [key: string]: Array<{
+      key: string
+      path: Array<string>
+      value?: unknown
+      global?: unknown
+      local?: unknown
+      source: "project" | "global" | "system" | "default"
+      inherited: boolean
+      overridden: boolean
+      editable: boolean
+      reason?: string
+    }>
+  }
+}
+
+export type ConfigSourcesResponse = {
+  sources: Array<{
+    order: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    kind: string
+    scope: string
+    label: string
+    source: string
+    path?: string
+    exists: boolean
+    editable: boolean
+    reason?: string
+  }>
+}
+
+export type ConfigRulesResponse = {
+  scope: "project"
+  target: string
+  files: Array<{
+    name: string
+    path: string
+    exists: boolean
+    editable: boolean
+    content: string
+  }>
+}
+
+export type ConfigModelStateResponse = {
+  model: {
+    [key: string]: {
+      providerID: string
+      modelID: string
+    }
+  }
+  recent: Array<{
+    providerID: string
+    modelID: string
+  }>
+  favorite: Array<{
+    providerID: string
+    modelID: string
+  }>
+  variant: {
+    [key: string]: string
+  }
+}
+
+export type TuiConfigGetResponse = {
+  $schema?: string
+  theme?: string
+  keybinds?: {
+    [key: string]: string
+  }
+  plugin?: Array<
+    | string
+    | [
+        string,
+        {
+          [key: string]: unknown
+        },
+      ]
+  >
+  plugin_enabled?: {
+    [key: string]: boolean
+  }
+  scroll_speed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  scroll_acceleration?: {
+    enabled: boolean
+  }
+  diff_style?: "auto" | "stacked"
+  mouse?: boolean
+  attention?: {
+    enabled?: boolean
+    notifications?: boolean
+    sound?: boolean
+    volume?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  }
+}
+
+export type TuiKeybindInfo = {
+  id: string
+  label: string
+  group: string
+  default: string
+  description: string
+}
+
+export type TuiKeybindListResponse = {
+  keybinds: Array<TuiKeybindInfo>
 }
 
 export type EffectHttpApiErrorUnauthorized = {
@@ -2544,6 +2725,30 @@ export type EventGlobalConfigUpdated = {
   }
 }
 
+export type EventKilocodeAgentManagerStart = {
+  id: string
+  type: "kilocode.agent_manager.start"
+  properties: {
+    requestID: string
+    sessionID: string
+    mode: "worktree" | "local"
+    versions?: boolean
+    tasks: Array<{
+      prompt?: string
+      name?: string
+      branchName?: string
+    }>
+  }
+}
+
+export type EventIndexingStatus = {
+  id: string
+  type: "indexing.status"
+  properties: {
+    status: IndexingStatus
+  }
+}
+
 export type EventServerInstanceDisposed = {
   id: string
   type: "server.instance.disposed"
@@ -2552,20 +2757,20 @@ export type EventServerInstanceDisposed = {
   }
 }
 
-export type EventLspClientDiagnostics = {
+export type EventFileEdited = {
   id: string
-  type: "lsp.client.diagnostics"
+  type: "file.edited"
   properties: {
-    serverID: string
-    path: string
+    file: string
   }
 }
 
-export type EventLspUpdated = {
+export type EventFileWatcherUpdated = {
   id: string
-  type: "lsp.updated"
+  type: "file.watcher.updated"
   properties: {
-    [key: string]: unknown
+    file: string
+    event: "add" | "change" | "unlink"
   }
 }
 
@@ -2585,6 +2790,23 @@ export type EventQuestionRejected = {
   id: string
   type: "question.rejected"
   properties: QuestionRejected
+}
+
+export type EventLspClientDiagnostics = {
+  id: string
+  type: "lsp.client.diagnostics"
+  properties: {
+    serverID: string
+    path: string
+  }
+}
+
+export type EventLspUpdated = {
+  id: string
+  type: "lsp.updated"
+  properties: {
+    [key: string]: unknown
+  }
 }
 
 export type EventMcpToolsChanged = {
@@ -2741,23 +2963,6 @@ export type EventInstallationUpdateAvailable = {
   }
 }
 
-export type EventFileEdited = {
-  id: string
-  type: "file.edited"
-  properties: {
-    file: string
-  }
-}
-
-export type EventFileWatcherUpdated = {
-  id: string
-  type: "file.watcher.updated"
-  properties: {
-    file: string
-    event: "add" | "change" | "unlink"
-  }
-}
-
 export type EventTodoUpdated = {
   id: string
   type: "todo.updated"
@@ -2843,22 +3048,6 @@ export type EventProjectUpdated = {
   id: string
   type: "project.updated"
   properties: Project
-}
-
-export type EventKilocodeAgentManagerStart = {
-  id: string
-  type: "kilocode.agent_manager.start"
-  properties: {
-    requestID: string
-    sessionID: string
-    mode: "worktree" | "local"
-    versions?: boolean
-    tasks: Array<{
-      prompt?: string
-      name?: string
-      branchName?: string
-    }>
-  }
 }
 
 export type EventVcsBranchUpdated = {
@@ -3384,14 +3573,6 @@ export type EventSessionNextCompactionEnded = {
     sessionID: string
     text: string
     include?: string
-  }
-}
-
-export type EventIndexingStatus = {
-  id: string
-  type: "indexing.status"
-  properties: {
-    status: IndexingStatus
   }
 }
 
@@ -3986,6 +4167,15 @@ export type ExperimentalConsoleGetData = {
   url: "/experimental/console"
 }
 
+export type ExperimentalConsoleGetErrors = {
+  /**
+   * InternalServerError
+   */
+  500: EffectHttpApiErrorInternalServerError
+}
+
+export type ExperimentalConsoleGetError = ExperimentalConsoleGetErrors[keyof ExperimentalConsoleGetErrors]
+
 export type ExperimentalConsoleGetResponses = {
   /**
    * Active Console provider metadata
@@ -4004,6 +4194,16 @@ export type ExperimentalConsoleListOrgsData = {
   }
   url: "/experimental/console/orgs"
 }
+
+export type ExperimentalConsoleListOrgsErrors = {
+  /**
+   * InternalServerError
+   */
+  500: EffectHttpApiErrorInternalServerError
+}
+
+export type ExperimentalConsoleListOrgsError =
+  ExperimentalConsoleListOrgsErrors[keyof ExperimentalConsoleListOrgsErrors]
 
 export type ExperimentalConsoleListOrgsResponses = {
   /**
@@ -4684,7 +4884,7 @@ export type AppSkillsResponses = {
    */
   200: Array<{
     name: string
-    description: string
+    description?: string
     location: string
     content: string
   }>
@@ -5210,6 +5410,7 @@ export type PtyGetResponse = PtyGetResponses[keyof PtyGetResponses]
 export type PtyUpdateData = {
   body?: {
     title?: string
+    sessionID?: string | null
     size?: {
       rows: number
       cols: number
@@ -5412,7 +5613,7 @@ export type PermissionReplyErrors = {
    */
   400: BadRequestError
   /**
-   * Not found
+   * NotFoundError
    */
   404: NotFoundError
 }
@@ -5445,7 +5646,7 @@ export type PermissionSaveAlwaysRulesData = {
 
 export type PermissionSaveAlwaysRulesErrors = {
   /**
-   * Not found
+   * NotFoundError
    */
   404: NotFoundError
 }
@@ -5967,6 +6168,7 @@ export type SessionPromptData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    snapshotInitialization?: "wait"
     editorContext?: {
       visibleFiles?: Array<string>
       openTabs?: Array<string>
@@ -6099,6 +6301,10 @@ export type SessionForkData = {
 
 export type SessionForkErrors = {
   /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
    * NotFoundError
    */
   404: NotFoundError
@@ -6201,13 +6407,13 @@ export type SessionUnshareData = {
 
 export type SessionUnshareErrors = {
   /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
    * NotFoundError
    */
   404: NotFoundError
+  /**
+   * InternalServerError
+   */
+  500: EffectHttpApiErrorInternalServerError
 }
 
 export type SessionUnshareError = SessionUnshareErrors[keyof SessionUnshareErrors]
@@ -6235,13 +6441,13 @@ export type SessionShareData = {
 
 export type SessionShareErrors = {
   /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
    * NotFoundError
    */
   404: NotFoundError
+  /**
+   * InternalServerError
+   */
+  500: EffectHttpApiErrorInternalServerError
 }
 
 export type SessionShareError = SessionShareErrors[keyof SessionShareErrors]
@@ -6308,6 +6514,7 @@ export type SessionPromptAsyncData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    snapshotInitialization?: "wait"
     editorContext?: {
       visibleFiles?: Array<string>
       openTabs?: Array<string>
@@ -6356,6 +6563,7 @@ export type SessionCommandData = {
     arguments: string
     command: string
     variant?: string
+    snapshotInitialization?: "wait"
     parts?: Array<{
       id?: string
       type: "file"
@@ -6783,6 +6991,16 @@ export type V2SessionListData = {
   query?: {
     directory?: string
     workspace?: string
+    limit?: number
+    order?: "asc" | "desc"
+    path?: string
+    roots?: boolean | "true" | "false"
+    start?: number
+    search?: string
+    /**
+     * Opaque pagination cursor returned as cursor.previous or cursor.next in the previous response. Do not combine with order or filters.
+     */
+    cursor?: string
   }
   url: "/api/session"
 }
@@ -6900,6 +7118,12 @@ export type V2SessionMessagesData = {
   query?: {
     directory?: string
     workspace?: string
+    limit?: number
+    order?: "asc" | "desc"
+    /**
+     * Opaque pagination cursor returned as cursor.previous or cursor.next in the previous response. Do not combine with order.
+     */
+    cursor?: string
   }
   url: "/api/session/{sessionID}/message"
 }
@@ -7305,6 +7529,26 @@ export type ExperimentalWorkspaceCreateResponses = {
 export type ExperimentalWorkspaceCreateResponse =
   ExperimentalWorkspaceCreateResponses[keyof ExperimentalWorkspaceCreateResponses]
 
+export type ExperimentalWorkspaceSyncListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/workspace/sync-list"
+}
+
+export type ExperimentalWorkspaceSyncListResponses = {
+  /**
+   * Workspace list synced
+   */
+  204: void
+}
+
+export type ExperimentalWorkspaceSyncListResponse =
+  ExperimentalWorkspaceSyncListResponses[keyof ExperimentalWorkspaceSyncListResponses]
+
 export type ExperimentalWorkspaceStatusData = {
   body?: never
   path?: never
@@ -7392,6 +7636,100 @@ export type ExperimentalWorkspaceWarpResponses = {
 
 export type ExperimentalWorkspaceWarpResponse =
   ExperimentalWorkspaceWarpResponses[keyof ExperimentalWorkspaceWarpResponses]
+
+export type AgentBuilderPreviewData = {
+  body?: {
+    id: string
+    scope?: "global" | "project"
+    description?: string
+    mode?: "primary" | "subagent" | "all"
+    model?: string
+    color?: string
+    steps?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    tools?: Array<string>
+    permission?: {
+      [key: string]: unknown
+    }
+    prompt: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/agent-builder/preview"
+}
+
+export type AgentBuilderPreviewErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type AgentBuilderPreviewError = AgentBuilderPreviewErrors[keyof AgentBuilderPreviewErrors]
+
+export type AgentBuilderPreviewResponses = {
+  /**
+   * Agent markdown preview
+   */
+  200: {
+    id: string
+    scope: "global" | "project"
+    path: string
+    markdown: string
+  }
+}
+
+export type AgentBuilderPreviewResponse = AgentBuilderPreviewResponses[keyof AgentBuilderPreviewResponses]
+
+export type AgentBuilderSaveData = {
+  body?: {
+    id?: string
+    scope?: "global" | "project"
+    description?: string
+    mode?: "primary" | "subagent" | "all"
+    model?: string
+    color?: string
+    steps?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    tools?: Array<string>
+    permission?: {
+      [key: string]: unknown
+    }
+    prompt: string
+  }
+  path: {
+    id: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/agent-builder/{id}"
+}
+
+export type AgentBuilderSaveErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type AgentBuilderSaveError = AgentBuilderSaveErrors[keyof AgentBuilderSaveErrors]
+
+export type AgentBuilderSaveResponses = {
+  /**
+   * Saved agent markdown
+   */
+  200: {
+    id: string
+    scope: "global" | "project"
+    path: string
+    markdown: string
+  }
+}
+
+export type AgentBuilderSaveResponse = AgentBuilderSaveResponses[keyof AgentBuilderSaveResponses]
 
 export type BackgroundProcessListData = {
   body?: never
@@ -7592,6 +7930,271 @@ export type CommitMessageGenerateResponses = {
 
 export type CommitMessageGenerateResponse = CommitMessageGenerateResponses[keyof CommitMessageGenerateResponses]
 
+export type ConfigOverlayData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+    scope?: "global" | "project"
+  }
+  url: "/config/overlay"
+}
+
+export type ConfigOverlayResponses = {
+  /**
+   * Resolved config overlay
+   */
+  200: ConfigOverlayResponse
+}
+
+export type ConfigOverlayResponse2 = ConfigOverlayResponses[keyof ConfigOverlayResponses]
+
+export type ConfigOverlayUpdateData = {
+  body?: {
+    scope?: "global" | "project"
+    set?: {
+      [key: string]: unknown
+    }
+    unset?: Array<Array<string>>
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/config/overlay"
+}
+
+export type ConfigOverlayUpdateResponses = {
+  /**
+   * Effective configuration after patch
+   */
+  200: Config
+}
+
+export type ConfigOverlayUpdateResponse = ConfigOverlayUpdateResponses[keyof ConfigOverlayUpdateResponses]
+
+export type ConfigSourcesData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/config/sources"
+}
+
+export type ConfigSourcesResponses = {
+  /**
+   * Config source inventory
+   */
+  200: ConfigSourcesResponse
+}
+
+export type ConfigSourcesResponse2 = ConfigSourcesResponses[keyof ConfigSourcesResponses]
+
+export type ConfigEffectiveData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/config/effective"
+}
+
+export type ConfigEffectiveResponses = {
+  /**
+   * Effective config info
+   */
+  200: Config
+}
+
+export type ConfigEffectiveResponse = ConfigEffectiveResponses[keyof ConfigEffectiveResponses]
+
+export type ConfigRulesData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+    scope?: "project"
+  }
+  url: "/config/rules"
+}
+
+export type ConfigRulesResponses = {
+  /**
+   * Project rules
+   */
+  200: ConfigRulesResponse
+}
+
+export type ConfigRulesResponse2 = ConfigRulesResponses[keyof ConfigRulesResponses]
+
+export type ConfigRulesUpdateData = {
+  body?: {
+    scope?: "project"
+    content: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/config/rules"
+}
+
+export type ConfigRulesUpdateResponses = {
+  /**
+   * Project rules after update
+   */
+  200: ConfigRulesResponse
+}
+
+export type ConfigRulesUpdateResponse = ConfigRulesUpdateResponses[keyof ConfigRulesUpdateResponses]
+
+export type ConfigModelStateData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/config/model-state"
+}
+
+export type ConfigModelStateResponses = {
+  /**
+   * Model state
+   */
+  200: ConfigModelStateResponse
+}
+
+export type ConfigModelStateResponse2 = ConfigModelStateResponses[keyof ConfigModelStateResponses]
+
+export type ConfigModelStateUpdateData = {
+  body?: {
+    favorite?: Array<{
+      providerID: string
+      modelID: string
+    }>
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/config/model-state"
+}
+
+export type ConfigModelStateUpdateResponses = {
+  /**
+   * Updated model state
+   */
+  200: ConfigModelStateResponse
+}
+
+export type ConfigModelStateUpdateResponse = ConfigModelStateUpdateResponses[keyof ConfigModelStateUpdateResponses]
+
+export type TuiConfigGetData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/tui/config"
+}
+
+export type TuiConfigGetResponses = {
+  /**
+   * Effective TUI configuration
+   */
+  200: TuiConfigGetResponse
+}
+
+export type TuiConfigGetResponse2 = TuiConfigGetResponses[keyof TuiConfigGetResponses]
+
+export type TuiConfigUpdateData = {
+  body?: {
+    $schema?: string
+    theme?: string
+    keybinds?: {
+      [key: string]: string
+    }
+    plugin?: Array<
+      | string
+      | [
+          string,
+          {
+            [key: string]: unknown
+          },
+        ]
+    >
+    plugin_enabled?: {
+      [key: string]: boolean
+    }
+    scroll_speed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    scroll_acceleration?: {
+      enabled: boolean
+    }
+    diff_style?: "auto" | "stacked"
+    mouse?: boolean
+    attention?: {
+      enabled?: boolean
+      notifications?: boolean
+      sound?: boolean
+      volume?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+    scope?: "project" | "global"
+  }
+  url: "/tui/config"
+}
+
+export type TuiConfigUpdateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type TuiConfigUpdateError = TuiConfigUpdateErrors[keyof TuiConfigUpdateErrors]
+
+export type TuiConfigUpdateResponses = {
+  /**
+   * Effective TUI configuration after the update
+   */
+  200: TuiConfigGetResponse
+}
+
+export type TuiConfigUpdateResponse = TuiConfigUpdateResponses[keyof TuiConfigUpdateResponses]
+
+export type TuiKeybindListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/tui/keybinds"
+}
+
+export type TuiKeybindListResponses = {
+  /**
+   * TUI keybind metadata
+   */
+  200: TuiKeybindListResponse
+}
+
+export type TuiKeybindListResponse2 = TuiKeybindListResponses[keyof TuiKeybindListResponses]
+
 export type EnhancePromptEnhanceData = {
   body?: {
     /**
@@ -7681,8 +8284,8 @@ export type KiloProfileResponses = {
     }
     balance: {
       balance: number
-    }
-    currentOrgId: string
+    } | null
+    currentOrgId: string | null
   }
 }
 
@@ -7737,6 +8340,7 @@ export type KiloFimData = {
   body?: {
     prefix: string
     suffix: string
+    provider?: string
     model?: string
     maxTokens?: number
     temperature?: number
@@ -7779,6 +8383,55 @@ export type KiloFimResponses = {
 
 export type KiloFimResponse = KiloFimResponses[keyof KiloFimResponses]
 
+export type KiloEditData = {
+  body?: {
+    provider?: string
+    model?: string
+    maxTokens?: number
+    currentFilePath: string
+    currentFileContent: string
+    cursorLine: number
+    cursorCharacter: number
+    editableRegionStartLine: number
+    editableRegionEndLine: number
+    recentlyViewedSnippets: Array<{
+      filepath: string
+      content: string
+    }>
+    editDiffHistory: Array<string>
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/edit"
+}
+
+export type KiloEditErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KiloEditError = KiloEditErrors[keyof KiloEditErrors]
+
+export type KiloEditResponses = {
+  /**
+   * Next Edit completion
+   */
+  200: {
+    content: string
+    usage?: {
+      prompt_tokens?: number
+      completion_tokens?: number
+    }
+  }
+}
+
+export type KiloEditResponse = KiloEditResponses[keyof KiloEditResponses]
+
 export type KiloAudioTranscriptionsData = {
   body?: {
     model: string
@@ -7787,6 +8440,7 @@ export type KiloAudioTranscriptionsData = {
       format: string
     }
     language?: string
+    prompt?: string
     temperature?: number
   }
   path?: never
@@ -7919,19 +8573,20 @@ export type KiloClawStatusResponses = {
       | "stopped"
       | "destroying"
       | "restoring"
+      | null
     sandboxId?: string
     flyRegion?: string
     machineSize?: {
       cpus: number
       memory_mb: number
     }
-    openclawVersion?: string
-    lastStartedAt?: string
-    lastStoppedAt?: string
+    openclawVersion?: string | null
+    lastStartedAt?: string | null
+    lastStoppedAt?: string | null
     channelCount?: number
     secretCount?: number
     userId?: string
-    botName?: string
+    botName?: string | null
   }
 }
 
@@ -7956,7 +8611,7 @@ export type KiloClawChatCredentialsResponses = {
     expiresAt: string
     kiloChatUrl: string
     eventServiceUrl: string
-  }
+  } | null
 }
 
 export type KiloClawChatCredentialsResponse = KiloClawChatCredentialsResponses[keyof KiloClawChatCredentialsResponses]
@@ -7990,12 +8645,12 @@ export type KiloCloudSessionsResponses = {
   200: {
     cliSessions: Array<{
       session_id: string
-      title: string
+      title: string | null
       created_at: string
       updated_at: string
       version: number
     }>
-    nextCursor: string
+    nextCursor: string | null
   }
 }
 

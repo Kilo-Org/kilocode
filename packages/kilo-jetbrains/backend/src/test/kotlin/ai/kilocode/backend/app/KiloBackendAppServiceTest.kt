@@ -37,8 +37,8 @@ class KiloBackendAppServiceTest {
         mock.close()
     }
 
-    private fun create(): KiloBackendAppService =
-        KiloBackendAppService.create(scope, FakeCliServer(mock), log)
+    private fun create(loadTimeoutMs: Long = 30_000L): KiloBackendAppService =
+        KiloBackendAppService.create(scope, FakeCliServer(mock), log, loadTimeoutMs)
 
     @Test
     fun `full lifecycle reaches Ready`() = runBlocking {
@@ -285,10 +285,12 @@ class KiloBackendAppServiceTest {
         svc.connect()
 
         withTimeout(10_000) {
-            svc.appState.first { it is KiloAppState.Ready }
+            svc.appState.first { state ->
+                state is KiloAppState.Ready && state.data.warnings.any { it.path == ".kilo/kilo.json" }
+            }
         }
 
-        assertTrue(log.messages.any {
+        assertTrue(log.awaitMessage {
             it.contains("App warnings:") && it.contains(".kilo/kilo.json: Invalid JSON")
         })
     }
@@ -405,6 +407,104 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `hung app load transitions from Loading to Error`() = runBlocking {
+        val gate = CountDownLatch(1)
+        mock.responseGate = gate
+        val svc = create(loadTimeoutMs = 300L)
+
+        try {
+            svc.connect()
+
+            withTimeout(10_000) {
+                svc.appState.first { it is KiloAppState.Loading }
+            }
+
+            val err = withTimeout(10_000) {
+                svc.appState.first { it is KiloAppState.Error }
+            } as KiloAppState.Error
+
+            assertEquals("Failed to load required data", err.message)
+            assertTrue(err.errors.any { it.detail?.contains("timeout", ignoreCase = true) == true })
+        } finally {
+            gate.countDown()
+        }
+    }
+
+    @Test
+    fun `hung warnings do not prevent Ready`() = runBlocking {
+        val gate = CountDownLatch(1)
+        mock.warningsGate = gate
+        val svc = create(loadTimeoutMs = 300L)
+
+        try {
+            svc.connect()
+
+            val ready = withTimeout(10_000) {
+                svc.appState.first { it is KiloAppState.Ready }
+            } as KiloAppState.Ready
+
+            assertTrue(ready.data.warnings.isEmpty())
+            assertTrue(svc.warnings.isEmpty())
+        } finally {
+            gate.countDown()
+        }
+    }
+
+    @Test
+    fun `restart during Loading cancels stale load and reaches Ready`() = runBlocking {
+        val gate = CountDownLatch(1)
+        mock.responseGate = gate
+        val svc = create(loadTimeoutMs = 500L)
+
+        try {
+            svc.connect()
+
+            withTimeout(10_000) {
+                svc.appState.first { it is KiloAppState.Loading }
+            }
+
+            gate.countDown()
+            svc.restart()
+
+            withTimeout(10_000) {
+                svc.appState.first { it is KiloAppState.Ready }
+            }
+
+            assertIs<KiloAppState.Ready>(svc.appState.value)
+            assertFalse(log.messages.any { it.contains("Application start timed out") })
+        } finally {
+            gate.countDown()
+        }
+    }
+
+    @Test
+    fun `reinstall during Loading cancels stale load and reaches Ready`() = runBlocking {
+        val gate = CountDownLatch(1)
+        mock.responseGate = gate
+        val svc = create(loadTimeoutMs = 500L)
+
+        try {
+            svc.connect()
+
+            withTimeout(10_000) {
+                svc.appState.first { it is KiloAppState.Loading }
+            }
+
+            gate.countDown()
+            svc.reinstall()
+
+            withTimeout(10_000) {
+                svc.appState.first { it is KiloAppState.Ready }
+            }
+
+            assertIs<KiloAppState.Ready>(svc.appState.value)
+            assertFalse(log.messages.any { it.contains("Application start timed out") })
+        } finally {
+            gate.countDown()
+        }
+    }
+
+    @Test
     fun `SSE config updated event refreshes config`() = runBlocking {
         mock.config = """{"model":"initial"}"""
         val svc = create()
@@ -418,13 +518,14 @@ class KiloBackendAppServiceTest {
 
         // Change the config response and push an SSE event
         mock.config = """{"model":"updated"}"""
+        val before = mock.requestCount("/global/config")
         mock.awaitSseConnection()
         mock.pushEvent("global.config.updated", """{"type":"global.config.updated"}""")
 
-        // Wait for config to be refreshed
+        assertTrue(mock.awaitRequestCount("/global/config", before + 1))
         withTimeout(5_000) {
-            while (svc.config?.model != "updated") {
-                delay(100)
+            svc.appState.first { state ->
+                state is KiloAppState.Ready && state.data.config.model == "updated"
             }
         }
 
@@ -444,12 +545,14 @@ class KiloBackendAppServiceTest {
         assertEquals(1, (svc.appState.value as KiloAppState.Ready).data.warnings.size)
 
         mock.warnings = "[]"
+        val before = mock.requestCount("/config/warnings")
         mock.awaitSseConnection()
         mock.pushEvent("global.config.updated", """{"type":"global.config.updated"}""")
 
+        assertTrue(mock.awaitRequestCount("/config/warnings", before + 1))
         withTimeout(5_000) {
-            while ((svc.appState.value as? KiloAppState.Ready)?.data?.warnings?.isNotEmpty() == true) {
-                delay(100)
+            svc.appState.first { state ->
+                state is KiloAppState.Ready && state.data.warnings.isEmpty()
             }
         }
 
