@@ -141,7 +141,7 @@ export const kiloScenarios: Scenario[] = [
   http.protected
     .post("/kilo/edit", "kilo.edit")
     .at((ctx) => ({ path: "/kilo/edit", headers: ctx.headers(), body: edit }))
-    .status(400),
+    .status(401),
   http.protected
     .post("/kilo/audio/transcriptions", "kilo.audio.transcriptions")
     .at((ctx) => ({

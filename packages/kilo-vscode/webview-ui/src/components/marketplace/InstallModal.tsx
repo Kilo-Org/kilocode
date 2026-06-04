@@ -9,7 +9,7 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "../../context/vscode"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
-import { useSession } from "../../context/session"
+import { useMarketplaceSession } from "../../context/marketplace-session"
 import type { MarketplaceItem, McpMarketplaceItem, McpInstallationMethod, McpParameter } from "../../types/marketplace"
 
 interface ScopeOption {
@@ -31,7 +31,7 @@ export const InstallModal = (props: Props) => {
   const vscode = useVSCode()
   const server = useServer()
   const { t } = useLanguage()
-  const session = useSession()
+  const session = useMarketplaceSession()
 
   const workspace = () => server.workspaceDirectory()
   const options = (): ScopeOption[] =>

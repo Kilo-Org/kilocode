@@ -20,7 +20,13 @@ import { useProvider } from "../src/context/provider"
 import { useConfig } from "../src/context/config"
 import { canUseSpeechToText, selectedSpeechToTextModel } from "../src/components/speech-to-text/availability"
 import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
-import { getDirectory, getFilename, lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
+import {
+  getDirectory,
+  getFilename,
+  lineCount,
+  sanitizeReviewComments,
+  type ReviewComment,
+} from "../diff-viewer/review-comments"
 import {
   buildFileAnnotations,
   buildReviewAnnotation,
@@ -34,8 +40,8 @@ import {
   type AnnotationMeta,
   type ReviewComposer,
   type ReviewDraft,
-} from "./review-annotations"
-import { createReviewAnnotationSpeechRenderer } from "./review-annotation-speech"
+} from "../diff-viewer/review-annotations"
+import { createReviewAnnotationSpeechRenderer } from "../diff-viewer/review-annotation-speech"
 import {
   LONG_DIFF_MARKER_FILE_COUNT,
   allOpenFiles,
@@ -43,11 +49,11 @@ import {
   initialOpenFiles,
   isLargeDiffFile,
   toggleOpenFiles,
-} from "./diff-open-policy"
-import { DiffEndMarker } from "./DiffEndMarker"
-import { treeOrder } from "./file-tree-utils"
-import { isMarkdownFile, MarkdownDiffView } from "./MarkdownDiffView"
-import { createDiffRows, diffToken } from "./diff-state"
+} from "../diff-viewer/diff-open-policy"
+import { DiffEndMarker } from "../diff-viewer/DiffEndMarker"
+import { treeOrder } from "../diff-viewer/file-tree-utils"
+import { isMarkdownFile, MarkdownDiffView } from "../diff-viewer/MarkdownDiffView"
+import { createDiffRows, diffToken } from "../diff-viewer/diff-state"
 
 // --- Data model ---
 

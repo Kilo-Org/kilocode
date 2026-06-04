@@ -1,5 +1,42 @@
 # @kilocode/cli
 
+## 7.3.29
+
+### Patch Changes
+
+- [#10822](https://github.com/Kilo-Org/kilocode/pull/10822) [`8b1ee66`](https://github.com/Kilo-Org/kilocode/commit/8b1ee6628c7ee552814980465af7233522dd5528) - Preserve worktree routing for Kilo HTTP API clients and keep inherited task-subagent restrictions active.
+
+## 7.3.28
+
+### Patch Changes
+
+- [#10847](https://github.com/Kilo-Org/kilocode/pull/10847) [`cdf46c9`](https://github.com/Kilo-Org/kilocode/commit/cdf46c97354630e2f1b392092ee0ffcc18b19640) - Clarify when free-model data may be used for training and identify it with a brain circuit icon.
+
+- [#10833](https://github.com/Kilo-Org/kilocode/pull/10833) [`8696edc`](https://github.com/Kilo-Org/kilocode/commit/8696edcb542a5a499018184cfc9aa15cc896e5de) - Keep Kilo Console terminals and worktree changes visible while refreshing diffs.
+
+- [#10833](https://github.com/Kilo-Org/kilocode/pull/10833) [`fbacc31`](https://github.com/Kilo-Org/kilocode/commit/fbacc312f747b6f2284d23c9f58bdc7a843a81cd) - Use the updated favicon in Kilo Console.
+
+- [#10865](https://github.com/Kilo-Org/kilocode/pull/10865) [`9c56107`](https://github.com/Kilo-Org/kilocode/commit/9c561074b624925d14ee0e7d9e64d0a6f5958531) - Show the animated Kilo logo while the console and dashboard finish loading.
+
+- [#10864](https://github.com/Kilo-Org/kilocode/pull/10864) [`557d6ad`](https://github.com/Kilo-Org/kilocode/commit/557d6ad02392dac9138d9788da1476a7ff9cc8e2) - Preserve upstream error statuses for cloud session and KiloClaw gateway requests.
+
+- [#10831](https://github.com/Kilo-Org/kilocode/pull/10831) [`837a875`](https://github.com/Kilo-Org/kilocode/commit/837a87509cb323dbf212cbf40af112f218221dd0) - Keep post-compaction tool calls and follow-up messages ordered after the compaction summary in the CLI and VS Code transcript.
+
+- [#10849](https://github.com/Kilo-Org/kilocode/pull/10849) [`a6b005d`](https://github.com/Kilo-Org/kilocode/commit/a6b005dfede302731dcbb00ac74e744333db9104) - Restore Cloud Agent transcripts in VS Code session previews and stop cloud session previews or continuation from loading indefinitely when a request stalls.
+
+- [#10883](https://github.com/Kilo-Org/kilocode/pull/10883) [`1cdc398`](https://github.com/Kilo-Org/kilocode/commit/1cdc39856f461b4dc183fe5b273b7fc1314b9a64) - Restore `kilo console` startup in packaged CLI builds.
+
+- [#10863](https://github.com/Kilo-Org/kilocode/pull/10863) [`35aa9bb`](https://github.com/Kilo-Org/kilocode/commit/35aa9bbbb38557df292f105fd5324bf37807f518) - Restore Kilo Gateway-backed Mercury Next Edit completions.
+
+- [#10829](https://github.com/Kilo-Org/kilocode/pull/10829) [`e64c1fb`](https://github.com/Kilo-Org/kilocode/commit/e64c1fb65ec6895f7e97786f52806195f25606c0) - Restore full-session forks in Agent Manager after the HTTP API migration.
+
+- Updated dependencies [[`fc4cf10`](https://github.com/Kilo-Org/kilocode/commit/fc4cf10b0a65ec2b2949dd695ebec6ebb619cd15), [`a6b005d`](https://github.com/Kilo-Org/kilocode/commit/a6b005dfede302731dcbb00ac74e744333db9104)]:
+  - @kilocode/sdk@7.3.23
+  - @kilocode/kilo-gateway@7.3.23
+  - @kilocode/plugin@7.3.23
+  - @kilocode/kilo-indexing@7.3.23
+  - @kilocode/kilo-telemetry@7.3.23
+
 ## 7.3.21
 
 ### Minor Changes

@@ -285,10 +285,12 @@ class KiloBackendAppServiceTest {
         svc.connect()
 
         withTimeout(10_000) {
-            svc.appState.first { it is KiloAppState.Ready }
+            svc.appState.first { state ->
+                state is KiloAppState.Ready && state.data.warnings.any { it.path == ".kilo/kilo.json" }
+            }
         }
 
-        assertTrue(log.messages.any {
+        assertTrue(log.awaitMessage {
             it.contains("App warnings:") && it.contains(".kilo/kilo.json: Invalid JSON")
         })
     }
@@ -516,13 +518,14 @@ class KiloBackendAppServiceTest {
 
         // Change the config response and push an SSE event
         mock.config = """{"model":"updated"}"""
+        val before = mock.requestCount("/global/config")
         mock.awaitSseConnection()
         mock.pushEvent("global.config.updated", """{"type":"global.config.updated"}""")
 
-        // Wait for config to be refreshed
+        assertTrue(mock.awaitRequestCount("/global/config", before + 1))
         withTimeout(5_000) {
-            while (svc.config?.model != "updated") {
-                delay(100)
+            svc.appState.first { state ->
+                state is KiloAppState.Ready && state.data.config.model == "updated"
             }
         }
 
@@ -542,12 +545,14 @@ class KiloBackendAppServiceTest {
         assertEquals(1, (svc.appState.value as KiloAppState.Ready).data.warnings.size)
 
         mock.warnings = "[]"
+        val before = mock.requestCount("/config/warnings")
         mock.awaitSseConnection()
         mock.pushEvent("global.config.updated", """{"type":"global.config.updated"}""")
 
+        assertTrue(mock.awaitRequestCount("/config/warnings", before + 1))
         withTimeout(5_000) {
-            while ((svc.appState.value as? KiloAppState.Ready)?.data?.warnings?.isNotEmpty() == true) {
-                delay(100)
+            svc.appState.first { state ->
+                state is KiloAppState.Ready && state.data.warnings.isEmpty()
             }
         }
 

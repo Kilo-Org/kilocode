@@ -15,11 +15,12 @@ import kotlin.math.roundToInt
  * Session UI uses this instead of reading editor globals in every component so font and color changes can be applied
  * consistently through [SessionEditorStyleTarget].
  *
- * Editor-specific fields ([transcriptFont], [smallEditorFont], [boldEditorFont], [editorForeground], [editorBackground])
- * are derived from the active editor color scheme and are used for code/editor-rendered content.
+ * Editor-specific fields ([editorFont], [editorForeground], [editorBackground]) are derived from the active editor color
+ * scheme and are used for code/editor-rendered content.
  *
- * UI font fields ([headerFont], [hintFont], [regularFont], [boldFont], [smallFont]) come from [UiStyle.Fonts]
- * and follow standard platform typography — they do not derive from the editor font size.
+ * UI font fields ([transcriptFont], [smallEditorFont], [boldEditorFont], [headerFont], [hintFont], [regularFont],
+ * [boldFont], [smallFont]) come from [UiStyle.Fonts] and follow standard platform typography. Transcript fonts use the
+ * editor size so the session body tracks editor zoom without adopting the editor family.
  */
 data class SessionEditorStyle(
     val editorScheme: EditorColorsScheme,
@@ -27,6 +28,7 @@ data class SessionEditorStyle(
     val editorSize: Int,
     val editorForeground: Color,
     val editorBackground: Color,
+    val editorFont: Font,
     val transcriptFont: Font,
     val smallEditorFont: Font,
     val boldEditorFont: Font,
@@ -61,9 +63,10 @@ data class SessionEditorStyle(
                 editorSize = size,
                 editorForeground = scheme.defaultForeground,
                 editorBackground = scheme.defaultBackground,
-                transcriptFont = Font(family, Font.PLAIN, size),
-                smallEditorFont = Font(family, Font.PLAIN, small),
-                boldEditorFont = Font(family, Font.BOLD, size),
+                editorFont = Font(family, Font.PLAIN, size),
+                transcriptFont = uiFont(UiStyle.Fonts.regular(), Font.PLAIN, size),
+                smallEditorFont = uiFont(UiStyle.Fonts.small(), Font.PLAIN, small),
+                boldEditorFont = uiFont(UiStyle.Fonts.regular(), Font.BOLD, size),
                 headerFont = UiStyle.Fonts.header(),
                 hintFont = UiStyle.Fonts.hint(),
                 regularFont = UiStyle.Fonts.regular(),
@@ -77,6 +80,8 @@ data class SessionEditorStyle(
             val ratio = font.size.toFloat() / base
             return (size * ratio).roundToInt().coerceAtLeast(1)
         }
+
+        private fun uiFont(font: Font, style: Int, size: Int): Font = font.deriveFont(style, size.toFloat())
     }
 }
 

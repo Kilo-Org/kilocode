@@ -1,6 +1,9 @@
 import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/middleware/instance-context"
-import { WorkspaceRoutingMiddleware } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
+import {
+  WorkspaceRoutingMiddleware,
+  WorkspaceRoutingQuery,
+} from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
@@ -44,6 +47,7 @@ export const AgentBuilderApi = HttpApi.make("agent-builder")
     HttpApiGroup.make("agent-builder")
       .add(
         HttpApiEndpoint.post("preview", AgentBuilderPaths.preview, {
+          query: WorkspaceRoutingQuery,
           payload: AgentBuilderInput,
           success: described(AgentBuilderOutput, "Agent markdown preview"),
           error: HttpApiError.BadRequest,
@@ -57,6 +61,7 @@ export const AgentBuilderApi = HttpApi.make("agent-builder")
         ),
         HttpApiEndpoint.put("save", AgentBuilderPaths.save, {
           params: { id: AgentBuilderID },
+          query: WorkspaceRoutingQuery,
           payload: AgentBuilderSaveInput,
           success: described(AgentBuilderOutput, "Saved agent markdown"),
           error: HttpApiError.BadRequest,

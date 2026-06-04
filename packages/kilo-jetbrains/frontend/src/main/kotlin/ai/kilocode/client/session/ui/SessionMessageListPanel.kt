@@ -5,6 +5,7 @@ import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
@@ -13,6 +14,7 @@ import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.views.TurnView
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.util.Disposer
 import com.intellij.util.ui.JBUI
 
 /**
@@ -48,6 +50,7 @@ class SessionMessageListPanel(
     private val login: LoginRequiredView? = null,
     private val openFile: (String) -> Unit,
     private val openUrl: (String) -> Unit = {},
+    private val selection: SessionSelection? = null,
 ) : SessionLayoutPanel(
     JBUI.scale(SessionUiStyle.SessionLayout.GAP),
     JBUI.insets(
@@ -56,7 +59,7 @@ class SessionMessageListPanel(
         SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
         SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
     ),
-), SessionEditorStyleTarget {
+), Disposable, SessionEditorStyleTarget {
 
     private val turnViews = LinkedHashMap<String, TurnView>()
     private val msgToTurn = HashMap<String, TurnView>()
@@ -68,7 +71,9 @@ class SessionMessageListPanel(
     val progress = ProgressPanel(model, parent)
 
     init {
-        isOpaque = false
+        isOpaque = true
+        background = SessionUiStyle.View.transcript()
+        Disposer.register(parent, this)
 
         model.addListener(parent) { event ->
             when (event) {
@@ -92,14 +97,11 @@ class SessionMessageListPanel(
                 }
 
                 is SessionModelEvent.ContentDelta -> {
-                    // Use the full current content from the model rather than
-                    // an incremental append. This avoids the double-write that
-                    // occurs when ContentAdded and ContentDelta both fire for
-                    // the same first delta (the model auto-creates the content
-                    // on first appendDelta and fires both events in sequence).
+                    if (event.created) return@addListener
+                    val handled = msgToView[event.messageId]?.appendDelta(event.contentId, event.delta) == true
+                    if (handled) return@addListener
                     val content = model.content(event.messageId, event.contentId)
                     if (content != null) msgToView[event.messageId]?.upsertPart(content)
-                    refresh()
                 }
 
                 is SessionModelEvent.HistoryLoaded -> rebuild()
@@ -175,7 +177,7 @@ class SessionMessageListPanel(
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id, openFile, style, openUrl)
+        val tv = TurnView(turn.id, openFile, style, openUrl, selection)
         turnViews[turn.id] = tv
         for (msgId in turn.messageIds) {
             val msg = model.message(msgId) ?: continue
@@ -215,18 +217,23 @@ class SessionMessageListPanel(
         val tv = turnViews.remove(id) ?: return
         for (msgId in tv.messageIds()) unregister(msgId)
         remove(tv)
+        Disposer.dispose(tv)
         anchorFooter()
         refresh()
     }
 
     private fun rebuild() {
+        turnViews.values.forEach {
+            remove(it)
+            Disposer.dispose(it)
+        }
         turnViews.clear()
         msgToTurn.clear()
         msgToView.clear()
         removeAll()
 
         for (turn in model.turns()) {
-            val tv = TurnView(turn.id, openFile, style, openUrl)
+            val tv = TurnView(turn.id, openFile, style, openUrl, selection)
             turnViews[turn.id] = tv
             for (msgId in turn.messageIds) {
                 val msg = model.message(msgId) ?: continue
@@ -242,6 +249,10 @@ class SessionMessageListPanel(
     }
 
     private fun clear() {
+        turnViews.values.forEach {
+            remove(it)
+            Disposer.dispose(it)
+        }
         turnViews.clear()
         msgToTurn.clear()
         msgToView.clear()
@@ -329,11 +340,23 @@ class SessionMessageListPanel(
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
+        background = SessionUiStyle.View.transcript()
         for (view in turnViews.values) view.applyStyle(style)
         question?.applyStyle(style)
         permission?.applyStyle(style)
         login?.applyStyle(style)
         progress.applyStyle(style)
         refresh()
+    }
+
+    override fun dispose() {
+        turnViews.values.forEach {
+            remove(it)
+            Disposer.dispose(it)
+        }
+        turnViews.clear()
+        msgToTurn.clear()
+        msgToView.clear()
+        removeAll()
     }
 }

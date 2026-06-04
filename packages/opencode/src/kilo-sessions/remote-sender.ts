@@ -12,7 +12,7 @@ import { QuestionID } from "@/question/schema"
 import { ModelID, ProviderID } from "@/provider/schema"
 import * as Log from "@opencode-ai/core/util/log"
 import z from "zod"
-import { zodObject } from "@/util/effect-zod"
+import { zodObject } from "@opencode-ai/core/effect-zod"
 import { Effect } from "effect"
 
 type Provide = typeof import("@/project/with-instance").provide

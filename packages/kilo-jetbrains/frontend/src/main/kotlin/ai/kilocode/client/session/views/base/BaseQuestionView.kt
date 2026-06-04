@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.views.base
 
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.RoundedContentPanel
@@ -37,7 +38,9 @@ import javax.swing.JPanel
  * Call [setTopPanel], [setHeaderIcon], [setHeader], [setDescription],
  * [setContent], [setActions], or [setActionEnabled] to configure the card.
  */
-class BaseQuestionView : RoundedContentPanel(
+class BaseQuestionView(
+    private val selection: SessionSelection? = null,
+) : RoundedContentPanel(
     UiStyle.Gap.lg(),
     UiStyle.Gap.pad(),
 ), SessionEditorStyleTarget {
@@ -95,6 +98,7 @@ class BaseQuestionView : RoundedContentPanel(
 
     // action buttons keyed by id for retained updates
     private val actionButtons = mutableMapOf<String, JButton>()
+    private val actionHandlers = mutableMapOf<String, () -> Unit>()
     private val actionOrder = mutableListOf<String>()
 
     private val mainActions = Stack.horizontal(gap = UiStyle.Gap.sm())
@@ -183,20 +187,25 @@ class BaseQuestionView : RoundedContentPanel(
     /**
      * Configure the action buttons shown in the card's right-aligned footer.
      *
-     * All buttons are created fresh; stable button references across calls can be
-     * maintained by the caller through [setActionEnabled] using the [Action.id].
+     * Buttons are retained by stable [Action.id] when possible and updated in place.
      * Pass an empty list to remove the footer entirely.
      */
     @RequiresEdt
     fun setActions(actions: List<Action>) {
-        actionButtons.clear()
+        val ids = actions.map { it.id }.toSet()
+        val stale = actionButtons.keys - ids
+        stale.forEach {
+            actionButtons.remove(it)
+            actionHandlers.remove(it)
+        }
         actionOrder.clear()
         mainActions.removeAll()
         for (action in actions) {
-            val btn = makeButton(action.text, action.primary).apply {
-                isEnabled = action.enabled
-                addActionListener { action.handler() }
-            }
+            val btn = actionButtons[action.id] ?: makeButton(action.id, action.text).also { actionButtons[action.id] = it }
+            actionHandlers[action.id] = action.handler
+            btn.text = action.text
+            btn.isEnabled = action.enabled
+            btn.putClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY, if (action.primary) true else null)
             actionButtons[action.id] = btn
             actionOrder.add(action.id)
             mainActions.next(btn)
@@ -352,6 +361,7 @@ class BaseQuestionView : RoundedContentPanel(
             alignmentX = Component.LEFT_ALIGNMENT
         }
         tracked.add(area to bold)
+        selection?.register(area)
         applyFont(area, bold)
         return area
     }
@@ -361,10 +371,9 @@ class BaseQuestionView : RoundedContentPanel(
         if (area.font != font) area.font = font
     }
 
-    private fun makeButton(text: String, primary: Boolean): JButton {
+    private fun makeButton(id: String, text: String): JButton {
         val btn = object : JButton(text) {
             init {
-                if (primary) putClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY, true)
                 syncBackground()
             }
 
@@ -377,6 +386,7 @@ class BaseQuestionView : RoundedContentPanel(
                 background = SessionUiStyle.View.surface()
             }
         }
+        btn.addActionListener { actionHandlers[id]?.invoke() }
         return btn
     }
 }

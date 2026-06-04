@@ -59,6 +59,18 @@ export namespace KiloTask {
     return [{ permission: "task", pattern: "*", action: "deny" }, ...rules]
   }
 
+  export function merge(...rulesets: Permission.Ruleset[]): Permission.Ruleset {
+    const result: Permission.Ruleset = []
+    const seen = new Set<string>()
+    for (const rule of rulesets.flat()) {
+      const key = `${rule.permission}\u0000${rule.pattern}\u0000${rule.action}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      result.push(rule)
+    }
+    return result
+  }
+
   type Model = { providerID: ProviderID; modelID: ModelID }
   type Saved = Model & { variant?: string }
   type Choice = { model: Model; variant?: string; sticky?: boolean; direct?: boolean }
