@@ -1,7 +1,7 @@
 export * as ConfigPermission from "./permission"
 import { Schema, SchemaGetter } from "effect"
-import { zod } from "@/util/effect-zod"
-import { withStatics } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { withStatics } from "@opencode-ai/core/schema"
 
 export const Action = Schema.NullOr(Schema.Literals(["ask", "allow", "deny"])) // kilocode_change - nullable allows null as a delete sentinel
   .annotate({ identifier: "PermissionActionConfig" })

@@ -23,8 +23,8 @@ import { Plugin } from "@/plugin"
 import { Skill } from "../skill"
 import { Effect, Context, Layer, Schema } from "effect"
 import { InstanceState } from "@/effect/instance-state"
-import { zod } from "@/util/effect-zod"
-import { withStatics, type DeepMutable } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { withStatics, type DeepMutable } from "@opencode-ai/core/schema"
 import * as KiloAgent from "@/kilocode/agent" // kilocode_change
 
 type ReferenceEntry = NonNullable<Config.Info["reference"]>[string]

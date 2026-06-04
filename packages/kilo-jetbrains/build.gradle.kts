@@ -34,6 +34,51 @@ fun checked(value: String): String {
     return value
 }
 
+data class Release(val major: Int, val minor: Int, val patch: Int, val rc: Int?) : Comparable<Release> {
+    val stable = rc == null
+    val base get() = if (stable) this else Release(major, minor, patch, null)
+    val text = listOfNotNull("$major.$minor.$patch", rc?.let { "rc.$it" }).joinToString("-")
+
+    override fun compareTo(other: Release): Int {
+        val cmp = compareValuesBy(this, other, Release::major, Release::minor, Release::patch)
+        if (cmp != 0) return cmp
+        return compareValues(rc ?: Int.MAX_VALUE, other.rc ?: Int.MAX_VALUE)
+    }
+}
+
+fun release(value: String): Release? {
+    val match = Regex("^(\\d+)\\.(\\d+)\\.(\\d+)(?:-rc\\.(\\d+))?$").matchEntire(value) ?: return null
+    return Release(
+        match.groupValues[1].toInt(),
+        match.groupValues[2].toInt(),
+        match.groupValues[3].toInt(),
+        match.groupValues[4].takeIf { it.isNotEmpty() }?.toInt(),
+    )
+}
+
+fun releases(): List<Release> {
+    val heading = Regex("^## \\[(.+?)](?: - .*)?$|^## ([^\\[]\\S*)$")
+    return file("CHANGELOG.md").readLines()
+        .mapNotNull { line ->
+            val match = heading.matchEntire(line.trim()) ?: return@mapNotNull null
+            release(match.groupValues[1].ifEmpty { match.groupValues[2] })
+        }
+        .distinctBy { it.text }
+}
+
+fun selected(value: String): List<String> {
+    val current = release(value) ?: return emptyList()
+    val entries = releases()
+    val rcs = if (current.stable) emptyList() else entries
+        .filter { !it.stable && it.base == current.base && it <= current }
+        .sortedDescending()
+    val stables = entries
+        .filter { it.stable && if (current.stable) it <= current else it < current.base }
+        .sortedDescending()
+        .take(5)
+    return (rcs + stables).map { it.text }
+}
+
 fun gitTag(): String? {
     val text = providers.exec {
         commandLine("git", "tag", "--points-at", "HEAD")
@@ -83,11 +128,15 @@ changelog {
 
 val notes = providers.gradleProperty("kilo.changeNotes").orElse(
     provider {
+        val versions = selected(ver).filter { changelog.has(it) }
+        if (versions.isNotEmpty()) return@provider versions.joinToString("\n") { item ->
+            changelog.renderItem(
+                changelog.get(item).withHeader(true).withEmptySections(false),
+                Changelog.OutputType.HTML,
+            )
+        }
         val item = if (changelog.has(ver)) changelog.get(ver) else changelog.getUnreleased()
-        changelog.renderItem(
-            item.withHeader(false).withEmptySections(false),
-            Changelog.OutputType.HTML,
-        )
+        changelog.renderItem(item.withHeader(false).withEmptySections(false), Changelog.OutputType.HTML)
     },
 )
 

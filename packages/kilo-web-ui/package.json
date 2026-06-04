@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-web-ui",
-  "version": "7.3.22",
+  "version": "7.3.29",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -144,5 +144,6 @@
     "@types/bun": "catalog:",
     "@typescript/native-preview": "catalog:",
     "typescript": "catalog:"
-  }
+  },
+  "peerDependencies": {}
 }

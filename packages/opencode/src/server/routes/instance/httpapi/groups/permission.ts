@@ -4,7 +4,7 @@ import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 import { Authorization } from "../middleware/authorization"
 import { InstanceContextMiddleware } from "../middleware/instance-context"
-import { WorkspaceRoutingMiddleware } from "../middleware/workspace-routing"
+import { WorkspaceRoutingMiddleware, WorkspaceRoutingQuery } from "../middleware/workspace-routing"
 import { described } from "./metadata"
 import { ApiNotFoundError } from "../errors" // kilocode_change
 
@@ -32,6 +32,7 @@ export const PermissionApi = HttpApi.make("permission")
     HttpApiGroup.make("permission")
       .add(
         HttpApiEndpoint.get("list", root, {
+          query: WorkspaceRoutingQuery,
           success: described(Schema.Array(Permission.Request), "List of pending permissions"),
         }).annotateMerge(
           OpenApi.annotations({
@@ -42,6 +43,7 @@ export const PermissionApi = HttpApi.make("permission")
         ),
         HttpApiEndpoint.post("reply", `${root}/:requestID/reply`, {
           params: { requestID: PermissionID },
+          query: WorkspaceRoutingQuery,
           payload: ReplyPayload,
           success: described(Schema.Boolean, "Permission processed successfully"),
           error: [HttpApiError.BadRequest, ApiNotFoundError], // kilocode_change
@@ -55,6 +57,7 @@ export const PermissionApi = HttpApi.make("permission")
         // kilocode_change start
         HttpApiEndpoint.post("saveAlwaysRules", `${root}/:requestID/always-rules`, {
           params: { requestID: PermissionID },
+          query: WorkspaceRoutingQuery,
           payload: SaveAlwaysRulesBody,
           success: described(Schema.Boolean, "Always-rules saved"),
           error: [ApiNotFoundError],
@@ -66,6 +69,7 @@ export const PermissionApi = HttpApi.make("permission")
           }),
         ),
         HttpApiEndpoint.post("allowEverything", `${root}/allow-everything`, {
+          query: WorkspaceRoutingQuery,
           payload: AllowEverythingBody,
           success: described(Schema.Boolean, "Success"),
           error: [HttpApiError.BadRequest, HttpApiError.NotFound],

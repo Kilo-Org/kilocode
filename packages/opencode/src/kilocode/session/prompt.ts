@@ -14,6 +14,7 @@ import { PlanFollowup } from "@/kilocode/plan-followup"
 import { KiloSession } from "@/kilocode/session"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { Permission } from "@/permission"
+import { Question } from "@/question"
 import { environmentDetails, type EditorContext } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
@@ -48,6 +49,7 @@ export namespace KiloSessionPrompt {
     sessionID: SessionID
     messages: MessageV2.WithParts[]
     abort: AbortSignal
+    question: Pick<Question.Interface, "ask" | "list" | "reject">
   }): Promise<"continue" | "break"> {
     if (!shouldAskPlanFollowup({ messages: input.messages, abort: input.abort })) return "break"
     const ask = InstanceState.bind(PlanFollowup.ask)
@@ -55,6 +57,16 @@ export namespace KiloSessionPrompt {
       sessionID: input.sessionID,
       messages: input.messages,
       abort: input.abort,
+      // Keep the request in the listener-local Question service so HTTP replies can resolve it.
+      question: {
+        ask: InstanceState.bind((request: Parameters<Question.Interface["ask"]>[0]) =>
+          Effect.runPromise(input.question.ask(request)),
+        ),
+        list: InstanceState.bind(() => Effect.runPromise(input.question.list())),
+        reject: InstanceState.bind((requestID: Parameters<Question.Interface["reject"]>[0]) =>
+          Effect.runPromise(input.question.reject(requestID)),
+        ),
+      },
     })
     return action === "continue" ? "continue" : "break"
   }
@@ -122,6 +134,11 @@ export namespace KiloSessionPrompt {
   export function hardPermissions(input: { agent: { name: string; permission: Permission.Ruleset } }) {
     if (!modes.includes(input.agent.name)) return
     return input.agent.permission
+  }
+
+  export function mergeToolPermissions(input: { existing: Permission.Ruleset; toggles: Permission.Ruleset }) {
+    const names = new Set(input.toggles.map((rule) => rule.permission))
+    return [...input.existing.filter((rule) => !names.has(rule.permission)), ...input.toggles]
   }
 
   export const askPermission = Effect.fn("KiloSessionPrompt.askPermission")(function* (input: {

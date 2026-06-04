@@ -23,10 +23,16 @@ function span(id: string, value: { value: string; start: number; end: number }) 
   }
 }
 
-function diff(kind: string, diffs: { file: string; additions: number; deletions: number }[] | undefined) {
+function diff(
+  kind: string,
+  // kilocode_change start - retain Kilo summary counts while accepting upstream's optional file and patch values
+  diffs: { file?: string; patch?: string; additions: number; deletions: number }[] | undefined,
+  // kilocode_change end
+) {
   return diffs?.map((item, i) => ({
     ...item,
-    file: redact(`${kind}-file`, String(i), item.file),
+    file: item.file === undefined ? undefined : redact(`${kind}-file`, String(i), item.file),
+    patch: item.patch === undefined ? undefined : redact(`${kind}-patch`, String(i), item.patch),
   }))
 }
 

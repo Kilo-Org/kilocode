@@ -12,6 +12,11 @@ import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import { useVSCode } from "../../context/vscode"
 import { createProviderAction } from "../../utils/provider-action"
+import {
+  ATOMIC_CHAT_PROVIDER_KEY,
+  isLocalProviderOptionalApiKey,
+  LOCAL_PROVIDER_API_KEY_PLACEHOLDER,
+} from "../../utils/local-providers"
 
 interface ProviderConnectDialogProps {
   providerID: string
@@ -265,7 +270,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
           <For each={methods()}>
             {(item, index) => (
               <Button variant="secondary" size="large" onClick={() => selectMethod(index())}>
-                {item.type === "api" ? language.t("provider.connect.method.apiKey") : item.label}
+                {item.type === "api" ? item.label || language.t("provider.connect.method.apiKey") : item.label}
               </Button>
             )}
           </For>
@@ -283,10 +288,29 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
     const [value, setValue] = createSignal("")
     const [fields, setFields] = createStore<Record<string, string>>({})
     const prompts = createMemo(() => method()?.prompts?.filter((prompt) => visible(prompt, fields)) ?? [])
+    const apiKeyOptional = () => isLocalProviderOptionalApiKey(props.providerID)
+
+    function apiKeyDescription() {
+      if (props.providerID === ATOMIC_CHAT_PROVIDER_KEY) {
+        return language.t("provider.connect.atomicChat.description")
+      }
+      if (apiKeyOptional()) {
+        return language.t("provider.connect.apiKey.description.local", { provider: name() })
+      }
+      return language.t("provider.connect.apiKey.description", { provider: name() })
+    }
+
+    function apiKeyLabel() {
+      if (apiKeyOptional()) {
+        return language.t("provider.connect.apiKey.label.optional", { provider: name() })
+      }
+      return language.t("provider.connect.apiKey.label", { provider: name() })
+    }
 
     function submit(e: SubmitEvent) {
       e.preventDefault()
-      const apiKey = value().trim()
+      const trimmed = value().trim()
+      const apiKey = trimmed || (apiKeyOptional() ? LOCAL_PROVIDER_API_KEY_PLACEHOLDER : "")
       if (!apiKey) {
         setState({ ...state, error: language.t("provider.connect.apiKey.required"), field: "apiKey" })
         return
@@ -313,14 +337,16 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
         style={{ display: "flex", "flex-direction": "column", gap: "16px" }}
         onSubmit={submit}
       >
-        <div class="provider-connect-body">
-          {language.t("provider.connect.apiKey.description", { provider: name() })}
-        </div>
+        <div class="provider-connect-body">{apiKeyDescription()}</div>
         <TextField
           autofocus
           type="password"
-          label={language.t("provider.connect.apiKey.label", { provider: name() })}
-          placeholder={language.t("provider.connect.apiKey.placeholder")}
+          label={apiKeyLabel()}
+          placeholder={
+            apiKeyOptional()
+              ? language.t("provider.connect.apiKey.placeholder.optional")
+              : language.t("provider.connect.apiKey.placeholder")
+          }
           value={value()}
           onChange={setValue}
           validationState={state.field === "apiKey" ? "invalid" : undefined}

@@ -1,6 +1,6 @@
 import { Schema, SchemaGetter } from "effect" // kilocode_change
-import { zod } from "@/util/effect-zod"
-import { PositiveInt, withStatics } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { PositiveInt, withStatics } from "@opencode-ai/core/schema"
 
 const LocalCanonical = Schema.Struct({
   // kilocode_change

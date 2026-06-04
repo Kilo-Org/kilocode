@@ -12,7 +12,8 @@ type LegacyDiff = {
   status?: "added" | "deleted" | "modified"
 }
 
-type ReviewDiff = SnapshotFileDiff | VcsFileDiff | LegacyDiff
+type SnapshotDiff = SnapshotFileDiff & { file: string }
+type ReviewDiff = SnapshotDiff | VcsFileDiff | LegacyDiff
 
 // kilocode_change start - expose patch text extraction without building FileDiffMetadata on the UI thread
 export type DiffText = {

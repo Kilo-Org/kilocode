@@ -22,6 +22,7 @@ import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
+import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.controller.EVENT_FLUSH_MS
@@ -38,6 +39,11 @@ import ai.kilocode.log.ChatLogSummary
 import com.intellij.util.ui.JBUI
 import ai.kilocode.log.KiloLog
 import com.intellij.ide.BrowserUtil
+import com.intellij.ide.TextCopyProvider
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.PlatformDataKeys
+import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -79,7 +85,7 @@ class SessionUi(
     private val manager: SessionManager? = null,
     private val workspaces: KiloWorkspaceService = service(),
     private val migration: MigrationUiController = service<KiloMigrationService>(),
-) : JPanel(BorderLayout()), Disposable, SessionEditorStyleTarget {
+) : JPanel(BorderLayout()), Disposable, SessionEditorStyleTarget, UiDataProvider {
 
     companion object {
         private val LOG = KiloLog.create(SessionUi::class.java)
@@ -99,7 +105,13 @@ class SessionUi(
             ?: EVENT_FLUSH_MS
 
     private val controller = SessionController(
-        this, ref, sessions, workspace, app, cs, comp = this,
+        parent = this,
+        ref = ref,
+        sessions = sessions,
+        workspace = workspace,
+        app = app,
+        cs = cs,
+        comp = this,
         flushMs = flushMs,
         condense = Registry.`is`("kilo.session.condense", true),
         displayMs = displayMs,
@@ -137,11 +149,22 @@ class SessionUi(
     private var empty: EmptySessionPanel? = null
     private var modalFocus: (() -> JComponent)? = null
     private var style = SessionEditorStyle.current()
+    private val selection = SessionSelection()
+    private val copy = object : TextCopyProvider() {
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+
+        override fun getTextLinesToCopy(): Collection<String>? {
+            val text = selection.selectedText()?.takeIf { it.isNotEmpty() } ?: return null
+            return listOf(text)
+        }
+    }
     private var editorTheme = style.editorScheme
     private var colorTheme = UIManager.getLookAndFeel()
+    private var disposed = false
 
     init {
         buildUi()
+        Disposer.register(this, selection)
         scroll.show(body(controller.model.state))
         bindUi()
         bindStyle()
@@ -152,12 +175,14 @@ class SessionUi(
     }
 
     override fun addNotify() {
+        if (disposed) return
         super.addNotify()
         resumeOpen()
     }
 
     override fun doLayout() {
         super.doLayout()
+        if (disposed) return
         resumeOpen()
     }
 
@@ -169,8 +194,9 @@ class SessionUi(
 
     internal fun currentStyle() = style
 
-    @RequiresEdt
-    internal fun canDisposeInactive(): Boolean = controller.model.state is SessionState.Idle
+    override fun uiDataSnapshot(sink: DataSink) {
+        sink[PlatformDataKeys.COPY_PROVIDER] = copy
+    }
 
     @RequiresEdt
     internal fun activityKind(): SessionActivityKind? = when (val state = controller.model.state) {
@@ -250,12 +276,18 @@ class SessionUi(
             reject = { id -> controller.rejectQuestion(id) },
             follow = { scroll.following() },
             scroll = { scroll.followBottom(it) },
+            selection = selection,
         )
         permission = PermissionView(
             reply = { id, dto -> controller.replyPermission(id, dto) },
+            selection = selection,
         )
-        login = LoginRequiredView(openProfile = { controller.openProfile() }, dismiss = { controller.dismissLoginRequired() })
-        messageBody = SessionMessageListPanel(controller.model, this, question, permission, login, ::openFile, ::openUrl)
+        login = LoginRequiredView(
+            openProfile = { controller.openProfile() },
+            dismiss = { controller.dismissLoginRequired() },
+            selection = selection,
+        )
+        messageBody = SessionMessageListPanel(controller.model, this, question, permission, login, ::openFile, ::openUrl, selection)
         header = SessionHeaderPanel(controller, this)
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
@@ -425,11 +457,13 @@ class SessionUi(
         val bus = ApplicationManager.getApplication().messageBus.connect(this)
         bus.subscribe(EditorColorsManager.TOPIC, EditorColorsListener {
             ApplicationManager.getApplication().invokeLater {
+                if (disposed) return@invokeLater
                 applyStyle(SessionEditorStyle.current())
             }
         })
         bus.subscribe(LafManagerListener.TOPIC, LafManagerListener {
             ApplicationManager.getApplication().invokeLater {
+                if (disposed) return@invokeLater
                 applyStyle(SessionEditorStyle.current())
             }
         })
@@ -493,6 +527,7 @@ class SessionUi(
     }
 
     private fun onStateChanged(state: SessionState) {
+        if (disposed) return
         prompt.setBusy(state.isBusy())
         load.setState(state)
         scroll.setQuestionPending(questionPending(state))
@@ -506,13 +541,16 @@ class SessionUi(
     }
 
     private fun refresh() {
+        if (disposed) return
         scroll.refresh()
         root.revalidate()
         root.repaint()
     }
 
     override fun applyStyle(style: SessionEditorStyle) {
+        if (disposed) return
         this.style = style
+        selection.applyStyle(style)
         editorTheme = style.editorScheme
         colorTheme = UIManager.getLookAndFeel()
         background = style.editorBackground
@@ -527,6 +565,7 @@ class SessionUi(
     }
 
     private fun applyStyleIfThemeChanged() {
+        if (disposed) return
         val next = SessionEditorStyle.current()
         val laf = UIManager.getLookAndFeel()
         if (editorTheme === next.editorScheme && colorTheme == laf) return
@@ -543,7 +582,13 @@ class SessionUi(
         )
     }
 
-    override fun dispose() {}
+    override fun dispose() {
+        disposed = true
+        modalFocus = null
+        empty = null
+        if (this::root.isInitialized) root.setModalContent(null)
+        removeAll()
+    }
 }
 
 private fun variantTitle(value: String): String = value.replaceFirstChar { it.titlecase() }

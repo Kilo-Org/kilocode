@@ -73,7 +73,6 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
             val actions = listOfNotNull(
                 ActionManager.getInstance().getAction("Kilo.NewSession"),
                 ActionManager.getInstance().getAction("Kilo.History"),
-                ActionManager.getInstance().getAction("Kilo.ShowProfile"),
                 ActionManager.getInstance().getAction("Kilo.Settings"),
             )
             toolWindow.setTitleActions(actions)

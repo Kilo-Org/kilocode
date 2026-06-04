@@ -92,7 +92,8 @@ function getLegacyPlugins(mod: Record<string, unknown>) {
     if (seen.has(entry)) continue
     seen.add(entry)
     const plugin = getServerPlugin(entry)
-    if (!plugin) throw new TypeError("Plugin export is not a function")
+    // kilocode_change: skip named exports (e.g. constants from @kilocode/plugin-atomic-chat)
+    if (!plugin) continue // kilocode_change
     result.push(plugin)
   }
 

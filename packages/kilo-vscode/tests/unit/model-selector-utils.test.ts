@@ -98,12 +98,12 @@ describe("sanitizeName", () => {
 
 describe("freeDataLabel", () => {
   it("uses the data collection label without repeating free", () => {
-    expect(freeDataLabel("Free", "Data collected")).toBe("Data collected")
+    expect(freeDataLabel("Free", "Data may be used for training")).toBe("Data may be used for training")
   })
 })
 
 describe("isDataCollectedModel", () => {
-  it("only marks free Kilo Gateway models as data collected", () => {
+  it("only marks free Kilo Gateway models with the training disclosure", () => {
     expect(isDataCollectedModel({ providerID: KILO_GATEWAY_ID, isFree: true })).toBe(true)
     expect(isDataCollectedModel({ providerID: "openrouter", isFree: true })).toBe(false)
     expect(isDataCollectedModel({ providerID: KILO_GATEWAY_ID, isFree: false })).toBe(false)
