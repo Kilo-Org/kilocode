@@ -287,7 +287,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
     const apiKeyOptional = () => isLocalProviderOptionalApiKey(props.providerID)
 
     function apiKeyDescription() {
-      if (props.providerID === "atomic-chat") {
+      if (props.providerID === ATOMIC_CHAT_PROVIDER_KEY) {
         return language.t("provider.connect.atomicChat.description")
       }
       if (apiKeyOptional()) {
