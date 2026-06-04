@@ -4,6 +4,7 @@ import os from "node:os"
 import path from "node:path"
 
 export const WORKSPACE_CHECKPOINT_KEY = "kilocodeWorkspaceCheckpoint"
+export const WORKSPACE_CHECKPOINT_PATCH_LIMIT = 5 * 1024 * 1024
 
 export type WorkspaceCheckpoint = {
   version: 1
@@ -123,17 +124,22 @@ async function patch(dir: string, base: string) {
 
 export async function captureWorkspaceCheckpoint(input: {
   directory: string
+  maxPatchBytes?: number
   now?: () => number
 }): Promise<WorkspaceCheckpoint | undefined> {
   const dir = await root(input.directory)
   if (!dir) return undefined
   const base = await head(dir)
+  const diff = await patch(dir, base)
+  if (new TextEncoder().encode(diff).byteLength > (input.maxPatchBytes ?? WORKSPACE_CHECKPOINT_PATCH_LIMIT)) {
+    return undefined
+  }
   return {
     version: 1,
     ...(await remote(dir).then((gitUrl) => (gitUrl ? { gitUrl } : {}))),
     ...(await branch(dir).then((name) => (name ? { branch: name } : {}))),
     head: base,
-    patch: await patch(dir, base),
+    patch: diff,
     createdAt: input.now?.() ?? Date.now(),
   }
 }

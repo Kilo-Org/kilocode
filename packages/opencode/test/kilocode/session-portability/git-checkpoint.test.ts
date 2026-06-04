@@ -159,6 +159,15 @@ describe("workspace git checkpoints", () => {
     expect(next[WORKSPACE_CHECKPOINT_KEY]?.patch).toContain("untracked.txt")
   })
 
+  test("skips checkpoints when the patch is over the size limit", async () => {
+    const dir = await repo()
+    await writeFile(path.join(dir, "large.txt"), "large patch\n")
+
+    const checkpoint = await captureWorkspaceCheckpoint({ directory: dir, maxPatchBytes: 8 })
+
+    expect(checkpoint).toBeUndefined()
+  })
+
   test("restores a cloud session workspace from the checkpoint embedded in session info", async () => {
     const dir = await repo()
     await writeFile(path.join(dir, "tracked.txt"), "base\nchanged\n")
