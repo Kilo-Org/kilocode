@@ -74,15 +74,15 @@ export function findSimilarModels(targetModel: string, availableModels: string[]
 
 export async function retryWithBackoff<T>(
   operation: () => Promise<T>,
-  maxRetries: number = 3,
+  maxAttempts: number = 3,
   baseDelay: number = 1000
 ): Promise<{ success: boolean; result?: T; error?: string }> {
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
       const result = await operation()
       return { success: true, result }
     } catch (error) {
-      if (attempt === maxRetries) {
+      if (attempt === maxAttempts - 1) {
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),
@@ -91,13 +91,13 @@ export async function retryWithBackoff<T>(
       const delay = baseDelay * Math.pow(2, attempt)
       console.warn(`${LOG_PREFIX} Retrying operation after ${delay}ms`, {
         attempt: attempt + 1,
-        maxRetries: maxRetries + 1,
+        maxAttempts,
         error: error instanceof Error ? error.message : String(error),
       })
       await new Promise((resolve) => setTimeout(resolve, delay))
     }
   }
-  return { success: false, error: 'Max retries exceeded' }
+  return { success: false, error: 'Max attempts exceeded' }
 }
 
 export function categorizeError(error: unknown, context: { baseURL: string; modelId: string }): ModelValidationError {

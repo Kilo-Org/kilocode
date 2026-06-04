@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { AtomicChatPlugin } from '../src/index'
 import { ATOMIC_CHAT_PROVIDER_KEY } from '../src/constants'
+import { sharedModelStatusCache } from '../src/cache/shared-model-status-cache'
 
 const mockFetch = vi.fn()
 global.fetch = mockFetch
@@ -19,6 +20,7 @@ describe('AtomicChatPlugin', () => {
 
   beforeEach(async () => {
     mockFetch.mockClear()
+    sharedModelStatusCache.invalidateAll()
     mockClient = {
       tui: {
         showToast: vi.fn().mockResolvedValue(true),

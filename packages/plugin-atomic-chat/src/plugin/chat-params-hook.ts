@@ -1,12 +1,10 @@
-import { ModelStatusCache } from '../cache/model-status-cache'
+import { sharedModelStatusCache } from '../cache/shared-model-status-cache'
 import { ToastNotifier } from '../ui/toast-notifier'
 import { findSimilarModels, retryWithBackoff, categorizeError, generateAutoFixSuggestions } from '../utils'
 import { getLoadedModels } from './get-loaded-models'
 import { normalizeBaseURL } from '../utils/atomic-chat-api'
 import { safeAsyncOperation, isPluginHookInput, isAtomicChatProvider, isValidModel } from '../utils/validation'
 import { DEFAULT_ATOMIC_CHAT_ORIGIN, LOG_PREFIX } from '../constants'
-
-const modelStatusCache = new ModelStatusCache()
 
 export function createChatParamsHook(toastNotifier: ToastNotifier) {
   return async (input: any, output: any) => {
@@ -15,7 +13,7 @@ export function createChatParamsHook(toastNotifier: ToastNotifier) {
       return
     }
 
-    const { sessionID, agent, model, provider } = input
+    const { model, provider } = input
 
     if (!isValidModel(model)) {
       console.error(`${LOG_PREFIX} Invalid model object`)
@@ -26,9 +24,6 @@ export function createChatParamsHook(toastNotifier: ToastNotifier) {
       return
     }
 
-    void sessionID
-    void agent
-
     const baseURL = normalizeBaseURL(provider.options?.baseURL || DEFAULT_ATOMIC_CHAT_ORIGIN)
 
     await safeAsyncOperation(
@@ -37,16 +32,17 @@ export function createChatParamsHook(toastNotifier: ToastNotifier) {
       (error: Error) => console.warn(`${LOG_PREFIX} Failed to show progress toast:`, error)
     )
 
+    let lastLoadedModels: string[] = []
     const validationResult = await retryWithBackoff(
       async () => {
         const loadedModels = await getLoadedModels(baseURL)
-        const isModelLoaded = loadedModels.includes(model.id)
-        if (!isModelLoaded) {
+        lastLoadedModels = loadedModels
+        if (!loadedModels.includes(model.id)) {
           throw new Error(`Model '${model.id}' not loaded`)
         }
         return loadedModels
       },
-      2,
+      3,
       500
     )
 
@@ -64,12 +60,8 @@ export function createChatParamsHook(toastNotifier: ToastNotifier) {
         baseURL,
       })
 
-      let availableModels: string[] = []
-      try {
-        availableModels = await getLoadedModels(baseURL)
-      } catch (e) {
-        console.warn(`${LOG_PREFIX} Failed to get available models for suggestions`, { error: e })
-      }
+      const availableModels =
+        errorCategory.type === 'offline' ? [] : lastLoadedModels.length > 0 ? lastLoadedModels : []
 
       const similarModels = findSimilarModels(model.id, availableModels)
 
@@ -112,7 +104,7 @@ export function createChatParamsHook(toastNotifier: ToastNotifier) {
         })),
       }
     } else {
-      const cacheStats = modelStatusCache.getStats()
+      const cacheStats = sharedModelStatusCache.getStats()
       const cacheEntry = cacheStats.entries.find((entry) => entry.baseURL === baseURL)
       const cacheAge = cacheEntry ? cacheEntry.age : 0
       const loadedModels = validationResult.result || []
@@ -129,7 +121,7 @@ export function createChatParamsHook(toastNotifier: ToastNotifier) {
         message: `Model '${model.id}' is listed by Atomic Chat and ready.`,
         cacheInfo: {
           age: cacheAge,
-          valid: modelStatusCache.isValid(baseURL),
+          valid: sharedModelStatusCache.isValid(baseURL),
           totalCacheEntries: cacheStats.size,
         },
         performanceHint:

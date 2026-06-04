@@ -79,15 +79,25 @@ export class ModelStatusCache {
 
   private cleanup(): void {
     const now = Date.now()
-    const toDelete: string[] = []
+    const entries = Array.from(this.cache.entries())
 
-    for (const [baseURL, data] of this.cache.entries()) {
-      if (now - data.timestamp > data.ttl * 5 || this.cache.size > this.MAX_CACHE_SIZE) {
-        toDelete.push(baseURL)
+    for (const [baseURL, data] of entries) {
+      if (now - data.timestamp > data.ttl * 5) {
+        this.cache.delete(baseURL)
       }
     }
 
-    toDelete.forEach((baseURL) => this.cache.delete(baseURL))
+    if (this.cache.size <= this.MAX_CACHE_SIZE) {
+      return
+    }
+
+    const sorted = Array.from(this.cache.entries()).sort(
+      (a, b) => a[1].timestamp - b[1].timestamp
+    )
+    const excess = this.cache.size - this.MAX_CACHE_SIZE
+    for (let i = 0; i < excess; i++) {
+      this.cache.delete(sorted[i]![0])
+    }
   }
 
   setTTL(baseURL: string, ttl: number): void {

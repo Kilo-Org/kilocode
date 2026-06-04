@@ -4,6 +4,8 @@ import { enhanceConfig, shouldProbeAtomicChat } from './enhance-config'
 import type { PluginInput } from '@kilocode/plugin'
 import { ATOMIC_CHAT_PROVIDER_KEY, LOG_PREFIX } from '../constants'
 
+const CONFIG_DISCOVERY_TIMEOUT_MS = 5000
+
 export function createConfigHook(client: PluginInput['client'], toastNotifier: ToastNotifier) {
   return async (config: any) => {
     const section = config?.provider?.[ATOMIC_CHAT_PROVIDER_KEY]
@@ -29,17 +31,14 @@ export function createConfigHook(client: PluginInput['client'], toastNotifier: T
       return
     }
 
-    const discoveryPromise = enhanceConfig(config, client, toastNotifier)
-    const timeoutMs = 5000
+    const abort = new AbortController()
+    const timeout = setTimeout(() => abort.abort(), CONFIG_DISCOVERY_TIMEOUT_MS)
     try {
-      await Promise.race([
-        discoveryPromise,
-        new Promise<void>((resolve) => {
-          setTimeout(() => resolve(), timeoutMs)
-        }),
-      ])
+      await enhanceConfig(config, client, toastNotifier, abort.signal)
     } catch (error) {
       console.error(`${LOG_PREFIX} Config enhancement failed:`, error)
+    } finally {
+      clearTimeout(timeout)
     }
 
     const finalSection = config?.provider?.[ATOMIC_CHAT_PROVIDER_KEY]

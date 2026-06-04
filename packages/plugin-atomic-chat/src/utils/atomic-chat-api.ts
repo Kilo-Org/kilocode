@@ -59,8 +59,10 @@ export async function fetchModelsDirect(baseURL: string = DEFAULT_ATOMIC_CHAT_OR
     }
     const data = (await response.json()) as AtomicChatModelsResponse
     return data.data?.map((model) => model.id) || []
-  } catch {
-    return []
+  } catch (error) {
+    throw new Error(
+      `Failed to fetch models: ${error instanceof Error ? error.message : String(error)}`
+    )
   }
 }
 

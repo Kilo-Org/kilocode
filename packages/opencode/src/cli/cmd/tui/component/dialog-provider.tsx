@@ -369,14 +369,13 @@ function ApiMethod(props: ApiMethodProps) {
       placeholder={KiloProvider.apiKeyPlaceholder(props.providerID)} // kilocode_change
       description={KiloProvider.renderApiDescription(props.providerID, theme)} // kilocode_change
       onConfirm={async (value) => {
-        // kilocode_change start
-        const key = value.trim() || (optionalApiKey ? KiloProvider.LOCAL_API_KEY_PLACEHOLDER : "")
-        if (!key) return
+        const key = value.trim() || (optionalApiKey ? KiloProvider.LOCAL_API_KEY_PLACEHOLDER : "") // kilocode_change
+        if (!key) return // kilocode_change
         await sdk.client.auth.set({
           providerID: props.providerID,
           auth: {
             type: "api",
-            key,
+            key, // kilocode_change
             ...(props.metadata ? { metadata: props.metadata } : {}),
           },
         })
@@ -385,12 +384,11 @@ function ApiMethod(props: ApiMethodProps) {
         if (props.custom && !sync.data.provider_next.all.some((provider) => provider.id === props.providerID)) {
           toast.show({
             variant: "info",
-            message: `Saved credential for ${props.providerID}. Configure it in kilo.json to use it.`,
+            message: `Saved credential for ${props.providerID}. Configure it in kilo.json to use it.`, // kilocode_change
           })
           dialog.clear()
           return
         }
-        // kilocode_change end
         dialog.replace(() => <DialogModel providerID={props.providerID} />)
       }}
     />

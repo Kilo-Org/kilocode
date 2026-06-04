@@ -1,4 +1,4 @@
-import { ModelStatusCache } from '../cache/model-status-cache'
+import { sharedModelStatusCache } from '../cache/shared-model-status-cache'
 import { ToastNotifier } from '../ui/toast-notifier'
 import { categorizeModel, formatModelName, extractModelOwner } from '../utils'
 import {
@@ -19,8 +19,6 @@ import { ATOMIC_CHAT_PROVIDER_KEY, LOG_PREFIX } from '../constants'
 
 export { shouldProbeAtomicChat } from '../utils/should-probe-atomic-chat'
 
-const modelStatusCache = new ModelStatusCache()
-
 function setAtomicSection(config: any, value: Record<string, unknown>) {
   if (!config.provider) {
     config.provider = {}
@@ -31,9 +29,10 @@ function setAtomicSection(config: any, value: Record<string, unknown>) {
 export async function enhanceConfig(
   config: any,
   _client: PluginInput['client'],
-  toastNotifier: ToastNotifier
+  toastNotifier: ToastNotifier,
+  signal?: AbortSignal
 ): Promise<void> {
-  if (!shouldProbeAtomicChat(config)) {
+  if (!shouldProbeAtomicChat(config) || signal?.aborted) {
     return
   }
 
@@ -45,7 +44,7 @@ export async function enhanceConfig(
       baseURL = normalizeBaseURL(atomicProvider.options?.baseURL || 'http://127.0.0.1:1337')
     } else if (isAtomicChatAutoDetectEnabled(config)) {
       const detectedURL = await autoDetectAtomicChat()
-      if (!detectedURL) {
+      if (!detectedURL || signal?.aborted) {
         return
       }
       baseURL = detectedURL
@@ -59,19 +58,20 @@ export async function enhanceConfig(
       })
       atomicProvider = getAtomicSection(config)
     } else {
-      // Model references atomic-chat but provider block is missing — use default origin only.
       baseURL = normalizeBaseURL('http://127.0.0.1:1337')
-      if (!atomicProvider) {
-        setAtomicSection(config, {
-          npm: '@ai-sdk/openai-compatible',
-          name: 'Atomic Chat (local)',
-          options: {
-            baseURL: `${baseURL}/v1`,
-          },
-          models: {},
-        })
-        atomicProvider = getAtomicSection(config)
-      }
+      setAtomicSection(config, {
+        npm: '@ai-sdk/openai-compatible',
+        name: 'Atomic Chat (local)',
+        options: {
+          baseURL: `${baseURL}/v1`,
+        },
+        models: {},
+      })
+      atomicProvider = getAtomicSection(config)
+    }
+
+    if (signal?.aborted) {
+      return
     }
 
     const isHealthy = await checkAtomicChatHealth(baseURL)
@@ -90,8 +90,12 @@ export async function enhanceConfig(
       return
     }
 
+    if (signal?.aborted) {
+      return
+    }
+
     if (models.length > 0) {
-      const existingModels = atomicProvider.models || {}
+      const existingModels = atomicProvider?.models || {}
       const discoveredModels: Record<string, any> = {}
       let chatModelsCount = 0
       let embeddingModelsCount = 0
@@ -150,11 +154,14 @@ export async function enhanceConfig(
       console.warn(`${LOG_PREFIX} No models returned from Atomic Chat. Load a model and ensure the server is running.`)
     }
 
-    if (hasAtomicChatProviderSection(config) || isAtomicChatAutoDetectEnabled(config)) {
+    if (
+      !signal?.aborted &&
+      (hasAtomicChatProviderSection(config) || isAtomicChatAutoDetectEnabled(config)) &&
+      models.length > 0
+    ) {
       try {
-        await modelStatusCache.getModels(baseURL, async () => {
-          return await discoverAtomicChatModels(baseURL).then((m) => m.map((x) => x.id))
-        })
+        const modelIds = models.map((m) => m.id)
+        await sharedModelStatusCache.getModels(baseURL, async () => modelIds)
       } catch {
         // non-fatal
       }
