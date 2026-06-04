@@ -23,14 +23,22 @@ export async function importCloudSession(
     kilo: {
       cloud: {
         session: {
-          import: (params: { sessionId: string }) => Promise<{ data?: unknown }>
+          import: (params: {
+            sessionId: string
+            body_directory?: string
+            query_directory?: string
+          }) => Promise<{ data?: unknown }>
         }
       }
     }
   },
   sessionId: string,
+  directory?: string,
 ): Promise<string | undefined> {
-  const result = await client.kilo.cloud.session.import({ sessionId })
+  const result = await client.kilo.cloud.session.import({
+    sessionId,
+    ...(directory ? { body_directory: directory } : {}),
+  })
   const id = (result.data as Record<string, unknown>)?.id
   return typeof id === "string" ? id : undefined
 }

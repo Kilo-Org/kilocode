@@ -35,7 +35,7 @@ async function session(input: Input, daemon: DaemonClient.Connection) {
     directory: input.cwd,
     headers: daemon.headers,
   })
-  const id = await importCloudSession(client, input.args.session).catch(() => undefined)
+  const id = await importCloudSession(client, input.args.session, input.cwd).catch(() => undefined)
   if (id) return { ok: true as const, id }
 
   UI.error("Failed to import session from cloud")

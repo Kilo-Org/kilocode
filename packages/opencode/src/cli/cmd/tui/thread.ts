@@ -336,7 +336,7 @@ export const TuiThreadCommand = cmd({
             fetch: transport.fetch,
             directory: cwd,
           })
-          const id = await importCloudSession(sdk, args.session).catch(() => undefined)
+          const id = await importCloudSession(sdk, args.session, cwd).catch(() => undefined)
           if (!id) {
             UI.error("Failed to import session from cloud")
             shutdownAndExit({ reason: "cloud-fork-failed", code: 1 })

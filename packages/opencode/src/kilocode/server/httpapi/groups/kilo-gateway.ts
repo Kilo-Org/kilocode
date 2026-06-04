@@ -105,6 +105,7 @@ export const CloudSessions = Schema.Struct({
 
 export const CloudSessionImportBody = Schema.Struct({
   sessionId: Schema.String,
+  directory: Schema.optional(Schema.String),
 })
 
 const GroupEntry = Schema.Union([

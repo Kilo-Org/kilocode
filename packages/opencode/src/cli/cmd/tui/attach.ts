@@ -89,7 +89,7 @@ export const AttachCommand = cmd({
           directory,
           headers,
         })
-        const id = await importCloudSession(sdk, args.session).catch(() => undefined)
+        const id = await importCloudSession(sdk, args.session, directory).catch(() => undefined)
         if (!id) {
           UI.error("Failed to import session from cloud")
           process.exitCode = 1

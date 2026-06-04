@@ -140,7 +140,7 @@ export async function handleImportAndSend(
     const result = await ctx.client.kilo.cloud.session.import(
       {
         sessionId: cloudSessionId,
-        directory: dir,
+        body_directory: dir,
       },
       { signal: AbortSignal.timeout(TIMEOUT) },
     )

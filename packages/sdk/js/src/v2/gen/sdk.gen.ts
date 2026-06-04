@@ -6290,9 +6290,10 @@ export class Session4 extends HeyApiClient {
    */
   public import<ThrowOnError extends boolean = false>(
     parameters?: {
-      directory?: string
+      query_directory?: string
       workspace?: string
       sessionId?: string
+      body_directory?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -6301,9 +6302,18 @@ export class Session4 extends HeyApiClient {
       [
         {
           args: [
-            { in: "query", key: "directory" },
+            {
+              in: "query",
+              key: "query_directory",
+              map: "directory",
+            },
             { in: "query", key: "workspace" },
             { in: "body", key: "sessionId" },
+            {
+              in: "body",
+              key: "body_directory",
+              map: "directory",
+            },
           ],
         },
       ],

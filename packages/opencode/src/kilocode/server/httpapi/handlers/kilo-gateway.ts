@@ -32,6 +32,7 @@ import { Auth } from "@/auth"
 import { EffectBridge } from "@/effect/bridge"
 import { Bus } from "@/bus"
 import { Identifier } from "@/id/id"
+import { restoreCloudSessionWorkspace } from "@/kilocode/session-portability/git-checkpoint"
 import { Instance } from "@/project/instance"
 import { InstanceStore } from "@/project/instance-store"
 import { ModelCache } from "@/provider/model-cache"
@@ -440,6 +441,34 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       if (!fetched.ok) return jsonError(fetched.error, fetched.status)
       if (!fetched.data?.info?.id) return yield* Effect.fail(new HttpApiError.BadRequest({}))
 
+      const directory = ctx.payload.directory ?? Instance.directory
+      const workspace = yield* Effect.tryPromise({
+        try: () =>
+          restoreCloudSessionWorkspace({
+            info: fetched.data.info,
+            directory,
+            sessionID: fetched.data.info.id,
+          }),
+        catch: (err) => err,
+      }).pipe(
+        Effect.catch((err) =>
+          Effect.sync(() => {
+            log.warn("cloud session workspace restore failed", {
+              sessionID: fetched.data.info.id,
+              error: err instanceof Error ? err.message : String(err),
+            })
+            return { directory, result: { status: "skipped" as const, reason: "no_checkpoint" as const } }
+          }),
+        ),
+      )
+      if (workspace.result.status === "failed") {
+        log.warn("cloud session workspace restore did not complete", {
+          sessionID: fetched.data.info.id,
+          reason: workspace.result.reason,
+          error: workspace.result.error,
+        })
+      }
+
       const bridge = yield* EffectBridge.make()
       return yield* Effect.tryPromise({
         try: () =>
@@ -447,7 +476,10 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
             Effect.sync(() =>
               importSessionToDb(fetched.data, {
                 Database,
-                Instance,
+                Instance: {
+                  directory: workspace.directory,
+                  project: Instance.project,
+                },
                 SessionTable,
                 MessageTable,
                 PartTable,

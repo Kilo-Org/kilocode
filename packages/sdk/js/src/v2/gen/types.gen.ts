@@ -8715,6 +8715,7 @@ export type KiloCloudSessionGetResponse = KiloCloudSessionGetResponses[keyof Kil
 export type KiloCloudSessionImportData = {
   body?: {
     sessionId: string
+    directory?: string
   }
   path?: never
   query?: {

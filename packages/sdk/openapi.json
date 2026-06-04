@@ -12364,6 +12364,9 @@
                 "properties": {
                   "sessionId": {
                     "type": "string"
+                  },
+                  "directory": {
+                    "type": "string"
                   }
                 },
                 "required": ["sessionId"],

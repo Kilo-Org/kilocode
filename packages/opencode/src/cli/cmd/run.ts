@@ -392,7 +392,7 @@ export const RunCommand = effectCmd({
       async function session(sdk: KiloClient): Promise<SessionInfo | undefined> {
         // kilocode_change start - import cloud session before local lookup
         if (args.session && args["cloud-fork"]) {
-          const id = await importCloudSession(sdk, args.session).catch(() => undefined)
+          const id = await importCloudSession(sdk, args.session, directory ?? root).catch(() => undefined)
           if (!id) {
             UI.error("Failed to import session from cloud")
             process.exit(1)
