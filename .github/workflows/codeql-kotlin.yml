@@ -9,15 +9,39 @@ on:
       - ".github/workflows/codeql-kotlin.yml"
   pull_request:
     branches: ["main"]
-    paths:
-      - "packages/kilo-jetbrains/**"
-      - ".github/workflows/codeql-kotlin.yml"
   schedule:
     - cron: "29 10 * * 5"
   workflow_dispatch:
 
 jobs:
+  check-paths:
+    name: Check Kotlin changed paths
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      matched: ${{ steps.filter.outputs.matched }}
+    steps:
+      - name: Check changed files
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          matched=false
+          while IFS= read -r file; do
+            case "$file" in
+              packages/kilo-jetbrains/*|.github/workflows/codeql-kotlin.yml)
+                matched=true
+                break
+                ;;
+            esac
+          done < <(gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR}/files" --jq '.[].filename')
+          echo "matched=$matched" >> "$GITHUB_OUTPUT"
+          echo "matched=$matched"
+
   analyze:
+    needs: check-paths
+    if: always() && (needs.check-paths.result == 'skipped' || needs.check-paths.outputs.matched == 'true')
     name: Analyze (java-kotlin)
     runs-on: ubuntu-latest
     permissions:
