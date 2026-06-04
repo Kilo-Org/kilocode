@@ -106,6 +106,27 @@ describe("workspace git checkpoints", () => {
     expect(restored).toEqual({ status: "skipped", reason: "different_repo" })
   })
 
+  test("removes the created worktree when patch apply fails", async () => {
+    const dir = await repo()
+    const checkpoint = await captureWorkspaceCheckpoint({ directory: dir })
+    const target = path.join(await mkdtemp(path.join(os.tmpdir(), "kilo-checkpoint-patch-fail-")), "session")
+
+    const restored = await restoreWorkspaceCheckpoint({
+      directory: dir,
+      checkpoint: {
+        ...checkpoint!,
+        patch: "diff --git a/missing.txt b/missing.txt\n--- a/missing.txt\n+++ b/missing.txt\n@@ -1 +1 @@\n-old\n+new\n",
+      },
+      targetDirectory: target,
+      branch: "kilo-restore-patch-fail",
+    })
+
+    expect(restored.status).toBe("failed")
+    expect(restored.reason).toBe("patch_failed")
+    expect(await Bun.file(target).exists()).toBe(false)
+    expect(await git(dir, ["worktree", "list", "--porcelain"])).not.toContain(target)
+  })
+
   test("embeds a checkpoint in a session-shaped object without mutating the original", async () => {
     const dir = await repo()
     await writeFile(path.join(dir, "untracked.txt"), "new\n")

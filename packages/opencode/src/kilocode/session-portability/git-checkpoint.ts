@@ -204,6 +204,10 @@ async function uniqueBranch(dir: string, base: string) {
   return pick(clean)
 }
 
+async function removeWorktree(dir: string, target: string) {
+  await run(dir, ["worktree", "remove", "--force", target], { ok: [0, 1, 128] }).catch(() => undefined)
+}
+
 export async function restoreWorkspaceCheckpoint(input: {
   directory: string
   checkpoint: WorkspaceCheckpoint | undefined
@@ -236,6 +240,7 @@ export async function restoreWorkspaceCheckpoint(input: {
       ok: [0, 1],
     }).catch((err) => ({ code: 1, stderr: err instanceof Error ? err.message : String(err) }))
     if (applied.code !== 0) {
+      await removeWorktree(dir, input.targetDirectory)
       return { status: "failed", reason: "patch_failed", directory: input.targetDirectory, error: applied.stderr }
     }
   }
