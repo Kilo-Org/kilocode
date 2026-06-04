@@ -35,22 +35,32 @@ export async function fetchModelsEndpoint(baseURL: string): Promise<ModelsEndpoi
     }
     const data = (await response.json()) as AtomicChatModelsResponse
     return { ok: true, models: data.data ?? [] }
-  } catch {
-    return { ok: false, models: [] }
+  } catch (error) {
+    throw new Error(
+      `Failed to fetch models: ${error instanceof Error ? error.message : String(error)}`
+    )
   }
 }
 
 export async function checkAtomicChatHealth(baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN): Promise<boolean> {
-  const { ok } = await fetchModelsEndpoint(baseURL)
-  return ok
+  try {
+    const { ok } = await fetchModelsEndpoint(baseURL)
+    return ok
+  } catch {
+    return false
+  }
 }
 
 export async function discoverAtomicChatModels(baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN): Promise<AtomicChatModel[]> {
-  const { ok, models } = await fetchModelsEndpoint(baseURL)
-  if (!ok) {
+  try {
+    const { ok, models } = await fetchModelsEndpoint(baseURL)
+    if (!ok) {
+      return []
+    }
+    return models
+  } catch {
     return []
   }
-  return models
 }
 
 export async function fetchModelsDirect(baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN): Promise<string[]> {
@@ -64,9 +74,13 @@ export async function fetchModelsDirect(baseURL: string = DEFAULT_ATOMIC_CHAT_OR
 export async function autoDetectAtomicChat(): Promise<string | null> {
   for (const port of ATOMIC_CHAT_PROBE_PORTS) {
     const baseURL = `http://127.0.0.1:${port}`
-    const { ok } = await fetchModelsEndpoint(baseURL)
-    if (ok) {
-      return baseURL
+    try {
+      const { ok } = await fetchModelsEndpoint(baseURL)
+      if (ok) {
+        return baseURL
+      }
+    } catch {
+      continue
     }
   }
   return null

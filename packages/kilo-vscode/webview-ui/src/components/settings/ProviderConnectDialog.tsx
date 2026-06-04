@@ -12,7 +12,11 @@ import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import { useVSCode } from "../../context/vscode"
 import { createProviderAction } from "../../utils/provider-action"
-import { isLocalProviderOptionalApiKey, LOCAL_PROVIDER_API_KEY_PLACEHOLDER } from "../../utils/local-providers"
+import {
+  ATOMIC_CHAT_PROVIDER_KEY,
+  isLocalProviderOptionalApiKey,
+  LOCAL_PROVIDER_API_KEY_PLACEHOLDER,
+} from "../../utils/local-providers"
 
 interface ProviderConnectDialogProps {
   providerID: string

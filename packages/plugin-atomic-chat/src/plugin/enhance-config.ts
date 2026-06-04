@@ -69,7 +69,19 @@ export async function enhanceConfig(
       return
     }
 
-    const { ok, models } = await fetchModelsEndpoint(baseURL)
+    let ok: boolean
+    let models: AtomicChatModel[]
+    try {
+      const result = await fetchModelsEndpoint(baseURL)
+      ok = result.ok
+      models = result.models
+    } catch (error) {
+      console.warn(`${LOG_PREFIX} Atomic Chat API appears unreachable`, {
+        baseURL,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return
+    }
     if (!ok) {
       console.warn(`${LOG_PREFIX} Atomic Chat API appears unreachable`, { baseURL })
       return
@@ -147,8 +159,10 @@ export async function enhanceConfig(
       try {
         const modelIds = models.map((m) => m.id)
         await sharedModelStatusCache.getModels(baseURL, async () => modelIds)
-      } catch {
-        // non-fatal
+      } catch (err) {
+        console.warn(`${LOG_PREFIX} Failed to warm model status cache`, {
+          error: err instanceof Error ? err.message : String(err),
+        })
       }
     }
   } catch (error) {
