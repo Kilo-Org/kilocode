@@ -6,6 +6,7 @@ import * as yaml from "yaml"
 import { exec } from "../../util/process"
 import type {
   MarketplaceItem,
+  MarketplaceItemRef,
   SkillMarketplaceItem,
   McpMarketplaceItem,
   AgentMarketplaceItem,
@@ -129,7 +130,7 @@ export class MarketplaceInstaller {
   }
 
   async removeAgent(
-    item: AgentMarketplaceItem,
+    item: Pick<AgentMarketplaceItem, "id">,
     scope: "project" | "global",
     workspace?: string,
   ): Promise<RemoveResult> {
@@ -250,13 +251,20 @@ export class MarketplaceInstaller {
 
   // ── Remove ──────────────────────────────────────────────────────────
 
-  async remove(item: MarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
+  async remove(item: MarketplaceItemRef, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
+    if (scope === "project" && !workspace) {
+      return { success: false, slug: item.id, error: "No workspace directory for project-scope removal" }
+    }
     if (item.type === "skill") return this.removeSkill(item, scope, workspace)
     if (item.type === "mcp") return this.removeMcp(item, scope, workspace)
     return this.removeAgent(item, scope, workspace)
   }
 
-  async removeMcp(item: McpMarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
+  async removeMcp(
+    item: Pick<McpMarketplaceItem, "id">,
+    scope: "project" | "global",
+    workspace?: string,
+  ): Promise<RemoveResult> {
     if (scope === "project" && !workspace) {
       return { success: false, slug: item.id, error: "No workspace directory for project-scope removal" }
     }
@@ -272,7 +280,7 @@ export class MarketplaceInstaller {
   }
 
   async removeSkill(
-    item: SkillMarketplaceItem,
+    item: Pick<SkillMarketplaceItem, "id">,
     scope: "project" | "global",
     workspace?: string,
   ): Promise<RemoveResult> {

@@ -2,7 +2,11 @@ package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import com.intellij.util.ui.JBUI
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import javax.swing.JComponent
+import javax.swing.RepaintManager
 
 /**
  * Tests for [TextView].
@@ -63,6 +67,24 @@ class TextViewTest : BasePlatformTestCase() {
         assertEquals("first second", view.markdown())
     }
 
+    fun `test appendDelta empty string does not repaint or change markdown`() {
+        val view = TextView(Text("p1").also { it.content.append("keep") })
+        val repaint = TrackingRepaintManager(view)
+        val old = RepaintManager.currentManager(view)
+
+        try {
+            RepaintManager.setCurrentManager(repaint)
+
+            view.appendDelta("")
+
+            assertEquals("keep", view.markdown())
+            assertEquals(0, repaint.dirty)
+            assertEquals(0, repaint.invalid)
+        } finally {
+            RepaintManager.setCurrentManager(old)
+        }
+    }
+
     // ---- contentId ------
 
     fun `test contentId matches Text id`() {
@@ -77,12 +99,12 @@ class TextViewTest : BasePlatformTestCase() {
         assertNotNull(view.md.component)
     }
 
-    fun `test markdown uses editor font settings`() {
+    fun `test markdown uses ui family with editor size`() {
         val style = SessionEditorStyle.current()
         val view = TextView(Text("p1"))
         val sheet = view.md.overrideSheet()
 
-        assertTrue(sheet.contains(style.editorFamily))
+        assertTrue(sheet.contains(style.transcriptFont.name))
         assertTrue(sheet.contains("${style.editorSize}pt"))
     }
 
@@ -95,9 +117,31 @@ class TextViewTest : BasePlatformTestCase() {
         val sheet = view.md.overrideSheet()
 
         assertSame(component, view.md.component)
+        assertTrue(sheet.contains(style.transcriptFont.name))
         assertTrue(sheet.contains("Courier New"))
         assertTrue(sheet.contains("23pt"))
         assertEquals(style.editorForeground, view.md.foreground)
+    }
+
+    fun `test prompt view uses editor font and background`() {
+        val style = SessionEditorStyle.create(family = "Courier New", size = 23)
+        val view = PromptView(Text("p1"))
+
+        view.applyStyle(style)
+
+        assertEquals(style.editorFont, view.md.font)
+        assertEquals(style.editorBackground, view.md.background)
+        assertFalse(view.contentOpaque())
+    }
+
+    fun `test prompt view uses input shell padding`() {
+        val view = PromptView(Text("p1"))
+        val ins = view.border.getBorderInsets(view)
+
+        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING), ins.top)
+        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING), ins.bottom)
+        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING), ins.left)
+        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING), ins.right)
     }
 
     // ---- markdown is rendered ------
@@ -122,5 +166,20 @@ class TextViewTest : BasePlatformTestCase() {
         view.md.simulateLink("https://kilocode.ai/docs")
 
         assertEquals(listOf("https://kilocode.ai/docs"), urls)
+    }
+
+    private class TrackingRepaintManager(private val watched: JComponent) : RepaintManager() {
+        var dirty = 0
+        var invalid = 0
+
+        override fun addDirtyRegion(c: JComponent, x: Int, y: Int, w: Int, h: Int) {
+            if (c === watched) dirty++
+            super.addDirtyRegion(c, x, y, w, h)
+        }
+
+        override fun addInvalidComponent(invalidComponent: JComponent) {
+            if (invalidComponent === watched) invalid++
+            super.addInvalidComponent(invalidComponent)
+        }
     }
 }

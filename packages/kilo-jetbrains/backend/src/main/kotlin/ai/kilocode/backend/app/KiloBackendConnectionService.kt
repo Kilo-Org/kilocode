@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -88,6 +89,11 @@ class KiloConnectionService(
 
     private val _events = MutableSharedFlow<SseEvent>(extraBufferCapacity = 64)
     val events: SharedFlow<SseEvent> = _events.asSharedFlow()
+    private val queue = Channel<SseEvent>(Channel.UNLIMITED)
+    private val lock = Any()
+    private val eventJob = cs.launch {
+        for (event in queue) _events.emit(event)
+    }
 
     /** Generated API client — null when disconnected. */
     var api: DefaultApi? = null
@@ -241,10 +247,16 @@ class KiloConnectionService(
 
         override fun onEvent(src: EventSource, id: String?, type: String?, data: String) {
             if (source.get() !== src) return
-            lastEvent.set(System.currentTimeMillis())
-            val kind = type ?: KiloCliDataParser.extractEventType(data)
-            log.debug { "evt=$kind bytes=${data.length} hasId=${id != null} ${ChatLogSummary.body(data)}" }
-            cs.launch { _events.emit(SseEvent(type = kind, data = data)) }
+            synchronized(lock) {
+                if (disposed) return@synchronized
+                lastEvent.set(System.currentTimeMillis())
+                val kind = type ?: KiloCliDataParser.extractEventType(data)
+                log.debug { "evt=$kind bytes=${data.length} hasId=${id != null} ${ChatLogSummary.body(data)}" }
+                val result = queue.trySend(SseEvent(type = kind, data = data))
+                if (result.isFailure && !disposed) {
+                    log.warn("SSE: event queue rejected type=$kind", result.exceptionOrNull())
+                }
+            }
         }
 
         override fun onClosed(src: EventSource) {
@@ -373,6 +385,8 @@ class KiloConnectionService(
         healthJob?.cancel()
         processJob?.cancel()
         reconnectJob?.cancel()
+        eventJob.cancel()
+        queue.close()
         close()
         _state.value = ConnectionState.Disconnected
         log.info("KiloConnectionService disposed")

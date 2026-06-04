@@ -706,6 +706,18 @@ class QuestionViewTest : BasePlatformTestCase() {
         assertNull("Empty custom editor should be removed after selecting a normal option", findAll<EditorTextField>(view).firstOrNull { it.parent != null })
     }
 
+    fun `test empty custom editor is detached after forcing underlying editor creation`() {
+        view.show(customSingleQuestion("q_custom_editor_release"))
+        findAll<JBRadioButton>(view).first { it.actionCommand == "" }.doClick()
+        val field = findAll<EditorTextField>(view).first()
+        val editor = field.getEditor(true)
+        assertSame(editor, field.getEditor(false))
+
+        option<JBRadioButton>(view, "Minimal").doClick()
+
+        assertNull(SwingUtilities.getAncestorOfClass(QuestionView::class.java, field))
+    }
+
     fun `test focusing retained custom editor reselects custom response`() {
         view.show(customSingleQuestion("q_custom_focus"))
 

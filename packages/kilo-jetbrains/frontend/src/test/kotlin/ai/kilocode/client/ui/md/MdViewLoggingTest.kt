@@ -6,7 +6,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 class MdViewLoggingTest : BasePlatformTestCase() {
 
     fun `test invalid font family does not throw while building override sheet`() {
-        val view = MdView.html()
+        val view = MdViewFactory.html()
 
         view.codeFont = "broken'font"
         view.set("`x`")

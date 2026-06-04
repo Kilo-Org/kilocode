@@ -7,31 +7,51 @@ import ai.kilocode.log.KiloLog
  */
 class TestLog : KiloLog {
     private val items = mutableListOf<String>()
+    private val lock = Object()
     val messages: List<String>
-        get() = synchronized(items) { items.toList() }
+        get() = synchronized(lock) { items.toList() }
     override var isDebugEnabled: Boolean = true
+
+    fun awaitMessage(timeout: Long = 5_000, predicate: (String) -> Boolean): Boolean {
+        val end = System.currentTimeMillis() + timeout
+        synchronized(lock) {
+            while (items.none(predicate)) {
+                val wait = end - System.currentTimeMillis()
+                if (wait <= 0) return false
+                lock.wait(wait)
+            }
+            return true
+        }
+    }
 
     override fun debug(block: () -> String) {
         if (!isDebugEnabled) return
         val msg = block()
-        synchronized(items) { items.add("DEBUG: $msg") }
+        add("DEBUG: $msg")
         println("[test] DEBUG: $msg")
     }
 
     override fun info(msg: String) {
-        synchronized(items) { items.add("INFO: $msg") }
+        add("INFO: $msg")
         println("[test] INFO: $msg")
     }
 
     override fun warn(msg: String, t: Throwable?) {
-        synchronized(items) { items.add("WARN: $msg") }
+        add("WARN: $msg")
         println("[test] WARN: $msg")
         t?.printStackTrace()
     }
 
     override fun error(msg: String, t: Throwable?) {
-        synchronized(items) { items.add("ERROR: $msg") }
+        add("ERROR: $msg")
         System.err.println("[test] ERROR: $msg")
         t?.printStackTrace()
+    }
+
+    private fun add(msg: String) {
+        synchronized(lock) {
+            items.add(msg)
+            lock.notifyAll()
+        }
     }
 }

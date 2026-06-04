@@ -1,12 +1,14 @@
 {
   "name": "@kilocode/kilo-docs",
-  "version": "7.3.22",
+  "version": "7.3.29",
   "private": true,
   "scripts": {
     "dev": "next dev --webpack --port 3002",
     "build": "next build --webpack",
+    "lint": "bun run --cwd ../.. lint packages/kilo-docs",
     "start": "next start",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@docsearch/css": "^4",

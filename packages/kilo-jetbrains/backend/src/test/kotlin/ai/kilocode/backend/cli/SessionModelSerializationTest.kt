@@ -54,9 +54,9 @@ class SessionModelSerializationTest {
         }"""
         val obj = json.decodeFromString<Session>(src)
         assertNotNull(obj.summary)
-        assertEquals(10, obj.summary!!.additions)
-        assertEquals(5, obj.summary!!.deletions)
-        assertEquals(3, obj.summary!!.files)
+        assertEquals(10.0, obj.summary!!.additions)
+        assertEquals(5.0, obj.summary!!.deletions)
+        assertEquals(3.0, obj.summary!!.files)
     }
 
     @Test

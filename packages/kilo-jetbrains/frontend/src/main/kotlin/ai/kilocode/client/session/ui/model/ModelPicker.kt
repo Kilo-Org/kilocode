@@ -19,6 +19,7 @@ import com.intellij.ui.components.JBList
 import com.intellij.ui.popup.AbstractPopup
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import com.intellij.xml.util.XmlStringUtil
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Cursor
@@ -62,9 +63,19 @@ class ModelPicker : PickerButton() {
         override fun toString(): String = listOf(display, id, providerName).joinToString(" ")
     }
 
+    enum class Placement {
+        ABOVE,
+        BELOW,
+    }
+
     var onSelect: (Item) -> Unit = {}
+    var onClear: () -> Unit = {}
     var favorites: () -> List<ModelSelectionDto> = { emptyList() }
     var onFavoriteToggle: (Item) -> Unit = {}
+    var allowEmpty: Boolean = false
+    var emptyText: String = KiloBundle.message("settings.models.notSet")
+    var includeSmall: Boolean = false
+    var placement: Placement = Placement.BELOW
 
     private var items: List<Item> = emptyList()
     private var selected: Item? = null
@@ -76,7 +87,7 @@ class ModelPicker : PickerButton() {
 
         addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
-                if (!isEnabled || items.isEmpty()) return
+                if (!isEnabled || (items.isEmpty() && !allowEmpty)) return
                 showPopup()
             }
         })
@@ -86,7 +97,7 @@ class ModelPicker : PickerButton() {
         items = values
         val key = default ?: selected?.key
         selected = key?.let { target -> values.firstOrNull { it.key == target || it.id == target } }
-            ?: values.firstOrNull()
+            ?: if (allowEmpty) null else values.firstOrNull()
         refresh()
     }
 
@@ -97,27 +108,34 @@ class ModelPicker : PickerButton() {
 
     internal fun selectedForTest(): Item? = selected
 
+    fun clearSelection() {
+        selected = null
+        refresh()
+    }
+
+    fun selectionKeyForTest(): String? = selected?.key
+
     private fun refresh() {
         if (items.isEmpty()) {
-            isEnabled = false
-            text = " "
+            isEnabled = allowEmpty
+            text = if (allowEmpty) emptyText else " "
             icon = null
-            cursor = Cursor.getDefaultCursor()
+            toolTipText = KiloBundle.message("model.picker.tooltip")
+            cursor = if (allowEmpty) Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) else Cursor.getDefaultCursor()
             return
         }
-        val item = selected ?: items.firstOrNull()
-        val display = item?.display ?: ""
-        text = "${ModelText.sanitize(display)} ▴"
-        icon = if (item?.let(ModelText::collectsData) == true) ModelPickerIcons.DATA_COLLECTED else null
+        val item = selected ?: if (allowEmpty) null else items.firstOrNull()
+        text = if (item == null && allowEmpty) "$emptyText ▾" else "${ModelText.sanitize(item?.display ?: items.first().display)} ▾"
+        icon = if (item?.let(ModelText::collectsData) == true) ModelPickerRenderer.DATA_COLLECTED else null
         horizontalTextPosition = SwingConstants.LEFT
         iconTextGap = JBUI.CurrentTheme.ActionsList.elementIconGap()
-        toolTipText = if (item?.let(ModelText::collectsData) == true) ModelText.dataCollected() else KiloBundle.message("model.picker.tooltip")
+        toolTipText = if (item?.let(ModelText::collectsData) == true) ModelText.dataCollectedTooltip() else KiloBundle.message("model.picker.tooltip")
         isEnabled = true
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
     }
 
     private fun showPopup() {
-        val rows = modelPickerRows(items, favorites(), "")
+        val rows = modelPickerRows(items, favorites(), "", allowEmpty, emptyText, includeSmall)
         val model = CollectionListModel(rows)
         val list = JBList(model).apply {
             selectionMode = ListSelectionModel.SINGLE_SELECTION
@@ -146,7 +164,7 @@ class ModelPicker : PickerButton() {
         }
 
         fun sync(prefer: String? = activeKey(), at: Int? = null) {
-            val rows = modelPickerRows(items, favorites(), search.text)
+            val rows = modelPickerRows(items, favorites(), search.text, allowEmpty, emptyText, includeSmall)
             model.replaceAll(rows)
             val idx = at?.let { modelPickerIndex(rows, it) }?.takeIf { it >= 0 }
                 ?: modelPickerIndex(rows, prefer).takeIf { it >= 0 }
@@ -164,6 +182,22 @@ class ModelPicker : PickerButton() {
             popup.closeOk(null)
         }
 
+        fun clear() {
+            selected = null
+            refresh()
+            onClear()
+            popup.closeOk(null)
+        }
+
+        fun activate(row: ModelPickerRow) {
+            val item = row.item
+            if (item == null) {
+                clear()
+                return
+            }
+            activate(item)
+        }
+
         fun move(step: Int) {
             val size = model.size
             if (size <= 0) return
@@ -173,8 +207,9 @@ class ModelPicker : PickerButton() {
         }
 
         fun toggle(row: ModelPickerRow) {
+            val item = row.item ?: return
             val idx = list.selectedIndex
-            onFavoriteToggle(row.item)
+            onFavoriteToggle(item)
             sync(at = idx)
             list.selectedIndex.takeIf { it >= 0 }?.let { repaintRow(list, it) }
         }
@@ -195,7 +230,7 @@ class ModelPicker : PickerButton() {
             JComponent.WHEN_FOCUSED,
         )
         search.textEditor.registerKeyboardAction(
-            { list.selectedValue?.item?.let(::activate) },
+            { list.selectedValue?.let(::activate) },
             KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0),
             JComponent.WHEN_FOCUSED,
         )
@@ -210,7 +245,7 @@ class ModelPicker : PickerButton() {
             JComponent.WHEN_FOCUSED,
         )
         list.registerKeyboardAction(
-            { list.selectedValue?.item?.let(::activate) },
+            { list.selectedValue?.let(::activate) },
             KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0),
             JComponent.WHEN_FOCUSED,
         )
@@ -236,7 +271,7 @@ class ModelPicker : PickerButton() {
                     e.consume()
                     return
                 }
-                activate(value.item)
+                activate(value)
             }
         })
         ListUtil.installAutoSelectOnMouseMove(list)
@@ -276,7 +311,10 @@ class ModelPicker : PickerButton() {
             .setMovable(false)
             .createPopup()
 
-        popup.show(PopupShowOptions.aboveComponent(this))
+        when (placement) {
+            Placement.ABOVE -> popup.show(PopupShowOptions.aboveComponent(this))
+            Placement.BELOW -> popup.showUnderneathOf(this)
+        }
         SwingUtilities.invokeLater {
             search.textEditor.requestFocusInWindow()
             search.selectText()
@@ -288,10 +326,14 @@ class ModelPicker : PickerButton() {
 }
 
 internal data class ModelPickerRow(
-    val item: ModelPicker.Item,
+    val item: ModelPicker.Item?,
     val section: String?,
     val favorite: Boolean,
-)
+    val emptyText: String = "",
+) {
+    val key: String? get() = item?.key
+    val isEmpty: Boolean get() = item == null
+}
 
 private fun computeInitialPopupSize(
     list: JList<ModelPickerRow>,
@@ -414,6 +456,11 @@ internal object ModelText {
     fun providerSort(id: String): Int = if (id == "kilo") 0 else 1
 
     fun dataCollected(): String = KiloBundle.message("model.picker.dataCollected")
+
+    fun dataCollectedTooltip(): String = XmlStringUtil.wrapInHtmlLines(
+        KiloBundle.message("model.picker.tooltip"),
+        KiloBundle.message("model.picker.dataCollected.current"),
+    )
 
     fun freeLabel(): String = KiloBundle.message("model.picker.free")
 
