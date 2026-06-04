@@ -369,18 +369,21 @@ function ApiMethod(props: ApiMethodProps) {
   const toast = useToast()
   const { theme } = useTheme()
 
+  const optionalApiKey = KiloProvider.isLocalOptionalApiKey(props.providerID) // kilocode_change
+
   return (
     <DialogPrompt
       title={props.title}
-      placeholder="API key"
+      placeholder={KiloProvider.apiKeyPlaceholder(props.providerID)} // kilocode_change
       description={KiloProvider.renderApiDescription(props.providerID, theme)} // kilocode_change
       onConfirm={async (value) => {
-        if (!value) return
+        const key = value.trim() || (optionalApiKey ? KiloProvider.LOCAL_API_KEY_PLACEHOLDER : "") // kilocode_change
+        if (!key) return // kilocode_change
         await sdk.client.auth.set({
           providerID: props.providerID,
           auth: {
             type: "api",
-            key: value,
+            key, // kilocode_change
             ...(props.metadata ? { metadata: props.metadata } : {}),
           },
         })

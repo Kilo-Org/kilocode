@@ -9,7 +9,7 @@ import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kil
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
-import * as EffectZod from "@/util/effect-zod"
+import * as EffectZod from "@opencode-ai/core/effect-zod"
 import { SessionID, MessageID, PartID } from "./schema"
 import { MessageV2 } from "./message-v2"
 import * as Log from "@opencode-ai/core/util/log"
@@ -54,8 +54,8 @@ import { Truncate } from "@/tool/truncate"
 import { decodeDataUrl } from "@/util/data-url"
 import { Process } from "@/util/process"
 import { Cause, Effect, Exit, Latch, Layer, Option, Scope, Context, Schema, Types } from "effect"
-import { zod } from "@/util/effect-zod"
-import { withStatics } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { withStatics } from "@opencode-ai/core/schema"
 import * as EffectLogger from "@opencode-ai/core/effect/logger"
 import { InstanceState } from "@/effect/instance-state"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
@@ -1429,8 +1429,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           permissions.push({ permission: t, action: enabled ? "allow" : "deny", pattern: "*" })
         }
         if (permissions.length > 0) {
-          session.permission = permissions
-          yield* sessions.setPermission({ sessionID: session.id, permission: permissions })
+          // kilocode_change start - preserve inherited task restrictions while refreshing prompt tool toggles
+          const merged = KiloSessionPrompt.mergeToolPermissions({
+            existing: session.permission ?? [],
+            toggles: permissions,
+          })
+          session.permission = merged
+          yield* sessions.setPermission({ sessionID: session.id, permission: merged })
+          // kilocode_change end
         }
 
         // kilocode_change start — unblock tools waiting on user input so any in-flight
@@ -1538,7 +1544,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           KiloSessionPrompt.shouldAskPlanFollowup({ messages: msgs, abort: AbortSignal.any([]) })
         ) {
           const action = yield* Effect.promise((signal) =>
-            KiloSessionPrompt.askPlanFollowup({ sessionID, messages: msgs, abort: signal }),
+            KiloSessionPrompt.askPlanFollowup({ sessionID, messages: msgs, abort: signal, question }),
           )
           if (action === "continue") continue
           yield* slog.info("exiting loop")
@@ -1555,7 +1561,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         ) {
           // kilocode_change start - ask follow-up when plan_exit tool was called
           const action = yield* Effect.promise((signal) =>
-            KiloSessionPrompt.askPlanFollowup({ sessionID, messages: msgs, abort: signal }),
+            KiloSessionPrompt.askPlanFollowup({ sessionID, messages: msgs, abort: signal, question }),
           )
           if (action === "continue") continue
           // kilocode_change end

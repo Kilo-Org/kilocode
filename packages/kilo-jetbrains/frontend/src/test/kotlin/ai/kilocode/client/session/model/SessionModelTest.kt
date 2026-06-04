@@ -16,10 +16,12 @@ import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TodoViewDto
 import ai.kilocode.rpc.dto.TokensDto
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
-import com.intellij.testFramework.UsefulTestCase
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
-class SessionModelTest : UsefulTestCase() {
+@Suppress("UnstableApiUsage")
+class SessionModelTest : BasePlatformTestCase() {
 
     private lateinit var model: SessionModel
     private lateinit var parent: Disposable
@@ -48,6 +50,15 @@ class SessionModelTest : UsefulTestCase() {
         assertEquals(KiloWorkspaceStatusDto.PENDING, model.workspace.status)
         assertFalse(model.isReady())
         assertEquals(SessionState.Idle, model.state)
+    }
+
+    fun `test model mutation works through EDT`() {
+        // The test fixture does not consistently throw for @RequiresEdt when called
+        // from a pooled thread, so keep this as a behavioral EDT contract check.
+        edt { model.addMessage(msg("on_edt", "assistant")) }
+
+        assertNotNull(edt { model.message("on_edt") })
+        assertTrue(events.any { it is SessionModelEvent.MessageAdded && it.info.info.id == "on_edt" })
     }
 
     fun `test isReady requires app and workspace readiness`() {
@@ -882,5 +893,12 @@ class SessionModelTest : UsefulTestCase() {
 
     private fun assertModel(expected: String) {
         assertEquals(expected.trimIndent().trim(), model.toString().trim())
+    }
+
+    private fun <T> edt(block: () -> T): T {
+        var result: T? = null
+        ApplicationManager.getApplication().invokeAndWait { result = block() }
+        @Suppress("UNCHECKED_CAST")
+        return result as T
     }
 }

@@ -2,9 +2,11 @@ package ai.kilocode.client.settings.profile
 
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.settings.base.SettingsPanel
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
+import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.openapi.wm.IdeFocusManager
 import kotlinx.coroutines.CoroutineScope
@@ -25,9 +27,10 @@ import javax.swing.JComponent
  * and a link to the Kilo dashboard. This is a status/action panel — it
  * has no persistent settings, so [isModified] always returns false.
  */
-class UserProfileConfigurable : SearchableConfigurable {
+class UserProfileConfigurable : SearchableConfigurable, Configurable.NoScroll {
 
-    private var ui: JComponent? = null
+    private var ui: ProfileUi? = null
+    private var shell: SettingsPanel? = null
     private var scope: CoroutineScope? = null
     private var watchJob: Job? = null
     private var focus = false
@@ -36,12 +39,12 @@ class UserProfileConfigurable : SearchableConfigurable {
 
     override fun getDisplayName(): String = KiloBundle.message("settings.profile.displayName")
 
-    override fun getPreferredFocusedComponent(): JComponent? = (ui as? ProfileUi)?.preferredFocus()
+    override fun getPreferredFocusedComponent(): JComponent? = ui?.preferredFocus()
 
     override fun focusOn(label: String) {
         if (label != FOCUS_ACCOUNT_COMBO) return
         focus = true
-        val panel = ui as? ProfileUi ?: return
+        val panel = ui ?: return
         requestFocus(panel)
     }
 
@@ -49,10 +52,13 @@ class UserProfileConfigurable : SearchableConfigurable {
         val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         scope = cs
         val panel = buildPanel(cs)
+        val root = SettingsPanel()
+        root.setContent(panel)
         ui = panel
+        shell = root
         startWatching(cs, panel)
         if (focus) requestFocus(panel)
-        return panel
+        return root
     }
 
     private fun requestFocus(panel: ProfileUi) {
@@ -93,10 +99,11 @@ class UserProfileConfigurable : SearchableConfigurable {
     override fun disposeUIResources() {
         // Dispose UI first to invalidate pending login attempts before scope cancellation.
         // Capturing local refs before nulling fields so the EDT callback is self-contained.
-        val panel = ui as? ProfileUi
+        val panel = ui
         val job = watchJob
         val cs = scope
         ui = null
+        shell = null
         watchJob = null
         scope = null
 

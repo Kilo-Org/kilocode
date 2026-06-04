@@ -3,12 +3,15 @@ package ai.kilocode.client.session.views.question
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
+import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.ToolView
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.JBUI
@@ -25,30 +28,31 @@ import javax.swing.BoxLayout
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
 
-class QuestionResultView(tool: Tool) : PartView() {
+class QuestionResultView(tool: Tool, private val selection: SessionSelection? = null) : PartView() {
 
     override val contentId: String = tool.id
 
     private var result = QuestionResultParser.parse(tool) ?: QuestionResult(emptyList(), emptyList())
     private var style = SessionEditorStyle.current()
     private val texts = mutableListOf<Pair<JBTextArea, Boolean>>()
+    private val regs = mutableListOf<Disposable>()
 
     private val root = object : JPanel(BorderLayout()) {
         override fun updateUI() {
             super.updateUI()
             isOpaque = true
             background = SessionUiStyle.View.surface()
-            border = SessionUiStyle.View.card()
+            border = SessionUiStyle.View.sessionView()
         }
     }
-    private val header = object : JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP), 0)) {
+    private val header = object : JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.SESSION_VIEW_GAP), 0)) {
         override fun updateUI() {
             super.updateUI()
             isOpaque = true
             background = SessionUiStyle.View.header()
             border = JBUI.Borders.empty(
-                JBUI.scale(SessionUiStyle.View.CARD_VERTICAL_PADDING),
-                JBUI.scale(SessionUiStyle.View.CARD_HORIZONTAL_PADDING),
+                JBUI.scale(SessionUiStyle.View.SESSION_VIEW_VERTICAL_PADDING),
+                JBUI.scale(SessionUiStyle.View.SESSION_VIEW_HORIZONTAL_PADDING),
             )
         }
     }
@@ -56,7 +60,7 @@ class QuestionResultView(tool: Tool) : PartView() {
     private val title = JBLabel()
     private val sub = JBLabel().apply { foreground = UiStyle.Colors.weak() }
     private val arrow = JBLabel()
-    private val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP), 0)).apply {
+    private val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.SESSION_VIEW_GAP), 0)).apply {
         isOpaque = false
     }
     private var pane: JPanel? = null
@@ -143,6 +147,11 @@ class QuestionResultView(tool: Tool) : PartView() {
     fun titleFont(): Font = title.font
     fun subFont(): Font = sub.font
 
+    override fun dispose() {
+        disposeRegs()
+        texts.clear()
+    }
+
     override fun dumpLabel(): String = "QuestionResultView#$contentId(${labelText()})"
 
     companion object {
@@ -157,8 +166,8 @@ class QuestionResultView(tool: Tool) : PartView() {
                 isOpaque = true
                 background = SessionUiStyle.View.surface()
                 border = JBUI.Borders.empty(
-                    JBUI.scale(SessionUiStyle.View.CARD_VERTICAL_PADDING),
-                    JBUI.scale(SessionUiStyle.View.CARD_HORIZONTAL_PADDING),
+                    JBUI.scale(SessionUiStyle.View.SESSION_VIEW_VERTICAL_PADDING),
+                    JBUI.scale(SessionUiStyle.View.SESSION_VIEW_HORIZONTAL_PADDING),
                 )
             }
         }.apply {
@@ -179,6 +188,7 @@ class QuestionResultView(tool: Tool) : PartView() {
     private fun syncBody() {
         val panel = pane ?: return
         panel.removeAll()
+        disposeRegs()
         texts.clear()
 
         for ((i, q) in result.questions.withIndex()) {
@@ -249,8 +259,14 @@ class QuestionResultView(tool: Tool) : PartView() {
             border = JBUI.Borders.empty()
         }
         texts.add(area to bold)
+        selection?.register(area)?.let(regs::add)
         setFont(area, bold)
         return area
+    }
+
+    private fun disposeRegs() {
+        regs.forEach(Disposer::dispose)
+        regs.clear()
     }
 
     private fun syncArrow() {
@@ -261,7 +277,7 @@ class QuestionResultView(tool: Tool) : PartView() {
         val color = if (value) SessionUiStyle.View.headerHover() else SessionUiStyle.View.header()
         if (header.background?.rgb == color.rgb) return
         header.background = color
-        root.border = if (value) SessionUiStyle.View.card(SessionUiStyle.View.hoverLine()) else SessionUiStyle.View.card()
+        root.border = if (value) SessionUiStyle.View.sessionView(SessionUiStyle.View.hoverLine()) else SessionUiStyle.View.sessionView()
         header.repaint()
         root.repaint()
     }

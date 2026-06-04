@@ -28,7 +28,7 @@ class TodoWriteView(tool: Tool, private val parts: TodoParts = todoParts()) :
     init {
         bindHeader(parts.glyph, parts.title, parts.sub, parts.center, parts.controls)
         parts.list.border = JBUI.Borders.compound(
-            SessionUiStyle.View.cardTop(),
+            SessionUiStyle.View.topOutline(),
             JBUI.Borders.empty(UiStyle.Gap.sm(), UiStyle.Gap.md()),
         )
         applyStyle(style)
@@ -95,13 +95,13 @@ private fun todoParts(): TodoParts {
     val glyph = JBLabel(AllIcons.Actions.Checked)
     val title = JBLabel(KiloBundle.message("session.part.todo.title"))
     val sub = JBLabel().apply { foreground = UiStyle.Colors.weak() }
-    val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP), 0)).apply {
+    val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.SESSION_VIEW_GAP), 0)).apply {
         isOpaque = false
         add(title, BorderLayout.WEST)
         add(sub, BorderLayout.CENTER)
     }
     val controls = Box.createHorizontalBox()
-    val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP), 0)).apply {
+    val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.SESSION_VIEW_GAP), 0)).apply {
         isOpaque = false
         add(glyph, BorderLayout.WEST)
         add(center, BorderLayout.CENTER)

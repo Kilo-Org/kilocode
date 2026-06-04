@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-console",
-  "version": "7.3.22",
+  "version": "7.3.29",
   "private": true,
   "type": "module",
   "scripts": {
@@ -27,5 +27,6 @@
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plugin-solid": "catalog:"
-  }
+  },
+  "peerDependencies": {}
 }

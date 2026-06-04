@@ -1,4 +1,5 @@
 import { Config } from "effect"
+import { InstallationChannel } from "../installation/version"
 
 function truthy(key: string) {
   const value = process.env[key]?.toLowerCase()
@@ -8,6 +9,13 @@ function truthy(key: string) {
 function falsy(key: string) {
   const value = process.env[key]?.toLowerCase()
   return value === "false" || value === "0"
+}
+
+// Channels where new experiments default to ON (unstable / internal users).
+// Stable channels (`prod`, `latest`) stay opt-in.
+const UNSTABLE_CHANNELS = new Set(["dev", "beta", "local"])
+function unstableDefault(key: string) {
+  return truthy(key) || (!falsy(key) && UNSTABLE_CHANNELS.has(InstallationChannel))
 }
 
 function number(key: string) {
@@ -47,6 +55,9 @@ export const Flag = {
   KILO_DISABLE_CLAUDE_CODE_PROMPT: KILO_DISABLE_CLAUDE_CODE || truthy("KILO_DISABLE_CLAUDE_CODE_PROMPT"),
   KILO_DISABLE_CLAUDE_CODE_SKILLS,
   KILO_DISABLE_EXTERNAL_SKILLS: truthy("KILO_DISABLE_EXTERNAL_SKILLS"), // kilocode_change
+  // Default-on for dev/beta/local; opt-in for stable. Set
+  // KILO_EXPERIMENTAL_CUSTOMIZE_SKILL=false to force off, =true to force on.
+  KILO_EXPERIMENTAL_CUSTOMIZE_SKILL: unstableDefault("KILO_EXPERIMENTAL_CUSTOMIZE_SKILL"),
   KILO_FAKE_VCS: process.env["KILO_FAKE_VCS"],
   KILO_SERVER_PASSWORD: process.env["KILO_SERVER_PASSWORD"],
   KILO_SERVER_USERNAME: process.env["KILO_SERVER_USERNAME"],

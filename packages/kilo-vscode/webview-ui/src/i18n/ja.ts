@@ -136,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "認証に失敗しました: {{error}}",
   "provider.connect.apiKey.description":
     "{{provider}}のAPIキーを入力してアカウントを接続し、Kiloで{{provider}}モデルを使用します。",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "{{provider}} APIキー",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "APIキー",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "APIキーが必要です",
   "provider.connect.prompt.required": "{{field}}は必須です",
   "provider.connect.azure.endpointType.label": "Azure エンドポイント構成の選択",
@@ -174,7 +180,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.title": "{{provider}}が切断されました",
   "provider.disconnect.toast.disconnected.description": "{{provider}}のモデルは利用できなくなりました。",
   "model.tag.free": "無料",
-  "model.tag.dataCollected": "データ収集あり",
+  "model.tag.dataCollected": "データがトレーニングに使用される場合があります",
   "model.tag.latest": "最新",
   "model.group.recommended": "推奨",
   "model.group.favorites": "お気に入り",

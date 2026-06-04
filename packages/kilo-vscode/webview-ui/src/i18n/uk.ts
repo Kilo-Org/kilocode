@@ -136,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "Авторизація не вдалася: {{error}}",
   "provider.connect.apiKey.description":
     "Введіть свій API-ключ {{provider}}, щоб підключити акаунт {{provider}} і використовувати моделі {{provider}} в Kilo.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "API-ключ {{provider}}",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API-ключ",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API-ключ обов'язковий",
   "provider.connect.prompt.required": "{{field}} є обов'язковим",
   "provider.connect.azure.endpointType.label": "Виберіть конфігурацію кінцевої точки Azure",
@@ -176,7 +182,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "Моделі {{provider}} більше недоступні.",
 
   "model.tag.free": "Безкоштовно",
-  "model.tag.dataCollected": "Дані збираються",
+  "model.tag.dataCollected": "Дані можуть використовуватися для навчання",
   "model.tag.latest": "Остання",
   "model.group.recommended": "Рекомендовані",
   "model.group.favorites": "Обране",

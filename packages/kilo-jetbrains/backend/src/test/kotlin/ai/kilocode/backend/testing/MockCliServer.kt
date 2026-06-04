@@ -99,9 +99,39 @@ class MockCliServer : AutoCloseable {
 
     /** Request counts by bare path (e.g. "/session" or "/global/config"). Thread-safe. */
     private val counts = ConcurrentHashMap<String, AtomicInteger>()
+    private val requests = Object()
+    private val streams = Object()
+    private val sse = AtomicInteger(0)
+
+    val sseConnectionCount: Int
+        get() = sse.get()
 
     /** Return the number of requests received for [path] (bare, no query). */
     fun requestCount(path: String): Int = counts[path]?.get() ?: 0
+
+    fun awaitRequestCount(path: String, target: Int, timeout: Long = 5_000): Boolean {
+        val end = System.currentTimeMillis() + timeout
+        synchronized(requests) {
+            while (requestCount(path) < target) {
+                val wait = end - System.currentTimeMillis()
+                if (wait <= 0) return false
+                requests.wait(wait)
+            }
+            return true
+        }
+    }
+
+    fun awaitSseConnections(target: Int, timeout: Long = 5_000): Boolean {
+        val end = System.currentTimeMillis() + timeout
+        synchronized(streams) {
+            while (sse.get() < target) {
+                val wait = end - System.currentTimeMillis()
+                if (wait <= 0) return false
+                streams.wait(wait)
+            }
+            return true
+        }
+    }
 
     @Volatile var lastExperimentalSessionPath: String? = null
 
@@ -127,7 +157,8 @@ class MockCliServer : AutoCloseable {
         // Clean up any previous instance
         shutdownServer()
 
-        sseLatch = CountDownLatch(1)
+        val latch = CountDownLatch(1)
+        sseLatch = latch
         sseConnected = CountDownLatch(1)
         sseWriter = null
 
@@ -218,9 +249,11 @@ class MockCliServer : AutoCloseable {
 
             val output = BufferedWriter(OutputStreamWriter(socket.getOutputStream()))
             val bare = path.substringBefore("?")
+            val latch = sseLatch
 
             // Track request counts
             counts.computeIfAbsent(bare) { AtomicInteger(0) }.incrementAndGet()
+            synchronized(requests) { requests.notifyAll() }
 
             // Optional delay for race condition testing
             val delay = responseDelay
@@ -255,7 +288,7 @@ class MockCliServer : AutoCloseable {
                     lastOrganizationSetBody = body
                     respond(output, organizationSetStatus, "true")
                 }
-                path == "/global/event" -> handleSse(output)
+                path == "/global/event" -> handleSse(output, latch)
                 path == "/path" -> respond(output, 200, this.path)
                 bare == "/provider" -> respond(output, providersStatus, providers)
                 bare == "/agent" -> respond(output, agentsStatus, agents)
@@ -319,7 +352,7 @@ class MockCliServer : AutoCloseable {
         writer.flush()
     }
 
-    private fun handleSse(writer: BufferedWriter) {
+    private fun handleSse(writer: BufferedWriter, latch: CountDownLatch) {
         writer.write("HTTP/1.1 200 OK\r\n")
         writer.write("Content-Type: text/event-stream\r\n")
         writer.write("Cache-Control: no-cache\r\n")
@@ -327,8 +360,10 @@ class MockCliServer : AutoCloseable {
         writer.write("\r\n")
         writer.flush()
         sseWriter = writer
+        sse.incrementAndGet()
+        synchronized(streams) { streams.notifyAll() }
         sseConnected.countDown()
         // Block until SSE is closed or server shuts down
-        sseLatch.await()
+        latch.await()
     }
 }

@@ -96,6 +96,7 @@ class PromptPanelTest : BasePlatformTestCase() {
 
         assertTrue(panel.reasoning.isVisible)
         assertEquals("high", panel.reasoning.selectedForTest()?.id)
+        assertEquals("High ▾", panel.reasoning.text)
     }
 
     fun `test reasoning picker aligns unchecked rows`() {
