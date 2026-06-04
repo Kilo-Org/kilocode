@@ -127,6 +127,25 @@ describe("workspace git checkpoints", () => {
     expect(await git(dir, ["worktree", "list", "--porcelain"])).not.toContain(target)
   })
 
+  test("uses a numbered branch suffix when the requested restore branch exists", async () => {
+    const dir = await repo()
+    await writeFile(path.join(dir, "untracked.txt"), "new\n")
+    const checkpoint = await captureWorkspaceCheckpoint({ directory: dir })
+    await git(dir, ["branch", "kilo-restore-collision"])
+    const target = path.join(await mkdtemp(path.join(os.tmpdir(), "kilo-checkpoint-branch-collision-")), "session")
+
+    const restored = await restoreWorkspaceCheckpoint({
+      directory: dir,
+      checkpoint: checkpoint!,
+      targetDirectory: target,
+      branch: "kilo-restore-collision",
+    })
+
+    expect(restored).toEqual({ status: "restored", directory: target })
+    expect(await git(target, ["branch", "--show-current"])).toBe("kilo-restore-collision-1")
+    expect(await readFile(path.join(target, "untracked.txt"), "utf8")).toBe("new\n")
+  })
+
   test("embeds a checkpoint in a session-shaped object without mutating the original", async () => {
     const dir = await repo()
     await writeFile(path.join(dir, "untracked.txt"), "new\n")

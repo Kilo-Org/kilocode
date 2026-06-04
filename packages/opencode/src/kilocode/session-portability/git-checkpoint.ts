@@ -196,10 +196,10 @@ async function commit(dir: string, sha: string) {
 
 async function uniqueBranch(dir: string, base: string) {
   const clean = base.replace(/[^A-Za-z0-9/_-]/g, "-")
-  const pick = async (name: string): Promise<string> => {
+  const pick = async (name: string, attempt = 0): Promise<string> => {
     const hit = await run(dir, ["rev-parse", "--verify", `refs/heads/${name}`], { ok: [0, 1, 128] })
     if (hit.code !== 0) return name
-    return pick(`${clean}-${Date.now().toString(36)}`)
+    return pick(`${clean}-${attempt + 1}`, attempt + 1)
   }
   return pick(clean)
 }
