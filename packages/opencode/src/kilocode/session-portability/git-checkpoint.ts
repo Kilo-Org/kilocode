@@ -24,9 +24,11 @@ type RunOptions = {
   env?: Record<string, string>
   ok?: number[]
   trim?: boolean
+  timeout?: number
 }
 
 async function run(dir: string, args: string[], opts: RunOptions = {}) {
+  let expired = false
   const proc = Bun.spawn(["git", ...args], {
     cwd: dir,
     stdin: opts.input ? "pipe" : undefined,
@@ -34,6 +36,12 @@ async function run(dir: string, args: string[], opts: RunOptions = {}) {
     stderr: "pipe",
     env: opts.env ? { ...process.env, ...opts.env } : undefined,
   })
+  const timeout = opts.timeout
+    ? setTimeout(() => {
+        expired = true
+        proc.kill()
+      }, opts.timeout)
+    : undefined
   if (opts.input && proc.stdin) {
     proc.stdin.write(opts.input)
     proc.stdin.end()
@@ -42,8 +50,11 @@ async function run(dir: string, args: string[], opts: RunOptions = {}) {
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
     proc.exited,
-  ])
+  ]).finally(() => {
+    if (timeout) clearTimeout(timeout)
+  })
   if (!(opts.ok ?? [0]).includes(code)) {
+    if (expired) throw new Error(`git ${args.join(" ")} timed out after ${opts.timeout}ms`)
     throw new Error(stderr.trim() || `git ${args.join(" ")} failed with ${code}`)
   }
   return { code, stdout: opts.trim === false ? stdout : stdout.trim(), stderr: stderr.trim() }
@@ -191,7 +202,7 @@ export async function restoreCloudSessionWorkspace(input: {
 async function commit(dir: string, sha: string) {
   const hit = await run(dir, ["cat-file", "-e", `${sha}^{commit}`], { ok: [0, 1] })
   if (hit.code === 0) return true
-  await run(dir, ["fetch", "--all", "--quiet"], { ok: [0, 1] })
+  await run(dir, ["fetch", "--all", "--quiet"], { env: { GIT_TERMINAL_PROMPT: "0" }, ok: [0, 1], timeout: 5000 })
   return run(dir, ["cat-file", "-e", `${sha}^{commit}`], { ok: [0, 1] }).then((out) => out.code === 0)
 }
 

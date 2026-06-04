@@ -121,7 +121,7 @@ describe("workspace git checkpoints", () => {
       branch: "kilo-restore-patch-fail",
     })
 
-    expect(restored.status).toBe("failed")
+    if (restored.status !== "failed") throw new Error("expected restore to fail")
     expect(restored.reason).toBe("patch_failed")
     expect(await Bun.file(target).exists()).toBe(false)
     expect(await git(dir, ["worktree", "list", "--porcelain"])).not.toContain(target)
