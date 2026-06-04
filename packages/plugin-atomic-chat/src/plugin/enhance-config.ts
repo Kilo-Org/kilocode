@@ -1,12 +1,7 @@
 import { sharedModelStatusCache } from '../cache/shared-model-status-cache'
 import { ToastNotifier } from '../ui/toast-notifier'
 import { categorizeModel, formatModelName, extractModelOwner } from '../utils'
-import {
-  normalizeBaseURL,
-  checkAtomicChatHealth,
-  discoverAtomicChatModels,
-  autoDetectAtomicChat,
-} from '../utils/atomic-chat-api'
+import { normalizeBaseURL, fetchModelsEndpoint, autoDetectAtomicChat } from '../utils/atomic-chat-api'
 import {
   getAtomicSection,
   hasAtomicChatProviderSection,
@@ -74,19 +69,9 @@ export async function enhanceConfig(
       return
     }
 
-    const isHealthy = await checkAtomicChatHealth(baseURL)
-    if (!isHealthy) {
+    const { ok, models } = await fetchModelsEndpoint(baseURL)
+    if (!ok) {
       console.warn(`${LOG_PREFIX} Atomic Chat API appears unreachable`, { baseURL })
-      return
-    }
-
-    let models: AtomicChatModel[]
-    try {
-      models = await discoverAtomicChatModels(baseURL)
-    } catch (error) {
-      console.warn(`${LOG_PREFIX} Model discovery failed`, {
-        error: error instanceof Error ? error.message : String(error),
-      })
       return
     }
 

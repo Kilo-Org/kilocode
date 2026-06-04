@@ -16,60 +16,55 @@ export function buildAPIURL(baseURL: string, endpoint: string = MODELS_ENDPOINT)
   return `${normalized}${endpoint}`
 }
 
-export async function checkAtomicChatHealth(baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN): Promise<boolean> {
-  try {
-    const url = buildAPIURL(baseURL)
-    const response = await fetch(url, {
-      method: 'GET',
-      signal: AbortSignal.timeout(3000),
-    })
-    return response.ok
-  } catch {
-    return false
-  }
+export type ModelsEndpointResult = {
+  ok: boolean
+  models: AtomicChatModel[]
 }
 
-export async function discoverAtomicChatModels(baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN): Promise<AtomicChatModel[]> {
+/** Single GET /v1/models — shared by health, discovery, and direct model-id fetch. */
+export async function fetchModelsEndpoint(baseURL: string): Promise<ModelsEndpointResult> {
+  const url = buildAPIURL(baseURL)
   try {
-    const url = buildAPIURL(baseURL)
     const response = await fetch(url, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       signal: AbortSignal.timeout(3000),
     })
     if (!response.ok) {
-      return []
+      return { ok: false, models: [] }
     }
     const data = (await response.json()) as AtomicChatModelsResponse
-    return data.data ?? []
-  } catch (error) {
-    throw new Error(`Failed to discover models: ${error instanceof Error ? error.message : String(error)}`)
+    return { ok: true, models: data.data ?? [] }
+  } catch {
+    return { ok: false, models: [] }
   }
 }
 
-export async function fetchModelsDirect(baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN): Promise<string[]> {
-  try {
-    const url = buildAPIURL(baseURL)
-    const response = await fetch(url, {
-      method: 'GET',
-      signal: AbortSignal.timeout(3000),
-    })
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-    const data = (await response.json()) as AtomicChatModelsResponse
-    return data.data?.map((model) => model.id) || []
-  } catch (error) {
-    throw new Error(
-      `Failed to fetch models: ${error instanceof Error ? error.message : String(error)}`
-    )
+export async function checkAtomicChatHealth(baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN): Promise<boolean> {
+  const { ok } = await fetchModelsEndpoint(baseURL)
+  return ok
+}
+
+export async function discoverAtomicChatModels(baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN): Promise<AtomicChatModel[]> {
+  const { ok, models } = await fetchModelsEndpoint(baseURL)
+  if (!ok) {
+    return []
   }
+  return models
+}
+
+export async function fetchModelsDirect(baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN): Promise<string[]> {
+  const { ok, models } = await fetchModelsEndpoint(baseURL)
+  if (!ok) {
+    throw new Error('Atomic Chat models endpoint returned a non-success status')
+  }
+  return models.map((model) => model.id)
 }
 
 export async function autoDetectAtomicChat(): Promise<string | null> {
   for (const port of ATOMIC_CHAT_PROBE_PORTS) {
     const baseURL = `http://127.0.0.1:${port}`
-    const ok = await checkAtomicChatHealth(baseURL)
+    const { ok } = await fetchModelsEndpoint(baseURL)
     if (ok) {
       return baseURL
     }
