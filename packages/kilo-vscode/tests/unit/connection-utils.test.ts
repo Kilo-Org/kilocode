@@ -46,6 +46,14 @@ describe("resolveEventSessionId", () => {
     expect(resolveEventSessionId(e, noLookup)).toBe("s4")
   })
 
+  it("returns sessionID from session.turn.close", () => {
+    const e = event({
+      type: "session.turn.close",
+      properties: { sessionID: "s-turn", reason: "interrupted" },
+    })
+    expect(resolveEventSessionId(e, noLookup)).toBe("s-turn")
+  })
+
   it("returns sessionID from message.updated and calls onMessageUpdated", () => {
     const e = event({
       type: "message.updated",

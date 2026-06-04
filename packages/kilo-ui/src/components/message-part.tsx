@@ -53,6 +53,7 @@ import { busy, createThrottledValue, useToolFade, useContextToolPending } from "
 import { readToolOpen, toolOpenKey } from "./tool-open-state"
 import { ContextToolGroupHeader, ContextToolExpandedList, ContextToolRollingResults } from "./context-tool-results"
 import { ShellRollingResults } from "./shell-rolling-results"
+import { reasoningHeading } from "./reasoning-heading"
 import { extractFilePathFromHref } from "../file-path"
 import { normalize } from "./session-diff"
 import { deferredHighlight } from "../context/marked"
@@ -929,18 +930,34 @@ export function UserMessageDisplay(props: {
 
 type HighlightSegment = { text: string; type?: "file" | "agent" }
 
+/** Match @path mentions: `@` followed by a path-like token (contains `/` or `.`). */
+const MENTION_RE = /@([\w./-]+\.[\w]+|[\w.-]+\/[\w./-]+)/g
+
+function detectMentions(text: string): { start: number; end: number; type: "file" }[] {
+  const result: { start: number; end: number; type: "file" }[] = []
+  MENTION_RE.lastIndex = 0
+  let m: RegExpExecArray | null
+  while ((m = MENTION_RE.exec(text))) {
+    result.push({ start: m.index, end: m.index + m[0].length, type: "file" })
+  }
+  return result
+}
+
 function HighlightedText(props: { text: string; references: FilePart[]; agents: AgentPart[] }) {
   const segments = createMemo(() => {
     const text = props.text
 
-    const allRefs: { start: number; end: number; type: "file" | "agent" }[] = [
+    const offset: { start: number; end: number; type: "file" | "agent" }[] = [
       ...props.references
         .filter((r) => r.source?.text?.start !== undefined && r.source?.text?.end !== undefined)
         .map((r) => ({ start: r.source!.text!.start, end: r.source!.text!.end, type: "file" as const })),
       ...props.agents
         .filter((a) => a.source?.start !== undefined && a.source?.end !== undefined)
         .map((a) => ({ start: a.source!.start, end: a.source!.end, type: "agent" as const })),
-    ].sort((a, b) => a.start - b.start)
+    ]
+
+    // Fall back to regex detection when no source offsets are available
+    const allRefs = offset.length > 0 ? offset.sort((a, b) => a.start - b.start) : detectMentions(text)
 
     const result: HighlightSegment[] = []
     let lastIndex = 0
@@ -963,7 +980,28 @@ function HighlightedText(props: { text: string; references: FilePart[]; agents: 
     return result
   })
 
-  return <For each={segments()}>{(segment) => <span data-highlight={segment.type}>{segment.text}</span>}</For>
+  const data = useData()
+
+  const click = (segment: HighlightSegment, e: MouseEvent) => {
+    if (segment.type !== "file" || !data.openFile) return
+    e.preventDefault()
+    const path = segment.text.replace(/^@/, "")
+    if (path) data.openFile(path)
+  }
+
+  return (
+    <For each={segments()}>
+      {(segment) => (
+        <span
+          data-highlight={segment.type}
+          data-clickable={segment.type === "file" && data.openFile ? "" : undefined}
+          onClick={[click, segment]}
+        >
+          {segment.text}
+        </span>
+      )}
+    </For>
+  )
 }
 
 export function Part(props: MessagePartProps) {
@@ -1339,7 +1377,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     <Show when={throttledText() && showSyntheticPart()}>
       <div data-component="text-part">
         <div data-slot="text-part-body">
-          <Markdown text={throttledText()} cacheKey={part().id} onClick={handleMarkdownClick} />
+          <Markdown text={throttledText()} cacheKey={part().id} streaming={streaming()} onClick={handleMarkdownClick} />
         </div>
         <Show when={showCopy()}>
           <div data-slot="assistant-copy-wrapper">
@@ -1450,6 +1488,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
 
   // Throttle markdown re-renders during streaming
   const display = createThrottledValue(text)
+  const view = createMemo(() => reasoningHeading(display()))
 
   // time.end is set by the processor on reasoning-end.
   // v1 parts lack time entirely → treat as historical.
@@ -1530,12 +1569,13 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
             <div data-slot="reasoning-header">
               <Icon name="brain" size="small" />
               <span data-slot="reasoning-label">{i18n.t("ui.reasoning.label" as never)}</span>
+              <Show when={view().title}>{(title) => <span data-slot="reasoning-title">{title()}</span>}</Show>
             </div>
             <Collapsible.Arrow />
           </Collapsible.Trigger>
           <Collapsible.Content>
             <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
-              <Markdown text={display()} cacheKey={id} />
+              <Markdown text={view().body} cacheKey={id} streaming={!done()} />
             </div>
           </Collapsible.Content>
         </Collapsible>
@@ -2149,6 +2189,11 @@ ToolRegistry.register({
     const subtitle = () => props.input.description ?? props.metadata.description
     const key = () => toolOpenKey(props)
     const [open, setOpen] = createSignal(readToolOpen(key(), props.defaultOpen ?? true) ?? true)
+    const [mounted, setMounted] = createSignal(open())
+
+    createEffect(() => {
+      if (open() || pending()) setMounted(true)
+    })
 
     // also apply processCarriageReturns for Windows CLI tools
     const cmd = createMemo(() => {
@@ -2168,6 +2213,7 @@ ToolRegistry.register({
         {...props}
         icon="console"
         animated
+        hasDetails
         defaultOpen={props.defaultOpen ?? true}
         onOpenChange={setOpen}
         allowPendingToggle
@@ -2182,7 +2228,9 @@ ToolRegistry.register({
           </div>
         }
       >
-        <BashHighlightedOutput cmd={cmd()} output={out()} outputPath={props.metadata.outputPath} active={open()} />
+        <Show when={mounted()}>
+          <BashHighlightedOutput cmd={cmd()} output={out()} outputPath={props.metadata.outputPath} active={open()} />
+        </Show>
       </BasicTool>
     )
   },
@@ -2253,6 +2301,7 @@ ToolRegistry.register({
           {...props}
           icon="code-lines"
           defer
+          hasDetails
           trigger={
             <div data-component="edit-trigger">
               <div data-slot="message-part-title-area">
@@ -2367,6 +2416,7 @@ ToolRegistry.register({
           {...props}
           icon="code-lines"
           defer
+          hasDetails
           trigger={
             <div data-component="write-trigger">
               <div data-slot="message-part-title-area">
@@ -2499,6 +2549,7 @@ ToolRegistry.register({
           {...props}
           icon="code-lines"
           defer
+          hasDetails
           trigger={
             <div data-component={single() ? "edit-trigger" : "write-trigger"}>
               <div data-slot="message-part-title-area">

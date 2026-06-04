@@ -14,6 +14,27 @@ describe("parseDshowAudioDevices", () => {
     expect(parseDshowAudioDevices(raw)).toEqual(["Microphone Array (Realtek Audio)", "Webcam Microphone"])
   })
 
+  it("extracts section-listed Windows dshow audio device names", () => {
+    const raw = `
+[dshow @ 000001] DirectShow video devices (some may be both video and audio devices)
+[dshow @ 000001]  "OBS Virtual Camera"
+[dshow @ 000001]     Alternative name "@device_video"
+[dshow @ 000001] DirectShow audio devices
+[dshow @ 000001]  "Headset (2- Bose QuietComfort 35 Series II)"
+[dshow @ 000001]     Alternative name "@device_headset"
+[dshow @ 000001]  "Microphone (MSI Sound Tune)"
+[dshow @ 000001]     Alternative name "@device_microphone"
+[dshow @ 000001]  "Alternative name Microphone"
+[dshow @ 000001]     Alternative name "@device_alternative"
+`
+
+    expect(parseDshowAudioDevices(raw)).toEqual([
+      "Headset (2- Bose QuietComfort 35 Series II)",
+      "Microphone (MSI Sound Tune)",
+      "Alternative name Microphone",
+    ])
+  })
+
   it("deduplicates repeated dshow audio device names", () => {
     const raw = `"Microphone" (audio)\n"Microphone" (audio)`
 

@@ -4,11 +4,14 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
-import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
-import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.controller.SessionController
+import ai.kilocode.client.session.ui.empty.EmptySessionPanel
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
@@ -17,6 +20,7 @@ import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
@@ -25,8 +29,11 @@ import com.intellij.util.ui.components.BorderLayoutPanel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import java.awt.BorderLayout
 import java.awt.Cursor
+import javax.swing.JButton
 
 @Suppress("UnstableApiUsage")
 class EmptySessionPanelTest : BasePlatformTestCase() {
@@ -34,6 +41,8 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
     private lateinit var app: KiloAppService
     private lateinit var workspace: Workspace
     private lateinit var controller: SessionController
+    private lateinit var rpc: FakeSessionRpcApi
+    private lateinit var sessions: KiloSessionService
     private val opened = mutableListOf<String>()
 
     override fun setUp() {
@@ -46,10 +55,12 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
             it.state.value = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.READY)
         })
         workspace = workspaces.workspace("/test")
+        rpc = FakeSessionRpcApi()
+        sessions = KiloSessionService(project, scope, rpc)
         controller = SessionController(
             parent = testRootDisposable,
             ref = null,
-            sessions = KiloSessionService(project, scope, FakeSessionRpcApi()),
+            sessions = sessions,
             workspace = workspace,
             app = app,
             cs = scope,
@@ -72,10 +83,10 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         assertFalse(panel.loadingVisible())
     }
 
-    fun `test recent section remains visible when empty`() {
+    fun `test recent section is hidden when empty`() {
         val panel = panel()
 
-        assertTrue(panel.recentVisible())
+        assertFalse(panel.recentVisible())
         assertEquals(0, panel.recentCount())
     }
 
@@ -150,12 +161,21 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         assertEquals(ai.kilocode.client.plugin.KiloBundle.message("session.showHistory"), panel.showHistoryText())
     }
 
+    fun `test feedback button uses localized text and icon`() {
+        val panel = panel()
+
+        assertEquals(KiloBundle.message("feedback.button"), panel.feedbackText())
+        assertNotNull(panel.feedbackIcon())
+    }
+
     fun `test action controls use hand cursor and no show history outline`() {
         val panel = panel()
 
         assertFalse(panel.showHistoryBorderPainted())
+        assertFalse(panel.feedbackBorderPainted())
         assertEquals(Cursor.HAND_CURSOR, panel.showHistoryCursor())
-        assertEquals(Cursor.HAND_CURSOR, panel.recentCursor())
+        assertEquals(Cursor.HAND_CURSOR, panel.feedbackCursor())
+        assertEquals(Cursor.HAND_CURSOR, panel.recent.list.cursor.type)
     }
 
     fun `test clicking show history delegates callback`() {
@@ -165,6 +185,36 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         panel.clickShowHistory()
 
         assertEquals(1, calls)
+    }
+
+    fun `test feedback popup content opens expected destinations`() {
+        val panel = panel()
+        val opened = mutableListOf<String>()
+        val content = panel.feedbackContent { opened.add(it) }
+        val buttons = UIUtil.uiTraverser(content).filter(JButton::class.java).toList()
+
+        assertEquals(
+            listOf(
+                KiloBundle.message("feedback.dialog.github"),
+                KiloBundle.message("feedback.dialog.discord"),
+                KiloBundle.message("feedback.dialog.support"),
+            ),
+            buttons.map { it.text },
+        )
+
+        buttons.forEach { it.doClick() }
+
+        assertEquals(panel.feedbackUrls(), opened)
+    }
+
+    fun `test feedback discord action has icon`() {
+        val panel = panel()
+        val content = panel.feedbackContent()
+        val discord = UIUtil.uiTraverser(content)
+            .filter(JButton::class.java)
+            .first { it.text == KiloBundle.message("feedback.dialog.discord") }
+
+        assertNotNull(discord.icon)
     }
 
     fun `test renderer aligns title center and time east`() {
@@ -193,6 +243,94 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         assertEquals("Untitled", label?.text)
     }
 
+    fun `test renderer uses title overlay`() {
+        val panel = panel(
+            recents = listOf(session("ses_1", title = "Stored")),
+            titles = { mapOf("ses_1" to "Live") },
+        )
+
+        panel.syncActivity()
+        val cell = panel.rendererComponent(session("ses_1", title = "Stored")) as BorderLayoutPanel
+
+        assertEquals("Live", titleText(cell))
+    }
+
+    fun `test sync activity removes title overlay`() {
+        var title = "Live"
+        val panel = panel(
+            recents = listOf(session("ses_1", title = "Stored")),
+            titles = { title.takeIf { it.isNotBlank() }?.let { mapOf("ses_1" to it) }.orEmpty() },
+        )
+
+        panel.syncActivity()
+        assertEquals("Live", titleText(panel.rendererComponent(session("ses_1", title = "Stored")) as BorderLayoutPanel))
+
+        title = ""
+        panel.syncActivity()
+
+        assertEquals("Stored", titleText(panel.rendererComponent(session("ses_1", title = "Stored")) as BorderLayoutPanel))
+    }
+
+    fun `test renderer shows running badge for busy recent session`() {
+        val panel = panel(listOf(session("ses_1")))
+        rpc.statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
+        flush()
+        panel.syncActivity()
+
+        val cell = panel.rendererComponent(session("ses_1")) as BorderLayoutPanel
+
+        assertEquals(KiloBundle.message("session.part.tool.running"), badgeText(cell))
+    }
+
+    fun `test renderer shows overlay badge for active recent session`() {
+        val panel = panel(
+            recents = listOf(session("ses_1")),
+            activity = { sessions.activity() + mapOf("ses_1" to SessionActivityKind.QUESTION) },
+        )
+        rpc.statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
+        flush()
+        panel.syncActivity()
+
+        val cell = panel.rendererComponent(session("ses_1")) as BorderLayoutPanel
+
+        assertEquals(KiloBundle.message("history.badge.question"), badgeText(cell))
+    }
+
+    fun `test sync activity updates recent badge kind change`() {
+        var kind: SessionActivityKind? = null
+        val panel = panel(
+            recents = listOf(session("ses_1")),
+            activity = { sessions.activity() + kind?.let { mapOf("ses_1" to it) }.orEmpty() },
+        )
+        rpc.statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
+        flush()
+
+        panel.syncActivity()
+        assertEquals(
+            KiloBundle.message("session.part.tool.running"),
+            badgeText(panel.rendererComponent(session("ses_1")) as BorderLayoutPanel),
+        )
+
+        kind = SessionActivityKind.QUESTION
+        panel.syncActivity()
+
+        assertEquals(
+            KiloBundle.message("history.badge.question"),
+            badgeText(panel.rendererComponent(session("ses_1")) as BorderLayoutPanel),
+        )
+    }
+
+    fun `test renderer hides running badge for idle recent session`() {
+        val panel = panel(listOf(session("ses_1")))
+        rpc.statuses.value = mapOf("ses_1" to SessionStatusDto("idle"))
+        flush()
+        panel.syncActivity()
+
+        val cell = panel.rendererComponent(session("ses_1")) as BorderLayoutPanel
+
+        assertNull(badgeText(cell))
+    }
+
     fun `test timestamp normalization handles seconds and milliseconds`() {
         assertEquals(1_700_000_000_000L, HistoryTime.millis(LocalHistoryItem(session("ses_1", 1_700_000_000))))
         assertEquals(1_700_000_000_000L, HistoryTime.millis(LocalHistoryItem(session("ses_1", 1_700_000_000_000))))
@@ -208,8 +346,28 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         assertEquals("4d ago", panel.text(session("ses_1", now - 345_600_000), now))
     }
 
-    private fun panel(recents: List<SessionDto> = emptyList(), history: () -> Unit = {}) =
-        EmptySessionPanel(testRootDisposable, controller, recents, history)
+    private fun panel(
+        recents: List<SessionDto> = emptyList(),
+        history: () -> Unit = {},
+        activity: () -> Map<String, SessionActivityKind> = { sessions.activity() },
+        titles: () -> Map<String, String> = { emptyMap() },
+    ) = EmptySessionPanel(testRootDisposable, controller, recents, history, activity, titles)
+
+    private fun flush() = runBlocking {
+        delay(100)
+        UIUtil.dispatchAllInvocationEvents()
+    }
+
+    private fun badgeText(cell: BorderLayoutPanel): String? = UIUtil.uiTraverser(cell)
+        .filter(JBLabel::class.java)
+        .mapNotNull { (it.icon as? FilledBadgeIcon)?.takeIf { _ -> it.isVisible }?.text }
+        .firstOrNull()
+
+    private fun titleText(cell: BorderLayoutPanel): String? = UIUtil.uiTraverser(cell)
+        .filter(JBLabel::class.java)
+        .filter { it.icon == null }
+        .firstOrNull()
+        ?.text
 
     private fun session(id: String, updated: Long = 2_000L, title: String = "Title $id") = SessionDto(
         id = id,

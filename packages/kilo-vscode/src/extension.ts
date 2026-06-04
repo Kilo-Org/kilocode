@@ -7,6 +7,7 @@ import { DiffViewerProvider } from "./diff/DiffViewerProvider"
 import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
+import { MarketplacePanelProvider } from "./MarketplacePanelProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
@@ -14,7 +15,7 @@ import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
 import { BrowserAutomationService } from "./services/browser-automation"
-import { TelemetryProxy } from "./services/telemetry"
+import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
 import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
@@ -263,17 +264,18 @@ export function activate(context: vscode.ExtensionContext) {
   agentManagerHost.setDiffVirtualProvider(diffVirtualProvider)
   context.subscriptions.push(diffVirtualProvider)
 
-  // Create settings/profile editor provider (opens in editor area, not sidebar)
+  // Create standalone editor providers (open in editor area, not sidebar)
   const settingsEditorProvider = new SettingsEditorProvider(context.extensionUri, connectionService, context)
   settingsEditorProvider.setRemoteService(remoteService)
-  context.subscriptions.push(settingsEditorProvider)
+  const marketplacePanelProvider = new MarketplacePanelProvider(context.extensionUri, connectionService, context)
+  context.subscriptions.push(settingsEditorProvider, marketplacePanelProvider)
 
   // Create sub-agent viewer provider (read-only editor panel for sub-agent sessions)
   const subAgentViewerProvider = new SubAgentViewerProvider(context.extensionUri, connectionService, context)
   context.subscriptions.push(subAgentViewerProvider)
 
-  // Register serializers so settings/diff/sub-agent panels restore on restart
-  const settingsViews = ["settingsPanel", "profilePanel", "marketplacePanel"] as const
+  // Register serializers so standalone panels restore on restart
+  const settingsViews = ["settingsPanel", "profilePanel"] as const
   for (const suffix of settingsViews) {
     context.subscriptions.push(
       vscode.window.registerWebviewPanelSerializer(`kilo-code.new.${suffix}`, {
@@ -284,6 +286,15 @@ export function activate(context: vscode.ExtensionContext) {
       }),
     )
   }
+
+  context.subscriptions.push(
+    vscode.window.registerWebviewPanelSerializer(MarketplacePanelProvider.viewType, {
+      deserializeWebviewPanel(panel: vscode.WebviewPanel) {
+        marketplacePanelProvider.deserializePanel(panel)
+        return Promise.resolve()
+      },
+    }),
+  )
 
   context.subscriptions.push(
     vscode.window.registerWebviewPanelSerializer(DiffViewerProvider.viewType, {
@@ -305,8 +316,39 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   )
 
+  // Sidebar menus use wrapper commands so this event measures real title button presses,
+  // not programmatic opens, shortcuts, or editor title commands.
+  const track = (button: string, command: string) => {
+    TelemetryProxy.capture(TelemetryEventName.TITLE_BUTTON_CLICKED, {
+      button,
+      surface: "sidebar_title",
+    })
+    void vscode.commands.executeCommand(command)
+  }
+
   // Register toolbar button command handlers
   context.subscriptions.push(
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.plusButtonClicked", () => {
+      track("new_task", "kilo-code.new.plusButtonClicked")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.historyButtonClicked", () => {
+      track("history", "kilo-code.new.historyButtonClicked")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.agentManagerOpen", () => {
+      track("agent_manager", "kilo-code.new.agentManagerOpen")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.kiloClawOpen", () => {
+      track("kiloclaw", "kilo-code.new.kiloClawOpen")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.marketplaceButtonClicked", () => {
+      track("marketplace", "kilo-code.new.marketplaceButtonClicked")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.profileButtonClicked", () => {
+      track("profile", "kilo-code.new.profileButtonClicked")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.settingsButtonClicked", () => {
+      track("settings", "kilo-code.new.settingsButtonClicked")
+    }),
     vscode.commands.registerCommand("kilo-code.new.plusButtonClicked", () => {
       const tab = activeTabProvider()
       if (tab) tab.postMessage({ type: "action", action: "plusButtonClicked" })
@@ -315,8 +357,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManagerOpen", () => {
       agentManagerProvider.openPanel()
     }),
-    vscode.commands.registerCommand("kilo-code.new.marketplaceButtonClicked", (directory?: string) => {
-      settingsEditorProvider.openPanel("marketplace", undefined, directory)
+    vscode.commands.registerCommand("kilo-code.new.marketplaceButtonClicked", (directory?: string | null) => {
+      marketplacePanelProvider.openPanel(directory)
     }),
     vscode.commands.registerCommand("kilo-code.new.kiloClawOpen", () => {
       kiloClawProvider.openPanel()
@@ -456,7 +498,7 @@ export function activate(context: vscode.ExtensionContext) {
   )
 
   // Register autocomplete provider
-  registerAutocompleteProvider(context, connectionService)
+  void registerAutocompleteProvider(context, connectionService)
 
   // Register commit message generation
   registerCommitMessageService(context, connectionService)

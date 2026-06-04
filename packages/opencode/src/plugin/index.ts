@@ -10,6 +10,7 @@ import { Bus } from "../bus"
 import * as Log from "@opencode-ai/core/util/log"
 import { createKiloClient } from "@kilocode/sdk"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { ServerAuth } from "@/server/auth"
 import { CodexAuthPlugin } from "./codex"
 import { Session } from "@/session/session"
 import { NamedError } from "@opencode-ai/core/util/error"
@@ -18,6 +19,7 @@ import { gitlabAuthPlugin as GitlabAuthPlugin } from "opencode-gitlab-auth"
 import { PoeAuthPlugin } from "opencode-poe-auth"
 import { CloudflareAIGatewayAuthPlugin, CloudflareWorkersAuthPlugin } from "./cloudflare"
 import { AzureAuthPlugin } from "./azure"
+import { XaiAuthPlugin } from "./xai" // kilocode_change
 import { Effect, Layer, Context, Stream } from "effect"
 import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
@@ -67,6 +69,7 @@ const INTERNAL_PLUGINS: PluginInstance[] = [
   CloudflareWorkersAuthPlugin,
   CloudflareAIGatewayAuthPlugin,
   AzureAuthPlugin,
+  XaiAuthPlugin,
 ]
 // kilocode_change end
 
@@ -89,7 +92,8 @@ function getLegacyPlugins(mod: Record<string, unknown>) {
     if (seen.has(entry)) continue
     seen.add(entry)
     const plugin = getServerPlugin(entry)
-    if (!plugin) throw new TypeError("Plugin export is not a function")
+    // kilocode_change: skip named exports (e.g. constants from @kilocode/plugin-atomic-chat)
+    if (!plugin) continue // kilocode_change
     result.push(plugin)
   }
 
@@ -129,11 +133,7 @@ export const layer = Layer.effect(
         const client = createKiloClient({
           baseUrl: "http://localhost:4096",
           directory: ctx.directory,
-          headers: Flag.KILO_SERVER_PASSWORD
-            ? {
-                Authorization: `Basic ${Buffer.from(`${Flag.KILO_SERVER_USERNAME ?? "opencode"}:${Flag.KILO_SERVER_PASSWORD}`).toString("base64")}`,
-              }
-            : undefined,
+          headers: ServerAuth.headers(),
           fetch: async (...args) => Server.Default().app.fetch(...args),
         })
         const cfg = yield* config.get()

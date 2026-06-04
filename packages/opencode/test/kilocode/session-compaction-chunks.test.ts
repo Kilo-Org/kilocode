@@ -6,7 +6,7 @@ import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Snapshot } from "../../src/snapshot"
 import { KiloCompactionChunks } from "../../src/kilocode/session/compaction-chunks"
@@ -117,7 +117,6 @@ function llm() {
           const stream = typeof item === "function" ? item(input) : item
           return stream.pipe(Stream.mapEffect((event) => Effect.succeed(event)))
         },
-        raw: () => Effect.die("raw not implemented in test LLM"),
       }),
     ),
   }
@@ -345,7 +344,7 @@ describe("KiloCompactionChunks", () => {
 
   test("falls back to chunk workers after the first compaction overflows", async () => {
     await using tmp = await tmpdir()
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const session = await svc.create({})
@@ -391,7 +390,7 @@ describe("KiloCompactionChunks", () => {
 
   test("uses chunk fallback before sending oversized normal compaction", async () => {
     await using tmp = await tmpdir()
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const session = await svc.create({})
@@ -429,7 +428,7 @@ describe("KiloCompactionChunks", () => {
 
   test("uses a worker even when fallback selection produces one oversized chunk", async () => {
     await using tmp = await tmpdir()
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const session = await svc.create({})
@@ -473,7 +472,7 @@ describe("KiloCompactionChunks", () => {
 
   test("serializes oversized fallback chunks before summarizing", async () => {
     await using tmp = await tmpdir()
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const session = await svc.create({})
@@ -510,7 +509,7 @@ describe("KiloCompactionChunks", () => {
   test("caps worker output budget below oversized model output limit", async () => {
     const { rt, calls, outputs } = fakeRuntime()
     await using tmp = await tmpdir()
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const session = await svc.create({})
@@ -550,7 +549,7 @@ describe("KiloCompactionChunks", () => {
     stub.push(reply("replay summary", (input) => calls.push(JSON.stringify(input.messages))))
 
     await using tmp = await tmpdir()
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const session = await svc.create({})

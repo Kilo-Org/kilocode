@@ -56,6 +56,19 @@ class SendPromptActionTest : BasePlatformTestCase() {
         assertTrue(action.promote(listOf(action), absent).isEmpty())
     }
 
+    fun `test frontend descriptor registers send prompt shortcuts`() {
+        val xml = javaClass.classLoader.getResourceAsStream("kilo.jetbrains.frontend.xml")
+            ?.bufferedReader()
+            ?.use { it.readText() }
+            ?: error("missing frontend descriptor")
+
+        assertTrue(xml.contains("id=\"Kilo.SendPrompt\""))
+        assertTrue(xml.contains("first-keystroke=\"ENTER\""))
+        assertTrue(xml.contains("keymap=\"Mac OS X 10.5+\""))
+        assertTrue(xml.contains("first-keystroke=\"meta ENTER\""))
+        assertTrue(xml.contains("first-keystroke=\"control ENTER\""))
+    }
+
     private fun event(action: SendPromptAction, ctx: SendPromptContext?): AnActionEvent {
         val presentation = Presentation().apply { copyFrom(action.templatePresentation) }
         return AnActionEvent.createFromDataContext("", presentation, context(ctx))

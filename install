@@ -348,6 +348,10 @@ download_and_install() {
 
     # kilocode_change start
     mv "$tmp_dir/kilo" "$INSTALL_DIR"
+    rm -rf "${INSTALL_DIR}/tree-sitter"
+    if [ -d "$tmp_dir/tree-sitter" ]; then
+        mv "$tmp_dir/tree-sitter" "$INSTALL_DIR"
+    fi
     chmod 755 "${INSTALL_DIR}/kilo"
     # kilocode_change end
     rm -rf "$tmp_dir"

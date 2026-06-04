@@ -33,6 +33,7 @@ import { recordPromotionHandoff } from "./promotion-handoff"
 import { restoreWorktrees } from "./state-recovery"
 import { diffSummary as localDiffSummary, diffFile as localDiffFile } from "./local-diff"
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
+import { stopSessionProcesses } from "../kilo-provider/background-process"
 
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
@@ -1151,6 +1152,7 @@ export class AgentManagerProvider implements Disposable {
       {
         getClient: () => this.connectionService.getClient(),
         state: this.getStateManager(),
+        directory: this.getRoot(),
         postError: (msg) => this.postToWebview({ type: "error", message: msg }),
         registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
         pushState: () => this.pushState(),
@@ -1175,7 +1177,16 @@ export class AgentManagerProvider implements Disposable {
     const state = this.getStateManager()
     if (!state) return null
 
+    const dirs = this.panel?.sessions.getSessionDirectories()
+    const dir = state.directoryFor(sessionId) ?? dirs?.get(sessionId) ?? this.getRoot() ?? process.cwd()
+    try {
+      await stopSessionProcesses(this.connectionService.getClient(), sessionId, dir)
+    } catch (err) {
+      this.log("onCloseSession: client not available:", err)
+    }
+
     state.removeSession(sessionId)
+    this.panel?.sessions.clearSessionDirectory(sessionId)
     this.pushState()
     this.log(`Closed session ${sessionId}`)
     return null

@@ -313,7 +313,29 @@ async function listDshowAudioDevices(bin: string): Promise<string[]> {
 
 export function parseDshowAudioDevices(raw: string): string[] {
   const devices = new Set<string>()
-  for (const match of raw.matchAll(/"([^"]+)"\s+\(audio\)/g)) devices.add(match[1]!)
+  const state = { audio: false }
+  const legacy = /"([^"]+)"\s+\(audio\)/
+  const quoted = /"([^"]+)"/
+  const section = (line: string) => /DirectShow audio devices/i.test(line)
+  const other = (line: string) => /DirectShow (video|external) devices/i.test(line)
+  const alt = (line: string) => /\]\s+Alternative name\s+"/i.test(line)
+  for (const line of raw.split(/\r?\n/)) {
+    const match = legacy.exec(line)
+    if (match) devices.add(match[1]!)
+
+    if (section(line)) {
+      state.audio = true
+      continue
+    }
+    if (other(line)) {
+      if (!state.audio) continue
+      state.audio = false
+      break
+    }
+    if (!state.audio || alt(line)) continue
+    const found = quoted.exec(line)
+    if (found) devices.add(found[1]!)
+  }
   return [...devices]
 }
 

@@ -2,6 +2,7 @@
 import { $ } from "bun"
 import { join, relative, dirname, basename } from "node:path"
 import { chmodSync, statSync, rmSync, readdirSync, existsSync } from "node:fs"
+import { copyTreeSitterResources, hasTreeSitterResources } from "../src/services/cli-backend/cli-resources"
 import { currentFfmpegTarget, ensureFfmpegForTarget } from "./ffmpeg-helper"
 
 const forceRebuild = process.argv.includes("--force")
@@ -22,6 +23,8 @@ const kiloVscodeDir = join(import.meta.dir, "..")
 const packagesDir = join(kiloVscodeDir, "..")
 const opencodeDir = join(packagesDir, "opencode")
 const coreDir = join(packagesDir, "core")
+const gatewayDir = join(packagesDir, "kilo-gateway")
+const indexingDir = join(packagesDir, "kilo-indexing")
 
 const targetBinDir = join(kiloVscodeDir, "bin")
 const binName = process.platform === "win32" ? "kilo.exe" : "kilo"
@@ -36,7 +39,12 @@ async function cliSourceHash(): Promise<string | null> {
   try {
     const opencodeResult = await $`git log -1 --format=%H -- .`.cwd(opencodeDir).quiet()
     const coreResult = await $`git log -1 --format=%H -- .`.cwd(coreDir).quiet()
-    return `${opencodeResult.text().trim()}-${coreResult.text().trim()}` || null
+    const gatewayResult = await $`git log -1 --format=%H -- .`.cwd(gatewayDir).quiet()
+    const indexingResult = await $`git log -1 --format=%H -- .`.cwd(indexingDir).quiet()
+    return (
+      `${opencodeResult.text().trim()}-${coreResult.text().trim()}-${gatewayResult.text().trim()}-${indexingResult.text().trim()}` ||
+      null
+    )
   } catch {
     return null
   }
@@ -46,7 +54,14 @@ async function isDirty(): Promise<boolean> {
   try {
     const opencodeResult = await $`git status --porcelain -- .`.cwd(opencodeDir).quiet()
     const coreResult = await $`git status --porcelain -- .`.cwd(coreDir).quiet()
-    return opencodeResult.text().trim().length > 0 || coreResult.text().trim().length > 0
+    const gatewayResult = await $`git status --porcelain -- .`.cwd(gatewayDir).quiet()
+    const indexingResult = await $`git status --porcelain -- .`.cwd(indexingDir).quiet()
+    return (
+      opencodeResult.text().trim().length > 0 ||
+      coreResult.text().trim().length > 0 ||
+      gatewayResult.text().trim().length > 0 ||
+      indexingResult.text().trim().length > 0
+    )
   } catch {
     return false
   }
@@ -83,6 +98,7 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
   const preferred = join(distDir, `@kilocode`, tag, "bin", binName)
   try {
     statSync(preferred)
+    if (!hasTreeSitterResources(preferred)) return null
     return preferred
   } catch {
     // fall through to generic search
@@ -108,6 +124,7 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
         continue
       }
       if (e.isFile() && (e.name === "kilo" || e.name === "kilo.exe") && basename(dirname(p)) === "bin") {
+        if (!hasTreeSitterResources(p)) continue
         return p
       }
     }
@@ -182,6 +199,7 @@ async function main() {
   const sourceBinPath = await ensureBuiltBinary()
   await $`mkdir -p ${targetBinDir}`
   await $`cp ${sourceBinPath} ${targetBinPath}`
+  await copyTreeSitterResources(sourceBinPath, targetBinPath)
   chmodSync(targetBinPath, 0o755)
   await ensureFfmpegForTarget(currentFfmpegTarget(), targetBinDir)
 

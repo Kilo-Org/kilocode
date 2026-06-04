@@ -19,6 +19,7 @@ import path from "node:path"
 
 const MONOREPO_ROOT = path.resolve(import.meta.dir, "../../../..")
 const KILO_UI_DIR = path.join(MONOREPO_ROOT, "packages/kilo-ui")
+const BASIC_TOOL_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/basic-tool.tsx")
 const DATA_CONTEXT_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/context/data.tsx")
 const MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/message-part.tsx")
 const KILO_MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/message-part.tsx")
@@ -137,6 +138,19 @@ describe("DataProvider contract (runtime)", () => {
   })
 })
 
+describe("Assistant Markdown streaming contract (source)", () => {
+  const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+  const block =
+    src.match(
+      /PART_MAPPING\["text"\]\s*=\s*function TextPartDisplay[\s\S]*?(?=\/\/ Expanded mode|PART_MAPPING\["reasoning"\])/,
+    )?.[0] ?? ""
+
+  it("passes active text streams through Markdown's streaming mode", () => {
+    expect(block).not.toBe("")
+    expect(block).toContain("streaming={streaming()}")
+  })
+})
+
 describe("Edit tool diff-first click contract (source)", () => {
   const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
 
@@ -218,6 +232,36 @@ describe("Bash tool syntax highlighting and section labels (source)", () => {
   })
 })
 
+describe("HighlightedText @mention regex fallback and click handler (source)", () => {
+  const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+
+  it("detects @path patterns via regex when source offsets are missing", () => {
+    // detectMentions is the regex fallback for when the backend doesn't
+    // populate FilePart.source.text.{start,end}
+    expect(src).toContain("detectMentions")
+    expect(src).toMatch(/MENTION_RE/)
+  })
+
+  it("prefers source offsets over regex when both are available", () => {
+    expect(src).toMatch(/offset\.length\s*>\s*0\s*\?/)
+  })
+
+  it("file mention spans are clickable via data.openFile", () => {
+    expect(src).toContain("data-clickable")
+    expect(src).toMatch(/segment\.type\s*===\s*"file".*data\.openFile/)
+  })
+
+  it("click handler strips @ prefix before calling openFile", () => {
+    expect(src).toMatch(/segment\.text\.replace\(\/\^@\//)
+  })
+
+  it("escapeHtml is imported from shared util, not duplicated", () => {
+    expect(src).toMatch(/import.*escapeHtml.*from.*util\/escape-html/)
+    // Must NOT contain a local function definition
+    expect(src).not.toMatch(/function escapeHtml/)
+  })
+})
+
 describe("BasicTool export contract (runtime)", () => {
   it("BasicTool and GenericTool are exported from basic-tool", () => {
     const result = check(`
@@ -234,5 +278,36 @@ describe("BasicTool export contract (runtime)", () => {
       process.exit(0)
     `)
     expect(result.ok, `BasicTool export check failed: ${result.output}`).toBe(true)
+  })
+})
+
+describe("Collapsed deferred tool details contract (source)", () => {
+  const basic = fs.readFileSync(BASIC_TOOL_FILE, "utf-8")
+  const message = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+
+  it("uses an explicit details hint before touching deferred children", () => {
+    expect(basic).toContain("hasDetails?: boolean")
+    expect(basic).toContain("props.hasDetails ?? !!props.children")
+    expect(basic).toMatch(/<Show when=\{!props\.defer \|\| ready\(\)\}>\{props\.children\}<\/Show>/)
+  })
+
+  it("opts edit-family transcript cards into collapsed lazy details", () => {
+    for (const name of ["edit", "write", "apply_patch"]) {
+      const block =
+        message.match(
+          new RegExp(`ToolRegistry\\.register\\(\\{\\s*name:\\s*"${name}"[\\s\\S]*?(?=ToolRegistry\\.register\\(|$)`),
+        )?.[0] ?? ""
+      expect(block).toContain("defer")
+      expect(block).toContain("hasDetails")
+    }
+  })
+
+  it("lazy-mounts completed bash output and retains it after first expansion", () => {
+    const block =
+      message.match(/ToolRegistry\.register\(\{\s*name:\s*"bash"[\s\S]*?(?=ToolRegistry\.register\(|$)/)?.[0] ?? ""
+    expect(block).toContain("const [mounted, setMounted] = createSignal(open())")
+    expect(block).toMatch(/if \(open\(\) \|\| pending\(\)\) setMounted\(true\)/)
+    expect(block).toContain("hasDetails")
+    expect(block).toMatch(/<Show when=\{mounted\(\)\}>[\s\S]*?<BashHighlightedOutput/)
   })
 })

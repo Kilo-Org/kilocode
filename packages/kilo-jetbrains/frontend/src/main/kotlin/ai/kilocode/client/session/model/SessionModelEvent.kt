@@ -36,7 +36,12 @@ sealed class SessionModelEvent {
     data class ContentRemoved(val messageId: String, val contentId: String) : SessionModelEvent() {
         override fun toString() = "ContentRemoved $messageId/$contentId"
     }
-    data class ContentDelta(val messageId: String, val contentId: String, val delta: String) : SessionModelEvent() {
+    data class ContentDelta(
+        val messageId: String,
+        val contentId: String,
+        val delta: String,
+        val created: Boolean = false,
+    ) : SessionModelEvent() {
         override fun toString() = "ContentDelta $messageId/$contentId"
     }
     data class StateChanged(val state: SessionState) : SessionModelEvent() {

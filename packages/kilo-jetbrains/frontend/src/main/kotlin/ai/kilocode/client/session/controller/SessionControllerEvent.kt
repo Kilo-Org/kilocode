@@ -2,6 +2,8 @@ package ai.kilocode.client.session.controller
 
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
+import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.SessionDto
 
 /**
@@ -31,6 +33,24 @@ sealed class SessionControllerEvent {
 
         data object ShowSession : ViewChanged() {
             override fun toString() = "ViewChanged session"
+        }
+    }
+
+    data class AccountOverlaySnapshot(
+        val status: KiloAppStatusDto,
+        val profile: ProfileDto?,
+        val transient: Boolean = false,
+        val switching: Boolean = false,
+        val targetOrgId: String? = null,
+    )
+
+    sealed class AccountOverlayChanged : SessionControllerEvent() {
+        data class Show(val account: AccountOverlaySnapshot) : AccountOverlayChanged() {
+            override fun toString() = "AccountOverlayChanged show loggedIn=${account.profile != null}"
+        }
+
+        data object Hide : AccountOverlayChanged() {
+            override fun toString() = "AccountOverlayChanged hide"
         }
     }
 

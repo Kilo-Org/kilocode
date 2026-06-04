@@ -4,9 +4,13 @@ import { Effect } from "effect"
 import { RemoteSender } from "../../../src/kilo-sessions/remote-sender"
 import type { RemoteWS } from "../../../src/kilo-sessions/remote-ws"
 import type { RemoteProtocol } from "../../../src/kilo-sessions/remote-protocol"
-import { SessionPrompt } from "../../../src/session/prompt"
+import type { SessionPrompt } from "../../../src/session/prompt"
 import { Question } from "../../../src/question"
+import { QuestionID } from "../../../src/question/schema"
 import { Permission } from "../../../src/permission"
+import { PermissionID } from "../../../src/permission/schema"
+import { ModelID, ProviderID } from "../../../src/provider/schema"
+import { SessionID } from "../../../src/session/schema"
 import { Suggestion } from "../../../src/kilocode/suggestion" // kilocode_change
 
 function fakeConn() {
@@ -45,6 +49,27 @@ const nolog = {
   info: () => {},
   error: () => {},
   warn: () => {},
+}
+
+function permissions(items: Permission.Request[] = []) {
+  return {
+    list: async () => items,
+    reply: async () => true,
+  }
+}
+
+function questions(items: Question.Request[] = []) {
+  return {
+    list: async () => items,
+    reply: async (_input: Parameters<Question.Interface["reply"]>[0]) => {},
+    reject: async (_requestID: QuestionID) => {},
+  }
+}
+
+function prompts(calls: SessionPrompt.PromptInput[]) {
+  return async (input: SessionPrompt.PromptInput) => {
+    calls.push(input)
+  }
 }
 
 // kilocode_change start
@@ -313,13 +338,14 @@ describe("RemoteSender", () => {
   // kilocode_change start
   test("send_message normalizes string model without prefix", async () => {
     const { conn, sent } = fakeConn()
-    const prompt = spyOn(SessionPrompt, "prompt").mockResolvedValue({} as never)
+    const calls: SessionPrompt.PromptInput[] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/test",
       log: nolog,
       subscribe: fakeBus().subscribe,
       provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
+      prompt: prompts(calls),
     })
 
     sender.handle({
@@ -336,22 +362,25 @@ describe("RemoteSender", () => {
     await new Promise((r) => setTimeout(r, 0))
 
     expect(sent[0]).toEqual({ type: "response", id: "req_model_string", result: {} })
-    expect(prompt).toHaveBeenCalledWith({
-      sessionID: "ses_x",
-      parts: [{ type: "text", text: "hello" }],
-      model: { providerID: "kilo", modelID: "anthropic/claude-sonnet-4-20250514" },
-    })
+    expect(calls).toEqual([
+      {
+        sessionID: SessionID.make("ses_x"),
+        parts: [{ type: "text", text: "hello" }],
+        model: { providerID: ProviderID.make("kilo"), modelID: ModelID.make("anthropic/claude-sonnet-4-20250514") },
+      },
+    ])
   })
 
   test("send_message keeps kilocode-prefixed model unchanged before internal conversion", async () => {
     const { conn } = fakeConn()
-    const prompt = spyOn(SessionPrompt, "prompt").mockResolvedValue({} as never)
+    const calls: SessionPrompt.PromptInput[] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/test",
       log: nolog,
       subscribe: fakeBus().subscribe,
       provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
+      prompt: prompts(calls),
     })
 
     sender.handle({
@@ -367,11 +396,13 @@ describe("RemoteSender", () => {
 
     await new Promise((r) => setTimeout(r, 0))
 
-    expect(prompt).toHaveBeenCalledWith({
-      sessionID: "ses_x",
-      parts: [{ type: "text", text: "hello" }],
-      model: { providerID: "kilo", modelID: "gpt-5-mini" },
-    })
+    expect(calls).toEqual([
+      {
+        sessionID: SessionID.make("ses_x"),
+        parts: [{ type: "text", text: "hello" }],
+        model: { providerID: ProviderID.make("kilo"), modelID: ModelID.make("gpt-5-mini") },
+      },
+    ])
   })
 
   test("send_message rejects structured model on remote path", () => {
@@ -403,13 +434,14 @@ describe("RemoteSender", () => {
 
   test("send_message does not special-case kilo-prefixed model", async () => {
     const { conn, sent } = fakeConn()
-    const prompt = spyOn(SessionPrompt, "prompt").mockResolvedValue({} as never)
+    const calls: SessionPrompt.PromptInput[] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/test",
       log: nolog,
       subscribe: fakeBus().subscribe,
       provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
+      prompt: prompts(calls),
     })
 
     sender.handle({
@@ -426,25 +458,30 @@ describe("RemoteSender", () => {
     await new Promise((r) => setTimeout(r, 0))
 
     expect(sent[0]).toEqual({ type: "response", id: "req_model_kilo", result: {} })
-    expect(prompt).toHaveBeenCalledWith({
-      sessionID: "ses_x",
-      parts: [{ type: "text", text: "hello" }],
-      model: { providerID: "kilo", modelID: "kilo/gpt-5-mini" },
-    })
+    expect(calls).toEqual([
+      {
+        sessionID: SessionID.make("ses_x"),
+        parts: [{ type: "text", text: "hello" }],
+        model: { providerID: ProviderID.make("kilo"), modelID: ModelID.make("kilo/gpt-5-mini") },
+      },
+    ])
   })
   // kilocode_change end
 
   test("question_reply sends response after work completes", async () => {
     const { conn, sent } = fakeConn()
-    let provideCalled = false
+    const calls: Parameters<Question.Interface["reply"]>[0][] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/test",
       log: nolog,
       subscribe: fakeBus().subscribe,
-      provide: async () => {
-        provideCalled = true
-        return {} as any
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
+      question: {
+        ...questions(),
+        reply: async (input) => {
+          calls.push(input)
+        },
       },
     })
 
@@ -452,17 +489,48 @@ describe("RemoteSender", () => {
       type: "command",
       id: "req_q",
       command: "question_reply",
-      data: { requestID: "r1", answers: [["yes"]] },
+      data: { requestID: "que_r1", answers: [["yes"]] },
     })
 
-    // Response not sent synchronously — waits for provide to finish
+    // Response not sent synchronously - waits for provide to finish.
     expect(sent).toHaveLength(0)
 
     await new Promise((r) => setTimeout(r, 10))
 
-    expect(provideCalled).toBe(true)
+    expect(calls).toEqual([{ requestID: QuestionID.make("que_r1"), answers: [["yes"]] }])
     expect(sent).toHaveLength(1)
     expect(sent[0]).toEqual({ type: "response", id: "req_q", result: {} })
+  })
+
+  test("permission_respond sends response after work completes", async () => {
+    const { conn, sent } = fakeConn()
+    const calls: Permission.ReplyInput[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
+      permission: {
+        list: async () => [],
+        reply: async (input) => {
+          calls.push(input)
+          return true
+        },
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_permission",
+      command: "permission_respond",
+      data: { requestID: PermissionID.make("permission_1"), reply: "once" },
+    })
+
+    await new Promise((r) => setTimeout(r, 10))
+
+    expect(calls).toEqual([{ requestID: PermissionID.make("permission_1"), reply: "once" }])
+    expect(sent).toContainEqual({ type: "response", id: "req_permission", result: {} })
   })
 
   test("question_reply error sends error response", async () => {
@@ -472,8 +540,12 @@ describe("RemoteSender", () => {
       directory: "/tmp/test",
       log: nolog,
       subscribe: fakeBus().subscribe,
-      provide: async () => {
-        throw new Error("boom")
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
+      question: {
+        ...questions(),
+        reply: async () => {
+          throw new Error("boom")
+        },
       },
     })
 
@@ -481,7 +553,7 @@ describe("RemoteSender", () => {
       type: "command",
       id: "req_qe",
       command: "question_reply",
-      data: { requestID: "r1", answers: [["yes"]] },
+      data: { requestID: "que_r1", answers: [["yes"]] },
     })
 
     await new Promise((r) => setTimeout(r, 10))
@@ -490,6 +562,37 @@ describe("RemoteSender", () => {
     expect(sent[0].type).toBe("response")
     expect(sent[0].id).toBe("req_qe")
     expect(sent[0].error).toContain("boom")
+  })
+
+  test("question_reply reports unknown request errors", async () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
+      question: {
+        ...questions(),
+        reply: async (input) => {
+          throw new Question.NotFoundError({ requestID: input.requestID })
+        },
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_q_missing",
+      command: "question_reply",
+      data: { requestID: "que_missing", answers: [["yes"]] },
+    })
+
+    await new Promise((r) => setTimeout(r, 10))
+
+    expect(sent).toHaveLength(1)
+    expect(sent[0].type).toBe("response")
+    expect(sent[0].id).toBe("req_q_missing")
+    expect(sent[0].error).toContain("Question.NotFoundError")
   })
 
   test("suggestion_accept sends response after work completes", async () => {
@@ -539,15 +642,18 @@ describe("RemoteSender", () => {
 
   test("question_reject sends response after work completes", async () => {
     const { conn, sent } = fakeConn()
-    let provideCalled = false
+    const calls: QuestionID[] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/test",
       log: nolog,
       subscribe: fakeBus().subscribe,
-      provide: async () => {
-        provideCalled = true
-        return {} as any
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
+      question: {
+        ...questions(),
+        reject: async (requestID) => {
+          calls.push(requestID)
+        },
       },
     })
 
@@ -555,14 +661,45 @@ describe("RemoteSender", () => {
       type: "command",
       id: "req_qr",
       command: "question_reject",
-      data: { requestID: "r1" },
+      data: { requestID: "que_r1" },
     })
 
     await new Promise((r) => setTimeout(r, 10))
 
-    expect(provideCalled).toBe(true)
+    expect(calls).toEqual([QuestionID.make("que_r1")])
     expect(sent).toHaveLength(1)
     expect(sent[0]).toEqual({ type: "response", id: "req_qr", result: {} })
+  })
+
+  test("question_reject reports unknown request errors", async () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
+      question: {
+        ...questions(),
+        reject: async (requestID) => {
+          throw new Question.NotFoundError({ requestID })
+        },
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_qr_missing",
+      command: "question_reject",
+      data: { requestID: "que_missing" },
+    })
+
+    await new Promise((r) => setTimeout(r, 10))
+
+    expect(sent).toHaveLength(1)
+    expect(sent[0].type).toBe("response")
+    expect(sent[0].id).toBe("req_qr_missing")
+    expect(sent[0].error).toContain("Question.NotFoundError")
   })
 
   test("question_reject with invalid data sends error response", () => {
@@ -861,11 +998,6 @@ describe("RemoteSender", () => {
     const bus = fakeBus()
 
     spyOn(Suggestion, "list").mockResolvedValue([])
-    spyOn(Question, "list").mockResolvedValue([
-      { id: "question_1", sessionID: "ses_target", questions: [{ type: "text", text: "Continue?" }] } as any,
-      { id: "question_2", sessionID: "ses_other", questions: [{ type: "text", text: "Unrelated?" }] } as any,
-    ])
-    spyOn(Permission, "list").mockResolvedValue([])
 
     const sender = RemoteSender.create({
       conn,
@@ -873,6 +1005,11 @@ describe("RemoteSender", () => {
       log: nolog,
       subscribe: bus.subscribe,
       provide: async (input: any) => input.fn(),
+      permission: permissions(),
+      question: questions([
+        { id: "question_1", sessionID: "ses_target", questions: [{ type: "text", text: "Continue?" }] } as any,
+        { id: "question_2", sessionID: "ses_other", questions: [{ type: "text", text: "Unrelated?" }] } as any,
+      ]),
     })
 
     sender.handle({ type: "subscribe", sessionId: "ses_target" })
@@ -893,25 +1030,6 @@ describe("RemoteSender", () => {
     const bus = fakeBus()
 
     spyOn(Suggestion, "list").mockResolvedValue([])
-    spyOn(Question, "list").mockResolvedValue([])
-    spyOn(Permission, "list").mockResolvedValue([
-      {
-        id: "permission_1",
-        sessionID: "ses_target",
-        permission: "file.write",
-        patterns: ["src/**"],
-        metadata: {},
-        always: [],
-      } as any,
-      {
-        id: "permission_2",
-        sessionID: "ses_other",
-        permission: "file.read",
-        patterns: ["*"],
-        metadata: {},
-        always: [],
-      } as any,
-    ])
 
     const sender = RemoteSender.create({
       conn,
@@ -919,6 +1037,25 @@ describe("RemoteSender", () => {
       log: nolog,
       subscribe: bus.subscribe,
       provide: async (input: any) => input.fn(),
+      question: questions(),
+      permission: permissions([
+        {
+          id: "permission_1",
+          sessionID: "ses_target",
+          permission: "file.write",
+          patterns: ["src/**"],
+          metadata: {},
+          always: [],
+        } as any,
+        {
+          id: "permission_2",
+          sessionID: "ses_other",
+          permission: "file.read",
+          patterns: ["*"],
+          metadata: {},
+          always: [],
+        } as any,
+      ]),
     })
 
     sender.handle({ type: "subscribe", sessionId: "ses_target" })
@@ -948,17 +1085,6 @@ describe("RemoteSender", () => {
     spyOn(Suggestion, "list").mockResolvedValue([
       { id: "sug_1", sessionID: "ses_other", text: "Review?", actions: [] } as any,
     ])
-    spyOn(Question, "list").mockResolvedValue([{ id: "question_1", sessionID: "ses_other", questions: [] } as any])
-    spyOn(Permission, "list").mockResolvedValue([
-      {
-        id: "permission_1",
-        sessionID: "ses_other",
-        permission: "file.write",
-        patterns: [],
-        metadata: {},
-        always: [],
-      } as any,
-    ])
 
     const sender = RemoteSender.create({
       conn,
@@ -966,6 +1092,17 @@ describe("RemoteSender", () => {
       log: nolog,
       subscribe: bus.subscribe,
       provide: async (input: any) => input.fn(),
+      question: questions([{ id: "question_1", sessionID: "ses_other", questions: [] } as any]),
+      permission: permissions([
+        {
+          id: "permission_1",
+          sessionID: "ses_other",
+          permission: "file.write",
+          patterns: [],
+          metadata: {},
+          always: [],
+        } as any,
+      ]),
     })
 
     sender.handle({ type: "subscribe", sessionId: "ses_target" })
@@ -993,8 +1130,6 @@ describe("RemoteSender", () => {
         actions: [{ label: "Skip", prompt: "skip" }],
       } as any,
     ])
-    spyOn(Question, "list").mockResolvedValue([])
-    spyOn(Permission, "list").mockResolvedValue([])
 
     const sender = RemoteSender.create({
       conn,
@@ -1002,6 +1137,8 @@ describe("RemoteSender", () => {
       log: nolog,
       subscribe: bus.subscribe,
       provide: async (input: any) => input.fn(),
+      permission: permissions(),
+      question: questions(),
     })
 
     sender.handle({ type: "subscribe", sessionId: "ses_target" })

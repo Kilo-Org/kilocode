@@ -20,27 +20,40 @@ import { useProvider } from "../src/context/provider"
 import { useConfig } from "../src/context/config"
 import { canUseSpeechToText, selectedSpeechToTextModel } from "../src/components/speech-to-text/availability"
 import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
-import { getDirectory, getFilename, lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
+import {
+  getDirectory,
+  getFilename,
+  lineCount,
+  sanitizeReviewComments,
+  type ReviewComment,
+} from "../diff-viewer/review-comments"
 import {
   buildFileAnnotations,
   buildReviewAnnotation,
+  clearReviewComposer,
+  createReviewComposer,
+  reviewComposerDraft,
+  reviewComposerEdit,
   reviewDraftSpeechKey,
   reviewEditSpeechKey,
   type AnnotationLabels,
   type AnnotationMeta,
-} from "./review-annotations"
-import { createReviewAnnotationSpeechRenderer } from "./review-annotation-speech"
+  type ReviewComposer,
+  type ReviewDraft,
+} from "../diff-viewer/review-annotations"
+import { createReviewAnnotationSpeechRenderer } from "../diff-viewer/review-annotation-speech"
 import {
   LONG_DIFF_MARKER_FILE_COUNT,
   allOpenFiles,
+  eagerDiffFiles,
   initialOpenFiles,
   isLargeDiffFile,
   toggleOpenFiles,
-} from "./diff-open-policy"
-import { DiffEndMarker } from "./DiffEndMarker"
-import { treeOrder } from "./file-tree-utils"
-import { isMarkdownFile, MarkdownDiffView } from "./MarkdownDiffView"
-import { diffToken } from "./diff-state"
+} from "../diff-viewer/diff-open-policy"
+import { DiffEndMarker } from "../diff-viewer/DiffEndMarker"
+import { treeOrder } from "../diff-viewer/file-tree-utils"
+import { isMarkdownFile, MarkdownDiffView } from "../diff-viewer/MarkdownDiffView"
+import { createDiffRows, diffToken } from "../diff-viewer/diff-state"
 
 // --- Data model ---
 
@@ -56,6 +69,7 @@ interface DiffPanelProps {
   onMarkdownRenderChange?: (render: boolean) => void
   comments: ReviewComment[]
   onCommentsChange: (comments: ReviewComment[]) => void
+  composer?: ReviewComposer
   onSendAll?: () => void
   onClose: () => void
   onExpand?: () => void
@@ -71,10 +85,10 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   const vscode = useVSCode()
   const server = useServer()
   const provider = useProvider()
-  const { config, settings } = useConfig()
+  const { config } = useConfig()
   const speech = useSpeechToText(vscode, server, { t })
-  const canUseSpeech = () => canUseSpeechToText(settings(), config(), provider.connected(), server.profileData())
-  const speechModel = () => selectedSpeechToTextModel(settings())
+  const canUseSpeech = () => canUseSpeechToText(config(), provider.connected(), server.profileData())
+  const speechModel = () => selectedSpeechToTextModel(config())
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
   const sendAllKeybind = () =>
     isMac ? t("agentManager.review.sendAllShortcut.mac") : t("agentManager.review.sendAllShortcut.other")
@@ -89,11 +103,11 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     edit: t("common.edit"),
     delete: t("common.delete"),
   })
+  const localComposer = createReviewComposer()
+  const composer = () => props.composer ?? localComposer
   const [open, setOpen] = createSignal<string[]>([])
-  const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number; endLine?: number } | null>(
-    null,
-  )
-  const [editing, setEditing] = createSignal<string | null>(null)
+  const [draft, setDraft] = createSignal<ReviewDraft | null>(reviewComposerDraft(composer()))
+  const [editing, setEditing] = createSignal<string | null>(reviewComposerEdit(composer()))
   const speechKeys = createMemo(() => {
     const keys = new Set<string>()
     const current = draft()
@@ -119,14 +133,17 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   // Reorder diffs to match the file-tree's depth-first visual order so
   // scrolling through the accordion matches the tree grouping.
   const sorted = createMemo(() => treeOrder(props.diffs))
+  const rows = createDiffRows(sorted, () => props.sessionKey)
+  const eager = createMemo(() => eagerDiffFiles(sorted()))
 
   const comments = () => props.comments
   const setComments = (next: ReviewComment[]) => props.onCommentsChange(next)
   const updateComments = (updater: (prev: ReviewComment[]) => ReviewComment[]) => setComments(updater(comments()))
 
-  // Stable draft metadata ref — avoids recreating the object on every signal read
-  // so pierre's annotation cache doesn't invalidate and destroy the textarea
-  let draftMeta: AnnotationMeta | null = null
+  // Stable composer metadata refs avoid recreating the object on every signal read
+  // so pierre's annotation cache doesn't invalidate and destroy the textarea.
+  let draftMeta: AnnotationMeta | null = composer().draft
+  let editMeta: AnnotationMeta | null = composer().edit
 
   // Ref to the scrollable container — used to preserve scroll position when
   // annotation changes cause pierre to fully re-render diffs
@@ -168,6 +185,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     preserveScroll(() => {
       setDraft(null)
       draftMeta = null
+      composer().draft = null
     })
     focusRoot()
   }
@@ -211,7 +229,13 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       () => props.sessionKey,
       () => {
         requested.clear()
+        setDraft(null)
+        draftMeta = null
+        setEditing(null)
+        editMeta = null
+        clearReviewComposer(composer())
       },
+      { defer: true },
     ),
   )
 
@@ -247,6 +271,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       updateComments((prev) => [...prev, { id, file, side, line, comment: text, selectedText }])
       setDraft(null)
       draftMeta = null
+      composer().draft = null
     })
     focusRoot()
   }
@@ -255,6 +280,8 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     preserveScroll(() => {
       updateComments((prev) => prev.map((c) => (c.id === id ? { ...c, comment: text } : c)))
       setEditing(null)
+      editMeta = null
+      composer().edit = null
     })
     focusRoot()
   }
@@ -262,12 +289,20 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   const deleteComment = (id: string) => {
     preserveScroll(() => {
       updateComments((prev) => prev.filter((c) => c.id !== id))
-      if (editing() === id) setEditing(null)
+      if (editing() === id) {
+        setEditing(null)
+        editMeta = null
+        composer().edit = null
+      }
     })
     focusRoot()
   }
 
   const setEditState = (id: string | null) => {
+    if (editing() !== id) {
+      editMeta = null
+      composer().edit = null
+    }
     preserveScroll(() => setEditing(id))
     if (id === null) focusRoot()
   }
@@ -284,6 +319,8 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         const edit = editing()
         if (edit && !valid.some((comment) => comment.id === edit)) {
           setEditing(null)
+          editMeta = null
+          composer().edit = null
         }
 
         const currentDraft = draft()
@@ -292,6 +329,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         if (!diff) {
           setDraft(null)
           draftMeta = null
+          composer().draft = null
           return
         }
         const content = currentDraft.side === "deletions" ? diff.before : diff.after
@@ -299,11 +337,13 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         if (currentDraft.line < 1 || currentDraft.line > max) {
           setDraft(null)
           draftMeta = null
+          composer().draft = null
           return
         }
         if (currentDraft.endLine !== undefined && currentDraft.endLine > max) {
           setDraft(null)
           draftMeta = null
+          composer().draft = null
         }
       },
     ),
@@ -322,8 +362,11 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   })
 
   const annotationsForFile = (file: string): DiffLineAnnotation<AnnotationMeta>[] => {
-    const result = buildFileAnnotations(file, commentsByFile().get(file) ?? [], editing(), draft(), draftMeta)
+    const result = buildFileAnnotations(file, commentsByFile().get(file) ?? [], editing(), draft(), draftMeta, editMeta)
     draftMeta = result.draftMeta
+    editMeta = result.editMeta
+    composer().draft = draft() ? draftMeta : null
+    composer().edit = editing() ? editMeta : null
     return result.annotations
   }
 
@@ -353,7 +396,10 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     if (draft()) return
     const side: AnnotationSide = range.side === "deletions" ? "deletions" : "additions"
     preserveScroll(() => {
-      setDraft({ file, side, line: range.start, endLine: range.end })
+      const next = { file, side, line: range.start, endLine: range.end }
+      draftMeta = { type: "draft", comment: null, ...next }
+      composer().draft = draftMeta
+      setDraft(next)
     })
   }
 
@@ -482,7 +528,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       <Show when={props.diffs.length > 0}>
         <div class="am-diff-content" data-component="session-review" ref={scroller}>
           <Accordion multiple value={open()} onChange={setOpen}>
-            <For each={sorted()}>
+            <For each={rows()}>
               {(diff) => {
                 const isAdded = () => diff.status === "added"
                 const isDeleted = () => diff.status === "deleted"
@@ -611,7 +657,9 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                               <Diff<AnnotationMeta>
                                 before={{ name: diff.file, contents: diff.before }}
                                 after={{ name: diff.file, contents: diff.after }}
+                                patch={diff.patch}
                                 diffStyle={props.diffStyle ?? "unified"}
+                                virtualized={!eager().has(diff.file)}
                                 annotations={annotationsForFile(diff.file)}
                                 renderAnnotation={buildAnnotation}
                                 enableGutterUtility={true}

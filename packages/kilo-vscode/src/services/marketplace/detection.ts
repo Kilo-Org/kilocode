@@ -16,6 +16,7 @@ export class InstallationDetector {
   /**
    * Detect installed marketplace items.
    *
+   * Agents are detected from .kilo/agents/*.md files.
    * MCP servers and modes are detected from kilo.json config files.
    * Skills come from the CLI backend (via GET /skill), which is the
    * authoritative source — it scans all skill directories.
@@ -23,12 +24,14 @@ export class InstallationDetector {
   async detect(workspace?: string, skills?: CliSkill[]): Promise<MarketplaceInstalledMetadata> {
     const project = workspace
       ? Object.fromEntries([
+          ...(await this.detectAgentFiles("project", workspace)),
           ...(await this.detectFromConfig(this.paths.configPath("project", workspace))),
           ...this.skillEntries(skills, workspace, true),
         ])
       : {}
 
     const global = Object.fromEntries([
+      ...(await this.detectAgentFiles("global")),
       ...(await this.detectFromConfig(this.paths.configPath("global"))),
       ...this.skillEntries(skills, workspace, false),
     ])
@@ -52,6 +55,20 @@ export class InstallationDetector {
       .map((s) => [s.name, { type: "skill" }])
   }
 
+  /** Scan .kilo/agents/*.md files to detect installed marketplace agents. */
+  private async detectAgentFiles(scope: "project" | "global", workspace?: string): Promise<Entry[]> {
+    const dir = this.paths.agentsDir(scope, workspace)
+    try {
+      const files = await fs.readdir(dir)
+      return files.filter((f) => f.endsWith(".md")).map((f) => [path.basename(f, ".md"), { type: "agent" }] as Entry)
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(`Failed to detect agent files from ${dir}:`, err)
+      }
+      return []
+    }
+  }
+
   /** Read mcp and agent entries from a kilo.json config file. */
   private async detectFromConfig(filepath: string): Promise<Entry[]> {
     try {
@@ -67,7 +84,7 @@ export class InstallationDetector {
 
       if (parsed?.agent && typeof parsed.agent === "object") {
         for (const key of Object.keys(parsed.agent)) {
-          entries.push([key, { type: "mode" }])
+          entries.push([key, { type: "agent" }])
         }
       }
 

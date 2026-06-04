@@ -50,7 +50,7 @@ Project-level instructions are loaded before global instructions and apply to ev
 
 You can place `AGENTS.md` files in any subdirectory of your project. These are loaded dynamically — when the agent's Read tool accesses a file in that directory, the corresponding `AGENTS.md` is discovered and its contents are injected into the conversation as `<system-reminder>` tags.
 
-This is useful for providing context-specific guidance for different parts of a monorepo or project.
+This is useful for providing context-specific guidance for different parts of a monorepo or project. The subdirectory file does not need to duplicate root-level instructions; it supplements them for tasks within that directory.
 
 ## Additional Instruction Sources
 
@@ -127,7 +127,7 @@ Project-level instructions are loaded before global instructions and apply to ev
 
 You can place `AGENTS.md` files in any subdirectory of your project. These are loaded dynamically — when the agent's Read tool accesses a file in that directory, the corresponding `AGENTS.md` is discovered and its contents are injected into the conversation as `<system-reminder>` tags.
 
-This is useful for providing context-specific guidance for different parts of a monorepo or project.
+This is useful for providing context-specific guidance for different parts of a monorepo or project. The subdirectory file does not need to duplicate root-level instructions; it supplements them for tasks within that directory.
 
 ## Additional Instruction Sources
 

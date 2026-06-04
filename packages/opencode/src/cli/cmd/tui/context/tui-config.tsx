@@ -1,9 +1,6 @@
-import { TuiConfig } from "@/cli/cmd/tui/config/tui"
-import { createSimpleContext } from "./helper"
+// kilocode_change start - reactive TUI config provider enables hot reload (impl in kilocode mirror)
+import { KiloTuiConfig } from "@/kilocode/cli/cmd/tui/context/tui-config"
 
-export const { use: useTuiConfig, provider: TuiConfigProvider } = createSimpleContext({
-  name: "TuiConfig",
-  init: (props: { config: TuiConfig.Info }) => {
-    return props.config
-  },
-})
+export const useTuiConfig = KiloTuiConfig.use
+export const TuiConfigProvider = KiloTuiConfig.Provider
+// kilocode_change end

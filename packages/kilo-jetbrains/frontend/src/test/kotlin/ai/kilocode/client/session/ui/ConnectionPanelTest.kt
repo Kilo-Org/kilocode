@@ -91,6 +91,8 @@ class ConnectionPanelTest : SessionControllerTestBase() {
         flush()
 
         assertEquals(1, appRpc.retries)
+        assertEquals("Connection Retry Clicked", appRpc.telemetry.last().event)
+        assertEquals("ERROR", appRpc.telemetry.last().properties["appStatus"])
     }
 
     fun `test ready warnings show collapsed banner with retry`() {

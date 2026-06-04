@@ -1,5 +1,3 @@
-// kilocode_change - new file
-
 /**
  * Conversation selector for the KiloClaw chat.
  *
@@ -13,11 +11,10 @@
 import { DialogSelect } from "@tui/ui/dialog-select"
 import { DialogPrompt } from "@tui/ui/dialog-prompt"
 import { useDialog } from "@tui/ui/dialog"
-import { useKeybind } from "@tui/context/keybind"
+import { useCommandShortcut } from "@tui/keymap"
 import { useTheme } from "@tui/context/theme"
 import { useToast } from "@tui/ui/toast"
 import { Locale } from "@/util/locale"
-import { Keybind } from "@/util/keybind"
 import { createMemo, createSignal, onMount } from "solid-js"
 import type { ClawChat } from "./hooks"
 
@@ -27,7 +24,7 @@ type Props = {
 
 export function DialogConversationList(props: Props) {
   const dialog = useDialog()
-  const keybind = useKeybind()
+  const deleteHint = useCommandShortcut("session.delete")
   const { theme } = useTheme()
   const toast = useToast()
   const [toDelete, setToDelete] = createSignal<string>()
@@ -47,7 +44,7 @@ export function DialogConversationList(props: Props) {
       if (category === today) category = "Today"
       const isDeleting = toDelete() === c.conversationId
       return {
-        title: isDeleting ? `Press ${keybind.print("session_delete")} again to confirm` : (c.title ?? "Untitled"),
+        title: isDeleting ? `Press ${deleteHint()} again to confirm` : (c.title ?? "Untitled"),
         bg: isDeleting ? theme.error : undefined,
         value: c.conversationId,
         category,
@@ -70,9 +67,9 @@ export function DialogConversationList(props: Props) {
         await props.chat.selectConversation(option.value)
         dialog.clear()
       }}
-      keybind={[
+      actions={[
         {
-          keybind: keybind.all.session_delete?.[0],
+          command: "session.delete",
           title: "delete",
           onTrigger: async (option) => {
             if (toDelete() === option.value) {
@@ -93,7 +90,7 @@ export function DialogConversationList(props: Props) {
           },
         },
         {
-          keybind: keybind.all.session_rename?.[0],
+          command: "session.rename",
           title: "rename",
           onTrigger: async (option) => {
             const item = props.chat.conversations().find((c) => c.conversationId === option.value)
@@ -116,7 +113,7 @@ export function DialogConversationList(props: Props) {
           },
         },
         {
-          keybind: Keybind.parse("ctrl+n")[0],
+          command: "kiloclaw.conversation.new",
           title: "new",
           side: "right",
           onTrigger: async () => {
@@ -125,6 +122,7 @@ export function DialogConversationList(props: Props) {
           },
         },
       ]}
+      bindings={[{ key: "ctrl+n", cmd: "kiloclaw.conversation.new" }]}
     />
   )
 }

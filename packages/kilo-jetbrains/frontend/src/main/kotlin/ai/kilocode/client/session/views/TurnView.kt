@@ -3,8 +3,11 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.ui.SessionLayoutPanel
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.util.Disposer
 import com.intellij.util.ui.JBUI
 
 /**
@@ -18,10 +21,13 @@ import com.intellij.util.ui.JBUI
  */
 class TurnView(
     val id: String,
+    private val openFile: (String) -> Unit,
     private var style: SessionEditorStyle = SessionEditorStyle.current(),
-) : SessionLayoutPanel(JBUI.scale(SessionUiStyle.SessionLayout.GAP)), SessionEditorStyleTarget {
+    private val openUrl: (String) -> Unit = {},
+    private val selection: SessionSelection? = null,
+) : SessionLayoutPanel(JBUI.scale(SessionUiStyle.SessionLayout.GAP)), Disposable, SessionEditorStyleTarget {
 
-    constructor(id: String) : this(id, SessionEditorStyle.current())
+    constructor(id: String, openFile: (String) -> Unit) : this(id, openFile, SessionEditorStyle.current())
 
     private val messages = LinkedHashMap<String, MessageView>()
 
@@ -31,7 +37,7 @@ class TurnView(
 
     /** Add a new [MessageView] for [msg] at the end of this turn. */
     fun addMessage(msg: Message): MessageView {
-        val view = MessageView(msg, style)
+        val view = MessageView(msg, openFile, style, openUrl, selection)
         messages[msg.info.id] = view
         add(view)
         revalidate()
@@ -42,6 +48,7 @@ class TurnView(
     fun removeMessage(msgId: String) {
         val view = messages.remove(msgId) ?: return
         remove(view)
+        Disposer.dispose(view)
         revalidate()
     }
 
@@ -59,5 +66,13 @@ class TurnView(
         for (view in messages.values) view.applyStyle(style)
         revalidate()
         repaint()
+    }
+
+    override fun dispose() {
+        messages.values.forEach {
+            remove(it)
+            Disposer.dispose(it)
+        }
+        messages.clear()
     }
 }

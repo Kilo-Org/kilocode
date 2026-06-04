@@ -110,6 +110,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "추천",
   "dialog.provider.opencode.note": "Claude, GPT, Gemini 등 엄선된 모델",
   "dialog.provider.anthropic.note": "Claude Pro/Max 또는 API 키로 연결",
+  "dialog.provider.deepseek.note": "추론 및 코딩 작업을 위한 DeepSeek 모델",
   "dialog.provider.openai.note": "ChatGPT Pro/Plus 또는 API 키로 연결",
   "dialog.provider.google.note": "빠르고 구조화된 응답을 위한 Gemini 모델",
   "dialog.provider.openrouter.note": "하나의 공급자에서 모든 지원 모델에 액세스",
@@ -139,8 +140,14 @@ export const dict = {
   "provider.connect.status.failed": "인증 실패: {{error}}",
   "provider.connect.apiKey.description":
     "{{provider}} API 키를 입력하여 계정을 연결하고 Kilo에서 {{provider}} 모델을 사용하세요.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "{{provider}} API 키",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API 키",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API 키가 필요합니다",
   "provider.connect.prompt.required": "{{field}} 항목은 필수입니다",
   "provider.connect.azure.endpointType.label": "Azure 엔드포인트 구성 선택",
@@ -177,6 +184,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.title": "{{provider}} 연결 해제됨",
   "provider.disconnect.toast.disconnected.description": "{{provider}} 모델을 더 이상 사용할 수 없습니다.",
   "model.tag.free": "무료",
+  "model.tag.dataCollected": "데이터가 학습에 사용될 수 있습니다",
   "model.tag.latest": "최신",
   "model.group.recommended": "추천",
   "model.group.favorites": "즐겨찾기",
@@ -285,7 +293,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "'프롬프트 향상' 버튼은 추가 컨텍스트, 명확화 또는 재구성을 제공하여 요청을 개선합니다. 여기에 요청을 입력한 다음 버튼을 다시 클릭하여 작동 방식을 확인해보세요.",
 
-  "speechToText.tooltip.start": "음성 입력 시작",
+  "speechToText.tooltip.start": "Kilo Gateway로 음성 입력 시작",
   "speechToText.tooltip.stop": "음성 캡처 중지",
   "speechToText.tooltip.transcribing": "변환 중... 취소하려면 클릭하세요.",
   "speechToText.tooltip.error": "음성 입력에 실패했습니다. 지우려면 클릭하세요.",
@@ -450,6 +458,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "세션 공유 해제 실패",
   "toast.session.unshare.failed.description": "세션 공유를 해제하는 동안 오류가 발생했습니다",
 
+  "toast.session.rename.invalid.title": "잘못된 세션 제목",
   "toast.session.listFailed.title": "{{project}}에 대한 세션을 로드하지 못했습니다",
 
   "toast.update.title": "업데이트 가능",
@@ -812,6 +821,9 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "환경 변수에서 연결됨",
   "settings.providers.action.signInChatGPT": "ChatGPT로 로그인",
   "settings.providers.custom.description": "기본 URL로 OpenAI 호환 공급자를 추가합니다.",
+  "settings.providers.subagentModel.title": "하위 에이전트 모델",
+  "settings.providers.subagentModel.description":
+    "task-tool 하위 에이전트의 기본 모델 및 추론 수준입니다. 호출하는 에이전트의 모델을 상속하려면 비워 두세요.",
   "settings.providers.modeModels": "모드별 모델",
   "settings.providers.custom.note": "Base URL로 OpenAI 호환 공급자를 추가합니다.",
   "settings.providers.modeModels.description":
@@ -973,6 +985,8 @@ export const dict = {
   "session.delete.confirm": '"{{name}}" 세션을 삭제하시겠습니까?',
   "session.delete.button": "세션 삭제",
   "session.untitled": "제목 없음",
+  "session.current": "현재 세션",
+  "session.history.sources": "기록 출처",
   "session.recent": "최근",
   "session.showHistory": "기록 보기",
   "session.search.placeholder": "세션 검색...",
@@ -1113,6 +1127,14 @@ export const dict = {
   "session.status.retrying": "재시도 중 ({{ attempt }}번째 시도)… {{ message }}",
   "session.status.working": "작업 중...",
   "session.status.offline": "네트워크 연결 끊김 — 다시 연결 중...",
+  "session.outcome.incomplete": "턴이 종료되었으며 {{count}}개의 할 일이 남았습니다",
+  "session.outcome.limit": "완료 전에 응답 제한에 도달했습니다",
+  "session.outcome.unknown": "모델의 종료 이유 없이 턴이 종료되었습니다",
+  "session.outcome.filtered": "콘텐츠 필터로 인해 제공자가 이 응답을 중단했습니다.",
+  "session.outcome.unexpected": "응답이 예기치 않게 종료되었으며 불완전할 수 있습니다.",
+  "session.outcome.interrupted": "턴이 중단되었습니다",
+  "session.outcome.error": "턴이 실패했습니다",
+  "session.outcome.finish": "종료 이유: {{reason}}",
 
   "ui.sessionTurn.cancel": "취소",
   "ui.sessionTurn.status.thinking": "생각 중...",
@@ -1175,7 +1197,6 @@ export const dict = {
     '원격 측정은 VS Code에 내장된 원격 측정 설정으로 제어됩니다. 비활성화하려면 설정 > 원격 측정 > 원격 측정 수준으로 이동하여 "off"로 설정하세요. 변경 사항을 적용하려면 VS Code를 다시 시작하세요.',
   "settings.aboutKiloCode.telemetry.openSettings": "원격 측정 설정 열기",
 
-  "settings.agentBehaviour.subtab.modes": "모드",
   "settings.agentBehaviour.subtab.agents": "에이전트",
   "settings.agentBehaviour.subtab.mcpServers": "MCP 서버",
   "settings.agentBehaviour.subtab.rules": "규칙",
@@ -1233,19 +1254,13 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "대량 붙여넣기 콘텐츠를 요약하지 않음",
   "settings.experimental.batch.title": "배치 도구",
   "settings.experimental.batch.description": "여러 도구 호출의 배치 처리 활성화",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "코드베이스 검색",
   "settings.experimental.codebaseSearch.description": "코드베이스 전체에서 AI 기반 자연어 검색 활성화",
-  "settings.experimental.agentManagerTool.title": "Agent Manager 도구",
-  "settings.experimental.agentManagerTool.description":
-    "에이전트가 도구 호출로 Agent Manager 로컬 세션 및 워크트리 세션을 시작하도록 허용",
   "settings.experimental.speechToText.title": "음성 텍스트 변환",
   "settings.experimental.speechToText.description":
     "Kilo Gateway를 통해 Kilo 계정을 사용하여 프롬프트 필드에서 음성 입력을 활성화합니다.",
   "settings.experimental.speechToText.disabledDescription":
-    "프롬프트 필드에서 음성 입력을 사용하려면 Kilo provider를 활성화하고 로그인하세요.",
+    "Speech to Text를 사용하려면 Kilo 제공자를 활성화하고 로그인하세요. 현재 Speech to Text는 Kilo Gateway에서만 지원됩니다.",
   "settings.experimental.speechToTextModel.title": "음성 텍스트 변환 모델",
   "settings.experimental.speechToTextModel.description": "음성 입력에 사용할 Kilo Gateway 변환 모델을 선택하세요.",
   "settings.experimental.continueOnDeny.title": "거부 시 계속",
@@ -1269,6 +1284,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "구성할 에이전트를 선택하세요…",
   "settings.agentBehaviour.modelOverride.title": "모델 재정의",
   "settings.agentBehaviour.modelOverride.description": "이 에이전트의 기본 모델 재정의",
+  "settings.agentBehaviour.variantOverride.title": "변형 재정의",
+  "settings.agentBehaviour.variantOverride.description": "이 에이전트의 모델 변형 재정의",
   "settings.agentBehaviour.prompt.title": "사용자 정의 프롬프트",
   "settings.agentBehaviour.prompt.description": "이 에이전트의 추가 시스템 프롬프트",
   "settings.agentBehaviour.temperature.title": "온도",
@@ -1288,7 +1305,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "스킬을 찾을 수 없습니다. 스킬을 사용하려면 아래에 스킬 폴더 경로 또는 URL을 추가하세요.",
   "settings.agentBehaviour.availableModes": "사용 가능한 사용자 정의 모드",
-  "settings.agentBehaviour.noModesFound": "모드를 찾을 수 없습니다.",
+  "settings.agentBehaviour.noAgentsFound": "에이전트를 찾을 수 없습니다.",
   "settings.agentBehaviour.createMode": "새 모드 만들기",
   "settings.agentBehaviour.createMode.name": "이름",
   "settings.agentBehaviour.createMode.name.placeholder": "예: reviewer",
@@ -1330,10 +1347,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "권한을 JSON으로 복사",
   "settings.agentBehaviour.permissions.hint":
     "규칙은 순서대로 평가되며, 마지막에 일치하는 규칙이 적용됩니다. 이것은 CLI 백엔드에서 확인된 규칙 세트입니다.",
-  "settings.agentBehaviour.removeMode.title": "모드 제거",
-  "settings.agentBehaviour.removeMode.confirm":
-    '모드 "{{name}}"을(를) 제거하시겠습니까? 구성을 업데이트하여 모드를 비활성화합니다.',
-  "settings.agentBehaviour.removeMode.button": "제거",
+  "settings.agentBehaviour.removeAgent.title": "에이전트 제거",
+  "settings.agentBehaviour.removeAgent.confirm":
+    '에이전트 "{{name}}"을(를) 제거하시겠습니까? 구성을 업데이트하여 에이전트를 비활성화합니다.',
+  "settings.agentBehaviour.removeAgent.button": "제거",
   "settings.agentBehaviour.removeMcp.title": "MCP 서버 제거",
   "settings.agentBehaviour.removeMcp.confirm": 'MCP 서버 "{{name}}"을(를) 제거하시겠습니까? 구성에서 제거됩니다.',
   "settings.agentBehaviour.removeMcp.button": "제거",

@@ -48,6 +48,7 @@ const profiles: Record<string, Record<string, ModelProfile>> = {
   openrouter: {
     "openai/text-embedding-3-small": { dimension: 1536, scoreThreshold: 0.4 },
     "openai/text-embedding-3-large": { dimension: 3072, scoreThreshold: 0.4 },
+    "google/gemini-embedding-2-preview": { dimension: 3072, scoreThreshold: 0.35 },
   },
   "openai-compatible": {},
   "vercel-ai-gateway": {

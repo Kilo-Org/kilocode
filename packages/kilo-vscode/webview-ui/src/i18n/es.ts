@@ -106,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Recomendado",
   "dialog.provider.opencode.note": "Modelos curados incluyendo Claude, GPT, Gemini y más",
   "dialog.provider.anthropic.note": "Conectar con Claude Pro/Max o clave API",
+  "dialog.provider.deepseek.note": "Modelos DeepSeek para tareas de razonamiento y programación",
   "dialog.provider.openai.note": "Conectar con ChatGPT Pro/Plus o clave API",
   "dialog.provider.google.note": "Modelos Gemini para respuestas rápidas y estructuradas",
   "dialog.provider.openrouter.note": "Accede a todos los modelos soportados desde un solo proveedor",
@@ -135,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "Autorización fallida: {{error}}",
   "provider.connect.apiKey.description":
     "Introduce tu clave API de {{provider}} para conectar tu cuenta y usar modelos de {{provider}} en Kilo.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "Clave API de {{provider}}",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "Clave API",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "La clave API es obligatoria",
   "provider.connect.prompt.required": "{{field}} es obligatorio",
   "provider.connect.azure.endpointType.label": "Seleccionar configuración de endpoint de Azure",
@@ -175,6 +182,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.title": "{{provider}} desconectado",
   "provider.disconnect.toast.disconnected.description": "Los modelos de {{provider}} ya no están disponibles.",
   "model.tag.free": "Gratis",
+  "model.tag.dataCollected": "Los datos pueden utilizarse para entrenamiento",
   "model.tag.latest": "Último",
   "model.group.recommended": "Recomendado",
   "model.group.favorites": "Favoritos",
@@ -287,7 +295,7 @@ export const dict = {
     "El botón 'Mejorar el mensaje' ayuda a mejorar tu petición proporcionando contexto adicional, aclaraciones o reformulaciones. Intenta escribir una petición aquí y haz clic en el botón nuevamente para ver cómo funciona.",
   "prompt.action.indexing": "Configuración de indexación",
 
-  "speechToText.tooltip.start": "Iniciar entrada de voz",
+  "speechToText.tooltip.start": "Iniciar entrada de voz con Kilo Gateway",
   "speechToText.tooltip.stop": "Detener captura",
   "speechToText.tooltip.transcribing": "Transcribiendo... Haz clic para cancelar.",
   "speechToText.tooltip.error": "Falló la entrada de voz. Haz clic para borrar.",
@@ -454,6 +462,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Fallo al dejar de compartir sesión",
   "toast.session.unshare.failed.description": "Ocurrió un error al dejar de compartir la sesión",
 
+  "toast.session.rename.invalid.title": "Título de sesión no válido",
   "toast.session.listFailed.title": "Fallo al cargar sesiones para {{project}}",
 
   "toast.update.title": "Actualización disponible",
@@ -862,6 +871,9 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "Conectado desde tus variables de entorno",
   "settings.providers.action.signInChatGPT": "Iniciar sesión con ChatGPT",
   "settings.providers.custom.description": "Añade un proveedor compatible con OpenAI por URL base.",
+  "settings.providers.subagentModel.title": "Modelo de subagente",
+  "settings.providers.subagentModel.description":
+    "Modelo predeterminado y esfuerzo de razonamiento para los subagentes de task-tool. Déjelo sin configurar para heredar el modelo del agente invocador.",
   "settings.providers.modeModels": "Modelo por modo",
   "settings.providers.custom.note": "Agrega un proveedor compatible con OpenAI mediante URL base.",
   "settings.providers.modeModels.description":
@@ -1027,6 +1039,8 @@ export const dict = {
   "session.delete.confirm": '¿Eliminar sesión "{{name}}"?',
   "session.delete.button": "Eliminar sesión",
   "session.untitled": "Sin título",
+  "session.current": "Sesión actual",
+  "session.history.sources": "Origen del historial",
   "session.recent": "Recientes",
   "session.showHistory": "Mostrar historial",
   "session.search.placeholder": "Buscar sesiones...",
@@ -1132,6 +1146,14 @@ export const dict = {
   "session.status.retrying": "Reintentando (intento {{ attempt }})… {{ message }}",
   "session.status.working": "Trabajando…",
   "session.status.offline": "Red desconectada — reconectando...",
+  "session.outcome.incomplete": "Turno finalizado con {{count}} tareas pendientes",
+  "session.outcome.limit": "Límite de respuesta alcanzado antes de finalizar",
+  "session.outcome.unknown": "Turno finalizado sin motivo de finalización del modelo",
+  "session.outcome.filtered": "El proveedor detuvo esta respuesta debido a un filtro de contenido.",
+  "session.outcome.unexpected": "La respuesta terminó inesperadamente y puede estar incompleta.",
+  "session.outcome.interrupted": "Turno interrumpido",
+  "session.outcome.error": "Turno fallido",
+  "session.outcome.finish": "Motivo de finalización: {{reason}}",
 
   "ui.sessionTurn.cancel": "Cancelar",
   "ui.sessionTurn.status.thinking": "Pensando...",
@@ -1196,7 +1218,6 @@ export const dict = {
     'La telemetría está controlada por la configuración de telemetría integrada de VS Code. Para desactivarla, ve a Configuración > Telemetría > Nivel de telemetría y establécelo en "off". Reinicia VS Code para aplicar el cambio.',
   "settings.aboutKiloCode.telemetry.openSettings": "Abrir configuración de telemetría",
 
-  "settings.agentBehaviour.subtab.modes": "Modos",
   "settings.agentBehaviour.subtab.agents": "Agentes",
   "settings.agentBehaviour.subtab.mcpServers": "Servidores MCP",
   "settings.agentBehaviour.subtab.rules": "Reglas",
@@ -1257,20 +1278,14 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "No resumir contenido pegado grande",
   "settings.experimental.batch.title": "Herramienta por lotes",
   "settings.experimental.batch.description": "Habilitar procesamiento por lotes de llamadas a herramientas",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Búsqueda de código",
   "settings.experimental.codebaseSearch.description":
     "Habilitar búsqueda por lenguaje natural con IA en toda la base de código",
-  "settings.experimental.agentManagerTool.title": "Herramienta Agent Manager",
-  "settings.experimental.agentManagerTool.description":
-    "Permitir que los agentes inicien sesiones locales y sesiones de worktree de Agent Manager desde una llamada de herramienta",
   "settings.experimental.speechToText.title": "Voz a texto",
   "settings.experimental.speechToText.description":
     "Habilita la entrada de voz en los campos de prompt usando tu cuenta de Kilo a través de Kilo Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Habilita e inicia sesión en Kilo provider para usar la entrada de voz en los campos de prompt.",
+    "Habilita e inicia sesión en el proveedor Kilo para usar Speech to Text. Actualmente, Speech to Text solo es compatible con Kilo Gateway.",
   "settings.experimental.speechToTextModel.title": "Modelo de voz a texto",
   "settings.experimental.speechToTextModel.description":
     "Elige el modelo de transcripción de Kilo Gateway para la entrada de voz.",
@@ -1295,6 +1310,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Seleccionar un agente para configurar…",
   "settings.agentBehaviour.modelOverride.title": "Anulación de modelo",
   "settings.agentBehaviour.modelOverride.description": "Anular el modelo predeterminado para este agente",
+  "settings.agentBehaviour.variantOverride.title": "Anulación de variante",
+  "settings.agentBehaviour.variantOverride.description": "Anular la variante del modelo para este agente",
   "settings.agentBehaviour.prompt.title": "Prompt personalizado",
   "settings.agentBehaviour.prompt.description": "Prompt de sistema adicional para este agente",
   "settings.agentBehaviour.temperature.title": "Temperatura",
@@ -1314,7 +1331,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "No se encontraron habilidades. Agregue rutas de carpetas o URLs abajo para hacer disponibles las habilidades.",
   "settings.agentBehaviour.availableModes": "Modos personalizados disponibles",
-  "settings.agentBehaviour.noModesFound": "No se encontraron modos.",
+  "settings.agentBehaviour.noAgentsFound": "No se encontraron agentes.",
   "settings.agentBehaviour.createMode": "Crear nuevo modo",
   "settings.agentBehaviour.createMode.name": "Nombre",
   "settings.agentBehaviour.createMode.name.placeholder": "ej. reviewer",
@@ -1360,10 +1377,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Copiar permisos como JSON",
   "settings.agentBehaviour.permissions.hint":
     "Las reglas se evalúan en orden — gana la última regla coincidente. Este es el conjunto de reglas resuelto desde el backend de la CLI.",
-  "settings.agentBehaviour.removeMode.title": "Eliminar modo",
-  "settings.agentBehaviour.removeMode.confirm":
-    '¿Eliminar el modo "{{name}}"? Esto desactivará el modo actualizando su configuración.',
-  "settings.agentBehaviour.removeMode.button": "Eliminar",
+  "settings.agentBehaviour.removeAgent.title": "Eliminar agente",
+  "settings.agentBehaviour.removeAgent.confirm":
+    '¿Eliminar agente "{{name}}"? Esto lo desactivará actualizando tu configuración.',
+  "settings.agentBehaviour.removeAgent.button": "Eliminar",
   "settings.agentBehaviour.removeMcp.title": "Eliminar servidor MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     '¿Eliminar el servidor MCP "{{name}}"? Esto lo eliminará de su configuración.',

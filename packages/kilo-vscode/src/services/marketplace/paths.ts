@@ -17,6 +17,12 @@ export class MarketplacePaths {
     return path.join(globalConfigDir(), "kilo.json")
   }
 
+  /** Agent install directory (where marketplace agents are written as .md files). */
+  agentsDir(scope: "project" | "global", workspace?: string): string {
+    if (scope === "project") return path.join(workspace!, ".kilo", "agents")
+    return path.join(globalConfigDir(), "agents")
+  }
+
   /** Skill install directory (where the marketplace installer writes to). */
   skillsDir(scope: "project" | "global", workspace?: string): string {
     if (scope === "project") return path.join(workspace!, ".kilo", "skills")

@@ -4,15 +4,19 @@ import { Session } from "@/session/session"
 import { SessionID, MessageID } from "../session/schema"
 import { MessageV2 } from "../session/message-v2"
 import { Agent } from "../agent/agent"
+import { deriveSubagentSessionPermission } from "../agent/subagent-permissions"
 import type { SessionPrompt } from "../session/prompt"
 import { Config } from "@/config/config"
+import { Provider } from "@/provider/provider" // kilocode_change
 import { KiloTask } from "../kilocode/tool/task" // kilocode_change
 import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode_change
-import { Effect, Schema } from "effect"
+import { errorMessage } from "@/util/error" // kilocode_change
+import { Effect, Exit, Schema } from "effect"
+import { EffectBridge } from "@/effect/bridge"
 
 export interface TaskPromptOps {
-  cancel(sessionID: SessionID): void
+  cancel(sessionID: SessionID): Effect.Effect<void>
   resolvePromptParts(template: string): Effect.Effect<SessionPrompt.PromptInput["parts"]>
   prompt(input: SessionPrompt.PromptInput): Effect.Effect<MessageV2.WithParts>
 }
@@ -36,6 +40,7 @@ export const TaskTool = Tool.define(
     const agent = yield* Agent.Service
     const config = yield* Config.Service
     const sessions = yield* Session.Service
+    const provider = yield* Provider.Service // kilocode_change
 
     const run = Effect.fn("TaskTool.execute")(function* (
       params: Schema.Schema.Type<typeof Parameters>,
@@ -66,65 +71,73 @@ export const TaskTool = Tool.define(
       const canTask = KiloTask.nestedTask() // kilocode_change - Kilo disallows subagents spawning subagents
       const canTodo = next.permission.some((rule) => rule.permission === "todowrite")
 
-      const parent = yield* sessions.get(ctx.sessionID)
-      // kilocode_change start — inherit edit/bash/MCP restrictions from calling agent
-      const caller = yield* agent.get(ctx.agent)
-      const rules = KiloTask.inherited({ caller, session: parent, mcp: cfg.mcp })
-      // kilocode_change end
-
       const taskID = params.task_id
       const session = taskID
         ? yield* sessions.get(SessionID.make(taskID)).pipe(Effect.catchCause(() => Effect.succeed(undefined)))
         : undefined
+      if (session && session.parentID !== ctx.sessionID) {
+        return yield* Effect.fail(new Error(`Cannot resume session ${taskID}: not a child of the current session`)) // kilocode_change - prevent cross-session task resume
+      }
+      const parent = yield* sessions.get(ctx.sessionID)
+      const parentAgent = parent.agent
+        ? yield* agent.get(parent.agent).pipe(Effect.catchCause(() => Effect.succeed(undefined)))
+        : undefined
+      // kilocode_change start — inherit edit/bash/MCP restrictions from calling agent
+      const caller = yield* agent.get(ctx.agent)
+      const rules = KiloTask.inherited({ caller, session: parent, mcp: cfg.mcp })
+      // kilocode_change end
+      // kilocode_change start - refresh current parent restrictions when resuming an existing task session
+      if (session) {
+        session.permission = KiloTask.merge(
+          session.permission ?? [],
+          deriveSubagentSessionPermission({
+            parentSessionPermission: parent.permission ?? [],
+            parentAgent,
+            subagent: next,
+          }),
+          KiloTask.permissions(rules),
+        )
+        yield* sessions.setPermission({ sessionID: session.id, permission: session.permission })
+      }
+      // kilocode_change end
       const nextSession =
         session ??
         (yield* sessions.create({
           parentID: ctx.sessionID,
           title: params.description + ` (@${next.name} subagent)`,
-          permission: [
-            ...(parent.permission ?? []).filter(
-              (rule) => rule.permission === "external_directory" || rule.action === "deny",
-            ),
-            ...(canTodo
-              ? []
-              : [
-                  {
-                    permission: "todowrite" as const,
-                    pattern: "*" as const,
-                    action: "deny" as const,
-                  },
-                ]),
-            ...(canTask
-              ? []
-              : [
-                  {
-                    permission: id,
-                    pattern: "*" as const,
-                    action: "deny" as const,
-                  },
-                ]),
-            ...(cfg.experimental?.primary_tools?.map((item) => ({
+          // kilocode_change start - dedupe inherited restrictions before child prompt toggles persist
+          permission: KiloTask.merge(
+            deriveSubagentSessionPermission({
+              parentSessionPermission: parent.permission ?? [],
+              parentAgent,
+              subagent: next,
+            }),
+            cfg.experimental?.primary_tools?.map((item) => ({
               pattern: "*",
               action: "allow" as const,
               permission: item,
-            })) ?? []),
-            // kilocode_change start — deny task + propagate caller restrictions
-            ...KiloTask.permissions(rules),
-            // kilocode_change end
-          ],
+            })) ?? [],
+            KiloTask.permissions(rules),
+          ),
+          // kilocode_change end
         }))
 
       const msg = yield* Effect.sync(() => MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID }))
       if (msg.info.role !== "assistant") return yield* Effect.fail(new Error("Not an assistant message"))
 
-      // kilocode_change start — prefer user's CLI-saved pick for this subagent
-      const saved = yield* KiloTask.resolveModel(next.name)
-      const model = saved ??
-        next.model ?? {
+      // kilocode_change start — prefer valid subagent overrides, safely inheriting when overrides go stale
+      const selected = yield* KiloTask.resolveModel({
+        name: next.name,
+        agent: next,
+        config: cfg,
+        parent: {
           modelID: msg.info.modelID,
           providerID: msg.info.providerID,
-        }
-      const variant = saved?.variant ?? (saved ? undefined : next.variant)
+        },
+        provider,
+      })
+      const model = selected.model
+      const variant = selected.variant
       // kilocode_change end
 
       yield* ctx.metadata({
@@ -138,17 +151,19 @@ export const TaskTool = Tool.define(
 
       const ops = ctx.extra?.promptOps as TaskPromptOps
       if (!ops) return yield* Effect.fail(new Error("TaskTool requires promptOps in ctx.extra"))
+      const runCancel = yield* EffectBridge.make()
 
       const messageID = MessageID.ascending()
+      const cancel = ops.cancel(nextSession.id)
 
-      function cancel() {
-        ops.cancel(nextSession.id)
+      function onAbort() {
+        runCancel.fork(cancel)
       }
 
       return yield* Effect.acquireUseRelease(
         // kilocode_change start - snapshot child cost so we propagate only the delta on resume (#6321)
         Effect.gen(function* () {
-          ctx.abort.addEventListener("abort", cancel)
+          ctx.abort.addEventListener("abort", onAbort)
           return yield* KiloCostPropagation.childCost(sessions, nextSession.id)
         }),
         // kilocode_change end
@@ -173,6 +188,12 @@ export const TaskTool = Tool.define(
               parts,
             })
 
+            // kilocode_change start - expose terminal child assistant errors through the task tool boundary
+            if (result.info.role === "assistant" && result.info.error) {
+              return yield* Effect.fail(new Error(errorMessage(result.info.error)))
+            }
+            // kilocode_change end
+
             return {
               title: params.description,
               metadata: {
@@ -190,12 +211,18 @@ export const TaskTool = Tool.define(
             }
           }),
         // kilocode_change start - propagate subagent cost delta to parent on every exit path (#6321)
-        (costBefore) =>
+        (costBefore, exit) =>
           Effect.gen(function* () {
-            ctx.abort.removeEventListener("abort", cancel)
-            const costAfter = yield* KiloCostPropagation.childCost(sessions, nextSession.id)
-            yield* KiloCostPropagation.propagate(sessions, ctx.sessionID, ctx.messageID, costAfter - costBefore)
-          }),
+            if (Exit.hasInterrupts(exit)) yield* cancel
+          }).pipe(
+            Effect.ensuring(
+              Effect.gen(function* () {
+                ctx.abort.removeEventListener("abort", onAbort)
+                const costAfter = yield* KiloCostPropagation.childCost(sessions, nextSession.id)
+                yield* KiloCostPropagation.propagate(sessions, ctx.sessionID, ctx.messageID, costAfter - costBefore)
+              }),
+            ),
+          ),
         // kilocode_change end
       )
     })

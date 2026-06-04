@@ -5,13 +5,12 @@ import type { InstanceContext } from "@/project/instance"
 import { SessionID, MessageID } from "@/session/schema"
 import { Effect, Layer, Context, Schema } from "effect"
 import z from "zod"
-import { zod, ZodOverride } from "@/util/effect-zod"
-import { withStatics } from "@/util/schema"
+import { zod, ZodOverride } from "@opencode-ai/core/effect-zod"
+import { withStatics } from "@opencode-ai/core/schema"
 import { Config } from "@/config/config"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
 import { localReviewCommand, localReviewUncommittedCommand } from "@/kilocode/review/command" // kilocode_change
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 import PROMPT_REVIEW from "./template/review.txt"
 
@@ -194,13 +193,5 @@ export const defaultLayer = layer.pipe(
   Layer.provide(MCP.defaultLayer),
   Layer.provide(Skill.defaultLayer),
 )
-
-// kilocode_change start
-const { runPromise } = makeRuntime(Service, defaultLayer)
-
-export async function get(name: string) {
-  return runPromise((svc) => svc.get(name))
-}
-// kilocode_change end
 
 export * as Command from "."

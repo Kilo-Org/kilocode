@@ -1,5 +1,6 @@
-import { describe, expect, test, mock, beforeEach } from "bun:test"
+import { describe, expect, test, mock, beforeEach, spyOn } from "bun:test"
 import type { GitContext } from "@/kilocode/commit-message/types"
+import type { Provider } from "@/provider/provider"
 
 // Mock dependencies before importing the module under test.
 // IMPORTANT: Bun's mock.module() is process-wide and permanent. To avoid
@@ -7,10 +8,7 @@ import type { GitContext } from "@/kilocode/commit-message/types"
 // this test needs.
 
 const realLog = await import("@opencode-ai/core/util/log")
-const realProvider = await import("@/provider/provider")
-const realLLM = await import("@/session/llm")
 const realAgent = await import("@/agent/agent")
-const realGitContext = await import("@/kilocode/commit-message/git-context")
 
 let mockStreamText = "feat(src): add hello world logging"
 
@@ -29,40 +27,6 @@ const defaultGitContext: GitContext = {
 let mockGitContext: GitContext = { ...defaultGitContext }
 let captured: { path: string; selected?: string[] } = { path: "" }
 
-mock.module("@/kilocode/commit-message/git-context", () => ({
-  ...realGitContext,
-  getGitContext: async (repoPath: string, selectedFiles?: string[]) => {
-    captured = { path: repoPath, selected: selectedFiles }
-    return mockGitContext
-  },
-}))
-
-mock.module("@/provider/provider", () => ({
-  ...realProvider,
-  Provider: {
-    ...realProvider.Provider,
-    defaultModel: async () => ({ providerID: "test", modelID: "test-model" }),
-    getSmallModel: async () => ({
-      providerID: "test",
-      id: "test-small-model",
-    }),
-    getModel: async () => ({ providerID: "test", id: "test-model" }),
-  },
-}))
-
-mock.module("@/session/llm", () => ({
-  ...realLLM,
-  LLM: {
-    ...realLLM.LLM,
-    stream: async () => ({
-      textStream: (async function* () {
-        yield mockStreamText
-      })(),
-      text: Promise.resolve(mockStreamText),
-    }),
-  },
-}))
-
 mock.module("@/agent/agent", () => ({
   ...realAgent,
   Agent: {},
@@ -78,10 +42,25 @@ mock.module("@opencode-ai/core/util/log", () => ({
   }),
 }))
 
-import { generateCommitMessage } from "../../../src/kilocode/commit-message/generate"
+import { CommitMessageRuntime, generateCommitMessage } from "../../../src/kilocode/commit-message/generate"
+
+const context = spyOn(CommitMessageRuntime, "context").mockImplementation(async (repoPath, selectedFiles) => {
+  captured = { path: repoPath, selected: selectedFiles }
+  return mockGitContext
+})
+const stream = spyOn(CommitMessageRuntime, "generate").mockImplementation(async () => mockStreamText)
+const model = spyOn(CommitMessageRuntime, "model").mockImplementation(
+  async () => ({ providerID: "test", id: "test-small-model" }) as Provider.Model,
+)
 
 describe("commit-message.generate", () => {
   beforeEach(() => {
+    context.mockImplementation(async (repoPath, selectedFiles) => {
+      captured = { path: repoPath, selected: selectedFiles }
+      return mockGitContext
+    })
+    stream.mockImplementation(async () => mockStreamText)
+    model.mockImplementation(async () => ({ providerID: "test", id: "test-small-model" }) as Provider.Model)
     mockStreamText = "feat(src): add hello world logging"
     mockGitContext = { ...defaultGitContext }
     captured = { path: "" }

@@ -37,7 +37,15 @@ import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageA
 import { convertToMentionPath } from "../../utils/path-mentions"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
-import { fileName, dirName, buildHighlightSegments, atEnd, insertSpacedText, isPromptBusy } from "./prompt-input-utils"
+import {
+  fileName,
+  dirName,
+  buildHighlightSegments,
+  atEnd,
+  insertSpacedText,
+  isPromptBusy,
+  isPathMention,
+} from "./prompt-input-utils"
 import type { ReviewComment, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import { pendingDraftKey, scopeDraftKey, sessionDraftKey } from "../../utils/prompt-drafts"
@@ -70,7 +78,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const session = useSession()
   const server = useServer()
   const indexing = useIndexing()
-  const { config, features, settings } = useConfig()
+  const { config, features } = useConfig()
   const provider = useProvider()
   const language = useLanguage()
   const vscode = useVSCode()
@@ -338,8 +346,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const isBusy = () => isPromptBusy(session.status(), !!props.suggesting?.(), !!props.questioning?.())
   const isDisabled = () => !server.isConnected()
-  const canUseSpeech = () => canUseSpeechToText(settings(), config(), provider.connected(), server.profileData())
-  const speechModel = () => selectedSpeechToTextModel(settings())
+  const canUseSpeech = () => canUseSpeechToText(config(), provider.connected(), server.profileData())
+  const speechModel = () => selectedSpeechToTextModel(config())
   const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
   const canSend = () =>
     !isDisabled() &&
@@ -381,6 +389,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type === "setChatBoxMessage") {
       setText(message.text)
+      mention.seedFromText(message.text)
       if (textareaRef) {
         textareaRef.value = message.text
         adjustHeight()
@@ -429,6 +438,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       if (target === draftKey() && !text().trim() && imageAttach.images().length === 0) {
         if (failed.text) {
           setText(failed.text)
+          mention.seedFromText(failed.text)
           if (textareaRef) {
             textareaRef.value = failed.text
             adjustHeight()
@@ -475,6 +485,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const result = message as import("../../types/messages").EnhancePromptResultMessage
       if (result.requestId === `enhance-${draftKey()}-${enhanceCounter}`) {
         setText(result.text)
+        mention.seedFromText(result.text)
         setEnhancing(false)
         if (textareaRef) {
           textareaRef.value = result.text
@@ -581,6 +592,18 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       }
       return
     }
+
+    // Atomic mention removal on backspace
+    if (
+      mention.handleBackspace(e, textareaRef, setText, () => {
+        adjustHeight()
+        syncHighlightScroll()
+      })
+    )
+      return
+
+    // Skip cursor over mentions on arrow keys
+    if (mention.handleArrowKey(e, textareaRef)) return
 
     if (slash.onKeyDown(e, textareaRef, setText, adjustHeight)) {
       ghost.setMentionOpen(slash.show())
@@ -778,6 +801,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       return undefined
     })
     if (hasGit() && hasGitChangesMention(message) && !gitFile) return
+    if (isDisabled()) return
 
     const allFiles = [
       ...mentionFiles,
@@ -1010,7 +1034,18 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             <Index each={buildHighlightSegments(text(), highlightMentions())}>
               {(seg) => (
                 <Show when={seg().highlight} fallback={<span>{seg().text}</span>}>
-                  <span class="prompt-input-file-mention">{seg().text}</span>
+                  <span
+                    class="prompt-input-file-mention"
+                    classList={{ "prompt-input-file-mention--file": isPathMention(seg().text) }}
+                    onClick={(e) => {
+                      if (!isPathMention(seg().text)) return
+                      e.preventDefault()
+                      e.stopPropagation()
+                      vscode.postMessage({ type: "openFile", filePath: seg().text.replace(/^@/, "") })
+                    }}
+                  >
+                    {seg().text}
+                  </span>
                 </Show>
               )}
             </Index>
@@ -1037,7 +1072,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             onClick={syncGhost}
             onFocus={syncGhost}
             onBlur={syncGhost}
-            onSelect={syncGhost}
+            onSelect={() => {
+              syncGhost()
+              if (textareaRef) mention.snapSelection(textareaRef)
+            }}
             onScroll={syncHighlightScroll}
             aria-disabled={isDisabled()}
             rows={1}

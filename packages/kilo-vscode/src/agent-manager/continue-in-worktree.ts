@@ -4,6 +4,7 @@ import type { WorktreeStateManager } from "./WorktreeStateManager"
 import { capture as captureGitState, apply as applyGitState, type GitSnapshot } from "./git-transfer"
 import { getErrorMessage } from "../kilo-provider-utils"
 import { PLATFORM } from "./constants"
+import { recordForkHandoff } from "./fork-handoff"
 
 export interface ContinueContext {
   root: string
@@ -82,6 +83,9 @@ export async function forkSession(ctx: ContinueContext, sessionId: string, dir: 
   }
   try {
     const { data } = await client.session.fork({ sessionID: sessionId, directory: dir }, { throwOnError: true })
+    await recordForkHandoff({ client, sessionId: data.id, directory: dir }).catch((err) => {
+      ctx.log("Failed to record fork handoff:", getErrorMessage(err))
+    })
     return { ok: true, value: data }
   } catch (err) {
     return { ok: false, error: `Failed to fork session: ${getErrorMessage(err)}` }

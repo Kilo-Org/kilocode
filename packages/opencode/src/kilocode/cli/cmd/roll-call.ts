@@ -1,9 +1,10 @@
 import type { Argv } from "yargs"
-import { Instance } from "../../../project/instance"
+import { WithInstance } from "../../../project/with-instance"
 import { Provider } from "../../../provider/provider"
 import { ProviderTransform } from "../../../provider/transform"
 import { cmd } from "../../../cli/cmd/cmd"
 import { UI } from "../../../cli/ui"
+import { AppRuntime } from "../../../effect/app-runtime"
 import { generateText } from "ai"
 import { randomUUID } from "crypto"
 
@@ -125,8 +126,16 @@ interface Result {
   errorMessage: string | null
 }
 
+function list() {
+  return AppRuntime.runPromise(Provider.Service.use((svc) => svc.list()))
+}
+
+function lang(model: Provider.Model) {
+  return AppRuntime.runPromise(Provider.Service.use((svc) => svc.getLanguage(model)))
+}
+
 export async function handle(args: ArgumentsCamelCase) {
-  const list = args.list ?? Provider.list
+  const load = args.list ?? list
 
   if (args.parallel < 1) {
     UI.error("--parallel must be at least 1")
@@ -158,10 +167,10 @@ export async function handle(args: ArgumentsCamelCase) {
     )
   }
 
-  await Instance.provide({
+  await WithInstance.provide({
     directory: process.cwd(),
     async fn() {
-      const providers = await list()
+      const providers = await load()
       const regex = (() => {
         try {
           return new RegExp(args.filter, "i")
@@ -272,7 +281,7 @@ async function call(
   start: number,
 ): Promise<Omit<Result, "model">> {
   try {
-    const language = await Provider.getLanguage(model)
+    const language = await lang(model)
     const sessionID = randomUUID()
     const options = ProviderTransform.options({ model, sessionID })
     const providerOptions = ProviderTransform.providerOptions(model, options)
@@ -342,5 +351,5 @@ type ArgumentsCamelCase = {
   output: "table" | "json" | "md"
   verbose: boolean
   quiet: boolean
-  list?: typeof Provider.list
+  list?: typeof list
 }

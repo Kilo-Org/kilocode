@@ -58,27 +58,34 @@ function run(msg: Msg) {
   })
 }
 
+// kilocode_change start - make worker finalization await the process close event without a Windows race
+const closed = new WeakMap<ReturnType<typeof spawn>, Promise<void>>()
+
 function spawnWorker(msg: Msg) {
-  return spawn(process.execPath, [worker, JSON.stringify(msg)], {
+  const proc = spawn(process.execPath, [worker, JSON.stringify(msg)], {
     cwd: root,
     stdio: ["ignore", "pipe", "pipe"],
   })
+  closed.set(proc, new Promise((resolve) => proc.once("close", () => resolve())))
+  return proc
 }
 
-function stopWorker(proc: ReturnType<typeof spawnWorker>) {
-  if (proc.exitCode !== null || proc.signalCode !== null) return Promise.resolve()
+async function stopWorker(proc: ReturnType<typeof spawnWorker>) {
+  const close = closed.get(proc) ?? Promise.resolve()
+  if (proc.exitCode !== null || proc.signalCode !== null) return close
   if (process.platform !== "win32" || !proc.pid) {
     proc.kill()
-    return Promise.resolve()
+    return close
   }
-  return new Promise<void>((resolve) => {
-    const killProc = spawn("taskkill", ["/pid", String(proc.pid), "/T", "/F"])
-    killProc.on("close", () => {
-      proc.kill()
-      resolve()
-    })
+  await new Promise<void>((resolve) => {
+    const kill = spawn("taskkill", ["/pid", String(proc.pid), "/T", "/F"], { windowsHide: true })
+    kill.once("error", () => resolve())
+    kill.once("close", () => resolve())
   })
+  proc.kill()
+  return close
 }
+// kilocode_change end
 
 async function waitForFile(file: string, timeout = 3_000) {
   const stop = Date.now() + timeout
@@ -362,8 +369,7 @@ describe("util.effect-flock", () => {
 
         try {
           await waitForFile(ready, 5_000)
-          await stopWorker(proc)
-          await new Promise((resolve) => proc.on("close", resolve))
+          await stopWorker(proc) // kilocode_change - stopWorker now awaits close before returning
 
           // Backdate lock files so they're past STALE_MS (60s)
           const lockDir = lock(dir, "eflock:crash")

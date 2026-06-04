@@ -5,7 +5,6 @@ import { Glob } from "@opencode-ai/core/util/glob"
 import * as Truncate from "../../tool/truncate"
 import { Config } from "../../config/config"
 import { Instance } from "../../project/instance"
-import { InstanceStore } from "../../project/instance-store"
 import { makeRuntime } from "@/effect/run-service"
 import z from "zod"
 import path from "path"
@@ -232,6 +231,16 @@ export function prepare(cfg: Config.Info): KiloData {
   const mcpRules = getMcpRules(cfg)
   const defaultsPatch = Permission.fromConfig({ bash, recall: "ask" })
   return { mcpRules, defaultsPatch }
+}
+
+export function cacheKey(cfg: Config.Info) {
+  return JSON.stringify({
+    agent: cfg.agent,
+    default_agent: cfg.default_agent,
+    mcp: cfg.mcp,
+    mode: cfg.mode,
+    permission: cfg.permission,
+  })
 }
 
 // Map "build" config key to "code" for backward compatibility.
@@ -466,8 +475,8 @@ export async function remove(name: string) {
   let found = false
 
   // 1. Delete .md files from config directories
-  const { Config } = await import("../../config/config")
-  const dirs = await Config.directories()
+  const { AppRuntime } = await import("@/effect/app-runtime")
+  const dirs = await AppRuntime.runPromise(Config.Service.use((svc) => svc.directories()))
   const patterns = ["{agent,agents}/**/" + name + ".md", "{mode,modes}/" + name + ".md"]
   for (const dir of dirs) {
     for (const pattern of patterns) {
@@ -512,5 +521,6 @@ export async function remove(name: string) {
 
   if (!found) throw new RemoveError({ name, message: "no agent file found on disk" })
 
-  await InstanceStore.disposeInstance(Instance.current)
+  const runtime = await import("../../project/instance-runtime")
+  await runtime.InstanceRuntime.disposeInstance(Instance.current)
 }

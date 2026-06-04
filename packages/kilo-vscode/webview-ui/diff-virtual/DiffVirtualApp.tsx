@@ -16,7 +16,7 @@ import { normalize } from "@kilocode/kilo-ui/session-diff"
 import { LanguageProvider, useLanguage } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
 import { getVSCodeAPI, VSCodeProvider } from "../src/context/vscode"
-import { isMarkdownFile, MarkdownDiffView } from "../agent-manager/MarkdownDiffView"
+import { isMarkdownFile, MarkdownDiffView } from "../diff-viewer/MarkdownDiffView"
 
 type DiffStyle = "unified" | "split"
 

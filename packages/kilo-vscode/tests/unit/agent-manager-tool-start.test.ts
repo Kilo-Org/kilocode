@@ -87,6 +87,7 @@ describe("agent manager tool start", () => {
         sessionID: "s-local",
         directory: "/repo",
         parts: [{ type: "text", text: "Do work" }],
+        snapshotInitialization: "wait",
       }),
       { throwOnError: true },
     )
