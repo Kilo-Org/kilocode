@@ -3,8 +3,11 @@
 package ai.kilocode.client.app
 
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
+import ai.kilocode.rpc.dto.ConfigTargetDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
+import ai.kilocode.rpc.dto.LoadErrorDto
+import ai.kilocode.rpc.dto.ModelsWorkspaceDto
 import ai.kilocode.rpc.dto.WorkspaceFileDto
 import com.intellij.openapi.components.Service
 import ai.kilocode.log.KiloLog
@@ -39,6 +42,11 @@ class KiloWorkspaceService internal constructor(
     }
 
     private val workspaces = ConcurrentHashMap<String, Workspace>()
+    internal val localConfig = ConcurrentHashMap<String, ConfigTargetDto>()
+
+    @Volatile
+    internal var globalConfig: ConfigTargetDto? = null
+        private set
 
     // ------ RPC helpers ------
 
@@ -100,6 +108,15 @@ class KiloWorkspaceService internal constructor(
         }
     }
 
+    suspend fun models(directory: String): ModelsWorkspaceDto {
+        return try {
+            call { this.models(directory) }
+        } catch (e: Exception) {
+            LOG.warn("models settings lookup failed for directory=$directory", e)
+            ModelsWorkspaceDto(errors = listOf(LoadErrorDto(resource = "models", detail = e.message)))
+        }
+    }
+
     suspend fun files(directory: String, path: String): List<WorkspaceFileDto> {
         return try {
             call { files(directory, path) }
@@ -116,6 +133,52 @@ class KiloWorkspaceService internal constructor(
         } catch (e: Exception) {
             LOG.warn("workspace file open failed for path=${match.path}", e)
             false
+        }
+    }
+
+    suspend fun localConfigTarget(directory: String): ConfigTargetDto? {
+        return try {
+            val target = call { this.localConfigTarget(directory) }
+            localConfig[directory] = target
+            target
+        } catch (e: Exception) {
+            LOG.warn("local config lookup failed for directory=$directory", e)
+            localConfig[directory]
+        }
+    }
+
+    suspend fun globalConfigTarget(): ConfigTargetDto? {
+        return try {
+            val target = call { this.globalConfigTarget() }
+            globalConfig = target
+            target
+        } catch (e: Exception) {
+            LOG.warn("global config lookup failed", e)
+            globalConfig
+        }
+    }
+
+    fun openLocalConfig(directory: String, done: (Boolean) -> Unit) {
+        cs.launch {
+            val ok = try {
+                call { this.openLocalConfig(directory) }
+            } catch (e: Exception) {
+                LOG.warn("local config open failed for directory=$directory", e)
+                false
+            }
+            done(ok)
+        }
+    }
+
+    fun openGlobalConfig(done: (Boolean) -> Unit) {
+        cs.launch {
+            val ok = try {
+                call { this.openGlobalConfig() }
+            } catch (e: Exception) {
+                LOG.warn("global config open failed", e)
+                false
+            }
+            done(ok)
         }
     }
 }

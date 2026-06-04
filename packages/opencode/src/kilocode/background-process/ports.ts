@@ -2,6 +2,8 @@ import { Process } from "@/util/process"
 import fs from "fs/promises"
 import path from "path"
 
+const SCAN_MS = 1_000
+
 function sorted(items: Iterable<number>) {
   return Array.from(items).toSorted((a, b) => a - b)
 }
@@ -92,7 +94,7 @@ async function linux(root: number) {
 }
 
 async function ps(root: number) {
-  const rows = await Process.lines(["ps", "-axo", "pid=,ppid="], { nothrow: true })
+  const rows = await lines(["ps", "-axo", "pid=,ppid="])
   const children = new Map<number, number[]>()
   for (const row of rows) {
     const [pid, parent] = row.trim().split(/\s+/).map(Number)
@@ -115,9 +117,7 @@ async function ps(root: number) {
 
 async function lsof(root: number) {
   const pids = await ps(root).catch(() => new Set([root]))
-  const rows = await Process.lines(["lsof", "-nP", "-iTCP", "-sTCP:LISTEN", "-a", "-p", Array.from(pids).join(",")], {
-    nothrow: true,
-  })
+  const rows = await lines(["lsof", "-nP", "-iTCP", "-sTCP:LISTEN", "-a", "-p", Array.from(pids).join(",")])
   return sorted(
     new Set(
       rows.flatMap((row) => {
@@ -126,6 +126,17 @@ async function lsof(root: number) {
       }),
     ),
   )
+}
+
+async function lines(cmd: string[]) {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), SCAN_MS)
+  timer.unref?.()
+  try {
+    return await Process.lines(cmd, { nothrow: true, abort: ctrl.signal, timeout: 500 })
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 export async function list(root: number) {

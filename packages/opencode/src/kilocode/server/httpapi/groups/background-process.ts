@@ -4,7 +4,10 @@ import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/middleware/instance-context"
-import { WorkspaceRoutingMiddleware } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
+import {
+  WorkspaceRoutingMiddleware,
+  WorkspaceRoutingQuery,
+} from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 
 const root = "/background-process"
@@ -26,6 +29,7 @@ export const BackgroundProcessApi = HttpApi.make("background-process")
     HttpApiGroup.make("background-process")
       .add(
         HttpApiEndpoint.get("list", BackgroundProcessPaths.list, {
+          query: WorkspaceRoutingQuery,
           success: described(Schema.Array(BackgroundProcess.Info), "List of background processes"),
         }).annotateMerge(
           OpenApi.annotations({
@@ -36,6 +40,7 @@ export const BackgroundProcessApi = HttpApi.make("background-process")
         ),
         HttpApiEndpoint.get("get", BackgroundProcessPaths.get, {
           params: { processID: BackgroundProcess.ID },
+          query: WorkspaceRoutingQuery,
           success: described(BackgroundProcess.Info, "Background process info"),
           error: HttpApiError.NotFound,
         }).annotateMerge(
@@ -47,6 +52,7 @@ export const BackgroundProcessApi = HttpApi.make("background-process")
         ),
         HttpApiEndpoint.get("logs", BackgroundProcessPaths.logs, {
           params: { processID: BackgroundProcess.ID },
+          query: WorkspaceRoutingQuery,
           success: described(BackgroundProcess.Logs, "Background process logs"),
           error: HttpApiError.NotFound,
         }).annotateMerge(
@@ -58,6 +64,7 @@ export const BackgroundProcessApi = HttpApi.make("background-process")
         ),
         HttpApiEndpoint.post("stop", BackgroundProcessPaths.stop, {
           params: { processID: BackgroundProcess.ID },
+          query: WorkspaceRoutingQuery,
           success: described(BackgroundProcess.Info, "Stopped background process"),
           error: HttpApiError.NotFound,
         }).annotateMerge(
@@ -69,6 +76,7 @@ export const BackgroundProcessApi = HttpApi.make("background-process")
         ),
         HttpApiEndpoint.post("restart", BackgroundProcessPaths.restart, {
           params: { processID: BackgroundProcess.ID },
+          query: WorkspaceRoutingQuery,
           success: described(BackgroundProcess.Info, "Restarted background process"),
           error: HttpApiError.NotFound,
         }).annotateMerge(
@@ -80,6 +88,7 @@ export const BackgroundProcessApi = HttpApi.make("background-process")
         ),
         HttpApiEndpoint.post("stopSession", BackgroundProcessPaths.stopSession, {
           params: { sessionID: SessionID },
+          query: WorkspaceRoutingQuery,
           success: described(Schema.Boolean, "Stopped session background processes"),
         }).annotateMerge(
           OpenApi.annotations({

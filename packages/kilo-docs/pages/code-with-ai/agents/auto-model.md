@@ -1,11 +1,11 @@
 ---
 title: "Auto Model"
-description: "Smart model routing that automatically selects the optimal AI model based on your current mode"
+description: "Smart model routing that selects an AI model for each Auto Model tier"
 ---
 
 # Auto Model
 
-Auto Model is a smart model routing system that automatically selects the optimal AI model based on the Kilo Code mode you're using. It comes in multiple tiers so you can balance cost and capability to fit your needs.
+Auto Model is a smart routing system that selects an underlying model for each request. Each tier uses its own routing strategy so you can balance cost and capability to fit your needs.
 
 | Tier | Best For | Pricing |
 |---|---|---|

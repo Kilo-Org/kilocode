@@ -53,15 +53,18 @@ function reconstruct(patch: string) {
 
 type DiffText = { before: string; after: string; patch: string }
 
+function name(diff: ReviewDiff) {
+  return diff.file ?? ""
+}
+
 function contents(diff: ReviewDiff): DiffText {
   if (typeof diff.patch === "string") {
     return { ...reconstruct(diff.patch), patch: diff.patch }
   }
   const before = "before" in diff && typeof diff.before === "string" ? diff.before : ""
   const after = "after" in diff && typeof diff.after === "string" ? diff.after : ""
-  const patch = formatPatch(
-    structuredPatch(diff.file, diff.file, before, after, "", "", { context: Number.MAX_SAFE_INTEGER }),
-  )
+  const file = name(diff)
+  const patch = formatPatch(structuredPatch(file, file, before, after, "", "", { context: Number.MAX_SAFE_INTEGER }))
   return { before, after, patch }
 }
 
@@ -69,9 +72,9 @@ function fileDiffFor(diff: ReviewDiff, view: DiffText): FileDiffMetadata {
   const hit = cache.get(view.patch)
   if (hit) return hit
   const fromPatch = typeof diff.patch === "string" ? processFile(diff.patch, { cacheKey: diff.patch }) : undefined
+  const file = name(diff)
   const value =
-    fromPatch ??
-    parseDiffFromFile({ name: diff.file, contents: view.before }, { name: diff.file, contents: view.after })
+    fromPatch ?? parseDiffFromFile({ name: file, contents: view.before }, { name: file, contents: view.after })
   cache.set(view.patch, value)
   return value
 }
@@ -79,7 +82,7 @@ function fileDiffFor(diff: ReviewDiff, view: DiffText): FileDiffMetadata {
 export function normalize(diff: ReviewDiff): ViewDiff {
   const view = contents(diff)
   return {
-    file: diff.file,
+    file: name(diff),
     patch: view.patch,
     before: view.before,
     after: view.after,

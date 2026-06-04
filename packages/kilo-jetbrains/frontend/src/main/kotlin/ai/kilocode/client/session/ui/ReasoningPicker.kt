@@ -5,7 +5,6 @@ import ai.kilocode.client.ui.PickerButton
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.ListPopup
-import com.intellij.openapi.ui.popup.PopupShowOptions
 import com.intellij.openapi.ui.popup.PopupStep
 import com.intellij.openapi.ui.popup.util.BaseListPopupStep
 import com.intellij.util.ui.EmptyIcon
@@ -17,8 +16,8 @@ import javax.swing.Icon
 /**
  * Clickable label-style dropdown picker with a native filled background.
  *
- * Shows the selected item's display text with an up-arrow. On click,
- * opens a list popup above the picker. Disabled (greyed out, not
+ * Shows the selected item's display text with a down-arrow. On click,
+ * opens a list popup below the picker. Disabled (greyed out, not
  * clickable) when no items are loaded.
  */
 class ReasoningPicker : PickerButton() {
@@ -76,7 +75,7 @@ class ReasoningPicker : PickerButton() {
         }
         isVisible = true
         val display = selected?.display ?: items.firstOrNull()?.display ?: ""
-        text = "$display ▴"
+        text = "$display ▾"
         isEnabled = true
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
     }
@@ -96,7 +95,7 @@ class ReasoningPicker : PickerButton() {
         }
 
         val popup: ListPopup = JBPopupFactory.getInstance().createListPopup(step)
-        popup.show(PopupShowOptions.aboveComponent(this))
+        popup.showUnderneathOf(this)
     }
 
     private fun icon(item: Item): Icon = if (item.id == selected?.id) checked else empty

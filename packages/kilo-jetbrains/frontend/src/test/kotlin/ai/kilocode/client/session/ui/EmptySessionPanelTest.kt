@@ -6,11 +6,11 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
-import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
-import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.controller.SessionController
+import ai.kilocode.client.session.ui.empty.EmptySessionPanel
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
@@ -33,6 +33,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import java.awt.BorderLayout
 import java.awt.Cursor
+import javax.swing.JButton
 
 @Suppress("UnstableApiUsage")
 class EmptySessionPanelTest : BasePlatformTestCase() {
@@ -82,10 +83,10 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         assertFalse(panel.loadingVisible())
     }
 
-    fun `test recent section remains visible when empty`() {
+    fun `test recent section is hidden when empty`() {
         val panel = panel()
 
-        assertTrue(panel.recentVisible())
+        assertFalse(panel.recentVisible())
         assertEquals(0, panel.recentCount())
     }
 
@@ -160,12 +161,21 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         assertEquals(ai.kilocode.client.plugin.KiloBundle.message("session.showHistory"), panel.showHistoryText())
     }
 
+    fun `test feedback button uses localized text and icon`() {
+        val panel = panel()
+
+        assertEquals(KiloBundle.message("feedback.button"), panel.feedbackText())
+        assertNotNull(panel.feedbackIcon())
+    }
+
     fun `test action controls use hand cursor and no show history outline`() {
         val panel = panel()
 
         assertFalse(panel.showHistoryBorderPainted())
+        assertFalse(panel.feedbackBorderPainted())
         assertEquals(Cursor.HAND_CURSOR, panel.showHistoryCursor())
-        assertEquals(Cursor.HAND_CURSOR, panel.recentCursor())
+        assertEquals(Cursor.HAND_CURSOR, panel.feedbackCursor())
+        assertEquals(Cursor.HAND_CURSOR, panel.recent.list.cursor.type)
     }
 
     fun `test clicking show history delegates callback`() {
@@ -175,6 +185,36 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         panel.clickShowHistory()
 
         assertEquals(1, calls)
+    }
+
+    fun `test feedback popup content opens expected destinations`() {
+        val panel = panel()
+        val opened = mutableListOf<String>()
+        val content = panel.feedbackContent { opened.add(it) }
+        val buttons = UIUtil.uiTraverser(content).filter(JButton::class.java).toList()
+
+        assertEquals(
+            listOf(
+                KiloBundle.message("feedback.dialog.github"),
+                KiloBundle.message("feedback.dialog.discord"),
+                KiloBundle.message("feedback.dialog.support"),
+            ),
+            buttons.map { it.text },
+        )
+
+        buttons.forEach { it.doClick() }
+
+        assertEquals(panel.feedbackUrls(), opened)
+    }
+
+    fun `test feedback discord action has icon`() {
+        val panel = panel()
+        val content = panel.feedbackContent()
+        val discord = UIUtil.uiTraverser(content)
+            .filter(JButton::class.java)
+            .first { it.text == KiloBundle.message("feedback.dialog.discord") }
+
+        assertNotNull(discord.icon)
     }
 
     fun `test renderer aligns title center and time east`() {

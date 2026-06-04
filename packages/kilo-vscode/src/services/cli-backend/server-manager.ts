@@ -17,6 +17,7 @@ export interface ServerInstance {
 const STARTUP_TIMEOUT_SECONDS = 30
 
 type WorkspaceFolderLike = { uri: { fsPath: string } }
+type ServerExitListener = (code: number | null) => void
 
 export function resolveServerCwd(folders: readonly WorkspaceFolderLike[] | undefined, storage: string): string {
   return folders?.[0]?.uri.fsPath ?? storage
@@ -31,7 +32,10 @@ export class ServerManager {
   private instance: ServerInstance | null = null
   private startupPromise: Promise<ServerInstance> | null = null
 
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  constructor(
+    private readonly context: vscode.ExtensionContext,
+    private readonly onExit?: ServerExitListener,
+  ) {}
 
   /**
    * Get or start the server instance
@@ -171,6 +175,7 @@ export class ServerManager {
         console.log("[Kilo New] ServerManager: 🛑 Process exited with code:", code)
         if (this.instance?.process === serverProcess) {
           this.instance = null
+          this.onExit?.(code)
         }
         if (!resolved) {
           const { userMessage, userDetails } = toErrorMessage(

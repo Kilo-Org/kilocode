@@ -175,6 +175,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.title": "{{provider}} 已中斷連線",
   "provider.disconnect.toast.disconnected.description": "{{provider}} 模型已不再可用。",
   "model.tag.free": "免費",
+  "model.tag.dataCollected": "資料可能會用於訓練",
   "model.tag.latest": "最新",
   "model.group.recommended": "推薦",
   "model.group.favorites": "我的最愛",

@@ -1,10 +1,10 @@
 import type { BackgroundProcessInfo } from "@kilocode/sdk/v2"
 import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core"
-import { useKeyboard, useTerminalDimensions } from "@opentui/solid"
+import { useTerminalDimensions } from "@opentui/solid"
 import { useDialog } from "@tui/ui/dialog"
 import { DialogSelect, type DialogSelectOption } from "@tui/ui/dialog-select"
-import { useKeybind } from "@tui/context/keybind"
 import { useProject } from "@tui/context/project"
+import { useBindings } from "@tui/keymap"
 import { useRoute } from "@tui/context/route"
 import { useSDK } from "@tui/context/sdk"
 import { useSync } from "@tui/context/sync"
@@ -13,7 +13,6 @@ import { useTuiConfig } from "@tui/context/tui-config"
 import { useToast } from "@tui/ui/toast"
 import { getScrollAcceleration } from "@tui/util/scroll"
 import { errorMessage } from "@/util/error"
-import { Keybind } from "@/util/keybind"
 import { Locale } from "@/util/locale"
 import { createMemo, createSignal, onMount, Show } from "solid-js"
 import stripAnsi from "strip-ansi"
@@ -23,10 +22,6 @@ type Status = Info["status"]
 type Scope = "session" | "all"
 type Kind = "stop" | "restart"
 type Theme = ReturnType<typeof useTheme>["theme"]
-
-const stopKey = Keybind.parse("ctrl+o")[0]
-const restartKey = Keybind.parse("ctrl+r")[0]
-const allKey = Keybind.parse("ctrl+a")[0]
 
 function terminal(status: Status) {
   return status === "exited" || status === "failed" || status === "stopped"
@@ -130,7 +125,6 @@ export function DialogProcessList() {
   const dialog = useDialog()
   const route = useRoute()
   const sync = useSync()
-  const keybind = useKeybind()
   const actions = useActions()
   const sid = createMemo(() => (route.data.type === "session" ? route.data.sessionID : undefined))
   const [scope, setScope] = createSignal<Scope>(sid() ? "session" : "all")
@@ -146,7 +140,8 @@ export function DialogProcessList() {
     const busy = actions.busy()
     return list().map((item) => {
       const note = mode() === "all" ? session(sync, item.sessionID) : undefined
-      const footer = busy?.id === item.id ? `${busy.kind === "stop" ? "stopping" : "restarting"}...` : item.pid?.toString()
+      const footer =
+        busy?.id === item.id ? `${busy.kind === "stop" ? "stopping" : "restarting"}...` : item.pid?.toString()
       const title = `${note ? `(${note}) ` : ""}${label(item)} - ${item.command}`
 
       return {
@@ -172,9 +167,9 @@ export function DialogProcessList() {
           <DialogProcessDetail id={option.value} back={() => dialog.replace(() => <DialogProcessList />)} />
         ))
       }}
-      keybind={[
+      actions={[
         {
-          keybind: stopKey,
+          command: "background_process.stop",
           title: "stop",
           onTrigger: (option) => {
             const item = list().find((proc) => proc.id === option.value)
@@ -182,7 +177,7 @@ export function DialogProcessList() {
           },
         },
         {
-          keybind: restartKey,
+          command: "background_process.restart",
           title: "restart",
           onTrigger: (option) => {
             const item = list().find((proc) => proc.id === option.value)
@@ -190,7 +185,7 @@ export function DialogProcessList() {
           },
         },
         {
-          keybind: allKey,
+          command: "background_process.scope.toggle",
           title: mode() === "session" ? "all" : "current",
           disabled: !sid(),
           side: "right",
@@ -199,6 +194,11 @@ export function DialogProcessList() {
           },
         },
       ]}
+      bindings={[
+        { key: "ctrl+o", cmd: "background_process.stop" },
+        { key: "ctrl+r", cmd: "background_process.restart" },
+        { key: "ctrl+a", cmd: "background_process.scope.toggle" },
+      ]}
     />
   )
 }
@@ -206,7 +206,6 @@ export function DialogProcessList() {
 function DialogProcessDetail(props: { id: string; back: () => void }) {
   const dialog = useDialog()
   const sync = useSync()
-  const keybind = useKeybind()
   const actions = useActions()
   const dimensions = useTerminalDimensions()
   const config = useTuiConfig()
@@ -226,39 +225,31 @@ function DialogProcessDetail(props: { id: string; back: () => void }) {
     dialog.setSize("large")
   })
 
-  useKeyboard((evt) => {
-    if (evt.defaultPrevented) return
-    const proc = item()
-    if (keybind.match("backspace", evt)) {
-      evt.preventDefault()
-      evt.stopPropagation()
-      props.back()
-      return
-    }
-    if (keybind.match("ctrl+o", evt)) {
-      evt.preventDefault()
-      evt.stopPropagation()
-      if (proc) void actions.run("stop", proc)
-      return
-    }
-    if (keybind.match("ctrl+r", evt)) {
-      evt.preventDefault()
-      evt.stopPropagation()
-      if (proc) void actions.run("restart", proc)
-      return
-    }
-    if (evt.name === "pageup") {
-      evt.preventDefault()
-      evt.stopPropagation()
-      box?.scrollBy(-height())
-      return
-    }
-    if (evt.name === "pagedown") {
-      evt.preventDefault()
-      evt.stopPropagation()
-      box?.scrollBy(height())
-    }
-  })
+  useBindings(() => ({
+    bindings: [
+      { key: "backspace", desc: "Back", group: "Process", cmd: props.back },
+      {
+        key: "ctrl+o",
+        desc: "Stop process",
+        group: "Process",
+        cmd: () => {
+          const proc = item()
+          if (proc) void actions.run("stop", proc)
+        },
+      },
+      {
+        key: "ctrl+r",
+        desc: "Restart process",
+        group: "Process",
+        cmd: () => {
+          const proc = item()
+          if (proc) void actions.run("restart", proc)
+        },
+      },
+      { key: "pageup", desc: "Scroll up", group: "Process", cmd: () => box?.scrollBy(-height()) },
+      { key: "pagedown", desc: "Scroll down", group: "Process", cmd: () => box?.scrollBy(height()) },
+    ],
+  }))
 
   return (
     <box paddingLeft={4} paddingRight={4} paddingBottom={1} gap={1}>
@@ -286,9 +277,7 @@ function DialogProcessDetail(props: { id: string; back: () => void }) {
               <Show when={proc().exitCode !== undefined}>
                 <text fg={theme.textMuted}>Exit: {proc().exitCode}</text>
               </Show>
-              <Show when={proc().signal}>
-                {(signal) => <text fg={theme.textMuted}>Signal: {signal()}</text>}
-              </Show>
+              <Show when={proc().signal}>{(signal) => <text fg={theme.textMuted}>Signal: {signal()}</text>}</Show>
               <text fg={theme.textMuted}>Started: {Locale.datetime(proc().time.started)}</text>
               <text fg={theme.textMuted}>Updated: {Locale.datetime(proc().time.updated)}</text>
               <Show when={proc().time.ended}>
@@ -324,16 +313,16 @@ function DialogProcessDetail(props: { id: string; back: () => void }) {
             </box>
             <box flexDirection="row" justifyContent="space-between" paddingTop={1}>
               <box flexDirection="row" gap={2}>
-                <Hint title="back" keys={keybind.print("backspace")} onClick={props.back} />
+                <Hint title="back" keys="backspace" onClick={props.back} />
                 <Hint
                   title={busy() ? "stopping" : "stop"}
-                  keys={Keybind.toString(stopKey)}
+                  keys="ctrl+o"
                   disabled={busy() || stopped()}
                   onClick={() => void actions.run("stop", proc())}
                 />
                 <Hint
                   title={busy() ? "restarting" : "restart"}
-                  keys={Keybind.toString(restartKey)}
+                  keys="ctrl+r"
                   disabled={busy()}
                   onClick={() => void actions.run("restart", proc())}
                 />

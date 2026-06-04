@@ -176,6 +176,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "{{provider}} modellen zijn niet langer beschikbaar.",
 
   "model.tag.free": "Gratis",
+  "model.tag.dataCollected": "Gegevens kunnen worden gebruikt voor training",
   "model.tag.latest": "Nieuwste",
   "model.group.recommended": "Aanbevolen",
   "model.group.favorites": "Favorieten",

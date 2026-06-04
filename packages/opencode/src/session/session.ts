@@ -32,10 +32,11 @@ import { Global } from "@opencode-ai/core/global"
 // kilocode_change start - Kilo session behavior extensions
 import { BackgroundProcess } from "@/kilocode/background-process"
 import { KiloSession, kiloSessionFork } from "@/kilocode/session"
+import { SessionExport } from "@/kilocode/session-export"
 // kilocode_change end
 import { Effect, Layer, Option, Context, Schema, Types } from "effect"
-import { zod } from "@/util/effect-zod"
-import { NonNegativeInt, optionalOmitUndefined, withStatics } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { NonNegativeInt, optionalOmitUndefined, withStatics } from "@opencode-ai/core/schema"
 
 const log = Log.create({ service: "session" })
 
@@ -139,9 +140,9 @@ function sessionPath(worktree: string, cwd: string) {
 }
 
 const Summary = Schema.Struct({
-  additions: NonNegativeInt,
-  deletions: NonNegativeInt,
-  files: NonNegativeInt,
+  additions: Schema.Finite,
+  deletions: Schema.Finite,
+  files: Schema.Finite,
   diffs: optionalOmitUndefined(Schema.Array(Snapshot.SummaryFileDiff)), // kilocode_change - lightweight diff without patch
 })
 
@@ -361,7 +362,7 @@ export const getUsage = (input: {
 }) => {
   const safe = (value: number) => {
     if (!Number.isFinite(value)) return 0
-    return value
+    return Math.max(0, value)
   }
   const inputTokens = safe(input.usage.inputTokens ?? 0)
   const outputTokens = safe(input.usage.outputTokens ?? 0)
@@ -611,7 +612,10 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service | 
           )
         }
         // kilocode_change end
-        yield* sync.run(Event.Deleted, { sessionID, info: session }, { publish: hasInstance })
+        yield* sync.run(Event.Deleted, { sessionID, info: session }, { publish: hasInstance }) // kilocode_change
+        // kilocode_change - capture final session-export workspace delta on close/delete
+        const workspaceKey = hasInstance ? yield* InstanceState.directory : undefined // kilocode_change
+        yield* Effect.promise(() => SessionExport.onSessionClose(sessionID, workspaceKey)) // kilocode_change
         yield* sync.remove(sessionID)
       } catch (e) {
         log.error(e)

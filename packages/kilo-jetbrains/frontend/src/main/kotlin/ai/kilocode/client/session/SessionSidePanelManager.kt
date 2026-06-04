@@ -5,6 +5,7 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.history.HistoryController
 import ai.kilocode.client.session.history.HistoryPanel
+import ai.kilocode.client.telemetry.Telemetry
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataProvider
 import com.intellij.openapi.application.ApplicationManager
@@ -19,6 +20,7 @@ import kotlinx.coroutines.cancel
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.Timer
 
 class SessionSidePanelManager(
     private val project: Project,
@@ -33,12 +35,14 @@ class SessionSidePanelManager(
     val component: JPanel = object : JPanel(BorderLayout()), DataProvider {
         override fun getData(dataId: String): Any? {
             if (SessionManager.KEY.`is`(dataId)) return this@SessionSidePanelManager
+            if (SessionManager.WORKSPACE_KEY.`is`(dataId)) return root
             return null
         }
     }
 
     private val opened = mutableMapOf<String, SessionUi>()
     private val all = mutableSetOf<SessionUi>()
+    private val timers = mutableMapOf<SessionUi, Timer>()
     private var current: SessionUi? = null
     private var latest: SessionUi? = null
     private var panel: JComponent? = null
@@ -62,6 +66,8 @@ class SessionSidePanelManager(
                 existing
             } else create(ref)
         }
+        if (current === ui) return
+        Telemetry.send("Session Opened", mapOf("source" to ref.type.name.lowercase(), "sessionId" to ref.id))
         show(ui)
     }
 
@@ -160,6 +166,7 @@ class SessionSidePanelManager(
     }
 
     private fun show(ui: SessionUi) {
+        cancel(ui)
         all.add(ui)
         register(ui)
         latest = ui
@@ -183,18 +190,12 @@ class SessionSidePanelManager(
             disposeUi(ui)
             return
         }
-        if (!disposeInactiveUi()) {
-            register(ui)
-            return
-        }
-        if (ui.canDisposeInactive()) {
-            disposeUi(ui)
-            return
-        }
         register(ui)
+        schedule(ui)
     }
 
     private fun disposeUi(ui: SessionUi) {
+        cancel(ui)
         opened.entries.removeIf { it.value === ui }
         all.remove(ui)
         if (current === ui) current = null
@@ -202,10 +203,27 @@ class SessionSidePanelManager(
         Disposer.dispose(ui)
     }
 
-    private fun disposeInactiveUi() = Registry.`is`("kilo.session.inactive.dispose", false)
+    private fun schedule(ui: SessionUi) {
+        cancel(ui)
+        val delay = Registry.intValue("kilo.session.inactive.disposeTimeoutMs").coerceAtLeast(0)
+        val timer = Timer(delay) {
+            timers.remove(ui)
+            if (ui === current || ui !in all) return@Timer
+            disposeUi(ui)
+        }
+        timer.isRepeats = false
+        timers[ui] = timer
+        timer.start()
+    }
+
+    private fun cancel(ui: SessionUi) {
+        timers.remove(ui)?.stop()
+    }
 
     override fun dispose() {
         val items = all.toList()
+        timers.values.forEach { it.stop() }
+        timers.clear()
         opened.clear()
         all.clear()
         current = null

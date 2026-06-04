@@ -49,7 +49,12 @@ function insertCursorToken(lines: string[], cursorLine: number, cursorCharacter:
 export function recentlyViewedSnippetsBlock(snippets: MercuryRecentSnippet[]): string {
   const inner = snippets
     .map((s) =>
-      [RECENTLY_VIEWED_SNIPPET_OPEN, `code_snippet_file_path: ${s.filepath}`, s.content, RECENTLY_VIEWED_SNIPPET_CLOSE].join("\n"),
+      [
+        RECENTLY_VIEWED_SNIPPET_OPEN,
+        `code_snippet_file_path: ${s.filepath}`,
+        s.content,
+        RECENTLY_VIEWED_SNIPPET_CLOSE,
+      ].join("\n"),
     )
     .join("\n")
   return [RECENTLY_VIEWED_SNIPPETS_OPEN, inner, RECENTLY_VIEWED_SNIPPETS_CLOSE].join("\n")
@@ -74,7 +79,12 @@ export function currentFileContentBlock(
     CODE_TO_EDIT_CLOSE,
     ...withCursor.slice(end + 1),
   ]
-  return [CURRENT_FILE_CONTENT_OPEN, `current_file_path: ${currentFilePath}`, instrumented.join("\n"), CURRENT_FILE_CONTENT_CLOSE].join("\n")
+  return [
+    CURRENT_FILE_CONTENT_OPEN,
+    `current_file_path: ${currentFilePath}`,
+    instrumented.join("\n"),
+    CURRENT_FILE_CONTENT_CLOSE,
+  ].join("\n")
 }
 
 export function editDiffHistoryBlock(diffs: string[]): string {

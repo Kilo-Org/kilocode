@@ -11,6 +11,9 @@ import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.JBUI
+import javax.swing.JComponent
+import javax.swing.JPanel
+import javax.swing.RepaintManager
 
 /**
  * Tests for [TurnView] and [MessageView].
@@ -100,10 +103,10 @@ class TurnViewTest : BasePlatformTestCase() {
         val mv = MessageView(msg("u1", "user"), openFile)
         val ins = mv.border.getBorderInsets(mv)
 
-        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING), ins.top)
-        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING), ins.bottom)
-        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING), ins.left)
-        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING), ins.right)
+        assertEquals(0, ins.top)
+        assertEquals(0, ins.bottom)
+        assertEquals(0, ins.left)
+        assertEquals(0, ins.right)
         assertFalse(mv.isOpaque)
     }
 
@@ -191,6 +194,25 @@ class TurnViewTest : BasePlatformTestCase() {
         mv.appendDelta("unknown", "delta")
     }
 
+    fun `test appendDelta for unknown part id does not repaint message or parent`() {
+        val parent = JPanel()
+        val mv = MessageView(msg("a1", "assistant"), openFile)
+        parent.add(mv)
+        val repaint = TrackingRepaintManager(setOf(parent, mv))
+        val old = RepaintManager.currentManager(parent)
+
+        try {
+            RepaintManager.setCurrentManager(repaint)
+
+            assertFalse(mv.appendDelta("unknown", "delta"))
+
+            assertTrue(repaint.dirty.isEmpty())
+            assertTrue(repaint.invalid.isEmpty())
+        } finally {
+            RepaintManager.setCurrentManager(old)
+        }
+    }
+
     fun `test MessageView pre-populates parts from Message on creation`() {
         val message = msg("a1", "assistant")
         val text = ai.kilocode.client.session.model.Text("p1").also { it.content.append("preloaded") }
@@ -240,4 +262,19 @@ class TurnViewTest : BasePlatformTestCase() {
 
     private fun msg(id: String, role: String): Message =
         Message(MessageDto(id = id, sessionID = "ses", role = role, time = MessageTimeDto(0.0)))
+
+    private class TrackingRepaintManager(private val watched: Set<JComponent>) : RepaintManager() {
+        val dirty = mutableListOf<JComponent>()
+        val invalid = mutableListOf<JComponent>()
+
+        override fun addDirtyRegion(c: JComponent, x: Int, y: Int, w: Int, h: Int) {
+            if (c in watched) dirty.add(c)
+            super.addDirtyRegion(c, x, y, w, h)
+        }
+
+        override fun addInvalidComponent(invalidComponent: JComponent) {
+            if (invalidComponent in watched) invalid.add(invalidComponent)
+            super.addInvalidComponent(invalidComponent)
+        }
+    }
 }

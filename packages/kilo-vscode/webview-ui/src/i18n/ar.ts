@@ -174,6 +174,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.title": "تم فصل {{provider}}",
   "provider.disconnect.toast.disconnected.description": "لم تعد نماذج {{provider}} متاحة.",
   "model.tag.free": "مجاني",
+  "model.tag.dataCollected": "قد تُستخدم البيانات للتدريب",
   "model.tag.latest": "الأحدث",
   "model.group.recommended": "موصى به",
   "model.group.favorites": "المفضلة",

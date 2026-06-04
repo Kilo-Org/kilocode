@@ -3,9 +3,9 @@ import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
 import { InstanceState } from "@/effect/instance-state"
 import { SessionID, MessageID } from "@/session/schema"
-import { zod } from "@/util/effect-zod"
+import { zod } from "@opencode-ai/core/effect-zod"
 import * as Log from "@opencode-ai/core/util/log"
-import { withStatics } from "@/util/schema"
+import { withStatics } from "@opencode-ai/core/schema"
 import { QuestionID } from "./schema"
 import { KiloQuestion } from "@/kilocode/question" // kilocode_change
 
@@ -155,7 +155,10 @@ export interface Interface {
     blocking?: boolean // kilocode_change
     tool?: Tool
   }) => Effect.Effect<ReadonlyArray<Answer>, RejectedError>
-  readonly reply: (input: { requestID: QuestionID; answers: ReadonlyArray<Answer> }) => Effect.Effect<void, NotFoundError>
+  readonly reply: (input: {
+    requestID: QuestionID
+    answers: ReadonlyArray<Answer>
+  }) => Effect.Effect<void, NotFoundError>
   readonly reject: (requestID: QuestionID) => Effect.Effect<void, NotFoundError>
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
   readonly dismissAll: (sessionID: SessionID) => Effect.Effect<void> // kilocode_change

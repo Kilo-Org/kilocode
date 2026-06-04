@@ -7,6 +7,7 @@ export interface DrizzleDb {
 }
 
 const INGEST_BASE = process.env.KILO_SESSION_INGEST_URL ?? "https://ingest.kilosessions.ai"
+const TIMEOUT = 30_000
 
 function exportUrl(sessionId: string) {
   return UUID_RE.test(sessionId)
@@ -18,6 +19,7 @@ export type FetchResult = { ok: true; data: any } | { ok: false; status: number;
 
 export async function fetchCloudSession(token: string, sessionId: string): Promise<FetchResult> {
   const response = await fetch(exportUrl(sessionId), {
+    signal: AbortSignal.timeout(TIMEOUT),
     headers: {
       Authorization: `Bearer ${token}`,
       ...buildKiloHeaders(),
@@ -33,6 +35,7 @@ export async function fetchCloudSession(token: string, sessionId: string): Promi
 
 export async function fetchCloudSessionForImport(token: string, sessionId: string): Promise<FetchResult> {
   const response = await fetch(exportUrl(sessionId), {
+    signal: AbortSignal.timeout(TIMEOUT),
     headers: {
       Authorization: `Bearer ${token}`,
       ...buildKiloHeaders(),

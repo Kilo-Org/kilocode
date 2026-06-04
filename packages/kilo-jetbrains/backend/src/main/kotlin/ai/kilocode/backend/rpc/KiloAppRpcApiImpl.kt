@@ -4,6 +4,7 @@ package ai.kilocode.backend.rpc
 
 import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.KiloBackendAppService
+import ai.kilocode.backend.telemetry.KiloBackendTelemetry
 import ai.kilocode.backend.app.ConfigWarning
 import ai.kilocode.backend.app.LoadError
 import ai.kilocode.backend.app.LoadProgress
@@ -14,6 +15,7 @@ import ai.kilocode.jetbrains.api.model.ConfigAgent
 import ai.kilocode.jetbrains.api.model.KiloProfile200Response
 import ai.kilocode.rpc.dto.AgentConfigDto
 import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.KiloAppRpcApi
 import ai.kilocode.rpc.dto.ConfigWarningDto
 import ai.kilocode.rpc.dto.DeviceAuthDto
@@ -30,6 +32,7 @@ import ai.kilocode.rpc.dto.ProfileBalanceDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileOrganizationDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
+import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import com.intellij.openapi.components.service
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -83,6 +86,11 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
         return app.models.variant(update)
     }
 
+    override suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto {
+        app.requireReady()
+        return appStateDto(app.updateConfig(patch))
+    }
+
     override suspend fun refreshProfile(): ProfileDto? = app.refreshProfile()?.let(::profileDto)
 
     override suspend fun startLogin(directory: String?): DeviceAuthDto = app.startLogin(directory)
@@ -93,6 +101,10 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
 
     override suspend fun setOrganization(organizationId: String?): ProfileDto? =
         app.setOrganization(organizationId)?.let(::profileDto)
+
+    override suspend fun captureTelemetry(capture: TelemetryCaptureDto) {
+        service<KiloBackendTelemetry>().capture(app.http, app.port, capture.event, capture.properties)
+    }
 
     private fun dto(state: KiloAppState): KiloAppStateDto =
         appStateDto(state)
@@ -163,6 +175,9 @@ private fun warning(w: ConfigWarning) = ConfigWarningDto(
 
 private fun config(c: Config) = ConfigDto(
     model = c.model,
+    smallModel = c.smallModel,
+    subagentModel = c.subagentModel,
+    subagentVariant = c.subagentVariant,
     agent = agents(c.agent),
 )
 

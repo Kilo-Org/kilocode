@@ -6,16 +6,26 @@ import ai.kilocode.backend.app.KiloConnectionService
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
+import ai.kilocode.log.KiloLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import okhttp3.Request
+import okhttp3.sse.EventSource
+import okhttp3.sse.EventSourceListener
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -91,6 +101,66 @@ class KiloConnectionServiceTest {
         withTimeout(5_000) {
             deferred.join()
         }
+    }
+
+    @Test
+    fun `SSE events preserve callback order`() = runBlocking {
+        val svc = KiloConnectionService(scope, fake, {}, log)
+        svc.connect()
+        mock.awaitSseConnection()
+
+        withTimeout(5_000) {
+            svc.state.first { it is ConnectionState.Connected }
+        }
+
+        val count = 100
+        val received = async {
+            withTimeout(5_000) {
+                svc.events.take(count).toList()
+            }
+        }
+
+        delay(200)
+        repeat(count) { idx ->
+            mock.pushEvent("test.event", idx.toString())
+        }
+
+        assertEquals((0 until count).map { it.toString() }, received.await().map { it.data })
+    }
+
+    @Test
+    fun `SSE concurrent callbacks preserve callback order`() = runBlocking {
+        val blocked = BlockingLog()
+        val svc = KiloConnectionService(scope, fake, {}, blocked)
+        val field = KiloConnectionService::class.java.getDeclaredField("listener")
+        field.isAccessible = true
+        val listener = field.get(svc) as EventSourceListener
+        val source = object : EventSource {
+            override fun request(): Request = Request.Builder().url("http://127.0.0.1/global/event").build()
+            override fun cancel() {}
+        }
+        val sourceField = KiloConnectionService::class.java.getDeclaredField("source")
+        sourceField.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val ref = sourceField.get(svc) as AtomicReference<EventSource?>
+        ref.set(source)
+        val received = scope.async {
+            withTimeout(5_000) {
+                svc.events.take(2).toList()
+            }
+        }
+
+        delay(200)
+        val first = Thread { listener.onEvent(source, null, "first.event", "first") }
+        val second = Thread { listener.onEvent(source, null, "second.event", "second") }
+        first.start()
+        assertTrue(blocked.started.await(1, TimeUnit.SECONDS))
+        second.start()
+        first.join()
+        second.join()
+
+        assertEquals(listOf("first", "second"), received.await().map { it.data })
+        svc.dispose()
     }
 
     @Test
@@ -207,5 +277,21 @@ class KiloConnectionServiceTest {
         withTimeout(10_000) {
             svc.state.first { it !is ConnectionState.Connected }
         }
+    }
+
+    private class BlockingLog : KiloLog {
+        val started = CountDownLatch(1)
+        override var isDebugEnabled: Boolean = true
+
+        override fun debug(block: () -> String) {
+            val msg = block()
+            if (!msg.contains("evt=first.event")) return
+            started.countDown()
+            Thread.sleep(250)
+        }
+
+        override fun info(msg: String) {}
+        override fun warn(msg: String, t: Throwable?) {}
+        override fun error(msg: String, t: Throwable?) {}
     }
 }

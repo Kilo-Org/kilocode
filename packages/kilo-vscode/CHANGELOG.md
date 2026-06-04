@@ -1,5 +1,48 @@
 # kilo-code
 
+## 7.3.28
+
+### Patch Changes
+
+- [#10847](https://github.com/Kilo-Org/kilocode/pull/10847) [`cdf46c9`](https://github.com/Kilo-Org/kilocode/commit/cdf46c97354630e2f1b392092ee0ffcc18b19640) - Clarify when free-model data may be used for training and identify it with a brain circuit icon.
+
+- [#10806](https://github.com/Kilo-Org/kilocode/pull/10806) [`ed3e1ac`](https://github.com/Kilo-Org/kilocode/commit/ed3e1ac99bffd2c1fa0480d80907d298f48ce175) - Make Marketplace skill installation resilient to missing project directories and overlapping install attempts.
+
+- [#10831](https://github.com/Kilo-Org/kilocode/pull/10831) [`837a875`](https://github.com/Kilo-Org/kilocode/commit/837a87509cb323dbf212cbf40af112f218221dd0) - Keep post-compaction tool calls and follow-up messages ordered after the compaction summary in the CLI and VS Code transcript.
+
+- [#10849](https://github.com/Kilo-Org/kilocode/pull/10849) [`a6b005d`](https://github.com/Kilo-Org/kilocode/commit/a6b005dfede302731dcbb00ac74e744333db9104) - Restore Cloud Agent transcripts in VS Code session previews and stop cloud session previews or continuation from loading indefinitely when a request stalls.
+
+- [#10692](https://github.com/Kilo-Org/kilocode/pull/10692) [`eadfb2b`](https://github.com/Kilo-Org/kilocode/commit/eadfb2b80a1a7ca4b469d78d85fec023c8c0387b) - Show shell command descriptions in permission approval prompts.
+
+- [#10816](https://github.com/Kilo-Org/kilocode/pull/10816) [`16341a6`](https://github.com/Kilo-Org/kilocode/commit/16341a6647d1a662ce1e9fceec09a9cf33bf0be6) - Keep chat auto-scroll stable while edit, write, and patch tools hand off between assistant steps.
+
+- [#10846](https://github.com/Kilo-Org/kilocode/pull/10846) [`48340fe`](https://github.com/Kilo-Org/kilocode/commit/48340fe2ec44d75c5210a0ebeaf18575f5935774) - Preserve unfinished inline review comments while diffs refresh.
+
+- [#10810](https://github.com/Kilo-Org/kilocode/pull/10810) [`5b34dfc`](https://github.com/Kilo-Org/kilocode/commit/5b34dfce3d62946f3aa2ad8e65f618af05246f4d) - Speed up VS Code session switching for long transcripts by lazily mounting collapsed historical tool details, sharing timeline hover infrastructure across activity bars, omitting transcript metadata that the webview does not use, and avoiding shimmer markup for inactive historical labels.
+
+- Updated dependencies [[`cdf46c9`](https://github.com/Kilo-Org/kilocode/commit/cdf46c97354630e2f1b392092ee0ffcc18b19640), [`fc4cf10`](https://github.com/Kilo-Org/kilocode/commit/fc4cf10b0a65ec2b2949dd695ebec6ebb619cd15), [`a6b005d`](https://github.com/Kilo-Org/kilocode/commit/a6b005dfede302731dcbb00ac74e744333db9104)]:
+  - @kilocode/kilo-ui@7.3.23
+  - @kilocode/sdk@7.3.23
+  - @kilocode/kilo-gateway@7.3.23
+  - @opencode-ai/ui@7.3.23
+  - @kilocode/kilo-indexing@7.3.23
+
+## 7.3.21
+
+## 7.3.20
+
+### Minor Changes
+
+- [#10754](https://github.com/Kilo-Org/kilocode/pull/10754) [`cf85e0d`](https://github.com/Kilo-Org/kilocode/commit/cf85e0d51f6e84298524cf39ce06f5c40a8599f4) - Experimental: Serve Kilo Console from the local daemon. Use `kilo console` to open it automatically.
+
+### Patch Changes
+
+- [#10786](https://github.com/Kilo-Org/kilocode/pull/10786) [`7dd8aab`](https://github.com/Kilo-Org/kilocode/commit/7dd8aabadeb1b5bcf69f5fb9545a57ac91daf54f) - Limit inferred background-process port discovery to the TUI and stop scanning after startup to avoid unnecessary Bun subprocess polling.
+
+- [#10783](https://github.com/Kilo-Org/kilocode/pull/10783) [`c44cd78`](https://github.com/Kilo-Org/kilocode/commit/c44cd786688a5050805fbd3c17e23ca14a5324a5) - Show a retryable connection error and preserve unsent prompts when the VS Code background CLI process exits.
+
+- [#10782](https://github.com/Kilo-Org/kilocode/pull/10782) [`1c06a1d`](https://github.com/Kilo-Org/kilocode/commit/1c06a1dbc7c2339fc7b7dd4bb45e31c9d80f259d) - Preserve the Changes review scroll position while agents update files.
+
 ## 7.3.18
 
 ### Patch Changes

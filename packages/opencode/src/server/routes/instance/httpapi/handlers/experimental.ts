@@ -7,7 +7,7 @@ import { MCP } from "@/mcp"
 import { Project } from "@/project/project"
 import { Session } from "@/session/session"
 import { ToolRegistry } from "@/tool/registry"
-import * as EffectZod from "@/util/effect-zod"
+import * as EffectZod from "@opencode-ai/core/effect-zod"
 import { Filesystem } from "@/util/filesystem" // kilocode_change
 import { Review } from "@/kilocode/review/review" // kilocode_change
 import { WorktreeDiff } from "@/kilocode/review/worktree-diff" // kilocode_change
@@ -39,7 +39,10 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
 
     const getConsole = Effect.fn("ExperimentalHttpApi.console")(function* () {
       const [state, groups] = yield* Effect.all(
-        [config.getConsoleState(), account.orgsByAccount().pipe(Effect.orDie)],
+        [
+          config.getConsoleState(),
+          account.orgsByAccount().pipe(Effect.catch(() => Effect.fail(new HttpApiError.InternalServerError({})))),
+        ],
         {
           concurrency: "unbounded",
         },
@@ -53,7 +56,10 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
 
     const listConsoleOrgs = Effect.fn("ExperimentalHttpApi.consoleOrgs")(function* () {
       const [groups, active] = yield* Effect.all(
-        [account.orgsByAccount().pipe(Effect.orDie), account.active().pipe(Effect.orDie)],
+        [
+          account.orgsByAccount().pipe(Effect.catch(() => Effect.fail(new HttpApiError.InternalServerError({})))),
+          account.active().pipe(Effect.catch(() => Effect.fail(new HttpApiError.InternalServerError({})))),
+        ],
         {
           concurrency: "unbounded",
         },

@@ -73,7 +73,7 @@ Provided under the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia
 
 ## Auto models
 
-Auto virtual models automatically select the best underlying model based on the task type. The selection is controlled by the `x-kilocode-mode` request header.
+Auto virtual models select an underlying model using tier-specific routing. Frontier uses the `x-kilocode-mode` request header. Balanced uses the API interface, Free uses deterministic affinity across available candidates, and Small uses account balance.
 
 {% callout type="info" title="Underlying models can change" %}
 The mappings below reflect the current routing. The underlying models behind each `kilo-auto/*` tier are updated server-side as better options become available or as providers change pricing and availability — the tier IDs themselves remain stable.

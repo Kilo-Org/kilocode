@@ -6,6 +6,7 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.ToolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.controller.SessionControllerTestBase
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.MessageDto
@@ -21,6 +22,7 @@ import java.awt.Color
 import java.awt.Point
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
+import javax.swing.UIManager
 
 class SessionHeaderPanelTest : SessionControllerTestBase() {
 
@@ -120,7 +122,20 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         emit(ChatEventDto.TodoUpdated("ses_test", listOf(TodoDto("Done", "completed", "high"))))
 
         assertEquals("All 1 todos complete", panel.todoText())
-        assertEquals(ai.kilocode.client.session.ui.style.SessionUiStyle.Timeline.SUCCESS, panel.foregrounds()[3])
+        assertEquals(SessionUiStyle.Timeline.SUCCESS, panel.foregrounds()[3])
+    }
+
+    fun `test timeline colors honor semantic named color keys`() {
+        val old = UIManager.getColor("Kilo.Session.Timeline.Read")
+        val color = Color(12, 34, 56)
+
+        try {
+            UIManager.put("Kilo.Session.Timeline.Read", color)
+
+            assertEquals(color.rgb, SessionUiStyle.Timeline.READ.rgb)
+        } finally {
+            UIManager.put("Kilo.Session.Timeline.Read", old)
+        }
     }
 
     fun `test retained labels update on later header event`() {

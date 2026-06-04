@@ -17,6 +17,11 @@ const base = {
 
 const user = (id: string): Message => ({ ...base, id, role: "user" })
 
+const compact = (id: string): Message => ({
+  ...user(id),
+  parts: [{ id: `part_${id}`, sessionID: base.sessionID, messageID: id, type: "compaction", auto: false }],
+})
+
 const assistant = (id: string, parentID: string, opts: Partial<Message> = {}): Message => ({
   ...base,
   id,
@@ -32,6 +37,19 @@ const layout = (messages: Message[], status: SessionStatusInfo, boundary?: strin
     new Set(active ? [active] : []),
     new Set(queuedUserMessageIDs(messages, status)),
   )
+}
+
+const expectLayout = (
+  messages: Message[],
+  status: SessionStatusInfo,
+  expected: { virtual: string[]; direct: string[]; queued: string[] },
+) => {
+  const result = layout(messages, status)
+  expect({
+    virtual: result.virtual.map((turn) => turn.user.id),
+    direct: result.direct.map((turn) => turn.user.id),
+    queued: result.queued.map((turn) => turn.user.id),
+  }).toEqual(expected)
 }
 
 describe("queuedUserMessageIDs", () => {
@@ -107,6 +125,58 @@ describe("partitionTurns", () => {
     expect(result.virtual).toEqual([])
     expect(result.direct.map((turn) => turn.user.id)).toEqual(["message_1"])
     expect(result.queued).toEqual([])
+  })
+
+  it("keeps completed resumable assistants direct while the session is active", () => {
+    const messages = (finish: string) => [
+      user("message_1"),
+      assistant("message_2", "message_1", { finish, time: { created: 1, completed: 2 } }),
+      user("message_3"),
+    ]
+    const expected = { virtual: [], direct: ["message_1"], queued: ["message_3"] }
+
+    expectLayout(messages("tool-calls"), { type: "busy" }, expected)
+    expectLayout(messages("unknown"), { type: "busy" }, expected)
+    expectLayout(messages("tool-calls"), { type: "retry", attempt: 1, message: "retrying", next: 2 }, expected)
+    expectLayout(messages("tool-calls"), { type: "offline", message: "offline" }, expected)
+  })
+
+  it("does not retain a completed tool-call assistant with an error", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1", {
+        finish: "tool-calls",
+        time: { created: 1, completed: 2 },
+        error: { name: "MessageAbortedError" },
+      }),
+      user("message_3"),
+    ]
+
+    expectLayout(messages, { type: "busy" }, { virtual: ["message_1"], direct: ["message_3"], queued: [] })
+  })
+
+  it("does not revive a completed tool-call step behind an errored assistant", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1", { finish: "tool-calls", time: { created: 1, completed: 2 } }),
+      assistant("message_3", "message_1", { error: { name: "MessageAbortedError" } }),
+      user("message_4"),
+    ]
+
+    expectLayout(messages, { type: "busy" }, { virtual: ["message_1"], direct: ["message_4"], queued: [] })
+  })
+
+  it("does not revive completed resumable steps behind a terminal assistant", () => {
+    const messages = (finish: string) => [
+      user("message_1"),
+      assistant("message_2", "message_1", { finish, time: { created: 1, completed: 2 } }),
+      assistant("message_3", "message_1", { finish: "stop", time: { created: 3, completed: 4 } }),
+      user("message_4"),
+    ]
+    const expected = { virtual: ["message_1"], direct: ["message_4"], queued: [] }
+
+    expectLayout(messages("tool-calls"), { type: "busy" }, expected)
+    expectLayout(messages("unknown"), { type: "busy" }, expected)
   })
 
   it("keeps an active partial turn direct when later loaded prompts are queued", () => {
@@ -251,6 +321,42 @@ describe("messageTurns", () => {
     ])
   })
 
+  it("keeps resumed replies after a persisted compaction turn", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1"),
+      compact("message_3"),
+      assistant("message_4", "message_3", { summary: true, finish: "stop" }),
+      assistant("message_5", "message_1", { finish: "stop" }),
+    ]
+
+    expect(
+      messageTurns(messages).map((turn) => ({
+        user: turn.user.id,
+        assistant: turn.assistant.map((msg) => msg.id),
+      })),
+    ).toEqual([
+      { user: "message_1", assistant: ["message_2"] },
+      { user: "message_3", assistant: ["message_4", "message_5"] },
+    ])
+  })
+
+  it("detects persisted compaction parts through the lazy lookup", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1"),
+      user("message_3"),
+      assistant("message_4", "message_3", { summary: true, finish: "stop" }),
+      assistant("message_5", "message_1", { finish: "stop" }),
+    ]
+
+    expect(
+      visibleMessages(messages, undefined, (msg) => (msg.id === "message_3" ? compact(msg.id).parts : msg.parts)).map(
+        (msg) => msg.id,
+      ),
+    ).toEqual(["message_1", "message_2", "message_3", "message_4", "message_5"])
+  })
+
   it("surfaces leading assistant output as partial turns grouped by parent", () => {
     const messages = [
       assistant("message_2", "message_1"),
@@ -370,6 +476,58 @@ describe("activeUserMessageID", () => {
     ]
 
     expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_1")
+  })
+
+  it("maps resumed post-compaction tool calls to the compaction turn", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1"),
+      compact("message_3"),
+      assistant("message_4", "message_3", { summary: true, finish: "stop" }),
+      assistant("message_5", "message_1", { finish: "tool-calls" }),
+      user("message_6"),
+    ]
+
+    expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_3")
+    expectLayout(messages, { type: "busy" }, { virtual: ["message_1"], direct: ["message_3"], queued: ["message_6"] })
+  })
+
+  it("uses lazy compaction parts when mapping resumed tool calls", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1"),
+      user("message_3"),
+      assistant("message_4", "message_3", { summary: true, finish: "stop" }),
+      assistant("message_5", "message_1", { finish: "tool-calls" }),
+    ]
+
+    expect(
+      activeUserMessageID(messages, { type: "busy" }, (msg) =>
+        msg.id === "message_3" ? compact(msg.id).parts : msg.parts,
+      ),
+    ).toBe("message_3")
+  })
+
+  it("advances beyond a completed post-compaction reply", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1", { finish: "stop" }),
+      compact("message_3"),
+      assistant("message_4", "message_3", { summary: true, finish: "stop" }),
+      assistant("message_5", "message_1", { finish: "stop" }),
+      user("message_6"),
+    ]
+
+    expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_6")
+  })
+
+  it("ignores completed tool-call assistants after the session becomes idle", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1", { finish: "tool-calls", time: { created: 1, completed: 2 } }),
+    ]
+
+    expect(activeUserMessageID(messages, { type: "idle" })).toBeUndefined()
   })
 
   it("keeps unknown assistants active until cleanup finishes", () => {

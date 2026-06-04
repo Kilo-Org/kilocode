@@ -11,7 +11,9 @@ export function ErrorDetails(props: ErrorDetailsProps) {
 
   return (
     <div class="error-details">
-      <pre class="error-detail-pre" data-scrollable>{raw()}</pre>
+      <pre class="error-detail-pre" data-scrollable>
+        {raw()}
+      </pre>
     </div>
   )
 }

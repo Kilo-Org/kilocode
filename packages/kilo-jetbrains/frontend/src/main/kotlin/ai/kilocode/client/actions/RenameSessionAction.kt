@@ -39,9 +39,22 @@ class RenameSessionAction : AnAction() {
         val item = selection.selectedLocal.singleOrNull() ?: return
 
         val current = title(item)
-        val newTitle = input(e.project, current)?.trim() ?: return
+        controller.requestRename()
+        val raw = input(e.project, current)
+        if (raw == null) {
+            controller.cancelRename("cancelled")
+            return
+        }
+        val newTitle = raw.trim()
 
-        if (newTitle.isBlank() || newTitle == current) return
+        if (newTitle.isBlank()) {
+            controller.cancelRename("blank")
+            return
+        }
+        if (newTitle == current) {
+            controller.cancelRename("unchanged")
+            return
+        }
         controller.rename(item, newTitle)
     }
 }
