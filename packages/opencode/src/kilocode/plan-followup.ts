@@ -288,8 +288,12 @@ export namespace PlanFollowup {
     return msg
   }
 
-  function prompt(input: { sessionID: SessionID; abort: AbortSignal }) {
-    const promise = PlanFollowupRuntime.question.ask({
+  type QuestionRuntime = Pick<typeof PlanFollowupRuntime.question, "ask" | "list" | "reject">
+
+  function prompt(input: { sessionID: SessionID; abort: AbortSignal; question?: QuestionRuntime }) {
+    if (input.abort.aborted) return Promise.resolve(undefined)
+    const question = input.question ?? PlanFollowupRuntime.question
+    const promise = question.ask({
       sessionID: input.sessionID,
       questions: [
         {
@@ -323,10 +327,15 @@ export namespace PlanFollowup {
     })
 
     const listener = () =>
-      PlanFollowupRuntime.question.list().then((qs) => {
-        const match = qs.find((q) => q.sessionID === input.sessionID)
-        if (match) PlanFollowupRuntime.question.reject(match.id)
-      })
+      question
+        .list()
+        .then((qs) => {
+          const match = qs.find((q) => q.sessionID === input.sessionID)
+          return match ? question.reject(match.id) : undefined
+        })
+        .catch((error) => {
+          log.warn("failed to reject aborted plan follow-up question", { sessionID: input.sessionID, error })
+        })
     input.abort.addEventListener("abort", listener, { once: true })
 
     return promise
@@ -478,6 +487,7 @@ export namespace PlanFollowup {
     sessionID: SessionID
     messages: MessageV2.WithParts[]
     abort: AbortSignal
+    question?: QuestionRuntime
   }): Promise<"continue" | "break"> {
     if (input.abort.aborted) return "break"
 
@@ -491,7 +501,7 @@ export namespace PlanFollowup {
     const user = latest.find((msg) => msg.info.role === "user")?.info
     if (!user || user.role !== "user" || !user.model) return "break"
 
-    const answers = await prompt({ sessionID: input.sessionID, abort: input.abort })
+    const answers = await prompt({ sessionID: input.sessionID, abort: input.abort, question: input.question })
     if (!answers) {
       Telemetry.trackPlanFollowup(input.sessionID, "dismissed")
       return "break"

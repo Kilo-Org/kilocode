@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { AsyncResource } from "async_hooks"
 import { Effect } from "effect"
 import fs from "fs/promises"
 import path from "path"
@@ -8,6 +9,8 @@ import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Instance } from "../../src/project/instance"
 import { WithInstance } from "../../src/project/with-instance"
 import { PlanFollowup, PlanFollowupRuntime } from "../../src/kilocode/plan-followup"
+import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
+import { Question } from "../../src/question"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionPrompt } from "../../src/session/prompt"
@@ -156,6 +159,122 @@ describe("plan_exit detection", () => {
       expect(question.questions[0].header).toBe("Implement")
       await PlanFollowupRuntime.question.reject(question.id)
       await expect(pending).resolves.toBe("break")
+    }))
+
+  test("KiloSessionPrompt resolves plan follow-up through the supplied question service", () =>
+    withInstance(async () => {
+      const seeded = await seed({
+        text: "Here is the plan",
+        tools: [
+          {
+            tool: "plan_exit",
+            input: {},
+            output: "Plan is ready. Ending planning turn.",
+          },
+        ],
+      })
+
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const question = yield* Question.Service
+          const pending = KiloSessionPrompt.askPlanFollowup({
+            sessionID: seeded.sessionID,
+            messages: seeded.messages,
+            abort: AbortSignal.any([]),
+            question,
+          })
+          const item = yield* Effect.gen(function* () {
+            for (let i = 0; i < 50; i++) {
+              const request = (yield* question.list()).find((entry) => entry.sessionID === seeded.sessionID)
+              if (request) return request
+              yield* Effect.sleep("10 millis")
+            }
+            throw new Error("timed out waiting for listener-local plan follow-up question")
+          })
+          yield* question.reply({ requestID: item.id, answers: [[PlanFollowup.ANSWER_CONTINUE]] })
+          return yield* Effect.promise(() => pending)
+        }).pipe(Effect.provide(Question.defaultLayer)),
+      )
+
+      expect(result).toBe("continue")
+    }))
+
+  test("KiloSessionPrompt cleans listener-local plan follow-up when aborted outside instance context", () => {
+    const outside = new AsyncResource("plan-followup-abort-test")
+    return withInstance(async () => {
+      const seeded = await seed({
+        text: "Here is the plan",
+        tools: [
+          {
+            tool: "plan_exit",
+            input: {},
+            output: "Plan is ready. Ending planning turn.",
+          },
+        ],
+      })
+
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const question = yield* Question.Service
+          const abort = new AbortController()
+          const pending = KiloSessionPrompt.askPlanFollowup({
+            sessionID: seeded.sessionID,
+            messages: seeded.messages,
+            abort: abort.signal,
+            question,
+          })
+          yield* Effect.gen(function* () {
+            for (let i = 0; i < 50; i++) {
+              const request = (yield* question.list()).find((entry) => entry.sessionID === seeded.sessionID)
+              if (request) return request
+              yield* Effect.sleep("10 millis")
+            }
+            throw new Error("timed out waiting for listener-local plan follow-up question")
+          })
+          outside.runInAsyncScope(() => abort.abort())
+          const action = yield* Effect.promise(() =>
+            Promise.race([pending, Bun.sleep(1_000).then(() => "timeout" as const)]),
+          )
+          expect(yield* question.list()).toEqual([])
+          return action
+        }).pipe(Effect.provide(Question.defaultLayer)),
+      )
+
+      expect(result).toBe("break")
+    }).finally(() => outside.emitDestroy())
+  })
+
+  test("PlanFollowup skips prompt when aborted while resolving the plan", () =>
+    withInstance(async () => {
+      const seeded = await seed({
+        text: "Here is the plan",
+        tools: [
+          {
+            tool: "plan_exit",
+            input: {},
+            output: "Plan is ready. Ending planning turn.",
+          },
+        ],
+      })
+      const abort = new AbortController()
+      const pending = PlanFollowup.ask({
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: abort.signal,
+      })
+      abort.abort()
+
+      const result = await Promise.race([pending, Bun.sleep(1_000).then(() => "timeout" as const)])
+      const list = () =>
+        PlanFollowupRuntime.question.list().then((qs) => qs.filter((q) => q.sessionID === seeded.sessionID))
+      try {
+        expect(result).toBe("break")
+        expect(await list()).toEqual([])
+      } finally {
+        for (const item of await list()) {
+          await PlanFollowupRuntime.question.reject(item.id)
+        }
+      }
     }))
 
   test("JetBrains client enables plan follow-up with custom answer", () =>
