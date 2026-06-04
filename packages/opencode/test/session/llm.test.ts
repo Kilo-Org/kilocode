@@ -120,6 +120,48 @@ describe("session.llm.hasToolCalls", () => {
   })
 })
 
+describe("session.llm.repairToolCall", () => {
+  test("repairs tool name with leading whitespace", () => {
+    const sortedTools = {
+      bash: tool({ description: "Run bash", inputSchema: z.object({}) }),
+    }
+
+    const result = LLM.repairToolCall(" bash", sortedTools)
+
+    expect(result).toBe("bash")
+  })
+
+  test("repairs tool name with trailing whitespace", () => {
+    const sortedTools = {
+      bash: tool({ description: "Run bash", inputSchema: z.object({}) }),
+    }
+
+    const result = LLM.repairToolCall("BASH ", sortedTools)
+
+    expect(result).toBe("bash")
+  })
+
+  test("returns undefined when name matches exactly (no repair needed)", () => {
+    const sortedTools = {
+      bash: tool({ description: "Run bash", inputSchema: z.object({}) }),
+    }
+
+    const result = LLM.repairToolCall("bash", sortedTools)
+
+    expect(result).toBeUndefined()
+  })
+
+  test("returns undefined when no match found", () => {
+    const sortedTools = {
+      bash: tool({ description: "Run bash", inputSchema: z.object({}) }),
+    }
+
+    const result = LLM.repairToolCall("nonexistent", sortedTools)
+
+    expect(result).toBeUndefined()
+  })
+})
+
 type Capture = {
   url: URL
   headers: Headers
