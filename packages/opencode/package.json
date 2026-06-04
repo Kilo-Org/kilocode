@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.3.22",
+  "version": "7.3.29",
   "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",
@@ -60,6 +60,7 @@
     "@types/bun": "catalog:",
     "@types/cross-spawn": "catalog:",
     "@types/mime-types": "3.0.1",
+    "@types/node": "catalog:",
     "@types/npm-package-arg": "6.1.4",
     "@types/semver": "^7.5.8",
     "@types/turndown": "5.0.5",
@@ -113,6 +114,7 @@
     "@kilocode/kilo-indexing": "workspace:*",
     "@kilocode/kilo-telemetry": "workspace:*",
     "@kilocode/plugin": "workspace:*",
+    "@kilocode/plugin-atomic-chat": "workspace:*",
     "@kilocode/sdk": "workspace:*",
     "@lydell/node-pty": "catalog:",
     "@modelcontextprotocol/sdk": "1.29.0",

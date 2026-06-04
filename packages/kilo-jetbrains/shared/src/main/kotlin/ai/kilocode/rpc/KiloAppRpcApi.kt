@@ -1,6 +1,7 @@
 package ai.kilocode.rpc
 
 import ai.kilocode.rpc.dto.DeviceAuthDto
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
@@ -61,6 +62,9 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
 
     /** Persist a per-model reasoning variant selection. */
     suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto
+
+    /** Patch global CLI config values. */
+    suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto
 
     /** Refresh the user profile and return the latest data, or null if not logged in. */
     suspend fun refreshProfile(): ProfileDto?

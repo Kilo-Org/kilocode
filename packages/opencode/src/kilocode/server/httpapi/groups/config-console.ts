@@ -3,7 +3,11 @@ import { ConfigPlugin } from "@/config/plugin"
 import { KilocodeKeybinds } from "@/kilocode/tui/keybinds"
 import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/middleware/instance-context"
-import { WorkspaceRoutingMiddleware } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
+import {
+  WorkspaceRoutingMiddleware,
+  WorkspaceRoutingQuery,
+  WorkspaceRoutingQueryFields,
+} from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
@@ -40,13 +44,19 @@ const Source = Schema.Struct({
   reason: Schema.optional(Schema.String),
 })
 
-export const ConfigOverlayQuery = Schema.Struct({ scope: Schema.optional(Scoped) })
+export const ConfigOverlayQuery = Schema.Struct({
+  ...WorkspaceRoutingQueryFields,
+  scope: Schema.optional(Scoped),
+})
 export const ConfigOverlayPatch = Schema.Struct({
   scope: Schema.optional(Scoped),
   set: Schema.optional(UnknownRecord),
   unset: Schema.optional(Schema.Array(Schema.Array(Schema.String))),
 })
-export const ConfigRulesQuery = Schema.Struct({ scope: Schema.optional(ProjectScope) })
+export const ConfigRulesQuery = Schema.Struct({
+  ...WorkspaceRoutingQueryFields,
+  scope: Schema.optional(ProjectScope),
+})
 const ConfigRulesFile = Schema.Struct({
   name: Schema.String,
   path: Schema.String,
@@ -88,7 +98,10 @@ export const ConfigModelStateResponse = Schema.Struct({
   variant: Schema.Record(Schema.String, Schema.String),
 }).annotate({ identifier: "ConfigModelStateResponse" })
 
-export const TuiConfigQuery = Schema.Struct({ scope: Schema.optional(TuiScoped) })
+export const TuiConfigQuery = Schema.Struct({
+  ...WorkspaceRoutingQueryFields,
+  scope: Schema.optional(TuiScoped),
+})
 const TuiConfigShape = {
   $schema: Schema.optional(Schema.String),
   theme: Schema.optional(Schema.String),
@@ -140,6 +153,7 @@ export const ConfigConsoleApi = HttpApi.make("config-console")
           }),
         ),
         HttpApiEndpoint.get("sources", ConfigConsolePaths.sources, {
+          query: WorkspaceRoutingQuery,
           success: described(ConfigSourcesResponse, "Config source inventory"),
         }).annotateMerge(
           OpenApi.annotations({
@@ -149,6 +163,7 @@ export const ConfigConsoleApi = HttpApi.make("config-console")
           }),
         ),
         HttpApiEndpoint.get("effective", ConfigConsolePaths.effective, {
+          query: WorkspaceRoutingQuery,
           success: described(Config.Info, "Effective config info"),
         }).annotateMerge(
           OpenApi.annotations({
@@ -158,6 +173,7 @@ export const ConfigConsoleApi = HttpApi.make("config-console")
           }),
         ),
         HttpApiEndpoint.patch("overlayUpdate", ConfigConsolePaths.overlay, {
+          query: WorkspaceRoutingQuery,
           payload: ConfigOverlayPatch,
           success: described(Config.Info, "Effective configuration after patch"),
         }).annotateMerge(
@@ -179,6 +195,7 @@ export const ConfigConsoleApi = HttpApi.make("config-console")
           }),
         ),
         HttpApiEndpoint.put("rulesUpdate", ConfigConsolePaths.rules, {
+          query: WorkspaceRoutingQuery,
           payload: ConfigRulesPatch,
           success: described(ConfigRulesResponse, "Project rules after update"),
         }).annotateMerge(
@@ -189,6 +206,7 @@ export const ConfigConsoleApi = HttpApi.make("config-console")
           }),
         ),
         HttpApiEndpoint.get("modelState", ConfigConsolePaths.modelState, {
+          query: WorkspaceRoutingQuery,
           success: described(ConfigModelStateResponse, "Model state"),
         }).annotateMerge(
           OpenApi.annotations({
@@ -198,6 +216,7 @@ export const ConfigConsoleApi = HttpApi.make("config-console")
           }),
         ),
         HttpApiEndpoint.patch("modelStateUpdate", ConfigConsolePaths.modelState, {
+          query: WorkspaceRoutingQuery,
           payload: ConfigModelStatePatch,
           success: described(ConfigModelStateResponse, "Updated model state"),
         }).annotateMerge(
@@ -208,6 +227,7 @@ export const ConfigConsoleApi = HttpApi.make("config-console")
           }),
         ),
         HttpApiEndpoint.get("tuiConfigGet", ConfigConsolePaths.tuiConfig, {
+          query: WorkspaceRoutingQuery,
           success: described(TuiConfigResponse, "Effective TUI configuration"),
         }).annotateMerge(
           OpenApi.annotations({
@@ -217,6 +237,7 @@ export const ConfigConsoleApi = HttpApi.make("config-console")
           }),
         ),
         HttpApiEndpoint.get("tuiKeybindList", ConfigConsolePaths.tuiKeybinds, {
+          query: WorkspaceRoutingQuery,
           success: described(TuiKeybindListResponse, "TUI keybind metadata"),
         }).annotateMerge(
           OpenApi.annotations({

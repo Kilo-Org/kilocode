@@ -21,26 +21,26 @@
       devShells = forEachSystem (pkgs: {
         default =
           let
-            # Pin bun to the version declared in package.json (packageManager: "bun@1.3.13").
-            # nixpkgs-unstable currently ships 1.3.11, so we fetch the official release directly.
+            # Pin bun to the version declared in package.json (packageManager: "bun@1.3.14").
+            # The locked nixpkgs revision ships 1.3.11, so we fetch the official release directly.
             bun =
               let
                 sources = {
                   "aarch64-linux" = {
                     name = "bun-linux-aarch64";
-                    hash = "sha256-cLrkGzkIsKEg4eWMXIrzDnSvrjuNEbDT/djnh937SyI=";
+                    hash = "sha256-on/7Y6gxA3WDbg1vZorhf6jY0YuIw3yCHGUzGXOhmjs=";
                   };
                   "x86_64-linux" = {
                     name = "bun-linux-x64";
-                    hash = "sha256-ecB3H6i5LDOq5B4VoODTB+qZ0OLwAxfHHGxTI3p44lo=";
+                    hash = "sha256-lR7iruhV8IWVruxiJSJqKY0/6oOj3NZGXAnLzN9+hI8=";
                   };
                   "aarch64-darwin" = {
                     name = "bun-darwin-aarch64";
-                    hash = "sha256-VGfj9l26Umuf6pjwzOBO+vwMY+Fpcz7Ce4dqOtMtoZA=";
+                    hash = "sha256-2LliIYKK1vl6x6wKt+lYcjQa92MAHogD6CZ2UsJlJiA=";
                   };
                   "x86_64-darwin" = {
                     name = "bun-darwin-x64";
-                    hash = "sha256-5abItk9BmSUjLREeyxPiXwq/VeVPeSNB+YdiP9B3gAk=";
+                    hash = "sha256-QYPfM3RiPlurMVxUfPoJdFM81FfYa3O2OfeoeXTNZjM=";
                   };
                 };
                 source =
@@ -49,7 +49,7 @@
               in
               pkgs.stdenv.mkDerivation rec {
                 pname = "bun";
-                version = "1.3.13";
+                version = "1.3.14";
                 src = pkgs.fetchurl {
                   url = "https://github.com/oven-sh/bun/releases/download/bun-v${version}/${source.name}.zip";
                   inherit (source) hash;

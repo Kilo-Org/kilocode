@@ -6,11 +6,14 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.md.MdView
+import ai.kilocode.client.ui.md.MdViewFactory
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
@@ -25,26 +28,42 @@ import javax.swing.Scrollable
 /** Renders reasoning as a secondary collapsible block. */
 class ReasoningView(
     reasoning: Reasoning,
-    openUrl: (String) -> Unit = {},
-    private val parts: ReasoningParts = reasoningParts(),
+    private val openUrl: (String) -> Unit = {},
+    private val selection: SessionSelection? = null,
+    private val parts: ReasoningParts = reasoningParts(selection),
 ) :
-    SecondarySessionPartView(parts.header, parts.scroll) {
+    SecondarySessionPartView(parts.header, { parts.scroll(openUrl) }) {
 
     override val contentId: String = reasoning.id
 
-    val md: MdView = parts.md
+    val md: MdView
+        get() {
+            val fresh = !parts.bodyCreated()
+            val view = parts.md(openUrl)
+            if (!fresh) return view
+            registerBody(view)
+            view.set(source)
+            view.applyStyle(style)
+            apply(view)
+            return view
+        }
 
     private var style = SessionEditorStyle.current()
     private var source = reasoning.content.toString()
+    private var registered = false
 
     init {
         bindHeader(parts.title, parts.icon)
         applyStyle(style)
-        md.opaque = false
-        md.addLinkListener { openUrl(it.href) }
-        md.set(source)
-        parts.panel.add(md.component, BorderLayout.CENTER)
         sync()
+    }
+
+    override fun expand(): Boolean {
+        val changed = super.expand()
+        if (!changed) return false
+        syncBody()
+        applyBodyStyle()
+        return true
     }
 
     override fun update(content: Content) {
@@ -53,7 +72,7 @@ class ReasoningView(
         val next = content.content.toString()
         if (source != next) {
             source = next
-            md.set(source)
+            if (parts.bodyCreated()) md.set(source)
             changed = true
         }
         changed = sync() || changed
@@ -63,7 +82,7 @@ class ReasoningView(
     override fun appendDelta(delta: String) {
         if (delta.isEmpty()) return
         source += delta
-        md.append(delta)
+        if (parts.bodyCreated()) md.append(delta)
         val changed = sync()
         if (changed || bodyVisible()) refresh()
     }
@@ -72,10 +91,10 @@ class ReasoningView(
     fun hasToggle(): Boolean = arrow.isVisible
     fun headerText(): String = parts.title.text
     internal fun headerFont() = parts.title.font
-    internal fun bodyVisible() = parts.scroll.parent === this
-    internal fun horizontalPolicy() = parts.scroll.horizontalScrollBarPolicy
+    internal fun bodyVisible() = parts.scrollOrNull?.parent === this
+    internal fun horizontalPolicy() = parts.scrollOrNull?.horizontalScrollBarPolicy ?: ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
     internal fun bodyMaxRows() = SessionUiStyle.View.Reasoning.BODY_LINES
-    internal fun bodyCreated() = true
+    internal fun bodyCreated() = parts.bodyCreated()
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
@@ -84,7 +103,7 @@ class ReasoningView(
             parts.title.font = style.smallEditorFont
             changed = true
         }
-        changed = apply(md) || changed
+        changed = applyBodyStyle() || changed
         if (changed) refresh()
     }
 
@@ -111,8 +130,32 @@ class ReasoningView(
         return changed
     }
 
-    private fun bodyMaxHeight(): Int = md.component.getFontMetrics(md.font).height * bodyMaxRows() +
-        JBUI.scale(SessionUiStyle.View.CARD_BODY_EXTRA_HEIGHT)
+    private fun syncBody() {
+        val md = md
+        registerBody(md)
+        md.set(source)
+    }
+
+    private fun applyBodyStyle(): Boolean {
+        if (!parts.bodyCreated()) return false
+        val md = md
+        registerBody(md)
+        md.applyStyle(style)
+        return apply(md)
+    }
+
+    private fun registerBody(md: MdView) {
+        if (registered) return
+        registered = true
+        Disposer.register(this, md)
+    }
+
+    private fun bodyMaxHeight(): Int {
+        if (!parts.bodyCreated()) return 0
+        val md = md
+        return md.component.getFontMetrics(md.font).height * bodyMaxRows() +
+            JBUI.scale(SessionUiStyle.View.SESSION_VIEW_BODY_EXTRA_HEIGHT)
+    }
 
     override fun dumpLabel(): String {
         val state = if (bodyVisible()) "open" else "closed"
@@ -121,40 +164,63 @@ class ReasoningView(
 }
 
 class ReasoningParts(
-    val md: MdView,
-    val panel: TrackPanel,
-    val scroll: JBScrollPane,
     val header: JPanel,
     val title: JBLabel,
     val icon: JBLabel,
+    private val selection: SessionSelection?,
+) {
+    private var body: ReasoningBody? = null
+    val scrollOrNull: JBScrollPane? get() = body?.scroll
+
+    fun bodyCreated() = body != null
+
+    fun md(openUrl: (String) -> Unit): MdView = body(openUrl).md
+
+    fun scroll(openUrl: (String) -> Unit): JBScrollPane = body(openUrl).scroll
+
+    private fun body(openUrl: (String) -> Unit): ReasoningBody {
+        val item = body
+        if (item != null) return item
+        val md = MdViewFactory.create(SessionEditorStyle.current(), selection).apply {
+            opaque = false
+            addLinkListener { openUrl(it.href) }
+        }
+        val panel = TrackPanel().apply {
+            isOpaque = true
+            background = SessionUiStyle.View.surface()
+            border = JBUI.Borders.empty(
+                JBUI.scale(SessionUiStyle.View.SESSION_VIEW_VERTICAL_PADDING),
+                JBUI.scale(SessionUiStyle.View.SESSION_VIEW_HORIZONTAL_PADDING),
+            )
+            add(md.component, BorderLayout.CENTER)
+        }
+        val scroll = JBScrollPane(panel).apply {
+            border = SessionUiStyle.View.topOutline()
+            isOpaque = true
+            background = SessionUiStyle.View.surface()
+            viewport.background = SessionUiStyle.View.surface()
+            horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+            verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
+        }
+        return ReasoningBody(md, panel, scroll).also { body = it }
+    }
+}
+
+class ReasoningBody(
+    val md: MdView,
+    val panel: TrackPanel,
+    val scroll: JBScrollPane,
 )
 
-private fun reasoningParts(): ReasoningParts {
-    val md = MdView.html()
-    val panel = TrackPanel().apply {
-        isOpaque = true
-        background = SessionUiStyle.View.surface()
-        border = JBUI.Borders.empty(
-            JBUI.scale(SessionUiStyle.View.CARD_VERTICAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.CARD_HORIZONTAL_PADDING),
-        )
-    }
-    val scroll = JBScrollPane(panel).apply {
-        border = SessionUiStyle.View.cardTop()
-        isOpaque = true
-        background = SessionUiStyle.View.surface()
-        viewport.background = SessionUiStyle.View.surface()
-        horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-        verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
-    }
+private fun reasoningParts(selection: SessionSelection? = null): ReasoningParts {
     val title = JBLabel(KiloBundle.message("session.part.reasoning")).apply { foreground = UiStyle.Colors.weak() }
     val icon = JBLabel(AllIcons.General.InspectionsEye).apply { foreground = UiStyle.Colors.weak() }
-    val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP), 0)).apply {
+    val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.SESSION_VIEW_GAP), 0)).apply {
         isOpaque = false
         add(icon, BorderLayout.WEST)
         add(title, BorderLayout.CENTER)
     }
-    return ReasoningParts(md, panel, scroll, header, title, icon)
+    return ReasoningParts(header, title, icon, selection)
 }
 
 class TrackPanel : JPanel(BorderLayout()), Scrollable {

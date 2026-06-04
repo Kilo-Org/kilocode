@@ -19,6 +19,7 @@ import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.ToolRefDto
+import java.util.concurrent.CopyOnWriteArrayList
 
 class PromptLifecycleTest : SessionControllerTestBase() {
 
@@ -494,6 +495,20 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         val perm = (m.model.state as SessionState.AwaitingPermission).permission
         assertEquals("child_perm1", perm.id)
         assertEquals("ses_child", perm.sessionId)
+    }
+
+    fun `test repeated task part subscribes to child once`() {
+        val calls = CopyOnWriteArrayList<String>()
+        rpc.eventFlow = { id, _ ->
+            calls.add(id)
+            rpc.events
+        }
+        prompted()
+
+        emit(taskPart("ses_child"), flush = false)
+        emit(taskPart("ses_child"))
+
+        assertEquals(1, calls.count { it == "ses_child" })
     }
 
     fun `test child PermissionAsked moves root model to AwaitingPermission`() {

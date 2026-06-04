@@ -161,6 +161,14 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
 
             panel.setSize(800, 600)
             layout(panel)
+            val logo = labelsByName(panel, "kilo.profile.logo.loggedIn").single()
+            val name = labels(panel).first { it.text == "Alice" }
+            val logoLoc = SwingUtilities.convertPoint(logo.parent, logo.location, panel)
+            val nameLoc = SwingUtilities.convertPoint(name.parent, name.location, panel)
+            assertNotNull(logo.icon)
+            assertTrue(logo.icon.iconWidth > 0)
+            assertTrue(logoLoc.x > nameLoc.x)
+
             val refresh = buttons(panel).first { it.text == "Refresh" }
             assertFalse(refresh.isContentAreaFilled)
             val card = refresh.parent
@@ -205,6 +213,28 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
             panel.update(null, KiloAppStatusDto.READY)
             val btn2 = buttons(panel).first { it.text == "Login with Kilo Code" }
             assertSame(btn, btn2)
+        }
+    }
+
+    fun `test logged out profile shows kilo icon above login content`() {
+        edt {
+            panel.update(null, KiloAppStatusDto.READY)
+            panel.setSize(800, 600)
+            layout(panel)
+
+            val logo = labelsByName(panel, "kilo.profile.logo.loggedOut").single()
+            val label = labels(panel).first { it.text == "Not logged in" }
+            val btn = buttons(panel).first { it.text == "Login with Kilo Code" }
+            val logoLoc = SwingUtilities.convertPoint(logo.parent, logo.location, panel)
+            val labelLoc = SwingUtilities.convertPoint(label.parent, label.location, panel)
+            val btnLoc = SwingUtilities.convertPoint(btn.parent, btn.location, panel)
+
+            assertTrue(visible(logo))
+            assertNotNull(logo.icon)
+            assertTrue(logo.icon.iconWidth > 0)
+            assertTrue(logo.icon.iconHeight > 0)
+            assertTrue(logoLoc.y < labelLoc.y)
+            assertTrue(labelLoc.y < btnLoc.y)
         }
     }
 
