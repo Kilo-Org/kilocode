@@ -2319,6 +2319,35 @@ describe("ProviderTransform.variants", () => {
     ...overrides,
   })
 
+  const deepseekVariants = {
+    none: { reasoningEffort: undefined, thinking: { type: "disabled" } },
+    high: { reasoningEffort: "high", thinking: { type: "enabled" } },
+    max: { reasoningEffort: "max", thinking: { type: "enabled" } },
+  }
+
+  const deepseekCases = [
+    {
+      title: "openrouter DeepSeek models return DeepSeek-specific thinking variants",
+      id: "openrouter/deepseek/deepseek-r1",
+      providerID: "openrouter",
+      api: {
+        id: "deepseek/deepseek-r1",
+        url: "https://openrouter.ai",
+        npm: "@openrouter/ai-sdk-provider",
+      },
+    },
+    {
+      title: "kilo gateway DeepSeek models return DeepSeek-specific thinking variants",
+      id: "kilo/deepseek/deepseek-r1",
+      providerID: "kilo",
+      api: {
+        id: "deepseek/deepseek-r1",
+        url: "https://gateway.kilo.ai",
+        npm: "@kilocode/kilo-gateway",
+      },
+    },
+  ] as const
+
   test("returns empty object when model has no reasoning capabilities", () => {
     const model = createMockModel({
       capabilities: { reasoning: false },
@@ -2338,11 +2367,7 @@ describe("ProviderTransform.variants", () => {
       },
     })
     const result = ProviderTransform.variants(model)
-    expect(result).toEqual({
-      none: { thinking: { type: "disabled" } },
-      high: { reasoningEffort: "high" },
-      max: { reasoningEffort: "max" },
-    })
+    expect(result).toEqual(deepseekVariants)
   })
 
   test("minimax returns empty object", () => {
@@ -2690,6 +2715,19 @@ describe("ProviderTransform.variants", () => {
     // kilocode_change end
   })
   // kilocode_change end
+
+  for (const testCase of deepseekCases) {
+    test(testCase.title, () => {
+      const result = ProviderTransform.variants(
+        createMockModel({
+          id: testCase.id,
+          providerID: testCase.providerID,
+          api: testCase.api,
+        }),
+      )
+      expect(result).toEqual(deepseekVariants)
+    })
+  }
 
   describe("@ai-sdk/gateway", () => {
     test("anthropic sonnet 4.6 models return adaptive thinking options", () => {

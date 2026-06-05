@@ -638,6 +638,14 @@ function googleSmallThinkingConfig(apiId: string) {
   return { thinkingBudget: googleThinkingBudgetMax(apiId) === 32_768 ? 128 : 0 }
 }
 
+function deepseekVariants() {
+  return {
+    high: { reasoningEffort: "high", thinking: { type: "enabled" } },
+    max: { reasoningEffort: "max", thinking: { type: "enabled" } },
+    none: { reasoningEffort: undefined, thinking: { type: "disabled" } },
+  }
+}
+
 export function variants(model: Provider.Model): Record<string, Record<string, any>> {
   // kilocode_change start
   if (
@@ -655,7 +663,11 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
   const adaptiveEfforts = anthropicAdaptiveEfforts(model.api.id)
 
   if (
-    // kilocode_change start - deepseek removed; handled in openai-compatible case
+    // deepseek is handled in provider-specific branches below:
+    // id.includes("deepseek-chat") ||
+    // id.includes("deepseek-reasoner") ||
+    // id.includes("deepseek-r1") ||
+    // id.includes("deepseek-v3") ||
     id.includes("minimax") ||
     // id.includes("glm") || // kilocode_change
     // id.includes("kimi") || // kilocode_change
@@ -686,6 +698,9 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     case "@kilocode/kilo-gateway": // kilocode_change
     case "@openrouter/ai-sdk-provider":
       // kilocode_change start
+      if (id.includes("deepseek")) {
+        return deepseekVariants()
+      }
       if (id.includes("glm") || id.includes("kimi") || id.includes("qwen")) {
         return {
           instant: { reasoning: { enabled: false } },
@@ -820,12 +835,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     // https://docs.venice.ai/overview/guides/reasoning-models#reasoning-effort
     case "@ai-sdk/openai-compatible":
       if (model.api.id.toLowerCase().includes("deepseek")) {
-        return {
-          // DeepSeek models default to high thinking, which is one of the two only supported levels:
-          high: { reasoningEffort: "high" },
-          max: { reasoningEffort: "max" },
-          none: { thinking: { type: "disabled" } }, // The no-thinking mode is also supported, this way.
-        }
+        return deepseekVariants()
       }
       const efforts = [...WIDELY_SUPPORTED_EFFORTS] // kilocode_change
       return Object.fromEntries(efforts.map((effort) => [effort, { reasoningEffort: effort }])) // kilocode_change
