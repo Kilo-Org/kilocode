@@ -345,6 +345,40 @@ describe("SourceController.requestFile", () => {
 
     controller.stop()
   })
+
+  it("posts null when a pending fetchFile result is invalidated by stop", async () => {
+    let release: () => void = () => {}
+    const workspace: DiffSource = {
+      descriptor: WORKSPACE_DESC,
+      async fetch() {
+        return { diffs: [] }
+      },
+      async fetchFile() {
+        await new Promise<void>((resolve) => (release = resolve))
+        return {
+          file: "foo.ts",
+          before: "a",
+          after: "b",
+          additions: 1,
+          deletions: 1,
+        }
+      },
+    }
+    const { controller, posted } = make({ workspace })
+
+    controller.setContext({ workspaceRoot: "/repo" })
+    await controller.activate("workspace")
+    posted.length = 0
+    const request = controller.requestFile("foo.ts")
+    controller.stop()
+    release()
+    await request
+
+    const files = byType(posted, "diffViewer.diffFile")
+    expect(files).toHaveLength(1)
+    expect(files[0]!.file).toBe("foo.ts")
+    expect(files[0]!.diff).toBeNull()
+  })
 })
 
 describe("SourceController.reactivate", () => {

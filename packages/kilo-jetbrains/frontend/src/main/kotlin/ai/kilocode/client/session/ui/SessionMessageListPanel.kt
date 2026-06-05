@@ -7,8 +7,9 @@ import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.MessageView
-import ai.kilocode.client.session.views.PermissionView
+import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.views.TurnView
 import com.intellij.openapi.Disposable
@@ -44,6 +45,9 @@ class SessionMessageListPanel(
     parent: Disposable,
     private val question: QuestionView? = null,
     private val permission: PermissionView? = null,
+    private val login: LoginRequiredView? = null,
+    private val openFile: (String) -> Unit,
+    private val openUrl: (String) -> Unit = {},
 ) : SessionLayoutPanel(
     JBUI.scale(SessionUiStyle.SessionLayout.GAP),
     JBUI.insets(
@@ -171,7 +175,7 @@ class SessionMessageListPanel(
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id, style)
+        val tv = TurnView(turn.id, openFile, style, openUrl)
         turnViews[turn.id] = tv
         for (msgId in turn.messageIds) {
             val msg = model.message(msgId) ?: continue
@@ -222,7 +226,7 @@ class SessionMessageListPanel(
         removeAll()
 
         for (turn in model.turns()) {
-            val tv = TurnView(turn.id, style)
+            val tv = TurnView(turn.id, openFile, style, openUrl)
             turnViews[turn.id] = tv
             for (msgId in turn.messageIds) {
                 val msg = model.message(msgId) ?: continue
@@ -248,8 +252,8 @@ class SessionMessageListPanel(
     }
 
     /**
-     * Show or hide active question/permission views based on [state].
-     * Both views are always kept as children of this panel (added in [anchorFooter]),
+     * Show or hide active question/permission/login views based on [state].
+     * All views are always kept as children of this panel (added in [anchorFooter]),
      * but visibility is controlled here.
      */
     private fun syncActive(state: SessionState = model.state) {
@@ -257,17 +261,26 @@ class SessionMessageListPanel(
             is SessionState.AwaitingQuestion -> {
                 setHiddenQuestionTool(state.question.tool)
                 permission?.hideView()
+                login?.hideView()
                 question?.show(state.question)
             }
             is SessionState.AwaitingPermission -> {
                 setHiddenQuestionTool(null)
                 question?.hideView()
+                login?.hideView()
                 permission?.show(state.permission)
+            }
+            is SessionState.LoginRequired -> {
+                setHiddenQuestionTool(null)
+                question?.hideView()
+                permission?.hideView()
+                login?.show(state.message)
             }
             else -> {
                 setHiddenQuestionTool(null)
                 question?.hideView()
                 permission?.hideView()
+                login?.hideView()
             }
         }
     }
@@ -280,19 +293,21 @@ class SessionMessageListPanel(
     }
 
     /**
-     * Re-insert [question], [permission], and [progress] as the last children
+     * Re-insert [question], [permission], [login], and [progress] as the last children
      * so active views always render after all turn views, and progress is last.
      *
-     * Both active views are added even when invisible — [SessionLayout] skips
+     * All active views are added even when invisible — [SessionLayout] skips
      * invisible children, so no extra space is consumed, and the component tree
      * remains stable for tests.
      */
     private fun anchorFooter() {
         if (question != null) remove(question)
         if (permission != null) remove(permission)
+        if (login != null) remove(login)
         remove(progress)
         if (question != null) add(question)
         if (permission != null) add(permission)
+        if (login != null) add(login)
         add(progress)
     }
 
@@ -317,6 +332,7 @@ class SessionMessageListPanel(
         for (view in turnViews.values) view.applyStyle(style)
         question?.applyStyle(style)
         permission?.applyStyle(style)
+        login?.applyStyle(style)
         progress.applyStyle(style)
         refresh()
     }

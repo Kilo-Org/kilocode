@@ -3,6 +3,7 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.ui.md.MdView
 import java.awt.BorderLayout
 
@@ -11,7 +12,11 @@ import java.awt.BorderLayout
  *
  * Supports both full-replacement ([update]) and streaming append ([appendDelta]).
  */
-class TextView(text: Text) : PartView() {
+class TextView(
+    text: Text,
+    transparent: Boolean = false,
+    openUrl: (String) -> Unit = {},
+) : PartView() {
 
     override val contentId: String = text.id
 
@@ -20,6 +25,8 @@ class TextView(text: Text) : PartView() {
     init {
         layout = BorderLayout()
         isOpaque = false
+        md.opaque = !transparent
+        md.addLinkListener { openUrl(it.href) }
         applyStyle(SessionEditorStyle.current())
         add(md.component, BorderLayout.CENTER)
         if (text.content.isNotEmpty()) md.set(text.content.toString())
@@ -40,11 +47,12 @@ class TextView(text: Text) : PartView() {
     /** Current markdown source — used by tests to assert rendered content. */
     fun markdown(): String = md.markdown()
 
+    internal fun contentOpaque() = md.opaque
+
     override fun applyStyle(style: SessionEditorStyle) {
-        val changed = md.font != style.transcriptFont || md.codeFont != style.editorFamily
-        if (md.font != style.transcriptFont) md.font = style.transcriptFont
-        if (md.codeFont != style.editorFamily) md.codeFont = style.editorFamily
-        if (!changed) return
+        md.font = style.transcriptFont
+        md.codeFont = style.editorFamily
+        md.foreground = style.editorForeground
         refresh()
     }
 

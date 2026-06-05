@@ -14,7 +14,12 @@ import { provideTmpdirInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
 const bus = Bus.layer
-const env = Layer.mergeAll(Permission.layer.pipe(Layer.provide(bus)), bus, CrossSpawnSpawner.defaultLayer)
+const env = Layer.mergeAll(
+  Permission.layer.pipe(Layer.provide(bus), Layer.provide(Config.defaultLayer)),
+  Config.defaultLayer,
+  bus,
+  CrossSpawnSpawner.defaultLayer,
+)
 const it = testEffect(env)
 
 afterAll(async () => {
@@ -22,7 +27,9 @@ afterAll(async () => {
   for (const file of ["kilo.jsonc", "kilo.json", "config.json", "opencode.json", "opencode.jsonc"]) {
     await fs.rm(path.join(dir, file), { force: true }).catch(() => {})
   }
-  await Config.invalidate()
+  await Effect.runPromise(
+    Config.Service.use((svc) => svc.invalidate()).pipe(Effect.scoped, Effect.provide(Config.defaultLayer)),
+  )
   await InstanceRuntime.disposeAllInstances()
 })
 
@@ -735,7 +742,8 @@ describe("saveAlwaysRules", () => {
         yield* reply({ requestID: PermissionID.make("permission_saved_always"), reply: "always" })
         yield* Fiber.join(fiber)
 
-        const cfg = yield* Effect.promise(() => Config.get())
+        const config = yield* Config.Service
+        const cfg = yield* config.get()
         expect(cfg.permission?.bash).toMatchObject({ "kilo-permission-8353 test": "allow" })
         expect(cfg.permission?.bash).not.toMatchObject({ "kilo-permission-8353 *": "allow" })
 

@@ -55,7 +55,6 @@ export const dict = {
   "agentManager.tabsMenu.search": "タブを検索...",
   "agentManager.tabsMenu.empty": "一致するタブがありません",
   "agentManager.tabsMenu.status.waiting": "待機",
-  "agentManager.tabsMenu.status.working": "実行中",
   "agentManager.tabsMenu.status.retry": "再試行",
 
   "agentManager.terminal.new": "新しいターミナルタブ",

@@ -5,6 +5,7 @@ import { ProjectID } from "../../project/schema"
 import { WorkspaceID } from "../../control-plane/schema"
 import { SessionImportType } from "./types"
 import { Project } from "../../project/project"
+import { AppRuntime } from "../../effect/app-runtime"
 import { eq } from "drizzle-orm"
 
 const key = (input: unknown) => [input] as never
@@ -18,7 +19,7 @@ export namespace SessionImportService {
       throw new Error("Legacy project import requires a non-empty worktree")
     }
 
-    const result = await Project.fromDirectory(input.worktree)
+    const result = await AppRuntime.runPromise(Project.Service.use((svc) => svc.fromDirectory(input.worktree)))
     return { ok: true, id: result.project.id }
   }
 

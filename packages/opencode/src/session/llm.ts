@@ -30,7 +30,6 @@ import {
   HEADER_TASKID,
 } from "@kilocode/kilo-gateway"
 import { Identity } from "@kilocode/kilo-telemetry"
-import { makeRuntime } from "@/effect/run-service"
 import { KiloSession } from "@/kilocode/session"
 import { KiloLLM } from "@/kilocode/session/llm"
 // kilocode_change end
@@ -71,7 +70,6 @@ export type Event = Result["fullStream"] extends AsyncIterable<infer T> ? T : ne
 
 export interface Interface {
   readonly stream: (input: StreamInput) => Stream.Stream<Event, unknown>
-  readonly raw: (input: StreamRequest) => Effect.Effect<Result> // kilocode_change - raw streamText result for Kilo helpers
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/LLM") {}
@@ -481,8 +479,7 @@ const live: Layer.Layer<
         ),
       )
 
-    // kilocode_change - expose raw streamText result for Kilo helpers; Effect.orDie collapses AuthError into a defect
-    return Service.of({ stream, raw: (input) => run(input).pipe(Effect.orDie) })
+    return Service.of({ stream })
   }),
 )
 
@@ -496,13 +493,6 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(Plugin.defaultLayer),
   ),
 )
-
-// kilocode_change start - keep raw async stream wrapper for Kilo callsites during Effect migration
-const runtime = makeRuntime(Service, defaultLayer)
-export async function stream(input: StreamRequest) {
-  return runtime.runPromise((svc) => svc.raw(input), { signal: input.abort })
-}
-// kilocode_change end
 
 function resolveTools(input: Pick<StreamInput, "tools" | "agent" | "permission" | "user">) {
   const disabled = Permission.disabled(

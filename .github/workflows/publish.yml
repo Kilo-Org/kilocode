@@ -175,6 +175,7 @@ jobs:
       cli_version: ${{ needs.version.outputs.version }}
     secrets: inherit
   # kilocode_change end
+
   publish:
     needs:
       - version
@@ -208,6 +209,7 @@ jobs:
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false # kilocode_change
 
       - name: Install @vscode/vsce
         run: bun install -g @vscode/vsce
@@ -265,7 +267,6 @@ jobs:
           GH_REPO: ${{ github.repository }}
           AUR_KEY: ${{ secrets.AUR_KEY }}
           GITHUB_TOKEN: ${{ steps.committer.outputs.token }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
           VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
           OPENVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}

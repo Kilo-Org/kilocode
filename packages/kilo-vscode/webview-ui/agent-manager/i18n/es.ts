@@ -55,7 +55,6 @@ export const dict = {
   "agentManager.tabsMenu.search": "Buscar pestañas...",
   "agentManager.tabsMenu.empty": "No hay pestañas coincidentes",
   "agentManager.tabsMenu.status.waiting": "Espera",
-  "agentManager.tabsMenu.status.working": "En curso",
   "agentManager.tabsMenu.status.retry": "Reintento",
 
   "agentManager.terminal.new": "Nueva pestaña de terminal",

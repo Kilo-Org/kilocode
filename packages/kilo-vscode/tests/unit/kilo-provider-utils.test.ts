@@ -21,6 +21,7 @@ import type {
   EventMessagePartUpdated,
   EventMessageUpdated,
   EventSessionStatus,
+  EventSessionTurnClose,
   EventPermissionAsked,
   EventPermissionReplied,
   EventTodoUpdated,
@@ -307,6 +308,16 @@ describe("mapSSEEventToWebviewMessage", () => {
       expect(msg.message).toBe("trying again")
       expect(msg.next).toBe(5000)
     }
+  })
+
+  it("maps session.turn.close to its terminal reason", () => {
+    const event: EventSessionTurnClose = {
+      id: "evt-turn",
+      type: "session.turn.close",
+      properties: { sessionID: "sess-1", reason: "interrupted" },
+    }
+    const msg = mapSSEEventToWebviewMessage(event, "sess-1")
+    expect(msg).toEqual({ type: "sessionTurnClosed", sessionID: "sess-1", reason: "interrupted" })
   })
 
   it("maps permission.asked to permissionRequest", () => {

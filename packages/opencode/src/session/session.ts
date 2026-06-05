@@ -3,7 +3,6 @@ import path from "path"
 import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import { Decimal } from "decimal.js"
-import z from "zod"
 import { type ProviderMetadata, type LanguageModelUsage } from "ai"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
@@ -30,10 +29,9 @@ import { ModelID, ProviderID } from "@/provider/schema"
 import type { Provider } from "@/provider/provider"
 import { Permission } from "@/permission"
 import { Global } from "@opencode-ai/core/global"
-// kilocode_change start - legacy promise helpers + kilocode extensions
-import { makeRuntime } from "@/effect/run-service"
+// kilocode_change start - Kilo session behavior extensions
+import { BackgroundProcess } from "@/kilocode/background-process"
 import { KiloSession, kiloSessionFork } from "@/kilocode/session"
-import { fn } from "@/util/fn"
 // kilocode_change end
 import { Effect, Layer, Option, Context, Schema, Types } from "effect"
 import { zod } from "@/util/effect-zod"
@@ -441,6 +439,8 @@ export class BusyError extends Error {
   }
 }
 
+export type NotFound = InstanceType<typeof NotFoundError>
+
 export interface Interface {
   readonly list: (input?: ListInput) => Effect.Effect<Info[]>
   readonly create: (input?: {
@@ -452,9 +452,9 @@ export interface Interface {
     platform?: string // kilocode_change - per-session platform override for telemetry attribution
     workspaceID?: WorkspaceID
   }) => Effect.Effect<Info>
-  readonly fork: (input: { sessionID: SessionID; messageID?: MessageID }) => Effect.Effect<Info>
+  readonly fork: (input: { sessionID: SessionID; messageID?: MessageID }) => Effect.Effect<Info, NotFound>
   readonly touch: (sessionID: SessionID) => Effect.Effect<void>
-  readonly get: (id: SessionID) => Effect.Effect<Info>
+  readonly get: (id: SessionID) => Effect.Effect<Info, NotFound>
   readonly setTitle: (input: { sessionID: SessionID; title: string }) => Effect.Effect<void>
   readonly setArchived: (input: { sessionID: SessionID; time?: number }) => Effect.Effect<void>
   readonly setPermission: (input: { sessionID: SessionID; permission: Permission.Ruleset }) => Effect.Effect<void>
@@ -468,7 +468,7 @@ export interface Interface {
   readonly diff: (sessionID: SessionID) => Effect.Effect<Snapshot.FileDiff[]>
   readonly messages: (input: { sessionID: SessionID; limit?: number }) => Effect.Effect<MessageV2.WithParts[]>
   readonly children: (parentID: SessionID) => Effect.Effect<Info[]>
-  readonly remove: (sessionID: SessionID) => Effect.Effect<void>
+  readonly remove: (sessionID: SessionID) => Effect.Effect<void, NotFound>
   readonly updateMessage: <T extends MessageV2.Info>(msg: T) => Effect.Effect<T>
   readonly removeMessage: (input: { sessionID: SessionID; messageID: MessageID }) => Effect.Effect<MessageID>
   readonly removePart: (input: { sessionID: SessionID; messageID: MessageID; partID: PartID }) => Effect.Effect<PartID>
@@ -559,13 +559,13 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service | 
 
     const get = Effect.fn("Session.get")(function* (id: SessionID) {
       const row = yield* db((d) => d.select().from(SessionTable).where(eq(SessionTable.id, id)).get())
-      if (!row) throw new NotFoundError({ message: `Session not found: ${id}` })
+      if (!row) return yield* Effect.fail(new NotFoundError({ message: `Session not found: ${id}` }))
       return fromRow(row)
     })
 
     const list = Effect.fn("Session.list")(function* (input?: ListInput) {
       const ctx = yield* InstanceState.context
-      return Array.from(listByProject({ projectID: ctx.project.id, ...(input ?? {}) }))
+      return Array.from(listByProject({ projectID: ctx.project.id, ...input }))
     })
 
     // kilocode_change start - scope by project_id when instance context is available
@@ -585,8 +585,8 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service | 
     // kilocode_change end
 
     const remove: Interface["remove"] = Effect.fnUntraced(function* (sessionID: SessionID) {
+      const session = yield* get(sessionID)
       try {
-        const session = yield* get(sessionID)
         const kids = yield* children(sessionID)
         for (const child of kids) {
           yield* remove(child.id)
@@ -605,6 +605,7 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service | 
         yield* Effect.promise(() => KiloSession.removeSession(sessionID)).pipe(Effect.ignore)
         KiloSession.clearPlatformOverride(sessionID)
         if (hasInstance) {
+          yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID)).pipe(Effect.ignore)
           void Promise.all([import("@/effect/app-runtime"), import("./run-state")]).then(([app, run]) =>
             app.AppRuntime.runPromise(run.SessionRunState.Service.use((svc) => svc.cancel(sessionID))).catch(() => {}),
           )
@@ -945,69 +946,7 @@ export function* listGlobal(input?: {
 }
 // kilocode_change end
 
-// kilocode_change start - keep legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-
-const decodeCreate = Schema.decodeUnknownSync(CreateInput)
-const decodeGet = Schema.decodeUnknownSync(GetInput)
-const decodeSetTitle = Schema.decodeUnknownSync(SetTitleInput)
-const decodeSetArchived = Schema.decodeUnknownSync(SetArchivedInput)
-const decodeSetPermission = Schema.decodeUnknownSync(SetPermissionInput)
-const decodeSetRevert = Schema.decodeUnknownSync(SetRevertInput)
-const decodeMessages = Schema.decodeUnknownSync(MessagesInput)
-const decodeChildren = Schema.decodeUnknownSync(ChildrenInput)
-const decodeRemove = Schema.decodeUnknownSync(RemoveInput)
-
-export const create = (input?: CreateInput) => runPromise((svc) => svc.create(decodeCreate(input) as CreateInput))
+// kilocode_change - preserve Kilo recursive fork/remap behavior without a Session service-local Promise runtime
 export const fork = kiloSessionFork
-export const get = (id: SessionID) => runPromise((svc) => svc.get(decodeGet(id)))
-export const setTitle = (input: { sessionID: SessionID; title: string }) =>
-  runPromise((svc) => svc.setTitle(decodeSetTitle(input)))
-export const setArchived = (input: { sessionID: SessionID; time?: number }) =>
-  runPromise((svc) => svc.setArchived(decodeSetArchived(input)))
-export const setPermission = (input: { sessionID: SessionID; permission: Permission.Ruleset }) =>
-  runPromise((svc) =>
-    svc.setPermission(decodeSetPermission(input) as { sessionID: SessionID; permission: Permission.Ruleset }),
-  )
-export const setRevert = (input: { sessionID: SessionID; revert?: Info["revert"]; summary?: Info["summary"] }) => {
-  const parsed = decodeSetRevert(input) as { sessionID: SessionID; revert?: Info["revert"]; summary?: Info["summary"] }
-  return runPromise((svc) =>
-    svc.setRevert({ sessionID: parsed.sessionID, revert: parsed.revert, summary: parsed.summary }),
-  )
-}
-export const messages = (input: { sessionID: SessionID; limit?: number }) =>
-  runPromise((svc) => svc.messages(decodeMessages(input)))
-export const children = (id: SessionID) => runPromise((svc) => svc.children(decodeChildren(id)))
-export const remove = (id: SessionID) => runPromise((svc) => svc.remove(decodeRemove(id)))
-export async function updateMessage<T extends MessageV2.Info>(msg: T): Promise<T> {
-  MessageV2.Info.zod.parse(msg) // kilocode_change
-  return runPromise((svc) => svc.updateMessage(msg))
-}
-
-export const removeMessage = fn(z.object({ sessionID: SessionID.zod, messageID: MessageID.zod }), (input) =>
-  runPromise((svc) => svc.removeMessage(input)),
-)
-
-export const removePart = fn(
-  z.object({ sessionID: SessionID.zod, messageID: MessageID.zod, partID: PartID.zod }),
-  (input) => runPromise((svc) => svc.removePart(input)),
-)
-
-export async function updatePart<T extends MessageV2.Part>(part: T): Promise<T> {
-  MessageV2.Part.zod.parse(part) // kilocode_change
-  return runPromise((svc) => svc.updatePart(part))
-}
-
-export const updatePartDelta = fn(
-  z.object({
-    sessionID: SessionID.zod,
-    messageID: MessageID.zod,
-    partID: PartID.zod,
-    field: z.string(),
-    delta: z.string(),
-  }),
-  (input) => runPromise((svc) => svc.updatePartDelta(input)),
-)
-// kilocode_change end
 
 export * as Session from "./session"

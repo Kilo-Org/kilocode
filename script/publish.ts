@@ -21,10 +21,7 @@ console.log("=== publishing ===\n")
         .catch(() => ""),
     )
   }
-  const res = await $`bunx changeset version`.nothrow()
-  if (res.exitCode !== 0) {
-    console.warn("changeset version failed (exit " + res.exitCode + ")")
-  }
+  await $`bunx changeset version`
   // Changeset computes its own version from package.json, but we use
   // Script.version. Fix the heading in any changelog that was modified.
   for (const p of paths) {
@@ -127,6 +124,13 @@ await import(`../packages/plugin/script/publish.ts`)
 // kilocode_change start
 console.log("\n=== vscode ===\n")
 await import(`../packages/kilo-vscode/script/publish.ts`)
+// kilocode_change end
+
+// kilocode_change start - Kilo does not ship the opencode desktop app
+// if (Script.release) {
+//   await $`bun ./packages/desktop/scripts/finalize-latest-json.ts`
+//   await $`bun ./packages/desktop/scripts/finalize-latest-yml.ts`
+// }
 // kilocode_change end
 
 const dir = fileURLToPath(new URL("..", import.meta.url))

@@ -67,20 +67,21 @@ import { createTuiApi } from "@/cli/cmd/tui/plugin/api"
 import { TuiPluginRuntime } from "@/cli/cmd/tui/plugin/runtime"
 import type { RouteMap } from "@/cli/cmd/tui/plugin/api"
 import { FormatError, FormatUnknownError } from "@/cli/error"
-import { resetTerminalState } from "@/kilocode/cli/cmd/tui/util/terminal" // kilocode_change
+import { kitty, resetTerminalState } from "@/kilocode/cli/cmd/tui/util/terminal" // kilocode_change
 
 import type { EventSource } from "./context/sdk"
 import { DialogVariant } from "./component/dialog-variant"
 
 function rendererConfig(_config: TuiConfig.Info): CliRendererConfig {
   const mouseEnabled = !Flag.KILO_DISABLE_MOUSE && (_config.mouse ?? true)
+  const keyboard = kitty() // kilocode_change
 
   return {
     externalOutputMode: "passthrough",
     targetFps: 60,
     gatherStats: false,
     exitOnCtrlC: false,
-    useKittyKeyboard: {},
+    ...(keyboard ? { useKittyKeyboard: {} } : {}), // kilocode_change
     autoFocus: false,
     openConsoleOnError: false,
     useMouse: mouseEnabled,

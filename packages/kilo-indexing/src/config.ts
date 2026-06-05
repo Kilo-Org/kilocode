@@ -21,11 +21,12 @@ export const IndexingConfig = z
   .object({
     enabled: z.boolean().optional().describe("Enable codebase indexing"),
     provider: z.enum(providers).optional().describe("Embedding provider to use for codebase indexing"),
-    model: z.string().optional().describe("Embedding model ID (uses provider default if omitted)"),
+    model: z.string().nullable().optional().describe("Embedding model ID (uses provider default if omitted)"),
     dimension: z
       .number()
       .int()
       .positive()
+      .nullable()
       .optional()
       .describe("Override embedding vector dimension (auto-detected from model if omitted)"),
     vectorStore: z.enum(stores).optional().describe("Vector store backend (default: qdrant)"),
@@ -140,10 +141,10 @@ export const IndexingSchema = Schema.Struct({
   provider: Schema.optional(Provider).annotate({
     description: "Embedding provider to use for codebase indexing",
   }),
-  model: Schema.optional(Schema.String).annotate({
+  model: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description: "Embedding model ID (uses provider default if omitted)",
   }),
-  dimension: Schema.optional(PositiveInt).annotate({
+  dimension: Schema.optional(Schema.NullOr(PositiveInt)).annotate({
     description: "Override embedding vector dimension (auto-detected from model if omitted)",
   }),
   vectorStore: Schema.optional(Store).annotate({ description: "Vector store backend (default: qdrant)" }),
@@ -237,8 +238,8 @@ export function toIndexingConfigInput(cfg: IndexingConfig | undefined): Indexing
     enabled: cfg?.enabled ?? false,
     embedderProvider: provider,
     vectorStoreProvider: cfg?.vectorStore,
-    modelId: cfg?.model,
-    modelDimension: cfg?.dimension,
+    modelId: cfg?.model ?? undefined,
+    modelDimension: cfg?.dimension ?? undefined,
     lancedbVectorStoreDirectory: cfg?.lancedb?.directory,
     qdrantUrl: cfg?.qdrant?.url,
     qdrantApiKey: cfg?.qdrant?.apiKey,

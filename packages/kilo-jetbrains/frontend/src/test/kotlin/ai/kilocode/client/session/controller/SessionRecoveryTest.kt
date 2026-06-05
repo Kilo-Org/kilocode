@@ -1,6 +1,8 @@
 package ai.kilocode.client.session.controller
 
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
@@ -231,6 +233,107 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             """,
             m, show = true,
         )
+    }
+
+    // ------ Child session permission recovery from history ------
+
+    fun `test history with task part and pending child permission recovers to AwaitingPermission`() {
+        rpc.history.add(
+            MessageWithPartsDto(
+                info = msg("msg1", "ses_test", "assistant"),
+                parts = listOf(
+                    PartDto(
+                        id = "part_task",
+                        sessionID = "ses_test",
+                        messageID = "msg1",
+                        type = "tool",
+                        tool = "task",
+                        metadata = mapOf("sessionId" to "ses_child"),
+                    ),
+                ),
+            )
+        )
+        rpc.pendingPermissionList.add(
+            PermissionRequestDto(
+                id = "child_perm_1",
+                sessionID = "ses_child",
+                permission = "read",
+                patterns = listOf("*.json"),
+            )
+        )
+
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        assertTrue(m.model.state is SessionState.AwaitingPermission)
+        val perm = (m.model.state as SessionState.AwaitingPermission).permission
+        assertEquals("child_perm_1", perm.id)
+        assertEquals("ses_child", perm.sessionId)
+    }
+
+    fun `test pending child permission from unrelated session is ignored`() {
+        rpc.pendingPermissionList.add(
+            PermissionRequestDto(
+                id = "perm_unrelated",
+                sessionID = "ses_other_child",
+                permission = "read",
+                patterns = emptyList(),
+            )
+        )
+
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        // No task part linking ses_other_child — its permissions must be ignored
+        assertEquals(SessionState.Idle, m.model.state)
+    }
+
+    fun `test root pending permission takes priority over child pending permission`() {
+        rpc.history.add(
+            MessageWithPartsDto(
+                info = msg("msg1", "ses_test", "assistant"),
+                parts = listOf(
+                    PartDto(
+                        id = "part_task",
+                        sessionID = "ses_test",
+                        messageID = "msg1",
+                        type = "tool",
+                        tool = "task",
+                        metadata = mapOf("sessionId" to "ses_child"),
+                    ),
+                ),
+            )
+        )
+        rpc.pendingPermissionList.add(
+            PermissionRequestDto(
+                id = "root_perm",
+                sessionID = "ses_test",
+                permission = "edit",
+                patterns = listOf("*.kt"),
+            )
+        )
+        rpc.pendingPermissionList.add(
+            PermissionRequestDto(
+                id = "child_perm",
+                sessionID = "ses_child",
+                permission = "read",
+                patterns = listOf("*.json"),
+            )
+        )
+
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        // Root recovery runs first and sets AwaitingPermission for root perm
+        assertTrue(m.model.state is SessionState.AwaitingPermission)
+        val perm = (m.model.state as SessionState.AwaitingPermission).permission
+        assertEquals("root_perm", perm.id)
     }
 
     fun `test pending question overrides a seeded retry status`() {

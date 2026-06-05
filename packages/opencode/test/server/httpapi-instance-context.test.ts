@@ -13,8 +13,8 @@ import { InstanceRef, WorkspaceRef } from "../../src/effect/instance-ref"
 // kilocode_change start - avoid InstanceLayer.layer's lazy bootstrap import in this test graph.
 import { InstanceBootstrap } from "../../src/project/bootstrap"
 import { Instance } from "../../src/project/instance"
-import { InstanceStore } from "../../src/project/instance-store"
 // kilocode_change end
+import { InstanceStore } from "../../src/project/instance-store"
 import { Project } from "../../src/project/project"
 import { disposeMiddleware, markInstanceForDisposal } from "../../src/server/routes/instance/httpapi/lifecycle"
 import { instanceRouterMiddleware } from "../../src/server/routes/instance/httpapi/middleware/instance-context"
@@ -39,6 +39,11 @@ const testStateLayer = Layer.effectDiscard(
   }),
 )
 
+const workspaceLayer = Workspace.defaultLayer.pipe(
+  Layer.provide(InstanceStore.defaultLayer),
+  Layer.provide(InstanceBootstrap.defaultLayer),
+)
+
 const it = testEffect(
   Layer.mergeAll(
     testStateLayer,
@@ -48,7 +53,7 @@ const it = testEffect(
     InstanceStore.defaultLayer.pipe(Layer.provide(InstanceBootstrap.defaultLayer)),
     // kilocode_change end
     Project.defaultLayer,
-    Workspace.defaultLayer,
+    workspaceLayer,
   ),
 )
 

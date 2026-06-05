@@ -5,9 +5,7 @@ import { logo as glyphs } from "./logo"
 import { tui } from "../kilocode/cli/logo" // kilocode_change
 
 // kilocode_change start
-const wordmark = [
-  ...tui(),
-]
+const wordmark = [...tui()]
 // kilocode_change end
 
 export const CancelledError = NamedError.create("UICancelledError", z.void())

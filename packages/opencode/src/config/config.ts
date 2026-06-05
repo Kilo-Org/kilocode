@@ -53,7 +53,6 @@ import {
   IndexingConfig as KiloIndexingConfig,
   IndexingSchema as KiloIndexingSchema,
 } from "@kilocode/kilo-indexing/config"
-import { makeRuntime } from "@/effect/run-service"
 import { unique } from "remeda"
 // kilocode_change end
 
@@ -75,7 +74,7 @@ function mergeConfigConcatArrays(target: Info, source: Info): Info {
 
 function normalizeLoadedConfig(data: unknown, source: string) {
   if (!isRecord(data)) return data
-  const copy = { ...data }
+  const copy = KilocodeConfig.retireIndexingFlag({ ...data }, source) // kilocode_change
   const hadLegacy = "theme" in copy || "keybinds" in copy || "tui" in copy
   if (!hadLegacy) return copy
   delete copy.theme
@@ -95,6 +94,36 @@ export type Warning = z.infer<typeof Warning>
 
 const { caught: caughtWarning } = KilocodeConfig
 // kilocode_change end
+
+async function substituteWellKnownRemoteConfig(input: { value: unknown; dir: string; source: string }) {
+  if (!isRecord(input.value) || typeof input.value.url !== "string") return
+
+  const url = await ConfigVariable.substitute({
+    text: input.value.url,
+    type: "virtual",
+    dir: input.dir,
+    source: input.source,
+  })
+  const headers = isRecord(input.value.headers)
+    ? Object.fromEntries(
+        await Promise.all(
+          Object.entries(input.value.headers)
+            .filter((entry): entry is [string, string] => typeof entry[1] === "string")
+            .map(async ([key, value]) => [
+              key,
+              await ConfigVariable.substitute({
+                text: value,
+                type: "virtual",
+                dir: input.dir,
+                source: input.source,
+              }),
+            ]),
+        ),
+      )
+    : undefined
+
+  return { url, headers }
+}
 
 async function resolveLoadedPlugins<T extends { plugin?: ConfigPlugin.Spec[] }>(config: T, filepath: string) {
   if (!config.plugin) return config
@@ -140,7 +169,7 @@ export const Info = Schema.Struct({
   }),
   logLevel: Schema.optional(LogLevelRef).annotate({ description: "Log level" }),
   server: Schema.optional(ConfigServer.Server).annotate({
-    description: "Server configuration for opencode serve and web commands",
+    description: "Server configuration for the kilo serve command", // kilocode_change
   }),
   command: Schema.optional(Schema.Record(Schema.String, ConfigCommand.Info)).annotate({
     description: "Command configuration, see https://opencode.ai/docs/commands",
@@ -195,6 +224,13 @@ export const Info = Schema.Struct({
   }),
   small_model: Schema.optional(Schema.NullOr(ConfigModelID)).annotate({
     description: "Small model to use for tasks like title generation in the format of provider/model",
+  }),
+  subagent_model: Schema.optional(Schema.NullOr(ConfigModelID)).annotate({
+    description:
+      "Default model for task-tool subagents in the format of provider/model. If unset or unavailable, subagents inherit the calling agent model.",
+  }),
+  subagent_variant: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description: "Default model variant for task-tool subagents when subagent_model is configured.",
   }),
   // kilocode_change end
   // kilocode_change start - renamed from "build" to "code" + nullable for delete sentinel
@@ -314,15 +350,6 @@ export const Info = Schema.Struct({
       batch_tool: Schema.optional(Schema.Boolean).annotate({ description: "Enable the batch tool" }),
       codebase_search: Schema.optional(Schema.Boolean).annotate({ description: "Enable AI-powered codebase search" }), // kilocode_change
       // kilocode_change start
-      semantic_indexing: Schema.optional(Schema.Boolean).annotate({
-        description: "Enable semantic codebase indexing and the semantic_search tool",
-      }),
-      agent_manager_tool: Schema.optional(Schema.Boolean).annotate({
-        description: "Enable the VS Code Agent Manager orchestration tool",
-      }),
-      speech_to_text: Schema.optional(Schema.Boolean).annotate({
-        description: "Enable speech-to-text voice input in Kilo clients",
-      }),
       speech_to_text_model: Schema.optional(Schema.String).annotate({
         description: "Speech-to-text transcription model ID to use for voice input",
       }),
@@ -547,7 +574,7 @@ export const layer = Layer.effect(
         yield* fs
           .writeFileString(
             gitignore,
-            // kilocode_change start - added pnpm-lock.yaml and yarn.lock (not in upstream)
+            // kilocode_change start - added pnpm-lock.yaml, yarn.lock, agent-manager.json (not in upstream)
             [
               "node_modules",
               "package.json",
@@ -556,6 +583,7 @@ export const layer = Layer.effect(
               "bun.lock",
               "yarn.lock",
               ".gitignore",
+              "agent-manager.json",
             ].join("\n"),
             // kilocode_change end
           )
@@ -634,42 +662,56 @@ export const layer = Layer.effect(
         for (const [key, value] of Object.entries(auth)) {
           if (value.type === "wellknown") {
             const url = key.replace(/\/+$/, "")
-            const source = `${url}/.well-known/opencode`
-            process.env[value.key] = value.token
-            log.debug("fetching remote config", { url: source })
+            const source = `${url}/.well-known/opencode` // kilocode_change
             // kilocode_change start - warn instead of fail on wellknown errors
-            const next = yield* Effect.tryPromise({
-              try: async () => {
-                const response = await fetch(source)
-                if (!response.ok) {
-                  throw new Error(`failed to fetch remote config from ${url}: ${response.status}`)
-                }
-                const wellknown = (await response.json()) as { config?: Record<string, unknown> }
-                const remoteConfig = wellknown.config ?? {}
-                if (!remoteConfig.$schema) remoteConfig.$schema = "https://app.kilo.ai/config.json"
-                return remoteConfig
-              },
-              catch: (err) => err,
-            }).pipe(
-              Effect.flatMap((remoteConfig) =>
-                loadConfig(JSON.stringify(remoteConfig), {
-                  dir: path.dirname(source),
-                  source,
+            yield* Effect.gen(function* () {
+              process.env[value.key] = value.token
+              log.debug("fetching remote config", { url: `${url}/.well-known/opencode` })
+              const response = yield* Effect.promise(() => fetch(`${url}/.well-known/opencode`))
+              if (!response.ok) {
+                throw new Error(`failed to fetch remote config from ${url}: ${response.status}`)
+              }
+              const wellknown = (yield* Effect.promise(() => response.json())) as {
+                config?: Record<string, unknown>
+                remote_config?: unknown
+              }
+              const remote = yield* Effect.promise(() =>
+                substituteWellKnownRemoteConfig({
+                  value: wellknown.remote_config,
+                  dir: url,
+                  source: `${url}/.well-known/opencode`,
                 }),
-              ),
-              Effect.tap(() => Effect.sync(() => log.debug("loaded remote config from well-known", { url }))),
+              )
+              const fetchedConfig = remote
+                ? ((yield* Effect.promise(async () => {
+                    log.debug("fetching remote config", { url: remote.url })
+                    const response = await fetch(remote.url, { headers: remote.headers })
+                    if (!response.ok)
+                      throw new Error(`failed to fetch remote config from ${remote.url}: ${response.status}`)
+                    const data = await response.json()
+                    return isRecord(data) && isRecord(data.config) ? data.config : data
+                  })) as Record<string, unknown>)
+                : {}
+              const remoteConfig = mergeConfig(wellknown.config ?? {}, fetchedConfig as Info)
+              if (!remoteConfig.$schema) remoteConfig.$schema = "https://app.kilo.ai/config.json" // kilocode_change
+              const next = yield* loadConfig(JSON.stringify(remoteConfig), {
+                dir: path.dirname(source),
+                source,
+              })
+              yield* merge(source, next, "global")
+              log.debug("loaded remote config from well-known", { url })
+            }).pipe(
               Effect.catch((err: unknown) => {
                 caughtWarning(warnings, source, err)
                 log.warn("skipped remote config due to error", { url, err })
-                return Effect.succeed({} as Info)
+                return Effect.void
               }),
               Effect.catchDefect((err: unknown) => {
                 caughtWarning(warnings, source, err)
                 log.warn("skipped remote config due to error", { url, err })
-                return Effect.succeed({} as Info)
+                return Effect.void
               }),
             )
-            yield* merge(source, next, "global")
             // kilocode_change end
           }
         }
@@ -1051,45 +1093,5 @@ export const defaultLayer = layer.pipe(
   Layer.provide(Account.defaultLayer),
   Layer.provide(Npm.defaultLayer),
 )
-
-// kilocode_change start - keep async wrappers for Kilo callsites during Effect migration
-const { runPromise } = makeRuntime(Service, defaultLayer)
-
-export async function get() {
-  return runPromise((svc) => svc.get())
-}
-
-export async function getGlobal() {
-  return runPromise((svc) => svc.getGlobal())
-}
-
-export async function getConsoleState() {
-  return runPromise((svc) => svc.getConsoleState())
-}
-
-export async function update(config: Info) {
-  return runPromise((svc) => svc.update(config))
-}
-
-export async function updateGlobal(config: Info, options?: { dispose?: boolean }) {
-  return runPromise((svc) => svc.updateGlobal(config, options))
-}
-
-export async function invalidate() {
-  return runPromise((svc) => svc.invalidate())
-}
-
-export async function directories() {
-  return runPromise((svc) => svc.directories())
-}
-
-export async function waitForDependencies() {
-  return runPromise((svc) => svc.waitForDependencies())
-}
-
-export async function warnings() {
-  return runPromise((svc) => svc.warnings())
-}
-// kilocode_change end
 
 export * as Config from "./config"

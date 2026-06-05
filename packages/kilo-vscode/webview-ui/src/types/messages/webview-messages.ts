@@ -250,7 +250,7 @@ export interface RemoveSkillMessage {
 }
 
 export interface RemoveModeMessage {
-  type: "removeMode"
+  type: "removeAgent"
   name: string
 }
 
@@ -384,6 +384,12 @@ export interface UpdateSettingRequest {
 
 export interface RequestTimelineSettingMessage {
   type: "requestTimelineSetting"
+}
+
+export interface StreamSessionVisibleMessage {
+  type: "streamSessionVisible"
+  sessionID: string
+  visible: boolean
 }
 
 export interface RequestBrowserSettingsMessage {
@@ -1054,6 +1060,10 @@ export interface RemoveInstalledMarketplaceItemMessage {
   mpInstallOptions: InstallMarketplaceItemOptions
 }
 
+export interface DismissAgentMigrationBannerMessage {
+  type: "dismissAgentMigrationBanner"
+}
+
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
@@ -1113,6 +1123,7 @@ export type WebviewMessage =
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
+  | StreamSessionVisibleMessage
   | RequestBrowserSettingsMessage
   | RequestClaudeCompatSettingMessage
   | RequestConfigMessage
@@ -1209,6 +1220,7 @@ export type WebviewMessage =
   | FilterMarketplaceItemsMessage
   | InstallMarketplaceItemMessage
   | RemoveInstalledMarketplaceItemMessage
+  | DismissAgentMigrationBannerMessage
   | ConnectProviderMessage
   | AuthorizeProviderOAuthMessage
   | CompleteProviderOAuthMessage

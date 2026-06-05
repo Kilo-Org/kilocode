@@ -17,10 +17,12 @@ data class Permission(
 )
 
 data class PermissionMeta(
+    val command: String? = null,
     val rules: List<String> = emptyList(),
     val diff: String? = null,
     val filePath: String? = null,
     val fileDiff: PermissionFileDiff? = null,
+    val fileDiffs: List<PermissionFileDiff> = emptyList(),
     val raw: Map<String, String> = emptyMap(),
 )
 

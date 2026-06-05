@@ -2,6 +2,8 @@ import { generateText } from "ai"
 import { mergeDeep } from "remeda"
 import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
+import { AppRuntime } from "@/effect/app-runtime"
+import { Effect } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 
 const log = Log.create({ service: "enhance-prompt" })
@@ -28,19 +30,23 @@ export function clean(text: string) {
 export async function enhancePrompt(text: string): Promise<string> {
   log.info("enhancing", { length: text.length })
 
-  const defaultModel = await Provider.defaultModel()
-  const model =
-    (await Provider.getSmallModel(defaultModel.providerID)) ??
-    (await Provider.getModel(defaultModel.providerID, defaultModel.modelID))
-
-  const language = await Provider.getLanguage(model)
+  const resolved = await AppRuntime.runPromise(
+    Provider.Service.use((svc) =>
+      Effect.gen(function* () {
+        const ref = yield* svc.defaultModel()
+        const model = (yield* svc.getSmallModel(ref.providerID)) ?? (yield* svc.getModel(ref.providerID, ref.modelID))
+        const language = yield* svc.getLanguage(model)
+        return { model, language }
+      }),
+    ),
+  )
 
   const result = await generateText({
-    model: language,
-    temperature: model.capabilities.temperature ? 0.7 : undefined,
+    model: resolved.language,
+    temperature: resolved.model.capabilities.temperature ? 0.7 : undefined,
     providerOptions: ProviderTransform.providerOptions(
-      model,
-      mergeDeep(ProviderTransform.smallOptions(model), model.options),
+      resolved.model,
+      mergeDeep(ProviderTransform.smallOptions(resolved.model), resolved.model.options),
     ),
     maxRetries: 3,
     system: INSTRUCTION,

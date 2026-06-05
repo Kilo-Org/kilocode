@@ -12,10 +12,12 @@ import { Question } from "@/question"
 import { Session } from "@/session/session"
 import { SessionID, MessageID, PartID } from "@/session/schema"
 import { LLM } from "@/session/llm"
+import { KiloLLM } from "@/kilocode/session/llm"
 import { MessageV2 } from "@/session/message-v2"
 import { SessionStatus } from "@/session/status"
 import { Todo } from "@/session/todo"
 import { makeRuntime } from "@/effect/run-service"
+import { Effect } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { lazy } from "@/util/lazy"
@@ -26,6 +28,7 @@ const agents = lazy(() => makeRuntime(Agent.Service, Agent.defaultLayer))
 const providers = lazy(() => makeRuntime(Provider.Service, Provider.defaultLayer))
 const questions = lazy(() => makeRuntime(Question.Service, Question.defaultLayer))
 const todo = lazy(() => makeRuntime(Todo.Service, Todo.defaultLayer))
+const llm = lazy(() => makeRuntime(LLM.Service, LLM.defaultLayer))
 const pending = new Map<SessionID, AbortController>()
 
 export const PlanFollowupRuntime = {
@@ -45,6 +48,9 @@ export const PlanFollowupRuntime = {
     reject(requestID: Parameters<Question.Interface["reject"]>[0]) {
       return questions().runPromise((svc) => svc.reject(requestID))
     },
+    reply(input: Parameters<Question.Interface["reply"]>[0]) {
+      return questions().runPromise((svc) => svc.reply(input))
+    },
   },
   todo: {
     get(sessionID: SessionID) {
@@ -53,6 +59,13 @@ export const PlanFollowupRuntime = {
     update(input: Parameters<Todo.Interface["update"]>[0]) {
       return todo().runPromise((svc) => svc.update(input))
     },
+  },
+  handover(input: LLM.StreamInput, signal: AbortSignal) {
+    return llm().runPromise((svc) => KiloLLM.text(svc.stream(input)).pipe(Effect.orDie), { signal })
+  },
+  async session<A, E>(run: (svc: Session.Interface) => Effect.Effect<A, E>) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(Session.Service.use(run))
   },
   async loop(sessionID: SessionID) {
     const item = await import("@/session/prompt")
@@ -123,31 +136,31 @@ export async function generateHandover(input: {
       model: input.model,
     }
 
-    const stream = await LLM.stream({
-      agent: entry ?? {
-        name: "compaction",
-        mode: "subagent",
-        permission: [],
-        options: {},
-      },
-      user: userMsg,
-      tools: {},
-      model,
-      small: true,
-      messages: [
-        ...(await MessageV2.toModelMessages(input.messages, model)),
-        {
-          role: "user" as const,
-          content: HANDOVER_PROMPT,
+    const result = await PlanFollowupRuntime.handover(
+      {
+        agent: entry ?? {
+          name: "compaction",
+          mode: "subagent",
+          permission: [],
+          options: {},
         },
-      ],
-      abort: input.abort ? AbortSignal.any([input.abort, AbortSignal.timeout(60_000)]) : AbortSignal.timeout(60_000),
-      sessionID,
-      system: [],
-      retries: 1,
-    })
-
-    const result = await stream.text
+        user: userMsg,
+        tools: {},
+        model,
+        small: true,
+        messages: [
+          ...(await MessageV2.toModelMessages(input.messages, model)),
+          {
+            role: "user" as const,
+            content: HANDOVER_PROMPT,
+          },
+        ],
+        sessionID,
+        system: [],
+        retries: 1,
+      },
+      input.abort ? AbortSignal.any([input.abort, AbortSignal.timeout(60_000)]) : AbortSignal.timeout(60_000),
+    )
     return result.trim()
   } catch (error) {
     if (input.abort?.aborted) return ""
@@ -236,7 +249,7 @@ export namespace PlanFollowup {
     if (text) return text
 
     // Fall back to plan file on disk
-    const session = await Session.get(SessionID.make(input.sessionID))
+    const session = await PlanFollowupRuntime.session((svc) => svc.get(SessionID.make(input.sessionID)))
     const file = Bun.file(Session.plan(session, Instance.current))
     const plan = await file.text().catch(() => "")
     return plan.trim()
@@ -259,15 +272,19 @@ export namespace PlanFollowup {
       agent: input.agent,
       model: input.model,
     }
-    await Session.updateMessage(msg)
-    await Session.updatePart({
-      id: PartID.ascending(),
-      messageID: msg.id,
-      sessionID: input.sessionID,
-      type: "text",
-      text: input.text,
-      synthetic: input.synthetic ?? true,
-    } satisfies MessageV2.TextPart)
+    await PlanFollowupRuntime.session((svc) =>
+      Effect.gen(function* () {
+        yield* svc.updateMessage(msg)
+        yield* svc.updatePart({
+          id: PartID.ascending(),
+          messageID: msg.id,
+          sessionID: input.sessionID,
+          type: "text",
+          text: input.text,
+          synthetic: input.synthetic ?? true,
+        } satisfies MessageV2.TextPart)
+      }),
+    )
     return msg
   }
 
@@ -285,7 +302,7 @@ export namespace PlanFollowup {
           // main prompt input below the dock already routes typed text as a question
           // reply, so "Type your own answer" would be redundant (originally hidden in
           // 65566af7f8, flipped back during the v1.4.4 upstream merge).
-          custom: Flag.KILO_CLIENT === "cli",
+          custom: Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "jetbrains",
           options: [
             {
               label: ANSWER_NEW_SESSION,
@@ -332,7 +349,7 @@ export namespace PlanFollowup {
     const code = await resolveCodeModel({
       model: input.model,
     })
-    const session = await Session.get(input.sessionID)
+    const session = await PlanFollowupRuntime.session((svc) => svc.get(input.sessionID))
     const { WithInstance } = await import("@/project/with-instance")
 
     await WithInstance.provide({
@@ -342,14 +359,15 @@ export namespace PlanFollowup {
         // VS Code extension's pendingFollowup gate (30s TTL) is still fresh. The
         // handover generation below can take tens of seconds and must not block
         // the SSE event that drives the webview tab switch.
-        const next = await Session.create({})
+        const next = await PlanFollowupRuntime.session((svc) => svc.create({}))
         const ctl = new AbortController()
         pending.set(next.id, ctl)
-        await SessionStatus.set(next.id, { type: "busy" })
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "busy" })))
         await Bus.publish(TuiEvent.SessionSelect, { sessionID: next.id })
 
         const idle = () =>
-          SessionStatus.set(next.id, { type: "idle" }).catch((err) => {
+          AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "idle" }))).catch((err) => {
             log.warn("failed to clear follow-up busy status", { sessionID: next.id, err })
           })
 
@@ -382,16 +400,20 @@ export namespace PlanFollowup {
             agent: "code",
             model: code.model,
           }
-          await Session.updateMessage(msg)
           const pid = PartID.ascending()
-          await Session.updatePart({
-            id: pid,
-            messageID: msg.id,
-            sessionID: next.id,
-            type: "text",
-            text: compose(""),
-            synthetic: false,
-          } satisfies MessageV2.TextPart)
+          await PlanFollowupRuntime.session((svc) =>
+            Effect.gen(function* () {
+              yield* svc.updateMessage(msg)
+              yield* svc.updatePart({
+                id: pid,
+                messageID: msg.id,
+                sessionID: next.id,
+                type: "text",
+                text: compose(""),
+                synthetic: false,
+              } satisfies MessageV2.TextPart)
+            }),
+          )
 
           if (todos.length) {
             await PlanFollowupRuntime.todo.update({ sessionID: next.id, todos })
@@ -408,14 +430,16 @@ export namespace PlanFollowup {
           }
 
           if (handover) {
-            await Session.updatePart({
-              id: pid,
-              messageID: msg.id,
-              sessionID: next.id,
-              type: "text",
-              text: compose(handover),
-              synthetic: false,
-            } satisfies MessageV2.TextPart)
+            await PlanFollowupRuntime.session((svc) =>
+              svc.updatePart({
+                id: pid,
+                messageID: msg.id,
+                sessionID: next.id,
+                type: "text",
+                text: compose(handover),
+                synthetic: false,
+              } satisfies MessageV2.TextPart),
+            )
           }
           if (ctl.signal.aborted) {
             await idle()

@@ -289,6 +289,29 @@ describe("KiloSnapshotTrack.wrap", () => {
     expect(state.disabledForSession).toBe(false)
   })
 
+  test('timeout + snapshot initialization "wait" keeps waiting without asking', async () => {
+    const state = KiloSnapshotTrack.makeState()
+    const { hooks, calls } = makeHooks("disable")
+
+    const result = await Effect.runPromise(
+      KiloSnapshotTrack.wrap({
+        inner: slowInner(50, "managed-hash"),
+        state,
+        snapshotInitialization: "wait",
+        sessionID: SESSION,
+        messageID: MESSAGE,
+        hooks,
+        timeoutMs: 10,
+        progressDelayMs: 2,
+      }),
+    )
+
+    expect(result).toBe("managed-hash")
+    expect(calls.ask).toBe(0)
+    expect(calls.persist).toBe(0)
+    expect(state.disabledForSession).toBe(false)
+  })
+
   test("continue path keeps `asked` sticky when the fiber finished with no hash", async () => {
     const state = KiloSnapshotTrack.makeState()
     const { hooks, calls } = makeHooks("continue")
