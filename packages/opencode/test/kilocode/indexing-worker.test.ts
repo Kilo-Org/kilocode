@@ -8,6 +8,8 @@ test("runs indexing engine requests in its worker", async () => {
   const engine = IndexingWorker.create(tmp.path, tmp.path, {
     status() {},
     telemetry() {},
+    warning() {},
+    log() {},
     failure(err) {
       failures.push(err)
     },

@@ -4,6 +4,7 @@ import type {
   VectorStoreSearchResult,
 } from "@kilocode/kilo-indexing/engine"
 import type { IndexingStatus } from "@kilocode/kilo-indexing/status"
+import type { IndexingWarning } from "./indexing-warning"
 
 export type InitInput = {
   directory: string
@@ -23,8 +24,15 @@ export type Result =
   | { type: "result"; id: number; method: "dispose"; ok: true; value: undefined }
   | { type: "result"; id: number; method: Request["method"]; ok: false; error: string }
 
+export type Log = {
+  level: "debug" | "info" | "warn" | "error"
+  message: string
+}
+
 export type Event =
   | { type: "event"; event: "status"; data: IndexingStatus }
   | { type: "event"; event: "telemetry"; data: IndexingTelemetryEvent }
+  | { type: "event"; event: "warning"; data: IndexingWarning }
+  | { type: "event"; event: "log"; data: Log }
 
 export type Message = Result | Event

@@ -14,6 +14,7 @@ export type Event =
   | EventTuiSessionSelect
   | EventKilocodeAgentManagerStart
   | EventIndexingStatus
+  | EventIndexingWarning
   | EventServerInstanceDisposed
   | EventFileEdited
   | EventFileWatcherUpdated
@@ -181,6 +182,11 @@ export type IndexingStatus = {
   processedFiles: number
   totalFiles: number
   percent: number
+}
+
+export type IndexingWarning = {
+  code: "qdrant.version-incompatible" | "qdrant.version-unavailable"
+  message: string
 }
 
 export type QuestionOption = {
@@ -890,6 +896,7 @@ export type GlobalEvent = {
     | EventTuiSessionSelect
     | EventKilocodeAgentManagerStart
     | EventIndexingStatus
+    | EventIndexingWarning
     | EventServerInstanceDisposed
     | EventFileEdited
     | EventFileWatcherUpdated
@@ -2747,6 +2754,12 @@ export type EventIndexingStatus = {
   properties: {
     status: IndexingStatus
   }
+}
+
+export type EventIndexingWarning = {
+  id: string
+  type: "indexing.warning"
+  properties: IndexingWarning
 }
 
 export type EventServerInstanceDisposed = {
@@ -8248,6 +8261,25 @@ export type IndexingStatusResponses = {
 }
 
 export type IndexingStatusResponse = IndexingStatusResponses[keyof IndexingStatusResponses]
+
+export type IndexingWarningsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/indexing/warnings"
+}
+
+export type IndexingWarningsResponses = {
+  /**
+   * Indexing warnings
+   */
+  200: Array<IndexingWarning>
+}
+
+export type IndexingWarningsResponse = IndexingWarningsResponses[keyof IndexingWarningsResponses]
 
 export type KiloProfileData = {
   body?: never

@@ -15,7 +15,8 @@ import { makeRuntime } from "@/effect/run-service"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
-import { Event as IndexingEvent } from "./indexing-event"
+import { Event as IndexingEvent, Warning as IndexingWarningEvent } from "./indexing-event"
+import { indexingWarningKey, type IndexingWarning } from "./indexing-warning"
 import { IndexingWorker } from "./indexing-worker-client"
 import { LanceDBRuntime } from "./lancedb" // kilocode_change
 import { indexingWithKiloDefault, resolveKiloIndexingAuth, type KiloIndexingAuth } from "./indexing-auth" // kilocode_change
@@ -196,6 +197,7 @@ export namespace KiloIndexing {
     engine?: IndexingWorker.Driver
     initialized?: boolean
     current(): Status
+    warnings(): IndexingWarning[]
     publish(): Promise<void>
     dispose(): Promise<void>
   }
@@ -210,6 +212,7 @@ export namespace KiloIndexing {
   }
 
   export const Event = IndexingEvent
+  export const Warning = IndexingWarningEvent
 
   const cache = new Map<string, Cache>()
 
@@ -220,6 +223,7 @@ export namespace KiloIndexing {
 
     return {
       current,
+      warnings: () => [],
       publish,
       async dispose() {},
     }
@@ -254,6 +258,7 @@ export namespace KiloIndexing {
     const merged = indexingWithKiloDefault({ ...global, ...cfg.indexing }, auth)
     const cfgInput = await model(enrichKilo(input(merged, global), auth), auth)
     const box = { status: pending() }
+    const warnings = new Map<string, IndexingWarning>()
     const current = () => box.status
     let disposed = false
 
@@ -276,8 +281,22 @@ export namespace KiloIndexing {
       if (disposed) return
       trackTelemetry(event)
     })
+    const warning = Instance.bind((item: IndexingWarning) => {
+      if (disposed) return
+      const key = indexingWarningKey(item)
+      if (warnings.has(key)) return
+      warnings.set(key, item)
+      void Bus.publish(Warning, item).catch((err) => {
+        log.error("failed to publish indexing warning", { err, workspacePath: dir })
+      })
+    })
+    const output = Instance.bind((event: Parameters<IndexingWorker.Hooks["log"]>[0]) => {
+      if (disposed) return
+      log[event.level](event.message, { source: "worker", workspacePath: dir })
+    })
     const base: Entry = {
       current,
+      warnings: () => [...warnings.values()],
       publish,
       async dispose() {
         if (disposed) return
@@ -309,7 +328,7 @@ export namespace KiloIndexing {
     const err = await LanceDBRuntime.ensure(cfgInput.vectorStoreProvider)
       .then(async () => {
         if (hit.disposed) return
-        const engine = IndexingWorker.create(dir, root, { status, telemetry, failure })
+        const engine = IndexingWorker.create(dir, root, { status, telemetry, warning, log: output, failure })
         base.engine = engine
         box.status = await engine.init(cfgInput)
         base.initialized = true
@@ -392,6 +411,10 @@ export namespace KiloIndexing {
 
   export async function current(): Promise<Status> {
     return (await hit().ready).current()
+  }
+
+  export async function warnings(): Promise<IndexingWarning[]> {
+    return (await hit().ready).warnings()
   }
 
   export function ready(): boolean {

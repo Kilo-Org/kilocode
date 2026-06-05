@@ -5,7 +5,8 @@ import type {
 } from "@kilocode/kilo-indexing/engine"
 import type { IndexingStatus } from "@kilocode/kilo-indexing/status"
 import { withTimeout } from "@/util/timeout"
-import type { Message, Request, Result } from "./indexing-worker-protocol"
+import type { Log, Message, Request, Result } from "./indexing-worker-protocol"
+import type { IndexingWarning } from "./indexing-warning"
 
 declare global {
   const KILO_INDEXING_WORKER_PATH: string
@@ -15,6 +16,8 @@ export namespace IndexingWorker {
   export type Hooks = {
     status(status: IndexingStatus): void
     telemetry(event: IndexingTelemetryEvent): void
+    warning(warning: IndexingWarning): void
+    log(event: Log): void
     failure(err: unknown): void
   }
 
@@ -56,6 +59,8 @@ export namespace IndexingWorker {
         if (stopping || stopped) return
         if (message.event === "status") hooks.status(message.data)
         if (message.event === "telemetry") hooks.telemetry(message.data)
+        if (message.event === "warning") hooks.warning(message.data)
+        if (message.event === "log") hooks.log(message.data)
         return
       }
 

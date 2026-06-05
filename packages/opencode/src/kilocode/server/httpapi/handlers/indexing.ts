@@ -10,7 +10,11 @@ export const indexingHandlers = HttpApiBuilder.group(InstanceHttpApi, "indexing"
       const current = yield* EffectBridge.fromPromise(() => mod.KiloIndexing.current())
       return current
     })
+    const warnings = Effect.fn("IndexingHttpApi.warnings")(function* () {
+      const mod = yield* Effect.promise(() => import("@/kilocode/indexing"))
+      return yield* EffectBridge.fromPromise(() => mod.KiloIndexing.warnings())
+    })
 
-    return handlers.handle("status", status)
+    return handlers.handle("status", status).handle("warnings", warnings)
   }),
 )

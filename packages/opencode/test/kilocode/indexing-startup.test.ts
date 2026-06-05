@@ -161,6 +161,73 @@ describe("indexing startup degradation", () => {
     }
   })
 
+  test("retains and deduplicates indexing warnings for TUI replay", async () => {
+    const warning = {
+      code: "qdrant.version-incompatible" as const,
+      message:
+        "Client version 1.17.0 is incompatible with server version 1.14.1. Set checkCompatibility=false to skip version check.",
+    }
+    const events: (typeof warning)[] = []
+
+    IndexingWorker.override((_directory, _root, hooks) => ({
+      async init() {
+        hooks.log({ level: "warn", message: warning.message })
+        hooks.warning(warning)
+        hooks.warning(warning)
+        return {
+          state: "Standby",
+          message: "Indexing paused.",
+          processedFiles: 0,
+          totalFiles: 0,
+          percent: 0,
+        }
+      },
+      async search() {
+        return []
+      },
+      async dispose() {},
+    }))
+
+    await using tmp = await tmpdir({ git: true, config: cfg })
+    process.env["KILO_CONFIG_DIR"] = tmp.path
+    const on = (data: { directory?: string; payload?: { type?: string; properties?: typeof warning } }) => {
+      if (data.directory !== tmp.path) return
+      if (data.payload?.type !== KiloIndexing.Warning.type) return
+      if (data.payload.properties) events.push(data.payload.properties)
+    }
+    GlobalBus.on("event", on)
+
+    try {
+      const app = Server.Default().app
+      await app.request("/config", {
+        headers: {
+          "x-kilo-directory": tmp.path,
+        },
+      })
+
+      const list = await (async () => {
+        for (const _ of Array.from({ length: 100 })) {
+          const response = await app.request("/indexing/warnings", {
+            headers: {
+              "x-kilo-directory": tmp.path,
+            },
+          })
+          expect(response.status).toBe(200)
+          const body = (await response.json()) as (typeof warning)[]
+          if (body.length > 0) return body
+          await new Promise((resolve) => setTimeout(resolve, 10))
+        }
+        throw new Error("indexing warning was not retained")
+      })()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(list).toEqual([warning])
+      expect(events).toEqual([warning])
+    } finally {
+      GlobalBus.off("event", on)
+    }
+  })
+
   test("reports routes as in progress while initialization is in flight", async () => {
     await using tmp = await tmpdir({ git: true, config: cfg })
     process.env["KILO_CONFIG_DIR"] = tmp.path

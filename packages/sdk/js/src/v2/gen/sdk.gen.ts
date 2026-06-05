@@ -86,6 +86,7 @@ import type {
   GlobalUpgradeErrors,
   GlobalUpgradeResponses,
   IndexingStatusResponses,
+  IndexingWarningsResponses,
   InstanceDisposeResponses,
   KiloAudioTranscriptionsErrors,
   KiloAudioTranscriptionsResponses,
@@ -6087,6 +6088,36 @@ export class Indexing extends HeyApiClient {
     )
     return (options?.client ?? this.client).get<IndexingStatusResponses, unknown, ThrowOnError>({
       url: "/indexing/status",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get indexing warnings
+   *
+   * Retrieve code indexing warnings for the active project.
+   */
+  public warnings<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<IndexingWarningsResponses, unknown, ThrowOnError>({
+      url: "/indexing/warnings",
       ...options,
       ...params,
     })
