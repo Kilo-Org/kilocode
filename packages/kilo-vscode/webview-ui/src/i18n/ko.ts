@@ -140,8 +140,14 @@ export const dict = {
   "provider.connect.status.failed": "인증 실패: {{error}}",
   "provider.connect.apiKey.description":
     "{{provider}} API 키를 입력하여 계정을 연결하고 Kilo에서 {{provider}} 모델을 사용하세요.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "{{provider}} API 키",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API 키",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API 키가 필요합니다",
   "provider.connect.prompt.required": "{{field}} 항목은 필수입니다",
   "provider.connect.azure.endpointType.label": "Azure 엔드포인트 구성 선택",

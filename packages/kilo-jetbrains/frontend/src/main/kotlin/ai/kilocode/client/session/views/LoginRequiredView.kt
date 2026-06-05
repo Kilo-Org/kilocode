@@ -3,6 +3,7 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.views.base.BaseQuestionView
+import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -21,11 +22,12 @@ import javax.swing.JButton
 class LoginRequiredView(
     private val openProfile: () -> Unit,
     private val dismiss: () -> Unit,
+    selection: SessionSelection? = null,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, SessionView {
 
     override val sessionViewKind = SessionView.Kind.Default
 
-    private val card = BaseQuestionView()
+    private val card = BaseQuestionView(selection)
 
     private val ID_DISMISS = "dismiss"
     private val ID_OPEN = "open"

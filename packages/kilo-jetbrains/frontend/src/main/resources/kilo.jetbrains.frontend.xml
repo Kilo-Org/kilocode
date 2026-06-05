@@ -53,9 +53,9 @@
                      defaultValue="150"
                      restartRequired="false"
                      overrides="false"/>
-        <registryKey key="kilo.session.inactive.dispose"
-                     description="Dispose inactive session UI when switching sessions instead of retaining it in memory."
-                     defaultValue="false"
+        <registryKey key="kilo.session.inactive.disposeTimeoutMs"
+                     description="Milliseconds before hidden session UI is disposed after switching away."
+                     defaultValue="180000"
                      restartRequired="false"
                      overrides="false"/>
     </extensions>

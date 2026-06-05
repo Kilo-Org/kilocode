@@ -1,11 +1,11 @@
 ---
 title: "Auto Model"
-description: "Smart model routing that automatically selects the optimal AI model based on your current mode"
+description: "Smart model routing that selects an AI model for each Auto Model tier"
 ---
 
 # Auto Model
 
-Auto Model is a smart model routing system that automatically selects the optimal AI model based on the Kilo Code mode you're using. It comes in multiple tiers so you can balance cost and capability to fit your needs.
+Auto Model is a smart routing system that selects an underlying model for each request. Each tier uses its own routing strategy so you can balance cost and capability to fit your needs.
 
 | Tier | Best For | Pricing |
 |---|---|---|
@@ -34,7 +34,9 @@ The underlying models behind each Auto Model tier are updated server-side as bet
 - **Free** — Routes to the best available free models on OpenRouter, splitting traffic across them. Because free model availability shifts over time as providers change promotional periods, the mapping is updated server-side — you always get the best free option without having to track what's currently available. Quality will be lower than paid tiers, and the models may change over time.
 
 {% callout type="warning" title="Data handling for Auto Free" %}
-Auto Free may route your requests to providers that log prompts and outputs and use them to improve their services. In particular, it may route to NVIDIA's free endpoints, which are provided under the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf) — trial use only, not for production or sensitive data. Do not submit personal or confidential data when using Auto Free.
+Auto Free may route your requests to providers that log prompts and outputs and use them to improve their services. Do not submit personal or confidential data when using Auto Free. In particular, it may route to NVIDIA's free endpoints.
+
+For NVIDIA free endpoints (Super/Ultra/etc): Trial use only - do not submit personal or confidential data. Your use is logged for security purposes and to improve NVIDIA products and services. The logged session data for improvement purposes is not linked to your identity or any persistent identifier. For more information about our data processing practices, see our [Privacy Policy](https://www.nvidia.com/en-us/about-nvidia/privacy-policy/). By interacting with this endpoint, you consent to our collection, recording, and use of such information and the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf).
 {% /callout %}
 
 ## Benefits

@@ -136,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "Godkendelse mislykkedes: {{error}}",
   "provider.connect.apiKey.description":
     "Indtast din {{provider}} API-nøgle for at forbinde din konto og bruge {{provider}} modeller i Kilo.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "{{provider}} API-nøgle",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API-nøgle",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API-nøgle er påkrævet",
   "provider.connect.prompt.required": "{{field}} er påkrævet",
   "provider.connect.azure.endpointType.label": "Vælg Azure-slutpunktskonfiguration",

@@ -4,6 +4,7 @@ import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.GroupHeaderSeparator
 import com.intellij.ui.NewUI
@@ -32,6 +33,7 @@ internal class ModelPickerRenderer(
     private val favorites: () -> Set<String>,
 ) : JPanel(BorderLayout()), ListCellRenderer<ModelPickerRow> {
     companion object {
+        val DATA_COLLECTED: Icon = IconLoader.getIcon("/icons/book-open-check.svg", ModelPickerRenderer::class.java)
         val checked: Icon = AllIcons.Actions.Checked
         val empty: Icon = EmptyIcon.create(checked)
 
@@ -69,18 +71,18 @@ internal class ModelPickerRenderer(
         ModelText.freeBg(),
         JBColor.namedColor("Kilo.ModelPicker.freeBadgeForeground", JBColor.WHITE),
     )
-    private val warn = JBLabel(ModelPickerIcons.DATA_COLLECTED).apply {
+    private val badgeLabel = BadgeLabel(badge).apply {
+        border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
+    }
+    private val warn = JBLabel(DATA_COLLECTED).apply {
         toolTipText = ModelText.dataCollected()
+        border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
     }
     private val provider = JBLabel()
     private val head = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
         add(title)
-        add(BadgeLabel(badge).apply {
-            border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
-        })
-        add(warn.apply {
-            border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
-        })
+        add(warn)
+        add(badgeLabel)
         add(provider)
     }
     private val star = JBLabel().apply {
@@ -134,7 +136,7 @@ internal class ModelPickerRenderer(
         val item = value.item
         if (item == null) {
             title.append(value.emptyText, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, fg))
-            head.getComponent(1).isVisible = false
+            badgeLabel.isVisible = false
             warn.isVisible = false
             provider.isVisible = false
             star.icon = EmptyIcon.ICON_16
@@ -148,8 +150,8 @@ internal class ModelPickerRenderer(
         }
         title.append(name.model, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, fg))
 
-        head.getComponent(1).isVisible = item.free
         warn.isVisible = ModelText.collectsData(item)
+        badgeLabel.isVisible = item.free
         provider.isVisible = value.favorite
         provider.text = item.providerName
         provider.foreground = weak
@@ -169,7 +171,7 @@ internal class ModelPickerRenderer(
 
     internal fun starIcon(): Icon? = star.icon
 
-    internal fun badgeVisible(): Boolean = head.getComponent(1).isVisible
+    internal fun badgeVisible(): Boolean = badgeLabel.isVisible
 
     internal fun badgeText(): String = badge.text
 

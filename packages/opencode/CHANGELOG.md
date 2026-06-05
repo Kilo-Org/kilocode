@@ -1,5 +1,25 @@
 # @kilocode/cli
 
+## 7.3.33
+
+### Patch Changes
+
+- [#10935](https://github.com/Kilo-Org/kilocode/pull/10935) [`6cab5f1`](https://github.com/Kilo-Org/kilocode/commit/6cab5f18e76b5ab0f738c2e20e93f12f3679b5dc) - Prevent the macOS Apple Silicon CLI from failing to start because of malformed bundled exports.
+
+## 7.3.30
+
+### Patch Changes
+
+- [#10862](https://github.com/Kilo-Org/kilocode/pull/10862) [`c4de1ac`](https://github.com/Kilo-Org/kilocode/commit/c4de1acdf0aef967b5795fde006c6f61e16328f3) - Support reasoning with Mistral Medium 3.5 models, including the latest alias.
+
+- [#10895](https://github.com/Kilo-Org/kilocode/pull/10895) [`2e1945c`](https://github.com/Kilo-Org/kilocode/commit/2e1945c287971f26bec67b7e60de6c282a5c8865) - Allow plan approval submissions to complete after planning finishes.
+
+## 7.3.29
+
+### Patch Changes
+
+- [#10822](https://github.com/Kilo-Org/kilocode/pull/10822) [`8b1ee66`](https://github.com/Kilo-Org/kilocode/commit/8b1ee6628c7ee552814980465af7233522dd5528) - Preserve worktree routing for Kilo HTTP API clients and keep inherited task-subagent restrictions active.
+
 ## 7.3.28
 
 ### Patch Changes

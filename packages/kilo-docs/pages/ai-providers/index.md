@@ -33,6 +33,7 @@ Major AI companies offering powerful models via API:
 
 Run models on your own hardware for privacy and offline use:
 
+- **[Atomic Chat](/docs/ai-providers/atomic-chat)** - Local models with TurboQuant inference and auto-discovery in Kilo Code
 - **[Ollama](/docs/ai-providers/ollama)** - Easy local model management
 - **[LM Studio](/docs/ai-providers/lmstudio)** - Desktop app for local models
 - **[OpenAI Compatible](/docs/ai-providers/openai-compatible)** - Any OpenAI-compatible endpoint

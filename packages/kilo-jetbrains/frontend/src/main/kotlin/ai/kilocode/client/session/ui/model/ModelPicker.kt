@@ -5,6 +5,7 @@ import ai.kilocode.client.ui.PickerButton
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.openapi.ui.popup.PopupShowOptions
 import com.intellij.openapi.ui.popup.util.PopupUtil
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.DocumentAdapter
@@ -18,6 +19,7 @@ import com.intellij.ui.components.JBList
 import com.intellij.ui.popup.AbstractPopup
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import com.intellij.xml.util.XmlStringUtil
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Cursor
@@ -61,6 +63,11 @@ class ModelPicker : PickerButton() {
         override fun toString(): String = listOf(display, id, providerName).joinToString(" ")
     }
 
+    enum class Placement {
+        ABOVE,
+        BELOW,
+    }
+
     var onSelect: (Item) -> Unit = {}
     var onClear: () -> Unit = {}
     var favorites: () -> List<ModelSelectionDto> = { emptyList() }
@@ -68,6 +75,7 @@ class ModelPicker : PickerButton() {
     var allowEmpty: Boolean = false
     var emptyText: String = KiloBundle.message("settings.models.notSet")
     var includeSmall: Boolean = false
+    var placement: Placement = Placement.BELOW
 
     private var items: List<Item> = emptyList()
     private var selected: Item? = null
@@ -118,10 +126,10 @@ class ModelPicker : PickerButton() {
         }
         val item = selected ?: if (allowEmpty) null else items.firstOrNull()
         text = if (item == null && allowEmpty) "$emptyText ▾" else "${ModelText.sanitize(item?.display ?: items.first().display)} ▾"
-        icon = if (item?.let(ModelText::collectsData) == true) ModelPickerIcons.DATA_COLLECTED else null
+        icon = if (item?.let(ModelText::collectsData) == true) ModelPickerRenderer.DATA_COLLECTED else null
         horizontalTextPosition = SwingConstants.LEFT
         iconTextGap = JBUI.CurrentTheme.ActionsList.elementIconGap()
-        toolTipText = if (item?.let(ModelText::collectsData) == true) ModelText.dataCollected() else KiloBundle.message("model.picker.tooltip")
+        toolTipText = if (item?.let(ModelText::collectsData) == true) ModelText.dataCollectedTooltip() else KiloBundle.message("model.picker.tooltip")
         isEnabled = true
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
     }
@@ -303,7 +311,10 @@ class ModelPicker : PickerButton() {
             .setMovable(false)
             .createPopup()
 
-        popup.showUnderneathOf(this)
+        when (placement) {
+            Placement.ABOVE -> popup.show(PopupShowOptions.aboveComponent(this))
+            Placement.BELOW -> popup.showUnderneathOf(this)
+        }
         SwingUtilities.invokeLater {
             search.textEditor.requestFocusInWindow()
             search.selectText()
@@ -445,6 +456,11 @@ internal object ModelText {
     fun providerSort(id: String): Int = if (id == "kilo") 0 else 1
 
     fun dataCollected(): String = KiloBundle.message("model.picker.dataCollected")
+
+    fun dataCollectedTooltip(): String = XmlStringUtil.wrapInHtmlLines(
+        KiloBundle.message("model.picker.tooltip"),
+        KiloBundle.message("model.picker.dataCollected.current"),
+    )
 
     fun freeLabel(): String = KiloBundle.message("model.picker.free")
 
