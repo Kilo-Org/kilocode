@@ -59,6 +59,7 @@ function apply(dir: string, diff: Diff) {
       cwd: dir,
       stdout: "pipe",
       stderr: "pipe",
+      windowsHide: true,
     })
     return proc.exitCode === 0
   } finally {

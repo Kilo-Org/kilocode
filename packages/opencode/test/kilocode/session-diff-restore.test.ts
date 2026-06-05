@@ -17,6 +17,7 @@ function git(dir: string, args: string[]) {
     cwd: dir,
     stdout: "pipe",
     stderr: "pipe",
+    windowsHide: true,
   })
   if (proc.exitCode !== 0) {
     const text = new TextDecoder().decode(proc.stderr)
