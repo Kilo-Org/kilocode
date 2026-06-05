@@ -22,7 +22,6 @@ export function createAutoScroll(options: AutoScrollOptions) {
   let stopTimer: ReturnType<typeof setTimeout> | undefined
   let cleanup: (() => void) | undefined
   let userInitiated = false
-  let lastScrollTop: number | undefined
   let lastInteraction = 0
 
   const threshold = () => options.bottomThreshold ?? 10
@@ -65,7 +64,6 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
     // `scrollTop` assignment bypasses any CSS `scroll-behavior: smooth`.
     el.scrollTop = el.scrollHeight
-    lastScrollTop = el.scrollTop
   }
 
   const scrollToBottom = (force: boolean) => {
@@ -124,21 +122,17 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
     if (distance < threshold()) {
       if (store.userScrolled) setStore("userScrolled", false)
-      lastScrollTop = el.scrollTop
       return
     }
 
     if (!store.userScrolled && !byUser) {
-      // virtua fires programmatic scroll events as it measures virtualized
-      // items. Don't let those snap the view back to the bottom while the
-      // user is mid-gesture — the wheel event fires before the scroll event,
-      // so `recentlyInteracted()` is reliable here.
-      if (el.scrollTop < (lastScrollTop ?? el.scrollTop) || recentlyInteracted()) {
+      // Only explicit user input can pause following. Treat unclassified
+      // scroll events from virtualization or layout changes as programmatic.
+      if (recentlyInteracted()) {
         stop()
       } else {
         scrollToBottomNow("auto")
       }
-      lastScrollTop = el.scrollTop
       return
     }
 
@@ -224,7 +218,6 @@ export function createAutoScroll(options: AutoScrollOptions) {
         cleanup = undefined
       }
 
-      lastScrollTop = undefined
       scroll = el
 
       if (!el) return
