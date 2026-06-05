@@ -45,7 +45,8 @@ export function extractSessionDiffs(data: unknown): Diff[] {
 
 function safe(root: string, file: string) {
   const fp = path.resolve(root, file)
-  if (!fp.startsWith(root + path.sep)) return
+  const rel = path.relative(root, fp)
+  if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) return
   return fp
 }
 

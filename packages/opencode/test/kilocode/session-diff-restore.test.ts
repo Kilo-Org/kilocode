@@ -90,4 +90,18 @@ describe("session diff restore", () => {
     expect(result).toEqual({ applied: 1, skipped: 0, total: 1 })
     expect(fs.readFileSync(path.join(dir, "src/index.ts"), "utf8")).toBe("after\n")
   })
+
+  test("skips snapshot diffs outside the workspace", () => {
+    const dir = tmp()
+    const out = path.join(path.dirname(dir), `${path.basename(dir)}-outside.txt`)
+    fs.rmSync(out, { force: true })
+
+    const result = restoreSessionDiffs({
+      directory: dir,
+      diffs: [{ file: `../${path.basename(out)}`, after: "outside", additions: 1, deletions: 0, status: "modified" }],
+    })
+
+    expect(result).toEqual({ applied: 0, skipped: 1, total: 1 })
+    expect(fs.existsSync(out)).toBe(false)
+  })
 })
