@@ -55,6 +55,7 @@ export const AiProvidersNav: NavSection[] = [
     links: [
       { href: "/ai-providers/ollama", children: "Ollama" },
       { href: "/ai-providers/lmstudio", children: "LM Studio" },
+      { href: "/ai-providers/atomic-chat", children: "Atomic Chat" },
       { href: "/ai-providers/vscode-lm", children: "VS Code LM API" },
       {
         href: "/ai-providers/openai-compatible",

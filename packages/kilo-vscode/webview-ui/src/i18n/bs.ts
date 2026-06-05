@@ -136,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "Autorizacija nije uspjela: {{error}}",
   "provider.connect.apiKey.description":
     "Unesi svoj {{provider}} API ključ da povežeš račun i koristiš {{provider}} modele u Kilo-u.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "{{provider}} API ključ",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API ključ",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API ključ je obavezan",
   "provider.connect.prompt.required": "{{field}} je obavezno",
   "provider.connect.azure.endpointType.label": "Odaberite konfiguraciju krajnje tačke za Azure",

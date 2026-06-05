@@ -136,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "Ошибка авторизации: {{error}}",
   "provider.connect.apiKey.description":
     "Введите ваш API ключ {{provider}} для подключения аккаунта и использования моделей {{provider}} в Kilo.",
+  "provider.connect.apiKey.description.local":
+    "Подключение к локальному серверу {{provider}}. Оставьте ключ пустым, если сервер его не требует (обычно для localhost).",
+  "provider.connect.atomicChat.description":
+    "Подключение к Atomic Chat на этом компьютере (по умолчанию http://127.0.0.1:1337). Для локального API ключ не нужен — запустите Atomic Chat, загрузите модель и нажмите Connect.",
   "provider.connect.apiKey.label": "{{provider}} API ключ",
+  "provider.connect.apiKey.label.optional": "{{provider}} API ключ (необязательно)",
   "provider.connect.apiKey.placeholder": "API ключ",
+  "provider.connect.apiKey.placeholder.optional": "Пусто для локального сервера",
   "provider.connect.apiKey.required": "API ключ обязателен",
   "provider.connect.prompt.required": "{{field}} обязательно",
   "provider.connect.azure.endpointType.label": "Выберите конфигурацию конечной точки Azure",

@@ -193,6 +193,14 @@ const allTargets: {
   },
 ]
 
+// kilocode_change start - isolate target builds because repeated Bun.build calls can corrupt shared chunks
+const arg = process.argv.find((item) => item.startsWith("--target="))
+const value = arg?.slice("--target=".length)
+const selection = value !== undefined && /^(0|[1-9]\d*)$/.test(value) ? Number(value) : -1
+const isolated = selection >= 0 && selection < allTargets.length
+if (arg !== undefined && !isolated) throw new Error(`Invalid isolated build target: ${arg}`)
+// kilocode_change end
+
 const targets = singleFlag
   ? allTargets.filter((item) => {
       if (item.os !== process.platform || item.arch !== process.arch) {
@@ -213,10 +221,12 @@ const targets = singleFlag
       return true
     })
   : allTargets
+if (isolated) targets.splice(0, targets.length, allTargets[selection]!) // kilocode_change - select one target in child
 
-await $`rm -rf dist` // kilocode_change
-
-const kiloConsoleDist = await buildKiloConsole() // kilocode_change
+// kilocode_change start - isolated children reuse the parent's prepared output tree
+if (!isolated) await $`rm -rf dist`
+const kiloConsoleDist = isolated ? path.resolve(dir, "../kilo-console/dist") : await buildKiloConsole()
+// kilocode_change end
 
 const binaries: Record<string, string> = {}
 if (!skipInstall) {
@@ -234,6 +244,15 @@ for (const item of targets) {
   ]
     .filter(Boolean)
     .join("-")
+
+  // kilocode_change start - isolate Bun's shared-chunk state between cross-platform targets
+  if (!isolated && targets.length > 1) {
+    await $`${process.execPath} run script/build.ts --target=${allTargets.indexOf(item)} --skip-install`
+    binaries[name] = Script.version
+    continue
+  }
+  // kilocode_change end
+
   console.log(`building ${name}`)
   await $`mkdir -p dist/${name}/bin`
 
@@ -331,6 +350,8 @@ for (const item of targets) {
         version: Script.version,
         os: [item.os],
         cpu: [item.arch],
+        keywords: pkg.keywords, // kilocode_change
+        private: pkg.private, // kilocode_change
         // kilocode_change start
         repository: {
           type: "git",
@@ -344,6 +365,8 @@ for (const item of targets) {
   )
   binaries[name] = Script.version
 }
+
+if (isolated) process.exit(0) // kilocode_change - isolated target children leave archive upload to parent
 
 if (Script.release) {
   const archives: string[] = [] // kilocode_change

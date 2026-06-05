@@ -74,7 +74,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
     working: () => session.status() !== "idle",
   })
 
-  // Resume auto-scroll when a bottom-dock permission/question is dismissed
+  // Explicit output-producing actions resume auto-scroll before appending.
   const onResumeAutoScroll = () => autoScroll.resume()
   window.addEventListener("resumeAutoScroll", onResumeAutoScroll)
   onCleanup(() => window.removeEventListener("resumeAutoScroll", onResumeAutoScroll))

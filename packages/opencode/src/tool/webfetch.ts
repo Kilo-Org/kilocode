@@ -3,7 +3,7 @@ import { HttpClient, HttpClientRequest } from "effect/unstable/http"
 import * as Tool from "./tool"
 import TurndownService from "turndown"
 import DESCRIPTION from "./webfetch.txt"
-import { isImageAttachment } from "@/util/media"
+import { isIconMimeType, isImageAttachment } from "@/util/media" // kilocode_change
 import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
 
 const MAX_RESPONSE_SIZE = 5 * 1024 * 1024 // 5MB
@@ -108,7 +108,7 @@ export const WebFetchTool = Tool.define(
           const contentType = response.headers["content-type"] || ""
           const mime = contentType.split(";")[0]?.trim().toLowerCase() || ""
           const title = `${url} (${contentType})` // kilocode_change
-
+          if (isIconMimeType(mime)) throw new Error(`Unsupported image format: ${mime}`) // kilocode_change
           if (isImageAttachment(mime)) {
             const base64Content = Buffer.from(arrayBuffer).toString("base64")
             return {

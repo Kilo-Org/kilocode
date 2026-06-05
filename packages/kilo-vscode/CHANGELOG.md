@@ -1,5 +1,13 @@
 # kilo-code
 
+## 7.3.33
+
+### Patch Changes
+
+- [#10935](https://github.com/Kilo-Org/kilocode/pull/10935) [`6cab5f1`](https://github.com/Kilo-Org/kilocode/commit/6cab5f18e76b5ab0f738c2e20e93f12f3679b5dc) - Prevent the macOS Apple Silicon CLI from failing to start because of malformed bundled exports.
+
+## 7.3.30
+
 ## 7.3.29
 
 ### Patch Changes

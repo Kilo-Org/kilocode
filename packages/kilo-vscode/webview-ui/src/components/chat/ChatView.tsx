@@ -5,7 +5,7 @@
  * Main chat container that combines all chat components
  */
 
-import { type Component, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount } from "solid-js"
+import { type Component, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
@@ -77,17 +77,6 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   // Session is busy only because a question tool call is pending — prompt should behave as idle
   const questioning = () => isQuestioning(blocked(), familyQuestions().length)
   const dock = () => !props.readonly || !!permissionRequest()
-
-  // When a bottom-dock permission disappears while the session is busy,
-  // the scroll container grows taller. Dispatch a custom event so MessageList can
-  // resume auto-scroll.
-  createEffect(
-    on(blocked, (isBlocked, wasBlocked) => {
-      if (wasBlocked && !isBlocked && !idle()) {
-        window.dispatchEvent(new CustomEvent("resumeAutoScroll"))
-      }
-    }),
-  )
 
   onMount(() => {
     if (props.readonly) return
