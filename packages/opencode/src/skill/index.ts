@@ -1,6 +1,8 @@
+// kilocode_change start
 import path from "node:path"
 import os from "node:os"
 import { pathToFileURL } from "node:url"
+// kilocode_change end
 import z from "zod"
 import { Effect, Layer, Context, Schema } from "effect"
 import { zod } from "@/util/effect-zod"
@@ -8,6 +10,7 @@ import { withStatics } from "@/util/schema"
 import { NamedError } from "@opencode-ai/core/util/error"
 import type { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
+import { AppRuntime } from "@/effect/app-runtime" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
@@ -320,10 +323,9 @@ export async function remove(location: string) {
   const resolved = path.resolve(location)
 
   // SEC-001: Enforce path-traversal guard.
-  const cfgDirs = await Config.directories().catch((err) => {
-    log.warn("config runtime unavailable — path-traversal guard limited to cwd", { err })
-    return [] as string[]
-  })
+  const cfgDirs = await AppRuntime.runPromise(
+    Config.Service.use((svc) => svc.directories()).pipe(Effect.catch(() => Effect.succeed([] as string[]))),
+  )
   const allowedDirs = [...cfgDirs, os.homedir(), process.cwd()]
   if (!isPathWithinAllowlist(path.dirname(resolved), allowedDirs)) {
     throw new Error(`refusing to remove skill outside allowed directories: ${resolved}`)

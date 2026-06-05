@@ -1,3 +1,4 @@
+// kilocode_change - new file
 /**
  * Path safety utilities — Kilo-specific.
  *
