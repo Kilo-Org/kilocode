@@ -671,7 +671,10 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         enabled: () => {
           const current = promptRef.current
           if (!current?.focused) return true
-          return current.current.input === ""
+          const input = current.current.input
+          // kilocode_change: also reachable when in slash-command mode so /exit
+          // still appears in the slash autocomplete even when the prompt has input
+          return input === "" || input.startsWith("/")
         },
         run: () => exit(),
         category: "System",
