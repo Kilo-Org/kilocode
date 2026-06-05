@@ -51,9 +51,9 @@ open class RoundedContentPanel(
         super.paintComponent(g)
     }
 
-    protected open fun contentColor(): Color = UiStyle.Colors.cardBg()
+    protected open fun contentColor(): Color = UiStyle.Colors.contentBackground()
 
-    protected open fun outlineColor(): Color? = UiStyle.Colors.cardBorder()
+    protected open fun outlineColor(): Color? = UiStyle.Colors.contentBorder()
 
     protected open fun outlineWidth(): Int = JBUI.scale(1)
 

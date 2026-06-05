@@ -2,6 +2,7 @@ import { createEffect, createMemo, createResource, createSignal, For, Show } fro
 import { A } from "@solidjs/router"
 import { Card } from "@kilocode/kilo-web-ui/card"
 import { SearchField } from "../../components/SearchField"
+import { LoadingScreen } from "../../components/LoadingScreen"
 import {
   discover,
   forgetCached,
@@ -131,15 +132,11 @@ export function ProjectsRoute() {
         </header>
 
         <Show when={!query() && discoverable()}>
-          <Card class="banner" variant="info">
-            Discovering Kilo server...
-          </Card>
+          <LoadingScreen variant="fullscreen" />
         </Show>
 
         <Show when={items.loading && !items()}>
-          <Card class="banner" variant="info">
-            Loading projects...
-          </Card>
+          <LoadingScreen variant="fullscreen" />
         </Show>
 
         <Show when={items.error}>

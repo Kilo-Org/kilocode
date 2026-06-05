@@ -1,6 +1,9 @@
 package ai.kilocode.client.session.controller
 
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
@@ -20,6 +23,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
         super.setUp()
         // Set a pre-existing session in the fake API
         rpc.session = rpc.session.copy(id = "ses_test")
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
     }
 
     fun `test pending permission is recovered on history load`() {
@@ -32,7 +36,6 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             )
         )
 
-        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()
@@ -52,7 +55,6 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             )
         )
 
-        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()
@@ -72,7 +74,6 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             )
         )
 
-        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()
@@ -98,7 +99,6 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             )
         )
 
-        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()

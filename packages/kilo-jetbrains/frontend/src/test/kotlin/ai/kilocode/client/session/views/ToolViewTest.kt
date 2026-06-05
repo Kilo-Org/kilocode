@@ -74,7 +74,7 @@ class ToolViewTest : BasePlatformTestCase() {
         assertFalse(view.isExpanded())
         assertTrue(view.hasToggle())
         assertFalse(view.bodyVisible())
-        assertTrue(view.bodyCreated())
+        assertFalse(view.bodyCreated())
         view.toggle()
         assertTrue(view.bodyVisible())
         assertTrue(view.bodyCreated())
@@ -122,14 +122,14 @@ class ToolViewTest : BasePlatformTestCase() {
         assertTrue(view.bodyVisible())
     }
 
-    fun `test tool reuses eager body after collapse and expand`() {
+    fun `test tool creates lazy body once after collapse and expand`() {
         val t = tool("p1", "bash", ToolExecState.COMPLETED).also {
             it.input = mapOf("command" to "pwd")
             it.output = "/tmp"
         }
         val view = ToolView(t)
 
-        assertTrue(view.bodyCreated())
+        assertFalse(view.bodyCreated())
         view.toggle()
         val font = view.bodyFont()
         view.toggle()
@@ -139,7 +139,7 @@ class ToolViewTest : BasePlatformTestCase() {
         assertTrue(view.bodyVisible())
     }
 
-    fun `test collapsed update keeps eager tool body detached`() {
+    fun `test collapsed update keeps lazy tool body uncreated`() {
         val view = ToolView(tool("p1", "bash", ToolExecState.RUNNING).also {
             it.input = mapOf("command" to "pwd")
             it.output = "/tmp"
@@ -150,7 +150,7 @@ class ToolViewTest : BasePlatformTestCase() {
             it.output = "/home"
         })
 
-        assertTrue(view.bodyCreated())
+        assertFalse(view.bodyCreated())
         assertEquals("$ pwd\n\n/home", view.bodyText())
     }
 
@@ -326,12 +326,12 @@ class ToolViewTest : BasePlatformTestCase() {
         Tool(id, name, toolKind(name)).also { it.state = state; it.title = title }
 
     private fun assertEditorFont(font: java.awt.Font, style: SessionEditorStyle) {
-        assertEquals(style.editorFamily, font.name)
+        assertEquals(style.transcriptFont.name, font.name)
         assertEquals(style.editorSize, font.size)
     }
 
     private fun assertSmallEditorFont(font: java.awt.Font, style: SessionEditorStyle) {
-        assertEquals(style.editorFamily, font.name)
+        assertEquals(style.smallEditorFont.name, font.name)
         assertTrue(font.size < style.editorSize)
     }
 }

@@ -68,6 +68,39 @@ describe("daemon manager", () => {
     expect(Daemon.clean(["--cwd=packages/opencode", "--conditions=browser"])).toStrictEqual(["--conditions=browser"])
   })
 
+  test("does not forward bundled bun entrypoints to the daemon child", () => {
+    const proc = {
+      argv: ["/tmp/kilo", "/$bunfs/root/src/index.js", "daemon", "start"],
+      execArgv: ["--user-agent=kilo/test", "--use-system-ca", "--"],
+      execPath: "/tmp/kilo",
+    }
+    expect(Daemon.command(undefined, proc)).toStrictEqual(["/tmp/kilo"])
+    expect(
+      Daemon.command(undefined, {
+        ...proc,
+        argv: ["C:/tmp/kilo.exe", "B:/~BUN/root/src/index.js", "daemon", "start"],
+        execPath: "C:/tmp/kilo.exe",
+      }),
+    ).toStrictEqual(["C:/tmp/kilo.exe"])
+    expect(
+      Daemon.command(undefined, {
+        ...proc,
+        argv: ["C:/tmp/kilo.exe", "b:\\~BUN\\root\\src\\index.js", "daemon", "start"],
+        execPath: "C:/tmp/kilo.exe",
+      }),
+    ).toStrictEqual(["C:/tmp/kilo.exe"])
+  })
+
+  test("forwards source entrypoints to the daemon child", () => {
+    expect(
+      Daemon.command(undefined, {
+        argv: ["/tmp/bun", "/tmp/kilo/src/index.ts", "daemon", "start"],
+        execArgv: ["--conditions=browser"],
+        execPath: "/tmp/bun",
+      }),
+    ).toStrictEqual(["/tmp/bun", "--conditions=browser", "/tmp/kilo/src/index.ts"])
+  })
+
   test("reuses one daemon across caller directories", async () => {
     await using tmp = await tmpdir()
     const env = opts(tmp.path)

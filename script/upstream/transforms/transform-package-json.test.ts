@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { fixCatalog, fixScripts, mergeWithNewestVersions } from "./transform-package-json"
+import { fixCatalog, fixMetadata, fixScripts, mergeWithNewestVersions } from "./transform-package-json"
 
 test("fixScripts preserves Kilo-only root scripts from base", () => {
   const ours = {
@@ -83,6 +83,17 @@ test("fixCatalog is a no-op when catalog is absent", () => {
   const changes: string[] = []
   fixCatalog(pkg, "package.json", changes)
   expect(changes.length).toBe(0)
+})
+
+test("fixMetadata preserves opencode publish metadata from base", () => {
+  const ours = { keywords: ["cli", "kilo", "opencode"], private: false }
+  const pkg: Record<string, unknown> = { keywords: ["opencode"], private: true }
+  const changes: string[] = []
+  fixMetadata(pkg, "packages/opencode/package.json", ours, changes)
+  expect(pkg.keywords).toEqual(ours.keywords)
+  expect(pkg.private).toBe(false)
+  expect(changes).toContain("keywords: preserved from base")
+  expect(changes).toContain("private: preserved from base")
 })
 
 test("mergeWithNewestVersions preserves ours' key order so kilo-only deps don't relocate", () => {

@@ -2,7 +2,10 @@ import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/middleware/instance-context"
-import { WorkspaceRoutingMiddleware } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
+import {
+  WorkspaceRoutingMiddleware,
+  WorkspaceRoutingQuery,
+} from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 
 const root = "/kilocode/session-import"
@@ -227,6 +230,7 @@ export const SessionImportApi = HttpApi.make("session-import")
     HttpApiGroup.make("session-import")
       .add(
         HttpApiEndpoint.post("project", SessionImportPaths.project, {
+          query: WorkspaceRoutingQuery,
           payload: ProjectSchema,
           success: described(ResultSchema, "Project import result"),
           error: HttpApiError.BadRequest,
@@ -238,6 +242,7 @@ export const SessionImportApi = HttpApi.make("session-import")
           }),
         ),
         HttpApiEndpoint.post("session", SessionImportPaths.session, {
+          query: WorkspaceRoutingQuery,
           payload: SessionSchema,
           success: described(ResultSchema, "Session import result"),
           error: HttpApiError.BadRequest,
@@ -249,6 +254,7 @@ export const SessionImportApi = HttpApi.make("session-import")
           }),
         ),
         HttpApiEndpoint.post("message", SessionImportPaths.message, {
+          query: WorkspaceRoutingQuery,
           payload: MessageSchema,
           success: described(ResultSchema, "Message import result"),
           error: HttpApiError.BadRequest,
@@ -260,6 +266,7 @@ export const SessionImportApi = HttpApi.make("session-import")
           }),
         ),
         HttpApiEndpoint.post("part", SessionImportPaths.part, {
+          query: WorkspaceRoutingQuery,
           payload: PartSchema,
           success: described(ResultSchema, "Part import result"),
           error: HttpApiError.BadRequest,

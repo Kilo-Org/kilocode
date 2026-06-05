@@ -15,6 +15,7 @@ import ai.kilocode.jetbrains.api.model.ConfigAgent
 import ai.kilocode.jetbrains.api.model.KiloProfile200Response
 import ai.kilocode.rpc.dto.AgentConfigDto
 import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.KiloAppRpcApi
 import ai.kilocode.rpc.dto.ConfigWarningDto
 import ai.kilocode.rpc.dto.DeviceAuthDto
@@ -83,6 +84,11 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
     override suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto {
         app.requireReady()
         return app.models.variant(update)
+    }
+
+    override suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto {
+        app.requireReady()
+        return appStateDto(app.updateConfig(patch))
     }
 
     override suspend fun refreshProfile(): ProfileDto? = app.refreshProfile()?.let(::profileDto)
@@ -169,6 +175,9 @@ private fun warning(w: ConfigWarning) = ConfigWarningDto(
 
 private fun config(c: Config) = ConfigDto(
     model = c.model,
+    smallModel = c.smallModel,
+    subagentModel = c.subagentModel,
+    subagentVariant = c.subagentVariant,
     agent = agents(c.agent),
 )
 

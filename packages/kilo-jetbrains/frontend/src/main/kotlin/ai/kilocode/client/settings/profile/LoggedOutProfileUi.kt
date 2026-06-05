@@ -7,6 +7,7 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.ide.CopyPasteManager
+import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.SimpleColoredComponent
@@ -124,6 +125,12 @@ internal class LoggedOutProfileUi(
         foreground = UiStyle.Colors.weak()
     }
 
+    private val logoLabel = JBLabel(IconLoader.getIcon("/icons/kilo-profile.svg", LoggedOutProfileUi::class.java)).apply {
+        name = "kilo.profile.logo.loggedOut"
+        horizontalAlignment = SwingConstants.CENTER
+        accessibleContext.accessibleName = KiloBundle.message("settings.kilo.displayName")
+    }
+
     private val errLabel = JBLabel().apply {
         foreground = UiStyle.Colors.errorLabelForeground()
         horizontalAlignment = SwingConstants.CENTER
@@ -179,11 +186,12 @@ internal class LoggedOutProfileUi(
 
     private fun emptyCard(): JPanel {
         val p = padded()
+        p.add(logoLabel, gbc(0).centered())
         p.add(JBLabel(KiloBundle.message("profile.notLoggedIn")).apply {
             foreground = UiStyle.Colors.weak()
             horizontalAlignment = SwingConstants.CENTER
-        }, gbc(0))
-        p.add(loginBtn, gbc(1, UiStyle.Gap.sm()).centered())
+        }, gbc(1, UiStyle.Gap.pad()))
+        p.add(loginBtn, gbc(2, UiStyle.Gap.sm()).centered())
         return p
     }
 

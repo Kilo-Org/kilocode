@@ -42,7 +42,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
         (item, id) => Object.keys(item.models).length > 0 || id in connected || failedSet.has(id),
       )
       return {
-        all: Object.values(validProviders),
+        all: Object.values(validProviders).map(Provider.toPublicInfo),
         default: Provider.defaultModelIDs(pickBy(validProviders, (item) => Object.keys(item.models).length > 0)),
         connected: Object.keys(connected),
         failed,

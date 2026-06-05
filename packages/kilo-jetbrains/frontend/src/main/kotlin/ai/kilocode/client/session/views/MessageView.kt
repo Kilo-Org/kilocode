@@ -8,9 +8,12 @@ import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.util.Disposer
 import com.intellij.util.ui.JBUI
 import java.awt.Graphics
 import java.awt.Graphics2D
@@ -32,9 +35,10 @@ class MessageView(
     private val openFile: (String) -> Unit,
     private var style: SessionEditorStyle = SessionEditorStyle.current(),
     private val openUrl: (String) -> Unit = {},
+    private val selection: SessionSelection? = null,
 ) : ai.kilocode.client.session.ui.SessionLayoutPanel(
     JBUI.scale(SessionUiStyle.SessionLayout.GAP),
-), SessionEditorStyleTarget, SessionView {
+), Disposable, SessionEditorStyleTarget, SessionView {
 
     constructor(msg: Message, openFile: (String) -> Unit) : this(msg, openFile, SessionEditorStyle.current())
 
@@ -49,11 +53,7 @@ class MessageView(
     init {
         isOpaque = false
         if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = style.editorScheme.defaultBackground
-        border = if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) {
-            userBorder()
-        } else {
-            assistantBorder()
-        }
+        border = assistantBorder()
 
         // Populate content that already exists (e.g. after loadHistory)
         for ((_, content) in msg.parts) {
@@ -84,6 +84,7 @@ class MessageView(
             val stale = parts.remove(content.id)
             if (stale != null) {
                 remove(stale)
+                Disposer.dispose(stale)
                 syncBorder()
                 refresh()
             }
@@ -111,6 +112,7 @@ class MessageView(
         val at = components.indexOfFirst { it === existing }.takeIf { it >= 0 } ?: componentCount
         parts.remove(content.id)
         remove(existing)
+        Disposer.dispose(existing)
         val view = view(content)
         view.applyStyle(style)
         parts[content.id] = view
@@ -123,6 +125,7 @@ class MessageView(
     fun removePart(contentId: String) {
         val view = parts.remove(contentId) ?: return
         remove(view)
+        Disposer.dispose(view)
         syncBorder()
         refresh()
     }
@@ -146,7 +149,10 @@ class MessageView(
      * Called only when the hidden ref changes to avoid unnecessary rebuilds.
      */
     private fun rebuildParts() {
-        parts.values.forEach { remove(it) }
+        parts.values.forEach {
+            remove(it)
+            Disposer.dispose(it)
+        }
         parts.clear()
         for ((_, content) in msg.parts) {
             if (content is StepFinish) continue
@@ -166,16 +172,16 @@ class MessageView(
     }
 
     private fun view(content: Content) = if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) {
-        ViewFactory.createUser(content, openFile, openUrl)
+        ViewFactory.createUser(content, openFile, openUrl, selection)
     } else {
-        ViewFactory.create(content, openFile, openUrl)
+        ViewFactory.create(content, openFile, openUrl, selection)
     }
 
     /** Append a streaming delta to the renderer for [contentId]. */
-    fun appendDelta(contentId: String, delta: String) {
-        val part = parts[contentId] ?: return
+    fun appendDelta(contentId: String, delta: String): Boolean {
+        val part = parts[contentId] ?: return false
         part.appendDelta(delta)
-        refresh()
+        return true
     }
 
     /** Look up a renderer by part id. */
@@ -192,6 +198,15 @@ class MessageView(
         if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = style.editorScheme.defaultBackground
         for (view in parts.values) view.applyStyle(style)
         refresh()
+    }
+
+    override fun dispose() {
+        parts.values.forEach {
+            remove(it)
+            Disposer.dispose(it)
+        }
+        parts.clear()
+        hidden = null
     }
 
     override fun paintComponent(g: Graphics) {
@@ -219,11 +234,6 @@ class MessageView(
         revalidate()
         repaint()
     }
-
-    private fun userBorder() = JBUI.Borders.empty(
-        JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
-        JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
-    )
 
     private fun assistantBorder() = JBUI.Borders.empty()
 }

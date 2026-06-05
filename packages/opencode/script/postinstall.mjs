@@ -126,13 +126,24 @@ function findBinary() {
 }
 // kilocode_change end
 
-// kilocode_change start - copy tree-sitter WASM resources next to cached binary
+// kilocode_change start - copy runtime resources next to cached binary
 function copyTreeSitterResources(binaryPath) {
   const source = path.join(path.dirname(binaryPath), "tree-sitter")
   const target = path.join(__dirname, "bin", "tree-sitter")
   const runtime = path.join(source, "tree-sitter.wasm")
 
   if (!fs.existsSync(runtime)) return
+
+  fs.rmSync(target, { recursive: true, force: true })
+  fs.cpSync(source, target, { recursive: true })
+}
+
+function copyConsoleResources(binaryPath) {
+  const source = path.join(path.dirname(binaryPath), "console")
+  const target = path.join(__dirname, "bin", "console")
+  const index = path.join(source, "index.html")
+
+  if (!fs.existsSync(index)) return
 
   fs.rmSync(target, { recursive: true, force: true })
   fs.cpSync(source, target, { recursive: true })
@@ -155,6 +166,7 @@ function main() {
     fs.copyFileSync(binaryPath, target)
   }
   copyTreeSitterResources(binaryPath) // kilocode_change
+  copyConsoleResources(binaryPath) // kilocode_change
   fs.chmodSync(target, 0o755)
 }
 

@@ -83,8 +83,9 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
     const seen = new Set<string>()
     return (rawDiffs as SnapshotFileDiff[])
       .reduceRight<SnapshotFileDiff[]>((result, diff) => {
-        if (seen.has(diff.file)) return result
-        seen.add(diff.file)
+        const file = diff.file ?? ""
+        if (seen.has(file)) return result
+        seen.add(file)
         result.push(diff)
         return result
       }, [])

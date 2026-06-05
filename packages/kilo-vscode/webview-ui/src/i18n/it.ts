@@ -123,8 +123,14 @@ export const dict = {
   "provider.connect.status.failed": "Autorizzazione non riuscita: {{error}}",
   "provider.connect.apiKey.description":
     "Inserisci la tua API key {{provider}} per connettere l'account e usare i modelli {{provider}} in Kilo.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "API key {{provider}}",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API key",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API key obbligatoria",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen ti offre una selezione curata di modelli affidabili e ottimizzati per agenti di coding.",
@@ -151,7 +157,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.title": "{{provider}} disconnesso",
   "provider.disconnect.toast.disconnected.description": "I modelli {{provider}} non sono più disponibili.",
   "model.tag.free": "Gratis",
-  "model.tag.dataCollected": "Dati raccolti",
+  "model.tag.dataCollected": "I dati possono essere utilizzati per l'addestramento",
   "model.tag.latest": "Più recente",
   "model.group.recommended": "Consigliati",
   "model.group.favorites": "Preferiti",

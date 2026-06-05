@@ -1,5 +1,5 @@
-import { afterEach, describe, expect } from "bun:test"
-import { Effect, Layer } from "effect"
+import { afterEach, describe, expect, test } from "bun:test"
+import { Effect, Exit, Layer } from "effect"
 import { Agent } from "../../src/agent/agent"
 import { Config } from "../../src/config/config"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
@@ -10,6 +10,7 @@ import { MessageID, PartID } from "../../src/session/schema"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Provider } from "../../src/provider/provider"
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
+import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
 import { Truncate } from "../../src/tool/truncate"
 import { ToolRegistry } from "../../src/tool/registry"
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
@@ -190,6 +191,110 @@ describe("Kilo task nesting", () => {
           },
         },
       },
+    ),
+  )
+
+  test("preserves inherited restrictions while refreshing prompt tool toggles", () => {
+    const permission = KiloSessionPrompt.mergeToolPermissions({
+      existing: [
+        { permission: "bash", pattern: "*", action: "deny" },
+        { permission: "edit", pattern: "*", action: "deny" },
+      ],
+      toggles: [
+        { permission: "task", pattern: "*", action: "deny" },
+        { permission: "edit", pattern: "*", action: "allow" },
+      ],
+    })
+
+    expect(permission).toEqual([
+      { permission: "bash", pattern: "*", action: "deny" },
+      { permission: "task", pattern: "*", action: "deny" },
+      { permission: "edit", pattern: "*", action: "allow" },
+    ])
+  })
+
+  it.live("refreshes inherited restrictions when resuming a task child", () =>
+    provideTmpdirInstance(() =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const { chat, assistant } = yield* seed()
+        yield* sessions.setPermission({
+          sessionID: chat.id,
+          permission: [{ permission: "bash", pattern: "*", action: "deny" }],
+        })
+        const child = yield* sessions.create({ parentID: chat.id, title: "Existing child" })
+        const tool = yield* TaskTool
+        const def = yield* tool.init()
+
+        const exec = () =>
+          def.execute(
+            {
+              description: "inspect bug",
+              prompt: "look into the cache key path",
+              subagent_type: "explore",
+              task_id: child.id,
+            },
+            {
+              sessionID: chat.id,
+              messageID: assistant.id,
+              agent: "build",
+              abort: new AbortController().signal,
+              extra: { promptOps: stubOps() },
+              messages: [],
+              metadata: () => Effect.void,
+              ask: () => Effect.void,
+            },
+          )
+
+        yield* exec()
+        const first = yield* sessions.get(child.id)
+        const count = first.permission?.filter((rule) => rule.permission === "bash").length
+        yield* exec()
+
+        const resumed = yield* sessions.get(child.id)
+        expect(resumed.permission).toEqual(
+          expect.arrayContaining([{ permission: "bash", pattern: "*", action: "deny" }]),
+        )
+        expect(count).toBeGreaterThan(0)
+        expect(resumed.permission?.filter((rule) => rule.permission === "bash")).toHaveLength(count ?? 0)
+      }),
+    ),
+  )
+
+  it.live("rejects task_id from a different parent session", () =>
+    provideTmpdirInstance(() =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const foreign = yield* sessions.create({ title: "Foreign parent" })
+        const child = yield* sessions.create({ parentID: foreign.id, title: "Foreign child" })
+        const { chat, assistant } = yield* seed()
+        const tool = yield* TaskTool
+        const def = yield* tool.init()
+
+        const exit = yield* def
+          .execute(
+            {
+              description: "inspect bug",
+              prompt: "look into the cache key path",
+              subagent_type: "explore",
+              task_id: child.id,
+            },
+            {
+              sessionID: chat.id,
+              messageID: assistant.id,
+              agent: "build",
+              abort: new AbortController().signal,
+              extra: { promptOps: stubOps() },
+              messages: [],
+              metadata: () => Effect.void,
+              ask: () => Effect.void,
+            },
+          )
+          .pipe(Effect.exit)
+
+        expect(Exit.isFailure(exit)).toBe(true)
+        expect(yield* sessions.children(chat.id)).toHaveLength(0)
+      }),
     ),
   )
 })

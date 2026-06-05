@@ -331,6 +331,8 @@ for (const item of targets) {
         version: Script.version,
         os: [item.os],
         cpu: [item.arch],
+        keywords: pkg.keywords, // kilocode_change
+        private: pkg.private, // kilocode_change
         // kilocode_change start
         repository: {
           type: "git",

@@ -1,6 +1,7 @@
 package ai.kilocode.client.settings
 
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
+import ai.kilocode.client.settings.models.ModelsConfigurable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.SearchableConfigurable
@@ -20,6 +21,10 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
     fun `test child profile id matches xml registration`() {
         // Verify the constants used in XML registrations are stable
         assertEquals("ai.kilocode.jetbrains.settings.profile", UserProfileConfigurable.ID)
+    }
+
+    fun `test child models id matches xml registration`() {
+        assertEquals("ai.kilocode.jetbrains.settings.models", ModelsConfigurable.ID)
     }
 
     fun `test root implements SearchableConfigurable but not Parent`() {
@@ -55,6 +60,24 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
                 "expected a link labeled 'User Profile'",
                 links.any { it.text == "User Profile" }
             )
+        }
+    }
+
+    fun `test createComponent contains Models link`() {
+        val cfg = KiloSettingsConfigurable()
+        edt {
+            val panel = cfg.createComponent()
+            val links = links(panel as Container)
+            assertTrue("expected a link labeled 'Models'", links.any { it.text == "Models" })
+        }
+    }
+
+    fun `test profile link appears before models link`() {
+        val cfg = KiloSettingsConfigurable()
+        edt {
+            val panel = cfg.createComponent()
+            val labels = links(panel as Container).map { it.text }
+            assertTrue("User Profile should appear before Models", labels.indexOf("User Profile") < labels.indexOf("Models"))
         }
     }
 
