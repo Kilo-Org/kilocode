@@ -197,7 +197,9 @@
 
 [data-slot="user-message-text"] [data-highlight="file"][data-clickable] {
   cursor: pointer;
-  transition: background-color 0.15s, box-shadow 0.15s;
+  transition:
+    background-color 0.15s,
+    box-shadow 0.15s;
 }
 
 [data-slot="user-message-text"] [data-highlight="file"][data-clickable]:hover {

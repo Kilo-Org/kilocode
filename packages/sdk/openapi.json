@@ -2176,6 +2176,54 @@
         ]
       }
     },
+    "/vcs/status": {
+      "get": {
+        "tags": ["instance"],
+        "operationId": "vcs.status",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "VCS status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VcsFileStatus"
+                  },
+                  "description": "VCS status"
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieve changed files in the current working tree without patches.",
+        "summary": "Get VCS status",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.vcs.status({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/vcs/diff": {
       "get": {
         "tags": ["instance"],
@@ -2229,6 +2277,128 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.vcs.diff({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/vcs/diff/raw": {
+      "get": {
+        "tags": ["instance"],
+        "operationId": "vcs.diff.raw",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Raw VCS diff",
+            "content": {
+              "text/x-diff; charset=utf-8": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieve a raw patch for current uncommitted changes.",
+        "summary": "Get raw VCS diff",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.vcs.diff.raw({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/vcs/apply": {
+      "post": {
+        "tags": ["instance"],
+        "operationId": "vcs.apply",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "VCS patch applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "applied": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["applied"],
+                  "additionalProperties": false,
+                  "description": "VCS patch applied"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VcsApplyError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VcsApplyError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Apply a raw patch to the current working tree.",
+        "summary": "Apply VCS patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "patch": {
+                    "type": "string"
+                  }
+                },
+                "required": ["patch"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.vcs.apply({\n  ...\n})"
           }
         ]
       }
@@ -3520,7 +3690,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -3673,7 +3843,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -3758,7 +3928,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -4917,7 +5087,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -4989,7 +5159,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -5060,7 +5230,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -5415,7 +5585,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -5553,6 +5723,10 @@
                   "variant": {
                     "type": "string"
                   },
+                  "snapshotInitialization": {
+                    "type": "string",
+                    "enum": ["wait"]
+                  },
                   "editorContext": {
                     "type": "object",
                     "properties": {
@@ -5687,7 +5861,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -5826,6 +6000,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
                 }
               }
             }
@@ -6079,7 +6263,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -6150,7 +6334,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -6224,7 +6408,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -6366,6 +6550,10 @@
                   },
                   "variant": {
                     "type": "string"
+                  },
+                  "snapshotInitialization": {
+                    "type": "string",
+                    "enum": ["wait"]
                   },
                   "editorContext": {
                     "type": "object",
@@ -6525,6 +6713,10 @@
                   },
                   "variant": {
                     "type": "string"
+                  },
+                  "snapshotInitialization": {
+                    "type": "string",
+                    "enum": ["wait"]
                   },
                   "parts": {
                     "type": "array",
@@ -7361,6 +7553,84 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.sync.replay({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/sync/steal": {
+      "post": {
+        "tags": ["sync"],
+        "operationId": "sync.steal",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session stolen into workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sessionID": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["sessionID"],
+                  "additionalProperties": false,
+                  "description": "Session stolen into workspace"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Update a session to belong to the current workspace through the sync event system.",
+        "summary": "Steal session into workspace",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionID": {
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionID"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.sync.steal({\n  ...\n})"
           }
         ]
       }
@@ -8399,7 +8669,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -8861,10 +9131,141 @@
         ]
       }
     },
-    "/experimental/workspace/{id}/session-restore": {
+    "/experimental/workspace/warp": {
       "post": {
         "tags": ["workspace"],
-        "operationId": "experimental.workspace.sessionRestore",
+        "operationId": "experimental.workspace.warp",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Session warped"
+          },
+          "400": {
+            "description": "WorkspaceWarpError | VcsApplyError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/WorkspaceWarpError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/VcsApplyError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Move a session's sync history into the target workspace, or detach it to the local project.",
+        "summary": "Warp session into workspace",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "sessionID": {
+                    "type": "string"
+                  },
+                  "copyChanges": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["id", "sessionID"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.warp({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/background-process": {
+      "get": {
+        "tags": ["background-process"],
+        "operationId": "backgroundProcess.list",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of background processes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BackgroundProcessInfo"
+                  },
+                  "description": "List of background processes"
+                }
+              }
+            }
+          }
+        },
+        "description": "List tracked background processes for the current instance.",
+        "summary": "List background processes",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.backgroundProcess.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/background-process/{processID}": {
+      "get": {
+        "tags": ["background-process"],
+        "operationId": "backgroundProcess.get",
         "parameters": [
           {
             "name": "directory",
@@ -8883,68 +9284,286 @@
             }
           },
           {
-            "name": "id",
+            "name": "processID",
             "in": "path",
             "schema": {
               "type": "string",
-              "pattern": "^wrk.*"
+              "pattern": "^bgp.*"
             },
             "required": true
           }
         ],
         "responses": {
           "200": {
-            "description": "Session replay started",
+            "description": "Background process info",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "total": {
-                      "type": "integer",
-                      "minimum": 0
-                    }
-                  },
-                  "required": ["total"],
-                  "additionalProperties": false,
-                  "description": "Session replay started"
+                  "$ref": "#/components/schemas/BackgroundProcessInfo"
                 }
               }
             }
           },
-          "400": {
-            "description": "Bad request",
+          "404": {
+            "description": "Not found",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
+                  "$ref": "#/components/schemas/NotFoundError"
                 }
               }
             }
           }
         },
-        "description": "Replay a session's sync events into the target workspace in batches.",
-        "summary": "Restore session into workspace",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "sessionID": {
-                    "type": "string"
-                  }
-                },
-                "required": ["sessionID"],
-                "additionalProperties": false
+        "description": "Get status and retained output for one background process.",
+        "summary": "Get background process",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.backgroundProcess.get({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/background-process/{processID}/logs": {
+      "get": {
+        "tags": ["background-process"],
+        "operationId": "backgroundProcess.logs",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "processID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^bgp.*"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Background process logs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackgroundProcessLogs"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
               }
             }
           }
         },
+        "description": "Get the retained output tail for one background process.",
+        "summary": "Get background process logs",
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.sessionRestore({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.backgroundProcess.logs({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/background-process/{processID}/stop": {
+      "post": {
+        "tags": ["background-process"],
+        "operationId": "backgroundProcess.stop",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "processID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^bgp.*"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stopped background process",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackgroundProcessInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Terminate a background process and its child process tree.",
+        "summary": "Stop background process",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.backgroundProcess.stop({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/background-process/{processID}/restart": {
+      "post": {
+        "tags": ["background-process"],
+        "operationId": "backgroundProcess.restart",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "processID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^bgp.*"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Restarted background process",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackgroundProcessInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Stop and restart a background process with its original command.",
+        "summary": "Restart background process",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.backgroundProcess.restart({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/background-process/session/{sessionID}/stop": {
+      "post": {
+        "tags": ["background-process"],
+        "operationId": "backgroundProcess.stopSession",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses.*"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stopped session background processes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Stopped session background processes"
+                }
+              }
+            }
+          }
+        },
+        "description": "Terminate and forget all background processes associated with one session.",
+        "summary": "Stop session background processes",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.backgroundProcess.stopSession({\n  ...\n})"
           }
         ]
       }
@@ -9509,6 +10128,9 @@
                     "type": "string"
                   },
                   "suffix": {
+                    "type": "string"
+                  },
+                  "provider": {
                     "type": "string"
                   },
                   "model": {
@@ -12193,6 +12815,12 @@
             "$ref": "#/components/schemas/EventPermissionReplied"
           },
           {
+            "$ref": "#/components/schemas/EventBackground_processUpdated"
+          },
+          {
+            "$ref": "#/components/schemas/EventBackground_processDeleted"
+          },
+          {
             "$ref": "#/components/schemas/EventSessionTurnOpen"
           },
           {
@@ -12250,13 +12878,13 @@
             "$ref": "#/components/schemas/EventVcsBranchUpdated"
           },
           {
+            "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
+          },
+          {
             "$ref": "#/components/schemas/EventWorkspaceReady"
           },
           {
             "$ref": "#/components/schemas/EventWorkspaceFailed"
-          },
-          {
-            "$ref": "#/components/schemas/EventWorkspaceRestore"
           },
           {
             "$ref": "#/components/schemas/EventWorkspaceStatus"
@@ -12377,9 +13005,6 @@
           },
           {
             "$ref": "#/components/schemas/EventSessionNextCompactionEnded"
-          },
-          {
-            "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
           },
           {
             "$ref": "#/components/schemas/EventIndexingStatus"
@@ -12805,6 +13430,75 @@
           }
         },
         "required": ["id", "sessionID", "permission", "patterns", "metadata", "always"],
+        "additionalProperties": false
+      },
+      "BackgroundProcessInfo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sessionID": {
+            "type": "string"
+          },
+          "pid": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "command": {
+            "type": "string"
+          },
+          "cwd": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "ports": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": ["starting", "running", "ready", "exited", "failed", "stopping", "stopped"]
+          },
+          "ready": {
+            "type": "boolean"
+          },
+          "exitCode": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "signal": {
+            "type": "string"
+          },
+          "output": {
+            "type": "string"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "started": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "updated": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "ended": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["started", "updated"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "sessionID", "command", "cwd", "ports", "status", "ready", "output", "time"],
         "additionalProperties": false
       },
       "SnapshotFileDiff": {
@@ -14629,6 +15323,12 @@
                 "$ref": "#/components/schemas/EventPermissionReplied"
               },
               {
+                "$ref": "#/components/schemas/EventBackground_processUpdated"
+              },
+              {
+                "$ref": "#/components/schemas/EventBackground_processDeleted"
+              },
+              {
                 "$ref": "#/components/schemas/EventSessionTurnOpen"
               },
               {
@@ -14686,13 +15386,13 @@
                 "$ref": "#/components/schemas/EventVcsBranchUpdated"
               },
               {
+                "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
+              },
+              {
                 "$ref": "#/components/schemas/EventWorkspaceReady"
               },
               {
                 "$ref": "#/components/schemas/EventWorkspaceFailed"
-              },
-              {
-                "$ref": "#/components/schemas/EventWorkspaceRestore"
               },
               {
                 "$ref": "#/components/schemas/EventWorkspaceStatus"
@@ -14813,9 +15513,6 @@
               },
               {
                 "$ref": "#/components/schemas/EventSessionNextCompactionEnded"
-              },
-              {
-                "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
               },
               {
                 "$ref": "#/components/schemas/EventIndexingStatus"
@@ -14954,7 +15651,7 @@
           }
         },
         "additionalProperties": false,
-        "description": "Server configuration for kilo serve and web commands"
+        "description": "Server configuration for the kilo serve command"
       },
       "IndexingConfig": {
         "type": "object",
@@ -14978,11 +15675,25 @@
             ]
           },
           "model": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "dimension": {
-            "type": "integer",
-            "exclusiveMinimum": 0
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "vectorStore": {
             "type": "string",
@@ -15541,17 +16252,21 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["local"],
-            "description": "Type of MCP server connection"
+            "enum": ["local"]
           },
           "command": {
             "type": "array",
             "items": {
               "type": "string"
-            },
-            "description": "Command and arguments to run the MCP server"
+            }
           },
           "environment": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "env": {
             "type": "object",
             "additionalProperties": {
               "type": "string"
@@ -15776,6 +16491,12 @@
             "type": "string"
           },
           "small_model": {
+            "type": "string"
+          },
+          "subagent_model": {
+            "type": "string"
+          },
+          "subagent_variant": {
             "type": "string"
           },
           "default_agent": {
@@ -16075,15 +16796,6 @@
                 "type": "boolean"
               },
               "codebase_search": {
-                "type": "boolean"
-              },
-              "semantic_indexing": {
-                "type": "boolean"
-              },
-              "agent_manager_tool": {
-                "type": "boolean"
-              },
-              "speech_to_text": {
                 "type": "boolean"
               },
               "speech_to_text_model": {
@@ -16894,6 +17606,28 @@
         },
         "additionalProperties": false
       },
+      "VcsFileStatus": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "additions": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "deletions": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": ["added", "deleted", "modified"]
+          }
+        },
+        "required": ["file", "additions", "deletions", "status"],
+        "additionalProperties": false
+      },
       "VcsFileDiff": {
         "type": "object",
         "properties": {
@@ -16917,6 +17651,31 @@
           }
         },
         "required": ["file", "patch", "additions", "deletions"],
+        "additionalProperties": false
+      },
+      "VcsApplyError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["VcsApplyError"]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string",
+                "enum": ["non-git", "not-clean"]
+              }
+            },
+            "required": ["message", "reason"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["name", "data"],
         "additionalProperties": false
       },
       "Command": {
@@ -17148,6 +17907,25 @@
         },
         "required": ["error"],
         "additionalProperties": false
+      },
+      "NotFoundError": {
+        "type": "object",
+        "required": ["name", "data"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["NotFoundError"]
+          },
+          "data": {
+            "type": "object",
+            "required": ["message"],
+            "properties": {
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
       },
       "effect_HttpApiError_Forbidden": {
         "type": "object",
@@ -17645,6 +18423,43 @@
           }
         },
         "required": ["id", "type", "name", "branch", "directory", "extra", "projectID"],
+        "additionalProperties": false
+      },
+      "WorkspaceWarpError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["WorkspaceWarpError"]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["name", "data"],
+        "additionalProperties": false
+      },
+      "BackgroundProcessLogs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sessionID": {
+            "type": "string"
+          },
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "sessionID", "output"],
         "additionalProperties": false
       },
       "effect_HttpApiError_Unauthorized": {
@@ -18288,17 +19103,24 @@
               "sessionID": {
                 "type": "string"
               },
-              "id": {
-                "type": "string"
-              },
-              "providerID": {
-                "type": "string"
-              },
-              "variant": {
-                "type": "string"
+              "model": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "providerID": {
+                    "type": "string"
+                  },
+                  "variant": {
+                    "type": "string"
+                  }
+                },
+                "required": ["id", "providerID", "variant"],
+                "additionalProperties": false
               }
             },
-            "required": ["timestamp", "sessionID", "id", "providerID"],
+            "required": ["timestamp", "sessionID", "model"],
             "additionalProperties": false
           }
         },
@@ -18521,7 +19343,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["id", "providerID"],
+                "required": ["id", "providerID", "variant"],
                 "additionalProperties": false
               },
               "snapshot": {
@@ -18647,17 +19469,7 @@
                 "type": "string"
               },
               "error": {
-                "type": "object",
-                "properties": {
-                  "type": {
-                    "type": "string"
-                  },
-                  "message": {
-                    "type": "string"
-                  }
-                },
-                "required": ["type", "message"],
-                "additionalProperties": false
+                "$ref": "#/components/schemas/SessionErrorUnknown"
               }
             },
             "required": ["timestamp", "sessionID", "error"],
@@ -19269,17 +20081,7 @@
                 "type": "string"
               },
               "error": {
-                "type": "object",
-                "properties": {
-                  "type": {
-                    "type": "string"
-                  },
-                  "message": {
-                    "type": "string"
-                  }
-                },
-                "required": ["type", "message"],
-                "additionalProperties": false
+                "$ref": "#/components/schemas/SessionErrorUnknown"
               },
               "provider": {
                 "type": "object",
@@ -19884,6 +20686,57 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventBackground_processUpdated": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["background_process.updated"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "info": {
+                "$ref": "#/components/schemas/BackgroundProcessInfo"
+              }
+            },
+            "required": ["info"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventBackground_processDeleted": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["background_process.deleted"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string"
+              },
+              "processID": {
+                "type": "string"
+              }
+            },
+            "required": ["sessionID", "processID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "EventSessionTurnOpen": {
         "type": "object",
         "properties": {
@@ -20439,6 +21292,33 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventKilo-sessionsRemote-status-changed": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["kilo-sessions.remote-status-changed"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "connected": {
+                "type": "boolean"
+              }
+            },
+            "required": ["enabled", "connected"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "EventWorkspaceReady": {
         "type": "object",
         "properties": {
@@ -20481,41 +21361,6 @@
               }
             },
             "required": ["message"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventWorkspaceRestore": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["workspace.restore"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "workspaceID": {
-                "type": "string"
-              },
-              "sessionID": {
-                "type": "string"
-              },
-              "total": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "step": {
-                "type": "integer",
-                "minimum": 0
-              }
-            },
-            "required": ["workspaceID", "sessionID", "total", "step"],
             "additionalProperties": false
           }
         },
@@ -20946,17 +21791,24 @@
               "sessionID": {
                 "type": "string"
               },
-              "id": {
-                "type": "string"
-              },
-              "providerID": {
-                "type": "string"
-              },
-              "variant": {
-                "type": "string"
+              "model": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "providerID": {
+                    "type": "string"
+                  },
+                  "variant": {
+                    "type": "string"
+                  }
+                },
+                "required": ["id", "providerID", "variant"],
+                "additionalProperties": false
               }
             },
-            "required": ["timestamp", "sessionID", "id", "providerID"],
+            "required": ["timestamp", "sessionID", "model"],
             "additionalProperties": false
           }
         },
@@ -21175,7 +22027,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["id", "providerID"],
+                "required": ["id", "providerID", "variant"],
                 "additionalProperties": false
               },
               "snapshot": {
@@ -21259,6 +22111,20 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "SessionErrorUnknown": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["unknown"]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["type", "message"],
+        "additionalProperties": false
+      },
       "EventSessionNextStepFailed": {
         "type": "object",
         "properties": {
@@ -21279,17 +22145,7 @@
                 "type": "string"
               },
               "error": {
-                "type": "object",
-                "properties": {
-                  "type": {
-                    "type": "string"
-                  },
-                  "message": {
-                    "type": "string"
-                  }
-                },
-                "required": ["type", "message"],
-                "additionalProperties": false
+                "$ref": "#/components/schemas/SessionErrorUnknown"
               }
             },
             "required": ["timestamp", "sessionID", "error"],
@@ -21792,17 +22648,7 @@
                 "type": "string"
               },
               "error": {
-                "type": "object",
-                "properties": {
-                  "type": {
-                    "type": "string"
-                  },
-                  "message": {
-                    "type": "string"
-                  }
-                },
-                "required": ["type", "message"],
-                "additionalProperties": false
+                "$ref": "#/components/schemas/SessionErrorUnknown"
               },
               "provider": {
                 "type": "object",
@@ -21985,33 +22831,6 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
-      "EventKilo-sessionsRemote-status-changed": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["kilo-sessions.remote-status-changed"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "enabled": {
-                "type": "boolean"
-              },
-              "connected": {
-                "type": "boolean"
-              }
-            },
-            "required": ["enabled", "connected"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
       "EventIndexingStatus": {
         "type": "object",
         "properties": {
@@ -22070,7 +22889,7 @@
                 "type": "string"
               }
             },
-            "required": ["id", "providerID"],
+            "required": ["id", "providerID", "variant"],
             "additionalProperties": false
           },
           "time": {
@@ -22166,7 +22985,7 @@
                 "type": "string"
               }
             },
-            "required": ["id", "providerID"],
+            "required": ["id", "providerID", "variant"],
             "additionalProperties": false
           }
         },
@@ -22425,17 +23244,7 @@
             "type": "object"
           },
           "error": {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string"
-              },
-              "message": {
-                "type": "string"
-              }
-            },
-            "required": ["type", "message"],
-            "additionalProperties": false
+            "$ref": "#/components/schemas/SessionErrorUnknown"
           }
         },
         "required": ["status", "input", "content", "structured", "error"],
@@ -22548,7 +23357,7 @@
                 "type": "string"
               }
             },
-            "required": ["id", "providerID"],
+            "required": ["id", "providerID", "variant"],
             "additionalProperties": false
           },
           "content": {
@@ -22615,17 +23424,7 @@
             "additionalProperties": false
           },
           "error": {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string"
-              },
-              "message": {
-                "type": "string"
-              }
-            },
-            "required": ["type", "message"],
-            "additionalProperties": false
+            "$ref": "#/components/schemas/SessionErrorUnknown"
           }
         },
         "required": ["id", "time", "type", "agent", "model", "content"],
@@ -22745,25 +23544,6 @@
             "enum": [false]
           }
         }
-      },
-      "NotFoundError": {
-        "type": "object",
-        "required": ["name", "data"],
-        "properties": {
-          "name": {
-            "type": "string",
-            "enum": ["NotFoundError"]
-          },
-          "data": {
-            "type": "object",
-            "required": ["message"],
-            "properties": {
-              "message": {
-                "type": "string"
-              }
-            }
-          }
-        }
       }
     }
   },
@@ -22844,6 +23624,10 @@
     {
       "name": "workspace",
       "description": "Experimental HttpApi workspace routes."
+    },
+    {
+      "name": "background-process",
+      "description": "Kilo background process routes."
     },
     {
       "name": "commit-message",

@@ -83,6 +83,20 @@ describe("CodeIndexConfigManager", () => {
     expect(cfg.currentModelDimension).toBe(2048)
   })
 
+  test("uses configured dimension before static model metadata", () => {
+    const cfg = new CodeIndexConfigManager(
+      createInput({
+        embedderProvider: "openrouter",
+        openAiKey: undefined,
+        openRouterApiKey: "or-test",
+        modelId: "google/gemini-embedding-2-preview",
+        modelDimension: 1536,
+      }),
+    )
+
+    expect(cfg.currentModelDimension).toBe(1536)
+  })
+
   describe("loadConfiguration restart checks", () => {
     test("requires restart when model changes with same dimension", () => {
       const cfg = new CodeIndexConfigManager(createInput({ modelId: "text-embedding-3-small" }))

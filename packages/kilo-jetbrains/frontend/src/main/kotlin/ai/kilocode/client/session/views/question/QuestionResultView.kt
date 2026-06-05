@@ -5,7 +5,7 @@ import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.PartView
+import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.ToolView
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
@@ -18,6 +18,7 @@ import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Font
+import java.awt.Rectangle
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.BoxLayout
@@ -108,7 +109,9 @@ class QuestionResultView(tool: Tool) : PartView() {
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        val label = setFont(title, style.boldEditorFont) || setFont(sub, style.smallEditorFont)
+        val t = setFont(title, style.boldFont)
+        val s = setFont(sub, style.smallFont)
+        val label = t || s
         val body = texts.fold(false) { acc, item -> setFont(item.first, item.second) || acc }
         if (!label && !body) return
         refresh()
@@ -136,6 +139,9 @@ class QuestionResultView(tool: Tool) : PartView() {
     fun bodyCreated(): Boolean = pane != null
 
     fun bodyFonts(): List<Font> = texts.map { it.first.font }
+
+    fun titleFont(): Font = title.font
+    fun subFont(): Font = sub.font
 
     override fun dumpLabel(): String = "QuestionResultView#$contentId(${labelText()})"
 
@@ -208,6 +214,8 @@ class QuestionResultView(tool: Tool) : PartView() {
                 return Dimension(Int.MAX_VALUE, size.height)
             }
 
+            override fun scrollRectToVisible(aRect: Rectangle) {}
+
             private fun withWidth(fallback: Int): Dimension {
                 val width = space()
                 if (width <= 0) return Dimension(super.getPreferredSize().width, fallback)
@@ -253,7 +261,9 @@ class QuestionResultView(tool: Tool) : PartView() {
         val color = if (value) SessionUiStyle.View.headerHover() else SessionUiStyle.View.header()
         if (header.background?.rgb == color.rgb) return
         header.background = color
+        root.border = if (value) SessionUiStyle.View.card(SessionUiStyle.View.hoverLine()) else SessionUiStyle.View.card()
         header.repaint()
+        root.repaint()
     }
 
     private fun inside(e: MouseEvent): Boolean {
@@ -268,7 +278,7 @@ class QuestionResultView(tool: Tool) : PartView() {
     }
 
     private fun setFont(area: JBTextArea, bold: Boolean): Boolean {
-        val font = if (bold) style.boldEditorFont else style.transcriptFont
+        val font = if (bold) style.boldFont else style.regularFont
         if (area.font == font) return false
         area.font = font
         return true

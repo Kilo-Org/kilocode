@@ -30,7 +30,7 @@ export interface AuthStore {
 
 export interface OrganizationDeps {
   auth: AuthStore
-  clear(): void
+  clear(): void | Promise<void>
   dispose(): Promise<void>
 }
 
@@ -97,7 +97,7 @@ export async function setOrganization(deps: OrganizationDeps, organizationId: st
     ...(organizationId && { accountId: organizationId }),
   })
 
-  deps.clear()
+  await deps.clear()
   clearModesCache()
   await deps.dispose()
   return true

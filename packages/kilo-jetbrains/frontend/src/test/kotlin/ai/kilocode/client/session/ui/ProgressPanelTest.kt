@@ -60,6 +60,18 @@ class ProgressPanelTest : BasePlatformTestCase() {
         assertEquals("Writing response\u2026", panel.labelText())
     }
 
+    fun `test panel hides on Retry`() {
+        model.setState(SessionState.Retry("Cannot connect to API", attempt = 2, next = 1_234L))
+
+        assertFalse(panel.isVisible)
+    }
+
+    fun `test panel hides on Offline`() {
+        model.setState(SessionState.Offline("Computer appears offline", requestId = "req1"))
+
+        assertFalse(panel.isVisible)
+    }
+
     fun `test panel hides on Error state`() {
         model.setState(SessionState.Busy("Thinking\u2026"))
         model.setState(SessionState.Error("something went wrong"))

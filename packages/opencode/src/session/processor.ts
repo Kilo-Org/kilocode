@@ -25,6 +25,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { isRecord } from "@/util/record"
 import { EventV2 } from "@/v2/event"
 import { SessionEvent } from "@/v2/session-event"
+import { Modelv2 } from "@/v2/model"
 import * as DateTime from "effect/DateTime"
 
 const DOOM_LOOP_THRESHOLD = 3
@@ -58,6 +59,7 @@ type Input = {
   sessionID: SessionID
   model: Provider.Model
   telemetry?: ReviewTelemetry // kilocode_change
+  snapshotInitialization?: "wait" // kilocode_change - managed clients wait silently for slow baseline creation
 }
 
 export interface Interface {
@@ -120,10 +122,11 @@ export const layer: Layer.Layer<
       // Pre-capture snapshot before the LLM stream starts. The AI SDK
       // may execute tools internally before emitting start-step events,
       // so capturing inside the event handler can be too late.
-      // kilocode_change start - pass sessionID + messageID so the slow-repo prompt/progress indicator can attach
+      // kilocode_change start - pass turn context for slow-snapshot UI/policy handling
       const initialSnapshot = yield* snapshot.track({
         sessionID: input.sessionID,
         messageID: input.assistantMessage.id,
+        snapshotInitialization: input.snapshotInitialization,
       })
       // kilocode_change end
       const ctx: ProcessorContext = {
@@ -228,6 +231,11 @@ export const layer: Layer.Layer<
             attachments: output.attachments,
           },
         })
+        // kilocode_change start - accepted suggest review actions tag following LLM completion telemetry
+        if (match.part.tool === "suggest") {
+          ctx.telemetry = KiloSessionProcessor.suggestionReviewTelemetry(output.metadata) ?? ctx.telemetry
+        }
+        // kilocode_change end
         yield* settleToolCall(toolCallID)
       })
 
@@ -240,6 +248,7 @@ export const layer: Layer.Layer<
             status: "error",
             input: match.part.state.input,
             error: errorMessage(error),
+            metadata: match.part.state.metadata, // kilocode_change - preserve running tool metadata on failure
             time: { start: match.part.state.time.start, end: Date.now() },
           },
         })
@@ -498,9 +507,13 @@ export const layer: Layer.Layer<
           case "start-step":
             ctx.stepStart = performance.now() // kilocode_change
             ctx.step = { reasoning: false, text: false, tool: false } // kilocode_change
-            // kilocode_change start - pass sessionID + messageID so the slow-repo prompt/progress indicator can attach
+            // kilocode_change start - pass turn context for slow-snapshot UI/policy handling
             if (!ctx.snapshot)
-              ctx.snapshot = yield* snapshot.track({ sessionID: ctx.sessionID, messageID: ctx.assistantMessage.id })
+              ctx.snapshot = yield* snapshot.track({
+                sessionID: ctx.sessionID,
+                messageID: ctx.assistantMessage.id,
+                snapshotInitialization: input.snapshotInitialization,
+              })
             // kilocode_change end
             if (!ctx.assistantMessage.summary) {
               // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
@@ -508,9 +521,9 @@ export const layer: Layer.Layer<
                 sessionID: ctx.sessionID,
                 agent: input.assistantMessage.agent,
                 model: {
-                  id: ctx.model.id,
-                  providerID: ctx.model.providerID,
-                  variant: input.assistantMessage.variant,
+                  id: Modelv2.ID.make(ctx.model.id),
+                  providerID: Modelv2.ProviderID.make(ctx.model.providerID),
+                  variant: Modelv2.VariantID.make(input.assistantMessage.variant ?? "default"),
                 },
                 snapshot: ctx.snapshot,
                 timestamp: DateTime.makeUnsafe(Date.now()),
@@ -526,10 +539,11 @@ export const layer: Layer.Layer<
             return
 
           case "finish-step": {
-            // kilocode_change start - pass sessionID + messageID
+            // kilocode_change start - pass turn context for slow-snapshot UI/policy handling
             const completedSnapshot = yield* snapshot.track({
               sessionID: ctx.sessionID,
               messageID: ctx.assistantMessage.id,
+              snapshotInitialization: input.snapshotInitialization,
             })
             // kilocode_change end
             const usage = Session.getUsage({
@@ -786,7 +800,7 @@ export const layer: Layer.Layer<
           EventV2.run(SessionEvent.Step.Failed.Sync, {
             sessionID: ctx.sessionID,
             error: {
-              type: error.name,
+              type: "unknown",
               message: errorMessage(e),
             },
             timestamp: DateTime.makeUnsafe(Date.now()),

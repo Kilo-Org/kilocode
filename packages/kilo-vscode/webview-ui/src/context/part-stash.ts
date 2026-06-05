@@ -36,6 +36,16 @@ export class PartStash {
     this.map.delete(messageID)
   }
 
+  /** Remove one stale part while keeping the message stash authoritative. */
+  removePart(messageID: string, partID: string): void {
+    const parts = this.map.get(messageID)
+    if (!parts) return
+    this.map.set(
+      messageID,
+      parts.filter((part) => part.id !== partID),
+    )
+  }
+
   /**
    * Collect parts for the given IDs, consuming the stash. Used by the
    * virtualizer when a turn is about to render: the returned parts should

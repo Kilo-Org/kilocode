@@ -112,7 +112,7 @@ function buildAuthorizeUrl(redirectUri: string, pkce: PkceCodes, state: string):
     id_token_add_organizations: "true",
     codex_cli_simplified_flow: "true",
     state,
-    originator: "opencode",
+    originator: "kilo", // kilocode_change
   })
   return `${ISSUER}/oauth/authorize?${params.toString()}`
 }

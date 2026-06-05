@@ -29,7 +29,9 @@ describe("reasoning heading", () => {
   })
 
   test("promotes HTML headings while flattening inline tags", () => {
-    expect(reasoningHeading('<h3 class="step">Check <em>provider</em> status</h3>\n\nContinue with the next item.')).toEqual({
+    expect(
+      reasoningHeading('<h3 class="step">Check <em>provider</em> status</h3>\n\nContinue with the next item.'),
+    ).toEqual({
       title: "Check provider status",
       body: "Continue with the next item.",
     })

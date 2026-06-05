@@ -84,7 +84,7 @@ const AgentCreateCommand = effectCmd({
       // Determine scope/path
       let targetPath: string
       if (cliPath) {
-        targetPath = path.join(cliPath, "agent")
+        targetPath = path.join(cliPath, "agents")
       } else {
         let scope: "global" | "project" = "global"
         if (project.vcs === "git") {
@@ -108,7 +108,7 @@ const AgentCreateCommand = effectCmd({
         }
         targetPath = path.join(
           scope === "global" ? Global.Path.config : path.join(ctx.worktree, ".kilo"), // kilocode_change
-          "agent",
+          "agents",
         )
       }
 

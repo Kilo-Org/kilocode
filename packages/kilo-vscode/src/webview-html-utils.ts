@@ -26,6 +26,8 @@ export function buildCspString(cspSource: string, nonce: string, port?: number):
     "default-src 'none'",
     `style-src 'unsafe-inline' ${cspSource}`,
     `script-src 'nonce-${nonce}' 'wasm-unsafe-eval'`,
+    // Allow the bundled Shiki highlighting worker (loaded as a webview resource).
+    `worker-src ${cspSource}`,
     `font-src ${cspSource}`,
     `connect-src ${cspSource} ${connectSrc}`,
     `img-src ${cspSource} data: https:`,

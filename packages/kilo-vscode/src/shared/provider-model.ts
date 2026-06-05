@@ -6,7 +6,7 @@ export const PROVIDER_ID_PATTERN = /^[a-z0-9][a-z0-9-_]*$/
 export const PROVIDER_PRIORITY = [
   KILO_PROVIDER_ID,
   "anthropic",
-  "github-copilot",
+  "deepseek",
   "openai",
   "google",
   "openrouter",

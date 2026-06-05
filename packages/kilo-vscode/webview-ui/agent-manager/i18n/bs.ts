@@ -55,7 +55,6 @@ export const dict = {
   "agentManager.tabsMenu.search": "Pretraži kartice...",
   "agentManager.tabsMenu.empty": "Nema podudarnih kartica",
   "agentManager.tabsMenu.status.waiting": "Čeka",
-  "agentManager.tabsMenu.status.working": "Radi",
   "agentManager.tabsMenu.status.retry": "Pokušaj",
 
   "agentManager.terminal.new": "Nova kartica terminala",

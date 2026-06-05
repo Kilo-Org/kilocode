@@ -80,10 +80,10 @@ your-project/
 
 ### Compatibility Directories
 
-For interoperability with other tools, the CLI also loads skills from:
+For interoperability with other tools, Kilo Code also loads skills from:
 
-- `.claude/skills/` — Claude Code compatibility
-- `.agents/skills/` — Open agent standard
+- `.agents/skills/` — Open agent standard, loaded by default
+- `.claude/skills/` — Claude Code compatibility, loaded when Claude Code Compatibility is enabled
 
 ### Additional Skill Paths and Remote URLs
 

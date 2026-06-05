@@ -1,7 +1,5 @@
 package ai.kilocode.client
 
-import ai.kilocode.client.actions.HistoryAction
-import ai.kilocode.client.actions.NewSessionAction
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.SessionSidePanelManager
@@ -65,9 +63,13 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
             toolWindow.contentManager.setSelectedContent(content)
             manager.newSession()
 
-            ActionManager.getInstance().getAction("Kilo.Settings")?.let { settings ->
-                toolWindow.setTitleActions(listOf(NewSessionAction(), HistoryAction(), settings))
-            }
+            val actions = listOfNotNull(
+                ActionManager.getInstance().getAction("Kilo.NewSession"),
+                ActionManager.getInstance().getAction("Kilo.History"),
+                ActionManager.getInstance().getAction("Kilo.ShowProfile"),
+                ActionManager.getInstance().getAction("Kilo.Settings"),
+            )
+            toolWindow.setTitleActions(actions)
         } catch (e: Exception) {
             LOG.error("Failed to set up Kilo tool window content", e)
         }

@@ -4,12 +4,15 @@ import path from "path"
 import { ConfigValidation } from "../../src/kilocode/config-validation"
 import { WithInstance } from "../../src/project/with-instance"
 import { Config } from "../../src/config/config"
+import { AppRuntime } from "../../src/effect/app-runtime"
 import { Filesystem } from "../../src/util/filesystem"
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 afterEach(async () => {
   await disposeAllInstances()
 })
+
+const check = (filepath: string) => ConfigValidation.check(filepath)
 
 describe("ConfigValidation.check", () => {
   test("returns empty string for non-config files", async () => {
@@ -19,7 +22,7 @@ describe("ConfigValidation.check", () => {
 
     const result = await WithInstance.provide({
       directory: tmp.path,
-      fn: () => ConfigValidation.check(filepath),
+      fn: () => check(filepath),
     })
     expect(result).toBe("")
   })
@@ -31,7 +34,7 @@ describe("ConfigValidation.check", () => {
 
     const result = await WithInstance.provide({
       directory: tmp.path,
-      fn: () => ConfigValidation.check(filepath),
+      fn: () => check(filepath),
     })
     expect(result).toContain("config_validation")
     expect(result).toContain("validated successfully")
@@ -44,7 +47,7 @@ describe("ConfigValidation.check", () => {
 
     const result = await WithInstance.provide({
       directory: tmp.path,
-      fn: () => ConfigValidation.check(filepath),
+      fn: () => check(filepath),
     })
     expect(result).toContain("config_validation")
     expect(result).toContain("ERROR")
@@ -59,7 +62,7 @@ describe("ConfigValidation.check", () => {
 
     const result = await WithInstance.provide({
       directory: tmp.path,
-      fn: () => ConfigValidation.check(filepath),
+      fn: () => check(filepath),
     })
     expect(result).toContain("config_validation")
     expect(result).toContain("WARNING")
@@ -79,7 +82,7 @@ Do something useful`,
 
     const result = await WithInstance.provide({
       directory: tmp.path,
-      fn: () => ConfigValidation.check(filepath),
+      fn: () => check(filepath),
     })
     expect(result).toContain("config_validation")
     expect(result).toContain("validated successfully")
@@ -100,7 +103,7 @@ Do something`,
 
     const result = await WithInstance.provide({
       directory: tmp.path,
-      fn: () => ConfigValidation.check(filepath),
+      fn: () => check(filepath),
     })
     expect(result).toContain("config_validation")
     expect(result).toContain("WARNING")
@@ -121,7 +124,7 @@ You are a helpful agent.`,
 
     const result = await WithInstance.provide({
       directory: tmp.path,
-      fn: () => ConfigValidation.check(filepath),
+      fn: () => check(filepath),
     })
     expect(result).toContain("config_validation")
     expect(result).toContain("validated successfully")
@@ -134,7 +137,7 @@ You are a helpful agent.`,
 
     const result = await WithInstance.provide({
       directory: tmp.path,
-      fn: () => ConfigValidation.check(filepath),
+      fn: () => check(filepath),
     })
     expect(result).toBe("")
   })
@@ -146,7 +149,7 @@ You are a helpful agent.`,
 
     const result = await WithInstance.provide({
       directory: tmp.path,
-      fn: () => ConfigValidation.check(filepath),
+      fn: () => check(filepath),
     })
     expect(result).toBe("")
   })
@@ -173,8 +176,8 @@ Broken agent`,
       directory: tmp.path,
       fn: async () => {
         // Force config load to populate warnings
-        await Config.get()
-        return ConfigValidation.check(filepath)
+        await AppRuntime.runPromise(Config.Service.use((svc) => svc.get()))
+        return check(filepath)
       },
     })
     expect(result).toContain("Pre-existing config issues")

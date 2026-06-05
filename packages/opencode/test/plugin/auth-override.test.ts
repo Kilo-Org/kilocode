@@ -8,12 +8,14 @@ import { ProviderAuth } from "@/provider/auth"
 import { ProviderID } from "../../src/provider/schema"
 import { Plugin } from "@/plugin"
 import { Auth } from "@/auth"
+import { ModelCache } from "@/provider/model-cache" // kilocode_change
 import { Bus } from "@/bus"
 import { TestConfig } from "../fixture/config"
 
 function layer(directory: string, plugins: string[]) {
   return ProviderAuth.layer.pipe(
     Layer.provide(Auth.defaultLayer),
+    Layer.provide(ModelCache.defaultLayer), // kilocode_change
     Layer.provide(
       Plugin.layer.pipe(
         Layer.provide(Bus.layer),

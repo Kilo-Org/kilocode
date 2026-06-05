@@ -35,6 +35,7 @@ class KiloBackendCliManager(
     companion object {
         private const val STARTUP_TIMEOUT_MS = 30_000L
         private const val KILL_TIMEOUT_SECONDS = 5L
+        private const val DEFAULT_CONFIG = """{"permission":{"edit":"ask","bash":"ask"}}"""
         private val PORT_REGEX = Regex("""listening on http://[\w.]+:(\d+)""")
     }
 
@@ -131,6 +132,7 @@ class KiloBackendCliManager(
         put("KILO_APP_NAME", "kilo-code")
         put("KILO_DISABLE_CLAUDE_CODE", "true")
         put("KILOCODE_FEATURE", "jetbrains-plugin")
+        putIfAbsent("KILO_CONFIG_CONTENT", DEFAULT_CONFIG)
         ideEnv().forEach { (k, v) -> put(k, v) }
         devStorageEnv()?.forEach { (k, v) -> put(k, v) }
     }
