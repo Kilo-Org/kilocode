@@ -67,6 +67,15 @@ export const PROVIDER_TITLES: Record<string, string> = {
   openai: "OpenAI / Codex",
 }
 
+/** Local OpenAI-compatible providers where API key is optional (localhost). */
+export const LOCAL_OPTIONAL_API_KEY = new Set(["atomic-chat", "lmstudio"])
+
+export function isLocalOptionalApiKey(providerID: string) {
+  return LOCAL_OPTIONAL_API_KEY.has(providerID)
+}
+
+export const LOCAL_API_KEY_PLACEHOLDER = "local"
+
 // ---------------------------------------------------------------------------
 // Auto-method renderer
 // ---------------------------------------------------------------------------
@@ -113,6 +122,13 @@ export function renderApiDescription(
   providerID: string,
   theme: { textMuted: RGBA; text: RGBA; primary: RGBA },
 ): (() => JSX.Element) | undefined {
+  if (providerID === "atomic-chat") {
+    return () => (
+      <text fg={theme.textMuted}>
+        Connect to Atomic Chat on this machine (default http://127.0.0.1:1337). Leave API key empty for local server.
+      </text>
+    )
+  }
   if (providerID !== "kilo") return undefined
   return () => (
     <box gap={1}>
@@ -124,4 +140,8 @@ export function renderApiDescription(
       </text>
     </box>
   )
+}
+
+export function apiKeyPlaceholder(providerID: string) {
+  return isLocalOptionalApiKey(providerID) ? "Optional for localhost" : "API key"
 }

@@ -35,8 +35,10 @@ Try the [v7 Early Access Program plugin](#jetbrains-early-access) for a JetBrain
 
 The v7 EAP plugin is available for users who want to try the newest JetBrains experience before it reaches the default Marketplace channel. It uses a JetBrains-native UI and is designed to work well with JetBrains remote development.
 
+Follow the [v7 roadmap and release milestone](https://github.com/Kilo-Org/kilocode/milestone/1) for planned work and release progress.
+
 {% callout type="info" %}
-The v7 EAP plugin supports JetBrains IDEs with 261+ builds. EAP builds may update more frequently than the default Marketplace release. Share feedback in the JetBrains channel on the [Kilo Discord](https://kilo.ai/discord).
+The v7 EAP plugin is compatible with JetBrains IDE builds 261 and later. EAP builds update frequently, so we recommend enabling automatic plugin updates in your JetBrains IDE from **Settings/Preferences → System Settings → Updates → Update plugins automatically**. Share feedback in the JetBrains channel on the [Kilo Discord](https://kilo.ai/discord).
 {% /callout %}
 
 To install the EAP build and receive updates:

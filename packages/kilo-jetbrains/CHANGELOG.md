@@ -1,10 +1,21 @@
 # Changelog
 
+## 7.3.29
+
+### Patch Changes
+
 ## [Unreleased]
+
+## [7.0.1-rc.7] - 2026-06-04
+
+### Fixed
+
+- Fixed JetBrains release notes rendering so notes from multiple releases display correctly.
 
 ## [7.0.1-rc.6] - 2026-06-03
 
 ### Fixed
+
 - Model picker now highlights models that can be used for training.
 
 ## [7.0.1-rc.5] - 2026-06-03

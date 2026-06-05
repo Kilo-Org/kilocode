@@ -141,6 +141,7 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
           const provider = input.models[modelID]?.ai_sdk_provider
           if (provider === "alibaba") return sdk.alibaba(modelID)
           if (provider === "anthropic") return sdk.anthropic(modelID)
+          if (provider === "mistral") return sdk.mistral(modelID)
           if (provider === "openai") return sdk.openai(modelID)
           if (provider === "openai-compatible") return sdk.openaiCompatible(modelID)
           return sdk.languageModel(modelID)

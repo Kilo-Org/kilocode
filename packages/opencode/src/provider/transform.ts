@@ -1006,6 +1006,10 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
         "mistral-small-2603",
         "mistral-small-latest",
         "mistral-medium-3.5",
+        // kilocode_change start
+        "mistral-medium-3-5",
+        "mistral-medium-latest",
+        // kilocode_change end
         "mistral-medium-2604",
       ]
       const mistralId = model.api.id.toLowerCase()

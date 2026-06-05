@@ -26,7 +26,6 @@ import z from "zod"
 
 const agents = lazy(() => makeRuntime(Agent.Service, Agent.defaultLayer))
 const providers = lazy(() => makeRuntime(Provider.Service, Provider.defaultLayer))
-const questions = lazy(() => makeRuntime(Question.Service, Question.defaultLayer))
 const todo = lazy(() => makeRuntime(Todo.Service, Todo.defaultLayer))
 const llm = lazy(() => makeRuntime(LLM.Service, LLM.defaultLayer))
 const pending = new Map<SessionID, AbortController>()
@@ -37,20 +36,6 @@ export const PlanFollowupRuntime = {
   },
   model(providerID: ProviderID, modelID: ModelID): Promise<Provider.Model> {
     return providers().runPromise((svc) => svc.getModel(providerID, modelID))
-  },
-  question: {
-    ask(input: Parameters<Question.Interface["ask"]>[0]) {
-      return questions().runPromise((svc) => svc.ask(input))
-    },
-    list() {
-      return questions().runPromise((svc) => svc.list())
-    },
-    reject(requestID: Parameters<Question.Interface["reject"]>[0]) {
-      return questions().runPromise((svc) => svc.reject(requestID))
-    },
-    reply(input: Parameters<Question.Interface["reply"]>[0]) {
-      return questions().runPromise((svc) => svc.reply(input))
-    },
   },
   todo: {
     get(sessionID: SessionID) {
@@ -288,8 +273,15 @@ export namespace PlanFollowup {
     return msg
   }
 
-  function prompt(input: { sessionID: SessionID; abort: AbortSignal }) {
-    const promise = PlanFollowupRuntime.question.ask({
+  type QuestionRuntime = {
+    ask: (input: Parameters<Question.Interface["ask"]>[0]) => Promise<ReadonlyArray<Question.Answer>>
+    list: () => Promise<ReadonlyArray<Question.Request>>
+    reject: (requestID: Parameters<Question.Interface["reject"]>[0]) => Promise<void>
+  }
+
+  function prompt(input: { sessionID: SessionID; abort: AbortSignal; question: QuestionRuntime }) {
+    if (input.abort.aborted) return Promise.resolve(undefined)
+    const promise = input.question.ask({
       sessionID: input.sessionID,
       questions: [
         {
@@ -323,10 +315,15 @@ export namespace PlanFollowup {
     })
 
     const listener = () =>
-      PlanFollowupRuntime.question.list().then((qs) => {
-        const match = qs.find((q) => q.sessionID === input.sessionID)
-        if (match) PlanFollowupRuntime.question.reject(match.id)
-      })
+      input.question
+        .list()
+        .then((qs) => {
+          const match = qs.find((q) => q.sessionID === input.sessionID)
+          return match ? input.question.reject(match.id) : undefined
+        })
+        .catch((error) => {
+          log.warn("failed to reject aborted plan follow-up question", { sessionID: input.sessionID, error })
+        })
     input.abort.addEventListener("abort", listener, { once: true })
 
     return promise
@@ -478,6 +475,7 @@ export namespace PlanFollowup {
     sessionID: SessionID
     messages: MessageV2.WithParts[]
     abort: AbortSignal
+    question: QuestionRuntime
   }): Promise<"continue" | "break"> {
     if (input.abort.aborted) return "break"
 
@@ -491,7 +489,7 @@ export namespace PlanFollowup {
     const user = latest.find((msg) => msg.info.role === "user")?.info
     if (!user || user.role !== "user" || !user.model) return "break"
 
-    const answers = await prompt({ sessionID: input.sessionID, abort: input.abort })
+    const answers = await prompt({ sessionID: input.sessionID, abort: input.abort, question: input.question })
     if (!answers) {
       Telemetry.trackPlanFollowup(input.sessionID, "dismissed")
       return "break"

@@ -8,11 +8,11 @@ import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
 import ai.kilocode.log.KiloLog
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
@@ -89,13 +89,11 @@ class KiloConnectionServiceTest {
         }
 
         // Use first{} on the flow to capture the event — avoids race with SharedFlow subscription
-        val deferred = scope.launch {
+        val deferred = scope.launch(start = CoroutineStart.UNDISPATCHED) {
             val event = svc.events.first { it.type == "global.config.updated" }
             assertEquals("global.config.updated", event.type)
         }
 
-        // Small delay to ensure the collector subscription is active
-        delay(200)
         mock.pushEvent("global.config.updated", """{"type":"global.config.updated"}""")
 
         withTimeout(5_000) {
@@ -114,13 +112,12 @@ class KiloConnectionServiceTest {
         }
 
         val count = 100
-        val received = async {
+        val received = async(start = CoroutineStart.UNDISPATCHED) {
             withTimeout(5_000) {
                 svc.events.take(count).toList()
             }
         }
 
-        delay(200)
         repeat(count) { idx ->
             mock.pushEvent("test.event", idx.toString())
         }
@@ -144,18 +141,23 @@ class KiloConnectionServiceTest {
         @Suppress("UNCHECKED_CAST")
         val ref = sourceField.get(svc) as AtomicReference<EventSource?>
         ref.set(source)
-        val received = scope.async {
+        val received = scope.async(start = CoroutineStart.UNDISPATCHED) {
             withTimeout(5_000) {
                 svc.events.take(2).toList()
             }
         }
 
-        delay(200)
+        val entered = CountDownLatch(1)
         val first = Thread { listener.onEvent(source, null, "first.event", "first") }
-        val second = Thread { listener.onEvent(source, null, "second.event", "second") }
+        val second = Thread {
+            entered.countDown()
+            listener.onEvent(source, null, "second.event", "second")
+        }
         first.start()
         assertTrue(blocked.started.await(1, TimeUnit.SECONDS))
         second.start()
+        assertTrue(entered.await(1, TimeUnit.SECONDS))
+        blocked.release.countDown()
         first.join()
         second.join()
 
@@ -247,9 +249,11 @@ class KiloConnectionServiceTest {
         }
 
         // Restart should tear down and re-open
+        val seen = mock.sseConnectionCount
         svc.restart()
 
         // Wait for reconnection
+        assertTrue(mock.awaitSseConnections(seen + 1))
         withTimeout(10_000) {
             svc.state.first { it is ConnectionState.Connected }
         }
@@ -281,13 +285,14 @@ class KiloConnectionServiceTest {
 
     private class BlockingLog : KiloLog {
         val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
         override var isDebugEnabled: Boolean = true
 
         override fun debug(block: () -> String) {
             val msg = block()
             if (!msg.contains("evt=first.event")) return
             started.countDown()
-            Thread.sleep(250)
+            release.await(1, TimeUnit.SECONDS)
         }
 
         override fun info(msg: String) {}
