@@ -16,7 +16,7 @@ import { Installation } from "../../installation"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
-import { modify, applyEdits } from "jsonc-parser"
+import { modify, applyEdits, parse as parseJsonc } from "jsonc-parser"
 import { Filesystem } from "@/util/filesystem"
 import { Bus } from "../../bus"
 import { Effect } from "effect"
@@ -434,11 +434,21 @@ async function addMcpToConfig(name: string, mcpConfig: ConfigMCP.Info, configPat
     text = await Filesystem.readText(configPath)
   }
 
-  // Use jsonc-parser to modify while preserving comments
-  const edits = modify(text, ["mcp", name], mcpConfig, {
-    formattingOptions: { tabSize: 2, insertSpaces: true },
-  })
-  const result = applyEdits(text, edits)
+  let result: string
+  if (configPath.endsWith(".jsonc")) {
+    // For .jsonc files, use jsonc-parser to modify while preserving comments
+    const edits = modify(text, ["mcp", name], mcpConfig, {
+      formattingOptions: { tabSize: 2, insertSpaces: true },
+    })
+    result = applyEdits(text, edits)
+  } else {
+    // For .json files, parse (tolerating any JSONC like trailing commas) and
+    // re-serialize with JSON.stringify to always produce valid JSON output.
+    const parsed: Record<string, unknown> = parseJsonc(text) ?? {}
+    if (typeof parsed.mcp !== "object" || parsed.mcp === null) parsed.mcp = {}
+    ;(parsed.mcp as Record<string, unknown>)[name] = mcpConfig
+    result = JSON.stringify(parsed, null, 2)
+  }
 
   await Filesystem.write(configPath, result)
 
