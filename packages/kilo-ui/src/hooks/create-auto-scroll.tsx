@@ -28,6 +28,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
   const [store, setStore] = createStore({
     contentRef: undefined as HTMLElement | undefined,
+    scrollRef: undefined as HTMLElement | undefined,
     userScrolled: false,
   })
 
@@ -187,6 +188,20 @@ export function createAutoScroll(options: AutoScrollOptions) {
     },
   )
 
+  createResizeObserver(
+    () => store.scrollRef,
+    () => {
+      const el = scroll
+      if (!el) return
+      if (!canScroll(el)) {
+        if (store.userScrolled) setStore("userScrolled", false)
+        return
+      }
+      if (store.userScrolled || recentlyInteracted()) return
+      scrollToBottomNow("auto")
+    },
+  )
+
   createEffect(
     on(options.working, (working: boolean) => {
       settling = false
@@ -219,6 +234,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
       }
 
       scroll = el
+      setStore("scrollRef", el)
 
       if (!el) return
 
