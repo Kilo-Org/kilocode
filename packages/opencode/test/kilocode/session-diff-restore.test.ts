@@ -77,12 +77,12 @@ describe("session diff restore", () => {
     expect(extractSessionDiffs(data)).toEqual([{ file: "a.txt", after: "second", additions: 1, deletions: 0 }])
   })
 
-  test("applies patch diffs in a git workspace", async () => {
+  test("applies patch diffs in a git workspace", () => {
     const dir = repo()
     const text = patch(dir)
     git(dir, ["checkout", "--", "."])
 
-    const result = await restoreSessionDiffs({
+    const result = restoreSessionDiffs({
       directory: dir,
       diffs: [{ file: "src/index.ts", patch: text, additions: 1, deletions: 1, status: "modified" }],
     })
