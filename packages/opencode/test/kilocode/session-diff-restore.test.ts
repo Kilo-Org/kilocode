@@ -88,7 +88,7 @@ describe("session diff restore", () => {
     })
 
     expect(result).toEqual({ applied: 1, skipped: 0, total: 1 })
-    expect(fs.readFileSync(path.join(dir, "src/index.ts"), "utf8")).toBe("after\n")
+    expect(fs.readFileSync(path.join(dir, "src/index.ts"), "utf8").replace(/\r\n/g, "\n")).toBe("after\n")
   })
 
   test("skips snapshot diffs outside the workspace", () => {
