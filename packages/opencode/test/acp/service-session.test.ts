@@ -909,15 +909,19 @@ describe("ACP service sessions", () => {
     await Effect.runPromise(
       service.setSessionConfigOption({
         sessionId: session.sessionId,
-        configId: "effort",
-        value: "high",
+        // kilocode_change start - use configured variant on mode switch
+        configId: "mode",
+        value: "plan",
+        // kilocode_change end
       }),
     )
     await Effect.runPromise(
       service.setSessionConfigOption({
         sessionId: session.sessionId,
-        configId: "mode",
-        value: "plan",
+        // kilocode_change start - use configured variant on mode switch
+        configId: "effort",
+        value: "high",
+        // kilocode_change end
       }),
     )
 

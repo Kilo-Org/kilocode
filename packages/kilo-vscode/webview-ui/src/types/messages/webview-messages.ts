@@ -791,18 +791,6 @@ export interface RevertWorktreeFileMessage {
   file: string
 }
 
-// Variant persistence (webview → extension)
-export interface PersistVariantRequest {
-  type: "persistVariant"
-  key: string
-  value: string
-}
-
-// Request stored variants from extension (webview → extension)
-export interface RequestVariantsMessage {
-  type: "requestVariants"
-}
-
 // Enhance prompt request (webview → extension)
 export interface EnhancePromptRequest {
   type: "enhancePrompt"
@@ -1207,8 +1195,6 @@ export type WebviewMessage =
   | SetSidebarCollapsedRequest
   | SetReviewDiffStyleRequest
   | SetReviewMarkdownRenderRequest
-  | PersistVariantRequest
-  | RequestVariantsMessage
   | RequestCloudSessionDataMessage
   | ImportAndSendMessage
   | RequestBranchesMessage

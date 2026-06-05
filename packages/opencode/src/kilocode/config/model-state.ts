@@ -18,7 +18,6 @@ export namespace KilocodeModelState {
     model: z.record(z.string(), Ref),
     recent: Ref.array(),
     favorite: Ref.array(),
-    variant: z.record(z.string(), z.string()),
   })
   export type State = z.infer<typeof State>
 
@@ -52,7 +51,7 @@ export namespace KilocodeModelState {
   }
 
   function empty(): State {
-    return { model: {}, recent: [], favorite: [], variant: {} }
+    return { model: {}, recent: [], favorite: [] }
   }
 
   function clean(input: unknown): State {
@@ -61,7 +60,6 @@ export namespace KilocodeModelState {
       model: record(input.model),
       recent: refs(input.recent),
       favorite: refs(input.favorite),
-      variant: variant(input.variant),
     }
   }
 
@@ -85,13 +83,6 @@ export namespace KilocodeModelState {
         if (!parsed.success) return []
         return [[key, parsed.data]]
       }),
-    )
-  }
-
-  function variant(input: unknown) {
-    if (!isRecord(input)) return {}
-    return Object.fromEntries(
-      Object.entries(input).filter((item): item is [string, string] => typeof item[1] === "string"),
     )
   }
 }

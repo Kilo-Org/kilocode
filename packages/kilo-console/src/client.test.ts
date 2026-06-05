@@ -1,18 +1,28 @@
 import { expect, test } from "bun:test"
 
+let current: ((input: RequestInfo | URL, init?: RequestInit) => Promise<Response>) | undefined
+
+if (!("window" in globalThis)) {
+  Object.defineProperty(globalThis, "window", {
+    value: {
+      fetch: (input: RequestInfo | URL, init?: RequestInit) => {
+        if (!current) throw new Error("fetch stub not installed")
+        return current(input, init)
+      },
+    },
+    configurable: true,
+  })
+}
+
 function setup() {
   const calls: Array<{ url: string; method: string; body: unknown }> = []
-  const win = {
-    fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
-      const req = input instanceof Request ? input : new Request(input, init)
-      calls.push({ url: req.url, method: req.method, body: await req.json() })
-      return new Response(JSON.stringify({ permission: { edit: { "*": "allow" } } }), {
-        headers: { "content-type": "application/json" },
-      })
-    },
+  current = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const req = input instanceof Request ? input : new Request(input, init)
+    calls.push({ url: req.url, method: req.method, body: await req.json() })
+    return new Response(JSON.stringify({ permission: { edit: { "*": "allow" } } }), {
+      headers: { "content-type": "application/json" },
+    })
   }
-
-  Object.defineProperty(globalThis, "window", { value: win, configurable: true })
   return calls
 }
 
@@ -45,4 +55,21 @@ test("config writes include the selected directory", async () => {
     set: { indexing: { provider: "ollama" } },
     unset: [["indexing", "model"]],
   })
+})
+
+test("agent variant writes use config overlay", async () => {
+  const calls = setup()
+  const client = await import("./client")
+  const query = { url: "http://kilo:secret@127.0.0.1:4097", dir: "/tmp/project", scope: "project" as const }
+
+  await client.saveAgentVariant(query, "code", "high")
+  await client.saveAgentVariant(query, "code", "default")
+  await client.saveAgentVariant(query, "code", "")
+
+  expect(calls).toHaveLength(3)
+  expect(calls[0]?.method).toBe("PATCH")
+  expect(new URL(calls[0]!.url).searchParams.get("directory")).toBe("/tmp/project")
+  expect(calls[0]?.body).toEqual({ scope: "project", set: { agent: { code: { variant: "high" } } } })
+  expect(calls[1]?.body).toEqual({ scope: "project", set: { agent: { code: { variant: "default" } } } })
+  expect(calls[2]?.body).toEqual({ scope: "project", unset: [["agent", "code", "variant"]] })
 })
