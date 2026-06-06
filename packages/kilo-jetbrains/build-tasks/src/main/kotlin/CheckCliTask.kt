@@ -45,7 +45,7 @@ abstract class CheckCliTask : DefaultTask() {
             val missing = platforms.get().filter { platform ->
                 val d = File(resolved, platform)
                 val exe = if (platform.startsWith("windows")) "kilo.exe" else "kilo"
-                !File(d, exe).exists()
+                !File(d, exe).exists() || !File(d, "models-snapshot.json").exists()
             }
             if (missing.isNotEmpty()) {
                 throw GradleException(
