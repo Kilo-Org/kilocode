@@ -257,7 +257,12 @@ export const layer = Layer.effect(
       if (!Flag.KILO_EXPERIMENTAL_PLAN_MODE) {
         // kilocode_change start - inject plan file path so agent writes to .kilo/plans/
         yield* Effect.promise(() =>
-          KiloSessionPrompt.insertPlanReminders({ agent: input.agent, session: input.session, userMessage }),
+          KiloSessionPrompt.insertPlanReminders({
+            agent: input.agent,
+            session: input.session,
+            userMessage,
+            messages: input.messages,
+          }),
         )
         // kilocode_change end
         const wasPlan = input.messages.some((msg) => msg.info.role === "assistant" && msg.info.agent === "plan")

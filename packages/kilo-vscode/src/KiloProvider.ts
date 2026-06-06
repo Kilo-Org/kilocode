@@ -500,7 +500,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private setSidebarVisible(visible: boolean): void {
     this.setStreamVisibility(visible)
     vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarVisible", visible)
-    this.opts.onSidebarVisibilityChange?.(visible)
   }
 
   /** Resolve a WebviewPanel for displaying Kilo in an editor tab. */

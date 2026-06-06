@@ -23,6 +23,7 @@ import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { lazy } from "@/util/lazy"
 import path from "path"
 import z from "zod"
+import { PlanFile } from "@/kilocode/plan-file"
 
 const agents = lazy(() => makeRuntime(Agent.Service, Agent.defaultLayer))
 const providers = lazy(() => makeRuntime(Provider.Service, Provider.defaultLayer))
@@ -235,8 +236,9 @@ export namespace PlanFollowup {
 
     // Fall back to plan file on disk
     const session = await PlanFollowupRuntime.session((svc) => svc.get(SessionID.make(input.sessionID)))
-    const file = Bun.file(Session.plan(session, Instance.current))
-    const plan = await file.text().catch(() => "")
+    const file =
+      PlanFile.resolve(PlanFile.latest(input.messages), Instance.current) ?? Session.plan(session, Instance.current)
+    const plan = await Bun.file(file).text().catch(() => "")
     return plan.trim()
   }
 
@@ -339,6 +341,7 @@ export namespace PlanFollowup {
   async function startNew(input: {
     sessionID: SessionID
     plan: string
+    file?: string
     messages: MessageV2.WithParts[]
     model: MessageV2.User["model"]
     abort?: AbortSignal
@@ -369,7 +372,7 @@ export namespace PlanFollowup {
           })
 
         try {
-          const file = Session.plan(session, Instance.current)
+          const file = input.file ?? Session.plan(session, Instance.current)
           const todos = await PlanFollowupRuntime.todo.get(input.sessionID)
           const todoList = formatTodos(todos)
 
@@ -503,9 +506,12 @@ export namespace PlanFollowup {
 
     if (answer === ANSWER_NEW_SESSION) {
       Telemetry.trackPlanFollowup(input.sessionID, "new_session")
+      const ctx = Instance.current
+      const file = PlanFile.resolve(PlanFile.latest(input.messages), ctx)
       await startNew({
         sessionID: input.sessionID,
         plan,
+        file: file ? PlanFile.display(file, ctx) : undefined,
         messages: input.messages,
         model: user.model,
         abort: input.abort,
