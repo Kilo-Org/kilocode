@@ -4,6 +4,5 @@ export type KiloProviderOptions = {
   snapshotInitialization?: "wait"
   slimEditMetadata?: boolean
   tabTitle?: (title: string) => void
-  onSidebarVisibilityChange?: (visible: boolean) => void
   worktreeDirectories?: () => string[]
 }

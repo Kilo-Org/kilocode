@@ -636,7 +636,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
             <Show when={activeCollectsData()}>
               <Tooltip value={dataLabel()} placement="top">
                 <span class="model-selector-trigger-free-data" aria-label={dataLabel()}>
-                  <Icon name="brain-circuit" size="small" />
+                  <Icon name="book-open-check" size="small" />
                 </span>
               </Tooltip>
             </Show>
@@ -836,7 +836,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                                           <Show when={isDataCollectedModel(model)}>
                                             <Tooltip value={dataLabel()} placement="top">
                                               <span class="model-selector-free-data-icon" aria-label={dataLabel()}>
-                                                <Icon name="brain-circuit" size="small" />
+                                                <Icon name="book-open-check" size="small" />
                                               </span>
                                             </Tooltip>
                                           </Show>

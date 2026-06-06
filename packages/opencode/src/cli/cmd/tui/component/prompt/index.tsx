@@ -59,6 +59,7 @@ import { DialogWorkspaceUnavailable } from "../dialog-workspace-unavailable"
 import { useArgs } from "@tui/context/args"
 import { KiloSessionTuiSync } from "@/kilocode/session/tui-sync" // kilocode_change
 import { TuiAutoApprove } from "@/kilocode/cli/cmd/tui/auto-approve" // kilocode_change
+import { slashMatches } from "@/kilocode/cli/cmd/command-display" // kilocode_change
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { type WorkspaceStatus } from "../workspace-label"
 import { useCommandPalette } from "../../context/command-palette"
@@ -1119,8 +1120,8 @@ export function Prompt(props: PromptProps) {
         return true
       }
 
-      sessionID = res.data.id
       // kilocode_change start
+      sessionID = res.data.id
       if (args.autoApprove && !args.sessionID && !args.continue) TuiAutoApprove.boot(sessionID)
       // kilocode_change end
     }
@@ -1184,7 +1185,7 @@ export function Prompt(props: PromptProps) {
       iife(() => {
         const firstLine = inputText.split("\n")[0]
         const command = firstLine.split(" ")[0].slice(1)
-        return sync.data.command.some((x) => x.name === command)
+        return sync.data.command.some((x) => slashMatches(x, command)) // kilocode_change
       })
     ) {
       // Parse command from first line, preserve multi-line content in arguments

@@ -1,5 +1,39 @@
 # @kilocode/cli
 
+## 7.3.40
+
+### Patch Changes
+
+- [#10925](https://github.com/Kilo-Org/kilocode/pull/10925) [`881a451`](https://github.com/Kilo-Org/kilocode/commit/881a451f8ac198c9d199616c1eef20e94ff25b57) Thanks [@evanjacobson](https://github.com/evanjacobson)! - Display skills in CLI slash command autocomplete options
+
+- [#10952](https://github.com/Kilo-Org/kilocode/pull/10952) [`be5f42f`](https://github.com/Kilo-Org/kilocode/commit/be5f42f158ee88777cc37160cb94dd58b74c6247) Thanks [@johnnyeric](https://github.com/johnnyeric)! - Support custom plan file paths when exiting planning.
+
+## 7.3.39
+
+### Patch Changes
+
+- [#10901](https://github.com/Kilo-Org/kilocode/pull/10901) [`a8a8dd8`](https://github.com/Kilo-Org/kilocode/commit/a8a8dd87247a700e83d8b9cbedc7a4a26cdea602) - Prevent icon images fetched from the web from causing provider request errors.
+
+- [#10933](https://github.com/Kilo-Org/kilocode/pull/10933) [`a0eb3b7`](https://github.com/Kilo-Org/kilocode/commit/a0eb3b7cb6e06a6d9d625169eaefaffb4b4f7095) - Write strict JSON when adding MCP servers to `kilo.json` configuration files.
+
+- [#10924](https://github.com/Kilo-Org/kilocode/pull/10924) [`189f251`](https://github.com/Kilo-Org/kilocode/commit/189f251866fb9e2971384377d1494b03e6d8889d) - Temporarily disable free-model session and Git workspace data export.
+
+- [#10949](https://github.com/Kilo-Org/kilocode/pull/10949) [`78117d1`](https://github.com/Kilo-Org/kilocode/commit/78117d1a25cc7fe408a5933c117bf76062a7aaf2) - Fail publication builds when the bundled models snapshot cannot be downloaded or validated, and load the snapshot as JSON data in compiled binaries.
+
+## 7.3.33
+
+### Patch Changes
+
+- [#10935](https://github.com/Kilo-Org/kilocode/pull/10935) [`6cab5f1`](https://github.com/Kilo-Org/kilocode/commit/6cab5f18e76b5ab0f738c2e20e93f12f3679b5dc) - Prevent the macOS Apple Silicon CLI from failing to start because of malformed bundled exports.
+
+## 7.3.30
+
+### Patch Changes
+
+- [#10862](https://github.com/Kilo-Org/kilocode/pull/10862) [`c4de1ac`](https://github.com/Kilo-Org/kilocode/commit/c4de1acdf0aef967b5795fde006c6f61e16328f3) - Support reasoning with Mistral Medium 3.5 models, including the latest alias.
+
+- [#10895](https://github.com/Kilo-Org/kilocode/pull/10895) [`2e1945c`](https://github.com/Kilo-Org/kilocode/commit/2e1945c287971f26bec67b7e60de6c282a5c8865) - Allow plan approval submissions to complete after planning finishes.
+
 ## 7.3.29
 
 ### Patch Changes
