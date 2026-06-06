@@ -51,6 +51,10 @@ export const CustomizeNav: NavSection[] = [
         children: "Large Projects",
         platform: "legacy",
       },
+      {
+        href: "/customize/context/entroly-compression",
+        children: "Entroly Compression",
+      },
     ],
   },
 ]
