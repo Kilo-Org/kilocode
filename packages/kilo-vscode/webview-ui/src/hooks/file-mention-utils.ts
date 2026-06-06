@@ -121,6 +121,17 @@ export function getMentionRemovalRange(
   return null
 }
 
+export function getBackspaceMentionRemovalRange(
+  text: string,
+  cursor: number,
+  paths: Set<string>,
+): { start: number; end: number } | null {
+  const char = text[cursor - 1]
+  const position = char && /\s/.test(char) ? cursor - 1 : cursor
+  if (!isCursorAtMentionEnd(text, position, paths)) return null
+  return getMentionRemovalRange(text, position, paths)
+}
+
 /**
  * Check whether the cursor sits immediately after a known mention.
  */
@@ -166,6 +177,19 @@ export function findMentionRange(
   return null
 }
 
+function findPathMention(text: string, path: string): { value: string; start: number; end: number } | undefined {
+  // A path is represented once in mentionedPaths, so use its first mention as
+  // the single inline source offset for the attachment.
+  const value = `@${path}`
+  const pattern = new RegExp(`(^|\\s)${escape(value)}(?=\\s|$)`)
+  const match = pattern.exec(text)
+  if (!match) return undefined
+
+  const prefix = match[1] ?? ""
+  const start = match.index + prefix.length
+  return { value, start, end: start + value.length }
+}
+
 /**
  * Build FileAttachment objects from currently mentioned paths in the text.
  */
@@ -177,12 +201,21 @@ export function buildFileAttachments(
   const result: FileAttachment[] = []
   const dir = workspaceDir.replaceAll("\\", "/")
   for (const path of mentionedPaths) {
-    if (text.includes(`@${path}`)) {
-      const abs = path.startsWith("/") ? path : `${dir}/${path}`
-      const url = new URL("file://")
-      url.pathname = abs.startsWith("/") ? abs : `/${abs}`
-      result.push({ mime: "text/plain", url: url.href })
-    }
+    const mention = findPathMention(text, path)
+    if (!mention) continue
+
+    const abs = path.startsWith("/") ? path : `${dir}/${path}`
+    const url = new URL("file://")
+    url.pathname = abs.startsWith("/") ? abs : `/${abs}`
+    result.push({
+      mime: "text/plain",
+      url: url.href,
+      source: {
+        type: "file",
+        path,
+        text: mention,
+      },
+    })
   }
   return result
 }

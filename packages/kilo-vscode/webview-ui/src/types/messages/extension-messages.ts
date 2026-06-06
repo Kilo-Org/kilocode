@@ -237,6 +237,7 @@ export interface ActionMessage {
 export interface SetChatBoxMessage {
   type: "setChatBoxMessage"
   text: string
+  focus?: boolean
 }
 
 export interface AppendChatBoxMessage {

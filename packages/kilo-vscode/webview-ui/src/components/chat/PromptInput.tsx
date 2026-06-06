@@ -386,14 +386,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
   })
 
+  const setTextareaValue = (value: string, focus = false) => {
+    if (!textareaRef) return
+    textareaRef.value = value
+    adjustHeight()
+    if (!focus) return
+    textareaRef.focus()
+    textareaRef.setSelectionRange(value.length, value.length)
+  }
+
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type === "setChatBoxMessage") {
       setText(message.text)
       mention.seedFromText(message.text)
-      if (textareaRef) {
-        textareaRef.value = message.text
-        adjustHeight()
-      }
+      setTextareaValue(message.text, message.focus)
     }
 
     if (message.type === "appendChatBoxMessage") {
@@ -782,7 +788,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     )
       return
 
-    const mentionFiles = mention.parseFileAttachments(draft)
+    const mentionFiles = mention.parseFileAttachments(message)
     const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))
     const pendingId = props.pendingSessionID ?? session.draftSessionID()
     const id = sid()
