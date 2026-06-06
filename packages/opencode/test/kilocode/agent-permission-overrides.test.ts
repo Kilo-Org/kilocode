@@ -70,6 +70,7 @@ test("plan agent still hard-denies non-plan edits after user edit allow", async 
       expect(plan).toBeDefined()
       expect(Permission.evaluate("edit", "src/output.log", plan!.permission).action).toBe("deny")
       expect(Permission.evaluate("edit", ".kilo/plans/fix.md", plan!.permission).action).toBe("allow")
+      expect(Permission.evaluate("edit", ".plans/fix.md", plan!.permission).action).toBe("allow")
     },
   })
 })
