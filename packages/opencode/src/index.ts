@@ -40,6 +40,7 @@ import { ProfileCommand } from "./kilocode/cli/cmd/profile" // kilocode_change
 import { DevSetupCommand, DevAliasCommand } from "./kilocode/cli/dev-setup" // kilocode_change
 import { DaemonCommand } from "./kilocode/cli/cmd/daemon" // kilocode_change
 import { KiloConsoleCommand } from "./kilocode/cli/cmd/console" // kilocode_change
+import { DesignCommand } from "./kilocode/design/cmd" // kilocode_change
 // kilocode_change start - Import telemetry, instance disposal, and legacy migration
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { InstanceRuntime } from "./project/instance-runtime" // kilocode_change
@@ -254,7 +255,7 @@ let cli = yargs(args) // kilocode_change
 
 // kilocode_change start - dev-only commands are hidden from release builds
 if (InstallationBuildKind !== "release") {
-  cli = cli.command(DevSetupCommand).command(DevAliasCommand)
+  cli = cli.command(DevSetupCommand).command(DevAliasCommand).command(DesignCommand)
 }
 // kilocode_change end
 

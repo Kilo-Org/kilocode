@@ -1,0 +1,10 @@
+{
+  "name": "@kilocode/design-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Throwaway Browser Canvas fixture for `kilo design` (zero-install, Bun dev server with live reload)",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run serve.ts"
+  }
+}

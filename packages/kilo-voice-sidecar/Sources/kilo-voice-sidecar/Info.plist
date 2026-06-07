@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key>
+  <string>ai.kilo.voice-sidecar</string>
+  <key>CFBundleName</key>
+  <string>kilo-voice-sidecar</string>
+  <key>CFBundleDisplayName</key>
+  <string>Kilo Voice Sidecar</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Kilo Design Mode uses the microphone so you can steer design changes by voice.</string>
+  <key>NSSpeechRecognitionUsageDescription</key>
+  <string>Kilo Design Mode transcribes your speech to drive live design edits.</string>
+</dict>
+</plist>
