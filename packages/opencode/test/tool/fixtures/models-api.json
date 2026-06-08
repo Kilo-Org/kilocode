@@ -28920,6 +28920,71 @@
       }
     }
   },
+  "orcarouter": {
+    "id": "orcarouter",
+    "env": ["ORCAROUTER_API_KEY"],
+    "npm": "@ai-sdk/openai-compatible",
+    "api": "https://api.orcarouter.ai/v1",
+    "name": "OrcaRouter",
+    "doc": "https://docs.orcarouter.ai",
+    "models": {
+      "orcarouter/auto": {
+        "id": "orcarouter/auto",
+        "name": "OrcaRouter Auto",
+        "family": "auto",
+        "attachment": true,
+        "reasoning": false,
+        "tool_call": true,
+        "temperature": true,
+        "release_date": "2025-01-01",
+        "last_updated": "2026-05-14",
+        "modalities": { "input": ["text", "image"], "output": ["text"] },
+        "open_weights": false,
+        "cost": { "input": 0, "output": 0 },
+        "limit": { "context": 128000, "output": 16384 },
+        "provider": { "npm": "@ai-sdk/openai-compatible", "api": "https://api.orcarouter.ai/v1" }
+      },
+      "openai/gpt-5.5": {
+        "id": "openai/gpt-5.5",
+        "name": "GPT-5.5",
+        "family": "gpt",
+        "attachment": true,
+        "reasoning": true,
+        "tool_call": true,
+        "temperature": false,
+        "knowledge": "2025-12-01",
+        "release_date": "2026-04-23",
+        "last_updated": "2026-04-23",
+        "modalities": { "input": ["text", "image", "pdf"], "output": ["text"] },
+        "open_weights": false,
+        "cost": {
+          "input": 5,
+          "output": 30,
+          "cache_read": 0.5,
+          "context_over_200k": { "input": 10, "output": 45, "cache_read": 1 }
+        },
+        "limit": { "context": 1050000, "input": 922000, "output": 128000 },
+        "provider": { "npm": "@ai-sdk/openai-compatible", "api": "https://api.orcarouter.ai/v1" }
+      },
+      "anthropic/claude-opus-4.7": {
+        "id": "anthropic/claude-opus-4.7",
+        "name": "Claude Opus 4.7",
+        "family": "claude-opus",
+        "attachment": true,
+        "reasoning": true,
+        "tool_call": true,
+        "temperature": false,
+        "knowledge": "2026-01-31",
+        "release_date": "2026-04-16",
+        "last_updated": "2026-04-16",
+        "modalities": { "input": ["text", "image", "pdf"], "output": ["text"] },
+        "open_weights": false,
+        "cost": { "input": 5, "output": 25, "cache_read": 0.5, "cache_write": 6.25 },
+        "limit": { "context": 1000000, "output": 128000 },
+        "provider": { "npm": "@ai-sdk/openai-compatible", "api": "https://api.orcarouter.ai/v1" }
+      }
+    }
+  },
   "openrouter": {
     "id": "openrouter",
     "env": ["OPENROUTER_API_KEY"],
