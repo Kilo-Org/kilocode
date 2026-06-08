@@ -1,5 +1,5 @@
-### File 1: `packages/kilo-docs/getting-started/faq/credits-and-billing.md`
+### 1. Update to `packages/kilo-docs/collaborate/teams/billing.md`
 
-Add the following section to the existing FAQ:
+Add a new section after the existing billing content:
 
 ```markdown
