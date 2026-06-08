@@ -10,6 +10,10 @@ describe("Agent Manager tool setting", () => {
     expect(toolPermission(true)).toBeUndefined()
   })
 
+  it("keeps new sessions enabled when the setting is unset", () => {
+    expect(toolPermission(undefined)).toBeUndefined()
+  })
+
   it("denies the tool for new sessions when disabled", () => {
     expect(toolPermission(false)).toEqual([{ permission: "agent_manager", action: "deny", pattern: "*" }])
   })

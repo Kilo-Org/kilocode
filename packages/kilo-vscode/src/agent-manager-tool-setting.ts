@@ -3,8 +3,8 @@ import type { PermissionRuleset } from "@kilocode/sdk/v2/client"
 
 const SETTING = "agentManager.enableTool"
 
-export function toolPermission(enabled: boolean): PermissionRuleset | undefined {
-  if (enabled) return undefined
+export function toolPermission(enabled?: boolean): PermissionRuleset | undefined {
+  if (enabled !== false) return undefined
   return [{ permission: "agent_manager", action: "deny", pattern: "*" }]
 }
 
