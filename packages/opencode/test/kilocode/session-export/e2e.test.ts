@@ -92,7 +92,12 @@ function ready(worker: Worker, db: string): Promise<void> {
       clearTimeout(timer)
       resolve()
     }
-    worker.postMessage({ kind: "init", dbPath: db, endpoint: "http://127.0.0.1:1/session-export" })
+    worker.postMessage({
+      kind: "init",
+      dbPath: db,
+      endpoint: "http://127.0.0.1:1/session-export",
+      allowCustomEndpoint: true,
+    })
   })
 }
 
