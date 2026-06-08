@@ -9,9 +9,10 @@ function base(): FormState {
   return {
     providerID: "my-provider",
     name: "My Provider",
+    interfaceType: "openai-compatible",
     baseURL: "https://example.com/v1",
     apiKey: "",
-    models: [{ id: "model-1", name: "Model One", reasoning: false, variants: [] }],
+    models: [{ id: "model-1", name: "Model One", context: "", reasoning: false, variants: [] }],
     headers: [],
     saving: false,
   }
@@ -154,5 +155,32 @@ describe("validateCustomProvider – variant name validation", () => {
     expect(out.result).toBeDefined()
     const saved = out.result!.config.models["model-1"] as Record<string, unknown>
     expect(saved.variants).toEqual({ eco: { enable_thinking: true, reasoningEffort: "low" } })
+  })
+
+  it("persists custom interface type, context limit, and max reasoning effort", () => {
+    const form = base()
+    form.interfaceType = "openai-responses"
+    form.models[0].context = "262144"
+    form.models[0].reasoning = true
+    form.models[0].variants = [
+      {
+        name: "max",
+        enableThinking: undefined,
+        thinking: undefined,
+        reasoningEffort: "max",
+        chatTemplateArgs: undefined,
+      },
+    ]
+
+    const out = validateCustomProvider(args(form))
+    expect(out.result).toBeDefined()
+    expect(out.result!.config.npm).toBe("@ai-sdk/openai")
+    expect(out.result!.config.options).toEqual({
+      baseURL: "https://example.com/v1",
+      interfaceType: "openai-responses",
+    })
+    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
+    expect(saved.limit).toEqual({ context: 262144, output: 0 })
+    expect(saved.variants).toEqual({ max: { reasoningEffort: "max" } })
   })
 })

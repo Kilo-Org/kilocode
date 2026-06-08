@@ -88,6 +88,7 @@ describe("sanitizeCustomProviderConfig", () => {
         env: ["MY_PROVIDER_KEY"],
         options: {
           baseURL: "https://example.com/v1",
+          interfaceType: "openai-compatible",
           headers: {
             Authorization: "Bearer test",
             "X-Test": "123",
@@ -95,6 +96,77 @@ describe("sanitizeCustomProviderConfig", () => {
         },
         models: {
           "model-1": { name: "Model One" },
+        },
+      },
+    })
+  })
+
+  it("maps supported custom provider interface types to approved packages", () => {
+    const cases = [
+      ["google-generative-ai", "@ai-sdk/google"],
+      ["openai-compatible", "@ai-sdk/openai-compatible"],
+      ["openai-responses", "@ai-sdk/openai"],
+      ["anthropic", "@ai-sdk/anthropic"],
+    ] as const
+
+    for (const [type, npm] of cases) {
+      const result = sanitizeCustomProviderConfig({
+        name: "My Provider",
+        interfaceType: type,
+        options: { baseURL: "https://example.com/v1", interfaceType: "openai-compatible" },
+        models: {
+          "model-1": { name: "Model One" },
+        },
+      })
+
+      expect(result).toEqual({
+        value: {
+          npm,
+          name: "My Provider",
+          options: {
+            baseURL: "https://example.com/v1",
+            interfaceType: type,
+          },
+          models: {
+            "model-1": { name: "Model One" },
+          },
+        },
+      })
+    }
+  })
+
+  it("persists per-model context limits and extended reasoning efforts", () => {
+    const result = sanitizeCustomProviderConfig({
+      name: "Reasoning Provider",
+      options: { baseURL: "https://example.com/v1" },
+      models: {
+        "model-1": {
+          name: "Model One",
+          reasoning: true,
+          limit: { context: 262144 },
+          variants: {
+            xhigh: { reasoningEffort: "xhigh" },
+            max: { reasoningEffort: "max" },
+          },
+        },
+      },
+    })
+
+    expect(result).toEqual({
+      value: {
+        npm: "@ai-sdk/openai-compatible",
+        name: "Reasoning Provider",
+        options: { baseURL: "https://example.com/v1", interfaceType: "openai-compatible" },
+        models: {
+          "model-1": {
+            name: "Model One",
+            reasoning: true,
+            limit: { context: 262144, output: 0 },
+            variants: {
+              xhigh: { reasoningEffort: "xhigh" },
+              max: { reasoningEffort: "max" },
+            },
+          },
         },
       },
     })
@@ -118,7 +190,7 @@ describe("sanitizeCustomProviderConfig", () => {
       value: {
         npm: "@ai-sdk/openai-compatible",
         name: "Thinking Provider",
-        options: { baseURL: "https://example.com/v1" },
+        options: { baseURL: "https://example.com/v1", interfaceType: "openai-compatible" },
         models: {
           "model-1": {
             name: "Model One",
