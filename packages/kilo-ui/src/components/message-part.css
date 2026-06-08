@@ -385,9 +385,6 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
    Reasoning stays open unless the user explicitly collapses it. */
 [data-component="reasoning-part"] {
   width: 100%;
-  border-left: 2px solid var(--border-weak-base);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
 
   [data-component="collapsible"].tool-collapsible {
     gap: 0;
