@@ -84,6 +84,7 @@ export class ServerManager {
       console.log("[Kilo New] ServerManager: 🎬 Spawning CLI process:", cliPath, ["serve", "--port", "0"])
       const cfg = vscode.workspace.getConfiguration("kilo-code.new")
       const claudeCompat = cfg.get<boolean>("claudeCodeCompat", false)
+      const manager = cfg.get<boolean>("agentManager.enableTool", true)
       // Pin cwd so the CLI doesn't inherit the extension host's cwd ("/" under F5 debug)
       // or "$HOME" in empty VS Code windows.
       const folders = vscode.workspace.workspaceFolders
@@ -136,6 +137,7 @@ export class ServerManager {
           KILO_VSCODE_VERSION: vscode.version,
           KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
           ...(!claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
+          ...(!manager && { KILO_DISABLE_AGENT_MANAGER_TOOL: "true" }),
           ...resolveTreeSitterEnv(this.context.extensionPath),
         },
         stdio: ["ignore", "pipe", "pipe"],

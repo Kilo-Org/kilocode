@@ -1203,6 +1203,7 @@ export const dict = {
   "settings.aboutKiloCode.telemetry.openSettings": "テレメトリ設定を開く",
 
   "settings.agentBehaviour.subtab.agents": "エージェント",
+  "settings.agentBehaviour.subtab.agentManager": "Agent Manager",
   "settings.agentBehaviour.subtab.mcpServers": "MCPサーバー",
   "settings.agentBehaviour.subtab.rules": "ルール",
   "settings.agentBehaviour.subtab.workflows": "ワークフロー",
@@ -1385,6 +1386,9 @@ export const dict = {
     "ルールはエージェントの動作を導く指示ファイルです。すべての会話のシステムプロンプトに含まれます。追加のルールを含めるには、以下にファイルパスを追加してください。",
   "settings.agentBehaviour.instructionFiles": "追加の指示ファイル",
   "settings.agentBehaviour.instructionFiles.description": "システムプロンプトに含まれる追加の指示ファイルへのパス",
+  "settings.agentBehaviour.agentManagerTool.title": "Agent Manager ツールを有効にする",
+  "settings.agentBehaviour.agentManagerTool.description":
+    "エージェントが Agent Manager で委任セッションを開始できるようにします。これらのセッションはタブとして表示され、個別の git worktrees で実行できます。これを無効にすると Agent Manager ツールのみが削除され、通常のサブエージェントは引き続き個別に利用できます。新しいセッションに適用されます。",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 互換性",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code ファイルを読み込む",
   "settings.agentBehaviour.claudeCompat.description":

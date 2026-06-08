@@ -907,6 +907,11 @@
           "default": false,
           "description": "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into Kilo sessions. Enable this if you want Kilo to use your Claude Code instructions and skills."
         },
+        "kilo-code.new.agentManager.enableTool": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow agents to start delegated sessions in Agent Manager, where they appear as tabs and can run in separate git worktrees. Disabling this only removes the Agent Manager tool; normal subagents remain available independently. Applies to new sessions."
+        },
         "kilo-code.new.extraCaCerts": {
           "type": "string",
           "default": "",

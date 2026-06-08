@@ -1214,6 +1214,7 @@ export const dict = {
   "settings.aboutKiloCode.telemetry.openSettings": "Otvori postavke telemetrije",
 
   "settings.agentBehaviour.subtab.agents": "Agenti",
+  "settings.agentBehaviour.subtab.agentManager": "Agent Manager",
   "settings.agentBehaviour.subtab.mcpServers": "MCP serveri",
   "settings.agentBehaviour.subtab.rules": "Pravila",
   "settings.agentBehaviour.subtab.workflows": "Tokovi rada",
@@ -1398,6 +1399,9 @@ export const dict = {
     "Pravila su datoteke uputa koje usmjeravaju ponašanje agenta. Uključena su u sistemski prompt za svaki razgovor. Dodajte putanje datoteka ispod kako biste uključili dodatna pravila.",
   "settings.agentBehaviour.instructionFiles": "Dodatne datoteke uputa",
   "settings.agentBehaviour.instructionFiles.description": "Putanje do dodatnih datoteka uputa u sistemskom promptu",
+  "settings.agentBehaviour.agentManagerTool.title": "Omogući alat Agent Manager",
+  "settings.agentBehaviour.agentManagerTool.description":
+    "Dozvolite agentima da pokreću delegirane sesije u Agent Manager, gdje se pojavljuju kao kartice i mogu se pokretati u odvojenim git worktrees. Onemogućavanje ovoga samo uklanja alat Agent Manager; normalni podagenti ostaju dostupni nezavisno. Primjenjuje se na nove sesije.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code kompatibilnost",
   "settings.agentBehaviour.claudeCompat.title": "Učitaj Claude Code datoteke",
   "settings.agentBehaviour.claudeCompat.description":

@@ -4,6 +4,7 @@ import type { CreateWorktreeResult } from "./WorktreeManager"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import type { PanelContext } from "./host"
 import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
+import { sessionPermission } from "../agent-manager-tool-setting"
 
 const LABEL_MAX = 28
 const PREFIX = new Set(["feat", "fix", "chore", "bug", "issue", "task", "branch"])
@@ -125,7 +126,10 @@ async function local(deps: ToolDeps, client: KiloClient, task: ToolTask, directo
     return false
   }
   const target = wt?.path ?? root
-  const { data } = await client.session.create({ directory: target, platform: PLATFORM }, { throwOnError: true })
+  const { data } = await client.session.create(
+    { directory: target, platform: PLATFORM, permission: sessionPermission() },
+    { throwOnError: true },
+  )
   const session = data
   state.addSession(session.id, wt?.id ?? null)
   if (wt) deps.registerWorktreeSession(session.id, wt.path)

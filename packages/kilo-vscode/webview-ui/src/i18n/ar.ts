@@ -1187,6 +1187,7 @@ export const dict = {
   "settings.aboutKiloCode.telemetry.openSettings": "فتح إعدادات Telemetry",
 
   "settings.agentBehaviour.subtab.agents": "الوكلاء",
+  "settings.agentBehaviour.subtab.agentManager": "Agent Manager",
   "settings.agentBehaviour.subtab.mcpServers": "خوادم MCP",
   "settings.agentBehaviour.subtab.rules": "القواعد",
   "settings.agentBehaviour.subtab.workflows": "سير العمل",
@@ -1367,6 +1368,9 @@ export const dict = {
     "القواعد هي ملفات تعليمات توجه سلوك الوكيل. يتم تضمينها في موجه النظام لكل محادثة. أضف مسارات الملفات أدناه لتضمين قواعد إضافية.",
   "settings.agentBehaviour.instructionFiles": "ملفات تعليمات إضافية",
   "settings.agentBehaviour.instructionFiles.description": "مسارات ملفات التعليمات الإضافية في موجه النظام",
+  "settings.agentBehaviour.agentManagerTool.title": "تمكين أداة Agent Manager",
+  "settings.agentBehaviour.agentManagerTool.description":
+    "السماح للوكلاء ببدء جلسات مفوضة في Agent Manager، حيث تظهر كعلامات تبويب ويمكن تشغيلها في git worktrees منفصلة. يؤدي تعطيل هذا إلى إزالة أداة Agent Manager فقط؛ يظل الوكلاء الفرعيون العاديون متاحين بشكل مستقل. ينطبق على الجلسات الجديدة.",
   "settings.agentBehaviour.claudeCompat.heading": "توافق Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "تحميل ملفات Claude Code",
   "settings.agentBehaviour.claudeCompat.description":

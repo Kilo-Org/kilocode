@@ -178,6 +178,7 @@ describe("kilocode tool registry indexing", () => {
 
   test("conditionally includes Kilo registry extras", () => {
     const prev = process.env["KILO_CLIENT"]
+    const disabled = process.env["KILO_DISABLE_AGENT_MANAGER_TOOL"]
     const def = (id: string): Tool.Def => ({
       id,
       description: id,
@@ -213,11 +214,20 @@ describe("kilocode tool registry indexing", () => {
         "agent_manager",
       ])
 
+      process.env["KILO_DISABLE_AGENT_MANAGER_TOOL"] = "true"
+      expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual([
+        "semantic_search",
+        "recall",
+        "background_process",
+      ])
+
       process.env["KILO_CLIENT"] = "desktop"
       expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual(["semantic_search", "recall"])
     } finally {
       if (prev === undefined) delete process.env["KILO_CLIENT"]
       if (prev !== undefined) process.env["KILO_CLIENT"] = prev
+      if (disabled === undefined) delete process.env["KILO_DISABLE_AGENT_MANAGER_TOOL"]
+      if (disabled !== undefined) process.env["KILO_DISABLE_AGENT_MANAGER_TOOL"] = disabled
     }
   })
 

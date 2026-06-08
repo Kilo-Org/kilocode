@@ -44,6 +44,7 @@ import {
   type SessionRefreshContext,
 } from "./kilo-provider-utils"
 import { GitOps } from "./agent-manager/GitOps"
+import { sessionPermission } from "./agent-manager-tool-setting"
 import { GitStatsPoller, type LocalStats } from "./agent-manager/GitStatsPoller"
 import { diffSummary as localDiffSummary } from "./agent-manager/local-diff"
 import { getWorkspaceRoot } from "./review-utils"
@@ -983,6 +984,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestClaudeCompatSetting":
           this.sendClaudeCompatSetting()
           break
+        case "requestAgentManagerToolSetting":
+          this.sendAgentManagerToolSetting()
+          break
         case "requestNotificationSettings":
           this.sendNotificationSettings()
           break
@@ -1336,7 +1340,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     try {
       const workspaceDir = this.getContextDirectory()
       const { data: session } = await this.client.session.create(
-        { directory: workspaceDir, platform: this.opts.platform },
+        { directory: workspaceDir, platform: this.opts.platform, permission: sessionPermission() },
         { throwOnError: true },
       )
       this.stopCurrentSessionProcesses(session.id)
@@ -2324,7 +2328,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     if (!sessionID && !this.currentSession) {
       const { data: session } = await this.client.session.create(
-        { directory: dir, platform: this.opts.platform },
+        { directory: dir, platform: this.opts.platform, permission: sessionPermission() },
         { throwOnError: true },
       )
       this.stopCurrentSessionProcesses(session.id)
@@ -2806,6 +2810,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Re-send all settings to the webview so the UI reflects the reset
     this.postMessage(buildAutocompleteSettingsMessage())
     this.sendBrowserSettings()
+    this.sendAgentManagerToolSetting()
     this.sendNotificationSettings()
     this.sendTimelineSetting()
     await ModelState.reset(this.client, (msg) => this.postMessage(msg))
@@ -2844,6 +2849,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       type: "claudeCompatSettingLoaded",
       enabled: enabled ?? false,
     })
+  }
+
+  private sendAgentManagerToolSetting(): void {
+    const enabled = vscode.workspace.getConfiguration("kilo-code.new.agentManager").get<boolean>("enableTool", true)
+    this.postMessage({ type: "agentManagerToolSettingLoaded", enabled })
   }
 
   /** Re-fetch all server-side state after an auth change. */

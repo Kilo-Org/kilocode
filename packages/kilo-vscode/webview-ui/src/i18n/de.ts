@@ -1225,6 +1225,7 @@ export const dict = {
   "settings.aboutKiloCode.telemetry.openSettings": "Telemetrie-Einstellungen öffnen",
 
   "settings.agentBehaviour.subtab.agents": "Agenten",
+  "settings.agentBehaviour.subtab.agentManager": "Agent Manager",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-Server",
   "settings.agentBehaviour.subtab.rules": "Regeln",
   "settings.agentBehaviour.subtab.workflows": "Workflows",
@@ -1416,6 +1417,9 @@ export const dict = {
     "Regeln sind Anweisungsdateien, die das Verhalten des Agenten steuern. Sie werden in den System-Prompt für jede Konversation eingebunden. Fügen Sie unten Dateipfade hinzu, um zusätzliche Regeln einzubinden.",
   "settings.agentBehaviour.instructionFiles": "Zusätzliche Anweisungsdateien",
   "settings.agentBehaviour.instructionFiles.description": "Pfade zu zusätzlichen Anweisungsdateien im System-Prompt",
+  "settings.agentBehaviour.agentManagerTool.title": "Agent Manager-Tool aktivieren",
+  "settings.agentBehaviour.agentManagerTool.description":
+    "Erlaubt Agenten das Starten delegierter Sitzungen in Agent Manager, wo sie als Tabs angezeigt werden und in separaten git worktrees ausgeführt werden können. Die Deaktivierung entfernt nur das Agent Manager-Tool; normale Sub-Agenten bleiben unabhängig davon verfügbar. Gilt für neue Sitzungen.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-Kompatibilität",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code-Dateien laden",
   "settings.agentBehaviour.claudeCompat.description":

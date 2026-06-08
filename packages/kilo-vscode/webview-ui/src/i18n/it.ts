@@ -1055,6 +1055,7 @@ export const dict = {
     'La telemetria è controllata dall\'impostazione integrata di VS Code. Per disabilitarla, vai in Impostazioni > Telemetria > Livello telemetria e impostala su "off". Riavvia VS Code per applicare la modifica.',
   "settings.aboutKiloCode.telemetry.openSettings": "Apri impostazioni telemetria",
   "settings.agentBehaviour.subtab.agents": "Agenti",
+  "settings.agentBehaviour.subtab.agentManager": "Agent Manager",
   "settings.agentBehaviour.subtab.mcpServers": "Server MCP",
   "settings.agentBehaviour.subtab.rules": "Regole",
   "settings.agentBehaviour.subtab.workflows": "Workflow",
@@ -1169,6 +1170,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "File istruzioni aggiuntivi",
   "settings.agentBehaviour.instructionFiles.description":
     "Percorsi ai file istruzioni aggiuntivi inclusi nel prompt di sistema",
+  "settings.agentBehaviour.agentManagerTool.title": "Abilita lo strumento Agent Manager",
+  "settings.agentBehaviour.agentManagerTool.description":
+    "Consenti agli agenti di avviare sessioni delegate in Agent Manager, dove appaiono come schede e possono essere eseguite in git worktrees separati. Disabilitare questa opzione rimuove solo lo strumento Agent Manager; i subagenti normali rimangono disponibili in modo indipendente. Si applica alle nuove sessioni.",
   "settings.agentBehaviour.claudeCompat.heading": "Compatibilità Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Carica file Claude Code",
   "settings.agentBehaviour.claudeCompat.description":

@@ -1207,6 +1207,7 @@ export const dict = {
   "settings.aboutKiloCode.telemetry.openSettings": "Åbn telemetriindstillinger",
 
   "settings.agentBehaviour.subtab.agents": "Agenter",
+  "settings.agentBehaviour.subtab.agentManager": "Agent Manager",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-servere",
   "settings.agentBehaviour.subtab.rules": "Regler",
   "settings.agentBehaviour.subtab.workflows": "Arbejdsgange",
@@ -1389,6 +1390,9 @@ export const dict = {
     "Regler er instruktionsfiler, der styrer agentens adfærd. De inkluderes i systemprompten for hver samtale. Tilføj filstier nedenfor for at inkludere yderligere regler.",
   "settings.agentBehaviour.instructionFiles": "Yderligere instruktionsfiler",
   "settings.agentBehaviour.instructionFiles.description": "Stier til yderligere instruktionsfiler i systemprompten",
+  "settings.agentBehaviour.agentManagerTool.title": "Aktivér Agent Manager-værktøj",
+  "settings.agentBehaviour.agentManagerTool.description":
+    "Tillad agenter at starte delegerede sessioner i Agent Manager, hvor de vises som faner og kan køre i separate git worktrees. Deaktivering af dette fjerner kun Agent Manager-værktøjet; normale underagenter forbliver tilgængelige uafhængigt. Gælder for nye sessioner.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-kompatibilitet",
   "settings.agentBehaviour.claudeCompat.title": "Indlæs Claude Code-filer",
   "settings.agentBehaviour.claudeCompat.description":

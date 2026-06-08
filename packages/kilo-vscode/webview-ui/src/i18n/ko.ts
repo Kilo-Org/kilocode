@@ -1198,6 +1198,7 @@ export const dict = {
   "settings.aboutKiloCode.telemetry.openSettings": "원격 측정 설정 열기",
 
   "settings.agentBehaviour.subtab.agents": "에이전트",
+  "settings.agentBehaviour.subtab.agentManager": "Agent Manager",
   "settings.agentBehaviour.subtab.mcpServers": "MCP 서버",
   "settings.agentBehaviour.subtab.rules": "규칙",
   "settings.agentBehaviour.subtab.workflows": "워크플로",
@@ -1376,6 +1377,9 @@ export const dict = {
     "규칙은 에이전트 동작을 안내하는 지시 파일입니다. 모든 대화의 시스템 프롬프트에 포함됩니다. 추가 규칙을 포함하려면 아래에 파일 경로를 추가하세요.",
   "settings.agentBehaviour.instructionFiles": "추가 지시 파일",
   "settings.agentBehaviour.instructionFiles.description": "시스템 프롬프트에 포함되는 추가 지시 파일 경로",
+  "settings.agentBehaviour.agentManagerTool.title": "Agent Manager 도구 활성화",
+  "settings.agentBehaviour.agentManagerTool.description":
+    "에이전트가 Agent Manager에서 위임된 세션을 시작하도록 허용합니다. 이 세션은 탭으로 표시되며 독립적인 git worktrees에서 실행될 수 있습니다. 이 설정을 비활성화하면 Agent Manager 도구만 제거되며, 일반 하위 에이전트는 독립적으로 계속 사용할 수 있습니다. 새 세션에 적용됩니다.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 호환성",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code 파일 로드",
   "settings.agentBehaviour.claudeCompat.description":

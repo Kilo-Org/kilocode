@@ -1190,6 +1190,7 @@ export const dict = {
   "settings.aboutKiloCode.telemetry.openSettings": "Open Telemetry Settings",
 
   "settings.agentBehaviour.subtab.agents": "Agents",
+  "settings.agentBehaviour.subtab.agentManager": "Agent Manager",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
   "settings.agentBehaviour.subtab.rules": "Rules",
   "settings.agentBehaviour.subtab.workflows": "Workflows",
@@ -1319,6 +1320,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Additional Instruction Files",
   "settings.agentBehaviour.instructionFiles.description":
     "Paths to additional instruction files that are included in the system prompt",
+  "settings.agentBehaviour.agentManagerTool.title": "Enable Agent Manager Tool",
+  "settings.agentBehaviour.agentManagerTool.description":
+    "Allow agents to start delegated sessions in Agent Manager, where they appear as tabs and can run in separate git worktrees. Disabling this only removes the Agent Manager tool; normal subagents remain available independently. Applies to new sessions.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code Compatibility",
   "settings.agentBehaviour.claudeCompat.title": "Load Claude Code Files",
   "settings.agentBehaviour.claudeCompat.description":

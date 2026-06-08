@@ -1145,6 +1145,7 @@ export const dict = {
   "settings.aboutKiloCode.telemetry.openSettings": "開啟遙測設定",
 
   "settings.agentBehaviour.subtab.agents": "代理程式",
+  "settings.agentBehaviour.subtab.agentManager": "Agent Manager",
   "settings.agentBehaviour.subtab.mcpServers": "MCP 伺服器",
   "settings.agentBehaviour.subtab.rules": "規則",
   "settings.agentBehaviour.subtab.workflows": "工作流程",
@@ -1317,6 +1318,9 @@ export const dict = {
     "規則是引導代理行為的指令檔案。它們會被包含在每次對話的系統提示詞中。在下方新增檔案路徑以包含額外的規則。",
   "settings.agentBehaviour.instructionFiles": "附加指令檔案",
   "settings.agentBehaviour.instructionFiles.description": "包含在系統提示詞中的附加指令檔案路徑",
+  "settings.agentBehaviour.agentManagerTool.title": "啟用 Agent Manager 工具",
+  "settings.agentBehaviour.agentManagerTool.description":
+    "允許代理在 Agent Manager 中啟動委派工作階段，這些工作階段會顯示為索引標籤，並可以在獨立的 git worktrees 中執行。停用此選項只會移除 Agent Manager 工具；一般的子代理程式依然獨立可用。適用於新的工作階段。",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 相容性",
   "settings.agentBehaviour.claudeCompat.title": "載入 Claude Code 檔案",
   "settings.agentBehaviour.claudeCompat.description":

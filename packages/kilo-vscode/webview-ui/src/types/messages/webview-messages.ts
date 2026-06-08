@@ -400,6 +400,10 @@ export interface RequestClaudeCompatSettingMessage {
   type: "requestClaudeCompatSetting"
 }
 
+export interface RequestAgentManagerToolSettingMessage {
+  type: "requestAgentManagerToolSetting"
+}
+
 export interface RequestConfigMessage {
   type: "requestConfig"
 }
@@ -1126,6 +1130,7 @@ export type WebviewMessage =
   | StreamSessionVisibleMessage
   | RequestBrowserSettingsMessage
   | RequestClaudeCompatSettingMessage
+  | RequestAgentManagerToolSettingMessage
   | RequestConfigMessage
   | RequestGlobalConfigMessage
   | RequestIndexingStatusMessage

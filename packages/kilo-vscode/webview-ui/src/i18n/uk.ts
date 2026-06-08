@@ -1199,6 +1199,7 @@ export const dict = {
   "settings.aboutKiloCode.telemetry.openSettings": "Відкрити налаштування телеметрії",
 
   "settings.agentBehaviour.subtab.agents": "Агенти",
+  "settings.agentBehaviour.subtab.agentManager": "Agent Manager",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-сервери",
   "settings.agentBehaviour.subtab.rules": "Правила",
   "settings.agentBehaviour.subtab.workflows": "Робочі процеси",
@@ -1337,6 +1338,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Додаткові файли інструкцій",
   "settings.agentBehaviour.instructionFiles.description":
     "Шляхи до додаткових файлів інструкцій, що включаються до системного запиту",
+  "settings.agentBehaviour.agentManagerTool.title": "Увімкнути інструмент Agent Manager",
+  "settings.agentBehaviour.agentManagerTool.description":
+    "Дозволити агентам запускати делеговані сеанси в Agent Manager, де вони відображаються як вкладки та можуть працювати в окремих git worktrees. Вимкнення цього налаштування видаляє лише інструмент Agent Manager; звичайні субагенти залишаються доступними незалежно. Застосовується до нових сеансів.",
   "settings.agentBehaviour.claudeCompat.heading": "Сумісність з Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Завантажувати файли Claude Code",
   "settings.agentBehaviour.claudeCompat.description":

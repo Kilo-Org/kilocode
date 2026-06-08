@@ -91,7 +91,7 @@ export namespace KiloToolRegistry {
       tools.recall,
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
       // The extension is the only client that can consume the Agent Manager start event.
-      ...(Flag.KILO_CLIENT === "vscode" ? [tools.manager] : []),
+      ...(Flag.KILO_CLIENT === "vscode" && !Flag.KILO_DISABLE_AGENT_MANAGER_TOOL ? [tools.manager] : []),
     ]
   }
 

@@ -33,6 +33,7 @@ import { recordPromotionHandoff } from "./promotion-handoff"
 import { restoreWorktrees } from "./state-recovery"
 import { diffSummary as localDiffSummary, diffFile as localDiffFile } from "./local-diff"
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
+import { sessionPermission } from "../agent-manager-tool-setting"
 import { stopSessionProcesses } from "../kilo-provider/background-process"
 
 import { buildKeybindingMap } from "./format-keybinding"
@@ -811,7 +812,7 @@ export class AgentManagerProvider implements Disposable {
 
     try {
       const { data: session } = await client.session.create(
-        { directory: worktreePath, platform: PLATFORM },
+        { directory: worktreePath, platform: PLATFORM, permission: sessionPermission() },
         { throwOnError: true },
       )
       return session
@@ -1109,7 +1110,7 @@ export class AgentManagerProvider implements Disposable {
     let session: Session
     try {
       const { data } = await client.session.create(
-        { directory: worktree.path, platform: PLATFORM },
+        { directory: worktree.path, platform: PLATFORM, permission: sessionPermission() },
         { throwOnError: true },
       )
       session = data

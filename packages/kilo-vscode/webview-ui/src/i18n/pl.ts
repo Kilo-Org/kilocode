@@ -1173,6 +1173,7 @@ export const dict = {
   "settings.aboutKiloCode.telemetry.openSettings": "Otwórz ustawienia telemetrii",
 
   "settings.agentBehaviour.subtab.agents": "Agenci",
+  "settings.agentBehaviour.subtab.agentManager": "Agent Manager",
   "settings.agentBehaviour.subtab.mcpServers": "Serwery MCP",
   "settings.agentBehaviour.subtab.rules": "Reguły",
   "settings.agentBehaviour.subtab.workflows": "Przepływy pracy",
@@ -1393,6 +1394,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Dodatkowe pliki instrukcji",
   "settings.agentBehaviour.instructionFiles.description":
     "Ścieżki do dodatkowych plików instrukcji w prompcie systemowym",
+  "settings.agentBehaviour.agentManagerTool.title": "Włącz narzędzie Agent Manager",
+  "settings.agentBehaviour.agentManagerTool.description":
+    "Zezwala agentom na uruchamianie delegowanych sesji w Agent Manager, gdzie pojawiają się jako karty i mogą działać w oddzielnych git worktrees. Wyłączenie tej opcji usuwa tylko narzędzie Agent Manager; zwykli podagenci pozostają dostępni niezależnie. Dotyczy nowych sesji.",
   "settings.agentBehaviour.claudeCompat.heading": "Kompatybilność z Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Wczytuj pliki Claude Code",
   "settings.agentBehaviour.claudeCompat.description":

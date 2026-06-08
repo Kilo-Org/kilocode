@@ -1200,6 +1200,7 @@ export const dict = {
   "settings.aboutKiloCode.telemetry.openSettings": "Telemetri Ayarlarını Aç",
 
   "settings.agentBehaviour.subtab.agents": "Ajanlar",
+  "settings.agentBehaviour.subtab.agentManager": "Agent Manager",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Sunucuları",
   "settings.agentBehaviour.subtab.rules": "Kurallar",
   "settings.agentBehaviour.subtab.workflows": "İş Akışları",
@@ -1337,6 +1338,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Ek Talimat Dosyaları",
   "settings.agentBehaviour.instructionFiles.description":
     "Sistem komutuna dahil edilen ek talimat dosyalarının yolları",
+  "settings.agentBehaviour.agentManagerTool.title": "Agent Manager Aracını Etkinleştir",
+  "settings.agentBehaviour.agentManagerTool.description":
+    "Ajanların Agent Manager'da devredilmiş oturumlar başlatmasına izin ver; bu oturumlar sekme olarak görünür ve ayrı git worktrees içinde çalışabilir. Bunu devre dışı bırakmak yalnızca Agent Manager aracını kaldırır; normal alt ajanlar bağımsız olarak kullanılmaya devam eder. Yeni oturumlara uygulanır.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code Uyumluluğu",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code Dosyalarını Yükle",
   "settings.agentBehaviour.claudeCompat.description":

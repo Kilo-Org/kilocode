@@ -1195,6 +1195,7 @@ export const dict = {
   "settings.aboutKiloCode.telemetry.openSettings": "เปิดการตั้งค่า Telemetry",
 
   "settings.agentBehaviour.subtab.agents": "ตัวแทน",
+  "settings.agentBehaviour.subtab.agentManager": "Agent Manager",
   "settings.agentBehaviour.subtab.mcpServers": "เซิร์ฟเวอร์ MCP",
   "settings.agentBehaviour.subtab.rules": "กฎ",
   "settings.agentBehaviour.subtab.workflows": "เวิร์กโฟลว์",
@@ -1375,6 +1376,9 @@ export const dict = {
     "กฎคือไฟล์คำสั่งที่แนะนำพฤติกรรมของเอเจนต์ กฎเหล่านี้จะถูกรวมอยู่ในพรอมต์ระบบสำหรับทุกการสนทนา เพิ่มเส้นทางไฟล์ด้านล่างเพื่อรวมกฎเพิ่มเติม",
   "settings.agentBehaviour.instructionFiles": "ไฟล์คำสั่งเพิ่มเติม",
   "settings.agentBehaviour.instructionFiles.description": "เส้นทางไฟล์คำสั่งเพิ่มเติมในพรอมต์ระบบ",
+  "settings.agentBehaviour.agentManagerTool.title": "เปิดใช้งานเครื่องมือ Agent Manager",
+  "settings.agentBehaviour.agentManagerTool.description":
+    "อนุญาตให้เอเจนต์เริ่มเซสชันที่ได้รับมอบหมายใน Agent Manager ซึ่งจะปรากฏเป็นแท็บและสามารถทำงานใน git worktrees ที่แยกจากกันได้ การปิดใช้งานสิ่งนี้จะลบเฉพาะเครื่องมือ Agent Manager เท่านั้น ซับเอเจนต์ปกติจะยังคงใช้งานได้โดยอิสระ มีผลกับเซสชันใหม่",
   "settings.agentBehaviour.claudeCompat.heading": "ความเข้ากันได้กับ Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "โหลดไฟล์ Claude Code",
   "settings.agentBehaviour.claudeCompat.description":

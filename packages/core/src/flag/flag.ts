@@ -115,6 +115,9 @@ export const Flag = {
     return process.env["KILO_CLIENT"] ?? "cli"
   },
   // kilocode_change start
+  get KILO_DISABLE_AGENT_MANAGER_TOOL() {
+    return truthy("KILO_DISABLE_AGENT_MANAGER_TOOL")
+  },
   get KILO_SESSION_RETRY_LIMIT() {
     return number("KILO_SESSION_RETRY_LIMIT")
   },

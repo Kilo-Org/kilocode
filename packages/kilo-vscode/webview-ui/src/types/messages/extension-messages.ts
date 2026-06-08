@@ -451,6 +451,11 @@ export interface ClaudeCompatSettingLoadedMessage {
   enabled: boolean
 }
 
+export interface AgentManagerToolSettingLoadedMessage {
+  type: "agentManagerToolSettingLoaded"
+  enabled: boolean
+}
+
 export interface ConfigLoadedMessage {
   type: "configLoaded"
   config: Config
@@ -982,6 +987,7 @@ export type ExtensionMessage =
   | SuggestionErrorMessage
   | BrowserSettingsLoadedMessage
   | ClaudeCompatSettingLoadedMessage
+  | AgentManagerToolSettingLoadedMessage
   | ConfigLoadedMessage
   | ConfigUpdatedMessage
   | ConfigUpdateFailedMessage

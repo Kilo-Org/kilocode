@@ -1204,6 +1204,7 @@ export const dict = {
   "settings.aboutKiloCode.telemetry.openSettings": "Telemetrie-instellingen openen",
 
   "settings.agentBehaviour.subtab.agents": "Agenten",
+  "settings.agentBehaviour.subtab.agentManager": "Agent Manager",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
   "settings.agentBehaviour.subtab.rules": "Regels",
   "settings.agentBehaviour.subtab.workflows": "Workflows",
@@ -1345,6 +1346,9 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Aanvullende Instructiebestanden",
   "settings.agentBehaviour.instructionFiles.description":
     "Paden naar aanvullende instructiebestanden die zijn opgenomen in de systeem prompt",
+  "settings.agentBehaviour.agentManagerTool.title": "Agent Manager-tool inschakelen",
+  "settings.agentBehaviour.agentManagerTool.description":
+    "Sta agenten toe om gedelegeerde sessies te starten in Agent Manager, waar ze verschijnen als tabbladen en in afzonderlijke git worktrees kunnen worden uitgevoerd. Het uitschakelen hiervan verwijdert alleen de Agent Manager-tool; normale subagenten blijven onafhankelijk beschikbaar. Is van toepassing op nieuwe sessies.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-compatibiliteit",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code-bestanden laden",
   "settings.agentBehaviour.claudeCompat.description":

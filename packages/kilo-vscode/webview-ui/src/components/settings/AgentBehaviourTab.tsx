@@ -21,7 +21,7 @@ import { selectedDefaultAgentValue } from "./agent-behaviour-patches"
 import { parseImport, MAX_IMPORT_SIZE } from "./mode-io"
 import type { ImportError } from "./mode-io"
 
-type SubtabId = "agents" | "mcpServers" | "rules" | "workflows" | "skills"
+type SubtabId = "agents" | "agentManager" | "mcpServers" | "rules" | "workflows" | "skills"
 
 interface SubtabConfig {
   id: SubtabId
@@ -30,6 +30,7 @@ interface SubtabConfig {
 
 const subtabs: SubtabConfig[] = [
   { id: "agents", labelKey: "settings.agentBehaviour.subtab.agents" },
+  { id: "agentManager", labelKey: "settings.agentBehaviour.subtab.agentManager" },
   { id: "mcpServers", labelKey: "settings.agentBehaviour.subtab.mcpServers" },
   { id: "rules", labelKey: "settings.agentBehaviour.subtab.rules" },
   { id: "workflows", labelKey: "settings.agentBehaviour.subtab.workflows" },
@@ -57,16 +58,16 @@ const AgentBehaviourTab: Component = () => {
   const [newSkillUrl, setNewSkillUrl] = createSignal("")
   const [newInstruction, setNewInstruction] = createSignal("")
   const [claudeCompat, setClaudeCompat] = createSignal(false)
+  const [manager, setManager] = createSignal(true)
   const browse = () => vscode.postMessage({ type: "openMarketplacePanel" })
 
-  // Load the VS Code setting for Claude Code compatibility
-  vscode.postMessage({ type: "requestClaudeCompatSetting" })
-  const unsubClaudeCompat = vscode.onMessage((msg) => {
-    if (msg.type === "claudeCompatSettingLoaded") {
-      setClaudeCompat(msg.enabled)
-    }
+  const unsubSettings = vscode.onMessage((msg) => {
+    if (msg.type === "claudeCompatSettingLoaded") setClaudeCompat(msg.enabled)
+    if (msg.type === "agentManagerToolSettingLoaded") setManager(msg.enabled)
   })
-  onCleanup(unsubClaudeCompat)
+  vscode.postMessage({ type: "requestClaudeCompatSetting" })
+  vscode.postMessage({ type: "requestAgentManagerToolSetting" })
+  onCleanup(unsubSettings)
 
   // Agent view state
   const [agentView, setAgentView] = createSignal<AgentView>("list")
@@ -798,6 +799,27 @@ const AgentBehaviourTab: Component = () => {
     )
   }
 
+  const renderAgentManagerSubtab = () => (
+    <Card>
+      <SettingsRow
+        title={language.t("settings.agentBehaviour.agentManagerTool.title")}
+        description={language.t("settings.agentBehaviour.agentManagerTool.description")}
+        last
+      >
+        <Switch
+          checked={manager()}
+          onChange={(checked: boolean) => {
+            setManager(checked)
+            vscode.postMessage({ type: "updateSetting", key: "agentManager.enableTool", value: checked })
+          }}
+          hideLabel
+        >
+          {language.t("settings.agentBehaviour.agentManagerTool.title")}
+        </Switch>
+      </SettingsRow>
+    </Card>
+  )
+
   const renderSkillsSubtab = () => (
     <div>
       <div
@@ -1085,6 +1107,8 @@ const AgentBehaviourTab: Component = () => {
     switch (activeSubtab()) {
       case "agents":
         return renderAgentsSubtab()
+      case "agentManager":
+        return renderAgentManagerSubtab()
       case "mcpServers":
         return renderMcpSubtab()
       case "rules":

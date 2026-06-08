@@ -1229,6 +1229,7 @@ export const dict = {
   "settings.aboutKiloCode.telemetry.openSettings": "Ouvrir les paramètres de télémétrie",
 
   "settings.agentBehaviour.subtab.agents": "Agents",
+  "settings.agentBehaviour.subtab.agentManager": "Agent Manager",
   "settings.agentBehaviour.subtab.mcpServers": "Serveurs MCP",
   "settings.agentBehaviour.subtab.rules": "Règles",
   "settings.agentBehaviour.subtab.workflows": "Flux de travail",
@@ -1422,6 +1423,9 @@ export const dict = {
     "Les règles sont des fichiers d'instructions qui guident le comportement de l'agent. Elles sont incluses dans le prompt système pour chaque conversation. Ajoutez des chemins de fichiers ci-dessous pour inclure des règles supplémentaires.",
   "settings.agentBehaviour.instructionFiles": "Fichiers d'instructions supplémentaires",
   "settings.agentBehaviour.instructionFiles.description": "Chemins vers des fichiers d'instructions supplémentaires",
+  "settings.agentBehaviour.agentManagerTool.title": "Activer l'outil Agent Manager",
+  "settings.agentBehaviour.agentManagerTool.description":
+    "Autoriser les agents à démarrer des sessions déléguées dans Agent Manager, où elles s'affichent sous forme d'onglets et peuvent s'exécuter dans des git worktrees séparés. Désactiver cette option supprime uniquement l'outil Agent Manager ; les sous-agents normaux restent disponibles indépendamment. S'applique aux nouvelles sessions.",
   "settings.agentBehaviour.claudeCompat.heading": "Compatibilité Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Charger les fichiers Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
