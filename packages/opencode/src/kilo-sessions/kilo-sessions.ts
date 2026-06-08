@@ -718,10 +718,11 @@ export namespace KiloSessions {
     ])
   }
 
-  /** Normalize a git remote URL: strip credentials, query params, and hash. Returns undefined for unrecognized formats. */
+  /** Normalize a git remote URL to canonical HTTPS form: strip credentials, query params, hash, and convert SSH to HTTPS. Returns undefined for unrecognized formats. */
   function normalizeGitUrl(raw: string): string | undefined {
+    // Convert SSH format (git@host:owner/repo) to HTTPS so all formats produce the same canonical URL
     const ssh = raw.match(/^git@([^:]+):(.+)$/)
-    if (ssh) return `git@${ssh[1]}:${ssh[2].split("?")[0]}`
+    if (ssh) return `https://${ssh[1]}/${ssh[2].split("?")[0]}`
     try {
       const parsed = new URL(raw)
       if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return undefined
