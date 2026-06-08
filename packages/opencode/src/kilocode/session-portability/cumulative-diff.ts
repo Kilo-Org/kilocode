@@ -35,6 +35,7 @@ export function appendSessionDiffs(input: { existing: PortableDiff[]; next: Port
   if (input.existing.length === 0) return input.next
   if (input.next.length === 0) return input.existing
   if (starts(input.existing, input.next)) return input.next
+  if (starts(input.next, input.existing)) return input.existing
   if (ends(input.existing, input.next)) return input.existing
   return [...input.existing, ...input.next]
 }

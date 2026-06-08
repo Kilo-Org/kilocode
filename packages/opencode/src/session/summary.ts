@@ -108,21 +108,23 @@ export const layer = Layer.effect(
       const all = yield* sessions.messages({ sessionID: input.sessionID })
       if (!all.length) return
 
+      // kilocode_change start - preserve imported cumulative diffs when summarizing cloud-forked sessions
+      const base = yield* readSessionDiffBase(storage, input.sessionID)
       const messages = all.filter(
         (m) => m.info.id === input.messageID || (m.info.role === "assistant" && m.info.parentID === input.messageID),
       )
       const target = messages.find((m) => m.info.id === input.messageID)
-      const msgDiffs = target?.info.role === "user" ? yield* computeDiff({ messages }) : []
-      const base = yield* readSessionDiffBase(storage, input.sessionID)
+      const local = base.length > 0 && target?.info.role === "user" ? yield* computeDiff({ messages }) : []
       const diffs =
         base.length > 0
           ? yield* storage
               .read<Snapshot.FileDiff[]>(["session_diff", input.sessionID])
               .pipe(
                 Effect.orElseSucceed((): Snapshot.FileDiff[] => base),
-                Effect.map((existing) => appendSessionDiffs({ existing: existing.length > 0 ? existing : base, next: msgDiffs })),
+                Effect.map((existing) => appendSessionDiffs({ existing: existing.length > 0 ? existing : base, next: local })),
               )
           : yield* computeDiff({ messages: all })
+      // kilocode_change end
       yield* sessions.setSummary({
         sessionID: input.sessionID,
         summary: {
@@ -135,6 +137,7 @@ export const layer = Layer.effect(
       yield* bus.publish(Session.Event.Diff, { sessionID: input.sessionID, diff: diffs })
 
       if (!target || target.info.role !== "user") return
+      const msgDiffs = base.length > 0 ? local : yield* computeDiff({ messages }) // kilocode_change
       target.info.summary = { ...target.info.summary, diffs: msgDiffs }
       yield* sessions.updateMessage(target.info)
     })

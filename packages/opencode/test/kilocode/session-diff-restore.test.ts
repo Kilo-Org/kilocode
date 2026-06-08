@@ -67,6 +67,7 @@ describe("session diff restore", () => {
     expect(appendSessionDiffs({ existing: base, next: local })).toEqual([...base, ...local])
     expect(appendSessionDiffs({ existing: [...base, ...local], next: local })).toEqual([...base, ...local])
     expect(appendSessionDiffs({ existing: base, next: [...base, ...local] })).toEqual([...base, ...local])
+    expect(appendSessionDiffs({ existing: [...base, ...local], next: base })).toEqual([...base, ...local])
   })
 
   test("extracts top-level sessionDiff before legacy message summaries", () => {
