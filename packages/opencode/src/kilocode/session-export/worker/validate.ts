@@ -14,6 +14,7 @@ export function parseMessage(value: unknown): ToWorker | undefined {
         dbPath: value.dbPath,
         agentVersion: text(value.agentVersion),
         endpoint: text(value.endpoint),
+        allowCustomEndpoint: value.allowCustomEndpoint === true,
         surface: text(value.surface),
         anonId: text(value.anonId),
       }
