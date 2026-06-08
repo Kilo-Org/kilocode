@@ -280,6 +280,8 @@ jobs:
         if: steps.storybook-cache-vscode.outputs.cache-hit != 'true'
         run: bun run build-storybook
         working-directory: packages/kilo-vscode
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096 # kilocode_change
 
       - name: Generate baselines and enforce webview accessibility checks # kilocode_change
         run: bun run test:visual:update
