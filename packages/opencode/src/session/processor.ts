@@ -27,8 +27,8 @@ import { EventV2 } from "@/v2/event"
 import { SessionEvent } from "@/v2/session-event"
 import { Modelv2 } from "@/v2/model"
 import * as DateTime from "effect/DateTime"
+import { LoopDetector } from "./loop-detection"
 
-const DOOM_LOOP_THRESHOLD = 3
 const log = Log.create({ service: "session.processor" })
 
 export type Result = "compact" | "stop" | "continue"
@@ -112,7 +112,6 @@ export const layer: Layer.Layer<
     const snapshot = yield* Snapshot.Service
     const agents = yield* Agent.Service
     const llm = yield* LLM.Service
-    const permission = yield* Permission.Service
     const plugin = yield* Plugin.Service
     const summary = yield* SessionSummary.Service
     const scope = yield* Scope.Scope
@@ -147,6 +146,7 @@ export const layer: Layer.Layer<
       }
       let aborted = false
       const ac = new AbortController() // kilocode_change — abort controller for offline handler
+      const detector = new LoopDetector(ac.signal)
       const slog = log.clone().tag("session.id", input.sessionID).tag("messageID", input.assistantMessage.id)
 
       const parse = (e: unknown) =>
@@ -292,18 +292,22 @@ export const layer: Layer.Layer<
             yield* session.updatePart(ctx.reasoningMap[value.id])
             return
 
-          case "reasoning-delta":
+          case "reasoning-delta": {
             if (!(value.id in ctx.reasoningMap)) return
-            ctx.reasoningMap[value.id].text += value.text
-            if (value.providerMetadata) ctx.reasoningMap[value.id].metadata = value.providerMetadata
+            const part = ctx.reasoningMap[value.id]
+            part.text += value.text
+            if (value.providerMetadata) part.metadata = value.providerMetadata
             yield* session.updatePartDelta({
-              sessionID: ctx.reasoningMap[value.id].sessionID,
-              messageID: ctx.reasoningMap[value.id].messageID,
-              partID: ctx.reasoningMap[value.id].id,
+              sessionID: part.sessionID,
+              messageID: part.messageID,
+              partID: part.id,
               field: "text",
               delta: value.text,
             })
+            const loop = yield* Effect.promise(() => detector.checkTextDelta(ctx.sessionID, part.id, part.text))
+            if (loop.detected) slog.warn("reasoning loop detected", { paragraph: loop.paragraph.slice(0, 200) })
             return
+          }
 
           case "reasoning-end":
             if (!(value.id in ctx.reasoningMap)) return
@@ -421,31 +425,14 @@ export const layer: Layer.Layer<
                 : value.providerMetadata,
             }))
 
-            const parts = MessageV2.parts(ctx.assistantMessage.id)
-            const recentParts = parts.slice(-DOOM_LOOP_THRESHOLD)
-
-            if (
-              recentParts.length !== DOOM_LOOP_THRESHOLD ||
-              !recentParts.every(
-                (part) =>
-                  part.type === "tool" &&
-                  part.tool === value.toolName &&
-                  part.state.status !== "pending" &&
-                  JSON.stringify(part.state.input) === JSON.stringify(value.input),
-              )
-            ) {
-              return
-            }
-
             const agent = yield* agents.get(ctx.assistantMessage.agent)
-            yield* permission.ask({
-              permission: "doom_loop",
-              patterns: [value.toolName],
-              sessionID: ctx.assistantMessage.sessionID,
-              metadata: { tool: value.toolName, input: value.input },
-              always: [value.toolName],
-              ruleset: agent.permission,
-            })
+            const loopResult = yield* Effect.promise(() =>
+              detector.checkToolCall(ctx.sessionID, value.toolName, value.input, agent.permission),
+            )
+            if (loopResult.rejected) {
+              yield* failToolCall(value.toolCallId, new Error(loopResult.message))
+              ctx.blocked = ctx.shouldBreak
+            }
             return
           }
 
@@ -580,6 +567,7 @@ export const layer: Layer.Layer<
             // kilocode_change end
             ctx.assistantMessage.cost += usage.cost
             ctx.assistantMessage.tokens = usage.tokens
+            detector.applyToMessage(ctx.assistantMessage)
             yield* session.updatePart({
               id: PartID.ascending(),
               reason: value.finishReason,
@@ -666,7 +654,7 @@ export const layer: Layer.Layer<
             yield* session.updatePart(ctx.currentText)
             return
 
-          case "text-delta":
+          case "text-delta": {
             if (!ctx.currentText) return
             ctx.currentText.text += value.text
             if (value.text.trim()) ctx.step.text = true // kilocode_change
@@ -678,7 +666,12 @@ export const layer: Layer.Layer<
               field: "text",
               delta: value.text,
             })
+            const loop = yield* Effect.promise(() =>
+              detector.checkTextDelta(ctx.sessionID, ctx.currentText!.id, ctx.currentText!.text),
+            )
+            if (loop.detected) slog.warn("text loop detected", { paragraph: loop.paragraph.slice(0, 200) })
             return
+          }
 
           case "text-end":
             if (!ctx.currentText) return
@@ -781,6 +774,7 @@ export const layer: Layer.Layer<
         // kilocode_change start - reconcile cost with any subagent propagation written during tool calls (#6321)
         yield* reconcile()
         // kilocode_change end
+        detector.applyToMessage(ctx.assistantMessage)
         yield* session.updateMessage(ctx.assistantMessage)
       })
 
@@ -825,6 +819,7 @@ export const layer: Layer.Layer<
         ctx.needsCompaction = false
         ctx.compactionError = undefined // kilocode_change
         ctx.shouldBreak = (yield* config.get()).experimental?.continue_loop_on_deny !== true
+        detector.resetForProcess()
 
         return yield* Effect.gen(function* () {
           yield* Effect.gen(function* () {
@@ -835,7 +830,7 @@ export const layer: Layer.Layer<
 
             yield* stream.pipe(
               Stream.tap((event) => handleEvent(event)),
-              Stream.takeUntil(() => ctx.needsCompaction),
+              Stream.takeUntil(() => ctx.needsCompaction || detector.signal.aborted),
               Stream.runDrain,
             )
           }).pipe(
@@ -885,7 +880,7 @@ export const layer: Layer.Layer<
           )
 
           if (ctx.needsCompaction) return "compact"
-          if (ctx.blocked || ctx.assistantMessage.error) return "stop"
+          if (ctx.blocked || ctx.assistantMessage.error || detector.detected) return "stop"
           return "continue" // kilocode_change - remove once compactError is no longer Kilo-specific
         })
       })
