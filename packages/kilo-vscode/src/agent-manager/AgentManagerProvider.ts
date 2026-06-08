@@ -913,9 +913,9 @@ export class AgentManagerProvider implements Disposable {
         createWorktree: (opts) => this.createWorktreeOnDisk(opts),
         claimRequest: (id) => {
           if (this.toolRequests.has(id)) return false
-          this.toolRequests.add(id)
-          const oldest = this.toolRequests.size > 100 ? this.toolRequests.values().next().value : undefined
+          const oldest = this.toolRequests.size >= 100 ? this.toolRequests.values().next().value : undefined
           if (oldest) this.toolRequests.delete(oldest)
+          this.toolRequests.add(id)
           return true
         },
         cleanupWorktree: async (wid, dir) => {

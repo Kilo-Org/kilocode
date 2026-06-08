@@ -249,8 +249,8 @@ export class WorktreeManager {
       if (!msg.includes("already exists") || params.existingBranch) {
         throw new Error(`Failed to create worktree: ${msg}`)
       }
-      // Branch name collision -- retry with unique suffix
-      branch = `${branch}-${Date.now()}`
+      // Another process may create the branch after resolveBranch checks it.
+      branch = await this.resolveBranch(params)
       const retryDir = branch.replace(/\//g, "-")
       worktreePath = path.join(this.dir, retryDir)
       const retryArgs = params.existingBranch
@@ -302,11 +302,10 @@ export class WorktreeManager {
       return !branches.has(branch) && !fs.existsSync(dir)
     }
     if (available(base)) return base
-    for (let suffix = 2; suffix < 100; suffix++) {
+    for (let suffix = 2; ; suffix++) {
       const branch = `${base}-${suffix}`
       if (available(branch)) return branch
     }
-    return `${base}-${Date.now()}`
   }
 
   /**
