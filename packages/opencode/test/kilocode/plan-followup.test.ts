@@ -667,9 +667,10 @@ describe("plan follow-up", () => {
       const part = user.parts.find((item) => item.type === "text")
       expect(part?.type).toBe("text")
       if (!part || part.type !== "text") throw new Error("expected text part")
-      expect(part.text).toContain("Implement the following plan:")
       expect(part.text).toContain(`Plan file: ${planPath}`)
-      expect(part.text).toContain("1. Add API\n2. Add tests")
+      expect(part.text).toContain("Read this file first and treat it as the source of truth for implementation.")
+      expect(part.text).not.toContain("Implement the following plan:")
+      expect(part.text).not.toContain("1. Add API\n2. Add tests")
       expect(part.text).toContain("## Handover from Planning Session")
       expect(part.text).toContain("Found REST endpoints in src/api.ts")
       expect(part.text).toContain("## Todo List")
@@ -984,9 +985,114 @@ describe("plan follow-up", () => {
       if (!user || user.info.role !== "user") throw new Error("expected user message")
       const part = user.parts.find((item) => item.type === "text")
       if (!part || part.type !== "text") throw new Error("expected text part")
-      expect(part.text).toContain("Implement the following plan:")
+      expect(part.text).toContain("Plan file:")
+      expect(part.text).toContain("Read this file first and treat it as the source of truth for implementation.")
+      expect(part.text).not.toContain("Implement the following plan:")
+      expect(part.text).not.toContain("1. Add API\n2. Add tests")
       expect(part.text).not.toContain("## Handover from Planning Session")
       expect(part.text).not.toContain("## Todo List")
+    }))
+
+  test("ask - new session references plan file without copying planning transcript", () =>
+    withInstance(async () => {
+      using _mocks = mockHandoverDeps("## Discoveries\n\nUse the saved plan file as the source of truth.")
+      const loop = spyOn(PlanFollowupRuntime, "loop").mockResolvedValue({
+        info: {
+          id: MessageID.make("msg_test"),
+          role: "assistant",
+          sessionID: SessionID.make("ses_test"),
+          time: { created: Date.now() },
+          parentID: MessageID.make("msg_parent"),
+          modelID: ModelID.make("test"),
+          providerID: ProviderID.make("test"),
+          mode: "code",
+          agent: "code",
+          path: { cwd: "/tmp", root: "/tmp" },
+          cost: 0,
+          tokens: { total: 0, input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        },
+        parts: [],
+      } as MessageV2.WithParts)
+      using _loop = {
+        [Symbol.dispose]() {
+          loop.mockRestore()
+        },
+      }
+
+      const transcript = "I inspected plan-followup.ts and found the session handoff path."
+      const seeded = await seed({
+        text: `${transcript}\n\nThis is visible planning chat, not implementation input.`,
+        tools: [
+          {
+            tool: "plan_exit",
+            input: {},
+            output: "Plan is ready. Ending planning turn.",
+          },
+        ],
+      })
+      const user = seeded.messages.find((m) => m.info.role === "user")?.info
+      if (!user || user.role !== "user") throw new Error("expected seeded user message")
+
+      await store.updateMessage({
+        id: MessageID.ascending(),
+        role: "assistant",
+        sessionID: seeded.sessionID,
+        time: { created: Date.now() + 1 },
+        parentID: user.id,
+        modelID: model.modelID,
+        providerID: model.providerID,
+        mode: "plan",
+        agent: "plan",
+        path: { cwd: Instance.directory, root: Instance.worktree },
+        cost: 0,
+        tokens: { total: 0, input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        finish: "end_turn",
+      } satisfies MessageV2.Assistant)
+
+      const messages = await store.messages({ sessionID: seeded.sessionID })
+      const created: SessionID[] = []
+      const unsub = Bus.subscribe(TuiEvent.SessionSelect, (event) => {
+        created.push(event.properties.sessionID)
+      })
+      using _bus = {
+        [Symbol.dispose]() {
+          unsub()
+        },
+      }
+
+      const pending = PlanFollowup.ask({
+        question,
+        sessionID: seeded.sessionID,
+        messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      await question.reply({
+        requestID: item.id,
+        answers: [[PlanFollowup.ANSWER_NEW_SESSION]],
+      })
+
+      await expect(pending).resolves.toBe("break")
+
+      const id = created[0]
+      if (!id) throw new Error("expected follow-up session")
+      const plan = Session.plan(await store.get(seeded.sessionID), Instance.current)
+      const next = await store.messages({ sessionID: id })
+      const msg = next.find((m) => m.info.role === "user")
+      const part = msg?.parts.find((p) => p.type === "text")
+      expect(part?.type).toBe("text")
+      if (part?.type !== "text") return
+
+      expect(part.text).toContain(`Plan file: ${plan}`)
+      expect(part.text).toContain("Read this file first and treat it as the source of truth for implementation.")
+      expect(part.text).toContain("## Handover from Planning Session")
+      expect(part.text).toContain("Use the saved plan file as the source of truth.")
+      expect(part.text).not.toContain("Implement the following plan:")
+      expect(part.text).not.toContain(transcript)
+      expect(part.text).not.toContain("This is visible planning chat")
     }))
 
   test("ask - fires session.created before generateHandover resolves on Start new session", () =>
@@ -1082,11 +1188,11 @@ describe("plan follow-up", () => {
       expect(createdAt!).toBeLessThan(handoverResolvedAt!)
     }))
 
-  test("ask - injects plan message before generateHandover resolves on Start new session", () =>
+  test("ask - injects plan-file message before generateHandover resolves on Start new session", () =>
     withInstance(async () => {
-      // Regression guard: the plan text must appear in the new session tab
-      // immediately after the tab switch — without waiting for the slow handover
-      // LLM call. The handover is then appended to the same part in-place.
+      // Regression guard: the plan-file handoff must appear in the new session tab
+      // immediately after the tab switch without waiting for the slow handover LLM
+      // call. The handover is then appended to the same part in-place.
       const seeded = await seed({ text: "1. Build" })
 
       let followup: SessionID | undefined
@@ -1148,7 +1254,7 @@ describe("plan follow-up", () => {
           const msgs = await store.messages({ sessionID: followup })
           const user = msgs.find((m) => m.info.role === "user")
           const part = user?.parts.find((p) => p.type === "text")
-          if (part?.type === "text" && part.text.includes("Implement the following plan:")) break
+          if (part?.type === "text" && part.text.includes("Read this file first")) break
         }
         await Bun.sleep(10)
       }
@@ -1160,8 +1266,10 @@ describe("plan follow-up", () => {
       const initialPart = initialUser?.parts.find((p) => p.type === "text")
       expect(initialPart?.type).toBe("text")
       if (initialPart?.type !== "text") return
-      expect(initialPart.text).toContain("Implement the following plan:")
-      expect(initialPart.text).toContain("1. Build")
+      expect(initialPart.text).toContain("Plan file:")
+      expect(initialPart.text).toContain("Read this file first and treat it as the source of truth for implementation.")
+      expect(initialPart.text).not.toContain("Implement the following plan:")
+      expect(initialPart.text).not.toContain("1. Build")
       // Handover is still deferred — must not be present yet.
       expect(initialPart.text).not.toContain("## Handover from Planning Session")
 
@@ -1174,7 +1282,8 @@ describe("plan follow-up", () => {
       const finalPart = finalUser?.parts.find((p) => p.type === "text")
       if (finalPart?.type !== "text") return
       expect(finalPart.id).toBe(initialPart.id)
-      expect(finalPart.text).toContain("Implement the following plan:")
+      expect(finalPart.text).toContain("Read this file first and treat it as the source of truth for implementation.")
+      expect(finalPart.text).not.toContain("Implement the following plan:")
       expect(finalPart.text).toContain("## Handover from Planning Session")
       expect(finalPart.text).toContain("example")
     }))
