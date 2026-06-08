@@ -3794,7 +3794,7 @@ describe("ProviderTransform.variants", () => {
   // kilocode_change start
   describe("ProviderTransform.smallOptions", () => {
     describe("@kilocode/kilo-gateway", () => {
-      test("claude models return reasoningEffort minimal", () => {
+      test("claude models use their default reasoning effort", () => {
         const model = createMockModel({
           id: "kilo/anthropic/claude-sonnet-4",
           providerID: "kilo",
@@ -3805,10 +3805,10 @@ describe("ProviderTransform.variants", () => {
           },
         })
         const result = ProviderTransform.smallOptions(model)
-        expect(result).toEqual({ reasoningEffort: "minimal" })
+        expect(result).toEqual({ reasoning: { enabled: true } })
       })
 
-      test("non-claude models use reasoningEffort format", () => {
+      test("non-claude models use their default reasoning effort", () => {
         const model = createMockModel({
           id: "kilo/openai/gpt-4",
           providerID: "kilo",
@@ -3819,10 +3819,10 @@ describe("ProviderTransform.variants", () => {
           },
         })
         const result = ProviderTransform.smallOptions(model)
-        expect(result).toEqual({ reasoningEffort: "minimal" })
+        expect(result).toEqual({ reasoning: { enabled: true } })
       })
 
-      test("google models disable reasoning", () => {
+      test("google models use their default reasoning effort", () => {
         const model = createMockModel({
           id: "kilo/google/gemini-2.0-flash",
           providerID: "kilo",
@@ -3833,7 +3833,7 @@ describe("ProviderTransform.variants", () => {
           },
         })
         const result = ProviderTransform.smallOptions(model)
-        expect(result).toEqual({ reasoning: { enabled: false } })
+        expect(result).toEqual({ reasoning: { enabled: true } })
       })
     })
   })

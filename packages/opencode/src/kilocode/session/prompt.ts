@@ -26,6 +26,10 @@ import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 export namespace KiloSessionPrompt {
   const modes = ["ask", "plan", "architect"]
 
+  export function titleID(sessionID: SessionID) {
+    return `title-${sessionID}`
+  }
+
   function mode(name: string) {
     return name.toLowerCase()
   }
