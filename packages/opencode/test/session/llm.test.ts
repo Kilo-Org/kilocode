@@ -160,6 +160,26 @@ describe("session.llm.repairToolCall", () => {
 
     expect(result).toBeUndefined()
   })
+
+  test("repairs tool name with both leading and trailing whitespace", () => {
+    const sortedTools = {
+      bash: tool({ description: "Run bash", inputSchema: z.object({}) }),
+    }
+
+    const result = LLM.repairToolCall("  BASH  ", sortedTools)
+
+    expect(result).toBe("bash")
+  })
+
+  test("repairs tool name with only whitespace difference", () => {
+    const sortedTools = {
+      glob: tool({ description: "Find files", inputSchema: z.object({}) }),
+    }
+
+    const result = LLM.repairToolCall(" glob ", sortedTools)
+
+    expect(result).toBe("glob")
+  })
 })
 
 type Capture = {
