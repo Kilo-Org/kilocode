@@ -9,14 +9,19 @@ export type PortableDiff = Snapshot.FileDiff & {
 
 export const baseKey = (id: SessionID | string) => ["session_diff_base", String(id)]
 
-function same(left: PortableDiff[], right: PortableDiff[]) {
+function equal(left: unknown, right: unknown) {
   return JSON.stringify(left) === JSON.stringify(right)
+}
+
+function starts(base: PortableDiff[], local: PortableDiff[]) {
+  if (local.length < base.length) return false
+  return base.every((diff, index) => equal(diff, local[index]))
 }
 
 export function mergeSessionDiffs(input: { base: PortableDiff[]; local: PortableDiff[] }) {
   if (input.base.length === 0) return input.local
   if (input.local.length === 0) return input.base
-  if (same(input.base, input.local)) return input.base
+  if (starts(input.base, input.local)) return input.local
   return [...input.base, ...input.local]
 }
 

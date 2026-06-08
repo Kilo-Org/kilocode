@@ -57,6 +57,7 @@ describe("session diff restore", () => {
 
     expect(mergeSessionDiffs({ base, local })).toEqual([...base, ...local])
     expect(mergeSessionDiffs({ base, local: base })).toEqual(base)
+    expect(mergeSessionDiffs({ base, local: [...base, ...local] })).toEqual([...base, ...local])
   })
 
   test("extracts top-level sessionDiff before legacy message summaries", () => {
