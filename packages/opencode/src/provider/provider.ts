@@ -41,6 +41,7 @@ import {
   buildTimeoutSignal,
   REQUEST_TIMEOUT_MS,
 } from "@/kilocode/provider/provider"
+import { CustomProviderInterface } from "@/kilocode/provider/custom-provider"
 // kilocode_change end
 
 const log = Log.create({ service: "provider" })
@@ -1480,7 +1481,7 @@ const layer: Layer.Layer<
           providerID: model.providerID,
         })
         const provider = s.providers[model.providerID]
-        const options = { ...provider.options }
+        const options = CustomProviderInterface.withoutInterface(provider.options) // kilocode_change
 
         if (model.providerID === "google-vertex" && !model.api.npm.includes("@ai-sdk/openai-compatible")) {
           delete options.fetch
@@ -1659,12 +1660,15 @@ const layer: Layer.Layer<
         const sdk = await resolveSDK(model, s, envs)
 
         try {
+          // kilocode_change start
+          const opts = {
+            ...provider.options,
+            ...model.options,
+          }
           const language = s.modelLoaders[model.providerID]
-            ? await s.modelLoaders[model.providerID](sdk, model.api.id, {
-                ...provider.options,
-                ...model.options,
-              })
-            : sdk.languageModel(model.api.id)
+            ? await s.modelLoaders[model.providerID](sdk, model.api.id, opts)
+            : (CustomProviderInterface.language(sdk, model, opts) ?? sdk.languageModel(model.api.id))
+          // kilocode_change end
           s.models.set(key, language)
           return language
         } catch (e) {

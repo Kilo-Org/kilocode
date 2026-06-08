@@ -10,7 +10,7 @@ export type Translator = ReturnType<typeof useLanguage>["t"]
 // undefined = not set; true/false = enable_thinking value
 export type EnableThinkingValue = undefined | boolean
 export type ThinkingTypeValue = undefined | "enabled" | "disabled"
-export type ReasoningEffortValue = undefined | "none" | "minimal" | "low" | "medium" | "high" | "xhigh"
+export type ReasoningEffortValue = undefined | "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max"
 export type ChatTemplateArgsValue = undefined | boolean
 
 export type VariantEntry = {
@@ -24,7 +24,9 @@ export type VariantEntry = {
 export type ModelEntry = {
   id: string
   name: string
+  context: string
   reasoning: boolean
+  vision: boolean
   variants: VariantEntry[]
 }
 
@@ -56,6 +58,7 @@ const REASONING_EFFORT_OPTIONS: SelectOption<ReasoningEffortValue>[] = [
   { value: "medium", labelKey: "provider.custom.models.variants.reasoningEffort.medium" },
   { value: "high", labelKey: "provider.custom.models.variants.reasoningEffort.high" },
   { value: "xhigh", labelKey: "provider.custom.models.variants.reasoningEffort.xhigh" },
+  { value: "max", labelKey: "provider.custom.models.variants.reasoningEffort.max" },
 ]
 
 type VariantRowProps = {
@@ -218,12 +221,14 @@ function VariantRow(props: VariantRowProps) {
 type ModelCardProps = {
   m: ModelEntry
   i: () => number
-  errors: { id?: string; name?: string; variants?: Array<{ name?: string }> }
+  errors: { id?: string; name?: string; context?: string; variants?: Array<{ name?: string }> }
   t: Translator
   canRemove: boolean
   onChangeId: (val: string) => void
   onChangeName: (val: string) => void
+  onChangeContext: (val: string) => void
   onChangeReasoning: (val: boolean) => void
+  onChangeVision: (val: boolean) => void
   onRemove: () => void
   onAddVariant: () => void
   onRemoveVariant: (vi: number) => void
@@ -247,7 +252,7 @@ export function ModelCard(props: ModelCardProps) {
       }}
     >
       {/* Model id + name + remove */}
-      <div style={{ display: "flex", gap: "8px", "align-items": "flex-end" }}>
+      <div style={{ display: "flex", gap: "8px", "align-items": "flex-end", "flex-wrap": "wrap" }}>
         <div style={{ flex: 1 }}>
           <TextField
             label={props.t("provider.custom.models.id.label")}
@@ -268,6 +273,17 @@ export function ModelCard(props: ModelCardProps) {
             error={props.errors.name}
           />
         </div>
+        <div style={{ flex: "0 1 132px" }}>
+          <TextField
+            type="number"
+            label={props.t("provider.custom.models.context.label")}
+            placeholder={props.t("provider.custom.models.context.placeholder")}
+            value={props.m.context}
+            onChange={props.onChangeContext}
+            validationState={props.errors.context ? "invalid" : undefined}
+            error={props.errors.context}
+          />
+        </div>
         <IconButton
           type="button"
           icon="trash"
@@ -279,24 +295,50 @@ export function ModelCard(props: ModelCardProps) {
         />
       </div>
 
-      {/* Reasoning toggle */}
-      <label
+      {/* Capability toggles */}
+      <div
         style={{
           display: "flex",
-          "align-items": "center",
           gap: "8px",
-          cursor: "pointer",
-          "font-size": "var(--kilo-font-size-13)",
-          color: "var(--vscode-foreground)",
+          "align-items": "center",
+          "flex-wrap": "wrap",
         }}
       >
-        <input
-          type="checkbox"
-          checked={props.m.reasoning}
-          onChange={(e) => props.onChangeReasoning(e.currentTarget.checked)}
-        />
-        {props.t("provider.custom.models.reasoning.label")}
-      </label>
+        <label
+          style={{
+            display: "flex",
+            "align-items": "center",
+            gap: "8px",
+            cursor: "pointer",
+            "font-size": "var(--kilo-font-size-13)",
+            color: "var(--vscode-foreground)",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={props.m.reasoning}
+            onChange={(e) => props.onChangeReasoning(e.currentTarget.checked)}
+          />
+          {props.t("provider.custom.models.reasoning.label")}
+        </label>
+        <label
+          style={{
+            display: "flex",
+            "align-items": "center",
+            gap: "8px",
+            cursor: "pointer",
+            "font-size": "var(--kilo-font-size-13)",
+            color: "var(--vscode-foreground)",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={props.m.vision}
+            onChange={(e) => props.onChangeVision(e.currentTarget.checked)}
+          />
+          {props.t("provider.custom.models.vision.label")}
+        </label>
+      </div>
 
       {/* Variants — only available when reasoning is enabled */}
       <Show when={props.m.reasoning}>

@@ -1,5 +1,11 @@
 import { z } from "zod"
-import { CUSTOM_PROVIDER_PACKAGE, PROVIDER_ID_PATTERN } from "./provider-model"
+import {
+  CUSTOM_PROVIDER_INTERFACE_IDS,
+  PROVIDER_ID_PATTERN,
+  customProviderInterface,
+  customProviderPackage,
+} from "./provider-model"
+import type { CustomProviderInterface, CustomProviderPackage } from "./provider-model"
 
 const INVALID_PROVIDER_ID = "Invalid provider ID"
 const INVALID_ENV = "Invalid environment variable name"
@@ -14,19 +20,23 @@ export const EnvSchema = z
 const VariantConfigSchema = z.object({
   enable_thinking: z.boolean().optional(),
   thinking: z.object({ type: z.enum(["enabled", "disabled"]) }).optional(),
-  reasoningEffort: z.enum(["none", "minimal", "low", "medium", "high", "xhigh"]).optional(),
+  reasoningEffort: z.enum(["none", "minimal", "low", "medium", "high", "xhigh", "max"]).optional(),
   chat_template_args: z.object({ enable_thinking: z.boolean() }).optional(),
 })
 
 export type VariantConfig = z.infer<typeof VariantConfigSchema>
 
+const ModalitySchema = z.enum(["text", "audio", "image", "video", "pdf"])
+
 export const CustomProviderConfigSchema = z
   .object({
     npm: z.string().optional(),
+    interfaceType: z.enum(CUSTOM_PROVIDER_INTERFACE_IDS).optional(),
     name: z.string().trim().min(1).max(200),
     env: z.array(EnvSchema).max(1).optional(),
     options: z
       .object({
+        interfaceType: z.enum(CUSTOM_PROVIDER_INTERFACE_IDS).optional(),
         baseURL: z
           .string()
           .trim()
@@ -44,6 +54,19 @@ export const CustomProviderConfigSchema = z
           .object({
             name: z.string().trim().min(1).max(200),
             reasoning: z.boolean().optional(),
+            attachment: z.boolean().optional(),
+            limit: z
+              .object({
+                context: z.number().int().positive(),
+                output: z.number().int().min(0).optional(),
+              })
+              .optional(),
+            modalities: z
+              .object({
+                input: z.array(ModalitySchema),
+                output: z.array(ModalitySchema),
+              })
+              .optional(),
             variants: z.record(z.string().trim().min(1), VariantConfigSchema).optional(),
           })
           .strict(),
@@ -53,14 +76,25 @@ export const CustomProviderConfigSchema = z
   .strict()
 
 export type SanitizedProviderConfig = {
-  npm: typeof CUSTOM_PROVIDER_PACKAGE
+  npm: CustomProviderPackage
   name: string
   env?: string[]
   options: {
     baseURL: string
+    interfaceType?: CustomProviderInterface
     headers?: Record<string, string>
   }
-  models: Record<string, { name: string; reasoning?: true; variants?: Record<string, VariantConfig> }>
+  models: Record<
+    string,
+    {
+      name: string
+      reasoning?: true
+      attachment?: boolean
+      limit?: { context: number; output: number }
+      modalities?: { input: Array<z.infer<typeof ModalitySchema>>; output: Array<z.infer<typeof ModalitySchema>> }
+      variants?: Record<string, VariantConfig>
+    }
+  >
 }
 
 export type CustomProviderAuthChange = { mode: "preserve" } | { mode: "clear" } | { mode: "set"; key: string }
@@ -109,6 +143,7 @@ export function resolveCustomProviderKey(auth: "api" | "oauth" | "wellknown" | u
 export function normalizeCustomProviderConfig(
   config: z.output<typeof CustomProviderConfigSchema>,
 ): SanitizedProviderConfig {
+  const type = config.interfaceType ?? customProviderInterface(config.npm, config.options.interfaceType)
   const headers = config.options.headers
     ? Object.fromEntries(
         Object.entries(config.options.headers)
@@ -118,11 +153,12 @@ export function normalizeCustomProviderConfig(
     : undefined
 
   return {
-    npm: CUSTOM_PROVIDER_PACKAGE,
+    npm: customProviderPackage(type),
     name: config.name.trim(),
     ...(config.env ? { env: config.env.map((item) => item.trim()) } : {}),
     options: {
       baseURL: config.options.baseURL.trim(),
+      interfaceType: type,
       ...(headers && Object.keys(headers).length > 0 ? { headers } : {}),
     },
     models: Object.fromEntries(
@@ -131,6 +167,16 @@ export function normalizeCustomProviderConfig(
         {
           name: model.name.trim(),
           ...(model.reasoning ? { reasoning: true as const } : {}),
+          ...(typeof model.attachment === "boolean" ? { attachment: model.attachment } : {}),
+          ...(model.limit ? { limit: { context: model.limit.context, output: model.limit.output ?? 0 } } : {}),
+          ...(model.modalities
+            ? {
+                modalities: {
+                  input: [...model.modalities.input],
+                  output: [...model.modalities.output],
+                },
+              }
+            : {}),
           ...(model.variants && Object.keys(model.variants).length > 0 ? { variants: model.variants } : {}),
         },
       ]),
