@@ -25,6 +25,8 @@ export namespace KiloSessionProcessor {
     "The model hit its output limit while reasoning and produced no actionable output. Try disabling reasoning or increasing the output limit."
   export const PROVIDER_FINISH_ERROR_MESSAGE =
     "The provider ended the response with an error before returning details. Start a new message to retry; Kilo will compact the oversized conversation first if needed."
+  export const EMPTY_PROVIDER_RESPONSE_MESSAGE = "The provider stream ended before returning any output."
+  export const INCOMPLETE_PROVIDER_RESPONSE_MESSAGE = "The provider stream ended before returning completion details."
 
   export function reviewTelemetry(command: string | undefined): ReviewTelemetry | undefined {
     if (!isReviewCommand(command)) return
@@ -207,6 +209,20 @@ export namespace KiloSessionProcessor {
     }
     log.warn("length stop", { messageID: input.msg.id })
     return OUTPUT_LENGTH_WARNING
+  }
+
+  export function incompleteResponseError(input: {
+    finish: string
+    output: number
+    step: { reasoning: boolean; text: boolean; tool: boolean }
+  }) {
+    if (input.finish !== "other" || input.output !== 0) return
+    const partial = input.step.reasoning || input.step.text || input.step.tool
+    log.warn("incomplete provider response", { partial, tool: input.step.tool })
+    return new MessageV2.APIError({
+      message: partial ? INCOMPLETE_PROVIDER_RESPONSE_MESSAGE : EMPTY_PROVIDER_RESPONSE_MESSAGE,
+      isRetryable: !partial,
+    })
   }
 
   export function providerFinishError(msg: MessageV2.Assistant) {

@@ -264,6 +264,186 @@ describe("session processor empty tool-calls", () => {
     ),
   )
 
+  it.live("retries empty provider responses before ending the turn", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const test = yield* TestLLM
+          const processors = yield* SessionProcessor.Service
+          const session = yield* Session.Service
+
+          yield* test.reply(
+            { type: "start" },
+            { type: "start-step" } as LLM.Event,
+            {
+              type: "finish-step",
+              finishReason: "other",
+              usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+              providerMetadata: undefined,
+            } as LLM.Event,
+            { type: "finish" } as LLM.Event,
+          )
+          yield* test.reply(
+            { type: "start" },
+            { type: "start-step" } as LLM.Event,
+            { type: "text-start", id: "text", providerMetadata: undefined } as LLM.Event,
+            { type: "text-delta", id: "text", text: "Recovered response", providerMetadata: undefined } as LLM.Event,
+            { type: "text-end", id: "text", providerMetadata: undefined } as LLM.Event,
+            {
+              type: "finish-step",
+              finishReason: "stop",
+              usage: usage(),
+              providerMetadata: undefined,
+            } as LLM.Event,
+            { type: "finish" } as LLM.Event,
+          )
+
+          const chat = yield* session.create({})
+          const parent = yield* session.updateMessage({
+            id: MessageID.ascending(),
+            role: "user",
+            sessionID: chat.id,
+            agent: "code",
+            model: ref,
+            time: { created: Date.now() },
+          })
+          const msg: MessageV2.Assistant = {
+            id: MessageID.ascending(),
+            role: "assistant",
+            sessionID: chat.id,
+            parentID: parent.id,
+            mode: "code",
+            agent: "code",
+            path: { cwd: path.resolve(dir), root: path.resolve(dir) },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ref.modelID,
+            providerID: ref.providerID,
+            time: { created: Date.now() },
+          }
+          yield* session.updateMessage(msg)
+
+          const mdl = model()
+          const handle = yield* processors.create({
+            assistantMessage: msg,
+            sessionID: chat.id,
+            model: mdl,
+          })
+          const input: LLM.StreamInput = {
+            user: parent as MessageV2.User,
+            sessionID: chat.id,
+            model: mdl,
+            agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
+            system: [],
+            messages: [],
+            tools: {},
+          }
+
+          const result = yield* handle.process(input)
+          expect(result).toBe("continue")
+          expect(handle.message.finish).toBe("stop")
+          expect(handle.message.error).toBeUndefined()
+          const parts = MessageV2.parts(msg.id)
+          expect(parts.some((part) => part.type === "text" && part.text === "Recovered response")).toBe(true)
+          expect(parts.filter((part) => part.type === "step-start")).toHaveLength(1)
+          expect(parts.some((part) => part.type === "step-finish" && part.reason === "other")).toBe(false)
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("surfaces partial provider responses without retrying", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const test = yield* TestLLM
+          const processors = yield* SessionProcessor.Service
+          const session = yield* Session.Service
+
+          yield* test.reply(
+            { type: "start" },
+            { type: "start-step" } as LLM.Event,
+            { type: "text-start", id: "text", providerMetadata: undefined } as LLM.Event,
+            { type: "text-delta", id: "text", text: "Partial response", providerMetadata: undefined } as LLM.Event,
+            { type: "text-end", id: "text", providerMetadata: undefined } as LLM.Event,
+            {
+              type: "finish-step",
+              finishReason: "other",
+              usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+              providerMetadata: undefined,
+            } as LLM.Event,
+            { type: "finish" } as LLM.Event,
+          )
+          yield* test.reply(
+            { type: "start" },
+            { type: "start-step" } as LLM.Event,
+            { type: "text-start", id: "retry", providerMetadata: undefined } as LLM.Event,
+            { type: "text-delta", id: "retry", text: "Unexpected retry", providerMetadata: undefined } as LLM.Event,
+            { type: "text-end", id: "retry", providerMetadata: undefined } as LLM.Event,
+            {
+              type: "finish-step",
+              finishReason: "stop",
+              usage: usage(),
+              providerMetadata: undefined,
+            } as LLM.Event,
+            { type: "finish" } as LLM.Event,
+          )
+
+          const chat = yield* session.create({})
+          const parent = yield* session.updateMessage({
+            id: MessageID.ascending(),
+            role: "user",
+            sessionID: chat.id,
+            agent: "code",
+            model: ref,
+            time: { created: Date.now() },
+          })
+          const msg: MessageV2.Assistant = {
+            id: MessageID.ascending(),
+            role: "assistant",
+            sessionID: chat.id,
+            parentID: parent.id,
+            mode: "code",
+            agent: "code",
+            path: { cwd: path.resolve(dir), root: path.resolve(dir) },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ref.modelID,
+            providerID: ref.providerID,
+            time: { created: Date.now() },
+          }
+          yield* session.updateMessage(msg)
+
+          const mdl = model()
+          const handle = yield* processors.create({
+            assistantMessage: msg,
+            sessionID: chat.id,
+            model: mdl,
+          })
+          const input: LLM.StreamInput = {
+            user: parent as MessageV2.User,
+            sessionID: chat.id,
+            model: mdl,
+            agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
+            system: [],
+            messages: [],
+            tools: {},
+          }
+
+          const result = yield* handle.process(input)
+          expect(result).toBe("stop")
+          expect(handle.message.finish).toBeUndefined()
+          expect(handle.message.error?.name).toBe("APIError")
+          if (handle.message.error?.name !== "APIError") return
+          expect(handle.message.error.data.isRetryable).toBe(false)
+          expect(handle.message.error.data.message).toBe(KiloSessionProcessor.INCOMPLETE_PROVIDER_RESPONSE_MESSAGE)
+          const texts = MessageV2.parts(msg.id).filter((part): part is MessageV2.TextPart => part.type === "text")
+          expect(texts.map((part) => part.text)).toEqual(["Partial response"])
+        }),
+      { git: true },
+    ),
+  )
+
   it.effect("treats provider finish errors without details as retryable API errors", () =>
     provideTmpdirInstance(
       (dir) =>

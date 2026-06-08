@@ -83,6 +83,7 @@ interface ProcessorContext extends Input {
   currentText: MessageV2.TextPart | undefined
   reasoningMap: Record<string, MessageV2.ReasoningPart>
   stepStart: number // kilocode_change
+  stepPart: PartID | undefined // kilocode_change
   step: { reasoning: boolean; text: boolean; tool: boolean } // kilocode_change
 }
 
@@ -143,17 +144,20 @@ export const layer: Layer.Layer<
         reasoningMap: {},
         telemetry: input.telemetry, // kilocode_change
         stepStart: 0, // kilocode_change
+        stepPart: undefined, // kilocode_change
         step: { reasoning: false, text: false, tool: false }, // kilocode_change
       }
       let aborted = false
       const ac = new AbortController() // kilocode_change — abort controller for offline handler
       const slog = log.clone().tag("session.id", input.sessionID).tag("messageID", input.assistantMessage.id)
 
-      const parse = (e: unknown) =>
-        MessageV2.fromError(e, {
+      const parse = (e: unknown) => {
+        if (e instanceof MessageV2.APIError) return e.toObject() // kilocode_change
+        return MessageV2.fromError(e, {
           providerID: input.model.providerID,
           aborted,
         })
+      }
 
       const settleToolCall = Effect.fn("SessionProcessor.settleToolCall")(function* (toolCallID: string) {
         const done = ctx.toolcalls[toolCallID]?.done
@@ -529,13 +533,15 @@ export const layer: Layer.Layer<
                 timestamp: DateTime.makeUnsafe(Date.now()),
               })
             }
+            const id = PartID.ascending() // kilocode_change
             yield* session.updatePart({
-              id: PartID.ascending(),
+              id, // kilocode_change
               messageID: ctx.assistantMessage.id,
               sessionID: ctx.sessionID,
               snapshot: ctx.snapshot,
               type: "step-start",
             })
+            ctx.stepPart = id // kilocode_change
             return
 
           case "finish-step": {
@@ -562,6 +568,23 @@ export const layer: Layer.Layer<
               elapsed: Math.round(performance.now() - (ctx.stepStart || performance.now())),
               telemetry: ctx.telemetry,
             })
+            const err = KiloSessionProcessor.incompleteResponseError({
+              finish: value.finishReason,
+              output: usage.tokens.output,
+              step: ctx.step,
+            })
+            if (err) {
+              if (err.data.isRetryable && ctx.stepPart) {
+                yield* session.removePart({
+                  sessionID: ctx.sessionID,
+                  messageID: ctx.assistantMessage.id,
+                  partID: ctx.stepPart,
+                })
+              }
+              ctx.stepPart = undefined
+              return yield* Effect.fail(err)
+            }
+            ctx.stepPart = undefined
             // kilocode_change end
             if (!ctx.assistantMessage.summary) {
               // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
