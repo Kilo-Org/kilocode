@@ -41,6 +41,7 @@ export interface ToolDeps {
     name?: string
     label?: string
   }) => Promise<WorktreeCreated | null>
+  claimRequest?: (requestID: string) => boolean
   cleanupWorktree: (wid: string, dir: string) => Promise<void>
   setup: (dir: string, branch?: string, id?: string) => Promise<void>
   createSessionInWorktree: (dir: string, branch: string, id?: string) => Promise<Session | null>
@@ -191,6 +192,11 @@ async function worktree(
 }
 
 export async function startFromTool(deps: ToolDeps, req: ToolRequest): Promise<void> {
+  if (deps.claimRequest && !deps.claimRequest(req.requestID)) {
+    deps.log(`Agent Manager tool skipped duplicate request ${req.requestID}`)
+    return
+  }
+
   deps.openPanel(true)
   await deps.getPanel()?.waitForReady()
   await deps.waitReady("startFromTool")
