@@ -55,7 +55,8 @@ function apply(dir: string, diff: Diff) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-session-diff-"))
   const file = path.join(tmp, "change.patch")
   try {
-    fs.writeFileSync(file, diff.patch)
+    const text = diff.patch.endsWith("\n") ? diff.patch : diff.patch + "\n"
+    fs.writeFileSync(file, text)
     const proc = Bun.spawnSync(["git", "apply", "--3way", "--whitespace=nowarn", file], {
       cwd: dir,
       stdout: "pipe",

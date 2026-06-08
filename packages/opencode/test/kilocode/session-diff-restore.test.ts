@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
-import { mergeSessionDiffs } from "../../src/kilocode/session-portability/cumulative-diff"
+import { appendSessionDiffs, mergeSessionDiffs } from "../../src/kilocode/session-portability/cumulative-diff"
 import { extractSessionDiffs, restoreSessionDiffs } from "../../src/kilocode/session-portability/session-diff-restore"
 
 const dirs: string[] = []
@@ -60,6 +60,15 @@ describe("session diff restore", () => {
     expect(mergeSessionDiffs({ base, local: [...base, ...local] })).toEqual([...base, ...local])
   })
 
+  test("appends turn diffs to imported cumulative diffs without repeating existing tails", () => {
+    const base = [{ file: "a.txt", patch: "base", additions: 1, deletions: 0, status: "added" as const }]
+    const local = [{ file: "b.txt", patch: "local", additions: 1, deletions: 0, status: "added" as const }]
+
+    expect(appendSessionDiffs({ existing: base, next: local })).toEqual([...base, ...local])
+    expect(appendSessionDiffs({ existing: [...base, ...local], next: local })).toEqual([...base, ...local])
+    expect(appendSessionDiffs({ existing: base, next: [...base, ...local] })).toEqual([...base, ...local])
+  })
+
   test("extracts top-level sessionDiff before legacy message summaries", () => {
     const diff = {
       file: "src/index.ts",
@@ -90,6 +99,20 @@ describe("session diff restore", () => {
   test("applies patch diffs in a git workspace", () => {
     const dir = repo()
     const text = patch(dir)
+    git(dir, ["checkout", "--", "."])
+
+    const result = restoreSessionDiffs({
+      directory: dir,
+      diffs: [{ file: "src/index.ts", patch: text, additions: 1, deletions: 1, status: "modified" }],
+    })
+
+    expect(result).toEqual({ applied: 1, skipped: 0, total: 1 })
+    expect(fs.readFileSync(path.join(dir, "src/index.ts"), "utf8").replace(/\r\n/g, "\n")).toBe("after\n")
+  })
+
+  test("applies patch diffs missing a final patch newline", () => {
+    const dir = repo()
+    const text = patch(dir).trimEnd()
     git(dir, ["checkout", "--", "."])
 
     const result = restoreSessionDiffs({

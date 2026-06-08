@@ -18,11 +18,25 @@ function starts(base: PortableDiff[], local: PortableDiff[]) {
   return base.every((diff, index) => equal(diff, local[index]))
 }
 
+function ends(base: PortableDiff[], local: PortableDiff[]) {
+  if (base.length < local.length) return false
+  const start = base.length - local.length
+  return local.every((diff, index) => equal(diff, base[start + index]))
+}
+
 export function mergeSessionDiffs(input: { base: PortableDiff[]; local: PortableDiff[] }) {
   if (input.base.length === 0) return input.local
   if (input.local.length === 0) return input.base
   if (starts(input.base, input.local)) return input.local
   return [...input.base, ...input.local]
+}
+
+export function appendSessionDiffs(input: { existing: PortableDiff[]; next: PortableDiff[] }) {
+  if (input.existing.length === 0) return input.next
+  if (input.next.length === 0) return input.existing
+  if (starts(input.existing, input.next)) return input.next
+  if (ends(input.existing, input.next)) return input.existing
+  return [...input.existing, ...input.next]
 }
 
 export function readSessionDiffBase(storage: Storage.Interface, id: SessionID | string) {
