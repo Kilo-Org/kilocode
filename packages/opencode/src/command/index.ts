@@ -71,6 +71,28 @@ export interface Interface {
   readonly list: () => Effect.Effect<Info[]>
 }
 
+// kilocode_change start - skills can share names with slash commands
+function fromSkill(item: Skill.Info): Info {
+  return {
+    name: item.name,
+    description: item.description,
+    source: "skill",
+    get template() {
+      return item.content
+    },
+    hints: [],
+  }
+}
+
+function skillName(name: string) {
+  return name.endsWith(":skill") ? name.slice(0, -6) : undefined
+}
+
+function mcpName(name: string) {
+  return name.endsWith(":mcp") ? name.slice(0, -4) : undefined
+}
+// kilocode_change end
+
 export class Service extends Context.Service<Service, Interface>()("@opencode/Command") {}
 
 export const layer = Layer.effect(
@@ -156,15 +178,7 @@ export const layer = Layer.effect(
 
       for (const item of yield* skill.all()) {
         if (commands[item.name]) continue
-        commands[item.name] = {
-          name: item.name,
-          description: item.description,
-          source: "skill",
-          get template() {
-            return item.content
-          },
-          hints: [],
-        }
+        commands[item.name] = fromSkill(item) // kilocode_change
       }
 
       return {
@@ -176,13 +190,41 @@ export const layer = Layer.effect(
 
     const get = Effect.fn("Command.get")(function* (name: string) {
       const s = yield* InstanceState.get(state)
-      return s.commands[name]
+      // kilocode_change start
+      const exact = s.commands[name]
+      if (exact) return exact
+      // kilocode_change end
+
+      // kilocode_change start
+      const target = skillName(name)
+      if (target) {
+        const item = yield* skill.get(target)
+        if (item) return fromSkill(item)
+        return undefined
+      }
+      // kilocode_change end
+      // kilocode_change start
+      const prompt = mcpName(name)
+      if (prompt) {
+        const cmd = s.commands[prompt]
+        return cmd?.source === "mcp" ? cmd : undefined
+      }
+      // kilocode_change end
+      return undefined // kilocode_change
     })
 
+    // kilocode_change start
     const list = Effect.fn("Command.list")(function* () {
       const s = yield* InstanceState.get(state)
-      return Object.values(s.commands)
+      const result = Object.values(s.commands)
+      const names = new Set(result.map((item) => item.name))
+      for (const item of yield* skill.all()) {
+        if (s.commands[item.name]?.source === "skill") continue
+        if (names.has(item.name)) result.push(fromSkill(item))
+      }
+      return result
     })
+    // kilocode_change end
 
     return Service.of({ get, list })
   }),

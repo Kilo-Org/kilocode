@@ -2,10 +2,12 @@
 
 import { $ } from "bun"
 import fs from "fs"
+import os from "os" // kilocode_change
 import path from "path"
 import { fileURLToPath } from "url"
 import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 import { createRequire } from "module" // kilocode_change
+import { prepareModelsSnapshot } from "./kilocode/models-snapshot" // kilocode_change
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -13,8 +15,6 @@ const dir = path.resolve(__dirname, "..")
 const require = createRequire(import.meta.url) // kilocode_change
 
 process.chdir(dir)
-
-await import("./generate.ts")
 
 import { Script } from "@opencode-ai/script"
 import pkg from "../package.json"
@@ -99,6 +99,40 @@ async function copyKiloConsole(input: string, outputDir: string) {
   await fs.promises.rm(target, { recursive: true, force: true })
   await fs.promises.cp(input, target, { recursive: true })
   console.log(`copied Kilo Console assets to ${target}`)
+}
+// kilocode_change end
+
+// kilocode_change start - validate compiled binaries load the sidecar models snapshot
+function smokeEnv(root: string) {
+  const env = { ...process.env }
+  delete env.KILO_MODELS_PATH
+  delete env.KILO_MODELS_URL
+  delete env.KILO_CONFIG
+  delete env.KILO_CONFIG_DIR
+  return {
+    ...env,
+    XDG_DATA_HOME: path.join(root, "data"),
+    XDG_CACHE_HOME: path.join(root, "cache"),
+    XDG_CONFIG_HOME: path.join(root, "config"),
+    XDG_STATE_HOME: path.join(root, "state"),
+    KILO_DISABLE_MODELS_FETCH: "1",
+    KILO_DISABLE_PROJECT_CONFIG: "1",
+    KILO_CONFIG_CONTENT: JSON.stringify({ enabled_providers: ["anthropic"] }),
+    ANTHROPIC_API_KEY: "dummy",
+  }
+}
+
+async function smokeModels(binaryPath: string) {
+  const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), "kilo-models-"))
+  try {
+    const out = await $`${binaryPath} --pure models anthropic`.env(smokeEnv(root)).text()
+    if (out.split(/\r?\n/).some((line) => line.startsWith("anthropic/"))) return
+    throw new Error("Compiled binary did not list Anthropic models from the sidecar snapshot")
+  } finally {
+    await fs.promises
+      .rm(root, { recursive: true, force: true })
+      .catch((err) => console.warn(`Failed to remove smoke test directory ${root}`, err))
+  }
 }
 // kilocode_change end
 
@@ -193,14 +227,6 @@ const allTargets: {
   },
 ]
 
-// kilocode_change start - isolate target builds because repeated Bun.build calls can corrupt shared chunks
-const arg = process.argv.find((item) => item.startsWith("--target="))
-const value = arg?.slice("--target=".length)
-const selection = value !== undefined && /^(0|[1-9]\d*)$/.test(value) ? Number(value) : -1
-const isolated = selection >= 0 && selection < allTargets.length
-if (arg !== undefined && !isolated) throw new Error(`Invalid isolated build target: ${arg}`)
-// kilocode_change end
-
 const targets = singleFlag
   ? allTargets.filter((item) => {
       if (item.os !== process.platform || item.arch !== process.arch) {
@@ -221,12 +247,14 @@ const targets = singleFlag
       return true
     })
   : allTargets
-if (isolated) targets.splice(0, targets.length, allTargets[selection]!) // kilocode_change - select one target in child
 
-// kilocode_change start - isolated children reuse the parent's prepared output tree
-if (!isolated) await $`rm -rf dist`
-const kiloConsoleDist = isolated ? path.resolve(dir, "../kilo-console/dist") : await buildKiloConsole()
+// kilocode_change start - prepare one validated models snapshot before any target compile
+const snapshot = await prepareModelsSnapshot()
+console.log(`Prepared models snapshot from ${snapshot.source} (${snapshot.providers} providers, ${snapshot.models} models)`)
 // kilocode_change end
+
+await $`rm -rf dist`
+const kiloConsoleDist = await buildKiloConsole() // kilocode_change
 
 const binaries: Record<string, string> = {}
 if (!skipInstall) {
@@ -245,14 +273,6 @@ for (const item of targets) {
     .filter(Boolean)
     .join("-")
 
-  // kilocode_change start - isolate Bun's shared-chunk state between cross-platform targets
-  if (!isolated && targets.length > 1) {
-    await $`${process.execPath} run script/build.ts --target=${allTargets.indexOf(item)} --skip-install`
-    binaries[name] = Script.version
-    continue
-  }
-  // kilocode_change end
-
   console.log(`building ${name}`)
   await $`mkdir -p dist/${name}/bin`
 
@@ -270,14 +290,22 @@ for (const item of targets) {
   await Bun.build({
     conditions: ["browser"],
     tsconfig: "./tsconfig.json",
-    plugins: [plugin], // kilocode_change
+    plugins: [plugin],
     // kilocode_change start - skip sourcemaps for release builds (each .js.map adds ~50 MB per target → ~600 MB total)
     sourcemap: Script.release ? "none" : "external",
     // kilocode_change end
     external: ["node-gyp", ...LanceDBRuntime.external], // kilocode_change
     format: "esm",
     minify: true,
-    splitting: true,
+    // kilocode_change start - disable code-splitting to avoid a Bun 1.3.14 codegen bug.
+    // With splitting:true Bun emits cross-chunk re-exports like `import{vn as G9}` whose
+    // binding isn't top-level, so the compiled binary crashes at startup on the baseline
+    // target: "SyntaxError: Exported binding 'G9' needs to refer to a top-level declared
+    // variable." (Bun oven-sh/bun#25621, #5344, #7265; also opencode#23349). Fixed upstream
+    // in Bun#26089, post-1.3.14. Splitting only deduped shared code between the entrypoints;
+    // turning it off inlines per entrypoint and produces a valid binary.
+    splitting: false,
+    // kilocode_change end
     compile: {
       autoloadBunfig: false,
       autoloadDotenv: false,
@@ -305,6 +333,7 @@ for (const item of targets) {
     },
   })
 
+  await fs.promises.copyFile(snapshot.path, path.resolve(dir, `dist/${name}/bin/models-snapshot.json`)) // kilocode_change
   await copyTreeSitterWasms(path.resolve(dir, `dist/${name}/bin`)) // kilocode_change
   await copyKiloConsole(kiloConsoleDist, path.resolve(dir, `dist/${name}/bin`)) // kilocode_change
 
@@ -336,6 +365,9 @@ for (const item of targets) {
     try {
       const versionOutput = await $`${binaryPath} --version`.text()
       console.log(`Smoke test passed: ${versionOutput.trim()}`)
+      console.log(`Running smoke test: ${binaryPath} --pure models anthropic`)
+      await smokeModels(binaryPath)
+      console.log("Models snapshot smoke test passed")
     } catch (e) {
       console.error(`Smoke test failed for ${name}:`, e)
       process.exit(1)
@@ -365,8 +397,6 @@ for (const item of targets) {
   )
   binaries[name] = Script.version
 }
-
-if (isolated) process.exit(0) // kilocode_change - isolated target children leave archive upload to parent
 
 if (Script.release) {
   const archives: string[] = [] // kilocode_change

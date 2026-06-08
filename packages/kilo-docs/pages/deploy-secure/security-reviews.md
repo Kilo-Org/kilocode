@@ -9,7 +9,7 @@ Most teams are drowning in Dependabot alerts. The majority of reported CVEs aren
 
 Kilo's Security Agent fixes this. It syncs your Dependabot alerts, triages them with AI, and performs deep codebase analysis to determine whether each vulnerability is actually reachable in your code. Non-exploitable findings can be auto-dismissed and synced back to GitHub.
 
-Available on **Teams** and **Enterprise** plans.
+Available for all users.
 
 ---
 

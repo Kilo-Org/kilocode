@@ -1,6 +1,7 @@
 import { createEffect, on, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
+import { isControl, isNested } from "./auto-scroll"
 
 const DEBOUNCE_MS = 100
 // Grace window after a real user interaction (wheel/pointer/key/touch) during
@@ -28,6 +29,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
   const [store, setStore] = createStore({
     contentRef: undefined as HTMLElement | undefined,
+    scrollRef: undefined as HTMLElement | undefined,
     userScrolled: false,
   })
 
@@ -42,11 +44,8 @@ export function createAutoScroll(options: AutoScrollOptions) {
   }
 
   const markUser = (e: Event) => {
-    if (e instanceof WheelEvent) {
-      const target = e.target instanceof Element ? e.target : undefined
-      const nested = target?.closest("[data-scrollable]")
-      if (scroll && nested && nested !== scroll) return
-    }
+    if (!(e instanceof WheelEvent) && isControl(e.target)) return
+    if (e instanceof WheelEvent && isNested(e.target, scroll)) return
     userInitiated = true
     lastInteraction = performance.now()
   }
@@ -187,6 +186,20 @@ export function createAutoScroll(options: AutoScrollOptions) {
     },
   )
 
+  createResizeObserver(
+    () => store.scrollRef,
+    () => {
+      const el = scroll
+      if (!el) return
+      if (!canScroll(el)) {
+        if (store.userScrolled) setStore("userScrolled", false)
+        return
+      }
+      if (store.userScrolled || recentlyInteracted()) return
+      scrollToBottomNow("auto")
+    },
+  )
+
   createEffect(
     on(options.working, (working: boolean) => {
       settling = false
@@ -219,6 +232,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
       }
 
       scroll = el
+      setStore("scrollRef", el)
 
       if (!el) return
 
