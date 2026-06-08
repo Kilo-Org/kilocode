@@ -279,7 +279,11 @@ export class WorktreeManager {
     await this.removeWorktreeImpl(worktreePath)
   }
 
-  private async resolveBranch(params: { prompt?: string; existingBranch?: string; branchName?: string }): Promise<string> {
+  private async resolveBranch(params: {
+    prompt?: string
+    existingBranch?: string
+    branchName?: string
+  }): Promise<string> {
     if (params.existingBranch) {
       const exists = await this.branchExists(params.existingBranch)
       if (!exists) throw new Error(`Branch "${params.existingBranch}" does not exist`)
