@@ -33,6 +33,7 @@ import { Global } from "@opencode-ai/core/global"
 import { BackgroundProcess } from "@/kilocode/background-process"
 import { KiloSession, kiloSessionFork } from "@/kilocode/session"
 import { SessionExport } from "@/kilocode/session-export"
+import { baseKey, cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff" // kilocode_change
 // kilocode_change end
 import { Effect, Layer, Option, Context, Schema, Types } from "effect"
 import { zod } from "@opencode-ai/core/effect-zod"
@@ -740,6 +741,16 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service | 
           yield* updatePart(p)
         }
       }
+      // kilocode_change start - preserve imported/cumulative diffs when forking sessions
+      const local = yield* storage
+        .read<Snapshot.FileDiff[]>(["session_diff", input.sessionID])
+        .pipe(Effect.orElseSucceed((): Snapshot.FileDiff[] => []))
+      const base = yield* cumulativeSessionDiff(storage, input.sessionID, local)
+      if (base.length > 0) {
+        yield* storage.write(baseKey(session.id), base).pipe(Effect.ignore)
+        yield* storage.write(["session_diff", session.id], base).pipe(Effect.ignore)
+      }
+      // kilocode_change end
       return session
     })
 

@@ -41,6 +41,7 @@ import { Session } from "@/session/session"
 import { Database } from "@/storage/db"
 import { Storage } from "@/storage/storage"
 import { AudioTranscriptionsBody, ClawStatus, EditBody, FimBody } from "../groups/kilo-gateway"
+import { baseKey } from "../../../session-portability/cumulative-diff"
 import { extractSessionDiffs, restoreSessionDiffs } from "../../../session-portability/session-diff-restore"
 
 const FIM_TIMEOUT_MS = 30_000
@@ -477,7 +478,12 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
               )
 
               if (diffs.length > 0) {
-                yield* Storage.Service.use((storage) => storage.write(["session_diff", imported.id], diffs)).pipe(
+                yield* Storage.Service.use((storage) =>
+                  Effect.all([
+                    storage.write(baseKey(imported.id), diffs),
+                    storage.write(["session_diff", imported.id], diffs),
+                  ]),
+                ).pipe(
                   Effect.catch((err) =>
                     Effect.sync(() => {
                       logError("cloud/session/import/diff", err)

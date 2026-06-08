@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
+import { mergeSessionDiffs } from "../../src/kilocode/session-portability/cumulative-diff"
 import { extractSessionDiffs, restoreSessionDiffs } from "../../src/kilocode/session-portability/session-diff-restore"
 
 const dirs: string[] = []
@@ -50,6 +51,14 @@ afterEach(() => {
 })
 
 describe("session diff restore", () => {
+  test("merges imported base diffs before local diffs without duplicating unchanged imports", () => {
+    const base = [{ file: "a.txt", patch: "base", additions: 1, deletions: 0, status: "added" as const }]
+    const local = [{ file: "b.txt", patch: "local", additions: 1, deletions: 0, status: "added" as const }]
+
+    expect(mergeSessionDiffs({ base, local })).toEqual([...base, ...local])
+    expect(mergeSessionDiffs({ base, local: base })).toEqual(base)
+  })
+
   test("extracts top-level sessionDiff before legacy message summaries", () => {
     const diff = {
       file: "src/index.ts",
