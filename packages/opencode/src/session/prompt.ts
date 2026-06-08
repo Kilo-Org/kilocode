@@ -224,7 +224,7 @@ export const layer = Layer.effect(
           small: true,
           tools: {},
           model: mdl,
-          sessionID: input.session.id,
+          sessionID: KiloSessionPrompt.titleID(input.session.id), // kilocode_change - isolate title requests from the agent task
           retries: 2,
           messages: [{ role: "user", content: "Generate a title for this conversation:\n" }, ...msgs],
         })

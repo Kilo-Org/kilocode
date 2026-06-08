@@ -410,7 +410,8 @@ export const kiloSessionFork = fn(
       Effect.gen(function* () {
         const sessions = yield* Session.Service
         const session = yield* sessions.fork(input)
-        yield* KiloSession.remapChildren(session.id)
+        const remapped = new Map<string, SessionID>([[input.sessionID, session.id]])
+        yield* KiloSession.remapChildren(session.id, remapped)
         return session
       }),
     )
