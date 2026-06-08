@@ -28,6 +28,7 @@ function deps(overrides: Partial<ToolDeps> = {}): ToolDeps {
     getRoot: () => "/repo",
     getState: () => ({ addSession: mock(() => calls.push("addSession")) }) as never,
     getPanel: () => panel as never,
+    getPermission: () => undefined,
     openPanel: mock(() => calls.push("openPanel")),
     waitReady: mock(async () => calls.push("waitReady")),
     createWorktree: mock(async () => ({ worktree: { id: "wt-1" }, result: result("/repo/.kilo/worktrees/wt-1") })),

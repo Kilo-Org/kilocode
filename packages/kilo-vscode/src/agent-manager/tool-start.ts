@@ -1,10 +1,9 @@
-import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
+import type { KiloClient, PermissionRuleset, Session } from "@kilocode/sdk/v2/client"
 import { sanitizeBranchName, versionedName } from "./branch-name"
 import type { CreateWorktreeResult } from "./WorktreeManager"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import type { PanelContext } from "./host"
 import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
-import { sessionPermission } from "../agent-manager-tool-setting"
 
 const LABEL_MAX = 28
 const PREFIX = new Set(["feat", "fix", "chore", "bug", "issue", "task", "branch"])
@@ -34,6 +33,7 @@ export interface ToolDeps {
   getRoot: () => string | undefined
   getState: () => WorktreeStateManager | undefined
   getPanel: () => PanelContext | undefined
+  getPermission: () => PermissionRuleset | undefined
   openPanel: (preserveFocus?: boolean) => void
   waitReady: (context: string) => Promise<void>
   createWorktree: (opts: {
@@ -127,7 +127,7 @@ async function local(deps: ToolDeps, client: KiloClient, task: ToolTask, directo
   }
   const target = wt?.path ?? root
   const { data } = await client.session.create(
-    { directory: target, platform: PLATFORM, permission: sessionPermission() },
+    { directory: target, platform: PLATFORM, permission: deps.getPermission() },
     { throwOnError: true },
   )
   const session = data

@@ -908,6 +908,7 @@ export class AgentManagerProvider implements Disposable {
         getRoot: () => this.getRoot(),
         getState: () => this.getStateManager(),
         getPanel: () => this.panel,
+        getPermission: sessionPermission,
         openPanel: (preserveFocus) => this.openPanel(preserveFocus),
         waitReady: (context) => this.waitForStateReady(context),
         createWorktree: (opts) => this.createWorktreeOnDisk(opts),
