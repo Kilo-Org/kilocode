@@ -13,6 +13,7 @@ import { optionalOmitUndefined } from "@opencode-ai/core/schema"
 import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
+import { ORCAROUTER_API, ORCAROUTER_ENV } from "./orcarouter"
 
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
 export const REQUEST_TIMEOUT_MS = 300_000 // 5 minutes
@@ -163,6 +164,33 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
         autoload: false,
         options: { headers: DEFAULT_HEADERS },
       }),
+
+    orcarouter: Effect.fnUntraced(function* (input: any) {
+      const env = yield* dep.env()
+      const cfg = yield* dep.config()
+      const auth = yield* dep.auth(input.id)
+      const cfgKey = cfg?.provider?.["orcarouter"]?.options?.apiKey
+      const authKey = auth?.type === "api" ? auth.key : undefined
+      const envKey = env[ORCAROUTER_ENV]
+      const hasKey = Boolean(cfgKey || authKey || envKey)
+      const hasModels = Object.keys(input.models ?? {}).length > 0
+
+      return {
+        autoload: hasKey && hasModels,
+        options: {
+          baseURL: ORCAROUTER_API,
+          headers: { ...DEFAULT_HEADERS },
+        },
+        // The `auto` router needs the orcarouter/ prefix to resolve on the
+        // backend (https://docs.orcarouter.ai/routing/auto-router). All
+        // other models already carry their own provider namespace
+        // (openai/..., anthropic/...) and pass through verbatim.
+        async getModel(sdk: any, modelID: string) {
+          const id = modelID === "auto" ? "orcarouter/auto" : modelID
+          return sdk.languageModel(id)
+        },
+      }
+    }),
   }
 }
 

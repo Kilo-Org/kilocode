@@ -1232,7 +1232,7 @@ export function options(input: {
     result["promptCacheKey"] = input.sessionID
   }
 
-  if (input.model.providerID === "openrouter") {
+  if (input.model.providerID === "openrouter" || input.model.providerID === "orcarouter" /* kilocode_change */) {
     result["prompt_cache_key"] = input.sessionID
   }
   if (input.model.api.npm === "@ai-sdk/gateway") {
@@ -1270,7 +1270,8 @@ export function smallOptions(model: Provider.Model) {
   if (
     model.providerID === "openrouter" ||
     model.providerID === "llmgateway" ||
-    model.api.npm === "@kilocode/kilo-gateway" // kilocode_change
+    model.api.npm === "@kilocode/kilo-gateway" || // kilocode_change
+    model.providerID === "orcarouter" // kilocode_change
   ) {
     if (!model.capabilities.reasoning) return {} // kilocode_change - omit unsupported reasoning options
     return { reasoning: { enabled: true } } // kilocode_change - use the model's supported default effort

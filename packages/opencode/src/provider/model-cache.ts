@@ -6,6 +6,7 @@ import { Config } from "../config/config"
 import { Auth } from "../auth"
 import type { Provider } from "./models"
 import * as Log from "@opencode-ai/core/util/log"
+import { fetchOrcaRouterModels } from "../kilocode/provider/orcarouter"
 
 type Models = Provider["models"]
 type KiloOptions = NonNullable<Parameters<typeof fetchKiloModels>[0]>
@@ -160,6 +161,11 @@ export const layer: Layer.Layer<
     const fetchModels = (providerID: string, options: Options): Effect.Effect<Result, unknown> => {
       if (providerID === "kilo") return kilo.fetch(options)
       if (providerID === "apertis") return fetchApertisModels(options).pipe(Effect.map((models) => ({ models })))
+      // kilocode_change start
+      if (providerID === "orcarouter") {
+        return Effect.tryPromise(() => fetchOrcaRouterModels()).pipe(Effect.map((models) => ({ models })))
+      }
+      // kilocode_change end
       log.debug("provider not implemented", { providerID })
       return Effect.succeed({ models: {} })
     }

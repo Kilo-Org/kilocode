@@ -14,6 +14,7 @@ import { Config } from "../config/config"
 import { ModelCache } from "./model-cache"
 import { Auth } from "../auth"
 import { AI_SDK_PROVIDERS, KILO_OPENROUTER_BASE, PROMPTS } from "@kilocode/kilo-gateway"
+import { ORCAROUTER_API, ORCAROUTER_ENV } from "../kilocode/provider/orcarouter"
 // kilocode_change end
 
 // kilocode_change start
@@ -203,15 +204,38 @@ export const layer: Layer.Layer<Service, never, Requirements> = Layer.effect(
     const get = Effect.fn("ModelsDev.get")(function* () {
       const providers = { ...(yield* cachedGet) }
       delete providers["kilo"]
+      // OrcaRouter ships its own /api/pricing catalog; never trust models.dev for it.
+      delete providers["orcarouter"]
 
       const config = yield* cfg.get()
       const disabled = new Set(config.disabled_providers ?? [])
       const enabled = config.enabled_providers ? new Set(config.enabled_providers) : undefined
       const kiloAllowed = (!enabled || enabled.has("kilo")) && !disabled.has("kilo")
+      const orcarouterAllowed = (!enabled || enabled.has("orcarouter")) && !disabled.has("orcarouter")
       const apt = config.provider?.apertis?.options
       const aptBase = apt?.baseURL ?? "https://api.apertis.ai/v1"
       const aptFetch = {
         ...(apt?.baseURL ? { baseURL: apt.baseURL } : {}),
+      }
+
+      if (orcarouterAllowed) {
+        const cfgKey = config.provider?.["orcarouter"]?.options?.apiKey
+        const authEntry = yield* auth.get("orcarouter").pipe(Effect.catch(() => Effect.succeed(undefined)))
+        const authKey = authEntry?.type === "api" ? authEntry.key : undefined
+        const envKey = process.env[ORCAROUTER_ENV]
+        const hasKey = Boolean(cfgKey || authKey || envKey)
+
+        if (hasKey) {
+          const orca = yield* cache.fetch("orcarouter").pipe(Effect.catch(() => Effect.succeed({})))
+          providers["orcarouter"] = {
+            id: "orcarouter",
+            name: "OrcaRouter",
+            env: [ORCAROUTER_ENV],
+            api: ORCAROUTER_API,
+            npm: "@ai-sdk/openai-compatible",
+            models: orca,
+          }
+        }
       }
 
       if (kiloAllowed) {
