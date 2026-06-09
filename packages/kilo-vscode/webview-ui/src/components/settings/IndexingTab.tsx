@@ -1,10 +1,10 @@
 import { Component, For, Show, createMemo, createSignal } from "solid-js"
+import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { formatKiloEmbeddingModelLabel, getKiloEmbeddingModel } from "@kilocode/kilo-indexing/embedding-models"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { TextField } from "@kilocode/kilo-ui/text-field"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useConfig } from "../../context/config"
 import { formatIndexingLabel, useIndexing } from "../../context/indexing"
 import { useKiloEmbeddingModels } from "../../context/kilo-embedding-models"
@@ -14,6 +14,11 @@ import { useServer } from "../../context/server"
 import type { IndexingConfig, IndexingProvider as ProviderId } from "../../types/messages"
 import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
 import SettingsRow from "./SettingsRow"
+import {
+  indexingEnabled,
+  indexingEnabledInherited,
+  type IndexingScope,
+} from "./indexing-tab-state"
 
 type Option = { value: string; label: string }
 type TuningKey = "searchMinScore" | "searchMaxResults" | "embeddingBatchSize" | "scannerMaxBatchRetries"
@@ -73,7 +78,7 @@ function providerFields(provider: ProviderId | undefined): Array<{ key: string; 
 }
 
 const IndexingTab: Component = () => {
-  const { config, globalConfig, updateConfig, updateGlobalConfig } = useConfig()
+  const { globalConfig, projectConfig, updateGlobalConfig, updateProjectConfig } = useConfig()
   const indexing = useIndexing()
   const embeds = useKiloEmbeddingModels()
   const language = useLanguage()
@@ -82,13 +87,21 @@ const IndexingTab: Component = () => {
   const [providerDrafts, setProviderDrafts] = createSignal<Record<string, string>>({})
   const [storeDrafts, setStoreDrafts] = createSignal<Record<string, string>>({})
   const [tuningDrafts, setTuningDrafts] = createSignal<Record<string, string>>({})
+  const [scope, setScope] = createSignal<IndexingScope>("global")
 
-  const cfg = createMemo<IndexingConfig>(() => config().indexing ?? {})
   const globalCfg = createMemo<IndexingConfig>(() => globalConfig().indexing ?? {})
-  const globalOn = createMemo(() => globalCfg().enabled === true)
+  const projectCfg = createMemo<IndexingConfig>(() => projectConfig().indexing ?? {})
+  const cfg = createMemo<IndexingConfig>(() => (scope() === "global" ? globalCfg() : projectCfg()))
+  const enabled = createMemo(() => indexingEnabled(scope(), globalCfg(), projectCfg()))
+  const inherited = createMemo(() => indexingEnabledInherited(scope(), globalCfg(), projectCfg()))
 
   const updateIndexing = (partial: IndexingConfig) => {
-    updateConfig({ indexing: { ...cfg(), ...partial } })
+    const patch = { indexing: { ...cfg(), ...partial } }
+    if (scope() === "global") {
+      updateGlobalConfig(patch)
+      return
+    }
+    updateProjectConfig(patch)
   }
 
   const vectorStore = () => cfg().vectorStore ?? "qdrant"
@@ -137,21 +150,6 @@ const IndexingTab: Component = () => {
     updateIndexing({ enabled })
   }
 
-  const saveGlobalEnabled = (enabled: boolean) => {
-    if (enabled && !globalCfg().provider && !cfg().provider && kiloAvailable()) {
-      updateGlobalConfig({
-        indexing: {
-          enabled,
-          provider: "kilo",
-          model: knownKiloModel(cfg().model) ?? (kiloDefault() || null),
-          dimension: null,
-        },
-      })
-      return
-    }
-    updateGlobalConfig({ indexing: { enabled } })
-  }
-
   const saveModel = (value: string) => {
     if (selectedProvider() === "kilo") return
     const trimmed = value.trim()
@@ -159,7 +157,7 @@ const IndexingTab: Component = () => {
   }
 
   const providerValue = (group: string, key: string) => {
-    const draftKey = `${group}.${key}`
+    const draftKey = `${scope()}.${group}.${key}`
     const draft = providerDrafts()[draftKey]
     if (draft !== undefined) return draft
     const value = (cfg()[group as keyof IndexingConfig] as Record<string, string | undefined> | undefined)?.[key]
@@ -167,7 +165,7 @@ const IndexingTab: Component = () => {
   }
 
   const storeValue = (group: "qdrant" | "lancedb", key: string) => {
-    const draftKey = `${group}.${key}`
+    const draftKey = `${scope()}.${group}.${key}`
     const draft = storeDrafts()[draftKey]
     if (draft !== undefined) return draft
     const value = (cfg()[group] as Record<string, string | undefined> | undefined)?.[key]
@@ -204,7 +202,7 @@ const IndexingTab: Component = () => {
   }
 
   const tuningValue = (key: TuningKey) => {
-    const draft = tuningDrafts()[key]
+    const draft = tuningDrafts()[`${scope()}.${key}`]
     if (draft !== undefined) return draft
     const value = cfg()[key]
     return value === undefined ? "" : String(value)
@@ -219,27 +217,46 @@ const IndexingTab: Component = () => {
           </span>
         </SettingsRow>
         <SettingsRow
-          title={language.t("settings.indexing.globalEnable.title")}
-          description={language.t("settings.indexing.globalEnable.description")}
+          title="Configuration scope"
+          description={
+            scope() === "global"
+              ? language.t("settings.indexing.globalEnable.description")
+              : language.t("settings.indexing.projectEnable.description")
+          }
         >
-          <Switch checked={globalCfg().enabled ?? false} onChange={saveGlobalEnabled} hideLabel>
-            {language.t("settings.indexing.globalEnable.title")}
-          </Switch>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <Button
+              variant={scope() === "global" ? "primary" : "secondary"}
+              size="small"
+              onClick={() => setScope("global")}
+            >
+              {language.t("settings.config.scope.global")}
+            </Button>
+            <Button
+              variant={scope() === "project" ? "primary" : "secondary"}
+              size="small"
+              onClick={() => setScope("project")}
+            >
+              {language.t("settings.config.scope.local")}
+            </Button>
+          </div>
         </SettingsRow>
         <SettingsRow
-          title={language.t("settings.indexing.projectEnable.title")}
-          description={language.t("settings.indexing.projectEnable.description")}
+          title={
+            scope() === "global"
+              ? language.t("settings.indexing.globalEnable.title")
+              : language.t("settings.indexing.projectEnable.title")
+          }
+          description={
+            inherited()
+              ? `Inherited from global config (${enabled() ? "on" : "off"}) until a project value is saved.`
+              : language.t("settings.indexing.enable.description")
+          }
           last
         >
-          <Tooltip
-            value={language.t("settings.indexing.projectEnable.disabledTooltip")}
-            placement="top"
-            inactive={!globalOn()}
-          >
-            <Switch checked={cfg().enabled === true} onChange={saveEnabled} disabled={globalOn()} hideLabel>
-              {language.t("settings.indexing.projectEnable.title")}
-            </Switch>
-          </Tooltip>
+          <Switch checked={enabled()} onChange={saveEnabled} hideLabel>
+            {language.t("settings.indexing.enable.title")}
+          </Switch>
         </SettingsRow>
       </Card>
 
@@ -330,7 +347,7 @@ const IndexingTab: Component = () => {
                       placeholder={field.placeholder}
                       onInput={(e: InputEvent) => {
                         const target = e.currentTarget as HTMLInputElement
-                        setProviderDrafts((prev) => ({ ...prev, [`${group}.${field.key}`]: target.value }))
+                        setProviderDrafts((prev) => ({ ...prev, [`${scope()}.${group}.${field.key}`]: target.value }))
                       }}
                       onBlur={(e: FocusEvent) => {
                         const target = e.currentTarget as HTMLInputElement
@@ -374,7 +391,7 @@ const IndexingTab: Component = () => {
                 placeholder={language.t("settings.indexing.lancedbDirectory.placeholder")}
                 onInput={(e: InputEvent) => {
                   const target = e.currentTarget as HTMLInputElement
-                  setStoreDrafts((prev) => ({ ...prev, "lancedb.directory": target.value }))
+                  setStoreDrafts((prev) => ({ ...prev, [`${scope()}.lancedb.directory`]: target.value }))
                 }}
                 onBlur={(e: FocusEvent) => {
                   const target = e.currentTarget as HTMLInputElement
@@ -394,7 +411,7 @@ const IndexingTab: Component = () => {
                 placeholder="http://localhost:6333"
                 onInput={(e: InputEvent) => {
                   const target = e.currentTarget as HTMLInputElement
-                  setStoreDrafts((prev) => ({ ...prev, "qdrant.url": target.value }))
+                  setStoreDrafts((prev) => ({ ...prev, [`${scope()}.qdrant.url`]: target.value }))
                 }}
                 onBlur={(e: FocusEvent) => {
                   const target = e.currentTarget as HTMLInputElement
@@ -413,7 +430,7 @@ const IndexingTab: Component = () => {
                 placeholder={language.t("settings.indexing.qdrantApiKey.placeholder")}
                 onInput={(e: InputEvent) => {
                   const target = e.currentTarget as HTMLInputElement
-                  setStoreDrafts((prev) => ({ ...prev, "qdrant.apiKey": target.value }))
+                  setStoreDrafts((prev) => ({ ...prev, [`${scope()}.qdrant.apiKey`]: target.value }))
                 }}
                 onBlur={(e: FocusEvent) => {
                   const target = e.currentTarget as HTMLInputElement
@@ -438,7 +455,7 @@ const IndexingTab: Component = () => {
                 placeholder={item.placeholder}
                 onInput={(e: InputEvent) => {
                   const target = e.currentTarget as HTMLInputElement
-                  setTuningDrafts((prev) => ({ ...prev, [item.key]: target.value }))
+                  setTuningDrafts((prev) => ({ ...prev, [`${scope()}.${item.key}`]: target.value }))
                 }}
                 onBlur={(e: FocusEvent) => {
                   const target = e.currentTarget as HTMLInputElement

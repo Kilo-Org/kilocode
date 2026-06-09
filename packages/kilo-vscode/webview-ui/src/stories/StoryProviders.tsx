@@ -299,6 +299,7 @@ const ConfigWrapper: ParentComponent<{ config?: Config; onConfigChange?: (config
     const value = {
       config: createMemo(() => cfg()),
       globalConfig: createMemo(() => cfg()),
+      projectConfig: createMemo(() => cfg()),
       settings,
       features,
       loading: () => false,
@@ -314,6 +315,14 @@ const ConfigWrapper: ParentComponent<{ config?: Config; onConfigChange?: (config
         setDirty(true)
       },
       updateGlobalConfig: (partial: Partial<Config>) => {
+        setCfg((prev) => {
+          const next = merge(prev as Record<string, unknown>, partial as Record<string, unknown>) as Config
+          props.onConfigChange?.(next)
+          return next
+        })
+        setDirty(true)
+      },
+      updateProjectConfig: (partial: Partial<Config>) => {
         setCfg((prev) => {
           const next = merge(prev as Record<string, unknown>, partial as Record<string, unknown>) as Config
           props.onConfigChange?.(next)

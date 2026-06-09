@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test"
+import fs from "node:fs/promises"
+import path from "node:path"
 import { CodeIndexManager } from "@kilocode/kilo-indexing/engine"
 import { normalizeIndexingStatus } from "@kilocode/kilo-indexing/status"
 import type { Config } from "../../src/config/config"
@@ -123,6 +125,47 @@ afterEach(async () => {
   else process.env["KILO_DISABLE_CODEBASE_INDEXING"] = disabled
   global.fetch = fetch
   await disposeAllInstances()
+})
+
+describe("indexing model catalog", () => {
+  test("ignores a project-scoped Kilo origin", async () => {
+    await using tmp = await tmpdir({
+      git: true,
+      init: async (dir) => {
+        const global = path.join(dir, "global")
+        const project = path.join(dir, "project")
+        await fs.mkdir(path.join(project, ".kilo"), { recursive: true })
+        await fs.mkdir(global, { recursive: true })
+        await Bun.write(path.join(global, "kilo.jsonc"), "{}")
+        await Bun.write(
+          path.join(project, ".kilo", "kilo.jsonc"),
+          JSON.stringify({ indexing: { kilo: { baseUrl: "http://127.0.0.1:4567" } } }),
+        )
+        return { global, project }
+      },
+    })
+    process.env["KILO_CONFIG_DIR"] = tmp.extra.global
+    const calls: string[] = []
+    globalThis.fetch = (async (input) => {
+      calls.push(String(input))
+      return new Response(
+        JSON.stringify({
+          defaultModel: "provider/model",
+          models: [{ id: "provider/model", name: "Provider Model", dimension: 1024, scoreThreshold: 0.4 }],
+          aliases: {},
+        }),
+      )
+    }) as typeof fetch
+
+    const response = await Server.Default().app.request("/indexing/models", {
+      headers: { "x-kilo-directory": tmp.extra.project },
+    })
+
+    const catalogs = calls.filter((url) => url.includes("embedding-models"))
+    expect(response.status).toBe(200)
+    expect(catalogs).toHaveLength(1)
+    expect(catalogs[0]).not.toContain("127.0.0.1:4567")
+  })
 })
 
 describe("indexing startup degradation", () => {
@@ -472,7 +515,7 @@ describe("indexing startup degradation", () => {
     }
   })
 
-  test("does not execute stored Kilo models when the hosted catalog is unavailable", async () => {
+  test("uses bundled Kilo models when the hosted catalog is unavailable", async () => {
     global.fetch = (() => Promise.resolve(new Response(undefined, { status: 500 }))) as unknown as typeof global.fetch
     const init = spyOn(CodeIndexManager.prototype, "initialize").mockResolvedValue({ requiresRestart: false })
     const key = process.env.KILO_API_KEY
@@ -486,9 +529,12 @@ describe("indexing startup degradation", () => {
         directory: tmp.path,
         fn: async () => {
           await called(init)
-          expect(init.mock.calls[0]?.[0]).toMatchObject({ embedderProvider: "kilo" })
-          expect(init.mock.calls[0]?.[0].modelId).toBeUndefined()
-          expect(init.mock.calls[0]?.[0].modelDimension).toBeUndefined()
+          expect(init.mock.calls[0]?.[0]).toMatchObject({
+            embedderProvider: "kilo",
+            modelId: "mistralai/mistral-embed-2312",
+            modelDimension: 1024,
+            searchMinScore: 0.35,
+          })
         },
       })
     } finally {

@@ -108,6 +108,62 @@ describe("config overlay routes", () => {
     })
   })
 
+  test.serial("marks global indexing values inherited in project scope", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+    await config(global.path, {
+      indexing: {
+        enabled: true,
+        provider: "ollama",
+        ollama: { baseUrl: "http://localhost:11434" },
+      },
+    })
+    await invalidate()
+
+    const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+
+    expect(body.fields["indexing.enabled"]).toMatchObject({ source: "global", inherited: true, value: true })
+    expect(body.fields["indexing.provider"]).toMatchObject({ source: "global", inherited: true, value: "ollama" })
+    expect(body.fields["indexing.ollama.baseUrl"]).toMatchObject({
+      source: "global",
+      inherited: true,
+      value: "http://localhost:11434",
+    })
+  })
+
+  test.serial("writes project indexing overrides to .kilo/kilo.jsonc", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+    await config(global.path, { indexing: { enabled: true, provider: "openai" } })
+    await invalidate()
+
+    await json(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          scope: "project",
+          set: { indexing: { enabled: false, provider: "ollama", ollama: { baseUrl: "http://127.0.0.1:11434" } } },
+        }),
+      }),
+    )
+
+    const file = path.join(project.path, ".kilo", "kilo.jsonc")
+    const saved = (await Bun.file(file).json()) as { indexing: Record<string, unknown> }
+    const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+
+    expect(await Bun.file(path.join(project.path, ".kilo", "kilo.json")).exists()).toBe(false)
+    expect(saved.indexing).toEqual({
+      enabled: false,
+      provider: "ollama",
+      ollama: { baseUrl: "http://127.0.0.1:11434" },
+    })
+    expect(body.fields["indexing.enabled"]).toMatchObject({ source: "project", value: false })
+    expect(body.fields["indexing.provider"]).toMatchObject({ source: "project", value: "ollama" })
+  })
+
   test.serial("removes local scalar override and falls back to global", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir({ config: { model: "kilo/project-model", username: "alice" } })
@@ -150,7 +206,7 @@ describe("config overlay routes", () => {
       }),
     )
 
-    const saved = (await Bun.file(path.join(project.path, ".kilo", "kilo.json")).json()) as {
+    const saved = (await Bun.file(path.join(project.path, ".kilo", "kilo.jsonc")).json()) as {
       mcp: Record<string, unknown>
     }
     expect(Object.keys(saved.mcp)).toEqual(["local"])
@@ -173,7 +229,7 @@ describe("config overlay routes", () => {
       }),
     )
 
-    const saved = (await Bun.file(path.join(project.path, ".kilo", "kilo.json")).json()) as {
+    const saved = (await Bun.file(path.join(project.path, ".kilo", "kilo.jsonc")).json()) as {
       mcp: Record<string, unknown>
     }
     expect(saved.mcp).toEqual({ shared: { enabled: false } })

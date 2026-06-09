@@ -188,7 +188,7 @@ export namespace KiloIndexing {
   export function input(config?: IndexingConfig, global?: IndexingConfig) {
     return toIndexingConfigInput({
       ...config,
-      enabled: config?.enabled === true || global?.enabled === true,
+      enabled: config?.enabled ?? global?.enabled ?? false,
     })
   }
 
@@ -392,6 +392,20 @@ export namespace KiloIndexing {
 
   export async function current(): Promise<Status> {
     return (await hit().ready).current()
+  }
+
+  export async function models() {
+    try {
+      const cfg = await AppRuntime.runPromise(Config.Service.use((svc) => svc.getGlobal()))
+      const auth = await kiloAuth(cfg)
+      const catalog = await fetchKiloEmbeddingModelCatalog({ baseURL: auth.baseUrl, token: auth.apiKey })
+      if (catalog.models.length > 0 || (!auth.baseUrl && !auth.apiKey)) return catalog
+      const fallback = await fetchKiloEmbeddingModelCatalog()
+      return fallback.models.length > 0 ? fallback : catalog
+    } catch (err) {
+      log.warn("falling back to public Kilo embedding model catalog", { err })
+      return fetchKiloEmbeddingModelCatalog()
+    }
   }
 
   export function ready(): boolean {

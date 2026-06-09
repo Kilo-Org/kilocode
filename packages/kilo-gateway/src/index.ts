@@ -35,6 +35,7 @@ export {
 } from "./api/profile.js"
 export { fetchKiloModels, type KiloModelsResult } from "./api/models.js"
 export {
+  BUNDLED_KILO_EMBEDDING_MODEL_CATALOG,
   EMPTY_KILO_EMBEDDING_MODEL_CATALOG,
   fetchKiloEmbeddingModelCatalog,
   type KiloEmbeddingModel,

@@ -27,6 +27,7 @@ export interface SaveError {
 interface ConfigContextValue {
   config: Accessor<Config>
   globalConfig: Accessor<Config>
+  projectConfig: Accessor<Config>
   settings: Accessor<Record<string, unknown>>
   features: Accessor<FeatureFlags>
   loading: Accessor<boolean>
@@ -35,6 +36,7 @@ interface ConfigContextValue {
   saveError: Accessor<SaveError | null>
   updateConfig: (partial: Partial<Config>) => void
   updateGlobalConfig: (partial: Partial<Config>) => void
+  updateProjectConfig: (partial: Partial<Config>) => void
   updateSetting: (key: string, value: unknown) => void
   saveConfig: () => void
   discardConfig: () => void
@@ -47,19 +49,25 @@ export const ConfigProvider: ParentComponent = (props) => {
 
   const [config, setConfig] = createSignal<Config>({})
   const [globalConfig, setGlobalConfig] = createSignal<Config>({})
+  const [projectConfig, setProjectConfig] = createSignal<Config>({})
   const [settings, setSettings] = createSignal<Record<string, unknown>>({})
   const [features, setFeatures] = createSignal<FeatureFlags>({ indexing: false })
   const [loading, setLoading] = createSignal(true)
   const [draft, setDraft] = createSignal<Partial<Config>>({})
   const [globalDraft, setGlobalDraft] = createSignal<Partial<Config>>({})
+  const [projectDraft, setProjectDraft] = createSignal<Partial<Config>>({})
   const [settingsDraft, setSettingsDraft] = createSignal<Record<string, unknown>>({})
   const isDirty = createMemo(
     () =>
-      has(draft() as Record<string, unknown>) || has(globalDraft() as Record<string, unknown>) || has(settingsDraft()),
+      has(draft() as Record<string, unknown>) ||
+      has(globalDraft() as Record<string, unknown>) ||
+      has(projectDraft() as Record<string, unknown>) ||
+      has(settingsDraft()),
   )
   // Last config received from the server — used to revert on discard
   const [saved, setSaved] = createSignal<Config>({})
   const [savedGlobal, setSavedGlobal] = createSignal<Config>({})
+  const [savedProject, setSavedProject] = createSignal<Config>({})
   const [savedSettings, setSavedSettings] = createSignal<Record<string, unknown>>({})
   // True while a saveConfig() write is in-flight — used to clear draft on success
   // and to guard against stale configLoaded messages overwriting optimistic state.
@@ -94,6 +102,10 @@ export const ConfigProvider: ParentComponent = (props) => {
         setGlobalConfig(stripNulls(deepMerge(message.globalConfig, globalDraft())))
         setSavedGlobal(message.globalConfig)
       }
+      if (message.projectConfig !== undefined) {
+        setProjectConfig(stripNulls(deepMerge(message.projectConfig, projectDraft())))
+        setSavedProject(message.projectConfig)
+      }
       setLoading(false)
       return
     }
@@ -110,11 +122,16 @@ export const ConfigProvider: ParentComponent = (props) => {
         setSaving(false)
         setDraft({})
         setGlobalDraft({})
+        setProjectDraft({})
         setSaveError(null)
         setConfig(message.config)
         if (message.globalConfig !== undefined) {
           setGlobalConfig(stripNulls(deepMerge(message.globalConfig, globalDraft())))
           setSavedGlobal(message.globalConfig)
+        }
+        if (message.projectConfig !== undefined) {
+          setProjectConfig(message.projectConfig)
+          setSavedProject(message.projectConfig)
         }
         setFeatures(message.features)
       } else {
@@ -124,6 +141,10 @@ export const ConfigProvider: ParentComponent = (props) => {
         if (message.globalConfig !== undefined) {
           setGlobalConfig(stripNulls(deepMerge(message.globalConfig, globalDraft())))
           setSavedGlobal(message.globalConfig)
+        }
+        if (message.projectConfig !== undefined) {
+          setProjectConfig(stripNulls(deepMerge(message.projectConfig, projectDraft())))
+          setSavedProject(message.projectConfig)
         }
         setFeatures(message.features)
       }
@@ -191,6 +212,12 @@ export const ConfigProvider: ParentComponent = (props) => {
     setSaveError(null)
   }
 
+  function updateProjectConfig(partial: Partial<Config>) {
+    setProjectConfig((prev) => stripNulls(deepMerge(prev, partial)))
+    setProjectDraft((prev) => deepMerge(prev as Config, partial))
+    setSaveError(null)
+  }
+
   function updateSetting(key: string, value: unknown) {
     setSettings((prev) => ({ ...prev, [key]: value }))
     setSettingsDraft((prev) => ({ ...prev, [key]: value }))
@@ -200,11 +227,13 @@ export const ConfigProvider: ParentComponent = (props) => {
   function saveConfig() {
     const changes = draft()
     const globals = globalDraft()
+    const projects = projectDraft()
     const pending = settingsDraft()
     const configDirty = has(changes as Record<string, unknown>)
     const globalDirty = has(globals as Record<string, unknown>)
+    const projectDirty = has(projects as Record<string, unknown>)
     const settingsDirty = has(pending)
-    if (!configDirty && !globalDirty && !settingsDirty) return
+    if (!configDirty && !globalDirty && !projectDirty && !settingsDirty) return
     // Don't clear draft/isDirty yet — wait for configUpdated confirmation.
     // If the write fails, the save bar stays visible so the user can retry.
     setSaving(true)
@@ -216,7 +245,7 @@ export const ConfigProvider: ParentComponent = (props) => {
       setSavedSettings((prev) => ({ ...prev, ...pending }))
       setSettingsDraft({})
     }
-    if (!configDirty && !globalDirty) {
+    if (!configDirty && !globalDirty && !projectDirty) {
       setSaving(false)
       return
     }
@@ -225,14 +254,17 @@ export const ConfigProvider: ParentComponent = (props) => {
     // extension confirms only after both scopes are saved.
     const split = splitConfigByScope(changes)
     const next = deepMerge(split.global as Config, globals)
-    vscode.postMessage({ type: "updateConfig", config: next, projectConfig: split.project })
+    const project = deepMerge(split.project as Config, projects)
+    vscode.postMessage({ type: "updateConfig", config: next, projectConfig: project })
   }
 
   function discardConfig() {
     setConfig(saved())
     setGlobalConfig(savedGlobal())
+    setProjectConfig(savedProject())
     setDraft({})
     setGlobalDraft({})
+    setProjectDraft({})
     setSettings(savedSettings())
     setSettingsDraft({})
     setSaveError(null)
@@ -241,6 +273,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   const value: ConfigContextValue = {
     config,
     globalConfig,
+    projectConfig,
     settings,
     features,
     loading,
@@ -249,6 +282,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     saveError,
     updateConfig,
     updateGlobalConfig,
+    updateProjectConfig,
     updateSetting,
     saveConfig,
     discardConfig,

@@ -83,6 +83,7 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       { method: "get", path: ConfigConsolePaths.overlay },
       { method: "patch", path: ConfigConsolePaths.overlay },
       { method: "get", path: IndexingPaths.status },
+      { method: "get", path: IndexingPaths.models },
     ] satisfies Array<{ method: Method; path: string }>
 
     for (const route of routes) {
