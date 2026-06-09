@@ -26,6 +26,7 @@ class GenericView private constructor(
         label.foreground = UiStyle.Colors.weak()
         applyStyle(SessionEditorStyle.current())
         syncExpandable(false)
+        border = null
     }
 
     override fun update(content: Content) {}  // generic content has no updatable state
