@@ -1,9 +1,15 @@
-import { Flag } from "@opencode-ai/core/flag/flag"
 import { Process } from "@/util/process"
 import { Shell } from "@/shell/shell"
 import { Effect, Stream } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import type { ChildProcessHandle } from "effect/unstable/process/ChildProcessSpawner"
+
+function max() {
+  const value = process.env.KILO_COMMAND_TIMEOUT_MAX_MS
+  if (!value) return
+  const timeout = Number(value)
+  return Number.isInteger(timeout) && timeout > 0 ? timeout : undefined
+}
 
 export namespace CommandTimeout {
   export type Limit = {
@@ -12,26 +18,36 @@ export namespace CommandTimeout {
   }
 
   export function clamp(timeout: number): Limit {
-    const cap = Flag.KILO_COMMAND_TIMEOUT_MAX_MS
+    const cap = max()
     if (!cap || timeout < cap) return { timeout, capped: false }
     return { timeout: cap, capped: true }
   }
 
   export function env(): Limit | undefined {
-    const cap = Flag.KILO_COMMAND_TIMEOUT_MAX_MS
+    const cap = max()
     if (!cap) return
     return { timeout: cap, capped: true }
   }
 
   export function note(limit: Limit, text: string) {
-    const msg = Flag.KILO_COMMAND_TIMEOUT_MAX_MS_MESSAGE?.trim()
+    const msg = process.env.KILO_COMMAND_TIMEOUT_MAX_MS_MESSAGE?.trim()
     const base = `${text} after exceeding environment timeout ${limit.timeout} ms.`
     return msg ? `${base} ${msg}` : base
   }
 
-  export function wait<A, E, R>(handle: ChildProcessHandle, drain: Effect.Effect<A, E, R>, limit: Limit) {
+  export function message(timeout: number, text: string) {
+    const limit = env()
+    if (!limit || limit.timeout !== timeout) return
+    return note(limit, text)
+  }
+
+  export function duration(timeout: number) {
+    return env()?.timeout === timeout ? timeout : timeout + 100
+  }
+
+  export function wait<A, E, R>(handle: ChildProcessHandle, output: Effect.Effect<A, E, R>, limit: Limit) {
     return Effect.raceFirst(
-      Effect.all([handle.exitCode, drain], { concurrency: 2 }).pipe(Effect.as(false)),
+      Effect.all([handle.exitCode, output], { concurrency: 2 }).pipe(Effect.as(false)),
       Effect.sleep(`${limit.timeout} millis`).pipe(Effect.as(true)),
     ).pipe(
       Effect.flatMap((expired) => {
@@ -39,6 +55,12 @@ export namespace CommandTimeout {
         return handle.kill({ forceKillAfter: "3 seconds" }).pipe(Effect.orDie, Effect.as(true))
       }),
     )
+  }
+
+  export function drain<A, E, R>(handle: ChildProcessHandle, output: Effect.Effect<A, E, R>, text: string) {
+    const limit = env()
+    if (!limit) return output.pipe(Effect.andThen(handle.exitCode), Effect.as(undefined))
+    return wait(handle, output, limit).pipe(Effect.map((expired) => (expired ? note(limit, text) : undefined)))
   }
 
   function make(cmd: string, shell: string) {
@@ -64,7 +86,7 @@ export namespace CommandTimeout {
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
       const handle = yield* spawner.spawn(make(cmd, shell))
       let text = ""
-      const drain = Effect.all(
+      const output = Effect.all(
         [
           Stream.runForEach(Stream.decodeText(handle.stdout), (chunk) =>
             Effect.sync(() => {
@@ -75,11 +97,18 @@ export namespace CommandTimeout {
         ],
         { concurrency: 2 },
       )
-      const expired = yield* wait(handle, drain, limit)
+      const expired = yield* wait(handle, output, limit)
       if (!expired) return text
 
-      const note = CommandTimeout.note(limit, "shell command terminated")
-      return text ? `${text}\n\n${note}` : note
+      const msg = note(limit, "shell command terminated")
+      return text ? `${text}\n\n${msg}` : msg
     }).pipe(Effect.scoped, Effect.orDie)
+  }
+
+  export function texts(cmds: string[], shell: string) {
+    return Effect.all(
+      cmds.map((cmd) => text(cmd, shell)),
+      { concurrency: "unbounded" },
+    )
   }
 }

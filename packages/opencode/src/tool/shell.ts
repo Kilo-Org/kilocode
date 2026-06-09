@@ -464,7 +464,6 @@ export const ShellTool = Tool.define(
         cwd: string
         env: NodeJS.ProcessEnv
         timeout: number
-        note?: string // kilocode_change
         description: string
       },
       ctx: Tool.Context,
@@ -574,7 +573,7 @@ export const ShellTool = Tool.define(
             return Effect.sync(() => ctx.abort.removeEventListener("abort", handler))
           })
 
-          const timeout = Effect.sleep(`${input.timeout + 100} millis`)
+          const timeout = Effect.sleep(`${CommandTimeout.duration(input.timeout)} millis`) // kilocode_change
 
           const exit = yield* Effect.raceAll([
             handle.exitCode.pipe(Effect.map((code) => ({ kind: "exit" as const, code }))),
@@ -597,12 +596,10 @@ export const ShellTool = Tool.define(
 
       const meta: string[] = []
       if (expired) {
-        // kilocode_change start
         meta.push(
-          input.note ??
+          CommandTimeout.message(input.timeout, "shell tool terminated command") ?? // kilocode_change
             `shell tool terminated command after exceeding timeout ${input.timeout} ms. If this command is expected to take longer and is not waiting for interactive input, retry with a larger timeout value in milliseconds.`,
         )
-        // kilocode_change end
       }
       if (aborted) meta.push("User aborted the command")
       const raw = list.map((item) => item.text).join("")
@@ -656,7 +653,7 @@ export const ShellTool = Tool.define(
               if (params.timeout !== undefined && params.timeout < 0) {
                 throw new Error(`Invalid timeout value: ${params.timeout}. Timeout must be a positive number.`)
               }
-              const limit = CommandTimeout.clamp(params.timeout ?? defaultTimeout) // kilocode_change
+              const timeout = CommandTimeout.clamp(params.timeout ?? defaultTimeout).timeout // kilocode_change
               const ps = Shell.ps(shell)
               yield* Effect.scoped(
                 Effect.gen(function* () {
@@ -680,8 +677,7 @@ export const ShellTool = Tool.define(
                   command: params.command,
                   cwd,
                   env: yield* shellEnv(ctx, cwd),
-                  timeout: limit.timeout, // kilocode_change
-                  note: limit.capped ? CommandTimeout.note(limit, "shell tool terminated command") : undefined, // kilocode_change
+                  timeout,
                   description: params.description ?? params.command, // kilocode_change
                 },
                 ctx,
