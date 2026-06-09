@@ -70,6 +70,10 @@ function bytesODS(book: WorkBook) {
   return new Uint8Array(write(book, { bookType: "ods", type: "buffer" }) as Uint8Array)
 }
 
+function fixture(name: string) {
+  return Bun.file(path.join(import.meta.dir, "../fixture/spreadsheet", name)).bytes()
+}
+
 async function range(bytes: Uint8Array) {
   const reader = new ZipReader(new Uint8ArrayReader(bytes))
   const output = new ZipWriter(new Uint8ArrayWriter())
@@ -280,6 +284,33 @@ describe("kilocode ODS reads", () => {
 
       expect(result.output).toContain("Visible content")
       expect(result.output).toContain("Other content")
+    }),
+  )
+
+  it.live("extracts repeated non-empty cells from OpenOffice ODS files", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const file = path.join(dir, "repeated-cells.ods")
+      yield* put(file, yield* Effect.promise(() => fixture("repeated-cells.ods")))
+
+      const result = yield* run(dir, file)
+
+      expect(result.output).toContain("--- Sheet: Sheet1 ---")
+      expect(result.output).toContain("1\t1")
+    }),
+  )
+
+  it.live("omits style-hidden worksheets from LibreOffice ODS files", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const file = path.join(dir, "hidden-sheet.ods")
+      yield* put(file, yield* Effect.promise(() => fixture("hidden-sheet.ods")))
+
+      const result = yield* run(dir, file)
+
+      expect(result.output).toContain("--- Sheet: Ranges ---")
+      expect(result.output).not.toContain("--- Sheet: Sheet1 ---")
+      expect(result.output).not.toContain("Invisible")
     }),
   )
 
