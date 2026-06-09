@@ -1,7 +1,6 @@
 import { Global } from "@opencode-ai/core/global"
 import os from "os"
 import path from "path"
-import { KilocodePaths } from "@/kilocode/paths"
 
 export type Ctx = {
   directory: string
@@ -31,18 +30,11 @@ export function skills(scope: "project" | "global", ctx: Ctx) {
   return path.join(Global.Path.config, "skills")
 }
 
-export function legacySkills(scope: "project" | "global", ctx: Ctx) {
+export function skillRoots(scope: "project" | "global", ctx: Ctx) {
   if (scope === "project") return [path.join(root(ctx), ".kilo", "skills"), path.join(root(ctx), ".kilocode", "skills")]
   return [
     path.join(Global.Path.config, "skills"),
     path.join(os.homedir(), ".kilo", "skills"),
     path.join(os.homedir(), ".kilocode", "skills"),
-    path.join(KilocodePaths.vscodeGlobalStorage(), "skills"),
   ]
-}
-
-export function legacyMcp(scope: "project" | "global", ctx: Ctx) {
-  if (scope === "project")
-    return [path.join(root(ctx), ".kilo", "mcp.json"), path.join(root(ctx), ".kilocode", "mcp.json")]
-  return [path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")]
 }

@@ -4,7 +4,6 @@ import {
   removeMarketplaceItem,
   removeMarketplaceItemFromAllScopes,
   type MarketplaceActionContext,
-  type MarketplaceRemoveContext,
 } from "../../src/services/marketplace/actions"
 import type { McpMarketplaceItem } from "../../src/services/marketplace/types"
 
@@ -49,10 +48,10 @@ function has(files: Map<string, string>, file: string) {
 }
 
 function connection() {
+  const uninstall = mock(async () => ({ data: { success: true, slug: item.id } }))
   return {
     getClientAsync: mock(async () => ({
-      global: { config: { update: mock(async () => {}) } },
-      instance: { dispose: mock(async () => {}) },
+      kilocode: { marketplace: { uninstall } },
     })),
   } as unknown as MarketplaceActionContext["connection"]
 }
@@ -63,11 +62,10 @@ afterEach(() => {
 })
 
 describe("Marketplace legacy MCP cleanup", () => {
-  it("preserves global legacy config during project removal", async () => {
+  it("preserves VS Code global legacy config during project removal", async () => {
     const files = setup()
     const ctx = {
       connection: connection(),
-      marketplace: { remove: mock(async () => ({ success: true, slug: item.id })) },
       storage,
     } as unknown as MarketplaceActionContext
 
@@ -78,11 +76,10 @@ describe("Marketplace legacy MCP cleanup", () => {
     expect(has(files, global)).toBe(true)
   })
 
-  it("preserves project legacy config during global removal", async () => {
+  it("preserves VS Code project legacy config during global removal", async () => {
     const files = setup()
     const ctx = {
       connection: connection(),
-      marketplace: { remove: mock(async () => ({ success: true, slug: item.id })) },
       storage,
     } as unknown as MarketplaceActionContext
 
@@ -93,13 +90,12 @@ describe("Marketplace legacy MCP cleanup", () => {
     expect(has(files, global)).toBe(false)
   })
 
-  it("removes project and global legacy config during sidebar cleanup", async () => {
+  it("removes VS Code project and global legacy config during sidebar cleanup", async () => {
     const files = setup()
     const ctx = {
       connection: connection(),
-      remove: mock(async () => ({ success: true, slug: item.id })),
       storage,
-    } as MarketplaceRemoveContext
+    } as MarketplaceActionContext
 
     await removeMarketplaceItemFromAllScopes(ctx, item, project, project)
 

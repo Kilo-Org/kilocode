@@ -69,6 +69,7 @@ export const KilocodeApi = HttpApi.make("kilocode")
           }),
         ),
         HttpApiEndpoint.get("marketplace", KilocodePaths.marketplace, {
+          query: WorkspaceRoutingQuery,
           success: described(Marketplace.Response, "Marketplace catalog and installed metadata"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
@@ -79,6 +80,7 @@ export const KilocodeApi = HttpApi.make("kilocode")
           }),
         ),
         HttpApiEndpoint.post("marketplaceInstall", KilocodePaths.marketplaceInstall, {
+          query: WorkspaceRoutingQuery,
           payload: Marketplace.InstallPayload,
           success: described(Marketplace.InstallResult, "Marketplace install result"),
           error: HttpApiError.BadRequest,
@@ -90,6 +92,7 @@ export const KilocodeApi = HttpApi.make("kilocode")
           }),
         ),
         HttpApiEndpoint.post("marketplaceUninstall", KilocodePaths.marketplaceUninstall, {
+          query: WorkspaceRoutingQuery,
           payload: Marketplace.UninstallPayload,
           success: described(Marketplace.RemoveResult, "Marketplace uninstall result"),
           error: HttpApiError.BadRequest,

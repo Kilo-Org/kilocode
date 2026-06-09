@@ -81,21 +81,6 @@ async function unlink(file: string) {
   })
 }
 
-async function legacy(name: string, scope: Target, ctx: Paths.Ctx) {
-  for (const file of Paths.legacyMcp(scope, ctx)) {
-    const text = await fs.readFile(file, "utf8").catch((err: NodeJS.ErrnoException) => {
-      if (err.code === "ENOENT") return undefined
-      throw err
-    })
-    if (!text) continue
-    const parsed = JSON.parse(text) as Record<string, unknown>
-    const servers = parsed.mcpServers as Record<string, unknown> | undefined
-    if (!servers?.[name]) continue
-    delete servers[name]
-    await fs.writeFile(file, JSON.stringify(parsed, null, 2), "utf8")
-  }
-}
-
 async function escaped(dir: string): Promise<string[]> {
   const root = path.resolve(dir)
   const out: string[] = []
@@ -125,6 +110,16 @@ function inside(file: string, dir: string) {
   const base = path.resolve(dir)
   const full = path.resolve(file)
   return full === base || full.startsWith(base + path.sep)
+}
+
+async function exists(file: string) {
+  return fs.stat(file).then(
+    () => true,
+    (err: NodeJS.ErrnoException) => {
+      if (err.code === "ENOENT") return false
+      throw err
+    },
+  )
 }
 
 export const install = Effect.fn("Marketplace.install")(function* (
@@ -164,7 +159,10 @@ const installAgent = Effect.fn("Marketplace.installAgent")(function* (item: Agen
   const dir = Paths.agent(scope, ctx)
   const file = path.join(dir, `${item.id}.md`)
   if (!inside(file, dir)) return { success: false, slug: item.id, error: "Invalid agent id" }
-  if (yield* Effect.promise(() => Bun.file(file).exists()))
+  const duplicate = yield* Effect.promise(() =>
+    Promise.all(Paths.agents(scope, ctx).map((dir) => exists(path.join(dir, `${item.id}.md`)))),
+  )
+  if (duplicate.some(Boolean))
     return { success: false, slug: item.id, error: "Agent already installed. Remove it first." }
   const output = yield* Effect.promise(() =>
     AgentBuilder.save({ directory: ctx.directory, worktree: ctx.worktree }, { id: item.id, scope, ...item.content }),
@@ -179,7 +177,10 @@ const installSkill = Effect.fn("Marketplace.installSkill")(function* (item: Skil
   const base = Paths.skills(scope, ctx)
   const dir = path.join(base, item.id)
   if (!inside(dir, base)) return { success: false, slug: item.id, error: "Invalid skill id" }
-  if (yield* Effect.promise(() => Bun.file(dir).exists()))
+  const duplicate = yield* Effect.promise(() =>
+    Promise.all(Paths.skillRoots(scope, ctx).map((base) => exists(path.join(base, item.id)))),
+  )
+  if (duplicate.some(Boolean))
     return { success: false, slug: item.id, error: "Skill already installed. Uninstall it before installing again." }
   const stamp = Date.now()
   const tarball = path.join(os.tmpdir(), `kilo-skill-${item.id}-${stamp}.tar.gz`)
@@ -217,7 +218,6 @@ export const remove = Effect.fn("Marketplace.remove")(function* (item: Item, sco
 
 const removeMcp = Effect.fn("Marketplace.removeMcp")(function* (item: McpItem, scope: Target, ctx: Paths.Ctx) {
   yield* update(scope, patchMcp(item.id, null))
-  yield* Effect.promise(() => legacy(item.id, scope, ctx))
   return { success: true, slug: item.id }
 })
 
@@ -234,7 +234,7 @@ const removeAgent = Effect.fn("Marketplace.removeAgent")(function* (item: AgentI
 
 const removeSkill = Effect.fn("Marketplace.removeSkill")(function* (item: SkillItem, scope: Target, ctx: Paths.Ctx) {
   if (!safe(item.id)) return { success: false, slug: item.id, error: "Invalid skill id" }
-  for (const base of Paths.legacySkills(scope, ctx)) {
+  for (const base of Paths.skillRoots(scope, ctx)) {
     const dir = path.join(base, item.id)
     if (!inside(dir, base)) return { success: false, slug: item.id, error: "Invalid skill id" }
     yield* Effect.promise(() => fs.rm(dir, { recursive: true, force: true }))

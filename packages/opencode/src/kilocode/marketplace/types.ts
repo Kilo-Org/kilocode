@@ -112,7 +112,7 @@ export const InstallResult = Schema.Struct({
   slug: Schema.String,
   error: Schema.optional(Schema.String),
   filePath: Schema.optional(Schema.String),
-  line: Schema.optional(Schema.Number),
+  line: Schema.optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(1))),
 })
 export type InstallResult = typeof InstallResult.Type
 

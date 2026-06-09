@@ -49,15 +49,22 @@ export const detect = Effect.fn("Marketplace.detect")(function* (ctx: Paths.Ctx)
   const cfg = yield* Config.Service
   const svc = yield* Skill.Service
   const skills = yield* svc.all()
+  const dirs = yield* svc.dirs()
   const project = Object.fromEntries([
     ...(yield* Effect.promise(() => files(Paths.agents("project", ctx)))),
     ...config(yield* cfg.get()),
-    ...skill(skills, Paths.legacySkills("project", ctx)),
+    ...skill(
+      skills,
+      dirs.filter((dir) => Paths.skillRoots("project", ctx).some((root) => inside(dir, root))),
+    ),
   ])
   const global = Object.fromEntries([
     ...(yield* Effect.promise(() => files(Paths.agents("global", ctx)))),
     ...config(yield* cfg.getGlobal()),
-    ...skill(skills, Paths.legacySkills("global", ctx)),
+    ...skill(
+      skills,
+      dirs.filter((dir) => Paths.skillRoots("global", ctx).some((root) => inside(dir, root))),
+    ),
   ])
   return { project, global } satisfies Metadata
 })
