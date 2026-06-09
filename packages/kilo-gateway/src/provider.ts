@@ -23,11 +23,18 @@ export function watchResponse(response: Response, incomplete?: (reason?: unknown
   if (!response.body || !incomplete) return response
 
   const reader = response.body.getReader()
+  let ended = false
+  const finish = (reason: unknown) => {
+    if (ended) return
+    ended = true
+    incomplete(reason)
+  }
   const body = new ReadableStream<Uint8Array>({
     async pull(controller) {
       await reader.read().then(
         (chunk) => {
           if (chunk.done) {
+            ended = true
             controller.close()
             return
           }
@@ -35,12 +42,14 @@ export function watchResponse(response: Response, incomplete?: (reason?: unknown
         },
         (reason) => {
           controller.error(reason)
-          incomplete(reason)
+          finish(reason)
         },
       )
     },
     async cancel(reason) {
-      await Promise.all([reader.cancel(reason), Promise.resolve().then(() => incomplete(reason))])
+      const canceled = reader.cancel(reason)
+      finish(reason)
+      await canceled
     },
   })
 
