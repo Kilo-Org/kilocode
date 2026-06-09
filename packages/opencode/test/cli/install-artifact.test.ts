@@ -35,7 +35,10 @@ describe("npm install artifact behavior", () => {
       await fs.mkdir(path.join(bin, "tree-sitter"), { recursive: true })
       await fs.mkdir(path.join(bin, "console", "assets"), { recursive: true })
       await fs.copyFile(postinstall, path.join(pkg, "postinstall.mjs"))
-      await Bun.write(path.join(native, "package.json"), JSON.stringify({ name: `@kilocode/cli-${process.platform}-${process.arch}` }))
+      await Bun.write(
+        path.join(native, "package.json"),
+        JSON.stringify({ name: `@kilocode/cli-${process.platform}-${process.arch}` }),
+      )
       await Bun.write(path.join(bin, "kilo"), "binary")
       await Bun.write(path.join(bin, "tree-sitter", "tree-sitter.wasm"), "wasm")
       await Bun.write(path.join(bin, "console", "index.html"), "console")

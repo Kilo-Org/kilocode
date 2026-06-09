@@ -17760,10 +17760,10 @@
         "temperature": true,
         "release_date": "2026-04-02",
         "last_updated": "2026-04-02",
-        "modalities": {"input":["text"],"output":["text"]},
+        "modalities": { "input": ["text"], "output": ["text"] },
         "open_weights": true,
-        "cost": {"input":0,"output":0},
-        "limit": {"context":32768,"output":8192}
+        "cost": { "input": 0, "output": 0 },
+        "limit": { "context": 32768, "output": 8192 }
       },
       "gemma-4-E4B-it-MLX-4bit": {
         "id": "gemma-4-E4B-it-MLX-4bit",
@@ -17775,10 +17775,10 @@
         "temperature": true,
         "release_date": "2026-04-02",
         "last_updated": "2026-04-02",
-        "modalities": {"input":["text"],"output":["text"]},
+        "modalities": { "input": ["text"], "output": ["text"] },
         "open_weights": true,
-        "cost": {"input":0,"output":0},
-        "limit": {"context":32768,"output":8192}
+        "cost": { "input": 0, "output": 0 },
+        "limit": { "context": 32768, "output": 8192 }
       },
       "Qwen3_5-9B-Q4_K_M": {
         "id": "Qwen3_5-9B-Q4_K_M",
@@ -17790,10 +17790,10 @@
         "temperature": true,
         "release_date": "2026-03-05",
         "last_updated": "2026-04-04",
-        "modalities": {"input":["text","image"],"output":["text"]},
+        "modalities": { "input": ["text", "image"], "output": ["text"] },
         "open_weights": true,
-        "cost": {"input":0,"output":0},
-        "limit": {"context":32768,"output":8192}
+        "cost": { "input": 0, "output": 0 },
+        "limit": { "context": 32768, "output": 8192 }
       },
       "Meta-Llama-3_1-8B-Instruct-GGUF": {
         "id": "Meta-Llama-3_1-8B-Instruct-GGUF",
@@ -17805,10 +17805,10 @@
         "temperature": true,
         "release_date": "2024-07-23",
         "last_updated": "2024-07-23",
-        "modalities": {"input":["text"],"output":["text"]},
+        "modalities": { "input": ["text"], "output": ["text"] },
         "open_weights": true,
-        "cost": {"input":0,"output":0},
-        "limit": {"context":131072,"output":4096}
+        "cost": { "input": 0, "output": 0 },
+        "limit": { "context": 131072, "output": 4096 }
       },
       "Qwen3_5-9B-MLX-4bit": {
         "id": "Qwen3_5-9B-MLX-4bit",
@@ -17820,10 +17820,10 @@
         "temperature": true,
         "release_date": "2026-03-05",
         "last_updated": "2026-04-04",
-        "modalities": {"input":["text","image"],"output":["text"]},
+        "modalities": { "input": ["text", "image"], "output": ["text"] },
         "open_weights": true,
-        "cost": {"input":0,"output":0},
-        "limit": {"context":32768,"output":8192}
+        "cost": { "input": 0, "output": 0 },
+        "limit": { "context": 32768, "output": 8192 }
       }
     }
   },

@@ -1152,7 +1152,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async handleFetchMarketplaceData(): Promise<void> {
     if (!this.client) return
     const directory = this.getProjectDirectory(this.currentSession?.id) ?? this.getWorkspaceDirectory()
+    const started = Date.now()
+    console.info("[Kilo New] Marketplace: list request", { directory })
     const { data } = await retry(() => this.client!.kilocode.marketplace.list({ directory }, { throwOnError: true }))
+    console.info("[Kilo New] Marketplace: list response", {
+      directory,
+      durationMs: Date.now() - started,
+      itemCount: data.marketplaceItems.length,
+      errorCount: data.errors?.length ?? 0,
+    })
     const dismissed = this.extensionContext?.globalState.get<boolean>("kilo.agentMigrationBannerDismissed") ?? false
     this.postMessage({ type: "marketplaceData", ...data, showAgentMigrationBanner: !dismissed })
   }
@@ -1997,12 +2005,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async removeMarketplaceItem(item: MarketplaceItem, scope: "project" | "global"): Promise<RemoveResult> {
     if (!this.client) return { success: false, slug: item.id, error: "Not connected to CLI backend" }
     const directory = this.getProjectDirectory(this.currentSession?.id) ?? this.getWorkspaceDirectory()
+    const started = Date.now()
+    console.info("[Kilo New] Marketplace: uninstall request", { id: item.id, type: item.type, scope, directory })
     const { data: result } = await retry(() =>
       this.client!.kilocode.marketplace.uninstall(
         { id: item.id, type: item.type, target: scope, directory },
         { throwOnError: true },
       ),
     )
+    console.info("[Kilo New] Marketplace: uninstall response", {
+      id: item.id,
+      type: item.type,
+      scope,
+      directory,
+      durationMs: Date.now() - started,
+      success: result.success,
+      error: result.error,
+    })
     if (result.success) {
       await this.invalidateAfterMarketplaceChange(scope)
     }
@@ -2015,12 +2034,31 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ): Promise<RemoveResult> {
     if (!this.client) return { success: false, slug: item.id, error: "Not connected to CLI backend" }
     const directory = this.getProjectDirectory(this.currentSession?.id) ?? this.getWorkspaceDirectory()
+    const scope = options?.target ?? "project"
+    const started = Date.now()
+    console.info("[Kilo New] Marketplace: install request", {
+      id: item.id,
+      type: item.type,
+      scope,
+      directory,
+      hasParameters: !!options?.parameters && Object.keys(options.parameters).length > 0,
+      method: typeof options?.parameters?.__method === "string" ? options.parameters.__method : undefined,
+    })
     const { data } = await retry(() =>
       this.client!.kilocode.marketplace.install(
         { id: item.id, type: item.type, target: options?.target, parameters: options?.parameters, directory },
         { throwOnError: true },
       ),
     )
+    console.info("[Kilo New] Marketplace: install response", {
+      id: item.id,
+      type: item.type,
+      scope,
+      directory,
+      durationMs: Date.now() - started,
+      success: data.success,
+      error: data.error,
+    })
     return data
   }
 
@@ -2033,12 +2071,22 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async removeMarketplaceItemFromAllScopes(id: string, type: "agent" | "mcp" | "skill"): Promise<boolean> {
     if (!this.client) return false
     const directory = this.getProjectDirectory(this.currentSession?.id) ?? this.getWorkspaceDirectory()
+    const started = Date.now()
+    console.info("[Kilo New] Marketplace: uninstall all scopes request", { id, type, directory })
     const project = await retry(() =>
       this.client!.kilocode.marketplace.uninstall({ id, type, target: "project", directory }, { throwOnError: true }),
     )
     const global = await retry(() =>
       this.client!.kilocode.marketplace.uninstall({ id, type, target: "global", directory }, { throwOnError: true }),
     )
+    console.info("[Kilo New] Marketplace: uninstall all scopes response", {
+      id,
+      type,
+      directory,
+      durationMs: Date.now() - started,
+      project: { success: project.data.success, error: project.data.error },
+      global: { success: global.data.success, error: global.data.error },
+    })
 
     if (project.data.success || global.data.success) {
       const scope = global.data.success ? "global" : "project"
