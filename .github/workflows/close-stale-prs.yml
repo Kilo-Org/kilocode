@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   close-stale-prs:
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: github.repository == 'anomalyco/opencode' # kilocode_change - Kilo uses kilo-auto-close.yml
     runs-on: blacksmith-2vcpu-ubuntu-2404 # kilocode_change
     timeout-minutes: 15
     steps:

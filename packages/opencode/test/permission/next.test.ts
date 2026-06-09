@@ -1,11 +1,15 @@
-import { afterAll, afterEach, test, expect } from "bun:test" // kilocode_change
-import fs from "fs/promises" // kilocode_change
+// kilocode_change start
+import { afterAll, afterEach, test, expect } from "bun:test"
+import fs from "fs/promises"
+// kilocode_change end
 import os from "os"
 import path from "path" // kilocode_change
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
 import { Bus } from "../../src/bus"
-import { Config } from "../../src/config/config" // kilocode_change
-import { Global } from "@opencode-ai/core/global" // kilocode_change
+// kilocode_change start
+import { Config } from "../../src/config/config"
+import { Global } from "@opencode-ai/core/global"
+// kilocode_change end
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Permission } from "../../src/permission"
 import { PermissionID } from "../../src/permission/schema"
@@ -840,8 +844,8 @@ it.live("allowEverything - session-scoped enable stays within one session", () =
       yield* waitForPending(1)
       yield* permission.allowEverything({
         enable: true,
-        requestID: "permission_session_allow",
-        sessionID: "session_allowed",
+        requestID: PermissionID.make("permission_session_allow"),
+        sessionID: SessionID.make("session_allowed"),
       })
 
       yield* Fiber.join(first)
@@ -1097,7 +1101,6 @@ it.live("permission requests stay isolated by directory", () =>
     const onePending = yield* waitForPending(1).pipe(runOne)
     const twoPending = yield* waitForPending(1).pipe(runTwo)
 
-    // kilocode_change start
     expect(onePending).toHaveLength(1)
     expect(twoPending).toHaveLength(1)
     expect(onePending[0].id).toBe(PermissionID.make("per_dir_a"))
@@ -1108,7 +1111,6 @@ it.live("permission requests stay isolated by directory", () =>
 
     yield* Fiber.await(a)
     yield* Fiber.await(b)
-    // kilocode_change end
   }),
 )
 
