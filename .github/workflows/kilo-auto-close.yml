@@ -1,12 +1,13 @@
-name: close-stale-prs # kilocode_change
+# kilocode_change - new file
+name: kilo-auto-close
 
 on:
   workflow_dispatch:
     inputs:
       dryRun:
-        description: "Log actions without closing PRs"
+        description: "Log actions without closing items"
         type: boolean
-        default: false
+        default: true
   schedule:
     - cron: "0 6 * * *"
 
@@ -16,32 +17,41 @@ permissions:
   pull-requests: write
 
 jobs:
-  close-stale-prs:
-    if: github.repository == 'anomalyco/opencode' # kilocode_change - Kilo uses kilo-auto-close.yml
-    runs-on: blacksmith-2vcpu-ubuntu-2404 # kilocode_change
-    timeout-minutes: 15
+  close:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 30
     steps:
-      - name: Close inactive PRs
+      - name: Close inactive PRs and issues
         uses: actions/github-script@v8
+        env:
+          KILO_AUTO_CLOSE_ENABLED: ${{ vars.KILO_AUTO_CLOSE_ENABLED }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const DAYS_INACTIVE = 60
+            const PR_DAYS_INACTIVE = 30
+            const ISSUE_DAYS_INACTIVE = 60
             const MAX_RETRIES = 3
 
             // Adaptive delay: fast for small batches, slower for large to respect
             // GitHub's 80 content-generating requests/minute limit
             const SMALL_BATCH_THRESHOLD = 10
-            const SMALL_BATCH_DELAY_MS = 1000  // 1s for daily operations (≤10 PRs)
-            const LARGE_BATCH_DELAY_MS = 2000  // 2s for backlog (>10 PRs) = ~30 ops/min, well under 80 limit
+            const SMALL_BATCH_DELAY_MS = 1000  // 1s for daily operations (≤10 items)
+            const LARGE_BATCH_DELAY_MS = 2000  // 2s for backlog (>10 items) = ~30 ops/min, well under 80 limit
 
             const startTime = Date.now()
-            const cutoff = new Date(Date.now() - DAYS_INACTIVE * 24 * 60 * 60 * 1000)
+            const prCutoff = new Date(Date.now() - PR_DAYS_INACTIVE * 24 * 60 * 60 * 1000)
+            const issueCutoff = new Date(Date.now() - ISSUE_DAYS_INACTIVE * 24 * 60 * 60 * 1000)
             const { owner, repo } = context.repo
-            const dryRun = context.payload.inputs?.dryRun === "true"
+            const dryRunInput = context.payload.inputs?.dryRun
+            const enabled = process.env.KILO_AUTO_CLOSE_ENABLED === "true"
+            const dryRun = dryRunInput === undefined
+              ? !enabled
+              : dryRunInput !== "false"
 
             core.info(`Dry run mode: ${dryRun}`)
-            core.info(`Cutoff date: ${cutoff.toISOString()}`)
+            core.info(`PR cutoff date: ${prCutoff.toISOString()}`)
+            core.info(`Issue cutoff date: ${issueCutoff.toISOString()}`)
 
             function sleep(ms) {
               return new Promise(resolve => setTimeout(resolve, ms))
@@ -60,6 +70,10 @@ jobs:
 
                   if (!isRateLimited) {
                     throw error
+                  }
+
+                  if (attempt === MAX_RETRIES - 1) {
+                    break
                   }
 
                   // Parse retry-after header, default to 60 seconds
@@ -155,7 +169,7 @@ jobs:
 
               const lastActivity = dates.sort((a, b) => b.getTime() - a.getTime())[0]
 
-              if (!lastActivity || lastActivity > cutoff) {
+              if (!lastActivity || lastActivity > prCutoff) {
                 core.info(`PR #${pr.number} is fresh (last activity: ${lastActivity?.toISOString() || "unknown"})`)
                 return false
               }
@@ -164,28 +178,20 @@ jobs:
               return true
             })
 
-            if (!stalePrs.length) {
-              core.info("No stale pull requests found.")
-              return
-            }
-
             core.info(`Found ${stalePrs.length} stale pull requests`)
 
-            // ============================================
-            // Close stale PRs
-            // ============================================
-            const requestDelayMs = stalePrs.length > SMALL_BATCH_THRESHOLD
+            const prDelayMs = stalePrs.length > SMALL_BATCH_THRESHOLD
               ? LARGE_BATCH_DELAY_MS
               : SMALL_BATCH_DELAY_MS
 
-            core.info(`Using ${requestDelayMs}ms delay between operations (${stalePrs.length > SMALL_BATCH_THRESHOLD ? 'large' : 'small'} batch mode)`)
+            core.info(`Using ${prDelayMs}ms delay between PR operations (${stalePrs.length > SMALL_BATCH_THRESHOLD ? 'large' : 'small'} batch mode)`)
 
-            let closedCount = 0
-            let skippedCount = 0
+            let closedPrCount = 0
+            let skippedPrCount = 0
 
             for (const pr of stalePrs) {
               const issue_number = pr.number
-              const closeComment = `Closing this pull request because it has had no updates for more than ${DAYS_INACTIVE} days. If you plan to continue working on it, feel free to reopen or open a new PR.`
+              const closeComment = `To stay organized pull requests are automatically closed after ${PR_DAYS_INACTIVE} days of inactivity. If the pull request is still relevant please open a new one.`
 
               if (dryRun) {
                 core.info(`[dry-run] Would close PR #${issue_number} from ${pr.author?.login || 'unknown'}: ${pr.title}`)
@@ -215,14 +221,114 @@ jobs:
                   `Close PR #${issue_number}`
                 )
 
-                closedCount++
+                closedPrCount++
                 core.info(`Closed PR #${issue_number} from ${pr.author?.login || 'unknown'}: ${pr.title}`)
 
                 // Delay before processing next PR
-                await sleep(requestDelayMs)
+                await sleep(prDelayMs)
               } catch (error) {
-                skippedCount++
+                skippedPrCount++
                 core.error(`Failed to close PR #${issue_number}: ${error.message}`)
+              }
+            }
+
+            let page = 1
+            let stop = false
+            const staleIssues = []
+
+            while (!stop) {
+              core.info(`Fetching page ${page} of open issues...`)
+
+              const result = await withRetry(
+                () => github.rest.issues.listForRepo({
+                  owner,
+                  repo,
+                  state: "open",
+                  sort: "updated",
+                  direction: "asc",
+                  per_page: 100,
+                  page,
+                }),
+                `Issues page ${page}`
+              )
+
+              if (!result.data.length) {
+                break
+              }
+
+              core.info(`Page ${page}: fetched ${result.data.length} issues`)
+
+              for (const issue of result.data) {
+                const updated = new Date(issue.updated_at)
+
+                if (updated >= issueCutoff) {
+                  core.info(`Found fresh issue/PR #${issue.number} (${updated.toISOString()}), stopping issue scan`)
+                  stop = true
+                  break
+                }
+
+                if (issue.pull_request) {
+                  core.info(`Skipping PR #${issue.number} in issue scan`)
+                  continue
+                }
+
+                staleIssues.push(issue)
+              }
+
+              if (!stop) {
+                page++
+                await sleep(SMALL_BATCH_DELAY_MS)
+              }
+            }
+
+            core.info(`Found ${staleIssues.length} stale issues`)
+
+            const issueDelayMs = staleIssues.length > SMALL_BATCH_THRESHOLD
+              ? LARGE_BATCH_DELAY_MS
+              : SMALL_BATCH_DELAY_MS
+
+            core.info(`Using ${issueDelayMs}ms delay between issue operations (${staleIssues.length > SMALL_BATCH_THRESHOLD ? 'large' : 'small'} batch mode)`)
+
+            let closedIssueCount = 0
+            let skippedIssueCount = 0
+
+            for (const issue of staleIssues) {
+              const closeComment = `To stay organized issues are automatically closed after ${ISSUE_DAYS_INACTIVE} days of no activity. If the issue is still relevant please open a new one.`
+
+              if (dryRun) {
+                core.info(`[dry-run] Would close issue #${issue.number}: ${issue.title}`)
+                continue
+              }
+
+              try {
+                await withRetry(
+                  () => github.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number: issue.number,
+                    body: closeComment,
+                  }),
+                  `Comment on issue #${issue.number}`
+                )
+
+                await withRetry(
+                  () => github.rest.issues.update({
+                    owner,
+                    repo,
+                    issue_number: issue.number,
+                    state: "closed",
+                    state_reason: "not_planned",
+                  }),
+                  `Close issue #${issue.number}`
+                )
+
+                closedIssueCount++
+                core.info(`Closed issue #${issue.number}: ${issue.title}`)
+
+                await sleep(issueDelayMs)
+              } catch (error) {
+                skippedIssueCount++
+                core.error(`Failed to close issue #${issue.number}: ${error.message}`)
               }
             }
 
@@ -230,7 +336,10 @@ jobs:
             core.info(`\n========== Summary ==========`)
             core.info(`Total open PRs found: ${allPrs.length}`)
             core.info(`Stale PRs identified: ${stalePrs.length}`)
-            core.info(`PRs closed: ${closedCount}`)
-            core.info(`PRs skipped (errors): ${skippedCount}`)
+            core.info(`PRs closed: ${closedPrCount}`)
+            core.info(`PRs skipped (errors): ${skippedPrCount}`)
+            core.info(`Stale issues identified: ${staleIssues.length}`)
+            core.info(`Issues closed: ${closedIssueCount}`)
+            core.info(`Issues skipped (errors): ${skippedIssueCount}`)
             core.info(`Elapsed time: ${elapsed}s`)
             core.info(`=============================`)
