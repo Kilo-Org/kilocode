@@ -1,7 +1,7 @@
 /* Kilo Accordion overrides */
 
 [data-component="accordion"] {
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
 
   [data-slot="accordion-trigger"] {
     cursor: pointer;

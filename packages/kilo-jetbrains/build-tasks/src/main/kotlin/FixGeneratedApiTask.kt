@@ -23,6 +23,8 @@ import java.io.File
  *  9. AnyOf union wrappers — `anyOf` unions like `boolean | object` that
  *     generate paired `Foo` + `FooAnyOf` classes the generator can't flatten.
  *     Replaced with `kotlinx.serialization.json.JsonElement`.
+ * 10. JsonElement query parameters — anyOf query params generate empty
+ *     `if (param != null) {}` blocks. Emit the primitive JSON text instead.
  */
 abstract class FixGeneratedApiTask : DefaultTask() {
     @get:OutputDirectory
@@ -33,6 +35,7 @@ abstract class FixGeneratedApiTask : DefaultTask() {
         val root = generated.get().asFile
         fixEmptyWrappers(root)
         fixAnyOfUnionWrappers(root)
+        fixJsonElementQueryParams(root)
         root.walkTopDown().filter { it.extension == "kt" }.forEach { fix(it) }
     }
 
@@ -112,6 +115,33 @@ abstract class FixGeneratedApiTask : DefaultTask() {
         }
     }
 
+    private fun fixJsonElementQueryParams(root: File) {
+        val api = File(root, "ai/kilocode/jetbrains/api/client/DefaultApi.kt")
+        if (!api.isFile) return
+
+        val models = File(root, "ai/kilocode/jetbrains/api/model")
+        val missing = mutableSetOf<String>()
+        val text = Regex("""import ai\.kilocode\.jetbrains\.api\.model\.(\w+Parameter)\n""")
+            .replace(api.readText()) { m ->
+                val name = m.groupValues[1]
+                if (File(models, "$name.kt").isFile) return@replace m.value
+                missing.add(name)
+                ""
+            }
+            .let { input ->
+                missing.fold(input) { acc, name ->
+                    acc.replace(Regex("""\b$name\b"""), "kotlinx.serialization.json.JsonElement")
+                }
+            }
+        val empty = Regex("""(\s*)if \((\w+) != null\) \{\s*\n\s*\}""")
+        val fixed = empty.replace(text) { m ->
+            val pad = m.groupValues[1]
+            val name = m.groupValues[2]
+            "${pad}if ($name != null) {\n${pad}    put(\"$name\", listOf($name.toString()))\n$pad}"
+        }
+        if (fixed != text) api.writeText(fixed)
+    }
+
     private fun fix(file: File) {
         var text = file.readText()
         var changed = false
@@ -188,7 +218,7 @@ abstract class FixGeneratedApiTask : DefaultTask() {
             }
         }
 
-        // Fix 7: Default values for non-nullable primitives in model data classes.
+        // Fix 7: Default values for non-nullable primitives and collections in model data classes.
         // The CLI API may omit fields that the OpenAPI spec marks as required
         // (e.g. `attachment`, `reasoning` on dynamically added models).
         // Add Kotlin defaults so kotlinx.serialization doesn't throw
@@ -200,6 +230,9 @@ abstract class FixGeneratedApiTask : DefaultTask() {
                 Regex("""(val \w+:\s*kotlin\.Boolean)(,|\n)""") to { m: MatchResult ->
                     "${m.groupValues[1]} = false${m.groupValues[2]}"
                 },
+                Regex("""(val \w+:\s*kotlin\.Long)(,|\n)""") to { m: MatchResult ->
+                    "${m.groupValues[1]} = 0L${m.groupValues[2]}"
+                },
                 Regex("""(val \w+:\s*kotlin\.Int)(,|\n)""") to { m: MatchResult ->
                     "${m.groupValues[1]} = 0${m.groupValues[2]}"
                 },
@@ -208,6 +241,12 @@ abstract class FixGeneratedApiTask : DefaultTask() {
                 },
                 Regex("""(val \w+:\s*kotlin\.String)(,|\n)""") to { m: MatchResult ->
                     "${m.groupValues[1]} = \"\"${m.groupValues[2]}"
+                },
+                Regex("""(val \w+:\s*kotlin\.collections\.List<[^>]+>)(,|\n)""") to { m: MatchResult ->
+                    "${m.groupValues[1]} = emptyList()${m.groupValues[2]}"
+                },
+                Regex("""(val \w+:\s*kotlin\.collections\.Map<[^>]+>)(,|\n)""") to { m: MatchResult ->
+                    "${m.groupValues[1]} = emptyMap()${m.groupValues[2]}"
                 },
             )
             for ((pattern, transform) in primitiveDefaults) {

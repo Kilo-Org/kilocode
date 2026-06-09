@@ -2,14 +2,14 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { $ } from "bun"
 import { Effect } from "effect"
+import { Session } from "../../src/session/session"
 import path from "path"
-import { Instance } from "../../src/project/instance"
-import * as Config from "../../src/config/config"
+import { WithInstance } from "../../src/project/with-instance"
 import { RecallTool } from "../../src/tool/recall"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { resetDatabase } from "../fixture/db"
 import { tmpdir } from "../fixture/fixture"
-import type { Tool } from "../../src/tool"
+import type { Tool } from "../../src/tool/tool"
 import { SessionID, MessageID } from "../../src/session/schema"
 import { RemoteSender } from "../../src/kilo-sessions/remote-sender"
 
@@ -33,6 +33,9 @@ afterEach(async () => {
   await resetDatabase()
 })
 
+const create = (title: string) =>
+  Effect.runPromise(Session.Service.use((svc) => svc.create({ title })).pipe(Effect.provide(Session.defaultLayer)))
+
 describe("tool.recall", () => {
   test("search is limited to the current project worktrees", async () => {
     await using first = await tmpdir({ git: true })
@@ -43,26 +46,21 @@ describe("tool.recall", () => {
       await $`git worktree add ${worktree} -b test-branch-${Date.now()}`.cwd(first.path).quiet()
       await Bun.write(path.join(first.path, ".git", "opencode"), "stale-project-id")
 
-      spyOn(Config, "get").mockImplementation(
-        async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>,
-      )
-
       try {
-        const { Session } = await import("../../src/session/index")
-        await Instance.provide({
+        await WithInstance.provide({
           directory: first.path,
-          fn: async () => Session.create({ title: "search-target root" }),
+          fn: () => create("search-target root"),
         })
-        await Instance.provide({
+        await WithInstance.provide({
           directory: worktree,
-          fn: async () => Session.create({ title: "search-target worktree" }),
+          fn: () => create("search-target worktree"),
         })
-        await Instance.provide({
+        await WithInstance.provide({
           directory: second.path,
-          fn: async () => Session.create({ title: "search-target other" }),
+          fn: () => create("search-target other"),
         })
 
-        const result = await Instance.provide({
+        const result = await WithInstance.provide({
           directory: first.path,
           fn: async () => {
             const info = await AppRuntime.runPromise(RecallTool)
@@ -86,16 +84,13 @@ describe("tool.recall", () => {
     await using first = await tmpdir({ git: true })
     await using second = await tmpdir({ git: true })
 
-    spyOn(Config, "get").mockImplementation(async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>)
-
     try {
-      const { Session } = await import("../../src/session/index")
-      const session = await Instance.provide({
+      const session = await WithInstance.provide({
         directory: second.path,
-        fn: async () => Session.create({ title: "other-project-session" }),
+        fn: () => create("other-project-session"),
       })
 
-      const err = await Instance.provide({
+      const err = await WithInstance.provide({
         directory: first.path,
         fn: async () => {
           const info = await AppRuntime.runPromise(RecallTool)
@@ -121,18 +116,13 @@ describe("tool.recall", () => {
       await $`git worktree add ${worktree} -b test-branch-${Date.now()}`.cwd(first.path).quiet()
       await Bun.write(path.join(first.path, ".git", "opencode"), "stale-project-id")
 
-      spyOn(Config, "get").mockImplementation(
-        async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>,
-      )
-
       try {
-        const { Session } = await import("../../src/session/index")
-        const session = await Instance.provide({
+        const session = await WithInstance.provide({
           directory: worktree,
-          fn: async () => Session.create({ title: "worktree readable" }),
+          fn: () => create("worktree readable"),
         })
 
-        const result = await Instance.provide({
+        const result = await WithInstance.provide({
           directory: first.path,
           fn: async () => {
             const info = await AppRuntime.runPromise(RecallTool)

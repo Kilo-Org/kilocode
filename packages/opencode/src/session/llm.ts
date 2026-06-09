@@ -1,40 +1,64 @@
-import { Provider } from "@/provider"
-import { Log } from "@/util"
+import { Provider } from "@/provider/provider"
+import * as Log from "@opencode-ai/core/util/log"
 import { Context, Effect, Layer, Record } from "effect"
 import * as Stream from "effect/Stream"
-import { streamText, wrapLanguageModel, type ModelMessage, type Tool, tool, jsonSchema } from "ai"
-import { mergeDeep, pipe } from "remeda"
+import {
+  streamText,
+  wrapLanguageModel,
+  type LanguageModelUsage,
+  type ModelMessage,
+  type Tool,
+  tool,
+  jsonSchema,
+} from "ai"
+import { mergeDeep } from "remeda"
 import { GitLabWorkflowLanguageModel } from "gitlab-ai-provider"
-import { ProviderTransform } from "@/provider"
-import { Config } from "@/config"
-import { Instance } from "@/project/instance"
+import { ProviderTransform } from "@/provider/transform"
+import { Config } from "@/config/config"
+import { InstanceState } from "@/effect/instance-state"
 import type { Agent } from "@/agent/agent"
 import type { MessageV2 } from "./message-v2"
+import { usable } from "./overflow" // kilocode_change
 import { Plugin } from "@/plugin"
 import { SystemPrompt } from "./system"
-import { Flag } from "@/flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { Permission } from "@/permission"
 import { PermissionID } from "@/permission/schema"
 import { Bus } from "@/bus"
-import { Wildcard } from "@/util"
+import { Wildcard } from "@/util/wildcard"
 import { SessionID } from "@/session/schema"
 import { Auth } from "@/auth"
 // kilocode_change start
 import { DEFAULT_HEADERS } from "@/kilocode/const"
 import { getKiloProjectId } from "@/kilocode/project-id"
-import { HEADER_PROJECTID, HEADER_MACHINEID, HEADER_TASKID } from "@kilocode/kilo-gateway"
+import {
+  HEADER_FEATURE,
+  HEADER_PARENT_TASKID,
+  HEADER_PROJECTID,
+  HEADER_MACHINEID,
+  HEADER_TASKID,
+} from "@kilocode/kilo-gateway"
 import { Identity } from "@kilocode/kilo-telemetry"
-import { makeRuntime } from "@/effect/run-service"
+import { KiloSession } from "@/kilocode/session"
+import { KiloLLM } from "@/kilocode/session/llm"
+import { KiloSessionOverflow } from "@/kilocode/session/overflow"
+import { SessionExport } from "@/kilocode/session-export"
+import { getActiveOrg } from "@/kilocode/session-export/eligibility"
 // kilocode_change end
 import { Installation } from "@/installation"
-import { InstallationVersion } from "@/installation/version"
-import { EffectBridge } from "@/effect"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
+import { EffectBridge } from "@/effect/bridge"
 import * as Option from "effect/Option"
 import * as OtelTracer from "@effect/opentelemetry/Tracer"
 
 const log = Log.create({ service: "llm" })
 export const OUTPUT_TOKEN_MAX = ProviderTransform.OUTPUT_TOKEN_MAX
 type Result = Awaited<ReturnType<typeof streamText>>
+type StreamResult = { fullStream: AsyncIterable<Event> }
+
+// Avoid re-instantiating remeda's deep merge types in this hot LLM path; the runtime behavior is still mergeDeep.
+const mergeOptions = (target: Record<string, any>, source: Record<string, any> | undefined): Record<string, any> =>
+  mergeDeep(target, source ?? {}) as Record<string, any>
 
 export type StreamInput = {
   user: MessageV2.User
@@ -49,6 +73,7 @@ export type StreamInput = {
   tools: Record<string, Tool>
   retries?: number
   toolChoice?: "auto" | "required" | "none"
+  preflight?: boolean // kilocode_change - enable proactive threshold compaction for normal session turns
 }
 
 export type StreamRequest = StreamInput & {
@@ -59,7 +84,6 @@ export type Event = Result["fullStream"] extends AsyncIterable<infer T> ? T : ne
 
 export interface Interface {
   readonly stream: (input: StreamInput) => Stream.Stream<Event, unknown>
-  readonly raw: (input: StreamRequest) => Effect.Effect<Result> // kilocode_change - raw streamText result for Kilo helpers
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/LLM") {}
@@ -100,6 +124,9 @@ const live: Layer.Layer<
         ],
         { concurrency: "unbounded" },
       )
+      // kilocode_change start - attribute Kilo gateway usage to the root product session
+      const attr = KiloSession.attribution(input.sessionID)
+      // kilocode_change end
 
       // TODO: move this to a proper hook
       const isOpenaiOauth = item.id === "openai" && info?.type === "oauth"
@@ -145,12 +172,7 @@ const live: Layer.Layer<
             sessionID: input.sessionID,
             providerOptions: item.options,
           })
-      const options: Record<string, any> = pipe(
-        base,
-        mergeDeep(input.model.options),
-        mergeDeep(input.agent.options),
-        mergeDeep(variant),
-      )
+      const options = mergeOptions(mergeOptions(mergeOptions(base, input.model.options), input.agent.options), variant)
       if (isOpenaiOauth) {
         // kilocode_change start - prepend soul to instructions
         options.instructions = SystemPrompt.soul() + "\n" + system.join("\n")
@@ -187,7 +209,14 @@ const live: Layer.Layer<
             : undefined,
           topP: input.agent.topP ?? ProviderTransform.topP(input.model),
           topK: ProviderTransform.topK(input.model),
-          maxOutputTokens: ProviderTransform.maxOutputTokens(input.model),
+          // kilocode_change start - gpt-5 via @ai-sdk/openai-compatible proxies (e.g. LiteLLM)
+          // rejects `max_tokens`; OpenAI requires `max_completion_tokens` and the compatible
+          // SDK cannot rename the field, so drop the cap and let the upstream default apply.
+          maxOutputTokens:
+            input.model.api.npm === "@ai-sdk/openai-compatible" && input.model.api.id.toLowerCase().includes("gpt-5")
+              ? undefined
+              : ProviderTransform.maxOutputTokens(input.model),
+          // kilocode_change end
           options,
         },
       )
@@ -249,6 +278,44 @@ const live: Layer.Layer<
           execute: async () => ({ output: "", title: "", metadata: {} }),
         })
       }
+      const sortedTools = Object.fromEntries(Object.entries(tools).toSorted(([a], [b]) => a.localeCompare(b)))
+
+      // kilocode_change start - compact at the configured threshold before contacting the provider
+      const estimated: ModelMessage[] =
+        isOpenaiOauth || isWorkflow
+          ? [
+              {
+                role: "system",
+                content: isOpenaiOauth ? String(options.instructions ?? "") : system.join("\n"),
+              },
+              ...messages,
+            ]
+          : messages
+      const preflight = input.preflight === true && KiloSessionOverflow.enabled({ cfg, model: input.model })
+      const cap = KiloLLM.needsEstimate({ model: input.model, configured: params.maxOutputTokens })
+      const usage =
+        cap || preflight ? KiloSessionOverflow.measure({ messages: estimated, tools: sortedTools }) : undefined
+      params.maxOutputTokens = KiloLLM.capOutputTokens({
+        model: input.model,
+        messages: estimated,
+        tools: sortedTools,
+        configured: params.maxOutputTokens,
+        tokens: usage?.raw,
+      })
+      if (
+        preflight &&
+        usage &&
+        KiloSessionOverflow.shouldCompact({
+          cfg,
+          model: input.model,
+          usable: usable({ cfg, model: input.model }),
+          tokens: usage.normalized,
+          continuation: usage.continuation,
+        })
+      ) {
+        return yield* Effect.fail(new KiloSessionOverflow.PreflightError())
+      }
+      // kilocode_change end
 
       // Wire up toolExecutor for DWS workflow models so that tool calls
       // from the workflow service are executed via opencode's tool system
@@ -262,7 +329,7 @@ const live: Layer.Layer<
         workflowModel.sessionID = input.sessionID
         workflowModel.systemPrompt = system.join("\n")
         workflowModel.toolExecutor = async (toolName, argsJson, _requestID) => {
-          const t = tools[toolName]
+          const t = sortedTools[toolName]
           if (!t || !t.execute) {
             return { result: "", error: `Unknown tool: ${toolName}` }
           }
@@ -284,14 +351,14 @@ const live: Layer.Layer<
         }
 
         const ruleset = Permission.merge(input.agent.permission ?? [], input.permission ?? [])
-        workflowModel.sessionPreapprovedTools = Object.keys(tools).filter((name) => {
+        workflowModel.sessionPreapprovedTools = Object.keys(sortedTools).filter((name) => {
           const match = ruleset.findLast((rule) => Wildcard.match(name, rule.permission))
           return !match || match.action !== "ask"
         })
 
         const bridge = yield* EffectBridge.make()
         const approvedToolsForSession = new Set<string>()
-        workflowModel.approvalHandler = Instance.bind(async (approvalTools) => {
+        workflowModel.approvalHandler = InstanceState.bind(async (approvalTools) => {
           const uniqueNames = [...new Set(approvalTools.map((t: { name: string }) => t.name))] as string[]
           // Auto-approve tools that were already approved in this session
           // (prevents infinite approval loops for server-side MCP tools)
@@ -353,7 +420,48 @@ const live: Layer.Layer<
           })
         : undefined
 
-      return streamText({
+      const instance = yield* InstanceState.context
+      const opencodeProjectID = input.model.providerID.startsWith("opencode") ? instance.project.id : undefined
+
+      // kilocode_change start - capture eligible session export request start
+      const exporting = SessionExport.enabled
+      const org = yield* exporting && isKilo && input.model.isFree === true
+        ? Effect.promise(() => getActiveOrg())
+        : Effect.succeed({ type: "unknown" as const })
+      const started = Date.now()
+      const parent = input.parentSessionID ?? KiloSession.resolveParent(input.sessionID)
+      const found = KiloSession.resolveRoot(input.sessionID)
+      const root = parent ? (found === input.sessionID ? parent : found) : input.sessionID
+      const exportable =
+        exporting && isKilo && input.model.isFree === true && org.type === "personal" && input.agent.name !== "title"
+      if (exportable) {
+        SessionExport.beforeRequest({
+          input: { model: input.model, org },
+          requestMeta: {
+            sessionId: input.sessionID,
+            rootSessionId: root,
+            parentSessionId: parent,
+            requestId: input.user.id,
+            userMessageId: input.user.id,
+            agent: input.agent.name,
+            modeId: input.agent.mode,
+            workspaceKey: instance.directory,
+            agentInfo: SessionExport.agentInfo(input.agent),
+          },
+          assembled: {
+            system,
+            messages,
+            tools,
+            permissions: input.permission ?? [],
+            toolChoice: input.toolChoice,
+            params,
+          },
+        })
+      }
+      // kilocode_change end
+
+      const result = streamText({
+        // kilocode_change
         onError(error) {
           l.error("stream error", {
             error,
@@ -361,7 +469,7 @@ const live: Layer.Layer<
         },
         async experimental_repairToolCall(failed) {
           const lower = failed.toolCall.toolName.toLowerCase()
-          if (lower !== failed.toolCall.toolName && tools[lower]) {
+          if (lower !== failed.toolCall.toolName && sortedTools[lower]) {
             l.info("repairing tool call", {
               tool: failed.toolCall.toolName,
               repaired: lower,
@@ -384,15 +492,15 @@ const live: Layer.Layer<
         topP: params.topP,
         topK: params.topK,
         providerOptions: ProviderTransform.providerOptions(input.model, params.options),
-        activeTools: Object.keys(tools).filter((x) => x !== "invalid"),
-        tools,
+        activeTools: Object.keys(sortedTools).filter((x) => x !== "invalid"),
+        tools: sortedTools,
         toolChoice: input.toolChoice,
         maxOutputTokens: params.maxOutputTokens,
         abortSignal: input.abort,
         headers: {
           ...(input.model.providerID.startsWith("kilo") // kilocode_change
             ? {
-                "x-kilo-project": Instance.project.id,
+                "x-kilo-project": opencodeProjectID,
                 "x-kilo-session": input.sessionID,
                 "x-kilo-request": input.user.id,
                 "x-kilo-client": Flag.KILO_CLIENT,
@@ -408,6 +516,8 @@ const live: Layer.Layer<
           ...(isKilo && kiloProjectId ? { [HEADER_PROJECTID]: kiloProjectId } : {}),
           ...(isKilo && machineId ? { [HEADER_MACHINEID]: machineId } : {}),
           ...(isKilo ? { [HEADER_TASKID]: input.sessionID } : {}),
+          ...(isKilo && parent ? { [HEADER_PARENT_TASKID]: parent } : {}),
+          ...(isKilo && attr.feature ? { [HEADER_FEATURE]: attr.feature } : {}),
           // kilocode_change end
           ...input.model.headers,
           ...headers,
@@ -429,9 +539,24 @@ const live: Layer.Layer<
             },
           ],
         }),
-        // kilocode_change - disable AI SDK span recording (ai.* / gen_ai.*)
+        // kilocode_change start - disable AI SDK span recording (ai.* / gen_ai.*)
         experimental_telemetry: { isEnabled: false },
       })
+      // kilocode_change end
+      // kilocode_change start - capture eligible session export request completion off the stream path
+      if (!exportable) return { fullStream: result.fullStream } satisfies StreamResult
+      return {
+        fullStream: observeFullStreamForExport(result.fullStream, {
+          sessionId: input.sessionID,
+          rootSessionId: root,
+          parentSessionId: parent,
+          requestId: input.user.id,
+          workspaceKey: instance.directory,
+          started,
+          retries: input.retries ?? 0,
+        }),
+      } satisfies StreamResult
+      // kilocode_change end
     })
 
     const stream: Interface["stream"] = (input) =>
@@ -450,8 +575,7 @@ const live: Layer.Layer<
         ),
       )
 
-    // kilocode_change - expose raw streamText result for Kilo helpers; Effect.orDie collapses AuthError into a defect
-    return Service.of({ stream, raw: (input) => run(input).pipe(Effect.orDie) })
+    return Service.of({ stream })
   }),
 )
 
@@ -466,13 +590,122 @@ export const defaultLayer = Layer.suspend(() =>
   ),
 )
 
-// kilocode_change start - keep raw async stream wrapper for Kilo callsites during Effect migration
-const runtime = makeRuntime(Service, defaultLayer)
-export async function stream(input: StreamRequest) {
-  return runtime.runPromise((svc) => svc.raw(input), { signal: input.abort })
+// kilocode_change start - session export stream observer
+export function observeFullStreamForExport(
+  stream: AsyncIterable<Event>,
+  meta: {
+    sessionId: string
+    rootSessionId: string
+    parentSessionId?: string
+    requestId: string
+    workspaceKey?: string
+    started: number
+    retries: number
+  },
+  complete: (args: Parameters<typeof SessionExport.afterRequest>[0]) => void = SessionExport.afterRequest,
+): AsyncIterable<Event> {
+  const textParts: string[] = []
+  const reasoningParts: string[] = []
+  const toolCalls: Event[] = []
+  let finishReason: string | undefined
+  let usage:
+    | { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number }
+    | undefined
+  let finished = false
+  let reported = false
+  const done = (error?: unknown) => {
+    if (reported) return
+    reported = true
+    try {
+      complete({
+        sessionId: meta.sessionId,
+        rootSessionId: meta.rootSessionId,
+        parentSessionId: meta.parentSessionId,
+        requestId: meta.requestId,
+        workspaceKey: meta.workspaceKey,
+        output: { textParts, reasoningParts, toolCalls, finishReason, error, usage },
+        durationMs: Date.now() - meta.started,
+        retryCount: meta.retries,
+      })
+    } catch (err) {
+      console.warn("[session-export] request completion export failed", err)
+    }
+  }
+  const observed = async function* () {
+    try {
+      for await (const part of stream) {
+        collectPart(part, {
+          textParts,
+          reasoningParts,
+          toolCalls,
+          setFinish: (val) => (finishReason = val),
+          setUsage: (val) => (usage = val),
+        })
+        yield part
+      }
+      finished = true
+    } catch (err) {
+      done(err)
+      throw err
+    } finally {
+      done(finished ? undefined : { code: "stream_cancelled" })
+    }
+  }
+  return observed()
+}
+
+function collectPart(
+  part: Event,
+  out: {
+    textParts: string[]
+    reasoningParts: string[]
+    toolCalls: Event[]
+    setFinish: (value: string | undefined) => void
+    setUsage: (
+      value:
+        | { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number }
+        | undefined,
+    ) => void
+  },
+): void {
+  switch (part.type) {
+    case "text-delta":
+      if (part.text) out.textParts.push(part.text)
+      return
+    case "reasoning-delta":
+      if (part.text) out.reasoningParts.push(part.text)
+      return
+    case "tool-input-start":
+    case "tool-input-delta":
+    case "tool-input-end":
+    case "tool-call":
+    case "tool-result":
+    case "tool-error":
+    case "tool-output-denied":
+    case "tool-approval-request":
+      out.toolCalls.push(part)
+      return
+    case "finish-step":
+      out.setFinish(part.finishReason)
+      out.setUsage(normalizeUsageForExport(part.usage))
+      return
+    case "finish":
+      out.setFinish(part.finishReason)
+      out.setUsage(normalizeUsageForExport(part.totalUsage))
+      return
+    default:
+      return
+  }
+}
+
+export function normalizeUsageForExport(value: Partial<LanguageModelUsage>) {
+  const inputTokens = value.inputTokens ?? 0
+  const outputTokens = value.outputTokens ?? 0
+  const cacheReadTokens = value.inputTokenDetails?.cacheReadTokens ?? undefined
+  const cacheWriteTokens = value.inputTokenDetails?.cacheWriteTokens ?? undefined
+  return { inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens }
 }
 // kilocode_change end
-
 function resolveTools(input: Pick<StreamInput, "tools" | "agent" | "permission" | "user">) {
   const disabled = Permission.disabled(
     Object.keys(input.tools),

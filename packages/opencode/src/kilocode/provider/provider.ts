@@ -9,12 +9,13 @@
 import { createKilo, type KiloProvider, AI_SDK_PROVIDERS, PROMPTS } from "@kilocode/kilo-gateway"
 import { DEFAULT_HEADERS } from "@/kilocode/const"
 import { ProviderID, ModelID } from "@/provider/schema"
+import { optionalOmitUndefined } from "@opencode-ai/core/schema"
 import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
 
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
-export const REQUEST_TIMEOUT_MS = 120_000 // 2 minutes
+export const REQUEST_TIMEOUT_MS = 300_000 // 5 minutes
 
 // ---------------------------------------------------------------------------
 // Bundled providers
@@ -31,9 +32,15 @@ export const KILO_BUNDLED_PROVIDERS: Record<string, () => Promise<(options: any)
 // ---------------------------------------------------------------------------
 
 export const KILO_MODEL_SCHEMA_EXTENSIONS = {
-  recommendedIndex: Schema.optional(Schema.Number),
+  recommendedIndex: optionalOmitUndefined(Schema.Finite),
   prompt: Schema.optional(Schema.Literals(PROMPTS)),
   isFree: Schema.optional(Schema.Boolean),
+  terminalBench: optionalOmitUndefined(
+    Schema.Struct({
+      overallScore: Schema.Finite,
+      avgAttemptCostUsd: Schema.Finite,
+    }),
+  ),
   ai_sdk_provider: Schema.optional(Schema.Literals(AI_SDK_PROVIDERS)),
 }
 
@@ -42,11 +49,13 @@ export const KILO_MODEL_SCHEMA_EXTENSIONS = {
 // ---------------------------------------------------------------------------
 
 export function patchModelsDevModel(providerID: string, source: any) {
+  const free = providerID === "kilo" && source.cost?.input === 0 && source.cost?.output === 0
   return {
     variants: providerID === "kilo" ? (source.variants ?? {}) : {},
     recommendedIndex: source.recommendedIndex,
     prompt: source.prompt,
-    isFree: source.isFree,
+    isFree: source.isFree ?? (free ? true : undefined),
+    terminalBench: source.terminalBench,
     ai_sdk_provider: source.ai_sdk_provider,
     options: source.options ?? {},
   }
@@ -61,6 +70,7 @@ export function patchConfigModel(cfg: any, existing: any) {
     recommendedIndex: cfg.recommendedIndex ?? existing?.recommendedIndex,
     prompt: cfg.prompt ?? existing?.prompt,
     isFree: cfg.isFree ?? existing?.isFree,
+    terminalBench: existing?.terminalBench,
     ai_sdk_provider: cfg.ai_sdk_provider ?? existing?.ai_sdk_provider,
     variants: cfg.variants
       ? mapValues(
@@ -139,6 +149,7 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
           const provider = input.models[modelID]?.ai_sdk_provider
           if (provider === "alibaba") return sdk.alibaba(modelID)
           if (provider === "anthropic") return sdk.anthropic(modelID)
+          if (provider === "mistral") return sdk.mistral(modelID)
           if (provider === "openai") return sdk.openai(modelID)
           if (provider === "openai-compatible") return sdk.openaiCompatible(modelID)
           return sdk.languageModel(modelID)
@@ -169,20 +180,6 @@ export function patchCustomLoaderResult(
   if (!result.options) return
 
   switch (providerID) {
-    case "anthropic": {
-      // Prepend claude-code beta flag to the anthropic-beta header
-      // TODO: Add adaptive thinking headers when @ai-sdk/anthropic supports it:
-      // adaptive-thinking-2026-01-28,effort-2025-11-24,max-effort-2026-01-24
-      const existing = result.options.headers?.["anthropic-beta"] ?? ""
-      const prefix = "claude-code-20250219"
-      if (!existing.includes(prefix)) {
-        result.options.headers = {
-          ...result.options.headers,
-          "anthropic-beta": existing ? `${prefix},${existing}` : prefix,
-        }
-      }
-      break
-    }
     case "openrouter":
     case "vercel":
     case "zenmux":
@@ -204,8 +201,10 @@ export function patchCustomLoaderResult(
       })()
       if (url) {
         result.options.baseURL = url
+        delete result.options.resourceName
       } else if (resource) {
         result.options.resourceName = resource
+        delete result.options.baseURL
       }
       break
     }

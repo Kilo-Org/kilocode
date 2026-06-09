@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "แชร์เซสชันนี้และคัดลอก URL ไปยังคลิปบอร์ด",
   "command.session.unshare": "ยกเลิกการแชร์เซสชัน",
   "command.session.unshare.description": "หยุดการแชร์เซสชันนี้",
+  "command.session.export": "ส่งออกบันทึกเซสชัน",
 
   "palette.search.placeholder": "ค้นหาไฟล์ คำสั่ง และเซสชัน",
   "palette.empty": "ไม่พบผลลัพธ์",
@@ -105,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "แนะนำ",
   "dialog.provider.opencode.note": "โมเดลที่คัดสรร รวมถึง Claude, GPT, Gemini และอื่น ๆ",
   "dialog.provider.anthropic.note": "เข้าถึงโมเดล Claude โดยตรง รวมถึง Pro และ Max",
+  "dialog.provider.deepseek.note": "โมเดล DeepSeek สำหรับงานการให้เหตุผลและการเขียนโค้ด",
   "dialog.provider.copilot.note": "โมเดล Claude สำหรับการช่วยเหลือในการเขียนโค้ด",
   "dialog.provider.openai.note": "โมเดล GPT สำหรับงาน AI ทั่วไปที่รวดเร็วและมีความสามารถ",
   "dialog.provider.google.note": "โมเดล Gemini สำหรับการตอบสนองที่รวดเร็วและมีโครงสร้าง",
@@ -134,9 +136,25 @@ export const dict = {
   "provider.connect.status.failed": "การอนุญาตล้มเหลว: {{error}}",
   "provider.connect.apiKey.description":
     "ป้อนคีย์ API ของ {{provider}} เพื่อเชื่อมต่อบัญชีและใช้โมเดล {{provider}} ใน Kilo",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "คีย์ API ของ {{provider}}",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "คีย์ API",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "ต้องใช้คีย์ API",
+  "provider.connect.prompt.required": "จำเป็นต้องระบุ {{field}}",
+  "provider.connect.azure.endpointType.label": "เลือกการกำหนดค่าปลายทางของ Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "ชื่อทรัพยากร",
+  "provider.connect.azure.endpointType.resourceName.hint": "สร้างปลายทางจากชื่อทรัพยากร Azure ของคุณ",
+  "provider.connect.azure.endpointType.baseURL.label": "URL ปลายทางแบบเต็ม",
+  "provider.connect.azure.endpointType.baseURL.hint": "ใช้ปลายทาง Azure OpenAI แบบกำหนดเอง",
+  "provider.connect.azure.resourceName.label": "ชื่อทรัพยากร Azure",
+  "provider.connect.azure.resourceName.placeholder": "เช่น my-models",
+  "provider.connect.azure.baseURL.label": "URL ปลายทาง Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "เช่น https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen ให้คุณเข้าถึงชุดโมเดลที่เชื่อถือได้และปรับแต่งแล้วสำหรับเอเจนต์การเขียนโค้ด",
   "provider.connect.opencodeZen.line2":
@@ -163,9 +181,12 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "โมเดล {{provider}} ไม่พร้อมใช้งานอีกต่อไป",
 
   "model.tag.free": "ฟรี",
+  "model.tag.dataCollected": "ข้อมูลอาจถูกนำไปใช้ในการฝึก",
   "model.tag.latest": "ล่าสุด",
   "model.group.recommended": "แนะนำ",
   "model.group.favorites": "รายการโปรด",
+  "model.group.collapse": "ย่อ {{group}}",
+  "model.group.expand": "ขยาย {{group}}",
   "model.favorite.add": "เพิ่มในรายการโปรด",
   "model.favorite.remove": "ลบออกจากรายการโปรด",
   "model.provider.anthropic": "Anthropic",
@@ -188,6 +209,9 @@ export const dict = {
   "model.preview.label.cached": "แคช",
   "model.preview.label.average": "ต้นทุนเฉลี่ยโดยประมาณ",
   "model.preview.label.context": "บริบท",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "ความสำเร็จ",
+  "model.preview.label.costAttempt": "ค่าใช้จ่าย / ครั้ง",
   "model.preview.value.notSupported": "ไม่รองรับ",
   "model.preview.tooltip.average":
     "ต้นทุนเฉลี่ยโดยประมาณนี้คำนวณจากอัตราส่วนทั่วไปของโทเค็นอินพุต เอาต์พุต และการอ่านแคช",
@@ -259,6 +283,7 @@ export const dict = {
   "prompt.attachment.remove": "เอาไฟล์แนบออก",
   "prompt.action.send": "ส่ง",
   "prompt.action.send.blocked": "โปรดตอบหรือข้ามคำถามที่รอดำเนินการก่อน",
+  "prompt.action.send.recording": "ถอดเสียงและส่ง",
   "prompt.action.stop": "หยุด",
   "prompt.action.enhance": "ปรับปรุงพรอมต์",
   "prompt.action.autoApprove.enable": "เปิดใช้การอนุมัติอัตโนมัติ",
@@ -269,6 +294,20 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "ปุ่ม 'ปรับปรุงพรอมต์' ช่วยปรับปรุงพรอมต์ของคุณโดยให้บริบทเพิ่มเติม ชี้แจง หรือเขียนใหม่ ลองพิมพ์พรอมต์ที่นี่และคลิกปุ่มอีกครั้งเพื่อดูว่ามันทำงานอย่างไร",
   "prompt.action.indexing": "การตั้งค่าการสร้างดัชนี",
+
+  "speechToText.tooltip.start": "เริ่มการป้อนข้อมูลด้วยเสียงด้วย Kilo Gateway",
+  "speechToText.tooltip.stop": "หยุดจับเสียง",
+  "speechToText.tooltip.transcribing": "กำลังถอดเสียง... คลิกเพื่อยกเลิก",
+  "speechToText.tooltip.error": "การป้อนข้อมูลด้วยเสียงล้มเหลว คลิกเพื่อล้าง",
+  "speechToText.error.title": "การป้อนข้อมูลด้วยเสียงล้มเหลว",
+  "speechToText.error.loginRequired": "ลงชื่อเข้าใช้ Kilo เพื่อใช้การป้อนข้อมูลด้วยเสียง",
+  "speechToText.error.permission": "การอนุญาตเข้าถึงไมโครโฟนถูกปฏิเสธ",
+  "speechToText.error.microphone": "ไม่สามารถเริ่มต้นไมโครโฟนได้",
+  "speechToText.error.recording": "การบันทึกล้มเหลว",
+  "speechToText.error.emptyRecording": "ไม่มีการบันทึกเสียง",
+  "speechToText.error.emptyTranscript": "ตรวจไม่พบเสียงพูด",
+  "speechToText.error.encoding": "ไม่สามารถเข้ารหัสการบันทึกได้",
+  "speechToText.toast.transcribed": "แทรกข้อความที่ถอดเสียงแล้ว",
 
   "prompt.toast.pasteUnsupported.title": "การวางไม่รองรับ",
   "prompt.toast.pasteUnsupported.description": "สามารถวางรูปภาพหรือ PDF เท่านั้น",
@@ -422,6 +461,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "ไม่สามารถยกเลิกการแชร์เซสชัน",
   "toast.session.unshare.failed.description": "เกิดข้อผิดพลาดระหว่างการยกเลิกการแชร์เซสชัน",
 
+  "toast.session.rename.invalid.title": "ชื่อเซสชันไม่ถูกต้อง",
   "toast.session.listFailed.title": "ไม่สามารถโหลดเซสชันสำหรับ {{project}}",
 
   "toast.update.title": "มีการอัปเดต",
@@ -454,6 +494,11 @@ export const dict = {
   "error.promotionLimit.description":
     "สมัครฟรีเพื่อดำเนินการต่อและสำรวจโมเดลกว่า 500 รายการ ใช้เวลา 2 นาที ไม่ต้องใช้บัตรเครดิต หรือกลับมาทีหลัง",
   "error.promotionLimit.action": "สมัครสมาชิก",
+  "error.providerAuth.title": "{{provider}} ออกจากระบบของคุณแล้ว",
+  "error.providerAuth.description": "เชื่อมต่อ {{provider}} อีกครั้ง จากนั้นส่งข้อความของคุณใหม่",
+  "error.providerAuth.chatgpt.title": "OpenAI ออกจากระบบของคุณแล้ว",
+  "error.providerAuth.chatgpt.description":
+    "เข้าสู่ระบบ ChatGPT อีกครั้ง จากนั้นส่งข้อความของคุณใหม่เพื่อใช้งานโมเดล Codex ต่อไป",
 
   "error.chain.unknown": "ข้อผิดพลาดที่ไม่รู้จัก",
   "error.chain.causedBy": "สาเหตุ:",
@@ -744,9 +789,19 @@ export const dict = {
 
   "settings.indexing.title": "การสร้างดัชนี",
   "settings.indexing.enable.title": "เปิดใช้งานการสร้างดัชนี",
-  "settings.indexing.enable.description": "เปิดหรือปิดการสร้างดัชนีโค้ดเบสเชิงความหมายสำหรับพื้นที่ทำงานนี้",
+  "settings.indexing.enable.description": "เปิดหรือปิดการสร้างดัชนีโค้ดเบสเชิงความหมาย",
+  "settings.indexing.globalEnable.title": "เปิดใช้งานแบบโกลบอล",
+  "settings.indexing.globalEnable.description": "เปิดใช้งานการทำดัชนีสำหรับทุกพื้นที่ทำงาน",
+  "settings.indexing.projectEnable.title": "เปิดใช้งานสำหรับโปรเจกต์นี้",
+  "settings.indexing.projectEnable.description":
+    "เปิดใช้งานการทำดัชนีสำหรับพื้นที่ทำงานนี้เมื่อการทำดัชนีแบบโกลบอลถูกปิดใช้งาน",
+  "settings.indexing.projectEnable.disabledTooltip": "เปิดใช้งานการทำดัชนีระดับโลกแล้ว โปรเจ็กต์นี้จึงถูกรวมไว้แล้ว",
   "settings.indexing.provider.title": "ผู้ให้บริการการฝัง",
   "settings.indexing.provider.description": "เลือกผู้ให้บริการที่ใช้สร้างการฝังสำหรับการค้นหาเชิงความหมาย",
+  "settings.indexing.kiloModel.title": "พรีเซ็ตโมเดล Kilo",
+  "settings.indexing.kiloModel.description": "เลือกโมเดลการฝังที่ Kilo โฮสต์และรองรับ",
+  "settings.indexing.kiloSignIn.title": "ต้องลงชื่อเข้าใช้ Kilo",
+  "settings.indexing.kiloSignIn.description": "ลงชื่อเข้าใช้ Kilo เพื่อใช้การฝังแบบโฮสต์",
   "settings.indexing.model.title": "โมเดลการฝัง",
   "settings.indexing.model.description": "แทนที่โมเดลการฝังเริ่มต้นสำหรับผู้ให้บริการที่เลือก",
   "settings.indexing.dimension.title": "ขนาดเวกเตอร์",
@@ -803,6 +858,9 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "เชื่อมต่อจากตัวแปรสภาพแวดล้อมของคุณ",
   "settings.providers.action.signInChatGPT": "ลงชื่อเข้าใช้ด้วย ChatGPT",
   "settings.providers.custom.description": "เพิ่มผู้ให้บริการที่เข้ากันได้กับ OpenAI ด้วย URL พื้นฐาน",
+  "settings.providers.subagentModel.title": "โมเดลตัวแทนย่อย",
+  "settings.providers.subagentModel.description":
+    "โมเดลเริ่มต้นและระดับการใช้เหตุผลสำหรับตัวแทนย่อยของ task-tool ปล่อยว่างไว้เพื่อรับค่าโมเดลจากตัวแทนที่เรียก",
   "settings.providers.modeModels": "โมเดลต่อโหมด",
   "settings.providers.custom.note": "เพิ่มผู้ให้บริการที่รองรับ OpenAI ด้วย Base URL",
   "settings.providers.modeModels.description":
@@ -965,6 +1023,8 @@ export const dict = {
   "session.delete.confirm": 'ลบเซสชัน "{{name}}" หรือไม่?',
   "session.delete.button": "ลบเซสชัน",
   "session.untitled": "ไม่มีชื่อ",
+  "session.current": "เซสชันปัจจุบัน",
+  "session.history.sources": "แหล่งที่มาของประวัติ",
   "session.recent": "ล่าสุด",
   "session.showHistory": "แสดงประวัติ",
   "session.search.placeholder": "ค้นหาเซสชัน...",
@@ -1073,6 +1133,14 @@ export const dict = {
   "session.status.retrying": "กำลังลองใหม่ (ครั้งที่ {{ attempt }})… {{ message }}",
   "session.status.working": "กำลังทำงาน...",
   "session.status.offline": "เครือข่ายถูกตัดการเชื่อมต่อ — กำลังเชื่อมต่อใหม่...",
+  "session.outcome.incomplete": "เทิร์นสิ้นสุดโดยเหลือสิ่งที่ต้องทำอีก {{count}} รายการ",
+  "session.outcome.limit": "ถึงขีดจำกัดการตอบกลับก่อนเสร็จสิ้น",
+  "session.outcome.unknown": "เทิร์นสิ้นสุดโดยไม่มีเหตุผลการเสร็จสิ้นของโมเดล",
+  "session.outcome.filtered": "ผู้ให้บริการหยุดการตอบกลับนี้เนื่องจากตัวกรองเนื้อหา",
+  "session.outcome.unexpected": "การตอบกลับสิ้นสุดลงโดยไม่คาดคิดและอาจไม่สมบูรณ์",
+  "session.outcome.interrupted": "เทิร์นถูกขัดจังหวะ",
+  "session.outcome.error": "เทิร์นล้มเหลว",
+  "session.outcome.finish": "เหตุผลการเสร็จสิ้น: {{reason}}",
 
   "ui.sessionTurn.cancel": "ยกเลิก",
   "ui.sessionTurn.status.thinking": "กำลังคิด...",
@@ -1134,7 +1202,6 @@ export const dict = {
     'Telemetry ถูกควบคุมโดยการตั้งค่า Telemetry ในตัวของ VS Code หากต้องการปิดใช้งาน ให้ไปที่ Settings > Telemetry > Telemetry Level แล้วตั้งค่าเป็น "off" รีสตาร์ท VS Code เพื่อให้การเปลี่ยนแปลงมีผล',
   "settings.aboutKiloCode.telemetry.openSettings": "เปิดการตั้งค่า Telemetry",
 
-  "settings.agentBehaviour.subtab.modes": "โหมด",
   "settings.agentBehaviour.subtab.agents": "ตัวแทน",
   "settings.agentBehaviour.subtab.mcpServers": "เซิร์ฟเวอร์ MCP",
   "settings.agentBehaviour.subtab.rules": "กฎ",
@@ -1163,6 +1230,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "ใช้ปุ่มลัดอัจฉริยะสำหรับงานอินไลน์",
   "settings.autocomplete.chatAutocomplete.title": "เปิดใช้งานเติมอัตโนมัติแชท",
   "settings.autocomplete.chatAutocomplete.description": "แสดงข้อเสนอแนะเติมอัตโนมัติในช่องแชท",
+  "settings.autocomplete.modelsHint": "เลือกโมเดลที่ใช้สำหรับการเติมอัตโนมัติได้ที่การตั้งค่าโมเดล",
   "settings.notifications.agent.title": "เอเจนต์เสร็จสิ้น",
   "settings.notifications.agent.description": "แสดงการแจ้งเตือนเมื่อเอเจนต์ทำงานเสร็จ",
   "settings.notifications.permissions.title": "คำขออนุญาต",
@@ -1191,11 +1259,16 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "ไม่สรุปเนื้อหาที่วางขนาดใหญ่",
   "settings.experimental.batch.title": "เครื่องมือแบทช์",
   "settings.experimental.batch.description": "เปิดใช้งานการประมวลผลแบทช์ของการเรียกเครื่องมือ",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "ค้นหาโค้ดเบส",
   "settings.experimental.codebaseSearch.description": "เปิดใช้งานการค้นหาด้วยภาษาธรรมชาติโดย AI ทั่วทั้งโค้ดเบส",
+  "settings.experimental.speechToText.title": "แปลงเสียงเป็นข้อความ",
+  "settings.experimental.speechToText.description":
+    "เปิดใช้งานการป้อนข้อมูลด้วยเสียงในช่องพรอมต์โดยใช้บัญชี Kilo ของคุณผ่าน Kilo Gateway",
+  "settings.experimental.speechToText.disabledDescription":
+    "เปิดใช้งานและลงชื่อเข้าใช้ผู้ให้บริการ Kilo เพื่อใช้ Speech to Text ปัจจุบัน Speech to Text รองรับเฉพาะกับ Kilo Gateway เท่านั้น",
+  "settings.experimental.speechToTextModel.title": "โมเดลแปลงเสียงเป็นข้อความ",
+  "settings.experimental.speechToTextModel.description":
+    "เลือกโมเดลการถอดเสียง Kilo Gateway สำหรับการป้อนข้อมูลด้วยเสียง",
   "settings.experimental.continueOnDeny.title": "ดำเนินต่อเมื่อถูกปฏิเสธ",
   "settings.experimental.continueOnDeny.description": "ดำเนินลูปเอเจนต์ต่อเมื่อสิทธิ์ถูกปฏิเสธ",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
@@ -1217,6 +1290,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "เลือกเอเจนต์เพื่อกำหนดค่า…",
   "settings.agentBehaviour.modelOverride.title": "แทนที่โมเดล",
   "settings.agentBehaviour.modelOverride.description": "แทนที่โมเดลเริ่มต้นของเอเจนต์นี้",
+  "settings.agentBehaviour.variantOverride.title": "แทนที่ตัวแปรโมเดล",
+  "settings.agentBehaviour.variantOverride.description": "แทนที่ตัวแปรของโมเดลสำหรับเอเจนต์นี้",
   "settings.agentBehaviour.prompt.title": "พรอมต์กำหนดเอง",
   "settings.agentBehaviour.prompt.description": "พรอมต์ระบบเพิ่มเติมสำหรับเอเจนต์นี้",
   "settings.agentBehaviour.temperature.title": "อุณหภูมิ",
@@ -1235,7 +1310,7 @@ export const dict = {
   "settings.agentBehaviour.discoveredSkills": "ทักษะที่ค้นพบ",
   "settings.agentBehaviour.noSkillsFound": "ไม่พบทักษะ เพิ่มเส้นทางโฟลเดอร์หรือ URL ด้านล่างเพื่อทำให้ทักษะพร้อมใช้งาน",
   "settings.agentBehaviour.availableModes": "โหมดกำหนดเองที่ใช้ได้",
-  "settings.agentBehaviour.noModesFound": "ไม่พบโหมด",
+  "settings.agentBehaviour.noAgentsFound": "ไม่พบเอเจนต์",
   "settings.agentBehaviour.createMode": "สร้างโหมดใหม่",
   "settings.agentBehaviour.createMode.name": "ชื่อ",
   "settings.agentBehaviour.createMode.name.placeholder": "เช่น reviewer",
@@ -1278,10 +1353,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "คัดลอกสิทธิ์เป็น JSON",
   "settings.agentBehaviour.permissions.hint":
     "กฎจะถูกประเมินตามลำดับ — กฎที่ตรงกันล่าสุดจะมีผล นี่คือชุดกฎที่ประมวลผลแล้วจากแบ็กเอนด์ CLI",
-  "settings.agentBehaviour.removeMode.title": "ลบโหมด",
-  "settings.agentBehaviour.removeMode.confirm":
-    'ต้องการลบโหมด "{{name}}" หรือไม่? การดำเนินการนี้จะปิดใช้งานโหมดโดยอัปเดตการกำหนดค่าของคุณ',
-  "settings.agentBehaviour.removeMode.button": "ลบ",
+  "settings.agentBehaviour.removeAgent.title": "ลบเอเจนต์",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'ลบเอเจนต์ "{{name}}" หรือไม่? การดำเนินการนี้จะปิดใช้งานเอเจนต์โดยการอัปเดตการตั้งค่า',
+  "settings.agentBehaviour.removeAgent.button": "ลบ",
   "settings.agentBehaviour.removeMcp.title": "ลบเซิร์ฟเวอร์ MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'ต้องการลบเซิร์ฟเวอร์ MCP "{{name}}" หรือไม่? การดำเนินการนี้จะลบออกจากการกำหนดค่าของคุณ',
@@ -1360,7 +1435,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "เปิดใช้งานสแนปชอต",
   "settings.checkpoints.enable.description": "สร้างจุดตรวจก่อนแก้ไขไฟล์",
   "settings.context.autoCompaction.title": "การบีบอัดอัตโนมัติ",
-  "settings.context.autoCompaction.description": "บีบอัดบริบทอัตโนมัติเมื่อเต็ม",
+  "settings.context.autoCompaction.description": "บีบอัดบริบทอัตโนมัติก่อนถึงขีดจำกัด",
+  "settings.context.compactionLimit.title": "ขีดจำกัดการบีบอัดอัตโนมัติ",
+  "settings.context.compactionLimit.description":
+    "บีบอัดเมื่อบริบทถึงเปอร์เซ็นต์นี้ของหน้าต่างโมเดล เว้นว่างไว้เพื่อใช้เฉพาะบัฟเฟอร์ความปลอดภัย",
   "settings.context.prune.title": "ตัดผลลัพธ์เก่า",
   "settings.context.prune.description": "ลบผลลัพธ์เครื่องมือเก่าระหว่างการบีบอัด",
   "settings.context.watcherPatterns": "รูปแบบการละเว้นตัวเฝ้าดูไฟล์",
@@ -1382,6 +1460,8 @@ export const dict = {
   "settings.display.layout.description": "โหมดเค้าโครงสำหรับอินเทอร์เฟซแชท",
   "settings.display.layout.auto": "อัตโนมัติ",
   "settings.display.layout.stretch": "ยืด",
+  "settings.display.fontSize.title": "ขนาดฟอนต์",
+  "settings.display.fontSize.description": "ปรับขนาดฟอนต์ webview UI ของ Kilo แยกเป็นอิสระจาก VS Code.",
   "settings.display.reasoningAutoCollapse.title": "ยุบเหตุผลอัตโนมัติ",
   "settings.display.reasoningAutoCollapse.description":
     "ยุบ block เหตุผลหลังจากเอเจนต์เขียนเสร็จ ปิดไว้เพื่อให้เหตุผลยังคงขยายอยู่ เว้นแต่คุณจะยุบเอง",
@@ -1396,6 +1476,7 @@ export const dict = {
     "โมเดลน้ำหนักเบาสำหรับสร้างชื่อ สร้างข้อความคอมมิต ปรับปรุงพรอมต์ และงานด่วนอื่นๆ",
   "settings.providers.disabled": "ผู้ให้บริการที่ปิดใช้งาน",
   "settings.providers.disabled.description": "ผู้ให้บริการที่จะซ่อนจากรายการ",
+  "settings.providers.disabled.enable": "เปิดใช้งาน",
   "settings.providers.enabled": "ผู้ให้บริการที่เปิดใช้งาน (รายการที่อนุญาต)",
   "settings.providers.enabled.description": "หากตั้งค่า เฉพาะผู้ให้บริการเหล่านี้เท่านั้นที่จะพร้อมใช้งาน",
   "settings.providers.notSet": "ไม่ได้ตั้งค่า (ใช้ค่าเริ่มต้นของเซิร์ฟเวอร์)",
@@ -1514,4 +1595,29 @@ export const dict = {
   "notifications.action.close": "ปิด",
   "notifications.action.tryModel": "ลองใช้ {{model}}",
   "notifications.action.tryModelGeneric": "ลองใช้โมเดล",
+  "diffViewer.source.workspace.label": "สาขา",
+  "diffViewer.source.workspace.tooltip":
+    "การเปลี่ยนแปลงทั้งหมดบนสาขานี้เมื่อเทียบกับสาขาเบส รวมถึงไฟล์ที่ยังไม่ได้คอมมิต (staged, unstaged, untracked) และคอมมิตในเครื่องที่ยังไม่มีในเบส",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "ไฟล์ที่มีการเปลี่ยนแปลงที่คุณได้เพิ่มเข้าสู่พื้นที่ staging ของ git (`git add`) ตามที่จะปรากฏในคอมมิตถัดไป",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "ไฟล์ที่ถูกแก้ไขในแผนผังการทำงานแต่ยังไม่ได้ staged และไฟล์ที่ไม่ได้ติดตาม (ใหม่)",
+  "diffViewer.source.session.label": "เซสชัน",
+  "diffViewer.source.session.tooltip":
+    "ไฟล์ที่ Kilo แก้ไขในช่วงเซสชันปัจจุบัน โดยอิงจากสแน็ปช็อตต่อเทิร์น จะรีเซ็ตเมื่อเริ่มเซสชันใหม่",
+  "diffViewer.group.session": "เซสชัน",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "ปิดใช้งานสแนปช็อตสำหรับที่เก็บนี้ กรุณาแก้ไขไฟล์การกำหนดค่าเพื่อแสดงการเปลี่ยนแปลงของเซสชัน",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "แผนพร้อมแล้ว:",
 }

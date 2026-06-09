@@ -12,6 +12,36 @@ import type { ProviderAuthAuthorization } from "@kilocode/sdk/v2"
 import { KiloAutoMethod } from "@/kilocode/components/dialog-kilo-auto-method"
 
 // ---------------------------------------------------------------------------
+// Failed-state gutter/description helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns a red `!` gutter element when the provider is in a failed auth state,
+ * or `undefined` if not failed and not connected (falls through to default check).
+ */
+export function renderGutter(
+  providerID: string,
+  failed: string[],
+  theme: { error: RGBA },
+): (() => JSX.Element) | undefined {
+  if (!failed.includes(providerID)) return undefined
+  return () => <text fg={theme.error}>!</text>
+}
+
+/**
+ * Returns a description suffix when the provider has encountered an error,
+ * or `undefined` to leave the default description unchanged.
+ *
+ * NOTE: The sync state only carries failed provider IDs, not the error kind.
+ * A generic message is used so it remains accurate for auth, network, and
+ * schema failure types alike.
+ */
+export function failedDescription(providerID: string, failed: string[]): string | undefined {
+  if (!failed.includes(providerID)) return undefined
+  return "(connection error — click to reconnect)"
+}
+
+// ---------------------------------------------------------------------------
 // Provider priority (replaces upstream map entirely)
 // ---------------------------------------------------------------------------
 
@@ -36,6 +66,15 @@ export const PROVIDER_DESCRIPTIONS: Record<string, string> = {
 export const PROVIDER_TITLES: Record<string, string> = {
   openai: "OpenAI / Codex",
 }
+
+/** Local OpenAI-compatible providers where API key is optional (localhost). */
+export const LOCAL_OPTIONAL_API_KEY = new Set(["atomic-chat", "lmstudio"])
+
+export function isLocalOptionalApiKey(providerID: string) {
+  return LOCAL_OPTIONAL_API_KEY.has(providerID)
+}
+
+export const LOCAL_API_KEY_PLACEHOLDER = "local"
 
 // ---------------------------------------------------------------------------
 // Auto-method renderer
@@ -83,6 +122,13 @@ export function renderApiDescription(
   providerID: string,
   theme: { textMuted: RGBA; text: RGBA; primary: RGBA },
 ): (() => JSX.Element) | undefined {
+  if (providerID === "atomic-chat") {
+    return () => (
+      <text fg={theme.textMuted}>
+        Connect to Atomic Chat on this machine (default http://127.0.0.1:1337). Leave API key empty for local server.
+      </text>
+    )
+  }
   if (providerID !== "kilo") return undefined
   return () => (
     <box gap={1}>
@@ -94,4 +140,8 @@ export function renderApiDescription(
       </text>
     </box>
   )
+}
+
+export function apiKeyPlaceholder(providerID: string) {
+  return isLocalOptionalApiKey(providerID) ? "Optional for localhost" : "API key"
 }

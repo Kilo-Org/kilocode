@@ -3,11 +3,20 @@
 package ai.kilocode.client.app
 
 import ai.kilocode.rpc.KiloAppRpcApi
+import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
-import com.intellij.openapi.components.Service
+import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
+import ai.kilocode.rpc.dto.ModelSelectionDto
+import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
+import ai.kilocode.rpc.dto.ModelStateDto
+import ai.kilocode.rpc.dto.ModelVariantUpdateDto
+import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.log.KiloLog
+import com.intellij.openapi.components.Service
 import fleet.rpc.client.durable
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
@@ -45,6 +54,10 @@ class KiloAppService internal constructor(
 
     internal val _state = MutableStateFlow(init)
     val state: StateFlow<KiloAppStateDto> = _state.asStateFlow()
+    private val _models = MutableStateFlow(ModelStateDto())
+    val models: StateFlow<ModelStateDto> = _models.asStateFlow()
+    private val _favorites = MutableStateFlow<List<ModelSelectionDto>>(emptyList())
+    val favorites: StateFlow<List<ModelSelectionDto>> = _favorites.asStateFlow()
 
     // ------ RPC helper ------
 
@@ -60,9 +73,14 @@ class KiloAppService internal constructor(
         cs.launch { call { connect() } }
         cs.launch {
             val api = rpc
-            if (api != null) api.state().collect { _state.value = it }
-            else durable { KiloAppRpcApi.getInstance().state().collect { _state.value = it } }
+            if (api != null) api.state().collect { onState(it) }
+            else durable { KiloAppRpcApi.getInstance().state().collect { onState(it) } }
         }
+    }
+
+    private fun onState(state: KiloAppStateDto) {
+        _state.value = state
+        if (state.status == KiloAppStatusDto.READY) refreshModelFavoritesAsync()
     }
 
     /** One-shot health check. Returns null on failure. */
@@ -127,6 +145,153 @@ class KiloAppService internal constructor(
         }
     }
 
+    fun refreshModelFavoritesAsync() {
+        cs.launch {
+            try {
+                setModelState(call { modelState() })
+            } catch (e: Exception) {
+                LOG.warn("model favorites refresh failed", e)
+            }
+        }
+    }
+
+    fun toggleModelFavorite(providerID: String, modelID: String) {
+        val key = providerID to modelID
+        val prev = _favorites.value
+        val exists = prev.any { it.providerID to it.modelID == key }
+        val action = if (exists) "remove" else "add"
+        val next = if (exists) {
+            _models.value.copy(favorite = prev.filterNot { it.providerID to it.modelID == key })
+        } else {
+            _models.value.copy(favorite = listOf(ModelSelectionDto(providerID, modelID)) + prev)
+        }
+        setModelState(next)
+        cs.launch {
+            try {
+                setModelState(call { updateModelFavorite(ModelFavoriteUpdateDto(action, providerID, modelID)) })
+            } catch (e: Exception) {
+                LOG.warn("model favorite update failed", e)
+                setModelState(_models.value.copy(favorite = prev))
+            }
+        }
+    }
+
+    fun selectModel(agent: String, providerID: String, modelID: String) {
+        val prev = _models.value
+        setModelState(prev.copy(model = prev.model + (agent to ModelSelectionDto(providerID, modelID))))
+        cs.launch {
+            try {
+                setModelState(call { updateModelSelection(ModelSelectionUpdateDto(agent, providerID, modelID)) })
+            } catch (e: Exception) {
+                LOG.warn("model selection update failed", e)
+                setModelState(prev)
+            }
+        }
+    }
+
+    fun clearModel(agent: String) {
+        val prev = _models.value
+        setModelState(prev.copy(model = prev.model - agent))
+        cs.launch {
+            try {
+                setModelState(call { clearModelSelection(agent) })
+            } catch (e: Exception) {
+                LOG.warn("model selection clear failed", e)
+                setModelState(prev)
+            }
+        }
+    }
+
+    fun selectVariant(key: String, value: String) {
+        val prev = _models.value
+        setModelState(prev.copy(variant = prev.variant + (key to value)))
+        cs.launch {
+            try {
+                setModelState(call { updateModelVariant(ModelVariantUpdateDto(key, value)) })
+            } catch (e: Exception) {
+                LOG.warn("model variant update failed", e)
+                setModelState(prev)
+            }
+        }
+    }
+
+    suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto? = try {
+        LOG.info("config update: sending RPC ${summary(patch)}")
+        val next = call { updateConfig(patch) }
+        _state.value = next
+        LOG.info("config update: RPC completed ${summary(patch)}")
+        next
+    } catch (e: Exception) {
+        LOG.warn("config update failed ${summary(patch)}", e)
+        null
+    }
+
+    fun updateConfigAsync(
+        patch: ConfigPatchDto,
+        done: (KiloAppStateDto?) -> Unit,
+    ): Job = cs.launch {
+        val state = updateConfig(patch)
+        done(state)
+    }
+
+    private fun setModelState(state: ModelStateDto) {
+        _models.value = state
+        _favorites.value = state.favorite
+    }
+
+    /** Refresh the user profile and return the latest data. Null = not logged in. */
+    suspend fun refreshProfile(): ProfileDto? = try {
+        call { refreshProfile() }.also { setProfile(it) }
+    } catch (e: Exception) {
+        LOG.warn("profile refresh failed", e)
+        null
+    }
+
+    /** Refresh profile in fire-and-forget fashion from non-suspend context. */
+    fun refreshProfileAsync() {
+        cs.launch { refreshProfile() }
+    }
+
+    /**
+     * Start the Kilo device auth login flow.
+     * Returns [DeviceAuthDto] with the URL/code to display.
+     * Throws on failure.
+     */
+    suspend fun startLogin(directory: String? = null): DeviceAuthDto = call { startLogin(directory) }
+
+    /**
+     * Complete the login flow. Blocks until authentication finishes.
+     * Returns the user profile, or null if unavailable.
+     */
+    suspend fun completeLogin(directory: String? = null): ProfileDto? = try {
+        call { completeLogin(directory) }.also { setProfile(it) }
+    } catch (e: Exception) {
+        LOG.warn("login completion failed", e)
+        null
+    }
+
+    /** Log out and clear the user profile. */
+    suspend fun logout(): Boolean = try {
+        call { logout() }.also { ok ->
+            if (ok) setProfile(null)
+        }
+    } catch (e: Exception) {
+        LOG.warn("logout failed", e)
+        false
+    }
+
+    /**
+     * Switch active account context.
+     * Pass null for personal account, organization ID for org context.
+     * Returns the updated profile, or null if not logged in.
+     */
+    suspend fun setOrganization(organizationId: String?): ProfileDto? = try {
+        call { setOrganization(organizationId) }.also { setProfile(it) }
+    } catch (e: Exception) {
+        LOG.warn("organization switch failed", e)
+        null
+    }
+
     /**
      * Collect app state changes and invoke [fn] for each update.
      */
@@ -138,4 +303,17 @@ class KiloAppService internal constructor(
             }
         }
     }
+
+    private fun setProfile(profile: ProfileDto?) {
+        val current = _state.value
+        val progress = current.progress?.copy(
+            profile = if (profile == null) ProfileStatusDto.NOT_LOGGED_IN else ProfileStatusDto.LOADED,
+        )
+        _state.value = current.copy(profile = profile, progress = progress)
+    }
+}
+
+private fun summary(patch: ConfigPatchDto): String {
+    val values = patch.values.keys.sorted().joinToString(",").ifEmpty { "none" }
+    return "values=$values agents=${patch.agents.size}"
 }

@@ -201,6 +201,14 @@ describe("WorktreeStateManager sections", () => {
       expect(mgr.getWorktreeOrder()).toEqual([wt.id, b.id, a.id])
     })
 
+    it("keeps ungrouped worktrees above moved sections", () => {
+      const wt = mgr.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
+      const a = mgr.addSection("A", null)
+      mgr.setWorktreeOrder([a.id, wt.id])
+
+      expect(mgr.getWorktreeOrder()).toEqual([wt.id, a.id])
+    })
+
     it("is a no-op at boundaries", () => {
       const a = mgr.addSection("A", null)
       const b = mgr.addSection("B", null)
@@ -319,6 +327,21 @@ describe("WorktreeStateManager sections", () => {
       const loaded = new WorktreeStateManager(root, () => {})
       await loaded.load()
       expect(loaded.getWorktreeOrder()).toContain(wt.id)
+    })
+
+    it("normalizes ungrouped worktrees above sections on load", async () => {
+      const wt = mgr.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
+      const sec = mgr.addSection("S", null)
+      await mgr.flush()
+      await mgr.save()
+      const file = path.join(root, ".kilo", "agent-manager.json")
+      const data = JSON.parse(fs.readFileSync(file, "utf-8"))
+      data.worktreeOrder = [sec.id, wt.id]
+      fs.writeFileSync(file, JSON.stringify(data))
+
+      const loaded = new WorktreeStateManager(root, () => {})
+      await loaded.load()
+      expect(loaded.getWorktreeOrder()).toEqual([wt.id, sec.id])
     })
   })
 })

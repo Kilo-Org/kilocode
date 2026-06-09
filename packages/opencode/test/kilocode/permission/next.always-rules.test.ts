@@ -7,13 +7,19 @@ import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
 import { SessionID } from "../../../src/session/schema"
 import * as Config from "../../../src/config/config"
-import { Global } from "../../../src/global"
-import * as CrossSpawnSpawner from "../../../src/effect/cross-spawn-spawner"
+import { InstanceRuntime } from "../../../src/project/instance-runtime"
+import { Global } from "@opencode-ai/core/global"
+import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { provideTmpdirInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
 const bus = Bus.layer
-const env = Layer.mergeAll(Permission.layer.pipe(Layer.provide(bus)), bus, CrossSpawnSpawner.defaultLayer)
+const env = Layer.mergeAll(
+  Permission.layer.pipe(Layer.provide(bus), Layer.provide(Config.defaultLayer)),
+  Config.defaultLayer,
+  bus,
+  CrossSpawnSpawner.defaultLayer,
+)
 const it = testEffect(env)
 
 afterAll(async () => {
@@ -21,7 +27,10 @@ afterAll(async () => {
   for (const file of ["kilo.jsonc", "kilo.json", "config.json", "opencode.json", "opencode.jsonc"]) {
     await fs.rm(path.join(dir, file), { force: true }).catch(() => {})
   }
-  await Config.invalidate(true)
+  await Effect.runPromise(
+    Config.Service.use((svc) => svc.invalidate()).pipe(Effect.scoped, Effect.provide(Config.defaultLayer)),
+  )
+  await InstanceRuntime.disposeAllInstances()
 })
 
 const ask = (input: Parameters<Permission.Interface["ask"]>[0]) =>
@@ -305,6 +314,93 @@ describe("saveAlwaysRules", () => {
           ],
         })
         expect(result).toBeUndefined()
+      }),
+    ),
+  )
+
+  it.live("explicit external directory allows are not shadowed by ask plan broad denies", () =>
+    withDir({ git: true }, (dir) =>
+      Effect.gen(function* () {
+        const root = path.resolve(path.dirname(dir), "legacy")
+        const glob = path.join(root, "*")
+        const ruleset: Permission.Ruleset = [
+          { permission: "external_directory", pattern: "*", action: "ask" },
+          { permission: "external_directory", pattern: glob, action: "allow" },
+          { permission: "*", pattern: "*", action: "deny" },
+        ]
+
+        const result = yield* ask({
+          sessionID: SessionID.make("session_test"),
+          permission: "external_directory",
+          patterns: [glob],
+          metadata: { filepath: path.join(root, "main.ts"), parentDir: root },
+          always: [glob],
+          ruleset,
+          hardRuleset: ruleset,
+        })
+        expect(result).toBeUndefined()
+      }),
+    ),
+  )
+
+  it.live("saved external directory approvals survive ask plan hard rules", () =>
+    withDir({ git: true }, (dir) =>
+      Effect.gen(function* () {
+        const root = path.resolve(path.dirname(dir), "legacy")
+        const glob = path.join(root, "*")
+        const asking = yield* ask({
+          id: PermissionID.make("permission_external_seed"),
+          sessionID: SessionID.make("session_test"),
+          permission: "external_directory",
+          patterns: [glob],
+          metadata: { filepath: path.join(root, "main.ts"), parentDir: root },
+          always: [glob],
+          ruleset: [{ permission: "external_directory", pattern: "*", action: "ask" }],
+        }).pipe(Effect.forkScoped)
+
+        yield* waitForPending(1)
+        yield* reply({ requestID: PermissionID.make("permission_external_seed"), reply: "always" })
+        yield* Fiber.join(asking)
+
+        const result = yield* ask({
+          sessionID: SessionID.make("session_test"),
+          permission: "external_directory",
+          patterns: [glob],
+          metadata: { filepath: path.join(root, "main.ts"), parentDir: root },
+          always: [glob],
+          ruleset: [
+            { permission: "external_directory", pattern: "*", action: "ask" },
+            { permission: "*", pattern: "*", action: "deny" },
+          ],
+          hardRuleset: [{ permission: "*", pattern: "*", action: "deny" }],
+        })
+        expect(result).toBeUndefined()
+      }),
+    ),
+  )
+
+  it.live("explicit external directory denies still win over ask plan exceptions", () =>
+    withDir({ git: true }, (dir) =>
+      Effect.gen(function* () {
+        const root = path.resolve(path.dirname(dir), "legacy")
+        const glob = path.join(root, "*")
+        const exit = yield* ask({
+          sessionID: SessionID.make("session_test"),
+          permission: "external_directory",
+          patterns: [glob],
+          metadata: { filepath: path.join(root, "main.ts"), parentDir: root },
+          always: [glob],
+          ruleset: [
+            { permission: "external_directory", pattern: glob, action: "allow" },
+            { permission: "external_directory", pattern: glob, action: "deny" },
+            { permission: "*", pattern: "*", action: "deny" },
+          ],
+          hardRuleset: [
+            { permission: "*", pattern: "*", action: "deny" },
+            { permission: "external_directory", pattern: glob, action: "deny" },
+          ],
+        }).pipe(Effect.exit)
+        expectFailure(exit, Permission.DeniedError)
       }),
     ),
   )
@@ -646,7 +742,8 @@ describe("saveAlwaysRules", () => {
         yield* reply({ requestID: PermissionID.make("permission_saved_always"), reply: "always" })
         yield* Fiber.join(fiber)
 
-        const cfg = yield* Effect.promise(() => Config.get())
+        const config = yield* Config.Service
+        const cfg = yield* config.get()
         expect(cfg.permission?.bash).toMatchObject({ "kilo-permission-8353 test": "allow" })
         expect(cfg.permission?.bash).not.toMatchObject({ "kilo-permission-8353 *": "allow" })
 

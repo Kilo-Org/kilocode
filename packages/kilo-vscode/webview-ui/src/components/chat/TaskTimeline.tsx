@@ -12,8 +12,8 @@
  * updates bindings in place (unlike React). Even 1000+ bars are fine.
  */
 
-import { Component, Index, createMemo, createEffect, on, onCleanup } from "solid-js"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { Component, Index, Show, createMemo, createEffect, createSignal, on, onCleanup } from "solid-js"
+import { Portal } from "solid-js/web"
 import { useSession } from "../../context/session"
 import { color, label } from "../../utils/timeline/colors"
 import { sizes, MAX_HEIGHT } from "../../utils/timeline/sizes"
@@ -56,8 +56,10 @@ export const TaskTimeline: Component = () => {
   let dragging = false
   let startX = 0
   let startScroll = 0
+  let tipBar: HTMLElement | undefined
+  const [tip, setTip] = createSignal<{ text: string; x: number; y: number }>()
 
-  const messages = () => session.messages()
+  const messages = () => session.visibleMessages()
   const allParts = () => {
     const msgs = messages()
     const result: Record<string, Part[]> = {}
@@ -85,8 +87,31 @@ export const TaskTimeline: Component = () => {
     ),
   )
 
+  const hideTip = () => {
+    tipBar = undefined
+    setTip(undefined)
+  }
+
+  createEffect(on(bars, hideTip, { defer: true }))
+
+  const showTip = (e: PointerEvent) => {
+    if (dragging || !(e.target instanceof Element)) return
+    const bar = e.target.closest<HTMLElement>(".task-timeline-bar")
+    if (!bar || !ref?.contains(bar)) return hideTip()
+    if (bar === tipBar) return
+    const rect = bar.getBoundingClientRect()
+    tipBar = bar
+    const margin = Math.min(160, window.innerWidth / 2)
+    setTip({
+      text: bar.dataset.tip ?? "",
+      x: Math.max(margin, Math.min(window.innerWidth - margin, rect.left + rect.width / 2)),
+      y: rect.top,
+    })
+  }
+
   // ── Drag scroll ──────────────────────────────────────────────────
   const onPointerDown = (e: PointerEvent) => {
+    hideTip()
     if (!ref) return
     dragging = true
     startX = e.clientX
@@ -97,7 +122,7 @@ export const TaskTimeline: Component = () => {
   }
 
   const onPointerMove = (e: PointerEvent) => {
-    if (!dragging || !ref) return
+    if (!dragging || !ref) return showTip(e)
     ref.scrollLeft = startScroll - (e.clientX - startX)
   }
 
@@ -111,6 +136,7 @@ export const TaskTimeline: Component = () => {
 
   // ── Wheel → horizontal scroll ────────────────────────────────────
   const onWheel = (e: WheelEvent) => {
+    hideTip()
     if (!ref) return
     e.preventDefault()
     ref.scrollLeft += e.deltaY || e.deltaX
@@ -124,23 +150,27 @@ export const TaskTimeline: Component = () => {
   })
 
   return (
-    <div class="task-timeline-outer">
-      <div
-        ref={ref}
-        class="task-timeline"
-        style={{ height: `${MAX_HEIGHT}px` }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-      >
-        <Index each={bars()}>
-          {(bar) => {
-            const active = () => busy() && bar().idx === bars().length - 1
-            return (
-              <Tooltip value={bar().tip} placement="top">
+    <>
+      <div class="task-timeline-outer">
+        <div
+          ref={ref}
+          class="task-timeline"
+          style={{ height: `${MAX_HEIGHT}px` }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          onPointerLeave={hideTip}
+        >
+          <Index each={bars()}>
+            {(bar) => {
+              const active = () => busy() && bar().idx === bars().length - 1
+              return (
                 <div
                   class="task-timeline-bar"
+                  data-tip={bar().tip}
+                  role="img"
+                  aria-label={bar().tip}
                   style={{
                     width: `${bar().width}px`,
                     height: `${MAX_HEIGHT}px`,
@@ -157,11 +187,25 @@ export const TaskTimeline: Component = () => {
                     }}
                   />
                 </div>
-              </Tooltip>
-            )
-          }}
-        </Index>
+              )
+            }}
+          </Index>
+        </div>
       </div>
-    </div>
+      <Show when={tip()}>
+        {(current) => (
+          <Portal>
+            <div
+              data-component="tooltip"
+              class="task-timeline-tooltip"
+              role="tooltip"
+              style={{ left: `${current().x}px`, top: `${current().y}px` }}
+            >
+              {current().text}
+            </div>
+          </Portal>
+        )}
+      </Show>
+    </>
   )
 }

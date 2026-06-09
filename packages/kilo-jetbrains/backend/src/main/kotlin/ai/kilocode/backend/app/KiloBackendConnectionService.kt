@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,6 +45,7 @@ data class SseEvent(val type: String, val data: String)
  *
  * Uses two separate OkHttp clients mirroring the VS Code architecture:
  * - [apiClient]: no call/read timeout — used for the generated API client and SSE
+ * - app-load client: bounded timeout — used for startup REST calls
  * - [healthClient]: 3 s timeout — used only for `/global/health` polling
  *
  * The generated [DefaultApi] is configured with [apiClient] and exposed via [api]
@@ -59,8 +61,22 @@ class KiloConnectionService(
   private val cs: CoroutineScope,
   private val server: CliServer,
   private val onReconnect: () -> Unit,
-  private val log: KiloLog = KiloLog.create(KiloConnectionService::class.java),
+  private val log: KiloLog,
+  private val appLoadTimeoutMs: Long,
 ) {
+
+    constructor(
+      cs: CoroutineScope,
+      server: CliServer,
+      onReconnect: () -> Unit,
+    ) : this(cs, server, onReconnect, KiloLog.create(KiloConnectionService::class.java), 30_000L)
+
+    constructor(
+      cs: CoroutineScope,
+      server: CliServer,
+      onReconnect: () -> Unit,
+      log: KiloLog,
+    ) : this(cs, server, onReconnect, log, 30_000L)
 
     companion object {
         private const val HEARTBEAT_TIMEOUT_MS = 15_000L
@@ -73,6 +89,11 @@ class KiloConnectionService(
 
     private val _events = MutableSharedFlow<SseEvent>(extraBufferCapacity = 64)
     val events: SharedFlow<SseEvent> = _events.asSharedFlow()
+    private val queue = Channel<SseEvent>(Channel.UNLIMITED)
+    private val lock = Any()
+    private val eventJob = cs.launch {
+        for (event in queue) _events.emit(event)
+    }
 
     /** Generated API client — null when disconnected. */
     var api: DefaultApi? = null
@@ -81,6 +102,9 @@ class KiloConnectionService(
     /** OkHttp client used for API calls — no call/read timeout. Null when disconnected. */
     var apiClient: OkHttpClient? = null
         private set
+    var appLoadApi: DefaultApi? = null
+        private set
+    private var appLoadClient: OkHttpClient? = null
     private var healthClient: OkHttpClient? = null
     /** Port the CLI server is listening on. Zero when disconnected. */
     var port = 0
@@ -175,12 +199,15 @@ class KiloConnectionService(
 
         // Create dual OkHttp clients (bundled — no IntelliJ platform deps)
         val ac = KiloBackendHttpClients.api(password)
+        val lc = KiloBackendHttpClients.appLoad(password, appLoadTimeoutMs)
         val hc = KiloBackendHttpClients.health(password)
         apiClient = ac
+        appLoadClient = lc
         healthClient = hc
 
         // Configure generated API client with the no-timeout api client
         api = DefaultApi(basePath = "http://127.0.0.1:$port", client = ac)
+        appLoadApi = DefaultApi(basePath = "http://127.0.0.1:$port", client = lc)
 
         startSse()
         startHeartbeatWatcher()
@@ -212,24 +239,34 @@ class KiloConnectionService(
 
     private val listener = object : EventSourceListener() {
         override fun onOpen(src: EventSource, response: Response) {
+            if (source.get() !== src) return
             log.info("SSE: connected")
             setState(ConnectionState.Connected(port, password))
             lastEvent.set(System.currentTimeMillis())
         }
 
         override fun onEvent(src: EventSource, id: String?, type: String?, data: String) {
-            lastEvent.set(System.currentTimeMillis())
-            val kind = type ?: KiloCliDataParser.extractEventType(data)
-            log.debug { "evt=$kind bytes=${data.length} hasId=${id != null} ${ChatLogSummary.body(data)}" }
-            cs.launch { _events.emit(SseEvent(type = kind, data = data)) }
+            if (source.get() !== src) return
+            synchronized(lock) {
+                if (disposed) return@synchronized
+                lastEvent.set(System.currentTimeMillis())
+                val kind = type ?: KiloCliDataParser.extractEventType(data)
+                log.debug { "evt=$kind bytes=${data.length} hasId=${id != null} ${ChatLogSummary.body(data)}" }
+                val result = queue.trySend(SseEvent(type = kind, data = data))
+                if (result.isFailure && !disposed) {
+                    log.warn("SSE: event queue rejected type=$kind", result.exceptionOrNull())
+                }
+            }
         }
 
         override fun onClosed(src: EventSource) {
+            if (source.get() !== src) return
             log.info("SSE: stream closed — scheduling reconnect")
             scheduleReconnect()
         }
 
         override fun onFailure(src: EventSource, t: Throwable?, response: Response?) {
+            if (source.get() !== src) return
             val detail = when {
                 t != null -> t.stackTraceToString()
                 response != null -> response.body?.string()
@@ -327,8 +364,11 @@ class KiloConnectionService(
 
     private fun close() {
         api = null
+        appLoadApi = null
         apiClient?.let { KiloBackendHttpClients.shutdown(it) }
         apiClient = null
+        appLoadClient?.let { KiloBackendHttpClients.shutdown(it) }
+        appLoadClient = null
         healthClient?.let { KiloBackendHttpClients.shutdown(it) }
         healthClient = null
     }
@@ -345,6 +385,8 @@ class KiloConnectionService(
         healthJob?.cancel()
         processJob?.cancel()
         reconnectJob?.cancel()
+        eventJob.cancel()
+        queue.close()
         close()
         _state.value = ConnectionState.Disconnected
         log.info("KiloConnectionService disposed")

@@ -28,7 +28,7 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         super.setUp()
         parent = Disposer.newDisposable("test")
         model = SessionModel()
-        panel = SessionMessageListPanel(model, parent)
+        panel = SessionMessageListPanel(model, parent, openFile = {})
     }
 
     override fun tearDown() {
@@ -84,7 +84,15 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         model.updateContent("a1", toolPart("t1", "a1", "bash", "completed"))
 
         val tv = panel.findMessage("a1")!!.part("t1") as ai.kilocode.client.session.views.ToolView
-        assertTrue(tv.labelText().contains("\u2713"))  // ✓ completed
+        assertFalse(tv.labelText().contains("Running"))
+    }
+
+    fun `test read tool renders as ReadToolView`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", toolPart("t1", "a1", "read", "completed"))
+
+        val tv = panel.findMessage("a1")!!.part("t1")
+        assertTrue(tv is ai.kilocode.client.session.views.ReadToolView)
     }
 
     // ------ multiple turns update correctly ------
@@ -125,13 +133,14 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         val mv = panel.findMessage("a1")!!
         val gv = mv.part("g1")
         assertNotNull(gv)
-        assertTrue(gv is ai.kilocode.client.session.views.GenericView)
-        assertTrue((gv as ai.kilocode.client.session.views.GenericView).labelText().contains("snapshot"))
+        assertTrue(gv is ai.kilocode.client.session.views.base.GenericView)
+        assertTrue((gv as ai.kilocode.client.session.views.base.GenericView).labelText().contains("snapshot"))
+        assertNull(gv.border)
     }
 
     // ------ silent part types ------
 
-    fun `test step-start part is not rendered in panel`() {
+    fun `test step markers are not rendered in panel`() {
         model.upsertMessage(msg("a1", "assistant"))
         model.updateContent("a1", PartDto("g1", "ses", "a1", "step-start"))
         model.updateContent("a1", PartDto("g2", "ses", "a1", "step-finish"))

@@ -1,5 +1,4 @@
 import * as vscode from "vscode"
-import { buildSettingPath } from "../kilo-provider-utils"
 import type { WorkStyleSettings, WorkStyleState } from "../shared/work-style-presets"
 
 export const WORK_STYLE_KEY = "kilo.agentWorkStyle.onboardingShown"
@@ -21,9 +20,6 @@ export function getWorkStylePayload(context?: vscode.ExtensionContext) {
     type: "workStyleLoaded" as const,
     style: config.get<WorkStyleState>("agentWorkStyle", "unset"),
     onboardingShown: context?.globalState.get<boolean>(WORK_STYLE_KEY, false) ?? false,
-    settings: {
-      showTaskTimeline: config.get<boolean>("showTaskTimeline", true),
-    },
     defaults,
   }
 }
@@ -42,18 +38,6 @@ export async function setWorkStyle(input: {
     .getConfiguration("kilo-code.new")
     .update("agentWorkStyle", input.style, vscode.ConfigurationTarget.Global)
   if (input.source === "onboarding" || input.shown) await input.context?.globalState.update(WORK_STYLE_KEY, input.shown)
-}
-
-export async function updateSetting(input: {
-  context?: vscode.ExtensionContext
-  key: string
-  value: unknown
-  post: (message: unknown) => void
-}) {
-  const { section, leaf } = buildSettingPath(input.key)
-  const config = vscode.workspace.getConfiguration(`kilo-code.new${section ? `.${section}` : ""}`)
-  await config.update(leaf, input.value, vscode.ConfigurationTarget.Global)
-  if (isWorkStyleSetting(input.key)) input.post(getWorkStylePayload(input.context))
 }
 
 export async function handleWorkStyleMessage(input: {

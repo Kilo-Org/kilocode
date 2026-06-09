@@ -1,15 +1,85 @@
 // kilocode_change - new file
-import { Telemetry } from "@kilocode/kilo-telemetry"
+import { Telemetry, type ReviewCommand } from "@kilocode/kilo-telemetry"
 import { SessionNetwork } from "@/session/network"
 import type { SessionID } from "@/session/schema"
 import type { SessionStatus } from "@/session/status"
-import type { MessageV2 } from "@/session/message-v2"
-import { Log } from "@/util"
+import { MessageV2 } from "@/session/message-v2"
+import { isRecord } from "@/util/record"
+import { isReviewCommand, parseReviewCommand } from "@/kilocode/review/command"
+import * as Log from "@opencode-ai/core/util/log"
 import { Effect } from "effect"
-import { Flag } from "@/flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { EffectBridge } from "@/effect/bridge"
+
+export type ReviewTelemetry = {
+  mode: "review"
+  feature: "code_reviews"
+  command: ReviewCommand
+  tool?: "suggest"
+}
 
 export namespace KiloSessionProcessor {
   const log = Log.create({ service: "session.processor.kilo" })
+  export const OUTPUT_LENGTH_WARNING = "The model hit its output limit, so this response may be incomplete."
+  export const REASONING_LENGTH_WARNING =
+    "The model hit its output limit while reasoning and produced no actionable output. Try disabling reasoning or increasing the output limit."
+  export const PROVIDER_FINISH_ERROR_MESSAGE =
+    "The provider ended the response with an error before returning details. Start a new message to retry; Kilo will compact the oversized conversation first if needed."
+
+  export function reviewTelemetry(command: string | undefined): ReviewTelemetry | undefined {
+    if (!isReviewCommand(command)) return
+    return { mode: "review", feature: "code_reviews", command }
+  }
+
+  /**
+   * Tag the text parts of a prompt with review telemetry metadata so that
+   * downstream LLM completions in the same turn (including child sessions
+   * spawned by subtask commands) are attributed to the originating review
+   * command. No-op when the command is not a recognized review command.
+   */
+  export function markReviewTelemetry(
+    parts: Array<{ type: string; metadata?: Record<string, unknown> }>,
+    command: string | undefined,
+  ): ReviewTelemetry | undefined {
+    const tel = reviewTelemetry(command)
+    if (!tel) return
+    for (const part of parts) {
+      if (part.type !== "text") continue
+      part.metadata = { ...part.metadata, ...tel }
+    }
+    return tel
+  }
+
+  export function extractReviewTelemetry(parts: MessageV2.Part[]): ReviewTelemetry | undefined {
+    for (const part of parts) {
+      if (part.type !== "text") continue
+      const meta: Record<string, unknown> | undefined = part.metadata
+      if (!meta) continue
+      if (meta.mode !== "review") continue
+      if (meta.feature !== "code_reviews") continue
+      const tel = reviewTelemetry(typeof meta.command === "string" ? meta.command : undefined)
+      if (tel) return tel
+    }
+  }
+
+  export function suggestionReviewTelemetry(metadata: unknown): ReviewTelemetry | undefined {
+    if (!isRecord(metadata)) return
+    if (!isRecord(metadata.accepted)) return
+    const prompt = typeof metadata.accepted.prompt === "string" ? metadata.accepted.prompt : undefined
+    const tel = reviewTelemetry(parseReviewCommand(prompt))
+    if (!tel) return
+    return { ...tel, tool: "suggest" }
+  }
+
+  export function extractSuggestionReviewTelemetry(parts: MessageV2.Part[]): ReviewTelemetry | undefined {
+    for (const part of parts) {
+      if (part.type !== "tool") continue
+      if (part.tool !== "suggest") continue
+      if (part.state.status !== "completed") continue
+      const tel = suggestionReviewTelemetry(part.state.metadata)
+      if (tel) return tel
+    }
+  }
 
   /**
    * Track LLM completion telemetry for a finished step.
@@ -21,11 +91,13 @@ export namespace KiloSessionProcessor {
     tokens: { input: number; output: number; cache: { read: number; write: number } }
     cost: number
     elapsed: number
+    telemetry?: ReviewTelemetry
   }) {
     const { tokens } = input
     if (tokens.input > 0 || tokens.output > 0 || tokens.cache.write > 0 || tokens.cache.read > 0) {
       Telemetry.trackLlmCompletion({
         taskId: input.sessionID,
+        ...(input.telemetry ?? {}),
         apiProvider: input.model.providerID,
         modelId: input.model.id,
         inputTokens: tokens.input,
@@ -56,7 +128,7 @@ export namespace KiloSessionProcessor {
     return Effect.gen(function* () {
       const msg = SessionNetwork.message(input.error)
 
-      const { id, promise } = yield* Effect.promise(() =>
+      const { id, promise } = yield* EffectBridge.fromPromise(() =>
         SessionNetwork.ask({
           sessionID: input.sessionID,
           message: msg,
@@ -121,5 +193,31 @@ export namespace KiloSessionProcessor {
       log.warn("empty tool-calls", { messageID: msg.id })
       msg.finish = "stop"
     }
+  }
+
+  export function lengthWarning(input: {
+    msg: MessageV2.Assistant
+    step: { reasoning: boolean; text: boolean; tool: boolean }
+  }) {
+    if (input.msg.summary) return
+    if (input.msg.finish !== "length") return
+    if (input.step.reasoning && !input.step.text && !input.step.tool) {
+      log.warn("reasoning-only length stop", { messageID: input.msg.id })
+      return REASONING_LENGTH_WARNING
+    }
+    log.warn("length stop", { messageID: input.msg.id })
+    return OUTPUT_LENGTH_WARNING
+  }
+
+  export function providerFinishError(msg: MessageV2.Assistant) {
+    if (msg.finish !== "error") return false
+    if (msg.error) return false
+    const err = new MessageV2.APIError({
+      message: PROVIDER_FINISH_ERROR_MESSAGE,
+      isRetryable: true,
+    }).toObject()
+    msg.error = err
+    log.warn("provider finish error", { messageID: msg.id })
+    return err
   }
 }

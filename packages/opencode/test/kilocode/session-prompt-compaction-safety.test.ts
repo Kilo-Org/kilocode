@@ -9,20 +9,23 @@ import { FetchHttpClient } from "effect/unstable/http"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Command } from "../../src/command"
-import { Config } from "../../src/config"
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
+import { Config } from "../../src/config/config"
+import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Env } from "../../src/env"
 import { Ripgrep } from "../../src/file/ripgrep"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Format } from "../../src/format"
-import { LSP } from "../../src/lsp"
+import { Git } from "../../src/git"
+import { Image } from "../../src/image/image"
+import { LSP } from "../../src/lsp/lsp"
 import { MCP } from "../../src/mcp"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
-import { Provider as ProviderSvc } from "../../src/provider"
+import { Provider as ProviderSvc } from "../../src/provider/provider"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Question } from "../../src/question"
-import { Session } from "../../src/session"
+import { Reference } from "../../src/reference/reference"
+import { Session } from "../../src/session/session"
 import { SessionCompaction } from "../../src/session/compaction"
 import { Instruction } from "../../src/session/instruction"
 import { LLM } from "../../src/session/llm"
@@ -38,8 +41,10 @@ import { SessionSummary } from "../../src/session/summary"
 import { Todo } from "../../src/session/todo"
 import { Skill } from "../../src/skill"
 import { Snapshot } from "../../src/snapshot"
-import { ToolRegistry, Truncate } from "../../src/tool"
-import { Log } from "../../src/util"
+import { SyncEvent } from "../../src/sync"
+import { ToolRegistry } from "../../src/tool/registry"
+import { Truncate } from "../../src/tool/truncate"
+import * as Log from "@opencode-ai/core/util/log"
 import { provideTmpdirServer } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { TestLLMServer } from "../lib/llm-server"
@@ -128,6 +133,7 @@ function makeHttp() {
     lsp,
     mcp,
     AppFileSystem.defaultLayer,
+    SyncEvent.defaultLayer,
     status,
   ).pipe(Layer.provideMerge(infra))
   const question = Question.layer.pipe(Layer.provideMerge(deps))
@@ -138,23 +144,31 @@ function makeHttp() {
     Layer.provide(CrossSpawnSpawner.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Format.defaultLayer),
+    Layer.provide(Git.defaultLayer),
+    Layer.provide(Reference.defaultLayer),
     Layer.provideMerge(todo),
     Layer.provideMerge(question),
     Layer.provideMerge(deps),
   )
   const trunc = Truncate.layer.pipe(Layer.provideMerge(deps))
-  const proc = SessionProcessor.layer.pipe(Layer.provide(summary), Layer.provideMerge(deps))
+  const proc = SessionProcessor.layer.pipe(
+    Layer.provide(summary),
+    Layer.provide(Image.defaultLayer),
+    Layer.provideMerge(deps),
+  )
   const compact = SessionCompaction.layer.pipe(Layer.provideMerge(proc), Layer.provideMerge(deps))
   return Layer.mergeAll(
     TestLLMServer.layer,
     SessionPrompt.layer.pipe(
       Layer.provide(SessionRevert.defaultLayer),
+      Layer.provide(Image.defaultLayer),
       Layer.provide(summary),
       Layer.provideMerge(run),
       Layer.provideMerge(compact),
       Layer.provideMerge(proc),
       Layer.provideMerge(registry),
       Layer.provideMerge(trunc),
+      Layer.provideMerge(question),
       Layer.provide(Instruction.defaultLayer),
       Layer.provide(SystemPrompt.defaultLayer),
       Layer.provideMerge(deps),
@@ -269,6 +283,24 @@ const assistant = Effect.fn("prompt-safety.assistant")(function* (
   return msg
 })
 
+const dangling = Effect.fn("prompt-safety.dangling")(function* (sessionID: SessionID, parentID: MessageID) {
+  const sessions = yield* Session.Service
+  return yield* sessions.updateMessage({
+    id: MessageID.ascending(),
+    role: "assistant",
+    parentID,
+    sessionID,
+    mode: "build",
+    agent: "build",
+    path: { cwd: "/tmp", root: "/tmp" },
+    cost: 0,
+    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+    modelID: ref.modelID,
+    providerID: ref.providerID,
+    time: { created: Date.now() },
+  } satisfies MessageV2.Assistant)
+})
+
 const file = Effect.fn("prompt-safety.file")(function* (
   sessionID: SessionID,
   messageID: MessageID,
@@ -287,6 +319,50 @@ const file = Effect.fn("prompt-safety.file")(function* (
 })
 
 describe("SessionPrompt compaction safety", () => {
+  it.live("compacts estimated outgoing context before the provider request", () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({
+          title: "Preflight compaction",
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        })
+
+        const old = yield* user(chat.id, "x".repeat(240_000))
+        yield* assistant(chat.id, old.id, { text: "old answer" })
+        const current = yield* user(chat.id, "continue")
+        yield* file(chat.id, current.id, { mime: "image/png", name: "current.png", body: "CURRENTIMAGE" })
+        yield* llm.text("compacted history")
+        yield* llm.text("final answer")
+
+        const result = yield* prompt.loop({ sessionID: chat.id })
+
+        expect(yield* llm.calls).toBe(2)
+        expect(result.parts.some((part) => part.type === "text" && part.text === "final answer")).toBe(true)
+        const inputs = yield* llm.inputs
+        expect(JSON.stringify(inputs.at(-1)?.messages)).toContain("CURRENTIMAGE")
+        const msgs = yield* sessions.messages({ sessionID: chat.id })
+        expect(msgs.some((msg) => msg.info.role === "assistant" && msg.info.summary === true)).toBe(true)
+        const marker = msgs.flatMap((msg) => msg.parts).find((part) => part.type === "compaction")
+        expect(marker?.type).toBe("compaction")
+        if (marker?.type === "compaction") expect(marker.overflow).toBe(false)
+      }),
+      {
+        git: true,
+        config: (url) => ({
+          ...providerCfg(url),
+          compaction: {
+            auto: true,
+            threshold_percent: 70,
+            tail_turns: 0,
+            preserve_recent_tokens: 0,
+          },
+        }),
+      },
+    ),
+  )
+
   it.live("trims plain-text summary history before provider request", () =>
     provideTmpdirServer(
       Effect.fnUntraced(function* ({ llm }) {
@@ -383,6 +459,96 @@ describe("SessionPrompt compaction safety", () => {
         expect(body).toContain("src/app.ts")
         expect(body).not.toContain("OLDIMAGE")
         expect(body).not.toContain("[Attached image/png: current.png]")
+      }),
+      { git: true, config: providerCfg },
+    ),
+  )
+})
+
+describe("SessionPrompt recovery", () => {
+  it.live("recovers from a dangling assistant row before replying", () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: "Prompt tail recovery" })
+        const first = yield* user(chat.id, "Before the crash")
+        const stale = yield* dangling(chat.id, first.id)
+
+        yield* llm.text("recovered")
+
+        const result = yield* prompt.prompt({
+          sessionID: chat.id,
+          agent: "build",
+          parts: [{ type: "text", text: "Continue after the dangling assistant" }],
+        })
+
+        expect(result.info.role).toBe("assistant")
+        expect(result.info.id).not.toBe(stale.id)
+        expect(result.parts.some((part) => part.type === "text" && part.text === "recovered")).toBe(true)
+        expect(yield* llm.calls).toBe(1)
+
+        const msgs = yield* sessions.messages({ sessionID: chat.id })
+        const empty = msgs.filter(
+          (msg) => msg.info.role === "assistant" && msg.parts.length === 0 && !msg.info.finish && !msg.info.error,
+        )
+        expect(empty).toHaveLength(0)
+        expect(msgs.some((msg) => msg.info.id === stale.id)).toBe(false)
+      }),
+      { git: true, config: providerCfg },
+    ),
+  )
+
+  it.live("recovers from persisted provider finish errors before replying", () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: "Provider finish error recovery" })
+        const first = yield* user(chat.id, "before provider finish error")
+        const stale = yield* sessions.updateMessage({
+          id: MessageID.ascending(),
+          role: "assistant",
+          parentID: first.id,
+          sessionID: chat.id,
+          mode: "code",
+          agent: "code",
+          path: { cwd: "/tmp", root: "/tmp" },
+          cost: 0,
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          modelID: ref.modelID,
+          providerID: ref.providerID,
+          time: { created: Date.now() },
+          finish: "error",
+        } satisfies MessageV2.Assistant)
+        yield* sessions.updatePart({
+          id: PartID.ascending(),
+          messageID: stale.id,
+          sessionID: chat.id,
+          type: "step-start",
+        } satisfies MessageV2.StepStartPart)
+        yield* sessions.updatePart({
+          id: PartID.ascending(),
+          messageID: stale.id,
+          sessionID: chat.id,
+          type: "step-finish",
+          reason: "error",
+          cost: 0,
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        } satisfies MessageV2.StepFinishPart)
+        yield* llm.text("recovered")
+
+        const result = yield* prompt.prompt({
+          sessionID: chat.id,
+          agent: "code",
+          parts: [{ type: "text", text: "continue after provider finish error" }],
+        })
+
+        expect(result.info.role).toBe("assistant")
+        expect(result.info.id).not.toBe(stale.id)
+        expect(result.parts.some((part) => part.type === "text" && part.text === "recovered")).toBe(true)
+        const msgs = yield* sessions.messages({ sessionID: chat.id })
+        expect(msgs.some((msg) => msg.info.id === stale.id)).toBe(false)
       }),
       { git: true, config: providerCfg },
     ),

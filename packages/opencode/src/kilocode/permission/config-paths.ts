@@ -1,5 +1,5 @@
 import path from "path"
-import { Global } from "@/global"
+import { Global } from "@opencode-ai/core/global"
 import { KilocodePaths } from "@/kilocode/paths"
 
 export namespace ConfigProtection {

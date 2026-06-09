@@ -3,12 +3,14 @@ package ai.kilocode.client.session.ui
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.layout.StackAxis
 import com.intellij.openapi.Disposable
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.components.JBLabel
-import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.UIUtil
-import java.awt.FlowLayout
 
 /**
  * Progress footer rendered at the bottom of the session transcript while the
@@ -16,7 +18,7 @@ import java.awt.FlowLayout
  *
  * Reacts to [SessionModelEvent.StateChanged]:
  * - [SessionState.Busy] → shows an animated spinner and [SessionState.Busy.text]
- * - Any other state → hidden
+ * - Any other state -> hidden
  *
  * Owned by [SessionMessageListPanel], which always re-anchors it as the last child so it
  * appears below all turn views inside the scroll pane.
@@ -24,21 +26,19 @@ import java.awt.FlowLayout
 class ProgressPanel(
     model: SessionModel,
     parent: Disposable,
-) : SessionLayoutPanel() {
+) : Stack(StackAxis.HORIZONTAL, UiStyle.Gap.md()), SessionEditorStyleTarget {
 
     private val label = JBLabel().apply {
-        foreground = UIUtil.getContextHelpForeground()
-        font = JBUI.Fonts.label()
+        foreground = UiStyle.Colors.weak()
     }
 
     init {
         isOpaque = false
         isVisible = false
-        layout = FlowLayout(FlowLayout.LEFT, JBUI.scale(6), 0)
-        border = JBUI.Borders.empty(JBUI.scale(6), 0, JBUI.scale(4), 0)
+        applyStyle(SessionEditorStyle.current())
 
-        add(JBLabel(AnimatedIcon.Default()))
-        add(label)
+        next(JBLabel(AnimatedIcon.Default()))
+        next(label)
 
         model.addListener(parent) { event ->
             if (event is SessionModelEvent.StateChanged) onState(event.state)
@@ -52,10 +52,18 @@ class ProgressPanel(
         when (state) {
             is SessionState.Busy -> {
                 label.text = state.text
+                label.foreground = UiStyle.Colors.weak()
                 isVisible = true
             }
+            is SessionState.Loading -> isVisible = false
             else -> isVisible = false
         }
+        revalidate()
+        repaint()
+    }
+
+    override fun applyStyle(style: SessionEditorStyle) {
+        label.font = style.regularFont
         revalidate()
         repaint()
     }

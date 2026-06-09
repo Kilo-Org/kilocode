@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test"
 import {
   fetchAndSendPendingPermissions,
+  handlePermissionResponse,
   recoverablePermissions,
   recoveryDirs,
   type RecoverablePermission,
@@ -20,7 +21,12 @@ function pending(id: string, sessionID: string, permission = "bash"): Recoverabl
   }
 }
 
-function permissionClient(permsPerDir: Record<string, ReturnType<typeof pending>[]>, queries: string[]) {
+function permissionClient(
+  permsPerDir: Record<string, ReturnType<typeof pending>[]>,
+  queries: string[],
+  saves: unknown[] = [],
+  replies: unknown[] = [],
+) {
   return {
     permission: {
       list: async (args?: { directory?: string }) => {
@@ -28,8 +34,14 @@ function permissionClient(permsPerDir: Record<string, ReturnType<typeof pending>
         queries.push(dir)
         return { data: permsPerDir[dir] ?? [] }
       },
-      saveAlwaysRules: async () => ({ data: true }),
-      reply: async () => ({ data: true }),
+      saveAlwaysRules: async (args: unknown) => {
+        saves.push(args)
+        return { data: true }
+      },
+      reply: async (args: unknown) => {
+        replies.push(args)
+        return { data: true }
+      },
     },
   }
 }
@@ -37,8 +49,10 @@ function permissionClient(permsPerDir: Record<string, ReturnType<typeof pending>
 function client(
   permsPerDir: Record<string, ReturnType<typeof pending>[]>,
   queries: string[],
+  saves: unknown[] = [],
+  replies: unknown[] = [],
 ): PermissionContext["client"] {
-  return permissionClient(permsPerDir, queries) as unknown as PermissionContext["client"]
+  return permissionClient(permsPerDir, queries, saves, replies) as unknown as PermissionContext["client"]
 }
 
 function ctx(opts: {
@@ -49,8 +63,10 @@ function ctx(opts: {
 }) {
   const messages: unknown[] = []
   const queries: string[] = []
+  const saves: unknown[] = []
+  const replies: unknown[] = []
   const perms = opts.permsPerDir ?? {}
-  const sdk = client(perms, queries)
+  const sdk = client(perms, queries, saves, replies)
 
   const permDirs = new Map<string, string>()
   const fake: PermissionContext = {
@@ -72,7 +88,7 @@ function ctx(opts: {
     },
   }
 
-  return { fake, messages, queries, permDirs }
+  return { fake, messages, queries, saves, replies, permDirs }
 }
 
 describe("recoveryDirs", () => {
@@ -91,6 +107,34 @@ describe("recoveryDirs", () => {
       "/workspace/.kilo/worktrees/alpha",
       "/workspace/.kilo/worktrees/beta",
     ])
+  })
+})
+
+describe("handlePermissionResponse", () => {
+  it("uses the recorded SSE directory instead of a stale session fallback", async () => {
+    const { fake, replies, permDirs } = ctx({ tracked: ["s1"] })
+    permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
+
+    await handlePermissionResponse(fake, "p1", "s1", "once", [], [])
+
+    expect(replies).toEqual([{ requestID: "p1", reply: "once", directory: "/workspace/.kilo/worktrees/feature" }])
+  })
+
+  it("saves selected rules and replies in the recorded SSE directory", async () => {
+    const { fake, saves, replies, permDirs } = ctx({ tracked: ["s1"] })
+    permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
+
+    await handlePermissionResponse(fake, "p1", "s1", "reject", ["bun *"], ["rm *"])
+
+    expect(saves).toEqual([
+      {
+        requestID: "p1",
+        directory: "/workspace/.kilo/worktrees/feature",
+        approvedAlways: ["bun *"],
+        deniedAlways: ["rm *"],
+      },
+    ])
+    expect(replies).toEqual([{ requestID: "p1", reply: "reject", directory: "/workspace/.kilo/worktrees/feature" }])
   })
 })
 

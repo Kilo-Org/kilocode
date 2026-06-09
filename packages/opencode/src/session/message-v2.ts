@@ -1,26 +1,35 @@
 import { BusEvent } from "@/bus/bus-event"
 import { SessionID, MessageID, PartID } from "./schema"
 import z from "zod"
-import { NamedError } from "@opencode-ai/shared/util/error"
+import { NamedError } from "@opencode-ai/core/util/error"
 import { APICallError, convertToModelMessages, LoadAPIKeyError, type ModelMessage, type UIMessage } from "ai"
-import { LSP } from "../lsp"
+import { LSP } from "@/lsp/lsp"
 import { Snapshot } from "@/snapshot"
 import { SyncEvent } from "../sync"
-import { Database, NotFoundError, and, desc, eq, inArray, lt, or } from "@/storage"
+import { Database } from "@/storage/db"
+import { NotFoundError } from "@/storage/storage"
+import { and } from "drizzle-orm"
+import { desc } from "drizzle-orm"
+import { eq } from "drizzle-orm"
+import { inArray } from "drizzle-orm"
+import { lt } from "drizzle-orm"
+import { or } from "drizzle-orm"
 import { MessageTable, PartTable, SessionTable } from "./session.sql"
-import { ProviderError } from "@/provider"
+import * as ProviderError from "@/provider/error"
 import { iife } from "@/util/iife"
 import { errorMessage } from "@/util/error"
 import { isMedia } from "@/util/media"
 import type { SystemError } from "bun"
-import type { Provider } from "@/provider"
+import type { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "@/provider/schema"
 import { SessionNetwork } from "./network" // kilocode_change
+import { CodexAuthExpiredError } from "@/kilocode/provider/codex-refresh" // kilocode_change
+import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { Effect, Schema, Types } from "effect"
-import { zod, ZodOverride } from "@/util/effect-zod"
-import { NonNegativeInt, withStatics } from "@/util/schema"
+import { zod, ZodOverride } from "@opencode-ai/core/effect-zod"
+import { NonNegativeInt, withStatics } from "@opencode-ai/core/schema"
 import { namedSchemaError } from "@/util/named-schema-error"
-import { EffectLogger } from "@/effect"
+import * as EffectLogger from "@opencode-ai/core/effect/logger"
 
 /** Error shape thrown by Bun's fetch() when gzip/br decompression fails mid-stream */
 interface FetchDecompressionError extends Error {
@@ -29,14 +38,14 @@ interface FetchDecompressionError extends Error {
   path: string
 }
 
-export const SYNTHETIC_ATTACHMENT_PROMPT = "Attached image(s) from tool result:"
+export const SYNTHETIC_ATTACHMENT_PROMPT = "Attached media from tool result:"
 export { isMedia }
 
 export const OutputLengthError = namedSchemaError("MessageOutputLengthError", {})
 export const AbortedError = namedSchemaError("MessageAbortedError", { message: Schema.String })
 export const StructuredOutputError = namedSchemaError("StructuredOutputError", {
   message: Schema.String,
-  retries: Schema.Number,
+  retries: NonNegativeInt,
 })
 export const AuthError = namedSchemaError("ProviderAuthError", {
   providerID: Schema.String,
@@ -44,7 +53,7 @@ export const AuthError = namedSchemaError("ProviderAuthError", {
 })
 export const APIError = namedSchemaError("APIError", {
   message: Schema.String,
-  statusCode: Schema.optional(Schema.Number),
+  statusCode: Schema.optional(NonNegativeInt),
   isRetryable: Schema.Boolean,
   responseHeaders: Schema.optional(Schema.Record(Schema.String, Schema.String)),
   responseBody: Schema.optional(Schema.String),
@@ -110,8 +119,8 @@ export const TextPart = Schema.Struct({
   ignored: Schema.optional(Schema.Boolean),
   time: Schema.optional(
     Schema.Struct({
-      start: Schema.Number,
-      end: Schema.optional(Schema.Number),
+      start: NonNegativeInt,
+      end: Schema.optional(NonNegativeInt),
     }),
   ),
   metadata: Schema.optional(Schema.Record(Schema.String, Schema.Any)),
@@ -126,8 +135,8 @@ export const ReasoningPart = Schema.Struct({
   text: Schema.String,
   metadata: Schema.optional(Schema.Record(Schema.String, Schema.Any)),
   time: Schema.Struct({
-    start: Schema.Number,
-    end: Schema.optional(Schema.Number),
+    start: NonNegativeInt,
+    end: Schema.optional(NonNegativeInt),
   }),
 })
   .annotate({ identifier: "ReasoningPart" })
@@ -137,8 +146,8 @@ export type ReasoningPart = Types.DeepMutable<Schema.Schema.Type<typeof Reasonin
 const filePartSourceBase = {
   text: Schema.Struct({
     value: Schema.String,
-    start: Schema.Int,
-    end: Schema.Int,
+    start: Schema.Finite,
+    end: Schema.Finite,
   }).annotate({ identifier: "FilePartSourceText" }),
 }
 
@@ -156,7 +165,7 @@ export const SymbolSource = Schema.Struct({
   path: Schema.String,
   range: LSP.Range,
   name: Schema.String,
-  kind: Schema.Int,
+  kind: NonNegativeInt,
 })
   .annotate({ identifier: "SymbolSource" })
   .pipe(withStatics((s) => ({ zod: zod(s) })))
@@ -195,8 +204,8 @@ export const AgentPart = Schema.Struct({
   source: Schema.optional(
     Schema.Struct({
       value: Schema.String,
-      start: Schema.Int,
-      end: Schema.Int,
+      start: NonNegativeInt,
+      end: NonNegativeInt,
     }),
   ),
 })
@@ -236,11 +245,10 @@ export type SubtaskPart = Types.DeepMutable<Schema.Schema.Type<typeof SubtaskPar
 export const RetryPart = Schema.Struct({
   ...partBase,
   type: Schema.Literal("retry"),
-  attempt: Schema.Number,
-  // APIError is still NamedError-based Zod; bridge via ZodOverride until errors migrate.
-  error: Schema.Any.annotate({ [ZodOverride]: APIError.Schema }),
+  attempt: NonNegativeInt,
+  error: APIError.EffectSchema,
   time: Schema.Struct({
-    created: Schema.Number,
+    created: NonNegativeInt,
   }),
 })
   .annotate({ identifier: "RetryPart" })
@@ -263,15 +271,15 @@ export const StepFinishPart = Schema.Struct({
   type: Schema.Literal("step-finish"),
   reason: Schema.String,
   snapshot: Schema.optional(Schema.String),
-  cost: Schema.Number,
+  cost: Schema.Finite,
   tokens: Schema.Struct({
-    total: Schema.optional(Schema.Number),
-    input: Schema.Number,
-    output: Schema.Number,
-    reasoning: Schema.Number,
+    total: Schema.optional(Schema.Finite),
+    input: Schema.Finite,
+    output: Schema.Finite,
+    reasoning: Schema.Finite,
     cache: Schema.Struct({
-      read: Schema.Number,
-      write: Schema.Number,
+      read: Schema.Finite,
+      write: Schema.Finite,
     }),
   }),
 })
@@ -294,7 +302,7 @@ export const ToolStateRunning = Schema.Struct({
   title: Schema.optional(Schema.String),
   metadata: Schema.optional(Schema.Record(Schema.String, Schema.Any)),
   time: Schema.Struct({
-    start: Schema.Number,
+    start: NonNegativeInt,
   }),
 })
   .annotate({ identifier: "ToolStateRunning" })
@@ -308,9 +316,9 @@ export const ToolStateCompleted = Schema.Struct({
   title: Schema.String,
   metadata: Schema.Record(Schema.String, Schema.Any),
   time: Schema.Struct({
-    start: Schema.Number,
-    end: Schema.Number,
-    compacted: Schema.optional(Schema.Number),
+    start: NonNegativeInt,
+    end: NonNegativeInt,
+    compacted: Schema.optional(NonNegativeInt),
   }),
   attachments: Schema.optional(Schema.Array(FilePart)),
 })
@@ -330,8 +338,8 @@ export const ToolStateError = Schema.Struct({
   error: Schema.String,
   metadata: Schema.optional(Schema.Record(Schema.String, Schema.Any)),
   time: Schema.Struct({
-    start: Schema.Number,
-    end: Schema.Number,
+    start: NonNegativeInt,
+    end: NonNegativeInt,
   }),
 })
   .annotate({ identifier: "ToolStateError" })
@@ -384,7 +392,7 @@ export const User = Schema.Struct({
   ...messageBase,
   role: Schema.Literal("user"),
   time: Schema.Struct({
-    created: Schema.Number,
+    created: NonNegativeInt,
   }),
   format: Schema.optional(_Format),
   summary: Schema.optional(
@@ -454,19 +462,18 @@ export type Part =
   | RetryPart
   | CompactionPart
 
-// Errors are still NamedError-based Zod; bridge via ZodOverride so the derived
-// Zod + JSON Schema emit the original discriminatedUnion shape. Migrating the
-// error classes to Schema.TaggedErrorClass is a separate slice.
-const AssistantErrorZod = z.discriminatedUnion("name", [
-  AuthError.Schema,
-  NamedError.Unknown.Schema,
-  OutputLengthError.Schema,
-  AbortedError.Schema,
-  StructuredOutputError.Schema,
-  ContextOverflowError.Schema,
-  APIError.Schema,
-])
-type AssistantError = z.infer<typeof AssistantErrorZod>
+const AssistantErrorSchema = Schema.Union([
+  AuthError.EffectSchema,
+  Schema.Struct({ name: Schema.Literal("UnknownError"), data: Schema.Struct({ message: Schema.String }) }).annotate({
+    identifier: "UnknownError",
+  }),
+  OutputLengthError.EffectSchema,
+  AbortedError.EffectSchema,
+  StructuredOutputError.EffectSchema,
+  ContextOverflowError.EffectSchema,
+  APIError.EffectSchema,
+]).annotate({ discriminator: "name" })
+type AssistantError = Schema.Schema.Type<typeof AssistantErrorSchema>
 
 // ── Prompt input schemas ─────────────────────────────────────────────────────
 //
@@ -484,8 +491,8 @@ export const TextPartInput = Schema.Struct({
   ignored: Schema.optional(Schema.Boolean),
   time: Schema.optional(
     Schema.Struct({
-      start: Schema.Number,
-      end: Schema.optional(Schema.Number),
+      start: NonNegativeInt,
+      end: Schema.optional(NonNegativeInt),
     }),
   ),
   metadata: Schema.optional(Schema.Record(Schema.String, Schema.Any)),
@@ -513,8 +520,8 @@ export const AgentPartInput = Schema.Struct({
   source: Schema.optional(
     Schema.Struct({
       value: Schema.String,
-      start: Schema.Int,
-      end: Schema.Int,
+      start: NonNegativeInt,
+      end: NonNegativeInt,
     }),
   ),
 })
@@ -544,10 +551,10 @@ export const Assistant = Schema.Struct({
   ...messageBase,
   role: Schema.Literal("assistant"),
   time: Schema.Struct({
-    created: Schema.Number,
-    completed: Schema.optional(Schema.Number),
+    created: NonNegativeInt,
+    completed: Schema.optional(NonNegativeInt),
   }),
-  error: Schema.optional(Schema.Any.annotate({ [ZodOverride]: AssistantErrorZod })),
+  error: Schema.optional(AssistantErrorSchema),
   parentID: MessageID,
   modelID: ModelID,
   providerID: ProviderID,
@@ -561,15 +568,15 @@ export const Assistant = Schema.Struct({
     root: Schema.String,
   }),
   summary: Schema.optional(Schema.Boolean),
-  cost: Schema.Number,
+  cost: Schema.Finite,
   tokens: Schema.Struct({
-    total: Schema.optional(Schema.Number),
-    input: Schema.Number,
-    output: Schema.Number,
-    reasoning: Schema.Number,
+    total: Schema.optional(Schema.Finite),
+    input: Schema.Finite,
+    output: Schema.Finite,
+    reasoning: Schema.Finite,
     cache: Schema.Struct({
-      read: Schema.Number,
-      write: Schema.Number,
+      read: Schema.Finite,
+      write: Schema.Finite,
     }),
   }),
   structured: Schema.optional(Schema.Any),
@@ -601,7 +608,7 @@ const RemovedEventSchema = Schema.Struct({
 const PartUpdatedEventSchema = Schema.Struct({
   sessionID: SessionID,
   part: _Part,
-  time: Schema.Number,
+  time: NonNegativeInt,
 })
 
 const PartRemovedEventSchema = Schema.Struct({
@@ -658,7 +665,7 @@ export type WithParts = {
 
 const Cursor = Schema.Struct({
   id: MessageID,
-  time: Schema.Number,
+  time: Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0)),
 })
 type Cursor = typeof Cursor.Type
 
@@ -675,6 +682,17 @@ export const cursor = {
 
 // kilocode_change start - strip bloated metadata fields from stored parts to prevent multi-MB payloads
 // This handles both legacy data that was stored with full file contents and keeps the API response lean.
+function stripPatch(value: unknown) {
+  if (typeof value !== "string") return undefined
+  if (Buffer.byteLength(value) > Snapshot.MAX_DIFF_SIZE) return undefined
+  return value
+}
+
+function withPatch(value: unknown) {
+  const kept = stripPatch(value)
+  return kept ? { patch: kept } : {}
+}
+
 export function stripPartMetadata(part: Part): Part {
   // kilocode_change - exported for testing
   if (part.type !== "tool") return part
@@ -686,20 +704,41 @@ export function stripPartMetadata(part: Part): Part {
   let changed = false
   let next = meta
 
-  // Strip edit tool's filediff.before/after (full file contents)
-  if (meta.filediff && (meta.filediff.before || meta.filediff.after)) {
-    const { before, after, ...rest } = meta.filediff
-    next = { ...next, filediff: rest }
+  if (meta.diff !== undefined) {
+    const { diff, ...rest } = next
+    next = rest
     changed = true
   }
 
-  // Strip apply_patch tool's files[].before/after (full file contents per file)
-  if (Array.isArray(meta.files) && meta.files.length > 0 && meta.files[0]?.before !== undefined) {
+  // Strip edit/write tool filediff.before/after (full file contents) and cap patches.
+  if (meta.filediff) {
+    const { before, after, patch, ...rest } = meta.filediff
+    next = { ...next, filediff: { ...rest, ...withPatch(patch) } }
+    changed = true
+  }
+
+  // Strip apply_patch tool's files[].before/after (full file contents per file) and cap per-file patches.
+  if (Array.isArray(meta.files) && meta.files.length > 0) {
     next = {
       ...next,
       files: meta.files.map((f: Record<string, unknown>) => {
-        const { before, after, ...rest } = f
-        return rest
+        const { before, after, patch, diff, ...rest } = f
+        const kept = stripPatch(patch) ?? stripPatch(diff)
+        return { ...rest, ...(kept ? { patch: kept } : {}) }
+      }),
+    }
+    changed = true
+  }
+
+  if (Array.isArray(meta.results) && meta.results.length > 0) {
+    next = {
+      ...next,
+      results: meta.results.map((r: Record<string, unknown>) => {
+        const { diff, ...rest } = r
+        if (!r.filediff || typeof r.filediff !== "object") return rest
+        const fd = r.filediff as Record<string, unknown>
+        const { before, after, patch, ...file } = fd
+        return { ...rest, filediff: { ...file, ...withPatch(patch) } }
       }),
     }
     changed = true
@@ -788,25 +827,25 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
   const result: UIMessage[] = []
   const toolNames = new Set<string>()
   // Track media from tool results that need to be injected as user messages
-  // for providers that don't support media in tool results.
+  // for providers that don't support that media type in tool results.
   //
   // OpenAI-compatible APIs only support string content in tool results, so we need
-  // to extract media and inject as user messages. Other SDKs (anthropic, google,
-  // bedrock) handle type: "content" with media parts natively.
+  // to extract media and inject as user messages. Some SDKs only support a subset
+  // of media in tool results; e.g. Bedrock supports images but not PDFs there.
   //
-  // Only apply this workaround if the model actually supports image input -
-  // otherwise there's no point extracting images.
-  const supportsMediaInToolResults = (() => {
+  // Only apply this workaround if the model actually supports that media input -
+  // otherwise unsupportedParts() will turn it into a user-visible error.
+  const supportsMediaInToolResult = (attachment: { mime: string }) => {
     if (model.api.npm === "@ai-sdk/anthropic") return true
     if (model.api.npm === "@ai-sdk/openai") return true
-    if (model.api.npm === "@ai-sdk/amazon-bedrock") return true
+    if (model.api.npm === "@ai-sdk/amazon-bedrock") return attachment.mime.startsWith("image/")
     if (model.api.npm === "@ai-sdk/google-vertex/anthropic") return true
     if (model.api.npm === "@ai-sdk/google") {
       const id = model.api.id.toLowerCase()
       return id.includes("gemini-3") && !id.includes("gemini-2")
     }
     return false
-  })()
+  }
 
   const toModelOutput = (options: { toolCallId: string; input: unknown; output: unknown }) => {
     const output = options.output
@@ -826,7 +865,7 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
       return {
         type: "content",
         value: [
-          { type: "text", text: outputObject.text },
+          ...(outputObject.text ? [{ type: "text", text: outputObject.text }] : []),
           ...attachments.map((attachment) => ({
             type: "media",
             mediaType: attachment.mime,
@@ -851,9 +890,9 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
         role: "user",
         parts: [],
       }
-      result.push(userMessage)
       for (const part of msg.parts) {
-        if (part.type === "text" && !part.ignored)
+        // User message parts should never be empty
+        if (part.type === "text" && !part.ignored && part.text !== "")
           userMessage.parts.push({
             type: "text",
             text: part.text,
@@ -888,11 +927,12 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
           })
         }
       }
+      if (userMessage.parts.length > 0) result.push(userMessage)
     }
 
     if (msg.info.role === "assistant") {
       const differentModel = `${model.providerID}/${model.id}` !== `${msg.info.providerID}/${msg.info.modelID}`
-      const media: Array<{ mime: string; url: string }> = []
+      const media: Array<{ mime: string; url: string; filename?: string }> = []
 
       if (
         msg.info.error &&
@@ -908,13 +948,31 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
         role: "assistant",
         parts: [],
       }
+      // Anthropic adaptive thinking can persist assistant turns like:
+      // step-start, reasoning(signature), text(""), step-start,
+      // reasoning(signature). The empty text part is a structural separator,
+      // but it does not carry the signature metadata itself. Dropping it shifts
+      // signed thinking positions after step-start splitting/provider regrouping;
+      // keeping it as "" is filtered by the AI SDK and rejected by Anthropic.
+      // It is unclear whether this shape originates in our stream processing,
+      // a proxy, or a lower-level library, but preserving a non-empty separator
+      // here is the only safe replay point we have.
+      // Use a single space so the separator survives replay without changing
+      // the neighboring signed reasoning blocks.
+      const hasSignedReasoning = msg.parts.some((part) => {
+        if (part.type !== "reasoning") return false
+        return part.metadata?.anthropic?.signature != null
+      })
       for (const part of msg.parts) {
-        if (part.type === "text")
+        // kilocode_change - !part.ignored keeps local UI warnings out of future prompts
+        if (part.type === "text" && !part.ignored) {
+          const text = part.text === "" && hasSignedReasoning ? " " : part.text
           assistantMessage.parts.push({
             type: "text",
-            text: part.text,
+            text,
             ...(differentModel ? {} : { providerMetadata: part.metadata }),
           })
+        }
         if (part.type === "step-start")
           assistantMessage.parts.push({
             type: "step-start",
@@ -930,11 +988,11 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
             // For providers that don't support media in tool results, extract media files
             // (images, PDFs) to be sent as a separate user message
             const mediaAttachments = attachments.filter((a) => isMedia(a.mime))
-            const nonMediaAttachments = attachments.filter((a) => !isMedia(a.mime))
-            if (!supportsMediaInToolResults && mediaAttachments.length > 0) {
-              media.push(...mediaAttachments)
+            const extractedMedia = mediaAttachments.filter((a) => !supportsMediaInToolResult(a))
+            if (extractedMedia.length > 0) {
+              media.push(...extractedMedia)
             }
-            const finalAttachments = supportsMediaInToolResults ? attachments : nonMediaAttachments
+            const finalAttachments = attachments.filter((a) => !isMedia(a.mime) || supportsMediaInToolResult(a))
 
             const output =
               finalAttachments.length > 0
@@ -992,10 +1050,18 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
             })
         }
         if (part.type === "reasoning") {
+          if (differentModel) {
+            if (part.text.trim().length > 0)
+              assistantMessage.parts.push({
+                type: "text",
+                text: part.text,
+              })
+            continue
+          }
           assistantMessage.parts.push({
             type: "reasoning",
             text: part.text,
-            ...(differentModel ? {} : { providerMetadata: part.metadata }),
+            providerMetadata: part.metadata,
           })
         }
       }
@@ -1016,6 +1082,7 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
                 type: "file" as const,
                 url: attachment.url,
                 mediaType: attachment.mime,
+                filename: attachment.filename,
               })),
             ],
           })
@@ -1152,6 +1219,33 @@ export function filterCompacted(msgs: Iterable<WithParts>) {
       completed.add(msg.info.parentID)
   }
   result.reverse()
+  KiloSessionMessageOrder.annotate(result) // kilocode_change - preserve chronology before retained-tail projection
+  const compactionIndex = result.findLastIndex(
+    (msg) =>
+      msg.info.role === "user" &&
+      msg.parts.some((item): item is CompactionPart => item.type === "compaction" && item.tail_start_id !== undefined),
+  )
+  const compaction = result[compactionIndex]
+  const part = compaction?.parts.find(
+    (item): item is CompactionPart => item.type === "compaction" && item.tail_start_id !== undefined,
+  )
+  const summaryIndex = compaction
+    ? result.findIndex(
+        (msg, index) =>
+          index > compactionIndex &&
+          msg.info.role === "assistant" &&
+          msg.info.summary &&
+          msg.info.parentID === compaction.info.id,
+      )
+    : -1
+  const tailIndex = part?.tail_start_id ? result.findIndex((msg) => msg.info.id === part.tail_start_id) : -1
+  if (tailIndex >= 0 && tailIndex < compactionIndex && summaryIndex > compactionIndex) {
+    return [
+      ...result.slice(compactionIndex, summaryIndex + 1),
+      ...result.slice(tailIndex, compactionIndex),
+      ...result.slice(summaryIndex + 1),
+    ]
+  }
   return result
 }
 
@@ -1181,6 +1275,14 @@ export function fromError(
         },
         { cause: e },
       ).toObject()
+    case e instanceof CodexAuthExpiredError: // kilocode_change start
+      return new AuthError(
+        {
+          providerID: "openai",
+          message: e.message,
+        },
+        { cause: e },
+      ).toObject() // kilocode_change end
     case SessionNetwork.disconnected(e): // kilocode_change start
       return new APIError(
         {

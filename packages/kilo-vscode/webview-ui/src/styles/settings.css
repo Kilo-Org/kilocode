@@ -14,7 +14,7 @@
 }
 
 .settings-save-bar-label {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--foreground-secondary);
   margin-right: auto;
 }
@@ -25,7 +25,7 @@
   border-radius: 4px;
   background: var(--vscode-inputValidation-errorBackground, rgba(241, 76, 76, 0.1));
   margin: 8px 16px 0 16px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
 }
 
 .settings-save-bar-error-header {
@@ -68,7 +68,7 @@
   border-top: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
   background: var(--vscode-editor-background);
   font-family: var(--vscode-editor-font-family, monospace);
-  font-size: 11px;
+  font-size: var(--font-size-small);
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 200px;
@@ -87,14 +87,15 @@
     min-width: 150px;
 
     [data-slot="settings-row-label-title"] {
+      font-size: var(--font-size-base);
       font-weight: 500;
-      min-height: 16px;
+      min-height: var(--kilo-font-size-16);
       margin-bottom: 4px;
     }
 
     [data-slot="settings-row-label-subtitle"] {
-      font-size: 12px;
-      min-height: 14px;
+      font-size: var(--font-size-small);
+      min-height: var(--kilo-font-size-14);
       color: var(--text-weak-base, var(--vscode-descriptionForeground));
     }
   }
@@ -113,4 +114,23 @@
 [data-variant="wide-input"] [data-slot="settings-row-input"] {
   flex: 1 1 0%;
   max-width: none;
+}
+
+.settings-font-size-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 160px;
+
+  input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  span {
+    min-width: 34px;
+    color: var(--text-weak-base, var(--vscode-descriptionForeground));
+    font-size: var(--font-size-small);
+    text-align: right;
+  }
 }

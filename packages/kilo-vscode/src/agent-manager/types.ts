@@ -126,7 +126,9 @@ interface StateMessage {
   tabOrder?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
+  sidebarCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
+  reviewMarkdownRender?: boolean
   isGitRepo?: boolean
   defaultBaseBranch?: string
   runStatuses?: RunStatus[]
@@ -346,6 +348,7 @@ interface OpenLocallyIn {
 interface AddSessionToWorktreeIn {
   type: "agentManager.addSessionToWorktree"
   worktreeId: string
+  sessionId?: string
 }
 
 interface CloseSessionIn {
@@ -455,9 +458,19 @@ interface SetSessionsCollapsedIn {
   collapsed: boolean
 }
 
+interface SetSidebarCollapsedIn {
+  type: "agentManager.setSidebarCollapsed"
+  collapsed: boolean
+}
+
 interface SetReviewDiffStyleIn {
   type: "agentManager.setReviewDiffStyle"
   style: "unified" | "split"
+}
+
+interface SetReviewMarkdownRenderIn {
+  type: "agentManager.setReviewMarkdownRender"
+  render: boolean
 }
 
 interface SetDefaultBaseBranchIn {
@@ -558,6 +571,12 @@ interface PreviewImageIn {
   filename: string
 }
 
+interface SaveImageIn {
+  type: "saveImage"
+  dataUrl: string
+  filename: string
+}
+
 interface LoadMessagesIn {
   type: "loadMessages"
   sessionID: string
@@ -588,6 +607,7 @@ interface SendMessageIn {
   variant?: string
   files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
   agentManagerContext?: string
+  contextDirectory?: string
 }
 
 interface SendCommandIn {
@@ -603,6 +623,7 @@ interface SendCommandIn {
   variant?: string
   files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
   agentManagerContext?: string
+  contextDirectory?: string
 }
 
 interface RequestTerminalContextIn {
@@ -724,7 +745,9 @@ export type AgentManagerInMessage =
   | SetTabOrderIn
   | SetWorktreeOrderIn
   | SetSessionsCollapsedIn
+  | SetSidebarCollapsedIn
   | SetReviewDiffStyleIn
+  | SetReviewMarkdownRenderIn
   | SetDefaultBaseBranchIn
   | RequestExternalWorktreesIn
   | ImportFromBranchIn
@@ -743,6 +766,7 @@ export type AgentManagerInMessage =
   | OpenFileIn
   | GenericOpenFileIn
   | PreviewImageIn
+  | SaveImageIn
   | LoadMessagesIn
   | SendMessageIn
   | SendCommandIn

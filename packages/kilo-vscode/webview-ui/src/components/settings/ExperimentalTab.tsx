@@ -1,13 +1,19 @@
 import { Component, For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { Switch } from "@kilocode/kilo-ui/switch"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Select } from "@kilocode/kilo-ui/select"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
+import { useProvider } from "../../context/provider"
+import { useServer } from "../../context/server"
 import { useVSCode } from "../../context/vscode"
 import type { ExtensionMessage } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
+import { DEFAULT_SPEECH_TO_TEXT_MODEL } from "../../../../src/speech-to-text/models"
+import { hasSpeechToTextAccess, selectedSpeechToTextModel } from "../speech-to-text/availability"
+import { SPEECH_TO_TEXT_MODEL_OPTIONS } from "../speech-to-text/model-selector"
 
 interface ShareOption {
   value: string
@@ -23,6 +29,8 @@ const SHARE_OPTIONS: ShareOption[] = [
 const ExperimentalTab: Component = () => {
   const { config, updateConfig } = useConfig()
   const language = useLanguage()
+  const provider = useProvider()
+  const server = useServer()
   const vscode = useVSCode()
   const [active, setActive] = createSignal(false)
 
@@ -39,6 +47,8 @@ const ExperimentalTab: Component = () => {
   })
 
   const experimental = createMemo(() => config().experimental ?? {})
+  const kiloReady = createMemo(() => hasSpeechToTextAccess(config(), provider.connected(), server.profileData()))
+  const speechModel = createMemo(() => selectedSpeechToTextModel(config()))
 
   const updateExperimental = (key: string, value: unknown) => {
     updateConfig({
@@ -155,19 +165,6 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.experimental.semanticIndexing.title")}
-          description={language.t("settings.experimental.semanticIndexing.description")}
-        >
-          <Switch
-            checked={experimental().semantic_indexing ?? false}
-            onChange={(checked) => updateExperimental("semantic_indexing", checked)}
-            hideLabel
-          >
-            {language.t("settings.experimental.semanticIndexing.title")}
-          </Switch>
-        </SettingsRow>
-
-        <SettingsRow
           title={language.t("settings.experimental.codebaseSearch.title")}
           description={language.t("settings.experimental.codebaseSearch.description")}
         >
@@ -178,6 +175,36 @@ const ExperimentalTab: Component = () => {
           >
             {language.t("settings.experimental.codebaseSearch.title")}
           </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.speechToTextModel.title")}
+          description={
+            kiloReady()
+              ? language.t("settings.experimental.speechToTextModel.description")
+              : language.t("settings.experimental.speechToText.disabledDescription")
+          }
+        >
+          <Tooltip
+            value={language.t("settings.experimental.speechToText.disabledDescription")}
+            placement="top"
+            inactive={kiloReady()}
+          >
+            <Select
+              options={SPEECH_TO_TEXT_MODEL_OPTIONS}
+              current={SPEECH_TO_TEXT_MODEL_OPTIONS.find((item) => item.value === speechModel())}
+              value={(item) => item.value}
+              label={(item) => `${item.label} (${item.provider})`}
+              onSelect={(item) =>
+                updateExperimental("speech_to_text_model", item?.value ?? DEFAULT_SPEECH_TO_TEXT_MODEL.id)
+              }
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+              disabled={!kiloReady()}
+              placeholder={DEFAULT_SPEECH_TO_TEXT_MODEL.label}
+            />
+          </Tooltip>
         </SettingsRow>
 
         <SettingsRow

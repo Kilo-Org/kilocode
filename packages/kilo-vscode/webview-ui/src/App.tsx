@@ -20,9 +20,8 @@ import { DisplayProvider } from "./context/display"
 import { WorkStyleProvider } from "./context/work-style"
 import { IndexingProvider } from "./context/indexing"
 import { SessionProvider, useSession } from "./context/session"
-import { LanguageProvider } from "./context/language"
+import { LanguageBridge } from "./context/language-bridge"
 import { ChatView } from "./components/chat"
-import { MarketplaceView } from "./components/marketplace"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
 
@@ -34,11 +33,13 @@ registerVscodeToolOverrides()
 import HistoryView from "./components/history/HistoryView"
 import { MigrationWizard } from "./components/migration" // legacy-migration
 import { NotificationsProvider } from "./context/notifications"
+import { FeedbackProvider } from "./context/feedback"
+import { KiloEmbeddingModelsProvider } from "./context/kilo-embedding-models"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import "./styles/chat.css"
 
-type ViewType = "newTask" | "marketplace" | "history" | "profile" | "settings" | "subAgentViewer"
-const VALID_VIEWS = new Set<string>(["newTask", "marketplace", "history", "profile", "settings", "subAgentViewer"])
+type ViewType = "newTask" | "history" | "profile" | "settings" | "subAgentViewer"
+const VALID_VIEWS = new Set<string>(["newTask", "history", "profile", "settings", "subAgentViewer"])
 
 /**
  * Bridge our session store to the DataProvider's expected Data shape.
@@ -135,12 +136,16 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     vscode.postMessage({ type: "openFile", filePath, line, column })
   }
 
-  const openDiff = (diff: { file: string; before: string; after: string; additions: number; deletions: number }) => {
+  const openDiff = (diff: { file: string; patch?: string; additions: number; deletions: number }) => {
     vscode.postMessage({ type: "openDiffVirtual", diff, initialDiffStyle: "split" })
   }
 
   const openUrl = (url: string) => {
     vscode.postMessage({ type: "openExternal", url })
+  }
+
+  const openContent = (content: string, language?: string) => {
+    vscode.postMessage({ type: "openContent", content, language })
   }
 
   const directory = () => {
@@ -160,23 +165,32 @@ export const DataBridge: Component<{ children: any }> = (props) => {
       onOpenFile={open}
       onOpenDiff={openDiff}
       onOpenUrl={openUrl}
+      onOpenContent={openContent}
     >
       {props.children}
     </DataProvider>
   )
 }
 
-/**
- * Wraps children in LanguageProvider, passing server-side language info.
- * Must be below ServerProvider in the hierarchy.
- */
-export const LanguageBridge: Component<{ children: any }> = (props) => {
-  const server = useServer()
-  return (
-    <LanguageProvider vscodeLanguage={server.vscodeLanguage} languageOverride={server.languageOverride}>
-      {props.children}
-    </LanguageProvider>
-  )
+type MermaidImageEvent = CustomEvent<{ dataUrl: string; filename: string }>
+
+export const MermaidDownloadBridge: Component = () => {
+  const vscode = useVSCode()
+
+  onMount(() => {
+    const save = (event: Event) => {
+      const detail = (event as MermaidImageEvent).detail
+      if (!detail?.dataUrl || !detail.filename) return
+      event.preventDefault()
+      vscode.postMessage({ type: "saveImage", dataUrl: detail.dataUrl, filename: detail.filename })
+    }
+    window.addEventListener("kilo:save-image", save)
+    onCleanup(() => {
+      window.removeEventListener("kilo:save-image", save)
+    })
+  })
+
+  return null
 }
 
 // Inner app component that uses the contexts
@@ -195,9 +209,6 @@ const AppContent: Component = () => {
       case "plusButtonClicked":
         window.dispatchEvent(new CustomEvent("newTaskRequest"))
         setCurrentView("newTask")
-        break
-      case "marketplaceButtonClicked":
-        setCurrentView("marketplace")
         break
       case "historyButtonClicked":
         setCurrentView("history")
@@ -301,9 +312,6 @@ const AppContent: Component = () => {
                 promptBoxId="sidebar:new-task"
               />
             </Match>
-            <Match when={currentView() === "marketplace"}>
-              <MarketplaceView />
-            </Match>
             <Match when={currentView() === "history"}>
               <HistoryView onSelectSession={handleSelectSession} onBack={() => setCurrentView("newTask")} />
             </Match>
@@ -343,28 +351,33 @@ const App: Component = () => {
     <ThemeProvider defaultTheme="kilo-vscode">
       <DialogProvider>
         <VSCodeProvider>
+          <MermaidDownloadBridge />
           <ServerProvider>
             <LanguageBridge>
               <MarkedProvider>
                 <DiffComponentProvider component={Diff}>
                   <CodeComponentProvider component={Code}>
                     <FileComponentProvider component={File}>
-                        <ProviderProvider>
-                          <ConfigProvider>
-                            <DisplayProvider>
-                              <WorkStyleProvider>
-                                <IndexingProvider>
+                      <ProviderProvider>
+                        <ConfigProvider>
+                          <DisplayProvider>
+                            <WorkStyleProvider>
+                              <IndexingProvider>
+                                <KiloEmbeddingModelsProvider>
                                   <NotificationsProvider>
                                     <SessionProvider>
-                                      <DataBridge>
-                                        <AppContent />
-                                      </DataBridge>
+                                      <FeedbackProvider>
+                                        <DataBridge>
+                                          <AppContent />
+                                        </DataBridge>
+                                      </FeedbackProvider>
                                     </SessionProvider>
                                   </NotificationsProvider>
-                                </IndexingProvider>
-                              </WorkStyleProvider>
-                            </DisplayProvider>
-                          </ConfigProvider>
+                                </KiloEmbeddingModelsProvider>
+                              </IndexingProvider>
+                            </WorkStyleProvider>
+                          </DisplayProvider>
+                        </ConfigProvider>
                       </ProviderProvider>
                     </FileComponentProvider>
                   </CodeComponentProvider>

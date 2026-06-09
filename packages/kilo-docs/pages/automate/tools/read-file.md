@@ -1,3 +1,8 @@
+---
+title: Read File Tool | Kilo Code Docs
+description: Learn how the read_file tool examines file contents with line number support to help Kilo Code understand code, configuration, and documentation.
+---
+
 # read_file
 
 The `read_file` tool examines the contents of files in a project. It allows Kilo Code to understand code, configuration files, and documentation to provide better assistance.

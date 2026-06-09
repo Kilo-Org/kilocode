@@ -3,18 +3,19 @@ import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { formatPatch, structuredPatch } from "diff"
 import path from "path"
 import z from "zod"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
-import * as CrossSpawnSpawner from "@/effect/cross-spawn-spawner"
-import { InstanceState } from "@/effect"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
-import { Hash } from "@opencode-ai/shared/util/hash"
-import { Config } from "../config"
-import { Global } from "../global"
-import { Log } from "../util"
-import { Flag } from "@/flag/flag" // kilocode_change
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { InstanceState } from "@/effect/instance-state"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { Hash } from "@opencode-ai/core/util/hash"
+import { Config } from "@/config/config"
+import { Global } from "@opencode-ai/core/global"
+import * as Log from "@opencode-ai/core/util/log"
+import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import { DiffFull } from "../kilocode/snapshot/diff-full" // kilocode_change
-import { withStatics } from "@/util/schema"
-import { zod } from "@/util/effect-zod"
+import { KiloSnapshotTrack } from "../kilocode/snapshot/track" // kilocode_change
+import type { MessageID, SessionID } from "../session/schema" // kilocode_change
+import { NonNegativeInt, withStatics } from "@opencode-ai/core/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
 
 export const Patch = Schema.Struct({
   hash: Schema.String,
@@ -23,10 +24,13 @@ export const Patch = Schema.Struct({
 export type Patch = typeof Patch.Type
 
 export const FileDiff = Schema.Struct({
-  file: Schema.String,
-  patch: Schema.String,
-  additions: Schema.Number,
-  deletions: Schema.Number,
+  // Optional because legacy/imported `summary_diffs` on disk may omit
+  // file details and patch text. Required Schema rejected the whole
+  // session response and broke session loading on Desktop.
+  file: Schema.optional(Schema.String),
+  patch: Schema.optional(Schema.String),
+  additions: Schema.Finite,
+  deletions: Schema.Finite,
   status: Schema.optional(Schema.Literals(["added", "deleted", "modified"])),
 })
   .annotate({ identifier: "SnapshotFileDiff" })
@@ -63,7 +67,13 @@ type State = Omit<Interface, "init">
 export interface Interface {
   readonly init: () => Effect.Effect<void>
   readonly cleanup: () => Effect.Effect<void>
-  readonly track: () => Effect.Effect<string | undefined>
+  // kilocode_change start - accept prompt context so slow snapshots can target UI or honor managed caller policy
+  readonly track: (opts?: {
+    sessionID?: SessionID
+    messageID?: MessageID
+    snapshotInitialization?: KiloSnapshotTrack.SnapshotInitialization
+  }) => Effect.Effect<string | undefined>
+  // kilocode_change end
   readonly patch: (hash: string) => Effect.Effect<Patch>
   readonly restore: (snapshot: string) => Effect.Effect<void>
   readonly revert: (patches: Patch[]) => Effect.Effect<void>
@@ -782,6 +792,10 @@ export const layer: Layer.Layer<
       }),
     )
 
+    // kilocode_change start - Snapshot.Service-scoped state for the slow-repo track wrapper
+    const trackState = KiloSnapshotTrack.makeState()
+    // kilocode_change end
+
     return Service.of({
       init: Effect.fn("Snapshot.init")(function* () {
         yield* InstanceState.get(state)
@@ -789,8 +803,16 @@ export const layer: Layer.Layer<
       cleanup: Effect.fn("Snapshot.cleanup")(function* () {
         return yield* InstanceState.useEffect(state, (s) => s.cleanup())
       }),
-      track: Effect.fn("Snapshot.track")(function* () {
-        return yield* InstanceState.useEffect(state, (s) => s.track())
+      // kilocode_change start - timeout guard with interactive and managed wait policies
+      track: Effect.fn("Snapshot.track")(function* (opts) {
+        return yield* KiloSnapshotTrack.wrap({
+          inner: InstanceState.useEffect(state, (s) => s.track()),
+          state: trackState,
+          snapshotInitialization: opts?.snapshotInitialization,
+          sessionID: opts?.sessionID,
+          messageID: opts?.messageID,
+        })
+        // kilocode_change end
       }),
       patch: Effect.fn("Snapshot.patch")(function* (hash: string) {
         return yield* InstanceState.useEffect(state, (s) => s.patch(hash))
@@ -834,17 +856,5 @@ export const defaultLayer = layer.pipe(
   Layer.provide(AppFileSystem.defaultLayer),
   Layer.provide(Config.defaultLayer),
 )
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const track = () => runPromise((svc) => svc.track())
-export const patch = (hash: string) => runPromise((svc) => svc.patch(hash))
-export const restore = (snapshot: string) => runPromise((svc) => svc.restore(snapshot))
-export const revert = (patches: Patch[]) => runPromise((svc) => svc.revert(patches))
-export const diff = (hash: string) => runPromise((svc) => svc.diff(hash))
-export const diffFull = (from: string, to: string) => runPromise((svc) => svc.diffFull(from, to))
-export const cleanup = () => runPromise((svc) => svc.cleanup())
-export const init = () => runPromise((svc) => svc.init())
-// kilocode_change end
 
 export * as Snapshot from "."

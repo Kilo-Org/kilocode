@@ -12,22 +12,26 @@ jobs:
       matched: ${{ steps.filter.outputs.matched }}
       is_fork: ${{ steps.fork-check.outputs.is_fork }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: Kilo-Org/paths-filter@master
+      - uses: actions/checkout@v6 # kilocode_change
+      # kilocode_change start
+      - name: Check changed files
         id: filter
-        with:
-          filters: |
-            matched:
-              - "packages/kilo-ui/**"
-              - "packages/ui/**"
-              - "packages/util/**"
-              - "packages/sdk/js/**"
-              - "packages/kilo-vscode/webview-ui/**"
-              - "packages/kilo-vscode/.storybook/**"
-              - "packages/kilo-vscode/tests/visual-regression*"
-              - "packages/kilo-vscode/tests/permission-dock-dropdown*"
-              - "packages/kilo-docs/public/img/screenshot-tests/**"
-              - ".github/workflows/visual-regression.yml"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          matched=false
+          while IFS= read -r file; do
+            case "$file" in
+              packages/kilo-ui/*|packages/ui/*|packages/util/*|packages/sdk/js/*|packages/kilo-vscode/webview-ui/*|packages/kilo-vscode/.storybook/*|packages/kilo-vscode/tests/visual-regression*|packages/kilo-vscode/tests/permission-dock-dropdown*|packages/kilo-vscode/tests/accessibility*|packages/kilo-docs/public/img/screenshot-tests/*|.github/workflows/visual-regression.yml)
+                matched=true
+                break
+                ;;
+            esac
+          done < <(gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR}/files" --jq '.[].filename')
+          echo "matched=$matched" >> "$GITHUB_OUTPUT"
+          echo "matched=$matched"
+      # kilocode_change end
       - name: Check if PR is from a fork
         id: fork-check
         run: |
@@ -47,7 +51,7 @@ jobs:
     steps:
       - name: Checkout (internal)
         if: needs.check-paths.outputs.is_fork != 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6 # kilocode_change
         with:
           lfs: true
           token: ${{ secrets.BOT_PAT }}
@@ -55,7 +59,7 @@ jobs:
 
       - name: Checkout (fork)
         if: needs.check-paths.outputs.is_fork == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6 # kilocode_change
         with:
           lfs: true
 
@@ -77,7 +81,7 @@ jobs:
           bun-version: latest
 
       - name: Cache Bun modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5 # kilocode_change
         with:
           path: ~/.bun/install/cache
           key: bun-${{ hashFiles('bun.lock') }}
@@ -87,7 +91,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: playwright-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5 # kilocode_change
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ hashFiles('packages/kilo-ui/package.json') }}
@@ -103,7 +107,7 @@ jobs:
 
       - name: Cache Storybook build
         id: storybook-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5 # kilocode_change
         with:
           path: packages/kilo-ui/storybook-static
           key: storybook-${{ hashFiles('packages/kilo-ui/src/**', 'packages/kilo-ui/.storybook/**', 'packages/ui/src/**', 'packages/kilo-ui/package.json') }}
@@ -195,7 +199,7 @@ jobs:
 
       - name: Upload test results on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7 # kilocode_change
         with:
           name: visual-regression-results
           path: packages/kilo-ui/test-results/
@@ -207,11 +211,15 @@ jobs:
     name: Visual Regression (kilo-vscode webview)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
+    # kilocode_change start
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+    # kilocode_change end
 
     steps:
       - name: Checkout (internal)
         if: needs.check-paths.outputs.is_fork != 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6 # kilocode_change
         with:
           lfs: true
           token: ${{ secrets.BOT_PAT }}
@@ -219,7 +227,7 @@ jobs:
 
       - name: Checkout (fork)
         if: needs.check-paths.outputs.is_fork == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6 # kilocode_change
         with:
           lfs: true
 
@@ -241,7 +249,7 @@ jobs:
           bun-version: latest
 
       - name: Cache Bun modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5 # kilocode_change
         with:
           path: ~/.bun/install/cache
           key: bun-${{ hashFiles('bun.lock') }}
@@ -251,7 +259,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: playwright-cache-vscode
-        uses: actions/cache@v4
+        uses: actions/cache@v5 # kilocode_change
         with:
           path: ~/.cache/ms-playwright
           key: playwright-vscode-${{ hashFiles('packages/kilo-vscode/package.json') }}
@@ -267,7 +275,7 @@ jobs:
 
       - name: Cache Storybook build
         id: storybook-cache-vscode
-        uses: actions/cache@v4
+        uses: actions/cache@v5 # kilocode_change
         with:
           path: packages/kilo-vscode/storybook-static
           key: storybook-vscode-${{ hashFiles('packages/kilo-vscode/webview-ui/src/**', 'packages/kilo-vscode/.storybook/**', 'packages/kilo-ui/src/**', 'packages/ui/src/**', 'packages/kilo-vscode/package.json') }}
@@ -276,13 +284,18 @@ jobs:
         if: steps.storybook-cache-vscode.outputs.cache-hit != 'true'
         run: bun run build-storybook
         working-directory: packages/kilo-vscode
+        # kilocode_change start
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        # kilocode_change end
 
-      - name: Generate baselines for new/missing stories
+      - name: Generate baselines and enforce webview accessibility checks # kilocode_change
         run: bun run test:visual:update
         working-directory: packages/kilo-vscode
         env:
           CI: true
           PLAYWRIGHT_WORKERS: "4"
+          NODE_OPTIONS: --max-old-space-size=4096 # kilocode_change
 
       - name: Remove stale baselines for deleted stories
         run: |
@@ -386,7 +399,7 @@ jobs:
 
       - name: Upload test results on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7 # kilocode_change
         with:
           name: visual-regression-vscode-results
           path: packages/kilo-vscode/test-results/

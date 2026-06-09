@@ -1,6 +1,7 @@
 // kilocode_change - new file
 import { EOL } from "os"
-import { Config } from "../../config"
+import { Config } from "../../config/config"
+import { AppRuntime } from "../../effect/app-runtime"
 import { bootstrap } from "../bootstrap"
 import { cmd } from "./cmd"
 import { UI } from "../ui"
@@ -15,7 +16,7 @@ export const ConfigCommand = cmd({
         describe: "check configuration for warnings and errors",
         async handler() {
           await bootstrap(process.cwd(), async () => {
-            const list = await Config.warnings()
+            const list = await AppRuntime.runPromise(Config.Service.use((svc) => svc.warnings()))
             if (list.length === 0) {
               process.stdout.write("No config warnings." + EOL)
               return

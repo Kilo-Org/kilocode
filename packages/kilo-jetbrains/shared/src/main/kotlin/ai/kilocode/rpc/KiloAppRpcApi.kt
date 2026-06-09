@@ -1,7 +1,15 @@
 package ai.kilocode.rpc
 
+import ai.kilocode.rpc.dto.DeviceAuthDto
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
+import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
+import ai.kilocode.rpc.dto.ModelStateDto
+import ai.kilocode.rpc.dto.ModelVariantUpdateDto
+import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import com.intellij.platform.rpc.RemoteApiProviderService
 import fleet.rpc.RemoteApi
 import fleet.rpc.Rpc
@@ -39,4 +47,50 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
 
     /** Kill the CLI process, re-extract the binary, and restart. */
     suspend fun reinstall()
+
+    /** Load persisted CLI model state such as favorites. */
+    suspend fun modelState(): ModelStateDto
+
+    /** Toggle a persisted CLI model favorite. */
+    suspend fun updateModelFavorite(update: ModelFavoriteUpdateDto): ModelStateDto
+
+    /** Persist a per-agent model selection. */
+    suspend fun updateModelSelection(update: ModelSelectionUpdateDto): ModelStateDto
+
+    /** Clear a persisted per-agent model selection. */
+    suspend fun clearModelSelection(agent: String): ModelStateDto
+
+    /** Persist a per-model reasoning variant selection. */
+    suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto
+
+    /** Patch global CLI config values. */
+    suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto
+
+    /** Refresh the user profile and return the latest data, or null if not logged in. */
+    suspend fun refreshProfile(): ProfileDto?
+
+    /**
+     * Start the device auth login flow for Kilo Gateway.
+     * Returns device auth details (verification URL and code) to show in the UI.
+     */
+    suspend fun startLogin(directory: String?): DeviceAuthDto
+
+    /**
+     * Complete the device auth login flow. Blocks until the user completes authentication.
+     * Returns the fresh profile on success, null if aborted.
+     */
+    suspend fun completeLogin(directory: String?): ProfileDto?
+
+    /** Log out from Kilo Gateway. */
+    suspend fun logout(): Boolean
+
+    /**
+     * Switch the active account context.
+     * Pass null for personal account, or an organization ID for org context.
+     * Returns the updated profile, or null if not logged in.
+     */
+    suspend fun setOrganization(organizationId: String?): ProfileDto?
+
+    /** Fire-and-forget behavior telemetry routed through the CLI server. */
+    suspend fun captureTelemetry(capture: TelemetryCaptureDto)
 }

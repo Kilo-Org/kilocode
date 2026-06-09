@@ -1,5 +1,7 @@
 import { createRequire } from "module"
 import type { ConfigPlugin } from "@/config/plugin"
+import { isIndexingPlugin } from "@kilocode/kilo-indexing/detect"
+import { ensureAtomicChatPlugin, resolveAtomicChatPlugin } from "@/kilocode/atomic-chat-feature"
 import { ensureIndexingPlugin, resolveIndexingPlugin } from "@/kilocode/indexing-feature"
 
 type Log = {
@@ -13,17 +15,16 @@ export namespace KilocodeDefaultPlugins {
     cfg: T,
     opts: { disabled: boolean; log?: Log },
   ): T {
-    const before = cfg.plugin ?? []
-    const plugin = opts.disabled ? undefined : resolveIndexingPlugin(req, opts.log)
-    const after = ensureIndexingPlugin(before, plugin)
-    if (after.length > before.length) {
-      const added = after[after.length - 1]
-      cfg.plugin_origins = [
-        ...(cfg.plugin_origins ?? []),
-        { spec: added, source: "builtin", scope: "global" as ConfigPlugin.Scope },
-      ]
+    let plugins = cfg.plugin ?? []
+
+    if (!opts.disabled) {
+      plugins = ensureIndexingPlugin(plugins, resolveIndexingPlugin(req, opts.log))
+      plugins = ensureAtomicChatPlugin(plugins, resolveAtomicChatPlugin(req, opts.log))
     }
-    cfg.plugin = after
+
+    cfg.plugin = plugins
+    // Built-in indexing is not loaded through external plugins and must not wait for their setup.
+    cfg.plugin_origins = cfg.plugin_origins?.filter((item) => !isIndexingPlugin(item.spec))
     return cfg
   }
 }

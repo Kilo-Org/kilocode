@@ -13,6 +13,8 @@
  *   --insiders        Prefer VS Code Insiders over stable
  *   --wait            Block until the VS Code window is closed
  *   --clean           Wipe the user-data and extensions dirs before launching
+ *   --preserve-settings  Merge defaults into existing VS Code user settings
+ *   --accessible      Enable VS Code accessibility support for assistive-technology testing
  *
  * Environment:
  *   VSCODE_EXEC_PATH  Path to VS Code executable (same as --app-path)
@@ -24,7 +26,7 @@
  */
 import { $ } from "bun"
 import { createHash } from "node:crypto"
-import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { homedir, tmpdir } from "node:os"
 import { delimiter, join, resolve } from "node:path"
 import { spawn } from "node:child_process"
@@ -84,6 +86,8 @@ const insiders = opts["insiders"] === true
 const explicit = opts["app-path"] as string | undefined
 const blocking = opts["wait"] === true
 const clean = opts["clean"] === true
+const preserve = opts["preserve-settings"] === true
+const accessible = opts["accessible"] === true
 
 // ---------------------------------------------------------------------------
 // VS Code executable detection
@@ -249,29 +253,45 @@ async function installVsix(path: string, app: string) {
 // Settings for isolated instance
 // ---------------------------------------------------------------------------
 
-function settings() {
+function settings(keep: boolean, enabled: boolean) {
   const dir = join(userDir, "User")
+  const file = join(dir, "settings.json")
+  const defaults = {
+    "editor.accessibilitySupport": enabled ? "on" : "off",
+    "extensions.autoCheckUpdates": false,
+    "extensions.autoUpdate": false,
+    "extensions.ignoreRecommendations": true,
+    "security.workspace.trust.enabled": false,
+    "task.allowAutomaticTasks": "off",
+    "telemetry.telemetryLevel": "off",
+    "update.mode": "none",
+    "workbench.startupEditor": "none",
+    "workbench.tips.enabled": false,
+    "window.commandCenter": false,
+  }
+
   mkdirSync(dir, { recursive: true })
-  writeFileSync(
-    join(dir, "settings.json"),
-    JSON.stringify(
-      {
-        "editor.accessibilitySupport": "off",
-        "extensions.autoCheckUpdates": false,
-        "extensions.autoUpdate": false,
-        "extensions.ignoreRecommendations": true,
-        "security.workspace.trust.enabled": false,
-        "task.allowAutomaticTasks": "off",
-        "telemetry.telemetryLevel": "off",
-        "update.mode": "none",
-        "workbench.startupEditor": "none",
-        "workbench.tips.enabled": false,
-        "window.commandCenter": false,
-      },
-      null,
-      2,
-    ) + "\n",
-  )
+  const cfg =
+    keep && existsSync(file)
+      ? { ...defaults, ...load(file), ...(enabled ? { "editor.accessibilitySupport": "on" } : {}) }
+      : defaults
+
+  writeFileSync(file, JSON.stringify(cfg, null, 2) + "\n")
+}
+
+function load(file: string) {
+  try {
+    const cfg = JSON.parse(readFileSync(file, "utf8"))
+    if (cfg && typeof cfg === "object" && !Array.isArray(cfg)) return cfg as Record<string, unknown>
+  } catch (err) {
+    console.warn(
+      `[launch] Could not parse existing settings.json, rewriting defaults: ${err instanceof Error ? err.message : String(err)}`,
+    )
+    return {}
+  }
+
+  console.warn("[launch] Existing settings.json root is not an object, rewriting defaults")
+  return {}
 }
 
 // ---------------------------------------------------------------------------
@@ -291,7 +311,7 @@ async function launch() {
 
   const app = detect()
 
-  settings()
+  settings(preserve, accessible)
 
   const args = [workspace, `--extensions-dir=${extDir}`, `--user-data-dir=${userDir}`, "--skip-release-notes"]
 
@@ -323,6 +343,7 @@ async function launch() {
   console.log(`[launch] Executable: ${app}`)
   console.log(`[launch] Workspace:  ${workspace}`)
   console.log(`[launch] State:      ${base}`)
+  console.log(`[launch] Accessibility support: ${accessible ? "on" : "off"}`)
 
   if (blocking) {
     const result = Bun.spawnSync([app, ...args], {

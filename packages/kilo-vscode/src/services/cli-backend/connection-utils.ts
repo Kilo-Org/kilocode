@@ -16,6 +16,7 @@ export function resolveEventSessionId(
     case "session.updated":
       return event.properties.info.id
     case "session.status":
+    case "session.turn.close":
     case "session.idle":
     case "session.error":
     case "todo.updated":
@@ -34,6 +35,8 @@ export function resolveEventSessionId(
       return lookupMessageSessionId(part.messageID)
     }
     case "message.part.delta":
+      return event.properties.sessionID
+    case "message.part.removed":
       return event.properties.sessionID
     case "permission.asked":
     case "permission.replied":

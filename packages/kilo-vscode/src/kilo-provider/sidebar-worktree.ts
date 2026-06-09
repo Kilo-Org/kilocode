@@ -7,13 +7,15 @@ interface Msg {
   baseBranch?: string
   branchName?: string
   sessionId?: string
+  turnId?: string
 }
 
 interface Ctx {
   post: (msg: unknown) => void
   openAgentManager: () => Thenable<unknown>
   openAdvancedWorktree: () => Thenable<unknown>
-  openChanges: () => Thenable<unknown>
+  openChanges: (sessionId?: string, turnId?: string) => Thenable<unknown>
+  currentSessionId?: string
   createWorktree?: (baseBranch?: string, branchName?: string) => Promise<void>
   continueInWorktree?: (
     sessionId: string,
@@ -53,7 +55,7 @@ export async function handleSidebarWorktreeMessage(message: Msg, ctx: Ctx) {
   }
 
   if (message.type === "openChanges") {
-    await ctx.openChanges()
+    await ctx.openChanges(ctx.currentSessionId, message.turnId)
     return true
   }
 

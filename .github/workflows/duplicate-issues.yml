@@ -13,7 +13,7 @@ jobs:
       issues: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6 # kilocode_change
         with:
           fetch-depth: 1
 
@@ -128,7 +128,7 @@ jobs:
       issues: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6 # kilocode_change
         with:
           fetch-depth: 1
 

@@ -1,0 +1,90 @@
+.kilo-console .formatters,
+.kilo-console .formatter-group,
+.kilo-console .formatter-rules {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.kilo-console .formatter-group [data-component="section-title"] {
+  margin: 0.75rem 0 0.25rem;
+}
+
+.kilo-console .formatters [data-component="config-row"] {
+  align-items: flex-start;
+}
+
+.kilo-console .formatters [data-slot="config-row-subtitle"] {
+  overflow: visible;
+  white-space: normal;
+}
+
+.kilo-console .formatter-row-subtitle {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.kilo-console .formatter-row-id,
+.kilo-console .formatter-command {
+  overflow-wrap: anywhere;
+  font-family: var(--font-family-mono);
+}
+
+.kilo-console .formatter-row-meta {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.kilo-console .formatter-empty {
+  margin: 0;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  padding: 0.75rem;
+}
+
+.kilo-console .formatter-drawer {
+  width: min(42rem, calc(100vw - var(--app-rail-width)));
+}
+
+.kilo-console .formatter-form {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  padding: 1rem;
+}
+
+.kilo-console .formatter-form .wide {
+  grid-column: 1;
+}
+
+.kilo-console .formatter-form textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.kilo-console .formatter-check {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: center;
+  color: var(--text-weak);
+  font-size: var(--font-size-small);
+}
+
+.kilo-console .formatter-check input {
+  width: 1rem;
+  height: 1rem;
+  min-height: 1rem;
+  margin: 0;
+  padding: 0;
+}
+
+@media (max-width: 760px) {
+  .kilo-console .formatter-drawer {
+    width: calc(100vw - var(--app-rail-width));
+  }
+}

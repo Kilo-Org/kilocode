@@ -1,4 +1,4 @@
-import { IDE, RangeInFileWithContents } from "../.."
+import { Disposable, IDE, RangeInFileWithContents } from "../.."
 import { PrecalculatedLruCache } from "../../util/LruCache"
 import { getFullLanguageName, getParserForFile, getQueryForFile } from "../../util/treeSitter"
 import { findUriInDirs } from "../../util/uri"
@@ -14,13 +14,18 @@ export class ImportDefinitionsService {
     this._getFileInfo.bind(this),
     ImportDefinitionsService.N,
   )
+  private readonly disposable: Disposable | void
 
   constructor(private readonly ide: IDE) {
-    ide.onDidChangeActiveTextEditor((filepath) => {
+    this.disposable = ide.onDidChangeActiveTextEditor((filepath) => {
       this.cache
         .initKey(filepath)
         .catch((e) => console.warn(`Failed to initialize ImportDefinitionService: ${e.message}`))
     })
+  }
+
+  dispose(): void {
+    this.disposable?.dispose()
   }
 
   get(filepath: string): FileInfo | undefined {

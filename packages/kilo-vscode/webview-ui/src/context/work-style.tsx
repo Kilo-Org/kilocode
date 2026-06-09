@@ -27,14 +27,12 @@ export const WorkStyleProvider: ParentComponent = (props) => {
   const [style, setStyle] = createSignal<WorkStyleState>("unset")
   const [shown, setShown] = createSignal(false)
   const [loading, setLoading] = createSignal(true)
-  const [settings, setSettings] = createSignal<Partial<WorkStyleSettings>>({})
   const [defaults, setDefaults] = createSignal<Partial<Record<keyof WorkStyleSettings, boolean>>>({})
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "workStyleLoaded") return
     setStyle(message.style)
     setShown(message.onboardingShown)
-    setSettings(message.settings)
     setDefaults(message.defaults)
     setLoading(false)
   })
@@ -61,7 +59,6 @@ export const WorkStyleProvider: ParentComponent = (props) => {
 
     setStyle(style)
     setShown(true)
-    setSettings({ ...settings(), ...plan.settings })
     vscode.postMessage({ type: "setWorkStyle", style, shown: true, source })
   }
 

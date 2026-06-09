@@ -9,6 +9,10 @@ This page covers everything you can do from the KiloClaw dashboard. For getting 
 
 {% image src="/docs/img/kiloclaw/dashboard.png" alt="Connect account screen" width="800" caption="The KiloClaw Dashboard" /%}
 
+## Personal and Organization Instances
+
+The dashboard controls are the same for personal and organization-scoped KiloClaw instances. Organization instances are selected from the organization context and are listed separately from your **Personal** instance. Availability depends on your organization membership and KiloClaw entitlement.
+
 ## Instance Status
 
 Your instance is always in one of these states as indicated by the status label at the top of your dashboard:
@@ -88,7 +92,7 @@ For access to the full catalog of 335+ models, use the `/model` and `/models` co
 
 ### Channels
 
-You can connect Telegram, Discord, and Slack by entering bot tokens in the Settings tab. See [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms) for setup instructions.
+Kilo Chat is always available as KiloClaw's first-party channel and does not need a token. You can also connect Telegram, Discord, and Slack by entering bot tokens in the Settings tab. See [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms) for setup instructions.
 
 {% callout type="info" %}
 After saving channel tokens, you need to **Redeploy** or **Restart OpenClaw** for the changes to take effect.
@@ -154,7 +158,7 @@ Do not use the **Update** feature in the OpenClaw Control UI to update KiloClaw.
 
 When your instance is running, the dashboard shows any pending pairing requests. These appear when:
 
-- Someone messages your bot on Telegram, Discord, or Slack for the first time
+- Someone messages your bot on a third-party chat channel for the first time
 - A new browser or device connects to the Control UI
 
 You need to **approve** each request before the user or device can interact with your agent. See [Pairing Requests](/docs/kiloclaw/chat-platforms#pairing-requests) for details.
@@ -188,10 +192,6 @@ Each instance runs on a dedicated machine — there is no shared infrastructure 
 | Storage | 10 GB persistent SSD |
 
 Your storage is region-pinned — once your instance is created in a region (e.g., DFW), it always runs there. OpenClaw config lives at `/root/.openclaw` and the workspace at `/root/clawd`.
-
-{% callout type="info" %}
-These are the beta specifications for machines and subject to change without notice.
-{% /callout %}
 
 ## Related
 

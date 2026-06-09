@@ -1,6 +1,6 @@
 import { Deferred, Effect } from "effect"
-import { InstanceState } from "@/effect"
-import { Log } from "@/util"
+import { InstanceState } from "@/effect/instance-state"
+import * as Log from "@opencode-ai/core/util/log"
 import { SessionID } from "@/session/schema"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 

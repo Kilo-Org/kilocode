@@ -3,8 +3,9 @@ import path from "path"
 import { Effect, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import { Agent } from "../../src/agent/agent"
-import { Truncate } from "../../src/tool"
+import { Truncate } from "@/tool/truncate"
 import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { WebFetchTool } from "../../src/tool/webfetch"
 import { SessionID, MessageID } from "../../src/session/schema"
 
@@ -12,7 +13,7 @@ const projectRoot = path.join(import.meta.dir, "../..")
 
 const ctx = {
   sessionID: SessionID.make("ses_test"),
-  messageID: MessageID.make("message"),
+  messageID: MessageID.make("msg_message"),
   callID: "",
   agent: "build",
   abort: AbortSignal.any([]),
@@ -41,7 +42,7 @@ describe("tool.webfetch", () => {
     await withFetch(
       () => new Response(bytes, { status: 200, headers: { "content-type": "IMAGE/PNG; charset=binary" } }),
       async (url) => {
-        await Instance.provide({
+        await WithInstance.provide({
           directory: projectRoot,
           fn: async () => {
             const result = await exec({ url: new URL("/image.png", url).toString(), format: "markdown" })
@@ -69,7 +70,7 @@ describe("tool.webfetch", () => {
           headers: { "content-type": "image/svg+xml; charset=UTF-8" },
         }),
       async (url) => {
-        await Instance.provide({
+        await WithInstance.provide({
           directory: projectRoot,
           fn: async () => {
             const result = await exec({ url: new URL("/image.svg", url).toString(), format: "html" })
@@ -81,6 +82,58 @@ describe("tool.webfetch", () => {
     )
   })
 
+  // kilocode_change start
+  test.each(["image/x-icon", "image/vnd.microsoft.icon"])("rejects %s attachments", async (mime) => {
+    const bytes = new Uint8Array([0, 0, 1, 0])
+    await withFetch(
+      () => new Response(bytes, { status: 200, headers: { "content-type": mime } }),
+      async (url) => {
+        await WithInstance.provide({
+          directory: projectRoot,
+          fn: async () => {
+            await expect(exec({ url: new URL("/favicon.ico", url).toString(), format: "markdown" })).rejects.toThrow(
+              `Unsupported image format: ${mime}`,
+            )
+          },
+        })
+      },
+    )
+  })
+
+  test("returns non-icon image responses as file attachments", async () => {
+    const bytes = new Uint8Array([0, 0, 0, 0])
+    await withFetch(
+      () => new Response(bytes, { status: 200, headers: { "content-type": "image/avif" } }),
+      async (url) => {
+        await WithInstance.provide({
+          directory: projectRoot,
+          fn: async () => {
+            const result = await exec({ url: new URL("/image.avif", url).toString(), format: "markdown" })
+            expect(result.output).toBe("Image fetched successfully")
+            expect(result.attachments?.[0].mime).toBe("image/avif")
+          },
+        })
+      },
+    )
+  })
+
+  test("keeps fastbidsheet responses as text output", async () => {
+    await withFetch(
+      () => new Response("sheet", { status: 200, headers: { "content-type": "image/vnd.fastbidsheet" } }),
+      async (url) => {
+        await WithInstance.provide({
+          directory: projectRoot,
+          fn: async () => {
+            const result = await exec({ url: new URL("/sheet", url).toString(), format: "text" })
+            expect(result.output).toBe("sheet")
+            expect(result.attachments).toBeUndefined()
+          },
+        })
+      },
+    )
+  })
+  // kilocode_change end
+
   test("keeps text responses as text output", async () => {
     await withFetch(
       () =>
@@ -89,7 +142,7 @@ describe("tool.webfetch", () => {
           headers: { "content-type": "text/plain; charset=utf-8" },
         }),
       async (url) => {
-        await Instance.provide({
+        await WithInstance.provide({
           directory: projectRoot,
           fn: async () => {
             const result = await exec({ url: new URL("/file.txt", url).toString(), format: "text" })

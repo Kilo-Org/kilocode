@@ -60,6 +60,18 @@ The extension provides the same **SCM button** in the VS Code Source Control pan
 
 Configuration is handled through the extension's settings or the shared `kilo.jsonc` config file.
 
+Customize the commit prompt from **Settings > Commit Message**. Kilo saves this prompt to the current project's config so each repository can follow its own commit conventions without changing your global settings.
+
+You can also set it directly in the project config:
+
+```json
+{
+  "commit_message": {
+    "prompt": "Write concise conventional commits with the package scope when possible."
+  }
+}
+```
+
 {% callout type="info" %}
 Git commit message generation is a **VS Code extension feature**. It is not available in the CLI/TUI.
 {% /callout %}

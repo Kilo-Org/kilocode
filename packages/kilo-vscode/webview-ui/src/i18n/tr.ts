@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "Bu oturumu paylaş ve URL'yi panoya kopyala",
   "command.session.unshare": "Paylaşımı kaldır",
   "command.session.unshare.description": "Bu oturumun paylaşımını durdur",
+  "command.session.export": "Oturum dökümünü dışa aktar",
 
   "palette.search.placeholder": "Dosya, komut ve oturum ara",
   "palette.empty": "Sonuç bulunamadı",
@@ -105,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Önerilen",
   "dialog.provider.opencode.note": "Claude, GPT, Gemini ve daha fazlasını içeren seçilmiş modeller",
   "dialog.provider.anthropic.note": "Pro ve Max dahil Claude modellerine doğrudan erişim",
+  "dialog.provider.deepseek.note": "Muhakeme ve kodlama görevleri için DeepSeek modelleri",
   "dialog.provider.copilot.note": "Kodlama yardımı için Claude modelleri",
   "dialog.provider.openai.note": "Hızlı ve yetenekli genel yapay zeka görevleri için GPT modelleri",
   "dialog.provider.google.note": "Hızlı ve yapılandırılmış yanıtlar için Gemini modelleri",
@@ -134,9 +136,25 @@ export const dict = {
   "provider.connect.status.failed": "Yetkilendirme başarısız: {{error}}",
   "provider.connect.apiKey.description":
     "{{provider}} hesabınızı bağlamak ve Kilo'da {{provider}} modellerini kullanmak için {{provider}} API anahtarınızı girin.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "{{provider}} API anahtarı",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API anahtarı",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API anahtarı gerekli",
+  "provider.connect.prompt.required": "{{field}} zorunludur",
+  "provider.connect.azure.endpointType.label": "Azure uç nokta yapılandırmasını seçin",
+  "provider.connect.azure.endpointType.resourceName.label": "Kaynak adı",
+  "provider.connect.azure.endpointType.resourceName.hint": "Azure kaynak adınızdan uç nokta oluşturun",
+  "provider.connect.azure.endpointType.baseURL.label": "Tam uç nokta URL'si",
+  "provider.connect.azure.endpointType.baseURL.hint": "Özel bir Azure OpenAI uç noktası kullanın",
+  "provider.connect.azure.resourceName.label": "Azure kaynak adı",
+  "provider.connect.azure.resourceName.placeholder": "örn. my-models",
+  "provider.connect.azure.baseURL.label": "Azure OpenAI uç nokta URL'si",
+  "provider.connect.azure.baseURL.placeholder": "örn. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen, kodlama ajanları için seçilmiş güvenilir optimize edilmiş modellere erişim sağlar.",
   "provider.connect.opencodeZen.line2":
@@ -163,9 +181,12 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "{{provider}} modelleri artık kullanılabilir değil.",
 
   "model.tag.free": "Ücretsiz",
+  "model.tag.dataCollected": "Veriler eğitim için kullanılabilir",
   "model.tag.latest": "En yeni",
   "model.group.recommended": "Önerilen",
   "model.group.favorites": "Favoriler",
+  "model.group.collapse": "{{group}} grubunu daralt",
+  "model.group.expand": "{{group}} grubunu genişlet",
   "model.favorite.add": "Favorilere ekle",
   "model.favorite.remove": "Favorilerden çıkar",
   "model.provider.anthropic": "Anthropic",
@@ -188,6 +209,9 @@ export const dict = {
   "model.preview.label.cached": "Önbellek",
   "model.preview.label.average": "Tahmini Ort. Maliyet",
   "model.preview.label.context": "Bağlam",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Tamamlama",
+  "model.preview.label.costAttempt": "Maliyet / deneme",
   "model.preview.value.notSupported": "Desteklenmiyor",
   "model.preview.tooltip.average":
     "Tahmini ortalama maliyet; girdi, çıktı ve önbellek okuma tokenlerinin tipik bir oranına dayanmaktadır.",
@@ -259,6 +283,7 @@ export const dict = {
   "prompt.attachment.remove": "Eki kaldır",
   "prompt.action.send": "Gönder",
   "prompt.action.send.blocked": "Bekleyen soruyu önce yanıtlayın veya kapatın",
+  "prompt.action.send.recording": "Yazıya dök ve gönder",
   "prompt.action.stop": "Durdur",
   "prompt.action.enhance": "Komutu geliştir",
   "prompt.action.indexing": "İndeksleme ayarları",
@@ -269,6 +294,20 @@ export const dict = {
   "prompt.action.resetModel": "Modeli varsayılana sıfırla",
   "prompt.action.enhanceDescription":
     "'Komutu Geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifadelendirme sağlayarak komutunuzu iyileştirmeye yardımcı olur. Buraya bir komut yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
+
+  "speechToText.tooltip.start": "Kilo Gateway ile sesli girişi başlatın",
+  "speechToText.tooltip.stop": "Ses yakalamayı durdur",
+  "speechToText.tooltip.transcribing": "Metne dönüştürülüyor... İptal etmek için tıklayın.",
+  "speechToText.tooltip.error": "Sesli giriş başarısız oldu. Temizlemek için tıklayın.",
+  "speechToText.error.title": "Sesli giriş başarısız oldu",
+  "speechToText.error.loginRequired": "Sesli girişi kullanmak için Kilo'ya giriş yapın.",
+  "speechToText.error.permission": "Mikrofon izni reddedildi.",
+  "speechToText.error.microphone": "Mikrofon başlatılamadı.",
+  "speechToText.error.recording": "Kayıt başarısız oldu.",
+  "speechToText.error.emptyRecording": "Hiçbir ses kaydedilmedi.",
+  "speechToText.error.emptyTranscript": "Hiçbir konuşma algılanmadı.",
+  "speechToText.error.encoding": "Kayıt kodlanamadı.",
+  "speechToText.toast.transcribed": "Döküm eklendi",
 
   "prompt.toast.pasteUnsupported.title": "Desteklenmeyen yapıştırma",
   "prompt.toast.pasteUnsupported.description": "Buraya sadece görsel veya PDF yapıştırılabilir.",
@@ -423,6 +462,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Oturum paylaşımı kaldırılamadı",
   "toast.session.unshare.failed.description": "Oturum paylaşımı kaldırılırken bir hata oluştu",
 
+  "toast.session.rename.invalid.title": "Geçersiz oturum başlığı",
   "toast.session.listFailed.title": "{{project}} için oturumlar yüklenemedi",
 
   "toast.update.title": "Güncelleme mevcut",
@@ -456,6 +496,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Devam etmek ve 500'den fazla modeli keşfetmek için ücretsiz kayıt olun. 2 dakika sürer, kredi kartı gerekmez. Ya da daha sonra gelin.",
   "error.promotionLimit.action": "Kayıt Ol",
+  "error.providerAuth.title": "{{provider}} oturumunuzu kapattı",
+  "error.providerAuth.description": "{{provider}} bağlantısını yeniden kurun ve mesajınızı tekrar gönderin.",
+  "error.providerAuth.chatgpt.title": "OpenAI oturumunuzu kapattı",
+  "error.providerAuth.chatgpt.description":
+    "Codex modellerini kullanmaya devam etmek için ChatGPT ile tekrar giriş yapın ve mesajınızı yeniden gönderin.",
 
   "error.chain.unknown": "Bilinmeyen hata",
   "error.chain.causedBy": "Nedeni:",
@@ -948,6 +993,8 @@ export const dict = {
   "session.delete.confirm": '"{{name}}" oturumu silinsin mi?',
   "session.delete.button": "Oturumu sil",
   "session.untitled": "Adsız",
+  "session.current": "Geçerli oturum",
+  "session.history.sources": "Geçmiş kaynağı",
   "session.recent": "Son",
   "session.showHistory": "Geçmişi Göster",
   "session.search.placeholder": "Oturum ara...",
@@ -1045,7 +1092,14 @@ export const dict = {
   "settings.indexing.title": "İndeksleme",
   "settings.indexing.status.title": "Durum",
   "settings.indexing.enable.title": "İndekslemeyi etkinleştir",
-  "settings.indexing.enable.description": "Bu çalışma alanı için anlamsal kod tabanı indekslemeyi açın veya kapatın.",
+  "settings.indexing.enable.description": "Anlamsal kod tabanı indekslemeyi açın veya kapatın.",
+  "settings.indexing.globalEnable.title": "Genel olarak etkinleştir",
+  "settings.indexing.globalEnable.description": "Her çalışma alanı için dizine eklemeyi etkinleştir.",
+  "settings.indexing.projectEnable.title": "Bu proje için etkinleştir",
+  "settings.indexing.projectEnable.description":
+    "Genel dizine ekleme kapalı olduğunda bu çalışma alanı için dizine eklemeyi etkinleştir.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Küresel indeksleme etkinleştirildi, bu nedenle bu proje zaten kapsanıyor.",
   "settings.indexing.provider.title": "Yerleştirme sağlayıcısı",
   "settings.indexing.provider.description":
     "Anlamsal arama için yerleştirmeleri oluşturmak amacıyla kullanılacak sağlayıcıyı seçin.",
@@ -1082,6 +1136,14 @@ export const dict = {
   "session.status.retrying": "Yeniden deneniyor (deneme {{ attempt }})… {{ message }}",
   "session.status.working": "Çalışıyor...",
   "session.status.offline": "Ağ bağlantısı kesildi — yeniden bağlanılıyor...",
+  "session.outcome.incomplete": "Tur, {{count}} yapılacak öğe kalarak sona erdi",
+  "session.outcome.limit": "Tamamlanmadan önce yanıt sınırına ulaşıldı",
+  "session.outcome.unknown": "Tur, model bitiş nedeni olmadan sona erdi",
+  "session.outcome.filtered": "Sağlayıcı, bir içerik filtresi nedeniyle bu yanıtı durdurdu.",
+  "session.outcome.unexpected": "Yanıt beklenmedik bir şekilde sona erdi ve eksik olabilir.",
+  "session.outcome.interrupted": "Tur kesintiye uğradı",
+  "session.outcome.error": "Tur başarısız oldu",
+  "session.outcome.finish": "Bitiş nedeni: {{reason}}",
 
   "ui.sessionTurn.cancel": "İptal",
   "ui.sessionTurn.status.thinking": "Düşünüyor...",
@@ -1145,7 +1207,6 @@ export const dict = {
     "Telemetri, VS Code'un yerleşik telemetri ayarı tarafından kontrol edilir. Devre dışı bırakmak için Ayarlar > Telemetri > Telemetri Düzeyi'ne gidin ve \"off\" olarak ayarlayın. Değişikliği uygulamak için VS Code'u yeniden başlatın.",
   "settings.aboutKiloCode.telemetry.openSettings": "Telemetri Ayarlarını Aç",
 
-  "settings.agentBehaviour.subtab.modes": "Modlar",
   "settings.agentBehaviour.subtab.agents": "Ajanlar",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Sunucuları",
   "settings.agentBehaviour.subtab.rules": "Kurallar",
@@ -1175,6 +1236,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Satır içi görevleri tetiklemek için akıllı tuş ataması kullan",
   "settings.autocomplete.chatAutocomplete.title": "Sohbet metin alanı otomatik tamamlamasını etkinleştir",
   "settings.autocomplete.chatAutocomplete.description": "Sohbet metin alanında otomatik tamamlama önerileri göster",
+  "settings.autocomplete.modelsHint":
+    "Otomatik tamamlama için kullanılacak modeli seçmek için Modeller ayarlarına bakın.",
 
   "settings.notifications.agent.title": "Ajan Tamamlanması",
   "settings.notifications.agent.description": "Ajan bir görevi tamamladığında bildirim göster",
@@ -1205,12 +1268,16 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Büyük yapıştırılan içeriği özetleme",
   "settings.experimental.batch.title": "Toplu Araç",
   "settings.experimental.batch.description": "Birden fazla araç çağrısının toplu işlenmesini etkinleştir",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Kod Tabanı Araması",
   "settings.experimental.codebaseSearch.description":
     "Kod tabanınız genelinde yapay zeka destekli doğal dil aramasını etkinleştir",
+  "settings.experimental.speechToText.title": "Sesten metne",
+  "settings.experimental.speechToText.description":
+    "Kilo Gateway üzerinden Kilo hesabınızı kullanarak komut alanlarında sesli girişi etkinleştirin.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Speech to Text kullanmak için Kilo sağlayıcısını etkinleştirin ve giriş yapın. Speech to Text şu anda yalnızca Kilo Gateway ile desteklenmektedir.",
+  "settings.experimental.speechToTextModel.title": "Sesten metne modeli",
+  "settings.experimental.speechToTextModel.description": "Sesli giriş için Kilo Gateway transkripsiyon modelini seçin.",
   "settings.experimental.continueOnDeny.title": "Reddetme Durumunda Devam Et",
   "settings.experimental.continueOnDeny.description": "Bir izin reddedildiğinde ajan döngüsüne devam et",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
@@ -1233,6 +1300,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Yapılandırmak için bir ajan seçin…",
   "settings.agentBehaviour.modelOverride.title": "Model Geçersiz Kılma",
   "settings.agentBehaviour.modelOverride.description": "Bu ajan için varsayılan modeli geçersiz kıl",
+  "settings.agentBehaviour.variantOverride.title": "Varyant Geçersiz Kılma",
+  "settings.agentBehaviour.variantOverride.description": "Bu ajan için model varyantını geçersiz kıl",
   "settings.agentBehaviour.prompt.title": "Özel Komut",
   "settings.agentBehaviour.prompt.description": "Bu ajan için ek sistem komutu",
   "settings.agentBehaviour.temperature.title": "Sıcaklık",
@@ -1252,7 +1321,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Keşfedilen beceri yok. Becerileri kullanılabilir kılmak için aşağıya beceri klasör yolları veya URL'ler ekleyin.",
   "settings.agentBehaviour.availableModes": "Mevcut Özel Modlar",
-  "settings.agentBehaviour.noModesFound": "Mod bulunamadı.",
+  "settings.agentBehaviour.noAgentsFound": "Ajan bulunamadı.",
   "settings.agentBehaviour.importMode": "İçe Aktar",
   "settings.agentBehaviour.importMode.invalidName":
     "Dosyadaki mod adı geçersiz. Ad küçük harfle başlamalı ve yalnızca küçük harfler, rakamlar ve tire içermelidir.",
@@ -1261,10 +1330,10 @@ export const dict = {
     "Geçersiz JSON dosyası. Lütfen geçerli bir ajan tanım dosyası seçin.",
   "settings.agentBehaviour.importMode.tooLarge": "Dosya çok büyük. Ajan tanımları 1 MB'den küçük olmalıdır.",
   "settings.agentBehaviour.exportMode": "Ajan tanımını dışa aktar",
-  "settings.agentBehaviour.removeMode.title": "Modu kaldır",
-  "settings.agentBehaviour.removeMode.confirm":
-    '"{{name}}" modu kaldırılsın mı? Bu, yapılandırmanızı güncelleyerek modu devre dışı bırakacak.',
-  "settings.agentBehaviour.removeMode.button": "Kaldır",
+  "settings.agentBehaviour.removeAgent.title": "Ajanı kaldır",
+  "settings.agentBehaviour.removeAgent.confirm":
+    '"{{name}}" ajanını kaldır? Bu, yapılandırmanızı güncelleyerek ajanı devre dışı bırakır.',
+  "settings.agentBehaviour.removeAgent.button": "Kaldır",
   "settings.agentBehaviour.skillPaths": "Beceri Klasör Yolları",
   "settings.agentBehaviour.skillUrls": "Beceri URL'leri",
   "settings.agentBehaviour.removeSkill.title": "Beceriyi kaldır",
@@ -1352,7 +1421,10 @@ export const dict = {
     "Dosya düzenlemelerinden önce kontrol noktaları oluştur, böylece önceki durumları geri yükleyebilirsiniz",
 
   "settings.context.autoCompaction.title": "Otomatik Sıkıştırma",
-  "settings.context.autoCompaction.description": "Bağlam dolduğunda otomatik olarak sıkıştır",
+  "settings.context.autoCompaction.description": "Bağlam sınıra ulaşmadan önce otomatik olarak sıkıştır",
+  "settings.context.compactionLimit.title": "Otomatik sıkıştırma sınırı",
+  "settings.context.compactionLimit.description":
+    "Bağlam model penceresinin bu yüzdesine ulaştığında sıkıştır. Yalnızca güvenlik tamponunu kullanmak için boş bırakın.",
   "settings.context.prune.title": "Eski Çıktıları Temizle",
   "settings.context.prune.description": "Sıkıştırma sırasında eski araç çıktılarını kaldır",
   "settings.context.watcherPatterns": "Dosya İzleyici Yok Sayma Kalıpları",
@@ -1374,6 +1446,8 @@ export const dict = {
   "settings.display.layout.description": "Sohbet arayüzü için düzen modu",
   "settings.display.layout.auto": "Otomatik",
   "settings.display.layout.stretch": "Genişlet",
+  "settings.display.fontSize.title": "Yazı Tipi Boyutu",
+  "settings.display.fontSize.description": "Kilo webview UI yazı tipi boyutunu VS Code'dan bağımsız olarak ayarlayın.",
   "settings.display.reasoningAutoCollapse.title": "Akıl yürütmeyi otomatik daralt",
   "settings.display.reasoningAutoCollapse.description":
     "Ajan yazmayı bitirdikten sonra akıl yürütme bloklarını daraltır. Manuel olarak daraltmadığınız sürece akıl yürütmenin geniş kalması için kapalı bırakın.",
@@ -1387,11 +1461,15 @@ export const dict = {
   "settings.providers.smallModel.title": "Küçük Model",
   "settings.providers.smallModel.description":
     "Başlık oluşturma, commit mesajı oluşturma, komut istemi iyileştirme ve diğer hızlı görevler için hafif model",
+  "settings.providers.subagentModel.title": "Alt Aracı Modeli",
+  "settings.providers.subagentModel.description":
+    "task-tool alt aracıları için varsayılan model ve akıl yürütme çabası. Çağıran aracının modelini devralmak için boş bırakın.",
   "settings.providers.modeModels": "Mod Başına Model",
   "settings.providers.modeModels.description":
     "Belirli modlar için varsayılan modeli geçersiz kılın. Ayarlanmadıysa genel varsayılan model kullanılır.",
   "settings.providers.disabled": "Devre Dışı Sağlayıcılar",
   "settings.providers.disabled.description": "Sağlayıcı listesinde gizlenecek sağlayıcılar",
+  "settings.providers.disabled.enable": "Etkinleştir",
   "settings.providers.enabled": "Etkin Sağlayıcılar (İzin Listesi)",
   "settings.providers.enabled.description":
     "Ayarlanırsa yalnızca bu sağlayıcılar kullanılabilir olacak (özel izin listesi)",
@@ -1518,6 +1596,10 @@ export const dict = {
   "notifications.action.close": "Kapat",
   "notifications.action.tryModel": "Dene {{model}}",
   "notifications.action.tryModelGeneric": "Modeli Dene",
+  "settings.indexing.kiloModel.title": "Kilo model önayarı",
+  "settings.indexing.kiloModel.description": "Desteklenen bir Kilo-hosted embeddings modeli seçin.",
+  "settings.indexing.kiloSignIn.title": "Kilo oturumu açmak gerekiyor",
+  "settings.indexing.kiloSignIn.description": "Hosted embeddings kullanmak için Kilo'da oturum açın.",
   // Missing translations - English fallbacks until translated
   "profile.switchingAccount": "Hesap değiştiriliyor…",
   "settings.agentBehaviour.createMode": "Yeni Mod Oluştur",
@@ -1556,4 +1638,29 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Kurallar sırayla değerlendirilir — son eşleşen kural kazanır. Bu, CLI arka ucundan çözümlenen kural kümesidir.",
   "settings.agentBehaviour.editMode.save": "Tamam",
+  "diffViewer.source.workspace.label": "Dal",
+  "diffViewer.source.workspace.tooltip":
+    "Bu daldaki tüm değişiklikler, temel dal ile karşılaştırıldığında. Commitlenmemiş dosyaları (staged, unstaged, izlenmeyen) ve temelde henüz bulunmayan yerel commitleri içerir.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "git'in hazırlama alanına eklediğin (`git add`) değişiklikleri içeren dosyalar. Bir sonraki commit'te görüneceği gibi.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Çalışma ağacında değiştirilmiş ancak henüz staged edilmemiş dosyalar, artı takip edilmeyen (yeni) dosyalar.",
+  "diffViewer.source.session.label": "Oturum",
+  "diffViewer.source.session.tooltip":
+    "Geçerli oturum sırasında Kilo tarafından değiştirilen dosyalar, tur başı anlık görüntülere dayanır. Yeni bir oturum başlatıldığında sıfırlanır.",
+  "diffViewer.group.session": "Oturum",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Bu depoda anlık görüntüler devre dışı bırakılmıştır. Oturum değişikliklerini görüntülemek için yapılandırma dosyalarınızı düzenleyin.",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "Plan hazır:",
 }

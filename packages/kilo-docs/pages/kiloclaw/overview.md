@@ -1,19 +1,20 @@
 ---
 title: "KiloClaw"
-description: "One-click deployment of your personal AI agent with OpenClaw"
+description: "One-click deployment of your Kilo-hosted AI agent with OpenClaw"
 ---
 
 # KiloClaw 🦀
 
-KiloClaw is Kilo's hosted [OpenClaw](https://openclaw.ai) service — a one-click deployment that gives you a personal AI agent without the complexity of self-hosting. OpenClaw is a 24/7, open source AI agent that connects to chat platforms like Telegram, Discord, and Slack so it can take real actions automatically, not just chat.
+KiloClaw is Kilo's hosted [OpenClaw](https://openclaw.ai) service — a one-click deployment that gives you a personal or organization-scoped AI agent without the complexity of self-hosting. OpenClaw is a 24/7, open source AI agent that connects to Kilo Chat and optional chat platforms like Telegram, Discord, and Slack so it can take real actions automatically, not just chat.
 
-KiloClaw is powered by KiloCode. The API key is platform-managed, so you never need to bring your own. KiloClaw is currently in **Beta**.
+KiloClaw is powered by Kilo Code. The API key is platform-managed, so you never need to bring your own.
 
 ## Why KiloClaw?
 
 - **No infrastructure setup** — Skip Docker, servers, and configuration files
 - **Instant provisioning** — Your agent is ready in seconds
-- **Powered by KiloCode** — API key is automatically generated and refreshed
+- **Kilo Chat included** — Use the first-party Kilo Chat channel without token setup
+- **Powered by Kilo Code** — API key is automatically generated and refreshed
 - **Uses existing credits** — Runs on your Kilo Gateway balance
 - **Multiple free models** — Choose from several models at no additional cost
 - **Web UI included** — Access your agent's web interface directly from the dashboard
@@ -23,9 +24,10 @@ KiloClaw is powered by KiloCode. The API key is platform-managed, so you never n
 - **Kilo account** — Sign up at [kilo.ai](https://kilo.ai) if you haven't already
 - **Model access** — KiloClaw uses **Kilo Gateway by default**, which provides access to **500+ AI models** through a single integration.
 
-You can also run KiloClaw using:
+Depending on your setup, you can also use:
 
 - **Your own provider API keys (BYOK)** such as Anthropic, OpenAI, Google, or other supported providers.
+- **Organization access** if your organization has KiloClaw enabled and you want the instance scoped to that organization.
 
 ## Creating an Instance
 
@@ -35,14 +37,22 @@ You can also run KiloClaw using:
 {% image src="/docs/img/kiloclaw/profile-claw-nav.png" alt="Profile page showing Claw navigation" width="400" caption="Claw navigation in profile sidebar" /%}
 
 3. Click **Create Instance**
-4. Select your preferred model from the dropdown. See all available models at the [Kilo Leaderboard](https://kilo.ai/leaderboard#all-models).
+4. Your instance will use **Kilo Auto Balanced** as the default model. You can optionally select a different model from the dropdown — see all available models at the [Kilo Leaderboard](https://kilo.ai/leaderboard#all-models).
 
 {% image src="/docs/img/kiloclaw/create-instance.png" alt="Create instance modal with model selection" width="600" caption="Model selection during instance creation" /%}
 
-5. Optionally configure chat channels (Telegram, Discord, Slack) — you can also do this later from [Settings](/docs/kiloclaw/dashboard#settings)
+5. Optionally configure third-party chat channels (Telegram, Discord, Slack) — Kilo Chat is already available, and you can add other channels later from [Settings](/docs/kiloclaw/dashboard#settings)
 6. Click **Create & Provision**
 
 Your instance will be provisioned in seconds. Each instance runs on a dedicated machine with 2 shared vCPUs, 3 GB RAM, and a 10 GB persistent SSD. Once created in a region, your instance always runs there.
+
+## Organization KiloClaw
+
+If your organization has KiloClaw enabled, you can use an organization-scoped instance for work that belongs to that organization. The core KiloClaw experience is the same as a personal instance, with these differences:
+
+- Organization instances are separated from your **Personal** instance in KiloClaw lists.
+- Provisioning depends on your organization membership and the organization's KiloClaw entitlement.
+- Instance ownership and routing are scoped to the organization, so use organization-approved accounts and credentials for connected services.
 
 ## Managing Your Instance
 
@@ -75,7 +85,7 @@ When you initialize a new channel for the first time, or a new device connects t
 
 ## Using your OpenClaw Agent
 
-OpenClaw lets you customize your own AI assistant that can actually take action — check your email, manage your calendar, control smart devices, browse the web, and message you on Telegram or Discord when something needs attention. It's like having a personal assistant that runs 24/7, with the skills and access you choose to give it.
+OpenClaw lets you customize your own AI assistant that can actually take action — check your email, manage your calendar, control smart devices, browse the web, and message you through Kilo Chat or connected third-party channels when something needs attention. It's like having a personal assistant that runs 24/7, with the skills and access you choose to give it.
 
 ### Browser Tool
 
