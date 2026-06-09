@@ -7,6 +7,7 @@ import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilo
 import { KiloSession } from "@/kilocode/session" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
+import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
@@ -55,8 +56,7 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Truncate } from "@/tool/truncate"
 import { Image } from "@/image/image"
 import { decodeDataUrl } from "@/util/data-url"
-import { Process } from "@/util/process"
-import { Cause, Effect, Exit, Latch, Layer, Option, Scope, Context, Schema, Types } from "effect"
+import { Cause, Effect, Exit, Latch, Layer, Option, Scope, Context, Schema, Types } from "effect" // kilocode_change - Process moved to the timeout helper
 import * as EffectLogger from "@opencode-ai/core/effect/logger"
 import { InstanceState } from "@/effect/instance-state"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
@@ -1029,14 +1029,23 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           const cfg = yield* config.get()
           const sh = Shell.preferred(cfg.shell)
           const args = Shell.args(sh, input.command, cwd)
+          const limit = CommandTimeout.env() // kilocode_change
           let output = ""
           let aborted = false
+          let expired = false // kilocode_change
 
           const finish = Effect.uninterruptible(
             Effect.gen(function* () {
               if (aborted) {
                 output += "\n\n" + ["<metadata>", "User aborted the command", "</metadata>"].join("\n")
               }
+              // kilocode_change start
+              if (expired && limit) {
+                output +=
+                  "\n\n" +
+                  ["<metadata>", CommandTimeout.note(limit, "shell command terminated"), "</metadata>"].join("\n")
+              }
+              // kilocode_change end
               const completed = Date.now()
               // kilocode_change start - preserve Kilo v2 shell event dual-write
               if (flags.experimentalEventSystem) {
@@ -1081,7 +1090,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                 forceKillAfter: "3 seconds",
               })
               const handle = yield* spawner.spawn(cmd)
-              yield* Stream.runForEach(Stream.decodeText(handle.all), (chunk) =>
+              // kilocode_change start
+              const drain = Stream.runForEach(Stream.decodeText(handle.all), (chunk) =>
                 Effect.gen(function* () {
                   output += chunk
                   if (part.state.status === "running") {
@@ -1090,7 +1100,22 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                   }
                 }),
               )
-              yield* handle.exitCode
+              if (!limit) {
+                yield* drain.pipe(Effect.andThen(handle.exitCode))
+                return
+              }
+              const timedOut = yield* CommandTimeout.wait(
+                handle,
+                drain,
+                limit,
+              )
+              if (!timedOut) {
+                return
+              }
+              expired = true
+              return
+
+              // kilocode_change end
             }).pipe(Effect.scoped, Effect.orDie),
           ).pipe(Effect.exit)
 
@@ -2237,14 +2262,19 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       }
 
       const shellMatches = ConfigMarkdown.shell(template)
-      if (shellMatches.length > 0) {
-        const cfg = yield* config.get()
-        const sh = Shell.preferred(cfg.shell)
-        const results = yield* Effect.promise(() =>
-          Promise.all(
-            shellMatches.map(async ([, cmd]) => (await Process.text([cmd], { shell: sh, nothrow: true })).text),
+      if (shellMatches.length > 0) { // kilocode_change - process template shell substitutions with timeout-aware output capture
+        const cfg = yield* config.get() // kilocode_change - reuse configured shell for timeout-aware substitutions
+        const sh = Shell.preferred(cfg.shell) // kilocode_change - pass configured shell into timeout-aware substitutions
+        // kilocode_change start
+        const results = yield* Effect.all(
+          shellMatches.map(([, cmd]) =>
+            CommandTimeout.text(cmd, sh).pipe(
+              Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
+            ),
           ),
+          { concurrency: "unbounded" },
         )
+        // kilocode_change end
         let index = 0
         template = template.replace(bashRegex, () => results[index++])
       }
