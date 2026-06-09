@@ -101,6 +101,11 @@ export interface KiloProviderOptions {
   fetch?: typeof fetch
 
   /**
+   * Called when response body consumption is canceled or fails before reaching a clean end
+   */
+  onResponseIncomplete?: (reason?: unknown) => void
+
+  /**
    * Request timeout in milliseconds
    */
   timeout?: number | false

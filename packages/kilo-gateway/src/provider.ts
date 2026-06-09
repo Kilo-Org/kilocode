@@ -19,6 +19,44 @@ export function buildRequestHeaders(defaultHeaders: Record<string, string>, requ
   return headers
 }
 
+export function watchResponse(response: Response, incomplete?: (reason?: unknown) => void): Response {
+  if (!response.body || !incomplete) return response
+
+  const reader = response.body.getReader()
+  const body = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      await reader.read().then(
+        (chunk) => {
+          if (chunk.done) {
+            controller.close()
+            return
+          }
+          controller.enqueue(chunk.value)
+        },
+        (reason) => {
+          controller.error(reason)
+          incomplete(reason)
+        },
+      )
+    },
+    async cancel(reason) {
+      await Promise.all([reader.cancel(reason), Promise.resolve().then(() => incomplete(reason))])
+    },
+  })
+
+  const watched = new Response(body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  })
+  Object.defineProperties(watched, {
+    redirected: { value: response.redirected },
+    type: { value: response.type },
+    url: { value: response.url },
+  })
+  return watched
+}
+
 /**
  * Create a KiloCode provider instance
  *
@@ -62,11 +100,12 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
       headers.set("Authorization", `Bearer ${apiKey}`)
     }
 
-    return originalFetch(input, {
+    const response = await originalFetch(input, {
       ...init,
       headers,
       body,
     })
+    return watchResponse(response, options.onResponseIncomplete)
   }
 
   const sdkOptions = {
