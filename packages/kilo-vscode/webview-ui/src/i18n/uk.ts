@@ -210,6 +210,9 @@ export const dict = {
   "model.preview.label.cached": "Кешовані",
   "model.preview.label.average": "Орієнт. сер. вартість",
   "model.preview.label.context": "Контекст",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Виконання",
+  "model.preview.label.costAttempt": "Вартість / спроба",
   "model.preview.value.notSupported": "Не підтримується",
   "model.preview.tooltip.average":
     "Орієнтовна середня вартість базується на типовому співвідношенні вхідних, вихідних токенів та читання кешу.",

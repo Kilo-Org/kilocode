@@ -144,7 +144,7 @@ describe("env read permissions", () => {
         }).pipe(Effect.forkScoped)
 
         yield* waitForPending(1)
-        yield* allow({ enable: true, requestID: "per_env_everything" })
+        yield* allow({ enable: true, requestID: PermissionID.make("per_env_everything") })
 
         const items = yield* waitForPending(1)
         expect(items[0].id).toBe(PermissionID.make("per_env_everything"))

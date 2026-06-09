@@ -209,6 +209,9 @@ export const dict = {
   "model.preview.label.cached": "แคช",
   "model.preview.label.average": "ต้นทุนเฉลี่ยโดยประมาณ",
   "model.preview.label.context": "บริบท",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "ความสำเร็จ",
+  "model.preview.label.costAttempt": "ค่าใช้จ่าย / ครั้ง",
   "model.preview.value.notSupported": "ไม่รองรับ",
   "model.preview.tooltip.average":
     "ต้นทุนเฉลี่ยโดยประมาณนี้คำนวณจากอัตราส่วนทั่วไปของโทเค็นอินพุต เอาต์พุต และการอ่านแคช",

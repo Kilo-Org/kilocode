@@ -86,7 +86,7 @@ describe("Question.dismissAll", () => {
 
         const first = yield* KiloSessionPromptQueue.enqueue(
           sessionID,
-          MessageID.make("message_ask_1"),
+          MessageID.make("msg_ask_1"),
           Effect.gen(function* () {
             started.resolve()
             yield* Effect.promise(() => release.promise)
@@ -98,7 +98,7 @@ describe("Question.dismissAll", () => {
 
         const second = yield* KiloSessionPromptQueue.enqueue(
           sessionID,
-          MessageID.make("message_ask_2"),
+          MessageID.make("msg_ask_2"),
           Effect.succeed("second" as const),
           Effect.succeed("second-cancelled" as const),
         ).pipe(Effect.forkScoped)

@@ -212,6 +212,9 @@ export const dict = {
   "model.preview.label.cached": "Bufret",
   "model.preview.label.average": "Est. snittkostnad",
   "model.preview.label.context": "Kontekst",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Fullføring",
+  "model.preview.label.costAttempt": "Kostnad / forsøk",
   "model.preview.value.notSupported": "Ikke støttet",
   "model.preview.tooltip.average":
     "Den estimerte snittkostnaden er basert på et typisk forhold mellom inndata-, utdata- og leste buffer-tokens.",

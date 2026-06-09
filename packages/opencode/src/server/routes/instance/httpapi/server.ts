@@ -88,6 +88,7 @@ import { compressionLayer } from "./middleware/compression"
 import { corsVaryFix } from "./middleware/cors-vary"
 import { errorLayer } from "./middleware/error"
 import { fenceLayer } from "./middleware/fence"
+import { schemaErrorLayer } from "./middleware/schema-error"
 
 export const context = Context.makeUnsafe<unknown>(new Map())
 
@@ -179,6 +180,7 @@ const uiRoute = HttpRouter.use((router) =>
 
 export function createRoutes(corsOptions?: CorsOptions) {
   return Layer.mergeAll(rootApiRoutes, eventApiRoutes, instanceRoutes, docRoute, uiRoute).pipe(
+    Layer.provide(schemaErrorLayer), // kilocode_change
     Layer.provide([
       errorLayer,
       compressionLayer,

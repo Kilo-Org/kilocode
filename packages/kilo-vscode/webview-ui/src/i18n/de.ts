@@ -214,6 +214,9 @@ export const dict = {
   "model.preview.label.cached": "Zwischengespeichert",
   "model.preview.label.average": "Geschätzte Ø-Kosten",
   "model.preview.label.context": "Kontext",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Abschluss",
+  "model.preview.label.costAttempt": "Kosten / Versuch",
   "model.preview.value.notSupported": "Nicht unterstützt",
   "model.preview.tooltip.average":
     "Die geschätzten Durchschnittskosten basieren auf einem typischen Verhältnis von Eingabe-, Ausgabe- und Cache-Lese-Token.",

@@ -24,7 +24,7 @@ async function initTool() {
 
 const baseCtx = {
   sessionID: SessionID.make("ses_test-semantic-search"),
-  messageID: MessageID.make(""),
+  messageID: MessageID.make("msg_test-semantic-search"),
   callID: "",
   agent: "code",
   abort: AbortSignal.any([]),

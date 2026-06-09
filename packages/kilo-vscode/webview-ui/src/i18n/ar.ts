@@ -208,6 +208,9 @@ export const dict = {
   "model.preview.label.cached": "مخزن مؤقتاً",
   "model.preview.label.average": "متوسط التكلفة التقديرية",
   "model.preview.label.context": "السياق",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "الإكمال",
+  "model.preview.label.costAttempt": "التكلفة / المحاولة",
   "model.preview.value.notSupported": "غير مدعوم",
   "model.preview.tooltip.average":
     "يعتمد متوسط التكلفة التقديرية على نسبة نموذجية لرموز الإدخال والإخراج والقراءة المخزنة مؤقتاً.",
