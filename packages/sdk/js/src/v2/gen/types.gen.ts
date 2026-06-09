@@ -9193,6 +9193,28 @@ export type KiloClawChatCredentialsResponses = {
 
 export type KiloClawChatCredentialsResponse = KiloClawChatCredentialsResponses[keyof KiloClawChatCredentialsResponses]
 
+export type KiloCloudAgentCredentialsData = {
+  body?: never
+  path?: never
+  query?: never
+  url: "/kilo/cloud-agent/credentials"
+}
+
+export type KiloCloudAgentCredentialsResponses = {
+  /**
+   * Cloud Agent credentials
+   */
+  200: {
+    token: string
+    expiresAt: string
+    kiloFacadeUrl: string
+    cloudAgentUrl: string
+  }
+}
+
+export type KiloCloudAgentCredentialsResponse =
+  KiloCloudAgentCredentialsResponses[keyof KiloCloudAgentCredentialsResponses]
+
 export type KiloCloudSessionsData = {
   body?: never
   path?: never

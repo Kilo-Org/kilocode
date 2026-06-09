@@ -17,6 +17,7 @@ import { QuestionDock } from "../components/chat/QuestionDock"
 import { SuggestBar } from "../components/chat/SuggestBar"
 import { MessageList } from "../components/chat/MessageList"
 import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
+import { CloudMessageFailureIndicator } from "../components/chat/CloudMessageFailureIndicator"
 import { TurnOutcome } from "../components/shared/TurnOutcome"
 import { SessionContext } from "../context/session"
 import { ServerContext } from "../context/server"
@@ -345,6 +346,23 @@ export const ErrorDisplayDataPolicy: Story = {
       </div>
     </StoryProviders>
   ),
+}
+
+export const CloudMessageFailureIndicatorFailed: Story = {
+  name: "Cloud message — failed to deliver",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
+      cloudMessageFailure: () => ({ messageID: "msg-failed", status: "failed" as const }),
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle">
+        <SessionContext.Provider value={session as any}>
+          <CloudMessageFailureIndicator />
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
 }
 
 const toolUserID = "user-msg-spacing-001"

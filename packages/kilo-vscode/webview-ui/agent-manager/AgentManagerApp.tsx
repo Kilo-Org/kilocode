@@ -74,7 +74,7 @@ import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { VSCodeProvider, useVSCode } from "../src/context/vscode"
 import { ServerProvider } from "../src/context/server"
-import { ProviderProvider } from "../src/context/provider"
+import { ProviderProvider, useProvider } from "../src/context/provider"
 import { ConfigProvider } from "../src/context/config"
 import { DisplayProvider } from "../src/context/display"
 import { KiloEmbeddingModelsProvider } from "../src/context/kilo-embedding-models"
@@ -137,6 +137,9 @@ import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
+import { CloudAgentSection } from "./cloud-agent/CloudAgentSection"
+import { createCloudAgentDialog } from "./cloud-agent/NewCloudAgentDialog"
+import { CLOUD, blocksCloudAction, createCloudSessionState } from "./cloud-agent/session-state"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 const REVIEW_TAB_ID = "review"
@@ -198,6 +201,7 @@ import { parseBindingTokens } from "./keybind-tokens"
 const AgentManagerContent: Component = () => {
   const { t } = useLanguage()
   const session = useSession()
+  const provider = useProvider()
   const vscode = useVSCode()
   const dialog = useDialog()
   let sidebarSearchMenu: SidebarSearchMenuRef | undefined
@@ -459,7 +463,7 @@ const AgentManagerContent: Component = () => {
 
   const openApplyDialog = () => {
     const sel = selection()
-    if (!sel || sel === LOCAL) return
+    if (!sel || sel === LOCAL || sel === CLOUD) return
     setApplyStates((prev) => {
       if (!prev[sel]) return prev
       const next = { ...prev }
@@ -501,7 +505,7 @@ const AgentManagerContent: Component = () => {
 
   const openWorktreeDirectory = () => {
     const sel = selection()
-    if (!sel || sel === LOCAL) return
+    if (!sel || sel === LOCAL || sel === CLOUD) return
     vscode.postMessage({ type: "agentManager.openWorktree", worktreeId: sel })
   }
   const openWindow = metrics.click("open_worktree_window", "tab_toolbar", openWorktreeDirectory)
@@ -519,7 +523,7 @@ const AgentManagerContent: Component = () => {
 
   const runSelected = () => {
     const sel = selection()
-    if (sel) runWorktree(sel)
+    if (sel && sel !== CLOUD) runWorktree(sel)
   }
 
   createEffect(
@@ -623,6 +627,20 @@ const AgentManagerContent: Component = () => {
     }
   }
 
+  const cloud = createCloudSessionState({
+    session,
+    enabled: false,
+    postMessage: vscode.postMessage,
+    setSelection,
+    prepare: () => {
+      saveTabMemory()
+      setHistory(false)
+      setSidePanel(null)
+      setReviewActive(false)
+      terms.setActiveId(undefined)
+    },
+  })
+  const cloudDialog = createCloudAgentDialog(dialog, { state: cloud, session, provider, t })
   // Invalidate local session IDs if they no longer exist (preserve pending tabs)
   createEffect(() => {
     if (!worktreesLoaded()) return
@@ -674,7 +692,9 @@ const AgentManagerContent: Component = () => {
 
   // Sessions NOT in any worktree and not local
   const unassignedSessions = createMemo(() =>
-    filterUnassignedSessions(session.sessions(), worktreeSessionIds(), localSet()),
+    filterUnassignedSessions(session.sessions(), worktreeSessionIds(), localSet()).filter(
+      (item) => !cloud.set().has(item.id),
+    ),
   )
 
   // Local sessions (resolved from session list + pending tabs, in insertion order)
@@ -713,13 +733,14 @@ const AgentManagerContent: Component = () => {
 
   const activeWorktreeSessions = createMemo((): SessionInfo[] => {
     const sel = selection()
-    if (!sel || sel === LOCAL) return []
+    if (!sel || sel === LOCAL || sel === CLOUD) return []
     return sessionsForWorktree(sel)
   })
 
   const activeTabs = createMemo((): SessionInfo[] => {
     const sel = selection()
     if (sel === LOCAL) return localSessions()
+    if (sel === CLOUD) return cloud.tabs()
     if (sel) return activeWorktreeSessions()
     return []
   })
@@ -728,6 +749,7 @@ const AgentManagerContent: Component = () => {
     const sel = selection()
     if (terms.current().length > 0) return false
     if (sel === LOCAL) return localSessionIDs().length === 0
+    if (sel === CLOUD) return cloud.ids().length === 0
     if (sel) return activeWorktreeSessions().length === 0 && managedSessions().every((ms) => ms.worktreeId !== sel)
     return false
   })
@@ -949,7 +971,7 @@ const AgentManagerContent: Component = () => {
 
   const addSessionToCurrentWorktree = (sid: string) => {
     const sel = selection()
-    if (!sel || sel === LOCAL) return false
+    if (!sel || sel === LOCAL || sel === CLOUD) return false
     const current = managedSessions().find((entry) => entry.id === sid)
     if (current?.worktreeId) return focusManagedSession(current.worktreeId, sid)
     saveTabMemory()
@@ -1019,8 +1041,9 @@ const AgentManagerContent: Component = () => {
   onMount(() => {
     const handler = (event: MessageEvent) => {
       const msg = event.data
-      if (msg?.type === "navigate" && msg.view === "history") return setHistory(true)
+      if (msg?.type === "navigate" && msg.view === "history" && selection() !== CLOUD) return setHistory(true)
       if (msg?.type !== "action") return
+      if (selection() === CLOUD && blocksCloudAction(msg.action)) return
       if (msg.action === "sessionPrevious") navigate("up")
       else if (msg.action === "sessionNext") navigate("down")
       else if (msg.action === "tabPrevious") navigateTab("left")
@@ -1098,7 +1121,7 @@ const AgentManagerContent: Component = () => {
       const tag = (e.target as HTMLElement)?.tagName
       if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return
       const sel = selection()
-      if (!sel || sel === LOCAL) return
+      if (!sel || sel === LOCAL || sel === CLOUD) return
       e.preventDefault()
       confirmDeleteWorktree(sel)
     }
@@ -1120,6 +1143,7 @@ const AgentManagerContent: Component = () => {
       const sel = selection()
       if (!sel || sel === LOCAL) return
       e.stopImmediatePropagation()
+      if (sel === CLOUD) return
       const draft = drafts.create(sel)
       window.dispatchEvent(new CustomEvent("agentManagerCaptureDraft", { detail: { id: draft.id } }))
       terms.setActiveId(undefined)
@@ -1178,6 +1202,8 @@ const AgentManagerContent: Component = () => {
     })
 
     const unsub = vscode.onMessage((msg) => {
+      cloud.handle(msg)
+
       if (msg.type === "agentManager.repoInfo") {
         const info = msg as AgentManagerRepoInfoMessage
         setRepoBranch(info.branch)
@@ -1259,6 +1285,7 @@ const AgentManagerContent: Component = () => {
         setWorktrees(state.worktrees)
         setManagedSessions(state.sessions)
         setStaleWorktreeIds(new Set(state.staleWorktreeIds ?? []))
+        cloud.enable(state.cloudAgentEnabled === true, cloudDialog.close)
         if (state.isGitRepo !== undefined) setIsGitRepo(state.isGitRepo)
         if (!worktreesLoaded()) setWorktreesLoaded(true)
         // When not a git repo, also mark sessions as loaded since the Kilo
@@ -1783,7 +1810,6 @@ const AgentManagerContent: Component = () => {
   }
   const createWorktree = metrics.click("new_worktree", "worktrees", handleCreateWorktree)
 
-  // Advanced worktree dialog — opens a full dialog with prompt, versions, model, mode
   const showAdvancedWorktreeDialog = () => {
     if (!loaded()) return
     expandSidebar()
@@ -1897,6 +1923,7 @@ const AgentManagerContent: Component = () => {
   const handleAddSession = () => {
     const sel = selection()
     expandSidebar()
+    if (sel === CLOUD) return
     if (sel === LOCAL) return addPendingTab()
     if (sel) {
       // Deactivate any focused terminal so the new session is visible.
@@ -1906,12 +1933,17 @@ const AgentManagerContent: Component = () => {
   }
   const handleForkSession = (sessionId: string, messageId?: string) => {
     const sel = selection()
+    if (sel === CLOUD) return
     const msg = { type: "agentManager.forkSession" as const, sessionId, ...(messageId ? { messageId } : {}) }
     if (!sel || sel === LOCAL) return vscode.postMessage(msg)
     vscode.postMessage({ ...msg, worktreeId: sel })
   }
   const handleCloseTab = (sessionId: string) => {
     freezeTabs()
+    if (cloud.isTab(sessionId)) {
+      cloud.close(sessionId)
+      return
+    }
     const pending = isPending(sessionId)
     const isActive = pending ? sessionId === activePendingId() : session.currentSessionID() === sessionId
     if (isActive) {
@@ -1987,7 +2019,7 @@ const AgentManagerContent: Component = () => {
   const tabIds = createMemo(() => {
     const ids = activeTabs().map((s) => s.id)
     const sel = selection()
-    if (sel === null) return ids
+    if (sel === null || sel === CLOUD) return ids
     const withReview = reviewOpen() ? [...ids, REVIEW_TAB_ID] : ids
     const terminalIds = terms.current().map((t) => t.id)
     const base = [...withReview, ...terminalIds]
@@ -2011,6 +2043,7 @@ const AgentManagerContent: Component = () => {
     if (typeof from !== "string" || typeof to !== "string") return
     const sel = selection()
     if (sel === null) return
+    if (sel === CLOUD) return cloud.reorder(from, to)
     const key = sel === LOCAL ? LOCAL : sel
     // Unified mixed-drag: the current visible order is `tabIds()` and
     // includes sessions, review, and terminals. `reorderTabs` moves
@@ -2034,7 +2067,7 @@ const AgentManagerContent: Component = () => {
   const handleDragEnd = () => {
     setDraggingTab(undefined)
     const sel = selection()
-    if (sel === null) return
+    if (sel === null || sel === CLOUD) return
     const key = sel === LOCAL ? LOCAL : sel
     const order = worktreeTabOrder()[key]
     if (order && order.length > 0) persistTabOrder(key, order)
@@ -2095,6 +2128,7 @@ const AgentManagerContent: Component = () => {
   // Cmd+T: add a new tab strictly to the current selection (no side effects)
   const handleNewTabForCurrentSelection = () => {
     const sel = selection()
+    if (sel === CLOUD) return
     if (sel === LOCAL) {
       addPendingTab()
     } else if (sel) {
@@ -2118,7 +2152,7 @@ const AgentManagerContent: Component = () => {
   // Close the currently selected worktree with a confirmation dialog
   const closeSelectedWorktree = () => {
     const sel = selection()
-    if (!sel || sel === LOCAL) return
+    if (!sel || sel === LOCAL || sel === CLOUD) return
     confirmDeleteWorktree(sel)
   }
 
@@ -2149,7 +2183,6 @@ const AgentManagerContent: Component = () => {
             }
           }}
         />
-        {/* Local repo item */}
         <button
           class={`am-local-item ${selection() === LOCAL ? "am-local-item-active" : ""}`}
           data-sidebar-id="local"
@@ -2226,8 +2259,7 @@ const AgentManagerContent: Component = () => {
           <span class="am-shortcut-badge">{isMac ? "⌘" : "Ctrl+"}1</span>
         </button>
 
-        {/* WORKTREES section */}
-        <div class={`am-section ${sessionsCollapsed() ? "am-section-grow" : ""}`}>
+        <div class="am-section" classList={{ "am-section-grow": sessionsCollapsed() && cloud.collapsed() }}>
           <div class="am-section-header">
             <span class="am-section-label">{t("agentManager.section.worktrees")}</span>
             <WorktreeSectionActions
@@ -2488,108 +2520,120 @@ const AgentManagerContent: Component = () => {
           </div>
         </div>
 
-        {/* SESSIONS section (unassigned) — collapsible */}
-        <div class={`am-section ${sessionsCollapsed() ? "" : "am-section-grow"}`}>
-          <button
-            class="am-section-header am-section-toggle"
-            onClick={() => {
-              const next = !sessionsCollapsed()
-              setSessionsCollapsed(next)
-              vscode.postMessage({ type: "agentManager.setSessionsCollapsed", collapsed: next })
-            }}
-          >
-            <span class="am-section-label">
-              <Icon
-                name={sessionsCollapsed() ? "chevron-right" : "chevron-down"}
-                size="small"
-                class="am-section-chevron"
-              />
-              {t("agentManager.section.sessions")}
-            </span>
-          </button>
-          <Show when={!sessionsCollapsed()}>
-            <div class="am-list">
-              <Show
-                when={sessionsLoaded()}
-                fallback={
-                  <div class="am-skeleton-list">
-                    <div class="am-skeleton-session">
-                      <div class="am-skeleton-session-title" style={{ width: "70%" }} />
-                      <div class="am-skeleton-session-time" />
+        <div
+          class="am-session-sections"
+          classList={{ "am-session-sections-collapsed": sessionsCollapsed() && cloud.collapsed() }}
+        >
+          <div class="am-section">
+            <button
+              class="am-section-header am-section-toggle"
+              onClick={() => {
+                const next = !sessionsCollapsed()
+                setSessionsCollapsed(next)
+                vscode.postMessage({ type: "agentManager.setSessionsCollapsed", collapsed: next })
+              }}
+            >
+              <span class="am-section-label">
+                <Icon
+                  name={sessionsCollapsed() ? "chevron-right" : "chevron-down"}
+                  size="small"
+                  class="am-section-chevron"
+                />
+                {t("agentManager.section.sessions")}
+              </span>
+            </button>
+            <Show when={!sessionsCollapsed()}>
+              <div class="am-list">
+                <Show
+                  when={sessionsLoaded()}
+                  fallback={
+                    <div class="am-skeleton-list">
+                      <div class="am-skeleton-session">
+                        <div class="am-skeleton-session-title" style={{ width: "70%" }} />
+                        <div class="am-skeleton-session-time" />
+                      </div>
+                      <div class="am-skeleton-session">
+                        <div class="am-skeleton-session-title" style={{ width: "55%" }} />
+                        <div class="am-skeleton-session-time" />
+                      </div>
+                      <div class="am-skeleton-session">
+                        <div class="am-skeleton-session-title" style={{ width: "65%" }} />
+                        <div class="am-skeleton-session-time" />
+                      </div>
                     </div>
-                    <div class="am-skeleton-session">
-                      <div class="am-skeleton-session-title" style={{ width: "55%" }} />
-                      <div class="am-skeleton-session-time" />
-                    </div>
-                    <div class="am-skeleton-session">
-                      <div class="am-skeleton-session-title" style={{ width: "65%" }} />
-                      <div class="am-skeleton-session-time" />
-                    </div>
-                  </div>
-                }
-              >
-                <For each={unassignedSessions()}>
-                  {(s) => (
-                    <ContextMenu>
-                      <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
-                        <button
-                          class={`am-item ${s.id === session.currentSessionID() && selection() === null ? "am-item-active" : ""}`}
-                          data-sidebar-id={s.id}
-                          onClick={() => {
-                            saveTabMemory()
-                            setSelection(null)
-                            setReviewActive(false)
-                            session.selectSession(s.id)
-                          }}
-                        >
-                          <span class="am-item-title">{s.title || t("agentManager.session.untitled")}</span>
-                          <span class="am-item-time">{formatRelativeDate(s.updatedAt)}</span>
-                          <div class="am-item-promote">
-                            <TooltipKeybind
-                              title={t("agentManager.session.openInWorktree")}
-                              keybind={kb().newWorktree ?? ""}
-                              placement="right"
-                            >
-                              <IconButton
-                                icon="branch"
-                                size="small"
-                                variant="ghost"
-                                label={t("agentManager.session.openInWorktree")}
-                                onClick={(e: MouseEvent) => handlePromote(s.id, e)}
-                              />
-                            </TooltipKeybind>
-                          </div>
-                        </button>
-                      </ContextMenu.Trigger>
-                      <ContextMenu.Portal>
-                        <ContextMenu.Content class="am-ctx-menu">
-                          <ContextMenu.Item onSelect={() => handlePromote(s.id, new MouseEvent("click"))}>
-                            <Icon name="branch" size="small" />
-                            <ContextMenu.ItemLabel>{t("agentManager.session.openInWorktree")}</ContextMenu.ItemLabel>
-                          </ContextMenu.Item>
-                          <ContextMenu.Item
-                            onSelect={metrics.click("open_session_locally", "unassigned_session_menu", () =>
-                              openLocally(s.id),
-                            )}
+                  }
+                >
+                  <For each={unassignedSessions()}>
+                    {(s) => (
+                      <ContextMenu>
+                        <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
+                          <button
+                            class={`am-item ${s.id === session.currentSessionID() && selection() === null ? "am-item-active" : ""}`}
+                            data-sidebar-id={s.id}
+                            onClick={() => {
+                              saveTabMemory()
+                              setSelection(null)
+                              setReviewActive(false)
+                              session.selectSession(s.id)
+                            }}
                           >
-                            <Icon name="folder" size="small" />
-                            <ContextMenu.ItemLabel>{t("agentManager.session.openLocally")}</ContextMenu.ItemLabel>
-                          </ContextMenu.Item>
-                        </ContextMenu.Content>
-                      </ContextMenu.Portal>
-                    </ContextMenu>
-                  )}
-                </For>
-              </Show>
-            </div>
+                            <span class="am-item-title">{s.title || t("agentManager.session.untitled")}</span>
+                            <span class="am-item-time">{formatRelativeDate(s.updatedAt)}</span>
+                            <div class="am-item-promote">
+                              <TooltipKeybind
+                                title={t("agentManager.session.openInWorktree")}
+                                keybind={kb().newWorktree ?? ""}
+                                placement="right"
+                              >
+                                <IconButton
+                                  icon="branch"
+                                  size="small"
+                                  variant="ghost"
+                                  label={t("agentManager.session.openInWorktree")}
+                                  onClick={(e: MouseEvent) => handlePromote(s.id, e)}
+                                />
+                              </TooltipKeybind>
+                            </div>
+                          </button>
+                        </ContextMenu.Trigger>
+                        <ContextMenu.Portal>
+                          <ContextMenu.Content class="am-ctx-menu">
+                            <ContextMenu.Item onSelect={() => handlePromote(s.id, new MouseEvent("click"))}>
+                              <Icon name="branch" size="small" />
+                              <ContextMenu.ItemLabel>{t("agentManager.session.openInWorktree")}</ContextMenu.ItemLabel>
+                            </ContextMenu.Item>
+                            <ContextMenu.Item
+                              onSelect={metrics.click("open_session_locally", "unassigned_session_menu", () =>
+                                openLocally(s.id),
+                              )}
+                            >
+                              <Icon name="folder" size="small" />
+                              <ContextMenu.ItemLabel>{t("agentManager.session.openLocally")}</ContextMenu.ItemLabel>
+                            </ContextMenu.Item>
+                          </ContextMenu.Content>
+                        </ContextMenu.Portal>
+                      </ContextMenu>
+                    )}
+                  </For>
+                </Show>
+              </div>
+            </Show>
+          </div>
+
+          <Show when={cloud.enabled()}>
+            <CloudAgentSection
+              state={cloud}
+              current={session.currentSessionID}
+              selected={() => selection() === CLOUD}
+              onCreate={cloudDialog.show}
+              t={t}
+            />
           </Show>
         </div>
       </div>
 
       <div class="am-detail">
-        {/* Tab bar — full version with tabs renders when a section is selected
-            and has tabs; otherwise a minimal version still renders so the
-            sidebar toggle button stays at a fixed position. */}
+        {/* Keep the sidebar toggle fixed when no session is selected. */}
         <Show
           when={selection() !== null && !contextEmpty()}
           fallback={
@@ -2634,6 +2678,7 @@ const AgentManagerContent: Component = () => {
                             visibleTabId,
                             isPending,
                             isBusy: isSessionBusy,
+                            canFork: (id) => !cloud.isTab(id),
                             tabLookup,
                             adjacentHint,
                             activateTerminal: termHandlers.activate,
@@ -2657,7 +2702,7 @@ const AgentManagerContent: Component = () => {
                 </div>
                 <div class={`am-tab-fade am-tab-fade-right ${tabScroll.showRight() ? "am-tab-fade-visible" : ""}`} />
               </div>
-              <Show when={selection() !== null}>
+              <Show when={selection() !== null && selection() !== CLOUD}>
                 <div class="am-tab-add-wrap">
                   <div class="am-tab-add-separator" />
                   {renderNewTabButton({
@@ -2672,7 +2717,7 @@ const AgentManagerContent: Component = () => {
                   })}
                 </div>
               </Show>
-              <div class="am-tab-actions">
+              <div class="am-tab-actions" style={{ display: selection() === CLOUD ? "none" : undefined }}>
                 {(() => {
                   const sel = () => selection()
                   const isWorktree = () => typeof sel() === "string" && sel() !== LOCAL
@@ -2951,6 +2996,7 @@ const AgentManagerContent: Component = () => {
                 {renderTerminalLayer({ state: terms })}
                 <div class="am-chat-wrapper">
                   <ChatView
+                    cloud={selection() === CLOUD}
                     onSelectSession={(id) => {
                       if (addSessionToCurrentWorktree(id)) return
                       if (localSessionIDs().includes(id)) {

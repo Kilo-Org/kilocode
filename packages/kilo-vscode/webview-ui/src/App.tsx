@@ -122,22 +122,27 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   }
 
   const respond = (input: { sessionID: string; permissionID: string; response: "once" | "always" | "reject" }) => {
+    if (session.isCloudSession(input.sessionID)) return
     session.respondToPermission(input.permissionID, input.response, [], [])
   }
 
   const reply = (input: { requestID: string; answers: string[][] }) => {
+    if (session.isCloudSession()) return
     session.replyToQuestion(input.requestID, input.answers)
   }
 
   const reject = (input: { requestID: string }) => {
+    if (session.isCloudSession()) return
     session.rejectQuestion(input.requestID)
   }
 
   const open = (filePath: string, line?: number, column?: number) => {
+    if (session.isCloudSession()) return
     vscode.postMessage({ type: "openFile", filePath, line, column })
   }
 
   const openDiff = (diff: { file: string; patch?: string; additions: number; deletions: number }) => {
+    if (session.isCloudSession()) return
     vscode.postMessage({ type: "openDiffVirtual", diff, initialDiffStyle: "split" })
   }
 
@@ -150,6 +155,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   }
 
   const directory = () => {
+    if (session.isCloudSession()) return ""
     const dir = server.workspaceDirectory()
     if (!dir) return ""
     return dir.endsWith("/") || dir.endsWith("\\") ? dir : dir + "/"
