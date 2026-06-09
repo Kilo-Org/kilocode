@@ -121,7 +121,7 @@ export const MultiModelSelector: Component<{
                             <Show when={isDataCollectedModel(model)}>
                               <Tooltip value={dataLabel()} placement="top">
                                 <span class="am-mm-free-data-icon" aria-label={dataLabel()}>
-                                  <Icon name="brain-circuit" size="small" />
+                                  <Icon name="book-open-check" size="small" />
                                 </span>
                               </Tooltip>
                             </Show>

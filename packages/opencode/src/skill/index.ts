@@ -252,7 +252,7 @@ export const layer = Layer.effect(
     const global = yield* Global.Service // kilocode_change
     const discovered = yield* InstanceState.make(
       Effect.fn("Skill.discovery")(function* (ctx) {
-        return yield* discoverSkills(config, discovery, fsys, global, ctx.directory, ctx.worktree)
+        return yield* discoverSkills(config, discovery, fsys, global, ctx.directory, ctx.project.worktree) // kilocode_change
       }),
     )
     const state = yield* InstanceState.make(

@@ -1,4 +1,3 @@
-// kilocode_change - new file
 //
 // Ensure the edit tool always includes `filediff` in its
 // permission-ask metadata. Without `filediff`, the VS Code extension's
@@ -49,7 +48,7 @@ function capture() {
   const requests: Array<{ permission: string; metadata: Record<string, any> }> = []
   const ctx = {
     sessionID: SessionID.make("ses_test-edit-filediff"),
-    messageID: MessageID.make(""),
+    messageID: MessageID.make("msg_test-edit-filediff"),
     callID: "",
     agent: "code",
     abort: AbortSignal.any([]),

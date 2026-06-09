@@ -11,6 +11,7 @@ import { useKeyboard } from "@opentui/solid"
 import fuzzysort from "fuzzysort"
 import path from "path"
 import { createEffect, createMemo, createResource, createSignal, onCleanup, onMount, type Accessor } from "solid-js"
+import { slashDisplay, slashMatches } from "@/kilocode/cli/cmd/command-display" // kilocode_change
 import * as Locale from "@/util/locale"
 import {
   createPromptHistory,
@@ -169,7 +170,7 @@ function parseSlashCommand(text: string, commands: RunCommand[] | undefined) {
     return { type: "pending" as const }
   }
 
-  if (!commands.some((item) => item.name === head.name)) {
+  if (!commands.some((item) => slashMatches(item, head.name))) { // kilocode_change
     return { type: "none" as const }
   }
 
@@ -375,13 +376,13 @@ export function createPromptState(input: PromptInput): PromptState {
     const hidden = new Set(builtins.map((item) => item.name))
     return [
       ...(input.commands() ?? [])
-        .filter((item) => item.source !== "skill" && !hidden.has(item.name))
+        .filter((item) => !hidden.has(item.name)) // kilocode_change - suggest skills as slash commands
         .map(
           (item) =>
             ({
               kind: "slash",
               name: item.name,
-              display: `/${item.name}${item.source === "mcp" ? ":mcp" : ""}`,
+              display: slashDisplay(item), // kilocode_change
               description: item.description,
             }) satisfies SlashOption,
         ),
@@ -763,7 +764,7 @@ export function createPromptState(input: PromptInput): PromptState {
     }
 
     if (next.kind === "slash") {
-      const text = `/${next.name} `
+      const text = `${next.display} ` // kilocode_change
       const cursor = area.cursorOffset
 
       area.cursorOffset = 0

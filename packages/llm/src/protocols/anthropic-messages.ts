@@ -5,10 +5,10 @@ import { Endpoint } from "../route/endpoint"
 import { Framing } from "../route/framing"
 import { Protocol } from "../route/protocol"
 import {
+  LLMEvent,
   Usage,
   type CacheHint,
   type FinishReason,
-  type LLMEvent,
   type LLMRequest,
   type ProviderMetadata,
   type ToolCallPart,
@@ -16,6 +16,7 @@ import {
   type ToolResultPart,
 } from "../schema"
 import { JsonObject, optionalArray, optionalNull, ProviderShared } from "./shared"
+import * as Cache from "./utils/cache"
 import { ToolStream } from "./utils/tool-stream"
 
 const ADAPTER = "anthropic-messages"
@@ -25,7 +26,10 @@ export const PATH = "/messages"
 // =============================================================================
 // Request Body Schema
 // =============================================================================
-const AnthropicCacheControl = Schema.Struct({ type: Schema.tag("ephemeral") })
+const AnthropicCacheControl = Schema.Struct({
+  type: Schema.tag("ephemeral"),
+  ttl: Schema.optional(Schema.Literals(["5m", "1h"])),
+})
 
 const AnthropicTextBlock = Schema.Struct({
   type: Schema.tag("text"),
@@ -193,8 +197,24 @@ const invalid = ProviderShared.invalidRequest
 // =============================================================================
 // Request Lowering
 // =============================================================================
-const cacheControl = (cache: CacheHint | undefined) =>
-  cache?.type === "ephemeral" ? { type: "ephemeral" as const } : undefined
+// Anthropic accepts at most 4 explicit cache_control breakpoints per request,
+// across `tools`, `system`, and `messages`. Beyond the cap the API returns a
+// 400 — so the lowering layer counts emitted markers and silently drops any
+// that exceed it.
+const ANTHROPIC_BREAKPOINT_CAP = 4
+
+const EPHEMERAL_5M = { type: "ephemeral" as const }
+const EPHEMERAL_1H = { type: "ephemeral" as const, ttl: "1h" as const }
+
+const cacheControl = (breakpoints: Cache.Breakpoints, cache: CacheHint | undefined) => {
+  if (cache?.type !== "ephemeral" && cache?.type !== "persistent") return undefined
+  if (breakpoints.remaining <= 0) {
+    breakpoints.dropped += 1
+    return undefined
+  }
+  breakpoints.remaining -= 1
+  return Cache.ttlBucket(cache.ttlSeconds) === "1h" ? EPHEMERAL_1H : EPHEMERAL_5M
+}
 
 const anthropicMetadata = (metadata: Record<string, unknown>): ProviderMetadata => ({ anthropic: metadata })
 
@@ -204,10 +224,11 @@ const signatureFromMetadata = (metadata: ProviderMetadata | undefined): string |
   return typeof anthropic.signature === "string" ? anthropic.signature : undefined
 }
 
-const lowerTool = (tool: ToolDefinition): AnthropicTool => ({
+const lowerTool = (breakpoints: Cache.Breakpoints, tool: ToolDefinition): AnthropicTool => ({
   name: tool.name,
   description: tool.description,
   input_schema: tool.inputSchema,
+  cache_control: cacheControl(breakpoints, tool.cache),
 })
 
 const lowerToolChoice = (toolChoice: NonNullable<LLMRequest["toolChoice"]>) =>
@@ -249,7 +270,10 @@ const lowerServerToolResult = Effect.fn("AnthropicMessages.lowerServerToolResult
   return { type: wireType, tool_use_id: part.id, content: part.result.value } satisfies AnthropicServerToolResultBlock
 })
 
-const lowerMessages = Effect.fn("AnthropicMessages.lowerMessages")(function* (request: LLMRequest) {
+const lowerMessages = Effect.fn("AnthropicMessages.lowerMessages")(function* (
+  request: LLMRequest,
+  breakpoints: Cache.Breakpoints,
+) {
   const messages: AnthropicMessage[] = []
 
   for (const message of request.messages) {
@@ -258,7 +282,7 @@ const lowerMessages = Effect.fn("AnthropicMessages.lowerMessages")(function* (re
       for (const part of message.content) {
         if (!ProviderShared.supportsContent(part, ["text"]))
           return yield* ProviderShared.unsupportedContent("Anthropic Messages", "user", ["text"])
-        content.push({ type: "text", text: part.text, cache_control: cacheControl(part.cache) })
+        content.push({ type: "text", text: part.text, cache_control: cacheControl(breakpoints, part.cache) })
       }
       messages.push({ role: "user", content })
       continue
@@ -268,7 +292,7 @@ const lowerMessages = Effect.fn("AnthropicMessages.lowerMessages")(function* (re
       const content: AnthropicAssistantBlock[] = []
       for (const part of message.content) {
         if (part.type === "text") {
-          content.push({ type: "text", text: part.text, cache_control: cacheControl(part.cache) })
+          content.push({ type: "text", text: part.text, cache_control: cacheControl(breakpoints, part.cache) })
           continue
         }
         if (part.type === "reasoning") {
@@ -304,6 +328,7 @@ const lowerMessages = Effect.fn("AnthropicMessages.lowerMessages")(function* (re
         tool_use_id: part.id,
         content: ProviderShared.toolResultText(part),
         is_error: part.result.type === "error" ? true : undefined,
+        cache_control: cacheControl(breakpoints, part.cache),
       })
     }
     messages.push({ role: "user", content })
@@ -330,18 +355,33 @@ const lowerThinking = Effect.fn("AnthropicMessages.lowerThinking")(function* (re
 const fromRequest = Effect.fn("AnthropicMessages.fromRequest")(function* (request: LLMRequest) {
   const toolChoice = request.toolChoice ? yield* lowerToolChoice(request.toolChoice) : undefined
   const generation = request.generation
+  // Allocate the 4-breakpoint budget in invalidation order: tools → system →
+  // messages. Tools live highest in the cache hierarchy, so when callers
+  // over-mark we keep their tool hints and shed the message-tail ones first.
+  const breakpoints = Cache.newBreakpoints(ANTHROPIC_BREAKPOINT_CAP)
+  const tools =
+    request.tools.length === 0 || request.toolChoice?.type === "none"
+      ? undefined
+      : request.tools.map((tool) => lowerTool(breakpoints, tool))
+  const system =
+    request.system.length === 0
+      ? undefined
+      : request.system.map((part) => ({
+          type: "text" as const,
+          text: part.text,
+          cache_control: cacheControl(breakpoints, part.cache),
+        }))
+  const messages = yield* lowerMessages(request, breakpoints)
+  if (breakpoints.dropped > 0) {
+    yield* Effect.logWarning(
+      `Anthropic Messages: dropped ${breakpoints.dropped} cache breakpoint(s); the API allows at most ${ANTHROPIC_BREAKPOINT_CAP} per request.`,
+    )
+  }
   return {
     model: request.model.id,
-    system:
-      request.system.length === 0
-        ? undefined
-        : request.system.map((part) => ({
-            type: "text" as const,
-            text: part.text,
-            cache_control: cacheControl(part.cache),
-          })),
-    messages: yield* lowerMessages(request),
-    tools: request.tools.length === 0 || request.toolChoice?.type === "none" ? undefined : request.tools.map(lowerTool),
+    system,
+    messages,
+    tools,
     tool_choice: toolChoice,
     stream: true as const,
     max_tokens: generation?.maxTokens ?? request.model.limits.output ?? 4096,
@@ -415,14 +455,13 @@ const serverToolResultEvent = (block: NonNullable<AnthropicEvent["content_block"
       ? String((block.content as Record<string, unknown>).type)
       : ""
   const isError = errorPayload.endsWith("_tool_result_error")
-  return {
-    type: "tool-result",
+  return LLMEvent.toolResult({
     id: block.tool_use_id ?? "",
     name: SERVER_TOOL_RESULT_NAMES[block.type],
     result: isError ? { type: "error", value: block.content } : { type: "json", value: block.content },
     providerExecuted: true,
     providerMetadata: anthropicMetadata({ blockType: block.type }),
-  }
+  })
 }
 
 type StepResult = readonly [ParserState, ReadonlyArray<LLMEvent>]
@@ -453,18 +492,17 @@ const onContentBlockStart = (state: ParserState, event: AnthropicEvent): StepRes
   }
 
   if (block.type === "text" && block.text) {
-    return [state, [{ type: "text-delta", text: block.text }]]
+    return [state, [LLMEvent.textDelta({ id: `text-${event.index ?? 0}`, text: block.text })]]
   }
 
   if (block.type === "thinking" && block.thinking) {
     return [
       state,
       [
-        {
-          type: "reasoning-delta",
+        LLMEvent.reasoningDelta({
+          id: `reasoning-${event.index ?? 0}`,
           text: block.thinking,
-          ...(block.signature ? { providerMetadata: anthropicMetadata({ signature: block.signature }) } : {}),
-        },
+        }),
       ],
     ]
   }
@@ -480,17 +518,25 @@ const onContentBlockDelta = Effect.fn("AnthropicMessages.onContentBlockDelta")(f
   const delta = event.delta
 
   if (delta?.type === "text_delta" && delta.text) {
-    return [state, [{ type: "text-delta", text: delta.text }]] satisfies StepResult
+    return [state, [LLMEvent.textDelta({ id: `text-${event.index ?? 0}`, text: delta.text })]] satisfies StepResult
   }
 
   if (delta?.type === "thinking_delta" && delta.thinking) {
-    return [state, [{ type: "reasoning-delta", text: delta.thinking }]] satisfies StepResult
+    return [
+      state,
+      [LLMEvent.reasoningDelta({ id: `reasoning-${event.index ?? 0}`, text: delta.thinking })],
+    ] satisfies StepResult
   }
 
   if (delta?.type === "signature_delta" && delta.signature) {
     return [
       state,
-      [{ type: "reasoning-delta", text: "", providerMetadata: anthropicMetadata({ signature: delta.signature }) }],
+      [
+        LLMEvent.reasoningEnd({
+          id: `reasoning-${event.index ?? 0}`,
+          providerMetadata: anthropicMetadata({ signature: delta.signature }),
+        }),
+      ],
     ] satisfies StepResult
   }
 
@@ -524,21 +570,20 @@ const onMessageDelta = (state: ParserState, event: AnthropicEvent): StepResult =
   return [
     { ...state, usage },
     [
-      {
-        type: "request-finish",
+      LLMEvent.requestFinish({
         reason: mapFinishReason(event.delta?.stop_reason),
         usage,
-        ...(event.delta?.stop_sequence
-          ? { providerMetadata: anthropicMetadata({ stopSequence: event.delta.stop_sequence }) }
-          : {}),
-      },
+        providerMetadata: event.delta?.stop_sequence
+          ? anthropicMetadata({ stopSequence: event.delta.stop_sequence })
+          : undefined,
+      }),
     ],
   ]
 }
 
 const onError = (state: ParserState, event: AnthropicEvent): StepResult => [
   state,
-  [{ type: "provider-error", message: event.error?.message ?? "Anthropic Messages stream error" }],
+  [LLMEvent.providerError({ message: event.error?.message ?? "Anthropic Messages stream error" })],
 ]
 
 const step = (state: ParserState, event: AnthropicEvent) => {

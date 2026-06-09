@@ -23,7 +23,10 @@ function childID(part: MessageV2.Part): string | undefined {
  * child session references, causing SSE events and permission prompts to bleed
  * across sessions.
  */
-export function remapChildren(sid: SessionID): Effect.Effect<void, Session.NotFound, Session.Service> {
+export function remapChildren(
+  sid: SessionID,
+  remapped = new Map<string, SessionID>(),
+): Effect.Effect<void, Session.NotFound, Session.Service> {
   return Effect.gen(function* () {
     const sessions = yield* Session.Service
     const msgs = yield* sessions.messages({ sessionID: sid })
@@ -36,14 +39,13 @@ export function remapChildren(sid: SessionID): Effect.Effect<void, Session.NotFo
     }
     if (refs.length === 0) return
 
-    const remapped = new Map<string, SessionID>()
     for (const ref of refs) {
       if (remapped.has(ref.child)) continue
       const exists = yield* sessions.get(SessionID.make(ref.child)).pipe(Effect.orElseSucceed(() => undefined))
       if (!exists) continue
       const forked = yield* sessions.fork({ sessionID: SessionID.make(ref.child) })
-      yield* remapChildren(forked.id)
       remapped.set(ref.child, forked.id)
+      yield* remapChildren(forked.id, remapped)
     }
 
     if (remapped.size === 0) return

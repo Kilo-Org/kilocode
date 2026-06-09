@@ -590,6 +590,137 @@ describe("plan_exit detection", () => {
       await expect(pending).resolves.toBe("continue")
     }))
 
+  test("plan reminder reuses custom plan_exit path when refining", () =>
+    withInstance(async () => {
+      const seeded = await seed({
+        tools: [
+          {
+            tool: "plan_exit",
+            input: { path: ".plans/fix.md" },
+            output: "Plan is ready at .plans/fix.md. Ending planning turn.",
+          },
+        ],
+      })
+      const file = path.join(Instance.worktree, ".plans", "fix.md")
+      await fs.mkdir(path.dirname(file), { recursive: true })
+      await Bun.write(file, "Do implementation step 1")
+
+      const session = await sessions.get(seeded.sessionID)
+      const id = MessageID.ascending()
+      const user: MessageV2.WithParts = {
+        info: {
+          id,
+          role: "user",
+          sessionID: seeded.sessionID,
+          time: { created: Date.now() },
+          agent: "Architect",
+          model,
+        },
+        parts: [
+          {
+            id: PartID.ascending(),
+            messageID: id,
+            sessionID: seeded.sessionID,
+            type: "text",
+            text: "Continue refining",
+          },
+        ],
+      }
+      await KiloSessionPrompt.insertPlanReminders({
+        agent: { name: "Architect", options: {} },
+        session,
+        userMessage: user,
+        messages: [...seeded.messages, user],
+      })
+
+      const part = user.parts.at(-1)
+      const text = part?.type === "text" ? part.text : ""
+      expect(text).toContain("The current saved plan file is")
+      expect(text.replaceAll(path.sep, "/")).toContain(".plans/fix.md")
+      expect(text).toContain("Project/user instructions about plan location")
+      expect(text).not.toContain("No plan file exists yet")
+    }))
+
+  test("plan reminder prefers project plan path instructions over fallback", () =>
+    withInstance(async () => {
+      const session = await sessions.create({})
+      const id = MessageID.ascending()
+      const user: MessageV2.WithParts = {
+        info: {
+          id,
+          role: "user",
+          sessionID: session.id,
+          time: { created: Date.now() },
+          agent: "plan",
+          model,
+        },
+        parts: [
+          {
+            id: PartID.ascending(),
+            messageID: id,
+            sessionID: session.id,
+            type: "text",
+            text: "Create a plan. AGENTS says plans go in .plans/.",
+          },
+        ],
+      }
+
+      await KiloSessionPrompt.insertPlanReminders({
+        agent: { name: "plan", options: {} },
+        session,
+        userMessage: user,
+        messages: [user],
+      })
+
+      const part = user.parts.at(-1)
+      const text = part?.type === "text" ? part.text : ""
+      expect(text).toContain("Use the plan path specified by the user or project instructions")
+      expect(text).toContain("Do not choose .kilo/plans/")
+      expect(text).toContain(".plans/")
+      expect(text).toContain("If none is specified")
+      expect(text).not.toContain(Session.plan(session, Instance.current))
+    }))
+
+  test("architect reminder prefers project plan path instructions over fallback", () =>
+    withInstance(async () => {
+      const session = await sessions.create({})
+      const id = MessageID.ascending()
+      const user: MessageV2.WithParts = {
+        info: {
+          id,
+          role: "user",
+          sessionID: session.id,
+          time: { created: Date.now() },
+          agent: "Architect",
+          model,
+        },
+        parts: [
+          {
+            id: PartID.ascending(),
+            messageID: id,
+            sessionID: session.id,
+            type: "text",
+            text: "Create a plan. AGENTS says plans go in .plans/.",
+          },
+        ],
+      }
+
+      await KiloSessionPrompt.insertPlanReminders({
+        agent: { name: "Architect", options: {} },
+        session,
+        userMessage: user,
+        messages: [user],
+      })
+
+      const part = user.parts.at(-1)
+      const text = part?.type === "text" ? part.text : ""
+      expect(text).toContain("Use the plan path specified by the user or project instructions")
+      expect(text).toContain("If none is specified")
+      expect(text).toContain(".plans/")
+      expect(text).not.toContain("Default to")
+      expect(text).not.toContain("A fallback plan file exists")
+    }))
+
   test("PlanFollowup.ask shows prompt when plan text is on earlier assistant and last assistant is empty", () =>
     withInstance(async () => {
       const session = await sessions.create({})

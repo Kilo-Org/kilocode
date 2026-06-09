@@ -13,6 +13,7 @@
  *    Local: builds only current platform (--single).
  *    Production: builds all platforms.
  * 2. Copies them into backend/build/generated/cli/cli/{os}/kilo[.exe]
+ *    plus models-snapshot.json sidecars.
  *    so they end up inside the backend jar at /cli/{os}/kilo.
  * 3. Invokes Gradle to build the plugin.
  */
@@ -53,13 +54,17 @@ function distBinPath(os: string, exe: string): string {
   return join(distDir, `@kilocode/cli-${os}`, "bin", exe)
 }
 
+function distSnapshotPath(os: string): string {
+  return join(distDir, `@kilocode/cli-${os}`, "bin", "models-snapshot.json")
+}
+
 function hasDist(): boolean {
   if (production) {
-    return platforms.every((p) => existsSync(distBinPath(p.os, p.exe)))
+    return platforms.every((p) => existsSync(distBinPath(p.os, p.exe)) && existsSync(distSnapshotPath(p.os)))
   }
   const tag = localPlatformTag()
   const local = platforms.find((p) => p.os === tag)
-  return local ? existsSync(distBinPath(local.os, local.exe)) : false
+  return local ? existsSync(distBinPath(local.os, local.exe)) && existsSync(distSnapshotPath(local.os)) : false
 }
 
 async function prepareCli() {
@@ -85,7 +90,8 @@ async function prepareCli() {
   let copied = 0
   for (const p of platforms) {
     const src = distBinPath(p.os, p.exe)
-    if (!existsSync(src)) {
+    const snapshot = distSnapshotPath(p.os)
+    if (!existsSync(src) || !existsSync(snapshot)) {
       missing.push(p.os)
       continue
     }
@@ -94,6 +100,7 @@ async function prepareCli() {
     mkdirSync(dir, { recursive: true })
     const dest = join(dir, p.exe)
     cpSync(src, dest)
+    cpSync(snapshot, join(dir, "models-snapshot.json"))
     chmodSync(dest, 0o755)
     copied++
     log(`Copied ${relative(root, src)} -> ${relative(root, dest)}`)
