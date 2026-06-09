@@ -90,6 +90,13 @@ export const ClawChatCredentials = Schema.NullOr(
   }),
 )
 
+export const CloudAgentCredentials = Schema.Struct({
+  token: Schema.String,
+  expiresAt: Schema.String,
+  kiloFacadeUrl: Schema.String,
+  cloudAgentUrl: Schema.String,
+})
+
 export const CloudSession = Schema.Struct({
   session_id: Schema.String,
   title: Schema.NullOr(Schema.String),
@@ -248,6 +255,7 @@ export const KiloGatewayPaths = {
   organization: `${root}/organization`,
   clawStatus: `${root}/claw/status`,
   clawChatCredentials: `${root}/claw/chat-credentials`,
+  cloudAgentCredentials: `${root}/cloud-agent/credentials`,
   cloudSessions: `${root}/cloud-sessions`,
   cloudSession: `${root}/cloud/session/:id`,
   cloudSessionImport: `${root}/cloud/session/import`,
@@ -362,6 +370,18 @@ export const KiloGatewayApi = HttpApi.make("kilo")
               "Returns the bearer token and endpoint URLs the client uses to talk to the Kilo Chat worker " +
               "and the Event Service. The bearer is the user's existing long-lived Kilo JWT — kilo-chat and " +
               "event-service both verify it directly with NEXTAUTH_SECRET, so no separate token mint is needed.",
+          }),
+        ),
+        HttpApiEndpoint.get("cloudAgentCredentials", KiloGatewayPaths.cloudAgentCredentials, {
+          success: described(CloudAgentCredentials, "Cloud Agent credentials"),
+          error: HttpApiError.Unauthorized,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilo.cloudAgent.credentials",
+            summary: "Get Cloud Agent credentials",
+            description:
+              "Returns the bearer token, facade URL, and API URL for extension-host Cloud Agent calls. This explicit " +
+              "localhost capability must not expose the returned bearer to a browser webview.",
           }),
         ),
         HttpApiEndpoint.get("cloudSessions", KiloGatewayPaths.cloudSessions, {

@@ -12,6 +12,8 @@ import {
   HEADER_ORGANIZATIONID,
   KILO_API_BASE,
   KILO_CHAT_URL,
+  KILO_CLOUD_AGENT_API_URL,
+  KILO_CLOUD_AGENT_URL,
   KILO_EVENT_SERVICE_URL,
   clearModesCache,
   fetchBalance,
@@ -377,6 +379,20 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       }
     })
 
+    const cloudAgentCredentials = Effect.fn("KiloGatewayHttpApi.cloudAgentCredentials")(function* () {
+      const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
+      const token = getToken(info)
+      if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+
+      const expires = info?.type === "oauth" ? info.expires : Date.now() + 365 * 24 * 60 * 60 * 1000
+      return {
+        token,
+        expiresAt: new Date(expires).toISOString(),
+        kiloFacadeUrl: KILO_CLOUD_AGENT_URL,
+        cloudAgentUrl: KILO_CLOUD_AGENT_API_URL,
+      }
+    })
+
     const cloudSessions = Effect.fn("KiloGatewayHttpApi.cloudSessions")(function* (ctx) {
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
       const token = getToken(info)
@@ -509,6 +525,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       .handle("organization", organization)
       .handle("clawStatus", clawStatus)
       .handle("clawChatCredentials", clawChatCredentials)
+      .handle("cloudAgentCredentials", cloudAgentCredentials)
       .handle("cloudSessions", cloudSessions)
       .handle("cloudSession", cloudSession)
       .handle("cloudSessionImport", cloudSessionImport)

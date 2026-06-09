@@ -33,6 +33,10 @@ type Body = {
   content?: Record<string, { schema?: Schema }>
 }
 
+type Response = {
+  content?: Record<string, { schema?: Schema }>
+}
+
 describe("Kilo PublicApi OpenAPI contract", () => {
   test("uses Kilo branding", () => {
     const spec = OpenApi.fromApi(PublicApi)
@@ -166,5 +170,19 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     const body = spec.paths[KiloGatewayPaths.audioTranscriptions]?.post?.requestBody as Body | undefined
     const schema = body?.content?.["application/json"]?.schema
     expect(schema?.properties?.prompt).toEqual({ type: "string" })
+  })
+
+  test("exposes Cloud Agent credentials through the authenticated Kilo group", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const response = spec.paths[KiloGatewayPaths.cloudAgentCredentials]?.get?.responses?.["200"] as Response | undefined
+    const schema = response?.content?.["application/json"]?.schema
+
+    expect(KiloGatewayPaths.cloudAgentCredentials).toBe("/kilo/cloud-agent/credentials")
+    expect(schema?.properties).toEqual({
+      token: { type: "string" },
+      expiresAt: { type: "string" },
+      kiloFacadeUrl: { type: "string" },
+      cloudAgentUrl: { type: "string" },
+    })
   })
 })

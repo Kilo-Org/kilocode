@@ -16,6 +16,8 @@ import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
 import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
 import type { AutoApproveController } from "../commands/toggle-auto-approve"
 
+const CLOUD_SETTING = "kilo-code.new.experimental.cloudAgent.enabled"
+
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
   private autoApprove: AutoApproveController | undefined
@@ -162,6 +164,16 @@ export class VscodeHost implements Host {
 
   workspacePath(): string | undefined {
     return getWorkspaceRoot()
+  }
+
+  cloudAgentEnabled(): boolean {
+    return vscode.workspace.getConfiguration().get(CLOUD_SETTING, false)
+  }
+
+  onCloudAgentConfigChanged(cb: () => void): Disposable {
+    return vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration(CLOUD_SETTING)) cb()
+    })
   }
 
   showError(msg: string): void {

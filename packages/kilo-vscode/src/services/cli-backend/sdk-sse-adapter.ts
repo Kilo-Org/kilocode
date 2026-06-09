@@ -1,4 +1,5 @@
 import type { KiloClient, GlobalEvent, Event } from "@kilocode/sdk/v2/client"
+import { SSEHeartbeat } from "../sse-heartbeat"
 
 export type SSEEventHandler = (event: Event, directory?: string) => void
 export type SSEErrorHandler = (error: Error) => void
@@ -24,19 +25,22 @@ export type SSEStateHandler = (state: "connecting" | "connected" | "disconnected
  * coalesce high-frequency part updates before calling `postMessage()`.
  */
 export class SdkSSEAdapter {
+  // Server sends heartbeats every 10s, so this gives a 5s grace window before forcing a reconnect.
+  // Reduced from 90s: with 90s a dead connection could linger for ~1.5 minutes.
+  private static readonly HEARTBEAT_TIMEOUT_MS = 15_000
+  private static readonly RECONNECT_DELAY_MS = 250
+  private static readonly MAX_RECONNECT_DELAY_MS = 5_000
+
   private readonly handlers = new Set<SSEEventHandler>()
   private readonly errorHandlers = new Set<SSEErrorHandler>()
   private readonly stateHandlers = new Set<SSEStateHandler>()
 
   private abortController: AbortController | null = null
   private attemptController: AbortController | null = null
-  private heartbeatTimer: ReturnType<typeof setTimeout> | null = null
-
-  // Server sends heartbeats every 10s, so this gives a 5s grace window before forcing a reconnect.
-  // Reduced from 90s: with 90s a dead connection could linger for ~1.5 minutes.
-  private static readonly HEARTBEAT_TIMEOUT_MS = 15_000
-  private static readonly RECONNECT_DELAY_MS = 250
-  private static readonly MAX_RECONNECT_DELAY_MS = 5_000
+  private readonly heartbeat = new SSEHeartbeat(SdkSSEAdapter.HEARTBEAT_TIMEOUT_MS, () => {
+    console.log("[Kilo New] SSE: ⏰ Heartbeat timeout — aborting stale connection")
+    this.attemptController?.abort()
+  })
 
   constructor(private readonly client: KiloClient) {}
 
@@ -70,7 +74,7 @@ export class SdkSSEAdapter {
     this.abortController?.abort()
     this.abortController = null
     this.attemptController = null
-    this.clearHeartbeat()
+    this.heartbeat.dispose()
   }
 
   /**
@@ -163,14 +167,14 @@ export class SdkSSEAdapter {
         })
 
         console.log("[Kilo New] SSE: ⏳ Waiting for first stream event")
-        this.resetHeartbeat(attempt)
+        this.heartbeat.reset()
 
         for await (const event of events.stream) {
           if (signal.aborted) {
             break
           }
 
-          this.resetHeartbeat(attempt)
+          this.heartbeat.reset()
 
           if (!ready) {
             ready = true
@@ -198,7 +202,7 @@ export class SdkSSEAdapter {
       } finally {
         signal.removeEventListener("abort", onAbort)
         this.attemptController = null
-        this.clearHeartbeat()
+        this.heartbeat.dispose()
       }
 
       if (signal.aborted) {
@@ -213,26 +217,6 @@ export class SdkSSEAdapter {
     }
 
     this.notifyState("disconnected")
-  }
-
-  /**
-   * Reset the heartbeat timer. If no event arrives within the timeout
-   * window the per-attempt controller is aborted, causing the
-   * `for await` loop to exit and the outer loop to reconnect.
-   */
-  private resetHeartbeat(attempt: AbortController): void {
-    this.clearHeartbeat()
-    this.heartbeatTimer = setTimeout(() => {
-      console.log("[Kilo New] SSE: ⏰ Heartbeat timeout — aborting stale connection")
-      attempt.abort()
-    }, SdkSSEAdapter.HEARTBEAT_TIMEOUT_MS)
-  }
-
-  private clearHeartbeat(): void {
-    if (this.heartbeatTimer) {
-      clearTimeout(this.heartbeatTimer)
-      this.heartbeatTimer = null
-    }
   }
 
   // ── Notify helpers ─────────────────────────────────────────────────

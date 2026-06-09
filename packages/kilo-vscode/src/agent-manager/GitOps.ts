@@ -165,6 +165,15 @@ export class GitOps {
     return this.raw(["rev-parse", "--abbrev-ref", "HEAD"], cwd).catch(() => "")
   }
 
+  /** Return the selected remote URL, or `undefined` if the repository or remote is absent. */
+  async remoteUrl(cwd: string, remote = "origin"): Promise<string | undefined> {
+    const result = await this.raw(["remote", "get-url", remote], cwd).catch((err) => {
+      if (repositoryUnavailable(err)) return ""
+      throw err
+    })
+    return result || undefined
+  }
+
   /**
    * Resolve the remote name for a branch. Checks (in order):
    * 1. The configured upstream's remote (e.g. upstream from `upstream/main`)
@@ -571,4 +580,9 @@ export class GitOps {
       })
     return this.semaphore ? this.semaphore.run(invoke) : invoke()
   }
+}
+
+function repositoryUnavailable(err: unknown): boolean {
+  const text = err instanceof Error ? err.message : String(err)
+  return /\bno such remote\b|\bnot a git repository\b/i.test(text)
 }

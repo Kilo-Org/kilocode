@@ -34,6 +34,7 @@ import { restoreWorktrees } from "./state-recovery"
 import { diffSummary as localDiffSummary, diffFile as localDiffFile } from "./local-diff"
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
 import { stopSessionProcesses } from "../kilo-provider/background-process"
+import { CloudAgentController } from "./cloud-agent/controller"
 
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
@@ -61,6 +62,7 @@ export class AgentManagerProvider implements Disposable {
   private importer: WorktreeImporter
   private terminalManager: SessionTerminalManager
   private terminalRouter: TerminalRouter
+  private cloud: CloudAgentController
   private run: RunController
   private stateReady: Promise<void> | undefined
   private statsPoller: GitStatsPoller
@@ -71,6 +73,9 @@ export class AgentManagerProvider implements Disposable {
   private cachedWorktreeStats: { type: "agentManager.worktreeStats"; stats: WorktreeStats[] } | undefined
   private cachedLocalStats: { type: "agentManager.localStats"; stats: LocalStats } | undefined
   private unsubTool: (() => void) | undefined
+  private unsubCloudState: (() => void) | undefined
+  private unsubCloudAuth: (() => void) | undefined
+  private config: Disposable
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
 
@@ -94,6 +99,14 @@ export class AgentManagerProvider implements Disposable {
       getWorktreePath: (id) => this.getStateManager()?.getWorktree(id)?.path,
       log: (...args) => this.log("[XTerm]", ...args),
       post: (msg) => this.postToWebview(msg),
+    })
+    this.cloud = new CloudAgentController({
+      getLocalClient: () =>
+        this.connectionService.getConnectionState() === "connected" ? this.connectionService.getClient() : null,
+      getRoot: () => this.getRoot(),
+      remoteUrl: (cwd, remote) => this.gitOps.remoteUrl(cwd, remote),
+      post: (msg) => this.postToWebview(msg as AgentManagerOutMessage),
+      log: (...args) => this.log("[CloudAgent]", ...args),
     })
     this.run = new RunController({
       root: () => this.getRoot(),
@@ -163,6 +176,19 @@ export class AgentManagerProvider implements Disposable {
       (event) => (event as { type?: string }).type === "kilocode.agent_manager.start",
       (event, directory) => this.onToolEvent(event, directory),
     )
+    this.unsubCloudState = this.connectionService.onStateChange((state) => {
+      if (state === "connected") return this.cloud.recover()
+      this.cloud.localDisconnected()
+    })
+    this.unsubCloudAuth = this.connectionService.onEventFiltered(
+      (event) => event.type === "global.disposed",
+      () => this.cloud.authChanged(),
+    )
+    this.config = this.host.onCloudAgentConfigChanged(() => {
+      if (!this.panel) return
+      if (this.state) return this.pushState()
+      this.pushEmptyState()
+    })
   }
 
   private log(...args: unknown[]) {
@@ -213,10 +239,12 @@ export class AgentManagerProvider implements Disposable {
   private attachPanel(ctx: PanelContext): void {
     if (this.panel) {
       this.log("Disposing previous panel before attaching new one")
+      this.cloud.detach()
       this.panel.dispose()
       this.panel = undefined
     }
     this.panel = ctx
+    this.cloud.attach()
 
     this.statsPoller.setVisible(ctx.visible)
     this.onVisibilityChange?.(ctx.visible)
@@ -237,6 +265,7 @@ export class AgentManagerProvider implements Disposable {
       // have already replaced us via attachPanel.
       if (this.panel === ctx) {
         this.log("Panel disposed")
+        this.cloud.detach()
         this.statsPoller.stop()
         this.prBridge.poller.stop()
         this.diffs.stop()
@@ -326,6 +355,7 @@ export class AgentManagerProvider implements Disposable {
 
   private async onMessage(msg: Record<string, unknown>): Promise<Record<string, unknown> | null> {
     if (this.prBridge.handleMessage(msg)) return null
+    if (this.cloud.handle(msg)) return null
     if (msg.type === "requestFileSearch" && typeof msg.sessionID !== "string" && this.activeSessionId) {
       return { ...msg, sessionID: this.activeSessionId }
     }
@@ -1554,6 +1584,7 @@ export class AgentManagerProvider implements Disposable {
       reviewMarkdownRender: getDiffMarkdownRender(),
       isGitRepo: true,
       defaultBaseBranch: state.getDefaultBaseBranch(),
+      cloudAgentEnabled: this.host.cloudAgentEnabled(),
       ...run,
     })
 
@@ -1577,6 +1608,7 @@ export class AgentManagerProvider implements Disposable {
       isGitRepo: false,
       runStatuses: [],
       runScriptConfigured: false,
+      cloudAgentEnabled: this.host.cloudAgentEnabled(),
     })
   }
 
@@ -1780,8 +1812,12 @@ export class AgentManagerProvider implements Disposable {
     await this.stateReady?.catch((err) => this.log("dispose: stateReady rejected:", err))
     await this.state?.flush().catch((err) => this.log("dispose: state flush failed:", err))
     this.unsubTool?.()
+    this.unsubCloudState?.()
+    this.unsubCloudAuth?.()
+    this.config.dispose()
     this.connectionService.unregisterFocused("agent-manager")
     this.connectionService.registerOpen("agent-manager", [])
+    this.cloud.dispose()
     this.diffs.stop()
     this.statsPoller.stop()
     this.gitOps.dispose()

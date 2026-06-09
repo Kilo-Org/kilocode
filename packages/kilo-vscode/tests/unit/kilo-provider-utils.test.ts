@@ -310,6 +310,22 @@ describe("mapSSEEventToWebviewMessage", () => {
     }
   })
 
+  it("maps session.status offline with message", () => {
+    const event: EventSessionStatus = {
+      type: "session.status",
+      properties: {
+        sessionID: "sess-1",
+        status: { type: "offline", requestID: "req-1", message: "provider unavailable" },
+      },
+    }
+    expect(mapSSEEventToWebviewMessage(event, "sess-1")).toEqual({
+      type: "sessionStatus",
+      sessionID: "sess-1",
+      status: "offline",
+      message: "provider unavailable",
+    })
+  })
+
   it("maps session.turn.close to its terminal reason", () => {
     const event: EventSessionTurnClose = {
       id: "evt-turn",

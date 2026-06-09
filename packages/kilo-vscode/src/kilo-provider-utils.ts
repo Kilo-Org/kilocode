@@ -3,6 +3,7 @@ import { prettifyError } from "zod/v4"
 import type { CloudSessionMessage, IndexingStatus } from "./services/cli-backend/types"
 import type { PartBatch, PartUpdate } from "./kilo-provider/session-stream-scheduler"
 import type { PartRemove } from "./shared/stream-messages"
+import { sessionStatusToWebview } from "./session-status"
 import * as path from "path"
 
 export { SessionStreamScheduler } from "./kilo-provider/session-stream-scheduler"
@@ -488,28 +489,8 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
         messageID: props.messageID,
       }
     }
-    case "session.status": {
-      const info = event.properties.status
-      // "offline" is not yet in the SDK SessionStatus type (pending SDK regeneration),
-      // so we use string comparison to forward the message field for offline status.
-      const status = info.type as string
-      const extra =
-        status === "retry"
-          ? {
-              attempt: (info as any).attempt as number,
-              message: (info as any).message as string,
-              next: (info as any).next as number,
-            }
-          : status === "offline"
-            ? { message: (info as any).message as string }
-            : {}
-      return {
-        type: "sessionStatus" as const,
-        sessionID: event.properties.sessionID,
-        status,
-        ...extra,
-      }
-    }
+    case "session.status":
+      return sessionStatusToWebview(event.properties.sessionID, event.properties.status)
     case "session.turn.close":
       return {
         type: "sessionTurnClosed",

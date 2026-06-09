@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { seedSessionStatuses, getBusySessionCount } from "../../src/session-status"
+import { seedSessionStatuses, getBusySessionCount, sessionStatusToWebview } from "../../src/session-status"
 import type { SessionStatus } from "@kilocode/sdk/v2/client"
 
 /**
@@ -23,6 +23,50 @@ function collect() {
 }
 
 // ---------------------------------------------------------------------------
+// sessionStatusToWebview
+// ---------------------------------------------------------------------------
+
+describe("sessionStatusToWebview", () => {
+  it("projects busy status", () => {
+    expect(sessionStatusToWebview("s1", { type: "busy" })).toEqual({
+      type: "sessionStatus",
+      sessionID: "s1",
+      status: "busy",
+    })
+  })
+
+  it("projects idle status", () => {
+    expect(sessionStatusToWebview("s1", { type: "idle" })).toEqual({
+      type: "sessionStatus",
+      sessionID: "s1",
+      status: "idle",
+    })
+  })
+
+  it("projects retry details", () => {
+    expect(sessionStatusToWebview("s1", { type: "retry", attempt: 3, message: "rate limited", next: 5000 })).toEqual({
+      type: "sessionStatus",
+      sessionID: "s1",
+      status: "retry",
+      attempt: 3,
+      message: "rate limited",
+      next: 5000,
+    })
+  })
+
+  it("projects offline message", () => {
+    expect(
+      sessionStatusToWebview("s1", { type: "offline", requestID: "req-1", message: "provider unavailable" }),
+    ).toEqual({
+      type: "sessionStatus",
+      sessionID: "s1",
+      status: "offline",
+      message: "provider unavailable",
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
 // seedSessionStatuses
 // ---------------------------------------------------------------------------
 
@@ -32,6 +76,7 @@ describe("seedSessionStatuses", () => {
       data: {
         s1: { type: "busy" },
         s2: { type: "retry", attempt: 3, message: "rate limited", next: 5000 },
+        s3: { type: "offline", requestID: "req-1", message: "provider unavailable" },
       },
     })
     const map = new Map<string, SessionStatus["type"]>()
@@ -41,9 +86,11 @@ describe("seedSessionStatuses", () => {
 
     expect(map.get("s1")).toBe("busy")
     expect(map.get("s2")).toBe("retry")
+    expect(map.get("s3")).toBe("offline")
     expect(msgs).toEqual([
       { type: "sessionStatus", sessionID: "s1", status: "busy" },
       { type: "sessionStatus", sessionID: "s2", status: "retry", attempt: 3, message: "rate limited", next: 5000 },
+      { type: "sessionStatus", sessionID: "s3", status: "offline", message: "provider unavailable" },
     ])
   })
 
