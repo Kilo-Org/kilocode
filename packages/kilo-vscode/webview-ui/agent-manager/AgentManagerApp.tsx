@@ -279,9 +279,8 @@ const AgentManagerContent: Component = () => {
   const PENDING_PREFIX = "pending:"
   const [activePendingId, setActivePendingId] = createSignal<string | undefined>()
 
-  // Per-sidebar-context terminal state. `terms.activeId` holds the id
-  // of the focused terminal tab, if any — takes precedence over
-  // session/pending/review when deriving the visible tab.
+  // Per-sidebar-context terminal state. `terms.activeId` holds the focused terminal tab, if any —
+  // taking precedence over session/pending/review when deriving the visible tab.
   const terms = createTerminalState(selection)
 
   // Inline delete confirmation: tracks which worktree is awaiting a second click/press
@@ -1009,9 +1008,8 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "tabPrevious") navigateTab("left")
       else if (msg.action === "tabNext") navigateTab("right")
       else if (msg.action === "showTerminal") {
-        // Cmd+/ opens the legacy VS Code integrated terminal for the
-        // active session (or local). The new xterm tab affordance has
-        // its own keybind (Cmd+Shift+T) so both coexist.
+        // Cmd+/ opens the legacy VS Code integrated terminal. The new xterm tab affordance has its
+        // own keybind (Cmd+Shift+T), so both coexist.
         const id = session.currentSessionID()
         if (id) vscode.postMessage({ type: "agentManager.showTerminal", sessionId: id })
         else if (selection() === LOCAL) vscode.postMessage({ type: "agentManager.showLocalTerminal" })
@@ -1081,10 +1079,8 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("keydown", deleteKeyHandler)
 
-    // When the panel regains focus (e.g. returning from terminal), focus the prompt
-    // and clear any stale body styles left by Kobalte modal overlays (dropdowns/dialogs
-    // set pointer-events:none and overflow:hidden on body, but cleanup never runs if
-    // focus leaves the webview before the overlay closes).
+    // On focus, restore the prompt and clear stale body styles left when Kobalte modal cleanup
+    // does not run before focus leaves the webview.
     const onWindowFocus = () => {
       document.body.style.pointerEvents = ""
       document.body.style.overflow = ""
@@ -1105,8 +1101,7 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("newTaskRequest", newTaskHandler, true)
 
-    // Add created sessions as local tabs (both direct from the prompt and
-    // backend follow-ups). Dedups HTTP + SSE firing together.
+    // Add created sessions as local tabs, deduplicating HTTP and SSE notifications.
     const unsubCreate = vscode.onMessage((msg) => {
       if (msg.type !== "sessionCreated") return
       const created = msg as { type: string; session: { id: string } }
@@ -1239,8 +1234,7 @@ const AgentManagerContent: Component = () => {
         cloud.enable(state.cloudAgentEnabled === true, cloudDialog.close)
         if (state.isGitRepo !== undefined) setIsGitRepo(state.isGitRepo)
         if (!worktreesLoaded()) setWorktreesLoaded(true)
-        // When not a git repo, also mark sessions as loaded since the Kilo
-        // server won't connect to send the sessionsLoaded message.
+        // Without a git repo, the Kilo server will not send sessionsLoaded.
         if (state.isGitRepo === false && !sessionsLoaded()) setSessionsLoaded(true)
         const prev = new Set(sections().map((s) => s.id)),
           incoming = state.sections ?? []
