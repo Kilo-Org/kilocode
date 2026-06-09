@@ -29,7 +29,6 @@ let shuttingDown = false
 const RESTORE_KEY = "kilo.workbench.restore"
 
 type RestoreState = {
-  sidebar?: boolean
   agentManager?: boolean
 }
 
@@ -50,10 +49,8 @@ export function activate(context: vscode.ExtensionContext) {
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(context)
   let restore = context.workspaceState.get<RestoreState>(RESTORE_KEY) ?? {}
-  const closeSidebar = restore.sidebar === false
   const remember = (patch: RestoreState) => {
     const next = { ...restore, ...patch }
-    if (shuttingDown && patch.sidebar === false) next.sidebar = restore.sidebar
     if (shuttingDown && patch.agentManager === false) next.agentManager = restore.agentManager
     restore = next
     void context.workspaceState.update(RESTORE_KEY, restore)
@@ -124,9 +121,7 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   // Create the provider with shared service
-  const provider = new KiloProvider(context.extensionUri, connectionService, context, {
-    onSidebarVisibilityChange: (visible) => remember({ sidebar: visible }),
-  })
+  const provider = new KiloProvider(context.extensionUri, connectionService, context)
   provider.setRemoteService(remoteService)
 
   // Register the webview view provider for the sidebar.
@@ -136,7 +131,6 @@ export function activate(context: vscode.ExtensionContext) {
       webviewOptions: { retainContextWhenHidden: true },
     }),
   )
-  if (closeSidebar) void vscode.commands.executeCommand("workbench.action.closeSidebar")
 
   // Ensure Agent Manager navigation keybindings work when a VS Code terminal has focus.
   // The terminal intercepts all keystrokes unless the command is listed in

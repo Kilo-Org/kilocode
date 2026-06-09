@@ -1272,10 +1272,8 @@ export function smallOptions(model: Provider.Model) {
     model.providerID === "llmgateway" ||
     model.api.npm === "@kilocode/kilo-gateway" // kilocode_change
   ) {
-    if (model.api.id.includes("google")) {
-      return { reasoning: { enabled: false } }
-    }
-    return { reasoningEffort: "minimal" }
+    if (!model.capabilities.reasoning) return {} // kilocode_change - omit unsupported reasoning options
+    return { reasoning: { enabled: true } } // kilocode_change - use the model's supported default effort
   }
 
   if (model.providerID === "venice") {

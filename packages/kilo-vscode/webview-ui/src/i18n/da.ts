@@ -210,6 +210,9 @@ export const dict = {
   "model.preview.label.cached": "Cached",
   "model.preview.label.average": "Est. gennemsnitspris",
   "model.preview.label.context": "Kontekst",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Fuldførelse",
+  "model.preview.label.costAttempt": "Pris / forsøg",
   "model.preview.value.notSupported": "Ikke understøttet",
   "model.preview.tooltip.average":
     "Den estimerede gennemsnitspris er baseret på et typisk forhold mellem input-, output- og cache-læsetokens.",

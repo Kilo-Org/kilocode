@@ -6,6 +6,7 @@ import { localReviewUncommittedCommand } from "../../../src/kilocode/review/comm
 import { WithInstance } from "../../../src/project/with-instance"
 import { Suggestion } from "../../../src/kilocode/suggestion"
 import { resolvePrompt } from "../../../src/kilocode/suggestion/tool"
+import { SessionID } from "../../../src/session/schema"
 import { tmpdir } from "../../fixture/fixture"
 
 afterEach(() => {
@@ -314,7 +315,7 @@ describe("suggestion", () => {
         // Only B's suggestion remains
         const remaining = await Suggestion.list()
         expect(remaining).toHaveLength(1)
-        expect(remaining[0]?.sessionID).toBe("ses_b")
+        expect(remaining[0]?.sessionID).toBe(SessionID.make("ses_b"))
 
         // Clean up B
         await Suggestion.dismiss(remaining[0]!.id)
@@ -329,7 +330,7 @@ describe("suggestion", () => {
       directory: tmp.path,
       fn: async () => {
         // Should not throw
-        await Suggestion.dismissAll("ses_nonexistent")
+        await Suggestion.dismissAll(SessionID.make("ses_nonexistent"))
         expect(await Suggestion.list()).toEqual([])
       },
     })

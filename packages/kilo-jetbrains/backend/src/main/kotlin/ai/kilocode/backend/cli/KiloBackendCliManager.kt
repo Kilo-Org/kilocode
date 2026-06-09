@@ -85,27 +85,36 @@ class KiloBackendCliManager(
     private fun extractCli(): File {
         val platform = platform()
         val exe = if (SystemInfo.isWindows) "kilo.exe" else "kilo"
-        val resource = "cli/$platform/$exe"
-        val loader = javaClass.classLoader
-
         val target = File(PathManager.getSystemPath(), "kilo/bin/$exe")
+        val snapshot = File(target.parentFile, "models-snapshot.json")
 
-        if (forceExtract && target.exists()) {
-            log.info("Force re-extracting CLI binary — deleting ${target.absolutePath}")
-            target.delete()
+        if (forceExtract) {
+            log.info("Force re-extracting CLI resources under ${target.parentFile.absolutePath}")
+            if (target.exists()) target.delete()
+            if (snapshot.exists()) snapshot.delete()
             forceExtract = false
         }
 
+        extractResource("cli/$platform/$exe", target, executable = true)
+        extractResource("cli/$platform/models-snapshot.json", snapshot, executable = false)
+        return target
+    }
+
+    private fun extractResource(resource: String, target: File, executable: Boolean) {
+        val loader = javaClass.classLoader
         val url = loader.getResource(resource)
-            ?: throw IllegalStateException("CLI binary not found in JAR resources at $resource")
+            ?: throw IllegalStateException("CLI resource not found in JAR resources at $resource")
 
         val size = url.openConnection().contentLengthLong
         if (size >= 0 && target.exists() && target.length() == size) {
-            log.info("CLI binary up-to-date at ${target.absolutePath}")
-            return target
+            log.info("CLI resource up-to-date at ${target.absolutePath}")
+            if (executable && !SystemInfo.isWindows) {
+                target.setExecutable(true)
+            }
+            return
         }
 
-        log.info("Extracting CLI binary to ${target.absolutePath}")
+        log.info("Extracting CLI resource to ${target.absolutePath}")
         target.parentFile.mkdirs()
 
         url.openStream().use { input ->
@@ -114,11 +123,9 @@ class KiloBackendCliManager(
             }
         }
 
-        if (!SystemInfo.isWindows) {
+        if (executable && !SystemInfo.isWindows) {
             target.setExecutable(true)
         }
-
-        return target
     }
 
     // Must be called from a background thread — devStorageEnv() performs blocking I/O (mkdirs).

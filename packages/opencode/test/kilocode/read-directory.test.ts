@@ -16,7 +16,7 @@ import { testEffect } from "../lib/effect"
 
 const baseCtx = {
   sessionID: SessionID.make("ses_test"),
-  messageID: MessageID.make(""),
+  messageID: MessageID.make("msg_test"),
   callID: "",
   agent: "code",
   abort: AbortSignal.any([]),

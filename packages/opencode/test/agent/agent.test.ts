@@ -42,9 +42,11 @@ test("returns default native agents when no config", async () => {
         const names = agents.map((a) => a.name)
         expect(names).toContain("code") // kilocode_change
         expect(names).toContain("plan")
-        expect(names).toContain("debug") // kilocode_change
-        expect(names).toContain("orchestrator") // kilocode_change
-        expect(names).toContain("ask") // kilocode_change
+        // kilocode_change start
+        expect(names).toContain("debug")
+        expect(names).toContain("orchestrator")
+        expect(names).toContain("ask")
+        // kilocode_change end
         expect(names).toContain("general")
         expect(names).toContain("explore")
         expect(names).not.toContain("scout")
@@ -67,15 +69,13 @@ test("code agent has correct default properties", async () => {
       expect(code?.mode).toBe("primary")
       expect(code?.native).toBe(true)
       expect(evalPerm(code, "edit")).toBe("allow")
-      expect(evalPerm(code, "bash")).toBe("ask") // kilocode_change - safe-bash default is ask
+      expect(evalPerm(code, "bash")).toBe("ask")
       expect(evalPerm(code, "repo_clone")).toBe("deny")
       expect(evalPerm(code, "repo_overview")).toBe("deny")
     },
   })
 })
-// kilocode_change end
 
-// kilocode_change start - ask agent tests
 test("ask agent has correct default properties", async () => {
   await using tmp = await tmpdir()
   await WithInstance.provide({
@@ -133,9 +133,7 @@ test("ask agent denies edit/write/bash even when user config adds a specific edi
     },
   })
 })
-// kilocode_change end
 
-// kilocode_change start
 test("plan agent denies edits except .kilo/plans/* and .opencode/plans/*", async () => {
   await using tmp = await tmpdir()
   await WithInstance.provide({
@@ -234,6 +232,10 @@ test("reference config creates scout-backed subagents", async () => {
       config: {
         reference: {
           effect: "github.com/effect/effect-smol",
+          effectDev: {
+            repository: "https://github.com/effect/effect-smol",
+            branch: "dev",
+          },
           effectFull: {
             repository: "Effect-TS/effect",
             branch: "main",
@@ -249,6 +251,7 @@ test("reference config creates scout-backed subagents", async () => {
       directory: tmp.path,
       fn: async () => {
         const effect = await load(tmp.path, (svc) => svc.get("effect"))
+        const effectDev = await load(tmp.path, (svc) => svc.get("effectDev"))
         const effectFull = await load(tmp.path, (svc) => svc.get("effectFull"))
         const local = await load(tmp.path, (svc) => svc.get("localdocs"))
         const localFull = await load(tmp.path, (svc) => svc.get("localdocsFull"))
@@ -256,13 +259,21 @@ test("reference config creates scout-backed subagents", async () => {
         expect(effect).toBeDefined()
         expect(effect?.mode).toBe("subagent")
         expect(effect?.prompt).toContain("Repository: github.com/effect/effect-smol")
-        expect(evalPerm(effect, "repo_clone")).toBe("allow")
+        expect(effect?.prompt).toContain(
+          `Cached directory: ${path.join(Global.Path.repos, "github.com", "effect", "effect-smol")}`,
+        )
+        expect(effect?.prompt).toContain("Do not call repo_clone")
+        expect(evalPerm(effect, "repo_clone")).toBe("deny")
+
+        expect(effectDev).toBeDefined()
+        expect(effectDev?.prompt).toContain("Problem: Reference conflicts with @effect")
+        expect(effectDev?.prompt).not.toContain("Cached directory:")
 
         expect(effectFull).toBeDefined()
         expect(effectFull?.mode).toBe("subagent")
         expect(effectFull?.prompt).toContain("Repository: Effect-TS/effect")
         expect(effectFull?.prompt).toContain("Branch/ref: main")
-        expect(evalPerm(effectFull, "repo_clone")).toBe("allow")
+        expect(evalPerm(effectFull, "repo_clone")).toBe("deny")
 
         expect(local).toBeDefined()
         expect(local?.mode).toBe("subagent")
@@ -526,6 +537,7 @@ test("unknown agent properties are placed into options", async () => {
     config: {
       agent: {
         code: {
+          // kilocode_change
           random_property: "hello",
           another_random: 123,
         },
@@ -945,7 +957,6 @@ test("defaultAgent returns plan when code is disabled and default_agent not set"
     directory: tmp.path,
     fn: async () => {
       const agent = await load(tmp.path, (svc) => svc.defaultAgent())
-      // kilocode_change - code is disabled, so it should return plan (next primary agent)
       expect(agent).toBe("plan")
     },
   })
@@ -968,7 +979,6 @@ test("defaultAgent throws when all primary agents are disabled", async () => {
   await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
-      // kilocode_change - all primary agents are disabled
       await expect(load(tmp.path, (svc) => svc.defaultAgent())).rejects.toThrow("no primary visible agent found")
     },
   })

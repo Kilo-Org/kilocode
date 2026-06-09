@@ -654,6 +654,75 @@ describe("HttpApi SDK", () => {
     ),
   )
 
+  // kilocode_change start - verify invalid user images fail at the real SDK boundary
+  serverPathParity("rejects malformed user image data before persistence", (serverPath) =>
+    withStandardProject(serverPath, ({ sdk }) =>
+      Effect.gen(function* () {
+        const session = yield* capture(() => sdk.session.create({ title: "invalid image" }))
+        const sessionID = String(record(session.data).id)
+        const prompt = yield* capture(() =>
+          sdk.session.prompt({
+            sessionID,
+            agent: "build",
+            noReply: true,
+            parts: [
+              {
+                type: "file",
+                mime: "image/png",
+                filename: "not-an-image.png",
+                url: "data:image/png;base64,bm90LWltYWdl",
+              },
+            ],
+          }),
+        )
+        const messages = yield* capture(() => sdk.session.messages({ sessionID }))
+
+        expect(prompt.status).toBe(400)
+        expect(JSON.stringify(messages.data)).not.toContain("not-an-image.png")
+
+        return {
+          promptStatus: prompt.status,
+          persisted: JSON.stringify(messages.data).includes("not-an-image.png"),
+        }
+      }),
+    ),
+  )
+  serverPathParity("rejects oversized user image files before persistence", (serverPath) =>
+    withProject(
+      serverPath,
+      { config: { attachment: { image: { max_base64_bytes: 4 } } } },
+      ({ sdk, directory }) =>
+        Effect.gen(function* () {
+          const filepath = path.join(directory, "oversized.png")
+          yield* call(() => Bun.write(filepath, Buffer.alloc(1024, 1)))
+          const session = yield* capture(() => sdk.session.create({ title: "oversized image" }))
+          const sessionID = String(record(session.data).id)
+          const prompt = yield* capture(() =>
+            sdk.session.prompt({
+              sessionID,
+              agent: "build",
+              noReply: true,
+              parts: [
+                {
+                  type: "file",
+                  mime: "image/png",
+                  filename: "oversized.png",
+                  url: `file://${filepath}`,
+                },
+              ],
+            }),
+          )
+          const messages = yield* capture(() => sdk.session.messages({ sessionID }))
+
+          expect(prompt.status).toBe(400)
+          expect(JSON.stringify(messages.data)).not.toContain("oversized.png")
+
+          return { promptStatus: prompt.status, persisted: JSON.stringify(messages.data).includes("oversized.png") }
+        }),
+    ),
+  )
+  // kilocode_change end
+
   serverPathParity("matches generated SDK prompt streaming through fake LLM", (serverPath) =>
     withFakeLlm(serverPath, ({ sdk, llm }) =>
       Effect.gen(function* () {
@@ -687,6 +756,62 @@ describe("HttpApi SDK", () => {
       }),
     ),
   )
+
+  // kilocode_change start - verify provider errors remain in successful assistant messages
+  serverPathParity("preserves provider errors through the generated SDK", (serverPath) =>
+    withFakeLlm(serverPath, ({ sdk, llm }) =>
+      Effect.gen(function* () {
+        const gateway = { error: { code: "PAID_MODEL_AUTH_REQUIRED", message: "Authentication required" } }
+        const create = () =>
+          capture(() =>
+            sdk.session.create({
+              title: "provider error",
+              permission: [{ permission: "*", pattern: "*", action: "allow" }],
+            }),
+          )
+        const prompt = (sessionID: string) => ({
+          sessionID,
+          agent: "build",
+          model: { providerID: "test", modelID: "test-model" },
+          parts: [{ type: "text" as const, text: "trigger provider error" }],
+        })
+
+        yield* llm.error(401, gateway)
+        const tupleSession = yield* create()
+        const tuple = yield* capture(() => sdk.session.prompt(prompt(String(record(tupleSession.data).id))))
+
+        yield* llm.error(401, gateway)
+        const strictSession = yield* create()
+        const strict = yield* call(() =>
+          sdk.session.prompt(prompt(String(record(strictSession.data).id)), { throwOnError: true }),
+        )
+
+        const tupleError = record(record(tuple.data).info).error
+        const tupleData = record(record(tupleError).data)
+        const strictError = record(record(record(strict).data).info).error
+        const strictData = record(record(strictError).data)
+
+        expect(tuple.status).toBe(200)
+        expect(record(tupleError).name).toBe("APIError")
+        expect(tupleData.statusCode).toBe(401)
+        expect(JSON.parse(String(tupleData.responseBody))).toEqual(gateway)
+        expect(record(strictError).name).toBe("APIError")
+        expect(strictData.statusCode).toBe(401)
+        expect(JSON.parse(String(strictData.responseBody))).toEqual(gateway)
+
+        return {
+          tupleStatus: tuple.status,
+          tupleName: record(tupleError).name,
+          providerStatus: tupleData.statusCode,
+          providerBody: tupleData.responseBody,
+          strictName: record(strictError).name,
+          strictStatus: strictData.statusCode,
+          strictBody: strictData.responseBody,
+        }
+      }),
+    ),
+  )
+  // kilocode_change end
 
   httpapi(
     "includes project skills in REST API async prompt context",

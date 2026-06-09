@@ -164,12 +164,16 @@ export const layer: Layer.Layer<Service, never, Requirements> = Layer.effect(
       Effect.map((v) => v as Record<string, Provider> | undefined),
     )
 
+    // kilocode_change start
     // Bundled at build time; absent in dev — `tryPromise` covers both.
     const loadSnapshot = Effect.tryPromise({
-      // @ts-ignore — generated at build time, may not exist in dev
-      try: () => import("./models-snapshot.js").then((m) => m.snapshot as Record<string, Provider> | undefined),
+      try: () =>
+        import("../kilocode/provider/models-snapshot").then(
+          (m) => m.loadModelsSnapshot() as Promise<Record<string, Provider> | undefined>,
+        ),
       catch: () => undefined,
     }).pipe(Effect.catch(() => Effect.succeed(undefined)))
+    // kilocode_change end
 
     const fetchAndWrite = Effect.fn("ModelsDev.fetchAndWrite")(function* () {
       const text = yield* fetchApi()
