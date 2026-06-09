@@ -10,19 +10,22 @@ import { ProviderTransform } from "@/provider/transform"
 import PROMPT_GENERATE from "./generate.txt"
 import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
+import PROMPT_SCOUT from "./prompt/scout.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 import { Permission } from "@/permission"
 import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { Global } from "@opencode-ai/core/global"
 import { KilocodePaths } from "@/kilocode/paths" // kilocode_change
+import { Flag } from "@opencode-ai/core/flag/flag"
 import path from "path"
 import { Plugin } from "@/plugin"
 import { Skill } from "../skill"
 import { Effect, Context, Layer, Schema } from "effect"
 import { InstanceState } from "@/effect/instance-state"
-import { zod } from "@/util/effect-zod"
-import { withStatics, type DeepMutable } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { withStatics, type DeepMutable } from "@opencode-ai/core/schema"
+import { Reference } from "@/reference/reference"
 import * as KiloAgent from "@/kilocode/agent" // kilocode_change
 
 export const Info = Schema.Struct({
@@ -66,7 +69,7 @@ export interface Interface {
   }>
 }
 
-type State = Omit<Interface, "generate">
+type State = Omit<Interface, "generate"> & { version: string } // kilocode_change
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Agent") {}
 
@@ -92,9 +95,13 @@ export const layer = Layer.effect(
           ...KilocodePaths.globalDirs().map((dir) => path.join(dir, "*")),
         ]
         // kilocode_change end
+        const readonlyExternalDirectory = {
+          "*": "ask",
+          ...Object.fromEntries(whitelistedDirs.map((dir) => [dir, "allow"])),
+        } satisfies Record<string, "allow" | "ask" | "deny">
 
         const baseDefaults = Permission.fromConfig({
-          // kilocode_change: renamed from defaults
+          // kilocode_change
           "*": "allow",
           doom_loop: "ask",
           external_directory: {
@@ -105,6 +112,8 @@ export const layer = Layer.effect(
           question: "deny",
           plan_enter: "deny",
           plan_exit: "deny",
+          repo_clone: "deny",
+          repo_overview: "deny",
           // mirrors github.com/github/gitignore Node.gitignore pattern for .env files
           read: {
             "*": "allow",
@@ -188,10 +197,7 @@ export const layer = Layer.effect(
                 webfetch: "allow",
                 websearch: "allow",
                 read: "allow",
-                external_directory: {
-                  "*": "ask",
-                  ...Object.fromEntries(whitelistedDirs.map((dir) => [dir, "allow"])),
-                },
+                external_directory: readonlyExternalDirectory,
               }),
               user,
             ),
@@ -201,6 +207,37 @@ export const layer = Layer.effect(
             mode: "subagent",
             native: true,
           },
+          ...(Flag.KILO_EXPERIMENTAL_SCOUT
+            ? {
+                scout: {
+                  name: "scout",
+                  permission: Permission.merge(
+                    defaults,
+                    Permission.fromConfig({
+                      "*": "deny",
+                      grep: "allow",
+                      glob: "allow",
+                      webfetch: "allow",
+                      websearch: "allow",
+                      codesearch: "allow",
+                      read: "allow",
+                      repo_clone: "allow",
+                      repo_overview: "allow",
+                      external_directory: {
+                        ...readonlyExternalDirectory,
+                        [path.join(Global.Path.repos, "*")]: "allow",
+                      },
+                    }),
+                    user,
+                  ),
+                  description: `Docs and dependency-source specialist. Use this when you need to inspect external documentation, clone dependency repositories into the managed cache, and research library implementation details without modifying the user's workspace.`,
+                  prompt: PROMPT_SCOUT,
+                  options: {},
+                  mode: "subagent" as const,
+                  native: true,
+                },
+              }
+            : {}),
           compaction: {
             name: "compaction",
             mode: "primary",
@@ -251,9 +288,7 @@ export const layer = Layer.effect(
 
         // kilocode_change start - rename build→code, add debug/orchestrator/ask, patch plan/explore
         KiloAgent.patchAgents(agents, defaults, user, cfg, kilo, ctx.worktree, whitelistedDirs)
-        // kilocode_change end
 
-        // kilocode_change start - preprocess config to remap "build" key → "code"
         const agentConfigs = KiloAgent.preprocessConfig(cfg.agent ?? {})
         for (const [key, value] of Object.entries(agentConfigs)) {
           // kilocode_change end
@@ -284,6 +319,76 @@ export const layer = Layer.effect(
           item.options = mergeDeep(item.options, value.options ?? {})
           item.permission = Permission.merge(item.permission, Permission.fromConfig(value.permission ?? {}))
           KiloAgent.processConfigItem(item) // kilocode_change - populate displayName from options
+        }
+
+        function referencePrompt(reference: Reference.Resolved) {
+          if (reference.kind === "local") {
+            return [
+              `You are configured reference @${reference.name}, a read-only research agent for external reference material.`,
+              `Local directory: ${reference.path}`,
+              `Inspect this directory as the primary reference source. Prefer repo_overview with path ${JSON.stringify(reference.path)} before broader searches. Do not edit files.`,
+              `Return exact absolute file paths for findings whenever possible.`,
+            ].join("\n\n")
+          }
+
+          if (reference.kind === "invalid") {
+            return [
+              `You are configured reference @${reference.name}, but this reference is not usable yet.`,
+              `Configured repository: ${reference.repository}`,
+              `Problem: ${reference.message}`,
+              `Explain this configuration problem if invoked. Do not edit files or attempt fallback clones.`,
+            ].join("\n\n")
+          }
+
+          return [
+            `You are configured reference @${reference.name}, a read-only research agent for external reference material.`,
+            `Repository: ${reference.repository}`,
+            ...(reference.branch ? [`Branch/ref: ${reference.branch}`] : []),
+            `Cached directory: ${reference.path}`,
+            `Kilo materializes this configured repository before use. Do not call repo_clone for this reference.`, // kilocode_change
+            `Inspect the cached directory as the primary reference source. Prefer repo_overview with path ${JSON.stringify(reference.path)} before broader searches, then use Glob, Grep, and Read inside that directory. Do not edit files.`,
+            `Return exact absolute file paths for findings whenever possible.`,
+          ].join("\n\n")
+        }
+
+        function referenceDescription(reference: Reference.Resolved) {
+          if (reference.kind === "local") return `Scout reference for local directory ${reference.path}`
+          if (reference.kind === "git") return `Scout reference for repository ${reference.repository}`
+          return `Invalid Scout reference for repository ${reference.repository}`
+        }
+
+        if (Flag.KILO_EXPERIMENTAL_SCOUT) {
+          const resolvedReferences = Reference.resolveAll({
+            references: cfg.reference ?? {},
+            directory: ctx.directory,
+            worktree: ctx.worktree,
+          })
+          for (const resolved of resolvedReferences) {
+            if (agents[resolved.name]) continue
+            const localPath = resolved.kind === "invalid" ? undefined : resolved.path
+            agents[resolved.name] = {
+              name: resolved.name,
+              description: referenceDescription(resolved),
+              permission: Permission.merge(
+                agents.scout.permission,
+                Permission.fromConfig({
+                  repo_clone: "deny",
+                  ...(localPath
+                    ? {
+                        external_directory: {
+                          [localPath]: "allow",
+                          [path.join(localPath, "*")]: "allow",
+                        },
+                      }
+                    : {}),
+                }),
+              ),
+              prompt: referencePrompt(resolved),
+              options: { reference: cfg.reference?.[resolved.name], resolved },
+              mode: "subagent",
+              native: false,
+            }
+          }
         }
 
         // Ensure Truncate.GLOB is allowed unless explicitly configured
@@ -321,8 +426,10 @@ export const layer = Layer.effect(
         const defaultAgent = Effect.fnUntraced(function* () {
           const c = yield* config.get()
           if (c.default_agent) {
-            const effective = KiloAgent.resolveKey(c.default_agent) // kilocode_change - treat "build" as "code"
-            const agent = agents[effective] // kilocode_change
+            // kilocode_change start
+            const effective = KiloAgent.resolveKey(c.default_agent)
+            const agent = agents[effective]
+            // kilocode_change end
             if (!agent) throw new Error(`default agent "${c.default_agent}" not found`)
             if (agent.mode === "subagent") throw new Error(`default agent "${c.default_agent}" is a subagent`)
             if (agent.hidden === true) throw new Error(`default agent "${c.default_agent}" is hidden`)
@@ -338,6 +445,7 @@ export const layer = Layer.effect(
         })
 
         return {
+          version: KiloAgent.cacheKey(cfg), // kilocode_change
           get,
           list,
           defaultAgent,
@@ -345,15 +453,25 @@ export const layer = Layer.effect(
       }),
     )
 
+    // kilocode_change start - rebuild cached agents when permission-relevant config changes
+    const current = Effect.fnUntraced(function* <A>(select: (s: State) => Effect.Effect<A>) {
+      const cfg = yield* config.get()
+      const s = yield* InstanceState.get(state)
+      if (s.version === KiloAgent.cacheKey(cfg)) return yield* select(s)
+      yield* InstanceState.invalidate(state)
+      return yield* select(yield* InstanceState.get(state))
+    })
+    // kilocode_change end
+
     return Service.of({
       get: Effect.fn("Agent.get")(function* (agent: string) {
-        return yield* InstanceState.useEffect(state, (s) => s.get(agent))
+        return yield* current((s) => s.get(agent)) // kilocode_change
       }),
       list: Effect.fn("Agent.list")(function* () {
-        return yield* InstanceState.useEffect(state, (s) => s.list())
+        return yield* current((s) => s.list()) // kilocode_change
       }),
       defaultAgent: Effect.fn("Agent.defaultAgent")(function* () {
-        return yield* InstanceState.useEffect(state, (s) => s.defaultAgent())
+        return yield* current((s) => s.defaultAgent()) // kilocode_change
       }),
       generate: Effect.fn("Agent.generate")(function* (input: {
         description: string

@@ -140,8 +140,14 @@ export const dict = {
   "provider.connect.status.failed": "授權失敗：{{error}}",
   "provider.connect.apiKey.description":
     "輸入你的 {{provider}} API 金鑰以連線帳戶，並在 Kilo 中使用 {{provider}} 模型。",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "{{provider}} API 金鑰",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API 金鑰",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API 金鑰為必填",
   "provider.connect.prompt.required": "{{field}} 為必填項",
   "provider.connect.azure.endpointType.label": "選擇 Azure 端點設定",
@@ -175,6 +181,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.title": "{{provider}} 已中斷連線",
   "provider.disconnect.toast.disconnected.description": "{{provider}} 模型已不再可用。",
   "model.tag.free": "免費",
+  "model.tag.dataCollected": "資料可能會用於訓練",
   "model.tag.latest": "最新",
   "model.group.recommended": "推薦",
   "model.group.favorites": "我的最愛",
@@ -203,6 +210,9 @@ export const dict = {
   "model.preview.label.cached": "快取",
   "model.preview.label.average": "預估平均成本",
   "model.preview.label.context": "上下文",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "完成率",
+  "model.preview.label.costAttempt": "成本 / 次嘗試",
   "model.preview.value.notSupported": "不支援",
   "model.preview.tooltip.average": "預估平均成本是基於輸入、輸出和快取讀取 token 的典型比例計算而得。",
   "model.preview.badge.reasoning": "推理",

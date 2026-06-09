@@ -140,8 +140,14 @@ export const dict = {
   "provider.connect.status.failed": "인증 실패: {{error}}",
   "provider.connect.apiKey.description":
     "{{provider}} API 키를 입력하여 계정을 연결하고 Kilo에서 {{provider}} 모델을 사용하세요.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "{{provider}} API 키",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API 키",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API 키가 필요합니다",
   "provider.connect.prompt.required": "{{field}} 항목은 필수입니다",
   "provider.connect.azure.endpointType.label": "Azure 엔드포인트 구성 선택",
@@ -178,6 +184,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.title": "{{provider}} 연결 해제됨",
   "provider.disconnect.toast.disconnected.description": "{{provider}} 모델을 더 이상 사용할 수 없습니다.",
   "model.tag.free": "무료",
+  "model.tag.dataCollected": "데이터가 학습에 사용될 수 있습니다",
   "model.tag.latest": "최신",
   "model.group.recommended": "추천",
   "model.group.favorites": "즐겨찾기",
@@ -206,6 +213,9 @@ export const dict = {
   "model.preview.label.cached": "캐시됨",
   "model.preview.label.average": "예상 평균 비용",
   "model.preview.label.context": "컨텍스트",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "완료율",
+  "model.preview.label.costAttempt": "시도당 비용",
   "model.preview.value.notSupported": "미지원",
   "model.preview.tooltip.average": "예상 평균 비용은 입력, 출력 및 캐시 읽기 토큰의 일반적인 비율을 기반으로 합니다.",
   "model.preview.badge.reasoning": "추론",

@@ -23,10 +23,10 @@ import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { lazy } from "@/util/lazy"
 import path from "path"
 import z from "zod"
+import { PlanFile } from "@/kilocode/plan-file"
 
 const agents = lazy(() => makeRuntime(Agent.Service, Agent.defaultLayer))
 const providers = lazy(() => makeRuntime(Provider.Service, Provider.defaultLayer))
-const questions = lazy(() => makeRuntime(Question.Service, Question.defaultLayer))
 const todo = lazy(() => makeRuntime(Todo.Service, Todo.defaultLayer))
 const llm = lazy(() => makeRuntime(LLM.Service, LLM.defaultLayer))
 const pending = new Map<SessionID, AbortController>()
@@ -37,20 +37,6 @@ export const PlanFollowupRuntime = {
   },
   model(providerID: ProviderID, modelID: ModelID): Promise<Provider.Model> {
     return providers().runPromise((svc) => svc.getModel(providerID, modelID))
-  },
-  question: {
-    ask(input: Parameters<Question.Interface["ask"]>[0]) {
-      return questions().runPromise((svc) => svc.ask(input))
-    },
-    list() {
-      return questions().runPromise((svc) => svc.list())
-    },
-    reject(requestID: Parameters<Question.Interface["reject"]>[0]) {
-      return questions().runPromise((svc) => svc.reject(requestID))
-    },
-    reply(input: Parameters<Question.Interface["reply"]>[0]) {
-      return questions().runPromise((svc) => svc.reply(input))
-    },
   },
   todo: {
     get(sessionID: SessionID) {
@@ -250,8 +236,9 @@ export namespace PlanFollowup {
 
     // Fall back to plan file on disk
     const session = await PlanFollowupRuntime.session((svc) => svc.get(SessionID.make(input.sessionID)))
-    const file = Bun.file(Session.plan(session, Instance.current))
-    const plan = await file.text().catch(() => "")
+    const file =
+      PlanFile.resolve(PlanFile.latest(input.messages), Instance.current) ?? Session.plan(session, Instance.current)
+    const plan = await Bun.file(file).text().catch(() => "")
     return plan.trim()
   }
 
@@ -288,8 +275,15 @@ export namespace PlanFollowup {
     return msg
   }
 
-  function prompt(input: { sessionID: SessionID; abort: AbortSignal }) {
-    const promise = PlanFollowupRuntime.question.ask({
+  type QuestionRuntime = {
+    ask: (input: Parameters<Question.Interface["ask"]>[0]) => Promise<ReadonlyArray<Question.Answer>>
+    list: () => Promise<ReadonlyArray<Question.Request>>
+    reject: (requestID: Parameters<Question.Interface["reject"]>[0]) => Promise<void>
+  }
+
+  function prompt(input: { sessionID: SessionID; abort: AbortSignal; question: QuestionRuntime }) {
+    if (input.abort.aborted) return Promise.resolve(undefined)
+    const promise = input.question.ask({
       sessionID: input.sessionID,
       questions: [
         {
@@ -323,10 +317,15 @@ export namespace PlanFollowup {
     })
 
     const listener = () =>
-      PlanFollowupRuntime.question.list().then((qs) => {
-        const match = qs.find((q) => q.sessionID === input.sessionID)
-        if (match) PlanFollowupRuntime.question.reject(match.id)
-      })
+      input.question
+        .list()
+        .then((qs) => {
+          const match = qs.find((q) => q.sessionID === input.sessionID)
+          return match ? input.question.reject(match.id) : undefined
+        })
+        .catch((error) => {
+          log.warn("failed to reject aborted plan follow-up question", { sessionID: input.sessionID, error })
+        })
     input.abort.addEventListener("abort", listener, { once: true })
 
     return promise
@@ -341,7 +340,7 @@ export namespace PlanFollowup {
 
   async function startNew(input: {
     sessionID: SessionID
-    plan: string
+    file?: string
     messages: MessageV2.WithParts[]
     model: MessageV2.User["model"]
     abort?: AbortSignal
@@ -372,25 +371,22 @@ export namespace PlanFollowup {
           })
 
         try {
-          const file = Session.plan(session, Instance.current)
+          const file = input.file ?? Session.plan(session, Instance.current)
           const todos = await PlanFollowupRuntime.todo.get(input.sessionID)
           const todoList = formatTodos(todos)
 
           // Assemble the user message text with or without a handover section.
           // The section order is fixed so the initial and final renders stay
-          // aligned — only the handover block grows in between.
+          // aligned; only the handover block grows in between.
           const compose = (handover: string) => {
-            const sections = [
-              `Plan file: ${file}\nRead this file first and treat it as the source of truth for implementation.`,
-              `Implement the following plan:\n\n${input.plan}`,
-            ]
+            const sections = [`Plan file: ${file}\nRead this file first and treat it as the source of truth for implementation.`]
             if (handover) sections.push(`## Handover from Planning Session\n\n${handover}`)
             if (todoList) sections.push(`## Todo List\n\n${todoList}`)
             return sections.join("\n\n")
           }
 
-          // Inject the plan and todos immediately so the new session tab shows
-          // real content right away. The handover section is appended to this
+          // Inject the plan-file handoff and todos immediately so the new session tab
+          // shows useful content right away. The handover section is appended to this
           // same part in-place once the slow LLM call resolves below.
           const msg: MessageV2.User = {
             id: MessageID.ascending(),
@@ -478,6 +474,7 @@ export namespace PlanFollowup {
     sessionID: SessionID
     messages: MessageV2.WithParts[]
     abort: AbortSignal
+    question: QuestionRuntime
   }): Promise<"continue" | "break"> {
     if (input.abort.aborted) return "break"
 
@@ -491,7 +488,7 @@ export namespace PlanFollowup {
     const user = latest.find((msg) => msg.info.role === "user")?.info
     if (!user || user.role !== "user" || !user.model) return "break"
 
-    const answers = await prompt({ sessionID: input.sessionID, abort: input.abort })
+    const answers = await prompt({ sessionID: input.sessionID, abort: input.abort, question: input.question })
     if (!answers) {
       Telemetry.trackPlanFollowup(input.sessionID, "dismissed")
       return "break"
@@ -505,9 +502,11 @@ export namespace PlanFollowup {
 
     if (answer === ANSWER_NEW_SESSION) {
       Telemetry.trackPlanFollowup(input.sessionID, "new_session")
+      const ctx = Instance.current
+      const file = PlanFile.resolve(PlanFile.latest(input.messages), ctx)
       await startNew({
         sessionID: input.sessionID,
-        plan,
+        file: file ? PlanFile.display(file, ctx) : undefined,
         messages: input.messages,
         model: user.model,
         abort: input.abort,

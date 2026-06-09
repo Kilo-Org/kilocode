@@ -27,6 +27,7 @@ import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.ProvidersDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
+import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
@@ -154,19 +155,20 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
     ): SessionController {
         val root = Root()
         val m = SessionController(
-            parent,
-            ref,
-            sessions,
-            workspace,
-            app,
-            scope,
-            root,
-            flushMs,
-            condense,
-            displayMs,
+            parent = parent,
+            ref = ref,
+            sessions = sessions,
+            workspace = workspace,
+            app = app,
+            cs = scope,
+            comp = root,
+            flushMs = flushMs,
+            condense = condense,
+            displayMs = displayMs,
             open = open,
             beforeUpdate = beforeUpdate,
             afterUpdate = afterUpdate,
+            telemetry = { event, props -> appRpc.telemetry.add(TelemetryCaptureDto(event, props)) },
         )
         controllers.add(m)
         roots[m] = root

@@ -3,7 +3,10 @@ import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "e
 import { Suggestion } from "@/kilocode/suggestion"
 import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/middleware/instance-context"
-import { WorkspaceRoutingMiddleware } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
+import {
+  WorkspaceRoutingMiddleware,
+  WorkspaceRoutingQuery,
+} from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 
 const root = "/suggestion"
@@ -27,6 +30,7 @@ export const SuggestionApi = HttpApi.make("suggestion")
     HttpApiGroup.make("suggestion")
       .add(
         HttpApiEndpoint.get("list", SuggestionPaths.list, {
+          query: WorkspaceRoutingQuery,
           success: described(Schema.Array(Suggestion.RequestSchema), "List of pending suggestions"),
         }).annotateMerge(
           OpenApi.annotations({
@@ -37,6 +41,7 @@ export const SuggestionApi = HttpApi.make("suggestion")
         ),
         HttpApiEndpoint.post("accept", SuggestionPaths.accept, {
           params: { requestID: SuggestionRequestID },
+          query: WorkspaceRoutingQuery,
           payload: SuggestionAcceptPayload,
           success: described(Schema.Boolean, "Suggestion accepted successfully"),
           error: [HttpApiError.BadRequest, HttpApiError.NotFound],
@@ -49,6 +54,7 @@ export const SuggestionApi = HttpApi.make("suggestion")
         ),
         HttpApiEndpoint.post("dismiss", SuggestionPaths.dismiss, {
           params: { requestID: SuggestionRequestID },
+          query: WorkspaceRoutingQuery,
           success: described(Schema.Boolean, "Suggestion dismissed successfully"),
           error: [HttpApiError.BadRequest, HttpApiError.NotFound],
         }).annotateMerge(

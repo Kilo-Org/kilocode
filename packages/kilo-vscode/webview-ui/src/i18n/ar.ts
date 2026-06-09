@@ -136,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "فشل التفويض: {{error}}",
   "provider.connect.apiKey.description":
     "أدخل مفتاح واجهة برمجة تطبيقات {{provider}} الخاص بك لتوصيل حسابك واستخدام نماذج {{provider}} في Kilo.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "مفتاح واجهة برمجة تطبيقات {{provider}}",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "مفتاح API",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "مفتاح API مطلوب",
   "provider.connect.prompt.required": "{{field}} مطلوب",
   "provider.connect.azure.endpointType.label": "حدد تكوين نقطة نهاية Azure",
@@ -174,6 +180,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.title": "تم فصل {{provider}}",
   "provider.disconnect.toast.disconnected.description": "لم تعد نماذج {{provider}} متاحة.",
   "model.tag.free": "مجاني",
+  "model.tag.dataCollected": "قد تُستخدم البيانات للتدريب",
   "model.tag.latest": "الأحدث",
   "model.group.recommended": "موصى به",
   "model.group.favorites": "المفضلة",
@@ -201,6 +208,9 @@ export const dict = {
   "model.preview.label.cached": "مخزن مؤقتاً",
   "model.preview.label.average": "متوسط التكلفة التقديرية",
   "model.preview.label.context": "السياق",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "الإكمال",
+  "model.preview.label.costAttempt": "التكلفة / المحاولة",
   "model.preview.value.notSupported": "غير مدعوم",
   "model.preview.tooltip.average":
     "يعتمد متوسط التكلفة التقديرية على نسبة نموذجية لرموز الإدخال والإخراج والقراءة المخزنة مؤقتاً.",

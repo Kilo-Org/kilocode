@@ -136,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "Autorizacija nije uspjela: {{error}}",
   "provider.connect.apiKey.description":
     "Unesi svoj {{provider}} API ključ da povežeš račun i koristiš {{provider}} modele u Kilo-u.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "{{provider}} API ključ",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API ključ",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API ključ je obavezan",
   "provider.connect.prompt.required": "{{field}} je obavezno",
   "provider.connect.azure.endpointType.label": "Odaberite konfiguraciju krajnje tačke za Azure",
@@ -176,6 +182,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "{{provider}} modeli više nisu dostupni.",
 
   "model.tag.free": "Besplatno",
+  "model.tag.dataCollected": "Podaci se mogu koristiti za obuku",
   "model.tag.latest": "Najnovije",
   "model.group.recommended": "Preporučeno",
   "model.group.favorites": "Favoriti",
@@ -203,6 +210,9 @@ export const dict = {
   "model.preview.label.cached": "Keširano",
   "model.preview.label.average": "Procj. prosječni trošak",
   "model.preview.label.context": "Kontekst",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Završetak",
+  "model.preview.label.costAttempt": "Trošak / pokušaj",
   "model.preview.value.notSupported": "Nije podržano",
   "model.preview.tooltip.average":
     "Procijenjeni prosječni trošak zasniva se na tipičnom omjeru ulaznih i izlaznih tokena, te tokena pročitanih iz keša.",

@@ -1,5 +1,3 @@
-// kilocode_change - new file
-
 /**
  * KiloClaw chat panel
  *
@@ -12,7 +10,7 @@
  */
 
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js"
-import { type BoxRenderable, type KeyBinding, type MouseEvent, type TextareaRenderable } from "@opentui/core"
+import { type BoxRenderable, type MouseEvent, type TextareaRenderable } from "@opentui/core"
 import { useRenderer } from "@opentui/solid"
 import { useTheme } from "@tui/context/theme"
 import { SplitBorder, EmptyBorder } from "@tui/component/border"
@@ -237,11 +235,6 @@ export function ClawChat(props: {
                 auto?.onInput(value)
               }}
               onCursorChange={() => auto?.onCursorChange()}
-              onKeyDown={(e) => auto?.onKeyDown(e)}
-              keyBindings={[
-                { name: "return", action: "submit" } satisfies KeyBinding,
-                { name: "return", shift: true, action: "newline" } satisfies KeyBinding,
-              ]}
               onSubmit={submit}
             />
           </box>

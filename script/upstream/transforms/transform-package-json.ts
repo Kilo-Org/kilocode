@@ -289,6 +289,24 @@ export function fixCatalog(pkg: Record<string, unknown>, path: string, changes: 
   }
 }
 
+export function fixMetadata(
+  pkg: Record<string, unknown>,
+  path: string,
+  ours: Record<string, unknown> | null,
+  changes: string[],
+): void {
+  if (path !== "packages/opencode/package.json") return
+  if (!ours) return
+  if (Array.isArray(ours.keywords) && JSON.stringify(pkg.keywords) !== JSON.stringify(ours.keywords)) {
+    pkg.keywords = ours.keywords
+    changes.push("keywords: preserved from base")
+  }
+  if (typeof ours.private === "boolean" && pkg.private !== ours.private) {
+    pkg.private = ours.private
+    changes.push("private: preserved from base")
+  }
+}
+
 /**
  * Check if file is a package.json
  */
@@ -430,6 +448,8 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
         pkg.repository = ourRepo
         changes.push(`repository: preserved Kilo's repository configuration`)
       }
+
+      fixMetadata(pkg, relativePath, ourPkg, changes)
 
       // 7. Handle workspaces for root package.json
       // Kilo has removed hosted platform packages (console/*, slack, etc.)
@@ -649,6 +669,8 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
           changes.push(`repository: preserved Kilo's repository configuration`)
         }
 
+        fixMetadata(pkg, path, kiloPkg, changes)
+
         // 7. Handle workspaces for root package.json
         // Kilo has removed hosted platform packages (console/*, slack, etc.)
         // so we need to preserve Kilo's workspace configuration instead of taking upstream's
@@ -793,6 +815,7 @@ export async function reconcilePackageJsonFromRefs(
     if (!ourPkg) return { file, action: "skipped", changes: [], dryRun }
     pkg = JSON.parse(JSON.stringify(ourPkg))
   }
+  if (!pkg) return { file, action: "skipped", changes: [], dryRun }
 
   const relativePath = file.replace(process.cwd() + "/", "")
   const newName = TRANSFORM_PACKAGE_NAMES[relativePath]
@@ -856,6 +879,8 @@ export async function reconcilePackageJsonFromRefs(
       pkg.repository = ourRepo
       changes.push(`repository: preserved Kilo's repository configuration`)
     }
+
+    fixMetadata(pkg, relativePath, ourPkg, changes)
 
     const ourWs = ourPkg.workspaces as { packages?: string[]; catalog?: Record<string, string> } | undefined
     const theirWs = pkg.workspaces as { packages?: string[]; catalog?: Record<string, string> } | undefined

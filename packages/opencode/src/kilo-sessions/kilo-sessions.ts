@@ -30,6 +30,8 @@ import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Question } from "@/question"
 import { Permission } from "@/permission"
 import { withTimeout } from "@/util/timeout"
+import { Snapshot } from "@/snapshot"
+import { cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff"
 
 async function provide<R>(input: { directory: string; fn: () => R }): Promise<R> {
   const { WithInstance } = await import("@/project/with-instance")
@@ -130,6 +132,20 @@ export namespace KiloSessions {
     fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
   }
 
+  function transport(info: Session.Info): SDK.Session {
+    return {
+      ...info,
+      summary: info.summary
+        ? {
+            ...info.summary,
+            diffs: info.summary.diffs?.filter(
+              (diff): diff is typeof diff & { file: string } => diff.file !== undefined,
+            ),
+          }
+        : undefined,
+    }
+  }
+
   async function getClient(): Promise<Client | undefined> {
     return withInFlightCache(clientKey, ttlMs, async () => {
       const token = await kilocodeToken()
@@ -191,14 +207,14 @@ export namespace KiloSessions {
 
   async function deriveStatus(sessionID: string): Promise<"idle" | "busy" | "question" | "permission" | "retry"> {
     const { AppRuntime } = await import("@/effect/app-runtime")
-    const permissions = (
-      await AppRuntime.runPromise(Permission.Service.use((svc) => svc.list()))
-    ).filter((p) => p.sessionID === sessionID)
+    const permissions = (await AppRuntime.runPromise(Permission.Service.use((svc) => svc.list()))).filter(
+      (p) => p.sessionID === sessionID,
+    )
     if (permissions.length > 0) return "permission"
 
-    const questions = (
-      await AppRuntime.runPromise(Question.Service.use((svc) => svc.list()))
-    ).filter((q) => q.sessionID === sessionID)
+    const questions = (await AppRuntime.runPromise(Question.Service.use((svc) => svc.list()))).filter(
+      (q) => q.sessionID === sessionID,
+    )
     if (questions.length > 0) return "question"
 
     const status = await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.get(SessionID.make(sessionID))))
@@ -209,6 +225,13 @@ export namespace KiloSessions {
   async function deriveAndSyncStatus(sessionID: string) {
     const status = await withTimeout(deriveStatus(sessionID), STATUS_TIMEOUT_MS)
     await ingest.sync(sessionID, [{ type: "session_status", data: { status } }])
+  }
+
+  async function cumulative(sessionId: string, local: Snapshot.FileDiff[]) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(
+      Storage.Service.use((storage) => cumulativeSessionDiff(storage, SessionID.make(sessionId), local)),
+    )
   }
 
   export const layer = Layer.effect(
@@ -246,7 +269,7 @@ export namespace KiloSessions {
             if (!session) return
             await ingest.sync(sessionID, [
               { type: "kilo_meta", data: await meta(sessionID) },
-              { type: "session", data: session },
+              { type: "session", data: transport(session) },
             ])
           })
           yield* watch(MessageV2.Event.Updated, async (evt) => {
@@ -259,7 +282,9 @@ export namespace KiloSessions {
             ingest.sync(evt.properties.part.sessionID, [{ type: "part", data: evt.properties.part }]),
           )
           yield* watch(Session.Event.Diff, (evt) =>
-            ingest.sync(evt.properties.sessionID, [{ type: "session_diff", data: evt.properties.diff }]),
+            cumulative(evt.properties.sessionID, evt.properties.diff).then((diff) =>
+              ingest.sync(evt.properties.sessionID, [{ type: "session_diff", data: diff }]),
+            ),
           )
           yield* watch(Session.Event.TurnOpen, (evt) =>
             ingest.sync(evt.properties.sessionID, [{ type: "session_open", data: {} }]),
@@ -378,7 +403,7 @@ export namespace KiloSessions {
                 svc.get(SessionID.make(id)).pipe(
                   Effect.map((session) => ({
                     id,
-                    status: statuses[id]?.type ?? "idle" as const,
+                    status: statuses[id]?.type ?? ("idle" as const),
                     title: session.title,
                     parentSessionId: session.parentID,
                     gitUrl,
@@ -659,7 +684,7 @@ export namespace KiloSessions {
     log.info("full sync", { sessionId })
 
     const { AppRuntime } = await import("@/effect/app-runtime")
-    const [session, diffs] = await AppRuntime.runPromise(
+    const [session, local] = await AppRuntime.runPromise(
       Effect.gen(function* () {
         const sessions = yield* Session.Service
         const summary = yield* SessionSummary.Service
@@ -669,6 +694,7 @@ export namespace KiloSessions {
         ])
       }),
     )
+    const diffs = await cumulative(sessionId, local)
     const messages = await Array.fromAsync(MessageV2.stream(SessionID.make(sessionId)))
     messages.reverse()
     const mdls = await models(
@@ -682,7 +708,7 @@ export namespace KiloSessions {
       },
       {
         type: "session",
-        data: session,
+        data: transport(session),
       },
       ...messages.map((x) => ({
         type: "message" as const,

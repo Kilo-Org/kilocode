@@ -32,6 +32,7 @@ jobs:
           - name: windows
             host: blacksmith-4vcpu-windows-2025 # kilocode_change
     runs-on: ${{ matrix.settings.host }}
+    timeout-minutes: 45 # kilocode_change
     defaults:
       run:
         shell: bash
@@ -77,6 +78,11 @@ jobs:
         run: bun turbo test:ci --filter='!@kilocode/kilo-jetbrains'
         env:
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
+
+      - name: Run HttpApi exerciser gates
+        if: runner.os == 'Linux'
+        working-directory: packages/opencode
+        run: bun run test:httpapi
 
       - name: Publish unit reports
         if: always()

@@ -2,6 +2,7 @@ package ai.kilocode.client.actions
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
+import ai.kilocode.client.telemetry.Telemetry
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -24,6 +25,7 @@ class ShowProfileAction : DumbAwareAction(
 ) {
 
     override fun actionPerformed(e: AnActionEvent) {
+        Telemetry.send("Profile Settings Opened", mapOf("surface" to "tool_window"))
         ShowSettingsUtil.getInstance().showSettingsDialog(
             e.project,
             Predicate { cfg: Configurable ->

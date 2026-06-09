@@ -74,7 +74,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
     working: () => session.status() !== "idle",
   })
 
-  // Resume auto-scroll when a bottom-dock permission/question is dismissed
+  // Explicit output-producing actions resume auto-scroll before appending.
   const onResumeAutoScroll = () => autoScroll.resume()
   window.addEventListener("resumeAutoScroll", onResumeAutoScroll)
   onCleanup(() => window.removeEventListener("resumeAutoScroll", onResumeAutoScroll))
@@ -92,14 +92,21 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   const boundary = () => session.revert()?.messageID
   const turns = createMemo((prev: MessageTurn[] | undefined) =>
-    stableMessageTurns(messageTurns(session.messages(), boundary()), prev),
+    stableMessageTurns(
+      messageTurns(session.messages(), boundary(), (msg) => session.getParts(msg.id)),
+      prev,
+    ),
   )
   const isEmpty = () => turns().length === 0 && !session.loading() && !boundary()
 
   const recent = createMemo(() => recentSessions(session.sessions()))
 
-  const activeUserID = createMemo(() => getActiveUserMessageID(session.messages(), session.statusInfo()))
-  const queuedIDs = createMemo(() => new Set(queuedUserMessageIDs(session.messages(), session.statusInfo())))
+  const activeUserID = createMemo(() =>
+    getActiveUserMessageID(session.messages(), session.statusInfo(), (msg) => session.getParts(msg.id)),
+  )
+  const queuedIDs = createMemo(
+    () => new Set(queuedUserMessageIDs(session.messages(), session.statusInfo(), (msg) => session.getParts(msg.id))),
+  )
   const [held, setHeld] = createSignal<{ sid: string; ids: Set<string> }>()
   createEffect(() => {
     const id = activeUserID()

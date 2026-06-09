@@ -1,5 +1,91 @@
 # kilo-code
 
+## 7.3.40
+
+## 7.3.39
+
+### Patch Changes
+
+- [#10946](https://github.com/Kilo-Org/kilocode/pull/10946) [`6a64794`](https://github.com/Kilo-Org/kilocode/commit/6a64794a5b49acf1ce9ab768c6bce8090f863036) - Keep chat auto-scroll active when interacting with question answers and other controls.
+
+- [#10944](https://github.com/Kilo-Org/kilocode/pull/10944) [`f5b5797`](https://github.com/Kilo-Org/kilocode/commit/f5b57975805ce945b16604037724f2ca7389ff43) - Keep chat pinned to the latest output when the visible message area resizes without overriding an intentional scroll position.
+
+- [#10950](https://github.com/Kilo-Org/kilocode/pull/10950) [`225b914`](https://github.com/Kilo-Org/kilocode/commit/225b914b5971819641834a3180c2e123cb71d7e6) - Reduce chat layout movement when live output finishes and session actions appear.
+
+- [#10951](https://github.com/Kilo-Org/kilocode/pull/10951) [`54534bd`](https://github.com/Kilo-Org/kilocode/commit/54534bd64162172322ba3785a6970ac3d94ccbf3) - Keep the Explorer and other primary sidebar views open when VS Code reloads while Kilo Code is hidden.
+
+- [#10942](https://github.com/Kilo-Org/kilocode/pull/10942) [`049d567`](https://github.com/Kilo-Org/kilocode/commit/049d567d1300487e735905920adeeae4bed21acc) - Keep chat auto-scroll following after programmatic or layout-driven scroll position changes.
+
+- Updated dependencies [[`6a64794`](https://github.com/Kilo-Org/kilocode/commit/6a64794a5b49acf1ce9ab768c6bce8090f863036), [`f5b5797`](https://github.com/Kilo-Org/kilocode/commit/f5b57975805ce945b16604037724f2ca7389ff43), [`049d567`](https://github.com/Kilo-Org/kilocode/commit/049d567d1300487e735905920adeeae4bed21acc)]:
+  - @kilocode/kilo-ui@7.3.34
+
+## 7.3.33
+
+### Patch Changes
+
+- [#10935](https://github.com/Kilo-Org/kilocode/pull/10935) [`6cab5f1`](https://github.com/Kilo-Org/kilocode/commit/6cab5f18e76b5ab0f738c2e20e93f12f3679b5dc) - Prevent the macOS Apple Silicon CLI from failing to start because of malformed bundled exports.
+
+## 7.3.30
+
+## 7.3.29
+
+### Patch Changes
+
+- [#9976](https://github.com/Kilo-Org/kilocode/pull/9976) [`56b0834`](https://github.com/Kilo-Org/kilocode/commit/56b0834db524d29737043c250b45e8c973add350) - Reduce JetBrains memory usage by disposing hidden session UIs after a configurable timeout.
+
+- [#9976](https://github.com/Kilo-Org/kilocode/pull/9976) [`750bb77`](https://github.com/Kilo-Org/kilocode/commit/750bb778998a405719d3132d17867d2868e4defd) - Improve JetBrains session stability by keeping controller subscription state on the UI thread.
+
+- [#9976](https://github.com/Kilo-Org/kilocode/pull/9976) [`50f4d28`](https://github.com/Kilo-Org/kilocode/commit/50f4d28e07f5fb0c71d231d9eead8c0b370c05aa) - Show JetBrains markdown code blocks as multiline boxed editors that expand to their full height.
+
+- [#9976](https://github.com/Kilo-Org/kilocode/pull/9976) [`e17c4f9`](https://github.com/Kilo-Org/kilocode/commit/e17c4f936c1c111d7019122b7c794661a610eb52) - Improve JetBrains chat streaming performance by retaining existing markdown and code block views while responses stream, and keep streamed code fences intact without showing raw fence markers during updates.
+
+- [#9976](https://github.com/Kilo-Org/kilocode/pull/9976) [`2a3975e`](https://github.com/Kilo-Org/kilocode/commit/2a3975ea29acfe4e5c4a4cd293de7e6f9b789e86) - Support coherent selection and copy behavior across JetBrains session transcript fragments.
+
+- [#10822](https://github.com/Kilo-Org/kilocode/pull/10822) [`8b1ee66`](https://github.com/Kilo-Org/kilocode/commit/8b1ee6628c7ee552814980465af7233522dd5528) - Preserve worktree routing for Kilo HTTP API clients and keep inherited task-subagent restrictions active.
+
+## 7.3.28
+
+### Patch Changes
+
+- [#10847](https://github.com/Kilo-Org/kilocode/pull/10847) [`cdf46c9`](https://github.com/Kilo-Org/kilocode/commit/cdf46c97354630e2f1b392092ee0ffcc18b19640) - Clarify when free-model data may be used for training and identify it with a brain circuit icon.
+
+- [#10806](https://github.com/Kilo-Org/kilocode/pull/10806) [`ed3e1ac`](https://github.com/Kilo-Org/kilocode/commit/ed3e1ac99bffd2c1fa0480d80907d298f48ce175) - Make Marketplace skill installation resilient to missing project directories and overlapping install attempts.
+
+- [#10831](https://github.com/Kilo-Org/kilocode/pull/10831) [`837a875`](https://github.com/Kilo-Org/kilocode/commit/837a87509cb323dbf212cbf40af112f218221dd0) - Keep post-compaction tool calls and follow-up messages ordered after the compaction summary in the CLI and VS Code transcript.
+
+- [#10849](https://github.com/Kilo-Org/kilocode/pull/10849) [`a6b005d`](https://github.com/Kilo-Org/kilocode/commit/a6b005dfede302731dcbb00ac74e744333db9104) - Restore Cloud Agent transcripts in VS Code session previews and stop cloud session previews or continuation from loading indefinitely when a request stalls.
+
+- [#10692](https://github.com/Kilo-Org/kilocode/pull/10692) [`eadfb2b`](https://github.com/Kilo-Org/kilocode/commit/eadfb2b80a1a7ca4b469d78d85fec023c8c0387b) - Show shell command descriptions in permission approval prompts.
+
+- [#10816](https://github.com/Kilo-Org/kilocode/pull/10816) [`16341a6`](https://github.com/Kilo-Org/kilocode/commit/16341a6647d1a662ce1e9fceec09a9cf33bf0be6) - Keep chat auto-scroll stable while edit, write, and patch tools hand off between assistant steps.
+
+- [#10846](https://github.com/Kilo-Org/kilocode/pull/10846) [`48340fe`](https://github.com/Kilo-Org/kilocode/commit/48340fe2ec44d75c5210a0ebeaf18575f5935774) - Preserve unfinished inline review comments while diffs refresh.
+
+- [#10810](https://github.com/Kilo-Org/kilocode/pull/10810) [`5b34dfc`](https://github.com/Kilo-Org/kilocode/commit/5b34dfce3d62946f3aa2ad8e65f618af05246f4d) - Speed up VS Code session switching for long transcripts by lazily mounting collapsed historical tool details, sharing timeline hover infrastructure across activity bars, omitting transcript metadata that the webview does not use, and avoiding shimmer markup for inactive historical labels.
+
+- Updated dependencies [[`cdf46c9`](https://github.com/Kilo-Org/kilocode/commit/cdf46c97354630e2f1b392092ee0ffcc18b19640), [`fc4cf10`](https://github.com/Kilo-Org/kilocode/commit/fc4cf10b0a65ec2b2949dd695ebec6ebb619cd15), [`a6b005d`](https://github.com/Kilo-Org/kilocode/commit/a6b005dfede302731dcbb00ac74e744333db9104)]:
+  - @kilocode/kilo-ui@7.3.23
+  - @kilocode/sdk@7.3.23
+  - @kilocode/kilo-gateway@7.3.23
+  - @opencode-ai/ui@7.3.23
+  - @kilocode/kilo-indexing@7.3.23
+
+## 7.3.21
+
+## 7.3.20
+
+### Minor Changes
+
+- [#10754](https://github.com/Kilo-Org/kilocode/pull/10754) [`cf85e0d`](https://github.com/Kilo-Org/kilocode/commit/cf85e0d51f6e84298524cf39ce06f5c40a8599f4) - Experimental: Serve Kilo Console from the local daemon. Use `kilo console` to open it automatically.
+
+### Patch Changes
+
+- [#10786](https://github.com/Kilo-Org/kilocode/pull/10786) [`7dd8aab`](https://github.com/Kilo-Org/kilocode/commit/7dd8aabadeb1b5bcf69f5fb9545a57ac91daf54f) - Limit inferred background-process port discovery to the TUI and stop scanning after startup to avoid unnecessary Bun subprocess polling.
+
+- [#10783](https://github.com/Kilo-Org/kilocode/pull/10783) [`c44cd78`](https://github.com/Kilo-Org/kilocode/commit/c44cd786688a5050805fbd3c17e23ca14a5324a5) - Show a retryable connection error and preserve unsent prompts when the VS Code background CLI process exits.
+
+- [#10782](https://github.com/Kilo-Org/kilocode/pull/10782) [`1c06a1d`](https://github.com/Kilo-Org/kilocode/commit/1c06a1dbc7c2339fc7b7dd4bb45e31c9d80f259d) - Preserve the Changes review scroll position while agents update files.
+
 ## 7.3.18
 
 ### Patch Changes

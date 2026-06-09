@@ -4,7 +4,10 @@ import { QuestionID } from "@/question/schema"
 import { SessionNetwork } from "@/session/network"
 import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/middleware/instance-context"
-import { WorkspaceRoutingMiddleware } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
+import {
+  WorkspaceRoutingMiddleware,
+  WorkspaceRoutingQuery,
+} from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 
 const root = "/network"
@@ -20,6 +23,7 @@ export const NetworkApi = HttpApi.make("network")
     HttpApiGroup.make("network")
       .add(
         HttpApiEndpoint.get("list", NetworkPaths.list, {
+          query: WorkspaceRoutingQuery,
           success: described(Schema.Array(SessionNetwork.Wait), "List of pending network reconnect requests"),
         }).annotateMerge(
           OpenApi.annotations({
@@ -30,6 +34,7 @@ export const NetworkApi = HttpApi.make("network")
         ),
         HttpApiEndpoint.post("reply", NetworkPaths.reply, {
           params: { requestID: QuestionID },
+          query: WorkspaceRoutingQuery,
           success: described(Schema.Boolean, "Network wait resumed successfully"),
           error: [HttpApiError.BadRequest, HttpApiError.NotFound],
         }).annotateMerge(
@@ -41,6 +46,7 @@ export const NetworkApi = HttpApi.make("network")
         ),
         HttpApiEndpoint.post("reject", NetworkPaths.reject, {
           params: { requestID: QuestionID },
+          query: WorkspaceRoutingQuery,
           success: described(Schema.Boolean, "Network wait rejected successfully"),
           error: [HttpApiError.BadRequest, HttpApiError.NotFound],
         }).annotateMerge(

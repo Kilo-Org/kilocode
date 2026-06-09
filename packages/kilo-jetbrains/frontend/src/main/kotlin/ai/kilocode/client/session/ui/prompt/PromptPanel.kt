@@ -76,7 +76,9 @@ class PromptPanel(
     }
 
     val mode = ModePicker()
-    val model = ModelPicker()
+    val model = ModelPicker().apply {
+        placement = ModelPicker.Placement.ABOVE
+    }
     val reasoning = ReasoningPicker()
     var onReset: () -> Unit = {}
     var onChange: () -> Unit = {}
@@ -252,7 +254,7 @@ class PromptPanel(
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        editor.font = style.transcriptFont
+        editor.font = style.editorFont
         editor.getEditor(false)?.let(style::applyToEditor)
         editor.background = style.editorScheme.defaultBackground
         syncEditorHeight()
@@ -368,7 +370,7 @@ class PromptPanel(
             SessionUiStyle.View.Prompt.EDITOR_LINES,
             SessionUiStyle.View.Prompt.EDITOR_MAX_LINES,
         )
-        val height = style.transcriptFont.size * lines + JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
+        val height = style.editorFont.size * lines + JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
         if (editor.preferredSize.height == height && editor.minimumSize.height == height) return
         editor.preferredSize = JBDimension(0, height)
         editor.minimumSize = JBDimension(0, height)

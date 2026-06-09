@@ -438,9 +438,9 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertEquals(SessionUiStyle.View.surface(), view.denyButtonForTest().background)
     }
 
-    // ------ code labels use editor style ------
+    // ------ code labels use transcript style ------
 
-    fun `test code label uses editor font family after applyStyle`() {
+    fun `test code label uses ui font family after applyStyle`() {
         view.show(
             Permission(
                 id = "perm_codefont",
@@ -456,7 +456,8 @@ class PermissionViewTest : BasePlatformTestCase() {
 
         val labels = view.codeLabelsForTest()
         assertNotNull("Should have at least one code label for command", labels.firstOrNull())
-        assertEquals("Code label font family should use editor family", "Courier New", labels[0].font.name)
+        assertEquals("Code label font family should use transcript family", style.transcriptFont.name, labels[0].font.name)
+        assertEquals(style.transcriptFont.size, labels[0].font.size)
     }
 
     fun `test permission header uses headerFont not editor font family`() {

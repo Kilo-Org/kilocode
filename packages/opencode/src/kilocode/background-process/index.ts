@@ -6,8 +6,9 @@ import { Identifier } from "@/id/id"
 import { Instance, type InstanceContext } from "@/project/instance"
 import { SessionID } from "@/session/schema"
 import { Shell } from "@/shell/shell"
-import { NonNegativeInt, PositiveInt, optionalOmitUndefined, withStatics } from "@/util/schema"
-import { zod, ZodOverride } from "@/util/effect-zod"
+import { NonNegativeInt, PositiveInt, optionalOmitUndefined, withStatics } from "@opencode-ai/core/schema"
+import { zod, ZodOverride } from "@opencode-ai/core/effect-zod"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import * as Log from "@opencode-ai/core/util/log"
 import { spawn, type ChildProcess } from "child_process"
 import { Context, Effect, Layer, Schema, Types } from "effect"
@@ -22,7 +23,9 @@ export namespace BackgroundProcess {
   const KILL_MS = 3_000
   const READY_MS = 30_000
   const PUBLISH_MS = 500
-  const PORT_MS = 2_000
+  const PORT_START_MS = 500
+  const PORT_MS = 5_000
+  const PORT_LIMIT_MS = 30_000
 
   const idSchema = Schema.String.annotate({ [ZodOverride]: z.string().startsWith("bgp") }).pipe(
     Schema.brand("BackgroundProcessID"),
@@ -164,7 +167,11 @@ export namespace BackgroundProcess {
     return a.length === b.length && a.every((port, index) => port === b[index])
   }
 
-  async function refresh(active: Active) {
+  function infer() {
+    return Flag.KILO_CLIENT === "cli" && process.env.KILO_BACKGROUND_PROCESS_PORTS === "true"
+  }
+
+  function update(active: Active, ports?: number[]) {
     const pid = active.proc.pid
     if (!pid || terminal(active.info.status)) {
       const changed = active.info.ports.length > 0
@@ -172,11 +179,17 @@ export namespace BackgroundProcess {
       return changed
     }
     const fallback = active.info.ready && active.start.ready?.port ? [active.start.ready.port] : []
-    const next = Array.from(new Set([...(await Ports.list(pid)), ...fallback])).toSorted((a, b) => a - b)
+    const next = Array.from(new Set([...(ports ?? active.info.ports), ...fallback])).toSorted((a, b) => a - b)
     if (same(active.info.ports, next)) return false
     active.info.ports = next
     active.info.time.updated = Date.now()
     return true
+  }
+
+  async function refresh(active: Active) {
+    const pid = active.proc.pid
+    if (!pid || terminal(active.info.status)) return update(active)
+    return update(active, await Ports.list(pid))
   }
 
   function emit(active: Active) {
@@ -189,48 +202,45 @@ export namespace BackgroundProcess {
 
   function publish(active: Active) {
     if (active.disposed) return
-    active.scan = (active.scan ?? refresh(active))
-      .then(() => {
+    update(active)
+    emit(active)
+  }
+
+  function finished(active: Active) {
+    if (active.disposed) return true
+    if (!infer()) return true
+    if (terminal(active.info.status)) return true
+    if (active.info.ports.length > 0) return true
+    return Date.now() - active.info.time.started >= PORT_LIMIT_MS
+  }
+
+  function scan(active: Active) {
+    if (finished(active)) return
+    if (active.scan) return
+    active.scan = refresh(active)
+      .then((changed) => {
         active.scan = undefined
         if (active.disposed) return false
-        emit(active)
+        if (changed) emit(active)
         poll(active)
-        return false
+        return changed
       })
       .catch((err) => {
         active.scan = undefined
         if (active.disposed) return false
         log.debug("failed to refresh process ports", { err, id: active.info.id })
-        emit(active)
         poll(active)
         return false
       })
   }
 
-  function poll(active: Active) {
-    if (active.disposed) return
-    if (terminal(active.info.status)) return
+  function poll(active: Active, ms = PORT_MS) {
+    if (finished(active)) return
     if (active.poll) return
     active.poll = setTimeout(() => {
       active.poll = undefined
-      if (active.disposed) return
-      if (terminal(active.info.status)) return
-      active.scan = (active.scan ?? refresh(active))
-        .then((changed) => {
-          active.scan = undefined
-          if (active.disposed) return false
-          if (changed) emit(active)
-          poll(active)
-          return changed
-        })
-        .catch((err) => {
-          active.scan = undefined
-          if (active.disposed) return false
-          log.debug("failed to refresh process ports", { err, id: active.info.id })
-          poll(active)
-          return false
-        })
-    }, PORT_MS)
+      scan(active)
+    }, ms)
   }
 
   function schedule(active: Active) {
@@ -355,6 +365,7 @@ export namespace BackgroundProcess {
     }
     delete result.KILO_SERVER_PASSWORD
     delete result.KILO_SERVER_USERNAME
+    delete result.KILO_BACKGROUND_PROCESS_PORTS
     return result
   }
 
@@ -494,6 +505,7 @@ export namespace BackgroundProcess {
       exited(active, code, signal)
     })
     publish(active)
+    poll(active, PORT_START_MS)
     if (input.ready) await wait(active, input.ready)
     return clone(active.info)
   }

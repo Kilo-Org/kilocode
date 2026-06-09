@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -88,6 +89,11 @@ class KiloConnectionService(
 
     private val _events = MutableSharedFlow<SseEvent>(extraBufferCapacity = 64)
     val events: SharedFlow<SseEvent> = _events.asSharedFlow()
+    private val queue = Channel<SseEvent>(Channel.UNLIMITED)
+    private val lock = Any()
+    private val eventJob = cs.launch {
+        for (event in queue) _events.emit(event)
+    }
 
     /** Generated API client — null when disconnected. */
     var api: DefaultApi? = null
@@ -233,24 +239,34 @@ class KiloConnectionService(
 
     private val listener = object : EventSourceListener() {
         override fun onOpen(src: EventSource, response: Response) {
+            if (source.get() !== src) return
             log.info("SSE: connected")
             setState(ConnectionState.Connected(port, password))
             lastEvent.set(System.currentTimeMillis())
         }
 
         override fun onEvent(src: EventSource, id: String?, type: String?, data: String) {
-            lastEvent.set(System.currentTimeMillis())
-            val kind = type ?: KiloCliDataParser.extractEventType(data)
-            log.debug { "evt=$kind bytes=${data.length} hasId=${id != null} ${ChatLogSummary.body(data)}" }
-            cs.launch { _events.emit(SseEvent(type = kind, data = data)) }
+            if (source.get() !== src) return
+            synchronized(lock) {
+                if (disposed) return@synchronized
+                lastEvent.set(System.currentTimeMillis())
+                val kind = type ?: KiloCliDataParser.extractEventType(data)
+                log.debug { "evt=$kind bytes=${data.length} hasId=${id != null} ${ChatLogSummary.body(data)}" }
+                val result = queue.trySend(SseEvent(type = kind, data = data))
+                if (result.isFailure && !disposed) {
+                    log.warn("SSE: event queue rejected type=$kind", result.exceptionOrNull())
+                }
+            }
         }
 
         override fun onClosed(src: EventSource) {
+            if (source.get() !== src) return
             log.info("SSE: stream closed — scheduling reconnect")
             scheduleReconnect()
         }
 
         override fun onFailure(src: EventSource, t: Throwable?, response: Response?) {
+            if (source.get() !== src) return
             val detail = when {
                 t != null -> t.stackTraceToString()
                 response != null -> response.body?.string()
@@ -369,6 +385,8 @@ class KiloConnectionService(
         healthJob?.cancel()
         processJob?.cancel()
         reconnectJob?.cancel()
+        eventJob.cancel()
+        queue.close()
         close()
         _state.value = ConnectionState.Disconnected
         log.info("KiloConnectionService disposed")

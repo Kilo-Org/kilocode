@@ -1,5 +1,104 @@
 # @kilocode/cli
 
+## 7.3.40
+
+### Patch Changes
+
+- [#10925](https://github.com/Kilo-Org/kilocode/pull/10925) [`881a451`](https://github.com/Kilo-Org/kilocode/commit/881a451f8ac198c9d199616c1eef20e94ff25b57) Thanks [@evanjacobson](https://github.com/evanjacobson)! - Display skills in CLI slash command autocomplete options
+
+- [#10952](https://github.com/Kilo-Org/kilocode/pull/10952) [`be5f42f`](https://github.com/Kilo-Org/kilocode/commit/be5f42f158ee88777cc37160cb94dd58b74c6247) Thanks [@johnnyeric](https://github.com/johnnyeric)! - Support custom plan file paths when exiting planning.
+
+## 7.3.39
+
+### Patch Changes
+
+- [#10901](https://github.com/Kilo-Org/kilocode/pull/10901) [`a8a8dd8`](https://github.com/Kilo-Org/kilocode/commit/a8a8dd87247a700e83d8b9cbedc7a4a26cdea602) - Prevent icon images fetched from the web from causing provider request errors.
+
+- [#10933](https://github.com/Kilo-Org/kilocode/pull/10933) [`a0eb3b7`](https://github.com/Kilo-Org/kilocode/commit/a0eb3b7cb6e06a6d9d625169eaefaffb4b4f7095) - Write strict JSON when adding MCP servers to `kilo.json` configuration files.
+
+- [#10924](https://github.com/Kilo-Org/kilocode/pull/10924) [`189f251`](https://github.com/Kilo-Org/kilocode/commit/189f251866fb9e2971384377d1494b03e6d8889d) - Temporarily disable free-model session and Git workspace data export.
+
+- [#10949](https://github.com/Kilo-Org/kilocode/pull/10949) [`78117d1`](https://github.com/Kilo-Org/kilocode/commit/78117d1a25cc7fe408a5933c117bf76062a7aaf2) - Fail publication builds when the bundled models snapshot cannot be downloaded or validated, and load the snapshot as JSON data in compiled binaries.
+
+## 7.3.33
+
+### Patch Changes
+
+- [#10935](https://github.com/Kilo-Org/kilocode/pull/10935) [`6cab5f1`](https://github.com/Kilo-Org/kilocode/commit/6cab5f18e76b5ab0f738c2e20e93f12f3679b5dc) - Prevent the macOS Apple Silicon CLI from failing to start because of malformed bundled exports.
+
+## 7.3.30
+
+### Patch Changes
+
+- [#10862](https://github.com/Kilo-Org/kilocode/pull/10862) [`c4de1ac`](https://github.com/Kilo-Org/kilocode/commit/c4de1acdf0aef967b5795fde006c6f61e16328f3) - Support reasoning with Mistral Medium 3.5 models, including the latest alias.
+
+- [#10895](https://github.com/Kilo-Org/kilocode/pull/10895) [`2e1945c`](https://github.com/Kilo-Org/kilocode/commit/2e1945c287971f26bec67b7e60de6c282a5c8865) - Allow plan approval submissions to complete after planning finishes.
+
+## 7.3.29
+
+### Patch Changes
+
+- [#10822](https://github.com/Kilo-Org/kilocode/pull/10822) [`8b1ee66`](https://github.com/Kilo-Org/kilocode/commit/8b1ee6628c7ee552814980465af7233522dd5528) - Preserve worktree routing for Kilo HTTP API clients and keep inherited task-subagent restrictions active.
+
+## 7.3.28
+
+### Patch Changes
+
+- [#10847](https://github.com/Kilo-Org/kilocode/pull/10847) [`cdf46c9`](https://github.com/Kilo-Org/kilocode/commit/cdf46c97354630e2f1b392092ee0ffcc18b19640) - Clarify when free-model data may be used for training and identify it with a brain circuit icon.
+
+- [#10833](https://github.com/Kilo-Org/kilocode/pull/10833) [`8696edc`](https://github.com/Kilo-Org/kilocode/commit/8696edcb542a5a499018184cfc9aa15cc896e5de) - Keep Kilo Console terminals and worktree changes visible while refreshing diffs.
+
+- [#10833](https://github.com/Kilo-Org/kilocode/pull/10833) [`fbacc31`](https://github.com/Kilo-Org/kilocode/commit/fbacc312f747b6f2284d23c9f58bdc7a843a81cd) - Use the updated favicon in Kilo Console.
+
+- [#10865](https://github.com/Kilo-Org/kilocode/pull/10865) [`9c56107`](https://github.com/Kilo-Org/kilocode/commit/9c561074b624925d14ee0e7d9e64d0a6f5958531) - Show the animated Kilo logo while the console and dashboard finish loading.
+
+- [#10864](https://github.com/Kilo-Org/kilocode/pull/10864) [`557d6ad`](https://github.com/Kilo-Org/kilocode/commit/557d6ad02392dac9138d9788da1476a7ff9cc8e2) - Preserve upstream error statuses for cloud session and KiloClaw gateway requests.
+
+- [#10831](https://github.com/Kilo-Org/kilocode/pull/10831) [`837a875`](https://github.com/Kilo-Org/kilocode/commit/837a87509cb323dbf212cbf40af112f218221dd0) - Keep post-compaction tool calls and follow-up messages ordered after the compaction summary in the CLI and VS Code transcript.
+
+- [#10849](https://github.com/Kilo-Org/kilocode/pull/10849) [`a6b005d`](https://github.com/Kilo-Org/kilocode/commit/a6b005dfede302731dcbb00ac74e744333db9104) - Restore Cloud Agent transcripts in VS Code session previews and stop cloud session previews or continuation from loading indefinitely when a request stalls.
+
+- [#10883](https://github.com/Kilo-Org/kilocode/pull/10883) [`1cdc398`](https://github.com/Kilo-Org/kilocode/commit/1cdc39856f461b4dc183fe5b273b7fc1314b9a64) - Restore `kilo console` startup in packaged CLI builds.
+
+- [#10863](https://github.com/Kilo-Org/kilocode/pull/10863) [`35aa9bb`](https://github.com/Kilo-Org/kilocode/commit/35aa9bbbb38557df292f105fd5324bf37807f518) - Restore Kilo Gateway-backed Mercury Next Edit completions.
+
+- [#10829](https://github.com/Kilo-Org/kilocode/pull/10829) [`e64c1fb`](https://github.com/Kilo-Org/kilocode/commit/e64c1fb65ec6895f7e97786f52806195f25606c0) - Restore full-session forks in Agent Manager after the HTTP API migration.
+
+- Updated dependencies [[`fc4cf10`](https://github.com/Kilo-Org/kilocode/commit/fc4cf10b0a65ec2b2949dd695ebec6ebb619cd15), [`a6b005d`](https://github.com/Kilo-Org/kilocode/commit/a6b005dfede302731dcbb00ac74e744333db9104)]:
+  - @kilocode/sdk@7.3.23
+  - @kilocode/kilo-gateway@7.3.23
+  - @kilocode/plugin@7.3.23
+  - @kilocode/kilo-indexing@7.3.23
+  - @kilocode/kilo-telemetry@7.3.23
+
+## 7.3.21
+
+### Minor Changes
+
+- [#10298](https://github.com/Kilo-Org/kilocode/pull/10298) [`ac7e46d`](https://github.com/Kilo-Org/kilocode/commit/ac7e46d67a7015469bf2edeb573c284308ea05d5) Thanks [@Githubguy132010](https://github.com/Githubguy132010)! - Add a `kilo profile` command for checking the active Kilo account or team balance.
+
+- [#10310](https://github.com/Kilo-Org/kilocode/pull/10310) [`c265fa4`](https://github.com/Kilo-Org/kilocode/commit/c265fa4c4ef18204f8e2741c66953c24bf012f2a) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Show running spinner in subagent footer to indicate when subagent is processing
+
+### Patch Changes
+
+- [#10191](https://github.com/Kilo-Org/kilocode/pull/10191) [`b590f8c`](https://github.com/Kilo-Org/kilocode/commit/b590f8c25f1af82e7df854b5b969ae8749118bba) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Handle newlines in DialogAlert messages
+
+- [#10306](https://github.com/Kilo-Org/kilocode/pull/10306) [`aca8aeb`](https://github.com/Kilo-Org/kilocode/commit/aca8aeb2b91679b52937562d45986562440ac1de) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Toggle export dialog checkboxes on mouse click
+
+## 7.3.20
+
+### Patch Changes
+
+- [#10792](https://github.com/Kilo-Org/kilocode/pull/10792) [`cb1fdb3`](https://github.com/Kilo-Org/kilocode/commit/cb1fdb3b1b824c6f91cb05dc568bd37f6bf494f5) - Allow clearing agent model and variant overrides from settings.
+
+- [#10786](https://github.com/Kilo-Org/kilocode/pull/10786) [`7dd8aab`](https://github.com/Kilo-Org/kilocode/commit/7dd8aabadeb1b5bcf69f5fb9545a57ac91daf54f) - Limit inferred background-process port discovery to the TUI and stop scanning after startup to avoid unnecessary Bun subprocess polling.
+
+- [#10735](https://github.com/Kilo-Org/kilocode/pull/10735) [`593903f`](https://github.com/Kilo-Org/kilocode/commit/593903fb5ce8843d1a84a64787f8103b92a31fee) - Fix Claude Opus 4.8 reasoning on Amazon Bedrock by treating it as an adaptive thinking model like Opus 4.7. This resolves the "thinking.type.enabled is not supported for this model" error and exposes the full low/medium/high/xhigh/max reasoning effort range.
+
+- [#10789](https://github.com/Kilo-Org/kilocode/pull/10789) [`316a662`](https://github.com/Kilo-Org/kilocode/commit/316a6627dc9eccd40bf7aa45366fca40b35f1879) - Fix queued plan prompts stalling in VS Code after a completed turn.
+
+- [#9499](https://github.com/Kilo-Org/kilocode/pull/9499) [`c1c3af8`](https://github.com/Kilo-Org/kilocode/commit/c1c3af8bf42e911d9d2a2cf06937fdf056d851d2) Thanks [@truffle-dev](https://github.com/truffle-dev)! - Fix empty TUI session list when launching kilo from inside a git submodule. `git worktree list --porcelain` reports the submodule's gitdir (`<repo>/.git/modules/<sub>`) instead of the working tree, so the worktree-family filter dropped every session whose directory was the actual submodule path. Include `Instance.worktree` in the returned set so submodule sessions stay in scope.
+
 ## 7.3.18
 
 ### Patch Changes

@@ -2,7 +2,11 @@ import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/unstable/httpapi"
 import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/middleware/instance-context"
-import { WorkspaceRoutingMiddleware } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
+import {
+  WorkspaceRoutingMiddleware,
+  WorkspaceRoutingQuery,
+  WorkspaceRoutingQueryFields,
+} from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 
 const root = "/kilo"
@@ -179,6 +183,7 @@ export const AudioTranscriptionsBody = Schema.Struct({
     format: Schema.String,
   }),
   language: Schema.optional(Schema.String),
+  prompt: Schema.optional(Schema.String),
   temperature: Schema.optional(Schema.Finite),
 })
 
@@ -187,35 +192,49 @@ export const TranscriptionResponse = Schema.Struct({
   usage: Schema.optional(Schema.Unknown),
 })
 
-export const CloudMessage = Schema.Struct({
-  info: Schema.Struct({
-    id: Schema.String,
-    sessionID: Schema.String,
-    role: Schema.Literals(["user", "assistant"]),
-    time: Schema.Struct({
-      created: Schema.Finite,
-      completed: Schema.optional(Schema.Finite),
-    }),
+const UnknownRecord = Schema.Record(Schema.String, Schema.Unknown)
+
+export const CloudMessage = Schema.StructWithRest(
+  Schema.Struct({
+    info: Schema.StructWithRest(
+      Schema.Struct({
+        id: Schema.String,
+        sessionID: Schema.String,
+        role: Schema.Literals(["user", "assistant"]),
+        time: Schema.Struct({
+          created: Schema.Finite,
+          completed: Schema.optional(Schema.Finite),
+        }),
+      }),
+      [UnknownRecord],
+    ),
+    parts: Schema.Array(
+      Schema.StructWithRest(
+        Schema.Struct({
+          id: Schema.String,
+          sessionID: Schema.String,
+          messageID: Schema.String,
+          type: Schema.String,
+        }),
+        [UnknownRecord],
+      ),
+    ),
   }),
-  parts: Schema.Array(
-    Schema.Struct({
-      id: Schema.String,
-      sessionID: Schema.String,
-      messageID: Schema.String,
-      type: Schema.String,
-    }),
-  ),
-})
+  [UnknownRecord],
+)
 
 export const CloudSessionData = Schema.Struct({
-  info: Schema.Struct({
-    id: Schema.String,
-    title: Schema.String,
-    time: Schema.Struct({
-      created: Schema.Finite,
-      updated: Schema.Finite,
+  info: Schema.StructWithRest(
+    Schema.Struct({
+      id: Schema.String,
+      title: Schema.String,
+      time: Schema.Struct({
+        created: Schema.Finite,
+        updated: Schema.Finite,
+      }),
     }),
-  }),
+    [UnknownRecord],
+  ),
   messages: Schema.Array(CloudMessage),
 })
 
@@ -239,6 +258,7 @@ export const KiloGatewayApi = HttpApi.make("kilo")
     HttpApiGroup.make("kilo")
       .add(
         HttpApiEndpoint.get("profile", KiloGatewayPaths.profile, {
+          query: WorkspaceRoutingQuery,
           success: described(ProfileWithBalance, "Profile data"),
           error: [HttpApiError.BadRequest, HttpApiError.Unauthorized],
         }).annotateMerge(
@@ -249,6 +269,7 @@ export const KiloGatewayApi = HttpApi.make("kilo")
           }),
         ),
         HttpApiEndpoint.get("modes", KiloGatewayPaths.modes, {
+          query: WorkspaceRoutingQuery,
           success: described(OrganizationModes, "Organization modes list"),
         }).annotateMerge(
           OpenApi.annotations({
@@ -258,6 +279,7 @@ export const KiloGatewayApi = HttpApi.make("kilo")
           }),
         ),
         HttpApiEndpoint.post("fim", KiloGatewayPaths.fim, {
+          query: WorkspaceRoutingQuery,
           payload: FimBody,
           success: Schema.String.pipe(HttpApiSchema.asText({ contentType: "text/event-stream" })),
           error: [HttpApiError.BadRequest, HttpApiError.Unauthorized],
@@ -269,6 +291,7 @@ export const KiloGatewayApi = HttpApi.make("kilo")
           }),
         ),
         HttpApiEndpoint.post("edit", KiloGatewayPaths.edit, {
+          query: WorkspaceRoutingQuery,
           payload: EditBody,
           success: described(EditResponse, "Next Edit completion"),
           error: [HttpApiError.BadRequest, HttpApiError.Unauthorized],
@@ -282,6 +305,7 @@ export const KiloGatewayApi = HttpApi.make("kilo")
           }),
         ),
         HttpApiEndpoint.post("audioTranscriptions", KiloGatewayPaths.audioTranscriptions, {
+          query: WorkspaceRoutingQuery,
           payload: AudioTranscriptionsBody,
           success: described(TranscriptionResponse, "Transcription response"),
           error: [HttpApiError.BadRequest, HttpApiError.Unauthorized],
@@ -293,6 +317,7 @@ export const KiloGatewayApi = HttpApi.make("kilo")
           }),
         ),
         HttpApiEndpoint.get("notifications", KiloGatewayPaths.notifications, {
+          query: WorkspaceRoutingQuery,
           success: described(Schema.Array(Notification), "Notifications list"),
           error: [HttpApiError.BadRequest, HttpApiError.Unauthorized],
         }).annotateMerge(
@@ -303,6 +328,7 @@ export const KiloGatewayApi = HttpApi.make("kilo")
           }),
         ),
         HttpApiEndpoint.post("organization", KiloGatewayPaths.organization, {
+          query: WorkspaceRoutingQuery,
           payload: OrganizationBody,
           success: described(Schema.Boolean, "Organization updated successfully"),
           error: [HttpApiError.BadRequest, HttpApiError.Unauthorized],
@@ -314,6 +340,7 @@ export const KiloGatewayApi = HttpApi.make("kilo")
           }),
         ),
         HttpApiEndpoint.get("clawStatus", KiloGatewayPaths.clawStatus, {
+          query: WorkspaceRoutingQuery,
           success: described(ClawStatus, "Instance status"),
           error: [HttpApiError.Unauthorized, HttpApiError.ServiceUnavailable],
         }).annotateMerge(
@@ -324,6 +351,7 @@ export const KiloGatewayApi = HttpApi.make("kilo")
           }),
         ),
         HttpApiEndpoint.get("clawChatCredentials", KiloGatewayPaths.clawChatCredentials, {
+          query: WorkspaceRoutingQuery,
           success: described(ClawChatCredentials, "Kilo Chat credentials or null"),
           error: HttpApiError.Unauthorized,
         }).annotateMerge(
@@ -338,6 +366,7 @@ export const KiloGatewayApi = HttpApi.make("kilo")
         ),
         HttpApiEndpoint.get("cloudSessions", KiloGatewayPaths.cloudSessions, {
           query: {
+            ...WorkspaceRoutingQueryFields,
             cursor: Schema.optional(Schema.String),
             limit: Schema.optional(Schema.String),
             gitUrl: Schema.optional(Schema.String),
@@ -353,6 +382,7 @@ export const KiloGatewayApi = HttpApi.make("kilo")
         ),
         HttpApiEndpoint.get("cloudSession", KiloGatewayPaths.cloudSession, {
           params: { id: Schema.String },
+          query: WorkspaceRoutingQuery,
           success: described(CloudSessionData, "Cloud session data"),
           error: [HttpApiError.Unauthorized, HttpApiError.NotFound],
         }).annotateMerge(
@@ -363,6 +393,7 @@ export const KiloGatewayApi = HttpApi.make("kilo")
           }),
         ),
         HttpApiEndpoint.post("cloudSessionImport", KiloGatewayPaths.cloudSessionImport, {
+          query: WorkspaceRoutingQuery,
           payload: CloudSessionImportBody,
           success: described(CloudSessionData.fields.info, "Imported session info"),
           error: [HttpApiError.BadRequest, HttpApiError.Unauthorized, HttpApiError.NotFound],

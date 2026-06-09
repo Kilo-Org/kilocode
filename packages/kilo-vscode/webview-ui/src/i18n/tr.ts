@@ -136,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "Yetkilendirme başarısız: {{error}}",
   "provider.connect.apiKey.description":
     "{{provider}} hesabınızı bağlamak ve Kilo'da {{provider}} modellerini kullanmak için {{provider}} API anahtarınızı girin.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "{{provider}} API anahtarı",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API anahtarı",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API anahtarı gerekli",
   "provider.connect.prompt.required": "{{field}} zorunludur",
   "provider.connect.azure.endpointType.label": "Azure uç nokta yapılandırmasını seçin",
@@ -175,6 +181,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "{{provider}} modelleri artık kullanılabilir değil.",
 
   "model.tag.free": "Ücretsiz",
+  "model.tag.dataCollected": "Veriler eğitim için kullanılabilir",
   "model.tag.latest": "En yeni",
   "model.group.recommended": "Önerilen",
   "model.group.favorites": "Favoriler",
@@ -202,6 +209,9 @@ export const dict = {
   "model.preview.label.cached": "Önbellek",
   "model.preview.label.average": "Tahmini Ort. Maliyet",
   "model.preview.label.context": "Bağlam",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Tamamlama",
+  "model.preview.label.costAttempt": "Maliyet / deneme",
   "model.preview.value.notSupported": "Desteklenmiyor",
   "model.preview.tooltip.average":
     "Tahmini ortalama maliyet; girdi, çıktı ve önbellek okuma tokenlerinin tipik bir oranına dayanmaktadır.",

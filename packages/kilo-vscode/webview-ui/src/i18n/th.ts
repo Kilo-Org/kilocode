@@ -136,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "การอนุญาตล้มเหลว: {{error}}",
   "provider.connect.apiKey.description":
     "ป้อนคีย์ API ของ {{provider}} เพื่อเชื่อมต่อบัญชีและใช้โมเดล {{provider}} ใน Kilo",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "คีย์ API ของ {{provider}}",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "คีย์ API",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "ต้องใช้คีย์ API",
   "provider.connect.prompt.required": "จำเป็นต้องระบุ {{field}}",
   "provider.connect.azure.endpointType.label": "เลือกการกำหนดค่าปลายทางของ Azure",
@@ -175,6 +181,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "โมเดล {{provider}} ไม่พร้อมใช้งานอีกต่อไป",
 
   "model.tag.free": "ฟรี",
+  "model.tag.dataCollected": "ข้อมูลอาจถูกนำไปใช้ในการฝึก",
   "model.tag.latest": "ล่าสุด",
   "model.group.recommended": "แนะนำ",
   "model.group.favorites": "รายการโปรด",
@@ -202,6 +209,9 @@ export const dict = {
   "model.preview.label.cached": "แคช",
   "model.preview.label.average": "ต้นทุนเฉลี่ยโดยประมาณ",
   "model.preview.label.context": "บริบท",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "ความสำเร็จ",
+  "model.preview.label.costAttempt": "ค่าใช้จ่าย / ครั้ง",
   "model.preview.value.notSupported": "ไม่รองรับ",
   "model.preview.tooltip.average":
     "ต้นทุนเฉลี่ยโดยประมาณนี้คำนวณจากอัตราส่วนทั่วไปของโทเค็นอินพุต เอาต์พุต และการอ่านแคช",

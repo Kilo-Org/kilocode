@@ -140,8 +140,14 @@ export const dict = {
   "provider.connect.status.failed": "Autorisierung fehlgeschlagen: {{error}}",
   "provider.connect.apiKey.description":
     "Geben Sie Ihren {{provider}} API-Schlüssel ein, um Ihr Konto zu verbinden und {{provider}} Modelle in Kilo zu nutzen.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "{{provider}} API-Schlüssel",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API-Schlüssel",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API-Schlüssel ist erforderlich",
   "provider.connect.prompt.required": "{{field}} ist erforderlich",
   "provider.connect.azure.endpointType.label": "Azure-Endpunktkonfiguration auswählen",
@@ -179,6 +185,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.title": "{{provider}} getrennt",
   "provider.disconnect.toast.disconnected.description": "Die {{provider}}-Modelle sind nicht mehr verfügbar.",
   "model.tag.free": "Kostenlos",
+  "model.tag.dataCollected": "Daten können für das Training verwendet werden",
   "model.tag.latest": "Neueste",
   "model.group.recommended": "Empfohlen",
   "model.group.favorites": "Favoriten",
@@ -207,6 +214,9 @@ export const dict = {
   "model.preview.label.cached": "Zwischengespeichert",
   "model.preview.label.average": "Geschätzte Ø-Kosten",
   "model.preview.label.context": "Kontext",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Abschluss",
+  "model.preview.label.costAttempt": "Kosten / Versuch",
   "model.preview.value.notSupported": "Nicht unterstützt",
   "model.preview.tooltip.average":
     "Die geschätzten Durchschnittskosten basieren auf einem typischen Verhältnis von Eingabe-, Ausgabe- und Cache-Lese-Token.",

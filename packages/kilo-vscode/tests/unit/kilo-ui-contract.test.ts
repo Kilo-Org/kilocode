@@ -19,6 +19,7 @@ import path from "node:path"
 
 const MONOREPO_ROOT = path.resolve(import.meta.dir, "../../../..")
 const KILO_UI_DIR = path.join(MONOREPO_ROOT, "packages/kilo-ui")
+const BASIC_TOOL_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/basic-tool.tsx")
 const DATA_CONTEXT_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/context/data.tsx")
 const MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/message-part.tsx")
 const KILO_MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/message-part.tsx")
@@ -277,5 +278,36 @@ describe("BasicTool export contract (runtime)", () => {
       process.exit(0)
     `)
     expect(result.ok, `BasicTool export check failed: ${result.output}`).toBe(true)
+  })
+})
+
+describe("Collapsed deferred tool details contract (source)", () => {
+  const basic = fs.readFileSync(BASIC_TOOL_FILE, "utf-8")
+  const message = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+
+  it("uses an explicit details hint before touching deferred children", () => {
+    expect(basic).toContain("hasDetails?: boolean")
+    expect(basic).toContain("props.hasDetails ?? !!props.children")
+    expect(basic).toMatch(/<Show when=\{!props\.defer \|\| ready\(\)\}>\{props\.children\}<\/Show>/)
+  })
+
+  it("opts edit-family transcript cards into collapsed lazy details", () => {
+    for (const name of ["edit", "write", "apply_patch"]) {
+      const block =
+        message.match(
+          new RegExp(`ToolRegistry\\.register\\(\\{\\s*name:\\s*"${name}"[\\s\\S]*?(?=ToolRegistry\\.register\\(|$)`),
+        )?.[0] ?? ""
+      expect(block).toContain("defer")
+      expect(block).toContain("hasDetails")
+    }
+  })
+
+  it("lazy-mounts completed bash output and retains it after first expansion", () => {
+    const block =
+      message.match(/ToolRegistry\.register\(\{\s*name:\s*"bash"[\s\S]*?(?=ToolRegistry\.register\(|$)/)?.[0] ?? ""
+    expect(block).toContain("const [mounted, setMounted] = createSignal(open())")
+    expect(block).toMatch(/if \(open\(\) \|\| pending\(\)\) setMounted\(true\)/)
+    expect(block).toContain("hasDetails")
+    expect(block).toMatch(/<Show when=\{mounted\(\)\}>[\s\S]*?<BashHighlightedOutput/)
   })
 })

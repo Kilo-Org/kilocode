@@ -36,7 +36,7 @@ This summary replaces older conversation history while Kilo keeps the most recen
 
 ### Automatic trigger
 
-Kilo tracks the total token count for the session: input, output, and cached reads and writes. Compaction runs when token usage reaches `compaction.threshold_percent`, or when the remaining window hits the reserved safety buffer, whichever happens first.
+Kilo checks provider-reported usage after each response and estimates the outgoing text, system instructions, and tool definitions before contacting the provider. Compaction runs when either count reaches `compaction.threshold_percent`, or when the remaining window hits the reserved safety buffer, whichever happens first.
 
 How the buffer is chosen depends on what the model declares. When the model advertises a separate input limit, the buffer defaults to 20,000 tokens (or the model's maximum output size, whichever is smaller). When the model only declares a single context window, Kilo instead reserves the model's full output cap — up to 32,000 tokens.
 
@@ -136,7 +136,7 @@ This summary replaces older conversation history while Kilo keeps the most recen
 
 ### Automatic trigger
 
-Kilo tracks the total token count for the session: input, output, and cached reads and writes. Compaction runs when token usage reaches `compaction.threshold_percent`, or when the remaining window hits the reserved safety buffer, whichever happens first.
+Kilo checks provider-reported usage after each response and estimates the outgoing text, system instructions, and tool definitions before contacting the provider. Compaction runs when either count reaches `compaction.threshold_percent`, or when the remaining window hits the reserved safety buffer, whichever happens first.
 
 How the buffer is chosen depends on what the model declares. When the model advertises a separate input limit, the buffer defaults to 20,000 tokens (or the model's maximum output size, whichever is smaller). When the model only declares a single context window, Kilo instead reserves the model's full output cap — up to 32,000 tokens.
 

@@ -92,6 +92,6 @@ data class CommandInfo(
 
 data class SkillInfo(
     val name: String,
-    val description: String,
+    val description: String?,
     val location: String,
 )
