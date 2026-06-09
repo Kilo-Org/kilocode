@@ -211,6 +211,9 @@ export const dict = {
   "model.preview.label.cached": "En caché",
   "model.preview.label.average": "Costo prom. est.",
   "model.preview.label.context": "Contexto",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Finalización",
+  "model.preview.label.costAttempt": "Costo / intento",
   "model.preview.value.notSupported": "No admitido",
   "model.preview.tooltip.average":
     "El costo promedio estimado se basa en una proporción típica de tokens de entrada, salida y lectura en caché.",

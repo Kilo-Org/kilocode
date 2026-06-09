@@ -11,36 +11,20 @@ import { useProject } from "../../context/project"
 import path from "path"
 import { LANGUAGE_EXTENSIONS } from "@/lsp/language"
 import { Locale } from "@/util/locale"
-import { Global } from "@opencode-ai/core/global"
 import { ShellID } from "@/tool/shell/id"
 import { webSearchProviderLabel } from "@/tool/websearch"
 import { useDialog } from "../../ui/dialog"
 import { getScrollAcceleration } from "../../util/scroll"
 import { useTuiConfig } from "../../context/tui-config"
-import { ConfigProtection } from "@/kilocode/permission/config-paths" // kilocode_change
-import { splitDiffHunks } from "@/kilocode/tui/diff" // kilocode_change
-import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
+// kilocode_change start
+import { ConfigProtection } from "@/kilocode/permission/config-paths"
+import { splitDiffHunks } from "@/kilocode/tui/diff"
+import { normalizeUrls } from "@/kilocode/util/url"
+// kilocode_change end
 import { useBindings, useCommandShortcut } from "../../keymap"
+import { usePathFormatter } from "../../context/path-format"
 
 type PermissionStage = "permission" | "always" | "reject"
-
-function normalizePath(input?: string) {
-  if (!input) return ""
-
-  const cwd = process.cwd()
-  const home = Global.Path.home
-  const absolute = path.isAbsolute(input) ? input : path.resolve(cwd, input)
-  const relative = path.relative(cwd, absolute)
-
-  if (!relative) return "."
-  if (!relative.startsWith("..")) return relative
-
-  // outside cwd - use ~ or absolute
-  if (home && (absolute === home || absolute.startsWith(home + path.sep))) {
-    return absolute.replace(home, "~")
-  }
-  return absolute
-}
 
 function filetype(input?: string) {
   if (!input) return "none"
@@ -154,6 +138,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
   const [store, setStore] = createStore({
     stage: "permission" as PermissionStage,
   })
+  const pathFormatter = usePathFormatter()
 
   const session = createMemo(() => sync.data.session.find((s) => s.id === props.request.sessionID))
 
@@ -239,7 +224,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
               const filepath = typeof raw === "string" ? raw : ""
               return {
                 icon: "→",
-                title: `Edit ${normalizePath(filepath)}`,
+                title: `Edit ${pathFormatter.format(filepath)}`,
                 body: <EditBody request={props.request} />,
               }
             }
@@ -249,11 +234,11 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
               const filePath = typeof raw === "string" ? raw : ""
               return {
                 icon: "→",
-                title: `Read ${normalizePath(filePath)}`,
+                title: `Read ${pathFormatter.format(filePath)}`,
                 body: (
                   <Show when={filePath}>
                     <box paddingLeft={1}>
-                      <text fg={theme.textMuted}>{"Path: " + normalizePath(filePath)}</text>
+                      <text fg={theme.textMuted}>{"Path: " + pathFormatter.format(filePath)}</text>
                     </box>
                   </Show>
                 ),
@@ -295,11 +280,11 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
               const dir = typeof raw === "string" ? raw : ""
               return {
                 icon: "→",
-                title: `List ${normalizePath(dir)}`,
+                title: `List ${pathFormatter.format(dir)}`,
                 body: (
                   <Show when={dir}>
                     <box paddingLeft={1}>
-                      <text fg={theme.textMuted}>{"Path: " + normalizePath(dir)}</text>
+                      <text fg={theme.textMuted}>{"Path: " + pathFormatter.format(dir)}</text>
                     </box>
                   </Show>
                 ),
@@ -389,7 +374,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
                 typeof pattern === "string" ? (pattern.includes("*") ? path.dirname(pattern) : pattern) : undefined
 
               const raw = parent ?? filepath ?? derived
-              const dir = normalizePath(raw)
+              const dir = pathFormatter.format(raw)
               const patterns = (props.request.patterns ?? []).filter((p): p is string => typeof p === "string")
 
               return {
@@ -445,13 +430,13 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
                 </text>
                 <text fg={theme.text}>{current.title}</text>
               </box>
-              {/* // kilocode_change start - explain config file edits always require approval */}
+              {/* kilocode_change start - explain config file edits always require approval */}
               <Show when={props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]}>
                 <box paddingLeft={4} flexShrink={0}>
                   <text fg={theme.textMuted}>Config file edits always require approval</text>
                 </box>
               </Show>
-              {/* // kilocode_change end */}
+              {/* kilocode_change end */}
             </box>
           )
 
@@ -466,7 +451,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
               title="Permission required"
               header={header()}
               body={current.body}
-              options={options}
+              /* kilocode_change */ options={options}
               escapeKey="reject"
               fullscreen
               onSelect={(option) => {
@@ -546,7 +531,6 @@ function RejectPrompt(props: { onConfirm: (message: string) => void; onCancel: (
           <text fg={theme.text}>Reject permission</text>
         </box>
         <box paddingLeft={1}>
-          {/* kilocode_change */}
           <text fg={theme.textMuted}>Tell Kilo what to do differently</text>
         </box>
       </box>

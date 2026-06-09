@@ -5,7 +5,9 @@ import * as Stream from "effect/Stream"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
+import { Image } from "../../src/image/image"
 import { KiloCompactionPayloadRecovery } from "../../src/kilocode/session/compaction-payload-recovery"
+import { KiloSessionCompaction } from "../../src/kilocode/session/compaction"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
 import { WithInstance } from "../../src/project/with-instance"
@@ -19,6 +21,7 @@ import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { SessionCompaction } from "../../src/session/compaction"
 import { SessionStatus } from "../../src/session/status"
 import { SessionSummary } from "../../src/session/summary"
+import { SyncEvent } from "../../src/sync"
 import { ProviderTest } from "../fake/provider"
 import { tmpdir } from "../fixture/fixture"
 
@@ -174,7 +177,11 @@ function reply(
 function runtime(layer: Layer.Layer<LLM.Service>, config = Config.defaultLayer) {
   const bus = Bus.layer
   const status = SessionStatus.layer.pipe(Layer.provide(bus))
-  const processor = SessionProcessorModule.SessionProcessor.layer.pipe(Layer.provide(summary))
+  const processor = SessionProcessorModule.SessionProcessor.layer.pipe(
+    Layer.provide(summary),
+    Layer.provide(Image.defaultLayer),
+    Layer.provide(SyncEvent.defaultLayer),
+  )
   const model = ProviderTest.model({ providerID, id: modelID, limit: { context: 100_000, output: 32_000 } })
   return ManagedRuntime.make(
     Layer.mergeAll(SessionCompaction.layer.pipe(Layer.provide(processor)), processor, bus, status).pipe(
@@ -188,6 +195,7 @@ function runtime(layer: Layer.Layer<LLM.Service>, config = Config.defaultLayer) 
       Layer.provide(status),
       Layer.provide(bus),
       Layer.provide(config),
+      Layer.provide(SyncEvent.defaultLayer),
     ),
   )
 }
@@ -355,12 +363,18 @@ describe("KiloCompactionPayloadRecovery", () => {
             time: { start: Date.now(), end: Date.now() },
           },
         })
-        await SessionCompaction.create({
-          sessionID: session.id,
-          agent: "build",
-          model: ref,
-          auto: false,
-        })
+        await Effect.runPromise(
+          KiloSessionCompaction.create({
+            session: {
+              updateMessage: (msg) => Effect.promise(() => svc.updateMessage(msg)),
+              updatePart: (part) => Effect.promise(() => svc.updatePart(part)),
+            },
+            sessionID: session.id,
+            agent: "build",
+            model: ref,
+            auto: false,
+          }),
+        )
 
         const rt = runtime(stub.layer, Config.defaultLayer)
         try {

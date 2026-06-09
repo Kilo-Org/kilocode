@@ -39,7 +39,7 @@ const models: AutocompleteModelDef[] = [
   {
     id: "kilo/inception/mercury-edit-2",
     modelID: "inception/mercury-edit-2",
-    label: "Mercury Edit 2",
+    label: "Mercury Edit 2 (FIM)",
     providerID: "kilo",
     provider: "Kilo Gateway",
     requestModel: "inception/mercury-edit-2",
@@ -51,7 +51,7 @@ const models: AutocompleteModelDef[] = [
     // users who want multi-line next-edit predictions with the jump-to-edit UX.
     id: "kilo/inception/mercury-next-edit",
     modelID: "inception/mercury-next-edit",
-    label: "Mercury Next Edit",
+    label: "Mercury Edit 2 (Next Edit)",
     providerID: "kilo",
     provider: "Kilo Gateway",
     requestModel: "inception/mercury-edit-2",
@@ -71,7 +71,7 @@ const models: AutocompleteModelDef[] = [
   {
     id: "inception/mercury-edit-2",
     modelID: "mercury-edit-2",
-    label: "Mercury Edit 2",
+    label: "Mercury Edit 2 (FIM)",
     providerID: "inception",
     provider: "Inception",
     requestModel: "mercury-edit-2",
@@ -80,11 +80,11 @@ const models: AutocompleteModelDef[] = [
   },
   {
     // Same wire-level model as `mercury-edit-2`, but routed through the
-    // Mercury Next Edit endpoint instead of FIM. Picked by users who want
+    // Mercury Edit 2 (Next Edit) endpoint instead of FIM. Picked by users who want
     // multi-line next-edit predictions with the jump-to-edit UX.
     id: "inception/mercury-next-edit",
     modelID: "mercury-next-edit",
-    label: "Mercury Next Edit",
+    label: "Mercury Edit 2 (Next Edit)",
     providerID: "inception",
     provider: "Inception",
     requestModel: "mercury-edit-2",
