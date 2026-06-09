@@ -12,7 +12,6 @@ import {
 
 interface WorkStyleContextValue {
   style: Accessor<WorkStyleState>
-  shown: Accessor<boolean>
   loading: Accessor<boolean>
   shouldShowOnboarding: Accessor<boolean>
   apply: (style: WorkStyle, opts?: { force?: boolean; source?: "onboarding" | "settings" }) => void
@@ -25,14 +24,12 @@ export const WorkStyleProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
   const cfg = useConfig()
   const [style, setStyle] = createSignal<WorkStyleState>("unset")
-  const [shown, setShown] = createSignal(false)
   const [loading, setLoading] = createSignal(true)
   const [defaults, setDefaults] = createSignal<Partial<Record<keyof WorkStyleSettings, boolean>>>({})
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "workStyleLoaded") return
     setStyle(message.style)
-    setShown(message.onboardingShown)
     setDefaults(message.defaults)
     setLoading(false)
   })
@@ -58,20 +55,18 @@ export const WorkStyleProvider: ParentComponent = (props) => {
     }
 
     setStyle(style)
-    setShown(true)
-    vscode.postMessage({ type: "setWorkStyle", style, shown: true, source })
+    vscode.postMessage({ type: "setWorkStyle", style })
   }
 
   function dismiss() {
-    setShown(true)
-    vscode.postMessage({ type: "setWorkStyle", style: "custom", shown: true, source: "onboarding" })
+    setStyle("skipped")
+    vscode.postMessage({ type: "setWorkStyle", style: "skipped" })
   }
 
   const value: WorkStyleContextValue = {
     style,
-    shown,
     loading,
-    shouldShowOnboarding: () => !loading() && !cfg.loading() && !shown() && style() === "unset",
+    shouldShowOnboarding: () => !loading() && !cfg.loading() && style() === "unset",
     apply,
     dismiss,
   }

@@ -497,7 +497,6 @@ export interface TimelineSettingLoadedMessage {
 export interface WorkStyleLoadedMessage {
   type: "workStyleLoaded"
   style: WorkStyleState
-  onboardingShown: boolean
   defaults: Record<keyof WorkStyleSettings, boolean>
 }
 

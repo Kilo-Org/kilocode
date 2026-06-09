@@ -394,8 +394,6 @@ export interface RequestWorkStyleMessage {
 export interface SetWorkStyleMessage {
   type: "setWorkStyle"
   style: WorkStyleState
-  shown: boolean
-  source: "onboarding" | "settings"
 }
 
 export interface StreamSessionVisibleMessage {

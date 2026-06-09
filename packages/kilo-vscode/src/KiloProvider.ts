@@ -82,7 +82,7 @@ import {
   getWorkStylePayload,
   handleWorkStyleMessage,
   isWorkStyleSetting,
-  WORK_STYLE_KEY,
+  watchWorkStyleConfig,
 } from "./kilo-provider/work-style"
 import * as McpOAuth from "./kilo-provider/mcp-oauth"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
@@ -665,9 +665,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         return
       }
       if (this.handleEditorOpenMessage(message)) return
-      if (await handleWorkStyleMessage({ context: this.extensionContext, message, post: (msg) => this.postMessage(msg) })) {
-        return
-      }
+      if (await handleWorkStyleMessage({ message, post: (msg) => this.postMessage(msg) })) return
       if (
         await handleSidebarWorktreeMessage(message, {
           post: (msg) => this.postMessage(msg),
@@ -1126,6 +1124,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
     })
     this.webviewMessageDisposable = watchFontSizeConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
+    this.webviewMessageDisposable = watchWorkStyleConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
   }
 
   private handleEditorOpenMessage(message: Parameters<typeof handleEditorAction>[0]): boolean {
@@ -2244,7 +2243,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private sendWorkStyle(): void {
-    this.postMessage(getWorkStylePayload(this.extensionContext))
+    this.postMessage(getWorkStylePayload())
   }
 
   /** Returns the number of sessions currently in "busy" state. */
@@ -2824,7 +2823,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     await this.extensionContext?.globalState.update("variantSelections", undefined)
     await this.extensionContext?.globalState.update("recentModels", undefined)
     await this.extensionContext?.globalState.update("kilo.dismissedNotificationIds", undefined)
-    await this.extensionContext?.globalState.update(WORK_STYLE_KEY, undefined)
     await this.extensionContext?.globalState.update("kilo.agentMigrationBannerDismissed", undefined)
 
     // Re-send all settings to the webview so the UI reflects the reset

@@ -1,5 +1,5 @@
 type PermissionLevel = "allow" | "ask" | "deny"
-type PermissionRule = PermissionLevel | Record<string, PermissionLevel | null>
+type PermissionRule = PermissionLevel | null | Record<string, PermissionLevel | null>
 type PermissionConfig = Partial<Record<string, PermissionRule>>
 
 export interface WorkStyleConfig {
@@ -9,7 +9,7 @@ export interface WorkStyleConfig {
 }
 
 export type WorkStyle = "human" | "autonomous"
-export type WorkStyleState = WorkStyle | "custom" | "unset"
+export type WorkStyleState = WorkStyle | "custom" | "skipped" | "unset"
 
 export interface WorkStyleChange {
   label: string
