@@ -34,6 +34,7 @@ export interface TabRenderDeps {
   visibleTabId: () => string | undefined
   isPending: (id: string) => boolean
   isBusy: (id: string) => boolean
+  canFork: (id: string) => boolean
   tabLookup: () => Map<string, SessionInfo>
   adjacentHint: (id: string, activeId: string, ids: string[], prev: string, next: string) => string
   // Handlers
@@ -141,7 +142,7 @@ function renderSessionTab(s: SessionInfo, deps: TabRenderDeps): JSX.Element {
       }}
       onMiddleClick={(e: MouseEvent) => deps.sessionMiddleClick(s.id, e)}
       onClose={() => deps.sessionClose(s.id)}
-      onFork={pending ? undefined : () => deps.sessionFork(s.id)}
+      onFork={pending || !deps.canFork(s.id) ? undefined : () => deps.sessionFork(s.id)}
     />
   )
 }

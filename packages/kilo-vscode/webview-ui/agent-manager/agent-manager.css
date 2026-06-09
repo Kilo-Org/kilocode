@@ -145,10 +145,29 @@
   min-height: 0;
 }
 
+.am-session-sections {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex-shrink: 1;
+  margin-bottom: auto;
+}
+
+.am-session-sections > .am-section {
+  display: contents;
+}
+
+.am-session-sections-collapsed {
+  flex-shrink: 0;
+  margin-top: auto;
+  margin-bottom: 0;
+}
+
 .am-section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
   padding: 4px 8px 2px;
 }
 
@@ -188,6 +207,12 @@ button.am-section-toggle:hover .am-section-label {
   display: flex;
   align-items: center;
   gap: 2px;
+}
+
+.am-section-header > .am-section-toggle {
+  flex: 1;
+  width: auto;
+  padding: 0;
 }
 
 /* Worktree list */
@@ -939,6 +964,15 @@ button.am-section-toggle:hover .am-section-label {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.am-cloud-list-state {
+  padding-inline-start: 26px;
+}
+
+.am-item-time.am-cloud-list-state {
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 /* Session items */
@@ -2583,6 +2617,145 @@ body.am-wt-dragging-active * {
   width: 100%;
   min-height: 100%;
   max-height: none;
+}
+
+[data-component="dialog"]:has(.am-cloud-create-shell) {
+  inset-inline-start: var(--cloud-dialog-offset, 0px);
+}
+
+[data-component="dialog"]:has(.am-cloud-create-shell) [data-slot="dialog-container"] {
+  width: min(calc(100vw - var(--cloud-dialog-offset, 0px) - 32px), 640px);
+}
+
+[data-slot="dialog-content"].am-cloud-create-shell {
+  max-width: 600px;
+  max-height: min(calc(100vh - 32px), 640px);
+}
+
+.am-cloud-create-shell [data-slot="dialog-body"] {
+  overflow-y: auto;
+}
+
+[data-component="dialog"]:has(.am-cloud-create-shell [data-component="popover-content"]) [data-slot="dialog-content"],
+[data-component="dialog"]:has(.am-cloud-create-shell [data-component="popover-content"]) [data-slot="dialog-body"] {
+  overflow: visible;
+}
+
+.am-cloud-create-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  padding: 0 20px 20px;
+  box-sizing: border-box;
+}
+
+.am-cloud-create-prompt [data-slot="input-label"] {
+  font-weight: 600;
+}
+
+.am-cloud-create-prompt [data-component="input"][data-variant="normal"] textarea[data-slot="input-input"] {
+  min-height: 110px;
+  padding: 10px 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.am-cloud-create-prompt [data-slot="input-wrapper"] {
+  background: var(--background-base);
+}
+
+.am-cloud-create-selectors {
+  display: flex;
+  min-width: 0;
+}
+
+.am-cloud-create-errors {
+  display: grid;
+  gap: 6px;
+}
+
+.am-cloud-create-errors:empty {
+  display: none;
+}
+
+.am-cloud-create-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-critical-base);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-critical-strong) 18%, transparent);
+  color: var(--text-on-critical-base);
+  font-size: var(--kilo-font-size-12);
+  line-height: var(--kilo-font-size-16);
+}
+
+.am-cloud-create-error [data-component="icon"] {
+  flex-shrink: 0;
+  color: var(--icon-critical-base);
+}
+
+.am-cloud-create-spinner {
+  width: 14px;
+  height: 14px;
+}
+
+.am-cloud-create-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-weak-base);
+}
+
+.am-cloud-create-note {
+  display: flex;
+  align-items: flex-start;
+  flex: 1 1 220px;
+  gap: 7px;
+  max-width: 300px;
+  margin: 0;
+  color: var(--text-weaker);
+  font-size: var(--kilo-font-size-11);
+  line-height: var(--kilo-font-size-16);
+}
+
+.am-cloud-create-note [data-component="icon"] {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.am-cloud-create-note-repository {
+  color: var(--text-weak);
+  overflow-wrap: anywhere;
+}
+
+.am-cloud-create-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-inline-start: auto;
+}
+
+@media (max-width: 620px) {
+  .am-cloud-create-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .am-cloud-create-note {
+    max-width: none;
+  }
+
+  .am-cloud-create-actions {
+    margin-inline-start: 0;
+  }
 }
 
 .am-nv-config-label {

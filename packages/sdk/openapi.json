@@ -12020,6 +12020,67 @@
         ]
       }
     },
+    "/kilo/cloud-agent/credentials": {
+      "get": {
+        "tags": ["kilo"],
+        "operationId": "kilo.cloudAgent.credentials",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cloud Agent credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "expiresAt": {
+                      "type": "string"
+                    },
+                    "kiloFacadeUrl": {
+                      "type": "string"
+                    },
+                    "cloudAgentUrl": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["token", "expiresAt", "kiloFacadeUrl", "cloudAgentUrl"],
+                  "additionalProperties": false,
+                  "description": "Cloud Agent credentials"
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns the bearer token, facade URL, and API URL for extension-host Cloud Agent calls. This explicit localhost capability must not expose the returned bearer to a browser webview.",
+        "summary": "Get Cloud Agent credentials",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.cloudAgent.credentials({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilo/cloud-sessions": {
       "get": {
         "tags": ["kilo"],

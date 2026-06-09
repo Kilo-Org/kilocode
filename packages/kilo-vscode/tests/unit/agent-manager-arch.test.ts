@@ -20,6 +20,8 @@ const CSS_FILES = [
 ]
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/cloud-agent/CloudAgentSection.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/cloud-agent/NewCloudAgentDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
@@ -241,6 +243,13 @@ describe("Agent Manager Provider — onMessage routing", () => {
     return fs.readFileSync(PROVIDER_FILE, "utf-8")
   }
 
+  function ctor(): string {
+    setup()
+    const constructor = cls.getConstructors()[0]
+    expect(constructor, "AgentManagerProvider constructor not found").toBeTruthy()
+    return constructor!.getText()
+  }
+
   function diff(): string {
     return fs.readFileSync(DIFF_CONTROLLER_FILE, "utf-8")
   }
@@ -311,6 +320,70 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(text).toContain("onImportMessage")
     expect(text).toContain("onDiffMessage")
     expect(text).not.toContain("agentManager.requestState")
+  })
+
+  it("routes cloud messages before context and local routing", () => {
+    const text = body("onMessage")
+    const cloud = text.indexOf("this.cloud.handle(msg)")
+    const context = text.indexOf("this.contextMessage(msg)")
+    const worktree = text.indexOf("this.onWorktreeMessage(m)")
+    const session = text.indexOf("this.onSessionMessage(m, msg)")
+
+    expect(cloud, "cloud handler must exist").toBeGreaterThan(-1)
+    expect(context, "context routing must exist").toBeGreaterThan(-1)
+    expect(worktree, "worktree routing must exist").toBeGreaterThan(-1)
+    expect(session, "session routing must exist").toBeGreaterThan(-1)
+    expect(cloud, "cloud messages must be consumed before context routing").toBeLessThan(context)
+    expect(cloud, "cloud messages must be consumed before worktree routing").toBeLessThan(worktree)
+    expect(cloud, "cloud messages must be consumed before session routing").toBeLessThan(session)
+  })
+
+  it("cloud controller follows panel and provider lifecycle", () => {
+    const attach = body("attachPanel")
+    const existing = attach.indexOf("if (this.panel)")
+    const replace = attach.indexOf("this.cloud.detach()", existing)
+    const panel = attach.indexOf("this.panel = ctx")
+    const connect = attach.indexOf("this.cloud.attach()")
+    const callback = attach.indexOf("ctx.onDidDispose")
+    const active = attach.indexOf("if (this.panel === ctx)", callback)
+    const detach = attach.indexOf("this.cloud.detach()", active)
+    const dispose = body("disposeAsync")
+
+    expect(existing, "existing-panel guard must exist").toBeGreaterThan(-1)
+    expect(replace, "replacing a panel must detach cloud handling").toBeGreaterThan(existing)
+    expect(panel, "panel assignment must exist").toBeGreaterThan(replace)
+    expect(connect, "new panel must attach cloud handling").toBeGreaterThan(panel)
+    expect(callback, "panel disposal hook must exist").toBeGreaterThan(connect)
+    expect(active, "panel disposal must guard the active panel").toBeGreaterThan(callback)
+    expect(detach, "active panel disposal must detach cloud handling").toBeGreaterThan(active)
+    expect(dispose).toContain("this.cloud.dispose()")
+  })
+
+  it("guards cloud credential requests until localhost is connected", () => {
+    const text = ctor()
+    expect(text).toContain(
+      'getLocalClient: () =>\n        this.connectionService.getConnectionState() === "connected" ? this.connectionService.getClient() : null',
+    )
+  })
+
+  it("routes localhost lifecycle changes into cloud recovery", () => {
+    const text = ctor()
+    expect(text).toContain("this.unsubCloudState = this.connectionService.onStateChange((state) => {")
+    expect(text).toContain('if (state === "connected") return this.cloud.recover()')
+    expect(text).toContain("this.cloud.localDisconnected()")
+  })
+
+  it("routes only global.disposed events into cloud auth recovery", () => {
+    const text = ctor()
+    expect(text).toContain("this.unsubCloudAuth = this.connectionService.onEventFiltered(")
+    expect(text).toContain('(event) => event.type === "global.disposed"')
+    expect(text).toContain("() => this.cloud.authChanged()")
+  })
+
+  it("releases cloud lifecycle subscriptions during shutdown", () => {
+    const text = body("disposeAsync")
+    expect(text).toContain("this.unsubCloudState?.()")
+    expect(text).toContain("this.unsubCloudAuth?.()")
   })
 
   // -- onDeleteWorktree invariants -------------------------------------------
@@ -669,9 +742,14 @@ function importsVscode(content: string): boolean {
 }
 
 function agentManagerSourceFiles(): string[] {
-  return fs
-    .readdirSync(AGENT_MANAGER_DIR)
-    .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts") && !f.endsWith(".spec.ts"))
+  const scan = (dir: string): string[] =>
+    fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const file = path.join(dir, entry.name)
+      if (entry.isDirectory()) return scan(file)
+      if (!entry.name.endsWith(".ts") || entry.name.endsWith(".test.ts") || entry.name.endsWith(".spec.ts")) return []
+      return [path.relative(AGENT_MANAGER_DIR, file).split(path.sep).join("/")]
+    })
+  return scan(AGENT_MANAGER_DIR)
 }
 
 describe("Agent Manager — VS Code import boundary", () => {

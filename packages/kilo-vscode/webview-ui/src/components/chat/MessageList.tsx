@@ -29,6 +29,7 @@ import { TurnOutcome } from "../shared/TurnOutcome"
 import { QuestionDock } from "./QuestionDock"
 import { Virtualizer } from "virtua/solid"
 import { SuggestBar } from "./SuggestBar"
+import { CloudMessageFailureIndicator } from "./CloudMessageFailureIndicator"
 import {
   activeUserMessageID as getActiveUserMessageID,
   messageTurns,
@@ -62,6 +63,7 @@ interface MessageListProps {
   suggestions?: () => SuggestionRequest[]
   /** When true (subagent viewer), replace the welcome screen with an initializing indicator */
   readonly?: boolean
+  loadingLabel?: string
 }
 
 export const MessageList: Component<MessageListProps> = (props) => {
@@ -213,7 +215,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
           <Show when={session.loading()}>
             <div class="message-list-loading" role="status">
               <Spinner />
-              <span>{language.t("session.messages.loading")}</span>
+              <span>{props.loadingLabel ?? language.t("session.messages.loading")}</span>
             </div>
           </Show>
           <Show when={isEmpty() && props.readonly}>
@@ -289,6 +291,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
             <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
             <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
           </Show>
+          <CloudMessageFailureIndicator />
         </div>
       </div>
 

@@ -12,6 +12,16 @@ export function getBusySessionCount(map: Map<string, SessionStatus["type"]>): nu
   return count
 }
 
+export function sessionStatusToWebview(sessionID: string, status: SessionStatus) {
+  return {
+    type: "sessionStatus" as const,
+    sessionID,
+    status: status.type,
+    ...(status.type === "retry" ? { attempt: status.attempt, message: status.message, next: status.next } : {}),
+    ...(status.type === "offline" ? { message: status.message } : {}),
+  }
+}
+
 /**
  * Fetch all current session statuses and seed the provided map + webview.
  * Called on connect so the Settings panel knows about already-running sessions
@@ -37,12 +47,7 @@ export async function seedSessionStatuses(
     // Seed/update entries the server knows about
     for (const [sid, info] of Object.entries(active) as [string, SessionStatus][]) {
       map.set(sid, info.type)
-      post({
-        type: "sessionStatus",
-        sessionID: sid,
-        status: info.type,
-        ...(info.type === "retry" ? { attempt: info.attempt, message: info.message, next: info.next } : {}),
-      })
+      post(sessionStatusToWebview(sid, info))
     }
 
     // Reconcile: any locally non-idle session absent from the server response
@@ -53,7 +58,7 @@ export async function seedSessionStatuses(
       for (const [sid, status] of map) {
         if (status !== "idle" && !active[sid]) {
           map.set(sid, "idle")
-          post({ type: "sessionStatus", sessionID: sid, status: "idle" })
+          post(sessionStatusToWebview(sid, { type: "idle" }))
         }
       }
     }

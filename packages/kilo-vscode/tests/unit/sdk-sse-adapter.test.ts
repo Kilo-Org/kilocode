@@ -101,6 +101,62 @@ describe("SdkSSEAdapter", () => {
     }
   })
 
+  it("reconnects a half-open stream after heartbeat timeout and stops after disconnect", async () => {
+    const timer = globalThis.setTimeout
+    const signals: AbortSignal[] = []
+    let expire = () => {}
+    let arm = () => {}
+    let replace = () => {}
+    const armed = new Promise<void>((resolve) => {
+      arm = resolve
+    })
+    const replaced = new Promise<void>((resolve) => {
+      replace = resolve
+    })
+    globalThis.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+      if (timeout === 15_000 && typeof handler === "function") {
+        expire = () => handler(...args)
+        arm()
+        return 0 as unknown as ReturnType<typeof setTimeout>
+      }
+      if (timeout === 250) return timer(handler, 0, ...args)
+      return timer(handler, timeout, ...args)
+    }) as typeof setTimeout
+
+    const adapter = new SdkSSEAdapter(
+      client((opts) => {
+        if (opts.signal) signals.push(opts.signal)
+        if (signals.length === 2) replace()
+        return (async function* () {
+          await aborted(opts.signal)
+        })()
+      }),
+    )
+
+    try {
+      adapter.connect()
+      await armed
+
+      expect(signals).toHaveLength(1)
+      expect(signals[0]?.aborted).toBe(false)
+
+      expire()
+      await replaced
+
+      expect(signals).toHaveLength(2)
+      expect(signals[0]?.aborted).toBe(true)
+      expect(signals[1]?.aborted).toBe(false)
+
+      adapter.disconnect()
+      expect(signals[1]?.aborted).toBe(true)
+      await wait(10)
+      expect(signals).toHaveLength(2)
+    } finally {
+      adapter.disconnect()
+      globalThis.setTimeout = timer
+    }
+  })
+
   it("backs off reconnects when an SSE fetch fails before opening", async () => {
     const timer = globalThis.setTimeout
     const delays: number[] = []

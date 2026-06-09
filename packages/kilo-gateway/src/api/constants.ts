@@ -21,6 +21,24 @@ export const KILO_DEFAULT_CHAT_URL = "https://chat.kiloapps.io"
 /** Base URL for Kilo Chat - can be overridden by KILO_CHAT_URL env var */
 export const KILO_CHAT_URL = process.env[KILO_CHAT_URL_ENV] || KILO_DEFAULT_CHAT_URL
 
+/** Environment variable for custom Cloud Agent facade URL */
+export const KILO_CLOUD_AGENT_URL_ENV = "KILO_CLOUD_AGENT_URL"
+
+/** Default Cloud Agent facade URL */
+export const KILO_DEFAULT_CLOUD_AGENT_URL = "https://cloud-agent-next.kilosessions.ai/kilo"
+
+/** Base URL for Cloud Agent facade - can be overridden by KILO_CLOUD_AGENT_URL env var */
+export const KILO_CLOUD_AGENT_URL = process.env[KILO_CLOUD_AGENT_URL_ENV] || KILO_DEFAULT_CLOUD_AGENT_URL
+
+/** Environment variable for custom Cloud Agent API URL */
+export const KILO_CLOUD_AGENT_API_URL_ENV = "KILO_CLOUD_AGENT_API_URL"
+
+/** Default Cloud Agent API URL */
+export const KILO_DEFAULT_CLOUD_AGENT_API_URL = "https://cloud-agent-next.kilosessions.ai"
+
+/** Base URL for Cloud Agent API - can be overridden by KILO_CLOUD_AGENT_API_URL env var */
+export const KILO_CLOUD_AGENT_API_URL = process.env[KILO_CLOUD_AGENT_API_URL_ENV] || KILO_DEFAULT_CLOUD_AGENT_API_URL
+
 /** Environment variable for custom Event Service URL */
 export const KILO_EVENT_SERVICE_URL_ENV = "EVENT_SERVICE_URL"
 

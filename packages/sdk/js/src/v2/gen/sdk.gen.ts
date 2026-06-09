@@ -92,6 +92,7 @@ import type {
   KiloClawChatCredentialsResponses,
   KiloClawStatusErrors,
   KiloClawStatusResponses,
+  KiloCloudAgentCredentialsResponses,
   KiloCloudSessionGetErrors,
   KiloCloudSessionGetResponses,
   KiloCloudSessionImportErrors,
@@ -6250,6 +6251,38 @@ export class Claw extends HeyApiClient {
   }
 }
 
+export class CloudAgent extends HeyApiClient {
+  /**
+   * Get Cloud Agent credentials
+   *
+   * Returns the bearer token, facade URL, and API URL for extension-host Cloud Agent calls. This explicit localhost capability must not expose the returned bearer to a browser webview.
+   */
+  public credentials<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<KiloCloudAgentCredentialsResponses, unknown, ThrowOnError>({
+      url: "/kilo/cloud-agent/credentials",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Session4 extends HeyApiClient {
   /**
    * Get cloud session
@@ -6579,6 +6612,11 @@ export class Kilo extends HeyApiClient {
   private _claw?: Claw
   get claw(): Claw {
     return (this._claw ??= new Claw({ client: this.client }))
+  }
+
+  private _cloudAgent?: CloudAgent
+  get cloudAgent(): CloudAgent {
+    return (this._cloudAgent ??= new CloudAgent({ client: this.client }))
   }
 
   private _cloud?: Cloud

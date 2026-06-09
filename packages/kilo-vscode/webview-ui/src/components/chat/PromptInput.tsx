@@ -745,13 +745,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const draft = text().trim()
 
     // Detect slash command (hoisted for both client and server command checks).
-    // Prioritize exact name matches over hint/alias matches so that a server
-    // command named e.g. "continue" is not hijacked by a client alias.
-    const cmdMatch = draft.match(/^\/(\S+)/)
-    const word = cmdMatch?.[1]
-    const matched = word
-      ? (slash.commands().find((c) => c.name === word) ?? slash.commands().find((c) => c.hints.includes(word)))
-      : undefined
+    const resolved = slash.resolve(draft)
+    const matched = resolved?.command
 
     // Client-side slash command — runs locally without a backend round-trip
     if (matched?.action) {
@@ -811,9 +806,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     ]
     const attachments = allFiles.length > 0 ? allFiles : undefined
 
-    // Server-side slash command (cmdMatch/matched already computed above)
+    // Server-side slash command (matched already computed above)
     if (matched) {
-      const rest = draft.slice(cmdMatch![0].length).trim()
+      const rest = resolved?.arguments ?? ""
       const args = review && rest ? `${review}\n\n${rest}` : rest || review
       session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments, pendingId, context)
     } else {

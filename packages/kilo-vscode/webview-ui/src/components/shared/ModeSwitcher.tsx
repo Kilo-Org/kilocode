@@ -7,7 +7,7 @@
  * ModeSwitcher     — thin wrapper wired to session context for chat usage.
  */
 
-import { type Accessor, Component, createSignal, onCleanup, For, Show } from "solid-js"
+import { type Accessor, Component, createEffect, createSignal, onCleanup, For, Show } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
@@ -36,6 +36,8 @@ export interface ModeSwitcherBaseProps {
   onSelect: (name: string) => void
   /** Delay outside dismissal while the popover opens inside a dialog. */
   deferDismiss?: boolean
+  /** Prevent opening or changing the selection. */
+  disabled?: boolean
 }
 
 export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
@@ -44,14 +46,24 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
   const language = useLanguage()
   let listRef: HTMLDivElement | undefined
 
+  const hasAgents = () => props.agents.length > 1
+  const canOpen = () => hasAgents() && !props.disabled
+
+  createEffect(() => {
+    if (!props.disabled || !open()) return
+    setOpen(false)
+  })
+
   // Listen for slash command trigger
-  const onTrigger = () => setOpen(true)
+  const onTrigger = () => {
+    if (!canOpen()) return
+    setOpen(true)
+  }
   window.addEventListener("openModePicker", onTrigger)
   onCleanup(() => window.removeEventListener("openModePicker", onTrigger))
 
-  const hasAgents = () => props.agents.length > 1
-
   function pick(name: string) {
+    if (props.disabled) return
     props.onSelect(name)
     setOpen(false)
   }
@@ -65,11 +77,11 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
   }
 
   function onOpen(val: boolean) {
-    setOpen(val)
-    if (val) {
-      const idx = props.agents.findIndex((a) => a.name === props.value)
-      requestAnimationFrame(() => focusItem(idx >= 0 ? idx : 0))
-    }
+    const next = val && canOpen()
+    setOpen(next)
+    if (!next) return
+    const idx = props.agents.findIndex((a) => a.name === props.value)
+    requestAnimationFrame(() => focusItem(idx >= 0 ? idx : 0))
   }
 
   function onKeyDown(e: KeyboardEvent) {
@@ -109,7 +121,13 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
         open={open()}
         onOpenChange={onOpen}
         triggerAs={Button}
-        triggerProps={{ variant: "ghost", size: "small" }}
+        triggerProps={{
+          variant: "ghost",
+          size: "small",
+          get disabled() {
+            return props.disabled
+          },
+        }}
         trigger={
           <>
             <span class="mode-switcher-trigger-label">{triggerLabel()}</span>

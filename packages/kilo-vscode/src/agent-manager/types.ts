@@ -14,6 +14,7 @@ import type { ApplyConflict } from "./GitOps"
 import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
 import type { ExternalWorktreeItem } from "./WorktreeManager"
 import type { RunStatus } from "./run/manager"
+import type { CloudStatus } from "./cloud-agent/status"
 
 // ---------------------------------------------------------------------------
 // Shared payload types
@@ -134,6 +135,64 @@ interface StateMessage {
   runStatuses?: RunStatus[]
   runScriptConfigured?: boolean
   runScriptPath?: string
+  cloudAgentEnabled: boolean
+}
+
+export interface CloudSessionSummary {
+  id: string
+  title?: string
+  createdAt: string
+  updatedAt: string
+}
+
+interface CloudSessionsMessage {
+  type: "agentManager.cloudSessions"
+  status: "loading" | "ready" | "error" | "signed-out"
+  sessions: CloudSessionSummary[]
+  repository?: string
+  error?: string
+}
+
+interface CloudSessionsPendingMessage {
+  type: "agentManager.cloudSessionsPending"
+  sessionIDs: string[]
+}
+
+interface CloudStatusMessage {
+  type: "agentManager.cloudStatus"
+  sessionID: string
+  cloudStatus: CloudStatus
+}
+
+interface CloudMessageFailedMessage {
+  type: "agentManager.cloudMessageFailed"
+  sessionID: string
+  messageID: string
+  status: "failed" | "interrupted"
+}
+
+interface CloudSessionDeletedMessage {
+  type: "agentManager.cloudSessionDeleted"
+  sessionId: string
+}
+
+interface CloudCreateContextMessage {
+  type: "agentManager.cloudCreateContext"
+  status: "ready" | "unavailable" | "signed-out"
+  repository?: string
+  account?: string
+  error?: string
+}
+
+interface CloudSessionCreatedMessage {
+  type: "agentManager.cloudSessionCreated"
+  session: CloudSessionSummary
+}
+
+interface CloudSessionCreateFailedMessage {
+  type: "agentManager.cloudSessionCreateFailed"
+  kind: "rejected" | "indeterminate"
+  error: string
 }
 
 // ---------------------------------------------------------------------------
@@ -163,6 +222,7 @@ interface TerminalErrorMessage {
 interface ErrorOutMessage {
   type: "error"
   message: string
+  sessionID?: string
 }
 
 interface SessionAddedMessage {
@@ -292,6 +352,14 @@ export type AgentManagerOutMessage =
   | WorktreeSetupMessage
   | SessionMetaMessage
   | StateMessage
+  | CloudSessionsMessage
+  | CloudSessionsPendingMessage
+  | CloudStatusMessage
+  | CloudMessageFailedMessage
+  | CloudSessionDeletedMessage
+  | CloudCreateContextMessage
+  | CloudSessionCreatedMessage
+  | CloudSessionCreateFailedMessage
   | ErrorOutMessage
   | SessionAddedMessage
   | SessionForkedMessage
@@ -318,6 +386,35 @@ export type AgentManagerOutMessage =
 // ---------------------------------------------------------------------------
 // Webview → Extension messages (onMessage)
 // ---------------------------------------------------------------------------
+
+interface RequestCloudSessionsIn {
+  type: "agentManager.requestCloudSessions"
+}
+
+interface RetryCloudSessionsIn {
+  type: "agentManager.retryCloudSessions"
+}
+
+interface OpenCloudSessionIn {
+  type: "agentManager.openCloudSession"
+  sessionId: string
+}
+
+interface CloseCloudSessionIn {
+  type: "agentManager.closeCloudSession"
+  sessionId: string
+}
+
+interface RequestCloudCreateContextIn {
+  type: "agentManager.requestCloudCreateContext"
+}
+
+interface CreateCloudSessionIn {
+  type: "agentManager.createCloudSession"
+  prompt: string
+  mode: string
+  model: string
+}
 
 interface CreateWorktreeIn {
   type: "agentManager.createWorktree"
@@ -718,6 +815,12 @@ interface TerminalResizeIn {
 
 /** All messages the Agent Manager expects from the webview (onMessage input). */
 export type AgentManagerInMessage =
+  | RequestCloudSessionsIn
+  | RetryCloudSessionsIn
+  | OpenCloudSessionIn
+  | CloseCloudSessionIn
+  | RequestCloudCreateContextIn
+  | CreateCloudSessionIn
   | CreateWorktreeIn
   | DeleteWorktreeIn
   | RemoveStaleWorktreeIn

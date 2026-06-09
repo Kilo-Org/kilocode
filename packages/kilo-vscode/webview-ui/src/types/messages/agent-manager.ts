@@ -103,6 +103,13 @@ export interface ManagedSessionState {
   createdAt: string
 }
 
+export interface AgentManagerCloudSessionSummary {
+  id: string
+  title?: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface BranchInfo {
   name: string
   isLocal: boolean

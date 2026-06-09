@@ -297,6 +297,26 @@
   border-style: dashed;
 }
 
+.cloud-status-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-weak-base, var(--vscode-input-border));
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  font-size: var(--kilo-font-size-11);
+}
+
+.cloud-status-strip--error {
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+.cloud-status-spinner {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
 .prompt-input-wrapper {
   display: flex;
   gap: 8px;
