@@ -134,8 +134,8 @@ export function ConfigProvider(props: { children?: JSX.Element }) {
     run("Saving config", () => saveConfig(target(), patch))
   }
 
-  function patch(patch: Partial<ConfigPatch>, unset?: ConfigUnset) {
-    run("Saving config", () => patchConfig(target(), patch, unset))
+  function patch(update: Partial<ConfigPatch>, unset?: ConfigUnset) {
+    run("Saving config", () => patchConfig(target(), update, unset))
   }
 
   function unset(paths: ConfigUnset) {

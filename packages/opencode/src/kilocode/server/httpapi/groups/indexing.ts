@@ -14,8 +14,8 @@ export { IndexingStatusInfo, IndexingStatusState } from "@/kilocode/indexing-eve
 export const KiloEmbeddingModel = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
-  dimension: Schema.Number,
-  scoreThreshold: Schema.Number,
+  dimension: Schema.Int.check(Schema.isGreaterThan(0)),
+  scoreThreshold: Schema.Finite.check(Schema.isBetween({ minimum: 0, maximum: 1 })),
   note: Schema.optional(Schema.String),
 })
 

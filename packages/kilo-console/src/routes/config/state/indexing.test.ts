@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { clean, merge, providerPatch, removed, validate } from "./indexing"
+import { clean, merge, providerPatch, removed, shouldSync, validate } from "./indexing"
 
 describe("indexing config state", () => {
   test("merges project settings over nested global settings", () => {
@@ -29,6 +29,12 @@ describe("indexing config state", () => {
       ["indexing", "model"],
       ["indexing", "openai"],
     ])
+  })
+
+  test("resyncs dirty drafts when the scope changes", () => {
+    expect(shouldSync("global", "global", true, "global", "updated")).toBe(false)
+    expect(shouldSync("global", "project", true, "global", "project")).toBe(true)
+    expect(shouldSync("global", "project", true, "shared", "shared")).toBe(true)
   })
 
   test("builds provider patches for custom selector changes", () => {

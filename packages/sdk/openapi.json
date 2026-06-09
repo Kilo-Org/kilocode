@@ -20525,50 +20525,13 @@
                   "type": "string"
                 },
                 "dimension": {
-                  "anyOf": [
-                    {
-                      "type": "number"
-                    },
-                    {
-                      "type": "string",
-                      "enum": ["NaN"]
-                    },
-                    {
-                      "type": "string",
-                      "enum": ["Infinity"]
-                    },
-                    {
-                      "type": "string",
-                      "enum": ["-Infinity"]
-                    },
-                    {
-                      "type": "string",
-                      "enum": ["Infinity", "-Infinity", "NaN"]
-                    }
-                  ]
+                  "type": "integer",
+                  "exclusiveMinimum": 0
                 },
                 "scoreThreshold": {
-                  "anyOf": [
-                    {
-                      "type": "number"
-                    },
-                    {
-                      "type": "string",
-                      "enum": ["NaN"]
-                    },
-                    {
-                      "type": "string",
-                      "enum": ["Infinity"]
-                    },
-                    {
-                      "type": "string",
-                      "enum": ["-Infinity"]
-                    },
-                    {
-                      "type": "string",
-                      "enum": ["Infinity", "-Infinity", "NaN"]
-                    }
-                  ]
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
                 },
                 "note": {
                   "type": "string"

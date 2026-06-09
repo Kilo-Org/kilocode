@@ -8,6 +8,10 @@ export function clone(input: IndexingConfig | undefined): IndexingConfig {
   return structuredClone(input ?? {})
 }
 
+export function shouldSync(selected: string, current: string, dirty: boolean, source: string, next: string) {
+  return selected !== current || (!dirty && source !== next)
+}
+
 export function merge(base: IndexingConfig | undefined, patch: IndexingConfig | undefined): IndexingConfig {
   const result: Record<string, unknown> = { ...(base ?? {}) }
   for (const [key, value] of Object.entries(patch ?? {})) {

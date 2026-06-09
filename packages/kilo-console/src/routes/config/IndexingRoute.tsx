@@ -6,7 +6,7 @@ import { CustomSelect, type SelectOption } from "../../components/CustomSelect"
 import { loadEmbeddingModels } from "../../client"
 import { useConfig } from "../../context/config"
 import { ConfigPage, ConfigTag as Tag, SourceBadge } from "./ConfigPage"
-import { clean, clone, merge, providerPatch, removed, validate } from "./state/indexing"
+import { clean, clone, merge, providerPatch, removed, shouldSync, validate } from "./state/indexing"
 
 type Provider = NonNullable<IndexingConfig["provider"]>
 type ProviderValue = Provider | ""
@@ -112,6 +112,7 @@ export function IndexingRoute() {
   const [source, setSource] = createSignal("")
   const [dirty, setDirty] = createSignal(false)
   const scope = () => ctx.query()?.scope ?? "global"
+  const [selected, setSelected] = createSignal(scope())
   const project = () => scope() === "project"
   const global = createMemo(() => ctx.data()?.overlay.global.indexing ?? {})
   const local = createMemo(() => {
@@ -141,11 +142,14 @@ export function IndexingRoute() {
   const overridden = createMemo(() => Object.keys(local()).length > 0)
 
   createEffect(() => {
+    const current = scope()
     const next = local()
     const key = JSON.stringify(next)
-    if (dirty() || source() === key) return
+    if (!shouldSync(selected(), current, dirty(), source(), key)) return
+    setSelected(current)
     setSource(key)
     setDraft(clone(next))
+    setDirty(false)
   })
 
   function field(path: string) {
