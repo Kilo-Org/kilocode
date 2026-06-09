@@ -14,6 +14,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Color
+import javax.swing.Box
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 
@@ -128,6 +129,97 @@ class MdViewHybridTest : BasePlatformTestCase() {
 
         assertTrue("code block should grow after streamed lines", pane.preferredSize.height > initial)
         assertTrue("streamed editor should not be clipped vertically", editor.height >= editor.preferredSize.height)
+    }
+
+    fun `test consecutive prose blocks coalesce into one html pane`() {
+        view.set("# Title\n\npara one\n\n- a\n- b")
+
+        val pane = htmls().single()
+        assertTrue(pane.text.contains("<h1>"))
+        assertTrue(pane.text.contains("<p>"))
+        assertTrue(pane.text.contains("<ul>"))
+        assertTrue(pane.text.contains("<li>"))
+    }
+
+    fun `test code block separates surrounding prose runs`() {
+        view.set("intro\n\n```kotlin\nval x = 1\n```\n\noutro")
+
+        val html = htmls()
+        assertEquals(2, html.size)
+        assertEquals(1, scrolls().size)
+        assertTrue(html[0].text.contains("intro"))
+        assertTrue(html[1].text.contains("outro"))
+    }
+
+    fun `test indented code block separates prose and renders as editor`() {
+        view.set("before\n\n    code line\n\nafter")
+
+        val html = htmls()
+        assertEquals(2, html.size)
+        assertEquals(1, editors().size)
+        assertTrue(html[0].text.contains("before"))
+        assertEquals("code line", editors().single().text)
+        assertTrue(html[1].text.contains("after"))
+    }
+
+    fun `test coalesced prose has no inter block struts`() {
+        view.set("first\n\nsecond\n\n- third")
+
+        assertEquals(1, htmls().size)
+        assertTrue(struts().isEmpty())
+    }
+
+    fun `test thematic break after code block is filtered`() {
+        view.set("```kotlin\nval x = 1\n```\n\n---\n\n# Next")
+
+        val pane = htmls().single()
+
+        assertEquals(1, scrolls().size)
+        assertTrue(pane.text.contains("<h1>"))
+        assertFalse(pane.text.contains("<hr"))
+        assertFalse(view.html().contains("<hr"))
+    }
+
+    fun `test prose thematic break is filtered from coalesced pane`() {
+        view.set("first\n\n---\n\nsecond\n\n- third")
+
+        val pane = htmls().single()
+
+        assertTrue(struts().isEmpty())
+        assertTrue(pane.text.contains("first"))
+        assertTrue(pane.text.contains("second"))
+        assertTrue(pane.text.contains("<ul>"))
+        assertFalse(pane.text.contains("<hr"))
+        assertFalse(view.html().contains("<hr"))
+    }
+
+    fun `test prose and code boundaries keep struts`() {
+        view.set("intro\n\n```kotlin\nval x = 1\n```\n\noutro")
+
+        assertEquals(2, htmls().size)
+        assertEquals(1, scrolls().size)
+        assertEquals(2, struts().size)
+    }
+
+    fun `test streaming prose append reuses coalesced pane`() {
+        view.append("first paragraph")
+        val pane = htmls().single()
+
+        view.append("\n\nsecond paragraph")
+
+        val html = htmls().single()
+
+        assertSame(pane, html)
+        assertTrue(html.text.contains("first paragraph"))
+        assertTrue(html.text.contains("second paragraph"))
+    }
+
+    fun `test alternating prose and code keeps expected component counts`() {
+        view.set("before\n\n```kotlin\nval a = 1\n```\n\nmiddle\n\n```java\nclass A {}\n```\n\nafter")
+
+        assertEquals(3, htmls().size)
+        assertEquals(2, scrolls().size)
+        assertEquals(4, struts().size)
     }
 
     fun `test appending later html block preserves earlier block component`() {
@@ -447,6 +539,8 @@ class MdViewHybridTest : BasePlatformTestCase() {
     private fun scrolls(): List<JBScrollPane> = (view.component as JPanel).components.filterIsInstance<JBScrollPane>()
 
     private fun htmls(): List<JBHtmlPane> = (view.component as JPanel).components.filterIsInstance<JBHtmlPane>()
+
+    private fun struts(): List<Box.Filler> = (view.component as JPanel).components.filterIsInstance<Box.Filler>()
 
     private fun editors(): List<EditorTextField> = scrolls().mapNotNull { it.viewport.view as? EditorTextField }
 

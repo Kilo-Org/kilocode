@@ -4,6 +4,9 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.views.base.SecondarySessionPartView
+import ai.kilocode.client.session.views.tool.GlobToolView
+import ai.kilocode.client.session.views.tool.ReadToolView
+import ai.kilocode.client.session.views.tool.SearchToolView
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import javax.swing.ScrollPaneConstants
@@ -85,6 +88,9 @@ class ReadToolViewTest : BasePlatformTestCase() {
         assertFalse(view.isExpanded())
         assertFalse(view.bodyVisible())
         assertEquals("file contents", view.bodyText())
+        assertTrue(view.bodyCreated())
+        assertTrue(view.bodyWrap())
+        assertNull(view.bodyEditor())
         assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, view.horizontalPolicy())
 
         view.toggle()
@@ -95,8 +101,8 @@ class ReadToolViewTest : BasePlatformTestCase() {
 
     fun `test view factory routes read kind tools to read tool view`() {
         assertTrue(ViewFactory.create(tool(), openFile = {}) is ReadToolView)
-        assertTrue(ViewFactory.create(Tool("p2", "grep", toolKind("grep")), openFile = {}) is ReadToolView)
-        assertTrue(ViewFactory.create(Tool("p3", "glob", toolKind("glob")), openFile = {}) is ReadToolView)
+        assertTrue(ViewFactory.create(Tool("p2", "grep", toolKind("grep")), openFile = {}) is SearchToolView)
+        assertTrue(ViewFactory.create(Tool("p3", "glob", toolKind("glob")), openFile = {}) is GlobToolView)
     }
 
     fun `test canRender matches read kind tools only`() {
