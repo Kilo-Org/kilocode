@@ -57,8 +57,10 @@ import {
 } from "../dialog-workspace-create"
 import { DialogWorkspaceUnavailable } from "../dialog-workspace-unavailable"
 import { useArgs } from "@tui/context/args"
-import { KiloSessionTuiSync } from "@/kilocode/session/tui-sync" // kilocode_change
-import { slashMatches } from "@/kilocode/cli/cmd/command-display" // kilocode_change
+// kilocode_change start
+import { KiloSessionTuiSync } from "@/kilocode/session/tui-sync"
+import { slashMatches } from "@/kilocode/cli/cmd/command-display"
+// kilocode_change end
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { type WorkspaceStatus } from "../workspace-label"
 import { useCommandPalette } from "../../context/command-palette"
@@ -391,11 +393,9 @@ export function Prompt(props: PromptProps) {
     const sessionID = props.sessionID
     const msg = lastUserMessage()
     if (!sessionID || !msg) return
-    // kilocode_change start - skip compaction messages while syncing local agent/model
     const parts = sync.data.part[msg.id]
     if (!parts) return
     if (!KiloSessionTuiSync.model({ role: msg.role, parts })) return
-    // kilocode_change end
 
     const key = [sessionID, msg.id].join(":")
     if (key === syncedKey) return
@@ -729,7 +729,6 @@ export function Prompt(props: PromptProps) {
       ...input.traits,
       ...computePromptTraits({
         mode: store.mode,
-        disabled: !!props.disabled,
         autocompleteVisible: !!auto()?.visible,
       }),
     }
@@ -1535,11 +1534,9 @@ export function Prompt(props: PromptProps) {
                 syncExtmarksWithPromptParts()
                 setCursorVersion((value) => value + 1)
               }}
-              onCursorChange={() => {
+              /* kilocode_change */ onCursorChange={() => {
                 setCursorVersion((value) => value + 1)
-                // kilocode_change start - dismiss autocomplete when cursor movement invalidates its filter
                 if (store.mode === "normal") auto()?.onCursorChange()
-                // kilocode_change end
               }}
               onKeyDown={(e: { preventDefault(): void }) => {
                 if (props.disabled) {
@@ -1642,7 +1639,7 @@ export function Prompt(props: PromptProps) {
         </box>
         <box
           height={1}
-          flexShrink={0} // kilocode_change - prevent border box from shrinking in narrow terminals (#6309)
+          /* kilocode_change */ flexShrink={0}
           border={["left"]}
           borderColor={borderHighlight()}
           customBorderChars={{

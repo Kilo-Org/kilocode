@@ -61,7 +61,7 @@ import { InstanceState } from "@/effect/instance-state"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
 import { SessionRunState } from "./run-state"
 import { EffectBridge } from "@/effect/bridge"
-import { EventV2 } from "@/v2/event"
+import { SyncEvent } from "@/sync" // kilocode_change - preserve Kilo v2 event dual-write wiring
 import { SessionEvent } from "@/v2/session-event"
 import { Modelv2 } from "@/v2/model"
 import { AgentAttachment, FileAttachment, Source } from "@/v2/session-prompt"
@@ -69,6 +69,7 @@ import * as DateTime from "effect/DateTime"
 import { eq } from "@/storage/db"
 import * as Database from "@/storage/db"
 import { SessionTable } from "./session.sql"
+import { Image } from "@/image/image" // kilocode_change - normalize user image data before persistence
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -132,6 +133,8 @@ export const layer = Layer.effect(
     const summary = yield* SessionSummary.Service
     const sys = yield* SystemPrompt.Service
     const llm = yield* LLM.Service
+    const image = yield* Image.Service // kilocode_change - normalize user image data before persistence
+    const sync = yield* SyncEvent.Service // kilocode_change - preserve Kilo v2 event dual-write wiring
     const runner = Effect.fn("SessionPrompt.runner")(function* () {
       return yield* EffectBridge.make()
     })
@@ -806,7 +809,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
               throw error
             }
-            const model = input.model ?? agent.model ?? (yield* lastModel(input.sessionID))
+            const model = input.model ?? agent.model ?? (yield* currentModel(input.sessionID)) // kilocode_change
             const userMsg: MessageV2.User = {
               id: input.messageID ?? MessageID.ascending(),
               sessionID: input.sessionID,
@@ -841,7 +844,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               providerID: model.providerID,
             }
             yield* sessions.updateMessage(msg)
-            const callID = ulid()
+            const callID = ulid() // kilocode_change - correlate v2 shell events with the persisted tool part
             const started = Date.now()
             const part: MessageV2.ToolPart = {
               type: "tool",
@@ -849,7 +852,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               messageID: msg.id,
               sessionID: input.sessionID,
               tool: ShellID.ToolID,
-              callID: ulid(),
+              callID, // kilocode_change
               state: {
                 status: "running",
                 time: { start: started },
@@ -857,12 +860,16 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               },
             }
             yield* sessions.updatePart(part)
-            EventV2.run(SessionEvent.Shell.Started.Sync, {
-              sessionID: input.sessionID,
-              timestamp: DateTime.makeUnsafe(started),
-              callID,
-              command: input.command,
-            })
+            // kilocode_change start - preserve Kilo v2 shell event dual-write
+            if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+              yield* sync.run(SessionEvent.Shell.Started.Sync, {
+                sessionID: input.sessionID,
+                timestamp: DateTime.makeUnsafe(started),
+                callID,
+                command: input.command,
+              })
+            }
+            // kilocode_change end
             return { msg, part, cwd: ctx.directory }
           }).pipe(Effect.ensuring(markReady))
 
@@ -878,12 +885,16 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                 output += "\n\n" + ["<metadata>", "User aborted the command", "</metadata>"].join("\n")
               }
               const completed = Date.now()
-              EventV2.run(SessionEvent.Shell.Ended.Sync, {
-                sessionID: input.sessionID,
-                timestamp: DateTime.makeUnsafe(completed),
-                callID: part.callID,
-                output,
-              })
+              // kilocode_change start - preserve Kilo v2 shell event dual-write
+              if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+                yield* sync.run(SessionEvent.Shell.Ended.Sync, {
+                  sessionID: input.sessionID,
+                  timestamp: DateTime.makeUnsafe(completed),
+                  callID: part.callID,
+                  output,
+                })
+              }
+              // kilocode_change end
               if (!msg.time.completed) {
                 msg.time.completed = completed
                 yield* sessions.updateMessage(msg)
@@ -964,11 +975,23 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       return yield* Effect.failCause(exit.cause)
     })
 
-    const lastModel = Effect.fnUntraced(function* (sessionID: SessionID) {
+    // kilocode_change start - preserve persisted per-session model selection
+    const currentModel = Effect.fnUntraced(function* (sessionID: SessionID) {
+      const current = Database.use((db) =>
+        db.select({ model: SessionTable.model }).from(SessionTable).where(eq(SessionTable.id, sessionID)).get(),
+      )
+      if (current?.model) {
+        return {
+          providerID: ProviderID.make(current.model.providerID),
+          modelID: ModelID.make(current.model.id),
+          ...(current.model.variant && current.model.variant !== "default" ? { variant: current.model.variant } : {}),
+        }
+      }
       const match = yield* sessions.findMessage(sessionID, (m) => m.info.role === "user" && !!m.info.model)
       if (Option.isSome(match) && match.value.info.role === "user") return match.value.info.model
       return yield* provider.defaultModel()
     })
+    // kilocode_change end
 
     const createUserMessage = Effect.fn("SessionPrompt.createUserMessage")(function* (input: PromptInput) {
       const agentName = input.agent || (yield* agents.defaultAgent())
@@ -981,7 +1004,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         throw error
       }
 
-      const model = input.model ?? ag.model ?? (yield* lastModel(input.sessionID))
+      const current = Database.use((db) =>
+        db
+          .select({ agent: SessionTable.agent, model: SessionTable.model })
+          .from(SessionTable)
+          .where(eq(SessionTable.id, input.sessionID))
+          .get(),
+      )
+      const model = input.model ?? ag.model ?? (yield* currentModel(input.sessionID)) // kilocode_change
       const same = ag.model && model.providerID === ag.model.providerID && model.modelID === ag.model.modelID
       const full =
         !input.variant && ag.variant && same
@@ -1006,15 +1036,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         editorContext: input.editorContext, // kilocode_change
       }
 
-      const current = Database.use((db) =>
-        db
-          .select({ agent: SessionTable.agent, model: SessionTable.model })
-          .from(SessionTable)
-          .where(eq(SessionTable.id, input.sessionID))
-          .get(),
-      )
       if (current?.agent !== info.agent) {
-        EventV2.run(SessionEvent.AgentSwitched.Sync, {
+        yield* sync.run(SessionEvent.AgentSwitched.Sync, {
           sessionID: input.sessionID,
           timestamp: DateTime.makeUnsafe(info.time.created),
           agent: info.agent,
@@ -1023,9 +1046,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       if (
         current?.model?.providerID !== info.model.providerID ||
         current.model.id !== info.model.modelID ||
-        current.model.variant !== info.model.variant
+        (current.model.variant === "default" ? undefined : current.model.variant) !== info.model.variant
       ) {
-        EventV2.run(SessionEvent.ModelSwitched.Sync, {
+        yield* sync.run(SessionEvent.ModelSwitched.Sync, {
           sessionID: input.sessionID,
           timestamp: DateTime.makeUnsafe(info.time.created),
           model: {
@@ -1122,6 +1145,17 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                   { ...part, messageID: info.id, sessionID: input.sessionID },
                 ]
               }
+              // kilocode_change start - normalize user image data before persistence
+              if (part.mime.startsWith("image/")) {
+                const file: MessageV2.FilePart = {
+                  ...part,
+                  id: part.id ? PartID.make(part.id) : PartID.ascending(),
+                  messageID: info.id,
+                  sessionID: input.sessionID,
+                }
+                return [yield* image.normalize(file).pipe(Effect.orDie)]
+              }
+              // kilocode_change end
               break
             case "file:": {
               log.info("file", { mime: part.mime })
@@ -1264,6 +1298,39 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                 ]
               }
 
+              // kilocode_change start - reject oversized user image files before reading and base64 allocation
+              if (mime.startsWith("image/")) {
+                const limit = (yield* config.get()).attachment?.image?.max_base64_bytes ?? Image.MAX_BASE64_BYTES
+                const stat = yield* fsys.stat(filepath).pipe(Effect.catch(Effect.die))
+                const encoded = ((stat.size + 2n) / 3n) * 4n
+                if (encoded > BigInt(limit))
+                  return yield* Effect.die(
+                    new Image.SizeError({
+                      bytes: Number(encoded > BigInt(Number.MAX_SAFE_INTEGER) ? Number.MAX_SAFE_INTEGER : encoded),
+                      max: limit,
+                      width: 0,
+                      height: 0,
+                      max_width: 0,
+                      max_height: 0,
+                    }),
+                  )
+              }
+              // kilocode_change end
+              const file: MessageV2.FilePart = {
+                id: part.id ? PartID.make(part.id) : PartID.ascending(),
+                messageID: info.id,
+                sessionID: input.sessionID,
+                type: "file",
+                url:
+                  `data:${mime};base64,` +
+                  Buffer.from(yield* fsys.readFile(filepath).pipe(Effect.catch(Effect.die))).toString("base64"),
+                mime,
+                filename: part.filename!,
+                source: part.source,
+              }
+              // kilocode_change start - apply image limits after resolving user file URLs
+              const attachment = mime.startsWith("image/") ? yield* image.normalize(file).pipe(Effect.orDie) : file
+              // kilocode_change end
               return [
                 {
                   messageID: info.id,
@@ -1272,18 +1339,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                   synthetic: true,
                   text: `Called the Read tool with the following input: {"filePath":"${filepath}"}`,
                 },
-                {
-                  id: part.id,
-                  messageID: info.id,
-                  sessionID: input.sessionID,
-                  type: "file",
-                  url:
-                    `data:${mime};base64,` +
-                    Buffer.from(yield* fsys.readFile(filepath).pipe(Effect.catch(Effect.die))).toString("base64"),
-                  mime,
-                  filename: part.filename!,
-                  source: part.source,
-                },
+                attachment,
               ]
             }
           }
@@ -1310,7 +1366,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         return [{ ...part, messageID: info.id, sessionID: input.sessionID }]
       })
 
-      const parts = yield* Effect.forEach(input.parts, resolvePart, { concurrency: "unbounded" }).pipe(
+      // kilocode_change start - resolve and persist the exact transformed Kilo prompt parts
+      const resolvedParts = yield* Effect.forEach(input.parts, resolvePart, { concurrency: "unbounded" }).pipe(
         Effect.map((x) => x.flat().map(assign)),
       )
 
@@ -1323,8 +1380,11 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           messageID: input.messageID,
           variant: input.variant,
         },
-        { message: info, parts },
+        { message: info, parts: resolvedParts },
       )
+
+      const parts = resolvedParts
+      // kilocode_change end
 
       const parsed = MessageV2.Info.zod.safeParse(info)
       if (!parsed.success) {
@@ -1397,24 +1457,30 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           synthetic: [] as string[],
         },
       )
+      // kilocode_change start - preserve Kilo v2 prompt event dual-write
       // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-      EventV2.run(SessionEvent.Prompted.Sync, {
-        sessionID: input.sessionID,
-        timestamp: DateTime.makeUnsafe(info.time.created),
-        prompt: {
-          text: nextPrompt.text.join("\n"),
-          files: nextPrompt.files,
-          agents: nextPrompt.agents,
-        },
-      })
-      for (const text of nextPrompt.synthetic) {
-        // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-        EventV2.run(SessionEvent.Synthetic.Sync, {
+      if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+        yield* sync.run(SessionEvent.Prompted.Sync, {
           sessionID: input.sessionID,
           timestamp: DateTime.makeUnsafe(info.time.created),
-          text,
+          prompt: {
+            text: nextPrompt.text.join("\n"),
+            files: nextPrompt.files,
+            agents: nextPrompt.agents,
+          },
         })
       }
+      for (const text of nextPrompt.synthetic) {
+        // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
+        if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+          yield* sync.run(SessionEvent.Synthetic.Sync, {
+            sessionID: input.sessionID,
+            timestamp: DateTime.makeUnsafe(info.time.created),
+            text,
+          })
+        }
+      }
+      // kilocode_change end
 
       return { info, parts }
     }, Effect.scoped)
@@ -1423,9 +1489,10 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       function* (input: PromptInput) {
         const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
         yield* revert.cleanup(session)
-        // kilocode_change start - persist queued prompts immediately while serializing each follow-up loop
+        // kilocode_change start - recover interrupted Kilo turns before accepting a follow-up
         yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
         yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
+        // kilocode_change end
         const message = yield* createUserMessage(input)
         yield* sessions.touch(input.sessionID)
 
@@ -1820,7 +1887,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               agent: lastUser.agent,
               model: lastUser.model,
               auto: true,
-              overflow: !handle.message.finish,
+              // kilocode_change - preflight compaction replays the pending turn without treating media as provider overflow
+              overflow: !handle.message.finish && handle.compactError?.() !== undefined, // kilocode_change
             })
           }
           // kilocode_change start — break out so a newer queued prompt can take over
@@ -1945,7 +2013,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           if (cmdAgent?.model) return cmdAgent.model
         }
         if (input.model) return Provider.parseModel(input.model)
-        return yield* lastModel(input.sessionID)
+        return yield* currentModel(input.sessionID) // kilocode_change
       })
 
       yield* getModel(taskModel.providerID, taskModel.modelID, input.sessionID)
@@ -1979,7 +2047,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       const userModel = isSubtask
         ? input.model
           ? Provider.parseModel(input.model)
-          : yield* lastModel(input.sessionID)
+          : yield* currentModel(input.sessionID) // kilocode_change
         : taskModel
 
       yield* plugin.trigger(
@@ -2030,6 +2098,8 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(LSP.defaultLayer),
     Layer.provide(ToolRegistry.defaultLayer),
     Layer.provide(Truncate.defaultLayer),
+  ).pipe(
+    Layer.provide(Image.defaultLayer), // kilocode_change - provide user image normalization service
     Layer.provide(Provider.defaultLayer),
     Layer.provide(Config.defaultLayer),
     Layer.provide(Instruction.defaultLayer),
@@ -2045,6 +2115,7 @@ export const defaultLayer = Layer.suspend(() =>
         LLM.defaultLayer,
         Bus.layer,
         CrossSpawnSpawner.defaultLayer,
+        SyncEvent.defaultLayer, // kilocode_change - provide Kilo v2 event dual-write service
       ),
     ),
   ),
@@ -2084,6 +2155,7 @@ export const PromptInput = Schema.Struct({
     ]).annotate({ discriminator: "type" }),
   ),
 }).pipe(withStatics((s) => ({ zod: zod(s) })))
+// kilocode_change start - retain precise prompt input types for Kilo callers
 // `z.discriminatedUnion` erases the discriminated members' shapes back to
 // `{}` when walked from the generic `z.ZodType` input. Restore the precise
 // `parts` type from the exported Schema input types so callers see a proper
@@ -2097,6 +2169,7 @@ export type PromptInput = Omit<Schema.Schema.Type<typeof PromptInput>, "parts" |
   parts: PartInputUnion[]
   editorContext?: MessageV2.EditorContext
 }
+// kilocode_change end
 
 export class LoopInput extends Schema.Class<LoopInput>("SessionPrompt.LoopInput")({
   sessionID: SessionID,

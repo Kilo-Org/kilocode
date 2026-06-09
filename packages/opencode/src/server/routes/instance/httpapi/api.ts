@@ -36,6 +36,7 @@ import { SuggestionApi } from "@/kilocode/server/httpapi/groups/suggestion"
 import { TelemetryApi } from "@/kilocode/server/httpapi/groups/telemetry"
 // kilocode_change end
 import { Authorization } from "./middleware/authorization"
+import { SchemaErrorMiddleware } from "./middleware/schema-error"
 
 // SSE event schemas built from the BusEvent/SyncEvent registries.
 const EventSchema = Schema.Union(BusEvent.effectPayloads()).annotate({ identifier: "Event" })
@@ -44,6 +45,7 @@ const SyncEventSchemas = SyncEvent.effectPayloads()
 export const RootHttpApi = HttpApi.make("opencode-root")
   .addHttpApi(ControlApi)
   .addHttpApi(GlobalApi)
+  .middleware(SchemaErrorMiddleware)
   .middleware(Authorization)
 
 export const InstanceHttpApi = HttpApi.make("opencode-instance")
@@ -76,7 +78,8 @@ export const InstanceHttpApi = HttpApi.make("opencode-instance")
   .addHttpApi(SessionImportApi)
   .addHttpApi(SuggestionApi)
   .addHttpApi(TelemetryApi)
-// kilocode_change end
+  // kilocode_change end
+  .middleware(SchemaErrorMiddleware)
 
 export const OpenCodeHttpApi = HttpApi.make("opencode")
   .addHttpApi(RootHttpApi)

@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { remapChildren as _remapChildren } from "./fork"
 import z from "zod"
 import { Cause, Effect, Schema } from "effect"
@@ -16,6 +15,7 @@ import { SessionTable } from "@/session/session.sql"
 import * as Log from "@opencode-ai/core/util/log"
 import type { LanguageModelUsage, ProviderMetadata } from "ai"
 import type { Provider } from "@/provider/provider"
+import { zod as toZod } from "@opencode-ai/core/effect-zod"
 import { ENV_FEATURE } from "@kilocode/kilo-gateway"
 
 export namespace KiloSession {
@@ -403,7 +403,7 @@ export namespace KiloSession {
 }
 
 export const kiloSessionFork = fn(
-  z.object({ sessionID: SessionID.zod, messageID: MessageID.zod.optional() }),
+  z.object({ sessionID: toZod(SessionID), messageID: toZod(MessageID).optional() }),
   async (input) => {
     const { AppRuntime } = await import("@/effect/app-runtime")
     return AppRuntime.runPromise(

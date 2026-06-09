@@ -1,8 +1,10 @@
 import { PlanExitTool } from "./plan"
 import { Session } from "@/session/session"
 import { QuestionTool } from "./question"
-import { SuggestTool } from "../kilocode/suggestion/tool" // kilocode_change
-import { Command } from "@/command" // kilocode_change
+// kilocode_change start
+import { SuggestTool } from "../kilocode/suggestion/tool"
+import { Command } from "@/command"
+// kilocode_change end
 import { ShellTool } from "./shell"
 import { EditTool } from "./edit"
 import { GlobTool } from "./glob"
@@ -54,6 +56,7 @@ import { Git } from "@/git"
 import { Skill } from "../skill"
 import { Permission } from "@/permission"
 import { SessionStatus } from "@/session/status" // kilocode_change
+import { Reference } from "@/reference/reference"
 
 const log = Log.create({ service: "tool.registry" })
 
@@ -95,6 +98,7 @@ export const layer: Layer.Layer<
   | Session.Service
   | Provider.Service
   | Git.Service
+  | Reference.Service
   | LSP.Service
   | Instruction.Service
   | AppFileSystem.Service
@@ -104,8 +108,10 @@ export const layer: Layer.Layer<
   | Ripgrep.Service
   | Format.Service
   | Truncate.Service
-  | Command.Service // kilocode_change
-  | SessionStatus.Service // kilocode_change
+  // kilocode_change start
+  | Command.Service
+  | SessionStatus.Service
+  // kilocode_change end
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -245,6 +251,7 @@ export const layer: Layer.Layer<
 
         return {
           custom,
+          // kilocode_change start
           builtin: KiloToolRegistry.describe(
             [
               tool.invalid,
@@ -262,15 +269,14 @@ export const layer: Layer.Layer<
               ...(Flag.KILO_EXPERIMENTAL_SCOUT ? [tool.code, tool.repo_clone, tool.repo_overview] : []),
               tool.skill,
               tool.patch,
-              // kilocode_change start
               tool.plan,
               ...(["cli", "vscode"].includes(Flag.KILO_CLIENT) ? [tool.suggest] : []),
               ...KiloToolRegistry.extra(kilo, cfg),
-              // kilocode_change end
               ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
             ],
             kilo,
-          ), // kilocode_change
+          ),
+          // kilocode_change end
           task: tool.task,
           read: tool.read,
         }
@@ -373,28 +379,32 @@ export const layer: Layer.Layer<
   }),
 )
 
-export const defaultLayer = Layer.suspend(() =>
-  layer.pipe(
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(Plugin.defaultLayer),
-    Layer.provide(Question.defaultLayer),
-    Layer.provide(Todo.defaultLayer),
-    Layer.provide(Skill.defaultLayer),
-    Layer.provide(Agent.defaultLayer),
-    Layer.provide(Session.defaultLayer),
-    Layer.provide(Provider.defaultLayer),
-    Layer.provide(Git.defaultLayer),
-    Layer.provide(LSP.defaultLayer),
-    Layer.provide(Instruction.defaultLayer),
-    Layer.provide(AppFileSystem.defaultLayer),
-    Layer.provide(Bus.layer),
-    Layer.provide(FetchHttpClient.layer),
-    Layer.provide(Format.defaultLayer),
-    Layer.provide(CrossSpawnSpawner.defaultLayer),
-    Layer.provide(Ripgrep.defaultLayer),
-    Layer.provide(Truncate.defaultLayer),
-    Layer.provide(Command.defaultLayer), // kilocode_change
-    Layer.provide(SessionStatus.defaultLayer), // kilocode_change
-  ),
+export const defaultLayer = Layer.suspend(
+  () =>
+    layer
+      .pipe(
+        Layer.provide(Config.defaultLayer),
+        Layer.provide(Plugin.defaultLayer),
+        Layer.provide(Question.defaultLayer),
+        Layer.provide(Todo.defaultLayer),
+        Layer.provide(Skill.defaultLayer),
+        Layer.provide(Agent.defaultLayer),
+        Layer.provide(Session.defaultLayer),
+        Layer.provide(Provider.defaultLayer),
+        Layer.provide(Git.defaultLayer),
+        Layer.provide(Reference.defaultLayer),
+        Layer.provide(LSP.defaultLayer),
+        Layer.provide(Instruction.defaultLayer),
+        Layer.provide(AppFileSystem.defaultLayer),
+        Layer.provide(Bus.layer),
+        Layer.provide(FetchHttpClient.layer),
+        Layer.provide(Format.defaultLayer),
+        Layer.provide(CrossSpawnSpawner.defaultLayer),
+        Layer.provide(Ripgrep.defaultLayer),
+        Layer.provide(Truncate.defaultLayer),
+      )
+      // kilocode_change start - provide Kilo-owned registry dependencies
+      .pipe(Layer.provide(Command.defaultLayer), Layer.provide(SessionStatus.defaultLayer)),
+  // kilocode_change end
 )
 export * as ToolRegistry from "./registry"

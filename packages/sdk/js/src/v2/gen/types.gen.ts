@@ -5,16 +5,10 @@ export type ClientOptions = {
 }
 
 export type Event =
+  | EventServerInstanceDisposed
   | EventServerConnected
   | EventGlobalDisposed
   | EventGlobalConfigUpdated
-  | EventTuiPromptAppend
-  | EventTuiCommandExecute
-  | EventTuiToastShow1
-  | EventTuiSessionSelect
-  | EventKilocodeAgentManagerStart
-  | EventIndexingStatus
-  | EventServerInstanceDisposed
   | EventFileEdited
   | EventFileWatcherUpdated
   | EventQuestionAsked
@@ -22,6 +16,10 @@ export type Event =
   | EventQuestionRejected
   | EventLspClientDiagnostics
   | EventLspUpdated
+  | EventTuiPromptAppend
+  | EventTuiCommandExecute
+  | EventTuiToastShow1
+  | EventTuiSessionSelect
   | EventMcpToolsChanged
   | EventMcpBrowserOpenFailed
   | EventSessionNetworkAsked
@@ -48,6 +46,7 @@ export type Event =
   | EventSessionCompacted
   | EventCommandExecuted
   | EventProjectUpdated
+  | EventKilocodeAgentManagerStart
   | EventVcsBranchUpdated
   | EventKiloSessionsRemoteStatusChanged
   | EventWorkspaceReady
@@ -92,6 +91,7 @@ export type Event =
   | EventSessionNextCompactionStarted
   | EventSessionNextCompactionDelta
   | EventSessionNextCompactionEnded
+  | EventIndexingStatus
 
 export type OAuth = {
   type: "oauth"
@@ -117,71 +117,6 @@ export type WellKnownAuth = {
 }
 
 export type Auth = OAuth | ApiAuth | WellKnownAuth
-
-export type EventTuiPromptAppend = {
-  id: string
-  type: "tui.prompt.append"
-  properties: {
-    text: string
-  }
-}
-
-export type EventTuiCommandExecute = {
-  id: string
-  type: "tui.command.execute"
-  properties: {
-    command:
-      | "session.list"
-      | "session.new"
-      | "session.share"
-      | "session.interrupt"
-      | "session.compact"
-      | "session.page.up"
-      | "session.page.down"
-      | "session.line.up"
-      | "session.line.down"
-      | "session.half.page.up"
-      | "session.half.page.down"
-      | "session.first"
-      | "session.last"
-      | "prompt.clear"
-      | "prompt.submit"
-      | "agent.cycle"
-      | string
-  }
-}
-
-export type EventTuiToastShow = {
-  id: string
-  type: "tui.toast.show"
-  properties: {
-    title?: string
-    message: string
-    variant: "info" | "success" | "warning" | "error"
-    duration?: number
-  }
-}
-
-export type EventTuiSessionSelect = {
-  id: string
-  type: "tui.session.select"
-  properties: {
-    /**
-     * Session ID to navigate to
-     */
-    sessionID: string
-  }
-}
-
-export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
-
-export type IndexingStatus = {
-  state: IndexingStatusState
-  message: string
-  processedFiles: number
-  totalFiles: number
-  percent: number
-}
 
 export type QuestionOption = {
   /**
@@ -243,6 +178,61 @@ export type QuestionReplied = {
 export type QuestionRejected = {
   sessionID: string
   requestID: string
+}
+
+export type EventTuiPromptAppend = {
+  id: string
+  type: "tui.prompt.append"
+  properties: {
+    text: string
+  }
+}
+
+export type EventTuiCommandExecute = {
+  id: string
+  type: "tui.command.execute"
+  properties: {
+    command:
+      | "session.list"
+      | "session.new"
+      | "session.share"
+      | "session.interrupt"
+      | "session.compact"
+      | "session.page.up"
+      | "session.page.down"
+      | "session.line.up"
+      | "session.line.down"
+      | "session.half.page.up"
+      | "session.half.page.down"
+      | "session.first"
+      | "session.last"
+      | "prompt.clear"
+      | "prompt.submit"
+      | "agent.cycle"
+      | string
+  }
+}
+
+export type EventTuiToastShow = {
+  id: string
+  type: "tui.toast.show"
+  properties: {
+    title?: string
+    message: string
+    variant: "info" | "success" | "warning" | "error"
+    duration?: number
+  }
+}
+
+export type EventTuiSessionSelect = {
+  id: string
+  type: "tui.session.select"
+  properties: {
+    /**
+     * Session ID to navigate to
+     */
+    sessionID: string
+  }
 }
 
 export type SessionNetworkWait = {
@@ -876,21 +866,25 @@ export type Prompt = {
   agents?: Array<PromptAgentAttachment>
 }
 
+export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
+
+export type IndexingStatus = {
+  state: IndexingStatusState
+  message: string
+  processedFiles: number
+  totalFiles: number
+  percent: number
+}
+
 export type GlobalEvent = {
   directory: string
   project?: string
   workspace?: string
   payload:
+    | EventServerInstanceDisposed
     | EventServerConnected
     | EventGlobalDisposed
     | EventGlobalConfigUpdated
-    | EventTuiPromptAppend
-    | EventTuiCommandExecute
-    | EventTuiToastShow
-    | EventTuiSessionSelect
-    | EventKilocodeAgentManagerStart
-    | EventIndexingStatus
-    | EventServerInstanceDisposed
     | EventFileEdited
     | EventFileWatcherUpdated
     | EventQuestionAsked
@@ -898,6 +892,10 @@ export type GlobalEvent = {
     | EventQuestionRejected
     | EventLspClientDiagnostics
     | EventLspUpdated
+    | EventTuiPromptAppend
+    | EventTuiCommandExecute
+    | EventTuiToastShow
+    | EventTuiSessionSelect
     | EventMcpToolsChanged
     | EventMcpBrowserOpenFailed
     | EventSessionNetworkAsked
@@ -924,6 +922,7 @@ export type GlobalEvent = {
     | EventSessionCompacted
     | EventCommandExecuted
     | EventProjectUpdated
+    | EventKilocodeAgentManagerStart
     | EventVcsBranchUpdated
     | EventKiloSessionsRemoteStatusChanged
     | EventWorkspaceReady
@@ -968,6 +967,7 @@ export type GlobalEvent = {
     | EventSessionNextCompactionStarted
     | EventSessionNextCompactionDelta
     | EventSessionNextCompactionEnded
+    | EventIndexingStatus
     | SyncEventMessageUpdated
     | SyncEventMessageRemoved
     | SyncEventMessagePartUpdated
@@ -1315,6 +1315,17 @@ export type McpRemoteConfig = {
  */
 export type LayoutConfig = "auto" | "stretch"
 
+export type ImageAttachmentConfig = {
+  auto_resize?: boolean
+  max_width?: number
+  max_height?: number
+  max_base64_bytes?: number
+}
+
+export type AttachmentConfig = {
+  image?: ImageAttachmentConfig
+}
+
 export type Config = {
   $schema?: string
   shell?: string
@@ -1438,6 +1449,7 @@ export type Config = {
   tools?: {
     [key: string]: boolean
   }
+  attachment?: AttachmentConfig
   enterprise?: {
     url?: string
   }
@@ -1543,6 +1555,10 @@ export type Model = {
   recommendedIndex?: number
   prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo" | "ling" | "gpt55"
   isFree?: boolean
+  terminalBench?: {
+    overallScore: number
+    avgAttemptCostUsd: number
+  }
   ai_sdk_provider?: "alibaba" | "anthropic" | "mistral" | "openai" | "openai-compatible" | "openrouter"
 }
 
@@ -2701,6 +2717,14 @@ export type SyncEventSessionNextCompactionEnded = {
   }
 }
 
+export type EventServerInstanceDisposed = {
+  id: string
+  type: "server.instance.disposed"
+  properties: {
+    directory: string
+  }
+}
+
 export type EventServerConnected = {
   id: string
   type: "server.connected"
@@ -2722,38 +2746,6 @@ export type EventGlobalConfigUpdated = {
   type: "global.config.updated"
   properties: {
     [key: string]: unknown
-  }
-}
-
-export type EventKilocodeAgentManagerStart = {
-  id: string
-  type: "kilocode.agent_manager.start"
-  properties: {
-    requestID: string
-    sessionID: string
-    mode: "worktree" | "local"
-    versions?: boolean
-    tasks: Array<{
-      prompt?: string
-      name?: string
-      branchName?: string
-    }>
-  }
-}
-
-export type EventIndexingStatus = {
-  id: string
-  type: "indexing.status"
-  properties: {
-    status: IndexingStatus
-  }
-}
-
-export type EventServerInstanceDisposed = {
-  id: string
-  type: "server.instance.disposed"
-  properties: {
-    directory: string
   }
 }
 
@@ -3048,6 +3040,22 @@ export type EventProjectUpdated = {
   id: string
   type: "project.updated"
   properties: Project
+}
+
+export type EventKilocodeAgentManagerStart = {
+  id: string
+  type: "kilocode.agent_manager.start"
+  properties: {
+    requestID: string
+    sessionID: string
+    mode: "worktree" | "local"
+    versions?: boolean
+    tasks: Array<{
+      prompt?: string
+      name?: string
+      branchName?: string
+    }>
+  }
 }
 
 export type EventVcsBranchUpdated = {
@@ -3576,6 +3584,14 @@ export type EventSessionNextCompactionEnded = {
   }
 }
 
+export type EventIndexingStatus = {
+  id: string
+  type: "indexing.status"
+  properties: {
+    status: IndexingStatus
+  }
+}
+
 export type SessionInfo = {
   id: string
   parentID?: string
@@ -3812,11 +3828,11 @@ export type EventTuiToastShow1 = {
 }
 
 export type BadRequestError = {
-  data: unknown
-  errors: Array<{
-    [key: string]: unknown
-  }>
-  success: false
+  name: "BadRequest"
+  data: {
+    message: string
+    kind?: "Params" | "Headers" | "Query" | "Body" | "Payload"
+  }
 }
 
 export type AuthRemoveData = {

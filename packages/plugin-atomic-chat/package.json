@@ -30,5 +30,6 @@
     "type": "git",
     "url": "https://github.com/Kilo-Org/kilocode",
     "directory": "packages/plugin-atomic-chat"
-  }
+  },
+  "peerDependencies": {}
 }
