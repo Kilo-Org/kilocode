@@ -255,6 +255,7 @@ export function mockSessionValue(overrides?: {
     deleteSession: noop,
     renameSession: noop,
     syncSession: noop,
+    cloudMessageFailure: () => undefined,
     cloudPreviewId: () => null,
     selectCloudSession: noop,
   }
