@@ -4,6 +4,7 @@ import type * as Scope from "effect/Scope"
 import * as TestClock from "effect/testing/TestClock"
 import * as TestConsole from "effect/testing/TestConsole"
 import type { Config } from "@/config/config"
+import { Reference } from "@/reference/reference" // kilocode_change
 import { TestInstance, withTmpdirInstance } from "../fixture/fixture"
 
 type Body<A, E, R> = Effect.Effect<A, E, R> | (() => Effect.Effect<A, E, R>)
@@ -107,5 +108,9 @@ const liveEnv = TestConsole.layer
 
 export const it = make(testEnv, liveEnv)
 
-export const testEffect = <R, E>(layer: Layer.Layer<R, E>) =>
-  make(Layer.provideMerge(layer, testEnv), Layer.provideMerge(layer, liveEnv))
+// kilocode_change start
+export const testEffect = <R, E>(layer: Layer.Layer<R, E>) => {
+  const full = Layer.merge(layer, Reference.defaultLayer)
+  return make(Layer.provideMerge(full, testEnv), Layer.provideMerge(full, liveEnv))
+}
+// kilocode_change end

@@ -210,6 +210,9 @@ export const dict = {
   "model.preview.label.cached": "Keširano",
   "model.preview.label.average": "Procj. prosječni trošak",
   "model.preview.label.context": "Kontekst",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Završetak",
+  "model.preview.label.costAttempt": "Trošak / pokušaj",
   "model.preview.value.notSupported": "Nije podržano",
   "model.preview.tooltip.average":
     "Procijenjeni prosječni trošak zasniva se na tipičnom omjeru ulaznih i izlaznih tokena, te tokena pročitanih iz keša.",

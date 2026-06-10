@@ -26,7 +26,7 @@ import javax.inject.Inject
  * 4. Each entry on `PATH`
  * 5. Common install locations (`~/.bun/bin`, `/opt/homebrew/bin`, `/usr/local/bin`)
  *
- * After Bun finishes, the task verifies the expected binary exists so that
+ * After Bun finishes, the task verifies the expected binary and models snapshot exist so that
  * Rosetta / architecture mismatches surface with a clear error message.
  */
 @DisableCachingByDefault(because = "Local developer bootstrap task that shells out to Bun")
@@ -47,7 +47,8 @@ abstract class PrepareLocalCliTask : DefaultTask() {
     @TaskAction
     fun run() {
         val expected = binary()
-        if (expected.exists()) {
+        val snapshot = snapshot()
+        if (expected.exists() && snapshot.exists()) {
             logger.lifecycle("CLI binary already exists at ${expected.absolutePath}")
             return
         }
@@ -71,10 +72,17 @@ abstract class PrepareLocalCliTask : DefaultTask() {
                     "This can happen if Bun and Gradle are running under different architectures."
             )
         }
+        if (!snapshot.exists()) {
+            throw GradleException("Expected CLI models snapshot was not created at ${snapshot.absolutePath}.")
+        }
     }
 
     private fun binary(): File {
         return File(File(dir.get().asFile, platform()), exe())
+    }
+
+    private fun snapshot(): File {
+        return File(File(dir.get().asFile, platform()), "models-snapshot.json")
     }
 
     private fun platform(): String {

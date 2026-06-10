@@ -1,6 +1,7 @@
 import { createEffect, on, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
+import { isControl, isNested } from "./auto-scroll"
 
 const DEBOUNCE_MS = 100
 // Grace window after a real user interaction (wheel/pointer/key/touch) during
@@ -22,13 +23,13 @@ export function createAutoScroll(options: AutoScrollOptions) {
   let stopTimer: ReturnType<typeof setTimeout> | undefined
   let cleanup: (() => void) | undefined
   let userInitiated = false
-  let lastScrollTop: number | undefined
   let lastInteraction = 0
 
   const threshold = () => options.bottomThreshold ?? 10
 
   const [store, setStore] = createStore({
     contentRef: undefined as HTMLElement | undefined,
+    scrollRef: undefined as HTMLElement | undefined,
     userScrolled: false,
   })
 
@@ -43,11 +44,8 @@ export function createAutoScroll(options: AutoScrollOptions) {
   }
 
   const markUser = (e: Event) => {
-    if (e instanceof WheelEvent) {
-      const target = e.target instanceof Element ? e.target : undefined
-      const nested = target?.closest("[data-scrollable]")
-      if (scroll && nested && nested !== scroll) return
-    }
+    if (!(e instanceof WheelEvent) && isControl(e.target)) return
+    if (e instanceof WheelEvent && isNested(e.target, scroll)) return
     userInitiated = true
     lastInteraction = performance.now()
   }
@@ -65,7 +63,6 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
     // `scrollTop` assignment bypasses any CSS `scroll-behavior: smooth`.
     el.scrollTop = el.scrollHeight
-    lastScrollTop = el.scrollTop
   }
 
   const scrollToBottom = (force: boolean) => {
@@ -124,21 +121,17 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
     if (distance < threshold()) {
       if (store.userScrolled) setStore("userScrolled", false)
-      lastScrollTop = el.scrollTop
       return
     }
 
     if (!store.userScrolled && !byUser) {
-      // virtua fires programmatic scroll events as it measures virtualized
-      // items. Don't let those snap the view back to the bottom while the
-      // user is mid-gesture — the wheel event fires before the scroll event,
-      // so `recentlyInteracted()` is reliable here.
-      if (el.scrollTop < (lastScrollTop ?? el.scrollTop) || recentlyInteracted()) {
+      // Only explicit user input can pause following. Treat unclassified
+      // scroll events from virtualization or layout changes as programmatic.
+      if (recentlyInteracted()) {
         stop()
       } else {
         scrollToBottomNow("auto")
       }
-      lastScrollTop = el.scrollTop
       return
     }
 
@@ -193,6 +186,20 @@ export function createAutoScroll(options: AutoScrollOptions) {
     },
   )
 
+  createResizeObserver(
+    () => store.scrollRef,
+    () => {
+      const el = scroll
+      if (!el) return
+      if (!canScroll(el)) {
+        if (store.userScrolled) setStore("userScrolled", false)
+        return
+      }
+      if (store.userScrolled || recentlyInteracted()) return
+      scrollToBottomNow("auto")
+    },
+  )
+
   createEffect(
     on(options.working, (working: boolean) => {
       settling = false
@@ -224,8 +231,8 @@ export function createAutoScroll(options: AutoScrollOptions) {
         cleanup = undefined
       }
 
-      lastScrollTop = undefined
       scroll = el
+      setStore("scrollRef", el)
 
       if (!el) return
 

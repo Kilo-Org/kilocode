@@ -16,7 +16,7 @@ import { Component, Index, Show, createMemo, createEffect, createSignal, on, onC
 import { Portal } from "solid-js/web"
 import { useSession } from "../../context/session"
 import { color, label } from "../../utils/timeline/colors"
-import { sizes, MAX_HEIGHT } from "../../utils/timeline/sizes"
+import { sizes, pinned, MAX_HEIGHT } from "../../utils/timeline/sizes"
 import type { Part, Message } from "../../types/messages"
 
 export interface TimelineBar {
@@ -73,19 +73,34 @@ export const TaskTimeline: Component = () => {
   const bars = createMemo(() => collect(messages(), allParts()))
   const busy = () => session.status() === "busy"
 
-  // Auto-scroll to the latest bar when new bars appear
+  // Reading scrollWidth and writing scrollLeft synchronously for every appended bar can
+  // force repeated layout during streamed part updates. Batch those appends behind one
+  // animation frame, after Solid has applied the current DOM updates. Only follow while
+  // pinned so inspecting earlier activity is not interrupted by incoming bars.
   let prev = 0
+  let frame: number | undefined
+  let follow = true
+  const onScroll = () => {
+    if (ref) follow = pinned(ref)
+  }
   createEffect(
     on(
       () => bars().length,
       (len) => {
-        if (len > prev && ref) {
-          ref.scrollLeft = ref.scrollWidth
+        if (len > prev && ref && follow && frame === undefined) {
+          frame = requestAnimationFrame(() => {
+            frame = undefined
+            if (!ref || !follow) return
+            ref.scrollLeft = ref.scrollWidth
+          })
         }
         prev = len
       },
     ),
   )
+  onCleanup(() => {
+    if (frame !== undefined) cancelAnimationFrame(frame)
+  })
 
   const hideTip = () => {
     tipBar = undefined
@@ -161,6 +176,7 @@ export const TaskTimeline: Component = () => {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onPointerLeave={hideTip}
+          onScroll={onScroll}
         >
           <Index each={bars()}>
             {(bar) => {

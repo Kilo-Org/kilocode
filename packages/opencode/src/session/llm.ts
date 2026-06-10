@@ -18,6 +18,7 @@ import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
 import type { Agent } from "@/agent/agent"
 import type { MessageV2 } from "./message-v2"
+import { usable } from "./overflow" // kilocode_change
 import { Plugin } from "@/plugin"
 import { SystemPrompt } from "./system"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -40,6 +41,7 @@ import {
 import { Identity } from "@kilocode/kilo-telemetry"
 import { KiloSession } from "@/kilocode/session"
 import { KiloLLM } from "@/kilocode/session/llm"
+import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { SessionExport } from "@/kilocode/session-export"
 import { getActiveOrg } from "@/kilocode/session-export/eligibility"
 // kilocode_change end
@@ -71,6 +73,7 @@ export type StreamInput = {
   tools: Record<string, Tool>
   retries?: number
   toolChoice?: "auto" | "required" | "none"
+  preflight?: boolean // kilocode_change - enable proactive threshold compaction for normal session turns
 }
 
 export type StreamRequest = StreamInput & {
@@ -243,14 +246,6 @@ const live: Layer.Layer<
       // kilocode_change end
 
       const tools = resolveTools(input)
-      // kilocode_change start - cap maxOutputTokens to fit within context after estimating real input size
-      params.maxOutputTokens = KiloLLM.capOutputTokens({
-        model: input.model,
-        messages,
-        tools,
-        configured: params.maxOutputTokens,
-      })
-      // kilocode_change end
 
       // LiteLLM and some Anthropic proxies require the tools parameter to be present
       // when message history contains tool calls, even if no tools are being used.
@@ -284,6 +279,43 @@ const live: Layer.Layer<
         })
       }
       const sortedTools = Object.fromEntries(Object.entries(tools).toSorted(([a], [b]) => a.localeCompare(b)))
+
+      // kilocode_change start - compact at the configured threshold before contacting the provider
+      const estimated: ModelMessage[] =
+        isOpenaiOauth || isWorkflow
+          ? [
+              {
+                role: "system",
+                content: isOpenaiOauth ? String(options.instructions ?? "") : system.join("\n"),
+              },
+              ...messages,
+            ]
+          : messages
+      const preflight = input.preflight === true && KiloSessionOverflow.enabled({ cfg, model: input.model })
+      const cap = KiloLLM.needsEstimate({ model: input.model, configured: params.maxOutputTokens })
+      const usage =
+        cap || preflight ? KiloSessionOverflow.measure({ messages: estimated, tools: sortedTools }) : undefined
+      params.maxOutputTokens = KiloLLM.capOutputTokens({
+        model: input.model,
+        messages: estimated,
+        tools: sortedTools,
+        configured: params.maxOutputTokens,
+        tokens: usage?.raw,
+      })
+      if (
+        preflight &&
+        usage &&
+        KiloSessionOverflow.shouldCompact({
+          cfg,
+          model: input.model,
+          usable: usable({ cfg, model: input.model }),
+          tokens: usage.normalized,
+          continuation: usage.continuation,
+        })
+      ) {
+        return yield* Effect.fail(new KiloSessionOverflow.PreflightError())
+      }
+      // kilocode_change end
 
       // Wire up toolExecutor for DWS workflow models so that tool calls
       // from the workflow service are executed via opencode's tool system

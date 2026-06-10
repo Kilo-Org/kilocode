@@ -3,6 +3,10 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.views.base.GenericView
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.question.QuestionResultView
+import ai.kilocode.client.session.views.tool.GlobToolView
+import ai.kilocode.client.session.views.tool.ReadToolView
+import ai.kilocode.client.session.views.tool.SearchToolView
+import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.model.Compaction
 import ai.kilocode.client.session.model.Content
@@ -25,19 +29,20 @@ object ViewFactory {
     fun create(
         content: Content,
         openFile: (String) -> Unit,
-    ): PartView = create(content, openFile, openUrl = {}, selection = null)
+    ): PartView = create(content, openFile, openUrl = {}, selection = null, repo = null)
 
     fun create(
         content: Content,
         openFile: (String) -> Unit,
         openUrl: (String) -> Unit,
-    ): PartView = create(content, openFile, openUrl, selection = null)
+    ): PartView = create(content, openFile, openUrl, selection = null, repo = null)
 
     fun create(
         content: Content,
         openFile: (String) -> Unit,
         openUrl: (String) -> Unit = {},
         selection: SessionSelection? = null,
+        repo: String? = null,
     ): PartView = when (content) {
         is Text -> TextView(content, openUrl = openUrl, selection = selection)
         is Reasoning -> ReasoningView(content, openUrl = openUrl, selection = selection)
@@ -45,6 +50,8 @@ object ViewFactory {
             TodoWriteView.canRender(content) -> TodoWriteView(content)
             PlanExitView.canRender(content) -> PlanExitView(content, openFile, selection)
             QuestionResultView.canRender(content) -> QuestionResultView(content, selection)
+            GlobToolView.canRender(content) -> GlobToolView(content, selection = selection, repo = repo)
+            SearchToolView.canRender(content) -> SearchToolView(content, selection = selection, repo = repo)
             ReadToolView.canRender(content) -> ReadToolView(content, openFile, selection = selection)
             else -> ToolView(content, selection = selection)
         }
@@ -56,22 +63,23 @@ object ViewFactory {
     fun createUser(
         content: Content,
         openFile: (String) -> Unit,
-    ): PartView = createUser(content, openFile, openUrl = {}, selection = null)
+    ): PartView = createUser(content, openFile, openUrl = {}, selection = null, repo = null)
 
     fun createUser(
         content: Content,
         openFile: (String) -> Unit,
         openUrl: (String) -> Unit,
-    ): PartView = createUser(content, openFile, openUrl, selection = null)
+    ): PartView = createUser(content, openFile, openUrl, selection = null, repo = null)
 
     fun createUser(
         content: Content,
         openFile: (String) -> Unit,
         openUrl: (String) -> Unit = {},
         selection: SessionSelection? = null,
+        repo: String? = null,
     ): PartView = when (content) {
         is Text -> PromptView(content, openUrl = openUrl, selection = selection)
-        else -> create(content, openFile, openUrl, selection)
+        else -> create(content, openFile, openUrl, selection, repo)
     }
 
     /**
@@ -86,6 +94,10 @@ object ViewFactory {
         if (view is PlanExitView) return !PlanExitView.canRender(content)
         if (view !is PlanExitView && PlanExitView.canRender(content)) return true
         if (view is QuestionResultView) return !QuestionResultView.canRender(content)
+        if (view is GlobToolView) return !GlobToolView.canRender(content) || QuestionResultView.canRender(content)
+        if (view !is GlobToolView && GlobToolView.canRender(content)) return true
+        if (view is SearchToolView) return !SearchToolView.canRender(content) || QuestionResultView.canRender(content)
+        if (view !is SearchToolView && SearchToolView.canRender(content)) return true
         if (view is ReadToolView) return !ReadToolView.canRender(content) || QuestionResultView.canRender(content)
         if (view is ToolView && ReadToolView.canRender(content)) return true
         if (view is ToolView) return QuestionResultView.canRender(content)

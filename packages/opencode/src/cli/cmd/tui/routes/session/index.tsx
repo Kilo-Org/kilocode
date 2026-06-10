@@ -23,8 +23,10 @@ import { SplitBorder } from "@tui/component/border"
 import { Spinner } from "@tui/component/spinner"
 import { selectedForeground, useTheme } from "@tui/context/theme"
 import { BoxRenderable, ScrollBoxRenderable, addDefaultParsers, TextAttributes, RGBA } from "@opentui/core"
-import type { KeyEvent } from "@opentui/core" // kilocode_change
-import type { CommandContext } from "@opentui/keymap" // kilocode_change
+// kilocode_change start
+import type { KeyEvent } from "@opentui/core"
+import type { CommandContext } from "@opentui/keymap"
+// kilocode_change end
 import { Prompt, type PromptRef } from "@tui/component/prompt"
 // kilocode_change start
 import type { AssistantMessage, Part, Provider, ToolPart, UserMessage, TextPart, ReasoningPart } from "@kilocode/sdk/v2"
@@ -78,24 +80,27 @@ import stripAnsi from "strip-ansi"
 import { usePromptRef } from "../../context/prompt"
 import { useExit } from "../../context/exit"
 import { Filesystem } from "@/util/filesystem"
-import { Global } from "@opencode-ai/core/global"
 import { PermissionPrompt } from "./permission"
 import { QuestionPrompt } from "./question"
-import { Suggest } from "@/kilocode/suggestion/tui/render" // kilocode_change
-import { SuggestPrompt } from "@/kilocode/suggestion/tui/prompt" // kilocode_change
-import { NetworkPrompt } from "./network" // kilocode_change
+// kilocode_change start
+import { Suggest } from "@/kilocode/suggestion/tui/render"
+import { SuggestPrompt } from "@/kilocode/suggestion/tui/prompt"
+import { NetworkPrompt } from "./network"
+// kilocode_change end
 import { DialogExportOptions } from "../../ui/dialog-export-options"
 import * as Model from "../../util/model"
 import { formatTranscript } from "../../util/transcript"
 import { UI } from "@/cli/ui.ts"
 import { useTuiConfig } from "../../context/tui-config"
-import { splitDiffHunks } from "@/kilocode/tui/diff" // kilocode_change
-import { session as banner } from "@/kilocode/cli/logo" // kilocode_change
+// kilocode_change start
+import { splitDiffHunks } from "@/kilocode/tui/diff"
+import { session as banner } from "@/kilocode/cli/logo"
 
-import { formatMarkdownTables } from "../../util/markdown" // kilocode_change
-import { bell } from "@/kilocode/bell" // kilocode_change
-import { SessionIndexing } from "@/kilocode/components/session-indexing" // kilocode_change
-import { submitFeedback } from "@/kilocode/cli/cmd/tui/feedback" // kilocode_change
+import { formatMarkdownTables } from "../../util/markdown"
+import { bell } from "@/kilocode/bell"
+import { SessionIndexing } from "@/kilocode/components/session-indexing"
+import { submitFeedback } from "@/kilocode/cli/cmd/tui/feedback"
+// kilocode_change end
 import { getScrollAcceleration } from "../../util/scroll"
 import { TuiPluginRuntime } from "@/cli/cmd/tui/plugin/runtime"
 import { DialogRetryAction } from "../../component/dialog-retry-action"
@@ -103,6 +108,7 @@ import { SessionRetry } from "@/session/retry"
 import { getRevertDiffFiles } from "../../util/revert-diff"
 import { useCommandPalette } from "../../context/command-palette"
 import { useBindings, useCommandShortcut } from "../../keymap"
+import { PathFormatterProvider, usePathFormatter } from "../../context/path-format"
 
 addDefaultParsers(parsers.parsers)
 
@@ -229,10 +235,8 @@ export function Session() {
   const nonBlockingQuestions = createMemo(() => questions().filter((q) => q.blocking === false))
   const question = createMemo(() => blockingQuestions()[0] ?? nonBlockingQuestions()[0])
   const blockingSuggestions = createMemo(() => suggestions().filter((s) => s.blocking !== false))
-  // kilocode_change start - footer overlay only hosts blocking suggestions now;
   // non-blocking ones render inline at the tool-part slot via `SuggestBar`.
   const blockingSuggestion = createMemo(() => blockingSuggestions()[0])
-  // kilocode_change end
   const visible = createMemo(
     () =>
       !session()?.parentID &&
@@ -263,9 +267,7 @@ export function Session() {
   const lastAssistant = createMemo(() => {
     return messages().findLast((x) => x.role === "assistant")
   })
-  // kilocode_change end
 
-  // kilocode_change start - ring terminal bell on task completion
   createEffect(
     on(
       () => [route.sessionID, sync.data.session_status?.[route.sessionID]?.type] as const,
@@ -275,9 +277,7 @@ export function Session() {
       },
     ),
   )
-  // kilocode_change end
 
-  // kilocode_change start - ring terminal bell when input is needed
   createEffect(
     on(
       () => [route.sessionID, permissions().length] as const,
@@ -298,7 +298,7 @@ export function Session() {
   )
   createEffect(
     on(
-      () => [route.sessionID, suggestions().length + network().length] as const, // kilocode_change
+      () => [route.sessionID, suggestions().length + network().length] as const,
       ([id, len], prev) => {
         if (!prev || prev[0] !== id) return
         if (len > prev[1] && bellEnabled()) bell()
@@ -423,8 +423,8 @@ export function Session() {
     if (part.state.status !== "completed") return
     if (part.id === lastSwitch) return
 
-    // kilocode_change - plan_exit no longer switches agent; PlanFollowup handles it
     if (part.tool === "plan_enter") {
+      // kilocode_change
       local.agent.set("plan")
       lastSwitch = part.id
     }
@@ -471,9 +471,7 @@ export function Session() {
     const title = Locale.truncate(session()?.title ?? "", 50)
     return exit.message.set(banner(title, session()?.id, UI.Style.TEXT_DIM, UI.Style.TEXT_NORMAL))
   })
-  // kilocode_change end
 
-  // kilocode_change start - double ctrl+c to exit for child sessions
   const [exitPress, setExitPress] = createSignal(0)
   useBindings(() => ({
     enabled: Boolean(session()?.parentID),
@@ -1248,231 +1246,227 @@ export function Session() {
   createEffect(on(() => route.sessionID, toBottom))
 
   return (
-    <context.Provider
-      value={{
-        get width() {
-          return contentWidth()
-        },
-        sessionID: route.sessionID,
-        conceal,
-        showThinking,
-        showTimestamps,
-        showDetails,
-        showGenericToolOutput,
-        diffWrapMode,
-        providers,
-        sync,
-        tui: tuiConfig,
-      }}
-    >
-      <box flexDirection="row" flexGrow={1} minHeight={0}>
-        <box flexGrow={1} minHeight={0} paddingBottom={1} paddingLeft={2} paddingRight={2} gap={1}>
-          <Show when={session()}>
-            <scrollbox
-              ref={(r) => (scroll = r)}
-              viewportOptions={{
-                paddingRight: showScrollbar() ? 1 : 0,
-              }}
-              verticalScrollbarOptions={{
-                paddingLeft: 1,
-                visible: showScrollbar(),
-                trackOptions: {
-                  backgroundColor: theme.backgroundElement,
-                  foregroundColor: theme.border,
-                },
-              }}
-              stickyScroll={true}
-              stickyStart="bottom"
-              flexGrow={1}
-              scrollAcceleration={scrollAcceleration()}
-            >
-              <box height={1} />
-              {/* kilocode_change start */}
-              <Show when={session()?.parentID && messages().length === 0}>
-                <box paddingLeft={3}>
-                  <text fg={theme.textMuted}>↳ Initializing...</text>
-                </box>
-              </Show>
-              {/* kilocode_change end */}
-              <For each={messages()}>
-                {(message, index) => (
-                  <Switch>
-                    <Match when={message.id === revert()?.messageID}>
-                      {(function () {
-                        const command = useCommandPalette()
-                        const redoShortcut = useCommandShortcut("session.redo")
-                        const [hover, setHover] = createSignal(false)
-                        const dialog = useDialog()
-
-                        const handleUnrevert = async () => {
-                          const confirmed = await DialogConfirm.show(
-                            dialog,
-                            "Confirm Redo",
-                            "Are you sure you want to restore the reverted messages?",
-                          )
-                          if (confirmed) {
-                            command.run("session.redo")
-                          }
-                        }
-
-                        return (
-                          <box
-                            onMouseOver={() => setHover(true)}
-                            onMouseOut={() => setHover(false)}
-                            onMouseUp={handleUnrevert}
-                            marginTop={1}
-                            flexShrink={0}
-                            border={["left"]}
-                            customBorderChars={SplitBorder.customBorderChars}
-                            borderColor={theme.backgroundPanel}
-                          >
-                            <box
-                              paddingTop={1}
-                              paddingBottom={1}
-                              paddingLeft={2}
-                              backgroundColor={hover() ? theme.backgroundElement : theme.backgroundPanel}
-                            >
-                              <text fg={theme.textMuted}>{revert()!.reverted.length} message reverted</text>
-                              <text fg={theme.textMuted}>
-                                <span style={{ fg: theme.text }}>{redoShortcut()}</span> or /redo to restore
-                              </text>
-                              <Show when={revert()!.diffFiles?.length}>
-                                <box marginTop={1}>
-                                  <For each={revert()!.diffFiles}>
-                                    {(file) => (
-                                      <text fg={theme.text}>
-                                        {file.filename}
-                                        <Show when={file.additions > 0}>
-                                          <span style={{ fg: theme.diffAdded }}> +{file.additions}</span>
-                                        </Show>
-                                        <Show when={file.deletions > 0}>
-                                          <span style={{ fg: theme.diffRemoved }}> -{file.deletions}</span>
-                                        </Show>
-                                      </text>
-                                    )}
-                                  </For>
-                                </box>
-                              </Show>
-                            </box>
-                          </box>
-                        )
-                      })()}
-                    </Match>
-                    <Match when={revert()?.messageID && message.id >= revert()!.messageID}>
-                      <></>
-                    </Match>
-                    <Match when={message.role === "user"}>
-                      <UserMessage
-                        index={index()}
-                        onMouseUp={() => {
-                          if (renderer.getSelection()?.getSelectedText()) return
-                          dialog.replace(() => (
-                            <DialogMessage
-                              messageID={message.id}
-                              sessionID={route.sessionID}
-                              setPrompt={(promptInfo) => prompt?.set(promptInfo)}
-                            />
-                          ))
-                        }}
-                        message={message as UserMessage}
-                        parts={sync.data.part[message.id] ?? []}
-                        pending={pending()}
-                      />
-                    </Match>
-                    <Match when={message.role === "assistant"}>
-                      <AssistantMessage
-                        last={lastAssistant()?.id === message.id}
-                        message={message as AssistantMessage}
-                        parts={sync.data.part[message.id] ?? []}
-                      />
-                    </Match>
-                  </Switch>
-                )}
-              </For>
-            </scrollbox>
-            <box flexShrink={0}>
-              <Show when={permissions().length > 0}>
-                <PermissionPrompt request={permissions()[0]} />
-              </Show>
-              {/* kilocode_change start */}
-              <Show when={permissions().length === 0 && question()} keyed>
-                {(request) => (
-                  <QuestionPrompt
-                    request={request}
-                    nonBlocking={request.blocking === false}
-                    inputFocused={() => prompt?.focused ?? false}
-                  />
-                )}
-              </Show>
-              <Show when={permissions().length === 0 && !question()}>
-                {/* kilocode_change end */}
-                {/* kilocode_change start */}
-                <Show when={blockingSuggestion()} keyed>
-                  {(request) => <SuggestPrompt request={request} />}
-                </Show>
-              </Show>
-              <Show when={session()?.parentID}>
-                <SubagentFooter />
-              </Show>
-              {/* kilocode_change end */}
-              {/* kilocode_change start */}
-              <Show when={networkVisible()}>
-                <NetworkPrompt request={network()[0]} />
-              </Show>
-              {/* kilocode_change end */}
-              {/* kilocode_change start */}
-              <Show when={!session()?.parentID}>
-                <TuiPluginRuntime.Slot
-                  name="session_prompt"
-                  mode="replace"
-                  session_id={route.sessionID}
-                  visible={visible()}
-                  disabled={disabled()}
-                  on_submit={toBottom}
-                  ref={bind}
-                >
-                  <Prompt
-                    visible={visible()}
-                    ref={bind}
-                    disabled={disabled()}
-                    onSubmit={() => {
-                      toBottom()
-                    }}
-                    sessionID={route.sessionID}
-                    right={<TuiPluginRuntime.Slot name="session_prompt_right" session_id={route.sessionID} />}
-                  />
-                </TuiPluginRuntime.Slot>
-              </Show>
-              {/* kilocode_change end */}
-            </box>
-          </Show>
-          {/* kilocode_change start */}
-          <SessionIndexing />
-          {/* kilocode_change end */}
-          <Toast />
-        </box>
-        <Show when={sidebarVisible()}>
-          <Switch>
-            <Match when={wide()}>
-              <Sidebar sessionID={route.sessionID} />
-            </Match>
-            <Match when={!wide()}>
-              <box
-                position="absolute"
-                top={0}
-                left={0}
-                right={0}
-                bottom={0}
-                alignItems="flex-end"
-                backgroundColor={RGBA.fromInts(0, 0, 0, 70)}
+    <PathFormatterProvider path={session()?.directory}>
+      <context.Provider
+        value={{
+          get width() {
+            return contentWidth()
+          },
+          sessionID: route.sessionID,
+          conceal,
+          showThinking,
+          showTimestamps,
+          showDetails,
+          showGenericToolOutput,
+          diffWrapMode,
+          providers,
+          sync,
+          tui: tuiConfig,
+        }}
+      >
+        <box flexDirection="row" flexGrow={1} minHeight={0}>
+          <box flexGrow={1} minHeight={0} paddingBottom={1} paddingLeft={2} paddingRight={2} gap={1}>
+            <Show when={session()}>
+              <scrollbox
+                ref={(r) => (scroll = r)}
+                viewportOptions={{
+                  paddingRight: showScrollbar() ? 1 : 0,
+                }}
+                verticalScrollbarOptions={{
+                  paddingLeft: 1,
+                  visible: showScrollbar(),
+                  trackOptions: {
+                    backgroundColor: theme.backgroundElement,
+                    foregroundColor: theme.border,
+                  },
+                }}
+                stickyScroll={true}
+                stickyStart="bottom"
+                flexGrow={1}
+                scrollAcceleration={scrollAcceleration()}
               >
-                <Sidebar sessionID={route.sessionID} />
+                <box height={1} />
+                {/* kilocode_change start */}
+                <Show when={session()?.parentID && messages().length === 0}>
+                  <box paddingLeft={3}>
+                    <text fg={theme.textMuted}>↳ Initializing...</text>
+                  </box>
+                </Show>
+                {/* kilocode_change end */}
+                <For each={messages()}>
+                  {(message, index) => (
+                    <Switch>
+                      <Match when={message.id === revert()?.messageID}>
+                        {(function () {
+                          const command = useCommandPalette()
+                          const redoShortcut = useCommandShortcut("session.redo")
+                          const [hover, setHover] = createSignal(false)
+                          const dialog = useDialog()
+
+                          const handleUnrevert = async () => {
+                            const confirmed = await DialogConfirm.show(
+                              dialog,
+                              "Confirm Redo",
+                              "Are you sure you want to restore the reverted messages?",
+                            )
+                            if (confirmed) {
+                              command.run("session.redo")
+                            }
+                          }
+
+                          return (
+                            <box
+                              onMouseOver={() => setHover(true)}
+                              onMouseOut={() => setHover(false)}
+                              onMouseUp={handleUnrevert}
+                              marginTop={1}
+                              flexShrink={0}
+                              border={["left"]}
+                              customBorderChars={SplitBorder.customBorderChars}
+                              borderColor={theme.backgroundPanel}
+                            >
+                              <box
+                                paddingTop={1}
+                                paddingBottom={1}
+                                paddingLeft={2}
+                                backgroundColor={hover() ? theme.backgroundElement : theme.backgroundPanel}
+                              >
+                                <text fg={theme.textMuted}>{revert()!.reverted.length} message reverted</text>
+                                <text fg={theme.textMuted}>
+                                  <span style={{ fg: theme.text }}>{redoShortcut()}</span> or /redo to restore
+                                </text>
+                                <Show when={revert()!.diffFiles?.length}>
+                                  <box marginTop={1}>
+                                    <For each={revert()!.diffFiles}>
+                                      {(file) => (
+                                        <text fg={theme.text}>
+                                          {file.filename}
+                                          <Show when={file.additions > 0}>
+                                            <span style={{ fg: theme.diffAdded }}> +{file.additions}</span>
+                                          </Show>
+                                          <Show when={file.deletions > 0}>
+                                            <span style={{ fg: theme.diffRemoved }}> -{file.deletions}</span>
+                                          </Show>
+                                        </text>
+                                      )}
+                                    </For>
+                                  </box>
+                                </Show>
+                              </box>
+                            </box>
+                          )
+                        })()}
+                      </Match>
+                      <Match when={revert()?.messageID && message.id >= revert()!.messageID}>
+                        <></>
+                      </Match>
+                      <Match when={message.role === "user"}>
+                        <UserMessage
+                          index={index()}
+                          onMouseUp={() => {
+                            if (renderer.getSelection()?.getSelectedText()) return
+                            dialog.replace(() => (
+                              <DialogMessage
+                                messageID={message.id}
+                                sessionID={route.sessionID}
+                                setPrompt={(promptInfo) => prompt?.set(promptInfo)}
+                              />
+                            ))
+                          }}
+                          message={message as UserMessage}
+                          parts={sync.data.part[message.id] ?? []}
+                          pending={pending()}
+                        />
+                      </Match>
+                      <Match when={message.role === "assistant"}>
+                        <AssistantMessage
+                          last={lastAssistant()?.id === message.id}
+                          message={message as AssistantMessage}
+                          parts={sync.data.part[message.id] ?? []}
+                        />
+                      </Match>
+                    </Switch>
+                  )}
+                </For>
+              </scrollbox>
+              <box flexShrink={0}>
+                <Show when={permissions().length > 0}>
+                  <PermissionPrompt request={permissions()[0]} />
+                </Show>
+                {/* kilocode_change start */}
+                <Show when={permissions().length === 0 && question()} keyed>
+                  {(request) => (
+                    <QuestionPrompt
+                      request={request}
+                      nonBlocking={request.blocking === false}
+                      inputFocused={() => prompt?.focused ?? false}
+                    />
+                  )}
+                </Show>
+                <Show when={permissions().length === 0 && !question()}>
+                  <Show when={blockingSuggestion()} keyed>
+                    {(request) => <SuggestPrompt request={request} />}
+                  </Show>
+                </Show>
+                <Show when={session()?.parentID}>
+                  <SubagentFooter />
+                </Show>
+                <Show when={networkVisible()}>
+                  <NetworkPrompt request={network()[0]} />
+                </Show>
+                <Show when={!session()?.parentID}>
+                  <TuiPluginRuntime.Slot
+                    name="session_prompt"
+                    mode="replace"
+                    session_id={route.sessionID}
+                    visible={visible()}
+                    disabled={disabled()}
+                    on_submit={toBottom}
+                    ref={bind}
+                  >
+                    <Prompt
+                      visible={visible()}
+                      ref={bind}
+                      disabled={disabled()}
+                      onSubmit={() => {
+                        toBottom()
+                      }}
+                      sessionID={route.sessionID}
+                      right={<TuiPluginRuntime.Slot name="session_prompt_right" session_id={route.sessionID} />}
+                    />
+                  </TuiPluginRuntime.Slot>
+                </Show>
+                {/* kilocode_change end */}
               </box>
-            </Match>
-          </Switch>
-        </Show>
-      </box>
-    </context.Provider>
+            </Show>
+            {/* kilocode_change start */}
+            <SessionIndexing />
+            {/* kilocode_change end */}
+            <Toast />
+          </box>
+          <Show when={sidebarVisible()}>
+            <Switch>
+              <Match when={wide()}>
+                <Sidebar sessionID={route.sessionID} />
+              </Match>
+              <Match when={!wide()}>
+                <box
+                  position="absolute"
+                  top={0}
+                  left={0}
+                  right={0}
+                  bottom={0}
+                  alignItems="flex-end"
+                  backgroundColor={RGBA.fromInts(0, 0, 0, 70)}
+                >
+                  <Sidebar sessionID={route.sessionID} />
+                </box>
+              </Match>
+            </Switch>
+          </Show>
+        </box>
+      </context.Provider>
+    </PathFormatterProvider>
   )
 }
 
@@ -2063,7 +2057,7 @@ function BlockTool(props: {
 
 function Shell(props: ToolProps<typeof ShellTool>) {
   const { theme } = useTheme()
-  const sync = useSync()
+  const pathFormatter = usePathFormatter()
   const isRunning = createMemo(() => props.part.state.status === "running")
   const output = createMemo(() => stripAnsi(props.metadata.output?.trim() ?? ""))
   const [expanded, setExpanded] = createSignal(false)
@@ -2077,18 +2071,7 @@ function Shell(props: ToolProps<typeof ShellTool>) {
   const workdirDisplay = createMemo(() => {
     const workdir = props.input.workdir
     if (!workdir || workdir === ".") return undefined
-
-    const base = sync.path.directory
-    if (!base) return undefined
-
-    const absolute = path.resolve(base, workdir)
-    if (absolute === base) return undefined
-
-    const home = Global.Path.home
-    if (!home) return absolute
-
-    const match = absolute === home || absolute.startsWith(home + path.sep)
-    return match ? absolute.replace(home, "~") : absolute
+    return pathFormatter.format(workdir)
   })
 
   const title = createMemo(() => {
@@ -2130,6 +2113,7 @@ function Shell(props: ToolProps<typeof ShellTool>) {
 
 function Write(props: ToolProps<typeof WriteTool>) {
   const { theme, syntax } = useTheme()
+  const pathFormatter = usePathFormatter()
   const code = createMemo(() => {
     if (!props.input.content) return ""
     return props.input.content
@@ -2138,7 +2122,7 @@ function Write(props: ToolProps<typeof WriteTool>) {
   return (
     <Switch>
       <Match when={props.metadata.diagnostics !== undefined}>
-        <BlockTool title={"# Wrote " + normalizePath(props.input.filePath!)} part={props.part}>
+        <BlockTool title={"# Wrote " + pathFormatter.format(props.input.filePath)} part={props.part}>
           <line_number fg={theme.textMuted} minWidth={3} paddingRight={1}>
             <code
               conceal={false}
@@ -2153,7 +2137,7 @@ function Write(props: ToolProps<typeof WriteTool>) {
       </Match>
       <Match when={true}>
         <InlineTool icon="←" pending="Preparing write..." complete={props.input.filePath} part={props.part}>
-          Write {normalizePath(props.input.filePath!)}
+          Write {pathFormatter.format(props.input.filePath)}
         </InlineTool>
       </Match>
     </Switch>
@@ -2161,9 +2145,10 @@ function Write(props: ToolProps<typeof WriteTool>) {
 }
 
 function Glob(props: ToolProps<typeof GlobTool>) {
+  const pathFormatter = usePathFormatter()
   return (
     <InlineTool icon="✱" pending="Finding files..." complete={props.input.pattern} part={props.part}>
-      Glob "{props.input.pattern}" <Show when={props.input.path}>in {normalizePath(props.input.path)} </Show>
+      Glob "{props.input.pattern}" <Show when={props.input.path}>in {pathFormatter.format(props.input.path)} </Show>
       <Show when={props.metadata.count}>
         ({props.metadata.count} {props.metadata.count === 1 ? "match" : "matches"})
       </Show>
@@ -2173,6 +2158,7 @@ function Glob(props: ToolProps<typeof GlobTool>) {
 
 function Read(props: ToolProps<typeof ReadTool>) {
   const { theme } = useTheme()
+  const pathFormatter = usePathFormatter()
   const isRunning = createMemo(() => props.part.state.status === "running")
   const loaded = createMemo(() => {
     if (props.part.state.status !== "completed") return []
@@ -2190,13 +2176,13 @@ function Read(props: ToolProps<typeof ReadTool>) {
         spinner={isRunning()}
         part={props.part}
       >
-        Read {normalizePath(props.input.filePath!)} {input(props.input, ["filePath"])}
+        Read {pathFormatter.format(props.input.filePath)} {input(props.input, ["filePath"])}
       </InlineTool>
       <For each={loaded()}>
         {(filepath) => (
           <box paddingLeft={3}>
             <text paddingLeft={3} fg={theme.textMuted}>
-              ↳ Loaded {normalizePath(filepath)}
+              ↳ Loaded {pathFormatter.format(filepath)}
             </text>
           </box>
         )}
@@ -2206,9 +2192,10 @@ function Read(props: ToolProps<typeof ReadTool>) {
 }
 
 function Grep(props: ToolProps<typeof GrepTool>) {
+  const pathFormatter = usePathFormatter()
   return (
     <InlineTool icon="✱" pending="Searching content..." complete={props.input.pattern} part={props.part}>
-      Grep "{props.input.pattern}" <Show when={props.input.path}>in {normalizePath(props.input.path)} </Show>
+      Grep "{props.input.pattern}" <Show when={props.input.path}>in {pathFormatter.format(props.input.path)} </Show>
       <Show when={props.metadata.matches}>
         ({props.metadata.matches} {props.metadata.matches === 1 ? "match" : "matches"})
       </Show>
@@ -2237,6 +2224,7 @@ function WebSearch(props: ToolProps<typeof WebSearchTool>) {
 // kilocode_change start
 function BackgroundProcess(props: ToolProps<typeof BackgroundProcessTool>) {
   const sync = useSync()
+  const pathFormatter = usePathFormatter()
   const running = createMemo(() => props.part.state.status === "running")
   const cmd = createMemo(() => (typeof props.input.command === "string" ? props.input.command : ""))
   const action = createMemo(() => props.input.action ?? "start")
@@ -2245,10 +2233,10 @@ function BackgroundProcess(props: ToolProps<typeof BackgroundProcessTool>) {
     const raw = props.input.workdir
     if (!raw || raw === ".") return undefined
     const base = sync.path.directory
-    if (!base) return normalizePath(raw)
+    if (!base) return pathFormatter.format(raw)
     const abs = path.resolve(base, raw)
     if (abs === base) return undefined
-    return normalizePath(abs)
+    return pathFormatter.format(abs)
   })
   const status = createMemo(() => {
     if (typeof props.metadata.status === "string") return props.metadata.status
@@ -2281,13 +2269,14 @@ function BackgroundProcess(props: ToolProps<typeof BackgroundProcessTool>) {
 }
 
 function SemanticSearch(props: ToolProps<typeof SemanticSearchTool>) {
+  const pathFormatter = usePathFormatter()
   const meta = createMemo(() => props.metadata as { results?: { length: number }[] })
   const args = createMemo(() => props.input as { query?: string; path?: string })
   const count = createMemo(() => meta().results?.length ?? 0)
 
   return (
     <InlineTool icon="✱" pending="Searching codebase..." complete={args().query} part={props.part}>
-      Codebase Search "{args().query}" <Show when={args().path}>in {normalizePath(args().path!)} </Show>
+      Codebase Search "{args().query}" <Show when={args().path}>in {pathFormatter.format(args().path)} </Show>
       <Show when={count() > 0}>
         ({count()} {count() === 1 ? "result" : "results"})
       </Show>
@@ -2374,6 +2363,7 @@ function Task(props: ToolProps<typeof TaskTool>) {
 function Edit(props: ToolProps<typeof EditTool>) {
   const ctx = use()
   const { theme, syntax } = useTheme()
+  const pathFormatter = usePathFormatter()
 
   const view = createMemo(() => {
     const diffStyle = ctx.tui.diff_style
@@ -2390,7 +2380,7 @@ function Edit(props: ToolProps<typeof EditTool>) {
   return (
     <Switch>
       <Match when={props.metadata.diff !== undefined}>
-        <BlockTool title={"← Edit " + normalizePath(props.input.filePath!)} part={props.part}>
+        <BlockTool title={"← Edit " + pathFormatter.format(props.input.filePath)} part={props.part}>
           {/* kilocode_change start */}
           <box paddingLeft={1} flexDirection="column">
             <For each={hunks()}>
@@ -2430,7 +2420,7 @@ function Edit(props: ToolProps<typeof EditTool>) {
       </Match>
       <Match when={true}>
         <InlineTool icon="←" pending="Preparing edit..." complete={props.input.filePath} part={props.part}>
-          Edit {normalizePath(props.input.filePath!)} {input({ replaceAll: props.input.replaceAll })}
+          Edit {pathFormatter.format(props.input.filePath)} {input({ replaceAll: props.input.replaceAll })}
         </InlineTool>
       </Match>
     </Switch>
@@ -2440,6 +2430,7 @@ function Edit(props: ToolProps<typeof EditTool>) {
 function ApplyPatch(props: ToolProps<typeof ApplyPatchTool>) {
   const ctx = use()
   const { theme, syntax } = useTheme()
+  const pathFormatter = usePathFormatter()
 
   const files = createMemo(() => props.metadata.files ?? [])
 
@@ -2492,7 +2483,7 @@ function ApplyPatch(props: ToolProps<typeof ApplyPatchTool>) {
   function title(file: { type: string; relativePath: string; filePath: string; deletions: number }) {
     if (file.type === "delete") return "# Deleted " + file.relativePath
     if (file.type === "add") return "# Created " + file.relativePath
-    if (file.type === "move") return "# Moved " + normalizePath(file.filePath) + " → " + file.relativePath
+    if (file.type === "move") return "# Moved " + pathFormatter.format(file.filePath) + " → " + file.relativePath
     return "← Patched " + file.relativePath
   }
 
@@ -2610,20 +2601,6 @@ function Diagnostics(props: { diagnostics?: Record<string, Record<string, any>[]
       </box>
     </Show>
   )
-}
-
-function normalizePath(input?: string) {
-  if (!input) return ""
-
-  const cwd = process.cwd()
-  const absolute = path.isAbsolute(input) ? input : path.resolve(cwd, input)
-  const relative = path.relative(cwd, absolute)
-
-  if (!relative) return "."
-  if (!relative.startsWith("..")) return relative
-
-  // outside cwd - use absolute
-  return absolute
 }
 
 function input(input: Record<string, any>, omit?: string[]): string {

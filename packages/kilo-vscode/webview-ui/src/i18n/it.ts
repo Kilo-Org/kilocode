@@ -183,6 +183,9 @@ export const dict = {
   "model.preview.label.cached": "Cache",
   "model.preview.label.average": "Costo medio stimato",
   "model.preview.label.context": "Contesto",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Completamento",
+  "model.preview.label.costAttempt": "Costo / tentativo",
   "model.preview.value.notSupported": "Non supportato",
   "model.preview.tooltip.average":
     "Il costo medio stimato si basa su un rapporto tipico tra token di input, output e lettura cache.",

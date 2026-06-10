@@ -1,10 +1,10 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.3.29",
+  "version": "7.3.41",
   "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",
-  "private": true,
+  "private": false,
   "scripts": {
     "typecheck": "tsgo --noEmit",
     "test": "bun run script/test-runner.ts",
@@ -138,6 +138,7 @@
     "@pierre/diffs": "catalog:",
     "@secretlint/core": "10.2.2",
     "@secretlint/secretlint-rule-preset-recommend": "10.2.2",
+    "@silvia-odwyer/photon-node": "0.3.4",
     "@solid-primitives/event-bus": "1.1.2",
     "@solid-primitives/scheduled": "1.5.2",
     "@standard-schema/spec": "1.0.0",
@@ -200,5 +201,22 @@
   "overrides": {
     "drizzle-orm": "catalog:"
   },
-  "peerDependencies": {}
+  "peerDependencies": {},
+  "keywords": [
+    "cli",
+    "tui",
+    "terminal",
+    "ai",
+    "agent",
+    "assistant",
+    "coding-agent",
+    "kilo-code",
+    "kilo",
+    "opencode",
+    "ink",
+    "react",
+    "copilot",
+    "autocomplete",
+    "developer-tools"
+  ]
 }

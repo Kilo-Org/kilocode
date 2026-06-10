@@ -188,6 +188,75 @@ class TurnViewTest : BasePlatformTestCase() {
         assertEquals("hello world", view.markdown())
     }
 
+    fun `test consecutive reasoning parts reuse one view`() {
+        val message = msg("a1", "assistant")
+        message.parts["r1"] = reasoning("r1", "first ")
+        message.parts["r2"] = reasoning("r2", "second")
+
+        val mv = MessageView(message, openFile)
+
+        assertEquals(listOf("r1"), mv.partIds())
+        assertSame(mv.part("r1"), mv.part("r2"))
+        assertEquals("first second", (mv.part("r1") as ReasoningView).markdown())
+    }
+
+    fun `test delta for aliased reasoning appends to reused view`() {
+        val message = msg("a1", "assistant")
+        message.parts["r1"] = reasoning("r1", "first ")
+        message.parts["r2"] = reasoning("r2", "second")
+        val mv = MessageView(message, openFile)
+
+        assertTrue(mv.appendDelta("r2", " third"))
+
+        assertEquals("first second third", (mv.part("r1") as ReasoningView).markdown())
+    }
+
+    fun `test reasoning alias maps stay bounded across churn`() {
+        val mv = MessageView(msg("a1", "assistant"), openFile)
+
+        repeat(100) { i ->
+            mv.upsertPart(reasoning("r${i}a", "first $i "))
+            mv.upsertPart(reasoning("r${i}b", "second $i"))
+
+            assertEquals(listOf("r${i}a"), mv.partIds())
+            assertSame(mv.part("r${i}a"), mv.part("r${i}b"))
+            assertEquals(1, aliasSize(mv))
+            assertEquals(1, sourceSize(mv))
+            assertEquals(1, mv.componentCount)
+
+            mv.removePart("r${i}b")
+            mv.removePart("r${i}a")
+
+            assertTrue(mv.partIds().isEmpty())
+            assertEquals(0, aliasSize(mv))
+            assertEquals(0, sourceSize(mv))
+            assertEquals(0, mv.componentCount)
+        }
+    }
+
+    fun `test text between reasoning parts keeps separate views`() {
+        val message = msg("a1", "assistant")
+        message.parts["r1"] = reasoning("r1", "first")
+        message.parts["t1"] = text("t1", "middle")
+        message.parts["r2"] = reasoning("r2", "second")
+
+        val mv = MessageView(message, openFile)
+
+        assertEquals(listOf("r1", "t1", "r2"), mv.partIds())
+        assertNotSame(mv.part("r1"), mv.part("r2"))
+    }
+
+    fun `test blank reasoning part is invisible`() {
+        val message = msg("a1", "assistant")
+        message.parts["r1"] = reasoning("r1", "")
+        message.parts["t1"] = text("t1", "middle")
+
+        val mv = MessageView(message, openFile)
+
+        assertFalse(mv.part("r1")!!.isVisible)
+        assertTrue(mv.part("t1")!!.isVisible)
+    }
+
     fun `test appendDelta for unknown part id is noop`() {
         val mv = MessageView(msg("a1", "assistant"), openFile)
         // Must not throw
@@ -226,7 +295,7 @@ class TurnViewTest : BasePlatformTestCase() {
 
     fun `test assistant card parts use shared compact gap`() {
         val message = msg("a1", "assistant")
-        val reasoning = Reasoning("r1")
+        val reasoning = reasoning("r1", "thinking")
         val tool = Tool("t1", "read", toolKind("read")).also { it.state = ToolExecState.COMPLETED }
         message.parts["r1"] = reasoning
         message.parts["t1"] = tool
@@ -262,6 +331,23 @@ class TurnViewTest : BasePlatformTestCase() {
 
     private fun msg(id: String, role: String): Message =
         Message(MessageDto(id = id, sessionID = "ses", role = role, time = MessageTimeDto(0.0)))
+
+    private fun reasoning(id: String, content: String) = Reasoning(id).also {
+        it.done = false
+        it.content.append(content)
+    }
+
+    private fun text(id: String, content: String) = Text(id).also { it.content.append(content) }
+
+    private fun aliasSize(view: MessageView) = mapSize(view, "aliases")
+
+    private fun sourceSize(view: MessageView) = mapSize(view, "sources")
+
+    private fun mapSize(view: MessageView, name: String): Int {
+        val field = MessageView::class.java.getDeclaredField(name)
+        field.isAccessible = true
+        return (field.get(view) as Map<*, *>).size
+    }
 
     private class TrackingRepaintManager(private val watched: Set<JComponent>) : RepaintManager() {
         val dirty = mutableListOf<JComponent>()

@@ -41,6 +41,8 @@ import javax.swing.JPanel
 class BaseQuestionView(
     private val selection: SessionSelection? = null,
 ) : RoundedContentPanel(
+    UiStyle.Gap.pad(),
+    UiStyle.Gap.pad(),
     UiStyle.Gap.lg(),
     UiStyle.Gap.pad(),
 ), SessionEditorStyleTarget {
@@ -95,6 +97,7 @@ class BaseQuestionView(
     private var top: JComponent? = null
     private var content: JComponent? = null
     private var actionLeft: JComponent? = null
+    private var gap = UiStyle.Gap.lg()
 
     // action buttons keyed by id for retained updates
     private val actionButtons = mutableMapOf<String, JButton>()
@@ -180,6 +183,15 @@ class BaseQuestionView(
         this.content = content
         syncNorth()
         content?.let { add(it, BorderLayout.CENTER) }
+        revalidate()
+        repaint()
+    }
+
+    @RequiresEdt
+    fun setSpacing(top: Int, gap: Int) {
+        this.gap = gap
+        border = JBUI.Borders.empty(top, UiStyle.Gap.pad(), UiStyle.Gap.lg(), UiStyle.Gap.pad())
+        syncNorth()
         revalidate()
         repaint()
     }
@@ -275,9 +287,9 @@ class BaseQuestionView(
 
     // ---- contentColor override ----
 
-    override fun contentColor(): Color = SessionUiStyle.View.surface()
+    override fun contentColor(): Color = SessionUiStyle.View.Surface.bgColor()
 
-    override fun outlineColor(): Color = SessionUiStyle.View.line()
+    override fun outlineColor(): Color = SessionUiStyle.View.Outline.brightColor()
 
     // ---- private helpers ----
 
@@ -285,7 +297,7 @@ class BaseQuestionView(
         north.removeAll()
         top?.let { north.next(it) }
         north.next(header)
-        if (content != null) north.fill(UiStyle.Gap.md())
+        if (content != null) north.fill(gap)
         north.revalidate()
         north.repaint()
     }
@@ -383,7 +395,7 @@ class BaseQuestionView(
             }
 
             private fun syncBackground() {
-                background = SessionUiStyle.View.surface()
+                background = SessionUiStyle.View.Surface.bgColor()
             }
         }
         btn.addActionListener { actionHandlers[id]?.invoke() }

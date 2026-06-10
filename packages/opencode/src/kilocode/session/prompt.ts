@@ -11,6 +11,7 @@ import { Instance } from "@/project/instance"
 import type { SessionStatus } from "@/session/status"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { PlanFollowup } from "@/kilocode/plan-followup"
+import { PlanFile } from "@/kilocode/plan-file"
 import { KiloSession } from "@/kilocode/session"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { Permission } from "@/permission"
@@ -23,7 +24,21 @@ import PROMPT_PLAN from "@/session/prompt/plan.txt"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
 export namespace KiloSessionPrompt {
-  const modes = ["ask", "plan"]
+  const modes = ["ask", "plan", "architect"]
+
+  export function titleID(sessionID: SessionID) {
+    return `title-${sessionID}`
+  }
+
+  function mode(name: string) {
+    return name.toLowerCase()
+  }
+
+  function planning(input: { name: string; options?: Record<string, unknown> }) {
+    const id = typeof input.options?.id === "string" ? mode(input.options.id) : undefined
+    const name = mode(input.name)
+    return id === "architect" || name === "plan" || name === "architect"
+  }
 
   /**
    * Determines whether the plan follow-up prompt should be shown.
@@ -123,7 +138,7 @@ export namespace KiloSessionPrompt {
     session: Pick<Session.Info, "permission">
   }) {
     const rules = input.session.permission ?? []
-    if (!modes.includes(input.agent.name)) return rules
+    if (!modes.includes(mode(input.agent.name))) return rules
     return Permission.merge(
       rules,
       input.agent.permission,
@@ -132,7 +147,7 @@ export namespace KiloSessionPrompt {
   }
 
   export function hardPermissions(input: { agent: { name: string; permission: Permission.Ruleset } }) {
-    if (!modes.includes(input.agent.name)) return
+    if (!modes.includes(mode(input.agent.name))) return
     return input.agent.permission
   }
 
@@ -250,32 +265,56 @@ export namespace KiloSessionPrompt {
     agent: { name: string; options?: Record<string, unknown> }
     session: Session.Info
     userMessage: MessageV2.WithParts
+    messages?: MessageV2.WithParts[]
   }) {
-    if (input.agent.name !== "plan" && input.agent.options?.id !== "architect") return
+    if (!planning(input.agent)) return
+    const add = (text: string) =>
+      input.userMessage.parts.push({
+        id: PartID.ascending(),
+        messageID: input.userMessage.info.id,
+        sessionID: input.userMessage.info.sessionID,
+        type: "text",
+        text,
+        synthetic: true,
+      })
+
     // keep bind(): inside Effect.promise the project context is lost, so Instance.current throws without it
-    const plan = InstanceState.bind(() => Session.plan(input.session, Instance.current))()
-    const exists = await Filesystem.exists(plan)
-    if (!exists) await ensurePlanDir(path.dirname(plan))
-    const info = exists
-      ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.`
-      : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`
-    const limit =
-      input.agent.name === "plan"
-        ? "This is the ONLY file you are allowed to write to or edit."
-        : "Use this as the main plan file to write or edit. Do not write or edit other files unless the user explicitly asks and your permissions allow it."
-    const planFile = `## Plan File\n${info}\n${limit}`
-    const text =
-      input.agent.name === "plan"
-        ? `${PROMPT_PLAN}\n\n${planFile}`
-        : `<system-reminder>\n${planFile} Before writing this file or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the main plan to this exact file, then call plan_exit with no arguments. If the user explicitly asks for additional plan files and your permissions allow it, you may create them and reference them from the main plan.\n</system-reminder>`
-    input.userMessage.parts.push({
-      id: PartID.ascending(),
-      messageID: input.userMessage.info.id,
-      sessionID: input.userMessage.info.sessionID,
-      type: "text",
-      text,
-      synthetic: true,
-    })
+    const ctx = InstanceState.bind(() => Instance.current)()
+    const plan = Session.plan(input.session, ctx)
+
+    if (mode(input.agent.name) === "plan") {
+      add(
+        [
+          PROMPT_PLAN,
+          "",
+          "## Plan File",
+          "Use the plan path specified by the user or project instructions when present and permissions allow it.",
+          "If none is specified, create a plan in .kilo/plans/ using a concise kebab-case filename based on the plan details.",
+          "Do not choose .kilo/plans/ when instructions specify an allowed plan path such as .plans/.",
+          "You may write/edit plan Markdown files only. Do not edit source files.",
+          "When finalizing, call plan_exit with the path of the plan file you wrote.",
+        ].join("\n"),
+      )
+      return
+    }
+
+    const file = input.messages ? PlanFile.latest(input.messages) : undefined
+    const saved = PlanFile.resolve(file, ctx)
+    const target = saved ?? plan
+    const dir = path.dirname(target)
+    if (saved && !(await Filesystem.exists(target))) await ensurePlanDir(dir)
+
+    const info = saved
+      ? `The current saved plan file is ${target}. Read and edit this file when refining the plan.`
+      : `Use the plan path specified by the user or project instructions when present and permissions allow it. If none is specified, create a plan in ${dir} using a concise kebab-case filename based on the plan details.`
+    const body = [
+      "## Plan File",
+      info,
+      "Use the chosen plan path as the main plan file. Do not write or edit other files unless the user explicitly asks and your permissions allow it.",
+      "Project/user instructions about plan location (for example .plans/) are authorized when permissions allow them; they do not conflict with this reminder. When finalizing, call plan_exit with the path of the plan file you wrote.",
+      'Before creating or updating the plan file, or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the main plan file, then call plan_exit.',
+    ].join("\n")
+    add(`<system-reminder>\n${body}\n</system-reminder>`)
   }
 
   /**

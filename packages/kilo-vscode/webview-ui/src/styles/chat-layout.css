@@ -161,6 +161,12 @@
   color: var(--vscode-descriptionForeground);
 }
 
+.working-indicator-slot {
+  /* Offset the session actions appearing when work finishes. */
+  min-height: 10px;
+  flex-shrink: 0;
+}
+
 .working-text {
   flex: 1;
   min-width: 0;
