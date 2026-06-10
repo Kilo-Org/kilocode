@@ -64,7 +64,7 @@ async function userMsg(sid: string) {
   return id
 }
 
-async function asstMsg(sid: string, parent: string) {
+async function asstMsg(sid: string, parent: string, cost = 0) {
   const id = MessageID.ascending()
   await sessions.updateMessage({
     id,
@@ -77,11 +77,53 @@ async function asstMsg(sid: string, parent: string) {
     mode: "",
     agent: "test",
     path: { cwd: "/tmp", root: "/tmp" },
-    cost: 0,
+    cost,
     tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
   } as MessageV2.Assistant)
   return id
 }
+
+describe("Session.fork cost accounting", () => {
+  test(
+    "forked sessions start with zero cost",
+    async () => {
+      await using tmp = await tmpdir({ git: true })
+      await WithInstance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          const original = await sessions.create({ title: "original" })
+          const user = await userMsg(original.id)
+          const assistant = await asstMsg(original.id, user, 0.42)
+          await sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: assistant,
+            sessionID: original.id,
+            type: "step-finish",
+            reason: "stop",
+            cost: 0.42,
+            tokens: { input: 1, output: 1, reasoning: 0, cache: { read: 0, write: 0 } },
+          } as MessageV2.StepFinishPart)
+
+          const forked = await Session.fork({ sessionID: original.id })
+          const source = await sessions.messages({ sessionID: original.id })
+          const copy = await sessions.messages({ sessionID: forked.id })
+          const cost = (msgs: MessageV2.WithParts[]) =>
+            msgs.reduce((sum, msg) => sum + (msg.info.role === "assistant" ? msg.info.cost : 0), 0)
+          const steps = (msgs: MessageV2.WithParts[]) =>
+            msgs
+              .flatMap((msg) => msg.parts)
+              .reduce((sum, part) => sum + (part.type === "step-finish" ? part.cost : 0), 0)
+
+          expect(cost(source)).toBe(0.42)
+          expect(cost(copy)).toBe(0)
+          expect(steps(source)).toBe(0.42)
+          expect(steps(copy)).toBe(0)
+        },
+      })
+    },
+    { timeout: 30000 },
+  )
+})
 
 describe("Session.fork child session remapping", () => {
   test(

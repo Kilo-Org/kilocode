@@ -73,7 +73,7 @@ open class TextView(
 
     protected open fun styleFont(style: SessionEditorStyle) = style.transcriptFont
 
-    protected open fun styleBackground(style: SessionEditorStyle) = SessionUiStyle.View.transcript()
+    protected open fun styleBackground(style: SessionEditorStyle) = SessionUiStyle.Transcript.bgColor()
 
     private fun refresh() {
         revalidate()
