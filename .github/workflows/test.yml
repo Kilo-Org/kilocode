@@ -14,6 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
+  actions: read # kilocode_change - read prior test-result artifacts for historical test health
   contents: read
   checks: write
 
@@ -94,6 +95,26 @@ jobs:
           include_time_in_summary: true
           fail_on_failure: false
 
+      # kilocode_change start
+      - name: Report historical test health
+        if: ${{ always() && !cancelled() && hashFiles('packages/*/.artifacts/unit/junit.xml') != '' }}
+        uses: ctrf-io/github-test-reporter@0f299074936c32ccaab5be5230511f6b2b9080aa # v1.0.28
+        with:
+          report-path: packages/*/.artifacts/unit/junit.xml
+          integrations-config: '{"junit-to-ctrf":{"enabled":true,"action":"convert"}}'
+          use-suite-name: true
+          insights-report: true
+          flaky-rate-report: true
+          fail-rate-report: true
+          slowest-report: true
+          upload-artifact: true
+          artifact-name: test-health-${{ matrix.settings.name }}
+          max-previous-runs-to-fetch: 100
+          annotate: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # kilocode_change end
+
       - name: Upload unit artifacts
         if: always()
         uses: actions/upload-artifact@v7 # kilocode_change
@@ -144,6 +165,24 @@ jobs:
           detailed_summary: true
           include_time_in_summary: true
           fail_on_failure: false
+
+      - name: Report historical JetBrains test health
+        if: ${{ always() && !cancelled() && hashFiles('packages/kilo-jetbrains/.artifacts/unit/junit.xml') != '' }}
+        uses: ctrf-io/github-test-reporter@0f299074936c32ccaab5be5230511f6b2b9080aa # v1.0.28
+        with:
+          report-path: packages/kilo-jetbrains/.artifacts/unit/junit.xml
+          integrations-config: '{"junit-to-ctrf":{"enabled":true,"action":"convert"}}'
+          use-suite-name: true
+          insights-report: true
+          flaky-rate-report: true
+          fail-rate-report: true
+          slowest-report: true
+          upload-artifact: true
+          artifact-name: test-health-jetbrains
+          max-previous-runs-to-fetch: 100
+          annotate: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload JetBrains unit artifacts
         if: always()

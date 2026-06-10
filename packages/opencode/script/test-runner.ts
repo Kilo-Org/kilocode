@@ -382,6 +382,22 @@ async function merge() {
     counts.failures++
   }
 
+  // Preserve pass-on-retry evidence in the standard Surefire JUnit form.
+  // Historical reporters can then track file-level flakes instead of seeing
+  // only the final green attempt.
+  for (const result of flaky) {
+    const secs = (result.duration / 1000).toFixed(3)
+    const msg = `Failed before passing on attempt ${result.attempts} of ${retries + 1}`
+    suites.push(
+      `  <testsuite name="${esc(result.file)} retry" tests="1" failures="0" errors="0" time="${secs}">\n` +
+        `    <testcase name="@file retry" classname="${esc(result.file)}" time="${secs}">\n` +
+        `      <flakyFailure message="${esc(msg)}">${esc(msg)}</flakyFailure>\n` +
+        `    </testcase>\n` +
+        `  </testsuite>`,
+    )
+    counts.tests++
+  }
+
   const body = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     `<testsuites tests="${counts.tests}" failures="${counts.failures}" errors="${counts.errors}" time="${elapsed.toFixed(3)}">`,
