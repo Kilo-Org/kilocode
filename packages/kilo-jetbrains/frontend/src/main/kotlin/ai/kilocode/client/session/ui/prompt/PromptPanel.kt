@@ -491,10 +491,10 @@ class PromptPanel(
         override fun outlineColor() = if (UIUtil.isFocusAncestor(editor)) {
             JBUI.CurrentTheme.Focus.focusColor()
         } else {
-            SessionUiStyle.View.line()
+            SessionUiStyle.View.Outline.brightColor()
         }
 
-        override fun outlineWidth() = if (UIUtil.isFocusAncestor(editor)) focus.get() else JBUI.scale(1)
+        override fun outlineWidth() = if (UIUtil.isFocusAncestor(editor)) focus.get() else SessionUiStyle.View.Outline.width()
 
         override fun cornerArc() = JBUI.scale(JBUI.getInt("Button.arc", SessionUiStyle.View.Prompt.CORNER_ARC))
     }

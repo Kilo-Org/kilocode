@@ -157,7 +157,7 @@ class SessionSelection : Disposable {
 
         override fun clearSelection() {
             val pos = component.selectionStart.coerceIn(0, component.document.length)
-            component.select(pos, pos)
+            component.caretPosition = pos
         }
 
         override fun applyStyle(style: SessionEditorStyle) {

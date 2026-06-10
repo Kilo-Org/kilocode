@@ -7,6 +7,8 @@
 - <https://api.apertis.ai/v1>
   <!-- packages/opencode/src/provider/model-cache.ts -->
   <!-- packages/opencode/src/provider/models.ts -->
+- <https://api.digitalocean.com>
+  <!-- packages/opencode/src/plugin/digitalocean.ts -->
 - <https://api.kilo.ai>
   <!-- packages/opencode/src/cli/cmd/github.ts -->
 - <https://api.x.ai/v1>
@@ -43,10 +45,10 @@
   <!-- packages/opencode/src/provider/error.ts -->
 - <https://cli.github.com/>
   <!-- packages/kilo-vscode/src/agent-manager/WorktreeManager.ts -->
+- <https://cloud.digitalocean.com/v1/oauth/authorize>
+  <!-- packages/opencode/src/plugin/digitalocean.ts -->
 - <https://cloudflare.com/cdn-cgi/trace>
   <!-- packages/opencode/src/session/network.ts -->
-- <https://cookbook.openai.com/examples/using_logprobs>
-  <!-- packages/opencode/src/provider/sdk/copilot/responses/openai-responses-language-model.ts -->
 - <https://docs.github.com/en/actions/how-tos/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services>
   <!-- packages/opencode/src/cli/cmd/github.ts -->
 - <https://docs.inceptionlabs.ai/capabilities/next-edit>
@@ -94,6 +96,8 @@
   <!-- packages/opencode/src/server/server.ts -->
 - <https://gitlab.com>
   <!-- packages/opencode/src/provider/provider.ts -->
+- <https://inference.do-ai.run/v1>
+  <!-- packages/opencode/src/plugin/digitalocean.ts -->
 - <https://julialang.org/downloads/>
   <!-- packages/opencode/src/lsp/server.ts -->
 - <https://kilo.ai>
@@ -116,8 +120,6 @@
   <!-- packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx -->
 - <https://kilo.ai/gateway>
   <!-- packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx -->
-- <https://kilo.ai/install>
-  <!-- packages/opencode/src/installation/index.ts -->
 - <https://kilo.ai/kiloclaw>
   <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/SetupView.tsx -->
   <!-- packages/opencode/src/kilocode/components/dialog-claw-setup.tsx -->
@@ -126,10 +128,6 @@
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
 - <https://kilocode.ai>
   <!-- packages/opencode/src/kilocode/const.ts -->
-- <https://models.dev>
-  <!-- packages/opencode/src/provider/models.ts -->
-- <https://models.dev/model-schema.json#/$defs/Model>
-  <!-- packages/opencode/src/config/model-id.ts -->
 - <https://opencode.ai/>
   <!-- packages/opencode/src/cli/cmd/generate.ts -->
   <!-- packages/opencode/src/kilocode/server/httpapi/public.ts -->
@@ -143,6 +141,8 @@
   <!-- packages/opencode/src/cli/cmd/providers.ts -->
 - <https://opencode.ai/go>
   <!-- packages/opencode/src/cli/cmd/tui/component/dialog-retry-action.tsx -->
+- <https://opencode.ai/install>
+  <!-- packages/opencode/src/installation/index.ts -->
 - <https://opencode.ai/tui.json>
   <!-- packages/opencode/src/cli/cmd/tui/config/tui-migrate.ts -->
 - <https://opencode.ai/zen>
@@ -151,12 +151,6 @@
   <!-- packages/opencode/src/kilocode/session/index.ts -->
 - <https://opncd.ai>
   <!-- packages/opencode/src/share/share-next.ts -->
-- <https://platform.openai.com/docs/api-reference/responses/create>
-  <!-- packages/opencode/src/provider/sdk/copilot/responses/openai-responses-language-model.ts -->
-- <https://platform.openai.com/docs/api-reference/responses/create#responses_create-top_logprobs>
-  <!-- packages/opencode/src/provider/sdk/copilot/responses/openai-responses-language-model.ts -->
-- <https://platform.openai.com/docs/guides/reasoning#limitations>
-  <!-- packages/opencode/src/provider/sdk/copilot/responses/openai-responses-language-model.ts -->
 - <https://reddit.com/r/kilocode>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
 - <https://search.parallel.ai/mcp>

@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { Effect, Exit, Layer } from "effect"
 import { Agent } from "../../src/agent/agent"
+import { BackgroundJob } from "../../src/background/job"
+import { Bus } from "../../src/bus"
+import { SessionRunState } from "../../src/session/run-state"
+import { SessionStatus } from "../../src/session/status"
 import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -24,7 +29,12 @@ const ref = {
 const it = testEffect(
   Layer.mergeAll(
     Agent.defaultLayer,
+    BackgroundJob.defaultLayer,
+    Bus.defaultLayer,
     Config.defaultLayer,
+    RuntimeFlags.layer(),
+    SessionRunState.defaultLayer,
+    SessionStatus.defaultLayer,
     CrossSpawnSpawner.defaultLayer,
     Session.defaultLayer,
     Truncate.defaultLayer,
@@ -67,40 +77,42 @@ const seed = Effect.fn("NestedTaskToolTest.seed")(function* () {
 })
 
 function stubOps(opts?: { onPrompt?: (input: SessionPrompt.PromptInput) => void }): TaskPromptOps {
+  const prompt = (input: SessionPrompt.PromptInput) =>
+    Effect.sync(() => {
+      opts?.onPrompt?.(input)
+      const id = MessageID.ascending()
+      return {
+        info: {
+          id,
+          role: "assistant",
+          parentID: input.messageID ?? MessageID.ascending(),
+          sessionID: input.sessionID,
+          mode: input.agent ?? "general",
+          agent: input.agent ?? "general",
+          cost: 0,
+          path: { cwd: "/tmp", root: "/tmp" },
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          modelID: ref.modelID,
+          providerID: ref.providerID,
+          time: { created: Date.now() },
+          finish: "stop",
+        },
+        parts: [
+          {
+            id: PartID.ascending(),
+            messageID: id,
+            sessionID: input.sessionID,
+            type: "text",
+            text: "done",
+          },
+        ],
+      } satisfies MessageV2.WithParts
+    })
   return {
     cancel: () => Effect.void,
     resolvePromptParts: (template) => Effect.succeed([{ type: "text" as const, text: template }]),
-    prompt: (input) =>
-      Effect.sync(() => {
-        opts?.onPrompt?.(input)
-        const id = MessageID.ascending()
-        return {
-          info: {
-            id,
-            role: "assistant",
-            parentID: input.messageID ?? MessageID.ascending(),
-            sessionID: input.sessionID,
-            mode: input.agent ?? "general",
-            agent: input.agent ?? "general",
-            cost: 0,
-            path: { cwd: "/tmp", root: "/tmp" },
-            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-            modelID: ref.modelID,
-            providerID: ref.providerID,
-            time: { created: Date.now() },
-            finish: "stop",
-          },
-          parts: [
-            {
-              id: PartID.ascending(),
-              messageID: id,
-              sessionID: input.sessionID,
-              type: "text",
-              text: "done",
-            },
-          ],
-        } satisfies MessageV2.WithParts
-      }),
+    prompt,
+    loop: (input) => prompt({ sessionID: input.sessionID, parts: [] }),
   }
 }
 

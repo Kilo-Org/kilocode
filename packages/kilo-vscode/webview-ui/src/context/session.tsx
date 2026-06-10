@@ -25,6 +25,7 @@ import { useLanguage } from "./language"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type {
   SessionInfo,
+  SessionUpdate,
   Message,
   Part,
   PartDelta,
@@ -1636,11 +1637,12 @@ export const SessionProvider: ParentComponent = (props) => {
     setStore("todos", sessionID, items)
   }
 
-  function handleSessionUpdated(session: SessionInfo) {
+  function handleSessionUpdated(session: SessionUpdate) {
+    const changed = session.revert !== undefined
     const prev = store.sessions[session.id]?.revert
     const next = session.revert ?? undefined
     setStore("sessions", session.id, session)
-    if (prev?.messageID === next?.messageID && prev?.partID === next?.partID) return
+    if (!changed || (prev?.messageID === next?.messageID && prev?.partID === next?.partID)) return
     clearClose(session.id)
     resetTodos(session.id, next)
   }

@@ -4,9 +4,12 @@ import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.ui.JBUI
 
 /**
  * Verifies [ProgressPanel] show/hide behaviour driven by direct [SessionModel]
@@ -43,6 +46,15 @@ class ProgressPanelTest : BasePlatformTestCase() {
 
         assertTrue(panel.isVisible)
         assertEquals("Thinking\u2026", panel.labelText())
+    }
+
+    fun `test panel uses transcript row padding`() {
+        val ins = panel.insets
+
+        assertEquals(UiStyle.Gap.sm(), ins.top)
+        assertEquals(JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING), ins.left)
+        assertEquals(0, ins.bottom)
+        assertEquals(0, ins.right)
     }
 
     fun `test panel hides on Idle`() {

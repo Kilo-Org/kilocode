@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import type { KiloClient, Event } from "@kilocode/sdk/v2/client"
+import type { KiloClient } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
 
 /**
@@ -83,7 +83,7 @@ export function registerToggleAutoApprove(
     return active
   }
 
-  const unsubscribe = connectionService.onEvent((event: Event, directory?: string) => {
+  const unsubscribe = connectionService.onEvent((event, directory) => {
     if (!active) return
     if (event.type !== "permission.asked") return
     const client = tryGetClient(connectionService)

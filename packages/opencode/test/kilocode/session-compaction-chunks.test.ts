@@ -4,6 +4,7 @@ import * as Stream from "effect/Stream"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Image } from "../../src/image/image"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
@@ -219,11 +220,12 @@ function runtime(layer: Layer.Layer<LLM.Service>, context = 7_000) {
       Layer.provide(Agent.defaultLayer),
       Layer.provide(Plugin.defaultLayer),
       Layer.provide(SyncEvent.defaultLayer),
+      Layer.provide(RuntimeFlags.layer()),
       Layer.provide(status),
       Layer.provide(bus),
       Layer.provide(
         Layer.mock(Config.Service)({
-          get: () => Effect.succeed({ ...Config.Info.zod.parse({}), compaction: { reserved: 1_000 } }),
+          get: () => Effect.succeed({ ...{}, compaction: { reserved: 1_000 } }),
         }),
       ),
     ),
@@ -284,10 +286,11 @@ function fakeRuntime() {
         Layer.provide(Agent.defaultLayer),
         Layer.provide(Plugin.defaultLayer),
         Layer.provide(SyncEvent.defaultLayer),
+        Layer.provide(RuntimeFlags.layer()),
         Layer.provide(bus),
         Layer.provide(
           Layer.mock(Config.Service)({
-            get: () => Effect.succeed({ ...Config.Info.zod.parse({}), compaction: { reserved: 1_000 } }),
+            get: () => Effect.succeed({ ...{}, compaction: { reserved: 1_000 } }),
           }),
         ),
       ),
@@ -314,11 +317,12 @@ function liveRuntime(layer: Layer.Layer<LLM.Service>, context = 10_000) {
       Layer.provide(Agent.defaultLayer),
       Layer.provide(Plugin.defaultLayer),
       Layer.provide(SyncEvent.defaultLayer),
+      Layer.provide(RuntimeFlags.layer()),
       Layer.provide(status),
       Layer.provide(bus),
       Layer.provide(
         Layer.mock(Config.Service)({
-          get: () => Effect.succeed({ ...Config.Info.zod.parse({}), compaction: { reserved: 1_000 } }),
+          get: () => Effect.succeed({ ...{}, compaction: { reserved: 1_000 } }),
         }),
       ),
     ),
@@ -372,7 +376,13 @@ describe("KiloCompactionChunks", () => {
         const second = await user(session.id, "second " + "c".repeat(10_000))
         await assistant(session.id, second.id, tmp.path, "reply " + "d".repeat(10_000))
         await Effect.runPromise(
-          KiloSessionCompaction.create({ session: store, sessionID: session.id, agent: "build", model: ref, auto: false }),
+          KiloSessionCompaction.create({
+            session: store,
+            sessionID: session.id,
+            agent: "build",
+            model: ref,
+            auto: false,
+          }),
         )
 
         const { rt, calls } = fakeRuntime()
@@ -420,7 +430,13 @@ describe("KiloCompactionChunks", () => {
         const second = await user(session.id, "second " + "c".repeat(10_000))
         await assistant(session.id, second.id, tmp.path, "reply " + "d".repeat(10_000))
         await Effect.runPromise(
-          KiloSessionCompaction.create({ session: store, sessionID: session.id, agent: "build", model: ref, auto: false }),
+          KiloSessionCompaction.create({
+            session: store,
+            sessionID: session.id,
+            agent: "build",
+            model: ref,
+            auto: false,
+          }),
         )
 
         const { rt, calls } = fakeRuntime()
@@ -458,7 +474,13 @@ describe("KiloCompactionChunks", () => {
         const first = await user(session.id, "first " + "a".repeat(20_000))
         await assistant(session.id, first.id, tmp.path, "reply " + "b".repeat(20_000))
         await Effect.runPromise(
-          KiloSessionCompaction.create({ session: store, sessionID: session.id, agent: "build", model: ref, auto: false }),
+          KiloSessionCompaction.create({
+            session: store,
+            sessionID: session.id,
+            agent: "build",
+            model: ref,
+            auto: false,
+          }),
         )
 
         const { rt, calls } = fakeRuntime()
@@ -503,7 +525,13 @@ describe("KiloCompactionChunks", () => {
         const session = await svc.create({})
         const first = await user(session.id, "single huge request " + "a".repeat(80_000))
         await Effect.runPromise(
-          KiloSessionCompaction.create({ session: store, sessionID: session.id, agent: "build", model: ref, auto: false }),
+          KiloSessionCompaction.create({
+            session: store,
+            sessionID: session.id,
+            agent: "build",
+            model: ref,
+            auto: false,
+          }),
         )
 
         const { rt, calls } = fakeRuntime()
@@ -543,7 +571,13 @@ describe("KiloCompactionChunks", () => {
         const first = await user(session.id, "first " + "a".repeat(1_000))
         await assistant(session.id, first.id, tmp.path, "reply " + "b".repeat(1_000))
         await Effect.runPromise(
-          KiloSessionCompaction.create({ session: store, sessionID: session.id, agent: "build", model: ref, auto: false }),
+          KiloSessionCompaction.create({
+            session: store,
+            sessionID: session.id,
+            agent: "build",
+            model: ref,
+            auto: false,
+          }),
         )
 
         try {

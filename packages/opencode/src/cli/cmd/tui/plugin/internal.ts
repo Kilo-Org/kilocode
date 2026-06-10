@@ -6,6 +6,7 @@ import HomeOnboarding from "@/kilocode/plugins/home-onboarding"
 import KiloHomeFooter from "@/kilocode/plugins/home-footer"
 import KiloSidebarFooter from "@/kilocode/plugins/sidebar-footer"
 import KiloSidebarBackgroundProcesses from "@/kilocode/plugins/sidebar-background-processes"
+import KiloSidebarIndexing from "@/kilocode/plugins/sidebar-indexing"
 import KiloSidebarPr from "@/kilocode/plugins/sidebar-pr"
 import KiloSidebarUsage from "@/kilocode/plugins/sidebar-usage"
 // kilocode_change end
@@ -16,10 +17,11 @@ import SidebarTodo from "../feature-plugins/sidebar/todo"
 import SidebarFiles from "../feature-plugins/sidebar/files"
 import SidebarFooter from "../feature-plugins/sidebar/footer"
 import PluginManager from "../feature-plugins/system/plugins"
+import Notifications from "../feature-plugins/system/notifications"
 import SessionV2Debug from "../feature-plugins/system/session-v2"
 import WhichKey from "../feature-plugins/system/which-key"
 import type { TuiPlugin, TuiPluginModule } from "@kilocode/plugin/tui"
-import { Flag } from "@opencode-ai/core/flag/flag"
+import type { RuntimeFlags } from "@/effect/runtime-flags"
 
 export type InternalTuiPlugin = Omit<TuiPluginModule, "id"> & {
   id: string
@@ -27,23 +29,27 @@ export type InternalTuiPlugin = Omit<TuiPluginModule, "id"> & {
   enabled?: boolean
 }
 
-export const INTERNAL_TUI_PLUGINS: InternalTuiPlugin[] = [
-  HomeNews, // kilocode_change
-  HomeOnboarding, // kilocode_change
-  KiloHomeFooter, // kilocode_change
-  KiloSidebarFooter, // kilocode_change
-  KiloSidebarBackgroundProcesses, // kilocode_change
-  KiloSidebarPr, // kilocode_change
-  KiloSidebarUsage, // kilocode_change
-  HomeFooter,
-  HomeTips,
-  SidebarContext,
-  SidebarMcp,
-  SidebarLsp,
-  SidebarTodo,
-  SidebarFiles,
-  SidebarFooter,
-  PluginManager,
-  WhichKey,
-  ...(Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM ? [SessionV2Debug] : []),
-]
+export function internalTuiPlugins(flags: Pick<RuntimeFlags.Info, "experimentalEventSystem">): InternalTuiPlugin[] {
+  return [
+    HomeNews, // kilocode_change
+    HomeOnboarding, // kilocode_change
+    KiloHomeFooter, // kilocode_change
+    KiloSidebarFooter, // kilocode_change
+    KiloSidebarBackgroundProcesses, // kilocode_change
+    KiloSidebarIndexing, // kilocode_change
+    KiloSidebarPr, // kilocode_change
+    KiloSidebarUsage, // kilocode_change
+    HomeFooter,
+    HomeTips,
+    SidebarContext,
+    SidebarMcp,
+    SidebarLsp,
+    SidebarTodo,
+    SidebarFiles,
+    SidebarFooter,
+    Notifications,
+    PluginManager,
+    WhichKey,
+    ...(flags.experimentalEventSystem ? [SessionV2Debug] : []),
+  ]
+}

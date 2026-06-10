@@ -5,7 +5,14 @@ import type { SessionMode } from "../../context/worktree-mode"
 import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../marketplace"
 import type { ConnectionState, ServerInfo, SessionStatus } from "./connection"
 import type { FileAttachment, Part } from "./parts"
-import type { CloudSessionInfo, Message, MessageLoadMode, SessionCloseReason, SessionInfo } from "./sessions"
+import type {
+  CloudSessionInfo,
+  Message,
+  MessageLoadMode,
+  SessionCloseReason,
+  SessionInfo,
+  SessionUpdate,
+} from "./sessions"
 import type { PermissionRequest } from "./permissions"
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
@@ -159,7 +166,7 @@ export interface SessionForkedMessage {
 
 export interface SessionUpdatedMessage {
   type: "sessionUpdated"
-  session: SessionInfo
+  session: SessionUpdate
 }
 
 export interface SessionDeletedMessage {

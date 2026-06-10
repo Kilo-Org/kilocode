@@ -1,14 +1,14 @@
 import * as vscode from "vscode"
 import { ServerManager } from "./server-manager"
-import { createKiloClient, type KiloClient, type Event } from "@kilocode/sdk/v2/client"
-import { SdkSSEAdapter } from "./sdk-sse-adapter"
+import { createKiloClient, type KiloClient } from "@kilocode/sdk/v2/client"
+import { SdkSSEAdapter, type SSEPayload } from "./sdk-sse-adapter"
 import type { ServerConfig } from "./types"
 import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
-type SSEEventListener = (event: Event, directory?: string) => void
+type SSEEventListener = (event: SSEPayload, directory?: string) => void
 type StateListener = (state: ConnectionState, error?: Error) => void
-type SSEEventFilter = (event: Event, directory?: string) => boolean
+type SSEEventFilter = (event: SSEPayload, directory?: string) => boolean
 type NotificationDismissListener = (notificationId: string) => void
 type LanguageChangeListener = (locale: string) => void
 type ProfileChangeListener = (data: unknown) => void
@@ -234,7 +234,7 @@ export class KiloConnectionService {
    * Best-effort sessionID extraction for an SSE event.
    * Returns undefined for global events.
    */
-  resolveEventSessionId(event: Event): string | undefined {
+  resolveEventSessionId(event: SSEPayload): string | undefined {
     return resolveEventSessionIdPure(
       event,
       (messageId) => this.messageSessionIdsByMessageId.get(messageId),
