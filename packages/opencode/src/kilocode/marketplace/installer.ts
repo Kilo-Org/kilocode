@@ -9,7 +9,9 @@ import type { AgentItem, InstallPayload, Item, McpItem, Method, SkillItem, Targe
 import * as Paths from "./paths"
 
 function safe(id: string) {
-  return !!id && !id.includes("..") && !id.includes("/") && !id.includes("\\") && /^[\w\-@.]+$/.test(id)
+  if (!id || id === "." || id.includes("..") || id.includes("/") || id.includes("\\") || id.endsWith(".")) return false
+  if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(id)) return false
+  return /^[\w\-@.]+$/.test(id)
 }
 
 function json(raw: string) {

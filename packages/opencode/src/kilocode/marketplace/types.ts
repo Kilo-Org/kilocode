@@ -97,6 +97,7 @@ export const InstallPayload = Schema.Struct({
   type: Type,
   target: Schema.optional(Target),
   parameters: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
+  item: Schema.optional(Item),
 })
 export type InstallPayload = typeof InstallPayload.Type
 

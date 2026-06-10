@@ -6775,6 +6775,73 @@ export class Marketplace extends HeyApiClient {
       parameters?: {
         [key: string]: unknown
       }
+      item?:
+        | {
+            id: string
+            name: string
+            description: string
+            author?: string
+            authorUrl?: string
+            tags?: Array<string>
+            prerequisites?: Array<string>
+            type: "mcp"
+            url: string
+            content:
+              | string
+              | Array<{
+                  name: string
+                  content: string
+                  parameters?: Array<{
+                    name: string
+                    key: string
+                    placeholder?: string
+                    optional?: boolean
+                  }>
+                  prerequisites?: Array<string>
+                }>
+            parameters?: Array<{
+              name: string
+              key: string
+              placeholder?: string
+              optional?: boolean
+            }>
+          }
+        | {
+            id: string
+            name: string
+            description: string
+            author?: string
+            authorUrl?: string
+            tags?: Array<string>
+            prerequisites?: Array<string>
+            type: "agent"
+            content: {
+              mode: "primary" | "subagent" | "all"
+              description: string
+              prompt: string
+              options?: {
+                [key: string]: unknown
+              }
+              permission?: {
+                [key: string]: unknown
+              }
+            }
+          }
+        | {
+            id: string
+            name: string
+            description: string
+            author?: string
+            authorUrl?: string
+            tags?: Array<string>
+            prerequisites?: Array<string>
+            type: "skill"
+            category: string
+            githubUrl: string
+            content: string
+            displayName: string
+            displayCategory: string
+          }
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -6789,6 +6856,7 @@ export class Marketplace extends HeyApiClient {
             { in: "body", key: "type" },
             { in: "body", key: "target" },
             { in: "body", key: "parameters" },
+            { in: "body", key: "item" },
           ],
         },
       ],

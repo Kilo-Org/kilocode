@@ -50,7 +50,7 @@ import { GitOps } from "./agent-manager/GitOps"
 import { GitStatsPoller, type LocalStats } from "./agent-manager/GitStatsPoller"
 import { diffSummary as localDiffSummary } from "./agent-manager/local-diff"
 import { getWorkspaceRoot } from "./review-utils"
-import type { MarketplaceItem, RemoveResult } from "./services/marketplace/types"
+import type { InstallResult, MarketplaceItem, RemoveResult } from "./services/marketplace/types"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 import { resolveProjectDirectory } from "./project-directory"
 import { getBusySessionCount, seedSessionStatuses } from "./session-status"
@@ -2118,7 +2118,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async installMarketplaceItem(
     item: MarketplaceItem,
     options?: { target?: "project" | "global"; parameters?: Record<string, unknown> },
-  ): Promise<RemoveResult> {
+  ): Promise<InstallResult> {
     if (!this.client) return { success: false, slug: item.id, error: "Not connected to CLI backend" }
     const directory = this.getProjectDirectory(this.currentSession?.id) ?? this.getWorkspaceDirectory()
     const scope = options?.target ?? "project"
@@ -2133,7 +2133,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
     const { data } = await retry(() =>
       this.client!.kilocode.marketplace.install(
-        { id: item.id, type: item.type, target: options?.target, parameters: options?.parameters, directory },
+        { id: item.id, type: item.type, target: options?.target, parameters: options?.parameters, item, directory },
         { throwOnError: true },
       ),
     )

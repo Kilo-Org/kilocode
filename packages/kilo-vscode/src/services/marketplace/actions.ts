@@ -59,7 +59,7 @@ export async function installMarketplaceItem(
     const client = await ctx.connection.getClientAsync(dir)
     const { data } = await retry(() =>
       client.kilocode.marketplace.install(
-        { id: item.id, type: item.type, target: scope, parameters: opts.parameters, directory: dir },
+        { id: item.id, type: item.type, target: scope, parameters: opts.parameters, item, directory: dir },
         { throwOnError: true },
       ),
     )

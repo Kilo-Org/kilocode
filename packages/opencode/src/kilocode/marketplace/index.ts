@@ -18,7 +18,9 @@ export const data = Effect.fn("Marketplace.data")(function* (ctx: Paths.Ctx) {
 
 export const install = Effect.fn("Marketplace.install")(function* (payload: InstallPayload, ctx: Paths.Ctx) {
   const catalog = yield* Effect.promise(() => Catalog.all())
-  const item = catalog.items.find((item) => item.id === payload.id && item.type === payload.type)
+  const item =
+    catalog.items.find((item) => item.id === payload.id && item.type === payload.type) ??
+    (payload.item?.id === payload.id && payload.item.type === payload.type ? payload.item : undefined)
   if (!item) return { success: false, slug: payload.id, error: "Marketplace item not found" }
   return yield* Installer.install(item, payload, ctx)
 })

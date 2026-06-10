@@ -8862,6 +8862,73 @@ export type KilocodeMarketplaceInstallData = {
     parameters?: {
       [key: string]: unknown
     }
+    item?:
+      | {
+          id: string
+          name: string
+          description: string
+          author?: string
+          authorUrl?: string
+          tags?: Array<string>
+          prerequisites?: Array<string>
+          type: "mcp"
+          url: string
+          content:
+            | string
+            | Array<{
+                name: string
+                content: string
+                parameters?: Array<{
+                  name: string
+                  key: string
+                  placeholder?: string
+                  optional?: boolean
+                }>
+                prerequisites?: Array<string>
+              }>
+          parameters?: Array<{
+            name: string
+            key: string
+            placeholder?: string
+            optional?: boolean
+          }>
+        }
+      | {
+          id: string
+          name: string
+          description: string
+          author?: string
+          authorUrl?: string
+          tags?: Array<string>
+          prerequisites?: Array<string>
+          type: "agent"
+          content: {
+            mode: "primary" | "subagent" | "all"
+            description: string
+            prompt: string
+            options?: {
+              [key: string]: unknown
+            }
+            permission?: {
+              [key: string]: unknown
+            }
+          }
+        }
+      | {
+          id: string
+          name: string
+          description: string
+          author?: string
+          authorUrl?: string
+          tags?: Array<string>
+          prerequisites?: Array<string>
+          type: "skill"
+          category: string
+          githubUrl: string
+          content: string
+          displayName: string
+          displayCategory: string
+        }
   }
   path?: never
   query?: {
