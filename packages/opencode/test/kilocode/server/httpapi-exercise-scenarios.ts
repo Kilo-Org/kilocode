@@ -1,6 +1,7 @@
 import { Effect } from "effect"
 import { mkdir, rm } from "fs/promises"
 import path from "path"
+import * as Catalog from "@/kilocode/marketplace/catalog"
 import { array, check, object } from "../../server/httpapi-exercise/assertions"
 import { http, route } from "../../server/httpapi-exercise/dsl"
 import type { Scenario, ScenarioContext } from "../../server/httpapi-exercise/types"
@@ -16,6 +17,27 @@ function file(ctx: ScenarioContext, name: string, content: string) {
     await mkdir(path.dirname(target), { recursive: true })
     await Bun.write(target, content)
     return target
+  })
+}
+
+function marketplaceCatalog() {
+  return Effect.sync(() => {
+    Catalog.clear()
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = String(input)
+      const items = url.endsWith("/mcps")
+        ? [
+            {
+              id: "memory",
+              name: "Memory",
+              description: "Test MCP",
+              url: "https://example.com/memory",
+              content: JSON.stringify({ command: "memory", args: ["serve"] }),
+            },
+          ]
+        : []
+      return new Response(JSON.stringify({ items }), { status: 200 })
+    }) as typeof fetch
   })
 }
 
@@ -377,4 +399,39 @@ export const kiloScenarios: Scenario[] = [
     .post("/telemetry/setEnabled", "telemetry.setEnabled")
     .at((ctx) => ({ path: "/telemetry/setEnabled", headers: ctx.headers(), body: { enabled: true } }))
     .json(200, (body) => check(body === true, "telemetry enabled update should return true")),
+  http.protected
+    .get("/kilocode/marketplace", "kilocode.marketplace")
+    .probe({ path: "/path" })
+    .seeded(() => marketplaceCatalog())
+    .json(200, (body) => {
+      object(body)
+      array(body.marketplaceItems)
+      object(body.marketplaceInstalledMetadata)
+    }),
+  http.protected
+    .post("/kilocode/marketplace/install", "kilocode.marketplace.install")
+    .mutating()
+    .seeded(() => marketplaceCatalog())
+    .at((ctx) => ({
+      path: "/kilocode/marketplace/install",
+      headers: ctx.headers(),
+      body: { id: "memory", type: "mcp", target: "project" },
+    }))
+    .json(200, (body) => {
+      object(body)
+      check(body.success === true && body.slug === "memory", "marketplace install should install seeded MCP")
+    }),
+  http.protected
+    .post("/kilocode/marketplace/uninstall", "kilocode.marketplace.uninstall")
+    .mutating()
+    .seeded(() => marketplaceCatalog())
+    .at((ctx) => ({
+      path: "/kilocode/marketplace/uninstall",
+      headers: ctx.headers(),
+      body: { id: "memory", type: "mcp", target: "project" },
+    }))
+    .json(200, (body) => {
+      object(body)
+      check(typeof body.success === "boolean" && body.slug === "memory", "marketplace uninstall should return result shape")
+    }),
 ]

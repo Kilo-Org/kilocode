@@ -53,7 +53,7 @@ import { resolveProjectDirectory } from "./project-directory"
 import { getBusySessionCount, seedSessionStatuses } from "./session-status"
 import { normalizeEnhancePromptErrorMessage } from "./enhance-prompt-error"
 import { retry } from "./services/cli-backend/retry"
-import { slimPart, slimParts } from "./kilo-provider/slim-metadata"
+import { slimInfo, slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { handleSidebarWorktreeMessage } from "./kilo-provider/sidebar-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
 import { renameSession } from "./kilo-provider/rename-session"
@@ -360,6 +360,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private slimParts<T>(parts: T[]) {
     if (!this.slimEditMetadata) return parts
     return slimParts(parts)
+  }
+
+  private slimInfo<T>(info: T): T {
+    if (!this.slimEditMetadata) return info
+    return slimInfo(info)
   }
 
   private get forkCtx() {
@@ -1480,7 +1485,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // no abort controller, so this guard prevents ghost entries.
       if (!this.trackedSessionIds.has(sessionID)) return
       const messages = page.items.map((m) => ({
-        ...m.info,
+        ...this.slimInfo(m.info),
         parts: this.slimParts(m.parts),
         createdAt: new Date(m.info.time.created).toISOString(),
       }))
@@ -1538,7 +1543,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       )
 
       const messages = messagesData.map((m) => ({
-        ...m.info,
+        ...this.slimInfo(m.info),
         parts: this.slimParts(m.parts),
         createdAt: new Date(m.info.time.created).toISOString(),
       }))
@@ -3139,6 +3144,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (!msg) return
     if (msg.type === "partUpdated") {
       this.streams.push({ ...msg, part: this.slimPart(msg.part) })
+      return
+    }
+    if (msg.type === "messageCreated") {
+      this.postMessage({ ...msg, message: this.slimInfo(msg.message) })
       return
     }
     if (msg.type === "indexingStatusLoaded") {
