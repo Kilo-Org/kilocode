@@ -228,7 +228,7 @@ function issueMessage(issue: any): string | undefined {
 }
 
 function body(ast: SchemaAST.AST): z.ZodTypeAny {
-  if (SchemaAST.isOptional(ast)) return opt(ast)
+  if (SchemaAST.isOptional(ast) && ast._tag === "Union") return opt(ast)
 
   switch (ast._tag) {
     case "String":

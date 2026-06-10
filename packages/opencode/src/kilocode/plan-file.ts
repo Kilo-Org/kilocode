@@ -7,9 +7,7 @@ export namespace PlanFile {
   export function latest(messages: MessageV2.WithParts[]) {
     const exit = messages
       .flatMap((m) => m.parts)
-      .findLast(
-        (part) => part.type === "tool" && part.tool === "plan_exit" && part.state.status === "completed",
-      )
+      .findLast((part) => part.type === "tool" && part.tool === "plan_exit" && part.state.status === "completed")
     if (exit?.type !== "tool" || exit.state.status !== "completed") return
     const meta = exit.state.metadata ?? {}
     const input = exit.state.input ?? {}

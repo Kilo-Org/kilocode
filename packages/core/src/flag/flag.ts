@@ -11,8 +11,6 @@ function falsy(key: string) {
   return value === "false" || value === "0"
 }
 
-// Channels where new experiments default to ON (unstable / internal users).
-// Stable channels (`prod`, `latest`) stay opt-in.
 const UNSTABLE_CHANNELS = new Set(["dev", "beta", "local"])
 function unstableDefault(key: string) {
   return truthy(key) || (!falsy(key) && UNSTABLE_CHANNELS.has(InstallationChannel))
@@ -54,16 +52,13 @@ export const Flag = {
   KILO_DISABLE_CLAUDE_CODE,
   KILO_DISABLE_CLAUDE_CODE_PROMPT: KILO_DISABLE_CLAUDE_CODE || truthy("KILO_DISABLE_CLAUDE_CODE_PROMPT"),
   KILO_DISABLE_CLAUDE_CODE_SKILLS,
-  KILO_DISABLE_EXTERNAL_SKILLS: truthy("KILO_DISABLE_EXTERNAL_SKILLS"), // kilocode_change
-  // Default-on for dev/beta/local; opt-in for stable. Set
-  // KILO_EXPERIMENTAL_CUSTOMIZE_SKILL=false to force off, =true to force on.
+  KILO_DISABLE_EXTERNAL_SKILLS: truthy("KILO_DISABLE_EXTERNAL_SKILLS"),
   KILO_EXPERIMENTAL_CUSTOMIZE_SKILL: unstableDefault("KILO_EXPERIMENTAL_CUSTOMIZE_SKILL"),
   KILO_FAKE_VCS: process.env["KILO_FAKE_VCS"],
   KILO_SERVER_PASSWORD: process.env["KILO_SERVER_PASSWORD"],
   KILO_SERVER_USERNAME: process.env["KILO_SERVER_USERNAME"],
   KILO_ENABLE_QUESTION_TOOL: truthy("KILO_ENABLE_QUESTION_TOOL"),
 
-  // Experimental
   KILO_EXPERIMENTAL,
   KILO_EXPERIMENTAL_FILEWATCHER: Config.boolean("KILO_EXPERIMENTAL_FILEWATCHER").pipe(Config.withDefault(false)),
   KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: Config.boolean("KILO_EXPERIMENTAL_DISABLE_FILEWATCHER").pipe(
@@ -93,9 +88,8 @@ export const Flag = {
   KILO_WORKSPACE_ID: process.env["KILO_WORKSPACE_ID"],
   KILO_EXPERIMENTAL_WORKSPACES: KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_WORKSPACES"),
   KILO_EXPERIMENTAL_EVENT_SYSTEM: KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_EVENT_SYSTEM"),
+  KILO_EXPERIMENTAL_SESSION_SWITCHING: KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_SESSION_SWITCHING"),
 
-  // Evaluated at access time (not module load) because tests, the CLI, and
-  // external tooling set these env vars at runtime.
   get KILO_DISABLE_PROJECT_CONFIG() {
     return truthy("KILO_DISABLE_PROJECT_CONFIG")
   },
@@ -114,9 +108,7 @@ export const Flag = {
   get KILO_CLIENT() {
     return process.env["KILO_CLIENT"] ?? "cli"
   },
-  // kilocode_change start
   get KILO_SESSION_RETRY_LIMIT() {
     return number("KILO_SESSION_RETRY_LIMIT")
   },
-  // kilocode_change end
 }

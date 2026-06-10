@@ -7,6 +7,7 @@ import { Global } from "@opencode-ai/core/global"
 import { Agent } from "../../../src/agent/agent"
 import { Bus } from "../../../src/bus"
 import { Config } from "../../../src/config/config"
+import { RuntimeFlags } from "../../../src/effect/runtime-flags"
 import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
 import { WithInstance } from "../../../src/project/with-instance"
@@ -24,6 +25,7 @@ const runtime = ManagedRuntime.make(
     CrossSpawnSpawner.defaultLayer,
     AppFileSystem.defaultLayer,
     Config.defaultLayer,
+    RuntimeFlags.layer(),
     Plugin.defaultLayer,
     Truncate.defaultLayer,
     Agent.defaultLayer,

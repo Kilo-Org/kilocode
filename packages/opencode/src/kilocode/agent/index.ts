@@ -6,7 +6,7 @@ import * as Truncate from "../../tool/truncate"
 import { Config } from "../../config/config"
 import { Instance } from "../../project/instance"
 import { makeRuntime } from "@/effect/run-service"
-import z from "zod"
+import { Schema } from "effect"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
 
@@ -448,13 +448,10 @@ export function patchAgents(
   }
 }
 
-export const RemoveError = NamedError.create(
-  "AgentRemoveError",
-  z.object({
-    name: z.string(),
-    message: z.string(),
-  }),
-)
+export const RemoveError = NamedError.create("AgentRemoveError", {
+  name: Schema.String,
+  message: Schema.String,
+})
 
 /**
  * Remove a custom agent by deleting its markdown source file and/or

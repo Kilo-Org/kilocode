@@ -1,8 +1,14 @@
+// kilocode_change - retained Kilo tool removed upstream
 import { Effect, Schema } from "effect"
 import { HttpClient } from "effect/unstable/http"
 import * as Tool from "./tool"
 import * as McpWebSearch from "./mcp-websearch"
 import DESCRIPTION from "./codesearch.txt"
+
+const CodeArgs = Schema.Struct({
+  query: Schema.String,
+  tokensNum: Schema.Number,
+})
 
 export const Parameters = Schema.Struct({
   query: Schema.String.annotate({
@@ -42,7 +48,7 @@ export const CodeSearchTool = Tool.define(
             http,
             McpWebSearch.EXA_URL,
             "get_code_context_exa",
-            McpWebSearch.CodeArgs,
+            CodeArgs,
             {
               query: params.query,
               tokensNum: params.tokensNum,

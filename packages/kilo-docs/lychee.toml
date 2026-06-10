@@ -31,6 +31,7 @@ exclude = [
   # API endpoint prefixes are valid but return 4xx to plain GET link checks.
   '^https?://ai-gateway\.vercel\.sh/v1/?$',
   '^https?://api\.voyageai\.com/v1/embeddings/?$',
+  '^https?://inference\.do-ai\.run/v1/?$',
   '^https?://generativelanguage\.googleapis\.com/v1beta/openai/?$',
   '^https?://search\.parallel\.ai/mcp/?$',
   # xAI API and OAuth endpoints require request parameters or reject plain link checks.

@@ -28,6 +28,7 @@ interface ChatViewProps {
   onSelectSession?: (id: string) => void
   onShowHistory?: () => void
   onForkMessage?: (sessionId: string, messageId: string) => void
+  onForkSession?: (sessionId: string) => void
   readonly?: boolean
   /** When true, show the "Continue in Worktree" button. Defaults to true in the sidebar. */
   continueInWorktree?: boolean
@@ -129,6 +130,12 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
   const startSession = () => window.dispatchEvent(new CustomEvent("newTaskRequest"))
 
+  const fork = () => {
+    const sid = id()
+    if (!sid) return
+    props.onForkSession?.(sid)
+  }
+
   const startWorktree = () => vscode.postMessage({ type: "agentManager.createWorktree" })
 
   const startWorktreeFromBranch = () =>
@@ -181,11 +188,14 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
   const canStartSession = (hasChat: boolean) => hasChat
 
+  const canFork = (hasChat: boolean) => hasChat && !isSidebar() && session.status() === "idle" && !!props.onForkSession
+
   const canStartWorktree = () => isSidebar() && server.gitInstalled()
 
   const canMoveToWorktree = (hasChat: boolean) => hasChat && canContinueInWorktree() && server.gitInstalled()
 
-  const hasActions = (hasChat: boolean) => canStartSession(hasChat) || canStartWorktree() || canMoveToWorktree(hasChat)
+  const hasActions = (hasChat: boolean) =>
+    canStartSession(hasChat) || canFork(hasChat) || canStartWorktree() || canMoveToWorktree(hasChat)
 
   const renderActions = (hasChat: boolean) => (
     <Show when={hasActions(hasChat)}>
@@ -201,6 +211,19 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 aria-label={language.t("sidebar.session.newSession")}
               >
                 {language.t("sidebar.session.newSession")}
+              </Button>
+            </Tooltip>
+          </Show>
+          <Show when={canFork(hasChat)}>
+            <Tooltip value={language.t("agentManager.tab.forkSession")} placement="top">
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={fork}
+                aria-label={language.t("agentManager.tab.forkSession")}
+              >
+                <Icon name="fork" size="small" />
+                {language.t("agentManager.tab.forkSession")}
               </Button>
             </Tooltip>
           </Show>

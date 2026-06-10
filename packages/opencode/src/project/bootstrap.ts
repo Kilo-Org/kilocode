@@ -43,7 +43,7 @@ export const layer = Layer.effect(
 
     const run = Effect.gen(function* () {
       const ctx = yield* InstanceState.context
-      yield* Effect.logDebug("bootstrapping", { directory: ctx.directory }) // kilocode_change - was logInfo; downgraded to avoid printing to TUI on every startup
+      yield* Effect.logDebug("bootstrapping").pipe(Effect.annotateLogs("directory", ctx.directory)) // kilocode_change - was logInfo; downgraded to avoid printing to TUI on every startup
       // everything depends on config so eager load it for nice traces
       yield* config.get()
       // Plugin can mutate config so it has to be initialized before anything else.
