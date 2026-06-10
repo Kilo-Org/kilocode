@@ -14,11 +14,7 @@ import { useServer } from "../../context/server"
 import type { IndexingConfig, IndexingProvider as ProviderId } from "../../types/messages"
 import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
 import SettingsRow from "./SettingsRow"
-import {
-  indexingEnabled,
-  indexingEnabledInherited,
-  type IndexingScope,
-} from "./indexing-tab-state"
+import { indexingEnabled, indexingEnabledInherited, type IndexingScope } from "./indexing-tab-state"
 
 type Option = { value: string; label: string }
 type TuningKey = "searchMinScore" | "searchMaxResults" | "embeddingBatchSize" | "scannerMaxBatchRetries"

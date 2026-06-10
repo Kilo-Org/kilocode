@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { AtomicChatPlugin } from '../src/index'
-import { ATOMIC_CHAT_PROVIDER_KEY } from '../src/constants'
-import { sharedModelStatusCache } from '../src/cache/shared-model-status-cache'
+import { describe, it, expect, beforeEach, vi, afterEach } from "vitest"
+import { AtomicChatPlugin } from "../src/index"
+import { ATOMIC_CHAT_PROVIDER_KEY } from "../src/constants"
+import { sharedModelStatusCache } from "../src/cache/shared-model-status-cache"
 
 const mockFetch = vi.fn()
 global.fetch = mockFetch
@@ -14,7 +14,7 @@ if (!global.AbortSignal.timeout) {
   })
 }
 
-describe('AtomicChatPlugin', () => {
+describe("AtomicChatPlugin", () => {
   let mockClient: any
   let pluginHooks: any
 
@@ -29,14 +29,14 @@ describe('AtomicChatPlugin', () => {
     const mockInput: any = {
       client: mockClient,
       project: {
-        id: 'test-project',
-        name: 'test',
-        path: '/tmp',
-        worktree: '',
+        id: "test-project",
+        name: "test",
+        path: "/tmp",
+        worktree: "",
         time: { created: Date.now() },
       },
-      directory: '/tmp',
-      worktree: '',
+      directory: "/tmp",
+      worktree: "",
       $: vi.fn(),
     }
     pluginHooks = await AtomicChatPlugin(mockInput)
@@ -46,49 +46,49 @@ describe('AtomicChatPlugin', () => {
     vi.restoreAllMocks()
   })
 
-  it('initializes hooks', async () => {
+  it("initializes hooks", async () => {
     const mockInput: any = {
       client: mockClient,
       project: {
-        id: 'test-project',
-        name: 'test',
-        path: '/tmp',
-        worktree: '',
+        id: "test-project",
+        name: "test",
+        path: "/tmp",
+        worktree: "",
         time: { created: Date.now() },
       },
-      directory: '/tmp',
-      worktree: '',
+      directory: "/tmp",
+      worktree: "",
       $: vi.fn(),
     }
     const hooks = await AtomicChatPlugin(mockInput)
-    expect(hooks.config).toBeTypeOf('function')
-    expect(hooks.event).toBeTypeOf('function')
-    expect(hooks['chat.params']).toBeTypeOf('function')
+    expect(hooks.config).toBeTypeOf("function")
+    expect(hooks.event).toBeTypeOf("function")
+    expect(hooks["chat.params"]).toBeTypeOf("function")
   })
 
-  it('registers optional local-server auth (no API key required)', async () => {
+  it("registers optional local-server auth (no API key required)", async () => {
     expect(pluginHooks.auth?.provider).toBe(ATOMIC_CHAT_PROVIDER_KEY)
-    expect(pluginHooks.auth?.methods[0]?.type).toBe('api')
-    expect(pluginHooks.auth?.methods[0]?.label).toBe('Local server')
+    expect(pluginHooks.auth?.methods[0]?.type).toBe("api")
+    expect(pluginHooks.auth?.methods[0]?.label).toBe("Local server")
   })
 
-  it('handles invalid client', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  it("handles invalid client", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {})
     const hooks = await AtomicChatPlugin({ client: null } as any)
-    expect(hooks.config).toBeTypeOf('function')
-    expect(consoleSpy).toHaveBeenCalledWith('[@kilocode/plugin-atomic-chat] Invalid client provided to plugin')
+    expect(hooks.config).toBeTypeOf("function")
+    expect(consoleSpy).toHaveBeenCalledWith("[@kilocode/plugin-atomic-chat] Invalid client provided to plugin")
     consoleSpy.mockRestore()
   })
 
-  describe('config hook', () => {
-    it('rejects invalid config', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  describe("config hook", () => {
+    it("rejects invalid config", async () => {
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {})
       await pluginHooks.config(null)
       expect(consoleSpy).toHaveBeenCalled()
       consoleSpy.mockRestore()
     })
 
-    it('does not probe localhost when Atomic Chat is not configured', async () => {
+    it("does not probe localhost when Atomic Chat is not configured", async () => {
       const config: any = {}
       await pluginHooks.config(config)
 
@@ -96,11 +96,11 @@ describe('AtomicChatPlugin', () => {
       expect(config.provider?.[ATOMIC_CHAT_PROVIDER_KEY]).toBeUndefined()
     })
 
-    it('auto-detects only when atomicChat.autoDetect is enabled', async () => {
+    it("auto-detects only when atomicChat.autoDetect is enabled", async () => {
       mockFetch.mockResolvedValue({
         ok: true,
         json: async () => ({
-          data: [{ id: 'm1', object: 'model', created: 1, owned_by: 'local' }],
+          data: [{ id: "m1", object: "model", created: 1, owned_by: "local" }],
         }),
       })
 
@@ -109,25 +109,25 @@ describe('AtomicChatPlugin', () => {
 
       expect(mockFetch).toHaveBeenCalled()
       expect(config.provider?.[ATOMIC_CHAT_PROVIDER_KEY]).toBeDefined()
-      expect(config.provider[ATOMIC_CHAT_PROVIDER_KEY].options.baseURL).toBe('http://127.0.0.1:1337/v1')
+      expect(config.provider[ATOMIC_CHAT_PROVIDER_KEY].options.baseURL).toBe("http://127.0.0.1:1337/v1")
     })
 
-    it('merges discovered models', async () => {
+    it("merges discovered models", async () => {
       mockFetch.mockResolvedValue({
         ok: true,
         json: async () => ({
-          data: [{ id: 'new-model', object: 'model', created: 1, owned_by: 'local' }],
+          data: [{ id: "new-model", object: "model", created: 1, owned_by: "local" }],
         }),
       })
 
       const config: any = {
         provider: {
           [ATOMIC_CHAT_PROVIDER_KEY]: {
-            npm: '@ai-sdk/openai-compatible',
-            name: 'Atomic Chat (local)',
-            options: { baseURL: 'http://127.0.0.1:1337/v1' },
+            npm: "@ai-sdk/openai-compatible",
+            name: "Atomic Chat (local)",
+            options: { baseURL: "http://127.0.0.1:1337/v1" },
             models: {
-              'existing-model': { name: 'Existing Model' },
+              "existing-model": { name: "Existing Model" },
             },
           },
         },
@@ -136,23 +136,23 @@ describe('AtomicChatPlugin', () => {
       await pluginHooks.config(config)
 
       expect(config.provider[ATOMIC_CHAT_PROVIDER_KEY].models).toEqual({
-        'existing-model': { name: 'Existing Model' },
-        'new-model': expect.objectContaining({
-          id: 'new-model',
-          name: 'New Model',
+        "existing-model": { name: "Existing Model" },
+        "new-model": expect.objectContaining({
+          id: "new-model",
+          name: "New Model",
         }),
       })
     })
 
-    it('handles offline API', async () => {
-      mockFetch.mockRejectedValue(new Error('Connection refused'))
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    it("handles offline API", async () => {
+      mockFetch.mockRejectedValue(new Error("Connection refused"))
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
       const config: any = {
         provider: {
           [ATOMIC_CHAT_PROVIDER_KEY]: {
-            npm: '@ai-sdk/openai-compatible',
-            name: 'Atomic Chat (local)',
-            options: { baseURL: 'http://127.0.0.1:1337/v1' },
+            npm: "@ai-sdk/openai-compatible",
+            name: "Atomic Chat (local)",
+            options: { baseURL: "http://127.0.0.1:1337/v1" },
           },
         },
       }
@@ -162,89 +162,89 @@ describe('AtomicChatPlugin', () => {
     })
   })
 
-  describe('event hook', () => {
-    it('validates event', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  describe("event hook", () => {
+    it("validates event", async () => {
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {})
       await pluginHooks.event({ event: null })
       expect(consoleSpy).toHaveBeenCalled()
       consoleSpy.mockRestore()
     })
 
-    it('accepts session events', async () => {
-      await pluginHooks.event({ event: { type: 'session.created' } })
+    it("accepts session events", async () => {
+      await pluginHooks.event({ event: { type: "session.created" } })
       expect(true).toBe(true)
     })
   })
 
-  describe('chat.params hook', () => {
-    it('rejects invalid input', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-      await pluginHooks['chat.params'](null, {})
+  describe("chat.params hook", () => {
+    it("rejects invalid input", async () => {
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+      await pluginHooks["chat.params"](null, {})
       expect(consoleSpy).toHaveBeenCalled()
       consoleSpy.mockRestore()
     })
 
-    it('skips other providers', async () => {
+    it("skips other providers", async () => {
       const output: any = {}
-      await pluginHooks['chat.params'](
+      await pluginHooks["chat.params"](
         {
-          model: { id: 'x' },
-          provider: { info: { id: 'anthropic' } },
+          model: { id: "x" },
+          provider: { info: { id: "anthropic" } },
         },
-        output
+        output,
       )
       expect(output).toEqual({})
       expect(mockClient.tui.showToast).not.toHaveBeenCalled()
     })
 
-    it('validates model availability', async () => {
+    it("validates model availability", async () => {
       mockFetch.mockResolvedValue({
         ok: true,
         json: async () => ({
-          data: [{ id: 'test-model', object: 'model', created: 1, owned_by: 'local' }],
+          data: [{ id: "test-model", object: "model", created: 1, owned_by: "local" }],
         }),
       })
 
       const output: any = {}
-      await pluginHooks['chat.params'](
+      await pluginHooks["chat.params"](
         {
-          sessionID: 's1',
-          model: { id: 'test-model' },
+          sessionID: "s1",
+          model: { id: "test-model" },
           provider: {
             info: { id: ATOMIC_CHAT_PROVIDER_KEY },
-            options: { baseURL: 'http://127.0.0.1:1337/v1' },
+            options: { baseURL: "http://127.0.0.1:1337/v1" },
           },
         },
-        output
+        output,
       )
 
       expect(mockClient.tui.showToast).not.toHaveBeenCalled()
       expect(output.options?.atomicChatValidation).toEqual(
-        expect.objectContaining({ status: 'success', model: 'test-model' })
+        expect.objectContaining({ status: "success", model: "test-model" }),
       )
     })
 
-    it('handles missing model', async () => {
+    it("handles missing model", async () => {
       mockFetch.mockResolvedValue({
         ok: true,
         json: async () => ({ data: [] }),
       })
 
       const output: any = {}
-      await pluginHooks['chat.params'](
+      await pluginHooks["chat.params"](
         {
-          sessionID: 's1',
-          model: { id: 'missing' },
+          sessionID: "s1",
+          model: { id: "missing" },
           provider: {
             info: { id: ATOMIC_CHAT_PROVIDER_KEY },
-            options: { baseURL: 'http://127.0.0.1:1337/v1' },
+            options: { baseURL: "http://127.0.0.1:1337/v1" },
           },
         },
-        output
+        output,
       )
 
       expect(output.options?.atomicChatValidation).toEqual(
-        expect.objectContaining({ status: 'error', model: 'missing' })
+        expect.objectContaining({ status: "error", model: "missing" }),
       )
     })
   })

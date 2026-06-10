@@ -238,7 +238,9 @@ export namespace PlanFollowup {
     const session = await PlanFollowupRuntime.session((svc) => svc.get(SessionID.make(input.sessionID)))
     const file =
       PlanFile.resolve(PlanFile.latest(input.messages), Instance.current) ?? Session.plan(session, Instance.current)
-    const plan = await Bun.file(file).text().catch(() => "")
+    const plan = await Bun.file(file)
+      .text()
+      .catch(() => "")
     return plan.trim()
   }
 
@@ -379,7 +381,9 @@ export namespace PlanFollowup {
           // The section order is fixed so the initial and final renders stay
           // aligned; only the handover block grows in between.
           const compose = (handover: string) => {
-            const sections = [`Plan file: ${file}\nRead this file first and treat it as the source of truth for implementation.`]
+            const sections = [
+              `Plan file: ${file}\nRead this file first and treat it as the source of truth for implementation.`,
+            ]
             if (handover) sections.push(`## Handover from Planning Session\n\n${handover}`)
             if (todoList) sections.push(`## Todo List\n\n${todoList}`)
             return sections.join("\n\n")

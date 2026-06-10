@@ -22,8 +22,7 @@ function dimensions(mime: string, data: Buffer) {
 
   if (mime === "image/gif" && data.length >= 10) {
     const head = data.subarray(0, 6).toString("ascii")
-    if (head === "GIF87a" || head === "GIF89a")
-      return { width: data.readUInt16LE(6), height: data.readUInt16LE(8) }
+    if (head === "GIF87a" || head === "GIF89a") return { width: data.readUInt16LE(6), height: data.readUInt16LE(8) }
   }
 
   if ((mime === "image/jpeg" || mime === "image/jpg") && data.length >= 4 && data.readUInt16BE(0) === 0xffd8) {

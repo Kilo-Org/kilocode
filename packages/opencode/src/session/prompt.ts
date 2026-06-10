@@ -2086,39 +2086,41 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 )
 
 export const defaultLayer = Layer.suspend(() =>
-  layer.pipe(
-    Layer.provide(SessionRunState.defaultLayer),
-    Layer.provide(SessionStatus.defaultLayer),
-    Layer.provide(SessionCompaction.defaultLayer),
-    Layer.provide(SessionProcessor.defaultLayer),
-    Layer.provide(Command.defaultLayer),
-    Layer.provide(Permission.defaultLayer),
-    Layer.provide(Question.defaultLayer), // kilocode_change - provide pending question dismissal dependency
-    Layer.provide(MCP.defaultLayer),
-    Layer.provide(LSP.defaultLayer),
-    Layer.provide(ToolRegistry.defaultLayer),
-    Layer.provide(Truncate.defaultLayer),
-  ).pipe(
-    Layer.provide(Image.defaultLayer), // kilocode_change - provide user image normalization service
-    Layer.provide(Provider.defaultLayer),
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(Instruction.defaultLayer),
-    Layer.provide(AppFileSystem.defaultLayer),
-    Layer.provide(Plugin.defaultLayer),
-    Layer.provide(Session.defaultLayer),
-    Layer.provide(SessionRevert.defaultLayer),
-    Layer.provide(SessionSummary.defaultLayer),
-    Layer.provide(
-      Layer.mergeAll(
-        Agent.defaultLayer,
-        SystemPrompt.defaultLayer,
-        LLM.defaultLayer,
-        Bus.layer,
-        CrossSpawnSpawner.defaultLayer,
-        SyncEvent.defaultLayer, // kilocode_change - provide Kilo v2 event dual-write service
+  layer
+    .pipe(
+      Layer.provide(SessionRunState.defaultLayer),
+      Layer.provide(SessionStatus.defaultLayer),
+      Layer.provide(SessionCompaction.defaultLayer),
+      Layer.provide(SessionProcessor.defaultLayer),
+      Layer.provide(Command.defaultLayer),
+      Layer.provide(Permission.defaultLayer),
+      Layer.provide(Question.defaultLayer), // kilocode_change - provide pending question dismissal dependency
+      Layer.provide(MCP.defaultLayer),
+      Layer.provide(LSP.defaultLayer),
+      Layer.provide(ToolRegistry.defaultLayer),
+      Layer.provide(Truncate.defaultLayer),
+    )
+    .pipe(
+      Layer.provide(Image.defaultLayer), // kilocode_change - provide user image normalization service
+      Layer.provide(Provider.defaultLayer),
+      Layer.provide(Config.defaultLayer),
+      Layer.provide(Instruction.defaultLayer),
+      Layer.provide(AppFileSystem.defaultLayer),
+      Layer.provide(Plugin.defaultLayer),
+      Layer.provide(Session.defaultLayer),
+      Layer.provide(SessionRevert.defaultLayer),
+      Layer.provide(SessionSummary.defaultLayer),
+      Layer.provide(
+        Layer.mergeAll(
+          Agent.defaultLayer,
+          SystemPrompt.defaultLayer,
+          LLM.defaultLayer,
+          Bus.layer,
+          CrossSpawnSpawner.defaultLayer,
+          SyncEvent.defaultLayer, // kilocode_change - provide Kilo v2 event dual-write service
+        ),
       ),
     ),
-  ),
 )
 const ModelRef = Schema.Struct({
   providerID: ProviderID,

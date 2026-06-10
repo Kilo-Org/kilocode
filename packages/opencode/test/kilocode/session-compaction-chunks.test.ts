@@ -372,7 +372,13 @@ describe("KiloCompactionChunks", () => {
         const second = await user(session.id, "second " + "c".repeat(10_000))
         await assistant(session.id, second.id, tmp.path, "reply " + "d".repeat(10_000))
         await Effect.runPromise(
-          KiloSessionCompaction.create({ session: store, sessionID: session.id, agent: "build", model: ref, auto: false }),
+          KiloSessionCompaction.create({
+            session: store,
+            sessionID: session.id,
+            agent: "build",
+            model: ref,
+            auto: false,
+          }),
         )
 
         const { rt, calls } = fakeRuntime()
@@ -420,7 +426,13 @@ describe("KiloCompactionChunks", () => {
         const second = await user(session.id, "second " + "c".repeat(10_000))
         await assistant(session.id, second.id, tmp.path, "reply " + "d".repeat(10_000))
         await Effect.runPromise(
-          KiloSessionCompaction.create({ session: store, sessionID: session.id, agent: "build", model: ref, auto: false }),
+          KiloSessionCompaction.create({
+            session: store,
+            sessionID: session.id,
+            agent: "build",
+            model: ref,
+            auto: false,
+          }),
         )
 
         const { rt, calls } = fakeRuntime()
@@ -458,7 +470,13 @@ describe("KiloCompactionChunks", () => {
         const first = await user(session.id, "first " + "a".repeat(20_000))
         await assistant(session.id, first.id, tmp.path, "reply " + "b".repeat(20_000))
         await Effect.runPromise(
-          KiloSessionCompaction.create({ session: store, sessionID: session.id, agent: "build", model: ref, auto: false }),
+          KiloSessionCompaction.create({
+            session: store,
+            sessionID: session.id,
+            agent: "build",
+            model: ref,
+            auto: false,
+          }),
         )
 
         const { rt, calls } = fakeRuntime()
@@ -503,7 +521,13 @@ describe("KiloCompactionChunks", () => {
         const session = await svc.create({})
         const first = await user(session.id, "single huge request " + "a".repeat(80_000))
         await Effect.runPromise(
-          KiloSessionCompaction.create({ session: store, sessionID: session.id, agent: "build", model: ref, auto: false }),
+          KiloSessionCompaction.create({
+            session: store,
+            sessionID: session.id,
+            agent: "build",
+            model: ref,
+            auto: false,
+          }),
         )
 
         const { rt, calls } = fakeRuntime()
@@ -543,7 +567,13 @@ describe("KiloCompactionChunks", () => {
         const first = await user(session.id, "first " + "a".repeat(1_000))
         await assistant(session.id, first.id, tmp.path, "reply " + "b".repeat(1_000))
         await Effect.runPromise(
-          KiloSessionCompaction.create({ session: store, sessionID: session.id, agent: "build", model: ref, auto: false }),
+          KiloSessionCompaction.create({
+            session: store,
+            sessionID: session.id,
+            agent: "build",
+            model: ref,
+            auto: false,
+          }),
         )
 
         try {

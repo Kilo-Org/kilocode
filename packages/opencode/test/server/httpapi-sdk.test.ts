@@ -688,37 +688,34 @@ describe("HttpApi SDK", () => {
     ),
   )
   serverPathParity("rejects oversized user image files before persistence", (serverPath) =>
-    withProject(
-      serverPath,
-      { config: { attachment: { image: { max_base64_bytes: 4 } } } },
-      ({ sdk, directory }) =>
-        Effect.gen(function* () {
-          const filepath = path.join(directory, "oversized.png")
-          yield* call(() => Bun.write(filepath, Buffer.alloc(1024, 1)))
-          const session = yield* capture(() => sdk.session.create({ title: "oversized image" }))
-          const sessionID = String(record(session.data).id)
-          const prompt = yield* capture(() =>
-            sdk.session.prompt({
-              sessionID,
-              agent: "build",
-              noReply: true,
-              parts: [
-                {
-                  type: "file",
-                  mime: "image/png",
-                  filename: "oversized.png",
-                  url: `file://${filepath}`,
-                },
-              ],
-            }),
-          )
-          const messages = yield* capture(() => sdk.session.messages({ sessionID }))
+    withProject(serverPath, { config: { attachment: { image: { max_base64_bytes: 4 } } } }, ({ sdk, directory }) =>
+      Effect.gen(function* () {
+        const filepath = path.join(directory, "oversized.png")
+        yield* call(() => Bun.write(filepath, Buffer.alloc(1024, 1)))
+        const session = yield* capture(() => sdk.session.create({ title: "oversized image" }))
+        const sessionID = String(record(session.data).id)
+        const prompt = yield* capture(() =>
+          sdk.session.prompt({
+            sessionID,
+            agent: "build",
+            noReply: true,
+            parts: [
+              {
+                type: "file",
+                mime: "image/png",
+                filename: "oversized.png",
+                url: `file://${filepath}`,
+              },
+            ],
+          }),
+        )
+        const messages = yield* capture(() => sdk.session.messages({ sessionID }))
 
-          expect(prompt.status).toBe(400)
-          expect(JSON.stringify(messages.data)).not.toContain("oversized.png")
+        expect(prompt.status).toBe(400)
+        expect(JSON.stringify(messages.data)).not.toContain("oversized.png")
 
-          return { promptStatus: prompt.status, persisted: JSON.stringify(messages.data).includes("oversized.png") }
-        }),
+        return { promptStatus: prompt.status, persisted: JSON.stringify(messages.data).includes("oversized.png") }
+      }),
     ),
   )
   // kilocode_change end

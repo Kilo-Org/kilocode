@@ -117,12 +117,12 @@ export const layer = Layer.effect(
       const local = base.length > 0 && target?.info.role === "user" ? yield* computeDiff({ messages }) : []
       const diffs =
         base.length > 0
-          ? yield* storage
-              .read<Snapshot.FileDiff[]>(["session_diff", input.sessionID])
-              .pipe(
-                Effect.orElseSucceed((): Snapshot.FileDiff[] => base),
-                Effect.map((existing) => appendSessionDiffs({ existing: existing.length > 0 ? existing : base, next: local })),
-              )
+          ? yield* storage.read<Snapshot.FileDiff[]>(["session_diff", input.sessionID]).pipe(
+              Effect.orElseSucceed((): Snapshot.FileDiff[] => base),
+              Effect.map((existing) =>
+                appendSessionDiffs({ existing: existing.length > 0 ? existing : base, next: local }),
+              ),
+            )
           : yield* computeDiff({ messages: all })
       // kilocode_change end
       yield* sessions.setSummary({

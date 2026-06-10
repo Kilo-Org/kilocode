@@ -170,7 +170,8 @@ function parseSlashCommand(text: string, commands: RunCommand[] | undefined) {
     return { type: "pending" as const }
   }
 
-  if (!commands.some((item) => slashMatches(item, head.name))) { // kilocode_change
+  if (!commands.some((item) => slashMatches(item, head.name))) {
+    // kilocode_change
     return { type: "none" as const }
   }
 

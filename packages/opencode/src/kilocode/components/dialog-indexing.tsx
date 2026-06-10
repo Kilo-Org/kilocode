@@ -186,9 +186,9 @@ function KiloModelSelect(props: SubDialogProps) {
   const sdk = props.useSDK()
   const toast = useToast()
   const indexing = props.indexing
-  const [remote] = createResource(async () => (await sdk.client.indexing.models({})).data as
-    | KiloEmbeddingModelCatalog
-    | undefined)
+  const [remote] = createResource(
+    async () => (await sdk.client.indexing.models({})).data as KiloEmbeddingModelCatalog | undefined,
+  )
   const catalog = () => remote() ?? BUNDLED_KILO_EMBEDDING_MODEL_CATALOG
   const options = () =>
     catalog().models.map((model) => ({
@@ -208,13 +208,7 @@ function KiloModelSelect(props: SubDialogProps) {
       options={options()}
       current={current()}
       onSelect={async (option) => {
-        await saveScopedIndexing(
-          sdk,
-          sync,
-          props.scope,
-          { ...props.raw, model: option.value, dimension: null },
-          toast,
-        )
+        await saveScopedIndexing(sdk, sync, props.scope, { ...props.raw, model: option.value, dimension: null }, toast)
         dialog.replace(() => <DialogIndexing useSDK={props.useSDK} scope={props.scope} />)
       }}
     />
@@ -401,14 +395,18 @@ function TuningMenu(props: SubDialogProps) {
           placeholder: `Default: ${param.defaultValue}`,
         })
         if (result === null) {
-          dialog.replace(() => <TuningMenu useSDK={props.useSDK} scope={props.scope} indexing={indexing} raw={props.raw} />)
+          dialog.replace(() => (
+            <TuningMenu useSDK={props.useSDK} scope={props.scope} indexing={indexing} raw={props.raw} />
+          ))
           return
         }
         const trimmed = result.trim()
         const num = trimmed ? Number(trimmed) : undefined
         if (trimmed && isNaN(num!)) {
           toast.show({ message: `Invalid number: "${trimmed}"`, variant: "error" })
-          dialog.replace(() => <TuningMenu useSDK={props.useSDK} scope={props.scope} indexing={indexing} raw={props.raw} />)
+          dialog.replace(() => (
+            <TuningMenu useSDK={props.useSDK} scope={props.scope} indexing={indexing} raw={props.raw} />
+          ))
           return
         }
         const updated = { ...props.raw, [param.key]: num }
@@ -491,8 +489,7 @@ export function DialogIndexing(props: DialogIndexingProps) {
         value: "model",
         title: "Embedding Model",
         category: "Embedding",
-        description:
-          indexing.provider === "kilo" ? (indexing.model ?? "Kilo catalog") : (indexing.model ?? "default"),
+        description: indexing.provider === "kilo" ? (indexing.model ?? "Kilo catalog") : (indexing.model ?? "default"),
       },
       {
         value: "dimension",
@@ -542,9 +539,7 @@ export function DialogIndexing(props: DialogIndexingProps) {
             dialog.replace(() => <DialogIndexing useSDK={props.useSDK} scope={scope()} />)
             break
           case "provider":
-            dialog.replace(() => (
-              <ProviderSelect useSDK={props.useSDK} scope={scope()} indexing={indexing} raw={raw} />
-            ))
+            dialog.replace(() => <ProviderSelect useSDK={props.useSDK} scope={scope()} indexing={indexing} raw={raw} />)
             break
           case "providerSettings":
             if (indexing.provider) {
