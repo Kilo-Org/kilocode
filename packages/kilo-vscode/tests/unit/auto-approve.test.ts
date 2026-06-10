@@ -80,13 +80,13 @@ function context() {
 }
 
 function connection(client: KiloClient | null) {
-  const listeners: Array<(event: Event) => void> = []
+  const listeners: Array<(event: Event, directory?: string) => void> = []
   const svc = {
     getClient: () => {
       if (!client) throw new Error("not connected")
       return client
     },
-    onEvent: (listener: (event: Event) => void) => {
+    onEvent: (listener: (event: Event, directory?: string) => void) => {
       listeners.push(listener)
       return () => {
         const index = listeners.indexOf(listener)
@@ -97,8 +97,8 @@ function connection(client: KiloClient | null) {
 
   return {
     svc,
-    emit(event: Event) {
-      for (const listener of listeners) listener(event)
+    emit(event: Event, directory?: string) {
+      for (const listener of listeners) listener(event, directory)
     },
   }
 }
@@ -150,6 +150,26 @@ describe("registerToggleAutoApprove", () => {
     expect(changes).toEqual([false, true])
     expect(env.updates).toEqual([{ key: "enabled", value: true, target: vscode.ConfigurationTarget.Workspace }])
     expect(env.messages).toContain("Auto-approve enabled")
+  })
+
+  it("uses the SSE directory for worktree permissions before session mappings are available", () => {
+    config(true)
+    const replies: unknown[] = []
+    const conn = connection(client({ reply: async (args) => replies.push(args) }))
+    registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    conn.emit(asked("perm_worktree", "ses_worktree"), "/workspace/.kilo/worktrees/feature")
+    conn.emit(asked("perm_child", "ses_child"), "/workspace/.kilo/worktrees/feature")
+
+    expect(replies).toEqual([
+      { requestID: "perm_worktree", directory: "/workspace/.kilo/worktrees/feature", reply: "once" },
+      { requestID: "perm_child", directory: "/workspace/.kilo/worktrees/feature", reply: "once" },
+    ])
   })
 
   it("cancels pending permission drains when disabled during an enable generation", async () => {

@@ -11,6 +11,7 @@ import { ModelCache } from "../../../src/provider/model-cache"
 import { Session } from "../../../src/session/session"
 import { Authorization } from "../../../src/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "../../../src/server/routes/instance/httpapi/middleware/instance-context"
+import { schemaErrorLayer } from "../../../src/server/routes/instance/httpapi/middleware/schema-error"
 import {
   WorkspaceRouteContext,
   WorkspaceRoutingMiddleware,
@@ -41,6 +42,7 @@ const testWorkspaceRouting = Layer.succeed(
 const layer = HttpRouter.serve(
   HttpApiBuilder.layer(TestHttpApi).pipe(
     Layer.provide(kiloGatewayHandlers),
+    Layer.provide(schemaErrorLayer),
     Layer.provide([
       passthroughAuthorization,
       passthroughInstanceContext,

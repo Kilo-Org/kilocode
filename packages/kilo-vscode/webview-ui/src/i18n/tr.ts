@@ -209,6 +209,9 @@ export const dict = {
   "model.preview.label.cached": "Önbellek",
   "model.preview.label.average": "Tahmini Ort. Maliyet",
   "model.preview.label.context": "Bağlam",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Tamamlama",
+  "model.preview.label.costAttempt": "Maliyet / deneme",
   "model.preview.value.notSupported": "Desteklenmiyor",
   "model.preview.tooltip.average":
     "Tahmini ortalama maliyet; girdi, çıktı ve önbellek okuma tokenlerinin tipik bir oranına dayanmaktadır.",

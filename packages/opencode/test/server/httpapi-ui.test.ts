@@ -191,7 +191,7 @@ describe("HttpApi UI fallback", () => {
   })
 
   test("keeps matched API routes ahead of the UI fallback", async () => {
-    const response = await Server.Default().app.request("/session/nope")
+    const response = await Server.Default().app.request("/session/ses_nope")
 
     expect(response.status).toBe(404)
   })
@@ -199,7 +199,7 @@ describe("HttpApi UI fallback", () => {
   test("requires server password for the web UI", async () => {
     Flag.KILO_DISABLE_EMBEDDED_WEB_UI = true
 
-    const response = await uiApp({ password: "secret", username: "kilo" }).request("/")
+    const response = await uiApp({ password: "secret", username: "kilo" }).request("/") // kilocode_change
 
     expect(response.status).toBe(401)
     expect(response.headers.get("www-authenticate")).toBe('Basic realm="Secure Area"')
@@ -210,22 +210,28 @@ describe("HttpApi UI fallback", () => {
 
     const response = await uiApp({
       password: "secret",
+      // kilocode_change start
       username: "kilo",
     }).request(`/?auth_token=${btoa("kilo:secret")}`)
 
     expect(response.status).toBe(404)
     expect(await response.json()).toEqual({ error: "Not Found" })
+    // kilocode_change end
   })
 
   test("accepts basic auth for the web UI", async () => {
     Flag.KILO_DISABLE_EMBEDDED_WEB_UI = true
 
+    // kilocode_change start
     const response = await uiApp({ password: "secret", username: "kilo" }).request("/", {
       headers: { authorization: `Basic ${btoa("kilo:secret")}` },
+      // kilocode_change end
     })
 
+    // kilocode_change start
     expect(response.status).toBe(404)
     expect(await response.json()).toEqual({ error: "Not Found" })
+    // kilocode_change end
   })
 
   // Regression for #25698 (Ope): the browser fetches the PWA manifest and
@@ -234,20 +240,22 @@ describe("HttpApi UI fallback", () => {
   // server returning 401 breaks PWA install. These specific public assets
   // should bypass auth.
   test("allows public PWA assets through auth without proxying", async () => {
+    // kilocode_change
     Flag.KILO_DISABLE_EMBEDDED_WEB_UI = true
 
     for (const path of ["/site.webmanifest", "/web-app-manifest-192x192.png", "/web-app-manifest-512x512.png"]) {
       const response = await uiApp({
         password: "secret",
-        username: "kilo",
+        username: "kilo", // kilocode_change
         client: httpClient(new Response("ok")),
       }).request(path)
-      expect(response.status).toBe(404)
+      expect(response.status).toBe(404) // kilocode_change
     }
   })
 
   test("allows web UI preflight without auth", async () => {
     const response = await app({ password: "secret", username: "kilo" }).request("/", {
+      // kilocode_change
       method: "OPTIONS",
       headers: {
         origin: "http://localhost:3000",

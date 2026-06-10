@@ -5,8 +5,10 @@ import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.views.base.BaseQuestionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -15,11 +17,13 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBRadioButton
 import com.intellij.ui.components.JBTextArea
+import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Container
 import kotlin.math.abs
 import javax.swing.AbstractButton
 import javax.swing.JButton
+import javax.swing.JComponent
 import javax.swing.SwingUtilities
 
 @Suppress("UnstableApiUsage")
@@ -132,6 +136,16 @@ class QuestionViewTest : BasePlatformTestCase() {
         view.show(singleSelectQuestion("req_summary"))
 
         assertTrue(findAll<JBLabel>(view).none { it.text == "1 of 1 questions" && it.isVisible })
+    }
+
+    fun `test single question uses roomy card spacing`() {
+        view.show(singleSelectQuestion("q_single_spacing"))
+
+        val card = card()
+        val ins = card.border.getBorderInsets(card)
+
+        assertEquals(UiStyle.Gap.xl(), ins.top)
+        assertEquals(UiStyle.Gap.pad(), spacer(card).preferredSize.height)
     }
 
     fun `test single question submit sends selected answer`() {
@@ -292,6 +306,23 @@ class QuestionViewTest : BasePlatformTestCase() {
         assertEquals(1, replies.size)
         assertEquals("q_nav", replies.single().first)
         assertEquals(listOf(listOf("Minimal"), listOf("Unit")), replies.single().second.answers)
+    }
+
+    fun `test multi question progress header has top padding`() {
+        view.show(twoItemQuestion("q_progress_padding"))
+
+        val card = card()
+        val outer = card.border.getBorderInsets(card)
+        val summary = findAll<JBLabel>(view).first { it.text == "1 of 2 questions" }
+        val panel = summary.parent as JComponent
+        val ins = panel.border.getBorderInsets(panel)
+
+        assertEquals(UiStyle.Gap.sm(), outer.top)
+        assertEquals(0, ins.top)
+        assertEquals(0, ins.left)
+        assertEquals(UiStyle.Gap.sm(), ins.bottom)
+        assertEquals(0, ins.right)
+        assertEquals(UiStyle.Gap.pad(), spacer(card).preferredSize.height)
     }
 
     fun `test multi question uses review before submit`() {
@@ -468,8 +499,8 @@ class QuestionViewTest : BasePlatformTestCase() {
         val dismiss = button(view, "Dismiss")
         val submit = button(view, "Submit")
 
-        assertEquals(SessionUiStyle.View.surface(), dismiss.background)
-        assertEquals(SessionUiStyle.View.surface(), submit.background)
+        assertEquals(SessionUiStyle.View.Surface.bgColor(), dismiss.background)
+        assertEquals(SessionUiStyle.View.Surface.bgColor(), submit.background)
     }
 
     fun `test review submit and back buttons have correct primary state on review page`() {
@@ -928,6 +959,13 @@ class QuestionViewTest : BasePlatformTestCase() {
 
     private fun text(root: Container, value: String): JBTextArea =
         findAll<JBTextArea>(root).first { it.text == value }
+
+    private fun card(): BaseQuestionView = findAll<BaseQuestionView>(view).distinct().single()
+
+    private fun spacer(card: BaseQuestionView): Component {
+        val north = (card.layout as BorderLayout).getLayoutComponent(BorderLayout.NORTH) as Container
+        return north.components.last()
+    }
 
     private fun layout(root: Container, width: Int = 400) {
         root.setSize(width, root.preferredSize.height)
