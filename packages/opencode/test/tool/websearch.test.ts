@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { Effect } from "effect"
-import { parseResponse } from "../../src/tool/mcp-websearch"
+import { Effect, Layer, Schema } from "effect"
+import { FetchHttpClient, HttpClient } from "effect/unstable/http"
+import { call, parseResponse } from "../../src/tool/mcp-websearch"
+import { DEFAULT_HEADERS } from "../../src/kilocode/const"
 import { selectWebSearchProvider, webSearchModelName, webSearchProviderLabel } from "../../src/tool/websearch"
 import { ProviderID } from "../../src/provider/schema"
 import { webSearchEnabled } from "../../src/tool/registry"
@@ -35,6 +37,18 @@ describe("websearch provider", () => {
     expect(selectWebSearchProvider(SESSION_ID, { exa: false, parallel: true })).toBe("parallel")
   })
 
+  test("defaults to Exa when no provider is pinned", () => {
+    const original = process.env.KILO_WEBSEARCH_PROVIDER
+
+    try {
+      delete process.env.KILO_WEBSEARCH_PROVIDER
+      expect(selectWebSearchProvider(SESSION_ID, { exa: false, parallel: false })).toBe("exa")
+    } finally {
+      if (original === undefined) delete process.env.KILO_WEBSEARCH_PROVIDER
+      else process.env.KILO_WEBSEARCH_PROVIDER = original
+    }
+  })
+
   test("is only enabled for kilo or explicit websearch provider flags", () => {
     // kilocode_change
     expect(webSearchEnabled(ProviderID.kilo, { exa: false, parallel: false })).toBe(true) // kilocode_change
@@ -59,6 +73,83 @@ describe("websearch provider", () => {
         },
       }),
     ).toBe("claude-opus-4.7")
+  })
+})
+
+describe("mcp-websearch headers", () => {
+  const Args = Schema.Struct({ query: Schema.String })
+
+  const okBody = JSON.stringify({
+    jsonrpc: "2.0",
+    id: 1,
+    result: { content: [{ type: "text", text: "ok" }] },
+  })
+
+  async function withServer(
+    handler: (req: Request) => Response | Promise<Response>,
+    fn: (url: string) => Promise<void>,
+  ) {
+    const server = Bun.serve({ port: 0, fetch: handler })
+    try {
+      await fn(server.url.toString())
+    } finally {
+      server.stop()
+    }
+  }
+
+  function runCall(url: string, extraHeaders?: Record<string, string>) {
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const http = yield* HttpClient.HttpClient
+        return yield* call(http, url, "web_search_exa", Args, { query: "test" }, "5 seconds", extraHeaders)
+      }).pipe(Effect.provide(FetchHttpClient.layer)),
+    )
+  }
+
+  test("Exa call includes Kilo-Code User-Agent", async () => {
+    let captured: Headers | undefined
+    await withServer(
+      (req) => {
+        captured = req.headers
+        return new Response(okBody, { status: 200 })
+      },
+      async (url) => {
+        await runCall(url)
+        expect(captured?.get("user-agent")).toBe(DEFAULT_HEADERS["User-Agent"])
+      },
+    )
+  })
+
+  test("Exa call includes HTTP-Referer and X-Title", async () => {
+    let captured: Headers | undefined
+    await withServer(
+      (req) => {
+        captured = req.headers
+        return new Response(okBody, { status: 200 })
+      },
+      async (url) => {
+        await runCall(url)
+        expect(captured?.get("http-referer")).toBe(DEFAULT_HEADERS["HTTP-Referer"])
+        expect(captured?.get("x-title")).toBe(DEFAULT_HEADERS["X-Title"])
+      },
+    )
+  })
+
+  test("caller-supplied headers override DEFAULT_HEADERS", async () => {
+    let captured: Headers | undefined
+    await withServer(
+      (req) => {
+        captured = req.headers
+        return new Response(okBody, { status: 200 })
+      },
+      async (url) => {
+        await runCall(url, { "User-Agent": "opencode/0.0.0", Authorization: "Bearer tok" })
+        expect(captured?.get("user-agent")).toBe("opencode/0.0.0")
+        expect(captured?.get("authorization")).toBe("Bearer tok")
+        // Base headers still present
+        expect(captured?.get("http-referer")).toBe(DEFAULT_HEADERS["HTTP-Referer"])
+      },
+    )
   })
 })
 

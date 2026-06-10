@@ -1,5 +1,6 @@
 import { Duration, Effect, Schema } from "effect"
 import { HttpClient, HttpClientRequest } from "effect/unstable/http"
+import { DEFAULT_HEADERS } from "../kilocode/const"
 
 export const EXA_URL = process.env.EXA_API_KEY
   ? `https://mcp.exa.ai/mcp?exaApiKey=${encodeURIComponent(process.env.EXA_API_KEY)}`
@@ -83,7 +84,7 @@ export const call = <F extends Schema.Struct.Fields>(
   Effect.gen(function* () {
     const request = yield* HttpClientRequest.post(url).pipe(
       HttpClientRequest.accept("application/json, text/event-stream"),
-      HttpClientRequest.setHeaders(headers ?? {}),
+      HttpClientRequest.setHeaders({ ...DEFAULT_HEADERS, ...headers }),
       HttpClientRequest.schemaBodyJson(McpRequest(args))({
         jsonrpc: "2.0" as const,
         id: 1 as const,
