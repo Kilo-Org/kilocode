@@ -30,6 +30,8 @@ import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Question } from "@/question"
 import { Permission } from "@/permission"
 import { withTimeout } from "@/util/timeout"
+import { Snapshot } from "@/snapshot"
+import { cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff"
 
 async function provide<R>(input: { directory: string; fn: () => R }): Promise<R> {
   const { WithInstance } = await import("@/project/with-instance")
@@ -107,6 +109,9 @@ export namespace KiloSessions {
       if (auth?.type === "api" && auth.key.length > 0) return auth.key
       if (auth?.type === "oauth" && auth.access.length > 0) return auth.access
       if (auth?.type === "wellknown" && auth.token.length > 0) return auth.token
+
+      const key = process.env["KILO_API_KEY"]?.trim()
+      if (key) return key
       return undefined
     })
   }
@@ -225,6 +230,13 @@ export namespace KiloSessions {
     await ingest.sync(sessionID, [{ type: "session_status", data: { status } }])
   }
 
+  async function cumulative(sessionId: string, local: Snapshot.FileDiff[]) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(
+      Storage.Service.use((storage) => cumulativeSessionDiff(storage, SessionID.make(sessionId), local)),
+    )
+  }
+
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
@@ -273,7 +285,9 @@ export namespace KiloSessions {
             ingest.sync(evt.properties.part.sessionID, [{ type: "part", data: evt.properties.part }]),
           )
           yield* watch(Session.Event.Diff, (evt) =>
-            ingest.sync(evt.properties.sessionID, [{ type: "session_diff", data: evt.properties.diff }]),
+            cumulative(evt.properties.sessionID, evt.properties.diff).then((diff) =>
+              ingest.sync(evt.properties.sessionID, [{ type: "session_diff", data: diff }]),
+            ),
           )
           yield* watch(Session.Event.TurnOpen, (evt) =>
             ingest.sync(evt.properties.sessionID, [{ type: "session_open", data: {} }]),
@@ -673,7 +687,7 @@ export namespace KiloSessions {
     log.info("full sync", { sessionId })
 
     const { AppRuntime } = await import("@/effect/app-runtime")
-    const [session, diffs] = await AppRuntime.runPromise(
+    const [session, local] = await AppRuntime.runPromise(
       Effect.gen(function* () {
         const sessions = yield* Session.Service
         const summary = yield* SessionSummary.Service
@@ -683,6 +697,7 @@ export namespace KiloSessions {
         ])
       }),
     )
+    const diffs = await cumulative(sessionId, local)
     const messages = await Array.fromAsync(MessageV2.stream(SessionID.make(sessionId)))
     messages.reverse()
     const mdls = await models(

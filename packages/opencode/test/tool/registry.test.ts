@@ -27,6 +27,7 @@ import { Ripgrep } from "@/file/ripgrep"
 import * as Truncate from "@/tool/truncate"
 import { InstanceState } from "@/effect/instance-state"
 import { SessionStatus } from "@/session/status" // kilocode_change
+import { Reference } from "@/reference/reference"
 
 const node = CrossSpawnSpawner.defaultLayer
 const originalExperimentalScout = Flag.KILO_EXPERIMENTAL_SCOUT
@@ -34,7 +35,8 @@ const configLayer = TestConfig.layer({
   directories: () => InstanceState.directory.pipe(Effect.map((dir) => [path.join(dir, ".opencode")])),
 })
 
-const registryLayer = ToolRegistry.layer.pipe(
+const registryBase = ToolRegistry.layer.pipe(
+  // kilocode_change
   Layer.provide(configLayer),
   Layer.provide(Plugin.defaultLayer),
   Layer.provide(Question.defaultLayer),
@@ -44,6 +46,7 @@ const registryLayer = ToolRegistry.layer.pipe(
   Layer.provide(Session.defaultLayer),
   Layer.provide(Provider.defaultLayer),
   Layer.provide(Git.defaultLayer),
+  Layer.provide(Reference.defaultLayer),
   Layer.provide(LSP.defaultLayer),
   Layer.provide(Instruction.defaultLayer),
   Layer.provide(AppFileSystem.defaultLayer),
@@ -53,9 +56,11 @@ const registryLayer = ToolRegistry.layer.pipe(
   Layer.provide(node),
   Layer.provide(Ripgrep.defaultLayer),
   Layer.provide(Truncate.defaultLayer),
-  Layer.provide(Command.defaultLayer), // kilocode_change
-  Layer.provide(SessionStatus.defaultLayer), // kilocode_change
 )
+
+// kilocode_change start
+const registryLayer = registryBase.pipe(Layer.provide(Command.defaultLayer), Layer.provide(SessionStatus.defaultLayer))
+// kilocode_change end
 
 const it = testEffect(Layer.mergeAll(registryLayer, node))
 
@@ -88,9 +93,7 @@ describe("tool.registry", () => {
       }
     }),
   )
-  // kilocode_change end
 
-  // kilocode_change start
   it.live("suggest is registered for cli and vscode only", () =>
     Effect.gen(function* () {
       const original = process.env["KILO_CLIENT"]

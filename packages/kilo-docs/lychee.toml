@@ -10,6 +10,7 @@ exclude_path = ["node_modules"]
 
 accept = [
   "200",
+  "202",
   "403",
   "429",
   "301",

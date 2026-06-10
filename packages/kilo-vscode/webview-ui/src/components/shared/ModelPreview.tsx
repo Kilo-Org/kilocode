@@ -6,7 +6,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
 import { freeDataLabel, isDataCollectedModel, sanitizeName } from "./model-selector-utils"
-import { avgPrice, fmtCachedPrice, fmtPrice } from "./model-preview-utils"
+import { avgPrice, fmtAttemptCost, fmtCachedPrice, fmtPrice, fmtTerminalBenchScore } from "./model-preview-utils"
 
 interface Props {
   model: EnrichedModel | null
@@ -41,6 +41,7 @@ export const ModelPreview: Component<Props> = (props) => {
       <Show when={m()}>
         {(model) => {
           const cost = () => model().cost
+          const bench = () => model().terminalBench
           const cachedText = () => {
             if (!cost()) return ""
             return fmtCachedPrice(cost()!) ?? language.t("model.preview.value.notSupported")
@@ -143,6 +144,19 @@ export const ModelPreview: Component<Props> = (props) => {
                   <span class="model-preview-value">{fmtContext(ctx()!)}</span>
                 </Show>
               </div>
+
+              {/* Terminal Bench — independent from token pricing */}
+              <Show when={bench()}>
+                <div class="model-preview-group">
+                  <span class="model-preview-group-title">{language.t("model.preview.group.terminalBench")}</span>
+                  <div class="model-preview-grid">
+                    <span class="model-preview-label">{language.t("model.preview.label.completion")}</span>
+                    <span class="model-preview-value">{fmtTerminalBenchScore(bench()!.overallScore)}</span>
+                    <span class="model-preview-label">{language.t("model.preview.label.costAttempt")}</span>
+                    <span class="model-preview-value">{fmtAttemptCost(bench()!.avgAttemptCostUsd)}</span>
+                  </div>
+                </div>
+              </Show>
 
               {/* Capabilities — free badge moved to header */}
               <Show when={caps()?.reasoning || activeModalities().length > 0}>

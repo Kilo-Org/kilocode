@@ -25,10 +25,8 @@ import { Effect, Context, Layer, Schema } from "effect"
 import { InstanceState } from "@/effect/instance-state"
 import { zod } from "@opencode-ai/core/effect-zod"
 import { withStatics, type DeepMutable } from "@opencode-ai/core/schema"
+import { Reference } from "@/reference/reference"
 import * as KiloAgent from "@/kilocode/agent" // kilocode_change
-
-type ReferenceEntry = NonNullable<Config.Info["reference"]>[string]
-type ResolvedReference = { kind: "git"; repository: string; branch?: string } | { kind: "local"; path: string }
 
 export const Info = Schema.Struct({
   name: Schema.String,
@@ -103,7 +101,7 @@ export const layer = Layer.effect(
         } satisfies Record<string, "allow" | "ask" | "deny">
 
         const baseDefaults = Permission.fromConfig({
-          // kilocode_change: renamed from defaults
+          // kilocode_change
           "*": "allow",
           doom_loop: "ask",
           external_directory: {
@@ -290,9 +288,7 @@ export const layer = Layer.effect(
 
         // kilocode_change start - rename build→code, add debug/orchestrator/ask, patch plan/explore
         KiloAgent.patchAgents(agents, defaults, user, cfg, kilo, ctx.worktree, whitelistedDirs)
-        // kilocode_change end
 
-        // kilocode_change start - preprocess config to remap "build" key → "code"
         const agentConfigs = KiloAgent.preprocessConfig(cfg.agent ?? {})
         for (const [key, value] of Object.entries(agentConfigs)) {
           // kilocode_change end
@@ -325,69 +321,70 @@ export const layer = Layer.effect(
           KiloAgent.processConfigItem(item) // kilocode_change - populate displayName from options
         }
 
-        function referencePath(value: string) {
-          if (value.startsWith("~/")) return path.join(Global.Path.home, value.slice(2))
-          return path.isAbsolute(value)
-            ? value
-            : path.resolve(ctx.worktree === "/" ? ctx.directory : ctx.worktree, value)
-        }
-
-        function resolveReference(reference: ReferenceEntry): ResolvedReference {
-          if (typeof reference === "string") {
-            if (reference.startsWith(".") || reference.startsWith("/") || reference.startsWith("~")) {
-              return { kind: "local", path: referencePath(reference) }
-            }
-            return { kind: "git", repository: reference }
-          }
-          if ("path" in reference) return { kind: "local", path: referencePath(reference.path) }
-          return { kind: "git", repository: reference.repository, branch: reference.branch }
-        }
-
-        function referencePrompt(name: string, reference: ResolvedReference) {
+        function referencePrompt(reference: Reference.Resolved) {
           if (reference.kind === "local") {
             return [
-              PROMPT_SCOUT,
-              `You are Scout reference @${name}. This reference points to a local directory outside or alongside the current workspace.`,
+              `You are configured reference @${reference.name}, a read-only research agent for external reference material.`,
               `Local directory: ${reference.path}`,
-              `When invoked, inspect this directory as the primary reference source. Prefer repo_overview with path ${JSON.stringify(reference.path)} before broader searches. Do not edit files.`,
+              `Inspect this directory as the primary reference source. Prefer repo_overview with path ${JSON.stringify(reference.path)} before broader searches. Do not edit files.`,
+              `Return exact absolute file paths for findings whenever possible.`,
+            ].join("\n\n")
+          }
+
+          if (reference.kind === "invalid") {
+            return [
+              `You are configured reference @${reference.name}, but this reference is not usable yet.`,
+              `Configured repository: ${reference.repository}`,
+              `Problem: ${reference.message}`,
+              `Explain this configuration problem if invoked. Do not edit files or attempt fallback clones.`,
             ].join("\n\n")
           }
 
           return [
-            PROMPT_SCOUT,
-            `You are Scout reference @${name}. This reference points to a git repository.`,
+            `You are configured reference @${reference.name}, a read-only research agent for external reference material.`,
             `Repository: ${reference.repository}`,
             ...(reference.branch ? [`Branch/ref: ${reference.branch}`] : []),
-            `When invoked, clone or refresh this repository with repo_clone, then inspect the cached repository as the primary reference source. Do not edit files.`,
+            `Cached directory: ${reference.path}`,
+            `Kilo materializes this configured repository before use. Do not call repo_clone for this reference.`, // kilocode_change
+            `Inspect the cached directory as the primary reference source. Prefer repo_overview with path ${JSON.stringify(reference.path)} before broader searches, then use Glob, Grep, and Read inside that directory. Do not edit files.`,
+            `Return exact absolute file paths for findings whenever possible.`,
           ].join("\n\n")
         }
 
+        function referenceDescription(reference: Reference.Resolved) {
+          if (reference.kind === "local") return `Scout reference for local directory ${reference.path}`
+          if (reference.kind === "git") return `Scout reference for repository ${reference.repository}`
+          return `Invalid Scout reference for repository ${reference.repository}`
+        }
+
         if (Flag.KILO_EXPERIMENTAL_SCOUT) {
-          for (const [name, reference] of Object.entries(cfg.reference ?? {})) {
-            if (agents[name]) continue
-            const resolved = resolveReference(reference)
-            const localPath = resolved.kind === "local" ? resolved.path : undefined
-            agents[name] = {
-              name,
-              description:
-                resolved.kind === "local"
-                  ? `Scout reference for local directory ${resolved.path}`
-                  : `Scout reference for repository ${resolved.repository}`,
+          const resolvedReferences = Reference.resolveAll({
+            references: cfg.reference ?? {},
+            directory: ctx.directory,
+            worktree: ctx.worktree,
+          })
+          for (const resolved of resolvedReferences) {
+            if (agents[resolved.name]) continue
+            const localPath = resolved.kind === "invalid" ? undefined : resolved.path
+            agents[resolved.name] = {
+              name: resolved.name,
+              description: referenceDescription(resolved),
               permission: Permission.merge(
                 agents.scout.permission,
-                Permission.fromConfig(
-                  localPath
+                Permission.fromConfig({
+                  repo_clone: "deny",
+                  ...(localPath
                     ? {
                         external_directory: {
                           [localPath]: "allow",
                           [path.join(localPath, "*")]: "allow",
                         },
                       }
-                    : {},
-                ),
+                    : {}),
+                }),
               ),
-              prompt: referencePrompt(name, resolved),
-              options: { reference },
+              prompt: referencePrompt(resolved),
+              options: { reference: cfg.reference?.[resolved.name], resolved },
               mode: "subagent",
               native: false,
             }
@@ -429,8 +426,10 @@ export const layer = Layer.effect(
         const defaultAgent = Effect.fnUntraced(function* () {
           const c = yield* config.get()
           if (c.default_agent) {
-            const effective = KiloAgent.resolveKey(c.default_agent) // kilocode_change - treat "build" as "code"
-            const agent = agents[effective] // kilocode_change
+            // kilocode_change start
+            const effective = KiloAgent.resolveKey(c.default_agent)
+            const agent = agents[effective]
+            // kilocode_change end
             if (!agent) throw new Error(`default agent "${c.default_agent}" not found`)
             if (agent.mode === "subagent") throw new Error(`default agent "${c.default_agent}" is a subagent`)
             if (agent.hidden === true) throw new Error(`default agent "${c.default_agent}" is hidden`)

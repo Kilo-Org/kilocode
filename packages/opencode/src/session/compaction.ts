@@ -4,7 +4,6 @@ import * as Session from "./session"
 import { SessionID, MessageID, PartID } from "./schema"
 import { Provider } from "@/provider/provider"
 import { MessageV2 } from "./message-v2"
-import z from "zod"
 import { Token } from "@/util/token"
 import * as Log from "@opencode-ai/core/util/log"
 import { SessionProcessor } from "./processor"
@@ -18,14 +17,17 @@ import * as DateTime from "effect/DateTime"
 import { InstanceState } from "@/effect/instance-state"
 import { isOverflow as overflow, usable } from "./overflow"
 import { makeRuntime } from "@/effect/run-service"
-import { fn } from "@/util/fn"
-import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
-import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-payload-recovery" // kilocode_change
-import { KiloCompactionChunks } from "@/kilocode/session/compaction-chunks" // kilocode_change
-import { SessionExport } from "@/kilocode/session-export" // kilocode_change
-import { KiloSession } from "@/kilocode/session" // kilocode_change
-import { EventV2 } from "@/v2/event"
+import { serviceUse } from "@/effect/service-use"
+// kilocode_change start
+import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
+import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-payload-recovery"
+import { KiloCompactionChunks } from "@/kilocode/session/compaction-chunks"
+import { SessionExport } from "@/kilocode/session-export"
+import { KiloSession } from "@/kilocode/session"
+// kilocode_change end
+import { SyncEvent } from "@/sync"
 import { SessionEvent } from "@/v2/session-event"
+import { Flag } from "@opencode-ai/core/flag/flag"
 
 const log = Log.create({ service: "session.compaction" })
 
@@ -217,6 +219,8 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/SessionCompaction") {}
 
+export const use = serviceUse(Service)
+
 export const layer: Layer.Layer<
   Service,
   never,
@@ -227,6 +231,7 @@ export const layer: Layer.Layer<
   | Plugin.Service
   | SessionProcessor.Service
   | Provider.Service
+  | SyncEvent.Service
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -237,6 +242,7 @@ export const layer: Layer.Layer<
     const plugin = yield* Plugin.Service
     const processors = yield* SessionProcessor.Service
     const provider = yield* Provider.Service
+    const sync = yield* SyncEvent.Service
 
     const isOverflow = Effect.fn("SessionCompaction.isOverflow")(function* (input: {
       tokens: MessageV2.Assistant["tokens"]
@@ -380,7 +386,8 @@ export const layer: Layer.Layer<
             parts: MessageV2.Part[]
           }
         | undefined
-      if (input.overflow) {
+      // kilocode_change start - false is preflight replay; undefined disables replay
+      if (input.overflow !== undefined) {
         const idx = input.messages.findIndex((m) => m.info.id === input.parentID)
         for (let i = idx - 1; i >= 0; i--) {
           const msg = input.messages[i]
@@ -397,6 +404,7 @@ export const layer: Layer.Layer<
           messages = input.messages
         }
       }
+      // kilocode_change end
 
       const agent = yield* agents.get("compaction")
       const model = agent.model
@@ -474,9 +482,7 @@ export const layer: Layer.Layer<
             updateMessage: session.updateMessage,
             updatePart: session.updatePart,
           })
-      // kilocode_change end
 
-      // kilocode_change start - fallback to chunked compaction when the first summary overflows
       const fallback = KiloCompactionChunks.eligible({
         result,
         error: processor.message.error ?? processor.compactError?.(),
@@ -550,8 +556,9 @@ export const layer: Layer.Layer<
           KiloSessionPromptQueue.retarget(input.sessionID, replayMsg.id) // kilocode_change - expose replay to scope()
           for (const part of replay.parts) {
             if (part.type === "compaction") continue
+            // kilocode_change start - preserve media for preflight replay but strip it after provider overflow
             const replayPart =
-              part.type === "file" && MessageV2.isMedia(part.mime)
+              input.overflow && part.type === "file" && MessageV2.isMedia(part.mime)
                 ? { type: "text" as const, text: `[Attached ${part.mime}: ${part.filename ?? "file"}]` }
                 : part
             yield* session.updatePart({
@@ -560,6 +567,7 @@ export const layer: Layer.Layer<
               messageID: replayMsg.id,
               sessionID: input.sessionID,
             })
+            // kilocode_change end
           }
         }
 
@@ -626,12 +634,14 @@ export const layer: Layer.Layer<
             parts: [],
           },
         )
-        EventV2.run(SessionEvent.Compaction.Ended.Sync, {
-          sessionID: input.sessionID,
-          timestamp: DateTime.makeUnsafe(Date.now()),
-          text: summary ?? "",
-          include: selected.tail_start_id,
-        })
+        if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+          yield* sync.run(SessionEvent.Compaction.Ended.Sync, {
+            sessionID: input.sessionID,
+            timestamp: DateTime.makeUnsafe(Date.now()),
+            text: summary ?? "",
+            include: selected.tail_start_id,
+          })
+        }
         // kilocode_change start - export self-contained compaction capture
         const parent = KiloSession.resolveParent(input.sessionID)
         const found = KiloSession.resolveRoot(input.sessionID)
@@ -695,11 +705,13 @@ export const layer: Layer.Layer<
       // kilocode_change start - keep auto-compaction markers visible during queued turns
       KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
       // kilocode_change end
-      EventV2.run(SessionEvent.Compaction.Started.Sync, {
-        sessionID: input.sessionID,
-        timestamp: DateTime.makeUnsafe(Date.now()),
-        reason: input.auto ? "auto" : "manual",
-      })
+      if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+        yield* sync.run(SessionEvent.Compaction.Started.Sync, {
+          sessionID: input.sessionID,
+          timestamp: DateTime.makeUnsafe(Date.now()),
+          reason: input.auto ? "auto" : "manual",
+        })
+      }
     })
 
     return Service.of({
@@ -720,13 +732,13 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(Plugin.defaultLayer),
     Layer.provide(Bus.layer),
     Layer.provide(Config.defaultLayer),
+    Layer.provide(SyncEvent.defaultLayer),
   ),
 )
 
 const { runPromise } = makeRuntime(Service, defaultLayer)
 
 export async function isOverflow(input: { tokens: MessageV2.Assistant["tokens"]; model: Provider.Model }) {
-  // kilocode_change
   return runPromise((svc) => svc.isOverflow(input))
 }
 
@@ -734,16 +746,5 @@ export async function prune(input: { sessionID: SessionID; reason?: PruneReason 
   // kilocode_change
   return runPromise((svc) => svc.prune(input))
 }
-
-export const create = fn(
-  z.object({
-    sessionID: SessionID.zod,
-    agent: z.string(),
-    model: z.object({ providerID: ProviderID.zod, modelID: ModelID.zod }),
-    auto: z.boolean(),
-    overflow: z.boolean().optional(),
-  }),
-  (input) => runPromise((svc) => svc.create(input)),
-)
 
 export * as SessionCompaction from "./compaction"
