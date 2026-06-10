@@ -163,6 +163,17 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
         autoload: false,
         options: { headers: DEFAULT_HEADERS },
       }),
+
+    // OrcaRouter is an OpenAI-compatible meta-router (catalog + api come from
+    // models.dev). Like the other meta-routers (openrouter, vercel, zenmux), it
+    // only needs Kilo attribution headers so OrcaRouter can attribute traffic to
+    // Kilo Code. autoload:false defers activation until the user provides
+    // ORCAROUTER_API_KEY (env detection is handled by the framework).
+    orcarouter: () =>
+      Effect.succeed({
+        autoload: false,
+        options: { headers: DEFAULT_HEADERS },
+      }),
   }
 }
 
