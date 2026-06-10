@@ -109,6 +109,9 @@ export namespace KiloSessions {
       if (auth?.type === "api" && auth.key.length > 0) return auth.key
       if (auth?.type === "oauth" && auth.access.length > 0) return auth.access
       if (auth?.type === "wellknown" && auth.token.length > 0) return auth.token
+
+      const key = process.env["KILO_API_KEY"]?.trim()
+      if (key) return key
       return undefined
     })
   }

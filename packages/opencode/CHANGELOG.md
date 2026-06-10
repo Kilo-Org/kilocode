@@ -1,5 +1,38 @@
 # @kilocode/cli
 
+## 7.3.41
+
+### Minor Changes
+
+- [#10761](https://github.com/Kilo-Org/kilocode/pull/10761) [`82b22f7`](https://github.com/Kilo-Org/kilocode/commit/82b22f78580fb5dafee55960135edfb1066d1520) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Support reading .ods (OpenDocument Spreadsheet) files in the read tool
+
+- [#10879](https://github.com/Kilo-Org/kilocode/pull/10879) [`b0a4f03`](https://github.com/Kilo-Org/kilocode/commit/b0a4f0391106a837b78200e6de52621a6872b890) - Show Terminal Bench completion scores and per-attempt costs in supported model details.
+
+- [#10948](https://github.com/Kilo-Org/kilocode/pull/10948) [`6ee090b`](https://github.com/Kilo-Org/kilocode/commit/6ee090b5a404924f00c1f4771b09c1f4a1e352ca) - Restore cloud session filesystem changes from synced session diffs when importing sessions, including inherited changes across imported session forks.
+
+### Patch Changes
+
+- [#10996](https://github.com/Kilo-Org/kilocode/pull/10996) [`cc03ffc`](https://github.com/Kilo-Org/kilocode/commit/cc03ffc58100cddbf4e0ab1ce9ccee89afe5726c) - Preserve image attachments when Photon is unavailable, enforce attachment limits for user images, and correlate shell lifecycle events correctly.
+
+- [#10998](https://github.com/Kilo-Org/kilocode/pull/10998) [`a59b255`](https://github.com/Kilo-Org/kilocode/commit/a59b255b3110411b8e05a09215bb9908f8dc6462) - Restore automatic session titles for models that require reasoning without assuming a supported effort level.
+
+- [#11004](https://github.com/Kilo-Org/kilocode/pull/11004) [`16e334f`](https://github.com/Kilo-Org/kilocode/commit/16e334ff8ca5305b7da379710a41056a6a6752fc) - Discover project-installed skills in Agent Manager worktree sessions.
+
+- [#11000](https://github.com/Kilo-Org/kilocode/pull/11000) [`741b00f`](https://github.com/Kilo-Org/kilocode/commit/741b00f2e0a6a94574c506a276688fc6ca033df5) - Keep subagent sessions isolated when forking sessions through editor clients.
+
+- [#10991](https://github.com/Kilo-Org/kilocode/pull/10991) [`ece8453`](https://github.com/Kilo-Org/kilocode/commit/ece8453ad0e8decc39f3c2a3d05893fd70b0985b) Thanks [@shssoichiro](https://github.com/shssoichiro)! - Avoid copying visible planning chat into new sessions started from the plan follow-up prompt.
+
+- [#11034](https://github.com/Kilo-Org/kilocode/pull/11034) [`0d76fa6`](https://github.com/Kilo-Org/kilocode/commit/0d76fa627349061d69fd4f5d6f486640d8d7834e) - Start forked sessions at zero cost instead of carrying over the source session's spend.
+
+- [#10109](https://github.com/Kilo-Org/kilocode/pull/10109) [`df30123`](https://github.com/Kilo-Org/kilocode/commit/df30123e5474cdbd2ad3b56d59c6eb5d06b89189) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Prevent memory leak in KiloSessionPromptQueue.cancel for sessions without active tails
+
+- [#11010](https://github.com/Kilo-Org/kilocode/pull/11010) [`a130641`](https://github.com/Kilo-Org/kilocode/commit/a13064167df50862e9a4a8622e092ac518110281) - Compact sessions at the configured context percentage before sending an oversized provider request.
+
+- Updated dependencies [[`b0a4f03`](https://github.com/Kilo-Org/kilocode/commit/b0a4f0391106a837b78200e6de52621a6872b890)]:
+  - @kilocode/kilo-gateway@7.4.0
+  - @kilocode/kilo-indexing@7.3.41
+  - @kilocode/kilo-telemetry@7.3.41
+
 ## 7.3.40
 
 ### Patch Changes

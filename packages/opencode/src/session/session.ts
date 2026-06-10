@@ -725,6 +725,7 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service | 
           ...msg.info,
           sessionID: session.id,
           id: newID,
+          ...(msg.info.role === "assistant" && { cost: 0 }), // kilocode_change - count only spend incurred after the fork
           ...(parentID && { parentID }),
         })
 
@@ -734,6 +735,7 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service | 
             id: PartID.ascending(),
             messageID: cloned.id,
             sessionID: session.id,
+            ...(part.type === "step-finish" && { cost: 0 }), // kilocode_change - exclude pre-fork spend from model stats
           }
           if (p.type === "compaction" && p.tail_start_id) {
             p.tail_start_id = idMap.get(p.tail_start_id)
