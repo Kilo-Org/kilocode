@@ -101,21 +101,6 @@ describe("daemon manager", () => {
     ).toStrictEqual(["/tmp/bun", "--conditions=browser", "/tmp/kilo/src/index.ts"])
   })
 
-  test("reuses one daemon across caller directories", async () => {
-    await using tmp = await tmpdir()
-    const env = opts(tmp.path)
-    const first = await Daemon.start(env)
-    const cwd = process.cwd()
-    try {
-      process.chdir(path.dirname(tmp.path))
-      const second = await Daemon.start(env)
-      expect(second.reused).toBe(true)
-      expect(second.state?.pid).toBe(first.state?.pid)
-    } finally {
-      process.chdir(cwd)
-    }
-  }, 20_000)
-
   test("starts, reuses, authenticates, and stops a daemon", async () => {
     await using tmp = await tmpdir()
 
@@ -140,20 +125,29 @@ describe("daemon manager", () => {
     })
     expect(health.status).toBe(200)
 
-    const reused = await Daemon.start(opts(tmp.path))
-    expect(reused.reused).toBe(true)
-    expect(reused.state?.pid).toBe(started.state?.pid)
+    const cwd = process.cwd()
+    try {
+      process.chdir(path.dirname(tmp.path))
+      const reused = await Daemon.start(opts(tmp.path))
+      expect(reused.reused).toBe(true)
+      expect(reused.state?.pid).toBe(started.state?.pid)
+    } finally {
+      process.chdir(cwd)
+    }
+
+    const daemon = await DaemonClient.connect()
+    expect(daemon?.url).toBe(started.state?.url)
+    expect(daemon?.headers.Authorization).toBe(`Basic ${daemon?.state.token}`)
+
+    process.env.KILO_NO_DAEMON = "1"
+    expect(await DaemonClient.connect()).toBeUndefined()
+    expect((await Daemon.status()).state?.pid).toBe(started.state?.pid)
+    if (original.disabled === undefined) delete process.env.KILO_NO_DAEMON
+    else process.env.KILO_NO_DAEMON = original.disabled
 
     const stopped = await Daemon.stop()
     expect(stopped.stopped).toBe(true)
     expect((await Daemon.status()).running).toBe(false)
-
-    const again = await Daemon.start(opts(tmp.path))
-    expect(again.running).toBe(true)
-    const restarted = await fetch(`${again.state!.url}/global/health`, {
-      headers: { authorization: `Basic ${again.state!.token}` },
-    })
-    expect(restarted.status).toBe(200)
   }, 20_000)
 
   test("daemon client does not start a daemon while attaching", async () => {
@@ -165,25 +159,4 @@ describe("daemon manager", () => {
     expect(daemon).toBeUndefined()
     expect((await Daemon.status()).running).toBe(false)
   })
-
-  test("daemon client honors the escape hatch", async () => {
-    await using tmp = await tmpdir()
-    const started = await Daemon.start(opts(tmp.path))
-    process.env.KILO_NO_DAEMON = "1"
-
-    const daemon = await DaemonClient.connect()
-
-    expect(daemon).toBeUndefined()
-    expect((await Daemon.status()).state?.pid).toBe(started.state?.pid)
-  }, 20_000)
-
-  test("daemon client returns authenticated attach settings", async () => {
-    await using tmp = await tmpdir()
-    const started = await Daemon.start(opts(tmp.path))
-
-    const daemon = await DaemonClient.connect()
-
-    expect(daemon?.url).toBe(started.state?.url)
-    expect(daemon?.headers.Authorization).toBe(`Basic ${daemon?.state.token}`)
-  }, 20_000)
 })

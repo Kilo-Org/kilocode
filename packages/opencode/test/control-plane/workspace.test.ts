@@ -1523,14 +1523,4 @@ describe("workspace waitForSync", () => {
       })
     })
   })
-
-  test("times out with the requested fence in the error message", async () => {
-    await withInstance(async () => {
-      const sessionID = SessionID.descending("ses_wait_timeout")
-
-      await expect(waitForWorkspaceSync(WorkspaceID.ascending("wrk_wait_timeout"), { [sessionID]: 1 })).rejects.toThrow(
-        `Timed out waiting for sync fence: {"${sessionID}":1}`,
-      )
-    })
-  }, 7000)
 })

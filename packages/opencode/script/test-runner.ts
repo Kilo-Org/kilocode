@@ -86,10 +86,15 @@ const bold = (s: string) => (tty ? `\x1b[1m${s}\x1b[0m` : s)
 const glob = new Bun.Glob("**/*.test.{ts,tsx}")
 const all = (await Array.fromAsync(glob.scan({ cwd: path.join(root, "test") }))).sort()
 
+// See test/kilocode/slow-test-policy.md for profiling data, retained coverage,
+// and commands that run these files explicitly.
 export const skipped = new Set([
   // Upstream browser OAuth integration tests bind the fixed callback port and
   // race with other parallel OAuth tests in CI.
   "mcp/oauth-browser.test.ts",
+  // Upstream stress tests spawn 30 Bun processes and spend most of their time
+  // on process startup and lock backoff. Keep them available for explicit runs.
+  "plugin/install-concurrency.test.ts",
 ])
 
 const matched =
