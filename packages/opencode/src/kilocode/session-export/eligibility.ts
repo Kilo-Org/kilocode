@@ -15,6 +15,10 @@ export type EligibilityInput = {
 
 export function isEligible(input: EligibilityInput): boolean {
   if (kill) return false
+  // Enterprise Bedrock-only: session export disabled
+  try {
+    if (process.env.BEDROCK_ONLY === "true" || process.env.BEDROCK_ONLY === "1") return false
+  } catch {}
   if (input.org?.type !== "personal") return false
   if (input.model.isFree !== true) return false
   if (input.model.api.npm !== "@kilocode/kilo-gateway") return false

@@ -17,7 +17,8 @@
     "hello": "echo 'Hello World!'",
     "test": "echo 'do not run tests from root' && exit 1",
     "extension": "bun --cwd packages/kilo-vscode script/launch.ts",
-    "dev-setup": "bun run --cwd packages/opencode --conditions=browser src/index.ts dev-setup"
+    "dev-setup": "bun run --cwd packages/opencode --conditions=browser src/index.ts dev-setup",
+    "audit:network": "node script/audit-network.js"
   },
   "workspaces": {
     "packages": [

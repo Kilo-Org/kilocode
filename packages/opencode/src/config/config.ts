@@ -17,6 +17,7 @@ import { existsSync } from "fs"
 // kilocode_change start
 import { GlobalBus } from "@/bus/global"
 import { Event } from "../server/event"
+import { isBedrockOnlyEnabled } from "@/kilocode/enterprise"
 // kilocode_change end
 import { Account } from "@/account/account"
 import { isRecord } from "@/util/record"
@@ -689,7 +690,11 @@ export const layer = Layer.effect(
         for (const [key, value] of Object.entries(auth)) {
           if (value.type === "wellknown") {
             const url = key.replace(/\/+$/, "")
-            // kilocode_change start
+            // kilocode_change start - Enterprise: skip remote config in Bedrock-only mode
+            if (isBedrockOnlyEnabled()) {
+              log.debug("skipping remote config in bedrock-only mode", { url })
+              continue
+            }
             const source = `${url}/.well-known/opencode`
             yield* Effect.gen(function* () {
               process.env[value.key] = value.token

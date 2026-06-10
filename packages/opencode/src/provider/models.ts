@@ -14,6 +14,7 @@ import { Config } from "../config/config"
 import { ModelCache } from "./model-cache"
 import { Auth } from "../auth"
 import { AI_SDK_PROVIDERS, KILO_OPENROUTER_BASE, PROMPTS } from "@kilocode/kilo-gateway"
+import { isBedrockOnlyEnabled } from "@/kilocode/enterprise" // Enterprise Bedrock-only
 // kilocode_change end
 
 // kilocode_change start
@@ -204,6 +205,11 @@ export const layer: Layer.Layer<Service, never, Requirements> = Layer.effect(
       const providers = { ...(yield* cachedGet) }
       delete providers["kilo"]
 
+      // Enterprise Bedrock-only: skip Kilo Gateway model fetching
+      if (isBedrockOnlyEnabled()) {
+        return providers
+      }
+
       const config = yield* cfg.get()
       const disabled = new Set(config.disabled_providers ?? [])
       const enabled = config.enabled_providers ? new Set(config.enabled_providers) : undefined
@@ -279,6 +285,7 @@ export const layer: Layer.Layer<Service, never, Requirements> = Layer.effect(
     // kilocode_change end
 
     const refresh = Effect.fn("ModelsDev.refresh")(function* (force = false) {
+      if (isBedrockOnlyEnabled()) return // Enterprise: skip external model fetching
       if (!force && (yield* fresh())) return
       yield* Effect.scoped(
         Effect.gen(function* () {

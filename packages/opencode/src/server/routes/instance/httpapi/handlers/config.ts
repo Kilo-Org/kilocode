@@ -10,6 +10,7 @@ import { Effect } from "effect"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi" // kilocode_change
 import { InstanceHttpApi } from "../api"
 import { markInstanceForDisposal } from "../lifecycle"
+import { isBedrockOnlyEnabled } from "@/kilocode/enterprise" // kilocode_change - enterprise
 
 export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (handlers) =>
   Effect.gen(function* () {
@@ -36,10 +37,10 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
       const providers = yield* providerSvc.list()
       const defaults = Provider.defaultModelIDs(providers)
 
-      // kilocode_change start - Fetch default model from Kilo API when the kilo provider is available.
-      if (providers[ProviderID.kilo]) {
+      // kilocode_change start - Enterprise: skip Kilo API default model in Bedrock-only mode
+      if (!isBedrockOnlyEnabled() && providers[ProviderID.kilo]) {
         const auth = yield* Auth.Service
-        const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({}))) // kilocode_change
+        const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
         const token = info?.type === "oauth" ? info.access : info?.key
         const organizationId = info?.type === "oauth" ? info.accountId : undefined
         const model = yield* Effect.promise(() => fetchDefaultModel(token, organizationId))

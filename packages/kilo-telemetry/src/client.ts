@@ -5,11 +5,20 @@ import { TelemetryEvent } from "./events.js"
 const POSTHOG_API_KEY = "phc_GK2Pxl0HPj5ZPfwhLRjXrtdz8eD7e9MKnXiFrOqnB6z"
 const POSTHOG_HOST = "https://us.i.posthog.com"
 
+function isBedrockOnly(): boolean {
+  const val = process.env.BEDROCK_ONLY
+  return val === "true" || val === "1"
+}
+
 export namespace Client {
   let client: PostHog | null = null
   let enabled = true
 
   export function init() {
+    if (isBedrockOnly()) {
+      enabled = false
+      return
+    }
     client = new PostHog(POSTHOG_API_KEY, {
       host: POSTHOG_HOST,
       disableGeoip: false,
@@ -21,6 +30,10 @@ export namespace Client {
   }
 
   export function setEnabled(value: boolean) {
+    if (isBedrockOnly()) {
+      enabled = false
+      return
+    }
     enabled = value
     if (!client) return
     if (value) client.optIn()
@@ -28,10 +41,12 @@ export namespace Client {
   }
 
   export function isEnabled(): boolean {
+    if (isBedrockOnly()) return false
     return enabled && client !== null
   }
 
   export function capture(event: TelemetryEvent, properties?: Record<string, unknown>) {
+    if (isBedrockOnly()) return
     if (!enabled || !client) return
 
     const distinctId = Identity.getDistinctId()
@@ -48,6 +63,7 @@ export namespace Client {
   }
 
   export function identify(distinctId: string, properties?: Record<string, unknown>) {
+    if (isBedrockOnly()) return
     if (!enabled || !client) return
 
     client.capture({
@@ -60,6 +76,7 @@ export namespace Client {
   }
 
   export function alias(distinctId: string, aliasId: string) {
+    if (isBedrockOnly()) return
     if (!enabled || !client) return
 
     client.alias({
@@ -70,7 +87,6 @@ export namespace Client {
 
   export async function shutdown(): Promise<void> {
     if (client) {
-      // Flush any pending events before shutdown
       await client.flush()
       await client.shutdown()
       client = null

@@ -1,5 +1,9 @@
 import * as path from "path"
-import { fetchProfile } from "@kilocode/kilo-gateway"
+
+function isBedrockOnly(): boolean {
+  const val = process.env.BEDROCK_ONLY
+  return val === "true" || val === "1"
+}
 
 export namespace Identity {
   let machineId: string | null = null
@@ -19,7 +23,6 @@ export namespace Identity {
       return machineId
     }
 
-    // Don't write to the working directory if no data path is configured
     if (!dataPath) return undefined
 
     const filepath = path.join(dataPath, "telemetry-id")
@@ -59,8 +62,18 @@ export namespace Identity {
       return
     }
 
-    const profile = await fetchProfile(token).catch(() => null)
-    userId = profile?.email || null
+    if (isBedrockOnly()) {
+      userId = null
+      return
+    }
+
+    try {
+      const { fetchProfile } = await import("@kilocode/kilo-gateway")
+      const profile = await fetchProfile(token).catch(() => null)
+      userId = profile?.email || null
+    } catch {
+      userId = null
+    }
   }
 
   export function reset() {

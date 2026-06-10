@@ -8,6 +8,14 @@ import * as Log from "@opencode-ai/core/util/log"
 // import { ConsoleCommand } from "./cli/cmd/account"
 // kilocode_change end
 import { ConsoleCommand } from "./cli/cmd/account"
+// Enterprise Bedrock-only: import network guard module
+import {
+  isBedrockOnlyEnabled,
+  assertBedrockConfigured,
+  installNetworkGuard,
+  installWebSocketGuard,
+  disableTelemetryExports,
+} from "@/kilocode/enterprise"
 import { ProvidersCommand } from "./cli/cmd/providers"
 import { AgentCommand } from "./cli/cmd/agent"
 import { UpgradeCommand } from "./cli/cmd/upgrade"
@@ -151,28 +159,46 @@ let cli = yargs(args) // kilocode_change
       run_id: processMetadata.runID,
     })
 
-    // kilocode_change start - Initialize telemetry
-    const globalCfg = await AppRuntime.runPromise(Config.Service.use((cfg) => cfg.getGlobal()))
-    await Telemetry.init({
-      dataPath: Global.Path.data,
-      version: InstallationVersion,
-      enabled: globalCfg.experimental?.openTelemetry !== false,
-    })
-
-    // Migrate legacy Kilo CLI auth if needed
-    await migrateLegacyKiloAuth(
-      async () => (await AppRuntime.runPromise(Auth.Service.use((svc) => svc.get("kilo")))) !== undefined,
-      async (auth) => AppRuntime.runPromise(Auth.Service.use((svc) => svc.set("kilo", auth))),
-    )
-
-    const kiloAuth = await AppRuntime.runPromise(Auth.Service.use((svc) => svc.get("kilo")))
-    if (kiloAuth) {
-      const token = kiloAuth.type === "oauth" ? kiloAuth.access : kiloAuth.key
-      const accountId = kiloAuth.type === "oauth" ? kiloAuth.accountId : undefined
-      await Telemetry.updateIdentity(token, accountId)
+    // Enterprise Bedrock-only: install guards before any network activity
+    const bedrockOnly = isBedrockOnlyEnabled()
+    if (bedrockOnly) {
+      disableTelemetryExports()
+      installNetworkGuard()
+      installWebSocketGuard()
+      assertBedrockConfigured()
+      Log.Default.info("enterprise bedrock-only mode active")
     }
 
-    Telemetry.trackCliStart()
+    // kilocode_change start - Initialize telemetry
+    const globalCfg = await AppRuntime.runPromise(Config.Service.use((cfg) => cfg.getGlobal()))
+
+    if (bedrockOnly) {
+      // Enterprise mode: telemetry completely disabled
+      Log.Default.info("telemetry disabled in enterprise bedrock-only mode")
+    } else {
+      await Telemetry.init({
+        dataPath: Global.Path.data,
+        version: InstallationVersion,
+        enabled: globalCfg.experimental?.openTelemetry !== false,
+      })
+    }
+
+    // Migrate legacy Kilo CLI auth if needed
+    if (!bedrockOnly) {
+      await migrateLegacyKiloAuth(
+        async () => (await AppRuntime.runPromise(Auth.Service.use((svc) => svc.get("kilo")))) !== undefined,
+        async (auth) => AppRuntime.runPromise(Auth.Service.use((svc) => svc.set("kilo", auth))),
+      )
+
+      const kiloAuth = await AppRuntime.runPromise(Auth.Service.use((svc) => svc.get("kilo")))
+      if (kiloAuth) {
+        const token = kiloAuth.type === "oauth" ? kiloAuth.access : kiloAuth.key
+        const accountId = kiloAuth.type === "oauth" ? kiloAuth.accountId : undefined
+        await Telemetry.updateIdentity(token, accountId)
+      }
+
+      Telemetry.trackCliStart()
+    }
     // kilocode_change end
 
     // kilocode_change start - one-time database migration progress

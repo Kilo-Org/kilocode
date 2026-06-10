@@ -366,6 +366,12 @@ export namespace KiloSessions {
   export async function enableRemote() {
     if (remote) return
     if (ingestDisabled) return
+    // Enterprise Bedrock-only: remote sessions disabled
+    try {
+      if (process.env.BEDROCK_ONLY === "true" || process.env.BEDROCK_ONLY === "1") {
+        throw new Error("Remote sessions are disabled in enterprise Bedrock-only mode.")
+      }
+    } catch {}
     if (enabling) return enabling
     const seq = ++remoteSeq
     void Bus.publish(Event.RemoteStatusChanged, { enabled: true, connected: false })

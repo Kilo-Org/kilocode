@@ -29,7 +29,17 @@ export namespace SessionNetwork {
     "UND_ERR_SOCKET",
     "ERR_SOCKET_CONNECTION_TIMEOUT",
   ])
-  const urls = ["https://kilo.ai", "https://example.com", "https://cloudflare.com/cdn-cgi/trace"]
+  // kilocode_change start - Enterprise Bedrock-only: use only safe probe URLs
+  const urls = (() => {
+    try {
+      const { isBedrockOnlyEnabled } = require("@/kilocode/enterprise")
+      if (isBedrockOnlyEnabled()) {
+        return ["https://amazonaws.com", "https://example.com", "https://cloudflare.com/cdn-cgi/trace"]
+      }
+    } catch {}
+    return ["https://kilo.ai", "https://example.com", "https://cloudflare.com/cdn-cgi/trace"]
+  })()
+  // kilocode_change end
   const POLL_MS = 3_000
   const PROBE_MS = 5_000
   const RESUME_MS = 10_000

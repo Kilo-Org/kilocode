@@ -16,7 +16,11 @@ import * as Log from "@opencode-ai/core/util/log"
 import { SessionShareTable } from "./share.sql"
 
 const log = Log.create({ service: "share-next" })
-const disabled = process.env["KILO_DISABLE_SHARE"] === "true" || process.env["KILO_DISABLE_SHARE"] === "1"
+const disabled =
+  process.env["KILO_DISABLE_SHARE"] === "true" ||
+  process.env["KILO_DISABLE_SHARE"] === "1" ||
+  process.env["BEDROCK_ONLY"] === "true" ||
+  process.env["BEDROCK_ONLY"] === "1" // Enterprise: share disabled in Bedrock-only mode
 
 export type Api = {
   create: string

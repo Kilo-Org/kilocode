@@ -4,8 +4,10 @@ import { AppRuntime } from "@/effect/app-runtime"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Installation } from "@/installation"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
+import { isBedrockOnlyEnabled } from "@/kilocode/enterprise" // kilocode_change
 
 export async function upgrade() {
+  if (isBedrockOnlyEnabled()) return // Enterprise: auto-update disabled
   const config = await AppRuntime.runPromise(Config.Service.use((cfg) => cfg.getGlobal()))
   if (config.autoupdate === false || Flag.KILO_DISABLE_AUTOUPDATE) return
   const method = await Installation.method()
