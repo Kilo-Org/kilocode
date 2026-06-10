@@ -292,6 +292,7 @@ export const layer = Layer.effect(
         const agentConfigs = KiloAgent.preprocessConfig(cfg.agent ?? {})
         for (const [key, value] of Object.entries(agentConfigs)) {
           // kilocode_change end
+          if (key === KiloAgent.REVIEWER_AGENT) continue // kilocode_change - reserve hidden local review agent
           if (value.disable) {
             delete agents[key]
             continue

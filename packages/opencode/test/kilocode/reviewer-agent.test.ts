@@ -47,3 +47,61 @@ test("registers reviewer as a hidden read-only primary agent", async () => {
     },
   })
 })
+
+test("keeps reviewer available when config disables reviewer", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        reviewer: { disable: true },
+      },
+    },
+  })
+
+  await WithInstance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const reviewer = await load(tmp.path, (svc) => svc.get("reviewer"))
+
+      expect(reviewer).toBeDefined()
+      expect(reviewer?.mode).toBe("primary")
+      expect(reviewer?.hidden).toBe(true)
+      expect(reviewer?.native).toBe(true)
+      expect(perm(reviewer, "edit")).toBe("deny")
+    },
+  })
+})
+
+test("ignores reviewer config that would change prompt or permissions", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        reviewer: {
+          prompt: "custom reviewer prompt",
+          mode: "subagent",
+          hidden: false,
+          permission: {
+            edit: "allow",
+            bash: "allow",
+            task: "deny",
+          },
+        },
+      },
+    },
+  })
+
+  await WithInstance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const reviewer = await load(tmp.path, (svc) => svc.get("reviewer"))
+
+      expect(reviewer).toBeDefined()
+      expect(reviewer?.mode).toBe("primary")
+      expect(reviewer?.hidden).toBe(true)
+      expect(reviewer?.prompt).not.toBe("custom reviewer prompt")
+      expect(perm(reviewer, "edit")).toBe("deny")
+      expect(perm(reviewer, "task")).toBe("allow")
+      expect(bash(reviewer, "touch file")).toBe("deny")
+      expect(bash(reviewer, "git status")).toBe("allow")
+    },
+  })
+})

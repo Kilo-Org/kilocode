@@ -16,6 +16,8 @@ import PROMPT_ASK from "../../agent/prompt/ask.txt"
 import PROMPT_EXPLORE from "../../agent/prompt/explore.txt"
 import PROMPT_REVIEWER from "./prompt/reviewer.txt"
 
+export const REVIEWER_AGENT = "reviewer"
+
 export const bash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "ask",
   "cat *": "allow",
@@ -478,8 +480,8 @@ export function patchAgents(
   }
 
   // Add hidden reviewer agent
-  agents.reviewer = {
-    name: "reviewer",
+  agents[REVIEWER_AGENT] = {
+    name: REVIEWER_AGENT,
     description: "Review local changes without inheriting the active agent prompt.",
     prompt: PROMPT_REVIEWER,
     options: {},
