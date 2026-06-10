@@ -436,7 +436,9 @@ describe("plan follow-up", () => {
       const part = user.parts.find((item) => item.type === "text")
       expect(part?.type).toBe("text")
       if (!part || part.type !== "text") return
-      expect(part.text).toBe("Implement the plan above.")
+      expect(part.text).toBe(
+        `Implement:\n\n1. Build\n2. Test\n\nThis plan was created in session ${seeded.sessionID}. Use \`kilo_local_recall\` to retrieve additional context from that session only if needed.`,
+      )
       expect(part.synthetic).toBe(true)
     }))
 
@@ -504,7 +506,9 @@ describe("plan follow-up", () => {
       const injected = scoped.findLast((m) => m.info.role === "user")
       expect(injected).toBeDefined()
       const part = injected!.parts.find((p) => p.type === "text")
-      expect(part?.type === "text" && part.text).toBe("Implement the plan above.")
+      expect(part?.type === "text" && part.text).toBe(
+        `Implement:\n\n1. Refactor\n2. Ship\n\nThis plan was created in session ${seeded.sessionID}. Use \`kilo_local_recall\` to retrieve additional context from that session only if needed.`,
+      )
     }))
 
   test("ask - creates a new session with the plan and source session reference", () =>

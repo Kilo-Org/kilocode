@@ -381,6 +381,12 @@ describe("plan_exit detection", () => {
       expect(user?.info.role).toBe("user")
       if (!user || user.info.role !== "user") return
       expect(user.info.agent).toBe("code")
+      const part = user.parts.find((p) => p.type === "text")
+      expect(part?.type).toBe("text")
+      if (!part || part.type !== "text") return
+      expect(part.text).toBe(
+        `Implement:\n\nHere is the plan\n\nThis plan was created in session ${seeded.sessionID}. Use \`kilo_local_recall\` to retrieve additional context from that session only if needed.`,
+      )
     }))
 
   test("plan agent completion without plan_exit does NOT trigger PlanFollowup", () =>
@@ -588,6 +594,16 @@ describe("plan_exit detection", () => {
         answers: [[PlanFollowup.ANSWER_CONTINUE]],
       })
       await expect(pending).resolves.toBe("continue")
+
+      const messages = await sessions.messages({ sessionID: seeded.sessionID })
+      const user = messages
+        .slice()
+        .reverse()
+        .find((m) => m.info.role === "user")
+      const part = user?.parts.find((p) => p.type === "text")
+      expect(part?.type === "text" && part.text).toBe(
+        `Implement:\n\nDo implementation step 1\n\nThis plan was created in session ${seeded.sessionID}. Use \`kilo_local_recall\` to retrieve additional context from that session only if needed.`,
+      )
     }))
 
   test("plan reminder reuses custom plan_exit path when refining", () =>

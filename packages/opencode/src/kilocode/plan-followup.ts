@@ -68,6 +68,10 @@ export namespace PlanFollowup {
   export const ANSWER_NEW_SESSION = "Start new session"
   export const ANSWER_CONTINUE = "Continue here"
 
+  function handover(input: { plan: string; sessionID: SessionID }) {
+    return `${PLAN_PREFIX}\n\n${input.plan}\n\nThis plan was created in session ${input.sessionID}. Use \`kilo_local_recall\` to retrieve additional context from that session only if needed.`
+  }
+
   export function abort(sessionID: SessionID) {
     const ctl = pending.get(sessionID)
     if (!ctl) return false
@@ -274,13 +278,12 @@ export namespace PlanFollowup {
 
         try {
           const todos = await PlanFollowupRuntime.todo.get(input.sessionID)
-          const text = `${PLAN_PREFIX}\n\n${input.plan}\n\nThis plan was created in session ${input.sessionID}. Use \`kilo_local_recall\` to retrieve additional context from that session only if needed.`
 
           await inject({
             sessionID: next.id,
             agent: "code",
             model: code.model,
-            text,
+            text: handover(input),
             synthetic: false,
           })
 
@@ -369,7 +372,7 @@ export namespace PlanFollowup {
         sessionID: input.sessionID,
         agent: "code",
         model: code.model,
-        text: "Implement the plan above.",
+        text: handover({ plan, sessionID: input.sessionID }),
       })
       KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
       return "continue"
