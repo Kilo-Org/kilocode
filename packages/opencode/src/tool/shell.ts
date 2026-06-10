@@ -596,10 +596,12 @@ export const ShellTool = Tool.define(
 
       const meta: string[] = []
       if (expired) {
+        // kilocode_change start
         meta.push(
-          CommandTimeout.message(input.timeout, "shell tool terminated command") ?? // kilocode_change
+          CommandTimeout.message(input.timeout, "shell tool terminated command") ??
             `shell tool terminated command after exceeding timeout ${input.timeout} ms. If this command is expected to take longer and is not waiting for interactive input, retry with a larger timeout value in milliseconds.`,
         )
+        // kilocode_change end
       }
       if (aborted) meta.push("User aborted the command")
       const raw = list.map((item) => item.text).join("")
