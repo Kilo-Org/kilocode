@@ -15,7 +15,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js"
 import {
   CallToolResultSchema,
-  ResultSchema, // kilocode_change - use SDK-owned schema at client.request boundary
+  ToolSchema,
   type Tool as MCPToolDef,
   ToolListChangedNotificationSchema,
 } from "@modelcontextprotocol/sdk/types.js"
@@ -60,18 +60,14 @@ export function ensureDockerRm(cmd: string, args: string[]): string[] {
 }
 // kilocode_change end
 
-// kilocode_change start - parse tools/list manually so invalid outputSchema does not hide usable tools
-const TolerantToolSchema = z.looseObject({
-  name: z.string(),
-  description: z.string().optional(),
-  inputSchema: z.custom<MCPToolDef["inputSchema"]>((value) => typeof value === "object" && value !== null),
+const TolerantToolSchema = ToolSchema.extend({
+  outputSchema: z.unknown().optional(),
 })
 
 const TolerantListToolsResultSchema = z.looseObject({
   tools: z.array(TolerantToolSchema),
   nextCursor: z.string().optional(),
 })
-// kilocode_change end
 
 export const Resource = Schema.Struct({
   name: Schema.String,
@@ -173,16 +169,9 @@ function listTools(key: string, client: MCPClient, timeout: number) {
 
       log.warn("failed to validate MCP tool output schemas, retrying without output schema validation", { key, error })
       return Effect.tryPromise({
-        try: () => client.request({ method: "tools/list" }, ResultSchema, { timeout }), // kilocode_change
+        try: () => client.request({ method: "tools/list" }, TolerantListToolsResultSchema, { timeout }),
         catch: (err) => (err instanceof Error ? err : new Error(String(err))),
       }).pipe(
-        // kilocode_change start - ignore invalid outputSchema fields after SDK-level result validation
-        Effect.flatMap((result) =>
-          Effect.try({
-            try: () => TolerantListToolsResultSchema.parse(result),
-            catch: (err) => (err instanceof Error ? err : new Error(String(err))),
-          }),
-        ),
         Effect.map((result) =>
           result.tools.map((tool) => ({
             name: tool.name,
@@ -190,7 +179,6 @@ function listTools(key: string, client: MCPClient, timeout: number) {
             inputSchema: tool.inputSchema,
           })),
         ),
-        // kilocode_change end
       )
     }),
   )
