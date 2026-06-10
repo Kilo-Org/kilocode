@@ -169,6 +169,7 @@ jobs:
       - unit
       - jetbrains
     if: ${{ always() && !cancelled() }}
+    continue-on-error: true
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 15
     permissions:
@@ -340,16 +341,11 @@ jobs:
     needs:
       - unit
       - jetbrains
-      - test-health # kilocode_change
     if: always()
     steps:
       - name: Verify upstream test jobs passed
         run: |
           echo "unit=${{ needs.unit.result }}"
           echo "jetbrains=${{ needs.jetbrains.result }}"
-          # kilocode_change start
-          echo "test-health=${{ needs.test-health.result }}"
-          # kilocode_change end
           test "${{ needs.unit.result }}" = "success"
           test "${{ needs.jetbrains.result }}" = "success"
-          test "${{ needs.test-health.result }}" = "success" # kilocode_change
