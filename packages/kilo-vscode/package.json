@@ -101,36 +101,43 @@
       {
         "command": "kilo-code.new.plusButtonClicked",
         "title": "New Task",
+        "category": "Kilo Code",
         "icon": "$(add)"
       },
       {
         "command": "kilo-code.new.agentManagerOpen",
         "title": "Agent Manager",
+        "category": "Kilo Code",
         "icon": "$(organization)"
       },
       {
         "command": "kilo-code.new.kiloClawOpen",
         "title": "KiloClaw",
+        "category": "Kilo Code",
         "icon": "$(comment-discussion)"
       },
       {
         "command": "kilo-code.new.marketplaceButtonClicked",
         "title": "Marketplace",
+        "category": "Kilo Code",
         "icon": "$(extensions)"
       },
       {
         "command": "kilo-code.new.historyButtonClicked",
         "title": "History",
+        "category": "Kilo Code",
         "icon": "$(history)"
       },
       {
         "command": "kilo-code.new.profileButtonClicked",
         "title": "Profile",
+        "category": "Kilo Code",
         "icon": "$(account)"
       },
       {
         "command": "kilo-code.new.settingsButtonClicked",
         "title": "Settings",
+        "category": "Kilo Code",
         "icon": "$(settings-gear)"
       },
       {
@@ -170,7 +177,8 @@
       },
       {
         "command": "kilo-code.new.openInTab",
-        "title": "Kilo Code",
+        "title": "Open in Tab",
+        "category": "Kilo Code",
         "icon": {
           "light": "assets/icons/kilo-light.svg",
           "dark": "assets/icons/kilo-dark.svg"

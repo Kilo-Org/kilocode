@@ -1437,8 +1437,7 @@ export const dict = {
     "言語サーバーにクエリ。コードインテリジェンスのために言語サーバークエリの実行を許可します。",
   "settings.autoApprove.tool.todoreadwrite": "タスクリストの管理。内部タスクリストの読み取りと更新を許可します。",
   "settings.autoApprove.tool.webfetch": "URLをフェッチ。特定のURLからコンテンツを取得することを許可します。",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Webまたはコードの検索。外部のWebまたはコード検索の実行を許可します。",
+  "settings.autoApprove.tool.websearch": "ウェブを検索。外部のWeb検索の実行を許可します。",
   "settings.autoApprove.tool.external_directory":
     "ワークスペース外のファイルにアクセス。現在のプロジェクトディレクトリ外のファイルにアクセスしたときにトリガーされます。",
   "settings.autoApprove.tool.doom_loop":

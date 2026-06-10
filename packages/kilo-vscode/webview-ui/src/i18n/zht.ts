@@ -1360,7 +1360,7 @@ export const dict = {
   "settings.autoApprove.tool.lsp": "查詢語言伺服器。允許執行語言伺服器查詢以取得程式碼智慧。",
   "settings.autoApprove.tool.todoreadwrite": "管理任務清單。允許讀取和更新內部任務清單。",
   "settings.autoApprove.tool.webfetch": "擷取 URL。允許從特定 URL 擷取內容。",
-  "settings.autoApprove.tool.websearchcodesearch": "搜尋網路或程式碼。允許執行外部網路或程式碼搜尋。",
+  "settings.autoApprove.tool.websearch": "搜尋網頁。允許執行外部網路搜尋。",
   "settings.autoApprove.tool.external_directory": "存取工作區外部的檔案。存取目前專案目錄之外的檔案時觸發。",
   "settings.autoApprove.tool.doom_loop": "防止重複相同操作。當相同的工具呼叫以相同的輸入重複時觸發。",
   "settings.checkpoints.enable.title": "啟用快照",

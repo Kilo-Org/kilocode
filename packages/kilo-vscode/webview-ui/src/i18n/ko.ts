@@ -1422,8 +1422,7 @@ export const dict = {
   "settings.autoApprove.tool.lsp": "언어 서버 쿼리. 코드 인텔리전스를 위해 언어 서버 쿼리 실행을 허용합니다.",
   "settings.autoApprove.tool.todoreadwrite": "작업 목록 관리. 내부 작업 목록을 읽고 업데이트할 수 있도록 허용합니다.",
   "settings.autoApprove.tool.webfetch": "URL 가져오기. 특정 URL에서 콘텐츠를 검색할 수 있도록 허용합니다.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "웹 또는 코드 검색. 외부 웹 또는 코드 검색을 수행할 수 있도록 허용합니다.",
+  "settings.autoApprove.tool.websearch": "웹 검색. 외부 웹 검색을 수행할 수 있도록 허용합니다.",
   "settings.autoApprove.tool.external_directory":
     "작업 공간 외부 파일 접근. 현재 프로젝트 디렉토리 외부의 파일에 접근할 때 트리거됩니다.",
   "settings.autoApprove.tool.doom_loop":

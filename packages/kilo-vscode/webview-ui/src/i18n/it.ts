@@ -1281,7 +1281,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Gestisci lista task. Consente lettura e aggiornamento della lista task interna.",
   "settings.autoApprove.tool.webfetch": "Recupera URL. Consente di recuperare contenuti da un URL specifico.",
-  "settings.autoApprove.tool.websearchcodesearch": "Cerca web o codice. Consente ricerche web o di codice esterne.",
+  "settings.autoApprove.tool.websearch": "Cerca sul web. Consente ricerche web esterne.",
   "settings.autoApprove.tool.doom_loop":
     "Previeni azioni identiche ripetute. Si attiva quando la stessa chiamata tool si ripete con input identico.",
   "settings.checkpoints.enable.title": "Abilita snapshot",

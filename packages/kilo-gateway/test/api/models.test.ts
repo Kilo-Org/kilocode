@@ -15,6 +15,8 @@ const VALID_RESPONSE = JSON.stringify({
         output_modalities: ["text"],
       },
       supported_parameters: ["tools", "temperature"],
+      isFree: false,
+      mayTrainOnYourPrompts: true,
     },
   ],
 })
@@ -143,7 +145,10 @@ test("returns models without error on success", async () => {
   ;(globalThis as any).fetch = orig
 
   expect(result.error).toBeUndefined()
-  expect(Object.keys(result.models).length).toBeGreaterThan(0)
+  expect(result.models["test/model-a"]).toMatchObject({
+    isFree: false,
+    mayTrainOnYourPrompts: true,
+  })
 })
 
 test("preserves Terminal Bench metadata as a dedicated model field", async () => {

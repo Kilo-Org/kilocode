@@ -91,9 +91,11 @@ export const ModelPreview: Component<Props> = (props) => {
                       })()}
                     </Show>
                   </div>
-                  <Show when={model().isFree}>
+                  <Show when={model().isFree || isDataCollectedModel(model())}>
                     <span class="model-preview-free-data">
-                      <span class="model-preview-badge model-preview-badge--free">{freeLabel()}</span>
+                      <Show when={model().isFree}>
+                        <span class="model-preview-badge model-preview-badge--free">{freeLabel()}</span>
+                      </Show>
                       <Show when={isDataCollectedModel(model())}>
                         <Tooltip value={dataLabel()} placement="top">
                           <span class="model-preview-free-data-icon" aria-label={dataLabel()}>

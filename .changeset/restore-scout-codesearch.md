@@ -1,5 +1,6 @@
 ---
 "@kilocode/cli": patch
+"kilo-code": patch
 ---
 
-Preserve the code search tool and Scout access after the OpenCode provider and agent updates.
+Remove the unsupported code search tool.

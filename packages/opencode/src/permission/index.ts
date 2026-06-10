@@ -506,7 +506,6 @@ const SCALAR_ONLY_PERMISSIONS = new Set([
   "question",
   "webfetch",
   "websearch",
-  "codesearch",
   "doom_loop",
 ])
 

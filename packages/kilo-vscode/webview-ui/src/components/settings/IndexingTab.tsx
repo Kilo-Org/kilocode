@@ -1,5 +1,6 @@
 import { Component, For, Show, createMemo, createSignal } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
+import { DEFAULT_VECTOR_STORE } from "@kilocode/kilo-indexing/config"
 import { formatKiloEmbeddingModelLabel, getKiloEmbeddingModel } from "@kilocode/kilo-indexing/embedding-models"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "@kilocode/kilo-ui/switch"
@@ -32,8 +33,8 @@ const allProviders: { value: ProviderId; label: string }[] = [
 ]
 
 const stores: Option[] = [
-  { value: "qdrant", label: "Qdrant (default)" },
-  { value: "lancedb", label: "LanceDB" },
+  { value: "lancedb", label: "LanceDB (default)" },
+  { value: "qdrant", label: "Qdrant" },
 ]
 
 const tuning: Array<{ key: TuningKey; label: string; placeholder: string }> = [
@@ -91,7 +92,7 @@ const IndexingTab: Component = () => {
     updateConfig({ indexing: { ...cfg(), ...partial } })
   }
 
-  const vectorStore = () => cfg().vectorStore ?? "qdrant"
+  const vectorStore = () => cfg().vectorStore ?? DEFAULT_VECTOR_STORE
   const kiloDefault = () =>
     getKiloEmbeddingModel(embeds.catalog().defaultModel, embeds.catalog())?.id ?? embeds.catalog().defaultModel
   const kiloModels = createMemo(() =>

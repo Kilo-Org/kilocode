@@ -146,7 +146,6 @@ function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
     question: "allow",
     webfetch: "allow",
     websearch: "allow",
-    codesearch: "allow",
     codebase_search: "allow",
     semantic_search: "allow",
     external_directory: {
@@ -200,7 +199,6 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
     list: "allow",
     webfetch: "allow",
     websearch: "allow",
-    codesearch: "allow",
     codebase_search: "allow",
     semantic_search: "allow",
     external_directory: {
@@ -355,7 +353,6 @@ export function patchAgents(
           skill: "allow",
           webfetch: "allow",
           websearch: "allow",
-          codesearch: "allow",
           codebase_search: "allow",
           semantic_search: "allow",
           read: "allow",
@@ -419,7 +416,6 @@ export function patchAgents(
         todowrite: "allow",
         webfetch: "allow",
         websearch: "allow",
-        codesearch: "allow",
         codebase_search: "allow",
         external_directory: {
           [Truncate.GLOB]: "allow",

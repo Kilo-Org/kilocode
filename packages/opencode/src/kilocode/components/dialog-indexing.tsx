@@ -9,6 +9,7 @@
 import { useDialog } from "@tui/ui/dialog"
 import { DialogSelect, type DialogSelectOption } from "@tui/ui/dialog-select"
 import { DialogPrompt } from "@tui/ui/dialog-prompt"
+import { DEFAULT_VECTOR_STORE } from "@kilocode/kilo-indexing/config"
 import { formatKiloEmbeddingModelLabel } from "@kilocode/kilo-indexing/embedding-models"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
 import { useSync } from "@tui/context/sync"
@@ -62,8 +63,8 @@ const PROVIDER_FIELDS: Record<EmbeddingProvider, ProviderFieldDef[]> = {
 }
 
 const VECTOR_STORE_LABELS: Record<string, string> = {
-  qdrant: "Qdrant (default)",
-  lancedb: "LanceDB",
+  lancedb: "LanceDB (default)",
+  qdrant: "Qdrant",
 }
 
 function maskSecret(value: string | undefined): string {
@@ -316,14 +317,14 @@ function VectorStoreSelect(props: SubDialogProps) {
   const options: DialogSelectOption<string>[] = Object.entries(VECTOR_STORE_LABELS).map(([value, title]) => ({
     value,
     title,
-    description: value === (indexing.vectorStore ?? "qdrant") ? "(current)" : undefined,
+    description: value === (indexing.vectorStore ?? DEFAULT_VECTOR_STORE) ? "(current)" : undefined,
   }))
 
   return (
     <DialogSelect
       title="Vector Store"
       options={options}
-      current={indexing.vectorStore ?? "qdrant"}
+      current={indexing.vectorStore ?? DEFAULT_VECTOR_STORE}
       onSelect={async (option) => {
         const store = option.value as "lancedb" | "qdrant"
         if (store === "lancedb") {
@@ -480,9 +481,8 @@ export function DialogIndexing(props: DialogIndexingProps) {
   const indexing = defaultIndexing(sync, globalCfg())
 
   const providerLabel = indexing.provider ? PROVIDER_LABELS[indexing.provider] : "not set"
-  const storeLabel = indexing.vectorStore
-    ? (VECTOR_STORE_LABELS[indexing.vectorStore] ?? indexing.vectorStore)
-    : "Qdrant (default)"
+  const store = indexing.vectorStore ?? DEFAULT_VECTOR_STORE
+  const storeLabel = VECTOR_STORE_LABELS[store] ?? store
 
   const tuningCount = TUNING_PARAMS.filter((p) => indexing[p.key] !== undefined).length
   const tuningDesc = tuningCount > 0 ? `${tuningCount} customized` : "defaults"
