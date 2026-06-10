@@ -27,7 +27,8 @@ export function addresses(
 ) {
   return Object.values(interfaces)
     .flatMap((list) => list ?? [])
-    .filter((item) => item.family === "IPv4" && !item.internal)
+    // Skip internal and Docker bridge networks (typically 172.x.x.x), matching web.ts
+    .filter((item) => item.family === "IPv4" && !item.internal && !item.address.startsWith("172."))
     .map((item) => item.address)
 }
 

@@ -26,7 +26,7 @@ describe("console command", () => {
     expect(covers({ hostname: "127.0.0.1", port: 4097 }, { hostname: "127.0.0.1", port: 0 })).toBe(true)
   })
 
-  test("addresses lists external IPv4 addresses only", () => {
+  test("addresses lists external IPv4 addresses only, skipping Docker bridge networks", () => {
     const fake = {
       lo: [
         { address: "127.0.0.1", family: "IPv4", internal: true },
@@ -36,6 +36,7 @@ describe("console command", () => {
         { address: "192.168.1.7", family: "IPv4", internal: false },
         { address: "fe80::1", family: "IPv6", internal: false },
       ],
+      docker0: [{ address: "172.17.0.1", family: "IPv4", internal: false }],
       down: undefined,
     }
     expect(addresses(fake)).toStrictEqual(["192.168.1.7"])
