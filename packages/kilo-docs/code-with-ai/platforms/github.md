@@ -1,3 +1,10 @@
-Add the following section to the existing GitHub integration documentation (`packages/kilo-docs/code-with-ai/platforms/github.md`), after the section describing how to mention the bot:
-
 ```markdown
+---
+title: "GitHub Integration"
+description: "Connect Kilo Code to GitHub for automated code reviews, PR comments, and bot interactions."
+sidebar_label: GitHub
+---
+
+# GitHub Integration
+
+Kilo Code integrates with GitHub to provide automated code reviews, PR comments, and bot interactions directly in your GitHub workflow.
