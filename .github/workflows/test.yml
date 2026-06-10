@@ -116,7 +116,9 @@ jobs:
           fi
 
       - name: Upload test health to Codecov
+        id: codecov
         if: ${{ !cancelled() && hashFiles('.artifacts/codecov-test-results/*.xml') != '' }}
+        continue-on-error: true
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           use_oidc: true
@@ -127,7 +129,12 @@ jobs:
           flags: unit-${{ matrix.settings.name }}
           name: unit-${{ matrix.settings.name }}
           os: ${{ matrix.settings.name }}
-          fail_ci_if_error: false
+          version: v11.2.8
+          fail_ci_if_error: true
+
+      - name: Warn when Codecov upload fails
+        if: ${{ !cancelled() && steps.codecov.outcome == 'failure' }}
+        run: echo "::warning title=Codecov test health upload failed::Check that Kilo-Org/kilocode is activated in Codecov and inspect the previous step."
       # kilocode_change end
 
       - name: Upload unit artifacts
@@ -190,7 +197,9 @@ jobs:
           fail_on_failure: false
 
       - name: Upload JetBrains test health to Codecov
+        id: codecov
         if: ${{ !cancelled() && hashFiles('packages/kilo-jetbrains/.artifacts/unit/junit.xml') != '' }}
+        continue-on-error: true
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           use_oidc: true
@@ -201,7 +210,12 @@ jobs:
           flags: jetbrains-linux
           name: jetbrains-linux
           os: linux
-          fail_ci_if_error: false
+          version: v11.2.8
+          fail_ci_if_error: true
+
+      - name: Warn when Codecov upload fails
+        if: ${{ !cancelled() && steps.codecov.outcome == 'failure' }}
+        run: echo "::warning title=Codecov test health upload failed::Check that Kilo-Org/kilocode is activated in Codecov and inspect the previous step."
 
       - name: Upload JetBrains unit artifacts
         if: always()
