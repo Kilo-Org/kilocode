@@ -14,6 +14,7 @@ import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
 import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
 import PROMPT_ASK from "../../agent/prompt/ask.txt"
 import PROMPT_EXPLORE from "../../agent/prompt/explore.txt"
+import PROMPT_REVIEWER from "./prompt/reviewer.txt"
 
 export const bash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "ask",
@@ -88,11 +89,15 @@ export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "tr *": "allow",
   "jq *": "allow",
   "git *": "deny",
+  "git -c core.quotepath=false diff": "allow",
+  "git -c core.quotepath=false diff *": "allow",
   "git log *": "allow",
   "git show *": "allow",
+  "git show-ref *": "allow",
   "git diff *": "allow",
   "git status *": "allow",
   "git blame *": "allow",
+  "git merge-base *": "allow",
   "git rev-parse *": "allow",
   "git rev-list *": "allow",
   "git ls-files *": "allow",
@@ -162,6 +167,31 @@ function denies(user: Permission.Ruleset) {
 
 function askEditGuard() {
   return Permission.fromConfig({ edit: "deny" })
+}
+
+function reviewGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
+  return Permission.fromConfig({
+    "*": "deny",
+    bash: readOnlyBash,
+    read: {
+      "*": "allow",
+      "*.env": "ask",
+      "*.env.*": "ask",
+      "*.env.example": "allow",
+    },
+    grep: "allow",
+    glob: "allow",
+    list: "allow",
+    skill: "allow",
+    task: "allow",
+    question: "allow",
+    webfetch: "allow",
+    websearch: "allow",
+    codesearch: "allow",
+    codebase_search: "allow",
+    semantic_search: "allow",
+    ...mcp,
+  })
 }
 
 // Upstream v1.14.33 builds Agent state outside the Instance ALS, so reading
@@ -280,7 +310,7 @@ export function telemetryOptions(_cfg: Config.Info) {
 // - Patch plan with readOnlyBash, mcpRules, .kilo paths
 // - Patch explore with codebase_search and conditional prompt
 // - Patch appropriate agents with semantic_search
-// - Add debug, orchestrator, ask agents
+// - Add debug, orchestrator, ask, reviewer agents
 export function patchAgents(
   agents: Record<
     string,
@@ -444,6 +474,24 @@ export function patchAgents(
     options: {},
     permission: Permission.merge(defaults, askGuard(kilo.mcpRules), user, askEditGuard(), denies(user)),
     mode: "primary",
+    native: true,
+  }
+
+  // Add hidden reviewer agent
+  agents.reviewer = {
+    name: "reviewer",
+    description: "Review local changes without inheriting the active agent prompt.",
+    prompt: PROMPT_REVIEWER,
+    options: {},
+    permission: Permission.merge(
+      defaults,
+      reviewGuard(kilo.mcpRules),
+      user,
+      Permission.fromConfig({ edit: "deny", bash: readOnlyBash }),
+      denies(user),
+    ),
+    mode: "primary",
+    hidden: true,
     native: true,
   }
 }

@@ -15,6 +15,16 @@ describe("review command parsing", () => {
   })
 })
 
+test("routes local review commands to the reviewer agent", () => {
+  const branch = localReviewCommand()
+  const uncommitted = localReviewUncommittedCommand()
+
+  expect(branch.agent).toBe("reviewer")
+  expect(uncommitted.agent).toBe("reviewer")
+  expect(branch.subtask).not.toBe(true)
+  expect(uncommitted.subtask).not.toBe(true)
+})
+
 describe("local-review command", () => {
   const cmd = localReviewCommand()
 
