@@ -13,6 +13,7 @@ import { Config } from "@/config/config"
 import { Agent } from "@/agent/agent"
 import { Shell } from "@/shell/shell"
 import { MessageID, SessionID } from "@/session/schema"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 import { testEffect } from "../lib/effect"
 
 const max = process.env.KILO_COMMAND_TIMEOUT_MAX_MS
@@ -27,6 +28,7 @@ const shell = testEffect(
     Truncate.defaultLayer,
     Config.defaultLayer,
     Agent.defaultLayer,
+    RuntimeFlags.defaultLayer,
   ),
 )
 
