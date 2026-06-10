@@ -410,6 +410,13 @@ describe("plan follow-up", () => {
         },
       }
       const seeded = await seed({ text: "1. Build\n2. Test" })
+      await todo.update({
+        sessionID: seeded.sessionID,
+        todos: [
+          { content: "Build feature", status: "in_progress", priority: "high" },
+          { content: "Drop legacy path", status: "cancelled", priority: "low" },
+        ],
+      })
       const pending = PlanFollowup.ask({
         question,
         sessionID: seeded.sessionID,
@@ -437,7 +444,7 @@ describe("plan follow-up", () => {
       expect(part?.type).toBe("text")
       if (!part || part.type !== "text") return
       expect(part.text).toBe(
-        `Implement:\n\n1. Build\n2. Test\n\nThis plan was created in session ${seeded.sessionID}. Use \`kilo_local_recall\` to retrieve additional context from that session only if needed.`,
+        `Implement:\n\n1. Build\n2. Test\n\nThis plan was created in session ${seeded.sessionID}. Use \`kilo_local_recall\` to retrieve additional context from that session only if needed.\n\n## Todo List\n\n- [~] Build feature\n- [-] Drop legacy path`,
       )
       expect(part.synthetic).toBe(true)
     }))
@@ -637,13 +644,11 @@ describe("plan follow-up", () => {
       expect(part?.type).toBe("text")
       if (!part || part.type !== "text") throw new Error("expected text part")
       expect(part.text).toBe(
-        `Implement:\n\n1. Add API\n2. Add tests\n\nThis plan was created in session ${seeded.sessionID}. Use \`kilo_local_recall\` to retrieve additional context from that session only if needed.`,
+        `Implement:\n\n1. Add API\n2. Add tests\n\nThis plan was created in session ${seeded.sessionID}. Use \`kilo_local_recall\` to retrieve additional context from that session only if needed.\n\n## Todo List\n\n- [x] Add API endpoint\n- [ ] Write tests`,
       )
       expect(part.text.indexOf("1. Add API")).toBeLessThan(part.text.indexOf(`${seeded.sessionID}`))
       expect(part.text).not.toContain("Plan file:")
       expect(part.text).not.toContain("## Handover")
-      expect(part.text).not.toContain("## Todo List")
-      expect(part.text).not.toContain("Add API endpoint")
       expect(part.synthetic).toBe(false)
 
       const newTodos = await todo.get(newSessionID)

@@ -68,8 +68,22 @@ export namespace PlanFollowup {
   export const ANSWER_NEW_SESSION = "Start new session"
   export const ANSWER_CONTINUE = "Continue here"
 
-  function handover(input: { plan: string; sessionID: SessionID }) {
-    return `${PLAN_PREFIX}\n\n${input.plan}\n\nThis plan was created in session ${input.sessionID}. Use \`kilo_local_recall\` to retrieve additional context from that session only if needed.`
+  function formatTodos(input: Todo.Info[]) {
+    if (!input.length) return ""
+    const icons: Record<string, string> = {
+      pending: "[ ]",
+      in_progress: "[~]",
+      completed: "[x]",
+      cancelled: "[-]",
+    }
+    return input.map((item) => `- ${icons[item.status] ?? "[ ]"} ${item.content}`).join("\n")
+  }
+
+  function handover(input: { plan: string; sessionID: SessionID; todos?: Todo.Info[] }) {
+    const text = `${PLAN_PREFIX}\n\n${input.plan}\n\nThis plan was created in session ${input.sessionID}. Use \`kilo_local_recall\` to retrieve additional context from that session only if needed.`
+    const todos = formatTodos(input.todos ?? [])
+    if (!todos) return text
+    return `${text}\n\n## Todo List\n\n${todos}`
   }
 
   export function abort(sessionID: SessionID) {
@@ -283,7 +297,7 @@ export namespace PlanFollowup {
             sessionID: next.id,
             agent: "code",
             model: code.model,
-            text: handover(input),
+            text: handover({ plan: input.plan, sessionID: input.sessionID, todos }),
             synthetic: false,
           })
 
@@ -368,11 +382,12 @@ export namespace PlanFollowup {
       const code = await resolveCodeModel({
         model: user.model,
       })
+      const todos = await PlanFollowupRuntime.todo.get(input.sessionID)
       const msg = await inject({
         sessionID: input.sessionID,
         agent: "code",
         model: code.model,
-        text: handover({ plan, sessionID: input.sessionID }),
+        text: handover({ plan, sessionID: input.sessionID, todos }),
       })
       KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
       return "continue"
