@@ -44,14 +44,16 @@ The lifecycle no longer performs a second daemon startup after stopping. Initial
 
 ## Profile impact
 
-| Measurement | Baseline | Updated | Difference | Time saved |
-|---|---:|---:|---:|---:|
-| Local CLI suite | 242.9s | 221.7s | -21.2s | 8.7% |
-| Linux CI CLI JUnit duration | 248.0s | 226.6s | -21.4s | 8.6% |
-| Linux CI `Run unit tests` step | 258s | 237s | -21s | 8.1% |
-| Windows CI CLI JUnit duration | 709.9s | 784.0s | +74.1s | -10.4% |
-| Windows CI `Run unit tests` step | 722s | 799s | +77s | -10.7% |
+| Measurement | Baseline | PR run 1 | Change | PR run 2 | Change |
+|---|---:|---:|---:|---:|---:|
+| Local CLI suite | 242.9s | 221.7s | -8.7% | - | - |
+| Linux CI CLI JUnit duration | 248.0s | 226.6s | -8.6% | 257.4s | +3.8% |
+| Linux CI `Run unit tests` step | 258s | 237s | -8.1% | 275s | +6.6% |
+| Windows CI CLI JUnit duration | 709.9s | 784.0s | +10.4% | 736.1s | +3.7% |
+| Windows CI `Run unit tests` step | 722s | 799s | +10.7% | 749s | +3.7% |
 
-The local and Linux CI measurements consistently save about 21 seconds. The first Windows CI comparison was green but slower overall despite removing approximately 30 seconds of deterministic waits on that platform. Per-test timing shows unrelated Windows tests varied upward enough to outweigh those removals, so a single Windows run does not demonstrate a pipeline speedup. The comparison uses PR run [27265656392](https://github.com/Kilo-Org/kilocode/actions/runs/27265656392) and the immediately preceding successful `main` run [27262711220](https://github.com/Kilo-Org/kilocode/actions/runs/27262711220).
+The controlled local profile saves 21.2 seconds, or 8.7 percent. The first Linux CI run showed the same 21-second improvement, but a repeat Linux run and both Windows runs were slower than the baseline. Per-test timing shows unrelated integration tests varied enough to outweigh the deterministic waits removed here. The change therefore reduces known test work, but the available CI runs do not demonstrate a consistent end-to-end pipeline speedup.
+
+The comparison uses PR runs [27265656392](https://github.com/Kilo-Org/kilocode/actions/runs/27265656392) and [27266758031](https://github.com/Kilo-Org/kilocode/actions/runs/27266758031) against the immediately preceding successful `main` run [27262711220](https://github.com/Kilo-Org/kilocode/actions/runs/27262711220). All three workflows completed successfully.
 
 Revisit an exclusion when upstream replaces a real-time wait with deterministic clock control, removes redundant process startup, or otherwise makes the case fast without reducing scheduling margin.
