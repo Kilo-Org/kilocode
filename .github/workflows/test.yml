@@ -24,20 +24,16 @@ jobs:
   unit:
     name: unit (${{ matrix.settings.name }})
     # kilocode_change start
-    permissions:
-      contents: read
-      checks: write
-      id-token: write # authenticate test-result uploads without a stored secret
-    # kilocode_change end
     strategy:
       fail-fast: false
       matrix:
         settings:
           - name: linux
-            host: blacksmith-4vcpu-ubuntu-2404 # kilocode_change
+            host: blacksmith-4vcpu-ubuntu-2404
           - name: windows
-            host: blacksmith-4vcpu-windows-2025 # kilocode_change
+            host: blacksmith-4vcpu-windows-2025
     runs-on: ${{ matrix.settings.host }}
+    # kilocode_change end
     timeout-minutes: 45 # kilocode_change
     defaults:
       run:
@@ -100,52 +96,15 @@ jobs:
           include_time_in_summary: true
           fail_on_failure: false
 
-      # kilocode_change start
-      - name: Prepare test health reports
-        if: ${{ !cancelled() && hashFiles('packages/*/.artifacts/unit/junit.xml') != '' }}
-        run: |
-          rm -rf .artifacts/codecov-test-results
-          mkdir -p .artifacts/codecov-test-results
-          for report in packages/*/.artifacts/unit/junit.xml; do
-            package="${report#packages/}"
-            package="${package%%/*}"
-            cp "$report" ".artifacts/codecov-test-results/$package.xml"
-          done
-          if test -f packages/opencode/.artifacts/test-health/junit.xml; then
-            cp packages/opencode/.artifacts/test-health/junit.xml .artifacts/codecov-test-results/opencode.xml
-          fi
-
-      - name: Upload test health to Codecov
-        id: codecov
-        if: ${{ !cancelled() && hashFiles('.artifacts/codecov-test-results/*.xml') != '' }}
-        continue-on-error: true
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
-        with:
-          use_oidc: true
-          report_type: test_results
-          files: .artifacts/codecov-test-results/*.xml
-          disable_search: true
-          disable_telem: true
-          flags: unit-${{ matrix.settings.name }}
-          name: unit-${{ matrix.settings.name }}
-          os: ${{ matrix.settings.name }}
-          version: v11.2.8
-          fail_ci_if_error: true
-
-      - name: Warn when Codecov upload fails
-        if: ${{ !cancelled() && steps.codecov.outcome == 'failure' }}
-        run: echo "::warning title=Codecov test health upload failed::Check that Kilo-Org/kilocode is activated in Codecov and inspect the previous step."
-      # kilocode_change end
-
       - name: Upload unit artifacts
         if: always()
         uses: actions/upload-artifact@v7 # kilocode_change
         with:
+          # kilocode_change start
           name: unit-${{ matrix.settings.name }}-${{ github.run_attempt }}
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7
-          # kilocode_change start
           path: |
             packages/*/.artifacts/unit/junit.xml
             packages/opencode/.artifacts/test-health/junit.xml
@@ -154,10 +113,6 @@ jobs:
   # kilocode_change start
   jetbrains:
     name: jetbrains
-    permissions:
-      contents: read
-      checks: write
-      id-token: write
     runs-on: blacksmith-4vcpu-ubuntu-2404
     defaults:
       run:
@@ -196,27 +151,6 @@ jobs:
           include_time_in_summary: true
           fail_on_failure: false
 
-      - name: Upload JetBrains test health to Codecov
-        id: codecov
-        if: ${{ !cancelled() && hashFiles('packages/kilo-jetbrains/.artifacts/unit/junit.xml') != '' }}
-        continue-on-error: true
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
-        with:
-          use_oidc: true
-          report_type: test_results
-          files: packages/kilo-jetbrains/.artifacts/unit/junit.xml
-          disable_search: true
-          disable_telem: true
-          flags: jetbrains-linux
-          name: jetbrains-linux
-          os: linux
-          version: v11.2.8
-          fail_ci_if_error: true
-
-      - name: Warn when Codecov upload fails
-        if: ${{ !cancelled() && steps.codecov.outcome == 'failure' }}
-        run: echo "::warning title=Codecov test health upload failed::Check that Kilo-Org/kilocode is activated in Codecov and inspect the previous step."
-
       - name: Upload JetBrains unit artifacts
         if: always()
         uses: actions/upload-artifact@v7
@@ -228,17 +162,194 @@ jobs:
           path: packages/kilo-jetbrains/.artifacts/unit/junit.xml
   # kilocode_change end
 
+  # kilocode_change start
+  test-health:
+    name: test health
+    needs:
+      - unit
+      - jetbrains
+    if: ${{ always() && !cancelled() }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+    concurrency:
+      group: test-health-${{ github.ref == 'refs/heads/main' && 'main' || github.run_id }}
+      cancel-in-progress: false
+    steps:
+      - name: Download Linux test results
+        uses: actions/download-artifact@v8
+        with:
+          name: unit-linux-${{ github.run_attempt }}
+          path: .allure/input/linux
+
+      - name: Download Windows test results
+        uses: actions/download-artifact@v8
+        with:
+          name: unit-windows-${{ github.run_attempt }}
+          path: .allure/input/windows
+
+      - name: Download JetBrains test results
+        uses: actions/download-artifact@v8
+        with:
+          name: unit-jetbrains-${{ github.run_attempt }}
+          path: .allure/input/jetbrains
+
+      - name: Restore test history
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .allure/history
+          restored=false
+          while read -r run; do
+            if test "$run" = "$GITHUB_RUN_ID"; then
+              continue
+            fi
+            name="$(
+              gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run/artifacts" \
+                --jq '[.artifacts[] | select(.expired == false) | select(.name | startswith("allure-history-"))] | sort_by(.created_at) | last | .name // empty'
+            )"
+            if test -z "$name"; then
+              continue
+            fi
+            gh run download "$run" --name "$name" --dir .allure/history
+            echo "Restored Allure history from run $run"
+            restored=true
+            break
+          done < <(
+            gh run list --workflow test.yml --branch main --status completed --limit 20 \
+              --json databaseId --jq '.[].databaseId'
+          )
+          if test "$restored" = false; then
+            echo "No previous Allure history found; starting a new baseline"
+          fi
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install Allure Report
+        run: |
+          archive="$RUNNER_TEMP/allure-2.42.1.tgz"
+          curl --fail --location --silent --show-error \
+            https://github.com/allure-framework/allure2/releases/download/2.42.1/allure-2.42.1.tgz \
+            --output "$archive"
+          echo "f8f73bf4bbd2cf5b8eee51d27487aef55c9d2f2650db111a52fa8108866ba86c  $archive" | sha256sum --check
+          tar -xzf "$archive" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/allure-2.42.1/bin" >> "$GITHUB_PATH"
+
+      - name: Generate test health reports
+        run: |
+          mkdir -p .allure/full .allure/reports
+          for lane in linux windows jetbrains; do
+            mkdir -p ".allure/results/$lane/final" ".allure/results/$lane/retries"
+          done
+          for lane in linux windows; do
+            for report in .allure/input/$lane/*/.artifacts/unit/junit.xml; do
+              package="${report#.allure/input/$lane/}"
+              package="${package%%/*}"
+              cp "$report" ".allure/results/$lane/final/$package.xml"
+            done
+            retry=".allure/input/$lane/opencode/.artifacts/test-health/junit.xml"
+            if test -f "$retry"; then
+              cp "$retry" ".allure/results/$lane/retries/opencode.xml"
+            fi
+          done
+          cp .allure/input/jetbrains/junit.xml .allure/results/jetbrains/final/jetbrains.xml
+
+          for lane in linux windows jetbrains; do
+            final=".allure/results/$lane/final"
+            retries=".allure/results/$lane/retries"
+            history=".allure/history/$lane"
+            output=".allure/full/$lane"
+            single=".allure/single/$lane"
+
+            if test -d "$history"; then
+              cp -R "$history" "$final/history"
+            fi
+
+            cat > "$final/executor.json" <<EOF
+          {
+            "name": "GitHub Actions",
+            "type": "github",
+            "buildOrder": $GITHUB_RUN_NUMBER,
+            "buildName": "$lane run $GITHUB_RUN_NUMBER",
+            "buildUrl": "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          }
+          EOF
+            printf 'environment=%s\nrepository=%s\n' "$lane" "$GITHUB_REPOSITORY" > "$final/environment.properties"
+
+            # The JUnit plugin keeps the first duplicate as authoritative. Pass
+            # final outcomes before failed retry attempts so recovered tests stay green.
+            allure generate "$final" "$retries" --clean --name "Kilo tests ($lane)" --output "$output"
+            total="$(jq -r '.statistic.total' "$output/widgets/summary.json")"
+            if test "$total" -le 0; then
+              echo "No tests found in the $lane report" >&2
+              exit 1
+            fi
+
+            rm -rf "$history"
+            mkdir -p "$history"
+            cp -R "$output/history/." "$history/"
+
+            allure generate "$final" "$retries" --single-file --clean --name "Kilo tests ($lane)" --output "$single"
+            cp "$single/index.html" ".allure/reports/$lane.html"
+            echo "$lane: $total tests"
+          done
+
+          cat > .allure/reports/README.txt <<'EOF'
+          Open linux.html, windows.html, or jetbrains.html directly in a browser.
+          Retried marks identify tests that changed status after a retry. Flaky,
+          regressed, and fixed marks use the recent history carried between runs.
+          EOF
+
+      - name: Upload Allure reports
+        id: reports
+        uses: actions/upload-artifact@v7
+        with:
+          name: allure-test-health-${{ github.run_attempt }}
+          path: .allure/reports
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Save main branch history
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v7
+        with:
+          name: allure-history-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .allure/history
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Add report link to summary
+        run: |
+          {
+            echo "### Allure test health"
+            echo
+            echo "[Download the single-file Linux, Windows, and JetBrains reports](${{ steps.reports.outputs.artifact-url }})."
+            echo
+            echo "Open the matching HTML file directly in a browser. Retried tests changed status during the current run; flaky tests changed status across recent runs."
+          } >> "$GITHUB_STEP_SUMMARY"
+  # kilocode_change end
   required:
     name: test (linux)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     needs:
       - unit
       - jetbrains
+      - test-health # kilocode_change
     if: always()
     steps:
       - name: Verify upstream test jobs passed
         run: |
           echo "unit=${{ needs.unit.result }}"
           echo "jetbrains=${{ needs.jetbrains.result }}"
+          # kilocode_change start
+          echo "test-health=${{ needs.test-health.result }}"
+          # kilocode_change end
           test "${{ needs.unit.result }}" = "success"
           test "${{ needs.jetbrains.result }}" = "success"
+          test "${{ needs.test-health.result }}" = "success" # kilocode_change

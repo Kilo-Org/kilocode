@@ -320,10 +320,11 @@ if (flaky.length > 0) {
 
 if (ci) {
   await merge(results, "unit")
-  // Keep first-attempt outcomes separate so analytics can measure reliability
-  // without changing the retry-based CI result developers already rely on.
+  // Keep only attempts before each file's final outcome so report generators
+  // can identify retries without duplicating tests that passed immediately.
+  const final = new Map(results.map((result) => [result.file, result.attempts]))
   await merge(
-    attempts.filter((result) => result.attempts === 1),
+    attempts.filter((result) => result.attempts < final.get(result.file)!),
     "test-health",
   )
   await fs.rm(xmldir, { recursive: true, force: true }).catch((err) => {
@@ -347,11 +348,10 @@ async function merge(entries: Result[], target: string) {
 
   const suites: string[] = []
   const counts = { tests: 0, failures: 0, errors: 0 }
-  const records = new Map(entries.map((result) => [result.file, result]))
+  const records = entries.slice().sort((a, b) => a.file.localeCompare(b.file) || a.attempts - b.attempts)
 
-  for (const file of files) {
-    const result = records.get(file)
-    if (!result) continue
+  for (const result of records) {
+    const file = result.file
     const fpath = path.join(xmldir, reportName(file, result.attempts))
     const found = await Bun.file(fpath).exists()
 
