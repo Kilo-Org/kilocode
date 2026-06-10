@@ -50,10 +50,14 @@ import { TextShimmer } from "@opencode-ai/ui/text-shimmer"
 import { GrowBox } from "./grow-box"
 import { COLLAPSIBLE_SPRING } from "./motion"
 import { busy, createThrottledValue, useToolFade, useContextToolPending } from "./tool-utils"
+import { readToolOpen, toolOpenKey } from "./tool-open-state"
 import { ContextToolGroupHeader, ContextToolExpandedList, ContextToolRollingResults } from "./context-tool-results"
 import { ShellRollingResults } from "./shell-rolling-results"
+import { reasoningHeading } from "./reasoning-heading"
 import { extractFilePathFromHref } from "../file-path"
 import { normalize } from "./session-diff"
+import { deferredHighlight } from "../context/marked"
+import { escapeHtml } from "../util/escape-html"
 
 // Windows CLI tools (e.g. winget) use \r to overwrite progress bars in-place.
 // Without this, every progress frame renders as a separate visual line.
@@ -926,18 +930,34 @@ export function UserMessageDisplay(props: {
 
 type HighlightSegment = { text: string; type?: "file" | "agent" }
 
+/** Match @path mentions: `@` followed by a path-like token (contains `/` or `.`). */
+const MENTION_RE = /@([\w./-]+\.[\w]+|[\w.-]+\/[\w./-]+)/g
+
+function detectMentions(text: string): { start: number; end: number; type: "file" }[] {
+  const result: { start: number; end: number; type: "file" }[] = []
+  MENTION_RE.lastIndex = 0
+  let m: RegExpExecArray | null
+  while ((m = MENTION_RE.exec(text))) {
+    result.push({ start: m.index, end: m.index + m[0].length, type: "file" })
+  }
+  return result
+}
+
 function HighlightedText(props: { text: string; references: FilePart[]; agents: AgentPart[] }) {
   const segments = createMemo(() => {
     const text = props.text
 
-    const allRefs: { start: number; end: number; type: "file" | "agent" }[] = [
+    const offset: { start: number; end: number; type: "file" | "agent" }[] = [
       ...props.references
         .filter((r) => r.source?.text?.start !== undefined && r.source?.text?.end !== undefined)
         .map((r) => ({ start: r.source!.text!.start, end: r.source!.text!.end, type: "file" as const })),
       ...props.agents
         .filter((a) => a.source?.start !== undefined && a.source?.end !== undefined)
         .map((a) => ({ start: a.source!.start, end: a.source!.end, type: "agent" as const })),
-    ].sort((a, b) => a.start - b.start)
+    ]
+
+    // Fall back to regex detection when no source offsets are available
+    const allRefs = offset.length > 0 ? offset.sort((a, b) => a.start - b.start) : detectMentions(text)
 
     const result: HighlightSegment[] = []
     let lastIndex = 0
@@ -960,7 +980,28 @@ function HighlightedText(props: { text: string; references: FilePart[]; agents: 
     return result
   })
 
-  return <For each={segments()}>{(segment) => <span data-highlight={segment.type}>{segment.text}</span>}</For>
+  const data = useData()
+
+  const click = (segment: HighlightSegment, e: MouseEvent) => {
+    if (segment.type !== "file" || !data.openFile) return
+    e.preventDefault()
+    const path = segment.text.replace(/^@/, "")
+    if (path) data.openFile(path)
+  }
+
+  return (
+    <For each={segments()}>
+      {(segment) => (
+        <span
+          data-highlight={segment.type}
+          data-clickable={segment.type === "file" && data.openFile ? "" : undefined}
+          onClick={[click, segment]}
+        >
+          {segment.text}
+        </span>
+      )}
+    </For>
+  )
 }
 
 export function Part(props: MessagePartProps) {
@@ -1117,6 +1158,9 @@ function McpTool(props: ToolProps) {
       <BasicTool
         icon="mcp"
         status={props.status}
+        tool={props.tool}
+        partID={props.partID}
+        callID={props.callID}
         trigger={{ title: props.tool, subtitle: subtitle(), args: inputArgs() }}
         defaultOpen={props.defaultOpen}
         forceOpen={props.forceOpen}
@@ -1333,13 +1377,13 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     <Show when={throttledText() && showSyntheticPart()}>
       <div data-component="text-part">
         <div data-slot="text-part-body">
-          <Markdown text={throttledText()} cacheKey={part().id} onClick={handleMarkdownClick} />
+          <Markdown text={throttledText()} cacheKey={part().id} streaming={streaming()} onClick={handleMarkdownClick} />
         </div>
         <Show when={showCopy()}>
           <div data-slot="assistant-copy-wrapper">
             <Tooltip
               value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
-              placement="right"
+              placement="top"
               gutter={4}
             >
               <IconButton
@@ -1444,6 +1488,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
 
   // Throttle markdown re-renders during streaming
   const display = createThrottledValue(text)
+  const view = createMemo(() => reasoningHeading(display()))
 
   // time.end is set by the processor on reasoning-end.
   // v1 parts lack time entirely → treat as historical.
@@ -1524,12 +1569,13 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
             <div data-slot="reasoning-header">
               <Icon name="brain" size="small" />
               <span data-slot="reasoning-label">{i18n.t("ui.reasoning.label" as never)}</span>
+              <Show when={view().title}>{(title) => <span data-slot="reasoning-title">{title()}</span>}</Show>
             </div>
             <Collapsible.Arrow />
           </Collapsible.Trigger>
           <Collapsible.Content>
             <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
-              <Markdown text={display()} cacheKey={id} />
+              <Markdown text={view().body} cacheKey={id} streaming={!done()} />
             </div>
           </Collapsible.Content>
         </Collapsible>
@@ -2028,6 +2074,112 @@ ToolRegistry.register({
   },
 })
 
+function BashCopyButton(props: { value: () => string; label: string }) {
+  const i18n = useI18n()
+  const [copied, setCopied] = createSignal(false)
+  const handler = async () => {
+    const text = props.value()
+    if (!text) return
+    await navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <Tooltip value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copy")} placement="bottom" gutter={4}>
+      <IconButton
+        icon={copied() ? "check" : "copy"}
+        size="small"
+        variant="ghost"
+        onClick={handler}
+        aria-label={props.label}
+      />
+    </Tooltip>
+  )
+}
+
+function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?: string; active?: boolean }) {
+  const data = useData()
+  const i18n = useI18n()
+  const cmdState = { signal: { aborted: false } }
+  const outState = { signal: { aborted: false } }
+  let cmdRef: HTMLDivElement | undefined
+  let outRef: HTMLDivElement | undefined
+
+  createEffect(() => {
+    cmdState.signal.aborted = true
+    if (!props.active) return
+    const cmd = props.cmd
+    if (!cmdRef || !cmd) return
+    const signal = { aborted: false }
+    cmdState.signal = signal
+    cmdRef.innerHTML = `<pre data-slot="bash-pre"><code data-lang="shellscript">${escapeHtml(cmd)}</code></pre>`
+    void deferredHighlight(cmdRef, undefined, signal)
+  })
+
+  createEffect(() => {
+    outState.signal.aborted = true
+    if (!props.active) return
+    const out = props.output
+    if (!outRef || !out) return
+    const signal = { aborted: false }
+    outState.signal = signal
+    outRef.innerHTML = `<pre data-slot="bash-pre"><code data-lang="log">${escapeHtml(out)}</code></pre>`
+    void deferredHighlight(outRef, undefined, signal)
+  })
+
+  onCleanup(() => {
+    cmdState.signal.aborted = true
+    outState.signal.aborted = true
+  })
+
+  const openInEditor = () => {
+    // When output was truncated, open the full output file on disk
+    if (props.outputPath && data.openFile) {
+      data.openFile(props.outputPath)
+      return
+    }
+    if (!data.openContent) return
+    data.openContent(props.output, "log")
+  }
+
+  return (
+    <div data-component="bash-output">
+      <Show when={props.cmd}>
+        <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.shell.command")}</div>
+        <div data-slot="bash-section">
+          <div data-slot="bash-section-code" ref={cmdRef} />
+          <div data-slot="bash-section-actions">
+            <BashCopyButton value={() => props.cmd} label={i18n.t("ui.message.copy")} />
+          </div>
+        </div>
+      </Show>
+      <Show when={props.cmd && props.output}>
+        <div data-slot="bash-divider" />
+      </Show>
+      <Show when={props.output}>
+        <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.shell.output")}</div>
+        <div data-slot="bash-section">
+          <div data-slot="bash-section-code" data-scrollable ref={outRef} />
+          <div data-slot="bash-section-actions">
+            <Show when={data.openContent || (props.outputPath && data.openFile)}>
+              <Tooltip value={i18n.t("ui.messagePart.openInEditor")} placement="bottom" gutter={4}>
+                <IconButton
+                  icon="square-arrow-top-right"
+                  size="small"
+                  variant="ghost"
+                  onClick={openInEditor}
+                  aria-label={i18n.t("ui.messagePart.openInEditor")}
+                />
+              </Tooltip>
+            </Show>
+            <BashCopyButton value={() => props.output} label={i18n.t("ui.message.copy")} />
+          </div>
+        </div>
+      </Show>
+    </div>
+  )
+}
+
 ToolRegistry.register({
   name: "bash",
   render(props) {
@@ -2035,6 +2187,13 @@ ToolRegistry.register({
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
     const subtitle = () => props.input.description ?? props.metadata.description
+    const key = () => toolOpenKey(props)
+    const [open, setOpen] = createSignal(readToolOpen(key(), props.defaultOpen ?? true) ?? true)
+    const [mounted, setMounted] = createSignal(open())
+
+    createEffect(() => {
+      if (open() || pending()) setMounted(true)
+    })
 
     // also apply processCarriageReturns for Windows CLI tools
     const cmd = createMemo(() => {
@@ -2048,26 +2207,15 @@ ToolRegistry.register({
       return ""
     })
     const out = createMemo(() => processCarriageReturns(stripAnsi(rawOutput())))
-    const text = createMemo(() => `$ ${cmd()}${out() ? "\n\n" + out() : ""}`)
-
-    const hasOutput = createMemo(() => out().length > 0)
-    const [copied, setCopied] = createSignal(false)
-
-    const handleCopy = async () => {
-      const command = cmd()
-      if (!command) return
-      const content = out() ? `${command}\n\n${out()}` : command
-      await navigator.clipboard.writeText(content)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
 
     return (
       <BasicTool
         {...props}
         icon="console"
         animated
+        hasDetails
         defaultOpen={props.defaultOpen ?? true}
+        onOpenChange={setOpen}
         allowPendingToggle
         trigger={
           <div data-slot="basic-tool-tool-info-structured">
@@ -2080,29 +2228,9 @@ ToolRegistry.register({
           </div>
         }
       >
-        <div data-component="bash-output">
-          <div data-slot="bash-copy">
-            <Tooltip
-              value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copy")}
-              placement="top"
-              gutter={4}
-            >
-              <IconButton
-                icon={copied() ? "check" : "copy"}
-                size="small"
-                variant="secondary"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={handleCopy}
-                aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copy")}
-              />
-            </Tooltip>
-          </div>
-          <div data-slot="bash-scroll" data-scrollable>
-            <pre data-slot="bash-pre">
-              <code>{text()}</code>
-            </pre>
-          </div>
-        </div>
+        <Show when={mounted()}>
+          <BashHighlightedOutput cmd={cmd()} output={out()} outputPath={props.metadata.outputPath} active={open()} />
+        </Show>
       </BasicTool>
     )
   },
@@ -2173,6 +2301,7 @@ ToolRegistry.register({
           {...props}
           icon="code-lines"
           defer
+          hasDetails
           trigger={
             <div data-component="edit-trigger">
               <div data-slot="message-part-title-area">
@@ -2287,6 +2416,7 @@ ToolRegistry.register({
           {...props}
           icon="code-lines"
           defer
+          hasDetails
           trigger={
             <div data-component="write-trigger">
               <div data-slot="message-part-title-area">
@@ -2419,6 +2549,7 @@ ToolRegistry.register({
           {...props}
           icon="code-lines"
           defer
+          hasDetails
           trigger={
             <div data-component={single() ? "edit-trigger" : "write-trigger"}>
               <div data-slot="message-part-title-area">

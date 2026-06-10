@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "lokalno",
+  "agentManager.sidebar.collapse": "Skupi bočnu traku",
+  "agentManager.sidebar.expand": "Prikaži bočnu traku",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESIJE",
   "agentManager.notGitRepo": "Nije git repozitorij",
@@ -53,7 +55,6 @@ export const dict = {
   "agentManager.tabsMenu.search": "Pretraži kartice...",
   "agentManager.tabsMenu.empty": "Nema podudarnih kartica",
   "agentManager.tabsMenu.status.waiting": "Čeka",
-  "agentManager.tabsMenu.status.working": "Radi",
   "agentManager.tabsMenu.status.retry": "Pokušaj",
 
   "agentManager.terminal.new": "Nova kartica terminala",

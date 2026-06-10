@@ -83,8 +83,9 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
     const seen = new Set<string>()
     return (rawDiffs as SnapshotFileDiff[])
       .reduceRight<SnapshotFileDiff[]>((result, diff) => {
-        if (seen.has(diff.file)) return result
-        seen.add(diff.file)
+        const file = diff.file ?? ""
+        if (seen.has(file)) return result
+        seen.add(file)
         result.push(diff)
         return result
       }, [])
@@ -122,11 +123,9 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
           <Show when={!props.turn.partial}>
             <div
               class="vscode-session-turn-user"
-              data-revert-disabled={
-                assistantMessages().length > 0 && !session.revert() && session.status() !== "idle" ? "" : undefined
-              }
+              data-revert-disabled={assistantMessages().length > 0 && session.status() !== "idle" ? "" : undefined}
               title={
-                assistantMessages().length > 0 && !session.revert() && session.status() !== "idle"
+                assistantMessages().length > 0 && session.status() !== "idle"
                   ? language.t("revert.disabled.agentBusy")
                   : undefined
               }
@@ -138,7 +137,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                 queued={props.queued}
                 onFork={props.onForkMessage ? () => props.onForkMessage?.(msg().sessionID, msg().id) : undefined}
                 onRevert={
-                  assistantMessages().length > 0 && !session.revert()
+                  assistantMessages().length > 0
                     ? () => {
                         if (session.status() !== "idle") return
                         session.revertSession(msg().id)

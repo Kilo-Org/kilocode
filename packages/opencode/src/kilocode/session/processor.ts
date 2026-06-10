@@ -1,17 +1,21 @@
 // kilocode_change - new file
-import { Telemetry } from "@kilocode/kilo-telemetry"
+import { Telemetry, type ReviewCommand } from "@kilocode/kilo-telemetry"
 import { SessionNetwork } from "@/session/network"
 import type { SessionID } from "@/session/schema"
 import type { SessionStatus } from "@/session/status"
 import { MessageV2 } from "@/session/message-v2"
+import { isRecord } from "@/util/record"
+import { isReviewCommand, parseReviewCommand } from "@/kilocode/review/command"
 import * as Log from "@opencode-ai/core/util/log"
 import { Effect } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { EffectBridge } from "@/effect/bridge"
 
 export type ReviewTelemetry = {
   mode: "review"
   feature: "code_reviews"
-  command: "local-review" | "local-review-uncommitted"
+  command: ReviewCommand
+  tool?: "suggest"
 }
 
 export namespace KiloSessionProcessor {
@@ -22,10 +26,28 @@ export namespace KiloSessionProcessor {
   export const PROVIDER_FINISH_ERROR_MESSAGE =
     "The provider ended the response with an error before returning details. Start a new message to retry; Kilo will compact the oversized conversation first if needed."
 
-  export function reviewTelemetry(command: string): ReviewTelemetry | undefined {
-    if (command === "local-review" || command === "local-review-uncommitted") {
-      return { mode: "review", feature: "code_reviews", command }
+  export function reviewTelemetry(command: string | undefined): ReviewTelemetry | undefined {
+    if (!isReviewCommand(command)) return
+    return { mode: "review", feature: "code_reviews", command }
+  }
+
+  /**
+   * Tag the text parts of a prompt with review telemetry metadata so that
+   * downstream LLM completions in the same turn (including child sessions
+   * spawned by subtask commands) are attributed to the originating review
+   * command. No-op when the command is not a recognized review command.
+   */
+  export function markReviewTelemetry(
+    parts: Array<{ type: string; metadata?: Record<string, unknown> }>,
+    command: string | undefined,
+  ): ReviewTelemetry | undefined {
+    const tel = reviewTelemetry(command)
+    if (!tel) return
+    for (const part of parts) {
+      if (part.type !== "text") continue
+      part.metadata = { ...part.metadata, ...tel }
     }
+    return tel
   }
 
   export function extractReviewTelemetry(parts: MessageV2.Part[]): ReviewTelemetry | undefined {
@@ -35,9 +57,27 @@ export namespace KiloSessionProcessor {
       if (!meta) continue
       if (meta.mode !== "review") continue
       if (meta.feature !== "code_reviews") continue
-      const command = meta.command
-      if (command !== "local-review" && command !== "local-review-uncommitted") continue
-      return { mode: "review", feature: "code_reviews", command }
+      const tel = reviewTelemetry(typeof meta.command === "string" ? meta.command : undefined)
+      if (tel) return tel
+    }
+  }
+
+  export function suggestionReviewTelemetry(metadata: unknown): ReviewTelemetry | undefined {
+    if (!isRecord(metadata)) return
+    if (!isRecord(metadata.accepted)) return
+    const prompt = typeof metadata.accepted.prompt === "string" ? metadata.accepted.prompt : undefined
+    const tel = reviewTelemetry(parseReviewCommand(prompt))
+    if (!tel) return
+    return { ...tel, tool: "suggest" }
+  }
+
+  export function extractSuggestionReviewTelemetry(parts: MessageV2.Part[]): ReviewTelemetry | undefined {
+    for (const part of parts) {
+      if (part.type !== "tool") continue
+      if (part.tool !== "suggest") continue
+      if (part.state.status !== "completed") continue
+      const tel = suggestionReviewTelemetry(part.state.metadata)
+      if (tel) return tel
     }
   }
 
@@ -88,7 +128,7 @@ export namespace KiloSessionProcessor {
     return Effect.gen(function* () {
       const msg = SessionNetwork.message(input.error)
 
-      const { id, promise } = yield* Effect.promise(() =>
+      const { id, promise } = yield* EffectBridge.fromPromise(() =>
         SessionNetwork.ask({
           sessionID: input.sessionID,
           message: msg,

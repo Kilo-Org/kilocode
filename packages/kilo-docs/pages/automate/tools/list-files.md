@@ -1,3 +1,8 @@
+---
+title: List Files Tool | Kilo Code Docs
+description: Learn how the list_files tool displays files and directories within a specified location to help Kilo Code understand your project structure.
+---
+
 # list_files
 
 The `list_files` tool displays the files and directories within a specified location. It helps Kilo Code understand your project structure and navigate your codebase effectively.

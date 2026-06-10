@@ -1,3 +1,8 @@
+---
+title: New Task Tool | Kilo Code Docs
+description: Learn how the new_task tool creates subtasks with specialized modes to break down complex projects into manageable pieces with parent-child relationships.
+---
+
 # new_task
 
 The `new_task` tool creates subtasks with specialized modes while maintaining a parent-child relationship. It breaks down complex projects into manageable pieces, each operating in the mode best suited for specific work.

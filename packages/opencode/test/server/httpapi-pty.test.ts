@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { NodeHttpServer, NodeServices } from "@effect/platform-node"
-import { Flag } from "@opencode-ai/core/flag/flag"
 import { PtyID } from "../../src/pty/schema"
 import { Instance } from "../../src/project/instance"
 import { Server } from "../../src/server/server"
@@ -11,22 +10,19 @@ import { disposeAllInstances, tmpdir, tmpdirScoped } from "../fixture/fixture"
 import { Config, Effect, Layer, Queue, Schema } from "effect"
 import { HttpClient, HttpClientRequest, HttpRouter, HttpServer } from "effect/unstable/http"
 import * as Socket from "effect/unstable/socket/Socket"
-import { ExperimentalHttpApiServer } from "../../src/server/routes/instance/httpapi/server"
+import { HttpApiApp } from "../../src/server/routes/instance/httpapi/server"
 import { Pty } from "../../src/pty"
 import { testEffect } from "../lib/effect"
 
 void Log.init({ print: false })
 
-const original = Flag.KILO_EXPERIMENTAL_HTTPAPI
 const testPty = process.platform === "win32" ? test.skip : test
 
 const testStateLayer = Layer.effectDiscard(
   Effect.gen(function* () {
-    Flag.KILO_EXPERIMENTAL_HTTPAPI = true
     yield* Effect.promise(() => resetDatabase())
     yield* Effect.addFinalizer(() =>
       Effect.promise(async () => {
-        Flag.KILO_EXPERIMENTAL_HTTPAPI = original
         await resetDatabase()
       }),
     )
@@ -34,7 +30,7 @@ const testStateLayer = Layer.effectDiscard(
 )
 
 const servedRoutes: Layer.Layer<never, Config.ConfigError, HttpServer.HttpServer> = HttpRouter.serve(
-  ExperimentalHttpApiServer.routes,
+  HttpApiApp.routes,
   { disableListenLog: true, disableLogger: true },
 )
 
@@ -51,7 +47,6 @@ const effectIt = testEffect(
 )
 
 function app() {
-  Flag.KILO_EXPERIMENTAL_HTTPAPI = true
   return Server.Default().app
 }
 
@@ -62,7 +57,6 @@ function serverUrl() {
 const directoryHeader = (dir: string) => HttpClientRequest.setHeader("x-kilo-directory", dir)
 
 afterEach(async () => {
-  Flag.KILO_EXPERIMENTAL_HTTPAPI = original
   await disposeAllInstances()
   await resetDatabase()
 })

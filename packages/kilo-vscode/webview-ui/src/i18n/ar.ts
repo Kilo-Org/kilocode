@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "مشاركة هذه الجلسة ونسخ الرابط إلى الحافظة",
   "command.session.unshare": "إلغاء مشاركة الجلسة",
   "command.session.unshare.description": "إيقاف مشاركة هذه الجلسة",
+  "command.session.export": "تصدير سجل الجلسة",
 
   "palette.search.placeholder": "البحث في الملفات والأوامر والجلسات",
   "palette.empty": "لا توجد نتائج",
@@ -105,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "موصى به",
   "dialog.provider.opencode.note": "نماذج مختارة تشمل Claude وGPT وGemini والمزيد",
   "dialog.provider.anthropic.note": "اتصل باستخدام Claude Pro/Max أو مفتاح API",
+  "dialog.provider.deepseek.note": "نماذج DeepSeek لمهام الاستدلال والبرمجة",
   "dialog.provider.openai.note": "اتصل باستخدام ChatGPT Pro/Plus أو مفتاح API",
   "dialog.provider.google.note": "نماذج Gemini للاستجابات السريعة والمنظمة",
   "dialog.provider.openrouter.note": "الوصول إلى جميع النماذج المدعومة من موفر واحد",
@@ -134,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "فشل التفويض: {{error}}",
   "provider.connect.apiKey.description":
     "أدخل مفتاح واجهة برمجة تطبيقات {{provider}} الخاص بك لتوصيل حسابك واستخدام نماذج {{provider}} في Kilo.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "مفتاح واجهة برمجة تطبيقات {{provider}}",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "مفتاح API",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "مفتاح API مطلوب",
   "provider.connect.prompt.required": "{{field}} مطلوب",
   "provider.connect.azure.endpointType.label": "حدد تكوين نقطة نهاية Azure",
@@ -172,9 +180,12 @@ export const dict = {
   "provider.disconnect.toast.disconnected.title": "تم فصل {{provider}}",
   "provider.disconnect.toast.disconnected.description": "لم تعد نماذج {{provider}} متاحة.",
   "model.tag.free": "مجاني",
+  "model.tag.dataCollected": "قد تُستخدم البيانات للتدريب",
   "model.tag.latest": "الأحدث",
   "model.group.recommended": "موصى به",
   "model.group.favorites": "المفضلة",
+  "model.group.collapse": "طي {{group}}",
+  "model.group.expand": "توسيع {{group}}",
   "model.favorite.add": "إضافة إلى المفضلة",
   "model.favorite.remove": "إزالة من المفضلة",
   "model.provider.anthropic": "Anthropic",
@@ -197,6 +208,9 @@ export const dict = {
   "model.preview.label.cached": "مخزن مؤقتاً",
   "model.preview.label.average": "متوسط التكلفة التقديرية",
   "model.preview.label.context": "السياق",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "الإكمال",
+  "model.preview.label.costAttempt": "التكلفة / المحاولة",
   "model.preview.value.notSupported": "غير مدعوم",
   "model.preview.tooltip.average":
     "يعتمد متوسط التكلفة التقديرية على نسبة نموذجية لرموز الإدخال والإخراج والقراءة المخزنة مؤقتاً.",
@@ -268,6 +282,7 @@ export const dict = {
   "prompt.attachment.remove": "إزالة المرفق",
   "prompt.action.send": "إرسال",
   "prompt.action.send.blocked": "أجب عن السؤال المعلق أو تجاهله أولاً",
+  "prompt.action.send.recording": "تفريغ وإرسال",
   "prompt.action.stop": "توقف",
   "prompt.action.enhance": "تحسين النص",
   "prompt.action.autoApprove.enable": "تفعيل الموافقة التلقائية",
@@ -277,6 +292,20 @@ export const dict = {
   "prompt.action.resetModel": "إعادة تعيين النموذج إلى الافتراضي",
   "prompt.action.enhanceDescription":
     "زر «حسّن الموجه» يطوّر موجهك بإضافة سياق أو توضيح أو إعادة صياغة. جرّب اكتب موجه هنا ثم اضغط الزر مرة ثانية وشوف النتيجة.",
+
+  "speechToText.tooltip.start": "بدء الإدخال الصوتي باستخدام Kilo Gateway",
+  "speechToText.tooltip.stop": "إيقاف التقاط الصوت",
+  "speechToText.tooltip.transcribing": "جاري تحويل الصوت إلى نص... انقر للإلغاء.",
+  "speechToText.tooltip.error": "فشل الإدخال الصوتي. انقر للمسح.",
+  "speechToText.error.title": "فشل الإدخال الصوتي",
+  "speechToText.error.loginRequired": "قم بتسجيل الدخول إلى Kilo لاستخدام الإدخال الصوتي.",
+  "speechToText.error.permission": "تم رفض إذن الوصول إلى الميكروفون.",
+  "speechToText.error.microphone": "تعذر بدء تشغيل الميكروفون.",
+  "speechToText.error.recording": "فشل التسجيل.",
+  "speechToText.error.emptyRecording": "لم يتم تسجيل أي صوت.",
+  "speechToText.error.emptyTranscript": "لم يتم اكتشاف أي كلام.",
+  "speechToText.error.encoding": "تعذر تشفير التسجيل.",
+  "speechToText.toast.transcribed": "تم إدراج النص المنسوخ",
 
   "prompt.toast.pasteUnsupported.title": "لصق غير مدعوم",
   "prompt.toast.pasteUnsupported.description": "يمكن لصق الصور أو ملفات PDF فقط هنا.",
@@ -429,6 +458,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "فشل إلغاء مشاركة الجلسة",
   "toast.session.unshare.failed.description": "حدث خطأ أثناء إلغاء مشاركة الجلسة",
 
+  "toast.session.rename.invalid.title": "عنوان الجلسة غير صالح",
   "toast.session.listFailed.title": "فشل تحميل الجلسات لـ {{project}}",
 
   "toast.update.title": "تحديث متاح",
@@ -462,6 +492,11 @@ export const dict = {
   "error.promotionLimit.description":
     "سجّل مجانًا للمتابعة واستكشاف أكثر من 500 نموذج. يستغرق دقيقتين، بدون بطاقة ائتمان. أو عُد لاحقًا.",
   "error.promotionLimit.action": "التسجيل",
+  "error.providerAuth.title": "تم تسجيل خروجك من {{provider}}",
+  "error.providerAuth.description": "أعد الاتصال بـ {{provider}}، ثم أرسل رسالتك مرة أخرى.",
+  "error.providerAuth.chatgpt.title": "تسجيل الدخول باستخدام ChatGPT مرة أخرى",
+  "error.providerAuth.chatgpt.description":
+    "سجل الدخول باستخدام ChatGPT مرة أخرى، ثم أرسل رسالتك مرة أخرى لمواصلة استخدام نماذج Codex.",
 
   "error.chain.unknown": "خطأ غير معروف",
   "error.chain.causedBy": "بسبب:",
@@ -784,6 +819,9 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "متصل من متغيرات البيئة الخاصة بك",
   "settings.providers.action.signInChatGPT": "تسجيل الدخول باستخدام ChatGPT",
   "settings.providers.custom.description": "أضف مزوداً متوافقاً مع OpenAI عبر عنوان URL الأساسي.",
+  "settings.providers.subagentModel.title": "نموذج الوكيل الفرعي",
+  "settings.providers.subagentModel.description":
+    "النموذج الافتراضي وجهد التفكير للوكلاء الفرعيين لـ task-tool. اتركه فارغًا ليرث نموذج الوكيل المستدعي.",
   "settings.providers.modeModels": "نموذج لكل وضع",
   "settings.providers.custom.note": "أضف موفرًا متوافقًا مع OpenAI عبر عنوان URL الأساسي.",
   "settings.providers.modeModels.description":
@@ -945,6 +983,8 @@ export const dict = {
   "session.delete.confirm": 'حذف الجلسة "{{name}}"؟',
   "session.delete.button": "حذف الجلسة",
   "session.untitled": "بدون عنوان",
+  "session.current": "الجلسة الحالية",
+  "session.history.sources": "مصدر السجل",
   "session.recent": "الأخيرة",
   "session.showHistory": "عرض السجل",
   "session.search.placeholder": "البحث في الجلسات...",
@@ -1081,6 +1121,14 @@ export const dict = {
   "session.status.retrying": "...إعادة المحاولة (المحاولة {{ attempt }})… {{ message }}",
   "session.status.working": "...جارٍ العمل",
   "session.status.offline": "انقطع الاتصال بالشبكة — جارٍ إعادة الاتصال...",
+  "session.outcome.incomplete": "انتهى الدور مع تبقي {{count}} مهام",
+  "session.outcome.limit": "تم الوصول إلى حد الاستجابة قبل الاكتمال",
+  "session.outcome.unknown": "انتهى الدور بدون سبب إنهاء من النموذج",
+  "session.outcome.filtered": "أوقف المزود هذه الاستجابة بسبب عامل تصفية المحتوى.",
+  "session.outcome.unexpected": "انتهت الاستجابة بشكل غير متوقع وقد تكون غير مكتملة.",
+  "session.outcome.interrupted": "تمت مقاطعة الدور",
+  "session.outcome.error": "فشل الدور",
+  "session.outcome.finish": "سبب الإنهاء: {{reason}}",
 
   "ui.sessionTurn.cancel": "إلغاء",
   "ui.sessionTurn.status.thinking": "...جارٍ التفكير",
@@ -1141,7 +1189,6 @@ export const dict = {
     'يتم التحكم في Telemetry بواسطة إعداد Telemetry المدمج في VS Code. لتعطيله، انتقل إلى الإعدادات > Telemetry > Telemetry Level واضبطه على "off". أعد تشغيل VS Code لتطبيق التغيير.',
   "settings.aboutKiloCode.telemetry.openSettings": "فتح إعدادات Telemetry",
 
-  "settings.agentBehaviour.subtab.modes": "الأوضاع",
   "settings.agentBehaviour.subtab.agents": "الوكلاء",
   "settings.agentBehaviour.subtab.mcpServers": "خوادم MCP",
   "settings.agentBehaviour.subtab.rules": "القواعد",
@@ -1199,14 +1246,15 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "عدم تلخيص المحتوى الملصق الكبير",
   "settings.experimental.batch.title": "أداة دفعية",
   "settings.experimental.batch.description": "تمكين المعالجة الدفعية لاستدعاءات الأدوات",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "بحث في قاعدة الكود",
   "settings.experimental.codebaseSearch.description": "تمكين البحث بالذكاء الاصطناعي باللغة الطبيعية عبر قاعدة الكود",
-  "settings.experimental.agentManagerTool.title": "أداة Agent Manager",
-  "settings.experimental.agentManagerTool.description":
-    "السماح للوكلاء ببدء جلسات Agent Manager المحلية وجلسات worktree من استدعاء أداة",
+  "settings.experimental.speechToText.title": "تحويل الصوت إلى نص",
+  "settings.experimental.speechToText.description":
+    "تمكين الإدخال الصوتي في حقول المطالبة باستخدام حساب Kilo الخاص بك من خلال Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "قم بتمكين وتسجيل الدخول إلى مزود Kilo لاستخدام Speech to Text. ميزة Speech to Text مدعومة حاليًا فقط مع Kilo Gateway.",
+  "settings.experimental.speechToTextModel.title": "نموذج تحويل الصوت إلى نص",
+  "settings.experimental.speechToTextModel.description": "اختر نموذج نسخ Kilo Gateway للإدخال الصوتي.",
   "settings.experimental.continueOnDeny.title": "المتابعة عند الرفض",
   "settings.experimental.continueOnDeny.description": "متابعة حلقة الوكيل عند رفض الإذن",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
@@ -1228,6 +1276,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "اختر وكيلاً للتهيئة…",
   "settings.agentBehaviour.modelOverride.title": "تجاوز النموذج",
   "settings.agentBehaviour.modelOverride.description": "تجاوز النموذج الافتراضي لهذا الوكيل",
+  "settings.agentBehaviour.variantOverride.title": "تجاوز المتغير",
+  "settings.agentBehaviour.variantOverride.description": "تجاوز متغير النموذج لهذا الوكيل",
   "settings.agentBehaviour.prompt.title": "موجه مخصص",
   "settings.agentBehaviour.prompt.description": "موجه نظام إضافي لهذا الوكيل",
   "settings.agentBehaviour.temperature.title": "الحرارة",
@@ -1247,7 +1297,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "لم يتم العثور على مهارات. أضف مسارات مجلدات أو عناوين URL أدناه لإتاحة المهارات.",
   "settings.agentBehaviour.availableModes": "الأوضاع المخصصة المتاحة",
-  "settings.agentBehaviour.noModesFound": "لم يتم العثور على أوضاع.",
+  "settings.agentBehaviour.noAgentsFound": "لم يتم العثور على وكلاء.",
   "settings.agentBehaviour.createMode": "إنشاء وضع جديد",
   "settings.agentBehaviour.createMode.name": "الاسم",
   "settings.agentBehaviour.createMode.name.placeholder": "مثال: reviewer",
@@ -1290,10 +1340,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "نسخ الأذونات كـ JSON",
   "settings.agentBehaviour.permissions.hint":
     "يتم تقييم القواعد بالترتيب — القاعدة المطابقة الأخيرة هي التي تُطبق. هذه هي مجموعة القواعد المحلولة من خلفية CLI.",
-  "settings.agentBehaviour.removeMode.title": "إزالة الوضع",
-  "settings.agentBehaviour.removeMode.confirm":
-    'هل تريد إزالة الوضع "{{name}}"؟ سيؤدي هذا إلى تعطيل الوضع عن طريق تحديث الإعدادات.',
-  "settings.agentBehaviour.removeMode.button": "إزالة",
+  "settings.agentBehaviour.removeAgent.title": "إزالة الوكيل",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'هل تريد إزالة الوكيل "{{name}}"؟ سيؤدي هذا إلى تعطيله عن طريق تحديث الإعدادات.',
+  "settings.agentBehaviour.removeAgent.button": "إزالة",
   "settings.agentBehaviour.removeMcp.title": "إزالة خادم MCP",
   "settings.agentBehaviour.removeMcp.confirm": 'هل تريد إزالة خادم MCP "{{name}}"؟ سيؤدي هذا إلى إزالته من الإعدادات.',
   "settings.agentBehaviour.removeMcp.button": "إزالة",
@@ -1364,8 +1414,7 @@ export const dict = {
   "settings.autoApprove.tool.lsp": "الاستعلام من خادم اللغة. يسمح بتشغيل استعلامات خادم اللغة لذكاء الكود.",
   "settings.autoApprove.tool.todoreadwrite": "إدارة قائمة المهام. يسمح بقراءة وتحديث قائمة المهام الداخلية.",
   "settings.autoApprove.tool.webfetch": "جلب رابط ويب. يسمح باسترداد المحتوى من رابط (URL) محدد.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "البحث في الويب أو الكود. يسمح بإجراء عمليات بحث خارجية في الويب أو الكود.",
+  "settings.autoApprove.tool.websearch": "البحث في الويب. يسمح بإجراء عمليات بحث خارجية في الويب.",
   "settings.autoApprove.tool.external_directory":
     "الوصول للملفات خارج مساحة العمل. يتم تشغيله عند الوصول إلى ملفات خارج مسار المشروع الحالي.",
   "settings.autoApprove.tool.doom_loop":
@@ -1373,7 +1422,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "تمكين اللقطات",
   "settings.checkpoints.enable.description": "إنشاء نقاط فحص قبل تحرير الملفات",
   "settings.context.autoCompaction.title": "ضغط تلقائي",
-  "settings.context.autoCompaction.description": "ضغط السياق تلقائياً عند امتلائه",
+  "settings.context.autoCompaction.description": "ضغط السياق تلقائياً قبل أن يصل إلى الحد",
+  "settings.context.compactionLimit.title": "حد الضغط التلقائي",
+  "settings.context.compactionLimit.description":
+    "اضغط عندما يصل السياق إلى هذه النسبة المئوية من نافذة النموذج. اتركه فارغاً لاستخدام هامش الأمان فقط.",
   "settings.context.prune.title": "تقليم المخرجات القديمة",
   "settings.context.prune.description": "إزالة مخرجات الأدوات القديمة أثناء الضغط",
   "settings.context.watcherPatterns": "أنماط تجاهل مراقب الملفات",
@@ -1555,4 +1607,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "لا توجد فروع مطابقة",
   "diffViewer.baseBranch.loading": "جارٍ تحميل الفروع…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "الخطة جاهزة:",
 }

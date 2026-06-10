@@ -2,8 +2,13 @@ package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Text
-import ai.kilocode.client.session.ui.SessionStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.ui.md.MdView
+import ai.kilocode.client.ui.md.MdViewFactory
+import com.intellij.openapi.util.Disposer
 import java.awt.BorderLayout
 
 /**
@@ -11,16 +16,24 @@ import java.awt.BorderLayout
  *
  * Supports both full-replacement ([update]) and streaming append ([appendDelta]).
  */
-class TextView(text: Text) : PartView() {
+open class TextView(
+    text: Text,
+    transparent: Boolean = false,
+    openUrl: (String) -> Unit = {},
+    selection: SessionSelection? = null,
+) : PartView() {
 
     override val contentId: String = text.id
 
-    val md: MdView = MdView.html()
+    val md: MdView = MdViewFactory.create(SessionEditorStyle.current(), selection)
 
     init {
         layout = BorderLayout()
         isOpaque = false
-        applyStyle(SessionStyle.current())
+        Disposer.register(this, md)
+        md.opaque = !transparent
+        md.addLinkListener { openUrl(it.href) }
+        applyStyle(SessionEditorStyle.current())
         add(md.component, BorderLayout.CENTER)
         if (text.content.isNotEmpty()) md.set(text.content.toString())
     }
@@ -40,13 +53,27 @@ class TextView(text: Text) : PartView() {
     /** Current markdown source — used by tests to assert rendered content. */
     fun markdown(): String = md.markdown()
 
-    override fun applyStyle(style: SessionStyle) {
-        val changed = md.font != style.transcriptFont || md.codeFont != style.editorFamily
-        if (md.font != style.transcriptFont) md.font = style.transcriptFont
+    internal fun contentOpaque() = md.opaque
+
+    override fun applyStyle(style: SessionEditorStyle) {
+        val font = styleFont(style)
+        val bg = styleBackground(style)
+        val changed = md.font != font ||
+            md.codeFont != style.editorFamily ||
+            md.foreground != style.editorForeground ||
+            md.background != bg
+        md.applyStyle(style)
+        if (md.font != font) md.font = font
         if (md.codeFont != style.editorFamily) md.codeFont = style.editorFamily
+        if (md.foreground != style.editorForeground) md.foreground = style.editorForeground
+        if (md.background != bg) md.background = bg
         if (!changed) return
         refresh()
     }
+
+    protected open fun styleFont(style: SessionEditorStyle) = style.transcriptFont
+
+    protected open fun styleBackground(style: SessionEditorStyle) = SessionUiStyle.Transcript.bgColor()
 
     private fun refresh() {
         revalidate()

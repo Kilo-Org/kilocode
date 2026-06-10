@@ -4,7 +4,6 @@ import * as Session from "./session"
 import { SessionID, MessageID, PartID } from "./schema"
 import { Provider } from "@/provider/provider"
 import { MessageV2 } from "./message-v2"
-import z from "zod"
 import { Token } from "@/util/token"
 import * as Log from "@opencode-ai/core/util/log"
 import { SessionProcessor } from "./processor"
@@ -14,12 +13,21 @@ import { Config } from "@/config/config"
 import { NotFoundError } from "@/storage/storage"
 import { ModelID, ProviderID } from "@/provider/schema"
 import { Effect, Layer, Context, Schema } from "effect"
+import * as DateTime from "effect/DateTime"
 import { InstanceState } from "@/effect/instance-state"
 import { isOverflow as overflow, usable } from "./overflow"
 import { makeRuntime } from "@/effect/run-service"
-import { fn } from "@/util/fn"
-import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
-import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-payload-recovery" // kilocode_change
+import { serviceUse } from "@/effect/service-use"
+// kilocode_change start
+import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
+import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-payload-recovery"
+import { KiloCompactionChunks } from "@/kilocode/session/compaction-chunks"
+import { SessionExport } from "@/kilocode/session-export"
+import { KiloSession } from "@/kilocode/session"
+// kilocode_change end
+import { RuntimeFlags } from "@/effect/runtime-flags"
+import { SyncEvent } from "@/sync"
+import { SessionEvent } from "@/v2/session-event"
 
 const log = Log.create({ service: "session.compaction" })
 
@@ -91,6 +99,10 @@ type CompletedCompaction = {
   assistantIndex: number
   summary: string | undefined
 }
+
+// kilocode_change start - allow safe pruning at cache-invalidating boundaries
+export type PruneReason = "normal" | "post-compaction" | "payload-limit"
+// kilocode_change end
 
 function summaryText(message: MessageV2.WithParts) {
   const text = message.parts
@@ -188,7 +200,7 @@ export interface Interface {
     tokens: MessageV2.Assistant["tokens"]
     model: Provider.Model
   }) => Effect.Effect<boolean>
-  readonly prune: (input: { sessionID: SessionID }) => Effect.Effect<void>
+  readonly prune: (input: { sessionID: SessionID; reason?: PruneReason }) => Effect.Effect<void> // kilocode_change
   readonly process: (input: {
     parentID: MessageID
     messages: MessageV2.WithParts[]
@@ -207,6 +219,8 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/SessionCompaction") {}
 
+export const use = serviceUse(Service)
+
 export const layer: Layer.Layer<
   Service,
   never,
@@ -217,6 +231,8 @@ export const layer: Layer.Layer<
   | Plugin.Service
   | SessionProcessor.Service
   | Provider.Service
+  | SyncEvent.Service
+  | RuntimeFlags.Service
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -227,6 +243,8 @@ export const layer: Layer.Layer<
     const plugin = yield* Plugin.Service
     const processors = yield* SessionProcessor.Service
     const provider = yield* Provider.Service
+    const sync = yield* SyncEvent.Service
+    const flags = yield* RuntimeFlags.Service
 
     const isOverflow = Effect.fn("SessionCompaction.isOverflow")(function* (input: {
       tokens: MessageV2.Assistant["tokens"]
@@ -296,10 +314,16 @@ export const layer: Layer.Layer<
 
     // goes backwards through parts until there are PRUNE_PROTECT tokens worth of tool
     // calls, then erases output of older tool calls to free context space
-    const prune = Effect.fn("SessionCompaction.prune")(function* (input: { sessionID: SessionID }) {
+    // kilocode_change start - preserve normal opt-in pruning, but allow payload/compaction cleanup by default
+    const prune = Effect.fn("SessionCompaction.prune")(function* (input: {
+      sessionID: SessionID
+      reason?: PruneReason
+    }) {
       const cfg = yield* config.get()
-      if (!cfg.compaction?.prune) return
-      log.info("pruning")
+      const reason = input.reason ?? "normal"
+      if (cfg.compaction?.prune === false) return
+      if (reason === "normal" && cfg.compaction?.prune !== true) return
+      log.info("pruning", { reason })
 
       const msgs = yield* session
         .messages({ sessionID: input.sessionID })
@@ -338,9 +362,10 @@ export const layer: Layer.Layer<
             yield* session.updatePart(part)
           }
         }
-        log.info("pruned", { count: toPrune.length })
+        log.info("pruned", { reason, count: toPrune.length })
       }
     })
+    // kilocode_change end
 
     const processCompaction = Effect.fn("SessionCompaction.process")(function* (input: {
       parentID: MessageID
@@ -363,7 +388,8 @@ export const layer: Layer.Layer<
             parts: MessageV2.Part[]
           }
         | undefined
-      if (input.overflow) {
+      // kilocode_change start - false is preflight replay; undefined disables replay
+      if (input.overflow !== undefined) {
         const idx = input.messages.findIndex((m) => m.info.id === input.parentID)
         for (let i = idx - 1; i >= 0; i--) {
           const msg = input.messages[i]
@@ -380,11 +406,12 @@ export const layer: Layer.Layer<
           messages = input.messages
         }
       }
+      // kilocode_change end
 
       const agent = yield* agents.get("compaction")
       const model = agent.model
-        ? yield* provider.getModel(agent.model.providerID, agent.model.modelID)
-        : yield* provider.getModel(userMessage.model.providerID, userMessage.model.modelID)
+        ? yield* provider.getModel(agent.model.providerID, agent.model.modelID).pipe(Effect.orDie)
+        : yield* provider.getModel(userMessage.model.providerID, userMessage.model.modelID).pipe(Effect.orDie)
       const cfg = yield* config.get()
       const history = compactionPart && messages.at(-1)?.info.id === input.parentID ? messages.slice(0, -1) : messages
       const prior = completedCompactions(history)
@@ -408,6 +435,7 @@ export const layer: Layer.Layer<
         stripMedia: true,
         toolOutputMaxChars: TOOL_OUTPUT_MAX_CHARS,
       })
+      const tokens = Token.estimate(JSON.stringify(modelMessages)) // kilocode_change
       const ctx = yield* InstanceState.context
       const msg: MessageV2.Assistant = {
         id: MessageID.ascending(),
@@ -442,21 +470,42 @@ export const layer: Layer.Layer<
         model,
       })
       // kilocode_change start
-      const result = yield* KiloCompactionPayloadRecovery.process({
-        processor,
-        user: userMessage,
-        agent,
-        sessionID: input.sessionID,
-        model,
-        messages: modelMessages,
-        prompt: nextPrompt,
-        recovery: selected.head,
-        updateMessage: session.updateMessage,
-        updatePart: session.updatePart,
-      })
-      // kilocode_change end
+      const result = KiloCompactionChunks.needed({ cfg, model, tokens })
+        ? "compact"
+        : yield* KiloCompactionPayloadRecovery.process({
+            processor,
+            user: userMessage,
+            agent,
+            sessionID: input.sessionID,
+            model,
+            messages: modelMessages,
+            prompt: nextPrompt,
+            recovery: selected.head,
+            updateMessage: session.updateMessage,
+            updatePart: session.updatePart,
+          })
 
-      if (result === "compact") {
+      const fallback = KiloCompactionChunks.eligible({
+        result,
+        error: processor.message.error ?? processor.compactError?.(),
+      })
+        ? yield* KiloCompactionChunks.process({
+            processors,
+            session,
+            user: userMessage,
+            agent,
+            sessionID: input.sessionID,
+            model,
+            cfg,
+            messages: selected.head,
+            prompt: nextPrompt,
+            target: processor.message,
+            updateMessage: session.updateMessage,
+            updatePart: session.updatePart,
+          })
+        : result
+      if (fallback === "compact") {
+        // kilocode_change end
         processor.message.error = new MessageV2.ContextOverflowError({
           message: replay
             ? "Conversation history too large to compact - exceeds model context limit"
@@ -474,8 +523,26 @@ export const layer: Layer.Layer<
         })
       }
 
-      if (result === "continue" && input.auto) {
+      if (fallback === "continue" && input.auto) {
+        // kilocode_change
         if (replay) {
+          // kilocode_change start - compact oversized replay turns instead of looping into replay overflow
+          replay = yield* KiloCompactionChunks.replay({
+            processors,
+            session,
+            user: userMessage,
+            agent,
+            sessionID: input.sessionID,
+            model,
+            cfg,
+            messages: selected.head,
+            prompt: nextPrompt,
+            target: processor.message,
+            updateMessage: session.updateMessage,
+            updatePart: session.updatePart,
+            replay,
+          })
+          // kilocode_change end
           const original = replay.info
           const replayMsg = yield* session.updateMessage({
             id: MessageID.ascending(),
@@ -488,10 +555,12 @@ export const layer: Layer.Layer<
             tools: original.tools,
             system: original.system,
           })
+          KiloSessionPromptQueue.retarget(input.sessionID, replayMsg.id) // kilocode_change - expose replay to scope()
           for (const part of replay.parts) {
             if (part.type === "compaction") continue
+            // kilocode_change start - preserve media for preflight replay but strip it after provider overflow
             const replayPart =
-              part.type === "file" && MessageV2.isMedia(part.mime)
+              input.overflow && part.type === "file" && MessageV2.isMedia(part.mime)
                 ? { type: "text" as const, text: `[Attached ${part.mime}: ${part.filename ?? "file"}]` }
                 : part
             yield* session.updatePart({
@@ -500,6 +569,7 @@ export const layer: Layer.Layer<
               messageID: replayMsg.id,
               sessionID: input.sessionID,
             })
+            // kilocode_change end
           }
         }
 
@@ -511,7 +581,9 @@ export const layer: Layer.Layer<
               {
                 sessionID: input.sessionID,
                 agent: userMessage.agent,
-                model: yield* provider.getModel(userMessage.model.providerID, userMessage.model.modelID),
+                model: yield* provider
+                  .getModel(userMessage.model.providerID, userMessage.model.modelID)
+                  .pipe(Effect.orDie),
                 provider: {
                   source: info.source,
                   info,
@@ -531,6 +603,7 @@ export const layer: Layer.Layer<
               agent: userMessage.agent,
               model: userMessage.model,
             })
+            KiloSessionPromptQueue.retarget(input.sessionID, continueMsg.id) // kilocode_change - expose auto-continue to scope()
             const text =
               (input.overflow
                 ? "The previous request exceeded the provider's size limit due to large media attachments. The conversation was compacted and media files were removed from context. If the user was asking about attached images or files, explain that the attachments were too large to process and suggest they try again with smaller or fewer files.\n\n"
@@ -556,9 +629,60 @@ export const layer: Layer.Layer<
         }
       }
 
+      // kilocode_change start - compaction already invalidates cache, so collapse stale tool outputs too
       if (processor.message.error) return "stop"
-      if (result === "continue") yield* bus.publish(Event.Compacted, { sessionID: input.sessionID })
-      return result
+      if (fallback === "continue") {
+        const summary = summaryText(
+          (yield* session.messages({ sessionID: input.sessionID }).pipe(Effect.orDie)).find(
+            (item) => item.info.id === msg.id,
+          ) ?? {
+            info: msg,
+            parts: [],
+          },
+        )
+        if (flags.experimentalEventSystem) {
+          yield* sync.run(SessionEvent.Compaction.Ended.Sync, {
+            sessionID: input.sessionID,
+            timestamp: DateTime.makeUnsafe(Date.now()),
+            text: summary ?? "",
+            include: selected.tail_start_id,
+          })
+        }
+        // kilocode_change start - export self-contained compaction capture
+        const parent = KiloSession.resolveParent(input.sessionID)
+        const found = KiloSession.resolveRoot(input.sessionID)
+        const root = parent ? (found === input.sessionID ? parent : found) : input.sessionID
+        const workspace = yield* InstanceState.context
+        SessionExport.compaction({
+          sessionId: input.sessionID,
+          rootSessionId: root,
+          parentSessionId: parent,
+          requestId: msg.id,
+          workspaceKey: workspace.directory,
+          input: {
+            inputMessagesSnapshot: modelMessages,
+            selectedContext: selected.head,
+            previousSummary,
+            prompt: nextPrompt,
+            tailStartId: selected.tail_start_id,
+          },
+          output: {
+            summary: summary ?? "",
+            assistantMessageId: msg.id,
+          },
+          modelId: model.id,
+          durationMs: Math.max(0, Date.now() - msg.time.created),
+          usage: {
+            inputTokens: processor.message.tokens.input,
+            outputTokens: processor.message.tokens.output,
+          },
+        })
+        // kilocode_change end
+        yield* prune({ sessionID: input.sessionID, reason: "post-compaction" })
+        yield* bus.publish(Event.Compacted, { sessionID: input.sessionID })
+      }
+      // kilocode_change end
+      return fallback // kilocode_change
     })
 
     const create = Effect.fn("SessionCompaction.create")(function* (input: {
@@ -587,12 +711,19 @@ export const layer: Layer.Layer<
       // kilocode_change start - keep auto-compaction markers visible during queued turns
       KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
       // kilocode_change end
+      if (flags.experimentalEventSystem) {
+        yield* sync.run(SessionEvent.Compaction.Started.Sync, {
+          sessionID: input.sessionID,
+          timestamp: DateTime.makeUnsafe(Date.now()),
+          reason: input.auto ? "auto" : "manual",
+        })
+      }
     })
 
     return Service.of({
       isOverflow,
       prune,
-      process: processCompaction,
+      process: (input) => processCompaction(input).pipe(Effect.orDie),
       create,
     })
   }),
@@ -607,6 +738,8 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(Plugin.defaultLayer),
     Layer.provide(Bus.layer),
     Layer.provide(Config.defaultLayer),
+    Layer.provide(SyncEvent.defaultLayer),
+    Layer.provide(RuntimeFlags.defaultLayer),
   ),
 )
 
@@ -616,19 +749,9 @@ export async function isOverflow(input: { tokens: MessageV2.Assistant["tokens"];
   return runPromise((svc) => svc.isOverflow(input))
 }
 
-export async function prune(input: { sessionID: SessionID }) {
+export async function prune(input: { sessionID: SessionID; reason?: PruneReason }) {
+  // kilocode_change
   return runPromise((svc) => svc.prune(input))
 }
-
-export const create = fn(
-  z.object({
-    sessionID: SessionID.zod,
-    agent: z.string(),
-    model: z.object({ providerID: ProviderID.zod, modelID: ModelID.zod }),
-    auto: z.boolean(),
-    overflow: z.boolean().optional(),
-  }),
-  (input) => runPromise((svc) => svc.create(input)),
-)
 
 export * as SessionCompaction from "./compaction"

@@ -5,7 +5,7 @@
 // showed ~16% of blocked main-thread time in timer operations). The
 // animation is now driven entirely by the `data-active` attribute via CSS —
 // no JS timer, no per-change work.
-import { createMemo, type ValidComponent } from "solid-js"
+import { createMemo, Show, type ValidComponent } from "solid-js"
 import { Dynamic } from "solid-js/web"
 
 export const TextShimmer = <T extends ValidComponent = "span">(props: {
@@ -18,6 +18,9 @@ export const TextShimmer = <T extends ValidComponent = "span">(props: {
   const text = createMemo(() => props.text ?? "")
   const active = createMemo(() => props.active ?? true)
   const offset = createMemo(() => props.offset ?? 0)
+  // Preserve the fade-out structure after live animation, but avoid creating it
+  // for historical labels that mount inactive and never shimmer.
+  const shimmer = createMemo<boolean>((seen) => seen || active(), false)
   const swap = 220
 
   return (
@@ -32,14 +35,16 @@ export const TextShimmer = <T extends ValidComponent = "span">(props: {
         "--text-shimmer-index": `${offset()}`,
       }}
     >
-      <span data-slot="text-shimmer-char">
-        <span data-slot="text-shimmer-char-base" aria-hidden="true">
-          {text()}
+      <Show when={shimmer()} fallback={text()}>
+        <span data-slot="text-shimmer-char">
+          <span data-slot="text-shimmer-char-base" aria-hidden="true">
+            {text()}
+          </span>
+          <span data-slot="text-shimmer-char-shimmer" aria-hidden="true">
+            {text()}
+          </span>
         </span>
-        <span data-slot="text-shimmer-char-shimmer" aria-hidden="true">
-          {text()}
-        </span>
-      </span>
+      </Show>
     </Dynamic>
   )
 }

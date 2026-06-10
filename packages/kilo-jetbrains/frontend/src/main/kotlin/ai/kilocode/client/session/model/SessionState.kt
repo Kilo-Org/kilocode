@@ -4,6 +4,8 @@ package ai.kilocode.client.session.model
 sealed class SessionState {
     data object Idle : SessionState()
 
+    data object Loading : SessionState()
+
     data class Busy(val text: String) : SessionState()
 
     data class AwaitingQuestion(val question: Question) : SessionState()
@@ -16,8 +18,10 @@ sealed class SessionState {
 
     data class Error(val message: String, val kind: String? = null) : SessionState()
 
+    data class LoginRequired(val message: String) : SessionState()
+
     fun isBusy(): Boolean = when (this) {
-        is Idle, is Error -> false
+        is Idle, is Loading, is Error, is LoginRequired -> false
         else -> true
     }
 }

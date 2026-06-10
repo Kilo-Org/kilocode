@@ -298,7 +298,7 @@
     line-height: var(--line-height-large);
 
     &::placeholder {
-      color: var(--text-weak);
+      color: var(--vscode-input-placeholderForeground, var(--text-weaker));
     }
 
     &:disabled {

@@ -91,7 +91,7 @@ export class DiffSourceCatalog implements vscode.Disposable {
 
   build(id: string, ctx: PanelContext): DiffSource {
     if (id === WORKSPACE_SOURCE_ID) {
-      return createWorktreeDiffSource(this.connection, { baseBranchOverride: ctx.baseBranchOverride })
+      return createWorktreeDiffSource({ baseBranchOverride: ctx.baseBranchOverride })
     }
 
     if (id === STAGED_SOURCE_ID) return createStagedDiffSource()

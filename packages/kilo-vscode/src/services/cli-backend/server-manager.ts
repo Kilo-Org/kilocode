@@ -4,6 +4,7 @@ import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"
 import * as vscode from "vscode"
+import { resolveTreeSitterEnv } from "./cli-resources"
 import { t } from "./i18n"
 import { parseServerPort } from "./server-utils"
 
@@ -16,6 +17,7 @@ export interface ServerInstance {
 const STARTUP_TIMEOUT_SECONDS = 30
 
 type WorkspaceFolderLike = { uri: { fsPath: string } }
+type ServerExitListener = (code: number | null) => void
 
 export function resolveServerCwd(folders: readonly WorkspaceFolderLike[] | undefined, storage: string): string {
   return folders?.[0]?.uri.fsPath ?? storage
@@ -30,7 +32,10 @@ export class ServerManager {
   private instance: ServerInstance | null = null
   private startupPromise: Promise<ServerInstance> | null = null
 
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  constructor(
+    private readonly context: vscode.ExtensionContext,
+    private readonly onExit?: ServerExitListener,
+  ) {}
 
   /**
    * Get or start the server instance
@@ -131,6 +136,7 @@ export class ServerManager {
           KILO_VSCODE_VERSION: vscode.version,
           KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
           ...(!claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
+          ...resolveTreeSitterEnv(this.context.extensionPath),
         },
         stdio: ["ignore", "pipe", "pipe"],
         detached: true,
@@ -169,6 +175,7 @@ export class ServerManager {
         console.log("[Kilo New] ServerManager: 🛑 Process exited with code:", code)
         if (this.instance?.process === serverProcess) {
           this.instance = null
+          this.onExit?.(code)
         }
         if (!resolved) {
           const { userMessage, userDetails } = toErrorMessage(

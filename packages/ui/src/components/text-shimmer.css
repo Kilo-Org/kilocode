@@ -21,6 +21,7 @@
   font: inherit;
   letter-spacing: inherit;
   line-height: inherit;
+  white-space: pre; /* kilocode_change - preserve inactive fallback whitespace */
 }
 
 [data-component="text-shimmer"] [data-slot="text-shimmer-char"] {

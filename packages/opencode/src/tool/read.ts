@@ -1,8 +1,7 @@
-import { lstat } from "fs/promises" // kilocode_change
 import { Effect, Option, Schema, Scope } from "effect"
-import { NonNegativeInt } from "@/util/schema"
+import { NonNegativeInt } from "@opencode-ai/core/schema"
 import * as path from "path"
-import type { Readable } from "stream" // kilocode_change
+import { Readable } from "stream" // kilocode_change
 import { createInterface } from "readline"
 import * as Tool from "./tool"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
@@ -12,9 +11,10 @@ import { InstanceState } from "@/effect/instance-state"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import { Instruction } from "../session/instruction"
 import { isPdfAttachment, sniffAttachmentMime } from "@/util/media"
+import { Reference } from "@/reference/reference"
 // kilocode_change start
 import * as Encoding from "../kilocode/encoding"
-import * as TextStream from "../kilocode/text-stream"
+import * as Extract from "../kilocode/tool/read-extract"
 // kilocode_change end
 
 const DEFAULT_READ_LIMIT = 2000
@@ -47,6 +47,7 @@ export const ReadTool = Tool.define(
     const fs = yield* AppFileSystem.Service
     const instruction = yield* Instruction.Service
     const lsp = yield* LSP.Service
+    const reference = yield* Reference.Service
     const scope = yield* Scope.Scope
 
     const miss = Effect.fn("ReadTool.miss")(function* (filepath: string) {
@@ -108,6 +109,31 @@ export const ReadTool = Tool.define(
         }),
       )
     })
+
+    const lines = Effect.fn("ReadTool.lines")((filepath: string, opts: { limit: number; offset: number }) =>
+      // kilocode_change - extracted formats still need their native readers; ordinary text stays on AppFileSystem
+      Effect.tryPromise({
+        try: () => Extract.open(filepath),
+        catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+      }).pipe(
+        Effect.flatMap((extracted) =>
+          extracted
+            ? Effect.tryPromise({
+                try: () => collect(extracted, opts),
+                catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+              })
+            : fs.readFile(filepath).pipe(
+                Effect.map((bytes) => Encoding.decode(Buffer.from(bytes), Encoding.detect(Buffer.from(bytes)))),
+                Effect.flatMap((text) =>
+                  Effect.tryPromise({
+                    try: () => collect(Readable.from([text]), opts),
+                    catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+                  }),
+                ),
+              ),
+        ),
+      ),
+    )
 
     const isBinaryFile = (filepath: string, bytes: Uint8Array) => {
       const ext = path.extname(filepath).toLowerCase()
@@ -177,13 +203,13 @@ export const ReadTool = Tool.define(
         items.filter((item) => !item.endsWith("/") && types.get(item) === "file"),
         Effect.fnUntraced(function* (item) {
           const child = path.join(filepath, item)
-          const info = yield* Effect.promise(() => lstat(child)).pipe(Effect.catch(() => Effect.void))
-          if (!info?.isFile()) return
+          const info = yield* fs.stat(child).pipe(Effect.catch(() => Effect.void))
+          if (info?.type !== "File") return
           const sample = yield* readSample(child, Number(info.size), SAMPLE_BYTES).pipe(
             Effect.catch(() => Effect.succeed(new Uint8Array())),
           )
           if (isBinaryFile(child, sample)) return
-          const file = yield* Effect.promise(() => lines(child, { limit: DEFAULT_READ_LIMIT, offset: 1 })).pipe(
+          const file = yield* lines(child, { limit: DEFAULT_READ_LIMIT, offset: 1 }).pipe(
             Effect.catch(() => Effect.void),
           )
           if (!file) return
@@ -212,6 +238,7 @@ export const ReadTool = Tool.define(
       if (process.platform === "win32") {
         filepath = AppFileSystem.normalizePath(filepath)
       }
+      yield* reference.ensure(filepath)
       const title = path.relative(instance.worktree, filepath)
 
       const stat = yield* fs.stat(filepath).pipe(
@@ -222,13 +249,13 @@ export const ReadTool = Tool.define(
       )
 
       yield* assertExternalDirectoryEffect(ctx, filepath, {
-        bypass: Boolean(ctx.extra?.["bypassCwdCheck"]),
+        bypass: Boolean(ctx.extra?.["bypassCwdCheck"]) || (yield* reference.contains(filepath)),
         kind: stat?.type === "Directory" ? "directory" : "file",
       })
 
       yield* ctx.ask({
         permission: "read",
-        patterns: [filepath],
+        patterns: [path.relative(instance.worktree, filepath)],
         always: ["*"],
         metadata: {},
       })
@@ -300,18 +327,18 @@ export const ReadTool = Tool.define(
         }
       }
 
-      if (isBinaryFile(filepath, sample)) {
+      // kilocode_change start - route extractable binary documents through lines()
+      if (!Extract.binary(filepath) && isBinaryFile(filepath, sample)) {
         return yield* Effect.fail(new Error(`Cannot read binary file: ${filepath}`))
       }
 
-      const file = yield* Effect.promise(() =>
-        lines(filepath, { limit: params.limit ?? DEFAULT_READ_LIMIT, offset: params.offset || 1 }),
-      )
+      const file = yield* lines(filepath, { limit: params.limit ?? DEFAULT_READ_LIMIT, offset: params.offset || 1 })
       if (file.count < file.offset && !(file.count === 0 && file.offset === 1)) {
         return yield* Effect.fail(
           new Error(`Offset ${file.offset} is out of range for this file (${file.count} lines)`),
         )
       }
+      // kilocode_change end
 
       let output = [`<path>${filepath}</path>`, `<type>file</type>`, "<content>\n"].join("\n")
       output += file.raw.map((line, i) => `${i + file.offset}: ${line}`).join("\n")
@@ -354,22 +381,10 @@ export const ReadTool = Tool.define(
   }),
 )
 
-// kilocode_change start - exported (so readDirectoryFiles can reuse it) and
-// routed through TextStream.withFallback so non-UTF-8 files are decoded via
-// iconv. The body otherwise matches upstream.
-export async function lines(filepath: string, opts: { limit: number; offset: number }) {
-  return TextStream.withFallback(filepath, (stream) => readLines(stream, opts))
-}
-
-async function readLines(stream: Readable, opts: { limit: number; offset: number }) {
+// kilocode_change start - extracted formats use native readers; ordinary text is supplied by AppFileSystem above
+async function collect(stream: Readable, opts: { limit: number; offset: number }) {
   // kilocode_change end
-  const rl = createInterface({
-    input: stream,
-    // Note: we use the crlfDelay option to recognize all instances of CR LF
-    // ('\r\n') in file as a single line break.
-    crlfDelay: Infinity,
-  })
-
+  const rl = createInterface({ input: stream, crlfDelay: Infinity })
   const start = opts.offset - 1
   const raw: string[] = []
   let bytes = 0
@@ -380,12 +395,10 @@ async function readLines(stream: Readable, opts: { limit: number; offset: number
     for await (const text of rl) {
       count += 1
       if (count <= start) continue
-
       if (raw.length >= opts.limit) {
         more = true
         continue
       }
-
       const line = text.length > MAX_LINE_LENGTH ? text.substring(0, MAX_LINE_LENGTH) + MAX_LINE_SUFFIX : text
       const size = Buffer.byteLength(line, "utf-8") + (raw.length > 0 ? 1 : 0)
       if (bytes + size > MAX_BYTES) {
@@ -393,7 +406,6 @@ async function readLines(stream: Readable, opts: { limit: number; offset: number
         more = true
         break
       }
-
       raw.push(line)
       bytes += size
     }
@@ -401,6 +413,5 @@ async function readLines(stream: Readable, opts: { limit: number; offset: number
     rl.close()
     stream.destroy()
   }
-
   return { raw, count, cut, more, offset: opts.offset }
 }

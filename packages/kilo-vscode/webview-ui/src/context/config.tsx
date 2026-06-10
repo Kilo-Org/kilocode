@@ -72,14 +72,13 @@ export const ConfigProvider: ParentComponent = (props) => {
   // a configLoaded message that arrives before the DOM mount.
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "autocompleteSettingsLoaded") {
-      const patch = {
+      mergeSettings({
         "autocomplete.enableAutoTrigger": message.settings.enableAutoTrigger,
         "autocomplete.enableSmartInlineTaskKeybinding": message.settings.enableSmartInlineTaskKeybinding,
         "autocomplete.enableChatAutocomplete": message.settings.enableChatAutocomplete,
+        "autocomplete.provider": message.settings.provider,
         "autocomplete.model": message.settings.model,
-      }
-      setSavedSettings((prev) => ({ ...prev, ...patch }))
-      setSettings((prev) => ({ ...prev, ...patch, ...settingsDraft() }))
+      })
       return
     }
     if (message.type === "configLoaded") {
@@ -142,15 +141,23 @@ export const ConfigProvider: ParentComponent = (props) => {
 
   onCleanup(unsubscribe)
 
+  function mergeSettings(patch: Record<string, unknown>) {
+    setSavedSettings((prev) => ({ ...prev, ...patch }))
+    setSettings((prev) => ({ ...prev, ...patch, ...settingsDraft() }))
+  }
+
+  const requestInitialData = () => {
+    vscode.postMessage({ type: "requestConfig" })
+    vscode.postMessage({ type: "requestAutocompleteSettings" })
+  }
+
   // Request config immediately; if the extension's httpClient is not yet ready,
   // extensionDataReady will fire once initialization completes and we retry once.
-  vscode.postMessage({ type: "requestConfig" })
-  vscode.postMessage({ type: "requestAutocompleteSettings" })
+  requestInitialData()
 
   const fallback = setTimeout(() => {
     if (loading()) {
-      vscode.postMessage({ type: "requestConfig" })
-      vscode.postMessage({ type: "requestAutocompleteSettings" })
+      requestInitialData()
     }
   }, 3000)
 
@@ -159,8 +166,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     unsubReady()
     clearTimeout(fallback)
     if (loading()) {
-      vscode.postMessage({ type: "requestConfig" })
-      vscode.postMessage({ type: "requestAutocompleteSettings" })
+      requestInitialData()
     }
   })
 

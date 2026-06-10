@@ -243,7 +243,9 @@ Options:
   --dry-run              Show what would change without writing the file
 ```
 
-The command finds the newest upstream tag already merged into `HEAD`, reads that upstream version of the file, applies the same branding transforms used by upstream merge automation, strips existing `kilocode_change` markers from the current file, and adds fresh markers around the remaining lines that differ from upstream.
+The command finds the newest upstream tag already merged into `HEAD` (read from `.opencode-version` at the repo root, falling back to an `ls-remote` + `merge-base --is-ancestor` walk), reads that upstream version of the file, applies the same branding transforms used by upstream merge automation, strips existing `kilocode_change` markers from the current file, and adds fresh markers around the remaining lines that differ from upstream.
+
+The `.opencode-version` file is a single-line tag (e.g. `v1.14.33`) recorded by `merge.ts` after every successful upstream merge. Editing it by hand pins the "last merged" tag for the per-file commands above; delete it to fall back to the slower automatic discovery.
 
 ### reset-to-upstream.ts
 

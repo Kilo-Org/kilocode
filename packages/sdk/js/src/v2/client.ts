@@ -3,6 +3,7 @@ export * from "./gen/types.gen.js"
 import { createClient } from "./gen/client/client.gen.js"
 import { type Config } from "./gen/client/types.gen.js"
 import { KiloClient } from "./gen/sdk.gen.js"
+import { wrapClientError } from "../error-interceptor.js"
 export { type Config as KiloClientConfig, KiloClient }
 
 function pick(value: string | null, fallback?: string, encode?: (value: string) => string) {
@@ -93,5 +94,6 @@ export function createKiloClient(config?: Config & { directory?: string; experim
 
     return response
   })
+  client.interceptors.error.use(wrapClientError)
   return new KiloClient({ client })
 }

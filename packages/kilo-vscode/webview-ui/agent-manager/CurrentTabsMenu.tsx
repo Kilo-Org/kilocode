@@ -135,7 +135,6 @@ function buildItem(
 
 function statusLabel(id: string, blocked: boolean, status: SessionStatusInfo | undefined, deps: CurrentTabItemsDeps) {
   if (blocked) return deps.t("agentManager.tabsMenu.status.waiting")
-  if (status?.type === "busy") return deps.t("agentManager.tabsMenu.status.working")
   if (status?.type === "retry") return deps.t("agentManager.tabsMenu.status.retry")
   return undefined
 }
@@ -231,13 +230,13 @@ export const CurrentTabsMenu: Component<CurrentTabsMenuProps> = (props) => {
 
   return (
     <Popover
-      placement="bottom-end"
+      placement="bottom-start"
       open={open()}
       onOpenChange={setOpen}
       modal={false}
       class="am-tabs-menu"
       trigger={
-        <Tooltip value={props.label} placement="bottom" inactive={open()}>
+        <Tooltip value={props.label} placement="top" gutter={8} inactive={open()}>
           <button class="am-tabs-menu-trigger" type="button" aria-label={props.label}>
             <SearchIcon />
           </button>

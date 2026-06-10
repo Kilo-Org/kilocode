@@ -5,7 +5,14 @@ import type { SessionMode } from "../../context/worktree-mode"
 import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../marketplace"
 import type { ConnectionState, ServerInfo, SessionStatus } from "./connection"
 import type { FileAttachment, Part } from "./parts"
-import type { CloudSessionInfo, Message, MessageLoadMode, SessionInfo } from "./sessions"
+import type {
+  CloudSessionInfo,
+  Message,
+  MessageLoadMode,
+  SessionCloseReason,
+  SessionInfo,
+  SessionUpdate,
+} from "./sessions"
 import type { PermissionRequest } from "./permissions"
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
@@ -112,6 +119,12 @@ export interface SessionStatusMessage {
   next?: number
 }
 
+export interface SessionTurnClosedMessage {
+  type: "sessionTurnClosed"
+  sessionID: string
+  reason: SessionCloseReason
+}
+
 export interface SessionErrorMessage {
   type: "sessionError"
   sessionID?: string
@@ -153,7 +166,7 @@ export interface SessionForkedMessage {
 
 export interface SessionUpdatedMessage {
   type: "sessionUpdated"
-  session: SessionInfo
+  session: SessionUpdate
 }
 
 export interface SessionDeletedMessage {
@@ -174,6 +187,7 @@ export interface MessagesLoadedMessage {
   mode?: Exclude<MessageLoadMode, "focus">
   cursor?: string
   hasMore?: boolean
+  since?: number
 }
 
 export interface MessageCreatedMessage {
@@ -241,6 +255,13 @@ export interface AppendReviewCommentsMessage {
   type: "appendReviewComments"
   comments: ReviewComment[]
   autoSend?: boolean
+}
+
+export interface AppendReviewCommentsToTerminalMessage {
+  type: "appendReviewCommentsToTerminal"
+  comments: ReviewComment[]
+  autoSend?: boolean
+  targetTerminalId: string
 }
 
 export interface TriggerTaskMessage {
@@ -322,13 +343,39 @@ export interface AutocompleteSettingsLoadedMessage {
     enableAutoTrigger: boolean
     enableSmartInlineTaskKeybinding: boolean
     enableChatAutocomplete: boolean
-    model: string
+    /** `null` means "no explicit setting — use the resolved default." */
+    provider: string | null
+    /** `null` means "no explicit setting — use the resolved default." */
+    model: string | null
   }
 }
 
 export interface ChatCompletionResultMessage {
   type: "chatCompletionResult"
   text: string
+  requestId: string
+}
+
+export interface SpeechToTextResultMessage {
+  type: "speechToTextResult"
+  text: string
+  requestId: string
+}
+
+export interface SpeechToTextStartedMessage {
+  type: "speechToTextStarted"
+  requestId: string
+}
+
+export interface SpeechToTextCancelledMessage {
+  type: "speechToTextCancelled"
+  requestId: string
+}
+
+export interface SpeechToTextErrorMessage {
+  type: "speechToTextError"
+  error: string
+  code?: string
   requestId: string
 }
 
@@ -512,6 +559,7 @@ export interface AgentManagerStateMessage {
   tabOrder?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
+  sidebarCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
   reviewMarkdownRender?: boolean
   isGitRepo?: boolean
@@ -805,6 +853,7 @@ export interface MarketplaceDataMessage {
   marketplaceItems: MarketplaceItem[]
   marketplaceInstalledMetadata: MarketplaceInstalledMetadata
   errors?: string[]
+  showAgentMigrationBanner?: boolean
 }
 
 export interface MarketplaceInstallResultMessage {
@@ -892,6 +941,7 @@ export type ExtensionMessage =
   | PartsUpdatedMessage
   | PartRemovedMessage
   | SessionStatusMessage
+  | SessionTurnClosedMessage
   | SessionErrorMessage
   | PermissionRequestMessage
   | PermissionResolvedMessage
@@ -922,6 +972,10 @@ export type ExtensionMessage =
   | CommandsLoadedMessage
   | AutocompleteSettingsLoadedMessage
   | ChatCompletionResultMessage
+  | SpeechToTextStartedMessage
+  | SpeechToTextCancelledMessage
+  | SpeechToTextResultMessage
+  | SpeechToTextErrorMessage
   | FileSearchResultMessage
   | TerminalContextResultMessage
   | TerminalContextErrorMessage
@@ -957,6 +1011,7 @@ export type ExtensionMessage =
   | SetChatBoxMessage
   | AppendChatBoxMessage
   | AppendReviewCommentsMessage
+  | AppendReviewCommentsToTerminalMessage
   | TriggerTaskMessage
   | VariantsLoadedMessage
   | CloudSessionDataLoadedMessage

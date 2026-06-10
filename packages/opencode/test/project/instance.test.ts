@@ -1,18 +1,40 @@
-import { afterEach, describe, expect } from "bun:test"
+import { describe, expect } from "bun:test"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { Effect, Fiber, Layer } from "effect"
+import { Deferred, Effect, Fiber, Layer } from "effect"
 import { InstanceRef } from "../../src/effect/instance-ref"
 import { registerDisposer } from "../../src/effect/instance-registry"
+import { InstanceBootstrap } from "../../src/project/bootstrap-service"
 import { Instance } from "../../src/project/instance"
 import { InstanceStore } from "../../src/project/instance-store"
-import { disposeAllInstances, tmpdirScoped } from "../fixture/fixture"
+import { TestInstance, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Layer.mergeAll(InstanceStore.defaultLayer, CrossSpawnSpawner.defaultLayer))
+let bootstrapRun: Effect.Effect<void> = Effect.void
+const noopBootstrap = Layer.succeed(
+  InstanceBootstrap.Service,
+  InstanceBootstrap.Service.of({ run: Effect.suspend(() => bootstrapRun) }),
+)
 
-afterEach(async () => {
-  await disposeAllInstances()
-})
+const it = testEffect(
+  Layer.mergeAll(InstanceStore.defaultLayer, CrossSpawnSpawner.defaultLayer).pipe(Layer.provide(noopBootstrap)),
+)
+
+const setBootstrap = (run: Effect.Effect<void>) =>
+  Effect.acquireRelease(
+    Effect.sync(() => {
+      bootstrapRun = run
+    }),
+    () =>
+      Effect.sync(() => {
+        bootstrapRun = Effect.void
+      }),
+  )
+
+const registerDisposerScoped = (disposer: (directory: string) => Promise<void>) =>
+  Effect.acquireRelease(
+    Effect.sync(() => registerDisposer(disposer)),
+    (off) => Effect.sync(off),
+  )
 
 describe("InstanceStore", () => {
   it.live("loads instance context without installing ALS for the caller", () =>
@@ -27,18 +49,18 @@ describe("InstanceStore", () => {
     }),
   )
 
-  it.live("runs load init with InstanceRef provided", () =>
+  it.live("runs bootstrap with InstanceRef provided", () =>
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped({ git: true })
       const store = yield* InstanceStore.Service
       let initializedDirectory: string | undefined
 
-      yield* store.load({
-        directory: dir,
-        init: Effect.gen(function* () {
+      yield* setBootstrap(
+        Effect.gen(function* () {
           initializedDirectory = (yield* InstanceRef)?.directory
         }),
-      })
+      )
+      yield* store.load({ directory: dir })
 
       expect(initializedDirectory).toBe(dir)
       expect(() => Instance.current).toThrow()
@@ -51,18 +73,13 @@ describe("InstanceStore", () => {
       const store = yield* InstanceStore.Service
       let initialized = 0
 
-      const first = yield* store.load({
-        directory: dir,
-        init: Effect.sync(() => {
+      yield* setBootstrap(
+        Effect.sync(() => {
           initialized++
         }),
-      })
-      const second = yield* store.load({
-        directory: dir,
-        init: Effect.sync(() => {
-          initialized++
-        }),
-      })
+      )
+      const first = yield* store.load({ directory: dir })
+      const second = yield* store.load({ directory: dir })
 
       expect(second).toBe(first)
       expect(initialized).toBe(1)
@@ -73,34 +90,30 @@ describe("InstanceStore", () => {
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped({ git: true })
       const store = yield* InstanceStore.Service
-      const started = Promise.withResolvers<void>()
-      const release = Promise.withResolvers<void>()
+      const started = yield* Deferred.make<void>()
+      const release = yield* Deferred.make<void>()
       let initialized = 0
 
-      const first = yield* store
-        .load({
-          directory: dir,
-          init: Effect.promise(async () => {
-            initialized++
-            started.resolve()
-            await release.promise
-          }),
-        })
-        .pipe(Effect.forkScoped)
+      yield* setBootstrap(
+        Effect.gen(function* () {
+          initialized++
+          yield* Deferred.succeed(started, undefined)
+          yield* Deferred.await(release)
+        }),
+      )
+      const first = yield* store.load({ directory: dir }).pipe(Effect.forkScoped)
 
-      yield* Effect.promise(() => started.promise)
+      yield* Deferred.await(started)
 
-      const second = yield* store
-        .load({
-          directory: dir,
-          init: Effect.sync(() => {
-            initialized++
-          }),
-        })
-        .pipe(Effect.forkScoped)
+      yield* setBootstrap(
+        Effect.sync(() => {
+          initialized++
+        }),
+      )
+      const second = yield* store.load({ directory: dir }).pipe(Effect.forkScoped)
 
       expect(initialized).toBe(1)
-      release.resolve()
+      yield* Deferred.succeed(release, undefined)
 
       const [firstCtx, secondCtx] = yield* Effect.all([Fiber.join(first), Fiber.join(second)])
       expect(secondCtx).toBe(firstCtx)
@@ -114,27 +127,25 @@ describe("InstanceStore", () => {
       const store = yield* InstanceStore.Service
       let attempts = 0
 
-      const failed = yield* store
-        .load({
-          directory: dir,
-          init: Effect.sync(() => {
-            attempts++
-            throw new Error("init failed")
-          }),
-        })
-        .pipe(
-          Effect.as(false),
-          Effect.catchCause(() => Effect.succeed(true)),
-        )
+      yield* setBootstrap(
+        Effect.sync(() => {
+          attempts++
+          throw new Error("init failed")
+        }),
+      )
+      const failed = yield* store.load({ directory: dir }).pipe(
+        Effect.as(false),
+        Effect.catchCause(() => Effect.succeed(true)),
+      )
 
       expect(failed).toBe(true)
 
-      const ctx = yield* store.load({
-        directory: dir,
-        init: Effect.sync(() => {
+      yield* setBootstrap(
+        Effect.sync(() => {
           attempts++
         }),
-      })
+      )
+      const ctx = yield* store.load({ directory: dir })
 
       expect(ctx.directory).toBe(dir)
       expect(attempts).toBe(2)
@@ -159,28 +170,25 @@ describe("InstanceStore", () => {
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped({ git: true })
       const store = yield* InstanceStore.Service
-      const reloading = Promise.withResolvers<void>()
-      const releaseReload = Promise.withResolvers<void>()
+      const reloading = yield* Deferred.make<void>()
+      const releaseReload = yield* Deferred.make<void>()
       const disposed: Array<string> = []
-      const off = registerDisposer(async (directory) => {
+      yield* registerDisposerScoped(async (directory) => {
         disposed.push(directory)
       })
-      yield* Effect.addFinalizer(() => Effect.sync(off))
 
       const first = yield* store.load({ directory: dir })
-      const reload = yield* store
-        .reload({
-          directory: dir,
-          init: Effect.promise(async () => {
-            reloading.resolve()
-            await releaseReload.promise
-          }),
-        })
-        .pipe(Effect.forkScoped)
+      yield* setBootstrap(
+        Effect.gen(function* () {
+          yield* Deferred.succeed(reloading, undefined)
+          yield* Deferred.await(releaseReload)
+        }),
+      )
+      const reload = yield* store.reload({ directory: dir }).pipe(Effect.forkScoped)
 
-      yield* Effect.promise(() => reloading.promise)
+      yield* Deferred.await(reloading)
       const staleDispose = yield* store.dispose(first).pipe(Effect.forkScoped)
-      releaseReload.resolve()
+      yield* Deferred.succeed(releaseReload, undefined)
 
       const second = yield* Fiber.join(reload)
       yield* Fiber.join(staleDispose)
@@ -194,23 +202,25 @@ describe("InstanceStore", () => {
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped({ git: true })
       const store = yield* InstanceStore.Service
-      const disposing = Promise.withResolvers<void>()
-      const releaseDispose = Promise.withResolvers<void>()
+      const disposing = yield* Deferred.make<void>()
+      const releaseDispose = yield* Deferred.make<() => void>()
       const disposed: Array<string> = []
-      const off = registerDisposer(async (directory) => {
+      yield* registerDisposerScoped((directory) => {
         disposed.push(directory)
-        disposing.resolve()
-        await releaseDispose.promise
+        Deferred.doneUnsafe(disposing, Effect.void)
+        return new Promise<void>((resolve) => {
+          Deferred.doneUnsafe(releaseDispose, Effect.succeed(resolve))
+        })
       })
-      yield* Effect.addFinalizer(() => Effect.sync(off))
 
       yield* store.load({ directory: dir })
       const first = yield* store.disposeAll().pipe(Effect.forkScoped)
-      yield* Effect.promise(() => disposing.promise)
+      yield* Deferred.await(disposing)
+      const release = yield* Deferred.await(releaseDispose)
       const second = yield* store.disposeAll().pipe(Effect.forkScoped)
 
       expect(disposed).toEqual([dir])
-      releaseDispose.resolve()
+      yield* Effect.sync(release)
       yield* Effect.all([Fiber.join(first), Fiber.join(second)])
       expect(disposed).toEqual([dir])
     }),
@@ -222,10 +232,9 @@ describe("InstanceStore", () => {
       const dir2 = yield* tmpdirScoped({ git: true })
       const store = yield* InstanceStore.Service
       const disposed: Array<string> = []
-      const off = registerDisposer(async (directory) => {
+      yield* registerDisposerScoped(async (directory) => {
         disposed.push(directory)
       })
-      yield* Effect.addFinalizer(() => Effect.sync(off))
 
       yield* store.load({ directory: dir1 })
       yield* store.disposeAll()
@@ -237,42 +246,38 @@ describe("InstanceStore", () => {
     }),
   )
 
-  it.live("keeps Instance.provide as the legacy ALS wrapper", () =>
-    Effect.gen(function* () {
-      const dir = yield* tmpdirScoped({ git: true })
+  it.instance(
+    "provides legacy Promise callers with instance ALS",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const ctx = yield* InstanceRef
+        if (!ctx) throw new Error("InstanceRef not provided")
 
-      const directory = yield* Effect.promise(() =>
-        Instance.provide({
-          directory: dir,
-          fn: () => Instance.directory,
-        }),
-      )
+        const directory = yield* Effect.promise(() => Promise.resolve(Instance.restore(ctx, () => Instance.directory)))
 
-      expect(directory).toBe(dir)
-      expect(() => Instance.current).toThrow()
-    }),
+        expect(directory).toBe(test.directory)
+        expect(() => Instance.current).toThrow()
+      }),
+    { git: true },
   )
 
-  // kilocode_change - Kilo wraps init in the Instance ALS so KilocodeBootstrap (and the
-  // KiloIndexing.init that it forkDetaches) can read Instance.directory. Upstream's test
-  // asserted the opposite contract; rewrite to assert Kilo's contract.
-  it.live("installs Instance ALS around Effect init for Kilo bootstrap compatibility", () =>
+  // kilocode_change - InstanceStore.boot wraps bootstrap.run in the Instance ALS so
+  // KilocodeBootstrap (and anything it forkDetaches, e.g. KiloIndexing.init) can read
+  // Instance.directory. Upstream runs bootstrap without the ALS; this regression test
+  // pins the Kilo contract.
+  it.live("installs Instance ALS around bootstrap for Kilo bootstrap compatibility", () =>
     Effect.gen(function* () {
-      const dir = yield* tmpdirScoped()
-      let directoryDuringInit: string | undefined
+      const dir = yield* tmpdirScoped({ git: true })
+      const store = yield* InstanceStore.Service
+      let directoryDuringBootstrap: string | undefined
 
-      const directory = yield* Effect.promise(() =>
-        Instance.provide({
-          directory: dir,
-          init: Effect.sync(() => {
-            directoryDuringInit = Instance.directory
-          }),
-          fn: () => Instance.directory,
-        }),
-      )
+      bootstrapRun = Effect.sync(() => {
+        directoryDuringBootstrap = Instance.directory
+      })
+      yield* store.load({ directory: dir })
 
-      expect(directoryDuringInit).toBe(dir)
-      expect(directory).toBe(dir)
+      expect(directoryDuringBootstrap).toBe(dir)
     }),
   )
 })

@@ -9,7 +9,7 @@ import ai.kilocode.client.session.model.TimelineItem
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.ToolKind
-import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import com.intellij.util.ui.JBUI
 import java.awt.Color
 import java.awt.Dimension
@@ -138,14 +138,14 @@ internal class TimelinePanel : JPanel() {
 
     private fun color(item: TimelineItem): Color {
         val part = item.part
-        if (part is Tool && part.state == ToolExecState.ERROR) return UiStyle.Colors.timelineError
-        if (part is Text) return UiStyle.Colors.timelineText
-        if (part is Reasoning) return UiStyle.Colors.timelineText
-        if (part is Compaction) return UiStyle.Colors.timelineStep
-        if (part is StepFinish) return UiStyle.Colors.timelineSuccess
-        if (part !is Tool) return UiStyle.Colors.timelineStep
-        if (part.kind == ToolKind.READ) return UiStyle.Colors.timelineRead
-        if (part.kind == ToolKind.WRITE) return UiStyle.Colors.timelineWrite
-        return UiStyle.Colors.timelineTool
+        if (part is Tool && part.state == ToolExecState.ERROR) return SessionUiStyle.Timeline.ERROR
+        if (part is Text) return SessionUiStyle.Timeline.TEXT
+        if (part is Reasoning) return SessionUiStyle.Timeline.TEXT
+        if (part is Compaction) return SessionUiStyle.Timeline.STEP
+        if (part is StepFinish) return SessionUiStyle.Timeline.SUCCESS
+        if (part !is Tool) return SessionUiStyle.Timeline.STEP
+        if (part.kind == ToolKind.READ) return SessionUiStyle.Timeline.READ
+        if (part.kind == ToolKind.WRITE) return SessionUiStyle.Timeline.WRITE
+        return SessionUiStyle.Timeline.TOOL
     }
 }

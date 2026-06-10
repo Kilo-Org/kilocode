@@ -1,12 +1,10 @@
-// kilocode_change - new file
 import { remapChildren as _remapChildren } from "./fork"
 import z from "zod"
-import { Schema } from "effect"
+import { Cause, Effect, Schema } from "effect"
 import { BusEvent } from "@/bus/bus-event"
+import { EffectBridge } from "@/effect/bridge"
 import { Session } from "@/session/session"
 import { MessageID, SessionID } from "@/session/schema"
-import { makeRuntime } from "@/effect/run-service"
-import { fn } from "@/util/fn"
 import { Database, eq, and, gte, isNull, desc, like, inArray, lt, or } from "@/storage/db"
 import type { SQL } from "@/storage/db"
 import { ProjectTable } from "@/project/project.sql"
@@ -16,6 +14,9 @@ import { SessionTable } from "@/session/session.sql"
 import * as Log from "@opencode-ai/core/util/log"
 import type { LanguageModelUsage, ProviderMetadata } from "ai"
 import type { Provider } from "@/provider/provider"
+import { zod as toZod } from "@opencode-ai/core/effect-zod"
+import { ENV_FEATURE } from "@kilocode/kilo-gateway"
+import { fn } from "@/kilocode/fn"
 
 export namespace KiloSession {
   const log = Log.create({ service: "session.kilo" })
@@ -49,6 +50,17 @@ export namespace KiloSession {
   // ---------------------------------------------------------------------------
 
   const overrides = new Map<string, string>()
+  const parents = new Map<string, string>()
+  const roots = new Map<string, string>()
+
+  export function register(input: { id: string; parentID?: string; platform?: string }) {
+    const root = input.parentID ? (roots.get(input.parentID) ?? input.parentID) : input.id
+    const platform = input.platform ?? (input.parentID ? resolvePlatform(input.parentID) : undefined)
+
+    roots.set(input.id, root)
+    if (input.parentID) parents.set(input.id, input.parentID)
+    if (platform) overrides.set(input.id, platform)
+  }
 
   export function setPlatformOverride(id: string, platform: string) {
     overrides.set(id, platform)
@@ -58,8 +70,46 @@ export namespace KiloSession {
     return overrides.get(id)
   }
 
+  export function resolvePlatform(id: string): string | undefined {
+    const override = overrides.get(id)
+    if (override) return override
+    const parent = parents.get(id)
+    if (!parent) return undefined
+    return resolvePlatform(parent)
+  }
+
+  export function resolveRoot(id: string): string {
+    return roots.get(id) ?? id
+  }
+
+  export function resolveParent(id: string): string | undefined {
+    return parents.get(id)
+  }
+
+  export function featureForPlatform(platform: string | undefined): string | undefined {
+    switch (platform) {
+      case "agent-manager":
+        return "agent-manager"
+      case "vscode":
+        return "vscode-extension"
+      case "cli":
+        return "cli"
+      default:
+        return undefined
+    }
+  }
+
   export function clearPlatformOverride(id: string) {
     overrides.delete(id)
+    parents.delete(id)
+    roots.delete(id)
+  }
+
+  export function attribution(id: string): { rootID: string; feature?: string } {
+    const rootID = resolveRoot(id)
+    const platform = resolvePlatform(rootID) ?? process.env["KILO_PLATFORM"]
+    const feature = featureForPlatform(platform) ?? process.env[ENV_FEATURE]
+    return { rootID, ...(feature ? { feature } : {}) }
   }
 
   // ---------------------------------------------------------------------------
@@ -123,7 +173,7 @@ export namespace KiloSession {
    * Returns `undefined` when no provider cost is available, so the caller
    * should fall back to the standard token-based calculation.
    *
-   * Reference: https://openrouter.ai/docs/use-cases/usage-accounting
+   * Reference: https://openrouter.ai/docs/cookbook/administration/usage-accounting
    */
   export function providerCost(input: {
     metadata?: ProviderMetadata
@@ -185,14 +235,18 @@ export namespace KiloSession {
   // Session lifecycle hooks (share, unshare, remove)
   // ---------------------------------------------------------------------------
 
-  export async function shareSession(id: string): Promise<{ url: string }> {
-    const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
-    return KiloSessions.share(id)
+  export function shareSession(id: SessionID) {
+    return EffectBridge.fromPromise(async () => {
+      const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
+      return KiloSessions.share(id)
+    }).pipe(Effect.catchCause((cause) => Effect.fail(Cause.squash(cause))))
   }
 
-  export async function unshareSession(id: string): Promise<void> {
-    const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
-    await KiloSessions.unshare(id)
+  export function unshareSession(id: SessionID) {
+    return EffectBridge.fromPromise(async () => {
+      const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
+      await KiloSessions.unshare(id)
+    }).pipe(Effect.catchCause((cause) => Effect.fail(Cause.squash(cause))))
   }
 
   export async function removeSession(id: string): Promise<void> {
@@ -216,16 +270,24 @@ export namespace KiloSession {
   // These helpers catch that specific error and log a warning instead.
   // ---------------------------------------------------------------------------
 
-  export function runSyncSafe(run: () => void, context: { type: string; id: string; sessionID: string }): void {
-    try {
-      run()
-    } catch (e: any) {
-      if (e?.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
-        log.warn(`skipping ${context.type} for deleted session`, { id: context.id, sessionID: context.sessionID })
-        return
-      }
-      throw e
-    }
+  export function runSyncSafe<E, R>(
+    run: Effect.Effect<void, E, R>,
+    context: { type: string; id: string; sessionID: string },
+  ) {
+    return run.pipe(
+      Effect.catchCause((cause) => {
+        const err = Cause.squash(cause)
+        if (typeof err === "object" && err !== null && "code" in err && err.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
+          return Effect.sync(() =>
+            log.warn(`skipping ${context.type} for deleted session`, {
+              id: context.id,
+              sessionID: context.sessionID,
+            }),
+          )
+        }
+        return Effect.failCause(cause)
+      }),
+    )
   }
 
   // ---------------------------------------------------------------------------
@@ -235,7 +297,7 @@ export namespace KiloSession {
   /** Schema for project summary returned by listGlobal. */
   export const ProjectInfo = z
     .object({
-      id: ProjectID.zod,
+      id: z.custom<ProjectID>(Schema.is(ProjectID)),
       name: z.string().optional(),
       worktree: z.string(),
     })
@@ -349,11 +411,17 @@ export namespace KiloSession {
 }
 
 export const kiloSessionFork = fn(
-  z.object({ sessionID: SessionID.zod, messageID: MessageID.zod.optional() }),
+  z.object({ sessionID: toZod(SessionID), messageID: toZod(MessageID).optional() }),
   async (input) => {
-    const { runPromise } = makeRuntime(Session.Service, Session.defaultLayer)
-    const session = await runPromise((svc) => svc.fork(input))
-    await KiloSession.remapChildren(session.id)
-    return session
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const session = yield* sessions.fork(input)
+        const remapped = new Map<string, SessionID>([[input.sessionID, session.id]])
+        yield* KiloSession.remapChildren(session.id, remapped)
+        return session
+      }),
+    )
   },
 )

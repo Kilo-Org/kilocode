@@ -1,10 +1,7 @@
 import { Component, For, Show, createMemo, createSignal } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
-import {
-  formatKiloEmbeddingModelLabel,
-  getKiloEmbeddingModel,
-  normalizeKiloEmbeddingModelId,
-} from "@kilocode/kilo-indexing/embedding-models"
+import { DEFAULT_VECTOR_STORE } from "@kilocode/kilo-indexing/config"
+import { formatKiloEmbeddingModelLabel, getKiloEmbeddingModel } from "@kilocode/kilo-indexing/embedding-models"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { TextField } from "@kilocode/kilo-ui/text-field"
@@ -36,8 +33,8 @@ const allProviders: { value: ProviderId; label: string }[] = [
 ]
 
 const stores: Option[] = [
-  { value: "qdrant", label: "Qdrant (default)" },
-  { value: "lancedb", label: "LanceDB" },
+  { value: "lancedb", label: "LanceDB (default)" },
+  { value: "qdrant", label: "Qdrant" },
 ]
 
 const tuning: Array<{ key: TuningKey; label: string; placeholder: string }> = [
@@ -95,17 +92,21 @@ const IndexingTab: Component = () => {
     updateConfig({ indexing: { ...cfg(), ...partial } })
   }
 
-  const vectorStore = () => cfg().vectorStore ?? "qdrant"
-  const kiloDefault = () => embeds.catalog().defaultModel
+  const vectorStore = () => cfg().vectorStore ?? DEFAULT_VECTOR_STORE
+  const kiloDefault = () =>
+    getKiloEmbeddingModel(embeds.catalog().defaultModel, embeds.catalog())?.id ?? embeds.catalog().defaultModel
   const kiloModels = createMemo(() =>
     embeds.catalog().models.map((model) => ({
       value: model.id,
       label: formatKiloEmbeddingModelLabel(model),
     })),
   )
-  const knownKiloModel = (model: string | undefined) => getKiloEmbeddingModel(model, embeds.catalog())?.id
+  const knownKiloModel = (model: string | null | undefined) =>
+    getKiloEmbeddingModel(model ?? undefined, embeds.catalog())?.id
+  const kiloValue = () => knownKiloModel(cfg().model) ?? kiloDefault()
   const kiloAvailable = () => !!server.profileData() || provider.authStates()[KILO_PROVIDER_ID] !== undefined
   const selectedProvider = () => cfg().provider ?? (kiloAvailable() ? "kilo" : undefined)
+  const staleKiloModel = () => selectedProvider() === "kilo" && !!cfg().model && !knownKiloModel(cfg().model)
   const providers = createMemo(() =>
     allProviders.filter((item) => item.value !== "kilo" || kiloAvailable() || selectedProvider() === "kilo"),
   )
@@ -113,15 +114,15 @@ const IndexingTab: Component = () => {
 
   const saveProvider = (next: ProviderId | undefined) => {
     if (next === "kilo") {
-      const model = knownKiloModel(cfg().model) ?? (kiloDefault() || undefined)
+      const model = knownKiloModel(cfg().model) ?? (kiloDefault() || null)
       updateIndexing({
         provider: next,
         model,
-        dimension: undefined,
+        dimension: null,
       })
       return
     }
-    updateIndexing({ provider: next, model: undefined, dimension: undefined })
+    updateIndexing({ provider: next, model: null, dimension: null })
   }
 
   const saveEnabled = (enabled: boolean) => {
@@ -129,7 +130,8 @@ const IndexingTab: Component = () => {
       updateIndexing({
         enabled,
         provider: "kilo",
-        model: knownKiloModel(cfg().model) ?? kiloDefault(),
+        model: knownKiloModel(cfg().model) ?? (kiloDefault() || null),
+        dimension: null,
       })
       return
     }
@@ -142,7 +144,8 @@ const IndexingTab: Component = () => {
         indexing: {
           enabled,
           provider: "kilo",
-          model: knownKiloModel(cfg().model) ?? kiloDefault(),
+          model: knownKiloModel(cfg().model) ?? (kiloDefault() || null),
+          dimension: null,
         },
       })
       return
@@ -151,15 +154,9 @@ const IndexingTab: Component = () => {
   }
 
   const saveModel = (value: string) => {
+    if (selectedProvider() === "kilo") return
     const trimmed = value.trim()
-    if (!trimmed) {
-      updateIndexing({ model: undefined })
-      return
-    }
-    updateIndexing({
-      model:
-        selectedProvider() === "kilo" ? (normalizeKiloEmbeddingModelId(trimmed, embeds.catalog()) ?? trimmed) : trimmed,
-    })
+    updateIndexing({ model: trimmed || null })
   }
 
   const providerValue = (group: string, key: string) => {
@@ -189,13 +186,13 @@ const IndexingTab: Component = () => {
   }
 
   const saveNumber = (
-    key: keyof IndexingConfig,
+    key: TuningKey | "dimension",
     value: string,
     options?: { integer?: boolean; min?: number; max?: number },
   ) => {
     const trimmed = value.trim()
     if (!trimmed) {
-      updateIndexing({ [key]: undefined })
+      updateIndexing({ [key]: key === "dimension" ? null : undefined })
       return
     }
 
@@ -272,35 +269,37 @@ const IndexingTab: Component = () => {
             >
               <Select
                 options={kiloModels()}
-                current={kiloModels().find((item) => item.value === knownKiloModel(cfg().model))}
+                current={kiloModels().find((item) => item.value === kiloValue())}
                 value={(item) => item.value}
                 label={(item) => item.label}
-                onSelect={(item) => updateIndexing({ model: item?.value ?? kiloDefault(), dimension: undefined })}
+                onSelect={(item) => updateIndexing({ model: item?.value ?? kiloDefault(), dimension: null })}
                 variant="secondary"
                 size="small"
                 triggerVariant="settings"
-                placeholder="Custom model"
+                placeholder="Select a model"
               />
             </SettingsRow>
           </Show>
         </Show>
-        <SettingsRow
-          title={language.t("settings.indexing.model.title")}
-          description={language.t("settings.indexing.model.description")}
-        >
-          <TextField
-            value={cfg().model ?? ""}
-            placeholder={selectedProvider() === "kilo" ? kiloDefault() || "provider/model" : "text-embedding-3-small"}
-            onChange={saveModel}
-          />
-        </SettingsRow>
+        <Show when={selectedProvider() !== "kilo"}>
+          <SettingsRow
+            title={language.t("settings.indexing.model.title")}
+            description={language.t("settings.indexing.model.description")}
+          >
+            <TextField value={cfg().model ?? ""} placeholder="Enter model ID" onChange={saveModel} />
+          </SettingsRow>
+        </Show>
         <SettingsRow
           title={language.t("settings.indexing.dimension.title")}
           description={language.t("settings.indexing.dimension.description")}
           last={!selectedProvider() || (fields().length === 0 && !(selectedProvider() === "kilo" && !kiloAvailable()))}
         >
           <TextField
-            value={cfg().dimension === undefined ? "" : String(cfg().dimension)}
+            value={
+              staleKiloModel() || cfg().dimension === undefined || cfg().dimension === null
+                ? ""
+                : String(cfg().dimension)
+            }
             placeholder={language.t("settings.indexing.dimension.placeholder")}
             onChange={(value) => saveNumber("dimension", value, { integer: true, min: 1 })}
           />

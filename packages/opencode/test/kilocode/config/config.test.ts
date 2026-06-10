@@ -1,6 +1,6 @@
 // kilocode_change - new file
 import { afterEach, describe, expect, test } from "bun:test"
-import { Effect, Layer, Option } from "effect"
+import { Effect, Layer, Option, Schema } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
@@ -11,9 +11,11 @@ import { Npm } from "@opencode-ai/core/npm"
 import { Account } from "../../../src/account/account"
 import { Auth } from "../../../src/auth"
 import { Config } from "../../../src/config/config"
+import { ConfigMarkdown } from "../../../src/config/markdown"
 import { Env } from "../../../src/env"
 import { KiloIndexing } from "../../../src/kilocode/indexing"
-import { Instance } from "../../../src/project/instance"
+import { KilocodeConfig } from "../../../src/kilocode/config/config"
+import { WithInstance } from "../../../src/project/with-instance"
 import { Filesystem } from "../../../src/util/filesystem"
 import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
 
@@ -43,18 +45,28 @@ const layer = Config.layer.pipe(
 )
 
 const load = () => Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(layer)))
-const clear = (wait = false) =>
-  Effect.runPromise(Config.Service.use((svc) => svc.invalidate(wait)).pipe(Effect.scoped, Effect.provide(layer)))
+const clear = () =>
+  Effect.runPromise(Config.Service.use((svc) => svc.invalidate()).pipe(Effect.scoped, Effect.provide(layer)))
+const saveGlobal = (config: Config.Info) =>
+  Effect.runPromise(Config.Service.use((svc) => svc.updateGlobal(config)).pipe(Effect.scoped, Effect.provide(layer)))
 
 async function writeConfig(dir: string, config: object, name = "kilo.json") {
   await Filesystem.write(path.join(dir, name), JSON.stringify(config))
 }
 
+function decode(input: unknown): Config.Info {
+  const config = Schema.decodeUnknownSync(Config.Info)(input)
+  return {
+    ...config,
+    skills: config.skills && {
+      paths: config.skills.paths && [...config.skills.paths],
+      urls: config.skills.urls && [...config.skills.urls],
+    },
+  }
+}
+
 const cfg: Partial<Config.Info> = {
   plugin: ["@kilocode/kilo-indexing"],
-  experimental: {
-    semantic_indexing: true,
-  },
   indexing: {
     provider: "ollama",
     vectorStore: "qdrant",
@@ -64,10 +76,47 @@ const cfg: Partial<Config.Info> = {
   },
 }
 
+afterEach(async () => {
+  delete process.env.KILO_MD_TEST
+  await clear()
+  await disposeAllInstances()
+})
+
+describe("markdown substitutions", () => {
+  test("applies file and env substitutions to parsed markdown body", async () => {
+    process.env.KILO_MD_TEST = "env content"
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Filesystem.write(path.join(dir, "body.md"), "file content")
+        await Filesystem.write(
+          path.join(dir, "SKILL.md"),
+          ["---", "name: test", "description: Test", "---", "{file:body.md}", "{env:KILO_MD_TEST}"].join("\n"),
+        )
+      },
+    })
+
+    const md = await ConfigMarkdown.parse(path.join(tmp.path, "SKILL.md"))
+
+    expect(md.content).toContain("file content")
+    expect(md.content).toContain("env content")
+  })
+})
+
 describe("kilocode indexing config", () => {
-  afterEach(async () => {
-    await disposeAllInstances()
-    await clear(true)
+  test("ignores retired semantic indexing flags in existing configs", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await writeConfig(tmp.path, {
+      experimental: { semantic_indexing: true, batch_tool: true },
+    })
+
+    await WithInstance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const config = await load()
+        expect(config.experimental?.batch_tool).toBe(true)
+        expect(config.experimental).not.toHaveProperty("semantic_indexing")
+      },
+    })
   })
 
   test("keeps global indexing enabled in global config", async () => {
@@ -76,7 +125,8 @@ describe("kilocode indexing config", () => {
 
     const prev = Global.Path.config
     ;(Global.Path as { config: string }).config = globalTmp.path
-    await clear(true)
+    await clear()
+    await disposeAllInstances()
 
     try {
       await writeConfig(globalTmp.path, {
@@ -87,7 +137,7 @@ describe("kilocode indexing config", () => {
         },
       })
 
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           const config = await load()
@@ -101,7 +151,8 @@ describe("kilocode indexing config", () => {
       })
     } finally {
       ;(Global.Path as { config: string }).config = prev
-      await clear(true)
+      await clear()
+      await disposeAllInstances()
     }
   })
 
@@ -111,7 +162,8 @@ describe("kilocode indexing config", () => {
 
     const prev = Global.Path.config
     ;(Global.Path as { config: string }).config = globalTmp.path
-    await clear(true)
+    await clear()
+    await disposeAllInstances()
 
     try {
       await writeConfig(globalTmp.path, {
@@ -121,7 +173,7 @@ describe("kilocode indexing config", () => {
         },
       })
 
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           const global = await Effect.runPromise(
@@ -134,12 +186,111 @@ describe("kilocode indexing config", () => {
       })
     } finally {
       ;(Global.Path as { config: string }).config = prev
-      await clear(true)
+      await clear()
+      await disposeAllInstances()
     }
   })
 
   test("global indexing enabled applies when project indexing is disabled", async () => {
     const input = KiloIndexing.input({ enabled: false }, { enabled: true })
     expect(input.enabled).toBe(true)
+  })
+
+  test("accepts delete sentinels for indexing model overrides", () => {
+    const patch = decode({ indexing: { model: null, dimension: null } })
+    const merged = KilocodeConfig.mergeConfig(
+      {
+        indexing: {
+          provider: "openai",
+          model: "text-embedding-3-large",
+          dimension: 3072,
+        },
+      },
+      patch,
+    )
+    const input = KiloIndexing.input(patch.indexing)
+
+    expect(merged.indexing).toEqual({ provider: "openai" })
+    expect(input.modelId).toBeUndefined()
+    expect(input.modelDimension).toBeUndefined()
+  })
+})
+
+describe("agent config", () => {
+  test("accepts delete sentinels for agent model and variant overrides", () => {
+    const patch = decode({ agent: { explore: { model: null, variant: null } } })
+    const merged = KilocodeConfig.mergeConfig(
+      {
+        agent: {
+          explore: {
+            model: "kilo/anthropic/claude-sonnet-4-6",
+            variant: "high",
+          },
+        },
+      },
+      patch,
+    )
+
+    expect(patch.agent?.explore?.model).toBeNull()
+    expect(patch.agent?.explore?.variant).toBeNull()
+    expect(merged.agent).toBeUndefined()
+  })
+
+  test("removes an agent variant override without removing its model", () => {
+    const patch = decode({ agent: { explore: { variant: null } } })
+    const merged = KilocodeConfig.mergeConfig(
+      {
+        agent: {
+          explore: {
+            model: "kilo/anthropic/claude-sonnet-4-6",
+            variant: "high",
+          },
+        },
+      },
+      patch,
+    )
+
+    expect(patch.agent?.explore?.variant).toBeNull()
+    expect(merged.agent?.explore).toEqual({ model: "kilo/anthropic/claude-sonnet-4-6" })
+  })
+
+  test("removes agent model and variant overrides from global JSONC config", async () => {
+    await using globalTmp = await tmpdir()
+    const file = path.join(globalTmp.path, "kilo.jsonc")
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await Filesystem.write(
+        file,
+        [
+          "{",
+          "  // Preserve this comment while clearing overrides.",
+          '  "agent": {',
+          '    "explore": {',
+          '      "model": "kilo/anthropic/claude-sonnet-4-6",',
+          '      "variant": "high",',
+          '      "description": "Keep me"',
+          "    }",
+          "  }",
+          "}",
+        ].join("\n"),
+      )
+      const patch = decode({ agent: { explore: { model: null, variant: null } } })
+
+      await saveGlobal(patch)
+
+      const written = await Bun.file(file).text()
+      expect(written).toContain("// Preserve this comment while clearing overrides.")
+      expect(written).not.toContain('"model"')
+      expect(written).not.toContain('"variant"')
+      expect(written).toContain('"description": "Keep me"')
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
   })
 })

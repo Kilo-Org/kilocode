@@ -1,7 +1,7 @@
 package ai.kilocode.client.session.ui.mode
 
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.PickerButton
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.PopupShowOptions
 import java.awt.Cursor
@@ -9,7 +9,7 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.ListSelectionModel
 
-class ModePicker : UiStyle.Pickers.Label() {
+class ModePicker : PickerButton() {
 
     data class Item(
         val id: String,

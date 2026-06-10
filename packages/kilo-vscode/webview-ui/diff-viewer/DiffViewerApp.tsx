@@ -11,10 +11,12 @@ import { File } from "@kilocode/kilo-ui/file"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { Toast } from "@kilocode/kilo-ui/toast"
-import { FullScreenDiffView } from "../agent-manager/FullScreenDiffView"
-import { mergeWorktreeDiffs } from "../agent-manager/diff-state"
+import { FullScreenDiffView } from "./FullScreenDiffView"
+import { mergeWorktreeDiffs } from "./diff-state"
 import { LanguageProvider, useLanguage } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
+import { ConfigProvider } from "../src/context/config"
+import { ProviderProvider } from "../src/context/provider"
 import { getVSCodeAPI, VSCodeProvider, useVSCode } from "../src/context/vscode"
 import type { BranchInfo, ReviewComment, WebviewMessage, WorktreeFileDiff } from "../src/types/messages"
 import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../src/diff/sources/types"
@@ -301,7 +303,11 @@ export const DiffViewerApp: Component = () => {
       <DialogProvider>
         <VSCodeProvider>
           <ServerProvider>
-            <DiffViewerShell />
+            <ProviderProvider>
+              <ConfigProvider>
+                <DiffViewerShell />
+              </ConfigProvider>
+            </ProviderProvider>
           </ServerProvider>
         </VSCodeProvider>
       </DialogProvider>

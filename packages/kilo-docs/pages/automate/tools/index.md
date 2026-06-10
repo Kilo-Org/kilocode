@@ -21,10 +21,10 @@ Tools are organized into logical groups based on their functionality:
 | **Read Group** | File system reading and searching | `read`, `glob`, `grep` | Code exploration and analysis |
 | **Edit Group** | File system modifications | `edit`, `write`, `apply_patch` | Code changes and file manipulation |
 | **Execute Group** | Shell command execution | `bash` | Running scripts, building projects |
-| **Web Group** | Fetch and search web content | `webfetch`, `websearch`, `codesearch` | Research, documentation lookup |
+| **Web Group** | Fetch and search web content | `webfetch`, `websearch` | Research, documentation lookup |
 | **Browser Group** | Web browser automation | `kilo-playwright_*` (via built-in Playwright MCP) | Browser testing and interaction |
 | **MCP Group** | External tool integration | MCP server tools (namespaced as `{server}_{tool}`) | Specialized functionality via MCP |
-| **Workflow Group** | Sub-agents and task management | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill`, `agent_manager` (experimental) | Context switching and task organization |
+| **Workflow Group** | Sub-agents and task management | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill`, `agent_manager` | Context switching and task organization |
 
 ### Always Available Tools
 
@@ -66,7 +66,6 @@ These tools help Kilo Code access web content:
 
 - `webfetch` - Fetches a URL and returns the content
 - `websearch` - Searches the web (available to Kilo/OpenRouter users)
-- `codesearch` - Semantic code search (available to Kilo/OpenRouter users)
 
 ### Browser Tools
 
@@ -94,7 +93,7 @@ These tools help manage the conversation and task flow:
 - `todoread` - Reads the current session TODO list
 - `plan` - Enters structured planning mode
 - `skill` - Invokes a reusable skill (Markdown instruction module)
-- `agent_manager` - Starts Agent Manager local or worktree sessions when the experimental Agent Manager Tool setting is enabled in VS Code
+- `agent_manager` - Starts Agent Manager local or worktree sessions in VS Code
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}

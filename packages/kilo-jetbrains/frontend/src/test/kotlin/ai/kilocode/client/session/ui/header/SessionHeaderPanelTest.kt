@@ -5,8 +5,9 @@ import ai.kilocode.client.session.model.StepFinish
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.ToolKind
-import ai.kilocode.client.session.ui.SessionStyle
-import ai.kilocode.client.session.update.SessionControllerTestBase
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.controller.SessionControllerTestBase
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
@@ -21,6 +22,7 @@ import java.awt.Color
 import java.awt.Point
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
+import javax.swing.UIManager
 
 class SessionHeaderPanelTest : SessionControllerTestBase() {
 
@@ -51,10 +53,10 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
     fun `test shows populated session header`() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)
-        val style = SessionStyle.current()
+        val style = SessionEditorStyle.current()
 
         assertTrue(panel.isVisible)
-        assertTrue(panel.isExpanded())
+        assertFalse(panel.isExpanded())
         assertEquals("Generated title", panel.titleText())
         assertEquals("$0.07", panel.costText())
         assertEquals("1%", panel.contextText())
@@ -90,6 +92,52 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         assertEquals(1, rpc.compacts.size)
     }
 
+    fun `test todo list starts collapsed and toggles independently`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+
+        panel.expandButton().doClick()
+        assertTrue(panel.isExpanded())
+        assertTrue(panel.todoVisible())
+        assertFalse(panel.todoListVisible())
+
+        click(panel.todoRowPanel())
+
+        assertTrue(panel.isExpanded())
+        assertTrue(panel.todoListVisible())
+        assertEquals(2, panel.todoListPanel().rowCount())
+        assertTrue(panel.todoListPanel().rowText(0).contains("Write tests"))
+        assertTrue(panel.todoListPanel().rowChecked(0))
+        assertFalse(panel.todoListPanel().rowChecked(1))
+
+        click(panel.todoLabel())
+        assertTrue(panel.isExpanded())
+        assertFalse(panel.todoListVisible())
+    }
+
+    fun `test all done todos use success foreground`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+
+        emit(ChatEventDto.TodoUpdated("ses_test", listOf(TodoDto("Done", "completed", "high"))))
+
+        assertEquals("All 1 todos complete", panel.todoText())
+        assertEquals(SessionUiStyle.Timeline.SUCCESS, panel.foregrounds()[3])
+    }
+
+    fun `test timeline colors honor semantic named color keys`() {
+        val old = UIManager.getColor("Kilo.Session.Timeline.Read")
+        val color = Color(12, 34, 56)
+
+        try {
+            UIManager.put("Kilo.Session.Timeline.Read", color)
+
+            assertEquals(color.rgb, SessionUiStyle.Timeline.READ.rgb)
+        } finally {
+            UIManager.put("Kilo.Session.Timeline.Read", old)
+        }
+    }
+
     fun `test retained labels update on later header event`() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)
@@ -109,7 +157,7 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
     fun `test apply style updates header colors`() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)
-        val style = SessionStyle.current().copy(
+        val style = SessionEditorStyle.current().copy(
             editorForeground = Color(1, 2, 3),
             editorBackground = Color(4, 5, 6),
         )
@@ -130,10 +178,13 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
     fun `test expanded body shows timeline context and token metrics`() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)
-        val style = SessionStyle.current()
+        val style = SessionEditorStyle.current()
         val body = panel.bodyPanel()
         val timeline = panel.timelinePanel()
         val bar = panel.contextBar()
+
+        assertFalse(panel.isExpanded())
+        panel.expandButton().doClick()
 
         assertTrue(panel.isExpanded())
         assertSame(body, panel.bodyPanel())
@@ -244,26 +295,27 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)
 
-        assertTrue(panel.isExpanded())
-        assertEquals("Hide session metrics", panel.expandTip())
-
-        panel.expandButton().doClick()
-        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test", title = "New title")))
-
         assertFalse(panel.isExpanded())
         assertEquals("Show session metrics", panel.expandTip())
 
         panel.expandButton().doClick()
-        emit(ChatEventDto.MessageUpdated("ses_test", assistant(cost = 0.2)))
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test", title = "New title")))
 
         assertTrue(panel.isExpanded())
         assertEquals("Hide session metrics", panel.expandTip())
+
+        panel.expandButton().doClick()
+        emit(ChatEventDto.MessageUpdated("ses_test", assistant(cost = 0.2)))
+
+        assertFalse(panel.isExpanded())
+        assertEquals("Show session metrics", panel.expandTip())
     }
 
     fun `test collapse persists and new header starts collapsed`() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)
 
+        panel.expandButton().doClick()
         panel.expandButton().doClick()
 
         assertFalse(panel.isExpanded())
@@ -294,6 +346,7 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
     }
 
     fun `test hidden empty header collapse keeps saved expansion preference`() {
+        PropertiesComponent.getInstance().setValue(SessionHeaderPanel.EXPANDED_KEY, "true")
         appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
         projectRpc.state.value = workspaceReady()
         val c = controller()
@@ -465,7 +518,7 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         assertEquals(0, panel.timelineViewport().viewPosition.y)
     }
 
-    private fun promptedHeader(): ai.kilocode.client.session.update.SessionController {
+    private fun promptedHeader(): ai.kilocode.client.session.controller.SessionController {
         appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(
             ai.kilocode.rpc.dto.KiloAppStatusDto.READY,
             config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"),
@@ -562,6 +615,19 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
             panel.timelineBarWidth() * index + 1,
             panel.timelinePreferredSize().height - 1,
             0,
+            false,
+        ))
+    }
+
+    private fun click(component: java.awt.Component) {
+        component.dispatchEvent(MouseEvent(
+            component,
+            MouseEvent.MOUSE_CLICKED,
+            System.currentTimeMillis(),
+            0,
+            1,
+            1,
+            1,
             false,
         ))
     }

@@ -1,13 +1,15 @@
 import { Schema } from "effect"
-import { PROMPTS } from "@kilocode/kilo-gateway" // kilocode_change
-import { zod } from "@/util/effect-zod"
-import { PositiveInt, withStatics } from "@/util/schema"
+import { PROMPTS, AI_SDK_PROVIDERS } from "@kilocode/kilo-gateway" // kilocode_change
+import { PositiveInt } from "@opencode-ai/core/schema"
+import { ModelStatus } from "@/provider/model-status"
 
 export const Model = Schema.Struct({
   id: Schema.optional(Schema.String),
   name: Schema.optional(Schema.String),
   family: Schema.optional(Schema.String),
   prompt: Schema.optional(Schema.Literals(PROMPTS)), // kilocode_change
+  isFree: Schema.optional(Schema.Boolean), // kilocode_change
+  ai_sdk_provider: Schema.optional(Schema.Literals(AI_SDK_PROVIDERS)), // kilocode_change
   release_date: Schema.optional(Schema.String),
   attachment: Schema.optional(Schema.Boolean),
   reasoning: Schema.optional(Schema.Boolean),
@@ -51,7 +53,7 @@ export const Model = Schema.Struct({
     }),
   ),
   experimental: Schema.optional(Schema.Boolean),
-  status: Schema.optional(Schema.Literals(["alpha", "beta", "deprecated"])),
+  status: Schema.optional(ModelStatus),
   provider: Schema.optional(
     Schema.Struct({ npm: Schema.optional(Schema.String), api: Schema.optional(Schema.String) }),
   ),
@@ -71,7 +73,7 @@ export const Model = Schema.Struct({
       ),
     ).annotate({ description: "Variant-specific configuration" }),
   ),
-}).pipe(withStatics((s) => ({ zod: zod(s) })))
+})
 
 export const Info = Schema.Struct({
   api: Schema.optional(Schema.String),
@@ -110,9 +112,7 @@ export const Info = Schema.Struct({
     ),
   ),
   models: Schema.optional(Schema.Record(Schema.String, Schema.NullOr(Model))), // kilocode_change - allow null values so removed models can be deleted via stripNulls on save
-})
-  .annotate({ identifier: "ProviderConfig" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "ProviderConfig" })
 export type Info = Schema.Schema.Type<typeof Info>
 
 export * as ConfigProvider from "./provider"

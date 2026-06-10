@@ -1,12 +1,10 @@
 export * as ConfigCommand from "./command"
 
 import * as Log from "@opencode-ai/core/util/log"
-import { Schema } from "effect"
+import { Cause, Exit, Schema, SchemaIssue } from "effect"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { Glob } from "@opencode-ai/core/util/glob"
 import { Bus } from "@/bus"
-import { zod } from "@/util/effect-zod"
-import { withStatics } from "@/util/schema"
 import { configEntryNameFromPath } from "./entry-name"
 import * as ConfigMarkdown from "./markdown"
 import { ConfigModelID } from "./model-id"
@@ -23,9 +21,11 @@ export const Info = Schema.Struct({
   agent: Schema.optional(Schema.String),
   model: Schema.optional(ConfigModelID),
   subtask: Schema.optional(Schema.Boolean),
-}).pipe(withStatics((s) => ({ zod: zod(s) })))
+})
 
 export type Info = Schema.Schema.Type<typeof Info>
+
+const decodeInfo = Schema.decodeUnknownExit(Info)
 
 // kilocode_change start
 export async function load(dir: string, warnings?: Warning[]) {
@@ -74,13 +74,22 @@ export async function load(dir: string, warnings?: Warning[]) {
       ...md.data,
       template: md.content.trim(),
     }
-    const parsed = Info.zod.safeParse(config)
-    if (parsed.success) {
-      result[config.name] = parsed.data
+    const parsed = decodeInfo(config, { errors: "all", propertyOrder: "original" })
+    if (Exit.isSuccess(parsed)) {
+      result[config.name] = parsed.value
       continue
     }
     // kilocode_change start
-    await KilocodeConfig.handleInvalid("command", item, parsed.error.issues, parsed.error, warnings)
+    const error = Cause.squash(parsed.cause)
+    const issues = Schema.isSchemaError(error)
+      ? SchemaIssue.makeFormatterStandardSchemaV1()(error.issue).issues.map((issue) => ({
+          ...issue,
+          message: issue.message,
+          path: issue.path?.map(String) ?? [],
+        }))
+      : [{ message: String(error), path: [] }]
+    const cause = error instanceof Error ? error : new Error(String(error))
+    await KilocodeConfig.handleInvalid("command", item, issues, cause, warnings)
     // kilocode_change end
   }
   return result

@@ -7,6 +7,7 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import { Global } from "@opencode-ai/core/global"
+import { KilocodeInstruction } from "@/kilocode/session/instruction" // kilocode_change
 import type { MessageV2 } from "./message-v2"
 import type { MessageID } from "./schema"
 
@@ -88,7 +89,8 @@ export const layer: Layer.Layer<
     })
 
     const read = Effect.fnUntraced(function* (filepath: string) {
-      return yield* fs.readFileString(filepath).pipe(Effect.catch(() => Effect.succeed("")))
+      const content = yield* fs.readFileString(filepath).pipe(Effect.catch(() => Effect.succeed(""))) // kilocode_change
+      return yield* Effect.promise(() => KilocodeInstruction.content(content, filepath)) // kilocode_change
     })
 
     const fetch = Effect.fnUntraced(function* (url: string) {

@@ -69,6 +69,8 @@ Markdown files in `.kilo/workflows/` or `.kilocode/workflows/` (project-level) a
 
 ## Agent Manager Setup And Run Scripts
 
+For the full product guidance, use the canonical [Agent Manager reference](https://kilo.ai/docs/automate/agent-manager) and [Agent Manager Workflows guide](https://kilo.ai/docs/automate/agent-manager-workflows). Prefer these links instead of guessing documentation paths.
+
 Agent Manager setup/run scripts are project files in the main repository's `.kilo/` directory. They are not `kilo.json` settings and should not be configured inside generated `.kilo/worktrees/<name>/` checkouts.
 
 Agent Manager worktrees usually live under `.kilo/worktrees/`. Think of each worktree as a separate checkout on its own branch: it enables parallel edits, but dependencies, build output, caches, databases, and generated files can consume significant disk space across many worktrees.
@@ -142,7 +144,7 @@ Scalar form applies to all patterns. Object form maps glob patterns to actions. 
 
 Actions: `"allow"`, `"ask"`, `"deny"`. Set `null` to delete an inherited key.
 
-Tool permissions: `read`, `edit`, `glob`, `grep`, `list`, `bash`, `task`, `webfetch`, `websearch`, `codesearch`, `semantic_search`, `lsp`, `skill`, `external_directory`, `todowrite`, `todoread`, `question`, `doom_loop`.
+Tool permissions: `read`, `edit`, `glob`, `grep`, `list`, `bash`, `task`, `webfetch`, `websearch`, `semantic_search`, `lsp`, `skill`, `external_directory`, `todowrite`, `todoread`, `question`, `doom_loop`.
 
 ## MCP Servers
 

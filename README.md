@@ -7,10 +7,33 @@
 </p>
 
 <p align="center">
- <img width="250" alt="kilo-code-logo" src="https://github.com/user-attachments/assets/bdb0c174-b9fd-40ad-a47b-f3aab9b54e8d" />
+  <a href="https://kilo.ai"><img width="250" alt="kilo-code-logo" src="https://github.com/user-attachments/assets/bdb0c174-b9fd-40ad-a47b-f3aab9b54e8d" /></a>
 </p>
 
-> Kilo is the all-in-one agentic engineering platform. Build, ship, and iterate faster with the most popular open source coding agent.
+<p align="center">
+  <strong>Kilo is the all-in-one agentic engineering platform.</strong><br>
+  Build, ship, and iterate faster with the most popular open source coding agent.
+</p>
+
+<p align="center">
+  <img width="100%" alt="Kilo Code running inside VS Code" src="https://kilo.ai/_next/image?url=%2Fscreenshots%2Fvs-code%2Fvs-code-home-page-screenshot.png&w=3840&q=75">
+</p>
+
+<p align="center">
+  <a href="https://kilo.ai">Website</a> ·
+  <a href="https://kilo.ai/install">Install</a> ·
+  <a href="https://kilo.ai/landing/vs-code">IDE</a> ·
+  <a href="https://kilo.ai/cli">CLI</a> ·
+  <a href="https://kilo.ai/docs">Docs</a> ·
+  <a href="https://kilo.ai/leaderboard">Models</a> ·
+  <a href="https://kilo.ai/gateway">Gateway</a> ·
+  <a href="https://kilo.ai/pricing">Pricing</a> ·
+  <a href="https://kilo.ai/pricing/kilo-pass">Kilo Pass</a>
+</p>
+
+<p align="center">
+  500+ models. One open source agent in <a href="https://kilo.ai/install">VS Code</a>, <a href="https://kilo.ai/features/jetbrains-native">JetBrains</a>, <a href="https://kilo.ai/cli">CLI</a>, <a href="https://kilo.ai/slack">Slack</a>, and <a href="https://kilo.ai/cloud">Cloud</a>.
+</p>
 
 - ✨ Generate code from natural language
 - ✅ Checks its own work
@@ -102,7 +125,9 @@ kilo run --auto "run tests and fix any failures"
 We welcome contributions from developers, writers, and enthusiasts!
 To get started, please read our [Contributing Guide](/CONTRIBUTING.md). It includes details on setting up your environment, coding standards, types of contribution and how to submit pull requests.
 
-See [RELEASING.md](RELEASING.md) for the release process.
+See [RELEASING.md](RELEASING.md) for the VS Code extension and CLI release process.
+
+See [packages/kilo-jetbrains/RELEASING.md](packages/kilo-jetbrains/RELEASING.md) for the JetBrains plugin release process.
 
 ## Code of Conduct
 
@@ -113,6 +138,11 @@ Our community is built on respect, inclusivity, and collaboration. Please review
 This project is licensed under the MIT License.
 You’re free to use, modify, and distribute this code, including for commercial purposes as long as you include proper attribution and license notices. See [License](/LICENSE).
 
-### Where did Kilo CLI come from?
+## FAQ
+
+<details>
+<summary>Where did Kilo CLI come from?</summary>
 
 Kilo CLI is a fork of [OpenCode](https://github.com/anomalyco/opencode), enhanced to work within the Kilo agentic engineering platform.
+
+</details>

@@ -9,10 +9,12 @@
 import { useDialog } from "@tui/ui/dialog"
 import { DialogSelect, type DialogSelectOption } from "@tui/ui/dialog-select"
 import { DialogPrompt } from "@tui/ui/dialog-prompt"
-import { getKiloEmbeddingModel, normalizeKiloEmbeddingModelId } from "@kilocode/kilo-indexing/embedding-models"
+import { DEFAULT_VECTOR_STORE } from "@kilocode/kilo-indexing/config"
+import { formatKiloEmbeddingModelLabel } from "@kilocode/kilo-indexing/embedding-models"
+import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
 import { useSync } from "@tui/context/sync"
 import { useToast } from "@tui/ui/toast"
-import { createResource } from "solid-js"
+import { createResource, Show } from "solid-js"
 import { reconcile } from "solid-js/store"
 import type { IndexingConfig, Config } from "@kilocode/sdk/v2"
 import { hasKiloIndexingAuth, resolveKiloIndexingAuth, shouldDefaultIndexingToKilo } from "../indexing-auth"
@@ -22,10 +24,6 @@ type UseSDK = any
 type SDK = any
 
 type EmbeddingProvider = NonNullable<IndexingConfig["provider"]>
-
-function kiloModel(model: string | undefined): string | undefined {
-  return getKiloEmbeddingModel(model)?.id
-}
 
 const PROVIDER_LABELS: Record<EmbeddingProvider, string> = {
   kilo: "Kilo",
@@ -65,8 +63,8 @@ const PROVIDER_FIELDS: Record<EmbeddingProvider, ProviderFieldDef[]> = {
 }
 
 const VECTOR_STORE_LABELS: Record<string, string> = {
-  qdrant: "Qdrant (default)",
-  lancedb: "LanceDB",
+  lancedb: "LanceDB (default)",
+  qdrant: "Qdrant",
 }
 
 function maskSecret(value: string | undefined): string {
@@ -93,7 +91,7 @@ function defaultIndexing(sync: ReturnType<typeof useSync>, global?: IndexingConf
   const provider = sync.data.provider_next.all.find((item) => item.id === "kilo")
   const auth = resolveKiloIndexingAuth({ config: sync.data.config, provider })
   if (!shouldDefaultIndexingToKilo({ ...global, ...indexing }, auth)) return indexing
-  return { ...indexing, provider: "kilo", model: kiloModel(indexing.model) }
+  return { ...indexing, provider: "kilo", model: null, dimension: null }
 }
 
 async function saveIndexing(
@@ -204,20 +202,12 @@ function ProviderSelect(props: SubDialogProps) {
       onSelect={async (option) => {
         const provider = option.value
         const current = getIndexing(sync)
-        const updated: IndexingConfig =
-          provider === "kilo"
-            ? {
-                ...current,
-                provider,
-                model: kiloModel(current.model),
-                dimension: undefined,
-              }
-            : {
-                ...current,
-                provider,
-                model: undefined,
-                dimension: undefined,
-              }
+        const updated: IndexingConfig = {
+          ...current,
+          provider,
+          model: null,
+          dimension: null,
+        }
         const saved = await saveIndexing(sdk, sync, updated, toast)
         if (!saved) {
           dialog.clear()
@@ -226,6 +216,59 @@ function ProviderSelect(props: SubDialogProps) {
         showProviderSettings(dialog, sync, sdk, toast, provider, props.useSDK)
       }}
     />
+  )
+}
+
+function KiloModelSelect(props: SubDialogProps) {
+  const dialog = useDialog()
+  const sync = useSync()
+  const sdk = props.useSDK()
+  const toast = useToast()
+  const indexing = defaultIndexing(sync)
+  const provider = sync.data.provider_next.all.find((item) => item.id === "kilo")
+  const auth = resolveKiloIndexingAuth({ config: sync.data.config, provider })
+  const [catalog] = createResource(() => fetchKiloEmbeddingModelCatalog({ baseURL: auth.baseUrl, token: auth.apiKey }))
+  const options = () =>
+    (catalog()?.models ?? []).map((model) => ({
+      value: model.id,
+      title: formatKiloEmbeddingModelLabel(model),
+    }))
+  const current = () => {
+    const cfg = catalog()
+    if (!cfg) return undefined
+    const fallback = cfg.aliases[cfg.defaultModel] ?? cfg.defaultModel
+    const id = indexing.model ? (cfg.aliases[indexing.model] ?? indexing.model) : fallback
+    if (cfg.models.some((model) => model.id === id)) return id
+    return fallback
+  }
+
+  return (
+    <Show
+      when={!catalog.loading && options().length > 0}
+      fallback={
+        <DialogSelect
+          title="Kilo Embedding Model"
+          options={[
+            {
+              value: "",
+              title: catalog.loading ? "Loading supported models..." : "No supported models available",
+              disabled: true,
+            },
+          ]}
+          renderFilter={false}
+        />
+      }
+    >
+      <DialogSelect
+        title="Kilo Embedding Model"
+        options={options()}
+        current={current()}
+        onSelect={async (option) => {
+          await saveIndexing(sdk, sync, { ...getIndexing(sync), model: option.value, dimension: null }, toast)
+          dialog.replace(() => <DialogIndexing useSDK={props.useSDK} />)
+        }}
+      />
+    </Show>
   )
 }
 
@@ -274,14 +317,14 @@ function VectorStoreSelect(props: SubDialogProps) {
   const options: DialogSelectOption<string>[] = Object.entries(VECTOR_STORE_LABELS).map(([value, title]) => ({
     value,
     title,
-    description: value === (indexing.vectorStore ?? "qdrant") ? "(current)" : undefined,
+    description: value === (indexing.vectorStore ?? DEFAULT_VECTOR_STORE) ? "(current)" : undefined,
   }))
 
   return (
     <DialogSelect
       title="Vector Store"
       options={options}
-      current={indexing.vectorStore ?? "qdrant"}
+      current={indexing.vectorStore ?? DEFAULT_VECTOR_STORE}
       onSelect={async (option) => {
         const store = option.value as "lancedb" | "qdrant"
         if (store === "lancedb") {
@@ -438,9 +481,8 @@ export function DialogIndexing(props: DialogIndexingProps) {
   const indexing = defaultIndexing(sync, globalCfg())
 
   const providerLabel = indexing.provider ? PROVIDER_LABELS[indexing.provider] : "not set"
-  const storeLabel = indexing.vectorStore
-    ? (VECTOR_STORE_LABELS[indexing.vectorStore] ?? indexing.vectorStore)
-    : "Qdrant (default)"
+  const store = indexing.vectorStore ?? DEFAULT_VECTOR_STORE
+  const storeLabel = VECTOR_STORE_LABELS[store] ?? store
 
   const tuningCount = TUNING_PARAMS.filter((p) => indexing[p.key] !== undefined).length
   const tuningDesc = tuningCount > 0 ? `${tuningCount} customized` : "defaults"
@@ -466,9 +508,9 @@ export function DialogIndexing(props: DialogIndexingProps) {
     },
     {
       value: "model",
-      title: "Embedding Model",
+      title: indexing.provider === "kilo" ? "Kilo Model Preset" : "Embedding Model",
       category: "Embedding",
-      description: indexing.model ?? "default",
+      description: indexing.provider === "kilo" ? "hosted presets only" : (indexing.model ?? "default"),
     },
     {
       value: "dimension",
@@ -543,21 +585,17 @@ export function DialogIndexing(props: DialogIndexingProps) {
             }
             break
           case "model": {
+            if (indexing.provider === "kilo") {
+              dialog.replace(() => <KiloModelSelect useSDK={props.useSDK} />)
+              break
+            }
             const result = await DialogPrompt.show(dialog, "Embedding Model", {
               value: indexing.model ?? "",
-              placeholder: indexing.provider === "kilo" ? "provider/model" : "e.g. text-embedding-3-small",
+              placeholder: "Enter model ID",
             })
             if (result !== null) {
               const trimmed = result.trim()
-              const updated = {
-                ...getIndexing(sync),
-                model: trimmed
-                  ? indexing.provider === "kilo"
-                    ? (normalizeKiloEmbeddingModelId(trimmed) ?? trimmed)
-                    : trimmed
-                  : undefined,
-              }
-              await saveIndexing(sdk, sync, updated, toast)
+              await saveIndexing(sdk, sync, { ...getIndexing(sync), model: trimmed || null }, toast)
             }
             dialog.replace(() => <DialogIndexing useSDK={props.useSDK} />)
             break
@@ -578,7 +616,7 @@ export function DialogIndexing(props: DialogIndexingProps) {
                   break
                 }
               }
-              const updated = { ...getIndexing(sync), dimension: dim }
+              const updated = { ...getIndexing(sync), dimension: dim ?? null }
               await saveIndexing(sdk, sync, updated, toast)
             }
             dialog.replace(() => <DialogIndexing useSDK={props.useSDK} />)

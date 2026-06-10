@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { Agent } from "../../src/agent/agent"
 import { Permission } from "../../src/permission"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { disposeAllInstances, provideInstance, tmpdir } from "../fixture/fixture"
 
 function load<A>(dir: string, fn: (svc: Agent.Interface) => Effect.Effect<A>) {
@@ -25,7 +25,7 @@ test("ask agent honors user MCP allow over generated ask rule", async () => {
     },
   })
 
-  await Instance.provide({
+  await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       const ask = await load(tmp.path, (svc) => svc.get("ask"))
@@ -44,7 +44,7 @@ test("plan agent honors user bash allow over read-only deny default", async () =
     },
   })
 
-  await Instance.provide({
+  await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       const plan = await load(tmp.path, (svc) => svc.get("plan"))
@@ -63,13 +63,14 @@ test("plan agent still hard-denies non-plan edits after user edit allow", async 
     },
   })
 
-  await Instance.provide({
+  await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       const plan = await load(tmp.path, (svc) => svc.get("plan"))
       expect(plan).toBeDefined()
       expect(Permission.evaluate("edit", "src/output.log", plan!.permission).action).toBe("deny")
       expect(Permission.evaluate("edit", ".kilo/plans/fix.md", plan!.permission).action).toBe("allow")
+      expect(Permission.evaluate("edit", ".plans/fix.md", plan!.permission).action).toBe("allow")
     },
   })
 })

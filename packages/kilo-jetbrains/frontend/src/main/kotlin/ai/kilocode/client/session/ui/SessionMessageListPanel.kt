@@ -2,10 +2,22 @@ package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
+import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.model.ToolCallRef
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.MessageView
+import ai.kilocode.client.session.views.permission.PermissionView
+import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.views.TurnView
-import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.session.views.base.PartView
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.util.Disposer
+import com.intellij.util.ui.JBUI
+import javax.swing.JComponent
 
 /**
  * Scrollable transcript panel that maps the model's turn grouping to
@@ -26,23 +38,47 @@ import com.intellij.openapi.Disposable
  * bottom of the transcript inside the scroll pane and shows a spinner while
  * the session is busy.
  *
+ * Optional [question] and [permission] views are kept immediately before
+ * [progress] in component order and shown/hidden in response to
+ * [SessionModelEvent.StateChanged].
+ *
  * All method calls must happen on the EDT.
  */
 class SessionMessageListPanel(
     private val model: SessionModel,
     parent: Disposable,
-) : SessionLayoutPanel(UiStyle.Card.groupGap(), UiStyle.Insets.transcript()), SessionStyleTarget {
+    private val question: QuestionView? = null,
+    private val permission: PermissionView? = null,
+    private val login: LoginRequiredView? = null,
+    private val openFile: (String) -> Unit,
+    private val openUrl: (String) -> Unit = {},
+    private val selection: SessionSelection? = null,
+    private val repo: String? = null,
+    private val resize: ((JComponent, () -> Unit) -> Unit)? = null,
+) : SessionLayoutPanel(
+    JBUI.scale(SessionUiStyle.SessionLayout.GAP),
+    JBUI.insets(
+        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
+        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
+        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
+        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING + SessionUiStyle.SessionLayout.TRANSCRIPT_SCROLLBAR_PADDING,
+    ),
+), Disposable, SessionEditorStyleTarget {
 
     private val turnViews = LinkedHashMap<String, TurnView>()
     private val msgToTurn = HashMap<String, TurnView>()
     private val msgToView = HashMap<String, MessageView>()
-    private var style = SessionStyle.current()
+    private var style = SessionEditorStyle.current()
+    private var hiddenTool: ToolCallRef? = null
+    private var hovered: PartView? = null
 
     /** Progress footer — always the last child inside the scroll. */
     val progress = ProgressPanel(model, parent)
 
     init {
-        isOpaque = false
+        isOpaque = true
+        background = SessionUiStyle.Transcript.bgColor()
+        Disposer.register(parent, this)
 
         model.addListener(parent) { event ->
             when (event) {
@@ -66,25 +102,26 @@ class SessionMessageListPanel(
                 }
 
                 is SessionModelEvent.ContentDelta -> {
-                    // Use the full current content from the model rather than
-                    // an incremental append. This avoids the double-write that
-                    // occurs when ContentAdded and ContentDelta both fire for
-                    // the same first delta (the model auto-creates the content
-                    // on first appendDelta and fires both events in sequence).
+                    if (event.created) return@addListener
+                    val handled = msgToView[event.messageId]?.appendDelta(event.contentId, event.delta) == true
+                    if (handled) return@addListener
                     val content = model.content(event.messageId, event.contentId)
                     if (content != null) msgToView[event.messageId]?.upsertPart(content)
-                    refresh()
                 }
 
                 is SessionModelEvent.HistoryLoaded -> rebuild()
                 is SessionModelEvent.Cleared -> clear()
 
+                is SessionModelEvent.StateChanged -> {
+                    syncActive(event.state)
+                    anchorFooter()
+                    refresh()
+                }
+
                 // Message events: structural changes are handled via turn events above.
-                // State/diff/todos changes are handled by other panels in SessionUi.
                 is SessionModelEvent.MessageAdded,
                 is SessionModelEvent.MessageUpdated,
                 is SessionModelEvent.MessageRemoved,
-                is SessionModelEvent.StateChanged,
                 is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
                 is SessionModelEvent.SessionUpdated,
@@ -145,7 +182,7 @@ class SessionMessageListPanel(
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id, style)
+        val tv = TurnView(turn.id, openFile, style, openUrl, selection, resize, repo, ::hover)
         turnViews[turn.id] = tv
         for (msgId in turn.messageIds) {
             val msg = model.message(msgId) ?: continue
@@ -185,18 +222,24 @@ class SessionMessageListPanel(
         val tv = turnViews.remove(id) ?: return
         for (msgId in tv.messageIds()) unregister(msgId)
         remove(tv)
+        Disposer.dispose(tv)
         anchorFooter()
         refresh()
     }
 
     private fun rebuild() {
+        clearHover()
+        turnViews.values.forEach {
+            remove(it)
+            Disposer.dispose(it)
+        }
         turnViews.clear()
         msgToTurn.clear()
         msgToView.clear()
         removeAll()
 
         for (turn in model.turns()) {
-            val tv = TurnView(turn.id, style)
+            val tv = TurnView(turn.id, openFile, style, openUrl, selection, resize, repo, ::hover)
             turnViews[turn.id] = tv
             for (msgId in turn.messageIds) {
                 val msg = model.message(msgId) ?: continue
@@ -206,28 +249,90 @@ class SessionMessageListPanel(
             add(tv)
         }
 
+        syncActive(model.state)
         anchorFooter()
         refresh()
     }
 
     private fun clear() {
+        clearHover()
+        turnViews.values.forEach {
+            remove(it)
+            Disposer.dispose(it)
+        }
         turnViews.clear()
         msgToTurn.clear()
         msgToView.clear()
         removeAll()
+        syncActive(model.state)
         anchorFooter()
         refresh()
     }
 
-    /** Re-insert [progress] as the last child so it always renders after all turn views. */
+    /**
+     * Show or hide active question/permission/login views based on [state].
+     * All views are always kept as children of this panel (added in [anchorFooter]),
+     * but visibility is controlled here.
+     */
+    private fun syncActive(state: SessionState = model.state) {
+        when (state) {
+            is SessionState.AwaitingQuestion -> {
+                setHiddenQuestionTool(state.question.tool)
+                permission?.hideView()
+                login?.hideView()
+                question?.show(state.question)
+            }
+            is SessionState.AwaitingPermission -> {
+                setHiddenQuestionTool(null)
+                question?.hideView()
+                login?.hideView()
+                permission?.show(state.permission)
+            }
+            is SessionState.LoginRequired -> {
+                setHiddenQuestionTool(null)
+                question?.hideView()
+                permission?.hideView()
+                login?.show(state.message)
+            }
+            else -> {
+                setHiddenQuestionTool(null)
+                question?.hideView()
+                permission?.hideView()
+                login?.hideView()
+            }
+        }
+    }
+
+    /** Fan out the hidden question tool ref to all registered [MessageView]s. */
+    private fun setHiddenQuestionTool(ref: ToolCallRef?) {
+        if (hiddenTool == ref) return
+        hiddenTool = ref
+        for (mv in msgToView.values) mv.setHiddenQuestionTool(ref)
+    }
+
+    /**
+     * Re-insert [question], [permission], [login], and [progress] as the last children
+     * so active views always render after all turn views, and progress is last.
+     *
+     * All active views are added even when invisible — [SessionLayout] skips
+     * invisible children, so no extra space is consumed, and the component tree
+     * remains stable for tests.
+     */
     private fun anchorFooter() {
+        if (question != null) remove(question)
+        if (permission != null) remove(permission)
+        if (login != null) remove(login)
         remove(progress)
+        if (question != null) add(question)
+        if (permission != null) add(permission)
+        if (login != null) add(login)
         add(progress)
     }
 
     private fun register(msgId: String, tv: TurnView, mv: MessageView) {
         msgToTurn[msgId] = tv
         msgToView[msgId] = mv
+        mv.setHiddenQuestionTool(hiddenTool)
     }
 
     private fun unregister(msgId: String) {
@@ -240,10 +345,43 @@ class SessionMessageListPanel(
         repaint()
     }
 
-    override fun applyStyle(style: SessionStyle) {
+    private fun hover(view: PartView, value: Boolean) {
+        if (value) {
+            val prev = hovered
+            if (prev === view) return
+            hovered = view
+            prev?.setHovered(false)
+            return
+        }
+        if (hovered === view) hovered = null
+    }
+
+    private fun clearHover() {
+        val view = hovered ?: return
+        hovered = null
+        view.setHovered(false)
+    }
+
+    override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
+        background = SessionUiStyle.Transcript.bgColor()
         for (view in turnViews.values) view.applyStyle(style)
+        question?.applyStyle(style)
+        permission?.applyStyle(style)
+        login?.applyStyle(style)
         progress.applyStyle(style)
         refresh()
+    }
+
+    override fun dispose() {
+        clearHover()
+        turnViews.values.forEach {
+            remove(it)
+            Disposer.dispose(it)
+        }
+        turnViews.clear()
+        msgToTurn.clear()
+        msgToView.clear()
+        removeAll()
     }
 }

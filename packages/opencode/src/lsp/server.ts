@@ -15,6 +15,7 @@ import { Module } from "@opencode-ai/core/util/module"
 import { spawn } from "./launch"
 import { Npm } from "@opencode-ai/core/npm"
 import { TsCheck } from "../kilocode/ts-check" // kilocode_change
+import type { RuntimeFlags } from "@/effect/runtime-flags"
 
 const log = Log.create({ service: "lsp.server" })
 const pathExists = async (p: string) =>
@@ -61,7 +62,7 @@ export interface Info {
   extensions: string[]
   global?: boolean
   root: RootFunction
-  spawn(root: string, ctx: InstanceContext): Promise<Handle | undefined>
+  spawn(root: string, ctx: InstanceContext, flags: RuntimeFlags.Info): Promise<Handle | undefined>
 }
 
 export const Deno: Info = {
@@ -429,8 +430,8 @@ export const Ty: Info = {
     "Pipfile",
     "pyrightconfig.json",
   ]),
-  async spawn(root) {
-    if (!Flag.KILO_EXPERIMENTAL_LSP_TY) {
+  async spawn(root, _ctx, flags) {
+    if (!flags.experimentalLspTy) {
       return undefined
     }
 

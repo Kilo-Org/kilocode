@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "lokalne",
+  "agentManager.sidebar.collapse": "Zwiń pasek boczny",
+  "agentManager.sidebar.expand": "Pokaż pasek boczny",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESJE",
   "agentManager.notGitRepo": "Nie jest repozytorium git",
@@ -53,7 +55,6 @@ export const dict = {
   "agentManager.tabsMenu.search": "Szukaj kart...",
   "agentManager.tabsMenu.empty": "Brak pasujących kart",
   "agentManager.tabsMenu.status.waiting": "Czeka",
-  "agentManager.tabsMenu.status.working": "Pracuje",
   "agentManager.tabsMenu.status.retry": "Ponów",
 
   "agentManager.terminal.new": "Nowa karta terminala",

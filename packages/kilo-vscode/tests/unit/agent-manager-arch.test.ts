@@ -23,18 +23,20 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/FullScreenDiffView.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/MarkdownDiffView.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/MarkdownAnnotationLayer.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/markdown-comment-ranges.ts"),
-  path.join(ROOT, "webview-ui/agent-manager/DiffEndMarker.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/FileTree.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/review-annotations.ts"),
+  path.join(ROOT, "webview-ui/diff-viewer/FullScreenDiffView.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/MarkdownDiffView.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/MarkdownAnnotationLayer.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/markdown-comment-ranges.ts"),
+  path.join(ROOT, "webview-ui/diff-viewer/DiffEndMarker.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/FileTree.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/review-annotations.ts"),
+  path.join(ROOT, "webview-ui/diff-viewer/review-annotation-speech.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/MultiModelSelector.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ApplyDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeItem.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SectionHeader.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/CurrentTabsMenu.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/SidebarToggleButton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SortableTerminalTab.tsx"),
@@ -183,10 +185,29 @@ describe("Agent Manager Provider Messages", () => {
     expect(getMethodBody("onMessage")).toContain("if (this.shouldWaitForState(m)) await this.waitForStateReady(m.type)")
   })
 
+  it("initializeState updates local git exclude before loading persisted state", () => {
+    const body = getMethodBody("initializeState")
+    const exclude = body.indexOf("await this.ensureGitExclude(manager)")
+    const load = body.indexOf("const loaded = await state.load()")
+
+    expect(exclude).toBeGreaterThanOrEqual(0)
+    expect(load).toBeGreaterThanOrEqual(0)
+    expect(exclude).toBeLessThan(load)
+  })
+
   it("async shutdown waits for terminal router cleanup", () => {
     const body = getMethodBody("disposeAsync")
     expect(body).toContain("await this.terminalRouter.dispose()")
     expect(body).not.toContain("void this.terminalRouter.dispose()")
+  })
+})
+
+describe("Agent Manager Model Picker", () => {
+  it("discloses data collection for free models in compare picker", () => {
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/MultiModelSelector.tsx"), "utf-8")
+
+    expect(source).toContain("model.tag.dataCollected")
+    expect(source).toContain("model.isFree")
   })
 })
 

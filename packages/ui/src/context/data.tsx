@@ -24,6 +24,9 @@ type Data = {
   part: {
     [messageID: string]: Part[]
   }
+  part_text_accum_delta?: {
+    [partID: string]: string
+  }
 }
 
 export type NavigateToSessionFn = (sessionID: string) => void
@@ -43,6 +46,8 @@ export type OpenDiffFn = (diff: {
 }) => void
 
 export type OpenUrlFn = (url: string) => void
+
+export type OpenContentFn = (content: string, language?: string) => void // kilocode_change
 // kilocode_change end
 
 export const { use: useData, provider: DataProvider } = createSimpleContext({
@@ -55,6 +60,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
     onOpenFile?: OpenFileFn // kilocode_change
     onOpenDiff?: OpenDiffFn // kilocode_change
     onOpenUrl?: OpenUrlFn // kilocode_change
+    onOpenContent?: OpenContentFn // kilocode_change
   }) => {
     return {
       get store() {
@@ -68,6 +74,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       openFile: props.onOpenFile, // kilocode_change
       openDiff: props.onOpenDiff, // kilocode_change
       openUrl: props.onOpenUrl, // kilocode_change
+      openContent: props.onOpenContent, // kilocode_change
     }
   },
 })

@@ -218,7 +218,7 @@ abstract class FixGeneratedApiTask : DefaultTask() {
             }
         }
 
-        // Fix 7: Default values for non-nullable primitives in model data classes.
+        // Fix 7: Default values for non-nullable primitives and collections in model data classes.
         // The CLI API may omit fields that the OpenAPI spec marks as required
         // (e.g. `attachment`, `reasoning` on dynamically added models).
         // Add Kotlin defaults so kotlinx.serialization doesn't throw
@@ -230,6 +230,9 @@ abstract class FixGeneratedApiTask : DefaultTask() {
                 Regex("""(val \w+:\s*kotlin\.Boolean)(,|\n)""") to { m: MatchResult ->
                     "${m.groupValues[1]} = false${m.groupValues[2]}"
                 },
+                Regex("""(val \w+:\s*kotlin\.Long)(,|\n)""") to { m: MatchResult ->
+                    "${m.groupValues[1]} = 0L${m.groupValues[2]}"
+                },
                 Regex("""(val \w+:\s*kotlin\.Int)(,|\n)""") to { m: MatchResult ->
                     "${m.groupValues[1]} = 0${m.groupValues[2]}"
                 },
@@ -238,6 +241,12 @@ abstract class FixGeneratedApiTask : DefaultTask() {
                 },
                 Regex("""(val \w+:\s*kotlin\.String)(,|\n)""") to { m: MatchResult ->
                     "${m.groupValues[1]} = \"\"${m.groupValues[2]}"
+                },
+                Regex("""(val \w+:\s*kotlin\.collections\.List<[^>]+>)(,|\n)""") to { m: MatchResult ->
+                    "${m.groupValues[1]} = emptyList()${m.groupValues[2]}"
+                },
+                Regex("""(val \w+:\s*kotlin\.collections\.Map<[^>]+>)(,|\n)""") to { m: MatchResult ->
+                    "${m.groupValues[1]} = emptyMap()${m.groupValues[2]}"
                 },
             )
             for ((pattern, transform) in primitiveDefaults) {

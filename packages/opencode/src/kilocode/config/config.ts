@@ -1,8 +1,6 @@
-// kilocode_change - new file
 import path from "path"
 import { pathToFileURL } from "url"
 import { existsSync } from "fs"
-import z from "zod"
 import { Effect, Schema } from "effect"
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
 import { mergeDeep } from "remeda"
@@ -116,6 +114,14 @@ export namespace KilocodeConfig {
     return stripGlobalIndexing(info)
   }
 
+  export function retireIndexingFlag(info: Record<string, unknown>, source: string) {
+    if (!isRecord(info.experimental) || !("semantic_indexing" in info.experimental)) return info
+    const experimental = { ...info.experimental }
+    delete experimental.semantic_indexing
+    log.warn("ignored retired experimental.semantic_indexing config; use indexing.enabled instead", { path: source })
+    return { ...info, experimental }
+  }
+
   function stripGlobalIndexing(info: Config.Info): Config.Info {
     // Indexing provider/storage settings can be global, but enablement is exposed separately from project enablement.
     if (info.indexing?.enabled === undefined) return info
@@ -148,8 +154,10 @@ export namespace KilocodeConfig {
     return undefined
   }
 
-  /** Format Zod issues into a human-readable string. */
-  export function formatIssues(issues: z.core.$ZodIssue[]) {
+  type Issue = { readonly message: string; readonly path: readonly string[]; readonly [key: string]: unknown }
+
+  /** Format schema issues into a human-readable string. */
+  export function formatIssues(issues: readonly Issue[]) {
     return issues
       .map((issue) => {
         const loc = issue.path.map(String).join(".")
@@ -163,7 +171,7 @@ export namespace KilocodeConfig {
   export async function handleInvalid(
     kind: "agent" | "command",
     item: string,
-    issues: z.core.$ZodIssue[],
+    issues: readonly Issue[],
     cause: Error,
     warnings?: Config.Warning[],
   ) {
@@ -261,8 +269,8 @@ export namespace KilocodeConfig {
       log.warn("failed to load kilocode rules", { error: err })
     }
 
-    // Load Kilocode MCP servers (skip global VSCode extension paths unless running in the extension)
-    const skipGlobal = process.env["KILO_PLATFORM"] !== "vscode"
+    // Load Kilocode MCP servers (skip global VSCode extension paths unless running in an editor or Console daemon)
+    const skipGlobal = process.env["KILO_PLATFORM"] !== "vscode" && process.env["KILOCODE_FEATURE"] !== "daemon"
     const mcp = await McpMigrator.loadMcpConfig(input.projectDir, skipGlobal)
     if (Object.keys(mcp).length > 0) {
       result = input.merge(result, { mcp })
@@ -335,14 +343,20 @@ export namespace KilocodeConfig {
     // no global config → new user, they'll get the new bash:ask default
     if (existing.length === 0 && !hasLegacy) return
 
+    const configs: Array<{ file: string; data: Record<string, unknown> }> = []
     // check if any config file already has an explicit bash permission
     for (const file of existing) {
       const text = await Bun.file(file)
         .text()
         .catch(() => "")
       const data = parseJsonc(text) ?? {}
-      if (data.permission?.bash) return
+      configs.push({ file, data })
+      if (isRecord(data.permission) && data.permission.bash) return
     }
+
+    // A schema-only file is generated for editor completion. It does not mean
+    // the user predates the bash permission default.
+    if (!hasLegacy && configs.every((item) => Object.keys(item.data).every((key) => key === "$schema"))) return
 
     // also check legacy TOML config for bash permission
     if (hasLegacy) {

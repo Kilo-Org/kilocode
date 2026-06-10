@@ -3,11 +3,8 @@ import { Bus } from "@/bus"
 import { InstanceState } from "@/effect/instance-state"
 import { SessionID } from "./schema"
 import { QuestionID } from "@/question/schema" // kilocode_change
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
-import { zod } from "@/util/effect-zod"
-import { NonNegativeInt, withStatics } from "@/util/schema"
+import { NonNegativeInt } from "@opencode-ai/core/schema"
 import { Effect, Layer, Context, Schema } from "effect"
-import z from "zod"
 
 export const Info = Schema.Union([
   Schema.Struct({
@@ -17,6 +14,16 @@ export const Info = Schema.Union([
     type: Schema.Literal("retry"),
     attempt: NonNegativeInt,
     message: Schema.String,
+    action: Schema.optional(
+      Schema.Struct({
+        reason: Schema.String,
+        provider: Schema.String,
+        title: Schema.String,
+        message: Schema.String,
+        label: Schema.String,
+        link: Schema.optional(Schema.String),
+      }),
+    ),
     next: NonNegativeInt,
   }),
   Schema.Struct({
@@ -29,9 +36,7 @@ export const Info = Schema.Union([
     message: Schema.String,
   }),
   // kilocode_change end
-])
-  .annotate({ identifier: "SessionStatus" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+]).annotate({ identifier: "SessionStatus" })
 export type Info = Schema.Schema.Type<typeof Info>
 
 export const Event = {
@@ -93,13 +98,5 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer.pipe(Layer.provide(Bus.layer))
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-
-export const list = () => runPromise((svc) => svc.list())
-export const get = (sessionID: SessionID) => runPromise((svc) => svc.get(sessionID))
-export const set = (sessionID: SessionID, status: Info) => runPromise((svc) => svc.set(sessionID, status))
-// kilocode_change end
 
 export * as SessionStatus from "./status"

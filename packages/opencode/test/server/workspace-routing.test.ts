@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test"
-import { isLocalWorkspaceRoute, getWorkspaceRouteSessionID, workspaceProxyURL } from "../../src/server/workspace"
+import {
+  isLocalWorkspaceRoute,
+  getWorkspaceRouteSessionID,
+  workspaceProxyURL,
+} from "../../src/server/shared/workspace-routing"
 import { SessionID } from "../../src/session/schema"
 
 describe("isLocalWorkspaceRoute", () => {
@@ -41,6 +45,13 @@ describe("getWorkspaceRouteSessionID", () => {
     const url = new URL("http://localhost/session/status")
     expect(getWorkspaceRouteSessionID(url)).toBeNull()
   })
+
+  // kilocode_change start
+  test("returns null for Kilo's /session/viewed route", () => {
+    const url = new URL("http://localhost/session/viewed")
+    expect(getWorkspaceRouteSessionID(url)).toBeNull()
+  })
+  // kilocode_change end
 
   test("returns null for non-session paths", () => {
     const url = new URL("http://localhost/config")

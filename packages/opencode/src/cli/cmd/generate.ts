@@ -1,22 +1,16 @@
 import { Server } from "../../server/server"
-import { PublicApi } from "../../server/routes/instance/httpapi/public"
 import type { CommandModule } from "yargs"
-import { OpenApi } from "effect/unstable/httpapi"
 
-type Args = {
-  httpapi: boolean
-}
+type Args = {}
 
 export const GenerateCommand = {
   command: "generate",
-  builder: (yargs) =>
-    yargs.option("httpapi", {
-      type: "boolean",
-      default: false,
-      description: "Generate OpenAPI from the experimental Effect HttpApi contract",
-    }),
-  handler: async (args) => {
-    const specs = args.httpapi ? OpenApi.fromApi(PublicApi) : await Server.openapi()
+  builder: (yargs) => yargs,
+  handler: async () => {
+    const specs = (await Server.openapi()) as {
+      info: { title: string; description: string } // kilocode_change
+      paths: Record<string, Record<string, any>>
+    }
     // kilocode_change start
     specs.info.title = "kilo"
     specs.info.description = "kilo api"

@@ -1,3 +1,8 @@
+---
+title: Attempt Completion Tool | Kilo Code Docs
+description: Learn how the attempt_completion tool signals task completion, presents results to the user, and supports continued refinement through feedback.
+---
+
 # attempt_completion
 
 The `attempt_completion` tool signals that Kilo Code believes a task is complete and presents results to the user. It provides a summary of what was accomplished, optionally includes a command to demonstrate the result, and supports continued refinement through user feedback.

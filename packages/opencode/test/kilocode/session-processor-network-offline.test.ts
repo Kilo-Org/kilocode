@@ -6,6 +6,8 @@ import path from "path"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
+import { Image } from "../../src/image/image"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
 import type { Provider } from "../../src/provider/provider"
@@ -19,6 +21,7 @@ import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
 import { SessionSummary } from "../../src/session/summary"
 import { Snapshot } from "../../src/snapshot"
+import { SyncEvent } from "../../src/sync"
 import * as Log from "@opencode-ai/core/util/log"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { provideTmpdirInstance } from "../fixture/fixture"
@@ -83,7 +86,6 @@ const llm = Layer.unwrap(
             const item = queue.shift() ?? Stream.empty
             return item
           },
-          raw: () => Effect.die("raw not implemented in TestLLM"),
         }),
       ),
       Layer.succeed(TestLLM, TestLLM.of({ push })),
@@ -100,7 +102,10 @@ const deps = Layer.mergeAll(
   Permission.defaultLayer,
   Plugin.defaultLayer,
   Config.defaultLayer,
+  RuntimeFlags.layer(),
   SessionSummary.defaultLayer,
+  Image.defaultLayer,
+  SyncEvent.defaultLayer,
   status,
   llm,
 ).pipe(Layer.provideMerge(infra))

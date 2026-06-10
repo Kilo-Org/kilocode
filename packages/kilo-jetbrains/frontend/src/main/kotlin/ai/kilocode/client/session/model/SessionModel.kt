@@ -13,12 +13,13 @@ import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TokensDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlin.math.roundToInt
 
 /**
  * Pure session model — single source of truth for session content and runtime state.
  *
- * **EDT-only access** — no synchronization. [ai.kilocode.client.session.update.SessionController] guarantees all
+ * **EDT-only access** — no synchronization. [ai.kilocode.client.session.controller.SessionController] guarantees all
  * reads and writes happen on the EDT.
  *
  * In addition to the flat message list, the model maintains a derived
@@ -35,7 +36,7 @@ class SessionModel {
 
     companion object {
         /** Part types that are internal server markers and must never be stored or rendered. */
-        val SILENT_PART_TYPES = setOf("step-start")
+        val SILENT_PART_TYPES = setOf("step-start", "patch")
     }
 
     private val entries = LinkedHashMap<String, Message>()
@@ -75,29 +76,38 @@ class SessionModel {
 
     private val listeners = mutableListOf<SessionModelEvent.Listener>()
 
+    @RequiresEdt
     fun addListener(parent: Disposable, listener: SessionModelEvent.Listener) {
         listeners.add(listener)
         Disposer.register(parent) { listeners.remove(listener) }
     }
 
+    @RequiresEdt
     fun messages(): Collection<Message> = entries.values
 
+    @RequiresEdt
     fun message(id: String): Message? = entries[id]
 
+    @RequiresEdt
     fun content(messageId: String, contentId: String): Content? = entries[messageId]?.parts?.get(contentId)
 
+    @RequiresEdt
     fun turns(): Collection<Turn> = turnEntries.values
 
+    @RequiresEdt
     fun turn(id: String): Turn? = turnEntries[id]
 
+    @RequiresEdt
     fun isEmpty(): Boolean = entries.isEmpty()
 
+    @RequiresEdt
     fun isReady(): Boolean = app.status == KiloAppStatusDto.READY && workspace.status == KiloWorkspaceStatusDto.READY
 
     /**
      * Add a message if it doesn't exist, or update its [MessageDto] info if it does.
      * Returns true when the message was newly added (caller can decide to show messages).
      */
+    @RequiresEdt
     fun upsertMessage(dto: MessageDto): Boolean {
         val existing = entries[dto.id]
         if (existing != null) {
@@ -116,6 +126,7 @@ class SessionModel {
     }
 
     /** @deprecated Use [upsertMessage] instead. Kept for incremental migration. */
+    @RequiresEdt
     fun addMessage(dto: MessageDto): Message? {
         if (entries.containsKey(dto.id)) return null
         val msg = Message(dto)
@@ -126,6 +137,7 @@ class SessionModel {
         return msg
     }
 
+    @RequiresEdt
     fun removeMessage(id: String) {
         if (entries.remove(id) == null) return
         fire(SessionModelEvent.MessageRemoved(id))
@@ -133,6 +145,7 @@ class SessionModel {
         updateHeader()
     }
 
+    @RequiresEdt
     fun removeContent(messageId: String, contentId: String) {
         val msg = entries[messageId] ?: return
         if (msg.parts.remove(contentId) == null) return
@@ -140,6 +153,7 @@ class SessionModel {
         updateHeader()
     }
 
+    @RequiresEdt
     fun updateContent(messageId: String, dto: PartDto) {
         if (dto.type in SILENT_PART_TYPES) return
         val msg = entries[messageId] ?: return
@@ -154,9 +168,11 @@ class SessionModel {
         updateHeader()
     }
 
+    @RequiresEdt
     fun appendDelta(messageId: String, contentId: String, delta: String) {
         val msg = entries[messageId] ?: return
         val existing = msg.parts[contentId]
+        val created = existing == null
         if (existing != null) {
             val buf = when (existing) {
                 is Text -> existing.content
@@ -170,16 +186,19 @@ class SessionModel {
             msg.parts[contentId] = content
             fire(SessionModelEvent.ContentAdded(messageId, content))
         }
-        fire(SessionModelEvent.ContentDelta(messageId, contentId, delta))
+        fire(SessionModelEvent.ContentDelta(messageId, contentId, delta, created))
         updateHeader()
     }
 
+    @RequiresEdt
     fun setState(state: SessionState) {
+        if (this.state == state) return
         this.state = state
         fire(SessionModelEvent.StateChanged(state))
         updateHeader()
     }
 
+    @RequiresEdt
     fun setSession(session: SessionDto) {
         if (this.session == session) return
         this.session = session
@@ -187,27 +206,32 @@ class SessionModel {
         updateHeader()
     }
 
+    @RequiresEdt
     fun setDiff(diff: List<DiffFileDto>) {
         this.diff = diff
         fire(SessionModelEvent.DiffUpdated(diff))
     }
 
+    @RequiresEdt
     fun setTodos(todos: List<TodoDto>) {
         this.todos = todos
         fire(SessionModelEvent.TodosUpdated(todos))
         updateHeader()
     }
 
+    @RequiresEdt
     fun markCompacted() {
         compactionCount++
         fire(SessionModelEvent.Compacted(compactionCount))
         updateHeader()
     }
 
+    @RequiresEdt
     fun refreshHeader() {
         updateHeader()
     }
 
+    @RequiresEdt
     fun loadHistory(history: List<MessageWithPartsDto>) {
         entries.clear()
         session = null
@@ -229,6 +253,7 @@ class SessionModel {
         updateHeader()
     }
 
+    @RequiresEdt
     fun clear() {
         entries.clear()
         turnEntries.clear()
@@ -351,12 +376,15 @@ class SessionModel {
             is Tool -> {
                 existing.kind = toolKind(dto.tool)
                 existing.state = parseToolState(dto.state)
+                existing.callId = dto.callID
                 existing.title = dto.title
                 existing.input = dto.input
                 existing.metadata = dto.metadata
                 existing.output = dto.output
                 existing.error = dto.error
                 existing.time = dto.time
+                existing.todos = dto.todos
+                existing.todoView = dto.todoView
             }
             is Compaction -> return
             is StepFinish -> {
@@ -382,12 +410,15 @@ class SessionModel {
             }
             "tool" -> Tool(dto.id, dto.tool ?: "unknown", toolKind(dto.tool)).apply {
                 state = parseToolState(dto.state)
+                callId = dto.callID
                 title = dto.title
                 input = dto.input
                 metadata = dto.metadata
                 output = dto.output
                 error = dto.error
                 time = dto.time
+                todos = dto.todos
+                todoView = dto.todoView
             }
             "compaction" -> Compaction(dto.id)
             "step-finish" -> StepFinish(dto.id).apply {

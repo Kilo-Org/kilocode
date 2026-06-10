@@ -7,6 +7,7 @@ on:
 
 jobs:
   close:
+    if: github.repository == 'anomalyco/opencode' # kilocode_change - Kilo uses kilo-auto-close.yml
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -14,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6 # kilocode_change
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: latest
 

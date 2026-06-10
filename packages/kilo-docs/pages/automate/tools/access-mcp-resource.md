@@ -1,3 +1,8 @@
+---
+title: Access MCP Resource Tool | Kilo Code Docs
+description: Learn how the access_mcp_resource tool retrieves data from Model Context Protocol servers to provide additional context for Kilo Code tasks.
+---
+
 # access_mcp_resource
 
 The `access_mcp_resource` tool retrieves data from resources exposed by connected Model Context Protocol (MCP) servers. It allows Kilo Code to access files, API responses, documentation, or system information that provides additional context for tasks.

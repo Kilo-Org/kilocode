@@ -3,11 +3,16 @@ package ai.kilocode.client.session.ui.header
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.SessionHeaderSnapshot
 import ai.kilocode.client.session.model.SessionModelEvent
-import ai.kilocode.client.session.ui.SessionStyle
-import ai.kilocode.client.session.ui.SessionStyleTarget
-import ai.kilocode.client.session.update.SessionController
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.controller.SessionController
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.todo.TodoListPanel
+import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TokensDto
+import com.intellij.icons.AllIcons
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.IconLoader
@@ -33,7 +38,7 @@ import javax.swing.SwingUtilities
 class SessionHeaderPanel(
     private val controller: SessionController,
     parent: Disposable,
-) : BorderLayoutPanel(), SessionStyleTarget {
+) : BorderLayoutPanel(), SessionEditorStyleTarget {
 
     companion object {
         private val COMPRESS_ICON: Icon = IconLoader.getIcon("/icons/compress.svg", SessionHeaderPanel::class.java)
@@ -51,13 +56,15 @@ class SessionHeaderPanel(
     private val cost = JBLabel()
     private val context = JBLabel()
     private val todos = JBLabel()
-    private val compact = UiStyle.Buttons.HoverIcon().apply {
+    private val todoArrow = JBLabel(AllIcons.General.ArrowRight)
+    private val todoList = TodoListPanel()
+    private val compact = HoverIcon().apply {
         icon = COMPRESS_ICON
         toolTipText = KiloBundle.message("session.header.compact.description")
         accessibleContext.accessibleName = KiloBundle.message("session.header.compact")
         addActionListener { controller.compact() }
     }
-    private val expand = UiStyle.Buttons.HoverIcon().apply {
+    private val expand = HoverIcon().apply {
         icon = CHEVRON_ICON
         toolTipText = KiloBundle.message("session.header.expand")
         accessibleContext.accessibleName = KiloBundle.message("session.header.expand")
@@ -90,7 +97,7 @@ class SessionHeaderPanel(
         iconTextGap = UiStyle.Gap.xs()
     }
     private val top = BorderLayoutPanel()
-    private val right = JPanel(FlowLayout(FlowLayout.RIGHT, UiStyle.Gap.inline(), 0)).apply {
+    private val right = JPanel(FlowLayout(FlowLayout.RIGHT, UiStyle.Gap.md(), 0)).apply {
         isOpaque = false
         add(cost)
         add(context)
@@ -99,32 +106,41 @@ class SessionHeaderPanel(
     }
     private val tokens = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
         isOpaque = false
-        border = JBUI.Borders.empty(UiStyle.Space.SM, 0, 0, 0)
+        border = JBUI.Borders.empty(UiStyle.Gap.sm(), 0, 0, 0)
         add(tokenTitle)
-        add(Box.createHorizontalStrut(UiStyle.Gap.inline()))
+        add(Box.createHorizontalStrut(UiStyle.Gap.md()))
         add(input)
-        add(Box.createHorizontalStrut(UiStyle.Gap.small()))
+        add(Box.createHorizontalStrut(UiStyle.Gap.sm()))
         add(output)
-        add(Box.createHorizontalStrut(UiStyle.Gap.small()))
+        add(Box.createHorizontalStrut(UiStyle.Gap.sm()))
         add(cacheRead)
-        add(Box.createHorizontalStrut(UiStyle.Gap.small()))
+        add(Box.createHorizontalStrut(UiStyle.Gap.sm()))
         add(cacheWrite)
     }
-    private val todoRow = JPanel(FlowLayout(FlowLayout.LEFT, UiStyle.Gap.inline(), 0)).apply {
+    private val todoRow = JPanel(FlowLayout(FlowLayout.LEFT, UiStyle.Gap.sm(), 0)).apply {
         isOpaque = false
-        border = JBUI.Borders.empty(UiStyle.Space.SM, 0, 0, 0)
+        border = JBUI.Borders.empty(UiStyle.Gap.sm(), 0, 0, 0)
+        cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+        toolTipText = KiloBundle.message("session.header.todos.toggle")
+        accessibleContext.accessibleName = KiloBundle.message("session.header.todos.toggle")
+        add(todoArrow)
         add(todos)
+    }
+    private val todoBox = JPanel().apply {
+        isOpaque = false
+        layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        add(todoRow)
     }
     private val body = JPanel().apply {
         isOpaque = false
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        border = JBUI.Borders.empty(UiStyle.Space.SM, 0, 0, 0)
+        border = JBUI.Borders.empty(UiStyle.Gap.sm(), 0, 0, 0)
         add(viewport)
         add(tokens)
         add(bar)
-        add(todoRow)
+        add(todoBox)
     }
-    private var style = SessionStyle.current()
+    private var style = SessionEditorStyle.current()
 
     init {
         isOpaque = true
@@ -150,6 +166,15 @@ class SessionHeaderPanel(
         })
         timeline.addMouseWheelListener { scroll(it) }
         viewport.addMouseWheelListener { scroll(it) }
+        val todoClick = object : MouseAdapter() {
+            override fun mouseClicked(event: MouseEvent) {
+                toggleTodos()
+            }
+        }
+        listOf(todoRow, todoArrow, todos).forEach {
+            it.cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+            it.addMouseListener(todoClick)
+        }
 
         controller.model.addListener(parent) { event ->
             when (event) {
@@ -184,7 +209,7 @@ class SessionHeaderPanel(
         super.updateUI()
         border = JBUI.Borders.compound(
             JBUI.Borders.customLine(JBUI.CurrentTheme.ToolWindow.borderColor(), 1, 0, 1, 0),
-            JBUI.Borders.empty(UiStyle.Space.LG, UiStyle.Space.PAD, UiStyle.Space.SM, UiStyle.Space.PAD),
+            JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.pad(), UiStyle.Gap.sm(), UiStyle.Gap.pad()),
         )
     }
 
@@ -206,8 +231,7 @@ class SessionHeaderPanel(
         set(context, contextText(header.context))
         context.toolTipText = contextTip(header.context)
         setTokens(header.tokens)
-        set(todos, todo(header.todos.completed, header.todos.total))
-        todoRow.isVisible = todos.isVisible
+        syncTodos(header.todos.items)
 
         compact.isEnabled = header.canCompact
         val appended = timeline.setItems(header.timeline)
@@ -218,7 +242,7 @@ class SessionHeaderPanel(
         refresh()
     }
 
-    override fun applyStyle(style: SessionStyle) {
+    override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         background = style.editorBackground
         foreground = style.editorForeground
@@ -226,25 +250,28 @@ class SessionHeaderPanel(
         right.background = style.editorBackground
         tokens.background = style.editorBackground
         todoRow.background = style.editorBackground
+        todoBox.background = style.editorBackground
         body.background = style.editorBackground
         viewport.background = style.editorBackground
-        title.font = style.boldUiFont
+        title.font = style.boldFont
         title.foreground = style.editorForeground
-        cost.font = style.uiFont
+        cost.font = style.regularFont
         cost.foreground = style.editorForeground
-        context.font = style.uiFont
+        context.font = style.regularFont
         context.foreground = style.editorForeground
-        todos.font = style.smallUiFont
+        todos.font = style.smallFont
         todos.foreground = style.editorForeground
-        tokenTitle.font = style.smallUiFont
+        todoArrow.foreground = style.editorForeground
+        todoList.applyStyle(style)
+        tokenTitle.font = style.smallFont
         tokenTitle.foreground = style.editorForeground
-        input.font = style.smallUiFont
+        input.font = style.smallFont
         input.foreground = style.editorForeground
-        output.font = style.smallUiFont
+        output.font = style.smallFont
         output.foreground = style.editorForeground
-        cacheRead.font = style.smallUiFont
+        cacheRead.font = style.smallFont
         cacheRead.foreground = style.editorForeground
-        cacheWrite.font = style.smallUiFont
+        cacheWrite.font = style.smallFont
         cacheWrite.foreground = style.editorForeground
         bar.applyStyle(style)
         refresh()
@@ -276,6 +303,14 @@ class SessionHeaderPanel(
     internal fun todoText(): String = todos.text
 
     internal fun todoVisible() = todoRow.isVisible && todos.isVisible
+
+    internal fun todoListVisible() = todoList.parent === todoBox
+
+    internal fun todoRowPanel() = todoRow
+
+    internal fun todoLabel() = todos
+
+    internal fun todoListPanel() = todoList
 
     internal fun compactButton() = compact
 
@@ -357,6 +392,41 @@ class SessionHeaderPanel(
         tokens.isVisible = total > 0
     }
 
+    private fun syncTodos(items: List<TodoDto>) {
+        val total = items.size
+        val done = items.count { it.status == "completed" }
+        set(todos, todo(done, total))
+        todos.foreground = if (total > 0 && done == total) SessionUiStyle.Timeline.SUCCESS else style.editorForeground
+        todoArrow.isVisible = total > 0
+        todoBox.isVisible = total > 0
+        todoRow.isVisible = total > 0
+        todoList.update(items)
+        if (total == 0) collapseTodos()
+    }
+
+    private fun toggleTodos() {
+        if (!todoBox.isVisible) return
+        if (todoListVisible()) collapseTodos() else expandTodos()
+        refresh()
+    }
+
+    private fun expandTodos(): Boolean {
+        if (todoListVisible()) return false
+        todoBox.add(todoList)
+        todoArrow.icon = AllIcons.General.ArrowDown
+        return true
+    }
+
+    private fun collapseTodos(): Boolean {
+        if (!todoListVisible()) {
+            todoArrow.icon = AllIcons.General.ArrowRight
+            return false
+        }
+        todoBox.remove(todoList)
+        todoArrow.icon = AllIcons.General.ArrowRight
+        return true
+    }
+
     private fun toggle() {
         val next = !isExpanded()
         syncExpanded(next)
@@ -390,7 +460,7 @@ class SessionHeaderPanel(
         expand.accessibleContext.accessibleName = KiloBundle.message(key)
     }
 
-    private fun expanded() = PropertiesComponent.getInstance().getBoolean(EXPANDED_KEY, true)
+    private fun expanded() = PropertiesComponent.getInstance().getBoolean(EXPANDED_KEY, false)
 
     private fun sizeTimeline() {
         val size = timeline.preferredSize

@@ -21,6 +21,7 @@ import { describePatterns, resolveLabel, savedRuleStates, type RuleDecision } fr
 import { PermissionCommand } from "./PermissionCommand"
 import { PermissionDiff } from "./PermissionDiff"
 import { permissionDiffs } from "./permission-diff-utils"
+import { normalizeUrls } from "../../../../../opencode/src/kilocode/util/url"
 import type { PermissionRequest } from "../../types/messages"
 
 let rulesExpandedPreference = false
@@ -42,7 +43,13 @@ export const PermissionDock: Component<{
   const label = (rule: string) => (rule === "*" ? "" : rule.replace(/ \*$/, ""))
   const command = () => {
     const cmd = props.request.args?.command
-    return typeof cmd === "string" ? cmd : undefined
+    if (typeof cmd !== "string") return undefined
+    // Normalize IDN/Unicode hostnames to punycode ASCII to prevent homograph attacks.
+    return normalizeUrls(cmd)
+  }
+  const cmdDescription = () => {
+    const val = props.request.args?.description
+    return typeof val === "string" && val.length > 0 ? val : undefined
   }
   const description = createMemo(() =>
     command() ? null : describePatterns(props.request.toolName, props.request.patterns, language.t),
@@ -258,6 +265,7 @@ export const PermissionDock: Component<{
           </Show>
         }
       >
+        <Show when={cmdDescription()}>{(desc) => <div data-slot="permission-hint">{desc()}</div>}</Show>
         <Show when={command()}>{(cmd) => <PermissionCommand command={cmd()} />}</Show>
 
         {(() => {

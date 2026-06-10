@@ -2,6 +2,8 @@
 import { $ } from "bun"
 import { join, relative, dirname, basename } from "node:path"
 import { chmodSync, statSync, rmSync, readdirSync, existsSync } from "node:fs"
+import { copyTreeSitterResources, hasTreeSitterResources } from "../src/services/cli-backend/cli-resources"
+import { currentFfmpegTarget, ensureFfmpegForTarget } from "./ffmpeg-helper"
 
 const forceRebuild = process.argv.includes("--force")
 
@@ -21,11 +23,16 @@ const kiloVscodeDir = join(import.meta.dir, "..")
 const packagesDir = join(kiloVscodeDir, "..")
 const opencodeDir = join(packagesDir, "opencode")
 const coreDir = join(packagesDir, "core")
+const gatewayDir = join(packagesDir, "kilo-gateway")
+const indexingDir = join(packagesDir, "kilo-indexing")
 
 const targetBinDir = join(kiloVscodeDir, "bin")
 const binName = process.platform === "win32" ? "kilo.exe" : "kilo"
 const targetBinPath = join(targetBinDir, binName)
+const snapshotName = "models-snapshot.json"
+const targetSnapshotPath = join(targetBinDir, snapshotName)
 const versionFile = join(targetBinDir, ".cli-version")
+const devSnapshotPath = join(opencodeDir, "src", "provider", snapshotName)
 
 function log(msg: string) {
   console.log(`[local-bin] ${msg}`)
@@ -35,7 +42,12 @@ async function cliSourceHash(): Promise<string | null> {
   try {
     const opencodeResult = await $`git log -1 --format=%H -- .`.cwd(opencodeDir).quiet()
     const coreResult = await $`git log -1 --format=%H -- .`.cwd(coreDir).quiet()
-    return `${opencodeResult.text().trim()}-${coreResult.text().trim()}` || null
+    const gatewayResult = await $`git log -1 --format=%H -- .`.cwd(gatewayDir).quiet()
+    const indexingResult = await $`git log -1 --format=%H -- .`.cwd(indexingDir).quiet()
+    return (
+      `${opencodeResult.text().trim()}-${coreResult.text().trim()}-${gatewayResult.text().trim()}-${indexingResult.text().trim()}` ||
+      null
+    )
   } catch {
     return null
   }
@@ -45,7 +57,14 @@ async function isDirty(): Promise<boolean> {
   try {
     const opencodeResult = await $`git status --porcelain -- .`.cwd(opencodeDir).quiet()
     const coreResult = await $`git status --porcelain -- .`.cwd(coreDir).quiet()
-    return opencodeResult.text().trim().length > 0 || coreResult.text().trim().length > 0
+    const gatewayResult = await $`git status --porcelain -- .`.cwd(gatewayDir).quiet()
+    const indexingResult = await $`git status --porcelain -- .`.cwd(indexingDir).quiet()
+    return (
+      opencodeResult.text().trim().length > 0 ||
+      coreResult.text().trim().length > 0 ||
+      gatewayResult.text().trim().length > 0 ||
+      indexingResult.text().trim().length > 0
+    )
   } catch {
     return false
   }
@@ -82,6 +101,8 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
   const preferred = join(distDir, `@kilocode`, tag, "bin", binName)
   try {
     statSync(preferred)
+    if (!hasTreeSitterResources(preferred)) return null
+    if (!existsSync(snapshotForBinary(preferred))) return null
     return preferred
   } catch {
     // fall through to generic search
@@ -107,11 +128,17 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
         continue
       }
       if (e.isFile() && (e.name === "kilo" || e.name === "kilo.exe") && basename(dirname(p)) === "bin") {
+        if (!hasTreeSitterResources(p)) continue
+        if (!existsSync(snapshotForBinary(p))) continue
         return p
       }
     }
   }
   return null
+}
+
+function snapshotForBinary(file: string): string {
+  return join(dirname(file), snapshotName)
 }
 
 async function ensureBuiltBinary(): Promise<string> {
@@ -146,29 +173,62 @@ async function ensureBuiltBinary(): Promise<string> {
   return built
 }
 
+async function writeSourceWrapper() {
+  if (process.platform === "win32") {
+    throw new Error("Compiled CLI build failed and source wrapper fallback is not supported on Windows.")
+  }
+
+  const bun = Bun.which("bun") ?? "bun"
+  await $`mkdir -p ${targetBinDir}`
+  await Bun.write(
+    targetBinPath,
+    [
+      "#!/usr/bin/env bash",
+      "set -euo pipefail",
+      `cd ${JSON.stringify(opencodeDir)}`,
+      `exec ${JSON.stringify(bun)} --conditions=browser src/index.ts "$@"`,
+      "",
+    ].join("\n"),
+  )
+  chmodSync(targetBinPath, 0o755)
+  if (existsSync(devSnapshotPath)) await $`cp ${devSnapshotPath} ${targetSnapshotPath}`
+  await ensureFfmpegForTarget(currentFfmpegTarget(), targetBinDir)
+
+  const hash = await cliSourceHash()
+  if (hash) await Bun.write(versionFile, hash + "\n")
+  log(
+    `Compiled CLI build failed; wrote source wrapper at ${relative(kiloVscodeDir, targetBinPath)} for local development.`,
+  )
+}
+
 async function main() {
   const targetFile = Bun.file(targetBinPath)
   const exists = await targetFile.exists()
+  const snapshotExists = await Bun.file(targetSnapshotPath).exists()
+  const ready = exists && snapshotExists
 
-  const stale = exists && !forceRebuild && (await isStale())
-  const rebuild = forceRebuild || stale
+  const stale = ready && !forceRebuild && (await isStale())
+  const rebuild = forceRebuild || stale || (exists && !snapshotExists)
 
-  if (exists && !rebuild) {
+  if (ready && !rebuild) {
     const st = statSync(targetBinPath)
     log(
       `CLI binary already present at ${relative(kiloVscodeDir, targetBinPath)} (${Math.round(st.size / 1024 / 1024)}MB). Use --force to rebuild.`,
     )
+    await ensureFfmpegForTarget(currentFfmpegTarget(), targetBinDir)
     return
   }
 
+  if (forceRebuild && !exists) {
+    removeDist()
+  }
+
   if (exists && rebuild) {
-    log(stale ? `CLI source has changed — rebuilding.` : `Removing existing binary (--force).`)
+    log(stale ? `CLI source has changed — rebuilding.` : `Refreshing existing CLI resources.`)
     rmSync(targetBinPath)
-    // Also remove the prebuilt dist so ensureBuiltBinary() triggers a fresh build
-    const distDir = join(opencodeDir, "dist")
-    if (existsSync(distDir)) {
-      rmSync(distDir, { recursive: true })
-      log(`Removed ${relative(kiloVscodeDir, distDir)} to force rebuild.`)
+    if (existsSync(targetSnapshotPath)) rmSync(targetSnapshotPath)
+    if (forceRebuild || stale) {
+      removeDist()
     }
   }
 
@@ -177,16 +237,33 @@ async function main() {
     throw new Error(`Expected opencode package at ${opencodeDir}, but it does not exist.`)
   }
 
-  const sourceBinPath = await ensureBuiltBinary()
+  const sourceBinPath = await ensureBuiltBinary().catch(async (err) => {
+    await writeSourceWrapper()
+    log(`Wrapper fallback reason: ${err instanceof Error ? err.message : String(err)}`)
+    return null
+  })
+  if (!sourceBinPath) return
+  const sourceSnapshotPath = snapshotForBinary(sourceBinPath)
   await $`mkdir -p ${targetBinDir}`
+  await $`cp ${sourceSnapshotPath} ${targetSnapshotPath}`
   await $`cp ${sourceBinPath} ${targetBinPath}`
+  await copyTreeSitterResources(sourceBinPath, targetBinPath)
   chmodSync(targetBinPath, 0o755)
+  await ensureFfmpegForTarget(currentFfmpegTarget(), targetBinDir)
 
   // Record the CLI source version so future runs detect when a rebuild is needed
   const hash = await cliSourceHash()
   if (hash) await Bun.write(versionFile, hash + "\n")
 
   log(`Copied CLI binary from ${relative(packagesDir, sourceBinPath)} -> ${relative(kiloVscodeDir, targetBinPath)}`)
+}
+
+function removeDist() {
+  // Also remove the prebuilt dist so ensureBuiltBinary() triggers a fresh build
+  const distDir = join(opencodeDir, "dist")
+  if (!existsSync(distDir)) return
+  rmSync(distDir, { recursive: true })
+  log(`Removed ${relative(kiloVscodeDir, distDir)} to force rebuild.`)
 }
 
 try {

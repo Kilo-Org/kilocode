@@ -26,7 +26,7 @@ Describe what you want to accomplish in natural language, and Kilo Code will:
 | Read | Access file content and code structure | `read`, `glob`, `grep` |
 | Edit | Create or modify files and code | `edit`, `write`, `apply_patch` |
 | Execute | Run commands and perform system operations | `bash` |
-| Web | Fetch and search web content | `webfetch`, `websearch`, `codesearch` |
+| Web | Fetch and search web content | `webfetch`, `websearch` |
 | Workflow | Manage task flow and sub-agents | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill` |
 
 {% /tab %}
@@ -108,7 +108,7 @@ Every tool use is subject to a permission check. The default action for any tool
 | `bash` | `ask` (per-command) |
 | `external_directory` | `ask` (when accessing paths outside the project) |
 | `task` | `ask` |
-| `webfetch`, `websearch`, `codesearch` | `ask` |
+| `webfetch`, `websearch` | `ask` |
 | `todowrite`, `todoread`, `question`, `skill` | `ask` |
 
 No tools are auto-approved out of the box. You must explicitly grant `allow` in your config, or approve them at runtime.
@@ -165,7 +165,6 @@ This safety mechanism ensures you maintain control over which files are modified
 | `bash` | Runs shell commands | Execute |
 | `webfetch` | Fetches a URL | Web |
 | `websearch` | Searches the web (Kilo/OpenRouter users) | Web |
-| `codesearch` | Semantic code search (Kilo/OpenRouter users) | Web |
 | `question` | Asks you a clarifying question with selectable options | Workflow |
 | `task` | Spawns a sub-agent session | Workflow |
 | `todowrite` | Creates and updates a session TODO list | Workflow |

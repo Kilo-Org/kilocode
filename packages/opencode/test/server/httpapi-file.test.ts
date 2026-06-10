@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { Context } from "effect"
 import path from "path"
-import { ExperimentalHttpApiServer } from "../../src/server/routes/instance/httpapi/server"
+import { HttpApiApp } from "../../src/server/routes/instance/httpapi/server"
 import { FilePaths } from "../../src/server/routes/instance/httpapi/groups/file"
 import { Instance } from "../../src/project/instance"
 import * as Log from "@opencode-ai/core/util/log"
@@ -17,7 +17,7 @@ function request(route: string, directory: string, query?: Record<string, string
   for (const [key, value] of Object.entries(query ?? {})) {
     url.searchParams.set(key, value)
   }
-  return ExperimentalHttpApiServer.webHandler().handler(
+  return HttpApiApp.webHandler().handler(
     new Request(url, {
       headers: {
         "x-kilo-directory": directory,
@@ -55,8 +55,7 @@ describe("file HttpApi", () => {
     expect(await status.json()).toContainEqual({ path: "hello.txt", added: 1, removed: 0, status: "added" })
   })
 
-  // kilocode_change - skip on Windows: Kilo file search returns [] for hello.txt via the experimental bridge.
-  // Other platforms pass; bridge is gated behind KILO_EXPERIMENTAL_HTTPAPI and not enabled in production.
+  // kilocode_change - skip on Windows: Kilo file search returns [] for hello.txt.
   // Tracked in Kilo-Org/kilocode#9831.
   const searchTest = process.platform === "win32" ? test.skip : test
   searchTest("serves search endpoints", async () => {

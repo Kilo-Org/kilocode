@@ -7,6 +7,9 @@ export const dict = {
   "provider.connect.kiloGateway.visit.prefix": "Odwiedź ",
   "provider.connect.kiloGateway.visit.link": "kilo.ai",
   "provider.connect.kiloGateway.visit.suffix": ", aby otrzymać swój klucz API.",
+  "provider.connect.kiloGateway.byok.prefix": "Aby uzyskać więcej statystyk użycia, użyj ",
+  "provider.connect.kiloGateway.byok.link": "BYOK przez Kilo's Gateway",
+  "provider.connect.kiloGateway.byok.suffix": ".",
 
   // Provider dialog translations
   "dialog.provider.group.recommended": "Polecane",
@@ -19,7 +22,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Skills",
   "marketplace.tab.mcpServers": "Serwery MCP",
-  "marketplace.tab.modes": "Tryby",
   "marketplace.category.all": "Wszystkie",
   "marketplace.placeholder": "Do zaimplementowania",
   "marketplace.card.installed": "Zainstalowano",
@@ -45,6 +47,7 @@ export const dict = {
   "marketplace.remove.cancel": "Anuluj",
   "marketplace.remove.confirm.button": "Usuń",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "Agenci",
   "marketplace.search": "Szukaj...",
   "marketplace.filter.all": "Wszystkie elementy",
   "marketplace.filter.notInstalled": "Nie zainstalowano",
@@ -60,7 +63,7 @@ export const dict = {
   "marketplace.scope.global": "globalny",
   "marketplace.remove.type.mcp": "serwer MCP",
   "marketplace.remove.type.skill": "umiejętność",
-  "marketplace.remove.type.mode": "tryb",
+  "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Nie udało się usunąć {{name}}",
   "marketplace.install": "Zainstaluj",
   "marketplace.filter.installed": "Zainstalowano",
@@ -69,8 +72,10 @@ export const dict = {
   "marketplace.warning.busyMany": "Kilka sesji jest uruchomionych i zostanie przerwanych",
   "marketplace.warning.installAnyway": "Zainstaluj mimo to",
   "marketplace.warning.cancel": "Anuluj",
-  "marketplace.contribute.prompt": "Brakuje skilla, trybu lub serwera MCP?",
+  "marketplace.contribute.prompt": "Brakuje umiejętności, agenta lub serwera MCP?",
   "marketplace.contribute.cta": "Wnieś wkład na GitHubie",
+  "marketplace.migration.notice":
+    "Tryby zostały zastąpione przez agentów. Jeśli wcześniej instalowałeś tryby z marketplace, usuń je i zainstaluj ponownie jako agenty, aby przejść na nowy format.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "Wdróż",
@@ -91,7 +96,11 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "Wyłącz snapshoty Kilo dla tego projektu. Stracisz cofanie/przywracanie zmian Kilo, ale git nadal śledzi wszystko.",
 
+  // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "Otwórz w podglądzie różnic",
+  "ui.messagePart.shell.command": "Polecenie",
+  "ui.messagePart.shell.output": "Wyjście",
+  "ui.messagePart.openInEditor": "Otwórz w edytorze",
 
   // Message feedback (thumbs up/down per assistant response)
   "ui.message.feedback.helpful": "To było pomocne",

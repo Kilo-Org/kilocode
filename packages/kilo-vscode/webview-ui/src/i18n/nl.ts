@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "Deel deze sessie en kopieer de URL naar het klembord",
   "command.session.unshare": "Delen van sessie stoppen",
   "command.session.unshare.description": "Stop met het delen van deze sessie",
+  "command.session.export": "Sessietranscript exporteren",
 
   "palette.search.placeholder": "Zoeken naar bestanden, commando's en sessies",
   "palette.empty": "Geen resultaten gevonden",
@@ -105,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Aanbevolen",
   "dialog.provider.opencode.note": "Geselecteerde modellen waaronder Claude, GPT, Gemini en meer",
   "dialog.provider.anthropic.note": "Directe toegang tot Claude-modellen, inclusief Pro en Max",
+  "dialog.provider.deepseek.note": "DeepSeek-modellen voor redeneer- en programmeertaken",
   "dialog.provider.copilot.note": "Claude-modellen voor programmeerhulp",
   "dialog.provider.openai.note": "GPT-modellen voor snelle, capabele algemene AI-taken",
   "dialog.provider.google.note": "Gemini-modellen voor snelle, gestructureerde antwoorden",
@@ -134,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "Autorisatie mislukt: {{error}}",
   "provider.connect.apiKey.description":
     "Voer uw {{provider}} API-sleutel in om uw account te verbinden en {{provider}} modellen te gebruiken in Kilo.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "{{provider}} API-sleutel",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API-sleutel",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API-sleutel is vereist",
   "provider.connect.prompt.required": "{{field}} is verplicht",
   "provider.connect.azure.endpointType.label": "Selecteer Azure-eindpuntconfiguratie",
@@ -174,9 +182,12 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "{{provider}} modellen zijn niet langer beschikbaar.",
 
   "model.tag.free": "Gratis",
+  "model.tag.dataCollected": "Gegevens kunnen worden gebruikt voor training",
   "model.tag.latest": "Nieuwste",
   "model.group.recommended": "Aanbevolen",
   "model.group.favorites": "Favorieten",
+  "model.group.collapse": "{{group}} inklappen",
+  "model.group.expand": "{{group}} uitklappen",
   "model.favorite.add": "Toevoegen aan favorieten",
   "model.favorite.remove": "Verwijderen uit favorieten",
   "model.provider.anthropic": "Anthropic",
@@ -199,6 +210,9 @@ export const dict = {
   "model.preview.label.cached": "Gecachet",
   "model.preview.label.average": "Gesch. gem. kosten",
   "model.preview.label.context": "Context",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Voltooiing",
+  "model.preview.label.costAttempt": "Kosten / poging",
   "model.preview.value.notSupported": "Niet ondersteund",
   "model.preview.tooltip.average":
     "De geschatte gemiddelde kosten zijn gebaseerd op een typische verhouding van input-, output- en cache-leestokens.",
@@ -270,6 +284,7 @@ export const dict = {
   "prompt.attachment.remove": "Bijlage verwijderen",
   "prompt.action.send": "Verzenden",
   "prompt.action.send.blocked": "Beantwoord of negeer eerst de openstaande vraag",
+  "prompt.action.send.recording": "Transcriberen en verzenden",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Prompt verbeteren",
   "prompt.action.indexing": "Indexeringsinstellingen",
@@ -282,6 +297,20 @@ export const dict = {
   "prompt.action.resetModel": "Model terugzetten naar standaard",
   "prompt.action.enhanceDescription":
     "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Typ hier een prompt en klik nogmaals op de knop om te zien hoe het werkt.",
+
+  "speechToText.tooltip.start": "Spraakinvoer starten met Kilo Gateway",
+  "speechToText.tooltip.stop": "Audio vastleggen stoppen",
+  "speechToText.tooltip.transcribing": "Transcriberen... Klik om te annuleren.",
+  "speechToText.tooltip.error": "Spraakinvoer mislukt. Klik om te wissen.",
+  "speechToText.error.title": "Spraakinvoer mislukt",
+  "speechToText.error.loginRequired": "Meld u aan bij Kilo om spraakinvoer te gebruiken.",
+  "speechToText.error.permission": "Microfoontoegang is geweigerd.",
+  "speechToText.error.microphone": "Kon de microfoon niet starten.",
+  "speechToText.error.recording": "Opname mislukt.",
+  "speechToText.error.emptyRecording": "Er is geen audio opgenomen.",
+  "speechToText.error.emptyTranscript": "Er is geen spraak gedetecteerd.",
+  "speechToText.error.encoding": "Kon de opname niet coderen.",
+  "speechToText.toast.transcribed": "Transcriptie ingevoegd",
 
   "prompt.toast.pasteUnsupported.title": "Plakken niet ondersteund",
   "prompt.toast.pasteUnsupported.description": "Hier kunnen alleen afbeeldingen of PDF's worden geplakt.",
@@ -436,6 +465,7 @@ export const dict = {
   "toast.session.unshare.success.description": "Delen van sessie succesvol gestopt!",
   "toast.session.unshare.failed.title": "Delen van sessie stoppen mislukt",
   "toast.session.unshare.failed.description": "Er is een fout opgetreden bij het stoppen van het delen van de sessie",
+  "toast.session.rename.invalid.title": "Ongeldige sessietitel",
   "toast.session.listFailed.title": "Laden van sessies voor {{project}} is mislukt",
 
   "toast.update.title": "Update beschikbaar",
@@ -469,6 +499,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Registreer je gratis om door te gaan en 500 andere modellen te ontdekken. Duurt 2 minuten, geen creditcard vereist. Of kom later terug.",
   "error.promotionLimit.action": "Registreren",
+  "error.providerAuth.title": "{{provider}} heeft je afgemeld",
+  "error.providerAuth.description": "Verbind opnieuw met {{provider}} en stuur je bericht nog een keer.",
+  "error.providerAuth.chatgpt.title": "OpenAI heeft je afgemeld",
+  "error.providerAuth.chatgpt.description":
+    "Meld je opnieuw aan bij ChatGPT en stuur je bericht nog een keer om Codex-modellen te blijven gebruiken.",
 
   "error.chain.unknown": "Onbekende fout",
   "error.chain.causedBy": "Veroorzaakt door:",
@@ -960,6 +995,8 @@ export const dict = {
   "session.delete.confirm": 'Sessie "{{name}}" verwijderen?',
   "session.delete.button": "Verwijder sessie",
   "session.untitled": "Naamloos",
+  "session.current": "Huidige sessie",
+  "session.history.sources": "Geschiedenisbron",
   "session.recent": "Recent",
   "session.showHistory": "Geschiedenis weergeven",
   "session.search.placeholder": "Zoek sessies...",
@@ -1096,6 +1133,14 @@ export const dict = {
   "session.status.retrying": "Opnieuw proberen (poging {{ attempt }})... {{ message }}",
   "session.status.working": "Bezig...",
   "session.status.offline": "Netwerkverbinding verbroken — opnieuw verbinden...",
+  "session.outcome.incomplete": "Beurt beëindigd met {{count}} resterende to-do's",
+  "session.outcome.limit": "Antwoordlimiet bereikt voor voltooiing",
+  "session.outcome.unknown": "Beurt beëindigd zonder voltooiingsreden van het model",
+  "session.outcome.filtered": "De provider heeft deze reactie gestopt vanwege een contentfilter.",
+  "session.outcome.unexpected": "Reactie is onverwacht beëindigd en is mogelijk onvolledig.",
+  "session.outcome.interrupted": "Beurt onderbroken",
+  "session.outcome.error": "Beurt mislukt",
+  "session.outcome.finish": "Voltooiingsreden: {{reason}}",
 
   "ui.sessionTurn.cancel": "Annuleren",
   "ui.sessionTurn.status.thinking": "Denken...",
@@ -1161,7 +1206,6 @@ export const dict = {
     'Telemetrie wordt beheerd door de ingebouwde telemetrie-instelling van VS Code. Om dit uit te schakelen, gaat u naar Instellingen > Telemetrie > Telemetrieniveau en stelt u dit in op "off". Herstart VS Code om de wijziging toe te passen.',
   "settings.aboutKiloCode.telemetry.openSettings": "Telemetrie-instellingen openen",
 
-  "settings.agentBehaviour.subtab.modes": "Modi",
   "settings.agentBehaviour.subtab.agents": "Agenten",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
   "settings.agentBehaviour.subtab.rules": "Regels",
@@ -1226,15 +1270,16 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Vat grote geplakte inhoud niet samen",
   "settings.experimental.batch.title": "Batch Tool",
   "settings.experimental.batch.description": "Schakel batching van meerdere tool calls in",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Codebase Zoeken",
   "settings.experimental.codebaseSearch.description":
     "Schakel AI-aangedreven zoeken in natuurlijke taal door je codebase in",
-  "settings.experimental.agentManagerTool.title": "Agent Manager-tool",
-  "settings.experimental.agentManagerTool.description":
-    "Sta agents toe om lokale Agent Manager-sessies en worktree-sessies te starten vanuit een tool call",
+  "settings.experimental.speechToText.title": "Spraak naar tekst",
+  "settings.experimental.speechToText.description":
+    "Schakel spraakinvoer in promptvelden in met uw Kilo-account via Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Schakel de Kilo-provider in en meld u aan om Speech to Text te gebruiken. Speech to Text wordt momenteel alleen ondersteund met Kilo Gateway.",
+  "settings.experimental.speechToTextModel.title": "Spraak-naar-tekst-model",
+  "settings.experimental.speechToTextModel.description": "Kies het Kilo Gateway-transcriptiemodel voor spraakinvoer.",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
   "settings.experimental.continueOnDeny.description":
     "Ga door met de agent loop wanneer een toestemming wordt geweigerd",
@@ -1258,6 +1303,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Selecteer een agent om te configureren…",
   "settings.agentBehaviour.modelOverride.title": "Model Overschrijven",
   "settings.agentBehaviour.modelOverride.description": "Overschrijf het standaard model voor deze agent",
+  "settings.agentBehaviour.variantOverride.title": "Variant Overschrijven",
+  "settings.agentBehaviour.variantOverride.description": "Overschrijf de modelvariant voor deze agent",
   "settings.agentBehaviour.prompt.title": "Aangepaste Prompt",
   "settings.agentBehaviour.prompt.description": "Aanvullende systeem prompt voor deze agent",
   "settings.agentBehaviour.temperature.title": "Temperatuur",
@@ -1277,7 +1324,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Geen skills ontdekt. Voeg hieronder skill mappaden of URL's toe om skills beschikbaar te maken.",
   "settings.agentBehaviour.availableModes": "Beschikbare Aangepaste Modi",
-  "settings.agentBehaviour.noModesFound": "Geen modi gevonden.",
+  "settings.agentBehaviour.noAgentsFound": "Geen agenten gevonden.",
   "settings.agentBehaviour.importMode": "Importeren",
   "settings.agentBehaviour.importMode.invalidName":
     "Ongeldige modusnaam in bestand. De naam moet beginnen met een kleine letter en mag alleen kleine letters, cijfers en streepjes bevatten.",
@@ -1286,10 +1333,10 @@ export const dict = {
     "Ongeldig JSON-bestand. Selecteer een geldig agentdefinitiebestand.",
   "settings.agentBehaviour.importMode.tooLarge": "Bestand is te groot. Agentdefinities moeten kleiner zijn dan 1 MB.",
   "settings.agentBehaviour.exportMode": "Agentdefinitie exporteren",
-  "settings.agentBehaviour.removeMode.title": "Verwijder modus",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Modus "{{name}}" verwijderen? Dit zal de modus uitschakelen door je configuratie bij te werken.',
-  "settings.agentBehaviour.removeMode.button": "Verwijderen",
+  "settings.agentBehaviour.removeAgent.title": "Verwijder agent",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Agent "{{name}}" verwijderen? Dit schakelt de agent uit door uw configuratie bij te werken.',
+  "settings.agentBehaviour.removeAgent.button": "Verwijderen",
   "settings.agentBehaviour.skillPaths": "Skill Mappaden",
   "settings.agentBehaviour.skillUrls": "Skill URL's",
   "settings.agentBehaviour.removeSkill.title": "Verwijder skill",
@@ -1370,8 +1417,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Takenlijst beheren. Staat het lezen en bijwerken van de interne takenlijst toe.",
   "settings.autoApprove.tool.webfetch": "Een URL ophalen. Staat het ophalen van inhoud van een specifieke URL toe.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Zoek op web of in code. Staat het uitvoeren van externe web- of code-zoekopdrachten toe.",
+  "settings.autoApprove.tool.websearch": "Zoek op het web. Staat het uitvoeren van externe web-zoekopdrachten toe.",
   "settings.autoApprove.tool.doom_loop":
     "Voorkom herhaalde identieke acties. Geactiveerd wanneer dezelfde tool call herhaald wordt met identieke invoer.",
 
@@ -1380,7 +1426,10 @@ export const dict = {
     "Maak checkpoints aan voor het bewerken van bestanden zodat je eerdere staten kunt herstellen",
 
   "settings.context.autoCompaction.title": "Automatische Compactie",
-  "settings.context.autoCompaction.description": "Context automatisch compacteren wanneer deze vol is",
+  "settings.context.autoCompaction.description": "Context automatisch compacteren voordat deze de limiet bereikt",
+  "settings.context.compactionLimit.title": "Limiet voor automatisch compacteren",
+  "settings.context.compactionLimit.description":
+    "Compacteer wanneer de context dit percentage van het modelvenster bereikt. Laat leeg om alleen de veiligheidsbuffer te gebruiken.",
   "settings.context.prune.title": "Oude Uitvoer Opschonen",
   "settings.context.prune.description": "Verwijder oude tool uitvoer tijdens compactie",
   "settings.context.watcherPatterns": "File Watcher Negeer Patronen",
@@ -1417,6 +1466,9 @@ export const dict = {
   "settings.providers.smallModel.title": "Klein Model",
   "settings.providers.smallModel.description":
     "Lichtgewicht model voor het genereren van titels, commit-berichten, promptverbetering en andere snelle taken",
+  "settings.providers.subagentModel.title": "Subagentmodel",
+  "settings.providers.subagentModel.description":
+    "Standaardmodel en redeneerinspanning voor task-tool subagenten. Laat leeg om het model van de aanroepende agent over te nemen.",
   "settings.providers.modeModels": "Model per Modus",
   "settings.providers.modeModels.description":
     "Overschrijf het standaard model voor specifieke modi. Indien niet ingesteld, wordt het globale standaard model gebruikt.",
@@ -1615,4 +1667,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "No matching branches",
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "Plan is klaar:",
 }

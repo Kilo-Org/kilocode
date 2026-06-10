@@ -4,12 +4,16 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.migration.FakeMigrationUiController
+import ai.kilocode.client.migration.MigrationUiController
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
-import ai.kilocode.client.session.update.SessionController
+import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.session.scroll.SessionScroll
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -22,6 +26,7 @@ import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.openapi.util.Disposer
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -30,6 +35,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import java.awt.Container
 import java.awt.event.MouseEvent
+import java.awt.event.MouseWheelEvent
 import javax.swing.JLabel
 import javax.swing.JComponent
 import javax.swing.JScrollBar
@@ -41,6 +47,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
     protected lateinit var app: KiloAppService
     protected lateinit var workspaces: KiloWorkspaceService
     protected lateinit var rpc: FakeSessionRpcApi
+    protected lateinit var appRpc: FakeAppRpcApi
     protected lateinit var workspace: Workspace
     protected lateinit var ui: SessionUi
 
@@ -49,7 +56,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
         scope = CoroutineScope(SupervisorJob())
 
         rpc = FakeSessionRpcApi()
-        val appRpc = FakeAppRpcApi().also {
+        appRpc = FakeAppRpcApi().also {
             it.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
         }
         val workspaceRpc = FakeWorkspaceRpcApi().also {
@@ -67,6 +74,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
+            Disposer.dispose(ui)
             scope.cancel()
         } finally {
             super.tearDown()
@@ -76,10 +84,24 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
     protected fun newUi(
         id: String? = null,
         displayMs: Long = 0,
-        loading: Boolean = id == null,
-        open: (SessionDto) -> Unit = {},
+        open: ((SessionRef) -> Unit)? = null,
+        migration: MigrationUiController = FakeMigrationUiController(),
     ): SessionUi {
-        return SessionUi(project, workspace, sessions, app, scope, id = id, displayMs = displayMs, loading = loading, open = open).apply {
+        val manager = open?.let { fn ->
+            object : SessionManager {
+                override fun newSession() {}
+                override fun showHistory() {}
+                override fun openSession(ref: SessionRef) = fn(ref)
+            }
+        }
+        return SessionUi(
+            project, workspace, sessions, app, scope,
+            ref = SessionRef.from(id),
+            displayMs = displayMs,
+            manager = manager,
+            workspaces = workspaces,
+            migration = migration,
+        ).apply {
             setSize(800, 600)
         }
     }
@@ -170,7 +192,17 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
     }
 
     protected fun setValue(bar: JScrollBar, value: Int) {
+        wheelNoop()
+        setValuePassive(bar, value)
+    }
+
+    protected fun setValuePassive(bar: JScrollBar, value: Int) {
         bar.value = value.coerceIn(bar.minimum, bottom(bar))
+    }
+
+    protected fun wheelNoop() {
+        val event = MouseWheelEvent(scrollComponent(), MouseEvent.MOUSE_WHEEL, System.currentTimeMillis(), 0, 1, 1, 0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 1, 1)
+        for (listener in scrollComponent().mouseWheelListeners) listener.mouseWheelMoved(event)
     }
 
     protected fun assertBottom(bar: JScrollBar) {
