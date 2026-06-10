@@ -1447,8 +1447,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Управление списком задач. Разрешает чтение и обновление внутреннего списка задач.",
   "settings.autoApprove.tool.webfetch": "Получение URL. Разрешает извлечение содержимого по указанному URL-адресу.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Поиск в интернете или коде. Разрешает выполнение внешних поисковых запросов в интернете или коде.",
+  "settings.autoApprove.tool.websearch":
+    "Поиск в интернете. Разрешает выполнение внешних поисковых запросов в интернете.",
   "settings.autoApprove.tool.external_directory":
     "Доступ к файлам вне рабочей области. Срабатывает при доступе к файлам за пределами текущего каталога проекта.",
   "settings.autoApprove.tool.doom_loop":

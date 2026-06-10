@@ -226,7 +226,6 @@ export const layer = Layer.effect(
                       glob: "allow",
                       webfetch: "allow",
                       websearch: "allow",
-                      codesearch: "allow", // kilocode_change
                       read: "allow",
                       repo_clone: "allow",
                       repo_overview: "allow",

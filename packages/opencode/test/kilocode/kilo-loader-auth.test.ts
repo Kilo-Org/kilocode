@@ -86,6 +86,8 @@ function layer() {
               id: "paid-model",
               name: "Paid Model",
               cost: { input: 1, output: 2 },
+              isFree: false,
+              mayTrainOnYourPrompts: true,
               limit: { context: 128000, output: 4096 },
             },
           },
@@ -129,11 +131,13 @@ it.live("assembles paid Kilo models without auth", () =>
       id: "paid-model",
       providerID: "kilo",
       cost: { input: 1, output: 2 },
+      isFree: false,
+      mayTrainOnYourPrompts: true,
     })
   }),
 )
 
-it.live("marks zero-cost Kilo models as free when the catalog omits isFree", () =>
+it.live("does not infer free status from zero catalog prices", () =>
   Effect.gen(function* () {
     const providers = yield* ModelsDev.Service.use((models) => models.get()).pipe(
       Effect.provide(layer()),
@@ -141,7 +145,7 @@ it.live("marks zero-cost Kilo models as free when the catalog omits isFree", () 
     )
     const kilo = Provider.fromModelsDevProvider(providers.kilo)
 
-    expect(kilo.models["free-model"].isFree).toBe(true)
+    expect(kilo.models["free-model"].isFree).toBeUndefined()
   }),
 )
 

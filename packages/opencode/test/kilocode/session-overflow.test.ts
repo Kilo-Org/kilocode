@@ -86,6 +86,27 @@ describe("Kilo auto-compaction threshold", () => {
 
     expect(isOverflow({ cfg: conf, model: mdl, tokens: tokens(150_000) })).toBe(false)
   })
+
+  test("uses normalized fields when the provider total disagrees", () => {
+    const conf = cfg({ threshold_percent: 75 })
+    const mdl = model({ context: 200_000, output: 32_000 })
+
+    expect(isOverflow({ cfg: conf, model: mdl, tokens: { ...tokens(80_000), total: 250_000 } })).toBe(false)
+  })
+
+  test("counts reasoning tokens", () => {
+    const conf = cfg({ threshold_percent: 75 })
+    const mdl = model({ context: 200_000, output: 32_000 })
+
+    expect(isOverflow({ cfg: conf, model: mdl, tokens: { ...tokens(149_999), reasoning: 1 } })).toBe(true)
+  })
+
+  test("falls back to provider total when normalized usage is unavailable", () => {
+    const conf = cfg({ threshold_percent: 75 })
+    const mdl = model({ context: 200_000, output: 32_000 })
+
+    expect(isOverflow({ cfg: conf, model: mdl, tokens: { ...tokens(0), total: 150_000 } })).toBe(true)
+  })
 })
 
 describe("Kilo request estimation", () => {

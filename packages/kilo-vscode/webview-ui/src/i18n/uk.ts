@@ -1406,8 +1406,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Керувати списком завдань. Дозволяє читання та оновлення внутрішнього списку завдань.",
   "settings.autoApprove.tool.webfetch": "Отримати URL. Дозволяє отримання вмісту з вказаного URL.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Шукати в мережі або коді. Дозволяє зовнішній веб-пошук або пошук коду.",
+  "settings.autoApprove.tool.websearch": "Шукати в інтернеті. Дозволяє зовнішній веб-пошук.",
   "settings.autoApprove.tool.doom_loop":
     "Запобігати повторюваним діям. Спрацьовує, коли той самий виклик інструменту повторюється з однаковими вхідними даними.",
 

@@ -39,6 +39,7 @@ import {
   buildTimeoutSignal,
   REQUEST_TIMEOUT_MS,
 } from "@/kilocode/provider/provider"
+import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
 // kilocode_change end
 
 const log = Log.create({ service: "provider" })
@@ -1554,6 +1555,7 @@ export const layer = Layer.effect(
         }
       }),
     )
+    yield* ModelsRefresh.watch(state) // kilocode_change
 
     const list = Effect.fn("Provider.list")(() => InstanceState.use(state, (s) => s.providers))
 

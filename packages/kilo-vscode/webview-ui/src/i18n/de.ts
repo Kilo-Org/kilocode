@@ -1470,8 +1470,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Aufgabenliste verwalten. Ermöglicht das Lesen und Aktualisieren der internen Aufgabenliste.",
   "settings.autoApprove.tool.webfetch": "URL abrufen. Erlaubt das Abrufen von Inhalten einer bestimmten URL.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Web oder Code durchsuchen. Ermöglicht die Durchführung externer Web- oder Code-Suchen.",
+  "settings.autoApprove.tool.websearch": "Das Web durchsuchen. Ermöglicht die Durchführung externer Web-Suchen.",
   "settings.autoApprove.tool.external_directory":
     "Zugriff auf Dateien außerhalb des Arbeitsbereichs. Wird ausgelöst, wenn auf Dateien außerhalb des aktuellen Projektverzeichnisses zugegriffen wird.",
   "settings.autoApprove.tool.doom_loop":

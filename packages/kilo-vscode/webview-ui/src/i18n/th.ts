@@ -1422,7 +1422,7 @@ export const dict = {
     "สอบถามเซิร์ฟเวอร์ภาษา อนุญาตให้เรียกใช้การสืบค้นเซิร์ฟเวอร์ภาษาสำหรับระบบอัจฉริยะของโค้ด",
   "settings.autoApprove.tool.todoreadwrite": "จัดการรายการงาน อนุญาตให้อ่านและอัปเดตรายการงานภายใน",
   "settings.autoApprove.tool.webfetch": "ดึงข้อมูลจาก URL อนุญาตให้ดึงเนื้อหาจาก URL ที่ระบุ",
-  "settings.autoApprove.tool.websearchcodesearch": "ค้นหาเว็บหรือโค้ด อนุญาตให้ทำการค้นหาเว็บหรือโค้ดภายนอก",
+  "settings.autoApprove.tool.websearch": "ค้นหาบนเว็บ อนุญาตให้ทำการค้นหาเว็บภายนอก",
   "settings.autoApprove.tool.external_directory":
     "เข้าถึงไฟล์นอกพื้นที่ทำงาน (Workspace) ถูกเรียกเมื่อเข้าถึงไฟล์ภายนอกไดเรกทอรีโปรเจ็กต์ปัจจุบัน",
   "settings.autoApprove.tool.doom_loop":
