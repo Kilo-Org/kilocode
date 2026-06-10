@@ -332,7 +332,7 @@ const AppContent: Component = () => {
               />
             </Match>
             <Match when={currentView() === "subAgentViewer"}>
-              <ChatView readonly />
+              <ChatView promptBoxId="sub-agent-viewer" />
             </Match>
           </Switch>
         }

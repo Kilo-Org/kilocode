@@ -3,7 +3,7 @@ import { KiloProvider } from "./KiloProvider"
 import type { KiloConnectionService } from "./services/cli-backend"
 
 /**
- * Opens a read-only editor panel to view a sub-agent session.
+ * Opens an editor panel to interact with a sub-agent session.
  *
  * Each child session ID maps to at most one panel — calling openPanel()
  * again with the same ID reveals the existing panel.
@@ -44,7 +44,7 @@ export class SubAgentViewerProvider implements vscode.Disposable {
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context)
     provider.resolveWebviewPanel(panel)
 
-    // Once the webview is ready, fetch the session and display it in read-only mode.
+    // Once the webview is ready, fetch the session and display it.
     const readyDisposable = panel.webview.onDidReceiveMessage(async (msg) => {
       if (msg.type !== "webviewReady") return
       readyDisposable.dispose()
