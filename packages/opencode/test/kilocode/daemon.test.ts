@@ -139,11 +139,14 @@ describe("daemon manager", () => {
     expect(daemon?.url).toBe(started.state?.url)
     expect(daemon?.headers.Authorization).toBe(`Basic ${daemon?.state.token}`)
 
-    process.env.KILO_NO_DAEMON = "1"
-    expect(await DaemonClient.connect()).toBeUndefined()
-    expect((await Daemon.status()).state?.pid).toBe(started.state?.pid)
-    if (original.disabled === undefined) delete process.env.KILO_NO_DAEMON
-    else process.env.KILO_NO_DAEMON = original.disabled
+    try {
+      process.env.KILO_NO_DAEMON = "1"
+      expect(await DaemonClient.connect()).toBeUndefined()
+      expect((await Daemon.status()).state?.pid).toBe(started.state?.pid)
+    } finally {
+      if (original.disabled === undefined) delete process.env.KILO_NO_DAEMON
+      else process.env.KILO_NO_DAEMON = original.disabled
+    }
 
     const stopped = await Daemon.stop()
     expect(stopped.stopped).toBe(true)
