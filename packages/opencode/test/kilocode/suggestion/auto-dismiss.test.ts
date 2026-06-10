@@ -24,7 +24,7 @@ describe("Suggestion.show auto-dismiss on queued followup", () => {
         const first = Effect.runPromise(
           KiloSessionPromptQueue.enqueue(
             sessionID,
-            MessageID.make("message_show_1"),
+            MessageID.make("msg_show_1"),
             Effect.gen(function* () {
               started.resolve()
               yield* Effect.promise(() => release.promise)
@@ -39,7 +39,7 @@ describe("Suggestion.show auto-dismiss on queued followup", () => {
         const second = Effect.runPromise(
           KiloSessionPromptQueue.enqueue(
             sessionID,
-            MessageID.make("message_show_2"),
+            MessageID.make("msg_show_2"),
             Effect.succeed("second" as const),
             Effect.succeed("second-cancelled" as const),
           ),

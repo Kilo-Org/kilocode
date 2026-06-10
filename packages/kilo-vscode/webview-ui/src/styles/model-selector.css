@@ -142,6 +142,18 @@
   font-variant-numeric: tabular-nums;
 }
 
+.model-preview-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.model-preview-group-title {
+  font-size: var(--kilo-font-size-11);
+  font-weight: 600;
+  color: var(--vscode-editor-foreground);
+}
+
 .model-preview-data-line {
   grid-column: 1 / -1;
   display: inline-flex;

@@ -437,7 +437,7 @@ describe("Capture", () => {
       requestId: "rA",
       input: {
         inputMessagesSnapshot: [{ role: "user", content: "..." }],
-        selectedContext: context("s1"),
+        selectedContext: context("ses_1"),
         prompt: "Summarize the conversation so far.",
       },
       output: { summary: "Discussed X.", assistantMessageId: "aA" },

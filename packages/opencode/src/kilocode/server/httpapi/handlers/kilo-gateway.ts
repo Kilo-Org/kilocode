@@ -39,7 +39,10 @@ import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { MessageTable, PartTable, SessionTable } from "@/session/session.sql"
 import { Session } from "@/session/session"
 import { Database } from "@/storage/db"
+import { Storage } from "@/storage/storage"
 import { AudioTranscriptionsBody, ClawStatus, EditBody, FimBody } from "../groups/kilo-gateway"
+import { baseKey } from "../../../session-portability/cumulative-diff"
+import { extractSessionDiffs, restoreSessionDiffs } from "../../../session-portability/session-diff-restore"
 
 const FIM_TIMEOUT_MS = 30_000
 const log = Log.create({ service: "kilo-gateway" })
@@ -440,23 +443,57 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       if (!fetched.ok) return jsonError(fetched.error, fetched.status)
       if (!fetched.data?.info?.id) return yield* Effect.fail(new HttpApiError.BadRequest({}))
 
+      const diffs = extractSessionDiffs(fetched.data)
       const bridge = yield* EffectBridge.make()
       return yield* Effect.tryPromise({
         try: () =>
           bridge.promise(
-            Effect.sync(() =>
-              importSessionToDb(fetched.data, {
-                Database,
-                Instance,
-                SessionTable,
-                MessageTable,
-                PartTable,
-                SessionToRow: Session.toRow,
-                Bus,
-                SessionCreatedEvent: Session.Event.Created,
-                Identifier,
-              }),
-            ),
+            Effect.gen(function* () {
+              if (diffs.length > 0) {
+                yield* Effect.try({
+                  try: () => restoreSessionDiffs({ directory: Instance.directory, diffs }),
+                  catch: (err) => err,
+                }).pipe(
+                  Effect.catch((err) =>
+                    Effect.sync(() => {
+                      logError("cloud/session/import/restore", err)
+                      return undefined
+                    }),
+                  ),
+                )
+              }
+
+              const imported = yield* Effect.sync(() =>
+                importSessionToDb(fetched.data, {
+                  Database,
+                  Instance,
+                  SessionTable,
+                  MessageTable,
+                  PartTable,
+                  SessionToRow: Session.toRow,
+                  Bus,
+                  SessionCreatedEvent: Session.Event.Created,
+                  Identifier,
+                }),
+              )
+
+              if (diffs.length > 0) {
+                yield* Storage.Service.use((storage) =>
+                  Effect.all([
+                    storage.write(baseKey(imported.id), diffs),
+                    storage.write(["session_diff", imported.id], diffs),
+                  ]),
+                ).pipe(
+                  Effect.catch((err) =>
+                    Effect.sync(() => {
+                      logError("cloud/session/import/diff", err)
+                    }),
+                  ),
+                )
+              }
+
+              return imported
+            }),
           ),
         catch: () => new HttpApiError.BadRequest({}),
       })

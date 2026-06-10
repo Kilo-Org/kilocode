@@ -14,7 +14,7 @@ import { tmpdir } from "../fixture/fixture"
 
 const base: Omit<Tool.Context, "ask"> = {
   sessionID: SessionID.make("ses_test-boundary-session"),
-  messageID: MessageID.make(""),
+  messageID: MessageID.make("msg_test-boundary-session"),
   callID: "",
   agent: "code",
   abort: AbortSignal.any([]),

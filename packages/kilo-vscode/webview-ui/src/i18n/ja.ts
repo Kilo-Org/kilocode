@@ -209,6 +209,9 @@ export const dict = {
   "model.preview.label.cached": "キャッシュ",
   "model.preview.label.average": "推定平均コスト",
   "model.preview.label.context": "コンテキスト",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "完了率",
+  "model.preview.label.costAttempt": "試行あたりのコスト",
   "model.preview.value.notSupported": "未対応",
   "model.preview.tooltip.average":
     "推定平均コストは、入力、出力、およびキャッシュ読み取りトークンの一般的な比率に基づいています。",
