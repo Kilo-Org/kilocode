@@ -14,7 +14,6 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  actions: read # kilocode_change - read prior test-result artifacts for historical test health
   contents: read
   checks: write
 
@@ -24,6 +23,12 @@ env:
 jobs:
   unit:
     name: unit (${{ matrix.settings.name }})
+    # kilocode_change start
+    permissions:
+      contents: read
+      checks: write
+      id-token: write # authenticate test-result uploads without a stored secret
+    # kilocode_change end
     strategy:
       fail-fast: false
       matrix:
@@ -96,23 +101,33 @@ jobs:
           fail_on_failure: false
 
       # kilocode_change start
-      - name: Report historical test health
-        if: ${{ always() && !cancelled() && hashFiles('packages/*/.artifacts/unit/junit.xml') != '' }}
-        uses: ctrf-io/github-test-reporter@0f299074936c32ccaab5be5230511f6b2b9080aa # v1.0.28
+      - name: Prepare test health reports
+        if: ${{ !cancelled() && hashFiles('packages/*/.artifacts/unit/junit.xml') != '' }}
+        run: |
+          rm -rf .artifacts/codecov-test-results
+          mkdir -p .artifacts/codecov-test-results
+          for report in packages/*/.artifacts/unit/junit.xml; do
+            package="${report#packages/}"
+            package="${package%%/*}"
+            cp "$report" ".artifacts/codecov-test-results/$package.xml"
+          done
+          if test -f packages/opencode/.artifacts/test-health/junit.xml; then
+            cp packages/opencode/.artifacts/test-health/junit.xml .artifacts/codecov-test-results/opencode.xml
+          fi
+
+      - name: Upload test health to Codecov
+        if: ${{ !cancelled() && hashFiles('.artifacts/codecov-test-results/*.xml') != '' }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
-          report-path: packages/*/.artifacts/unit/junit.xml
-          integrations-config: '{"junit-to-ctrf":{"enabled":true,"action":"convert"}}'
-          use-suite-name: true
-          insights-report: true
-          flaky-rate-report: true
-          fail-rate-report: true
-          slowest-report: true
-          upload-artifact: true
-          artifact-name: test-health-${{ matrix.settings.name }}
-          max-previous-runs-to-fetch: 100
-          annotate: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          use_oidc: true
+          report_type: test_results
+          files: .artifacts/codecov-test-results/*.xml
+          disable_search: true
+          disable_telem: true
+          flags: unit-${{ matrix.settings.name }}
+          name: unit-${{ matrix.settings.name }}
+          os: ${{ matrix.settings.name }}
+          fail_ci_if_error: false
       # kilocode_change end
 
       - name: Upload unit artifacts
@@ -123,11 +138,19 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7
-          path: packages/*/.artifacts/unit/junit.xml
+          # kilocode_change start
+          path: |
+            packages/*/.artifacts/unit/junit.xml
+            packages/opencode/.artifacts/test-health/junit.xml
+          # kilocode_change end
 
   # kilocode_change start
   jetbrains:
     name: jetbrains
+    permissions:
+      contents: read
+      checks: write
+      id-token: write
     runs-on: blacksmith-4vcpu-ubuntu-2404
     defaults:
       run:
@@ -166,23 +189,19 @@ jobs:
           include_time_in_summary: true
           fail_on_failure: false
 
-      - name: Report historical JetBrains test health
-        if: ${{ always() && !cancelled() && hashFiles('packages/kilo-jetbrains/.artifacts/unit/junit.xml') != '' }}
-        uses: ctrf-io/github-test-reporter@0f299074936c32ccaab5be5230511f6b2b9080aa # v1.0.28
+      - name: Upload JetBrains test health to Codecov
+        if: ${{ !cancelled() && hashFiles('packages/kilo-jetbrains/.artifacts/unit/junit.xml') != '' }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
-          report-path: packages/kilo-jetbrains/.artifacts/unit/junit.xml
-          integrations-config: '{"junit-to-ctrf":{"enabled":true,"action":"convert"}}'
-          use-suite-name: true
-          insights-report: true
-          flaky-rate-report: true
-          fail-rate-report: true
-          slowest-report: true
-          upload-artifact: true
-          artifact-name: test-health-jetbrains
-          max-previous-runs-to-fetch: 100
-          annotate: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          use_oidc: true
+          report_type: test_results
+          files: packages/kilo-jetbrains/.artifacts/unit/junit.xml
+          disable_search: true
+          disable_telem: true
+          flags: jetbrains-linux
+          name: jetbrains-linux
+          os: linux
+          fail_ci_if_error: false
 
       - name: Upload JetBrains unit artifacts
         if: always()

@@ -130,13 +130,12 @@ const pad = String(files.length).length
 // Run a single test file
 // ---------------------------------------------------------------------------
 
-async function run(file: string): Promise<Result> {
+async function run(file: string, attempt = 1): Promise<Result> {
   const target = path.join("test", file)
   const cmd = ["bun", "test", target, "--timeout", String(timeout)]
 
   if (ci) {
-    const name = file.replace(/[/\\]/g, "_") + ".xml"
-    cmd.push("--reporter=junit", `--reporter-outfile=${path.join(xmldir, name)}`)
+    cmd.push("--reporter=junit", `--reporter-outfile=${path.join(xmldir, reportName(file, attempt))}`)
   }
 
   const start = performance.now()
@@ -169,7 +168,7 @@ async function run(file: string): Promise<Result> {
     stderr,
     duration: performance.now() - start,
     timedout: killed.value,
-    attempts: 1,
+    attempts: attempt,
   }
 }
 
@@ -215,6 +214,7 @@ console.log(`\nRunning ${bold(String(files.length))} test files with concurrency
 
 const start = performance.now()
 const results: Result[] = []
+const attempts: Result[] = []
 const queue = [...files]
 const stopped = { value: false }
 
@@ -222,14 +222,14 @@ const workers = Array.from({ length: Math.min(concurrency, files.length) }, asyn
   while (queue.length > 0 && !stopped.value) {
     const file = queue.shift()!
     let result = await run(file)
+    attempts.push(result)
     // Retry failing files up to `retries` extra times. Bugs still fail on every
     // attempt; contention-based flakes (port races, slow FS, slow spawn) recover.
     // Preserve the last attempt's stdout/stderr/duration so a truly broken file
     // still shows a useful diagnostic.
     while (!result.passed && result.attempts <= retries && !stopped.value) {
-      const retry = await run(file)
-      retry.attempts = result.attempts + 1
-      result = retry
+      result = await run(file, result.attempts + 1)
+      attempts.push(result)
     }
     results.push(result)
     report(result)
@@ -319,7 +319,13 @@ if (flaky.length > 0) {
 // ---------------------------------------------------------------------------
 
 if (ci) {
-  await merge()
+  await merge(results, "unit")
+  // Keep first-attempt outcomes separate so analytics can measure reliability
+  // without changing the retry-based CI result developers already rely on.
+  await merge(
+    attempts.filter((result) => result.attempts === 1),
+    "test-health",
+  )
   await fs.rm(xmldir, { recursive: true, force: true }).catch((err) => {
     console.error("cleanup failed:", err)
   })
@@ -331,16 +337,22 @@ process.exit(failures.length > 0 ? 1 : 0)
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function merge() {
-  const dir = path.join(root, ".artifacts", "unit")
+function reportName(file: string, attempt: number) {
+  return `${file.replace(/[/\\]/g, "_")}.attempt-${attempt}.xml`
+}
+
+async function merge(entries: Result[], target: string) {
+  const dir = path.join(root, ".artifacts", target)
   await fs.mkdir(dir, { recursive: true })
 
   const suites: string[] = []
   const counts = { tests: 0, failures: 0, errors: 0 }
+  const records = new Map(entries.map((result) => [result.file, result]))
 
   for (const file of files) {
-    const name = file.replace(/[/\\]/g, "_") + ".xml"
-    const fpath = path.join(xmldir, name)
+    const result = records.get(file)
+    if (!result) continue
+    const fpath = path.join(xmldir, reportName(file, result.attempts))
     const found = await Bun.file(fpath).exists()
 
     if (found) {
@@ -362,8 +374,7 @@ async function merge() {
     }
 
     // No valid XML produced - generate synthetic entry for failed files
-    const result = results.find((r) => r.file === file)
-    if (!result || result.passed) continue
+    if (result.passed) continue
 
     const secs = (result.duration / 1000).toFixed(3)
     const msg = result.timedout
@@ -380,22 +391,6 @@ async function merge() {
     )
     counts.tests++
     counts.failures++
-  }
-
-  // Preserve pass-on-retry evidence in the standard Surefire JUnit form.
-  // Historical reporters can then track file-level flakes instead of seeing
-  // only the final green attempt.
-  for (const result of flaky) {
-    const secs = (result.duration / 1000).toFixed(3)
-    const msg = `Failed before passing on attempt ${result.attempts} of ${retries + 1}`
-    suites.push(
-      `  <testsuite name="${esc(result.file)} retry" tests="1" failures="0" errors="0" time="${secs}">\n` +
-        `    <testcase name="@file retry" classname="${esc(result.file)}" time="${secs}">\n` +
-        `      <flakyFailure message="${esc(msg)}">${esc(msg)}</flakyFailure>\n` +
-        `    </testcase>\n` +
-        `  </testsuite>`,
-    )
-    counts.tests++
   }
 
   const body = [
