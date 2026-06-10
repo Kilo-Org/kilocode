@@ -207,7 +207,13 @@ const installSkill = Effect.fn("Marketplace.installSkill")(function* (item: Skil
     if (!response.ok) return { success: false, slug: item.id, error: `Download failed: ${response.status}` }
     await fs.writeFile(tarball, Buffer.from(await response.arrayBuffer()))
     await fs.mkdir(staging, { recursive: true })
-    await Process.run(["tar", "-xzf", archive, "--strip-components=1", "-C", stage], { cwd: base })
+    const cmd = ["tar", "-xzf", archive, "--strip-components=1", "-C", stage]
+    const extracted = await Process.run(cmd, { cwd: base, nothrow: true })
+    if (extracted.code !== 0) {
+      if (extracted.stderr.toString().includes("Cannot create symlink"))
+        return { success: false, slug: item.id, error: "Skill archive contains unsafe paths" }
+      throw new Process.RunFailedError(cmd, extracted.code, extracted.stdout, extracted.stderr)
+    }
     if ((await escaped(staging)).length > 0)
       return { success: false, slug: item.id, error: "Skill archive contains unsafe paths" }
     if (!(await Bun.file(path.join(staging, "SKILL.md")).exists()))
