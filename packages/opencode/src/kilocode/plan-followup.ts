@@ -79,6 +79,61 @@ export namespace PlanFollowup {
     return input.map((item) => `- ${icons[item.status] ?? "[ ]"} ${item.content}`).join("\n")
   }
 
+  function parseTodos(input: unknown): Todo.Info[] {
+    if (!Array.isArray(input)) return []
+    return input.flatMap((item) => {
+      if (!item || typeof item !== "object") return []
+      const todo = item as Record<string, unknown>
+      if (typeof todo.content !== "string") return []
+      if (typeof todo.status !== "string") return []
+      if (typeof todo.priority !== "string") return []
+      return [{ content: todo.content, status: todo.status, priority: todo.priority }]
+    })
+  }
+
+  function outputTodos(text: string): Todo.Info[] {
+    try {
+      return parseTodos(JSON.parse(text) as unknown)
+    } catch {
+      return []
+    }
+  }
+
+  function messageTodos(input: MessageV2.WithParts[]): Todo.Info[] {
+    for (const msg of input.slice().reverse()) {
+      for (const part of msg.parts.slice().reverse()) {
+        if (part.type !== "tool") continue
+        if (part.tool !== "todowrite") continue
+        if (part.state.status !== "completed") continue
+        const meta = parseTodos(part.state.metadata.todos)
+        if (meta.length) return meta
+        const output = outputTodos(part.state.output)
+        if (output.length) return output
+      }
+    }
+    return []
+  }
+
+  function planTodos(plan: string): Todo.Info[] {
+    const match = /(?:^|\n)## Implementation\s*\n([\s\S]*?)(?=\n## |\n# |$)/i.exec(plan)
+    const text = match?.[1]
+    if (!text) return []
+    return text.split("\n").flatMap((line) => {
+      const item = /^\d+\.\s+(.*\S)\s*$/.exec(line)
+      const content = item?.[1]?.replaceAll("`", "").trim()
+      if (!content) return []
+      return [{ content, status: "pending", priority: "medium" }]
+    })
+  }
+
+  async function resolveTodos(input: { sessionID: SessionID; messages: MessageV2.WithParts[]; plan: string }) {
+    const todos = await PlanFollowupRuntime.todo.get(input.sessionID)
+    if (todos.length) return todos
+    const messages = messageTodos(input.messages)
+    if (messages.length) return messages
+    return planTodos(input.plan)
+  }
+
   function handover(input: { plan: string; sessionID: SessionID; todos?: Todo.Info[] }) {
     const text = `${PLAN_PREFIX}\n\n${input.plan}\n\nThis plan was created in session ${input.sessionID}. Use \`kilo_local_recall\` to retrieve additional context from that session only if needed.`
     const todos = formatTodos(input.todos ?? [])
@@ -265,6 +320,7 @@ export namespace PlanFollowup {
   async function startNew(input: {
     sessionID: SessionID
     plan: string
+    messages: MessageV2.WithParts[]
     model: MessageV2.User["model"]
   }) {
     const code = await resolveCodeModel({
@@ -291,7 +347,7 @@ export namespace PlanFollowup {
           })
 
         try {
-          const todos = await PlanFollowupRuntime.todo.get(input.sessionID)
+          const todos = await resolveTodos({ sessionID: input.sessionID, messages: input.messages, plan: input.plan })
 
           await inject({
             sessionID: next.id,
@@ -372,6 +428,7 @@ export namespace PlanFollowup {
       await startNew({
         sessionID: input.sessionID,
         plan,
+        messages: input.messages,
         model: user.model,
       })
       return "break"
@@ -382,7 +439,7 @@ export namespace PlanFollowup {
       const code = await resolveCodeModel({
         model: user.model,
       })
-      const todos = await PlanFollowupRuntime.todo.get(input.sessionID)
+      const todos = await resolveTodos({ sessionID: input.sessionID, messages: input.messages, plan })
       const msg = await inject({
         sessionID: input.sessionID,
         agent: "code",

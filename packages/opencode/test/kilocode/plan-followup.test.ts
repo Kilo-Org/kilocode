@@ -481,6 +481,42 @@ describe("plan follow-up", () => {
       expect(part.synthetic).toBe(true)
     }))
 
+  test("ask - derives handover todos from the implementation section", () =>
+    withInstance(async () => {
+      const get = spyOn(PlanFollowupRuntime, "agent").mockResolvedValue(undefined as any)
+      using _ = {
+        [Symbol.dispose]() {
+          get.mockRestore()
+        },
+      }
+      const plan = `# Hidden Reviewer Agent\n\n## Implementation\n\n1. Add a minimal reviewer prompt\n2. Add a built-in hidden reviewer agent\n3. Route local review commands to reviewer\n\n## Validation\n\nRun targeted tests.`
+      const seeded = await seed({ text: plan })
+      const pending = PlanFollowup.ask({
+        question,
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      await question.reply({
+        requestID: item.id,
+        answers: [[PlanFollowup.ANSWER_CONTINUE]],
+      })
+
+      await expect(pending).resolves.toBe("continue")
+
+      const user = await latestUser(seeded.sessionID)
+      const part = user?.parts.find((item) => item.type === "text")
+      expect(part?.type).toBe("text")
+      if (!part || part.type !== "text") return
+      expect(part.text).toBe(
+        `Implement:\n\n${plan}\n\nThis plan was created in session ${seeded.sessionID}. Use \`kilo_local_recall\` to retrieve additional context from that session only if needed.\n\n## Todo List\n\n- [ ] Add a minimal reviewer prompt\n- [ ] Add a built-in hidden reviewer agent\n- [ ] Route local review commands to reviewer`,
+      )
+    }))
+
   test("ask - retargets prompt queue so injected message is visible in scope", () =>
     withInstance(async () => {
       const { KiloSessionPromptQueue } = await import("../../src/kilocode/session/prompt-queue")
