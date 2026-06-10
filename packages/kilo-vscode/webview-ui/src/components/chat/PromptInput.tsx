@@ -46,7 +46,7 @@ import {
   isPromptBusy,
   isPathMention,
 } from "./prompt-input-utils"
-import type { ReviewComment, TextPart } from "../../types/messages"
+import type { FileAttachment, ReviewComment, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import { pendingDraftKey, scopeDraftKey, sessionDraftKey } from "../../utils/prompt-drafts"
 
@@ -62,6 +62,17 @@ function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]
     map.set(item.id, item)
   }
   return [...map.values()]
+}
+
+function toImages(files: FileAttachment[] | undefined) {
+  return (files ?? [])
+    .filter((f) => f.mime.startsWith("image/") && f.url.startsWith("data:"))
+    .map((f) => ({
+      id: crypto.randomUUID(),
+      filename: f.filename ?? "image",
+      mime: f.mime,
+      dataUrl: f.url,
+    }))
 }
 
 interface PromptInputProps {
@@ -388,8 +399,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type === "setChatBoxMessage") {
+      const imgs = toImages(message.files)
       setText(message.text)
       mention.seedFromText(message.text)
+      imageAttach.replace(imgs)
+      saveDraft(draftKey(), message.text, reviewComments(), imgs)
       if (textareaRef) {
         textareaRef.value = message.text
         adjustHeight()
@@ -445,17 +459,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             textareaRef.focus()
           }
         }
-        const images = (failed.files ?? [])
-          .filter((f) => f.mime.startsWith("image/") && f.url.startsWith("data:"))
-          .map((f) => ({
-            id: crypto.randomUUID(),
-            filename: f.filename ?? "image",
-            mime: f.mime,
-            dataUrl: f.url,
-          }))
-        if (images.length > 0) {
-          imageAttach.replace(images)
-          imageDrafts.set(target, images)
+        const imgs = toImages(failed.files)
+        if (imgs.length > 0) {
+          imageAttach.replace(imgs)
+          imageDrafts.set(target, imgs)
         }
       }
     }
