@@ -306,6 +306,24 @@ describe("Kilo marketplace reusable state", () => {
     expect(out).toEqual({ success: false, slug: "starter", error: "Skill archive contains unsafe paths" })
   })
 
+  it("rejects skill archives with broken symlinks", async () => {
+    await using tmp = await tmpdir()
+    const pkg = path.join(tmp.path, "pkg")
+    await fs.mkdir(pkg, { recursive: true })
+    await Bun.write(path.join(pkg, "SKILL.md"), "# Skill")
+    await fs.symlink(path.join(tmp.path, "missing"), path.join(pkg, "broken"))
+    const body = await tar(tmp.path, "pkg")
+    setFetch(() => new Response(body))
+
+    const out = await Effect.runPromise(
+      Installer.install(skill({}), { id: "starter", type: "skill", target: "project" }, { directory: tmp.path, worktree: tmp.path }).pipe(
+        Effect.provide(cfg),
+      ),
+    )
+
+    expect(out).toEqual({ success: false, slug: "starter", error: "Skill archive contains unsafe paths" })
+  })
+
   it("uses install payload item when the catalog cannot resolve it", async () => {
     const updates: Config.Info[] = []
     setFetch(() => new Response(JSON.stringify({ items: [] })))

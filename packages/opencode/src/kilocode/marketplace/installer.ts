@@ -3,7 +3,7 @@ import path from "path"
 import { Config } from "@/config/config"
 import { AgentBuilder } from "@/kilocode/agent/builder"
 import { Process } from "@/util/process"
-import { Effect } from "effect"
+import { Cause, Effect } from "effect"
 import type { AgentItem, InstallPayload, Item, McpItem, Method, SkillItem, Target } from "./types"
 import * as Paths from "./paths"
 
@@ -103,7 +103,11 @@ async function escaped(dir: string): Promise<string[]> {
         continue
       }
       if (item.isSymbolicLink()) {
-        const real = await fs.realpath(full)
+        const real = await fs.realpath(full).catch(() => undefined)
+        if (!real) {
+          out.push(full)
+          continue
+        }
         if (!inside(real, root)) {
           out.push(full)
           continue
@@ -211,7 +215,10 @@ const installSkill = Effect.fn("Marketplace.installSkill")(function* (item: Skil
     await fs.rename(staging, dir)
     return { success: true, slug: item.id, filePath: path.join(dir, "SKILL.md"), line: 1 }
   }).pipe(
-    Effect.catch((err) => Effect.succeed({ success: false, slug: item.id, error: String(err) })),
+    Effect.catch((err) => {
+      const cause = Cause.isUnknownError(err) ? err.cause : err
+      return Effect.succeed({ success: false, slug: item.id, error: String(cause) })
+    }),
     Effect.ensuring(
       Effect.promise(() =>
         Promise.all([fs.rm(staging, { recursive: true, force: true }), fs.rm(tarball, { force: true })]).then(
