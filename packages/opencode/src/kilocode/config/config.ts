@@ -66,7 +66,7 @@ export namespace KilocodeConfig {
    *
    * This mirrors the Kilo project-config load chain: prefer existing config files
    * in ancestor config directories, then existing root config files, and create
-   * `.kilo/kilo.json` when no project config exists yet.
+   * `.kilo/kilo.jsonc` when no project config exists yet.
    */
   export const projectConfigUpdateTarget = Effect.fn("KilocodeConfig.projectConfigUpdateTarget")(function* (input: {
     fs: AppFileSystem.Interface
@@ -99,6 +99,7 @@ export namespace KilocodeConfig {
     const patch = input.writable(input.config)
 
     if (file.endsWith(".jsonc")) {
+      if (source === undefined && Object.keys(mergeConfig({}, patch)).length === 0) return
       const updated = input.patch(before, patch)
       yield* input.fs.writeWithDirs(file, updated).pipe(Effect.orDie)
       return

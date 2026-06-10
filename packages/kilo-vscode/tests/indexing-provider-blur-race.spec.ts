@@ -110,11 +110,18 @@ test("enabling Kilo before its catalog loads does not store an empty model", asy
   await page.goto(storyUrl(KILO_LOADING_STORY_ID), { waitUntil: "load" })
   await disableAnimations(page)
   await page.waitForSelector("#storybook-root *", { state: "attached" })
-  await page.locator('[data-component="switch"] [data-slot="switch-control"]').nth(1).click()
+  await page.getByRole("button", { name: "Local", exact: true }).click()
+  await page
+    .locator('[data-slot="settings-row"]', { hasText: "Enable for this project" })
+    .locator('[data-slot="switch-control"]')
+    .click()
   await verify()
 
   await page.goto(storyUrl(KILO_LOADING_STORY_ID), { waitUntil: "load" })
   await page.waitForSelector("#storybook-root *", { state: "attached" })
-  await page.locator('[data-component="switch"] [data-slot="switch-control"]').first().click()
+  await page
+    .locator('[data-slot="settings-row"]', { hasText: "Enable globally" })
+    .locator('[data-slot="switch-control"]')
+    .click()
   await verify()
 })
