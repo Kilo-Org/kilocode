@@ -4,13 +4,33 @@
 
 ### Patch Changes
 
-- [#9976](https://github.com/Kilo-Org/kilocode/pull/9976) [`ae6f3c0`](https://github.com/Kilo-Org/kilocode/commit/ae6f3c0e06e450a227ffbd024a52b689b5749d16) - Fix session transcript colors after switching JetBrains IDE themes.
-
-- [#9976](https://github.com/Kilo-Org/kilocode/pull/9976) [`8c06a3b`](https://github.com/Kilo-Org/kilocode/commit/8c06a3b7840960798f1c4f4792b8eed1d366c3c4) - Improve JetBrains session UI stability and responsiveness during streaming updates and collapsed transcript rendering.
-
-- [#9976](https://github.com/Kilo-Org/kilocode/pull/9976) [`87b0cf1`](https://github.com/Kilo-Org/kilocode/commit/87b0cf15ddfe29503fa0a4d72067bce050a1c432) - Improve JetBrains session timeline colors to follow semantic theme keys.
-
 ## [Unreleased]
+
+## [7.0.1-rc.8] - 2026-06-09
+
+### Added
+
+- Display search results and tool output in clearer, more readable JetBrains session cards.
+
+### Fixed
+
+- Improve session transcript scrolling so streaming updates, expanded cards, reasoning blocks, and mouse wheel scrolling preserve the user's position more reliably.
+- Make session transcripts easier to scan with tighter spacing, aligned icons, cleaner card outlines, relative search paths, and less visual noise.
+- Keep completed reasoning blocks expanded after a response finishes.
+- Improve session stability during long-running or cancelled prompts.
+- Restore automatic session titles, project skill discovery, and subagent isolation in forked sessions.
+- Restore imported cloud session diffs.
+- Compact sessions before the configured context limit is exceeded.
+
+### Changed
+
+- Update the bundled Kilo CLI runtime with the latest fixes used by the JetBrains plugin.
+
+## [7.0.1-rc.7] - 2026-06-04
+
+### Fixed
+
+- Fixed JetBrains release notes rendering so notes from multiple releases display correctly.
 
 ## [7.0.1-rc.6] - 2026-06-03
 

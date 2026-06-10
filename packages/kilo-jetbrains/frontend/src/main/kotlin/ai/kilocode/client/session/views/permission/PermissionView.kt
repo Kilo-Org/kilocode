@@ -10,14 +10,13 @@ import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.ui.style.SessionUiStyle.View.SESSION_VIEW_GAP
+import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
 import ai.kilocode.rpc.dto.PermissionReplyDto
-import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.ColorUtil
@@ -68,7 +67,7 @@ class PermissionView(
         isOpaque = false
         isVisible = false
 
-        card.setHeaderIcon(AllIcons.General.Warning, KiloBundle.message("session.permission.title"))
+        card.setHeaderIcon(SessionViewIcons.warning, KiloBundle.message("session.permission.title"))
         card.setContent(body)
         card.setActions(listOf(
             BaseQuestionView.Action(ID_DENY, KiloBundle.message("session.permission.deny"), primary = false) { decide("reject") },
@@ -128,7 +127,7 @@ class PermissionView(
 
     /** Adds a three-column permission detail row: tool, target, and changes. */
     private fun addDetailRow(action: String, target: String?, diffs: List<PermissionFileDiff>) {
-        val row = JPanel(BorderLayout(SESSION_VIEW_GAP, 0)).apply {
+        val row = JPanel(BorderLayout(SessionUiStyle.View.Layout.GAP, 0)).apply {
             isOpaque = false
         }
 
@@ -174,7 +173,7 @@ class PermissionView(
     private fun applyTargetPane(pane: JBHtmlPane) {
         pane.font = style.transcriptFont
         pane.foreground = style.editorForeground
-        pane.background = SessionUiStyle.View.headerHover()
+        pane.background = SessionUiStyle.View.Surface.headerHoverBgColor()
         pane.reloadCssStylesheets()
     }
 
@@ -182,7 +181,7 @@ class PermissionView(
         val sheet = StyleSheet()
         val font = style.transcriptFont
         val fg = ColorUtil.toHtmlColor(style.editorForeground)
-        val bg = ColorUtil.toHtmlColor(SessionUiStyle.View.headerHover())
+        val bg = ColorUtil.toHtmlColor(SessionUiStyle.View.Surface.headerHoverBgColor())
         val family = font.name.replace("\\", "\\\\").replace("'", "\\'")
         sheet.addRule("body { margin: 0; padding: 0 ${UiStyle.Gap.xs()}px; color: $fg; background: $bg; font-family: '$family', monospace; font-size: ${font.size}pt }")
         sheet.addRule("pre { margin: 0; white-space: pre-wrap; font-family: '$family', monospace; font-size: ${font.size}pt }")

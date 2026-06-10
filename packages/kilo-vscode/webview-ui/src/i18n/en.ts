@@ -210,6 +210,9 @@ export const dict = {
   "model.preview.label.cached": "Cached",
   "model.preview.label.average": "Est. Average Cost",
   "model.preview.label.context": "Context",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Completion",
+  "model.preview.label.costAttempt": "Cost / attempt",
   "model.preview.value.notSupported": "Not supported",
   "model.preview.tooltip.average":
     "The estimated average cost is based on a typical ratio of input, output, and cache read tokens.",

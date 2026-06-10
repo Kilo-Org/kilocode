@@ -26,6 +26,7 @@ import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.openapi.util.Disposer
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -73,6 +74,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
+            Disposer.dispose(ui)
             scope.cancel()
         } finally {
             super.tearDown()

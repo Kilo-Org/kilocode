@@ -1,3 +1,4 @@
+import { remapChildren } from "@/kilocode/session/fork"
 import { SessionID } from "@/session/schema"
 import { ForkPayload } from "@/server/routes/instance/httpapi/groups/session"
 import { Effect, Schema } from "effect"
@@ -15,19 +16,24 @@ export namespace KiloSessionHttpApi {
     request: HttpServerRequest.HttpServerRequest
   }
 
-  export function forkRaw<A, E, R>(fork: (ctx: Input) => Effect.Effect<A, E, R>) {
+  export function forkRaw<A extends { id: SessionID }, E, R>(fork: (ctx: Input) => Effect.Effect<A, E, R>) {
     return Effect.fn("KiloSessionHttpApi.forkRaw")(function* (ctx: Raw) {
       const body = yield* Effect.orDie(ctx.request.text)
-      if (body.trim().length === 0) return yield* fork({ params: ctx.params, payload: {} })
+      const payload = yield* Effect.gen(function* () {
+        if (body.trim().length === 0) return {}
 
-      const json = yield* Effect.try({
-        try: () => JSON.parse(body) as unknown,
-        catch: () => new HttpApiError.BadRequest({}),
+        const json = yield* Effect.try({
+          try: () => JSON.parse(body) as unknown,
+          catch: () => new HttpApiError.BadRequest({}),
+        })
+        return yield* Schema.decodeUnknownEffect(ForkPayload)(json).pipe(
+          Effect.mapError(() => new HttpApiError.BadRequest({})),
+        )
       })
-      const payload = yield* Schema.decodeUnknownEffect(ForkPayload)(json).pipe(
-        Effect.mapError(() => new HttpApiError.BadRequest({})),
-      )
-      return yield* fork({ params: ctx.params, payload })
+      const session = yield* fork({ params: ctx.params, payload })
+      const remapped = new Map<string, SessionID>([[ctx.params.sessionID, session.id]])
+      yield* remapChildren(session.id, remapped).pipe(Effect.orDie)
+      return session
     })
   }
 }

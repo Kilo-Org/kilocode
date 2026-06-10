@@ -212,6 +212,9 @@ export const dict = {
   "model.preview.label.cached": "En cache",
   "model.preview.label.average": "Coût moyen est.",
   "model.preview.label.context": "Contexte",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Réussite",
+  "model.preview.label.costAttempt": "Coût / tentative",
   "model.preview.value.notSupported": "Non pris en charge",
   "model.preview.tooltip.average":
     "Le coût moyen estimé est basé sur un ratio typique de jetons d'entrée, de sortie et de lecture en cache.",

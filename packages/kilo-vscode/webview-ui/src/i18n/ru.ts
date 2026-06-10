@@ -209,6 +209,9 @@ export const dict = {
   "model.preview.label.cached": "В кэше",
   "model.preview.label.average": "Средняя стоимость",
   "model.preview.label.context": "Контекст",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Выполнение",
+  "model.preview.label.costAttempt": "Стоимость / попытка",
   "model.preview.value.notSupported": "Не поддерживается",
   "model.preview.tooltip.average":
     "Примерная средняя стоимость основана на типичном соотношении токенов ввода, вывода и чтения из кэша.",

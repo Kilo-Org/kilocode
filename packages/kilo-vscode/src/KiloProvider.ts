@@ -500,7 +500,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private setSidebarVisible(visible: boolean): void {
     this.setStreamVisibility(visible)
     vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarVisible", visible)
-    this.opts.onSidebarVisibilityChange?.(visible)
   }
 
   /** Resolve a WebviewPanel for displaying Kilo in an editor tab. */
@@ -1166,7 +1165,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       // Subscribe to SSE events for this webview (filtered by tracked sessions)
       this.unsubscribeEvent = this.connectionService.onEventFiltered(
-        (event) => {
+        (event, directory) => {
+          // Preserve the request origin even when a worktree session is not tracked yet.
+          // Manual replies must target the Instance that owns the pending permission.
+          if (event.type === "permission.asked" && directory) {
+            this.permissionDirectories.set(event.properties.id, directory)
+          }
+          if (event.type === "permission.replied") {
+            this.permissionDirectories.delete(event.properties.requestID)
+          }
+
           // Remote status events are global and should always pass through
           if (event.type === "kilo-sessions.remote-status-changed") return true
           const sessionId = this.connectionService.resolveEventSessionId(event)
@@ -2874,13 +2882,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // This must come first: the trackedSessionIds guard below would otherwise
     // let a foreign session through if it was accidentally tracked.
     if (isEventFromForeignProject(event, this.projectID)) return
-
-    if (event.type === "permission.asked" && directory) {
-      this.permissionDirectories.set(event.properties.id, directory)
-    }
-    if (event.type === "permission.replied") {
-      this.permissionDirectories.delete(event.properties.requestID)
-    }
 
     if (event.type === "mcp.browser.open.failed") {
       McpOAuth.openMcpOAuthUrlOnce(event.properties.url)

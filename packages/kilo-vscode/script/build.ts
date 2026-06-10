@@ -69,13 +69,19 @@ for (const config of targets) {
 
   const sourceBinary = join(cliDistDir, config.cliDir, "bin", config.binary)
   const targetBinary = join(binDir, config.binary)
+  const sourceSnapshot = join(cliDistDir, config.cliDir, "bin", "models-snapshot.json")
+  const targetSnapshot = join(binDir, "models-snapshot.json")
 
   if (!existsSync(sourceBinary)) {
     throw new Error(`CLI binary not found at ${sourceBinary}`)
   }
+  if (!existsSync(sourceSnapshot)) {
+    throw new Error(`CLI models snapshot not found at ${sourceSnapshot}`)
+  }
 
   console.log(`  📥 Copying binary from ${config.cliDir}/bin/${config.binary}...`)
   await $`cp ${sourceBinary} ${targetBinary}`
+  await $`cp ${sourceSnapshot} ${targetSnapshot}`
   await copyTreeSitterResources(sourceBinary, targetBinary)
 
   if (config.binary !== "kilo.exe") {

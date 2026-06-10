@@ -4,6 +4,12 @@ JetBrains releases are locked by an immediate `jetbrains/v<version>` tag, then g
 
 The published code comes from `jetbrains/v<version>`. Marketplace and GitHub release notes come from the reviewed changelog merged in the release PR.
 
+## Skill-Assisted Release
+
+Maintainers can use the Kilo `release-jetbrains` skill to drive this process from a version request such as `next rc` or an explicit version. The skill resolves and confirms the version, dispatches and watches the prepare workflow, helps produce a filtered human-readable JetBrains/CLI changelog draft, commits the reviewed changelog to the release PR, and watches publishing after the PR is merged.
+
+The skill lives at `.kilo/skills/release-jetbrains/SKILL.md`. It does not move or recreate release tags, and merge permission is only required if the user explicitly asks the skill to merge the release PR automatically.
+
 ## Create Release Tag And PR
 
 1. Open the GitHub Actions workflow:

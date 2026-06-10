@@ -209,6 +209,9 @@ export const dict = {
   "model.preview.label.cached": "W pamięci podręcznej",
   "model.preview.label.average": "Szac. średni koszt",
   "model.preview.label.context": "Kontekst",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Ukończenie",
+  "model.preview.label.costAttempt": "Koszt / próbę",
   "model.preview.value.notSupported": "Nieobsługiwane",
   "model.preview.tooltip.average":
     "Szacowany średni koszt opiera się na typowym stosunku tokenów wejściowych, wyjściowych i pobranych z pamięci podręcznej.",

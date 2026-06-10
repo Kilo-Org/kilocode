@@ -210,6 +210,9 @@ export const dict = {
   "model.preview.label.cached": "Gecachet",
   "model.preview.label.average": "Gesch. gem. kosten",
   "model.preview.label.context": "Context",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Voltooiing",
+  "model.preview.label.costAttempt": "Kosten / poging",
   "model.preview.value.notSupported": "Niet ondersteund",
   "model.preview.tooltip.average":
     "De geschatte gemiddelde kosten zijn gebaseerd op een typische verhouding van input-, output- en cache-leestokens.",
