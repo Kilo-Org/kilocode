@@ -6,6 +6,26 @@
 
 ## [Unreleased]
 
+## [7.0.1-rc.8] - 2026-06-09
+
+### Added
+
+- Display search results and tool output in clearer, more readable JetBrains session cards.
+
+### Fixed
+
+- Improve session transcript scrolling so streaming updates, expanded cards, reasoning blocks, and mouse wheel scrolling preserve the user's position more reliably.
+- Make session transcripts easier to scan with tighter spacing, aligned icons, cleaner card outlines, relative search paths, and less visual noise.
+- Keep completed reasoning blocks expanded after a response finishes.
+- Improve session stability during long-running or cancelled prompts.
+- Restore automatic session titles, project skill discovery, and subagent isolation in forked sessions.
+- Restore imported cloud session diffs.
+- Compact sessions before the configured context limit is exceeded.
+
+### Changed
+
+- Update the bundled Kilo CLI runtime with the latest fixes used by the JetBrains plugin.
+
 ## [7.0.1-rc.7] - 2026-06-04
 
 ### Fixed
