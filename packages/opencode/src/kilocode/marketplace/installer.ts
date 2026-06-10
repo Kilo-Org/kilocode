@@ -1,5 +1,4 @@
 import fs from "fs/promises"
-import os from "os"
 import path from "path"
 import { Config } from "@/config/config"
 import { AgentBuilder } from "@/kilocode/agent/builder"
@@ -7,6 +6,13 @@ import { Process } from "@/util/process"
 import { Effect } from "effect"
 import type { AgentItem, InstallPayload, Item, McpItem, Method, SkillItem, Target } from "./types"
 import * as Paths from "./paths"
+
+type Agent = NonNullable<Config.Info["agent"]>[string]
+type Mcp = NonNullable<Config.Info["mcp"]>[string]
+type Patch = Omit<Config.Info, "agent" | "mcp"> & {
+  agent?: Record<string, Agent | null>
+  mcp?: Record<string, Mcp | null>
+}
 
 function safe(id: string) {
   if (!id || id === "." || id.includes("..") || id.includes("/") || id.includes("\\") || id.endsWith(".")) return false
@@ -57,24 +63,26 @@ function content(item: McpItem, params?: Record<string, unknown>) {
   return item.content.find((method: Method) => method.name === name)?.content ?? item.content[0].content
 }
 
-function entry(item: McpItem, params?: Record<string, unknown>) {
+function entry(item: McpItem, params?: Record<string, unknown>): Mcp | undefined {
   const raw = content(item, params)
   if (!raw) return undefined
-  return normalize(JSON.parse(params ? substitute(raw, params) : raw) as Record<string, unknown>)
+  return normalize(JSON.parse(params ? substitute(raw, params) : raw) as Record<string, unknown>) as Mcp
 }
 
-function patchMcp(id: string, value: unknown) {
-  return { mcp: { [id]: value } } as unknown as Config.Info
+function patchMcp(id: string, value: Mcp | null): Patch {
+  return { mcp: { [id]: value } }
 }
 
-function patchAgent(id: string) {
-  return { agent: { [id]: null } } as unknown as Config.Info
+function patchAgent(id: string): Patch {
+  return { agent: { [id]: null } }
 }
 
-const update = Effect.fn("Marketplace.updateConfig")(function* (scope: Target, patch: Config.Info) {
+const update = Effect.fn("Marketplace.updateConfig")(function* (scope: Target, patch: Patch) {
   const cfg = yield* Config.Service
-  if (scope === "project") return yield* cfg.update(patch)
-  yield* cfg.updateGlobal(patch, { dispose: false })
+  // Config.patchJsonc treats null as a deletion tombstone; Config.Info only represents loaded config.
+  const tombstone = patch as Config.Info
+  if (scope === "project") return yield* cfg.update(tombstone)
+  yield* cfg.updateGlobal(tombstone, { dispose: false })
 })
 
 async function unlink(file: string) {
@@ -185,7 +193,9 @@ const installSkill = Effect.fn("Marketplace.installSkill")(function* (item: Skil
   if (duplicate.some(Boolean))
     return { success: false, slug: item.id, error: "Skill already installed. Uninstall it before installing again." }
   const stamp = Date.now()
-  const tarball = path.join(os.tmpdir(), `kilo-skill-${item.id}-${stamp}.tar.gz`)
+  const archive = `.staging-${item.id}-${stamp}.tar.gz`
+  const tarball = path.join(base, archive)
+  const stage = `.staging-${item.id}-${stamp}`
   const staging = path.join(base, `.staging-${item.id}-${stamp}`)
   return yield* Effect.tryPromise(async () => {
     await fs.mkdir(base, { recursive: true })
@@ -193,7 +203,7 @@ const installSkill = Effect.fn("Marketplace.installSkill")(function* (item: Skil
     if (!response.ok) return { success: false, slug: item.id, error: `Download failed: ${response.status}` }
     await fs.writeFile(tarball, Buffer.from(await response.arrayBuffer()))
     await fs.mkdir(staging, { recursive: true })
-    await Process.run(["tar", "-xzf", tarball, "--strip-components=1", "-C", staging])
+    await Process.run(["tar", "-xzf", archive, "--strip-components=1", "-C", stage], { cwd: base })
     if ((await escaped(staging)).length > 0)
       return { success: false, slug: item.id, error: "Skill archive contains unsafe paths" }
     if (!(await Bun.file(path.join(staging, "SKILL.md")).exists()))

@@ -148,8 +148,10 @@ export async function removeMarketplaceItemFromAllScopes(
 
   try {
     if (item.type === "mcp") await removeVsCodeLegacyMcp(ctx, item.id, project, "all")
-    const local = project ? await removeMarketplaceItemRef(ctx, item, "project", project, dir) : undefined
-    const global = await removeMarketplaceItemRef(ctx, item, "global", project, dir)
+    const [local, global] = await Promise.all([
+      project ? removeMarketplaceItemRef(ctx, item, "project", project, dir) : Promise.resolve(undefined),
+      removeMarketplaceItemRef(ctx, item, "global", project, dir),
+    ])
     console.info("[Kilo New] Marketplace: uninstall all scopes response", {
       id: item.id,
       type: item.type,

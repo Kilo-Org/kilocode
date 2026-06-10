@@ -45,6 +45,21 @@ describe("marketplace catalog", () => {
     expect(hits).toEqual({ agents: 1, mcps: 1, skills: 1 })
   })
 
+  it("deduplicates concurrent category fetches", async () => {
+    const hits = { agents: 0, mcps: 0, skills: 0 }
+    stub(async (url) => {
+      if (url.endsWith("/agents")) hits.agents++
+      if (url.endsWith("/mcps")) hits.mcps++
+      if (url.endsWith("/skills")) hits.skills++
+      await new Promise((resolve) => setTimeout(resolve, 10))
+      return new Response(JSON.stringify({ items: [] }))
+    })
+
+    await Promise.all([Catalog.all(), Catalog.all()])
+
+    expect(hits).toEqual({ agents: 1, mcps: 1, skills: 1 })
+  })
+
   it("returns successful categories when one category fails", async () => {
     stub((url) => {
       if (url.endsWith("/mcps")) return new Response("nope", { status: 500, statusText: "broken" })

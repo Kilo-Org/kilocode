@@ -1185,12 +1185,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         }
         case "installMarketplaceItem": {
-          const scope = message.mpInstallOptions?.target ?? "project"
           const item = message.mpItem as MarketplaceItem
           const result = await this.installMarketplaceItem(item, message.mpInstallOptions)
           if (result.success) {
             vscode.window.showInformationMessage(`Successfully installed ${item.name}`)
-            await this.invalidateAfterMarketplaceChange(scope)
+            await this.invalidateAfterMarketplaceChange(item.type)
           }
           this.postMessage({
             type: "marketplaceInstallResult",
@@ -2110,7 +2109,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       error: result.error,
     })
     if (result.success) {
-      await this.invalidateAfterMarketplaceChange(scope)
+      await this.invalidateAfterMarketplaceChange(item.type)
     }
     return result
   }
@@ -2160,12 +2159,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const directory = this.getProjectDirectory(this.currentSession?.id) ?? this.getWorkspaceDirectory()
     const started = Date.now()
     console.info("[Kilo New] Marketplace: uninstall all scopes request", { id, type, directory })
-    const project = await retry(() =>
-      this.client!.kilocode.marketplace.uninstall({ id, type, target: "project", directory }, { throwOnError: true }),
-    )
-    const global = await retry(() =>
-      this.client!.kilocode.marketplace.uninstall({ id, type, target: "global", directory }, { throwOnError: true }),
-    )
+    const [project, global] = await Promise.all([
+      retry(() =>
+        this.client!.kilocode.marketplace.uninstall({ id, type, target: "project", directory }, { throwOnError: true }),
+      ),
+      retry(() =>
+        this.client!.kilocode.marketplace.uninstall({ id, type, target: "global", directory }, { throwOnError: true }),
+      ),
+    ])
     console.info("[Kilo New] Marketplace: uninstall all scopes response", {
       id,
       type,
@@ -2176,8 +2177,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
 
     if (project.data.success || global.data.success) {
-      const scope = global.data.success ? "global" : "project"
-      await this.invalidateAfterMarketplaceChange(scope)
+      await this.invalidateAfterMarketplaceChange(type)
       return true
     }
     return false
@@ -2186,19 +2186,22 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Refresh local webview caches after the CLI marketplace endpoint updates backend state.
    */
-  private async invalidateAfterMarketplaceChange(_scope: "project" | "global"): Promise<void> {
-    this.cachedAgentsMessage = null
-    this.cachedConfigMessage = null
+  private async invalidateAfterMarketplaceChange(type: MarketplaceItem["type"]): Promise<void> {
+    if (type === "agent") {
+      this.cachedAgentsMessage = null
+      this.cachedConfigMessage = null
+      await Promise.all([this.fetchAndSendAgents(), this.fetchAndSendConfig()])
+      return
+    }
+    if (type === "mcp") {
+      this.cachedMcpStatusMessage = null
+      this.cachedConfigMessage = null
+      await Promise.all([this.fetchAndSendMcpStatus(), this.fetchAndSendConfig()])
+      return
+    }
     this.cachedSkillsMessage = null
-    this.cachedMcpStatusMessage = null
     this.clearCommandsCache()
-    await Promise.all([
-      this.fetchAndSendAgents(),
-      this.fetchAndSendConfig(),
-      this.fetchAndSendSkills(),
-      this.fetchAndSendCommands(),
-      this.fetchAndSendMcpStatus(),
-    ])
+    await Promise.all([this.fetchAndSendSkills(), this.fetchAndSendCommands()])
   }
 
   /**

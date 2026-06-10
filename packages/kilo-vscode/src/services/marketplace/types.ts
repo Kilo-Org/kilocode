@@ -42,14 +42,6 @@ export interface AgentMarketplaceItem extends MarketplaceItemBase {
   content: AgentContent
 }
 
-export interface RawSkill {
-  id: string
-  description: string
-  category: string
-  githubUrl: string
-  content: string
-}
-
 export interface SkillMarketplaceItem extends MarketplaceItemBase {
   type: "skill"
   category: string

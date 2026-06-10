@@ -65,8 +65,9 @@ function layer(current: Config.Info, updates: Config.Info[]) {
 }
 
 async function tar(root: string, name: string) {
-  const file = path.join(root, `${name}.tar.gz`)
-  await Process.run(["tar", "-czf", file, "-C", root, name])
+  const archive = `${name}.tar.gz`
+  const file = path.join(root, archive)
+  await Process.run(["tar", "-czf", archive, name], { cwd: root })
   return await Bun.file(file).arrayBuffer()
 }
 

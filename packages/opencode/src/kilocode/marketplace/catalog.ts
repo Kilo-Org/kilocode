@@ -12,6 +12,7 @@ type Entry = {
 }
 
 const cache = new Map<string, Entry>()
+const pending = new Map<string, Promise<Item[]>>()
 
 function title(input: string) {
   return input
@@ -59,25 +60,31 @@ async function text(input: string, attempt = 0): Promise<string> {
 async function fetchKind(kind: Type): Promise<Item[]> {
   const prior = cached(kind)
   if (prior) return prior as Item[]
-  const raw = parse(await text(`${url}/${kind === "mcp" ? "mcps" : `${kind}s`}`)) as { items?: unknown[] }
-  const list = (raw.items ?? []).map((item) => {
-    if (kind !== "skill") return { ...(item as Record<string, unknown>), type: kind } as AgentItem | McpItem
-    const skill = item as RawSkill
-    const name = title(skill.id)
-    return {
-      type: "skill" as const,
-      id: skill.id,
-      name,
-      displayName: name,
-      description: skill.description,
-      category: skill.category,
-      displayCategory: title(skill.category),
-      githubUrl: skill.githubUrl,
-      content: skill.content,
-    } satisfies SkillItem
-  })
-  save(kind, list)
-  return list
+  const running = pending.get(kind)
+  if (running) return running
+  const next = (async () => {
+    const raw = parse(await text(`${url}/${kind === "mcp" ? "mcps" : `${kind}s`}`)) as { items?: unknown[] }
+    const list = (raw.items ?? []).map((item) => {
+      if (kind !== "skill") return { ...(item as Record<string, unknown>), type: kind } as AgentItem | McpItem
+      const skill = item as RawSkill
+      const name = title(skill.id)
+      return {
+        type: "skill" as const,
+        id: skill.id,
+        name,
+        displayName: name,
+        description: skill.description,
+        category: skill.category,
+        displayCategory: title(skill.category),
+        githubUrl: skill.githubUrl,
+        content: skill.content,
+      } satisfies SkillItem
+    })
+    save(kind, list)
+    return list
+  })().finally(() => pending.delete(kind))
+  pending.set(kind, next)
+  return next
 }
 
 export async function all(): Promise<{ items: Item[]; errors: string[] }> {
@@ -97,4 +104,5 @@ export async function all(): Promise<{ items: Item[]; errors: string[] }> {
 
 export function clear() {
   cache.clear()
+  pending.clear()
 }

@@ -18,6 +18,7 @@ export const data = Effect.fn("Marketplace.data")(function* (ctx: Paths.Ctx) {
 
 export const install = Effect.fn("Marketplace.install")(function* (payload: InstallPayload, ctx: Paths.Ctx) {
   const catalog = yield* Effect.promise(() => Catalog.all())
+  // Catalog.all() can return partial data; trust the editor payload only when it matches this request.
   const item =
     catalog.items.find((item) => item.id === payload.id && item.type === payload.type) ??
     (payload.item?.id === payload.id && payload.item.type === payload.type ? payload.item : undefined)
