@@ -1,6 +1,7 @@
 package ai.kilocode.client.settings
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.settings.models.ModelsConfigurable
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
 import ai.kilocode.client.ui.layout.Stack
 import com.intellij.ide.DataManager
@@ -44,6 +45,14 @@ class KiloSettingsConfigurable : SearchableConfigurable {
         }
         link.border = JBUI.Borders.emptyBottom(4)
         panel.next(link)
+
+        val models = ActionLink(KiloBundle.message("settings.models.displayName")) { e ->
+            val src = e.source as? JComponent ?: return@ActionLink
+            val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src)) ?: return@ActionLink
+            open(settings, ModelsConfigurable.ID)
+        }
+        models.border = JBUI.Borders.emptyBottom(4)
+        panel.next(models)
 
         return panel
     }

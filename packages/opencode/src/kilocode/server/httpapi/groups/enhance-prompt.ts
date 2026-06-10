@@ -2,7 +2,10 @@ import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/middleware/instance-context"
-import { WorkspaceRoutingMiddleware } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
+import {
+  WorkspaceRoutingMiddleware,
+  WorkspaceRoutingQuery,
+} from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 
 const root = "/enhance-prompt"
@@ -20,6 +23,7 @@ export const EnhancePromptApi = HttpApi.make("enhance-prompt")
     HttpApiGroup.make("enhance-prompt")
       .add(
         HttpApiEndpoint.post("enhance", root, {
+          query: WorkspaceRoutingQuery,
           payload: EnhancePromptPayload,
           success: described(EnhancePromptResponse, "Enhanced prompt text"),
           error: HttpApiError.BadRequest,

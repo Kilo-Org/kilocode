@@ -11,9 +11,12 @@ function falsy(key: string) {
   return value === "false" || value === "0"
 }
 
-// Channels that default to the new effect-httpapi server backend. The legacy
-// hono backend remains the default for stable (`prod`/`latest`) installs.
-const HTTPAPI_DEFAULT_ON_CHANNELS = new Set(["dev", "beta", "local"])
+// Channels where new experiments default to ON (unstable / internal users).
+// Stable channels (`prod`, `latest`) stay opt-in.
+const UNSTABLE_CHANNELS = new Set(["dev", "beta", "local"])
+function unstableDefault(key: string) {
+  return truthy(key) || (!falsy(key) && UNSTABLE_CHANNELS.has(InstallationChannel))
+}
 
 function number(key: string) {
   const value = process.env[key]
@@ -52,6 +55,9 @@ export const Flag = {
   KILO_DISABLE_CLAUDE_CODE_PROMPT: KILO_DISABLE_CLAUDE_CODE || truthy("KILO_DISABLE_CLAUDE_CODE_PROMPT"),
   KILO_DISABLE_CLAUDE_CODE_SKILLS,
   KILO_DISABLE_EXTERNAL_SKILLS: truthy("KILO_DISABLE_EXTERNAL_SKILLS"), // kilocode_change
+  // Default-on for dev/beta/local; opt-in for stable. Set
+  // KILO_EXPERIMENTAL_CUSTOMIZE_SKILL=false to force off, =true to force on.
+  KILO_EXPERIMENTAL_CUSTOMIZE_SKILL: unstableDefault("KILO_EXPERIMENTAL_CUSTOMIZE_SKILL"),
   KILO_FAKE_VCS: process.env["KILO_FAKE_VCS"],
   KILO_SERVER_PASSWORD: process.env["KILO_SERVER_PASSWORD"],
   KILO_SERVER_USERNAME: process.env["KILO_SERVER_USERNAME"],
@@ -73,7 +79,9 @@ export const Flag = {
   KILO_EXPERIMENTAL_LSP_TY: truthy("KILO_EXPERIMENTAL_LSP_TY"),
   KILO_EXPERIMENTAL_LSP_TOOL: KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_LSP_TOOL"),
   KILO_EXPERIMENTAL_PLAN_MODE: KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_PLAN_MODE"),
+  KILO_EXPERIMENTAL_SCOUT: KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_SCOUT"),
   KILO_EXPERIMENTAL_MARKDOWN: !falsy("KILO_EXPERIMENTAL_MARKDOWN"),
+  KILO_ENABLE_PARALLEL: truthy("KILO_ENABLE_PARALLEL") || truthy("KILO_EXPERIMENTAL_PARALLEL"),
   KILO_MODELS_URL: process.env["KILO_MODELS_URL"],
   KILO_MODELS_PATH: process.env["KILO_MODELS_PATH"],
   KILO_DISABLE_EMBEDDED_WEB_UI: truthy("KILO_DISABLE_EMBEDDED_WEB_UI"),
@@ -83,14 +91,6 @@ export const Flag = {
   KILO_STRICT_CONFIG_DEPS: truthy("KILO_STRICT_CONFIG_DEPS"),
 
   KILO_WORKSPACE_ID: process.env["KILO_WORKSPACE_ID"],
-  // Defaults to true on dev/beta/local channels so internal users exercise the
-  // new effect-httpapi server backend. Stable (`prod`/`latest`) installs stay
-  // on the legacy hono backend until the rollout is complete. An explicit env
-  // var ("true"/"1" or "false"/"0") always wins, providing an opt-in for
-  // stable users and an escape hatch for dev/beta users.
-  KILO_EXPERIMENTAL_HTTPAPI:
-    truthy("KILO_EXPERIMENTAL_HTTPAPI") ||
-    (!falsy("KILO_EXPERIMENTAL_HTTPAPI") && HTTPAPI_DEFAULT_ON_CHANNELS.has(InstallationChannel)),
   KILO_EXPERIMENTAL_WORKSPACES: KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_WORKSPACES"),
   KILO_EXPERIMENTAL_EVENT_SYSTEM: KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_EVENT_SYSTEM"),
 

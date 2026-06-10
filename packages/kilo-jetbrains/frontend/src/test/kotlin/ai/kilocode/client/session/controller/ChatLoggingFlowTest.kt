@@ -10,10 +10,16 @@ import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import kotlinx.coroutines.flow.flow
+import java.util.concurrent.CopyOnWriteArrayList
 
 class ChatLoggingFlowTest : SessionControllerTestBase() {
 
     fun `test prompt creates session and subscribes before dispatch`() {
+        val calls = CopyOnWriteArrayList<String>()
+        rpc.eventFlow = { id, _ ->
+            calls.add(id)
+            rpc.events
+        }
         projectRpc.state.value = workspaceReady()
         appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
         val m = controller()
@@ -23,6 +29,7 @@ class ChatLoggingFlowTest : SessionControllerTestBase() {
         flush()
 
         assertEquals(1, rpc.creates)
+        assertEquals(listOf("ses_test"), calls.toList())
         assertEquals(1, rpc.prompts.size)
         assertEquals("ses_test", rpc.prompts[0].first)
     }

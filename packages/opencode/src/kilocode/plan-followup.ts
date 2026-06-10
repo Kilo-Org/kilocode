@@ -14,15 +14,16 @@ import { MessageV2 } from "@/session/message-v2"
 import { SessionStatus } from "@/session/status"
 import { Todo } from "@/session/todo"
 import { makeRuntime } from "@/effect/run-service"
+import { Effect } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { lazy } from "@/util/lazy"
 import path from "path"
 import z from "zod"
+import { PlanFile } from "@/kilocode/plan-file"
 
 const agents = lazy(() => makeRuntime(Agent.Service, Agent.defaultLayer))
 const providers = lazy(() => makeRuntime(Provider.Service, Provider.defaultLayer))
-const questions = lazy(() => makeRuntime(Question.Service, Question.defaultLayer))
 const todo = lazy(() => makeRuntime(Todo.Service, Todo.defaultLayer))
 const pending = new Map<SessionID, AbortController>()
 
@@ -33,17 +34,6 @@ export const PlanFollowupRuntime = {
   model(providerID: ProviderID, modelID: ModelID): Promise<Provider.Model> {
     return providers().runPromise((svc) => svc.getModel(providerID, modelID))
   },
-  question: {
-    ask(input: Parameters<Question.Interface["ask"]>[0]) {
-      return questions().runPromise((svc) => svc.ask(input))
-    },
-    list() {
-      return questions().runPromise((svc) => svc.list())
-    },
-    reject(requestID: Parameters<Question.Interface["reject"]>[0]) {
-      return questions().runPromise((svc) => svc.reject(requestID))
-    },
-  },
   todo: {
     get(sessionID: SessionID) {
       return todo().runPromise((svc) => svc.get(sessionID))
@@ -51,6 +41,10 @@ export const PlanFollowupRuntime = {
     update(input: Parameters<Todo.Interface["update"]>[0]) {
       return todo().runPromise((svc) => svc.update(input))
     },
+  },
+  async session<A, E>(run: (svc: Session.Interface) => Effect.Effect<A, E>) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(Session.Service.use(run))
   },
   async loop(sessionID: SessionID) {
     const item = await import("@/session/prompt")
@@ -147,9 +141,10 @@ export namespace PlanFollowup {
     if (text) return text
 
     // Fall back to plan file on disk
-    const session = await Session.get(SessionID.make(input.sessionID))
-    const file = Bun.file(Session.plan(session, Instance.current))
-    const plan = await file.text().catch(() => "")
+    const session = await PlanFollowupRuntime.session((svc) => svc.get(SessionID.make(input.sessionID)))
+    const file =
+      PlanFile.resolve(PlanFile.latest(input.messages), Instance.current) ?? Session.plan(session, Instance.current)
+    const plan = await Bun.file(file).text().catch(() => "")
     return plan.trim()
   }
 
@@ -170,20 +165,31 @@ export namespace PlanFollowup {
       agent: input.agent,
       model: input.model,
     }
-    await Session.updateMessage(msg)
-    await Session.updatePart({
-      id: PartID.ascending(),
-      messageID: msg.id,
-      sessionID: input.sessionID,
-      type: "text",
-      text: input.text,
-      synthetic: input.synthetic ?? true,
-    } satisfies MessageV2.TextPart)
+    await PlanFollowupRuntime.session((svc) =>
+      Effect.gen(function* () {
+        yield* svc.updateMessage(msg)
+        yield* svc.updatePart({
+          id: PartID.ascending(),
+          messageID: msg.id,
+          sessionID: input.sessionID,
+          type: "text",
+          text: input.text,
+          synthetic: input.synthetic ?? true,
+        } satisfies MessageV2.TextPart)
+      }),
+    )
     return msg
   }
 
-  function prompt(input: { sessionID: SessionID; abort: AbortSignal }) {
-    const promise = PlanFollowupRuntime.question.ask({
+  type QuestionRuntime = {
+    ask: (input: Parameters<Question.Interface["ask"]>[0]) => Promise<ReadonlyArray<Question.Answer>>
+    list: () => Promise<ReadonlyArray<Question.Request>>
+    reject: (requestID: Parameters<Question.Interface["reject"]>[0]) => Promise<void>
+  }
+
+  function prompt(input: { sessionID: SessionID; abort: AbortSignal; question: QuestionRuntime }) {
+    if (input.abort.aborted) return Promise.resolve(undefined)
+    const promise = input.question.ask({
       sessionID: input.sessionID,
       questions: [
         {
@@ -217,10 +223,15 @@ export namespace PlanFollowup {
     })
 
     const listener = () =>
-      PlanFollowupRuntime.question.list().then((qs) => {
-        const match = qs.find((q) => q.sessionID === input.sessionID)
-        if (match) PlanFollowupRuntime.question.reject(match.id)
-      })
+      input.question
+        .list()
+        .then((qs) => {
+          const match = qs.find((q) => q.sessionID === input.sessionID)
+          return match ? input.question.reject(match.id) : undefined
+        })
+        .catch((error) => {
+          log.warn("failed to reject aborted plan follow-up question", { sessionID: input.sessionID, error })
+        })
     input.abort.addEventListener("abort", listener, { once: true })
 
     return promise
@@ -241,7 +252,7 @@ export namespace PlanFollowup {
     const code = await resolveCodeModel({
       model: input.model,
     })
-    const session = await Session.get(input.sessionID)
+    const session = await PlanFollowupRuntime.session((svc) => svc.get(input.sessionID))
     const { WithInstance } = await import("@/project/with-instance")
 
     await WithInstance.provide({
@@ -249,14 +260,15 @@ export namespace PlanFollowup {
       fn: async () => {
         // Create the session first so the SSE event driving the webview tab switch
         // fires before prompt seeding and implementation startup work.
-        const next = await Session.create({})
+        const next = await PlanFollowupRuntime.session((svc) => svc.create({}))
         const ctl = new AbortController()
         pending.set(next.id, ctl)
-        await SessionStatus.set(next.id, { type: "busy" })
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "busy" })))
         await Bus.publish(TuiEvent.SessionSelect, { sessionID: next.id })
 
         const idle = () =>
-          SessionStatus.set(next.id, { type: "idle" }).catch((err) => {
+          AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "idle" }))).catch((err) => {
             log.warn("failed to clear follow-up busy status", { sessionID: next.id, err })
           })
 
@@ -312,6 +324,7 @@ export namespace PlanFollowup {
     sessionID: SessionID
     messages: MessageV2.WithParts[]
     abort: AbortSignal
+    question: QuestionRuntime
   }): Promise<"continue" | "break"> {
     if (input.abort.aborted) return "break"
 
@@ -325,7 +338,7 @@ export namespace PlanFollowup {
     const user = latest.find((msg) => msg.info.role === "user")?.info
     if (!user || user.role !== "user" || !user.model) return "break"
 
-    const answers = await prompt({ sessionID: input.sessionID, abort: input.abort })
+    const answers = await prompt({ sessionID: input.sessionID, abort: input.abort, question: input.question })
     if (!answers) {
       Telemetry.trackPlanFollowup(input.sessionID, "dismissed")
       return "break"

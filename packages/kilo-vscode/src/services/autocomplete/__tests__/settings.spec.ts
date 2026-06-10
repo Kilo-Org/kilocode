@@ -33,45 +33,31 @@ describe("autocomplete settings", () => {
     expect(buildAutocompleteSettingsMessage().settings.model).toBe("mercury-edit-2")
   })
 
-  it("does not infer direct provider from a bare model name when provider is unset", async () => {
-    // Safety: a legacy `model` setting alone must never silently route to a
-    // direct BYOK provider. Direct providers require an explicit `provider`.
+  it("passes a bare model setting through unchanged so the webview can render it as-is", async () => {
+    // The webview now distinguishes "no explicit setting" (null) from "user
+    // picked something." We don't try to interpret a bare `model` here —
+    // resolving it to a default happens at the runtime layer, not in the
+    // settings message.
     state.set("model", "mercury-edit-2")
     const { buildAutocompleteSettingsMessage } = await import("../settings")
 
-    expect(buildAutocompleteSettingsMessage().settings.provider).toBe("kilo")
-    expect(buildAutocompleteSettingsMessage().settings.model).toBe("mistralai/codestral-2508")
+    expect(buildAutocompleteSettingsMessage().settings.provider).toBeNull()
+    expect(buildAutocompleteSettingsMessage().settings.model).toBe("mercury-edit-2")
   })
 
-  it("defaults to codestral when no model is set", async () => {
+  it("returns null for both keys when nothing is set (let the webview render 'Not set')", async () => {
     const { buildAutocompleteSettingsMessage } = await import("../settings")
 
-    expect(buildAutocompleteSettingsMessage().settings.provider).toBe("kilo")
-    expect(buildAutocompleteSettingsMessage().settings.model).toBe("mistralai/codestral-2508")
+    expect(buildAutocompleteSettingsMessage().settings.provider).toBeNull()
+    expect(buildAutocompleteSettingsMessage().settings.model).toBeNull()
   })
 
-  it("defaults to codestral when stored model is no longer supported", async () => {
+  it("preserves an unsupported stored model verbatim — runtime fallback handles resolution", async () => {
     state.set("model", "some/removed-model")
     const { buildAutocompleteSettingsMessage } = await import("../settings")
 
-    expect(buildAutocompleteSettingsMessage().settings.provider).toBe("kilo")
-    expect(buildAutocompleteSettingsMessage().settings.model).toBe("mistralai/codestral-2508")
-  })
-
-  it("maps legacy inception/mercury-edit to Kilo Gateway Mercury", async () => {
-    state.set("model", "inception/mercury-edit")
-    const { buildAutocompleteSettingsMessage } = await import("../settings")
-
-    expect(buildAutocompleteSettingsMessage().settings.provider).toBe("kilo")
-    expect(buildAutocompleteSettingsMessage().settings.model).toBe("inception/mercury-edit-2")
-  })
-
-  it("maps legacy inception/mercury-edit-2 to Kilo Gateway Mercury", async () => {
-    state.set("model", "inception/mercury-edit-2")
-    const { buildAutocompleteSettingsMessage } = await import("../settings")
-
-    expect(buildAutocompleteSettingsMessage().settings.provider).toBe("kilo")
-    expect(buildAutocompleteSettingsMessage().settings.model).toBe("inception/mercury-edit-2")
+    expect(buildAutocompleteSettingsMessage().settings.provider).toBeNull()
+    expect(buildAutocompleteSettingsMessage().settings.model).toBe("some/removed-model")
   })
 
   it("validates supported model updates", async () => {
@@ -81,12 +67,20 @@ describe("autocomplete settings", () => {
     expect(validAutocompleteSetting("provider", "inception")).toBe(true)
   })
 
+  it("accepts null/undefined for provider and model so users can clear the setting", async () => {
+    const { validAutocompleteSetting } = await import("../settings")
+
+    expect(validAutocompleteSetting("provider", null)).toBe(true)
+    expect(validAutocompleteSetting("provider", undefined)).toBe(true)
+    expect(validAutocompleteSetting("model", null)).toBe(true)
+    expect(validAutocompleteSetting("model", undefined)).toBe(true)
+  })
+
   it("rejects unsupported autocomplete updates", async () => {
     const { validAutocompleteSetting } = await import("../settings")
 
     expect(validAutocompleteSetting("model", "other/model")).toBe(false)
-    expect(validAutocompleteSetting("provider", undefined)).toBe(false)
-    expect(validAutocompleteSetting("provider", null)).toBe(false)
+    expect(validAutocompleteSetting("provider", "openrouter")).toBe(false)
   })
 
   it("rejects non-boolean toggle updates", async () => {

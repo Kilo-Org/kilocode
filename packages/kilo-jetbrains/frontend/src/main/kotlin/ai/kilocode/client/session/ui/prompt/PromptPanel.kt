@@ -26,11 +26,14 @@ import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.event.DocumentEvent
+import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.keymap.Keymap
 import com.intellij.openapi.keymap.KeymapManagerListener
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.xml.util.XmlStringUtil
 import com.intellij.util.ui.JBValue
 import com.intellij.util.ui.JBDimension
@@ -73,9 +76,12 @@ class PromptPanel(
     }
 
     val mode = ModePicker()
-    val model = ModelPicker()
+    val model = ModelPicker().apply {
+        placement = ModelPicker.Placement.ABOVE
+    }
     val reasoning = ReasoningPicker()
     var onReset: () -> Unit = {}
+    var onChange: () -> Unit = {}
     var onAutoApproveToggle: (Boolean) -> Unit = {}
     private var style = SessionEditorStyle.current()
     private val shell = PromptShell()
@@ -162,6 +168,13 @@ class PromptPanel(
         )
 
         applyStyle(style)
+        editor.text = ""
+        editor.addDocumentListener(object : DocumentListener {
+            override fun documentChanged(e: DocumentEvent) {
+                syncEditorHeight()
+                onChange()
+            }
+        })
         shell.add(editor, BorderLayout.CENTER)
 
         val bar = BorderLayoutPanel().apply {
@@ -186,34 +199,41 @@ class PromptPanel(
         syncAutoApprove()
     }
 
+    @RequiresEdt
     fun setReady(value: Boolean) {
         ready = value
     }
 
+    @RequiresEdt
     fun setBusy(value: Boolean) {
         busy = value
         button.icon = if (value) STOP_ICON else SEND_ICON
         syncTooltip()
     }
 
+    @RequiresEdt
     fun setAutoApprove(value: Boolean) {
         if (autoApprove == value) return
         autoApprove = value
         syncAutoApprove()
     }
 
+    @RequiresEdt
     fun setResetVisible(value: Boolean) {
         reset.isVisible = value
         revalidate()
         repaint()
     }
 
+    @RequiresEdt
     fun text(): String = editor.text.trim()
 
+    @RequiresEdt
     override fun send() {
         submit("action")
     }
 
+    @RequiresEdt
     override fun stop() {
         if (!isStopEnabled) return
         onAbort()
@@ -231,24 +251,23 @@ class PromptPanel(
 
     internal val defaultFocusedComponent: JComponent get() = editor
 
+    @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        editor.font = style.transcriptFont
+        editor.font = style.editorFont
         editor.getEditor(false)?.let(style::applyToEditor)
         editor.background = style.editorScheme.defaultBackground
-        val height = style.transcriptFont.size * SessionUiStyle.View.Prompt.EDITOR_LINES + JBUI.scale(
-            SessionUiStyle.View.Prompt.EDITOR_CHROME)
-        editor.preferredSize = JBDimension(0, height)
-        editor.minimumSize = JBDimension(0, height)
+        syncEditorHeight()
         syncAutoApprove()
-        revalidate()
-        repaint()
     }
 
+    @RequiresEdt
     fun clear() {
         editor.text = ""
+        syncEditorHeight()
     }
 
+    @RequiresEdt
     fun focus() {
         editor.requestFocusInWindow()
     }
@@ -264,6 +283,7 @@ class PromptPanel(
         super.removeNotify()
     }
 
+    @RequiresEdt
     private fun submit(src: String) {
         if (!isSendEnabled) return
         val txt = text()
@@ -273,6 +293,7 @@ class PromptPanel(
         }
     }
 
+    @RequiresEdt
     private fun bindKeymap() {
         if (bus != null) return
         val connection = ApplicationManager.getApplication().messageBus.connect()
@@ -293,6 +314,7 @@ class PromptPanel(
         })
     }
 
+    @RequiresEdt
     private fun syncTooltip() {
         button.toolTipText = tooltip()
     }
@@ -339,6 +361,21 @@ class PromptPanel(
         if (send.isNotEmpty()) return KiloBundle.message("prompt.placeholder.with.send", send)
         if (line.isNotEmpty()) return KiloBundle.message("prompt.placeholder.with.newline", line)
         return KiloBundle.message("prompt.placeholder")
+    }
+
+    @RequiresEdt
+    private fun syncEditorHeight() {
+        val count = ApplicationManager.getApplication().runReadAction<Int> { editor.document.lineCount }
+        val lines = (count + SessionUiStyle.View.Prompt.EDITOR_SPARE_LINES).coerceIn(
+            SessionUiStyle.View.Prompt.EDITOR_LINES,
+            SessionUiStyle.View.Prompt.EDITOR_MAX_LINES,
+        )
+        val height = style.editorFont.size * lines + JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
+        if (editor.preferredSize.height == height && editor.minimumSize.height == height) return
+        editor.preferredSize = JBDimension(0, height)
+        editor.minimumSize = JBDimension(0, height)
+        revalidate()
+        repaint()
     }
 
     private inner class SendButton : JButton(), UiDataProvider {
@@ -454,10 +491,10 @@ class PromptPanel(
         override fun outlineColor() = if (UIUtil.isFocusAncestor(editor)) {
             JBUI.CurrentTheme.Focus.focusColor()
         } else {
-            SessionUiStyle.View.line()
+            SessionUiStyle.View.Outline.brightColor()
         }
 
-        override fun outlineWidth() = if (UIUtil.isFocusAncestor(editor)) focus.get() else JBUI.scale(1)
+        override fun outlineWidth() = if (UIUtil.isFocusAncestor(editor)) focus.get() else SessionUiStyle.View.Outline.width()
 
         override fun cornerArc() = JBUI.scale(JBUI.getInt("Button.arc", SessionUiStyle.View.Prompt.CORNER_ARC))
     }

@@ -1,5 +1,7 @@
 import * as InstanceState from "@/effect/instance-state"
+import { Image } from "@/image/image" // kilocode_change - classify user image validation defects
 import { InstanceRef, WorkspaceRef } from "@/effect/instance-ref"
+import { KiloSessionHttpApi } from "@/kilocode/server/httpapi/session-fork" // kilocode_change
 import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
 import { Command } from "@/command"
@@ -36,7 +38,7 @@ import {
   ShellPayload,
   SummarizePayload,
   UpdatePayload,
-  ViewedPayload,
+  ViewedPayload, // kilocode_change
 } from "../groups/session"
 import * as SessionError from "./session-errors"
 
@@ -195,6 +197,8 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       )
     })
 
+    const forkRaw = KiloSessionHttpApi.forkRaw(fork) // kilocode_change - carry upstream bodyless full-session fork support
+
     const abort = Effect.fn("SessionHttpApi.abort")(function* (ctx: { params: { sessionID: SessionID } }) {
       yield* promptSvc.cancel(ctx.params.sessionID)
       return true
@@ -204,23 +208,32 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       params: { sessionID: SessionID }
       payload: typeof InitPayload.Type
     }) {
-      yield* promptSvc.command({
-        sessionID: ctx.params.sessionID,
-        messageID: ctx.payload.messageID,
-        model: `${ctx.payload.providerID}/${ctx.payload.modelID}`,
-        command: Command.Default.INIT,
-        arguments: "",
-      })
+      yield* promptSvc
+        .command({
+          sessionID: ctx.params.sessionID,
+          messageID: ctx.payload.messageID,
+          model: `${ctx.payload.providerID}/${ctx.payload.modelID}`,
+          command: Command.Default.INIT,
+          arguments: "",
+        })
+        .pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
       return true
     })
 
+    // share/unshare errors aren't all client-induced — storage and network
+    // failures from SessionShare are real possibilities. Map to a typed 500
+    // (matches the legacy Hono path which routed any failure through
+    // ErrorMiddleware → NamedError.Unknown 500) instead of blanket-mapping
+    // every failure to a 400 BadRequest.
     const share = Effect.fn("SessionHttpApi.share")(function* (ctx: { params: { sessionID: SessionID } }) {
-      yield* shareSvc.share(ctx.params.sessionID).pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
+      yield* shareSvc.share(ctx.params.sessionID).pipe(Effect.mapError(() => new HttpApiError.InternalServerError({})))
       return yield* SessionError.mapStorageNotFound(session.get(ctx.params.sessionID))
     })
 
     const unshare = Effect.fn("SessionHttpApi.unshare")(function* (ctx: { params: { sessionID: SessionID } }) {
-      yield* shareSvc.unshare(ctx.params.sessionID).pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
+      yield* shareSvc
+        .unshare(ctx.params.sessionID)
+        .pipe(Effect.mapError(() => new HttpApiError.InternalServerError({})))
       return yield* SessionError.mapStorageNotFound(session.get(ctx.params.sessionID))
     })
 
@@ -252,18 +265,27 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     }) {
       const instance = yield* InstanceState.context
       const workspace = yield* InstanceState.workspaceID
-      return HttpServerResponse.stream(
-        Stream.fromEffect(
-          promptSvc
-            // kilocode_change - cast to bridge schema-readonly→PromptInput-mutable; matches legacy Hono session.ts
-            .prompt({ ...ctx.payload, sessionID: ctx.params.sessionID } as unknown as SessionPrompt.PromptInput)
-            .pipe(Effect.provideService(InstanceRef, instance), Effect.provideService(WorkspaceRef, workspace)),
-        ).pipe(
-          Stream.map((message) => JSON.stringify(message)),
-          Stream.encodeText,
-        ),
-        { contentType: "application/json" },
-      )
+      const message = yield* promptSvc
+        .prompt({ ...ctx.payload, sessionID: ctx.params.sessionID } as unknown as SessionPrompt.PromptInput) // kilocode_change
+        .pipe(
+          Effect.provideService(InstanceRef, instance),
+          Effect.provideService(WorkspaceRef, workspace),
+          // kilocode_change start - reject only typed user image validation defects as request errors
+          Effect.catchCause((cause) => {
+            const error = Cause.squash(cause)
+            if (
+              error instanceof Image.InvalidDataUrlError ||
+              error instanceof Image.DecodeError ||
+              error instanceof Image.SizeError
+            )
+              return Effect.fail(new HttpApiError.BadRequest({}))
+            return Effect.failCause(cause)
+          }),
+          // kilocode_change end
+        )
+      return HttpServerResponse.stream(Stream.make(JSON.stringify(message)).pipe(Stream.encodeText), {
+        contentType: "application/json",
+      })
     })
 
     const promptAsync = Effect.fn("SessionHttpApi.promptAsync")(function* (ctx: {
@@ -293,7 +315,9 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       params: { sessionID: SessionID }
       payload: typeof CommandPayload.Type
     }) {
-      return yield* promptSvc.command({ ...ctx.payload, sessionID: ctx.params.sessionID })
+      return yield* promptSvc
+        .command({ ...ctx.payload, sessionID: ctx.params.sessionID })
+        .pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
     })
 
     const shell = Effect.fn("SessionHttpApi.shell")(function* (ctx: {
@@ -374,7 +398,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       .handleRaw("create", createRaw)
       .handle("remove", remove)
       .handle("update", update)
-      .handle("fork", fork)
+      .handleRaw("fork", forkRaw) // kilocode_change - carry upstream bodyless full-session fork support
       .handle("abort", abort)
       .handle("init", init)
       .handle("share", share)

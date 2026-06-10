@@ -2,7 +2,10 @@ import { HttpApi, HttpApiEndpoint, HttpApiGroup, OpenApi } from "effect/unstable
 import { IndexingStatusInfo } from "@/kilocode/indexing-event"
 import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/middleware/instance-context"
-import { WorkspaceRoutingMiddleware } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
+import {
+  WorkspaceRoutingMiddleware,
+  WorkspaceRoutingQuery,
+} from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 
 export { IndexingStatusInfo, IndexingStatusState } from "@/kilocode/indexing-event"
@@ -18,6 +21,7 @@ export const IndexingApi = HttpApi.make("indexing")
     HttpApiGroup.make("indexing")
       .add(
         HttpApiEndpoint.get("status", IndexingPaths.status, {
+          query: WorkspaceRoutingQuery,
           success: described(IndexingStatusInfo, "Indexing status"),
         }).annotateMerge(
           OpenApi.annotations({

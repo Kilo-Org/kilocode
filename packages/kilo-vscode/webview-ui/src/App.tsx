@@ -19,9 +19,8 @@ import { ConfigProvider } from "./context/config"
 import { DisplayProvider } from "./context/display"
 import { IndexingProvider } from "./context/indexing"
 import { SessionProvider, useSession } from "./context/session"
-import { LanguageProvider } from "./context/language"
+import { LanguageBridge } from "./context/language-bridge"
 import { ChatView } from "./components/chat"
-import { MarketplaceView } from "./components/marketplace"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
 
@@ -38,8 +37,8 @@ import { KiloEmbeddingModelsProvider } from "./context/kilo-embedding-models"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import "./styles/chat.css"
 
-type ViewType = "newTask" | "marketplace" | "history" | "profile" | "settings" | "subAgentViewer"
-const VALID_VIEWS = new Set<string>(["newTask", "marketplace", "history", "profile", "settings", "subAgentViewer"])
+type ViewType = "newTask" | "history" | "profile" | "settings" | "subAgentViewer"
+const VALID_VIEWS = new Set<string>(["newTask", "history", "profile", "settings", "subAgentViewer"])
 
 /**
  * Bridge our session store to the DataProvider's expected Data shape.
@@ -172,19 +171,6 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   )
 }
 
-/**
- * Wraps children in LanguageProvider, passing server-side language info.
- * Must be below ServerProvider in the hierarchy.
- */
-export const LanguageBridge: Component<{ children: any }> = (props) => {
-  const server = useServer()
-  return (
-    <LanguageProvider vscodeLanguage={server.vscodeLanguage} languageOverride={server.languageOverride}>
-      {props.children}
-    </LanguageProvider>
-  )
-}
-
 type MermaidImageEvent = CustomEvent<{ dataUrl: string; filename: string }>
 
 export const MermaidDownloadBridge: Component = () => {
@@ -222,9 +208,6 @@ const AppContent: Component = () => {
       case "plusButtonClicked":
         window.dispatchEvent(new CustomEvent("newTaskRequest"))
         setCurrentView("newTask")
-        break
-      case "marketplaceButtonClicked":
-        setCurrentView("marketplace")
         break
       case "historyButtonClicked":
         setCurrentView("history")
@@ -327,9 +310,6 @@ const AppContent: Component = () => {
                 continueInWorktree
                 promptBoxId="sidebar:new-task"
               />
-            </Match>
-            <Match when={currentView() === "marketplace"}>
-              <MarketplaceView />
             </Match>
             <Match when={currentView() === "history"}>
               <HistoryView onSelectSession={handleSelectSession} onBack={() => setCurrentView("newTask")} />

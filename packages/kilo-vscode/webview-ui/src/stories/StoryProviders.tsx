@@ -43,6 +43,8 @@ import type {
   Config,
   KilocodeNotification,
   PermissionRequest,
+  ProviderAuthState,
+  SessionCloseReason,
   QuestionRequest,
   SuggestionRequest,
 } from "../types/messages"
@@ -89,7 +91,7 @@ const MOCK_PROVIDERS = {
 const MOCK_MODELS = flattenModels(MOCK_PROVIDERS as any)
 
 /** A synchronous mock ProviderContext — provides models without waiting for a postMessage round-trip. */
-const MockProviderProvider: ParentComponent = (props) => {
+const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean }> = (props) => {
   const value = {
     providers: () => MOCK_PROVIDERS as any,
     connected: () => ["kilo"],
@@ -98,7 +100,7 @@ const MockProviderProvider: ParentComponent = (props) => {
     models: () => MOCK_MODELS,
     findModel: (sel: any) => _findModel(MOCK_MODELS, sel),
     authMethods: () => ({}),
-    authStates: () => ({}),
+    authStates: () => (props.kiloAuth ? { kilo: "oauth" } : {}) as Record<string, ProviderAuthState>,
     isModelValid: () => true,
   }
   return <ProviderContext.Provider value={value}>{props.children}</ProviderContext.Provider>
@@ -159,6 +161,7 @@ export function mockSessionValue(overrides?: {
   questions?: QuestionRequest[]
   suggestions?: SuggestionRequest[]
   status?: string
+  closeReason?: SessionCloseReason
 }) {
   const id = overrides?.id ?? "story-session-001"
   const permissions = overrides?.permissions ?? []
@@ -178,6 +181,7 @@ export function mockSessionValue(overrides?: {
     sessions: () => [],
     status: () => status,
     statusInfo: () => ({ type: status }),
+    closeReason: () => overrides?.closeReason,
     statusText: () => (status === "idle" ? undefined : "Thinking…"),
     busySince: () => (status === "busy" ? Date.now() - 2000 : undefined),
     loading: () => false,
@@ -215,7 +219,7 @@ export function mockSessionValue(overrides?: {
     skills: () => [],
     refreshSkills: noop,
     removeSkill: noop,
-    removeMode: noop,
+    removeAgent: noop,
     selectedAgent: () => "code",
     selectAgent: noop,
     getSessionAgent: () => "code",
@@ -271,6 +275,7 @@ interface StoryProvidersProps {
   /** When provided, injects a mock ConfigContext with this config instead of the real ConfigProvider. */
   config?: Config
   onConfigChange?: (config: Config) => void
+  kiloAuth?: boolean
   /** When true, renders children without the default 12px padding wrapper */
   noPadding?: boolean
 }
@@ -287,7 +292,7 @@ const ConfigWrapper: ParentComponent<{ config?: Config; onConfigChange?: (config
       }
 
       return {
-        indexing: hasIndexingPlugin(config.plugin ?? []) && config.experimental?.semantic_indexing === true,
+        indexing: hasIndexingPlugin(config.plugin ?? []),
       }
     })
 
@@ -346,7 +351,7 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
         <FeedbackProvider>
           <ConfigWrapper config={props.config} onConfigChange={props.onConfigChange}>
             <DisplayProvider>
-              <MockProviderProvider>
+              <MockProviderProvider kiloAuth={props.kiloAuth}>
                 <DialogProvider>
                   <LanguageContext.Provider
                     value={{

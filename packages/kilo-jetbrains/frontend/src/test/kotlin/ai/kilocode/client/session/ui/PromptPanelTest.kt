@@ -9,6 +9,7 @@ import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.EditorTextField
 import com.intellij.util.ui.EmptyIcon
 import java.awt.Container
 import javax.swing.JButton
@@ -44,6 +45,42 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(panel.preferredSize.height >= 26)
     }
 
+    fun `test prompt editor grows when lines are added`() {
+        val panel = PromptPanel(project, {}, {})
+        val editor = panel.defaultFocusedComponent as EditorTextField
+        val min = editor.preferredSize.height
+
+        editor.text = "one\ntwo\nthree\nfour\nfive"
+
+        assertTrue(editor.preferredSize.height > min)
+    }
+
+    fun `test prompt editor shrinks when lines are removed`() {
+        val panel = PromptPanel(project, {}, {})
+        val editor = panel.defaultFocusedComponent as EditorTextField
+        val min = editor.preferredSize.height
+
+        editor.text = "one\ntwo\nthree\nfour\nfive"
+        assertTrue(editor.preferredSize.height > min)
+
+        editor.text = "one"
+
+        assertEquals(min, editor.preferredSize.height)
+    }
+
+    fun `test prompt editor shrinks after clear`() {
+        val panel = PromptPanel(project, {}, {})
+        val editor = panel.defaultFocusedComponent as EditorTextField
+        val min = editor.preferredSize.height
+
+        editor.text = "one\ntwo\nthree\nfour\nfive"
+        assertTrue(editor.preferredSize.height > min)
+
+        panel.clear()
+
+        assertEquals(min, editor.preferredSize.height)
+    }
+
     fun `test reasoning picker hides when variants are empty`() {
         val panel = PromptPanel(project, {}, {})
 
@@ -59,6 +96,7 @@ class PromptPanelTest : BasePlatformTestCase() {
 
         assertTrue(panel.reasoning.isVisible)
         assertEquals("high", panel.reasoning.selectedForTest()?.id)
+        assertEquals("High ▾", panel.reasoning.text)
     }
 
     fun `test reasoning picker aligns unchecked rows`() {

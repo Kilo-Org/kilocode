@@ -12,7 +12,7 @@ import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.scroll.SessionScroll
 import ai.kilocode.client.session.ui.ConnectionPanel
-import ai.kilocode.client.session.ui.EmptySessionPanel
+import ai.kilocode.client.session.ui.empty.EmptySessionPanel
 import ai.kilocode.client.session.ui.LoadingPanel
 import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.mode.ModePicker
@@ -22,6 +22,7 @@ import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
+import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.controller.EVENT_FLUSH_MS
@@ -32,10 +33,17 @@ import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
+import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.log.ChatLogSummary
 import com.intellij.util.ui.JBUI
 import ai.kilocode.log.KiloLog
+import com.intellij.ide.BrowserUtil
+import com.intellij.ide.TextCopyProvider
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.PlatformDataKeys
+import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -55,8 +63,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
+import java.awt.event.HierarchyEvent
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.UIManager
 
 /**
  * Top-level session UI composition root.
@@ -75,7 +85,7 @@ class SessionUi(
     private val manager: SessionManager? = null,
     private val workspaces: KiloWorkspaceService = service(),
     private val migration: MigrationUiController = service<KiloMigrationService>(),
-) : JPanel(BorderLayout()), Disposable, SessionEditorStyleTarget {
+) : JPanel(BorderLayout()), Disposable, SessionEditorStyleTarget, UiDataProvider {
 
     companion object {
         private val LOG = KiloLog.create(SessionUi::class.java)
@@ -95,7 +105,13 @@ class SessionUi(
             ?: EVENT_FLUSH_MS
 
     private val controller = SessionController(
-        this, ref, sessions, workspace, app, cs, comp = this,
+        parent = this,
+        ref = ref,
+        sessions = sessions,
+        workspace = workspace,
+        app = app,
+        cs = cs,
+        comp = this,
         flushMs = flushMs,
         condense = Registry.`is`("kilo.session.condense", true),
         displayMs = displayMs,
@@ -130,11 +146,25 @@ class SessionUi(
     private lateinit var prompt: PromptPanel
     private lateinit var load: LoadingPanel
     private lateinit var migrationOverlay: MigrationOverlayPanel
+    private var empty: EmptySessionPanel? = null
     private var modalFocus: (() -> JComponent)? = null
     private var style = SessionEditorStyle.current()
+    private val selection = SessionSelection()
+    private val copy = object : TextCopyProvider() {
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+
+        override fun getTextLinesToCopy(): Collection<String>? {
+            val text = selection.selectedText()?.takeIf { it.isNotEmpty() } ?: return null
+            return listOf(text)
+        }
+    }
+    private var editorTheme = style.editorScheme
+    private var colorTheme = UIManager.getLookAndFeel()
+    private var disposed = false
 
     init {
         buildUi()
+        Disposer.register(this, selection)
         scroll.show(body(controller.model.state))
         bindUi()
         bindStyle()
@@ -145,12 +175,14 @@ class SessionUi(
     }
 
     override fun addNotify() {
+        if (disposed) return
         super.addNotify()
         resumeOpen()
     }
 
     override fun doLayout() {
         super.doLayout()
+        if (disposed) return
         resumeOpen()
     }
 
@@ -161,6 +193,32 @@ class SessionUi(
     internal val cacheKey: String? get() = controller.refKey
 
     internal fun currentStyle() = style
+
+    override fun uiDataSnapshot(sink: DataSink) {
+        sink[PlatformDataKeys.COPY_PROVIDER] = copy
+    }
+
+    @RequiresEdt
+    internal fun activityKind(): SessionActivityKind? = when (val state = controller.model.state) {
+        is SessionState.Idle,
+        is SessionState.Loading,
+        is SessionState.Busy,
+        is SessionState.Retry,
+        is SessionState.Offline,
+        is SessionState.Error -> null
+        is SessionState.LoginRequired -> SessionActivityKind.LOGIN_REQUIRED
+        is SessionState.AwaitingPermission -> SessionActivityKind.PERMISSION
+        is SessionState.AwaitingQuestion ->
+            SessionActivityKind.PLAN.takeIf { state.question.items.any { it.planFollowup() } } ?: SessionActivityKind.QUESTION
+    }
+
+    @RequiresEdt
+    internal fun title(): String? = controller.model.session?.title?.takeIf { it.isNotBlank() }
+
+    @RequiresEdt
+    internal fun syncActivity() {
+        empty?.syncActivity()
+    }
 
     val defaultFocusedComponent: JComponent get() {
         modalFocus?.invoke()?.let { return it }
@@ -216,13 +274,31 @@ class SessionUi(
             project = project,
             reply = { id, dto, opts -> controller.replyQuestion(id, dto, opts) },
             reject = { id -> controller.rejectQuestion(id) },
-            scroll = { scroll.followBottom(true) },
+            follow = { scroll.following() },
+            scroll = { scroll.followBottom(it) },
+            selection = selection,
         )
         permission = PermissionView(
             reply = { id, dto -> controller.replyPermission(id, dto) },
+            selection = selection,
         )
-        login = LoginRequiredView(openProfile = { controller.openProfile() }, dismiss = { controller.dismissLoginRequired() })
-        messageBody = SessionMessageListPanel(controller.model, this, question, permission, login, ::openFile)
+        login = LoginRequiredView(
+            openProfile = { controller.openProfile() },
+            dismiss = { controller.dismissLoginRequired() },
+            selection = selection,
+        )
+        messageBody = SessionMessageListPanel(
+            controller.model,
+            this,
+            question,
+            permission,
+            login,
+            ::openFile,
+            ::openUrl,
+            selection,
+            repo = workspace.directory,
+            resize = { anchor, fn -> scroll.preserve(anchor, fn) },
+        )
         header = SessionHeaderPanel(controller, this)
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
@@ -246,13 +322,20 @@ class SessionUi(
         prompt.model.onSelect = { item -> controller.selectModel(item.provider, item.id) }
         prompt.reasoning.onSelect = { item -> controller.selectVariant(item.id) }
         prompt.onReset = { controller.clearModelOverride() }
+        prompt.onChange = { scroll.refresh() }
         prompt.onAutoApproveToggle = { value ->
             controller.setAutoApprove(value)
             prompt.setAutoApprove(controller.autoApprove)
         }
         prompt.setAutoApprove(controller.autoApprove)
         prompt.model.favorites = { app.favorites.value }
-        prompt.model.onFavoriteToggle = { item -> app.toggleModelFavorite(item.provider, item.id) }
+        prompt.model.onFavoriteToggle = { item ->
+            Telemetry.send(
+                "Model Favorite Toggled",
+                mapOf("provider" to item.provider, "modelId" to item.id),
+            )
+            app.toggleModelFavorite(item.provider, item.id)
+        }
 
         controller.addListener(this) { event ->
             when (event) {
@@ -286,15 +369,25 @@ class SessionUi(
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowProgress -> {
+                    empty = null
                     scroll.show(progressBody)
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowRecents -> {
-                    val panel = EmptySessionPanel(this, controller, event.recents) { manager?.showHistory() }
+                    val panel = EmptySessionPanel(
+                        this,
+                        controller,
+                        event.recents,
+                        history = { manager?.showHistory() },
+                        activity = { manager?.activity() ?: sessions.activity() },
+                        titles = { manager?.titles().orEmpty() },
+                    )
+                    empty = panel
                     scroll.show(panel.view)
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowSession -> {
+                    empty = null
                     scroll.show(messageBody)
                 }
 
@@ -316,6 +409,8 @@ class SessionUi(
             when (event) {
                 is SessionModelEvent.StateChanged -> onStateChanged(event.state)
 
+                is SessionModelEvent.SessionUpdated -> onSessionUpdated()
+
                 is SessionModelEvent.TurnAdded,
                 is SessionModelEvent.TurnUpdated,
                 is SessionModelEvent.ContentAdded,
@@ -329,7 +424,6 @@ class SessionUi(
                 is SessionModelEvent.ContentRemoved,
                 is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
-                is SessionModelEvent.SessionUpdated,
                 is SessionModelEvent.HeaderUpdated,
                 is SessionModelEvent.Compacted,
                 is SessionModelEvent.Cleared -> Unit
@@ -365,14 +459,22 @@ class SessionUi(
     }
 
     private fun bindStyle() {
+        addHierarchyListener { event ->
+            if ((event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong()) == 0L) return@addHierarchyListener
+            if (!isShowing) return@addHierarchyListener
+            applyStyleIfThemeChanged()
+        }
+
         val bus = ApplicationManager.getApplication().messageBus.connect(this)
         bus.subscribe(EditorColorsManager.TOPIC, EditorColorsListener {
             ApplicationManager.getApplication().invokeLater {
+                if (disposed) return@invokeLater
                 applyStyle(SessionEditorStyle.current())
             }
         })
         bus.subscribe(LafManagerListener.TOPIC, LafManagerListener {
             ApplicationManager.getApplication().invokeLater {
+                if (disposed) return@invokeLater
                 applyStyle(SessionEditorStyle.current())
             }
         })
@@ -419,8 +521,10 @@ class SessionUi(
             val model = controller.model.model ?: "none"
             "${ChatLogSummary.prompt(text)} agent=$agent model=$model ready=${controller.ready}"
         }
-        controller.prompt(text)
         prompt.clear()
+        val follow = scroll.atBottom()
+        controller.prompt(text)
+        scroll.followBottom(follow)
     }
 
     private fun openFile(path: String) {
@@ -429,26 +533,54 @@ class SessionUi(
         }
     }
 
+    private fun openUrl(url: String) {
+        BrowserUtil.browse(url)
+    }
+
     private fun onStateChanged(state: SessionState) {
+        if (disposed) return
         prompt.setBusy(state.isBusy())
         load.setState(state)
+        scroll.setQuestionPending(questionPending(state))
         scroll.show(body(state))
+        manager?.activityChanged()
         refresh()
     }
 
+    private fun onSessionUpdated() {
+        manager?.activityChanged()
+    }
+
     private fun refresh() {
+        if (disposed) return
         scroll.refresh()
         root.revalidate()
         root.repaint()
     }
 
     override fun applyStyle(style: SessionEditorStyle) {
+        if (disposed) return
         this.style = style
+        selection.applyStyle(style)
+        editorTheme = style.editorScheme
+        colorTheme = UIManager.getLookAndFeel()
+        background = style.editorBackground
+        root.content.background = style.editorBackground
+        sessionContent.background = style.editorBackground
+        blankBody.background = style.editorBackground
         load.applyStyle(style)
         header.applyStyle(style)
         prompt.applyStyle(style)
         scroll.applyStyle(style)
         refresh()
+    }
+
+    private fun applyStyleIfThemeChanged() {
+        if (disposed) return
+        val next = SessionEditorStyle.current()
+        val laf = UIManager.getLookAndFeel()
+        if (editorTheme === next.editorScheme && colorTheme == laf) return
+        applyStyle(next)
     }
 
     private fun openProfileSettings() {
@@ -461,7 +593,21 @@ class SessionUi(
         )
     }
 
-    override fun dispose() {}
+    override fun dispose() {
+        disposed = true
+        modalFocus = null
+        empty = null
+        if (this::root.isInitialized) root.setModalContent(null)
+        removeAll()
+    }
 }
 
 private fun variantTitle(value: String): String = value.replaceFirstChar { it.titlecase() }
+
+private fun questionPending(state: SessionState): Boolean {
+    if (state !is SessionState.AwaitingQuestion) return false
+    return state.question.items.none { it.planFollowup() }
+}
+
+private fun ai.kilocode.client.session.model.QuestionItem.planFollowup() =
+    questionKey == "plan.followup.question" || headerKey == "plan.followup.header"

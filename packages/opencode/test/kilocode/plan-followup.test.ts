@@ -1,4 +1,5 @@
 import { describe, expect, spyOn, test } from "bun:test"
+import { Effect } from "effect"
 import { Bus } from "../../src/bus"
 import { TuiEvent } from "../../src/cli/cmd/tui/event"
 import { Identifier } from "../../src/id/id"
@@ -12,6 +13,7 @@ import { Question } from "../../src/question"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { AppRuntime } from "../../src/effect/app-runtime"
+import { makeRuntime } from "../../src/effect/run-service"
 import { SessionStatus } from "../../src/session/status"
 import { Todo } from "../../src/session/todo"
 import { Global } from "@opencode-ai/core/global"
@@ -23,15 +25,19 @@ import { tmpdir } from "../fixture/fixture"
 Log.init({ print: false })
 process.env.KILO_CLIENT = "cli"
 
+const runtime = makeRuntime(Question.Service, Question.defaultLayer)
 const question = {
+  ask(input: Parameters<Question.Interface["ask"]>[0]) {
+    return runtime.runPromise((svc) => svc.ask(input))
+  },
   list() {
-    return AppRuntime.runPromise(Question.Service.use((svc) => svc.list()))
+    return runtime.runPromise((svc) => svc.list())
   },
   reply(input: Parameters<Question.Interface["reply"]>[0]) {
-    return AppRuntime.runPromise(Question.Service.use((svc) => svc.reply(input)))
+    return runtime.runPromise((svc) => svc.reply(input))
   },
   reject(requestID: Parameters<Question.Interface["reject"]>[0]) {
-    return AppRuntime.runPromise(Question.Service.use((svc) => svc.reject(requestID)))
+    return runtime.runPromise((svc) => svc.reject(requestID))
   },
 }
 
@@ -42,6 +48,19 @@ const todo = {
   get(sessionID: SessionID) {
     return AppRuntime.runPromise(Todo.Service.use((svc) => svc.get(sessionID)))
   },
+}
+
+const store = {
+  create: (input?: Parameters<Session.Interface["create"]>[0]) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.create(input)).pipe(Effect.provide(Session.defaultLayer))),
+  get: (id: SessionID) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.get(id)).pipe(Effect.provide(Session.defaultLayer))),
+  messages: (input: Parameters<Session.Interface["messages"]>[0]) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.messages(input)).pipe(Effect.provide(Session.defaultLayer))),
+  updateMessage: <T extends MessageV2.Info>(msg: T) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.updateMessage(msg)).pipe(Effect.provide(Session.defaultLayer))),
+  updatePart: <T extends MessageV2.Part>(part: T) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.updatePart(part)).pipe(Effect.provide(Session.defaultLayer))),
 }
 
 const model = {
@@ -88,8 +107,8 @@ async function seed(input: {
   variant?: string
   tools?: Array<{ tool: string; input: Record<string, unknown>; output: string }>
 }) {
-  const session = await Session.create({})
-  const user = await Session.updateMessage({
+  const session = await store.create({})
+  const user = await store.updateMessage({
     id: MessageID.ascending(),
     role: "user",
     sessionID: session.id,
@@ -99,7 +118,7 @@ async function seed(input: {
     agent: "plan",
     model: input.variant ? { ...model, variant: input.variant } : model,
   })
-  await Session.updatePart({
+  await store.updatePart({
     id: PartID.ascending(),
     messageID: user.id,
     sessionID: session.id,
@@ -136,8 +155,8 @@ async function seed(input: {
     },
     finish: "end_turn",
   }
-  await Session.updateMessage(assistant)
-  await Session.updatePart({
+  await store.updateMessage(assistant)
+  await store.updatePart({
     id: PartID.ascending(),
     messageID: assistant.id,
     sessionID: session.id,
@@ -146,7 +165,7 @@ async function seed(input: {
   })
 
   for (const t of input.tools ?? []) {
-    await Session.updatePart({
+    await store.updatePart({
       id: PartID.ascending(),
       messageID: assistant.id,
       sessionID: session.id,
@@ -164,7 +183,7 @@ async function seed(input: {
     } satisfies MessageV2.ToolPart)
   }
 
-  const messages = await Session.messages({ sessionID: session.id })
+  const messages = await store.messages({ sessionID: session.id })
   return {
     sessionID: session.id,
     messages,
@@ -172,7 +191,7 @@ async function seed(input: {
 }
 
 async function latestUser(sessionID: SessionID) {
-  const messages = await Session.messages({ sessionID })
+  const messages = await store.messages({ sessionID })
   return messages
     .slice()
     .reverse()
@@ -220,12 +239,12 @@ function full(input: { providerID: string; modelID: string }, vars: string[]) {
 const savedFull = full(saved, [savedVar, "low"])
 const savedConfigFull = full(saved, [configVar, "low"])
 const configFull = full(config, [configVar, "low"])
-
 describe("plan follow-up", () => {
   test("ask - returns break when dismissed", () =>
     withInstance(async () => {
       const seeded = await seed({ text: "1. Step one\n2. Step two" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -243,6 +262,7 @@ describe("plan follow-up", () => {
     withInstance(async () => {
       const seeded = await seed({ text: "1. Build" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -272,6 +292,7 @@ describe("plan follow-up", () => {
     withInstance(async () => {
       const seeded = await seed({ text: "1. Build" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -303,6 +324,7 @@ describe("plan follow-up", () => {
         process.env.KILO_CLIENT = "vscode"
         const seeded = await seed({ text: "1. Build" })
         const pending = PlanFollowup.ask({
+          question,
           sessionID: seeded.sessionID,
           messages: seeded.messages,
           abort: AbortSignal.any([]),
@@ -330,6 +352,7 @@ describe("plan follow-up", () => {
     withInstance(async () => {
       const seeded = await seed({ text: "1. Build" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -388,6 +411,7 @@ describe("plan follow-up", () => {
       }
       const seeded = await seed({ text: "1. Build\n2. Test" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -420,6 +444,7 @@ describe("plan follow-up", () => {
     withInstance(async () => {
       const seeded = await seed({ text: "1. Build\n2. Test" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -457,6 +482,7 @@ describe("plan follow-up", () => {
       KiloSessionPromptQueue.retarget(seeded.sessionID, original)
 
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -473,7 +499,7 @@ describe("plan follow-up", () => {
       await expect(pending).resolves.toBe("continue")
 
       // The injected user message must be visible when scoped
-      const all = await Session.messages({ sessionID: seeded.sessionID })
+      const all = await store.messages({ sessionID: seeded.sessionID })
       const scoped = KiloSessionPromptQueue.scope(seeded.sessionID, all)
       const injected = scoped.findLast((m) => m.info.role === "user")
       expect(injected).toBeDefined()
@@ -567,6 +593,7 @@ describe("plan follow-up", () => {
       })
 
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -595,7 +622,7 @@ describe("plan follow-up", () => {
       if (!newSessionID || !next) throw new Error("expected follow-up session")
       expect(next.id).toBe(newSessionID)
       expect(next.parentID).toBeUndefined()
-      const messages = await Session.messages({ sessionID: newSessionID })
+      const messages = await store.messages({ sessionID: newSessionID })
       const user = messages.find((item) => item.info.role === "user")
       expect(user?.info.role).toBe("user")
       if (!user || user.info.role !== "user") throw new Error("expected seeded user message")
@@ -625,6 +652,7 @@ describe("plan follow-up", () => {
     withInstance(async () => {
       await using other = await tmpdir({ git: true })
       const get = spyOn(PlanFollowupRuntime, "agent").mockImplementation(async () => undefined as any)
+      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockResolvedValue(fakeModel)
       const loop = spyOn(PlanFollowupRuntime, "loop").mockResolvedValue({
         info: {
           id: MessageID.make("msg_test"),
@@ -651,6 +679,7 @@ describe("plan follow-up", () => {
       using _mocks = {
         [Symbol.dispose]() {
           get.mockRestore()
+          modelSpy.mockRestore()
           loop.mockRestore()
         },
       }
@@ -667,6 +696,7 @@ describe("plan follow-up", () => {
         fn: async () => sessions(),
       })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -696,7 +726,7 @@ describe("plan follow-up", () => {
       expect(next?.parentID).toBeUndefined()
 
       if (next) {
-        const messages = await Session.messages({ sessionID: next.id })
+        const messages = await store.messages({ sessionID: next.id })
         const user = messages.find((item) => item.info.role === "user")
         if (!user || user.info.role !== "user") throw new Error("expected user message")
         const part = user.parts.find((item) => item.type === "text")
@@ -740,6 +770,7 @@ describe("plan follow-up", () => {
       }
       const seeded = await seed({ text: "1. Build\n2. Test" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -792,6 +823,7 @@ describe("plan follow-up", () => {
       }
       const seeded = await seed({ text: "1. Build\n2. Test" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -827,6 +859,7 @@ describe("plan follow-up", () => {
       }
       const seeded = await seed({ text: "1. Build\n2. Test", variant: planVar })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -878,6 +911,7 @@ describe("plan follow-up", () => {
       }
 
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -902,7 +936,12 @@ describe("plan follow-up", () => {
       expect(states.some((x) => x.sessionID === next && x.type === "busy")).toBe(true)
 
       const { SessionPrompt } = await import("../../src/session/prompt")
-      await SessionPrompt.cancel(next)
+      await Effect.runPromise(
+        SessionPrompt.Service.use((svc) => svc.cancel(next)).pipe(
+          Effect.provide(SessionPrompt.defaultLayer),
+          Effect.scoped,
+        ),
+      )
       deferred.resolve([])
       await expect(pending).resolves.toBe("break")
 
@@ -914,6 +953,7 @@ describe("plan follow-up", () => {
     withInstance(async () => {
       const seeded = await seed({ text: "   " })
       const result = await PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -929,6 +969,7 @@ describe("plan follow-up", () => {
       abort.abort()
 
       const result = await PlanFollowup.ask({
+        question,
         sessionID: SessionID.make("ses_test"),
         messages: [],
         abort: abort.signal,
@@ -942,6 +983,7 @@ describe("plan follow-up", () => {
       const abort = new AbortController()
       const seeded = await seed({ text: "1. Step one\n2. Step two" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: abort.signal,
@@ -961,6 +1003,7 @@ describe("plan follow-up", () => {
     withInstance(async () => {
       const seeded = await seed({ text: "1. Build\n2. Test" })
       const pending = PlanFollowup.ask({
+        question,
         sessionID: seeded.sessionID,
         messages: seeded.messages,
         abort: AbortSignal.any([]),
@@ -975,6 +1018,6 @@ describe("plan follow-up", () => {
       })
 
       await expect(pending).resolves.toBe("break")
-      expect((await Session.messages({ sessionID: seeded.sessionID })).length).toBe(2)
+      expect((await store.messages({ sessionID: seeded.sessionID })).length).toBe(2)
     }))
 })

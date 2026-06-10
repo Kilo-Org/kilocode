@@ -2,7 +2,10 @@ import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/middleware/instance-context"
-import { WorkspaceRoutingMiddleware } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
+import {
+  WorkspaceRoutingMiddleware,
+  WorkspaceRoutingQuery,
+} from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 
 const root = "/commit-message"
@@ -26,6 +29,7 @@ export const CommitMessageApi = HttpApi.make("commit-message")
     HttpApiGroup.make("commit-message")
       .add(
         HttpApiEndpoint.post("generate", root, {
+          query: WorkspaceRoutingQuery,
           payload: CommitMessagePayload,
           success: described(CommitMessageResponse, "Generated commit message"),
           error: HttpApiError.BadRequest,

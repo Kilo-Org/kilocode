@@ -6,9 +6,8 @@ import { InstanceState } from "@/effect/instance-state"
 import { FileWatcher } from "@/file/watcher"
 import { Git } from "@/git"
 import * as Log from "@opencode-ai/core/util/log"
-import { zod, zodObject } from "@/util/effect-zod"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
-import { NonNegativeInt, withStatics } from "@/util/schema"
+import { zod, zodObject } from "@opencode-ai/core/effect-zod"
+import { NonNegativeInt, withStatics } from "@opencode-ai/core/schema"
 
 const log = Log.create({ service: "vcs" })
 const PATCH_CONTEXT_LINES = 2_147_483_647
@@ -231,9 +230,12 @@ export type Info = Schema.Schema.Type<typeof Info>
 
 export const FileDiff = Schema.Struct({
   file: Schema.String,
-  patch: Schema.String,
-  additions: NonNegativeInt,
-  deletions: NonNegativeInt,
+  // Mirrors Snapshot.FileDiff (see #26574). The current producer always
+  // populates patch, but loosening matches the sibling schema so a
+  // future code path that omits it can't crash /instance/vcs/diff.
+  patch: Schema.optional(Schema.String),
+  additions: Schema.Finite,
+  deletions: Schema.Finite,
   status: Schema.optional(Schema.Literals(["added", "deleted", "modified"])),
 })
   .annotate({ identifier: "VcsFileDiff" })
@@ -242,8 +244,8 @@ export type FileDiff = Schema.Schema.Type<typeof FileDiff>
 
 export const FileStatus = Schema.Struct({
   file: Schema.String,
-  additions: NonNegativeInt,
-  deletions: NonNegativeInt,
+  additions: Schema.Finite,
+  deletions: Schema.Finite,
   status: Schema.Literals(["added", "deleted", "modified"]),
 })
   .annotate({ identifier: "VcsFileStatus" })
@@ -407,11 +409,5 @@ export const layer: Layer.Layer<Service, never, Git.Service | Bus.Service> = Lay
 )
 
 export const defaultLayer = layer.pipe(Layer.provide(Git.defaultLayer), Layer.provide(Bus.layer))
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const branch = () => runPromise((svc) => svc.branch())
-export const defaultBranch = () => runPromise((svc) => svc.defaultBranch())
-// kilocode_change end
 
 export * as Vcs from "./vcs"

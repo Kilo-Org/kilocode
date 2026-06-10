@@ -13,6 +13,19 @@ type Options = { -readonly [K in keyof KiloOptions]?: KiloOptions[K] } & { apiKe
 type Failure = NonNullable<KiloModelsResult["error"]>
 type Result = { readonly models: Models; readonly error?: Failure }
 type View = { models?: Models; timestamp?: number }
+
+export interface KiloModels {
+  readonly fetch: (options: KiloOptions) => Effect.Effect<KiloModelsResult, unknown>
+}
+
+export class KiloModelsService extends Context.Service<KiloModelsService, KiloModels>()(
+  "@kilocode/ModelCache/KiloModels",
+) {}
+
+export const kiloModelsLayer = Layer.succeed(
+  KiloModelsService,
+  KiloModelsService.of({ fetch: (options) => Effect.tryPromise(() => fetchKiloModels(options)) }),
+)
 type Cell = {
   readonly providerID: string
   readonly view: View
@@ -38,11 +51,16 @@ const ApertisItem = Schema.Struct({ id: Schema.String, owned_by: Schema.optional
 const ApertisResponse = Schema.Struct({ data: Schema.optional(Schema.Array(ApertisItem)) })
 type ApertisItem = Schema.Schema.Type<typeof ApertisItem>
 
-export const layer: Layer.Layer<Service, never, Auth.Service | Config.Service | HttpClient.HttpClient> = Layer.effect(
+export const layer: Layer.Layer<
+  Service,
+  never,
+  Auth.Service | Config.Service | KiloModelsService | HttpClient.HttpClient
+> = Layer.effect(
   Service,
   Effect.gen(function* () {
     const auth = yield* Auth.Service
     const cfg = yield* Config.Service
+    const kilo = yield* KiloModelsService
     const http = yield* HttpClient.HttpClient
     const cells = new Map<string, Cell>()
     const active = new Map<string, Cell>()
@@ -140,7 +158,7 @@ export const layer: Layer.Layer<Service, never, Auth.Service | Config.Service | 
     })
 
     const fetchModels = (providerID: string, options: Options): Effect.Effect<Result, unknown> => {
-      if (providerID === "kilo") return Effect.tryPromise(() => fetchKiloModels(options))
+      if (providerID === "kilo") return kilo.fetch(options)
       if (providerID === "apertis") return fetchApertisModels(options).pipe(Effect.map((models) => ({ models })))
       log.debug("provider not implemented", { providerID })
       return Effect.succeed({ models: {} })
@@ -261,6 +279,7 @@ export const defaultLayer = layer.pipe(
   Layer.provide(FetchHttpClient.layer),
   Layer.provide(Auth.defaultLayer),
   Layer.provide(Config.defaultLayer),
+  Layer.provide(kiloModelsLayer),
 )
 
 export * as ModelCache from "./model-cache"

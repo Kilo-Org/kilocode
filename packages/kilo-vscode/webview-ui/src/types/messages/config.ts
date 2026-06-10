@@ -40,7 +40,6 @@ export interface WatcherConfig {
 export interface ExperimentalConfig {
   disable_paste_summary?: boolean
   batch_tool?: boolean
-  semantic_indexing?: boolean
   codebase_search?: boolean
   speech_to_text_model?: string
   primary_tools?: string[]
@@ -67,8 +66,8 @@ export type IndexingProvider =
 export interface IndexingConfig {
   enabled?: boolean
   provider?: IndexingProvider
-  model?: string
-  dimension?: number
+  model?: string | null
+  dimension?: number | null
   vectorStore?: "lancedb" | "qdrant"
   kilo?: { apiKey?: string; baseUrl?: string; organizationId?: string }
   openai?: { apiKey?: string }

@@ -106,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Preporučeno",
   "dialog.provider.opencode.note": "Kurirani modeli uključujući Claude, GPT, Gemini i druge",
   "dialog.provider.anthropic.note": "Direktan pristup Claude modelima, uključujući Pro i Max",
+  "dialog.provider.deepseek.note": "DeepSeek modeli za zadatke zaključivanja i kodiranja",
   "dialog.provider.copilot.note": "Claude modeli za pomoć pri kodiranju",
   "dialog.provider.openai.note": "GPT modeli za brze, sposobne opšte AI zadatke",
   "dialog.provider.google.note": "Gemini modeli za brze, strukturirane odgovore",
@@ -135,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "Autorizacija nije uspjela: {{error}}",
   "provider.connect.apiKey.description":
     "Unesi svoj {{provider}} API ključ da povežeš račun i koristiš {{provider}} modele u Kilo-u.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "{{provider}} API ključ",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API ključ",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API ključ je obavezan",
   "provider.connect.prompt.required": "{{field}} je obavezno",
   "provider.connect.azure.endpointType.label": "Odaberite konfiguraciju krajnje tačke za Azure",
@@ -175,6 +182,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "{{provider}} modeli više nisu dostupni.",
 
   "model.tag.free": "Besplatno",
+  "model.tag.dataCollected": "Podaci se mogu koristiti za obuku",
   "model.tag.latest": "Najnovije",
   "model.group.recommended": "Preporučeno",
   "model.group.favorites": "Favoriti",
@@ -202,6 +210,9 @@ export const dict = {
   "model.preview.label.cached": "Keširano",
   "model.preview.label.average": "Procj. prosječni trošak",
   "model.preview.label.context": "Kontekst",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Završetak",
+  "model.preview.label.costAttempt": "Trošak / pokušaj",
   "model.preview.value.notSupported": "Nije podržano",
   "model.preview.tooltip.average":
     "Procijenjeni prosječni trošak zasniva se na tipičnom omjeru ulaznih i izlaznih tokena, te tokena pročitanih iz keša.",
@@ -454,6 +465,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Neuspjelo ukidanje dijeljenja",
   "toast.session.unshare.failed.description": "Došlo je do greške prilikom ukidanja dijeljenja",
 
+  "toast.session.rename.invalid.title": "Nevažeći naslov sesije",
   "toast.session.listFailed.title": "Neuspjelo učitavanje sesija za {{project}}",
 
   "toast.update.title": "Dostupno ažuriranje",
@@ -1028,6 +1040,8 @@ export const dict = {
   "session.delete.confirm": 'Izbriši sesiju "{{name}}"?',
   "session.delete.button": "Izbriši sesiju",
   "session.untitled": "Bez naslova",
+  "session.current": "Trenutna sesija",
+  "session.history.sources": "Izvor historije",
   "session.recent": "Nedavne",
   "session.showHistory": "Prikaži historiju",
   "session.search.placeholder": "Pretraži sesije...",
@@ -1132,6 +1146,14 @@ export const dict = {
   "session.status.retrying": "Ponovni pokušaj (pokušaj {{ attempt }})… {{ message }}",
   "session.status.working": "Radim…",
   "session.status.offline": "Mreža prekinuta — ponovno povezivanje...",
+  "session.outcome.incomplete": "Potez završen sa {{count}} preostalih zadataka",
+  "session.outcome.limit": "Ograničenje odgovora dosegnuto prije završetka",
+  "session.outcome.unknown": "Potez završen bez razloga završetka modela",
+  "session.outcome.filtered": "Provajder je zaustavio ovaj odgovor zbog filtera sadržaja.",
+  "session.outcome.unexpected": "Odgovor je neočekivano završen i može biti nepotpun.",
+  "session.outcome.interrupted": "Potez prekinut",
+  "session.outcome.error": "Potez nije uspio",
+  "session.outcome.finish": "Razlog završetka: {{reason}}",
 
   "ui.sessionTurn.cancel": "Otkaži",
   "ui.sessionTurn.status.thinking": "Razmišljam...",
@@ -1194,7 +1216,6 @@ export const dict = {
     'Telemetrija je kontrolisana ugrađenom postavkom za telemetriju u VS Code-u. Da biste je onemogućili, idite na Postavke > Telemetrija > Nivo telemetrije i postavite na "off". Ponovo pokrenite VS Code da biste primijenili promjenu.',
   "settings.aboutKiloCode.telemetry.openSettings": "Otvori postavke telemetrije",
 
-  "settings.agentBehaviour.subtab.modes": "Modovi",
   "settings.agentBehaviour.subtab.agents": "Agenti",
   "settings.agentBehaviour.subtab.mcpServers": "MCP serveri",
   "settings.agentBehaviour.subtab.rules": "Pravila",
@@ -1254,9 +1275,6 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Ne sažimaj veliki zalijepljeni sadržaj",
   "settings.experimental.batch.title": "Batch alat",
   "settings.experimental.batch.description": "Omogući batch obradu poziva alata",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Pretraga koda",
   "settings.experimental.codebaseSearch.description": "Omogući AI pretragu prirodnim jezikom kroz bazu koda",
   "settings.experimental.speechToText.title": "Govor u tekst",
@@ -1309,7 +1327,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Nisu pronađene vještine. Dodajte putanje mapa ili URL-ove ispod kako biste učinili vještine dostupnim.",
   "settings.agentBehaviour.availableModes": "Dostupni prilagođeni modovi",
-  "settings.agentBehaviour.noModesFound": "Nisu pronađeni modovi.",
+  "settings.agentBehaviour.noAgentsFound": "Nisu pronađeni agenti.",
   "settings.agentBehaviour.createMode": "Kreiraj novi mod",
   "settings.agentBehaviour.createMode.name": "Naziv",
   "settings.agentBehaviour.createMode.name.placeholder": "npr. reviewer",
@@ -1353,10 +1371,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Kopiraj dozvole kao JSON",
   "settings.agentBehaviour.permissions.hint":
     "Pravila se evaluiraju po redoslijedu — zadnje pravilo koje se podudara pobjeđuje. Ovo je riješeni skup pravila iz CLI backenda.",
-  "settings.agentBehaviour.removeMode.title": "Ukloni mod",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Ukloniti mod "{{name}}"? Ovo će onemogućiti mod ažuriranjem vaše konfiguracije.',
-  "settings.agentBehaviour.removeMode.button": "Ukloni",
+  "settings.agentBehaviour.removeAgent.title": "Ukloni agenta",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Ukloniti agenta "{{name}}"? Ovo će ga onemogućiti ažuriranjem konfiguracije.',
+  "settings.agentBehaviour.removeAgent.button": "Ukloni",
   "settings.agentBehaviour.removeMcp.title": "Ukloni MCP server",
   "settings.agentBehaviour.removeMcp.confirm":
     'Ukloniti MCP server "{{name}}"? Ovo će ga ukloniti iz vaše konfiguracije.',

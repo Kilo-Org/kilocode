@@ -25,49 +25,6 @@ The current Kilo Code extension is built on the [Kilo CLI](https://github.com/Ki
 The "pre-release" label is a VS Code Marketplace distribution channel — the extension is stable and recommended for all users.
 {% /callout %}
 
-{% /tab %}
-{% tab label="CLI" %}
-
-## Command Line Interface
-
-{% partial file="install-cli.md" /%}
-
-{% /tab %}
-{% tab label="VS Code (Legacy)" %}
-
-## VS Code Legacy Extension
-
-The legacy extension is the previous version of Kilo Code for VS Code. It is still available but is no longer actively developed. We recommend installing the current extension (see the **VS Code** tab).
-
-To install or switch back to the legacy version:
-
-1. Open VS Code
-2. Go to Extensions (`Ctrl+Shift+X` / `Cmd+Shift+X`)
-3. Search for "Kilo Code"
-4. Click the dropdown arrow next to **Install** and select **Switch to Release Version**
-
-{% /tab %}
-{% tab label="JetBrains" %}
-
-## JetBrains IDEs
-
-{% partial file="install-jetbrains.md" /%}
-
-{% /tab %}
-{% tab label="Slack" %}
-
-## Slack Integration
-
-{% partial file="install-slack.md" /%}
-
-{% /tab %}
-{% tab label="Other IDEs" %}
-
-{% partial file="install-other-ides.md" /%}
-
-{% /tab %}
-{% /tabs %}
-
 ## Manual Installations
 
 ### Open VSX Registry
@@ -135,6 +92,49 @@ If you plan to remain on that version for a while, you may also want to temporar
   2. Under **System variables**, select **Path** → **Edit** → **New**
   3. Add: `C:\Windows\System32\WindowsPowerShell\v1.0\`
   4. Click **OK** and restart VS Code
+
+{% /tab %}
+{% tab label="CLI" %}
+
+## Command Line Interface
+
+{% partial file="install-cli.md" /%}
+
+{% /tab %}
+{% tab label="VS Code (Legacy)" %}
+
+## VS Code Legacy Extension
+
+The legacy extension is the previous version of Kilo Code for VS Code. It is still available but is no longer actively developed. We recommend installing the current extension (see the **VS Code** tab).
+
+To install or switch back to the legacy version:
+
+1. Open VS Code
+2. Go to Extensions (`Ctrl+Shift+X` / `Cmd+Shift+X`)
+3. Search for "Kilo Code"
+4. Click the dropdown arrow next to **Install** and select **Switch to Release Version**
+
+{% /tab %}
+{% tab label="JetBrains" %}
+
+## JetBrains IDEs
+
+{% partial file="install-jetbrains.md" /%}
+
+{% /tab %}
+{% tab label="Slack" %}
+
+## Slack Integration
+
+{% partial file="install-slack.md" /%}
+
+{% /tab %}
+{% tab label="Other IDEs" %}
+
+{% partial file="install-other-ides.md" /%}
+
+{% /tab %}
+{% /tabs %}
 
 ## Next Steps
 

@@ -1,8 +1,10 @@
 import { PlanExitTool } from "./plan"
 import { Session } from "@/session/session"
 import { QuestionTool } from "./question"
-import { SuggestTool } from "../kilocode/suggestion/tool" // kilocode_change
-import { Command } from "@/command" // kilocode_change
+// kilocode_change start
+import { SuggestTool } from "../kilocode/suggestion/tool"
+import { Command } from "@/command"
+// kilocode_change end
 import { ShellTool } from "./shell"
 import { EditTool } from "./edit"
 import { GlobTool } from "./glob"
@@ -19,15 +21,15 @@ import { Config } from "@/config/config"
 import { type ToolContext as PluginToolContext, type ToolDefinition } from "@kilocode/plugin"
 import { Schema } from "effect"
 import z from "zod"
-import { ZodOverride } from "@/util/effect-zod"
+import { ZodOverride } from "@opencode-ai/core/effect-zod"
 import { Plugin } from "../plugin"
 import { Provider } from "@/provider/provider"
 import { ProviderID, type ModelID } from "../provider/schema"
 import { WebSearchTool } from "./websearch"
-// kilocode_change start
-import { KiloToolRegistry } from "../kilocode/tool/registry"
-import { makeRuntime } from "@/effect/run-service"
-// kilocode_change end
+import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
+import { CodeSearchTool } from "./codesearch"
+import { RepoCloneTool } from "./repo_clone"
+import { RepoOverviewTool } from "./repo_overview"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import * as Log from "@opencode-ai/core/util/log"
 import { LspTool } from "./lsp"
@@ -50,11 +52,20 @@ import { Instruction } from "../session/instruction"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Bus } from "../bus"
 import { Agent } from "../agent/agent"
-import { Git } from "../git" // kilocode_change
+import { Git } from "@/git"
 import { Skill } from "../skill"
 import { Permission } from "@/permission"
+import { SessionStatus } from "@/session/status" // kilocode_change
+import { Reference } from "@/reference/reference"
 
 const log = Log.create({ service: "tool.registry" })
+
+export function webSearchEnabled(
+  providerID: ProviderID,
+  flags = { exa: Flag.KILO_ENABLE_EXA, parallel: Flag.KILO_ENABLE_PARALLEL },
+) {
+  return providerID === ProviderID.kilo || flags.exa || flags.parallel // kilocode_change
+}
 
 type TaskDef = Tool.InferDef<typeof TaskTool>
 type ReadDef = Tool.InferDef<typeof ReadTool>
@@ -86,6 +97,8 @@ export const layer: Layer.Layer<
   | Skill.Service
   | Session.Service
   | Provider.Service
+  | Git.Service
+  | Reference.Service
   | LSP.Service
   | Instruction.Service
   | AppFileSystem.Service
@@ -95,8 +108,10 @@ export const layer: Layer.Layer<
   | Ripgrep.Service
   | Format.Service
   | Truncate.Service
-  | Command.Service // kilocode_change
-  | Git.Service // kilocode_change
+  // kilocode_change start
+  | Command.Service
+  | SessionStatus.Service
+  // kilocode_change end
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -115,6 +130,9 @@ export const layer: Layer.Layer<
     const plan = yield* PlanExitTool
     const webfetch = yield* WebFetchTool
     const websearch = yield* WebSearchTool
+    const codesearch = yield* CodeSearchTool
+    const repoClone = yield* RepoCloneTool
+    const repoOverview = yield* RepoOverviewTool
     const shell = yield* ShellTool
     const globtool = yield* GlobTool
     const writetool = yield* WriteTool
@@ -218,6 +236,9 @@ export const layer: Layer.Layer<
           fetch: Tool.init(webfetch),
           todo: Tool.init(todo),
           search: Tool.init(websearch),
+          code: Tool.init(codesearch),
+          repo_clone: Tool.init(repoClone),
+          repo_overview: Tool.init(repoOverview),
           skill: Tool.init(skilltool),
           patch: Tool.init(patchtool),
           question: Tool.init(question),
@@ -230,6 +251,7 @@ export const layer: Layer.Layer<
 
         return {
           custom,
+          // kilocode_change start
           builtin: KiloToolRegistry.describe(
             [
               tool.invalid,
@@ -244,17 +266,17 @@ export const layer: Layer.Layer<
               tool.fetch,
               tool.todo,
               tool.search,
+              ...(Flag.KILO_EXPERIMENTAL_SCOUT ? [tool.code, tool.repo_clone, tool.repo_overview] : []),
               tool.skill,
               tool.patch,
-              // kilocode_change start
               tool.plan,
               ...(["cli", "vscode"].includes(Flag.KILO_CLIENT) ? [tool.suggest] : []),
               ...KiloToolRegistry.extra(kilo, cfg),
-              // kilocode_change end
               ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
             ],
             kilo,
-          ), // kilocode_change
+          ),
+          // kilocode_change end
           task: tool.task,
           read: tool.read,
         }
@@ -307,7 +329,7 @@ export const layer: Layer.Layer<
     const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {
       const filtered = (yield* all()).filter((tool) => {
         if (tool.id === WebSearchTool.id) {
-          return input.providerID === ProviderID.kilo || Flag.KILO_ENABLE_EXA // kilocode_change
+          return webSearchEnabled(input.providerID)
         }
 
         const usePatch =
@@ -357,31 +379,32 @@ export const layer: Layer.Layer<
   }),
 )
 
-export const defaultLayer = Layer.suspend(() =>
-  layer.pipe(
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(Plugin.defaultLayer),
-    Layer.provide(Question.defaultLayer),
-    Layer.provide(Todo.defaultLayer),
-    Layer.provide(Skill.defaultLayer),
-    Layer.provide(Agent.defaultLayer),
-    Layer.provide(Session.defaultLayer),
-    Layer.provide(Provider.defaultLayer),
-    Layer.provide(LSP.defaultLayer),
-    Layer.provide(Instruction.defaultLayer),
-    Layer.provide(AppFileSystem.defaultLayer),
-    Layer.provide(Bus.layer),
-    Layer.provide(FetchHttpClient.layer),
-    Layer.provide(Format.defaultLayer),
-    Layer.provide(CrossSpawnSpawner.defaultLayer),
-    Layer.provide(Ripgrep.defaultLayer),
-    Layer.provide(Truncate.defaultLayer),
-    Layer.provide(Command.defaultLayer), // kilocode_change
-    Layer.provide(Git.defaultLayer), // kilocode_change
-  ),
+export const defaultLayer = Layer.suspend(
+  () =>
+    layer
+      .pipe(
+        Layer.provide(Config.defaultLayer),
+        Layer.provide(Plugin.defaultLayer),
+        Layer.provide(Question.defaultLayer),
+        Layer.provide(Todo.defaultLayer),
+        Layer.provide(Skill.defaultLayer),
+        Layer.provide(Agent.defaultLayer),
+        Layer.provide(Session.defaultLayer),
+        Layer.provide(Provider.defaultLayer),
+        Layer.provide(Git.defaultLayer),
+        Layer.provide(Reference.defaultLayer),
+        Layer.provide(LSP.defaultLayer),
+        Layer.provide(Instruction.defaultLayer),
+        Layer.provide(AppFileSystem.defaultLayer),
+        Layer.provide(Bus.layer),
+        Layer.provide(FetchHttpClient.layer),
+        Layer.provide(Format.defaultLayer),
+        Layer.provide(CrossSpawnSpawner.defaultLayer),
+        Layer.provide(Ripgrep.defaultLayer),
+        Layer.provide(Truncate.defaultLayer),
+      )
+      // kilocode_change start - provide Kilo-owned registry dependencies
+      .pipe(Layer.provide(Command.defaultLayer), Layer.provide(SessionStatus.defaultLayer)),
+  // kilocode_change end
 )
-// kilocode_change start
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const ids = () => runPromise((svc) => svc.ids())
-// kilocode_change end
 export * as ToolRegistry from "./registry"

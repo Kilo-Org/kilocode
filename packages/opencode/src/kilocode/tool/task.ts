@@ -59,6 +59,18 @@ export namespace KiloTask {
     return [{ permission: "task", pattern: "*", action: "deny" }, ...rules]
   }
 
+  export function merge(...rulesets: Permission.Ruleset[]): Permission.Ruleset {
+    const result: Permission.Ruleset = []
+    const seen = new Set<string>()
+    for (const rule of rulesets.flat()) {
+      const key = `${rule.permission}\u0000${rule.pattern}\u0000${rule.action}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      result.push(rule)
+    }
+    return result
+  }
+
   type Model = { providerID: ProviderID; modelID: ModelID }
   type Saved = Model & { variant?: string }
   type Choice = { model: Model; variant?: string; sticky?: boolean; direct?: boolean }
@@ -98,6 +110,7 @@ export namespace KiloTask {
     agent: Pick<Agent.Info, "model" | "variant">
     config: Pick<Config.Info, "subagent_model" | "subagent_variant">
     parent: Model
+    provider: Provider.Interface
   }) {
     const state = yield* saved(input.name)
     const cfg = parse(input.config.subagent_model)
@@ -116,10 +129,8 @@ export namespace KiloTask {
     for (const choice of choices) {
       if (!choice) continue
       if (choice.direct) return { model: choice.model, variant: choice.variant }
-      const full = yield* Effect.tryPromise(() =>
-        Provider.getModel(choice.model.providerID, choice.model.modelID),
-      ).pipe(
-        Effect.catch((err) =>
+      const full = yield* input.provider.getModel(choice.model.providerID, choice.model.modelID).pipe(
+        Effect.catchDefect((err) =>
           Effect.sync(() => {
             log.debug("skipping unavailable task subagent model", {
               providerID: choice.model.providerID,

@@ -9,8 +9,8 @@ import { makeRuntime } from "@/effect/run-service"
 import * as Log from "@opencode-ai/core/util/log"
 import { fn } from "../util/fn"
 import { MCP } from "../mcp"
-import { zod } from "@/util/effect-zod"
-import { withStatics } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { withStatics } from "@opencode-ai/core/schema"
 import z from "zod"
 
 export namespace SessionNetwork {

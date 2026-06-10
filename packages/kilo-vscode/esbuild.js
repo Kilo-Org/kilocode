@@ -56,45 +56,46 @@ const esbuildProblemMatcherPlugin = {
 }
 
 /**
- * Stub the pierre worker module so the Diff/Code components work without
- * web workers in the VS Code webview. The `@pierre/diffs` library handles
- * undefined worker pools gracefully (renders without syntax highlighting).
+ * Route the shared `@opencode-ai/ui/pierre/worker` module (and its relative
+ * variants) to the Kilo implementation in `webview-ui/pierre-worker.ts`.
  *
- * We stub the entire worker module rather than just the URL import because
- * `new Worker('')` would throw at runtime.
+ * The upstream module loads Pierre's Shiki worker via a Vite-only
+ * `?worker&url` import that esbuild can't resolve. The Kilo replacement loads
+ * the worker from the bundled `dist/shiki-worker.js` asset instead, so syntax
+ * highlighting runs off the main thread. `@pierre/diffs/worker` (used by that
+ * replacement) is left alone.
  *
  * @type {import('esbuild').Plugin}
  */
-const pierreWorkerStubPlugin = {
-  name: "pierre-worker-stub",
+const pierreWorkerAliasPlugin = {
+  name: "pierre-worker-alias",
   setup(build) {
-    // Stub the Vite-specific ?worker&url import
-    build.onResolve({ filter: /\?worker&url$/ }, (args) => ({
-      path: args.path,
-      namespace: "worker-url-stub",
-    }))
-    build.onLoad({ filter: /.*/, namespace: "worker-url-stub" }, () => ({
-      contents: "export default ''",
-      loader: "js",
-    }))
-
-    // Stub the pierre worker module so getWorkerPool always returns undefined
     build.onResolve({ filter: /pierre\/worker$/ }, (args) => {
-      // Only stub the local UI worker module, not @pierre/diffs/worker
       if (args.path.includes("@pierre")) return
-      return {
-        path: args.path,
-        namespace: "pierre-worker-stub",
-      }
+      return { path: path.join(__dirname, "webview-ui", "pierre-worker.ts") }
     })
-    build.onLoad({ filter: /.*/, namespace: "pierre-worker-stub" }, () => ({
-      contents: `
-        export function getWorkerPool() { return undefined }
-        export function getWorkerPools() { return { unified: undefined, split: undefined } }
-        export function workerFactory() { return undefined }
-      `,
-      loader: "js",
-    }))
+  },
+}
+
+/**
+ * Resolve the synthetic `kilo-shiki-worker` entry point to Pierre's Shiki worker
+ * so esbuild can bundle it (and its inlined oniguruma WebAssembly) into a single
+ * `dist/shiki-worker.js` asset loaded by `webview-ui/pierre-worker.ts`. Switch to
+ * `worker-portable.js` to drop WebAssembly and use the JS regex engine instead.
+ *
+ * @type {import('esbuild').Plugin}
+ */
+const shikiWorkerEntryPlugin = {
+  name: "shiki-worker-entry",
+  setup(build) {
+    build.onResolve({ filter: /^kilo-shiki-worker$/ }, async () => {
+      const resolved = await build.resolve("@pierre/diffs/worker/worker.js", {
+        kind: "import-statement",
+        resolveDir: __dirname,
+      })
+      if (resolved.errors.length > 0) return { errors: resolved.errors }
+      return { path: resolved.path }
+    })
   },
 }
 
@@ -157,12 +158,29 @@ function createBrowserWebviewContext(entryPoint, outfile) {
     },
     plugins: [
       solidDedupePlugin,
-      pierreWorkerStubPlugin,
+      pierreWorkerAliasPlugin,
       svgSpritePlugin,
       cssPackageResolvePlugin,
       solidPlugin(),
       esbuildProblemMatcherPlugin,
     ],
+  })
+}
+
+// Bundle Pierre's Shiki worker into a single self-contained asset that the
+// webviews load off the main thread for syntax highlighting.
+function createShikiWorkerContext() {
+  return esbuild.context({
+    entryPoints: ["kilo-shiki-worker"],
+    bundle: true,
+    format: "iife",
+    minify: production,
+    sourcemap: !production,
+    sourcesContent: false,
+    platform: "browser",
+    outfile: "dist/shiki-worker.js",
+    logLevel: "silent",
+    plugins: [shikiWorkerEntryPlugin, esbuildProblemMatcherPlugin],
   })
 }
 
@@ -191,6 +209,9 @@ async function main() {
   // Build KiloClaw webview (SolidJS, standalone chat panel)
   const kiloClawCtx = await createBrowserWebviewContext("webview-ui/kiloclaw/index.tsx", "dist/kiloclaw.js")
 
+  // Build Marketplace webview (SolidJS, standalone catalog panel)
+  const marketplaceCtx = await createBrowserWebviewContext("webview-ui/marketplace/index.tsx", "dist/marketplace.js")
+
   // Build Diff Viewer webview (SolidJS, reuses Agent Manager diff components)
   const diffViewerCtx = await createBrowserWebviewContext("webview-ui/diff-viewer/index.tsx", "dist/diff-viewer.js")
 
@@ -200,6 +221,9 @@ async function main() {
   // Build webview
   const webviewCtx = await createBrowserWebviewContext("webview-ui/src/index.tsx", "dist/webview.js")
 
+  // Build the shared Shiki highlighting worker asset
+  const shikiWorkerCtx = await createShikiWorkerContext()
+
   if (watch) {
     await Promise.all([
       extensionCtx.watch(),
@@ -208,6 +232,8 @@ async function main() {
       diffViewerCtx.watch(),
       diffVirtualCtx.watch(),
       kiloClawCtx.watch(),
+      marketplaceCtx.watch(),
+      shikiWorkerCtx.watch(),
     ])
   } else {
     await Promise.all([
@@ -215,16 +241,20 @@ async function main() {
       webviewCtx.rebuild(),
       agentManagerCtx.rebuild(),
       kiloClawCtx.rebuild(),
+      marketplaceCtx.rebuild(),
       diffViewerCtx.rebuild(),
       diffVirtualCtx.rebuild(),
+      shikiWorkerCtx.rebuild(),
     ])
     await Promise.all([
       extensionCtx.dispose(),
       webviewCtx.dispose(),
       agentManagerCtx.dispose(),
-      kiloClawCtx.dispose(),
       diffViewerCtx.dispose(),
       diffVirtualCtx.dispose(),
+      kiloClawCtx.dispose(),
+      marketplaceCtx.dispose(),
+      shikiWorkerCtx.dispose(),
     ])
   }
 }

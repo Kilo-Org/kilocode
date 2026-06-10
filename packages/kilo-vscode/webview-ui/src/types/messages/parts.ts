@@ -73,7 +73,14 @@ export interface StepFinishPart extends BasePart {
   }
 }
 
-export type Part = TextPart | FilePart | ToolPart | ReasoningPart | StepStartPart | StepFinishPart
+export interface CompactionPart extends BasePart {
+  type: "compaction"
+  auto: boolean
+  overflow?: boolean
+  tail_start_id?: string
+}
+
+export type Part = TextPart | FilePart | ToolPart | ReasoningPart | StepStartPart | StepFinishPart | CompactionPart
 
 // Part delta for streaming updates
 export interface PartDelta {

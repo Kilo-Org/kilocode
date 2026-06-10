@@ -1,5 +1,6 @@
 package ai.kilocode.backend.cli
 
+import ai.kilocode.backend.migration.session.LegacySessionIds
 import ai.kilocode.jetbrains.api.infrastructure.Serializer
 import ai.kilocode.jetbrains.api.model.Session
 import ai.kilocode.jetbrains.api.model.SessionStatus
@@ -41,6 +42,27 @@ class SessionModelSerializationTest {
     }
 
     @Test
+    fun `Session decodes canonical migrated and unprefixed legacy IDs`() {
+        val src = """{
+            "id": "ses_abc",
+            "slug": "canonical",
+            "projectID": "prj_123",
+            "directory": "/test/project",
+            "title": "Canonical",
+            "version": "1.0.0",
+            "time": {"created": 1000, "updated": 2000}
+        }"""
+        val migrated = LegacySessionIds.createSessionId("task-abc")
+        val canonical = json.decodeFromString<Session>(src)
+        val imported = json.decodeFromString<Session>(src.replace("ses_abc", migrated))
+        val legacy = json.decodeFromString<Session>(src.replace("ses_abc", "s1"))
+
+        assertEquals("ses_abc", canonical.id)
+        assertEquals(migrated, imported.id)
+        assertEquals("s1", legacy.id)
+    }
+
+    @Test
     fun `Session with summary`() {
         val src = """{
             "id": "ses_1",
@@ -54,9 +76,9 @@ class SessionModelSerializationTest {
         }"""
         val obj = json.decodeFromString<Session>(src)
         assertNotNull(obj.summary)
-        assertEquals(10, obj.summary!!.additions)
-        assertEquals(5, obj.summary!!.deletions)
-        assertEquals(3, obj.summary!!.files)
+        assertEquals(10.0, obj.summary!!.additions)
+        assertEquals(5.0, obj.summary!!.deletions)
+        assertEquals(3.0, obj.summary!!.files)
     }
 
     @Test

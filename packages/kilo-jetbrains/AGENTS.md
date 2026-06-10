@@ -20,6 +20,8 @@
 
 When looking for IntelliJ Platform API usage, implementation examples, extension points, services, actions, inspections, PSI/VFS/editor behavior, or plugin patterns, prefer real IntelliJ source code over Gradle caches, downloaded jars, generated parser artifacts, or decompiled classes.
 
+Do not use IntelliJ Platform APIs marked as internal in the IntelliJ source repository. Find a public API alternative or keep the integration behind supported extension points. Experimental APIs are acceptable when needed, but warn the user that the integration relies on an experimental IntelliJ API.
+
 Use this priority order:
 
 1. Check whether `$INTELLIJ_REPO` is set and points to a readable IntelliJ Community checkout.
@@ -166,8 +168,18 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 - The `.kilo-dev/` directory is gitignored and created automatically on first run.
 - The implementation lives in `KiloBackendCliManager.buildEnv()` / `devStorageEnv()`. Tests: `KiloBackendCliManagerEnvTest`.
 
+### Debugging Session Event Logs
+
+- Use `script/dev/part-update.sh client <session-id>` from `packages/kilo-jetbrains/` to print frontend `message.part.delta` text by part id.
+- Use `script/dev/part-update.sh backend <session-id>` from `packages/kilo-jetbrains/` for backend sandbox events.
+- Append with `>> file.txt` when you need to keep the output.
+- For full chat payload previews in JetBrains dev runs, pass `-Pkilo.dev.log.chat.content=<mode>` where `<mode>` is `off` (default, no content), `preview` (cleaned/truncated content), or `full` (cleaned full content).
+- `-Pkilo.dev.log.chat.preview.max=<n>` controls preview length, clamped from 1 to 2000.
+
 ## Build and Verification
 
+- **Marketplace version build**: Use `script/build-version.sh <version>` from `packages/kilo-jetbrains/` to clean, prepare production CLI binaries, build, sign, and verify the JetBrains Marketplace plugin ZIP. Pass `--skip-verification` only when explicitly needed.
+- **Test version build**: If the user asks for a JetBrains test build, still require a version and use `script/build-version.sh <version> --skip-signing --skip-verification` from `packages/kilo-jetbrains/` so no signing secrets are needed. Add `--skip-clean` only when the user wants a faster incremental test build.
 - **Typecheck**: `bun run typecheck` or `./gradlew typecheck` from `packages/kilo-jetbrains/` — compiles all Kotlin sources including the generated API client. Does NOT require CLI binaries.
 - **Full build**: `bun run build` from `packages/kilo-jetbrains/` (prepares CLI binaries + runs Gradle `buildPlugin`).
 - **Gradle only**: `./gradlew buildPlugin` from `packages/kilo-jetbrains/` (requires CLI binaries already present in `backend/build/generated/cli/`; run `bun run build --prepare-cli` first).
@@ -224,6 +236,7 @@ Rules:
 ### Primary UI Rules
 
 - Use IntelliJ platform components instead of raw Swing where an equivalent exists (see [Platform Components](#platform-components-and-utilities) table below).
+- When implementing a new user-facing action, consider adding metrics so usage can be tracked.
 - Do not set default Swing properties explicitly. Avoid `isOpaque = false` unless the component default differs or there is a documented rendering reason.
 - Avoid hardcoded dimensions, colors, and font sizes — use the platform style APIs described in [Theme-Derived Colors](#theme-derived-colors), [Theme-Derived Fonts](#theme-derived-fonts), and [Borders, Insets, and Spacing](#borders-insets-and-spacing).
 - Put user-visible strings in `*.properties` files.
@@ -255,6 +268,22 @@ Tests for retained Swing components should assert:
 - `update(model)` changes existing labels/body text without duplicating components.
 - Updates while collapsed do not eagerly create lazy bodies.
 - No-op updates, empty deltas, repeated hover values, and toggling non-expandable cards do not repaint/revalidate the whole view.
+- Streaming/rebuilding surfaces additionally require stress + leak tests (see below).
+
+### Stress and Leak Tests for Streaming UI
+
+Session/transcript UI that streams updates or rebuilds its component tree (markdown
+views, code blocks, transcript parts, collapsible cards) must ship stress + leak tests in
+addition to behavior tests. These tests must:
+
+- Drive many updates (hundreds of streamed deltas or `set` cycles) through the public API.
+- Assert that retained component instances stay identical across updates (`assertSame`).
+- Assert the component count stays bounded — no growth per update.
+- Assert disposable-backed resources return to baseline after churn + clear/dispose.
+  For code editors, compare `EditorFactory.getInstance().allEditors.size` against a
+  baseline captured before the loop.
+
+See `MdViewHybridStressTest` for the reference pattern.
 
 ### Platform Components and Utilities
 

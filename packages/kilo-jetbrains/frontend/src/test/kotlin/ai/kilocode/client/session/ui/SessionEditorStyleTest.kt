@@ -9,32 +9,41 @@ import java.awt.Font
 @Suppress("UnstableApiUsage")
 class SessionEditorStyleTest : BasePlatformTestCase() {
 
-    fun `test transcript font uses editor settings`() {
+    fun `test transcript font uses ui family and editor size`() {
         val scheme = EditorColorsManager.getInstance().globalScheme
         val style = SessionEditorStyle.current()
         val font = style.transcriptFont
 
-        assertEquals(scheme.editorFontName, font.name)
+        assertEquals(UiStyle.Fonts.regular().name, font.name)
         assertEquals(scheme.editorFontSize, font.size)
         assertEquals(scheme.defaultForeground, style.editorForeground)
         assertEquals(scheme.defaultBackground, style.editorBackground)
         assertEquals(Font.PLAIN, font.style)
     }
 
-    fun `test bold editor font uses editor family and size`() {
+    fun `test editor font uses editor family and size`() {
+        val style = SessionEditorStyle.current()
+        val font = style.editorFont
+
+        assertEquals(style.editorFamily, font.name)
+        assertEquals(style.editorSize, font.size)
+        assertEquals(Font.PLAIN, font.style)
+    }
+
+    fun `test bold transcript font uses ui family and editor size`() {
         val style = SessionEditorStyle.current()
         val font = style.boldEditorFont
 
-        assertEquals(style.editorFamily, font.name)
+        assertEquals(UiStyle.Fonts.regular().name, font.name)
         assertEquals(style.editorSize, font.size)
         assertTrue(font.isBold)
     }
 
-    fun `test small editor font uses editor family with smaller editor-derived size`() {
+    fun `test small transcript font uses ui family with smaller editor-derived size`() {
         val style = SessionEditorStyle.current()
         val font = style.smallEditorFont
 
-        assertEquals(style.editorFamily, font.name)
+        assertEquals(UiStyle.Fonts.small().name, font.name)
         assertTrue(font.size < style.editorSize)
     }
 
@@ -43,9 +52,10 @@ class SessionEditorStyleTest : BasePlatformTestCase() {
 
         assertEquals("Courier New", style.editorFamily)
         assertEquals(22, style.editorSize)
-        assertEquals("Courier New", style.transcriptFont.name)
+        assertEquals("Courier New", style.editorFont.name)
+        assertEquals(UiStyle.Fonts.regular().name, style.transcriptFont.name)
         assertEquals(22, style.transcriptFont.size)
-        assertEquals("Courier New", style.boldEditorFont.name)
+        assertEquals(UiStyle.Fonts.regular().name, style.boldEditorFont.name)
         assertEquals(22, style.boldEditorFont.size)
         assertTrue(style.boldEditorFont.isBold)
         assertTrue(style.smallEditorFont.size < style.editorSize)

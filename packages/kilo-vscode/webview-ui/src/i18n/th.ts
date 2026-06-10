@@ -106,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "แนะนำ",
   "dialog.provider.opencode.note": "โมเดลที่คัดสรร รวมถึง Claude, GPT, Gemini และอื่น ๆ",
   "dialog.provider.anthropic.note": "เข้าถึงโมเดล Claude โดยตรง รวมถึง Pro และ Max",
+  "dialog.provider.deepseek.note": "โมเดล DeepSeek สำหรับงานการให้เหตุผลและการเขียนโค้ด",
   "dialog.provider.copilot.note": "โมเดล Claude สำหรับการช่วยเหลือในการเขียนโค้ด",
   "dialog.provider.openai.note": "โมเดล GPT สำหรับงาน AI ทั่วไปที่รวดเร็วและมีความสามารถ",
   "dialog.provider.google.note": "โมเดล Gemini สำหรับการตอบสนองที่รวดเร็วและมีโครงสร้าง",
@@ -135,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "การอนุญาตล้มเหลว: {{error}}",
   "provider.connect.apiKey.description":
     "ป้อนคีย์ API ของ {{provider}} เพื่อเชื่อมต่อบัญชีและใช้โมเดล {{provider}} ใน Kilo",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "คีย์ API ของ {{provider}}",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "คีย์ API",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "ต้องใช้คีย์ API",
   "provider.connect.prompt.required": "จำเป็นต้องระบุ {{field}}",
   "provider.connect.azure.endpointType.label": "เลือกการกำหนดค่าปลายทางของ Azure",
@@ -174,6 +181,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "โมเดล {{provider}} ไม่พร้อมใช้งานอีกต่อไป",
 
   "model.tag.free": "ฟรี",
+  "model.tag.dataCollected": "ข้อมูลอาจถูกนำไปใช้ในการฝึก",
   "model.tag.latest": "ล่าสุด",
   "model.group.recommended": "แนะนำ",
   "model.group.favorites": "รายการโปรด",
@@ -201,6 +209,9 @@ export const dict = {
   "model.preview.label.cached": "แคช",
   "model.preview.label.average": "ต้นทุนเฉลี่ยโดยประมาณ",
   "model.preview.label.context": "บริบท",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "ความสำเร็จ",
+  "model.preview.label.costAttempt": "ค่าใช้จ่าย / ครั้ง",
   "model.preview.value.notSupported": "ไม่รองรับ",
   "model.preview.tooltip.average":
     "ต้นทุนเฉลี่ยโดยประมาณนี้คำนวณจากอัตราส่วนทั่วไปของโทเค็นอินพุต เอาต์พุต และการอ่านแคช",
@@ -450,6 +461,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "ไม่สามารถยกเลิกการแชร์เซสชัน",
   "toast.session.unshare.failed.description": "เกิดข้อผิดพลาดระหว่างการยกเลิกการแชร์เซสชัน",
 
+  "toast.session.rename.invalid.title": "ชื่อเซสชันไม่ถูกต้อง",
   "toast.session.listFailed.title": "ไม่สามารถโหลดเซสชันสำหรับ {{project}}",
 
   "toast.update.title": "มีการอัปเดต",
@@ -1011,6 +1023,8 @@ export const dict = {
   "session.delete.confirm": 'ลบเซสชัน "{{name}}" หรือไม่?',
   "session.delete.button": "ลบเซสชัน",
   "session.untitled": "ไม่มีชื่อ",
+  "session.current": "เซสชันปัจจุบัน",
+  "session.history.sources": "แหล่งที่มาของประวัติ",
   "session.recent": "ล่าสุด",
   "session.showHistory": "แสดงประวัติ",
   "session.search.placeholder": "ค้นหาเซสชัน...",
@@ -1114,6 +1128,14 @@ export const dict = {
   "session.status.retrying": "กำลังลองใหม่ (ครั้งที่ {{ attempt }})… {{ message }}",
   "session.status.working": "กำลังทำงาน...",
   "session.status.offline": "เครือข่ายถูกตัดการเชื่อมต่อ — กำลังเชื่อมต่อใหม่...",
+  "session.outcome.incomplete": "เทิร์นสิ้นสุดโดยเหลือสิ่งที่ต้องทำอีก {{count}} รายการ",
+  "session.outcome.limit": "ถึงขีดจำกัดการตอบกลับก่อนเสร็จสิ้น",
+  "session.outcome.unknown": "เทิร์นสิ้นสุดโดยไม่มีเหตุผลการเสร็จสิ้นของโมเดล",
+  "session.outcome.filtered": "ผู้ให้บริการหยุดการตอบกลับนี้เนื่องจากตัวกรองเนื้อหา",
+  "session.outcome.unexpected": "การตอบกลับสิ้นสุดลงโดยไม่คาดคิดและอาจไม่สมบูรณ์",
+  "session.outcome.interrupted": "เทิร์นถูกขัดจังหวะ",
+  "session.outcome.error": "เทิร์นล้มเหลว",
+  "session.outcome.finish": "เหตุผลการเสร็จสิ้น: {{reason}}",
 
   "ui.sessionTurn.cancel": "ยกเลิก",
   "ui.sessionTurn.status.thinking": "กำลังคิด...",
@@ -1175,7 +1197,6 @@ export const dict = {
     'Telemetry ถูกควบคุมโดยการตั้งค่า Telemetry ในตัวของ VS Code หากต้องการปิดใช้งาน ให้ไปที่ Settings > Telemetry > Telemetry Level แล้วตั้งค่าเป็น "off" รีสตาร์ท VS Code เพื่อให้การเปลี่ยนแปลงมีผล',
   "settings.aboutKiloCode.telemetry.openSettings": "เปิดการตั้งค่า Telemetry",
 
-  "settings.agentBehaviour.subtab.modes": "โหมด",
   "settings.agentBehaviour.subtab.agents": "ตัวแทน",
   "settings.agentBehaviour.subtab.mcpServers": "เซิร์ฟเวอร์ MCP",
   "settings.agentBehaviour.subtab.rules": "กฎ",
@@ -1233,9 +1254,6 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "ไม่สรุปเนื้อหาที่วางขนาดใหญ่",
   "settings.experimental.batch.title": "เครื่องมือแบทช์",
   "settings.experimental.batch.description": "เปิดใช้งานการประมวลผลแบทช์ของการเรียกเครื่องมือ",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "ค้นหาโค้ดเบส",
   "settings.experimental.codebaseSearch.description": "เปิดใช้งานการค้นหาด้วยภาษาธรรมชาติโดย AI ทั่วทั้งโค้ดเบส",
   "settings.experimental.speechToText.title": "แปลงเสียงเป็นข้อความ",
@@ -1287,7 +1305,7 @@ export const dict = {
   "settings.agentBehaviour.discoveredSkills": "ทักษะที่ค้นพบ",
   "settings.agentBehaviour.noSkillsFound": "ไม่พบทักษะ เพิ่มเส้นทางโฟลเดอร์หรือ URL ด้านล่างเพื่อทำให้ทักษะพร้อมใช้งาน",
   "settings.agentBehaviour.availableModes": "โหมดกำหนดเองที่ใช้ได้",
-  "settings.agentBehaviour.noModesFound": "ไม่พบโหมด",
+  "settings.agentBehaviour.noAgentsFound": "ไม่พบเอเจนต์",
   "settings.agentBehaviour.createMode": "สร้างโหมดใหม่",
   "settings.agentBehaviour.createMode.name": "ชื่อ",
   "settings.agentBehaviour.createMode.name.placeholder": "เช่น reviewer",
@@ -1330,10 +1348,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "คัดลอกสิทธิ์เป็น JSON",
   "settings.agentBehaviour.permissions.hint":
     "กฎจะถูกประเมินตามลำดับ — กฎที่ตรงกันล่าสุดจะมีผล นี่คือชุดกฎที่ประมวลผลแล้วจากแบ็กเอนด์ CLI",
-  "settings.agentBehaviour.removeMode.title": "ลบโหมด",
-  "settings.agentBehaviour.removeMode.confirm":
-    'ต้องการลบโหมด "{{name}}" หรือไม่? การดำเนินการนี้จะปิดใช้งานโหมดโดยอัปเดตการกำหนดค่าของคุณ',
-  "settings.agentBehaviour.removeMode.button": "ลบ",
+  "settings.agentBehaviour.removeAgent.title": "ลบเอเจนต์",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'ลบเอเจนต์ "{{name}}" หรือไม่? การดำเนินการนี้จะปิดใช้งานเอเจนต์โดยการอัปเดตการตั้งค่า',
+  "settings.agentBehaviour.removeAgent.button": "ลบ",
   "settings.agentBehaviour.removeMcp.title": "ลบเซิร์ฟเวอร์ MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'ต้องการลบเซิร์ฟเวอร์ MCP "{{name}}" หรือไม่? การดำเนินการนี้จะลบออกจากการกำหนดค่าของคุณ',

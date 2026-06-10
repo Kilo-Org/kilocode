@@ -7,6 +7,8 @@ import { Instance } from "../project/instance"
 import { Locale } from "../util/locale"
 import { Filesystem } from "../util/filesystem" // kilocode_change
 import { WorktreeFamily } from "../kilocode/worktree-family" // kilocode_change
+import { Session } from "../session/session" // kilocode_change
+import { SessionID } from "../session/schema" // kilocode_change
 import DESCRIPTION from "./recall.txt"
 
 const Parameters = Schema.Struct({
@@ -28,6 +30,7 @@ export const RecallTool = Tool.define(
   "kilo_local_recall",
   Effect.gen(function* () {
     const git = yield* Git.Service
+    const sessions = yield* Session.Service // kilocode_change
     return {
       description: DESCRIPTION,
       parameters: Parameters,
@@ -37,7 +40,7 @@ export const RecallTool = Tool.define(
           if (params.mode === "search") {
             return yield* Effect.promise(() => search(params, ctx, bridge, git))
           }
-          return yield* Effect.promise(() => read(params, ctx, bridge, git))
+          return yield* Effect.promise(() => read(params, ctx, bridge, git, sessions))
         }).pipe(Effect.orDie),
     }
   }),
@@ -106,14 +109,18 @@ async function search(
   }
 }
 
-async function read(params: { sessionID?: string }, ctx: Tool.Context, bridge: EffectBridge.Shape, git: Git.Interface) {
+async function read(
+  params: { sessionID?: string },
+  ctx: Tool.Context,
+  bridge: EffectBridge.Shape,
+  git: Git.Interface,
+  sessions: Session.Interface,
+) {
   if (!params.sessionID) {
     throw new Error("The 'sessionID' parameter is required when mode is 'read'")
   }
 
-  const { Session } = await import("../session/session") // kilocode_change
-  const { SessionID } = await import("../session/schema") // kilocode_change
-  const session = await Session.get(SessionID.make(params.sessionID)).catch(() => {
+  const session = await bridge.promise(sessions.get(SessionID.make(params.sessionID))).catch(() => {
     throw new Error(`Session "${params.sessionID}" not found. Use search mode first to find valid session IDs.`)
   })
   const dirs = await bridge.promise(WorktreeFamily.list().pipe(Effect.provideService(Git.Service, git))) // kilocode_change
@@ -140,7 +147,7 @@ async function read(params: { sessionID?: string }, ctx: Tool.Context, bridge: E
     })
   }
 
-  const msgs = await Session.messages({ sessionID: session.id })
+  const msgs = await bridge.promise(sessions.messages({ sessionID: session.id }))
   const lines: string[] = [
     `# Session: ${session.title}`,
     `Directory: ${session.directory}`,

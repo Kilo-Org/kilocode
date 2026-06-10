@@ -5,19 +5,26 @@ import { KiloNews } from "@/kilocode/components/kilo-news"
 const id = "internal:home-news"
 
 const tui: TuiPlugin = async (api) => {
-  api.command.register(() => [
-    {
-      title: api.kv.get("news_hidden", false) ? "Show news" : "Hide news",
-      value: "news.toggle",
-      keybind: "news_toggle",
-      category: "System",
-      hidden: api.route.current.name !== "home",
-      onSelect() {
-        api.kv.set("news_hidden", !api.kv.get("news_hidden", false))
-        api.ui.dialog.clear()
+  api.keymap.registerLayer({
+    commands: [
+      {
+        namespace: "palette",
+        name: "news.toggle",
+        get title() {
+          return api.kv.get("news_hidden", false) ? "Show news" : "Hide news"
+        },
+        category: "System",
+        get hidden() {
+          return api.route.current.name !== "home"
+        },
+        run() {
+          api.kv.set("news_hidden", !api.kv.get("news_hidden", false))
+          api.ui.dialog.clear()
+        },
       },
-    },
-  ])
+    ],
+    bindings: api.tuiConfig.keybinds.gather("home.news", ["news.toggle"]),
+  })
 
   api.slots.register({
     order: 50,

@@ -3,6 +3,7 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
+import ai.kilocode.client.session.views.tool.ToolView
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 @Suppress("UnstableApiUsage")
@@ -19,7 +20,7 @@ class PlanExitViewTest : BasePlatformTestCase() {
 
     fun `test view factory replaces running tool with plan exit view when completed`() {
         val running = tool(ToolExecState.RUNNING)
-        val existing = ViewFactory.create(running) {}
+        val existing = ViewFactory.create(running, {}) {}
         assertTrue(existing is ToolView)
 
         val done = tool(ToolExecState.COMPLETED).apply {
@@ -27,7 +28,7 @@ class PlanExitViewTest : BasePlatformTestCase() {
         }
 
         assertTrue(ViewFactory.shouldReplace(existing, done))
-        assertTrue(ViewFactory.create(done) {} is PlanExitView)
+        assertTrue(ViewFactory.create(done, {}) {} is PlanExitView)
     }
 
     fun `test clicking plan link opens href`() {

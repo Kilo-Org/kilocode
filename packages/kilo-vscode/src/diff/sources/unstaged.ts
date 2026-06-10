@@ -130,6 +130,10 @@ export function createUnstagedDiffSource(): DiffSource {
       // after = disk content (or "" for deleted).
       const before = !entry.tracked || entry.status === "added" ? "" : await showBlob(git, dir, INDEX_REF, file)
       const after = entry.status === "deleted" ? "" : await readDisk(dir, file)
+      const result = entry.tracked
+        ? await git.execGit(["-c", "core.quotepath=false", "diff", "--no-ext-diff", "--no-renames", "--", file], dir)
+        : undefined
+      const patch = result?.code === 0 ? result.stdout : undefined
       const summarized = before === "" && after === "" && entry.status === "modified"
 
       // For untracked added files numstat doesn't return counts, so backfill
@@ -139,6 +143,7 @@ export function createUnstagedDiffSource(): DiffSource {
         file,
         before,
         after,
+        patch,
         additions,
         deletions: entry.deletions,
         status: entry.status,

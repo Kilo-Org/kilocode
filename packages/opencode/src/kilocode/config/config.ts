@@ -115,6 +115,14 @@ export namespace KilocodeConfig {
     return stripGlobalIndexing(info)
   }
 
+  export function retireIndexingFlag(info: Record<string, unknown>, source: string) {
+    if (!isRecord(info.experimental) || !("semantic_indexing" in info.experimental)) return info
+    const experimental = { ...info.experimental }
+    delete experimental.semantic_indexing
+    log.warn("ignored retired experimental.semantic_indexing config; use indexing.enabled instead", { path: source })
+    return { ...info, experimental }
+  }
+
   function stripGlobalIndexing(info: Config.Info): Config.Info {
     // Indexing provider/storage settings can be global, but enablement is exposed separately from project enablement.
     if (info.indexing?.enabled === undefined) return info
@@ -260,8 +268,8 @@ export namespace KilocodeConfig {
       log.warn("failed to load kilocode rules", { error: err })
     }
 
-    // Load Kilocode MCP servers (skip global VSCode extension paths unless running in the extension)
-    const skipGlobal = process.env["KILO_PLATFORM"] !== "vscode"
+    // Load Kilocode MCP servers (skip global VSCode extension paths unless running in an editor or Console daemon)
+    const skipGlobal = process.env["KILO_PLATFORM"] !== "vscode" && process.env["KILOCODE_FEATURE"] !== "daemon"
     const mcp = await McpMigrator.loadMcpConfig(input.projectDir, skipGlobal)
     if (Object.keys(mcp).length > 0) {
       result = input.merge(result, { mcp })

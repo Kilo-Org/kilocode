@@ -29,16 +29,15 @@ import { ModelID, ProviderID } from "@/provider/schema"
 import type { Provider } from "@/provider/provider"
 import { Permission } from "@/permission"
 import { Global } from "@opencode-ai/core/global"
-// kilocode_change start - legacy promise helpers + kilocode extensions
-import { makeRuntime } from "@/effect/run-service"
+// kilocode_change start - Kilo session behavior extensions
 import { BackgroundProcess } from "@/kilocode/background-process"
 import { KiloSession, kiloSessionFork } from "@/kilocode/session"
-import { fn } from "@/util/fn"
-import { z } from "zod"
+import { SessionExport } from "@/kilocode/session-export"
+import { baseKey, cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff" // kilocode_change
 // kilocode_change end
 import { Effect, Layer, Option, Context, Schema, Types } from "effect"
-import { zod } from "@/util/effect-zod"
-import { NonNegativeInt, optionalOmitUndefined, withStatics } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { NonNegativeInt, optionalOmitUndefined, withStatics } from "@opencode-ai/core/schema"
 
 const log = Log.create({ service: "session" })
 
@@ -142,9 +141,9 @@ function sessionPath(worktree: string, cwd: string) {
 }
 
 const Summary = Schema.Struct({
-  additions: NonNegativeInt,
-  deletions: NonNegativeInt,
-  files: NonNegativeInt,
+  additions: Schema.Finite,
+  deletions: Schema.Finite,
+  files: Schema.Finite,
   diffs: optionalOmitUndefined(Schema.Array(Snapshot.SummaryFileDiff)), // kilocode_change - lightweight diff without patch
 })
 
@@ -364,7 +363,7 @@ export const getUsage = (input: {
 }) => {
   const safe = (value: number) => {
     if (!Number.isFinite(value)) return 0
-    return value
+    return Math.max(0, value)
   }
   const inputTokens = safe(input.usage.inputTokens ?? 0)
   const outputTokens = safe(input.usage.outputTokens ?? 0)
@@ -614,7 +613,10 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service | 
           )
         }
         // kilocode_change end
-        yield* sync.run(Event.Deleted, { sessionID, info: session }, { publish: hasInstance })
+        yield* sync.run(Event.Deleted, { sessionID, info: session }, { publish: hasInstance }) // kilocode_change
+        // kilocode_change - capture final session-export workspace delta on close/delete
+        const workspaceKey = hasInstance ? yield* InstanceState.directory : undefined // kilocode_change
+        yield* Effect.promise(() => SessionExport.onSessionClose(sessionID, workspaceKey)) // kilocode_change
         yield* sync.remove(sessionID)
       } catch (e) {
         log.error(e)
@@ -723,6 +725,7 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service | 
           ...msg.info,
           sessionID: session.id,
           id: newID,
+          ...(msg.info.role === "assistant" && { cost: 0 }), // kilocode_change - count only spend incurred after the fork
           ...(parentID && { parentID }),
         })
 
@@ -732,6 +735,7 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service | 
             id: PartID.ascending(),
             messageID: cloned.id,
             sessionID: session.id,
+            ...(part.type === "step-finish" && { cost: 0 }), // kilocode_change - exclude pre-fork spend from model stats
           }
           if (p.type === "compaction" && p.tail_start_id) {
             p.tail_start_id = idMap.get(p.tail_start_id)
@@ -739,6 +743,16 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service | 
           yield* updatePart(p)
         }
       }
+      // kilocode_change start - preserve imported/cumulative diffs when forking sessions
+      const local = yield* storage
+        .read<Snapshot.FileDiff[]>(["session_diff", input.sessionID])
+        .pipe(Effect.orElseSucceed((): Snapshot.FileDiff[] => []))
+      const base = yield* cumulativeSessionDiff(storage, input.sessionID, local)
+      if (base.length > 0) {
+        yield* storage.write(baseKey(session.id), base).pipe(Effect.ignore)
+        yield* storage.write(["session_diff", session.id], base).pipe(Effect.ignore)
+      }
+      // kilocode_change end
       return session
     })
 
@@ -949,69 +963,7 @@ export function* listGlobal(input?: {
 }
 // kilocode_change end
 
-// kilocode_change start - keep legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-
-const decodeCreate = Schema.decodeUnknownSync(CreateInput)
-const decodeGet = Schema.decodeUnknownSync(GetInput)
-const decodeSetTitle = Schema.decodeUnknownSync(SetTitleInput)
-const decodeSetArchived = Schema.decodeUnknownSync(SetArchivedInput)
-const decodeSetPermission = Schema.decodeUnknownSync(SetPermissionInput)
-const decodeSetRevert = Schema.decodeUnknownSync(SetRevertInput)
-const decodeMessages = Schema.decodeUnknownSync(MessagesInput)
-const decodeChildren = Schema.decodeUnknownSync(ChildrenInput)
-const decodeRemove = Schema.decodeUnknownSync(RemoveInput)
-
-export const create = (input?: CreateInput) => runPromise((svc) => svc.create(decodeCreate(input) as CreateInput))
+// kilocode_change - preserve Kilo recursive fork/remap behavior without a Session service-local Promise runtime
 export const fork = kiloSessionFork
-export const get = (id: SessionID) => runPromise((svc) => svc.get(decodeGet(id)))
-export const setTitle = (input: { sessionID: SessionID; title: string }) =>
-  runPromise((svc) => svc.setTitle(decodeSetTitle(input)))
-export const setArchived = (input: { sessionID: SessionID; time?: number }) =>
-  runPromise((svc) => svc.setArchived(decodeSetArchived(input)))
-export const setPermission = (input: { sessionID: SessionID; permission: Permission.Ruleset }) =>
-  runPromise((svc) =>
-    svc.setPermission(decodeSetPermission(input) as { sessionID: SessionID; permission: Permission.Ruleset }),
-  )
-export const setRevert = (input: { sessionID: SessionID; revert?: Info["revert"]; summary?: Info["summary"] }) => {
-  const parsed = decodeSetRevert(input) as { sessionID: SessionID; revert?: Info["revert"]; summary?: Info["summary"] }
-  return runPromise((svc) =>
-    svc.setRevert({ sessionID: parsed.sessionID, revert: parsed.revert, summary: parsed.summary }),
-  )
-}
-export const messages = (input: { sessionID: SessionID; limit?: number }) =>
-  runPromise((svc) => svc.messages(decodeMessages(input)))
-export const children = (id: SessionID) => runPromise((svc) => svc.children(decodeChildren(id)))
-export const remove = (id: SessionID) => runPromise((svc) => svc.remove(decodeRemove(id)))
-export async function updateMessage<T extends MessageV2.Info>(msg: T): Promise<T> {
-  MessageV2.Info.zod.parse(msg) // kilocode_change
-  return runPromise((svc) => svc.updateMessage(msg))
-}
-
-export const removeMessage = fn(z.object({ sessionID: SessionID.zod, messageID: MessageID.zod }), (input) =>
-  runPromise((svc) => svc.removeMessage(input)),
-)
-
-export const removePart = fn(
-  z.object({ sessionID: SessionID.zod, messageID: MessageID.zod, partID: PartID.zod }),
-  (input) => runPromise((svc) => svc.removePart(input)),
-)
-
-export async function updatePart<T extends MessageV2.Part>(part: T): Promise<T> {
-  MessageV2.Part.zod.parse(part) // kilocode_change
-  return runPromise((svc) => svc.updatePart(part))
-}
-
-export const updatePartDelta = fn(
-  z.object({
-    sessionID: SessionID.zod,
-    messageID: MessageID.zod,
-    partID: PartID.zod,
-    field: z.string(),
-    delta: z.string(),
-  }),
-  (input) => runPromise((svc) => svc.updatePartDelta(input)),
-)
-// kilocode_change end
 
 export * as Session from "./session"

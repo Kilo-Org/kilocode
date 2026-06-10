@@ -2,7 +2,7 @@ import { Bus } from "../../bus"
 import { BusEvent } from "../../bus/bus-event"
 import { Identifier } from "../../id/id"
 import { SessionID } from "../../session/schema"
-import { ZodOverride } from "../../util/effect-zod"
+import { zod as toZod } from "@opencode-ai/core/effect-zod"
 import * as Log from "@opencode-ai/core/util/log"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import z from "zod"
@@ -34,7 +34,9 @@ export namespace Suggestion {
     }),
   })
 
-  const SuggestionIDSchema = Schema.String.annotate({ [ZodOverride]: Identifier.schema("suggestion") })
+  const SuggestionIDSchema = Schema.String.check(Schema.isStartsWith("sug"))
+  const SuggestionID = toZod(SuggestionIDSchema)
+  const SessionIDZod = toZod(SessionID)
 
   export const Info = z
     .object({
@@ -48,8 +50,8 @@ export namespace Suggestion {
 
   export const Request = z
     .object({
-      id: Identifier.schema("suggestion"),
-      sessionID: Identifier.schema("session"),
+      id: SuggestionID,
+      sessionID: SessionIDZod,
       text: z.string().describe("Suggestion text shown to the user"),
       actions: z.array(Action).min(1).max(2).describe("Available actions the user can take"),
       blocking: z
@@ -109,7 +111,6 @@ export namespace Suggestion {
     ),
   }
 
-  // kilocode_change - Instance.state() removed in v1.4.4; use module-level state
   // (request IDs are globally unique so instance scoping is not needed)
   const pending: Record<
     string,
@@ -143,7 +144,7 @@ export namespace Suggestion {
     return new Promise<Action>((resolve, reject) => {
       const info: Request = {
         id,
-        sessionID: input.sessionID,
+        sessionID: SessionID.make(input.sessionID),
         text: input.text,
         actions: input.actions,
         blocking: input.blocking,

@@ -6,6 +6,8 @@ import {
   sanitizeName,
   KILO_GATEWAY_ID,
   PROVIDER_ORDER,
+  freeDataLabel,
+  isDataCollectedModel,
 } from "../../webview-ui/src/components/shared/model-selector-utils"
 
 const labels = { select: "Select model", noProviders: "No providers", notSet: "Not set" }
@@ -38,9 +40,9 @@ describe("providerSortKey", () => {
   })
 
   it("sorts providers correctly when used with sort", () => {
-    const ids = ["google", "anthropic", "kilo", "openai", "github-copilot"]
+    const ids = ["google", "anthropic", "kilo", "openai", "deepseek"]
     const sorted = ids.slice().sort((a, b) => providerSortKey(a) - providerSortKey(b))
-    expect(sorted).toEqual(["kilo", "anthropic", "github-copilot", "openai", "google"])
+    expect(sorted).toEqual(["kilo", "anthropic", "deepseek", "openai", "google"])
   })
 })
 
@@ -91,6 +93,20 @@ describe("sanitizeName", () => {
   it("handles extra whitespace around (free) suffix", () => {
     expect(sanitizeName("Llama 3 (free)  ")).toBe("Llama 3")
     expect(sanitizeName("Model  (free)  ")).toBe("Model")
+  })
+})
+
+describe("freeDataLabel", () => {
+  it("uses the data collection label without repeating free", () => {
+    expect(freeDataLabel("Free", "Data may be used for training")).toBe("Data may be used for training")
+  })
+})
+
+describe("isDataCollectedModel", () => {
+  it("only marks free Kilo Gateway models with the training disclosure", () => {
+    expect(isDataCollectedModel({ providerID: KILO_GATEWAY_ID, isFree: true })).toBe(true)
+    expect(isDataCollectedModel({ providerID: "openrouter", isFree: true })).toBe(false)
+    expect(isDataCollectedModel({ providerID: KILO_GATEWAY_ID, isFree: false })).toBe(false)
   })
 })
 

@@ -1,12 +1,12 @@
-import { afterEach, describe, expect, test } from "bun:test"
+import { afterEach, describe, expect } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
 import { Effect, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { ToolRegistry } from "@/tool/registry"
 import { Command } from "@/command" // kilocode_change
-import { Git } from "@/git" // kilocode_change
-import { disposeAllInstances, provideTmpdirInstance, TestInstance, tmpdir } from "../fixture/fixture" // kilocode_change
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { disposeAllInstances, provideTmpdirInstance, TestInstance } from "../fixture/fixture" // kilocode_change
 import { testEffect } from "../lib/effect"
 import { TestConfig } from "../fixture/config"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
@@ -17,6 +17,7 @@ import { Skill } from "@/skill"
 import { Agent } from "@/agent/agent"
 import { Session } from "@/session/session"
 import { Provider } from "@/provider/provider"
+import { Git } from "@/git"
 import { LSP } from "@/lsp/lsp"
 import { Instruction } from "@/session/instruction"
 import { Bus } from "@/bus"
@@ -25,14 +26,17 @@ import { Format } from "@/format"
 import { Ripgrep } from "@/file/ripgrep"
 import * as Truncate from "@/tool/truncate"
 import { InstanceState } from "@/effect/instance-state"
-import { WithInstance } from "@/project/with-instance"
+import { SessionStatus } from "@/session/status" // kilocode_change
+import { Reference } from "@/reference/reference"
 
 const node = CrossSpawnSpawner.defaultLayer
+const originalExperimentalScout = Flag.KILO_EXPERIMENTAL_SCOUT
 const configLayer = TestConfig.layer({
   directories: () => InstanceState.directory.pipe(Effect.map((dir) => [path.join(dir, ".opencode")])),
 })
 
-const registryLayer = ToolRegistry.layer.pipe(
+const registryBase = ToolRegistry.layer.pipe(
+  // kilocode_change
   Layer.provide(configLayer),
   Layer.provide(Plugin.defaultLayer),
   Layer.provide(Question.defaultLayer),
@@ -41,6 +45,8 @@ const registryLayer = ToolRegistry.layer.pipe(
   Layer.provide(Agent.defaultLayer),
   Layer.provide(Session.defaultLayer),
   Layer.provide(Provider.defaultLayer),
+  Layer.provide(Git.defaultLayer),
+  Layer.provide(Reference.defaultLayer),
   Layer.provide(LSP.defaultLayer),
   Layer.provide(Instruction.defaultLayer),
   Layer.provide(AppFileSystem.defaultLayer),
@@ -50,13 +56,16 @@ const registryLayer = ToolRegistry.layer.pipe(
   Layer.provide(node),
   Layer.provide(Ripgrep.defaultLayer),
   Layer.provide(Truncate.defaultLayer),
-  Layer.provide(Command.defaultLayer), // kilocode_change
-  Layer.provide(Git.defaultLayer), // kilocode_change
 )
+
+// kilocode_change start
+const registryLayer = registryBase.pipe(Layer.provide(Command.defaultLayer), Layer.provide(SessionStatus.defaultLayer))
+// kilocode_change end
 
 const it = testEffect(Layer.mergeAll(registryLayer, node))
 
 afterEach(async () => {
+  Flag.KILO_EXPERIMENTAL_SCOUT = originalExperimentalScout
   await disposeAllInstances()
 })
 
@@ -84,38 +93,63 @@ describe("tool.registry", () => {
       }
     }),
   )
+
+  it.live("suggest is registered for cli and vscode only", () =>
+    Effect.gen(function* () {
+      const original = process.env["KILO_CLIENT"]
+      const originalQuestion = process.env["KILO_ENABLE_QUESTION_TOOL"]
+      const originalConfig = process.env["KILO_CONFIG_DIR"]
+      try {
+        for (const client of ["cli", "vscode", "desktop", "app"]) {
+          process.env["KILO_CLIENT"] = client
+          process.env["KILO_ENABLE_QUESTION_TOOL"] = client === "vscode" ? "true" : "false"
+          yield* provideTmpdirInstance(
+            (dir) =>
+              Effect.gen(function* () {
+                process.env["KILO_CONFIG_DIR"] = dir
+                const registry = yield* ToolRegistry.Service
+                const ids = yield* registry.ids()
+                if (client === "cli" || client === "vscode") expect(ids).toContain("suggest")
+                else expect(ids).not.toContain("suggest")
+              }),
+            { git: true },
+          )
+        }
+      } finally {
+        if (original === undefined) delete process.env["KILO_CLIENT"]
+        else process.env["KILO_CLIENT"] = original
+        if (originalQuestion === undefined) delete process.env["KILO_ENABLE_QUESTION_TOOL"]
+        else process.env["KILO_ENABLE_QUESTION_TOOL"] = originalQuestion
+        if (originalConfig === undefined) delete process.env["KILO_CONFIG_DIR"]
+        else process.env["KILO_CONFIG_DIR"] = originalConfig
+      }
+    }),
+  )
   // kilocode_change end
 
-  // kilocode_change start
-  test("suggest is registered for cli and vscode only", async () => {
-    const original = process.env["KILO_CLIENT"]
-    const originalQuestion = process.env["KILO_ENABLE_QUESTION_TOOL"]
-    const originalConfig = process.env["KILO_CONFIG_DIR"]
-    try {
-      for (const client of ["cli", "vscode", "desktop", "app"]) {
-        process.env["KILO_CLIENT"] = client
-        process.env["KILO_ENABLE_QUESTION_TOOL"] = client === "vscode" ? "true" : "false"
-        await using tmp = await tmpdir({ git: true })
-        process.env["KILO_CONFIG_DIR"] = tmp.path
-        await WithInstance.provide({
-          directory: tmp.path,
-          fn: async () => {
-            const ids = await ToolRegistry.ids()
-            if (client === "cli" || client === "vscode") expect(ids).toContain("suggest")
-            else expect(ids).not.toContain("suggest")
-          },
-        })
-      }
-    } finally {
-      if (original === undefined) delete process.env["KILO_CLIENT"]
-      else process.env["KILO_CLIENT"] = original
-      if (originalQuestion === undefined) delete process.env["KILO_ENABLE_QUESTION_TOOL"]
-      else process.env["KILO_ENABLE_QUESTION_TOOL"] = originalQuestion
-      if (originalConfig === undefined) delete process.env["KILO_CONFIG_DIR"]
-      else process.env["KILO_CONFIG_DIR"] = originalConfig
-    }
-  })
-  // kilocode_change end
+  it.instance("hides repo research tools unless experimental", () =>
+    Effect.gen(function* () {
+      Flag.KILO_EXPERIMENTAL_SCOUT = false
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+
+      expect(ids).not.toContain("codesearch")
+      expect(ids).not.toContain("repo_clone")
+      expect(ids).not.toContain("repo_overview")
+    }),
+  )
+
+  it.instance("shows repo research tools when experimental scout is enabled", () =>
+    Effect.gen(function* () {
+      Flag.KILO_EXPERIMENTAL_SCOUT = true
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+
+      expect(ids).toContain("codesearch")
+      expect(ids).toContain("repo_clone")
+      expect(ids).toContain("repo_overview")
+    }),
+  )
 
   it.instance("loads tools from .opencode/tool (singular)", () =>
     Effect.gen(function* () {

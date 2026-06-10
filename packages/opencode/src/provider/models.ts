@@ -8,6 +8,7 @@ import { Flock } from "@opencode-ai/core/util/flock"
 import { Hash } from "@opencode-ai/core/util/hash"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { withTransientReadRetry } from "@/util/effect-http-client"
+import { CatalogModelStatus } from "./model-status"
 // kilocode_change start
 import { Config } from "../config/config"
 import { ModelCache } from "./model-cache"
@@ -98,7 +99,7 @@ export const Model = Schema.Struct({
       ),
     }),
   ),
-  status: Schema.optional(Schema.Literals(["alpha", "beta", "deprecated"])),
+  status: Schema.optional(CatalogModelStatus),
   provider: Schema.optional(
     Schema.Struct({ npm: Schema.optional(Schema.String), api: Schema.optional(Schema.String) }),
   ),
@@ -163,12 +164,16 @@ export const layer: Layer.Layer<Service, never, Requirements> = Layer.effect(
       Effect.map((v) => v as Record<string, Provider> | undefined),
     )
 
+    // kilocode_change start
     // Bundled at build time; absent in dev — `tryPromise` covers both.
     const loadSnapshot = Effect.tryPromise({
-      // @ts-ignore — generated at build time, may not exist in dev
-      try: () => import("./models-snapshot.js").then((m) => m.snapshot as Record<string, Provider> | undefined),
+      try: () =>
+        import("../kilocode/provider/models-snapshot").then(
+          (m) => m.loadModelsSnapshot() as Promise<Record<string, Provider> | undefined>,
+        ),
       catch: () => undefined,
     }).pipe(Effect.catch(() => Effect.succeed(undefined)))
+    // kilocode_change end
 
     const fetchAndWrite = Effect.fn("ModelsDev.fetchAndWrite")(function* () {
       const text = yield* fetchApi()

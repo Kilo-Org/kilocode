@@ -3,6 +3,8 @@ package ai.kilocode.backend.cli
 import ai.kilocode.backend.workspace.CommandInfo
 import ai.kilocode.backend.workspace.ProviderData
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.AgentConfigPatchDto
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
@@ -1397,6 +1399,47 @@ class KiloCliDataParserTest {
         fun `buildConfigPartial - empty update`() {
             val result = KiloCliDataParser.buildConfigPartial(ConfigUpdateDto())
             assertEquals("{}", result)
+        }
+
+        @Test
+        fun `buildConfigPatch - top-level model set`() {
+            val patch = ConfigPatchDto(values = linkedMapOf("model" to "anthropic/claude"))
+            assertEquals("{\"model\":\"anthropic/claude\"}", KiloCliDataParser.buildConfigPatch(patch))
+        }
+
+        @Test
+        fun `buildConfigPatch - top-level model clear emits null`() {
+            val patch = ConfigPatchDto(values = linkedMapOf("model" to null))
+            assertEquals("{\"model\":null}", KiloCliDataParser.buildConfigPatch(patch))
+        }
+
+        @Test
+        fun `buildConfigPatch - small and subagent values`() {
+            val patch = ConfigPatchDto(values = linkedMapOf("small_model" to "kilo/auto-small", "subagent_model" to null, "subagent_variant" to null))
+            assertEquals("{\"small_model\":\"kilo/auto-small\",\"subagent_model\":null,\"subagent_variant\":null}", KiloCliDataParser.buildConfigPatch(patch))
+        }
+
+        @Test
+        fun `buildConfigPatch - per-agent model set`() {
+            val patch = ConfigPatchDto(agents = linkedMapOf("code" to AgentConfigPatchDto(model = "kilo/gpt-5")))
+            assertEquals("{\"agent\":{\"code\":{\"model\":\"kilo/gpt-5\"}}}", KiloCliDataParser.buildConfigPatch(patch))
+        }
+
+        @Test
+        fun `buildConfigPatch - per-agent model clear emits null`() {
+            val patch = ConfigPatchDto(agents = linkedMapOf("code" to AgentConfigPatchDto(model = null)))
+            assertEquals("{\"agent\":{\"code\":{\"model\":null}}}", KiloCliDataParser.buildConfigPatch(patch))
+        }
+
+        @Test
+        fun `buildConfigPatch - empty patch`() {
+            assertEquals("{}", KiloCliDataParser.buildConfigPatch(ConfigPatchDto()))
+        }
+
+        @Test
+        fun `buildConfigPatch - escapes special characters`() {
+            val patch = ConfigPatchDto(values = linkedMapOf("model" to "kilo/a\\b\"c"))
+            assertEquals("{\"model\":\"kilo/a\\\\b\\\"c\"}", KiloCliDataParser.buildConfigPatch(patch))
         }
 
         @Test

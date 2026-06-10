@@ -106,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Рекомендовано",
   "dialog.provider.opencode.note": "Добірка моделей включаючи Claude, GPT, Gemini та інші",
   "dialog.provider.anthropic.note": "Прямий доступ до моделей Claude включаючи Pro та Max",
+  "dialog.provider.deepseek.note": "Моделі DeepSeek для завдань міркування та програмування",
   "dialog.provider.copilot.note": "Моделі Claude для допомоги з кодуванням",
   "dialog.provider.openai.note": "Моделі GPT для швидких і потужних загальних завдань ШІ",
   "dialog.provider.google.note": "Моделі Gemini для швидких і структурованих відповідей",
@@ -135,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "Авторизація не вдалася: {{error}}",
   "provider.connect.apiKey.description":
     "Введіть свій API-ключ {{provider}}, щоб підключити акаунт {{provider}} і використовувати моделі {{provider}} в Kilo.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "API-ключ {{provider}}",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API-ключ",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API-ключ обов'язковий",
   "provider.connect.prompt.required": "{{field}} є обов'язковим",
   "provider.connect.azure.endpointType.label": "Виберіть конфігурацію кінцевої точки Azure",
@@ -175,6 +182,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "Моделі {{provider}} більше недоступні.",
 
   "model.tag.free": "Безкоштовно",
+  "model.tag.dataCollected": "Дані можуть використовуватися для навчання",
   "model.tag.latest": "Остання",
   "model.group.recommended": "Рекомендовані",
   "model.group.favorites": "Обране",
@@ -202,6 +210,9 @@ export const dict = {
   "model.preview.label.cached": "Кешовані",
   "model.preview.label.average": "Орієнт. сер. вартість",
   "model.preview.label.context": "Контекст",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Виконання",
+  "model.preview.label.costAttempt": "Вартість / спроба",
   "model.preview.value.notSupported": "Не підтримується",
   "model.preview.tooltip.average":
     "Орієнтовна середня вартість базується на типовому співвідношенні вхідних, вихідних токенів та читання кешу.",
@@ -455,6 +466,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Не вдалося закрити доступ до сесії",
   "toast.session.unshare.failed.description": "Під час закриття доступу до сесії сталася помилка",
 
+  "toast.session.rename.invalid.title": "Некоректна назва сесії",
   "toast.session.listFailed.title": "Не вдалося завантажити сесії для {{project}}",
 
   "toast.update.title": "Доступне оновлення",
@@ -982,6 +994,8 @@ export const dict = {
   "session.delete.confirm": 'Видалити сесію "{{name}}"?',
   "session.delete.button": "Видалити сесію",
   "session.untitled": "Без назви",
+  "session.current": "Поточна сесія",
+  "session.history.sources": "Джерело історії",
   "session.recent": "Останні",
   "session.showHistory": "Показати історію",
   "session.search.placeholder": "Пошук сесій...",
@@ -1116,6 +1130,14 @@ export const dict = {
   "session.status.retrying": "Повторна спроба (спроба {{ attempt }})… {{ message }}",
   "session.status.working": "Працює...",
   "session.status.offline": "Мережу відключено — перепідключення...",
+  "session.outcome.incomplete": "Хід завершився з {{count}} невиконаними завданнями",
+  "session.outcome.limit": "Ліміт відповідей досягнуто до завершення",
+  "session.outcome.unknown": "Хід завершився без причини завершення моделі",
+  "session.outcome.filtered": "Провайдер зупинив цю відповідь через фільтр вмісту.",
+  "session.outcome.unexpected": "Відповідь завершилася несподівано і може бути неповною.",
+  "session.outcome.interrupted": "Хід перервано",
+  "session.outcome.error": "Хід не вдався",
+  "session.outcome.finish": "Причина завершення: {{reason}}",
 
   "ui.sessionTurn.cancel": "Скасувати",
   "ui.sessionTurn.status.thinking": "Думаю...",
@@ -1179,7 +1201,6 @@ export const dict = {
     'Телеметрія керується вбудованим налаштуванням телеметрії VS Code. Щоб вимкнути її, перейдіть до Налаштування > Телеметрія > Рівень телеметрії та встановіть значення "off". Перезапустіть VS Code, щоб застосувати зміну.',
   "settings.aboutKiloCode.telemetry.openSettings": "Відкрити налаштування телеметрії",
 
-  "settings.agentBehaviour.subtab.modes": "Режими",
   "settings.agentBehaviour.subtab.agents": "Агенти",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-сервери",
   "settings.agentBehaviour.subtab.rules": "Правила",
@@ -1242,9 +1263,6 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Підсумовувати великий вставлений вміст",
   "settings.experimental.batch.title": "Пакетний інструмент",
   "settings.experimental.batch.description": "Увімкнути пакетну обробку кількох викликів інструментів",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Пошук по кодовій базі",
   "settings.experimental.codebaseSearch.description":
     "Увімкнути пошук природною мовою на основі ШІ по всій кодовій базі",
@@ -1299,7 +1317,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Навичок не виявлено. Додайте шляхи до папок навичок або URL нижче, щоб зробити їх доступними.",
   "settings.agentBehaviour.availableModes": "Доступні власні режими",
-  "settings.agentBehaviour.noModesFound": "Режимів не знайдено.",
+  "settings.agentBehaviour.noAgentsFound": "Агентів не знайдено.",
   "settings.agentBehaviour.importMode": "Імпортувати",
   "settings.agentBehaviour.importMode.invalidName":
     "Назва режиму у файлі недійсна. Назва має починатися з малої літери і містити лише малі літери, цифри та дефіси.",
@@ -1308,10 +1326,10 @@ export const dict = {
     "Недійсний файл JSON. Будь ласка, виберіть дійсний файл визначення агента.",
   "settings.agentBehaviour.importMode.tooLarge": "Файл занадто великий. Визначення агентів мають бути менше 1 МБ.",
   "settings.agentBehaviour.exportMode": "Експортувати визначення агента",
-  "settings.agentBehaviour.removeMode.title": "Видалити режим",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Видалити режим "{{name}}"? Це оновить вашу конфігурацію, щоб вимкнути режим.',
-  "settings.agentBehaviour.removeMode.button": "Видалити",
+  "settings.agentBehaviour.removeAgent.title": "Видалити агент",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Видалити агент "{{name}}"? Це вимкне агент шляхом оновлення конфігурації.',
+  "settings.agentBehaviour.removeAgent.button": "Видалити",
   "settings.agentBehaviour.skillPaths": "Шляхи до папок навичок",
   "settings.agentBehaviour.skillUrls": "URL навичок",
   "settings.agentBehaviour.removeSkill.title": "Видалити навичку",

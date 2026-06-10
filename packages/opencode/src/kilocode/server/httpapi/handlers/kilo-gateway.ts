@@ -20,11 +20,14 @@ import {
   fetchProfile,
 } from "@kilocode/kilo-gateway"
 import { DIRECT_FIM_ENV, requestMistralFim, resolveFimTarget } from "@kilocode/kilo-gateway/fim"
+import { DIRECT_EDIT_ENV, extractFencedBody, resolveEditTarget } from "@kilocode/kilo-gateway/edit"
+import { buildMercuryEditPrompt } from "@kilocode/kilo-gateway/edit-prompt"
 import { buildKiloHeaders } from "@kilocode/kilo-gateway"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import * as Stream from "effect/Stream"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
+import * as Log from "@opencode-ai/core/util/log"
 import { Auth } from "@/auth"
 import { EffectBridge } from "@/effect/bridge"
 import { Bus } from "@/bus"
@@ -36,9 +39,21 @@ import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { MessageTable, PartTable, SessionTable } from "@/session/session.sql"
 import { Session } from "@/session/session"
 import { Database } from "@/storage/db"
-import { AudioTranscriptionsBody, FimBody } from "../groups/kilo-gateway"
+import { Storage } from "@/storage/storage"
+import { AudioTranscriptionsBody, ClawStatus, EditBody, FimBody } from "../groups/kilo-gateway"
+import { baseKey } from "../../../session-portability/cumulative-diff"
+import { extractSessionDiffs, restoreSessionDiffs } from "../../../session-portability/session-diff-restore"
 
 const FIM_TIMEOUT_MS = 30_000
+const log = Log.create({ service: "kilo-gateway" })
+
+function jsonError(error: string, status: number) {
+  return HttpServerResponse.jsonUnsafe({ error }, { status })
+}
+
+function logError(route: string, err: unknown) {
+  log.error("unhandled error", { route, err })
+}
 
 export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo", (handlers) =>
   Effect.gen(function* () {
@@ -154,6 +169,105 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       )
     })
 
+    const edit = Effect.fn("KiloGatewayHttpApi.edit")(function* (ctx: { payload: typeof EditBody.Type }) {
+      const target = resolveEditTarget(ctx.payload.provider, ctx.payload.model)
+      if (target.provider === "kilo" && !target.url) {
+        return yield* Effect.fail(new HttpApiError.BadRequest({}))
+      }
+      const proxy = target.provider === "kilo" ? yield* proxyAuth() : undefined
+      const token = yield* Effect.gen(function* () {
+        if (target.provider === "kilo") return proxy?.token
+        const item = yield* auth.get(target.provider).pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
+        if (item?.type === "api") return item.key
+        return DIRECT_EDIT_ENV[target.provider].map((key) => process.env[key]).find(Boolean)
+      })
+      if (target.provider === "kilo" && !proxy?.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+
+      const request = yield* HttpServerRequest.HttpServerRequest
+      const signal =
+        request.source instanceof Request
+          ? AbortSignal.any([request.source.signal, AbortSignal.timeout(FIM_TIMEOUT_MS)])
+          : AbortSignal.timeout(FIM_TIMEOUT_MS)
+
+      // Assemble the Mercury sentinel prompt from the structured context the
+      // client sent — same builder every editor frontend shares.
+      const content = buildMercuryEditPrompt({
+        currentFilePath: ctx.payload.currentFilePath,
+        currentFileContent: ctx.payload.currentFileContent,
+        cursorLine: ctx.payload.cursorLine,
+        cursorCharacter: ctx.payload.cursorCharacter,
+        editableRegionStartLine: ctx.payload.editableRegionStartLine,
+        editableRegionEndLine: ctx.payload.editableRegionEndLine,
+        recentlyViewedSnippets: [...ctx.payload.recentlyViewedSnippets],
+        editDiffHistory: [...ctx.payload.editDiffHistory],
+      })
+
+      const response = yield* Effect.promise(async () => {
+        try {
+          return await fetch(target.url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+              ...(target.provider === "kilo"
+                ? buildKiloHeaders(undefined, { kilocodeOrganizationId: proxy?.organizationId })
+                : {}),
+              ...(target.provider === "kilo" ? { [HEADER_FEATURE]: "autocomplete" } : {}),
+            },
+            signal,
+            body: JSON.stringify({
+              model: target.model,
+              max_tokens: ctx.payload.maxTokens ?? 512,
+              // Mercury rejects role:"system" on this endpoint — must be a single user message.
+              messages: [{ role: "user", content }],
+            }),
+          })
+        } catch (err) {
+          if (err instanceof DOMException && err.name === "TimeoutError")
+            return Response.json({ error: "Edit request timed out" }, { status: 504 })
+          if (signal.aborted) return Response.json({ error: "Edit request canceled" }, { status: 499 })
+          throw err
+        }
+      })
+
+      if (!response.ok) {
+        // Pass the upstream status through (mirrors the FIM handler) so the
+        // client can distinguish auth/credit/rate-limit/server failures
+        // instead of collapsing everything to 400.
+        const text = yield* Effect.promise(async () => {
+          try {
+            return await response.text()
+          } catch {
+            return "<unreadable>"
+          }
+        })
+        return HttpServerResponse.jsonUnsafe(
+          { error: `Edit request failed: ${response.status} ${text}` },
+          { status: response.status },
+        )
+      }
+
+      const json = yield* Effect.promise(
+        () =>
+          response.json() as Promise<{
+            choices?: Array<{ message?: { content?: string } }>
+            usage?: { prompt_tokens?: number; completion_tokens?: number }
+          }>,
+      )
+      const raw = json.choices?.[0]?.message?.content ?? ""
+      const body = extractFencedBody(raw)
+      return {
+        content: body,
+        usage: json.usage
+          ? {
+              prompt_tokens: json.usage.prompt_tokens,
+              completion_tokens: json.usage.completion_tokens,
+            }
+          : undefined,
+      }
+    })
+
     const audioTranscriptions = Effect.fn("KiloGatewayHttpApi.audioTranscriptions")(function* (ctx: {
       payload: typeof AudioTranscriptionsBody.Type
     }) {
@@ -233,13 +347,20 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
         try: async () => {
           const response = await fetch(`${KILO_API_BASE}/api/kiloclaw/status`, { headers })
           if (!response.ok) throw new GatewayError(await response.text(), response.status)
-          return response.json()
+          return Schema.decodeUnknownPromise(ClawStatus)(await response.json())
         },
-        catch: (err) =>
-          err instanceof GatewayError && err.status === 401
-            ? new HttpApiError.Unauthorized({})
-            : new HttpApiError.ServiceUnavailable({}),
-      })
+        catch: (err) => err,
+      }).pipe(
+        Effect.match({
+          onFailure: (err) => {
+            if (err instanceof GatewayError)
+              return jsonError(`KiloClaw request failed: ${err.status} ${err.message}`, err.status)
+            logError("claw/status", err)
+            return jsonError("Failed to reach KiloClaw", 502)
+          },
+          onSuccess: (result) => result,
+        }),
+      )
     })
 
     const clawChatCredentials = Effect.fn("KiloGatewayHttpApi.clawChatCredentials")(function* () {
@@ -268,11 +389,17 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
 
       return yield* Effect.tryPromise({
         try: () => getCloudSessions(token, query),
-        catch: (err) =>
-          err instanceof GatewayError && err.status === 401
-            ? new HttpApiError.Unauthorized({})
-            : new HttpApiError.BadRequest({}),
-      })
+        catch: (err) => err,
+      }).pipe(
+        Effect.match({
+          onFailure: (err) => {
+            if (err instanceof GatewayError) return jsonError(err.message, err.status)
+            logError("cloud-sessions", err)
+            return jsonError("Internal error", 500)
+          },
+          onSuccess: (result) => result,
+        }),
+      )
     })
 
     const cloudSession = Effect.fn("KiloGatewayHttpApi.cloudSession")(function* (ctx) {
@@ -280,9 +407,19 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       const token = getToken(info)
       if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
-      const result = yield* Effect.promise(() => fetchCloudSession(token, ctx.params.id))
-      if (!result.ok && result.status === 404) return yield* Effect.fail(new HttpApiError.NotFound({}))
-      if (!result.ok) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      const result = yield* Effect.tryPromise({
+        try: () => fetchCloudSession(token, ctx.params.id),
+        catch: (err) => err,
+      }).pipe(
+        Effect.catch((err) =>
+          Effect.sync(() => {
+            logError("cloud/session/get", err)
+            return undefined
+          }),
+        ),
+      )
+      if (!result) return jsonError("Internal error", 500)
+      if (!result.ok) return jsonError(result.error, result.status)
       return result.data
     })
 
@@ -291,28 +428,72 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       const token = getToken(info)
       if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
-      const fetched = yield* Effect.promise(() => fetchCloudSessionForImport(token, ctx.payload.sessionId))
-      if (!fetched.ok && fetched.status === 404) return yield* Effect.fail(new HttpApiError.NotFound({}))
-      if (!fetched.ok) return yield* Effect.fail(new HttpApiError.BadRequest({}))
+      const fetched = yield* Effect.tryPromise({
+        try: () => fetchCloudSessionForImport(token, ctx.payload.sessionId),
+        catch: (err) => err,
+      }).pipe(
+        Effect.catch((err) =>
+          Effect.sync(() => {
+            logError("cloud/session/import", err)
+            return undefined
+          }),
+        ),
+      )
+      if (!fetched) return jsonError("Internal error", 500)
+      if (!fetched.ok) return jsonError(fetched.error, fetched.status)
       if (!fetched.data?.info?.id) return yield* Effect.fail(new HttpApiError.BadRequest({}))
 
+      const diffs = extractSessionDiffs(fetched.data)
       const bridge = yield* EffectBridge.make()
       return yield* Effect.tryPromise({
         try: () =>
           bridge.promise(
-            Effect.sync(() =>
-              importSessionToDb(fetched.data, {
-                Database,
-                Instance,
-                SessionTable,
-                MessageTable,
-                PartTable,
-                SessionToRow: Session.toRow,
-                Bus,
-                SessionCreatedEvent: Session.Event.Created,
-                Identifier,
-              }),
-            ),
+            Effect.gen(function* () {
+              if (diffs.length > 0) {
+                yield* Effect.try({
+                  try: () => restoreSessionDiffs({ directory: Instance.directory, diffs }),
+                  catch: (err) => err,
+                }).pipe(
+                  Effect.catch((err) =>
+                    Effect.sync(() => {
+                      logError("cloud/session/import/restore", err)
+                      return undefined
+                    }),
+                  ),
+                )
+              }
+
+              const imported = yield* Effect.sync(() =>
+                importSessionToDb(fetched.data, {
+                  Database,
+                  Instance,
+                  SessionTable,
+                  MessageTable,
+                  PartTable,
+                  SessionToRow: Session.toRow,
+                  Bus,
+                  SessionCreatedEvent: Session.Event.Created,
+                  Identifier,
+                }),
+              )
+
+              if (diffs.length > 0) {
+                yield* Storage.Service.use((storage) =>
+                  Effect.all([
+                    storage.write(baseKey(imported.id), diffs),
+                    storage.write(["session_diff", imported.id], diffs),
+                  ]),
+                ).pipe(
+                  Effect.catch((err) =>
+                    Effect.sync(() => {
+                      logError("cloud/session/import/diff", err)
+                    }),
+                  ),
+                )
+              }
+
+              return imported
+            }),
           ),
         catch: () => new HttpApiError.BadRequest({}),
       })
@@ -322,6 +503,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       .handle("profile", profile)
       .handle("modes", modes)
       .handle("fim", fim)
+      .handle("edit", edit)
       .handle("audioTranscriptions", audioTranscriptions)
       .handle("notifications", notifications)
       .handle("organization", organization)

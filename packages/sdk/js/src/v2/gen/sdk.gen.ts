@@ -3,6 +3,10 @@
 import { client } from "./client.gen.js"
 import { buildClientParams, type Client, type Options as Options2, type TDataShape } from "./client/index.js"
 import type {
+  AgentBuilderPreviewErrors,
+  AgentBuilderPreviewResponses,
+  AgentBuilderSaveErrors,
+  AgentBuilderSaveResponses,
   AgentPartInput,
   AppAgentsResponses,
   AppLogErrors,
@@ -26,9 +30,17 @@ import type {
   CommandListResponses,
   CommitMessageGenerateErrors,
   CommitMessageGenerateResponses,
-  Config as Config3,
+  Config as Config4,
+  ConfigEffectiveResponses,
   ConfigGetResponses,
+  ConfigModelStateResponses,
+  ConfigModelStateUpdateResponses,
+  ConfigOverlayResponses,
+  ConfigOverlayUpdateResponses,
   ConfigProvidersResponses,
+  ConfigRulesResponses,
+  ConfigRulesUpdateResponses,
+  ConfigSourcesResponses,
   ConfigUpdateErrors,
   ConfigUpdateResponses,
   ConfigWarningsResponses,
@@ -39,7 +51,9 @@ import type {
   EventTuiPromptAppend2,
   EventTuiSessionSelect2,
   EventTuiToastShow2,
+  ExperimentalConsoleGetErrors,
   ExperimentalConsoleGetResponses,
+  ExperimentalConsoleListOrgsErrors,
   ExperimentalConsoleListOrgsResponses,
   ExperimentalConsoleSwitchOrgResponses,
   ExperimentalResourceListResponses,
@@ -51,6 +65,7 @@ import type {
   ExperimentalWorkspaceRemoveErrors,
   ExperimentalWorkspaceRemoveResponses,
   ExperimentalWorkspaceStatusResponses,
+  ExperimentalWorkspaceSyncListResponses,
   ExperimentalWorkspaceWarpErrors,
   ExperimentalWorkspaceWarpResponses,
   FileListResponses,
@@ -97,6 +112,8 @@ import type {
   KilocodeSessionImportProjectResponses,
   KilocodeSessionImportSessionErrors,
   KilocodeSessionImportSessionResponses,
+  KiloEditErrors,
+  KiloEditResponses,
   KiloFimErrors,
   KiloFimResponses,
   KiloModesResponses,
@@ -252,10 +269,14 @@ import type {
   TuiAppendPromptErrors,
   TuiAppendPromptResponses,
   TuiClearPromptResponses,
+  TuiConfigGetResponses,
+  TuiConfigUpdateErrors,
+  TuiConfigUpdateResponses,
   TuiControlNextResponses,
   TuiControlResponseResponses,
   TuiExecuteCommandErrors,
   TuiExecuteCommandResponses,
+  TuiKeybindListResponses,
   TuiOpenHelpResponses,
   TuiOpenModelsResponses,
   TuiOpenSessionsResponses,
@@ -524,7 +545,7 @@ export class Config extends HeyApiClient {
    */
   public update<ThrowOnError extends boolean = false>(
     parameters?: {
-      config?: Config3
+      config?: Config4
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -681,7 +702,7 @@ export class Config2 extends HeyApiClient {
     parameters?: {
       directory?: string
       workspace?: string
-      config?: Config3
+      config?: Config4
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -768,6 +789,282 @@ export class Config2 extends HeyApiClient {
       ...params,
     })
   }
+
+  /**
+   * Get config overlay
+   *
+   * Resolve global, project, and effective config values with source metadata for inheritance-aware settings UI.
+   */
+  public overlay<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      scope?: "global" | "project"
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "scope" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<ConfigOverlayResponses, unknown, ThrowOnError>({
+      url: "/config/overlay",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Patch config overlay
+   *
+   * Apply a minimal global or project config patch, including unset paths for reverting local overrides.
+   */
+  public overlayUpdate<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      scope?: "global" | "project"
+      set?: {
+        [key: string]: unknown
+      }
+      unset?: Array<Array<string>>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "scope" },
+            { in: "body", key: "set" },
+            { in: "body", key: "unset" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).patch<ConfigOverlayUpdateResponses, unknown, ThrowOnError>({
+      url: "/config/overlay",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * List config sources
+   *
+   * List config source metadata in load order without exposing config contents or secrets.
+   */
+  public sources<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<ConfigSourcesResponses, unknown, ThrowOnError>({
+      url: "/config/sources",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get effective configuration
+   *
+   * Retrieve effective config for the current instance directory.
+   */
+  public effective<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<ConfigEffectiveResponses, unknown, ThrowOnError>({
+      url: "/config/effective",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get project rules
+   *
+   * List project instruction files used by Kilo and return their current contents.
+   */
+  public rules<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      scope?: "project"
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "scope" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<ConfigRulesResponses, unknown, ThrowOnError>({
+      url: "/config/rules",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Update project rules
+   *
+   * Create or update the project AGENTS.md rules file.
+   */
+  public rulesUpdate<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      scope?: "project"
+      content?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "scope" },
+            { in: "body", key: "content" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).put<ConfigRulesUpdateResponses, unknown, ThrowOnError>({
+      url: "/config/rules",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Get model state
+   *
+   * Retrieve TUI-compatible recent and favorite model selections.
+   */
+  public modelState<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<ConfigModelStateResponses, unknown, ThrowOnError>({
+      url: "/config/model-state",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Update model state
+   *
+   * Patch TUI-compatible model selections shared with Kilo Console.
+   */
+  public modelStateUpdate<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      favorite?: Array<{
+        providerID: string
+        modelID: string
+      }>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "favorite" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).patch<ConfigModelStateUpdateResponses, unknown, ThrowOnError>({
+      url: "/config/model-state",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
 }
 
 export class Console extends HeyApiClient {
@@ -794,7 +1091,11 @@ export class Console extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<ExperimentalConsoleGetResponses, unknown, ThrowOnError>({
+    return (options?.client ?? this.client).get<
+      ExperimentalConsoleGetResponses,
+      ExperimentalConsoleGetErrors,
+      ThrowOnError
+    >({
       url: "/experimental/console",
       ...options,
       ...params,
@@ -824,7 +1125,11 @@ export class Console extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<ExperimentalConsoleListOrgsResponses, unknown, ThrowOnError>({
+    return (options?.client ?? this.client).get<
+      ExperimentalConsoleListOrgsResponses,
+      ExperimentalConsoleListOrgsErrors,
+      ThrowOnError
+    >({
       url: "/experimental/console/orgs",
       ...options,
       ...params,
@@ -1058,6 +1363,36 @@ export class Workspace extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+
+  /**
+   * Sync workspace list
+   *
+   * Register missing workspaces returned by workspace adapters.
+   */
+  public syncList<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<ExperimentalWorkspaceSyncListResponses, unknown, ThrowOnError>({
+      url: "/experimental/workspace/sync-list",
+      ...options,
+      ...params,
     })
   }
 
@@ -2637,6 +2972,7 @@ export class Pty extends HeyApiClient {
       directory?: string
       workspace?: string
       title?: string
+      sessionID?: string | null
       size?: {
         rows: number
         cols: number
@@ -2653,6 +2989,7 @@ export class Pty extends HeyApiClient {
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
             { in: "body", key: "title" },
+            { in: "body", key: "sessionID" },
             { in: "body", key: "size" },
           ],
         },
@@ -3597,6 +3934,7 @@ export class Session2 extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      snapshotInitialization?: "wait"
       editorContext?: {
         visibleFiles?: Array<string>
         openTabs?: Array<string>
@@ -3623,6 +3961,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "snapshotInitialization" },
             { in: "body", key: "editorContext" },
             { in: "body", key: "parts" },
           ],
@@ -3957,6 +4296,7 @@ export class Session2 extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      snapshotInitialization?: "wait"
       editorContext?: {
         visibleFiles?: Array<string>
         openTabs?: Array<string>
@@ -3983,6 +4323,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "snapshotInitialization" },
             { in: "body", key: "editorContext" },
             { in: "body", key: "parts" },
           ],
@@ -4017,6 +4358,7 @@ export class Session2 extends HeyApiClient {
       arguments?: string
       command?: string
       variant?: string
+      snapshotInitialization?: "wait"
       parts?: Array<{
         id?: string
         type: "file"
@@ -4042,6 +4384,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "arguments" },
             { in: "body", key: "command" },
             { in: "body", key: "variant" },
+            { in: "body", key: "snapshotInitialization" },
             { in: "body", key: "parts" },
           ],
         },
@@ -4477,6 +4820,13 @@ export class Session3 extends HeyApiClient {
     parameters?: {
       directory?: string
       workspace?: string
+      limit?: number
+      order?: "asc" | "desc"
+      path?: string
+      roots?: boolean | "true" | "false"
+      start?: number
+      search?: string
+      cursor?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4487,6 +4837,13 @@ export class Session3 extends HeyApiClient {
           args: [
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "order" },
+            { in: "query", key: "path" },
+            { in: "query", key: "roots" },
+            { in: "query", key: "start" },
+            { in: "query", key: "search" },
+            { in: "query", key: "cursor" },
           ],
         },
       ],
@@ -4645,6 +5002,9 @@ export class Session3 extends HeyApiClient {
       sessionID: string
       directory?: string
       workspace?: string
+      limit?: number
+      order?: "asc" | "desc"
+      cursor?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4656,6 +5016,9 @@ export class Session3 extends HeyApiClient {
             { in: "path", key: "sessionID" },
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "order" },
+            { in: "query", key: "cursor" },
           ],
         },
       ],
@@ -4740,6 +5103,146 @@ export class Control extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+}
+
+export class Config3 extends HeyApiClient {
+  /**
+   * Get TUI configuration
+   *
+   * Retrieve the effective TUI configuration for the current instance directory.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<TuiConfigGetResponses, unknown, ThrowOnError>({
+      url: "/tui/config",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Update TUI configuration
+   *
+   * Patch global or project TUI configuration and return the effective TUI configuration.
+   */
+  public update<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      scope?: "project" | "global"
+      $schema?: string
+      theme?: string
+      keybinds?: {
+        [key: string]: string
+      }
+      plugin?: Array<
+        | string
+        | [
+            string,
+            {
+              [key: string]: unknown
+            },
+          ]
+      >
+      plugin_enabled?: {
+        [key: string]: boolean
+      }
+      scroll_speed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      scroll_acceleration?: {
+        enabled: boolean
+      }
+      diff_style?: "auto" | "stacked"
+      mouse?: boolean
+      attention?: {
+        enabled?: boolean
+        notifications?: boolean
+        sound?: boolean
+        volume?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "scope" },
+            { in: "body", key: "$schema" },
+            { in: "body", key: "theme" },
+            { in: "body", key: "keybinds" },
+            { in: "body", key: "plugin" },
+            { in: "body", key: "plugin_enabled" },
+            { in: "body", key: "scroll_speed" },
+            { in: "body", key: "scroll_acceleration" },
+            { in: "body", key: "diff_style" },
+            { in: "body", key: "mouse" },
+            { in: "body", key: "attention" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).patch<TuiConfigUpdateResponses, TuiConfigUpdateErrors, ThrowOnError>({
+      url: "/tui/config",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Keybind extends HeyApiClient {
+  /**
+   * List TUI keybinds
+   *
+   * List valid TUI keybind commands, descriptions, groups, and default bindings from the CLI schema.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<TuiKeybindListResponses, unknown, ThrowOnError>({
+      url: "/tui/keybinds",
+      ...options,
+      ...params,
     })
   }
 }
@@ -5120,6 +5623,144 @@ export class Tui extends HeyApiClient {
   get control(): Control {
     return (this._control ??= new Control({ client: this.client }))
   }
+
+  private _config?: Config3
+  get config(): Config3 {
+    return (this._config ??= new Config3({ client: this.client }))
+  }
+
+  private _keybind?: Keybind
+  get keybind(): Keybind {
+    return (this._keybind ??= new Keybind({ client: this.client }))
+  }
+}
+
+export class AgentBuilder extends HeyApiClient {
+  /**
+   * Preview agent markdown
+   *
+   * Validate an agent builder payload and return the canonical agent markdown without writing it.
+   */
+  public preview<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      id?: string
+      scope?: "global" | "project"
+      description?: string
+      mode?: "primary" | "subagent" | "all"
+      model?: string
+      color?: string
+      steps?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      tools?: Array<string>
+      permission?: {
+        [key: string]: unknown
+      }
+      prompt?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "id" },
+            { in: "body", key: "scope" },
+            { in: "body", key: "description" },
+            { in: "body", key: "mode" },
+            { in: "body", key: "model" },
+            { in: "body", key: "color" },
+            { in: "body", key: "steps" },
+            { in: "body", key: "tools" },
+            { in: "body", key: "permission" },
+            { in: "body", key: "prompt" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<AgentBuilderPreviewResponses, AgentBuilderPreviewErrors, ThrowOnError>(
+      {
+        url: "/agent-builder/preview",
+        ...options,
+        ...params,
+        headers: {
+          "Content-Type": "application/json",
+          ...options?.headers,
+          ...params.headers,
+        },
+      },
+    )
+  }
+
+  /**
+   * Save agent markdown
+   *
+   * Save an agent builder payload as a canonical agent markdown file.
+   */
+  public save<ThrowOnError extends boolean = false>(
+    parameters: {
+      path_id: string
+      directory?: string
+      workspace?: string
+      body_id?: string
+      scope?: "global" | "project"
+      description?: string
+      mode?: "primary" | "subagent" | "all"
+      model?: string
+      color?: string
+      steps?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      tools?: Array<string>
+      permission?: {
+        [key: string]: unknown
+      }
+      prompt?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            {
+              in: "path",
+              key: "path_id",
+              map: "id",
+            },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            {
+              in: "body",
+              key: "body_id",
+              map: "id",
+            },
+            { in: "body", key: "scope" },
+            { in: "body", key: "description" },
+            { in: "body", key: "mode" },
+            { in: "body", key: "model" },
+            { in: "body", key: "color" },
+            { in: "body", key: "steps" },
+            { in: "body", key: "tools" },
+            { in: "body", key: "permission" },
+            { in: "body", key: "prompt" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).put<AgentBuilderSaveResponses, AgentBuilderSaveErrors, ThrowOnError>({
+      url: "/agent-builder/{id}",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
 }
 
 export class BackgroundProcess extends HeyApiClient {
@@ -5468,6 +6109,7 @@ export class Audio extends HeyApiClient {
         format: string
       }
       language?: string
+      prompt?: string
       temperature?: number
     },
     options?: Options<never, ThrowOnError>,
@@ -5482,6 +6124,7 @@ export class Audio extends HeyApiClient {
             { in: "body", key: "model" },
             { in: "body", key: "input_audio" },
             { in: "body", key: "language" },
+            { in: "body", key: "prompt" },
             { in: "body", key: "temperature" },
           ],
         },
@@ -5787,6 +6430,66 @@ export class Kilo extends HeyApiClient {
     )
     return (options?.client ?? this.client).sse.post<KiloFimResponses, KiloFimErrors, ThrowOnError>({
       url: "/kilo/fim",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Next Edit completion
+   *
+   * Proxy a Mercury-style Next Edit request. The client supplies structured editor context; the gateway assembles the sentinel-tagged prompt and forwards to the upstream edit endpoint.
+   */
+  public edit<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      provider?: string
+      model?: string
+      maxTokens?: number
+      currentFilePath?: string
+      currentFileContent?: string
+      cursorLine?: number
+      cursorCharacter?: number
+      editableRegionStartLine?: number
+      editableRegionEndLine?: number
+      recentlyViewedSnippets?: Array<{
+        filepath: string
+        content: string
+      }>
+      editDiffHistory?: Array<string>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "provider" },
+            { in: "body", key: "model" },
+            { in: "body", key: "maxTokens" },
+            { in: "body", key: "currentFilePath" },
+            { in: "body", key: "currentFileContent" },
+            { in: "body", key: "cursorLine" },
+            { in: "body", key: "cursorCharacter" },
+            { in: "body", key: "editableRegionStartLine" },
+            { in: "body", key: "editableRegionEndLine" },
+            { in: "body", key: "recentlyViewedSnippets" },
+            { in: "body", key: "editDiffHistory" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<KiloEditResponses, KiloEditErrors, ThrowOnError>({
+      url: "/kilo/edit",
       ...options,
       ...params,
       headers: {
@@ -6908,6 +7611,11 @@ export class KiloClient extends HeyApiClient {
   private _tui?: Tui
   get tui(): Tui {
     return (this._tui ??= new Tui({ client: this.client }))
+  }
+
+  private _agentBuilder?: AgentBuilder
+  get agentBuilder(): AgentBuilder {
+    return (this._agentBuilder ??= new AgentBuilder({ client: this.client }))
   }
 
   private _backgroundProcess?: BackgroundProcess
