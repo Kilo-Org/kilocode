@@ -129,6 +129,25 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
+  it("seedFromText handles folder mentions ending with a slash", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.seedFromText("Hi to @packages/kilo-docs/.kilocode/")
+
+    expect(mention.mentionedPaths().has("packages/kilo-docs/.kilocode/")).toBe(true)
+
+    dispose.fn?.()
+  })
+
   it("seedFromText ignores text without @mentions", () => {
     const ctx = {
       postMessage: () => {},

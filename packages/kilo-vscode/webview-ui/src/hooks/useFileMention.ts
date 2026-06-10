@@ -7,13 +7,19 @@ import {
   buildFileAttachments,
   buildMentionResults,
   filterMentionResults,
-  isCursorAtMentionEnd,
-  getMentionRemovalRange,
+  getBackspaceMentionRemovalRange,
   findMentionRange,
   type MentionResult,
 } from "./file-mention-utils"
 
 const FILE_SEARCH_DEBOUNCE_MS = 150
+
+function pathToken(raw: string): string | undefined {
+  const path = raw.replace(/^@/, "")
+  if (!path) return undefined
+  if (!path.includes("/") && !path.includes(".")) return undefined
+  return path
+}
 
 interface VSCodeContext {
   postMessage: (message: WebviewMessage) => void
@@ -251,14 +257,9 @@ export function useFileMention(
     const cursor = textarea.selectionStart ?? 0
     if (textarea.selectionStart !== textarea.selectionEnd) return false
 
-    const charBefore = val[cursor - 1]
-    if (charBefore !== " " && charBefore !== "\n") return false
-    if (!isCursorAtMentionEnd(val, cursor - 1, mentionedPaths())) return false
-
-    // Cursor is on the space right after a mention — remove the entire
-    // mention + trailing space in one step via execCommand so the change
-    // lands on the browser's native undo stack.
-    const range = getMentionRemovalRange(val, cursor - 1, mentionedPaths())
+    // Remove the whole mention whether the cursor is directly after the token
+    // or after the single separator space inserted by mention selection.
+    const range = getBackspaceMentionRemovalRange(val, cursor, mentionedPaths())
     if (!range) return false
 
     e.preventDefault()
@@ -317,10 +318,9 @@ export function useFileMention(
   }
 
   const seedFromText = (text: string) => {
-    const re = /@([\w./-]+\.[\w]+|[\w.-]+\/[\w./-]+)/g
-    let m: RegExpExecArray | null
-    while ((m = re.exec(text))) {
-      knownPaths.add(m[1])
+    for (const match of text.matchAll(/(^|\s)@(\S+)/g)) {
+      const path = pathToken(match[2] ?? "")
+      if (path) knownPaths.add(path)
     }
     syncMentionedPaths(text)
   }

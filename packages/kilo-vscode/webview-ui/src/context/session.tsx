@@ -2412,7 +2412,7 @@ export const SessionProvider: ParentComponent = (props) => {
         .filter((p) => p.type === "text" && !(p as { synthetic?: boolean }).synthetic)
         .map((p) => (p as { text: string }).text ?? "")
         .join("")
-      if (text) window.postMessage({ type: "setChatBoxMessage", text }, "*")
+      if (text) window.postMessage({ type: "setChatBoxMessage", text, focus: true }, "*")
     }
     vscode.postMessage({ type: "revertSession", sessionID: id, messageID, partID })
   }

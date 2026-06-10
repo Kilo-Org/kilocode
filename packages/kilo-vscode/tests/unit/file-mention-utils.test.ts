@@ -6,6 +6,7 @@ import {
   buildFileAttachments,
   buildMentionResults,
   filterMentionResults,
+  getBackspaceMentionRemovalRange,
   getMentionRemovalRange,
   isCursorAtMentionEnd,
   findMentionRange,
@@ -221,6 +222,35 @@ describe("buildFileAttachments", () => {
     expect(result[0]!.mime).toBe("text/plain")
     expect(result[0]!.url).toContain("file://")
     expect(result[0]!.url).toContain("src/foo.ts")
+    expect(result[0]!.source).toEqual({
+      type: "file",
+      path: "src/foo.ts",
+      text: { value: "@src/foo.ts", start: 6, end: 17 },
+    })
+  })
+
+  it("tracks source offsets after prefixed text", () => {
+    const paths = new Set(["plans/tsql-migration.md"])
+    const result = buildFileAttachments("review\n\nread @plans/tsql-migration.md", paths, "/workspace")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.source?.text).toEqual({ value: "@plans/tsql-migration.md", start: 13, end: 37 })
+  })
+
+  it("tracks folder mention source offsets", () => {
+    const paths = new Set(["rf-adf/"])
+    const result = buildFileAttachments("inspect @rf-adf/", paths, "/workspace")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.source).toEqual({
+      type: "file",
+      path: "rf-adf/",
+      text: { value: "@rf-adf/", start: 8, end: 16 },
+    })
+  })
+
+  it("skips partial mention matches", () => {
+    const paths = new Set(["foo.ts"])
+    const result = buildFileAttachments("ignore @foo.tsx", paths, "/workspace")
+    expect(result).toEqual([])
   })
 
   it("skips paths not in text", () => {
@@ -298,6 +328,26 @@ describe("getMentionRemovalRange", () => {
     const paths = new Set(["foo.ts"])
     const result = getMentionRemovalRange(text, 13, paths)
     expect(result).toEqual({ start: 6, end: 13 })
+  })
+})
+
+describe("getBackspaceMentionRemovalRange", () => {
+  it("removes a mention when the cursor is directly at the end", () => {
+    const text = "Hi @foo.ts"
+    const paths = new Set(["foo.ts"])
+    expect(getBackspaceMentionRemovalRange(text, text.length, paths)).toEqual({ start: 3, end: 10 })
+  })
+
+  it("removes a mention and its separator when the cursor is after the separator", () => {
+    const text = "Hi @foo.ts "
+    const paths = new Set(["foo.ts"])
+    expect(getBackspaceMentionRemovalRange(text, text.length, paths)).toEqual({ start: 3, end: 11 })
+  })
+
+  it("does not remove a mention when the cursor is after later whitespace", () => {
+    const text = "Hi @foo.ts  "
+    const paths = new Set(["foo.ts"])
+    expect(getBackspaceMentionRemovalRange(text, text.length, paths)).toBeNull()
   })
 })
 
