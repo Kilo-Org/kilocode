@@ -8,9 +8,11 @@ import { describe, expect } from "bun:test"
 import { Deferred, Effect, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import { Agent as AgentSvc } from "../../src/agent/agent"
+import { BackgroundJob } from "../../src/background/job"
 import { Bus } from "../../src/bus"
 import { Command } from "../../src/command"
 import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Env } from "../../src/env"
 import { Ripgrep } from "../../src/file/ripgrep"
@@ -128,6 +130,7 @@ const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLaye
 function makeHttp() {
   const deps = Layer.mergeAll(
     Session.defaultLayer,
+    BackgroundJob.defaultLayer,
     Snapshot.defaultLayer,
     LLM.defaultLayer,
     Env.defaultLayer,
@@ -136,6 +139,7 @@ function makeHttp() {
     Permission.defaultLayer,
     plugin,
     Config.defaultLayer,
+    RuntimeFlags.layer(),
     ProviderSvc.defaultLayer,
     lsp,
     mcp,

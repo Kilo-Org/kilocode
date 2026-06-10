@@ -3,15 +3,17 @@
 
 import { expect } from "bun:test"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { ModelsDev } from "../../src/provider/models"
+import * as CoreModels from "@opencode-ai/core/models"
 import { Effect, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import { kiloCustomLoaders } from "../../src/kilocode/provider/provider"
 import { Auth } from "../../src/auth"
 import { ModelCache } from "../../src/provider/model-cache"
-import { ModelsDev } from "../../src/provider/models"
 import { Provider } from "../../src/provider/provider"
 import { TestConfig } from "../fixture/config"
 import { testEffect } from "../lib/effect"
+import { provideInstance } from "../fixture/fixture"
 
 const input = {
   id: "kilo",
@@ -96,7 +98,15 @@ function layer() {
     Layer.provide(auth),
     Layer.provide(models),
   )
+  const core = Layer.succeed(
+    CoreModels.Service,
+    CoreModels.Service.of({
+      get: () => Effect.succeed(seed),
+      refresh: () => Effect.void,
+    }),
+  )
   return Layer.fresh(ModelsDev.layer).pipe(
+    Layer.provide(core),
     Layer.provide(FetchHttpClient.layer),
     Layer.provide(files),
     Layer.provide(cfg),
@@ -109,7 +119,10 @@ const it = testEffect(Layer.empty)
 
 it.live("assembles paid Kilo models without auth", () =>
   Effect.gen(function* () {
-    const providers = yield* ModelsDev.Service.use((models) => models.get()).pipe(Effect.provide(layer()))
+    const providers = yield* ModelsDev.Service.use((models) => models.get()).pipe(
+      Effect.provide(layer()),
+      provideInstance(process.cwd()),
+    )
     const kilo = Provider.fromModelsDevProvider(providers.kilo)
 
     expect(kilo.models["paid-model"]).toMatchObject({
@@ -122,7 +135,10 @@ it.live("assembles paid Kilo models without auth", () =>
 
 it.live("marks zero-cost Kilo models as free when the catalog omits isFree", () =>
   Effect.gen(function* () {
-    const providers = yield* ModelsDev.Service.use((models) => models.get()).pipe(Effect.provide(layer()))
+    const providers = yield* ModelsDev.Service.use((models) => models.get()).pipe(
+      Effect.provide(layer()),
+      provideInstance(process.cwd()),
+    )
     const kilo = Provider.fromModelsDevProvider(providers.kilo)
 
     expect(kilo.models["free-model"].isFree).toBe(true)

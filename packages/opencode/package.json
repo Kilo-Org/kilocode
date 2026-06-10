@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.3.41",
+  "version": "7.3.42",
   "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",
@@ -33,11 +33,6 @@
       "bun": "./src/pty/pty.bun.ts",
       "node": "./src/pty/pty.node.ts",
       "default": "./src/pty/pty.bun.ts"
-    },
-    "#httpapi-server": {
-      "bun": "./src/server/httpapi-server.node.ts",
-      "node": "./src/server/httpapi-server.node.ts",
-      "default": "./src/server/httpapi-server.node.ts"
     }
   },
   "devDependencies": {
@@ -125,6 +120,7 @@
     "@octokit/rest": "catalog:",
     "@openauthjs/openauth": "catalog:",
     "@opencode-ai/script": "workspace:*",
+    "@opencode-ai/ui": "workspace:*",
     "@openrouter/ai-sdk-provider": "2.8.1",
     "@opentelemetry/api": "1.9.0",
     "@opentelemetry/context-async-hooks": "2.6.1",
@@ -163,6 +159,7 @@
     "gray-matter": "4.0.3",
     "hono": "catalog:",
     "hono-openapi": "catalog:",
+    "htmlparser2": "8.0.2",
     "iconv-lite": "0.7.2",
     "ignore": "7.0.5",
     "immer": "11.1.4",

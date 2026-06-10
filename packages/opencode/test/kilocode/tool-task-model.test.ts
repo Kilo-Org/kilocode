@@ -3,7 +3,12 @@ import { Effect, Layer } from "effect"
 import fs from "fs/promises"
 import path from "path"
 import { Agent } from "../../src/agent/agent"
+import { BackgroundJob } from "../../src/background/job"
+import { Bus } from "../../src/bus"
+import { SessionRunState } from "../../src/session/run-state"
+import { SessionStatus } from "../../src/session/status"
 import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Global } from "@opencode-ai/core/global"
 import { Instance } from "../../src/project/instance"
@@ -91,7 +96,12 @@ const catalog = {
 const it = testEffect(
   Layer.mergeAll(
     Agent.defaultLayer,
+    BackgroundJob.defaultLayer,
+    Bus.defaultLayer,
     Config.defaultLayer,
+    RuntimeFlags.layer(),
+    SessionRunState.defaultLayer,
+    SessionStatus.defaultLayer,
     CrossSpawnSpawner.defaultLayer,
     Session.defaultLayer,
     Truncate.defaultLayer,
@@ -130,14 +140,16 @@ const seed = Effect.fn("TaskToolModelTest.seed")(function* (title = "Parent") {
 })
 
 function stubOps(opts?: { onPrompt?: (input: SessionPrompt.PromptInput) => void; text?: string }): TaskPromptOps {
+  const prompt = (input: SessionPrompt.PromptInput) =>
+    Effect.sync(() => {
+      opts?.onPrompt?.(input)
+      return reply(input, opts?.text ?? "done")
+    })
   return {
     cancel: () => Effect.void,
     resolvePromptParts: (template) => Effect.succeed([{ type: "text" as const, text: template }]),
-    prompt: (input) =>
-      Effect.sync(() => {
-        opts?.onPrompt?.(input)
-        return reply(input, opts?.text ?? "done")
-      }),
+    prompt,
+    loop: (input) => prompt({ sessionID: input.sessionID, parts: [] }),
   }
 }
 

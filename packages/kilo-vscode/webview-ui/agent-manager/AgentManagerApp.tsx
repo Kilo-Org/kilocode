@@ -2999,6 +2999,7 @@ const AgentManagerContent: Component = () => {
                     }}
                     onShowHistory={() => setHistory(true)}
                     onForkMessage={readOnly() ? undefined : handleForkSession}
+                    onForkSession={readOnly() ? undefined : handleForkSession}
                     readonly={readOnly()}
                     continueInWorktree={selection() === LOCAL}
                     promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
