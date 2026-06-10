@@ -69,7 +69,7 @@ describe("KiloCostPropagation.propagate", () => {
           deltas.map((d) => KiloCostPropagation.propagate(sessions, chat.id, assistant.id, d)),
           { concurrency: "unbounded" },
         )
-        const parent = yield* Effect.sync(() => MessageV2.get({ sessionID: chat.id, messageID: assistant.id }))
+        const parent = yield* MessageV2.get({ sessionID: chat.id, messageID: assistant.id })
         expect(parent.info.role).toBe("assistant")
         if (parent.info.role !== "assistant") return
         const total = deltas.reduce((a, b) => a + b, 0)
@@ -85,7 +85,7 @@ describe("KiloCostPropagation.propagate", () => {
         const { chat, assistant } = yield* seed()
         yield* KiloCostPropagation.propagate(sessions, chat.id, assistant.id, 0)
         yield* KiloCostPropagation.propagate(sessions, chat.id, assistant.id, -1.5)
-        const parent = yield* Effect.sync(() => MessageV2.get({ sessionID: chat.id, messageID: assistant.id }))
+        const parent = yield* MessageV2.get({ sessionID: chat.id, messageID: assistant.id })
         if (parent.info.role !== "assistant") return
         expect(parent.info.cost).toBe(0)
       }),

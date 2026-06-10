@@ -5,7 +5,6 @@ import { BusEvent } from "@/bus/bus-event"
 import { EffectBridge } from "@/effect/bridge"
 import { Session } from "@/session/session"
 import { MessageID, SessionID } from "@/session/schema"
-import { fn } from "@/util/fn"
 import { Database, eq, and, gte, isNull, desc, like, inArray, lt, or } from "@/storage/db"
 import type { SQL } from "@/storage/db"
 import { ProjectTable } from "@/project/project.sql"
@@ -17,6 +16,7 @@ import type { LanguageModelUsage, ProviderMetadata } from "ai"
 import type { Provider } from "@/provider/provider"
 import { zod as toZod } from "@opencode-ai/core/effect-zod"
 import { ENV_FEATURE } from "@kilocode/kilo-gateway"
+import { fn } from "@/kilocode/fn"
 
 export namespace KiloSession {
   const log = Log.create({ service: "session.kilo" })
@@ -270,16 +270,24 @@ export namespace KiloSession {
   // These helpers catch that specific error and log a warning instead.
   // ---------------------------------------------------------------------------
 
-  export function runSyncSafe(run: () => void, context: { type: string; id: string; sessionID: string }): void {
-    try {
-      run()
-    } catch (e: any) {
-      if (e?.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
-        log.warn(`skipping ${context.type} for deleted session`, { id: context.id, sessionID: context.sessionID })
-        return
-      }
-      throw e
-    }
+  export function runSyncSafe<E, R>(
+    run: Effect.Effect<void, E, R>,
+    context: { type: string; id: string; sessionID: string },
+  ) {
+    return run.pipe(
+      Effect.catchCause((cause) => {
+        const err = Cause.squash(cause)
+        if (typeof err === "object" && err !== null && "code" in err && err.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
+          return Effect.sync(() =>
+            log.warn(`skipping ${context.type} for deleted session`, {
+              id: context.id,
+              sessionID: context.sessionID,
+            }),
+          )
+        }
+        return Effect.failCause(cause)
+      }),
+    )
   }
 
   // ---------------------------------------------------------------------------
@@ -289,7 +297,7 @@ export namespace KiloSession {
   /** Schema for project summary returned by listGlobal. */
   export const ProjectInfo = z
     .object({
-      id: ProjectID.zod,
+      id: z.custom<ProjectID>(Schema.is(ProjectID)),
       name: z.string().optional(),
       worktree: z.string(),
     })

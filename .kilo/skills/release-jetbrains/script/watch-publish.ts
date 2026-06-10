@@ -17,7 +17,9 @@ const { values } = parseArgs({
 })
 
 if (values.help) {
-  console.log(`Usage: bun .kilo/skills/release-jetbrains/script/watch-publish.ts --pr <number> --version <version> [--merge] [--run-id <id>]`)
+  console.log(
+    `Usage: bun .kilo/skills/release-jetbrains/script/watch-publish.ts --pr <number> --version <version> [--merge] [--run-id <id>]`,
+  )
   process.exit(0)
 }
 
@@ -70,11 +72,19 @@ async function find() {
     if (run) return String(run.databaseId)
     await Bun.sleep(1000)
   }
-  throw new Error(`No ${workflow} run found for ${branch}. Merge PR ${pr} first, or pass --merge to merge it automatically.`)
+  throw new Error(
+    `No ${workflow} run found for ${branch}. Merge PR ${pr} first, or pass --merge to merge it automatically.`,
+  )
 }
 
 function active(status: string) {
-  return status === "queued" || status === "in_progress" || status === "waiting" || status === "requested" || status === "pending"
+  return (
+    status === "queued" ||
+    status === "in_progress" ||
+    status === "waiting" ||
+    status === "requested" ||
+    status === "pending"
+  )
 }
 
 async function runs() {

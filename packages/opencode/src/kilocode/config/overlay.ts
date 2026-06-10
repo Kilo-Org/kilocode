@@ -1,5 +1,6 @@
 import path from "path"
 import { existsSync } from "fs"
+import { Schema } from "effect"
 import z from "zod"
 import { Global } from "@opencode-ai/core/global"
 import { ConfigAgent } from "@/config/agent"
@@ -46,9 +47,9 @@ export namespace KilocodeConfigOverlay {
 
   export const Result = z.object({
     scope: Scope,
-    effective: Config.Info.zod,
-    global: Config.Info.zod,
-    project: Config.Info.zod,
+    effective: z.custom<Config.Info>(Schema.is(Config.Info)),
+    global: z.custom<Config.Info>(Schema.is(Config.Info)),
+    project: z.custom<Config.Info>(Schema.is(Config.Info)),
     sources: z.array(KilocodeConfigSources.Source),
     targets: z.object({
       global: z.string().optional(),
@@ -176,7 +177,7 @@ export namespace KilocodeConfigOverlay {
     const expanded = await ConfigVariable.substitute({ text, type: "path", path: file })
     const parsed = ConfigParse.jsonc(expanded, file)
     if (!isRecord(parsed)) return {}
-    return ConfigParse.effectSchema(Config.Info, parsed, file) as Config.Info
+    return ConfigParse.schema(Config.Info, parsed, file) as Config.Info
   }
 
   function field(

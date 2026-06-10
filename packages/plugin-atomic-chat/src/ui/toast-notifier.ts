@@ -1,4 +1,4 @@
-import { LOG_PREFIX } from '../constants'
+import { LOG_PREFIX } from "../constants"
 
 export class ToastNotifier {
   constructor(private readonly client: any) {}
@@ -13,7 +13,7 @@ export class ToastNotifier {
         body: {
           title,
           message,
-          variant: 'success',
+          variant: "success",
           duration: duration || 3000,
         },
       })
@@ -32,7 +32,7 @@ export class ToastNotifier {
         body: {
           title,
           message,
-          variant: 'error',
+          variant: "error",
           duration: duration || 5000,
         },
       })
@@ -51,7 +51,7 @@ export class ToastNotifier {
         body: {
           title,
           message,
-          variant: 'warning',
+          variant: "warning",
           duration: duration || 4000,
         },
       })
@@ -70,7 +70,7 @@ export class ToastNotifier {
         body: {
           title,
           message: progress !== undefined ? `${message} (${progress}%)` : message,
-          variant: 'info',
+          variant: "info",
           duration: progress !== undefined ? 0 : 2000,
         },
       })

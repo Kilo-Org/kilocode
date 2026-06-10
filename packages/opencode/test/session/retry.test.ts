@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import type { NamedError } from "@opencode-ai/core/util/error"
 import { APICallError } from "ai"
 import { setTimeout as sleep } from "node:timers/promises"
-import { Effect, Layer, Schedule } from "effect"
+import { Effect, Layer, Schedule, Schema } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { SessionRetry } from "../../src/session/retry"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -17,7 +17,7 @@ const retryProvider = "test"
 const it = testEffect(Layer.mergeAll(SessionStatus.defaultLayer, CrossSpawnSpawner.defaultLayer))
 
 function apiError(headers?: Record<string, string>): MessageV2.APIError {
-  return MessageV2.APIError.Schema.parse(
+  return Schema.decodeUnknownSync(MessageV2.APIError.Schema)(
     new MessageV2.APIError({
       message: "boom",
       isRetryable: true,
@@ -94,7 +94,7 @@ describe("session.retry.delay", () => {
         const step = yield* Schedule.toStepWithMetadata(
           SessionRetry.policy({
             provider: "test",
-            parse: (err) => MessageV2.APIError.Schema.parse(err),
+            parse: (err) => Schema.decodeUnknownSync(MessageV2.APIError.Schema)(err),
             set: (info) =>
               status.set(sessionID, {
                 type: "retry",
@@ -173,7 +173,7 @@ describe("session.retry.retryable", () => {
   })
 
   test("retries 500 errors even when isRetryable is false", () => {
-    const error = MessageV2.APIError.Schema.parse(
+    const error = Schema.decodeUnknownSync(MessageV2.APIError.Schema)(
       new MessageV2.APIError({
         message: "Internal server error",
         isRetryable: false,
@@ -186,7 +186,7 @@ describe("session.retry.retryable", () => {
   })
 
   test("retries 502 bad gateway errors", () => {
-    const error = MessageV2.APIError.Schema.parse(
+    const error = Schema.decodeUnknownSync(MessageV2.APIError.Schema)(
       new MessageV2.APIError({
         message: "Bad gateway",
         isRetryable: false,
@@ -198,7 +198,7 @@ describe("session.retry.retryable", () => {
   })
 
   test("retries 503 service unavailable errors", () => {
-    const error = MessageV2.APIError.Schema.parse(
+    const error = Schema.decodeUnknownSync(MessageV2.APIError.Schema)(
       new MessageV2.APIError({
         message: "Service unavailable",
         isRetryable: false,
@@ -210,7 +210,7 @@ describe("session.retry.retryable", () => {
   })
 
   test("does not retry 4xx errors when isRetryable is false", () => {
-    const error = MessageV2.APIError.Schema.parse(
+    const error = Schema.decodeUnknownSync(MessageV2.APIError.Schema)(
       new MessageV2.APIError({
         message: "Bad request",
         isRetryable: false,
@@ -222,7 +222,7 @@ describe("session.retry.retryable", () => {
   })
 
   test("retries ZlibError decompression failures", () => {
-    const error = MessageV2.APIError.Schema.parse(
+    const error = Schema.decodeUnknownSync(MessageV2.APIError.Schema)(
       new MessageV2.APIError({
         message: "Response decompression failed",
         isRetryable: true,
@@ -237,7 +237,7 @@ describe("session.retry.retryable", () => {
 
   // kilocode_change start - Kilo does not support OpenCode Go upsells
   test("does not retry free usage limits", () => {
-    const error = MessageV2.APIError.Schema.parse(
+    const error = Schema.decodeUnknownSync(MessageV2.APIError.Schema)(
       new MessageV2.APIError({
         message: "Free usage exceeded",
         isRetryable: true,
@@ -293,7 +293,7 @@ describe("session.message-v2.fromError", () => {
   )
 
   test("ECONNRESET socket error is retryable", () => {
-    const error = MessageV2.APIError.Schema.parse(
+    const error = Schema.decodeUnknownSync(MessageV2.APIError.Schema)(
       new MessageV2.APIError({
         message: "Connection reset by server",
         isRetryable: true,

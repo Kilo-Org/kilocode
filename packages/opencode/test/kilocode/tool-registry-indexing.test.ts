@@ -42,6 +42,7 @@ describe("kilocode tool registry indexing", () => {
             expect(ids).toContain("question")
             expect(ids).toContain("read")
             expect(ids).toContain("suggest")
+            expect(ids).toContain("codesearch")
             expect(avail).not.toHaveBeenCalled()
           } finally {
             avail.mockRestore()

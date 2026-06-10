@@ -22,16 +22,16 @@ import { Question } from "@/question"
 import { KiloSessionProcessor, type ReviewTelemetry } from "@/kilocode/session/processor"
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { Suggestion } from "@/kilocode/suggestion"
-import { NotFoundError } from "@/storage/storage"
 // kilocode_change end
 import { errorMessage } from "@/util/error"
 import * as Log from "@opencode-ai/core/util/log"
 import { isRecord } from "@/util/record"
 import { SyncEvent } from "@/sync"
 import { SessionEvent } from "@/v2/session-event"
-import { Modelv2 } from "@/v2/model"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 import * as DateTime from "effect/DateTime"
-import { Flag } from "@opencode-ai/core/flag/flag"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 
 const DOOM_LOOP_THRESHOLD = 3
 const log = Log.create({ service: "session.processor" })
@@ -114,6 +114,7 @@ export const layer: Layer.Layer<
   | SessionSummary.Service
   | SessionStatus.Service
   | SyncEvent.Service
+  | RuntimeFlags.Service
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -130,6 +131,7 @@ export const layer: Layer.Layer<
     const status = yield* SessionStatus.Service
     const image = yield* Image.Service
     const sync = yield* SyncEvent.Service
+    const flags = yield* RuntimeFlags.Service
 
     const create = Effect.fn("SessionProcessor.create")(function* (input: Input) {
       // Pre-capture snapshot before the LLM stream starts. The AI SDK
@@ -193,14 +195,10 @@ export const layer: Layer.Layer<
 
       // kilocode_change start - tolerate deleted sessions during subagent cost reconciliation (#6321)
       const reconcile = Effect.fn("SessionProcessor.reconcileCost")(function* () {
-        const fresh = yield* Effect.sync(() => {
-          try {
-            return MessageV2.get({ sessionID: ctx.assistantMessage.sessionID, messageID: ctx.assistantMessage.id })
-          } catch (err) {
-            if (NotFoundError.isInstance(err)) return
-            throw err
-          }
-        })
+        const fresh = yield* MessageV2.get({
+          sessionID: ctx.assistantMessage.sessionID,
+          messageID: ctx.assistantMessage.id,
+        }).pipe(Effect.catchTag("NotFoundError", () => Effect.void))
         if (fresh?.info.role !== "assistant") return
         if (fresh.info.cost <= ctx.assistantMessage.cost) return
         ctx.assistantMessage.cost = fresh.info.cost
@@ -290,7 +288,7 @@ export const layer: Layer.Layer<
             if (value.id in ctx.reasoningMap) return
             ctx.step.reasoning = true // kilocode_change
             // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-            if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+            if (flags.experimentalEventSystem) {
               yield* sync.run(SessionEvent.Reasoning.Started.Sync, {
                 sessionID: ctx.sessionID,
                 reasoningID: value.id,
@@ -325,7 +323,7 @@ export const layer: Layer.Layer<
           case "reasoning-end":
             if (!(value.id in ctx.reasoningMap)) return
             // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-            if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+            if (flags.experimentalEventSystem) {
               yield* sync.run(SessionEvent.Reasoning.Ended.Sync, {
                 sessionID: ctx.sessionID,
                 reasoningID: value.id,
@@ -347,7 +345,7 @@ export const layer: Layer.Layer<
             }
             ctx.step.tool = true // kilocode_change
             // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-            if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+            if (flags.experimentalEventSystem) {
               yield* sync.run(SessionEvent.Tool.Input.Started.Sync, {
                 sessionID: ctx.sessionID,
                 callID: value.id,
@@ -378,7 +376,7 @@ export const layer: Layer.Layer<
 
           case "tool-input-end": {
             // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-            if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+            if (flags.experimentalEventSystem) {
               yield* sync.run(SessionEvent.Tool.Input.Ended.Sync, {
                 sessionID: ctx.sessionID,
                 callID: value.id,
@@ -419,7 +417,7 @@ export const layer: Layer.Layer<
             // kilocode_change end
             const toolCall = yield* readToolCall(value.toolCallId)
             // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-            if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+            if (flags.experimentalEventSystem) {
               yield* sync.run(SessionEvent.Tool.Called.Sync, {
                 sessionID: ctx.sessionID,
                 callID: value.toolCallId,
@@ -487,7 +485,13 @@ export const layer: Layer.Layer<
             )
             const normalized = yield* Effect.forEach(toolAttachments, (attachment) =>
               attachment.mime.startsWith("image/")
-                ? image.normalize(attachment).pipe(Effect.exit)
+                ? image.normalize(attachment).pipe(
+                    Effect.catchIf(
+                      (error) => error instanceof Image.ResizerUnavailableError,
+                      () => Effect.succeed(attachment),
+                    ),
+                    Effect.exit,
+                  )
                 : Effect.succeed(Exit.succeed<MessageV2.FilePart>(attachment)),
             )
             const omitted = normalized.filter(Exit.isFailure).length
@@ -497,11 +501,11 @@ export const layer: Layer.Layer<
               output:
                 omitted === 0
                   ? value.output.output
-                  : `${value.output.output}\n\n[${omitted} image${omitted === 1 ? "" : "s"} omitted: could not be resized below the inline image size limit.]`,
+                  : `${value.output.output}\n\n[${omitted} image${omitted === 1 ? "" : "s"} omitted: could not be resized below the image size limit.]`,
               attachments: attachments?.length ? attachments : undefined,
             }
             // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-            if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+            if (flags.experimentalEventSystem) {
               yield* sync.run(SessionEvent.Tool.Success.Sync, {
                 sessionID: ctx.sessionID,
                 callID: value.toolCallId,
@@ -536,7 +540,7 @@ export const layer: Layer.Layer<
           case "tool-error": {
             const toolCall = yield* readToolCall(value.toolCallId)
             // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-            if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+            if (flags.experimentalEventSystem) {
               yield* sync.run(SessionEvent.Tool.Failed.Sync, {
                 sessionID: ctx.sessionID,
                 callID: value.toolCallId,
@@ -570,14 +574,14 @@ export const layer: Layer.Layer<
             // kilocode_change end
             if (!ctx.assistantMessage.summary) {
               // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-              if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+              if (flags.experimentalEventSystem) {
                 yield* sync.run(SessionEvent.Step.Started.Sync, {
                   sessionID: ctx.sessionID,
                   agent: input.assistantMessage.agent,
                   model: {
-                    id: Modelv2.ID.make(ctx.model.id),
-                    providerID: Modelv2.ProviderID.make(ctx.model.providerID),
-                    variant: Modelv2.VariantID.make(input.assistantMessage.variant ?? "default"),
+                    id: ModelV2.ID.make(ctx.model.id),
+                    providerID: ProviderV2.ID.make(ctx.model.providerID),
+                    variant: ModelV2.VariantID.make(input.assistantMessage.variant ?? "default"),
                   },
                   snapshot: ctx.snapshot,
                   timestamp: DateTime.makeUnsafe(Date.now()),
@@ -620,7 +624,7 @@ export const layer: Layer.Layer<
             // kilocode_change end
             if (!ctx.assistantMessage.summary) {
               // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-              if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+              if (flags.experimentalEventSystem) {
                 yield* sync.run(SessionEvent.Step.Ended.Sync, {
                   sessionID: ctx.sessionID,
                   finish: value.finishReason,
@@ -706,7 +710,7 @@ export const layer: Layer.Layer<
           case "text-start":
             if (!ctx.assistantMessage.summary) {
               // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-              if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+              if (flags.experimentalEventSystem) {
                 yield* sync.run(SessionEvent.Text.Started.Sync, {
                   sessionID: ctx.sessionID,
                   timestamp: DateTime.makeUnsafe(Date.now()),
@@ -755,7 +759,7 @@ export const layer: Layer.Layer<
             if (ctx.currentText.text.trim()) ctx.step.text = true // kilocode_change
             if (!ctx.assistantMessage.summary) {
               // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-              if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+              if (flags.experimentalEventSystem) {
                 yield* sync.run(SessionEvent.Text.Ended.Sync, {
                   sessionID: ctx.sessionID,
                   text: ctx.currentText.text,
@@ -864,7 +868,7 @@ export const layer: Layer.Layer<
         }
         if (!ctx.assistantMessage.summary) {
           // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-          if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+          if (flags.experimentalEventSystem) {
             yield* sync.run(SessionEvent.Step.Failed.Sync, {
               sessionID: ctx.sessionID,
               error: {
@@ -935,7 +939,7 @@ export const layer: Layer.Layer<
                 // kilocode_change end
                 set: (info) => {
                   // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-                  const event = Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM
+                  const event = flags.experimentalEventSystem
                     ? sync.run(SessionEvent.Retried.Sync, {
                         sessionID: ctx.sessionID,
                         attempt: info.attempt,
@@ -999,6 +1003,7 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(Bus.layer),
     Layer.provide(Config.defaultLayer),
     Layer.provide(SyncEvent.defaultLayer),
+    Layer.provide(RuntimeFlags.defaultLayer),
   ),
 )
 

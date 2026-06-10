@@ -2,6 +2,7 @@ import { render, TimeToFirstDraw, useKeyboard, useRenderer, useTerminalDimension
 import { createDefaultOpenTuiKeymap } from "@opentui/keymap/opentui"
 import * as Clipboard from "@tui/util/clipboard"
 import * as Selection from "@tui/util/selection"
+import * as TuiAudio from "@tui/util/audio"
 import { createCliRenderer, MouseButton, TextAttributes, type CliRendererConfig } from "@opentui/core" // kilocode_change
 import { RouteProvider, useRoute } from "@tui/context/route"
 import {
@@ -68,6 +69,7 @@ import { TuiConfig } from "@/cli/cmd/tui/config/tui"
 import { TuiPluginRuntime } from "@/cli/cmd/tui/plugin/runtime"
 import { createTuiApi } from "@/cli/cmd/tui/plugin/api"
 import type { RouteMap } from "@/cli/cmd/tui/plugin/api"
+import { createTuiAttention } from "@/cli/cmd/tui/attention"
 import { FormatError, FormatUnknownError } from "@/cli/error"
 import { kitty, resetTerminalState } from "@/kilocode/cli/cmd/tui/util/terminal" // kilocode_change
 import * as AppExit from "@/kilocode/tui/app-exit" // kilocode_change
@@ -81,6 +83,17 @@ const appBindingCommands = [
   "command.palette.show",
   "session.list",
   "session.new",
+  "session.cycle_recent",
+  "session.cycle_recent_reverse",
+  "session.quick_switch.1",
+  "session.quick_switch.2",
+  "session.quick_switch.3",
+  "session.quick_switch.4",
+  "session.quick_switch.5",
+  "session.quick_switch.6",
+  "session.quick_switch.7",
+  "session.quick_switch.8",
+  "session.quick_switch.9",
   "model.list",
   "model.cycle_recent",
   "model.cycle_recent_reverse",
@@ -173,10 +186,10 @@ export function tui(input: {
       unguard?.()
       resolve()
     }
-
     const onBeforeExit = async () => {
       offKeymap()
       await TuiPluginRuntime.dispose()
+      TuiAudio.dispose()
     }
 
     process.on("exit", resetTerminalState) // kilocode_change
@@ -282,6 +295,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     routeRev()
     return routes.get(name)?.at(-1)?.render
   }
+  const attention = createTuiAttention({ renderer, config: tuiConfig, kv })
 
   const api = createTuiApi({
     tuiConfig,
@@ -297,11 +311,13 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     theme: themeState,
     toast,
     renderer,
+    attention,
   })
   const [ready, setReady] = createSignal(false)
   TuiPluginRuntime.init({
     api,
     config: tuiConfig,
+    dispose: () => attention.dispose(),
   })
     .catch((error) => {
       console.error("Failed to load TUI plugins", error)
@@ -319,7 +335,10 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     },
     { priority: 1 },
   )
-  onCleanup(offSelectionKeys)
+  onCleanup(() => {
+    offSelectionKeys()
+    attention.dispose()
+  })
 
   // Wire up console copy-to-clipboard via opentui's onCopySelection callback
   renderer.console.onCopySelection = async (text: string) => {
@@ -484,6 +503,37 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
           dialog.clear()
         },
       },
+      ...(Flag.KILO_EXPERIMENTAL_SESSION_SWITCHING
+        ? [
+            {
+              name: "session.cycle_recent",
+              title: "Cycle to previous recent session",
+              category: "Session",
+              hidden: true,
+              run: () => {
+                local.session.cycleRecent(1)
+              },
+            },
+            {
+              name: "session.cycle_recent_reverse",
+              title: "Cycle to next recent session",
+              category: "Session",
+              hidden: true,
+              run: () => {
+                local.session.cycleRecent(-1)
+              },
+            },
+            ...Array.from({ length: 9 }, (_, i) => ({
+              name: `session.quick_switch.${i + 1}`,
+              title: `Switch to session in quick slot ${i + 1}`,
+              category: "Session",
+              hidden: true,
+              run: () => {
+                local.session.quickSwitch(i + 1)
+              },
+            })),
+          ]
+        : []),
       {
         name: "model.list",
         title: "Switch model",
@@ -802,7 +852,14 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
 
   useBindings(() => ({
     enabled: command.matcher,
-    bindings: tuiConfig.keybinds.gather("app", appBindingCommands),
+    bindings: tuiConfig.keybinds.gather(
+      "app",
+      Flag.KILO_EXPERIMENTAL_SESSION_SWITCHING
+        ? appBindingCommands
+        : appBindingCommands.filter(
+            (c) => !c.startsWith("session.cycle_recent") && !c.startsWith("session.quick_switch"),
+          ),
+    ),
   }))
 
   useBindings(() => ({
@@ -832,8 +889,8 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     })
   })
 
-  event.on("session.deleted", (evt) => {
-    if (route.data.type === "session" && route.data.sessionID === evt.properties.info.id) {
+  event.onSync("session.deleted.1", (evt) => {
+    if (route.data.type === "session" && route.data.sessionID === evt.data.sessionID) {
       route.navigate({ type: "home" })
       toast.show({
         variant: "info",

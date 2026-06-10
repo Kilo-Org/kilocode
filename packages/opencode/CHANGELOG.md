@@ -1,5 +1,17 @@
 # @kilocode/cli
 
+## 7.3.42
+
+### Patch Changes
+
+- [#11064](https://github.com/Kilo-Org/kilocode/pull/11064) [`db7707d`](https://github.com/Kilo-Org/kilocode/commit/db7707d49c4bb3d3cb6f0a44a62787d9d05e88f6) - Allow local review follow-up fix prompts to modify code after explicit user approval.
+
+- [#11050](https://github.com/Kilo-Org/kilocode/pull/11050) [`8535d3d`](https://github.com/Kilo-Org/kilocode/commit/8535d3d51bef513c0034085e4422355f5be72bf3) - Keep new Kilo Console terminals open in the TUI on macOS.
+
+- [#11011](https://github.com/Kilo-Org/kilocode/pull/11011) [`9f072b0`](https://github.com/Kilo-Org/kilocode/commit/9f072b05d49554648adbaca251a1ec5800b7b0fc) - Re-enable free-model session and Git workspace data export.
+
+- [#10751](https://github.com/Kilo-Org/kilocode/pull/10751) [`6e8d6f7`](https://github.com/Kilo-Org/kilocode/commit/6e8d6f7d5354d5380c165482c6af87baceca07bd) - Sync CLI sessions to Kilo session history when authenticated with `KILO_API_KEY` when no stored Kilo auth is present.
+
 ## 7.3.41
 
 ### Minor Changes

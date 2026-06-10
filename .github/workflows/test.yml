@@ -46,7 +46,7 @@ jobs:
       - name: Setup Node
         id: setup-node
         continue-on-error: ${{ runner.os == 'Windows' }}
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v6 # kilocode_change
         with:
           node-version: "24"
 
@@ -86,7 +86,7 @@ jobs:
 
       - name: Publish unit reports
         if: always()
-        uses: mikepenz/action-junit-report@v6
+        uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6.4.0
         with:
           report_paths: packages/*/.artifacts/unit/junit.xml
           check_name: "unit results (${{ matrix.settings.name }})"

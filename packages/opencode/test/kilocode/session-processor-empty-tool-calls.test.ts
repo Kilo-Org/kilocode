@@ -6,6 +6,7 @@ import path from "path"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Image } from "../../src/image/image"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
@@ -102,6 +103,7 @@ const deps = Layer.mergeAll(
   Permission.defaultLayer,
   Plugin.defaultLayer,
   Config.defaultLayer,
+  RuntimeFlags.layer(),
   SessionSummary.defaultLayer,
   Image.defaultLayer,
   SyncEvent.defaultLayer,
