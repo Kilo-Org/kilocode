@@ -1,19 +1,20 @@
-# Enterprise Bedrock-Only Mode
+# Enterprise Bedrock-Only Mode (EU West 1)
 
-This fork of Kilo Code is configured to run **exclusively** with AWS Bedrock as the LLM provider. All connections to Kilo Gateway, external telemetry, session sharing, and cloud services are disabled.
+This fork of Kilo Code is configured to run **exclusively** with AWS Bedrock in the **eu-west-1** region as the LLM provider. All connections to Kilo Gateway, external telemetry, session sharing, and cloud services are disabled. No other AWS region is allowed.
 
 ## Quick Start
 
 1. Set the environment variable `BEDROCK_ONLY=true`
-2. Configure AWS credentials (one of):
-   - `AWS_REGION` + `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY`
-   - `AWS_REGION` + `AWS_PROFILE`
+2. Set `AWS_REGION=eu-west-1` (mandatory — no other region is accepted)
+3. Configure AWS credentials (one of):
+   - `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY`
+   - `AWS_PROFILE`
    - Standard AWS credential chain (instance profile, ECS task role, etc.)
-3. Run `kilo run` or `kilo serve`
+4. Run `kilo run` or `kilo serve`
 
 ```bash
 export BEDROCK_ONLY=true
-export AWS_REGION=us-east-1
+export AWS_REGION=eu-west-1
 export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
 export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 
@@ -25,7 +26,7 @@ kilo run
 | Variable | Required | Description |
 |---|---|---|
 | `BEDROCK_ONLY` | **Yes** | Set to `true` or `1` to enable Bedrock-only mode |
-| `AWS_REGION` | **Yes** | AWS region for Bedrock (e.g., `us-east-1`) |
+| `AWS_REGION` | **Yes** | Must be `eu-west-1`. Any other value causes a startup error |
 | `AWS_ACCESS_KEY_ID` | Conditional | AWS access key (required if not using profile) |
 | `AWS_SECRET_ACCESS_KEY` | Conditional | AWS secret key (required if not using profile) |
 | `AWS_PROFILE` | Conditional | AWS profile name (alternative to access key) |
@@ -83,10 +84,14 @@ Setting `BEDROCK_ONLY=true` also sets:
 
 ## Allowed AWS Bedrock Endpoints
 
+Only endpoints in the **eu-west-1** region are permitted:
+
 | Endpoint | Purpose |
 |---|---|
-| `bedrock-runtime.<region>.amazonaws.com` | Bedrock Runtime API (invoke model) |
-| `bedrock.<region>.amazonaws.com` | Bedrock Control Plane API |
+| `bedrock-runtime.eu-west-1.amazonaws.com` | Bedrock Runtime API (invoke model) |
+| `bedrock.eu-west-1.amazonaws.com` | Bedrock Control Plane API |
+
+Any request to a different region (e.g., `us-east-1`, `eu-central-1`) is blocked.
 
 ## Static Audit
 

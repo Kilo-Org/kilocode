@@ -13,7 +13,7 @@ import { CatalogModelStatus } from "./model-status"
 import { Config } from "../config/config"
 import { ModelCache } from "./model-cache"
 import { Auth } from "../auth"
-import { AI_SDK_PROVIDERS, KILO_OPENROUTER_BASE, PROMPTS } from "@kilocode/kilo-gateway"
+import { AI_SDK_PROVIDERS, KILO_OPENROUTER_BASE, PROMPTS } from "@/kilocode/gateway-constants"
 import { isBedrockOnlyEnabled } from "@/kilocode/enterprise" // Enterprise Bedrock-only
 // kilocode_change end
 

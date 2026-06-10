@@ -7,7 +7,16 @@
 
 import { DialogSelect } from "@tui/ui/dialog-select"
 import type { Organization } from "@kilocode/kilo-gateway"
-import { getOrganizationOptions } from "@kilocode/kilo-gateway/tui"
+// kilocode_change start - lazy import guarded by Bedrock-only mode
+let _getOrganizationOptions: any
+const getOrganizationOptions = (...args: any[]) => {
+  if (process.env.BEDROCK_ONLY === "true" || process.env.BEDROCK_ONLY === "1") return []
+  if (!_getOrganizationOptions) {
+    try { _getOrganizationOptions = require("@kilocode/kilo-gateway/tui").getOrganizationOptions } catch { return [] }
+  }
+  return _getOrganizationOptions(...args)
+}
+// kilocode_change end
 
 interface DialogKiloTeamSelectProps {
   organizations: Organization[]
@@ -16,7 +25,6 @@ interface DialogKiloTeamSelectProps {
 }
 
 export function DialogKiloTeamSelect(props: DialogKiloTeamSelectProps) {
-  // Get formatted options with current markers
   const options = getOrganizationOptions(props.organizations, props.currentOrgId || undefined)
 
   return (

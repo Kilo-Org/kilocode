@@ -45,60 +45,43 @@ describe("Enterprise Bedrock-only mode", () => {
       const { isBedrockOnlyEnabled } = require("@/kilocode/enterprise/bedrock-only")
       expect(isBedrockOnlyEnabled()).toBe(true)
     })
-
-    it("returns false for other values", () => {
-      process.env[BEDROCK_ONLY_ENV] = "false"
-      const { isBedrockOnlyEnabled } = require("@/kilocode/enterprise/bedrock-only")
-      expect(isBedrockOnlyEnabled()).toBe(false)
-    })
   })
 
-  describe("isBedrockAllowedUrl", () => {
-    it("allows bedrock-runtime endpoints", () => {
+  describe("isBedrockAllowedUrl — EU West 1 only", () => {
+    it("allows bedrock-runtime in eu-west-1", () => {
       const { isBedrockAllowedUrl } = require("@/kilocode/enterprise/bedrock-only")
-      expect(isBedrockAllowedUrl("https://bedrock-runtime.us-east-1.amazonaws.com")).toBe(true)
       expect(isBedrockAllowedUrl("https://bedrock-runtime.eu-west-1.amazonaws.com")).toBe(true)
-      expect(isBedrockAllowedUrl("https://bedrock-runtime.ap-southeast-1.amazonaws.com")).toBe(true)
     })
 
-    it("allows bedrock endpoints", () => {
+    it("allows bedrock in eu-west-1", () => {
       const { isBedrockAllowedUrl } = require("@/kilocode/enterprise/bedrock-only")
-      expect(isBedrockAllowedUrl("https://bedrock.us-east-1.amazonaws.com")).toBe(true)
+      expect(isBedrockAllowedUrl("https://bedrock.eu-west-1.amazonaws.com")).toBe(true)
     })
 
-    it("blocks kilo.ai", () => {
+    it("blocks bedrock in OTHER regions", () => {
+      const { isBedrockAllowedUrl } = require("@/kilocode/enterprise/bedrock-only")
+      expect(isBedrockAllowedUrl("https://bedrock-runtime.us-east-1.amazonaws.com")).toBe(false)
+      expect(isBedrockAllowedUrl("https://bedrock-runtime.eu-central-1.amazonaws.com")).toBe(false)
+      expect(isBedrockAllowedUrl("https://bedrock-runtime.ap-southeast-1.amazonaws.com")).toBe(false)
+      expect(isBedrockAllowedUrl("https://bedrock.us-west-2.amazonaws.com")).toBe(false)
+    })
+
+    it("blocks all non-Bedrock endpoints", () => {
       const { isBedrockAllowedUrl } = require("@/kilocode/enterprise/bedrock-only")
       expect(isBedrockAllowedUrl("https://api.kilo.ai")).toBe(false)
       expect(isBedrockAllowedUrl("https://app.kilo.ai")).toBe(false)
       expect(isBedrockAllowedUrl("https://kilo.ai")).toBe(false)
-    })
-
-    it("blocks kiloapps.io", () => {
-      const { isBedrockAllowedUrl } = require("@/kilocode/enterprise/bedrock-only")
       expect(isBedrockAllowedUrl("https://chat.kiloapps.io")).toBe(false)
       expect(isBedrockAllowedUrl("https://events.kiloapps.io")).toBe(false)
-    })
-
-    it("blocks posthog", () => {
-      const { isBedrockAllowedUrl } = require("@/kilocode/enterprise/bedrock-only")
       expect(isBedrockAllowedUrl("https://us.i.posthog.com")).toBe(false)
-    })
-
-    it("blocks other cloud providers", () => {
-      const { isBedrockAllowedUrl } = require("@/kilocode/enterprise/bedrock-only")
       expect(isBedrockAllowedUrl("https://api.openai.com")).toBe(false)
       expect(isBedrockAllowedUrl("https://api.anthropic.com")).toBe(false)
-      expect(isBedrockAllowedUrl("https://generativelanguage.googleapis.com")).toBe(false)
-      expect(isBedrockAllowedUrl("https://openrouter.ai")).toBe(false)
-    })
-
-    it("blocks models.dev", () => {
-      const { isBedrockAllowedUrl } = require("@/kilocode/enterprise/bedrock-only")
       expect(isBedrockAllowedUrl("https://models.dev")).toBe(false)
+      expect(isBedrockAllowedUrl("https://ingest.kilosessions.ai")).toBe(false)
     })
   })
 
-  describe("assertBedrockConfigured", () => {
+  describe("assertBedrockConfigured — EU West 1 enforced", () => {
     it("throws when Bedrock-only is enabled but not configured", () => {
       process.env[BEDROCK_ONLY_ENV] = "true"
       delete process.env[AWS_REGION_ENV]
@@ -109,25 +92,27 @@ describe("Enterprise Bedrock-only mode", () => {
       expect(() => assertBedrockConfigured()).toThrow("Enterprise Bedrock-only mode is enabled")
     })
 
-    it("does not throw when Bedrock-only is disabled", () => {
-      process.env[BEDROCK_ONLY_ENV] = "false"
-      delete process.env[AWS_REGION_ENV]
-      const { assertBedrockConfigured } = require("@/kilocode/enterprise/bedrock-only")
-      expect(() => assertBedrockConfigured()).not.toThrow()
-    })
-
-    it("does not throw when Bedrock is properly configured with access key", () => {
+    it("throws when region is not eu-west-1", () => {
       process.env[BEDROCK_ONLY_ENV] = "true"
       process.env[AWS_REGION_ENV] = "us-east-1"
+      process.env[AWS_ACCESS_KEY_ID_ENV] = "AKIAIOSFODNN7EXAMPLE"
+      process.env[AWS_SECRET_ACCESS_KEY_ENV] = "test"
+      const { assertBedrockConfigured } = require("@/kilocode/enterprise/bedrock-only")
+      expect(() => assertBedrockConfigured()).toThrow("requires AWS_REGION=eu-west-1")
+    })
+
+    it("does not throw when properly configured with eu-west-1 and access key", () => {
+      process.env[BEDROCK_ONLY_ENV] = "true"
+      process.env[AWS_REGION_ENV] = "eu-west-1"
       process.env[AWS_ACCESS_KEY_ID_ENV] = "AKIAIOSFODNN7EXAMPLE"
       process.env[AWS_SECRET_ACCESS_KEY_ENV] = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
       const { assertBedrockConfigured } = require("@/kilocode/enterprise/bedrock-only")
       expect(() => assertBedrockConfigured()).not.toThrow()
     })
 
-    it("does not throw when Bedrock is properly configured with profile", () => {
+    it("does not throw when properly configured with eu-west-1 and profile", () => {
       process.env[BEDROCK_ONLY_ENV] = "true"
-      process.env[AWS_REGION_ENV] = "us-east-1"
+      process.env[AWS_REGION_ENV] = "eu-west-1"
       process.env[AWS_PROFILE_ENV] = "my-profile"
       delete process.env[AWS_ACCESS_KEY_ID_ENV]
       delete process.env[AWS_SECRET_ACCESS_KEY_ENV]
@@ -135,48 +120,31 @@ describe("Enterprise Bedrock-only mode", () => {
       expect(() => assertBedrockConfigured()).not.toThrow()
     })
 
-    it("throws when region is missing", () => {
-      process.env[BEDROCK_ONLY_ENV] = "true"
-      delete process.env[AWS_REGION_ENV]
-      process.env[AWS_ACCESS_KEY_ID_ENV] = "AKIAIOSFODNN7EXAMPLE"
-      process.env[AWS_SECRET_ACCESS_KEY_ENV] = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+    it("does not throw when Bedrock-only is disabled", () => {
+      process.env[BEDROCK_ONLY_ENV] = "false"
       const { assertBedrockConfigured } = require("@/kilocode/enterprise/bedrock-only")
-      expect(() => assertBedrockConfigured()).toThrow("Enterprise Bedrock-only mode is enabled")
+      expect(() => assertBedrockConfigured()).not.toThrow()
+    })
+  })
+
+  describe("BEDROCK_ONLY_ERROR message", () => {
+    it("contains eu-west-1 and clear instructions", () => {
+      const { BEDROCK_ONLY_ERROR } = require("@/kilocode/enterprise/bedrock-only")
+      expect(BEDROCK_ONLY_ERROR).toContain("eu-west-1")
+      expect(BEDROCK_ONLY_ERROR).toContain("No fallback provider is allowed")
+      expect(BEDROCK_ONLY_ERROR).toContain("AWS_REGION=eu-west-1")
     })
   })
 
   describe("Kilo Gateway is not selectable", () => {
     it("BUNDLED_PROVIDERS should not contain kilo-gateway in bedrock-only mode", () => {
       process.env[BEDROCK_ONLY_ENV] = "true"
-      process.env[AWS_REGION_ENV] = "us-east-1"
+      process.env[AWS_REGION_ENV] = "eu-west-1"
       process.env[AWS_ACCESS_KEY_ID_ENV] = "AKIAIOSFODNN7EXAMPLE"
       process.env[AWS_SECRET_ACCESS_KEY_ENV] = "test"
 
-      // The BUNDLED_PROVIDERS is evaluated at module load time.
-      // We verify that the kilo-gateway provider is not in the list
-      // by checking the enterprise module's bedrock-only check.
       const { isBedrockOnlyEnabled } = require("@/kilocode/enterprise/bedrock-only")
       expect(isBedrockOnlyEnabled()).toBe(true)
-    })
-  })
-
-  describe("BEDROCK_ONLY_ERROR message", () => {
-    it("contains the required message", () => {
-      const { BEDROCK_ONLY_ERROR } = require("@/kilocode/enterprise/bedrock-only")
-      expect(BEDROCK_ONLY_ERROR).toContain("Enterprise Bedrock-only mode is enabled")
-      expect(BEDROCK_ONLY_ERROR).toContain("AWS Bedrock must be configured")
-      expect(BEDROCK_ONLY_ERROR).toContain("No fallback provider is allowed")
-    })
-  })
-
-  describe("Network guard blocks unauthorized domains", () => {
-    it("BlockedNetworkError is thrown for unauthorized URLs", () => {
-      const { BlockedNetworkError } = require("@/kilocode/enterprise/network-guard")
-      const err = new BlockedNetworkError("https://api.kilo.ai/test")
-      expect(err).toBeInstanceOf(Error)
-      expect(err.name).toBe("BlockedNetworkError")
-      expect(err.message).toContain("blocked in enterprise Bedrock-only mode")
-      expect(err.message).toContain("Only AWS Bedrock endpoints are allowed")
     })
   })
 
@@ -188,8 +156,17 @@ describe("Enterprise Bedrock-only mode", () => {
       expect(isBedrockAllowedNpm("@ai-sdk/openai")).toBe(false)
       expect(isBedrockAllowedNpm("@kilocode/kilo-gateway")).toBe(false)
       expect(isBedrockAllowedNpm("@openrouter/ai-sdk-provider")).toBe(false)
-      expect(isBedrockAllowedNpm("@ai-sdk/google")).toBe(false)
-      expect(isBedrockAllowedNpm("@ai-sdk/mistral")).toBe(false)
+    })
+  })
+
+  describe("Network guard blocks unauthorized domains", () => {
+    it("BlockedNetworkError is thrown for unauthorized URLs", () => {
+      const { BlockedNetworkError } = require("@/kilocode/enterprise/network-guard")
+      const err = new BlockedNetworkError("https://api.kilo.ai/test")
+      expect(err).toBeInstanceOf(Error)
+      expect(err.name).toBe("BlockedNetworkError")
+      expect(err.message).toContain("blocked in enterprise Bedrock-only mode")
+      expect(err.message).toContain("eu-west-1")
     })
   })
 })

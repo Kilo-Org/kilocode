@@ -10,7 +10,24 @@ import { useSync } from "@tui/context/sync"
 import { useToast } from "@tui/ui/toast"
 import { DialogSelect } from "@tui/ui/dialog-select"
 import type { Organization } from "@kilocode/kilo-gateway"
-import { getOrganizationOptions, getDefaultOrganizationSelection } from "@kilocode/kilo-gateway/tui"
+// kilocode_change start - lazy imports guarded by Bedrock-only mode
+let _getOrganizationOptions: any
+let _getDefaultOrganizationSelection: any
+const getOrganizationOptions = (...args: any[]) => {
+  if (process.env.BEDROCK_ONLY === "true" || process.env.BEDROCK_ONLY === "1") return []
+  if (!_getOrganizationOptions) {
+    try { _getOrganizationOptions = require("@kilocode/kilo-gateway/tui").getOrganizationOptions } catch { return [] }
+  }
+  return _getOrganizationOptions(...args)
+}
+const getDefaultOrganizationSelection = (...args: any[]) => {
+  if (process.env.BEDROCK_ONLY === "true" || process.env.BEDROCK_ONLY === "1") return null
+  if (!_getDefaultOrganizationSelection) {
+    try { _getDefaultOrganizationSelection = require("@kilocode/kilo-gateway/tui").getDefaultOrganizationSelection } catch { return null }
+  }
+  return _getDefaultOrganizationSelection(...args)
+}
+// kilocode_change end
 
 // These types are OpenCode-internal and imported at runtime
 type UseSDK = any

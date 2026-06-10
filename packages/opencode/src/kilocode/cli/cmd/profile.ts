@@ -3,7 +3,8 @@ import { cmd } from "../../../cli/cmd/cmd"
 import { UI } from "../../../cli/ui"
 import { Auth, type Info as AuthInfo } from "../../../auth"
 import { makeRuntime } from "../../../effect/run-service"
-import { fetchBalance, fetchProfile, type KilocodeBalance, type KilocodeProfile } from "@kilocode/kilo-gateway"
+import { fetchBalance, fetchProfile } from "@/kilocode/gateway-stub" // kilocode_change - local stubs
+import type { KilocodeBalance, KilocodeProfile } from "@kilocode/kilo-gateway"
 
 const runtime = makeRuntime(Auth.Service, Auth.defaultLayer)
 

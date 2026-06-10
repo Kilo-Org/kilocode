@@ -1,5 +1,6 @@
 // kilocode_change - new file
-import { fetchKiloModels, type KiloModelsResult } from "@kilocode/kilo-gateway"
+import { fetchKiloModels } from "@/kilocode/gateway-stub"
+import type { KiloModelsResult } from "@kilocode/kilo-gateway"
 import { Context, Duration, Effect, Layer, Schema } from "effect"
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import { Config } from "../config/config"

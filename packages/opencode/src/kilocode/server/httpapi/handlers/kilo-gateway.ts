@@ -1,12 +1,11 @@
 import {
-  GatewayError,
   fetchCloudSession,
   fetchCloudSessionForImport,
   getCloudSessions,
   getOrganizationId,
   getToken,
   importSessionToDb,
-} from "@kilocode/kilo-gateway"
+} from "@/kilocode/gateway-stub"
 import {
   HEADER_FEATURE,
   HEADER_ORGANIZATIONID,
@@ -18,11 +17,27 @@ import {
   fetchKilocodeNotifications,
   fetchOrganizationModes,
   fetchProfile,
-} from "@kilocode/kilo-gateway"
-import { DIRECT_FIM_ENV, requestMistralFim, resolveFimTarget } from "@kilocode/kilo-gateway/fim"
-import { DIRECT_EDIT_ENV, extractFencedBody, resolveEditTarget } from "@kilocode/kilo-gateway/edit"
-import { buildMercuryEditPrompt } from "@kilocode/kilo-gateway/edit-prompt"
-import { buildKiloHeaders } from "@kilocode/kilo-gateway"
+} from "@/kilocode/gateway-stub"
+import { buildKiloHeaders } from "@/kilocode/gateway-stub"
+import { isBedrockOnlyEnabled } from "@/kilocode/enterprise"
+
+// kilocode_change start - stubs for deep subpath imports (Bedrock-only: never called)
+const DIRECT_FIM_ENV: Record<string, string[]> = {}
+const DIRECT_EDIT_ENV: Record<string, string[]> = {}
+async function requestMistralFim(_run: any): Promise<any> { return {} }
+function resolveFimTarget(_provider: string, _model: string): any { return { provider: "", model: "" } }
+function resolveEditTarget(_provider: string, _model: string): any { return { provider: "", model: "" } }
+function extractFencedBody(_raw: string): string { return "" }
+function buildMercuryEditPrompt(_input: any): string { return "" }
+class GatewayError extends Error {
+  status: number
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = "GatewayError"
+    this.status = status
+  }
+}
+// kilocode_change end
 import { Effect, Schema } from "effect"
 import * as Stream from "effect/Stream"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
@@ -94,7 +109,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const fim = Effect.fn("KiloGatewayHttpApi.fim")(function* (ctx: { payload: typeof FimBody.Type }) {
-      const target = resolveFimTarget(ctx.payload.provider, ctx.payload.model)
+      const target = resolveFimTarget(ctx.payload.provider as string, ctx.payload.model as string)
       const info = target.provider === "kilo" ? yield* proxyAuth() : undefined
       const token = yield* Effect.gen(function* () {
         if (target.provider === "kilo") return info?.token
@@ -115,14 +130,15 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
         try {
           const run = async (url: string): Promise<Response> => {
             console.info(`[FIM] request provider=${target.provider} model=${target.model} url=${url}`)
+            const kiloHeaders = target.provider === "kilo"
+              ? await buildKiloHeaders(undefined, { kilocodeOrganizationId: info?.organizationId })
+              : {}
             return fetch(url, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${token}`,
-                ...(target.provider === "kilo"
-                  ? buildKiloHeaders(undefined, { kilocodeOrganizationId: info?.organizationId })
-                  : {}),
+                ...kiloHeaders,
                 ...(target.provider === "kilo" ? { [HEADER_FEATURE]: "autocomplete" } : {}),
               },
               signal,
@@ -170,7 +186,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const edit = Effect.fn("KiloGatewayHttpApi.edit")(function* (ctx: { payload: typeof EditBody.Type }) {
-      const target = resolveEditTarget(ctx.payload.provider, ctx.payload.model)
+      const target = resolveEditTarget(ctx.payload.provider as string, ctx.payload.model as string)
       if (target.provider === "kilo" && !target.url) {
         return yield* Effect.fail(new HttpApiError.BadRequest({}))
       }
@@ -205,14 +221,15 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
 
       const response = yield* Effect.promise(async () => {
         try {
+          const kiloHeaders = target.provider === "kilo"
+            ? await buildKiloHeaders(undefined, { kilocodeOrganizationId: proxy?.organizationId })
+            : {}
           return await fetch(target.url, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
-              ...(target.provider === "kilo"
-                ? buildKiloHeaders(undefined, { kilocodeOrganizationId: proxy?.organizationId })
-                : {}),
+              ...kiloHeaders,
               ...(target.provider === "kilo" ? { [HEADER_FEATURE]: "autocomplete" } : {}),
             },
             signal,
@@ -276,6 +293,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       if (!info.token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
       const request = yield* HttpServerRequest.HttpServerRequest
+      const kiloHeaders = yield* Effect.promise(() => buildKiloHeaders(undefined, { kilocodeOrganizationId: info.organizationId }))
       const response = yield* Effect.tryPromise({
         try: () =>
           fetch(`${KILO_API_BASE}/api/gateway/v1/audio/transcriptions`, {
@@ -283,7 +301,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${info.token}`,
-              ...buildKiloHeaders(undefined, { kilocodeOrganizationId: info.organizationId }),
+              ...kiloHeaders,
               [HEADER_FEATURE]: "vscode-extension",
             },
             signal: request.source instanceof Request ? request.source.signal : undefined,
@@ -463,7 +481,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
                 )
               }
 
-              const imported = yield* Effect.sync(() =>
+              const imported = yield* Effect.promise(() =>
                 importSessionToDb(fetched.data, {
                   Database,
                   Instance,

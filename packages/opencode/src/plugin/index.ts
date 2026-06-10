@@ -29,6 +29,7 @@ import { parsePluginSpecifier, readPluginId, readV1Plugin, resolvePluginId } fro
 import { KiloAuthPlugin } from "@kilocode/kilo-gateway" // kilocode_change
 import { registerAdapter } from "@/control-plane/adapters"
 import type { WorkspaceAdapter } from "@/control-plane/types"
+import { isBedrockOnlyEnabled } from "@/kilocode/enterprise" // kilocode_change - enterprise guard
 
 const log = Log.create({ service: "plugin" })
 
@@ -60,7 +61,7 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/Pl
 // Built-in plugins that are directly imported (not installed from npm)
 // kilocode_change start
 const INTERNAL_PLUGINS: PluginInstance[] = [
-  KiloAuthPlugin,
+  ...(!isBedrockOnlyEnabled() ? [KiloAuthPlugin] : []),
   CodexAuthPlugin,
   CopilotAuthPlugin,
   // kilocode_change - external auth plugins ship against @opencode-ai/plugin; bridge to our @kilocode/plugin types

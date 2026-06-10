@@ -15,7 +15,7 @@ import { ConfigError } from "../../config/error"
 import type { Config } from "../../config/config"
 import type { ConfigAgent } from "../../config/agent"
 import { ModesMigrator } from "../modes-migrator"
-import { fetchOrganizationModes } from "@kilocode/kilo-gateway"
+import { fetchOrganizationModes } from "@/kilocode/gateway-stub" // kilocode_change - local stub
 import { RulesMigrator } from "../rules-migrator"
 import { WorkflowsMigrator } from "../workflows-migrator"
 import { McpMigrator } from "../mcp-migrator"

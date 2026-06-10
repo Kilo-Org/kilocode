@@ -37,7 +37,7 @@ import {
   HEADER_PROJECTID,
   HEADER_MACHINEID,
   HEADER_TASKID,
-} from "@kilocode/kilo-gateway"
+} from "@/kilocode/gateway-constants"
 import { Identity } from "@kilocode/kilo-telemetry"
 import { KiloSession } from "@/kilocode/session"
 import { KiloLLM } from "@/kilocode/session/llm"

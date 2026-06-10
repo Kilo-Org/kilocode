@@ -2,40 +2,46 @@
  * Centralized network guard for enterprise Bedrock-only mode.
  *
  * When BEDROCK_ONLY is enabled, this module intercepts fetch/HTTP calls
- * and blocks any request to endpoints that are not AWS Bedrock.
+ * and blocks ANY request that is not to the allowed AWS Bedrock eu-west-1 endpoint.
+ *
+ * Strategy: default-deny. Only explicit allowlisted hosts pass through.
  */
 
-import { isBedrockOnlyEnabled, isBedrockAllowedUrl } from "./bedrock-only"
+import { isBedrockOnlyEnabled, ALLOWED_BEDROCK_REGION } from "./bedrock-only"
 import * as Log from "@opencode-ai/core/util/log"
 
 const log = Log.create({ service: "network-guard" })
 
 let installed = false
 
+/** Reset the installed flag — for test isolation only. */
+export function _resetInstalledFlag(): void {
+  installed = false
+}
+
 export class BlockedNetworkError extends Error {
   constructor(url: string) {
     super(
       `Network request to ${url} is blocked in enterprise Bedrock-only mode. ` +
-        "Only AWS Bedrock endpoints are allowed.",
+        `Only AWS Bedrock in region ${ALLOWED_BEDROCK_REGION} is allowed.`,
     )
     this.name = "BlockedNetworkError"
   }
 }
 
-const BLOCKED_DOMAINS = [
-  "kilo.ai",
-  "kiloapps.io",
-  "kilosessions.ai",
-  "kilocode.ai",
-  "api.kilo.ai",
-  "app.kilo.ai",
-  "chat.kiloapps.io",
-  "events.kiloapps.io",
-  "posthog.com",
-  "i.posthog.com",
-  "us.i.posthog.com",
-  "models.dev",
-]
+const ALLOWED_HOSTS = new Set([
+  `bedrock-runtime.${ALLOWED_BEDROCK_REGION}.amazonaws.com`,
+  `bedrock.${ALLOWED_BEDROCK_REGION}.amazonaws.com`,
+])
+
+function isAllowed(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return ALLOWED_HOSTS.has(parsed.hostname)
+  } catch {
+    return false
+  }
+}
 
 export function installNetworkGuard(): void {
   if (installed) return
@@ -47,19 +53,10 @@ export function installNetworkGuard(): void {
   globalThis.fetch = function guardedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
     const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url
 
-    if (!isBedrockAllowedUrl(url)) {
+    if (!isAllowed(url)) {
       const host = extractHost(url)
-      if (isBlockedDomain(host)) {
-        log.error("BLOCKED network request", { url, host })
-        return Promise.reject(new BlockedNetworkError(url))
-      }
-
-      for (const blocked of BLOCKED_DOMAINS) {
-        if (host.includes(blocked) || url.includes(blocked)) {
-          log.error("BLOCKED network request", { url, host, blocked })
-          return Promise.reject(new BlockedNetworkError(url))
-        }
-      }
+      log.error("BLOCKED network request (enterprise Bedrock-only)", { url, host })
+      return Promise.reject(new BlockedNetworkError(url))
     }
 
     return originalFetch.call(globalThis, input, init)
@@ -75,15 +72,11 @@ export function installWebSocketGuard(): void {
   class GuardedWebSocket extends OriginalWebSocket {
     constructor(url: string | URL, protocols?: string | string[]) {
       const urlStr = typeof url === "string" ? url : url.toString()
-      const host = extractHost(urlStr)
 
-      if (!isBedrockAllowedUrl(urlStr)) {
-        for (const blocked of BLOCKED_DOMAINS) {
-          if (host.includes(blocked) || urlStr.includes(blocked)) {
-            log.error("BLOCKED WebSocket connection", { url: urlStr, host })
-            throw new BlockedNetworkError(urlStr)
-          }
-        }
+      if (!isAllowed(urlStr)) {
+        const host = extractHost(urlStr)
+        log.error("BLOCKED WebSocket connection (enterprise Bedrock-only)", { url: urlStr, host })
+        throw new BlockedNetworkError(urlStr)
       }
 
       super(url, protocols)
@@ -99,10 +92,6 @@ function extractHost(url: string): string {
   } catch {
     return url
   }
-}
-
-function isBlockedDomain(host: string): boolean {
-  return BLOCKED_DOMAINS.some((d) => host.includes(d))
 }
 
 export function disableTelemetryExports(): void {

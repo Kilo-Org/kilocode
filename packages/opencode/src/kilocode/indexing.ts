@@ -5,7 +5,7 @@ import { toIndexingConfigInput, type IndexingConfig } from "@kilocode/kilo-index
 import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
 import { IndexingStatus, disabledIndexingStatus } from "@kilocode/kilo-indexing/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
-import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
+import { fetchKiloEmbeddingModelCatalog } from "@/kilocode/gateway-stub" // kilocode_change - local stub
 import { Instance } from "@/project/instance"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
@@ -84,9 +84,9 @@ async function model(input: ReturnType<typeof toIndexingConfigInput>, auth: Kilo
 
   const catalog = await fetchKiloEmbeddingModelCatalog({ baseURL: auth.baseUrl, token: auth.apiKey })
   const id = input.modelId ? (catalog.aliases[input.modelId] ?? input.modelId) : catalog.defaultModel
-  const chosen = catalog.models.find((item) => item.id === id)
+  const chosen = catalog.models.find((item: any) => item.id === id)
   const fallback = catalog.aliases[catalog.defaultModel] ?? catalog.defaultModel
-  const found = chosen ?? catalog.models.find((item) => item.id === fallback)
+  const found = chosen ?? catalog.models.find((item: any) => item.id === fallback)
 
   if (!found) {
     if (input.modelId || input.modelDimension) {

@@ -1,5 +1,5 @@
 import { Schema } from "effect"
-import { PROMPTS, AI_SDK_PROVIDERS } from "@kilocode/kilo-gateway" // kilocode_change
+import { PROMPTS, AI_SDK_PROVIDERS } from "@/kilocode/gateway-constants" // kilocode_change - local constants
 import { zod } from "@opencode-ai/core/effect-zod"
 import { PositiveInt, withStatics } from "@opencode-ai/core/schema"
 import { ModelStatus } from "@/provider/model-status"

@@ -16,7 +16,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import type { LanguageModelUsage, ProviderMetadata } from "ai"
 import type { Provider } from "@/provider/provider"
 import { zod as toZod } from "@opencode-ai/core/effect-zod"
-import { ENV_FEATURE } from "@kilocode/kilo-gateway"
+import { ENV_FEATURE } from "@/kilocode/gateway-constants" // kilocode_change - local constant
 
 export namespace KiloSession {
   const log = Log.create({ service: "session.kilo" })

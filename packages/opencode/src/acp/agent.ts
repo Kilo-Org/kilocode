@@ -54,7 +54,7 @@ import type { AssistantMessage, Event, KiloClient, SessionMessageResponse, ToolP
 import { applyPatch } from "diff"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 
-import { fetchDefaultModel } from "@kilocode/kilo-gateway" // kilocode_change
+import { fetchDefaultModel } from "@/kilocode/gateway-stub" // kilocode_change - local stub
 import { ShellID } from "@/tool/shell/id"
 
 type ModeOption = { id: string; name: string; description?: string }

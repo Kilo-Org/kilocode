@@ -10,7 +10,7 @@ import { useDialog } from "@tui/ui/dialog"
 import { DialogSelect, type DialogSelectOption } from "@tui/ui/dialog-select"
 import { DialogPrompt } from "@tui/ui/dialog-prompt"
 import { formatKiloEmbeddingModelLabel } from "@kilocode/kilo-indexing/embedding-models"
-import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
+import { fetchKiloEmbeddingModelCatalog } from "@/kilocode/gateway-stub" // kilocode_change - local stub
 import { useSync } from "@tui/context/sync"
 import { useToast } from "@tui/ui/toast"
 import { createResource, Show } from "solid-js"
@@ -228,7 +228,7 @@ function KiloModelSelect(props: SubDialogProps) {
   const auth = resolveKiloIndexingAuth({ config: sync.data.config, provider })
   const [catalog] = createResource(() => fetchKiloEmbeddingModelCatalog({ baseURL: auth.baseUrl, token: auth.apiKey }))
   const options = () =>
-    (catalog()?.models ?? []).map((model) => ({
+    (catalog()?.models ?? []).map((model: any) => ({
       value: model.id,
       title: formatKiloEmbeddingModelLabel(model),
     }))
@@ -237,7 +237,7 @@ function KiloModelSelect(props: SubDialogProps) {
     if (!cfg) return undefined
     const fallback = cfg.aliases[cfg.defaultModel] ?? cfg.defaultModel
     const id = indexing.model ? (cfg.aliases[indexing.model] ?? indexing.model) : fallback
-    if (cfg.models.some((model) => model.id === id)) return id
+    if (cfg.models.some((model: any) => model.id === id)) return id
     return fallback
   }
 
