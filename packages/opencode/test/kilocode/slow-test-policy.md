@@ -44,6 +44,14 @@ The lifecycle no longer performs a second daemon startup after stopping. Initial
 
 ## Profile impact
 
-The default CLI suite changed from 449 files and 4,342 reported tests in 242.9 seconds to 448 files and 4,330 reported tests in 221.7 seconds on the profiling machine. This saves about 21.2 seconds, or 8.7 percent, without reducing any timeout or retry duration.
+| Measurement | Baseline | Updated | Difference | Time saved |
+|---|---:|---:|---:|---:|
+| Local CLI suite | 242.9s | 221.7s | -21.2s | 8.7% |
+| Linux CI CLI JUnit duration | 248.0s | 226.6s | -21.4s | 8.6% |
+| Linux CI `Run unit tests` step | 258s | 237s | -21s | 8.1% |
+| Windows CI CLI JUnit duration | 709.9s | 784.0s | +74.1s | -10.4% |
+| Windows CI `Run unit tests` step | 722s | 799s | +77s | -10.7% |
+
+The local and Linux CI measurements consistently save about 21 seconds. The first Windows CI comparison was green but slower overall despite removing approximately 30 seconds of deterministic waits on that platform. Per-test timing shows unrelated Windows tests varied upward enough to outweigh those removals, so a single Windows run does not demonstrate a pipeline speedup. The comparison uses PR run [27265656392](https://github.com/Kilo-Org/kilocode/actions/runs/27265656392) and the immediately preceding successful `main` run [27262711220](https://github.com/Kilo-Org/kilocode/actions/runs/27262711220).
 
 Revisit an exclusion when upstream replaces a real-time wait with deterministic clock control, removes redundant process startup, or otherwise makes the case fast without reducing scheduling margin.
