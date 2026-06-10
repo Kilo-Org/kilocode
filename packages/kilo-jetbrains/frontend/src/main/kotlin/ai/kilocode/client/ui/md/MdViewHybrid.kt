@@ -27,6 +27,7 @@ import org.commonmark.node.Document
 import org.commonmark.node.FencedCodeBlock
 import org.commonmark.node.IndentedCodeBlock
 import org.commonmark.node.Node
+import org.commonmark.node.ThematicBreak
 import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.HtmlRenderer
 import java.awt.Color
@@ -498,6 +499,9 @@ internal class MdViewHybrid(
         val field = runCatching {
             CodeField(file, opts, text).also { ed ->
                 ed.setDisposedWith(disposable)
+                Disposer.register(disposable) {
+                    ed.getEditor(false)?.let(EditorFactory.getInstance()::releaseEditor)
+                }
                 selection?.register(ed, disposable)
             }
         }.getOrElse { err ->
@@ -682,8 +686,14 @@ internal class MdViewHybrid(
         fun flush() {
             if (md.isEmpty()) return
             val doc = parser.parse(md.toString())
-            html.append(renderer.render(doc))
-            blocks.addAll(collect(doc))
+            val descs = collect(doc)
+            blocks.addAll(descs)
+            for (desc in descs) {
+                when (desc) {
+                    is Desc.Html -> html.append(desc.body)
+                    is Desc.Code -> html.append(codeHtml(desc.text))
+                }
+            }
             md.clear()
         }
 
@@ -896,27 +906,39 @@ internal class MdViewHybrid(
 
     private inner class Visitor : AbstractVisitor() {
         val blocks = mutableListOf<Desc>()
+        private val run = StringBuilder()
 
         override fun visit(document: Document) {
             visitChildren(document)
+            flush()
         }
 
         override fun visit(code: FencedCodeBlock) {
+            flush()
             blocks.add(Desc.Code(code.literal, file(code.info)))
         }
 
         override fun visit(code: IndentedCodeBlock) {
+            flush()
             blocks.add(Desc.Code(code.literal, file(null)))
+        }
+
+        private fun flush() {
+            if (run.isEmpty()) return
+            blocks.add(Desc.Html(run.toString()))
+            run.clear()
         }
 
         public override fun visitChildren(parent: Node) {
             var child = parent.firstChild
             while (child != null) {
                 val next = child.next
-                if (child is FencedCodeBlock || child is IndentedCodeBlock) child.accept(this)
-                if (child is Block && child !is FencedCodeBlock && child !is IndentedCodeBlock) {
-                    blocks.add(Desc.Html(renderer.render(child)))
+                if (child is ThematicBreak) {
+                    child = next
+                    continue
                 }
+                if (child is FencedCodeBlock || child is IndentedCodeBlock) child.accept(this)
+                if (child is Block && child !is FencedCodeBlock && child !is IndentedCodeBlock) run.append(renderer.render(child))
                 child = next
             }
         }
