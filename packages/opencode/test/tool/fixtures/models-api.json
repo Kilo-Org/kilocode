@@ -50653,6 +50653,29 @@
           "output": 0
         }
       },
+      "nex-n2-pro:free": {
+        "id": "nex-n2-pro:free",
+        "name": "Nex N2 Pro (free)",
+        "attachment": false,
+        "reasoning": false,
+        "tool_call": true,
+        "temperature": true,
+        "release_date": "2026-06-11",
+        "last_updated": "2026-06-11",
+        "modalities": {
+          "input": ["text"],
+          "output": ["text"]
+        },
+        "open_weights": false,
+        "limit": {
+          "context": 131072,
+          "output": 8192
+        },
+        "cost": {
+          "input": 0,
+          "output": 0
+        }
+      },
       "baidu/ernie-4.5-vl-28b-a3b": {
         "id": "baidu/ernie-4.5-vl-28b-a3b",
         "name": "Baidu: ERNIE 4.5 VL 28B A3B",

@@ -63,6 +63,7 @@ Several models are available at no cost, subject to rate limits:
 | `stepfun/step-3.7-flash:free` | StepFun Step 3.7 Flash |
 | `poolside/laguna-m.1:free` | Poolside Laguna M.1 |
 | `nvidia/nemotron-3-ultra-550b-a55b:free` | NVIDIA Nemotron 3 Ultra |
+| `nex-n2-pro:free` | Nex N2 Pro |
 | `openrouter/free` | Best available free model |
 
 Free models are available to both authenticated and anonymous users. Anonymous users are rate-limited to 200 requests per hour per IP address.
