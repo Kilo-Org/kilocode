@@ -61,8 +61,9 @@ export const layer: Layer.Layer<
         return providers
       }
 
+      // kilocode_change start - resolve model fetch options from effective Kilo credentials
       const info = yield* auth.get("kilo").pipe(Effect.catch(() => Effect.succeed(undefined)))
-      const fetch = resolveKiloModelOptions({ config: cfg, auth: info }) // kilocode_change
+      const fetch = resolveKiloModelOptions({ config: cfg, auth: info })
       const models = yield* cache.fetch("kilo", fetch).pipe(Effect.catch(() => Effect.succeed({})))
       providers.kilo = {
         id: "kilo",
@@ -73,6 +74,7 @@ export const layer: Layer.Layer<
         models,
       }
       if (Object.keys(models).length === 0) yield* cache.refresh("kilo", fetch).pipe(Effect.ignore, Effect.forkDetach)
+      // kilocode_change end
       yield* addApertis()
       return providers
     })

@@ -209,6 +209,7 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
     yield* mergeFile(acc, file)
   }
 
+  // kilocode_change start - order Kilo TUI config sources by precedence
   // 2. Project tui files, applied root-first so the closest file wins.
   for (const file of projectFiles) {
     yield* mergeFile(acc, file)
@@ -217,15 +218,13 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
   // 3. `.opencode` directories (and KILO_CONFIG_DIR) discovered while
   // walking up the tree. Also returned below so callers can install plugin
   // dependencies from each location.
-  // kilocode_change start - also load tui.json from .kilo/.kilocode
   const dirs = unique(directories).filter(
     (dir) =>
       dir.endsWith(".kilo") || dir.endsWith(".kilocode") || dir.endsWith(".opencode") || dir === Flag.KILO_CONFIG_DIR,
   )
-  // kilocode_change end
 
   for (const dir of dirs) {
-    // if (!dir.endsWith(".opencode") && dir !== Flag.KILO_CONFIG_DIR) continue // kilocode_change
+    // if (!dir.endsWith(".opencode") && dir !== Flag.KILO_CONFIG_DIR) continue
     for (const file of ConfigPaths.fileInDirectory(dir, "tui")) {
       yield* mergeFile(acc, file)
     }
@@ -235,7 +234,8 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
     file: Flag.KILO_TUI_CONFIG,
     merge: (file) => mergeFile(acc, file),
     loaded: (file) => log.debug("loaded custom tui config", { path: file }),
-  }) // kilocode_change
+  })
+  // kilocode_change end
 
   const keybinds = { ...acc.result.keybinds }
   if (process.platform === "win32") {
