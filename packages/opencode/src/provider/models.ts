@@ -51,7 +51,7 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
         const aptURL = apt?.baseURL ?? "https://api.apertis.ai/v1"
         const aptOpts = apt?.baseURL ? { baseURL: apt.baseURL } : {}
 
-        const addApertis = Effect.fnUntraced(function* () {
+const addApertis = Effect.fnUntraced(function* () {
           if (providers.apertis) return
           const models = yield* cache.fetch("apertis", aptOpts).pipe(Effect.catch(() => Effect.succeed({})))
           providers.apertis = {
@@ -66,8 +66,28 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
             yield* cache.refresh("apertis", aptOpts).pipe(Effect.ignore, Effect.forkDetach)
         })
 
+        const anyCfg = cfg.provider?.anyapi?.options
+        const anyURL = anyCfg?.baseURL ?? "https://api.anyapi.ai/v1"
+        const anyOpts = anyCfg?.baseURL ? { baseURL: anyCfg.baseURL } : {}
+
+        const addAnyApi = Effect.fnUntraced(function* () {
+          if (providers.anyapi) return
+          const models = yield* cache.fetch("anyapi", anyOpts).pipe(Effect.catch(() => Effect.succeed({})))
+          providers.anyapi = {
+            id: "anyapi",
+            name: "AnyAPI",
+            env: ["ANYAPI_API_KEY"],
+            api: anyURL,
+            npm: "@ai-sdk/openai-compatible",
+            models,
+          }
+          if (Object.keys(models).length === 0)
+            yield* cache.refresh("anyapi", anyOpts).pipe(Effect.ignore, Effect.forkDetach)
+        })
+
         if (!allowed) {
           yield* addApertis()
+          yield* addAnyApi()
           return providers
         }
 
@@ -90,6 +110,7 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
         }
         if (Object.keys(models).length === 0) yield* cache.refresh("kilo", fetch).pipe(Effect.ignore, Effect.forkDetach)
         yield* addApertis()
+        yield* addAnyApi()
         return providers
       })
 
