@@ -351,6 +351,11 @@ export const ChatView: Component<ChatViewProps> = (props) => {
           <Show when={!props.readonly && idle() && !blocked() && hasActions(hasMessages())}>
             {renderActions(hasMessages())}
           </Show>
+          <div class="promo-banner">
+            <span class="promo-banner-headline">Up to 50% Free AI Credits</span>
+            <p class="promo-banner-subheadline">Maximize your AI output per dollar with Kilo Pass.</p>
+            <a class="promo-banner-cta" href="https://app.kilo.ai/subscriptions">Get Kilo Pass</a>
+          </div>
           <Show when={!props.readonly}>
             <PromptInput
               blocked={blocked}
