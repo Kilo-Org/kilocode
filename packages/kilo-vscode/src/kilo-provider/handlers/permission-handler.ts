@@ -14,16 +14,17 @@ export interface PermissionContext {
   readonly currentSessionId: string | undefined
   readonly trackedSessionIds: Set<string>
   readonly sessionDirectories: ReadonlyMap<string, string>
+  readonly extraDirectories?: () => string[]
   postMessage(msg: unknown): void
   getWorkspaceDirectory(sessionId?: string): string
   recordPermissionDirectory(requestID: string, directory: string): void
   getPermissionDirectory(requestID: string): string | undefined
   clearPermissionDirectory(requestID: string): void
-  prunePermissionDirectories(active: Set<string>): void
+  prunePermissionDirectories(active: Set<string>, dirs?: Set<string>): void
 }
 
-export function recoveryDirs(workspace: string, dirs: ReadonlyMap<string, string>) {
-  return [...new Set([workspace, ...dirs.values()])]
+export function recoveryDirs(workspace: string, dirs: ReadonlyMap<string, string>, extra: string[] = []) {
+  return [...new Set([workspace, ...dirs.values(), ...extra])]
 }
 
 export function recoverablePermissions(perms: RecoverablePermission[], tracked: Set<string>, seen: Set<string>) {
@@ -127,7 +128,7 @@ export async function handlePermissionResponse(
 export async function fetchAndSendPendingPermissions(ctx: PermissionContext): Promise<void> {
   if (!ctx.client) return
   try {
-    const dirs = recoveryDirs(ctx.getWorkspaceDirectory(), ctx.sessionDirectories)
+    const dirs = recoveryDirs(ctx.getWorkspaceDirectory(), ctx.sessionDirectories, ctx.extraDirectories?.() ?? [])
 
     const seen = new Set<string>()
     for (const dir of dirs) {
@@ -150,7 +151,7 @@ export async function fetchAndSendPendingPermissions(ctx: PermissionContext): Pr
         })
       }
     }
-    ctx.prunePermissionDirectories(seen)
+    ctx.prunePermissionDirectories(seen, new Set(dirs))
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to fetch pending permissions:", error)
   }

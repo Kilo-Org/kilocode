@@ -281,7 +281,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private syncedChildSessions: Set<string> = new Set()
   private sessionStatusMap = new Map<string, SessionStatus["type"]>() // Latest status used for destructive config warnings.
   private sessionDirectories = new Map<string, string>() // Per-session directory overrides, such as Agent Manager worktrees.
-  private permissionDirectories = new Map<string, string>()
   private projectID: string | undefined // Current workspace project ID used to filter sessions.
   private loadMessagesAbort: AbortController | null = null // Current load request cancellation.
   private lastReconciledAt = new Map<string, number>() // Per-session focus-mode reconcile timestamp.
@@ -1246,15 +1245,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         (payload, directory) => {
           const event = unwrapSyncEvent(payload)
           if (!event) return false
-
-          // Preserve the request origin even when a worktree session is not tracked yet.
-          // Manual replies must target the Instance that owns the pending permission.
-          if (event.type === "permission.asked" && directory) {
-            this.permissionDirectories.set(event.properties.id, directory)
-          }
-          if (event.type === "permission.replied") {
-            this.permissionDirectories.delete(event.properties.requestID)
-          }
 
           // Remote status events are global and should always pass through
           if (event.type === "kilo-sessions.remote-status-changed") return true
@@ -2762,16 +2752,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       currentSessionId: this.currentSession?.id,
       trackedSessionIds: this.trackedSessionIds,
       sessionDirectories: this.sessionDirectories,
+      extraDirectories: this.opts.worktreeDirectories,
       postMessage: (msg) => this.postMessage(msg),
       getWorkspaceDirectory: (sid) => this.getWorkspaceDirectory(sid),
-      recordPermissionDirectory: (id, dir) => this.permissionDirectories.set(id, dir),
-      getPermissionDirectory: (id) => this.permissionDirectories.get(id),
-      clearPermissionDirectory: (id) => this.permissionDirectories.delete(id),
-      prunePermissionDirectories: (active) => {
-        for (const key of this.permissionDirectories.keys()) {
-          if (!active.has(key)) this.permissionDirectories.delete(key)
-        }
-      },
+      recordPermissionDirectory: (id, dir) => this.connectionService.recordPermissionDirectory(id, dir),
+      getPermissionDirectory: (id) => this.connectionService.getPermissionDirectory(id),
+      clearPermissionDirectory: (id) => this.connectionService.clearPermissionDirectory(id),
+      prunePermissionDirectories: (active, dirs) => this.connectionService.prunePermissionDirectories(active, dirs),
     }
   }
 
@@ -3490,7 +3477,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.trackedSessionIds.clear()
     this.syncedChildSessions.clear()
     this.sessionDirectories.clear()
-    this.permissionDirectories.clear()
     this.sessionStatusMap.clear()
     this.ignoreController?.dispose()
     this.chatAutocomplete?.dispose()
