@@ -34,8 +34,20 @@ export const WorkStyleProvider: ParentComponent = (props) => {
     setLoading(false)
   })
 
-  onCleanup(unsubscribe)
-  vscode.postMessage({ type: "requestWorkStyle" })
+  const request = () => vscode.postMessage({ type: "requestWorkStyle" })
+
+  request()
+
+  const unsubReady = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "extensionDataReady") return
+    unsubReady()
+    if (loading()) request()
+  })
+
+  onCleanup(() => {
+    unsubscribe()
+    unsubReady()
+  })
 
   function apply(style: WorkStyle) {
     const plan = buildWorkStyleApplyPlan({
