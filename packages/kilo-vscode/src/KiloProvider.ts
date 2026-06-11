@@ -14,7 +14,7 @@ import { type KiloConnectionService, ServerStartupError } from "./services/cli-b
 import type { EditorContext, IndexingStatus } from "./services/cli-backend/types"
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { ChatTextAreaAutocomplete } from "./services/autocomplete/chat-autocomplete/ChatTextAreaAutocomplete"
-import { buildWebviewHtml, getWebviewFontSize } from "./utils"
+import { buildWebviewHtml, getFontFamilyConfig, getWebviewFontSize } from "./utils"
 import { saveImage } from "./kilo-provider/save-image"
 import { handleEditorAction } from "./kilo-provider/editor-actions"
 import { exportTranscript } from "./kilo-provider/export-transcript"
@@ -62,6 +62,7 @@ import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-fil
 import { renameSession } from "./kilo-provider/rename-session"
 import { handleFileSearch } from "./kilo-provider/file-search"
 import { watchFontSizeConfig } from "./kilo-provider/font-size"
+import { watchFontFamilyConfig } from "./kilo-provider/font-family"
 import { getTerminalContents } from "./services/terminal/context"
 import { disposeGitChangesTarget } from "./kilo-provider/git-changes-target"
 import { interceptMessage } from "./kilo-provider/git-changes-request"
@@ -1200,6 +1201,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
     })
     this.webviewMessageDisposable = watchFontSizeConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
+    this.webviewMessageDisposable = watchFontFamilyConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
   }
 
   private handleEditorOpenMessage(message: Parameters<typeof handleEditorAction>[0]): boolean {
@@ -1365,6 +1367,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           vscodeLanguage: vscode.env.language,
           languageOverride: langConfig.get<string>("language"),
           fontSize: getWebviewFontSize(),
+          fontFamily: langConfig.get<string>("fontFamily") ?? "",
           workspaceDirectory: this.getProjectDirectory(this.currentSession?.id),
         })
       }
@@ -3433,6 +3436,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       workerUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "shiki-worker.js")),
       title: "Kilo Code",
       port: this.connectionService.getServerInfo()?.port,
+      fontFamily: getFontFamilyConfig(),
       extraStyles: `.container { height: 100%; display: flex; flex-direction: column; height: 100vh; border-right: 1px solid var(--border-weak-base); }`,
     })
   }

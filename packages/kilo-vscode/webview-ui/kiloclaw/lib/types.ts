@@ -154,6 +154,7 @@ export type KiloClawOutMessage =
   | { type: "kiloclaw.typing"; conversationId: string; memberId: string }
   | { type: "kiloclaw.typingStop"; conversationId: string; memberId: string }
   | { type: "fontSizeChanged"; fontSize: number }
+  | { type: "fontFamilyChanged"; fontFamily: string }
 
 // Note: messages sent from the webview to the extension host are typed in
 // src/kiloclaw/types.ts (KiloClawInMessage). The webview dispatches them

@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
-import { buildWebviewHtml, getWebviewFontSize } from "./utils"
+import { buildWebviewHtml, getFontFamilyConfig, getWebviewFontSize } from "./utils"
 import { watchFontSizeConfig } from "./kilo-provider/font-size"
+import { watchFontFamilyConfig } from "./kilo-provider/font-family"
 import { appendOutput, getWorkspaceRoot } from "./review-utils"
 import { getDiffMarkdownRender, setDiffMarkdownRender } from "./review-settings"
 
@@ -57,7 +58,9 @@ export class DiffVirtualProvider implements vscode.Disposable {
     panel.webview.html = this.getHtml(panel.webview)
     panel.webview.onDidReceiveMessage((msg) => this.onMessage(msg))
     this.fontConfigDisposable?.dispose()
-    this.fontConfigDisposable = watchFontSizeConfig((msg) => this.post(msg))
+    const font = watchFontSizeConfig((msg) => this.post(msg))
+    const fontFamily = watchFontFamilyConfig((msg) => this.post(msg))
+    this.fontConfigDisposable = vscode.Disposable.from(font, fontFamily)
     panel.onDidDispose(() => {
       this.log("Panel disposed")
       this.fontConfigDisposable?.dispose()
@@ -115,6 +118,7 @@ export class DiffVirtualProvider implements vscode.Disposable {
       iconsBaseUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
       workerUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "shiki-worker.js")),
       title: "Diff Virtual",
+      fontFamily: getFontFamilyConfig(),
       extraStyles: "#root { display: flex; flex-direction: column; height: 100%; }",
     })
   }

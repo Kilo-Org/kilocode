@@ -1461,6 +1461,8 @@ export const dict = {
   "settings.display.layout.stretch": "Stretch",
   "settings.display.fontSize.title": "Font Size",
   "settings.display.fontSize.description": "Adjust the Kilo webview UI font size independently from VS Code.",
+  "settings.display.fontFamily.title": "Font Family",
+  "settings.display.fontFamily.description": "Override the webview font family. Leave empty to use the VS Code editor font.",
   "settings.display.reasoningAutoCollapse.title": "Auto-Collapse Reasoning",
   "settings.display.reasoningAutoCollapse.description":
     "Collapse reasoning blocks after the agent finishes writing them. Leave off to keep reasoning expanded unless you collapse it manually.",

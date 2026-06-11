@@ -85,6 +85,19 @@ const DisplayTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.display.fontFamily.title")}
+          description={language.t("settings.display.fontFamily.description")}
+        >
+          <div style={{ width: "200px" }}>
+            <TextField
+              value={display.fontFamily()}
+              placeholder="Editor Font"
+              onChange={(val) => display.setFontFamily(val.trim())}
+            />
+          </div>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.display.reasoningAutoCollapse.title")}
           description={language.t("settings.display.reasoningAutoCollapse.description")}
         >

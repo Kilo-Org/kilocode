@@ -11,7 +11,7 @@ import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
 import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
 import { DiffVirtualProvider } from "../DiffVirtualProvider"
-import { buildWebviewHtml } from "../utils"
+import { buildWebviewHtml, getFontFamilyConfig } from "../utils"
 import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
 import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
 import type { AutoApproveController } from "../commands/toggle-auto-approve"
@@ -87,6 +87,7 @@ export class VscodeHost implements Host {
       workerUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "shiki-worker.js")),
       title: "Agent Manager",
       port,
+      fontFamily: getFontFamilyConfig(),
     })
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {

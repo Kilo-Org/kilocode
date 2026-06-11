@@ -791,6 +791,11 @@
     "configuration": {
       "title": "Kilo Code",
       "properties": {
+        "kilo-code.new.fontFamily": {
+          "type": "string",
+          "default": "",
+          "description": "Font family for Kilo Code webview UI. Overrides the default VS Code font. Leave empty to use the VS Code editor font."
+        },
         "kilo-code.new.language": {
           "type": "string",
           "default": "",
