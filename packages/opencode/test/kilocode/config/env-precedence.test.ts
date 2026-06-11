@@ -52,6 +52,7 @@ const original = {
   share: Flag.KILO_AUTO_SHARE,
   update: Flag.KILO_DISABLE_AUTOUPDATE,
   notify: Flag.KILO_ALWAYS_NOTIFY_UPDATE,
+  permission: Flag.KILO_PERMISSION,
 }
 
 function restore() {
@@ -67,6 +68,7 @@ function restore() {
   Flag.KILO_AUTO_SHARE = original.share
   Flag.KILO_DISABLE_AUTOUPDATE = original.update
   Flag.KILO_ALWAYS_NOTIFY_UPDATE = original.notify
+  Flag.KILO_PERMISSION = original.permission
 }
 
 function set(key: keyof typeof process.env, value: string | undefined) {
@@ -198,6 +200,21 @@ describe("KILO config precedence", () => {
     await WithInstance.provide({
       directory: tmp.path,
       fn: async () => expect((await load()).compaction).toMatchObject({ auto: true, prune: true }),
+    })
+  })
+
+  test("ignores malformed KILO_PERMISSION overlays", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(path.join(dir, "kilo.json"), JSON.stringify({ permission: { bash: "ask" } }))
+      },
+    })
+
+    Flag.KILO_PERMISSION = "{malformed"
+
+    await WithInstance.provide({
+      directory: tmp.path,
+      fn: async () => expect((await load()).permission).toEqual({ bash: "ask" }),
     })
   })
 })

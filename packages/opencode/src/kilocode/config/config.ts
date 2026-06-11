@@ -399,6 +399,7 @@ export namespace KilocodeConfig {
       disablePrune: boolean
     },
   ) {
+    const permission = parsePermission(input.permission)
     const provider =
       input.apiKey || input.organizationId
         ? {
@@ -431,7 +432,7 @@ export namespace KilocodeConfig {
     const overlay = {
       ...provider,
       ...indexing,
-      ...(input.permission ? { permission: JSON.parse(input.permission) } : {}),
+      ...permission,
       ...(input.autoShare ? { share: "auto" as const } : {}),
       ...(autoupdate !== undefined ? { autoupdate } : {}),
       ...(input.disableAutocompact || input.disablePrune
@@ -444,6 +445,16 @@ export namespace KilocodeConfig {
         : {}),
     }
     return mergeConfig(config, overlay)
+  }
+
+  function parsePermission(input?: string) {
+    if (!input) return {}
+    try {
+      return { permission: JSON.parse(input) }
+    } catch (err) {
+      log.warn("ignored invalid KILO_PERMISSION", { err })
+      return {}
+    }
   }
 
   export function loadEnvConfig(input: {

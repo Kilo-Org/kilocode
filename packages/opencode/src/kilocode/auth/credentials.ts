@@ -50,10 +50,10 @@ export function resolveKiloCredentials(input: {
 }): KiloCredentials {
   const env = input.env ?? {}
   const config = record(input.config)
-  const options = record(record(config.provider).kilo)
-  const configured = record(options.options)
-  const provider = input.provider ?? {}
-  const state = record(provider.options)
+  const entry = record(record(config.provider).kilo)
+  const configured = record(entry.options)
+  const source = input.provider ?? {}
+  const state = record(source.options)
 
   return {
     token:
@@ -62,7 +62,7 @@ export function resolveKiloCredentials(input: {
       text(configured.kilocodeToken) ??
       text(input.token) ??
       token(input.auth) ??
-      text(provider.key) ??
+      text(source.key) ??
       text(state.kilocodeToken) ??
       text(state.apiKey),
     organizationId:
