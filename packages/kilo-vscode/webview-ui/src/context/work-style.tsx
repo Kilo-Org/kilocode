@@ -4,6 +4,7 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "./vscode"
 import { useConfig } from "./config"
 import { useLanguage } from "./language"
+import { resolveWorkStyleOnboarding } from "./work-style-state"
 import type { ExtensionMessage } from "../types/messages"
 import { TelemetryEventName } from "../../../src/services/telemetry/types"
 import {
@@ -29,11 +30,13 @@ export const WorkStyleProvider: ParentComponent = (props) => {
   const language = useLanguage()
   const [style, setStyle] = createSignal<WorkStyleState>("unset")
   const [loading, setLoading] = createSignal(true)
+  const [display, setDisplay] = createSignal(false)
   const [defaults, setDefaults] = createSignal<Partial<Record<keyof WorkStyleSettings, boolean>>>({})
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "workStyleLoaded") return
     setStyle(message.style)
+    setDisplay((current) => resolveWorkStyleOnboarding(current, message.style))
     setDefaults(message.defaults)
     setLoading(false)
   })
@@ -48,9 +51,13 @@ export const WorkStyleProvider: ParentComponent = (props) => {
     if (loading()) request()
   })
 
+  const end = () => setDisplay(false)
+  window.addEventListener("newTaskRequest", end)
+
   onCleanup(() => {
     unsubscribe()
     unsubReady()
+    window.removeEventListener("newTaskRequest", end)
   })
 
   function apply(style: WorkStyle) {
@@ -73,6 +80,7 @@ export const WorkStyleProvider: ParentComponent = (props) => {
       vscode.postMessage({ type: "updateSetting", key, value })
     }
 
+    setDisplay(false)
     setStyle(style)
     vscode.postMessage({ type: "setWorkStyle", style })
     showToast({
@@ -90,21 +98,28 @@ export const WorkStyleProvider: ParentComponent = (props) => {
   }
 
   function dismiss() {
+    setDisplay(false)
     setStyle("skipped")
     vscode.postMessage({ type: "setWorkStyle", style: "skipped" })
   }
 
   const ready = createMemo(() => !loading() && !cfg.loading())
-  const onboarding = createMemo(() => ready() && style() === "unset")
-  let shown = false
+  const onboarding = createMemo(() => ready() && display())
+  let acknowledged = false
 
   createEffect(() => {
-    if (!onboarding() || shown) return
-    shown = true
+    if (!onboarding()) {
+      acknowledged = false
+      return
+    }
+    if (acknowledged) return
+    acknowledged = true
     vscode.postMessage({
       type: "telemetry",
       event: TelemetryEventName.WORK_STYLE_ONBOARDING_SHOWN,
     })
+    // This onboarding display is a one-off. Persist skipped now while keeping this mounted view visible.
+    vscode.postMessage({ type: "setWorkStyle", style: "skipped" })
   })
 
   const value: WorkStyleContextValue = {
