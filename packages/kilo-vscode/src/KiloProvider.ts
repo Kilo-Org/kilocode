@@ -747,6 +747,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         await handleWorkStyleMessage({
           message,
           connection: this.connectionService,
+          directory: this.getWorkspaceDirectory(this.currentSession?.id),
           post: (msg) => this.postMessage(msg),
         })
       )

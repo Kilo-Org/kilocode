@@ -1008,6 +1008,9 @@ export const dict = {
   "workStyle.onboarding.description":
     "권한, 추론 블록, 터미널 출력 및 컨텍스트 타임라인의 초기 기본값을 설정합니다. 한 번만 적용되며 이미 사용자 지정한 설정은 건너뜁니다.",
   "workStyle.onboarding.skip": "지금은 건너뛰기",
+  "workStyle.toast.saved.title": "환경설정이 저장되었습니다",
+  "workStyle.toast.saved.description": "설정에서 언제든지 환경설정을 변경할 수 있습니다.",
+  "workStyle.toast.saved.action": "설정으로 이동",
   "workStyle.choice.permissions": "권한",
   "workStyle.choice.bash": "Bash",
   "workStyle.choice.visibility": "표시",

@@ -1015,6 +1015,9 @@ export const dict = {
   "workStyle.onboarding.description":
     "Hiermee stel je de beginwaarden in voor machtigingen, redeneerblokken, terminaluitvoer en de contexttijdlijn. Dit wordt slechts één keer toegepast en slaat instellingen over die je al hebt aangepast.",
   "workStyle.onboarding.skip": "Voorlopig overslaan",
+  "workStyle.toast.saved.title": "Voorkeuren opgeslagen",
+  "workStyle.toast.saved.description": "Werk je voorkeuren op elk moment bij in Instellingen.",
+  "workStyle.toast.saved.action": "Naar Instellingen",
   "workStyle.choice.permissions": "Machtigingen",
   "workStyle.choice.bash": "Bash",
   "workStyle.choice.visibility": "Zichtbaarheid",

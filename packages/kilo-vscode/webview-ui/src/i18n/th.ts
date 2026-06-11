@@ -1043,6 +1043,9 @@ export const dict = {
   "workStyle.onboarding.description":
     "ตั้งค่าเริ่มต้นสำหรับสิทธิ์ บล็อกการให้เหตุผล เอาต์พุตเทอร์มินัล และไทม์ไลน์บริบท การตั้งค่านี้ใช้เพียงครั้งเดียวและจะข้ามรายการที่คุณปรับแต่งไว้แล้ว",
   "workStyle.onboarding.skip": "ข้ามไปก่อน",
+  "workStyle.toast.saved.title": "บันทึกการตั้งค่าแล้ว",
+  "workStyle.toast.saved.description": "อัปเดตการตั้งค่าของคุณได้ทุกเมื่อในการตั้งค่า",
+  "workStyle.toast.saved.action": "ไปที่การตั้งค่า",
   "workStyle.choice.permissions": "สิทธิ์",
   "workStyle.choice.bash": "Bash",
   "workStyle.choice.visibility": "การแสดงผล",

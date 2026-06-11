@@ -1057,6 +1057,9 @@ export const dict = {
   "workStyle.onboarding.description":
     "Задаёт начальные значения разрешений, блоков рассуждений, вывода терминала и временной шкалы контекста. Применяется только один раз и не затрагивает уже изменённые вами настройки.",
   "workStyle.onboarding.skip": "Пока пропустить",
+  "workStyle.toast.saved.title": "Настройки сохранены",
+  "workStyle.toast.saved.description": "Изменить их можно в любое время в настройках.",
+  "workStyle.toast.saved.action": "Перейти в настройки",
   "workStyle.choice.permissions": "Разрешения",
   "workStyle.choice.bash": "Bash",
   "workStyle.choice.visibility": "Видимость",

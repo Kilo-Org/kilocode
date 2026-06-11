@@ -1046,6 +1046,9 @@ export const dict = {
   "workStyle.onboarding.description":
     "権限、推論ブロック、ターミナル出力、コンテキストタイムラインの初期設定を行います。適用されるのは一度だけで、すでにカスタマイズした設定は変更されません。",
   "workStyle.onboarding.skip": "今はスキップ",
+  "workStyle.toast.saved.title": "設定を保存しました",
+  "workStyle.toast.saved.description": "設定画面でいつでも変更できます。",
+  "workStyle.toast.saved.action": "設定を開く",
   "workStyle.choice.permissions": "権限",
   "workStyle.choice.bash": "Bash",
   "workStyle.choice.visibility": "表示",

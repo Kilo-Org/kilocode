@@ -978,6 +978,9 @@ export const dict = {
   "workStyle.onboarding.description":
     "This sets the starting defaults for permissions, reasoning blocks, terminal output, and the context timeline. It only applies once and skips settings you already customized.",
   "workStyle.onboarding.skip": "Skip for now",
+  "workStyle.toast.saved.title": "Preferences saved",
+  "workStyle.toast.saved.description": "Update your preferences anytime in Settings.",
+  "workStyle.toast.saved.action": "Go to Settings",
   "workStyle.choice.permissions": "Permissions",
   "workStyle.choice.bash": "Bash",
   "workStyle.choice.visibility": "Visibility",

@@ -995,6 +995,9 @@ export const dict = {
   "workStyle.onboarding.description":
     "這會設定權限、推理區塊、終端機輸出和上下文時間軸的初始預設值。此設定只會套用一次，並會略過你已自訂的設定。",
   "workStyle.onboarding.skip": "暫時略過",
+  "workStyle.toast.saved.title": "偏好設定已儲存",
+  "workStyle.toast.saved.description": "您可以隨時在「設定」中更新偏好設定。",
+  "workStyle.toast.saved.action": "前往設定",
   "workStyle.choice.permissions": "權限",
   "workStyle.choice.bash": "Bash",
   "workStyle.choice.visibility": "可見性",

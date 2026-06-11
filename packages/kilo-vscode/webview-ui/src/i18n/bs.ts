@@ -1060,6 +1060,9 @@ export const dict = {
   "workStyle.onboarding.description":
     "Postavlja početne zadane vrijednosti za dozvole, blokove zaključivanja, izlaz terminala i vremensku liniju konteksta. Primjenjuje se samo jednom i preskače postavke koje ste već prilagodili.",
   "workStyle.onboarding.skip": "Preskoči za sada",
+  "workStyle.toast.saved.title": "Postavke sačuvane",
+  "workStyle.toast.saved.description": "Svoje postavke možete ažurirati bilo kada u Postavkama.",
+  "workStyle.toast.saved.action": "Idi na Postavke",
   "workStyle.choice.permissions": "Dozvole",
   "workStyle.choice.bash": "Bash",
   "workStyle.choice.visibility": "Vidljivost",

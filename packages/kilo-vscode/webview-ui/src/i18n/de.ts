@@ -1067,6 +1067,9 @@ export const dict = {
   "workStyle.onboarding.description":
     "Hiermit werden die anfänglichen Standardeinstellungen für Berechtigungen, Denkblöcke, Terminalausgabe und Kontextzeitleiste festgelegt. Dies gilt nur einmal und überspringt Einstellungen, die Sie bereits angepasst haben.",
   "workStyle.onboarding.skip": "Vorerst überspringen",
+  "workStyle.toast.saved.title": "Einstellungen gespeichert",
+  "workStyle.toast.saved.description": "Du kannst deine Einstellungen jederzeit in den Einstellungen ändern.",
+  "workStyle.toast.saved.action": "Zu den Einstellungen",
   "workStyle.choice.permissions": "Berechtigungen",
   "workStyle.choice.bash": "Bash",
   "workStyle.choice.visibility": "Sichtbarkeit",

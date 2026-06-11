@@ -49,8 +49,8 @@ export async function setWorkStyle(style: WorkStyleState) {
   await getConfig().update("agentWorkStyle", style, vscode.ConfigurationTarget.Global)
 }
 
-async function hasAnySession(connection: KiloConnectionService): Promise<boolean> {
-  const client = await connection.getClientAsync()
+async function hasAnySession(connection: KiloConnectionService, directory: string): Promise<boolean> {
+  const client = await connection.getClientAsync(directory)
   const { data } = await client.experimental.session.list(
     {
       roots: true,
@@ -62,10 +62,10 @@ async function hasAnySession(connection: KiloConnectionService): Promise<boolean
   return data.length > 0
 }
 
-async function initializeWorkStyle(connection: KiloConnectionService): Promise<void> {
+async function initializeWorkStyle(connection: KiloConnectionService, directory: string): Promise<void> {
   if (isWorkStyleConfigured()) return
 
-  const hasSessions = await hasAnySession(connection)
+  const hasSessions = await hasAnySession(connection, directory)
 
   if (isWorkStyleConfigured()) return
   await setWorkStyle(getInitialWorkStyle(hasSessions))
@@ -74,10 +74,11 @@ async function initializeWorkStyle(connection: KiloConnectionService): Promise<v
 export async function handleWorkStyleMessage(input: {
   message: { type?: string; style?: WorkStyleState }
   connection: KiloConnectionService
+  directory: string
   post: (message: unknown) => void
 }): Promise<boolean> {
   if (input.message.type === "requestWorkStyle") {
-    const initialized = await initializeWorkStyle(input.connection)
+    const initialized = await initializeWorkStyle(input.connection, input.directory)
       .then(() => true)
       .catch((err: unknown) => {
         console.error("[Kilo New] Failed to initialize work style:", err)

@@ -1014,6 +1014,9 @@ export const dict = {
   "workStyle.onboarding.description":
     "İzinler, akıl yürütme blokları, terminal çıktısı ve bağlam zaman çizelgesi için başlangıç varsayılanlarını belirler. Yalnızca bir kez uygulanır ve daha önce özelleştirdiğiniz ayarları atlar.",
   "workStyle.onboarding.skip": "Şimdilik atla",
+  "workStyle.toast.saved.title": "Tercihler kaydedildi",
+  "workStyle.toast.saved.description": "Tercihlerinizi istediğiniz zaman Ayarlar'dan güncelleyebilirsiniz.",
+  "workStyle.toast.saved.action": "Ayarlara git",
   "workStyle.choice.permissions": "İzinler",
   "workStyle.choice.bash": "Bash",
   "workStyle.choice.visibility": "Görünürlük",

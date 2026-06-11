@@ -1019,6 +1019,9 @@ export const dict = {
   "workStyle.onboarding.description":
     "Dette angir startinnstillingene for tillatelser, resonneringsblokker, terminalutdata og konteksttidslinjen. Det brukes bare én gang og hopper over innstillinger du allerede har tilpasset.",
   "workStyle.onboarding.skip": "Hopp over inntil videre",
+  "workStyle.toast.saved.title": "Innstillingene er lagret",
+  "workStyle.toast.saved.description": "Oppdater innstillingene når som helst under Innstillinger.",
+  "workStyle.toast.saved.action": "Gå til Innstillinger",
   "workStyle.choice.permissions": "Tillatelser",
   "workStyle.choice.bash": "Bash",
   "workStyle.choice.visibility": "Synlighet",

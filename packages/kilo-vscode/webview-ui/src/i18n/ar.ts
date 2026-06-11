@@ -1003,6 +1003,9 @@ export const dict = {
   "workStyle.onboarding.description":
     "يحدد هذا الإعداد القيم الافتراضية الأولية للأذونات وكتل الاستدلال ومخرجات المحطة الطرفية والمخطط الزمني للسياق. يُطبّق مرة واحدة فقط ويتجاوز الإعدادات التي خصصتها مسبقًا.",
   "workStyle.onboarding.skip": "تخطي الآن",
+  "workStyle.toast.saved.title": "تم حفظ التفضيلات",
+  "workStyle.toast.saved.description": "يمكنك تحديث تفضيلاتك في أي وقت من الإعدادات.",
+  "workStyle.toast.saved.action": "الانتقال إلى الإعدادات",
   "workStyle.choice.permissions": "الأذونات",
   "workStyle.choice.bash": "Bash",
   "workStyle.choice.visibility": "العرض",

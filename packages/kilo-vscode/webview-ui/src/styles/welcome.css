@@ -166,6 +166,10 @@
   [data-component="button"].work-style-mode {
     padding: 12px;
   }
+
+  [data-slot="work-style-mode-details"] {
+    display: none;
+  }
 }
 
 /* ============================================

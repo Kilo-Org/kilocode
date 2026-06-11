@@ -1,8 +1,11 @@
-import { createContext, useContext, createSignal, onCleanup } from "solid-js"
+import { createContext, useContext, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
 import type { Accessor, ParentComponent } from "solid-js"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "./vscode"
 import { useConfig } from "./config"
+import { useLanguage } from "./language"
 import type { ExtensionMessage } from "../types/messages"
+import { TelemetryEventName } from "../../../src/services/telemetry/types"
 import {
   buildWorkStyleApplyPlan,
   type WorkStyle,
@@ -23,6 +26,7 @@ export const WorkStyleContext = createContext<WorkStyleContextValue>()
 export const WorkStyleProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
   const cfg = useConfig()
+  const language = useLanguage()
   const [style, setStyle] = createSignal<WorkStyleState>("unset")
   const [loading, setLoading] = createSignal(true)
   const [defaults, setDefaults] = createSignal<Partial<Record<keyof WorkStyleSettings, boolean>>>({})
@@ -50,6 +54,12 @@ export const WorkStyleProvider: ParentComponent = (props) => {
   })
 
   function apply(style: WorkStyle) {
+    vscode.postMessage({
+      type: "telemetry",
+      event: TelemetryEventName.WORK_STYLE_SELECTED,
+      properties: { style },
+    })
+
     const plan = buildWorkStyleApplyPlan({
       style,
       config: cfg.config(),
@@ -65,6 +75,18 @@ export const WorkStyleProvider: ParentComponent = (props) => {
 
     setStyle(style)
     vscode.postMessage({ type: "setWorkStyle", style })
+    showToast({
+      variant: "success",
+      icon: "circle-check",
+      title: language.t("workStyle.toast.saved.title"),
+      description: language.t("workStyle.toast.saved.description"),
+      actions: [
+        {
+          label: language.t("workStyle.toast.saved.action"),
+          onClick: () => vscode.postMessage({ type: "openSettingsPanel", tab: "autoApprove" }),
+        },
+      ],
+    })
   }
 
   function dismiss() {
@@ -72,10 +94,23 @@ export const WorkStyleProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "setWorkStyle", style: "skipped" })
   }
 
+  const ready = createMemo(() => !loading() && !cfg.loading())
+  const onboarding = createMemo(() => ready() && style() === "unset")
+  let shown = false
+
+  createEffect(() => {
+    if (!onboarding() || shown) return
+    shown = true
+    vscode.postMessage({
+      type: "telemetry",
+      event: TelemetryEventName.WORK_STYLE_ONBOARDING_SHOWN,
+    })
+  })
+
   const value: WorkStyleContextValue = {
     style,
-    loading,
-    shouldShowOnboarding: () => !loading() && !cfg.loading() && style() === "unset",
+    loading: () => !ready(),
+    shouldShowOnboarding: onboarding,
     apply,
     dismiss,
   }

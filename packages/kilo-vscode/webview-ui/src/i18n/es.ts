@@ -1063,6 +1063,9 @@ export const dict = {
   "workStyle.onboarding.description":
     "Esto establece los valores iniciales de permisos, bloques de razonamiento, salida del terminal y cronología de contexto. Solo se aplica una vez y omite los ajustes que ya hayas personalizado.",
   "workStyle.onboarding.skip": "Omitir por ahora",
+  "workStyle.toast.saved.title": "Preferencias guardadas",
+  "workStyle.toast.saved.description": "Actualiza tus preferencias cuando quieras en Configuración.",
+  "workStyle.toast.saved.action": "Ir a Configuración",
   "workStyle.choice.permissions": "Permisos",
   "workStyle.choice.bash": "Bash",
   "workStyle.choice.visibility": "Visibilidad",
