@@ -988,20 +988,19 @@
         },
         "kilo-code.new.agentWorkStyle": {
           "type": "string",
+          "scope": "application",
           "default": "unset",
           "enum": [
             "unset",
             "human",
             "autonomous",
-            "skipped",
-            "custom"
+            "skipped"
           ],
           "enumDescriptions": [
             "Show work style onboarding so you can choose again",
             "Human in the Loop: review agent actions as they happen",
             "High autonomy: let Kilo take most actions with fewer interruptions",
-            "Onboarding was skipped without changing work style settings",
-            "Custom settings"
+            "Onboarding was skipped without changing work style settings"
           ],
           "description": "Preferred agent work style. Set to Unset to show the onboarding flow again."
         },

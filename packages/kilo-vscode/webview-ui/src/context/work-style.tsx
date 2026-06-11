@@ -10,11 +10,11 @@ import {
   type WorkStyleState,
 } from "../../../src/shared/work-style-presets"
 
-interface WorkStyleContextValue {
+export interface WorkStyleContextValue {
   style: Accessor<WorkStyleState>
   loading: Accessor<boolean>
   shouldShowOnboarding: Accessor<boolean>
-  apply: (style: WorkStyle, opts?: { force?: boolean; source?: "onboarding" | "settings" }) => void
+  apply: (style: WorkStyle) => void
   dismiss: () => void
 }
 
@@ -37,18 +37,15 @@ export const WorkStyleProvider: ParentComponent = (props) => {
   onCleanup(unsubscribe)
   vscode.postMessage({ type: "requestWorkStyle" })
 
-  function apply(style: WorkStyle, opts?: { force?: boolean; source?: "onboarding" | "settings" }) {
-    const source = opts?.source ?? "settings"
+  function apply(style: WorkStyle) {
     const plan = buildWorkStyleApplyPlan({
       style,
       config: cfg.config(),
-      force: opts?.force,
       settingDefault: (key) => defaults()[key] ?? true,
     })
 
     if (Object.keys(plan.config).length > 0) {
-      if (source === "onboarding") vscode.postMessage({ type: "updateConfig", config: plan.config })
-      else cfg.updateConfig(plan.config)
+      vscode.postMessage({ type: "updateConfig", config: plan.config })
     }
     for (const [key, value] of Object.entries(plan.settings)) {
       vscode.postMessage({ type: "updateSetting", key, value })

@@ -9,20 +9,7 @@ export interface WorkStyleConfig {
 }
 
 export type WorkStyle = "human" | "autonomous"
-export type WorkStyleState = WorkStyle | "custom" | "skipped" | "unset"
-
-export interface WorkStyleChange {
-  label: string
-  value: string
-}
-
-export interface WorkStyleChoice {
-  id: WorkStyle
-  title: string
-  eyebrow: string
-  description: string
-  changes: WorkStyleChange[]
-}
+export type WorkStyleState = WorkStyle | "skipped" | "unset"
 
 export interface WorkStyleSettings {
   showTaskTimeline: boolean
@@ -64,47 +51,14 @@ const BASH: Record<string, PermissionLevel> = {
   "grep *": "allow",
   "rg *": "allow",
   "ag *": "allow",
-  "sort *": "allow",
   "uniq *": "allow",
   "cut *": "allow",
   "tr *": "allow",
   "jq *": "allow",
-  "touch *": "allow",
-  "mkdir *": "allow",
-  "cp *": "allow",
-  "mv *": "allow",
-  "tsc *": "allow",
-  "tsgo *": "allow",
-  "tar *": "allow",
-  "unzip *": "allow",
-  "gzip *": "allow",
-  "gunzip *": "allow",
+  "*>*": "ask",
 }
 
-export const WORK_STYLE_CHOICES: WorkStyleChoice[] = [
-  {
-    id: "human",
-    title: "Review-first",
-    eyebrow: "Human in the Loop",
-    description: "Kilo pauses more often and keeps its work visible while it runs.",
-    changes: [
-      { label: "Permissions", value: "Ask before edits and most actions. Reads and searches stay allowed." },
-      { label: "Bash", value: "Allow known safe commands, ask for everything else." },
-      { label: "Visibility", value: "Open reasoning, terminal output, and the context timeline by default." },
-    ],
-  },
-  {
-    id: "autonomous",
-    title: "High autonomy",
-    eyebrow: "Fewer interruptions",
-    description: "Kilo keeps the UI out of the way without loosening approval rules.",
-    changes: [
-      { label: "Permissions", value: "Leave approval rules unchanged. Use Auto-approve to auto-accept prompts." },
-      { label: "Bash", value: "No new bash allow rules are added by this preset." },
-      { label: "Visibility", value: "Collapse reasoning, terminal output, and the context timeline by default." },
-    ],
-  },
-]
+export const WORK_STYLE_CHOICES: WorkStyle[] = ["human", "autonomous"]
 
 export const WORK_STYLE_PRESETS: Record<WorkStyle, WorkStylePreset> = {
   human: {
@@ -153,6 +107,10 @@ export function getWorkStylePreset(style: WorkStyle): WorkStylePreset {
   return WORK_STYLE_PRESETS[style]
 }
 
+export function getInitialWorkStyle(hasSessions: boolean): WorkStyleState {
+  return hasSessions ? "skipped" : "unset"
+}
+
 export function hasPermissionConfig(config: WorkStyleConfig): boolean {
   return Object.keys(config.permission ?? {}).length > 0
 }
@@ -178,19 +136,17 @@ export function buildWorkStyleApplyPlan(input: {
   style: WorkStyle
   config: WorkStyleConfig
   settingDefault?: (key: keyof WorkStyleSettings) => boolean
-  force?: boolean
 }): WorkStyleApplyPlan {
   const preset = getWorkStylePreset(input.style)
-  const force = input.force === true
   const next: WorkStyleConfig = {}
 
-  if (preset.config.permission && (force || !hasPermissionConfig(input.config))) {
+  if (preset.config.permission && !hasPermissionConfig(input.config)) {
     next.permission = stripPermission(preset.config.permission)
   }
-  if (force || input.config.terminal_command_display === undefined) {
+  if (input.config.terminal_command_display === undefined) {
     next.terminal_command_display = preset.config.terminal_command_display
   }
-  if (force || input.config.auto_collapse_reasoning === undefined) {
+  if (input.config.auto_collapse_reasoning === undefined) {
     next.auto_collapse_reasoning = preset.config.auto_collapse_reasoning
   }
 
@@ -198,7 +154,7 @@ export function buildWorkStyleApplyPlan(input: {
   return {
     config: next,
     settings: {
-      ...(force || settingDefault("showTaskTimeline") ? { showTaskTimeline: preset.settings.showTaskTimeline } : {}),
+      ...(settingDefault("showTaskTimeline") ? { showTaskTimeline: preset.settings.showTaskTimeline } : {}),
     },
   }
 }

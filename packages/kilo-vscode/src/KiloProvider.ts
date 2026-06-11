@@ -665,7 +665,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         return
       }
       if (this.handleEditorOpenMessage(message)) return
-      if (await handleWorkStyleMessage({ message, post: (msg) => this.postMessage(msg) })) return
+      if (
+        await handleWorkStyleMessage({
+          message,
+          connection: this.connectionService,
+          post: (msg) => this.postMessage(msg),
+        })
+      )
+        return
       if (
         await handleSidebarWorktreeMessage(message, {
           post: (msg) => this.postMessage(msg),
