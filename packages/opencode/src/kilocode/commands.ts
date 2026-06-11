@@ -8,15 +8,18 @@ import { AttachCommand } from "../cli/cmd/tui/attach"
 import { RunCommand } from "../cli/cmd/run"
 import { GenerateCommand } from "../cli/cmd/generate"
 import { DebugCommand } from "../cli/cmd/debug"
+import { ConsoleCommand } from "../cli/cmd/account"
 import { ProvidersCommand } from "../cli/cmd/providers" // kilocode_change — upstream renamed auth → providers
 import { AgentCommand } from "../cli/cmd/agent"
 import { UpgradeCommand } from "../cli/cmd/upgrade"
 import { UninstallCommand } from "../cli/cmd/uninstall"
 import { ServeCommand } from "../cli/cmd/serve"
+import { WebCommand } from "../cli/cmd/web"
 import { ModelsCommand } from "../cli/cmd/models"
 import { StatsCommand } from "../cli/cmd/stats"
 import { ExportCommand } from "../cli/cmd/export"
 import { ImportCommand } from "../cli/cmd/import"
+import { GithubCommand } from "../cli/cmd/github"
 import { PrCommand } from "../cli/cmd/pr"
 import { SessionCommand } from "../cli/cmd/session"
 import { RemoteCommand } from "../cli/cmd/remote"
@@ -53,17 +56,20 @@ export const commands = [
   RunCommand,
   GenerateCommand,
   DebugCommand,
+  ConsoleCommand,
   ProvidersCommand, // kilocode_change — upstream renamed AuthCommand → ProvidersCommand
   AgentCommand,
   UpgradeCommand,
   UninstallCommand,
   ServeCommand,
+  WebCommand,
   ModelsCommand,
   RollCallCommand,
   ProfileCommand,
   StatsCommand,
   ExportCommand,
   ImportCommand,
+  GithubCommand,
   PrCommand,
   SessionCommand,
   RemoteCommand,

@@ -3,6 +3,7 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
+import ai.kilocode.client.session.views.tool.ToolView
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 @Suppress("UnstableApiUsage")

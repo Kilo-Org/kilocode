@@ -19,12 +19,34 @@ abstract class SecondarySessionPartView(
     ) : this(header, { content }, expanded, expandable)
     init {
         row.isOpaque = true
-        row.background = SessionUiStyle.View.header()
+        row.background = SessionUiStyle.View.Surface.headerBgColor()
         row.border = JBUI.Borders.empty(
-            JBUI.scale(SessionUiStyle.View.SESSION_VIEW_VERTICAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.SESSION_VIEW_HORIZONTAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
         )
+        syncBorder()
     }
 
-    override fun hoverColor(value: Boolean) = if (value) SessionUiStyle.View.headerHover() else SessionUiStyle.View.header()
+    override fun expand(): Boolean {
+        val changed = super.expand()
+        if (changed) syncBorder()
+        return changed
+    }
+
+    override fun collapse(): Boolean {
+        val changed = super.collapse()
+        if (changed) syncBorder()
+        return changed
+    }
+
+    override fun hoverColor(value: Boolean) =
+        if (value) SessionUiStyle.View.Surface.headerHoverBgColor() else SessionUiStyle.View.Surface.headerBgColor()
+
+    private fun syncBorder() {
+        if (isExpanded()) {
+            border = JBUI.Borders.customLine(SessionUiStyle.View.Outline.color(), SessionUiStyle.View.Outline.width())
+            return
+        }
+        border = JBUI.Borders.empty(1)
+    }
 }

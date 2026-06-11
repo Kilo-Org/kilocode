@@ -2,7 +2,7 @@ import type { VectorStoreSearchResult } from "./interfaces"
 import type { IndexingState } from "./interfaces/manager"
 import type { IndexingTelemetryEvent, IndexingTelemetryMeta, IndexingTelemetryTrigger } from "./interfaces/telemetry"
 import { CodeIndexConfigManager, type IndexingConfigInput } from "./config-manager"
-import { INITIAL_MANAGER_RECOVERY_DELAY_MS, MAX_MANAGER_RECOVERY_ATTEMPTS } from "./constants"
+import { DEFAULT_VECTOR_STORE, INITIAL_MANAGER_RECOVERY_DELAY_MS, MAX_MANAGER_RECOVERY_ATTEMPTS } from "./constants"
 import { CodeIndexStateManager } from "./state-manager"
 import { CodeIndexServiceFactory } from "./service-factory"
 import { CodeIndexSearchService } from "./search-service"
@@ -60,7 +60,7 @@ export class CodeIndexManager {
     const cfg = this._configManager.getConfig()
     return {
       provider: cfg.embedderProvider,
-      vectorStore: cfg.vectorStoreProvider ?? "qdrant",
+      vectorStore: cfg.vectorStoreProvider ?? DEFAULT_VECTOR_STORE,
       modelId: cfg.modelId,
     }
   }

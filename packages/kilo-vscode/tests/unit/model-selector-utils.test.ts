@@ -8,6 +8,7 @@ import {
   PROVIDER_ORDER,
   freeDataLabel,
   isDataCollectedModel,
+  isFree,
 } from "../../webview-ui/src/components/shared/model-selector-utils"
 
 const labels = { select: "Select model", noProviders: "No providers", notSet: "Not set" }
@@ -102,11 +103,19 @@ describe("freeDataLabel", () => {
   })
 })
 
+describe("isFree", () => {
+  it("uses only explicit free metadata", () => {
+    expect(isFree({ isFree: true })).toBe(true)
+    expect(isFree({ isFree: false })).toBe(false)
+    expect(isFree({})).toBe(false)
+  })
+})
+
 describe("isDataCollectedModel", () => {
-  it("only marks free Kilo Gateway models with the training disclosure", () => {
-    expect(isDataCollectedModel({ providerID: KILO_GATEWAY_ID, isFree: true })).toBe(true)
-    expect(isDataCollectedModel({ providerID: "openrouter", isFree: true })).toBe(false)
-    expect(isDataCollectedModel({ providerID: KILO_GATEWAY_ID, isFree: false })).toBe(false)
+  it("uses only explicit prompt training metadata", () => {
+    expect(isDataCollectedModel({ mayTrainOnYourPrompts: true })).toBe(true)
+    expect(isDataCollectedModel({ mayTrainOnYourPrompts: false })).toBe(false)
+    expect(isDataCollectedModel({})).toBe(false)
   })
 })
 

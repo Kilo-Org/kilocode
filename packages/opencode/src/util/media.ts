@@ -15,7 +15,9 @@ export function isIconMimeType(mime: string) {
 }
 
 export function isImageAttachment(mime: string) {
-  return mime.startsWith("image/") && mime !== "image/svg+xml" && mime !== "image/vnd.fastbidsheet" && !isIconMimeType(mime)
+  return (
+    mime.startsWith("image/") && mime !== "image/svg+xml" && mime !== "image/vnd.fastbidsheet" && !isIconMimeType(mime)
+  )
 }
 // kilocode_change end
 

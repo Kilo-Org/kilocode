@@ -15,7 +15,9 @@ const { values } = parseArgs({
 })
 
 if (values.help) {
-  console.log(`Usage: bun .kilo/skills/release-jetbrains/script/update-changelog.ts --version <version> --file <section.md>`)
+  console.log(
+    `Usage: bun .kilo/skills/release-jetbrains/script/update-changelog.ts --version <version> --file <section.md>`,
+  )
   process.exit(0)
 }
 
@@ -39,7 +41,11 @@ const text = Buffer.from(current.content.replace(/\s/g, ""), "base64").toString(
 const pattern = regex(ver)
 if (!pattern.test(text)) throw new Error(`${path} is missing a section for ${ver} on ${branch}`)
 
-const next = text.replace(pattern, `\n${section}\n`).replace(/\n{3,}/g, "\n\n").trimEnd() + "\n"
+const next =
+  text
+    .replace(pattern, `\n${section}\n`)
+    .replace(/\n{3,}/g, "\n\n")
+    .trimEnd() + "\n"
 if (next === text) {
   console.log("CHANGELOG.md already contains the provided section")
   process.exit(0)

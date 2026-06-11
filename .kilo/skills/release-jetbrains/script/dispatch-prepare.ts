@@ -17,7 +17,9 @@ const { values } = parseArgs({
 })
 
 if (values.help) {
-  console.log(`Usage: bun .kilo/skills/release-jetbrains/script/dispatch-prepare.ts --kind <rc|stable> --version <version> [--from-tag <tag>] [--run-id <id>]`)
+  console.log(
+    `Usage: bun .kilo/skills/release-jetbrains/script/dispatch-prepare.ts --kind <rc|stable> --version <version> [--from-tag <tag>] [--run-id <id>]`,
+  )
   process.exit(0)
 }
 

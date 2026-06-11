@@ -11,6 +11,7 @@ import { GlobTool } from "./glob"
 import { GrepTool } from "./grep"
 import { ReadTool } from "./read"
 import { TaskTool } from "./task"
+import { TaskStatusTool } from "./task_status"
 import { TodoWriteTool } from "./todo"
 import { WebFetchTool } from "./webfetch"
 import { WriteTool } from "./write"
@@ -19,18 +20,17 @@ import { SkillTool } from "./skill"
 import * as Tool from "./tool"
 import { Config } from "@/config/config"
 import { type ToolContext as PluginToolContext, type ToolDefinition } from "@kilocode/plugin"
+import type { JSONSchema7, JSONSchema7Definition } from "@ai-sdk/provider"
 import { Schema } from "effect"
 import z from "zod"
-import { ZodOverride } from "@opencode-ai/core/effect-zod"
 import { Plugin } from "../plugin"
 import { Provider } from "@/provider/provider"
 import { ProviderID, type ModelID } from "../provider/schema"
 import { WebSearchTool } from "./websearch"
 import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
-import { CodeSearchTool } from "./codesearch"
 import { RepoCloneTool } from "./repo_clone"
 import { RepoOverviewTool } from "./repo_overview"
-import { Flag } from "@opencode-ai/core/flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import * as Log from "@opencode-ai/core/util/log"
 import { LspTool } from "./lsp"
 import * as Truncate from "./truncate"
@@ -57,6 +57,8 @@ import { Skill } from "../skill"
 import { Permission } from "@/permission"
 import { SessionStatus } from "@/session/status" // kilocode_change
 import { Reference } from "@/reference/reference"
+import { BackgroundJob } from "@/background/job"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 
 const log = Log.create({ service: "tool.registry" })
 
@@ -96,6 +98,8 @@ export const layer: Layer.Layer<
   | Agent.Service
   | Skill.Service
   | Session.Service
+  | SessionStatus.Service
+  | BackgroundJob.Service
   | Provider.Service
   | Git.Service
   | Reference.Service
@@ -110,8 +114,8 @@ export const layer: Layer.Layer<
   | Truncate.Service
   // kilocode_change start
   | Command.Service
-  | SessionStatus.Service
   // kilocode_change end
+  | RuntimeFlags.Service
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -120,9 +124,11 @@ export const layer: Layer.Layer<
     const agents = yield* Agent.Service
     const skill = yield* Skill.Service
     const truncate = yield* Truncate.Service
+    const flags = yield* RuntimeFlags.Service
 
     const invalid = yield* InvalidTool
     const task = yield* TaskTool
+    const taskStatus = yield* TaskStatusTool
     const read = yield* ReadTool
     const question = yield* QuestionTool
     const todo = yield* TodoWriteTool
@@ -130,7 +136,6 @@ export const layer: Layer.Layer<
     const plan = yield* PlanExitTool
     const webfetch = yield* WebFetchTool
     const websearch = yield* WebSearchTool
-    const codesearch = yield* CodeSearchTool
     const repoClone = yield* RepoCloneTool
     const repoOverview = yield* RepoOverviewTool
     const shell = yield* ShellTool
@@ -151,17 +156,19 @@ export const layer: Layer.Layer<
         const custom: Tool.Def[] = []
 
         function fromPlugin(id: string, def: ToolDefinition): Tool.Def {
-          // Plugin tools define their args as a raw Zod shape. Wrap the
-          // derived Zod object in a `Schema.declare` so it slots into the
-          // Schema-typed framework, and annotate with `ZodOverride` so the
-          // walker emits the original Zod object for LLM JSON Schema.
-          const zodParams = z.object(def.args)
-          const parameters = Schema.declare<unknown>((u): u is unknown => zodParams.safeParse(u).success).annotate({
-            [ZodOverride]: zodParams,
-          })
+          // Plugin tools still expose Zod args publicly; keep that compatibility
+          // boxed at the registry boundary and give the LLM the original JSON Schema.
+          const entries = Object.entries(def.args)
+          const allZod = entries.every((entry) => isZodType(entry[1]))
+          const zodParams = allZod ? z.object(def.args) : undefined
+          const jsonSchema = zodParams ? zodJsonSchema(zodParams) : legacyJsonSchema(entries)
+          const parameters = zodParams
+            ? Schema.declare<unknown>((u): u is unknown => zodParams.safeParse(u).success)
+            : Schema.Unknown
           return {
             id,
             parameters,
+            jsonSchema,
             description: def.description,
             execute: (args, toolCtx) =>
               Effect.gen(function* () {
@@ -174,11 +181,13 @@ export const layer: Layer.Layer<
                 const result = yield* Effect.promise(() => def.execute(args as any, pluginCtx))
                 const output = typeof result === "string" ? result : result.output
                 const metadata = typeof result === "string" ? {} : (result.metadata ?? {})
+                const attachments = typeof result === "string" ? undefined : result.attachments
                 const info = yield* agent.get(toolCtx.agent)
                 const out = yield* truncate.output(output, {}, info)
                 return {
-                  title: "",
+                  title: typeof result === "string" ? "" : (result.title ?? ""),
                   output: out.truncated ? out.content : output,
+                  attachments,
                   metadata: {
                     ...metadata,
                     truncated: out.truncated,
@@ -221,8 +230,7 @@ export const layer: Layer.Layer<
         }
 
         const cfg = yield* config.get() // kilocode_change: capture for KiloToolRegistry.extra
-        const questionEnabled =
-          ["app", "cli", "desktop", "vscode"].includes(Flag.KILO_CLIENT) || Flag.KILO_ENABLE_QUESTION_TOOL // kilocode_change: add vscode client + KILO_* flag
+        const questionEnabled = ["app", "cli", "desktop", "vscode"].includes(flags.client) || flags.enableQuestionTool // kilocode_change: add vscode client
 
         const tool = yield* Effect.all({
           invalid: Tool.init(invalid),
@@ -233,10 +241,10 @@ export const layer: Layer.Layer<
           edit: Tool.init(edit),
           write: Tool.init(writetool),
           task: Tool.init(task),
+          task_status: Tool.init(taskStatus),
           fetch: Tool.init(webfetch),
           todo: Tool.init(todo),
           search: Tool.init(websearch),
-          code: Tool.init(codesearch),
           repo_clone: Tool.init(repoClone),
           repo_overview: Tool.init(repoOverview),
           skill: Tool.init(skilltool),
@@ -263,16 +271,17 @@ export const layer: Layer.Layer<
               tool.edit,
               tool.write,
               tool.task,
+              ...(flags.experimentalBackgroundSubagents ? [tool.task_status] : []),
               tool.fetch,
               tool.todo,
               tool.search,
-              ...(Flag.KILO_EXPERIMENTAL_SCOUT ? [tool.code, tool.repo_clone, tool.repo_overview] : []),
+              ...(flags.experimentalScout ? [tool.repo_clone, tool.repo_overview] : []),
               tool.skill,
               tool.patch,
               tool.plan,
-              ...(["cli", "vscode"].includes(Flag.KILO_CLIENT) ? [tool.suggest] : []),
+              ...(["cli", "vscode"].includes(flags.client) ? [tool.suggest] : []),
               ...KiloToolRegistry.extra(kilo, cfg),
-              ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
+              ...(flags.experimentalLspTool ? [tool.lsp] : []),
             ],
             kilo,
           ),
@@ -329,7 +338,7 @@ export const layer: Layer.Layer<
     const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {
       const filtered = (yield* all()).filter((tool) => {
         if (tool.id === WebSearchTool.id) {
-          return webSearchEnabled(input.providerID)
+          return webSearchEnabled(input.providerID, { exa: flags.enableExa, parallel: flags.enableParallel })
         }
 
         const usePatch =
@@ -350,8 +359,13 @@ export const layer: Layer.Layer<
           const output = {
             description: tool.description,
             parameters: tool.parameters,
+            jsonSchema: tool.jsonSchema,
           }
           yield* plugin.trigger("tool.definition", { toolID: tool.id }, output)
+          const jsonSchema =
+            output.parameters === tool.parameters || output.jsonSchema !== tool.jsonSchema
+              ? output.jsonSchema
+              : undefined
           return {
             id: tool.id,
             description: [
@@ -362,6 +376,7 @@ export const layer: Layer.Layer<
               .filter(Boolean)
               .join("\n"),
             parameters: output.parameters,
+            jsonSchema,
             execute: tool.execute,
             formatValidationError: tool.formatValidationError,
           }
@@ -390,6 +405,7 @@ export const defaultLayer = Layer.suspend(
         Layer.provide(Skill.defaultLayer),
         Layer.provide(Agent.defaultLayer),
         Layer.provide(Session.defaultLayer),
+        Layer.provide(Layer.mergeAll(SessionStatus.defaultLayer, BackgroundJob.defaultLayer)),
         Layer.provide(Provider.defaultLayer),
         Layer.provide(Git.defaultLayer),
         Layer.provide(Reference.defaultLayer),
@@ -404,7 +420,54 @@ export const defaultLayer = Layer.suspend(
         Layer.provide(Truncate.defaultLayer),
       )
       // kilocode_change start - provide Kilo-owned registry dependencies
-      .pipe(Layer.provide(Command.defaultLayer), Layer.provide(SessionStatus.defaultLayer)),
+      .pipe(Layer.provide(Command.defaultLayer), Layer.provide(RuntimeFlags.defaultLayer)),
   // kilocode_change end
 )
+
+function isZodType(value: unknown): value is z.ZodType {
+  return typeof value === "object" && value !== null && "_zod" in value
+}
+
+function isJsonSchemaDefinition(value: unknown): value is JSONSchema7Definition {
+  return typeof value === "boolean" || (typeof value === "object" && value !== null && !Array.isArray(value))
+}
+
+function legacyJsonSchema(entries: [string, unknown][]): JSONSchema7 {
+  const properties = Object.fromEntries(
+    entries.filter((entry): entry is [string, JSONSchema7Definition] => isJsonSchemaDefinition(entry[1])),
+  )
+  return {
+    type: "object",
+    properties,
+    required: Object.keys(properties),
+  }
+}
+
+function zodJsonSchema(schema: z.ZodType): JSONSchema7 {
+  const result = normalizeZodJsonSchema(z.toJSONSchema(schema, { io: "input" }))
+  if (!isJsonSchemaObject(result)) throw new Error("plugin tool Zod schema produced a non-object JSON Schema")
+  const { $defs, ...rest } = result
+  return (
+    $defs && isJsonSchemaObject($defs) ? { ...rest, definitions: $defs as JSONSchema7["definitions"] } : rest
+  ) as JSONSchema7
+}
+
+function normalizeZodJsonSchema(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map((item) => normalizeZodJsonSchema(item))
+  if (typeof value !== "object" || value === null) return value
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter((entry) =>
+        (entry[0] === "exclusiveMaximum" || entry[0] === "exclusiveMinimum") && typeof entry[1] === "boolean"
+          ? false
+          : true,
+      )
+      .map(([key, item]) => [key, normalizeZodJsonSchema(item)]),
+  )
+}
+
+function isJsonSchemaObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
 export * as ToolRegistry from "./registry"

@@ -40,7 +40,7 @@ class CompactionView(@Suppress("UNUSED_PARAMETER") compaction: Compaction) : Par
         applyStyle(SessionEditorStyle.current())
 
         val line = { JPanel().apply {
-            background = SessionUiStyle.View.line()
+            background = SessionUiStyle.View.Outline.color()
             isOpaque = true
             preferredSize = JBDimension(0, JBUI.scale(1))
         } }

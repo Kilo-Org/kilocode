@@ -15,7 +15,8 @@
 // The tick counter prevents stale idle events from resolving the wrong turn.
 // We also re-check live session status before resolving an idle event so a
 // delayed idle from an older turn cannot complete a newer busy turn.
-import type { Event, GlobalEvent, KiloClient } from "@kilocode/sdk/v2"
+import type { GlobalEvent, KiloClient } from "@kilocode/sdk/v2"
+import { event as normalizeEvent, type Event } from "./event"
 import { Context, Deferred, Effect, Exit, Layer, Scope, Stream } from "effect"
 import { makeRuntime } from "@/effect/run-service"
 import {
@@ -167,12 +168,8 @@ function globalPayloadEvent(value: unknown): Event | undefined {
     return undefined
   }
 
-  const payload = value.payload
-  if (payload.type === "sync") {
-    return undefined
-  }
-
-  return isEvent(payload) ? payload : undefined
+  const payload = normalizeEvent(value.payload)
+  return payload && isEvent(payload) ? payload : undefined
 }
 
 function isMatchingDisposeEvent(value: unknown, directory: string | undefined): boolean {

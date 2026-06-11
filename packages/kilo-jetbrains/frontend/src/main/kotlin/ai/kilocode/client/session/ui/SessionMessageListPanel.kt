@@ -13,9 +13,11 @@ import ai.kilocode.client.session.views.MessageView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.views.TurnView
+import ai.kilocode.client.session.views.base.PartView
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.ui.JBUI
+import javax.swing.JComponent
 
 /**
  * Scrollable transcript panel that maps the model's turn grouping to
@@ -51,13 +53,15 @@ class SessionMessageListPanel(
     private val openFile: (String) -> Unit,
     private val openUrl: (String) -> Unit = {},
     private val selection: SessionSelection? = null,
+    private val repo: String? = null,
+    private val resize: ((JComponent, () -> Unit) -> Unit)? = null,
 ) : SessionLayoutPanel(
     JBUI.scale(SessionUiStyle.SessionLayout.GAP),
     JBUI.insets(
         SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
         SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
         SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
-        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
+        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING + SessionUiStyle.SessionLayout.TRANSCRIPT_SCROLLBAR_PADDING,
     ),
 ), Disposable, SessionEditorStyleTarget {
 
@@ -66,13 +70,14 @@ class SessionMessageListPanel(
     private val msgToView = HashMap<String, MessageView>()
     private var style = SessionEditorStyle.current()
     private var hiddenTool: ToolCallRef? = null
+    private var hovered: PartView? = null
 
     /** Progress footer — always the last child inside the scroll. */
     val progress = ProgressPanel(model, parent)
 
     init {
         isOpaque = true
-        background = SessionUiStyle.View.transcript()
+        background = SessionUiStyle.Transcript.bgColor()
         Disposer.register(parent, this)
 
         model.addListener(parent) { event ->
@@ -177,7 +182,7 @@ class SessionMessageListPanel(
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id, openFile, style, openUrl, selection)
+        val tv = TurnView(turn.id, openFile, style, openUrl, selection, resize, repo, ::hover)
         turnViews[turn.id] = tv
         for (msgId in turn.messageIds) {
             val msg = model.message(msgId) ?: continue
@@ -223,6 +228,7 @@ class SessionMessageListPanel(
     }
 
     private fun rebuild() {
+        clearHover()
         turnViews.values.forEach {
             remove(it)
             Disposer.dispose(it)
@@ -233,7 +239,7 @@ class SessionMessageListPanel(
         removeAll()
 
         for (turn in model.turns()) {
-            val tv = TurnView(turn.id, openFile, style, openUrl, selection)
+            val tv = TurnView(turn.id, openFile, style, openUrl, selection, resize, repo, ::hover)
             turnViews[turn.id] = tv
             for (msgId in turn.messageIds) {
                 val msg = model.message(msgId) ?: continue
@@ -249,6 +255,7 @@ class SessionMessageListPanel(
     }
 
     private fun clear() {
+        clearHover()
         turnViews.values.forEach {
             remove(it)
             Disposer.dispose(it)
@@ -338,9 +345,26 @@ class SessionMessageListPanel(
         repaint()
     }
 
+    private fun hover(view: PartView, value: Boolean) {
+        if (value) {
+            val prev = hovered
+            if (prev === view) return
+            hovered = view
+            prev?.setHovered(false)
+            return
+        }
+        if (hovered === view) hovered = null
+    }
+
+    private fun clearHover() {
+        val view = hovered ?: return
+        hovered = null
+        view.setHovered(false)
+    }
+
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        background = SessionUiStyle.View.transcript()
+        background = SessionUiStyle.Transcript.bgColor()
         for (view in turnViews.values) view.applyStyle(style)
         question?.applyStyle(style)
         permission?.applyStyle(style)
@@ -350,6 +374,7 @@ class SessionMessageListPanel(
     }
 
     override fun dispose() {
+        clearHover()
         turnViews.values.forEach {
             remove(it)
             Disposer.dispose(it)

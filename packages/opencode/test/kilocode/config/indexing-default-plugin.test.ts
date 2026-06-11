@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { Effect, Layer, Option } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import path from "path"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
 import { Account } from "../../../src/account/account"
 import { Auth } from "../../../src/auth"
@@ -44,12 +45,8 @@ const layer = Config.layer.pipe(
 )
 
 const load = () => Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(layer)))
-const clear = () =>
-  Effect.runPromise(Config.Service.use((svc) => svc.invalidate()).pipe(Effect.scoped, Effect.provide(layer)))
-
 describe("kilocode default indexing plugin", () => {
   afterEach(async () => {
-    await clear()
     await disposeAllInstances()
   })
 
@@ -76,32 +73,31 @@ describe("kilocode default indexing plugin", () => {
   })
 
   test("does not hard-enable indexing plugin when default plugins are disabled", async () => {
-    const prev = process.env["KILO_DISABLE_DEFAULT_PLUGINS"]
-    process.env["KILO_DISABLE_DEFAULT_PLUGINS"] = "true"
+    const original = Flag.KILO_DISABLE_DEFAULT_PLUGINS
+    Flag.KILO_DISABLE_DEFAULT_PLUGINS = true
 
     try {
       await using tmp = await tmpdir({
-        init: async (dir) => {
-          await Filesystem.write(
-            path.join(dir, "opencode.json"),
-            JSON.stringify({
-              $schema: "https://app.kilo.ai/config.json",
-              plugin: ["global-plugin-1"],
-            }),
-          )
-        },
-      })
+      init: async (dir) => {
+        await Filesystem.write(
+          path.join(dir, "opencode.json"),
+          JSON.stringify({
+            $schema: "https://app.kilo.ai/config.json",
+            plugin: ["global-plugin-1"],
+          }),
+        )
+      },
+    })
 
-      await WithInstance.provide({
-        directory: tmp.path,
-        fn: async () => {
+    await WithInstance.provide({
+      directory: tmp.path,
+      fn: async () => {
           const config = await load()
           expect(hasIndexingPlugin(config.plugin ?? [])).toBe(false)
         },
       })
     } finally {
-      if (prev === undefined) delete process.env["KILO_DISABLE_DEFAULT_PLUGINS"]
-      else process.env["KILO_DISABLE_DEFAULT_PLUGINS"] = prev
+      Flag.KILO_DISABLE_DEFAULT_PLUGINS = original
     }
   })
 })

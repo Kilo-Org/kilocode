@@ -1,5 +1,55 @@
 # kilo-code
 
+## 7.3.42
+
+### Minor Changes
+
+- [#11063](https://github.com/Kilo-Org/kilocode/pull/11063) [`4446102`](https://github.com/Kilo-Org/kilocode/commit/4446102dac38ceb8229c43e919915081084f4287) - Add a Fork Session button to completed Agent Manager sessions.
+
+### Patch Changes
+
+- [#11037](https://github.com/Kilo-Org/kilocode/pull/11037) [`15d771e`](https://github.com/Kilo-Org/kilocode/commit/15d771e8fa2bb40294d0ea892ee8fcd73c66f215) - Keep task timelines in place while reviewing earlier activity across Kilo chat surfaces, and resume following updates from the latest bar.
+
+- [#11015](https://github.com/Kilo-Org/kilocode/pull/11015) [`256fe3a`](https://github.com/Kilo-Org/kilocode/commit/256fe3a819eefcebf4c40c8fca0be83b9361167f) - Improve JetBrains reasoning blocks so active reasoning opens while streaming, completed reasoning collapses automatically, empty blocks stay hidden, and adjacent reasoning renders as one block.
+
+- [#11065](https://github.com/Kilo-Org/kilocode/pull/11065) [`339c70a`](https://github.com/Kilo-Org/kilocode/commit/339c70a9476034ca1a33c4343fcb1671ef057b31) - Pause chat auto-scroll whenever the user scrolls upward over nested tool output.
+
+- [#11015](https://github.com/Kilo-Org/kilocode/pull/11015) [`3b76248`](https://github.com/Kilo-Org/kilocode/commit/3b762484f37e36510efb430366071ad0f2a31e93) - Hide thematic separator lines in JetBrains chat markdown while preserving surrounding prose and code blocks.
+
+- [#11015](https://github.com/Kilo-Org/kilocode/pull/11015) [`8c4c337`](https://github.com/Kilo-Org/kilocode/commit/8c4c3375b9f7ba21e2c9bc806b63ad4d9f17c3ec) - Display JetBrains search tool paths relative to the current repository when possible.
+
+- Updated dependencies [[`339c70a`](https://github.com/Kilo-Org/kilocode/commit/339c70a9476034ca1a33c4343fcb1671ef057b31), [`b98fb9a`](https://github.com/Kilo-Org/kilocode/commit/b98fb9afdb7b4984f56f35f7546d88a87c4e8572)]:
+  - @kilocode/kilo-ui@7.3.42
+
+## 7.3.41
+
+### Minor Changes
+
+- [#10879](https://github.com/Kilo-Org/kilocode/pull/10879) [`b0a4f03`](https://github.com/Kilo-Org/kilocode/commit/b0a4f0391106a837b78200e6de52621a6872b890) - Show Terminal Bench completion scores and per-attempt costs in supported model details.
+
+- [#10948](https://github.com/Kilo-Org/kilocode/pull/10948) [`6ee090b`](https://github.com/Kilo-Org/kilocode/commit/6ee090b5a404924f00c1f4771b09c1f4a1e352ca) - Restore cloud session filesystem changes from synced session diffs when importing sessions, including inherited changes across imported session forks.
+
+### Patch Changes
+
+- [#10094](https://github.com/Kilo-Org/kilocode/pull/10094) [`7ac7c1e`](https://github.com/Kilo-Org/kilocode/commit/7ac7c1e2832235e418eb7d27f4defdb6a3d139c6) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Fix agent-manager model sync on config change
+
+- [#10999](https://github.com/Kilo-Org/kilocode/pull/10999) [`ad93990`](https://github.com/Kilo-Org/kilocode/commit/ad93990ca9c84215bd71dee9febe76eebf07f1b5) - Show a pointer cursor for clickable controls and links in Kilo webviews.
+
+- [#11038](https://github.com/Kilo-Org/kilocode/pull/11038) [`70f9441`](https://github.com/Kilo-Org/kilocode/commit/70f9441b50568d2f3330b81b316f5907f4f797e0) - Speed up long streamed responses by preserving completed Markdown blocks and updating only the active tail.
+
+- [#11033](https://github.com/Kilo-Org/kilocode/pull/11033) [`10520d0`](https://github.com/Kilo-Org/kilocode/commit/10520d04e19a8b85072bdc25ff8d3dd51e5c7629) - Keep Agent Manager streaming responsive when multiple sessions run concurrently.
+
+- [#11039](https://github.com/Kilo-Org/kilocode/pull/11039) [`422bc8a`](https://github.com/Kilo-Org/kilocode/commit/422bc8aca87794858ddd3c0b5e0081def0033758) - Remove the obsolete speech-to-text enabled setting while preserving provider-based availability and model selection.
+
+- [#10992](https://github.com/Kilo-Org/kilocode/pull/10992) [`2d7c49d`](https://github.com/Kilo-Org/kilocode/commit/2d7c49d2a8d8fe32f80eab732774defed55da27f) - Rename Mercury autocomplete model labels to distinguish FIM and Next Edit modes.
+
+- [#10787](https://github.com/Kilo-Org/kilocode/pull/10787) [`c6679ea`](https://github.com/Kilo-Org/kilocode/commit/c6679eaec5112e0355f81c140901171df64481a3) - Route Agent Manager permission approvals to the worktree that created the request.
+
+- Updated dependencies [[`ad93990`](https://github.com/Kilo-Org/kilocode/commit/ad93990ca9c84215bd71dee9febe76eebf07f1b5), [`b0a4f03`](https://github.com/Kilo-Org/kilocode/commit/b0a4f0391106a837b78200e6de52621a6872b890)]:
+  - @kilocode/kilo-ui@7.3.41
+  - @kilocode/kilo-gateway@7.4.0
+  - @kilocode/kilo-indexing@7.3.41
+
 ## 7.3.40
 
 ## 7.3.39

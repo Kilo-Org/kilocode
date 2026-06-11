@@ -609,7 +609,7 @@ describe("session prompt queue", () => {
     const result = await Effect.runPromise(
       KiloSessionPromptQueue.enqueue(
         sessionID,
-        MessageID.make("message_probe"),
+        MessageID.make("msg_probe"),
         Effect.succeed("work executed"),
         Effect.succeed("cancelled returned"),
       ),
