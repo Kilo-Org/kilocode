@@ -174,6 +174,14 @@ describe("generateCommandTable", () => {
 })
 
 describe("commands.ts stays in sync with index.ts", () => {
+  test("registers the local Kilo Console instead of the upstream account console", async () => {
+    const index = await Bun.file(path.resolve(import.meta.dir, "../../src/index.ts")).text()
+    const registered = [...index.matchAll(/^\s*\.command\((\w+)\)/gm)].map((match) => match[1]!)
+
+    expect(registered).toContain("KiloConsoleCommand")
+    expect(registered).not.toContain("ConsoleCommand")
+  })
+
   test("every .command() in index.ts has an entry in the commands array", async () => {
     const index = await Bun.file(path.resolve(import.meta.dir, "../../src/index.ts")).text()
     const barrel = await Bun.file(path.resolve(import.meta.dir, "../../src/kilocode/commands.ts")).text()

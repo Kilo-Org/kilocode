@@ -1229,8 +1229,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Włącz automatyczny formater kodu",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Włącz integrację protokołu serwera języka",
-  "settings.experimental.pasteSummary.title": "Wyłącz podsumowanie wklejania",
-  "settings.experimental.pasteSummary.description": "Nie podsumowuj dużego wklejonego tekstu",
   "settings.experimental.batch.title": "Narzędzie wsadowe",
   "settings.experimental.batch.description": "Włącz przetwarzanie wsadowe wywołań narzędzi",
   "settings.experimental.codebaseSearch.title": "Wyszukiwanie kodu",

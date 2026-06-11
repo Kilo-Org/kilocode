@@ -317,7 +317,9 @@ Custom themes: place JSON files in `~/.config/kilo/themes/` or `.kilo/themes/`.
 
 ### Display Toggles (via Ctrl+P)
 
-Toggle notifications, Toggle animations, Toggle diff wrapping, Toggle sidebar (`<leader>b`), Toggle thinking (`/thinking`), Toggle tool details, Toggle timestamps (`/timestamps`), Toggle scrollbar, Toggle header, Toggle code concealment (`<leader>h`).
+Toggle animations, Toggle diff wrapping, Toggle sidebar (`<leader>b`), Toggle thinking (`/thinking`), Toggle tool details, Toggle timestamps (`/timestamps`), Toggle scrollbar, Toggle header, Toggle code concealment (`<leader>h`).
+
+Notification settings are managed through `kilo console` under **Settings > CLI > Notifications**, or through `attention` in `tui.json` / `tui.jsonc`. There is no notification slash command or command-palette toggle.
 
 ### System
 

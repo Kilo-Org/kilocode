@@ -3,7 +3,7 @@ import { hideBin } from "yargs/helpers"
 import { RunCommand } from "./cli/cmd/run"
 import { GenerateCommand } from "./cli/cmd/generate"
 import * as Log from "@opencode-ai/core/util/log"
-import { ConsoleCommand } from "./cli/cmd/account"
+// import { ConsoleCommand } from "./cli/cmd/account" // kilocode_change - reserve `kilo console` for local settings
 import { ProvidersCommand } from "./cli/cmd/providers"
 import { AgentCommand } from "./cli/cmd/agent"
 import { UpgradeCommand } from "./cli/cmd/upgrade"
@@ -40,6 +40,7 @@ import { Heap } from "./cli/heap"
 import { drizzle } from "drizzle-orm/bun-sqlite"
 import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process"
 import { isRecord } from "@/util/record"
+import { KiloConsoleCommand } from "@/kilocode/cli/cmd/console" // kilocode_change
 
 const processMetadata = ensureProcessMetadata("main")
 
@@ -162,7 +163,8 @@ const cli = yargs(args)
   .command(RunCommand)
   .command(GenerateCommand)
   .command(DebugCommand)
-  .command(ConsoleCommand)
+  // .command(ConsoleCommand) // kilocode_change - reserve `kilo console` for local settings
+  .command(KiloConsoleCommand) // kilocode_change
   .command(ProvidersCommand)
   .command(AgentCommand)
   .command(UpgradeCommand)

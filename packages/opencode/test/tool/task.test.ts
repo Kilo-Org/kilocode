@@ -484,6 +484,7 @@ describe("tool.task", () => {
         )
         // kilocode_change end
         expect(seen?.tools).toEqual({
+          question: false, // kilocode_change - subagents cannot prompt the user directly
           todowrite: false,
           task: false, // kilocode_change - Kilo disallows nested subagents
           bash: false,

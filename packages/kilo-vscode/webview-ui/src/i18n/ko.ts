@@ -1253,8 +1253,6 @@ export const dict = {
   "settings.experimental.formatter.description": "자동 코드 포매터 활성화",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "언어 서버 프로토콜 통합 활성화",
-  "settings.experimental.pasteSummary.title": "붙여넣기 요약 비활성화",
-  "settings.experimental.pasteSummary.description": "대량 붙여넣기 콘텐츠를 요약하지 않음",
   "settings.experimental.batch.title": "배치 도구",
   "settings.experimental.batch.description": "여러 도구 호출의 배치 처리 활성화",
   "settings.experimental.codebaseSearch.title": "코드베이스 검색",

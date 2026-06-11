@@ -1271,8 +1271,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Omogući automatsko formatiranje koda",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Omogući integraciju jezičkog servera",
-  "settings.experimental.pasteSummary.title": "Onemogući sažetak lijepljenja",
-  "settings.experimental.pasteSummary.description": "Ne sažimaj veliki zalijepljeni sadržaj",
   "settings.experimental.batch.title": "Batch alat",
   "settings.experimental.batch.description": "Omogući batch obradu poziva alata",
   "settings.experimental.codebaseSearch.title": "Pretraga koda",

@@ -1266,8 +1266,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Schakel de automatische code formatter in",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Schakel language server protocol integratie in",
-  "settings.experimental.pasteSummary.title": "Plak-samenvatting uitschakelen",
-  "settings.experimental.pasteSummary.description": "Vat grote geplakte inhoud niet samen",
   "settings.experimental.batch.title": "Batch Tool",
   "settings.experimental.batch.description": "Schakel batching van meerdere tool calls in",
   "settings.experimental.codebaseSearch.title": "Codebase Zoeken",

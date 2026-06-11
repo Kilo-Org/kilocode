@@ -1242,8 +1242,6 @@ export const dict = {
   "settings.experimental.formatter.description": "تمكين منسق الكود التلقائي",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "تمكين تكامل بروتوكول خادم اللغة",
-  "settings.experimental.pasteSummary.title": "تعطيل ملخص اللصق",
-  "settings.experimental.pasteSummary.description": "عدم تلخيص المحتوى الملصق الكبير",
   "settings.experimental.batch.title": "أداة دفعية",
   "settings.experimental.batch.description": "تمكين المعالجة الدفعية لاستدعاءات الأدوات",
   "settings.experimental.codebaseSearch.title": "بحث في قاعدة الكود",

@@ -1251,8 +1251,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Enable the automatic code formatter",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Enable language server protocol integration",
-  "settings.experimental.pasteSummary.title": "Disable Paste Summary",
-  "settings.experimental.pasteSummary.description": "Don't summarize large pasted content",
   "settings.experimental.batch.title": "Batch Tool",
   "settings.experimental.batch.description": "Enable batching of multiple tool calls",
   "settings.experimental.codebaseSearch.title": "Codebase Search",

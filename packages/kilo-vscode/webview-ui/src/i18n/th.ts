@@ -1250,8 +1250,6 @@ export const dict = {
   "settings.experimental.formatter.description": "เปิดใช้งานฟอร์แมตโค้ดอัตโนมัติ",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "เปิดใช้งานการรวม Language Server Protocol",
-  "settings.experimental.pasteSummary.title": "ปิดใช้งานสรุปการวาง",
-  "settings.experimental.pasteSummary.description": "ไม่สรุปเนื้อหาที่วางขนาดใหญ่",
   "settings.experimental.batch.title": "เครื่องมือแบทช์",
   "settings.experimental.batch.description": "เปิดใช้งานการประมวลผลแบทช์ของการเรียกเครื่องมือ",
   "settings.experimental.codebaseSearch.title": "ค้นหาโค้ดเบส",

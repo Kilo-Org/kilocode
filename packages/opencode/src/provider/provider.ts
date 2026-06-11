@@ -998,6 +998,7 @@ export class ModelNotFoundError extends Schema.TaggedErrorClass<ModelNotFoundErr
   providerID: ProviderID,
   modelID: ModelID,
   suggestions: Schema.optional(Schema.Array(Schema.String)),
+  modelsEmpty: Schema.optional(Schema.Boolean), // kilocode_change
   cause: Schema.optional(Schema.Defect),
 }) {
   static isInstance(input: unknown): input is ModelNotFoundError {
@@ -1725,7 +1726,8 @@ export const layer = Layer.effect(
           : fuzzysort
               .go(providerID, Object.keys({ ...s.catalog, ...s.providers }), { limit: 3, threshold: -10000 })
               .map((m) => m.target)
-        return yield* new ModelNotFoundError({ providerID, modelID, suggestions })
+        const empty = false // kilocode_change
+        return yield* new ModelNotFoundError({ providerID, modelID, suggestions, modelsEmpty: empty }) // kilocode_change
       }
 
       const info = provider.models[modelID]
@@ -1734,7 +1736,8 @@ export const layer = Layer.effect(
         const suggestions = current.length
           ? current
           : modelSuggestions(s.catalog[providerID], modelID, runtimeFlags.enableExperimentalModels)
-        return yield* new ModelNotFoundError({ providerID, modelID, suggestions })
+        const empty = Object.keys(provider.models).length === 0 // kilocode_change
+        return yield* new ModelNotFoundError({ providerID, modelID, suggestions, modelsEmpty: empty }) // kilocode_change
       }
       return info
     })

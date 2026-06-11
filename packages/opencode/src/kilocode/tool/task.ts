@@ -61,7 +61,11 @@ export namespace KiloTask {
 
   /** Extra permission rules appended to subagent sessions */
   export function permissions(rules: Permission.Ruleset): Permission.Ruleset {
-    return [{ permission: "task", pattern: "*", action: "deny" }, ...rules]
+    return [
+      { permission: "task", pattern: "*", action: "deny" },
+      { permission: "question", pattern: "*", action: "deny" },
+      ...rules,
+    ]
   }
 
   export function merge(...rulesets: Permission.Ruleset[]): Permission.Ruleset {

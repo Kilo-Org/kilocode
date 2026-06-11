@@ -19,6 +19,7 @@ import { ShellID } from "./shell/id"
 import * as Truncate from "./truncate"
 import { Plugin } from "@/plugin"
 import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
+import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { ShellPrompt, type Parameters } from "./shell/prompt"
@@ -572,7 +573,7 @@ export const ShellTool = Tool.define(
             return Effect.sync(() => ctx.abort.removeEventListener("abort", handler))
           })
 
-          const timeout = Effect.sleep(`${input.timeout + 100} millis`)
+          const timeout = Effect.sleep(`${CommandTimeout.duration(input.timeout)} millis`) // kilocode_change
 
           const exit = yield* Effect.raceAll([
             handle.exitCode.pipe(Effect.map((code) => ({ kind: "exit" as const, code }))),
@@ -595,9 +596,12 @@ export const ShellTool = Tool.define(
 
       const meta: string[] = []
       if (expired) {
+        // kilocode_change start
         meta.push(
-          `shell tool terminated command after exceeding timeout ${input.timeout} ms. If this command is expected to take longer and is not waiting for interactive input, retry with a larger timeout value in milliseconds.`,
+          CommandTimeout.message(input.timeout, "shell tool terminated command") ??
+            `shell tool terminated command after exceeding timeout ${input.timeout} ms. If this command is expected to take longer and is not waiting for interactive input, retry with a larger timeout value in milliseconds.`,
         )
+        // kilocode_change end
       }
       if (aborted) meta.push("User aborted the command")
       const raw = list.map((item) => item.text).join("")
@@ -651,7 +655,7 @@ export const ShellTool = Tool.define(
               if (params.timeout !== undefined && params.timeout < 0) {
                 throw new Error(`Invalid timeout value: ${params.timeout}. Timeout must be a positive number.`)
               }
-              const timeout = params.timeout ?? defaultTimeout
+              const timeout = CommandTimeout.clamp(params.timeout ?? defaultTimeout).timeout // kilocode_change
               const ps = Shell.ps(shell)
               yield* Effect.scoped(
                 Effect.gen(function* () {

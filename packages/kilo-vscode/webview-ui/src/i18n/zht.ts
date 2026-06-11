@@ -1200,8 +1200,6 @@ export const dict = {
   "settings.experimental.formatter.description": "啟用自動程式碼格式化",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "啟用語言伺服器協定整合",
-  "settings.experimental.pasteSummary.title": "停用貼上摘要",
-  "settings.experimental.pasteSummary.description": "不對大量貼上內容進行摘要",
   "settings.experimental.batch.title": "批次工具",
   "settings.experimental.batch.description": "啟用多個工具呼叫的批次處理",
   "settings.experimental.codebaseSearch.title": "程式碼庫搜尋",

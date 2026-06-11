@@ -1267,8 +1267,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Включить автоматическое форматирование кода",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Включить интеграцию протокола языкового сервера",
-  "settings.experimental.pasteSummary.title": "Отключить сводку вставки",
-  "settings.experimental.pasteSummary.description": "Не суммировать большой вставленный контент",
   "settings.experimental.batch.title": "Пакетный инструмент",
   "settings.experimental.batch.description": "Включить пакетную обработку вызовов инструментов",
   "settings.experimental.codebaseSearch.title": "Поиск по коду",

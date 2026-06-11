@@ -776,17 +776,6 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
           dialog.clear()
         },
       },
-      // kilocode_change start - expose the existing terminal notification preference in the command palette
-      {
-        name: "app.toggle.notifications",
-        title: kv.get("bell_enabled", true) ? "Disable notifications" : "Enable notifications",
-        category: "System",
-        run: () => {
-          kv.set("bell_enabled", !kv.get("bell_enabled", true))
-          dialog.clear()
-        },
-      },
-      // kilocode_change end
       {
         name: "app.toggle.animations",
         title: kv.get("animations_enabled", true) ? "Disable animations" : "Enable animations",

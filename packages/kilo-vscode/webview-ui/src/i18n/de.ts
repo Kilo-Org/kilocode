@@ -1285,8 +1285,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Automatischen Code-Formatierer aktivieren",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Language-Server-Protokoll-Integration aktivieren",
-  "settings.experimental.pasteSummary.title": "Einfüge-Zusammenfassung deaktivieren",
-  "settings.experimental.pasteSummary.description": "Große eingefügte Inhalte nicht zusammenfassen",
   "settings.experimental.batch.title": "Batch-Werkzeug",
   "settings.experimental.batch.description": "Bündelung mehrerer Werkzeugaufrufe aktivieren",
   "settings.experimental.codebaseSearch.title": "Codebase-Suche",

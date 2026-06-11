@@ -247,6 +247,7 @@ export const TaskTool = Tool.define(
           variant, // kilocode_change
           agent: next.name,
           tools: {
+            question: false, // kilocode_change - subagents cannot prompt the user directly
             ...(canTodo ? {} : { todowrite: false }),
             ...(canTask ? {} : { task: false }),
             ...Object.fromEntries((cfg.experimental?.primary_tools ?? []).map((item) => [item, false])),

@@ -7,6 +7,7 @@ import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilo
 import { KiloSession } from "@/kilocode/session" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
+import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
@@ -55,8 +56,7 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Truncate } from "@/tool/truncate"
 import { Image } from "@/image/image"
 import { decodeDataUrl } from "@/util/data-url"
-import { Process } from "@/util/process"
-import { Cause, Effect, Exit, Latch, Layer, Option, Scope, Context, Schema, Types } from "effect"
+import { Cause, Effect, Exit, Latch, Layer, Option, Scope, Context, Schema, Types } from "effect" // kilocode_change - Process moved to the timeout helper
 import * as EffectLogger from "@opencode-ai/core/effect/logger"
 import { InstanceState } from "@/effect/instance-state"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
@@ -1031,12 +1031,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           const args = Shell.args(sh, input.command, cwd)
           let output = ""
           let aborted = false
+          let timeout: string | undefined // kilocode_change
 
           const finish = Effect.uninterruptible(
             Effect.gen(function* () {
               if (aborted) {
                 output += "\n\n" + ["<metadata>", "User aborted the command", "</metadata>"].join("\n")
               }
+              if (timeout) output += "\n\n" + ["<metadata>", timeout, "</metadata>"].join("\n") // kilocode_change
               const completed = Date.now()
               // kilocode_change start - preserve Kilo v2 shell event dual-write
               if (flags.experimentalEventSystem) {
@@ -1081,16 +1083,21 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                 forceKillAfter: "3 seconds",
               })
               const handle = yield* spawner.spawn(cmd)
-              yield* Stream.runForEach(Stream.decodeText(handle.all), (chunk) =>
-                Effect.gen(function* () {
-                  output += chunk
-                  if (part.state.status === "running") {
-                    part.state.metadata = { output, description: "" }
-                    yield* sessions.updatePart(part)
-                  }
-                }),
+              // kilocode_change start
+              timeout = yield* CommandTimeout.drain(
+                handle,
+                Stream.runForEach(Stream.decodeText(handle.all), (chunk) =>
+                  Effect.gen(function* () {
+                    output += chunk
+                    if (part.state.status === "running") {
+                      part.state.metadata = { output, description: "" }
+                      yield* sessions.updatePart(part)
+                    }
+                  }),
+                ),
+                "shell command terminated",
               )
-              yield* handle.exitCode
+              // kilocode_change end
             }).pipe(Effect.scoped, Effect.orDie),
           ).pipe(Effect.exit)
 
@@ -1118,10 +1125,11 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       const err = Cause.squash(exit.cause)
       if (Provider.ModelNotFoundError.isInstance(err)) {
         const hint = err.suggestions?.length ? ` Did you mean: ${err.suggestions.join(", ")}?` : ""
+        const empty = err.modelsEmpty ? " No models are currently available." : "" // kilocode_change
         yield* bus.publish(Session.Event.Error, {
           sessionID,
           error: new NamedError.Unknown({
-            message: `Model not found: ${err.providerID}/${err.modelID}.${hint}`,
+            message: `Model not found: ${err.providerID}/${err.modelID}.${hint}${empty}`, // kilocode_change
           }).toObject(),
         })
       }
@@ -2240,11 +2248,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       if (shellMatches.length > 0) {
         const cfg = yield* config.get()
         const sh = Shell.preferred(cfg.shell)
-        const results = yield* Effect.promise(() =>
-          Promise.all(
-            shellMatches.map(async ([, cmd]) => (await Process.text([cmd], { shell: sh, nothrow: true })).text),
-          ),
-        )
+        // kilocode_change start
+        const results = yield* CommandTimeout.texts(
+          shellMatches.map(([, cmd]) => cmd),
+          sh,
+        ).pipe(Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner))
+        // kilocode_change end
         let index = 0
         template = template.replace(bashRegex, () => results[index++])
       }

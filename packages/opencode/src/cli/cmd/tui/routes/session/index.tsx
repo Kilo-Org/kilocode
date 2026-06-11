@@ -97,7 +97,6 @@ import { splitDiffHunks } from "@/kilocode/tui/diff"
 import { session as banner } from "@/kilocode/cli/logo"
 
 import { formatMarkdownTables } from "../../util/markdown"
-import { bell } from "@/kilocode/bell"
 import { submitFeedback } from "@/kilocode/cli/cmd/tui/feedback"
 // kilocode_change end
 import { getScrollAcceleration } from "../../util/scroll"
@@ -258,6 +257,7 @@ export function Session() {
       blockingSuggestions().length > 0 ||
       network().length > 0,
   )
+  // kilocode_change end
 
   const pending = createMemo(() => {
     return messages().findLast((x) => x.role === "assistant" && !x.time.completed)?.id
@@ -266,45 +266,6 @@ export function Session() {
   const lastAssistant = createMemo(() => {
     return messages().findLast((x) => x.role === "assistant")
   })
-
-  createEffect(
-    on(
-      () => [route.sessionID, sync.data.session_status?.[route.sessionID]?.type] as const,
-      ([id, type], prev) => {
-        if (!prev || prev[0] !== id) return
-        if (prev[1] && prev[1] !== "idle" && type === "idle" && bellEnabled()) bell()
-      },
-    ),
-  )
-
-  createEffect(
-    on(
-      () => [route.sessionID, permissions().length] as const,
-      ([id, len], prev) => {
-        if (!prev || prev[0] !== id) return
-        if (len > prev[1] && bellEnabled()) bell()
-      },
-    ),
-  )
-  createEffect(
-    on(
-      () => [route.sessionID, questions().length] as const,
-      ([id, len], prev) => {
-        if (!prev || prev[0] !== id) return
-        if (len > prev[1] && bellEnabled()) bell()
-      },
-    ),
-  )
-  createEffect(
-    on(
-      () => [route.sessionID, suggestions().length + network().length] as const,
-      ([id, len], prev) => {
-        if (!prev || prev[0] !== id) return
-        if (len > prev[1] && bellEnabled()) bell()
-      },
-    ),
-  )
-  // kilocode_change end
 
   const dimensions = useTerminalDimensions()
   const [sidebar, setSidebar] = kv.signal<"auto" | "hide">("sidebar", "auto")
@@ -317,7 +278,6 @@ export function Session() {
   const [showScrollbar, setShowScrollbar] = kv.signal("scrollbar_visible", false)
   const [diffWrapMode] = kv.signal<"word" | "none">("diff_wrap_mode", "word")
   const [_animationsEnabled, _setAnimationsEnabled] = kv.signal("animations_enabled", true)
-  const [bellEnabled, _setBellEnabled] = kv.signal("bell_enabled", true) // kilocode_change - terminal bell toggle (toggled via kv.set in app.tsx command)
   const [showGenericToolOutput, setShowGenericToolOutput] = kv.signal("generic_tool_output_visibility", false)
 
   const wide = createMemo(() => dimensions().width > 120)

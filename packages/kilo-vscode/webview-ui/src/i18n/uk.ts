@@ -1259,8 +1259,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Увімкнути автоматичне форматування коду",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Увімкнути інтеграцію з мовним сервером",
-  "settings.experimental.pasteSummary.title": "Вимкнути підсумовування вставки",
-  "settings.experimental.pasteSummary.description": "Підсумовувати великий вставлений вміст",
   "settings.experimental.batch.title": "Пакетний інструмент",
   "settings.experimental.batch.description": "Увімкнути пакетну обробку кількох викликів інструментів",
   "settings.experimental.codebaseSearch.title": "Пошук по кодовій базі",

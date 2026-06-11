@@ -1230,8 +1230,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Aktiver automatisk kodeformatering",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Aktiver språkserverprotokoll-integrasjon",
-  "settings.experimental.pasteSummary.title": "Deaktiver lim-sammendrag",
-  "settings.experimental.pasteSummary.description": "Ikke oppsummer stort limt innhold",
   "settings.experimental.batch.title": "Batchverktøy",
   "settings.experimental.batch.description": "Aktiver batchbehandling av verktøykall",
   "settings.experimental.codebaseSearch.title": "Kodesøk",

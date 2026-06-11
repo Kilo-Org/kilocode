@@ -35,12 +35,16 @@ export function recoverablePermissions(perms: RecoverablePermission[], tracked: 
 }
 
 function isNotFoundError(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false
-  const obj = error as Record<string, unknown>
-  if (obj.name === "NotFoundError") return true
-  if (typeof obj.status === "number" && obj.status === 404) return true
-  const data = obj.data as Record<string, unknown> | undefined
-  return data?.name === "NotFoundError"
+  const record = (value: unknown) =>
+    value && typeof value === "object" ? (value as Record<string, unknown>) : undefined
+  const obj = record(error)
+  if (!obj) return false
+
+  const cause = record(obj.cause)
+  const body = record(cause?.body)
+  return [obj, record(obj.data), cause, body, record(body?.data)].some(
+    (value) => value?.name === "NotFoundError" || value?.status === 404,
+  )
 }
 
 /**

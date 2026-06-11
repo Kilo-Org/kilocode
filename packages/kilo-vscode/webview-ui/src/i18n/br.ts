@@ -1270,8 +1270,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Ativar formatador automático de código",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Ativar integração do protocolo de servidor de linguagem",
-  "settings.experimental.pasteSummary.title": "Desativar resumo de colagem",
-  "settings.experimental.pasteSummary.description": "Não resumir conteúdo colado grande",
   "settings.experimental.batch.title": "Ferramenta em lote",
   "settings.experimental.batch.description": "Ativar processamento em lote de chamadas de ferramentas",
   "settings.experimental.codebaseSearch.title": "Pesquisa de código",

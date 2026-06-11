@@ -1232,8 +1232,6 @@ export const dict = {
   "settings.experimental.formatter.description": "启用自动代码格式化",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "启用语言服务器协议集成",
-  "settings.experimental.pasteSummary.title": "禁用粘贴摘要",
-  "settings.experimental.pasteSummary.description": "不对大量粘贴内容进行摘要",
   "settings.experimental.batch.title": "批量工具",
   "settings.experimental.batch.description": "启用多个工具调用的批处理",
   "settings.experimental.codebaseSearch.title": "代码库搜索",

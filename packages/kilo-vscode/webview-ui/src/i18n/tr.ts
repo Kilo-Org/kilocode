@@ -1259,8 +1259,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Otomatik kod biçimlendiriciyi etkinleştir",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Dil sunucu protokolü entegrasyonunu etkinleştir",
-  "settings.experimental.pasteSummary.title": "Yapıştırma Özetini Devre Dışı Bırak",
-  "settings.experimental.pasteSummary.description": "Büyük yapıştırılan içeriği özetleme",
   "settings.experimental.batch.title": "Toplu Araç",
   "settings.experimental.batch.description": "Birden fazla araç çağrısının toplu işlenmesini etkinleştir",
   "settings.experimental.codebaseSearch.title": "Kod Tabanı Araması",

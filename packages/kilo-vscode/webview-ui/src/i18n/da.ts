@@ -1264,8 +1264,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Aktiver automatisk kodeformatering",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Aktiver sprogserverprotokol-integration",
-  "settings.experimental.pasteSummary.title": "Deaktiver indsæt-resumé",
-  "settings.experimental.pasteSummary.description": "Resumér ikke stort indsat indhold",
   "settings.experimental.batch.title": "Batchværktøj",
   "settings.experimental.batch.description": "Aktiver batchbehandling af flere værktøjskald",
   "settings.experimental.codebaseSearch.title": "Kodesøgning",
