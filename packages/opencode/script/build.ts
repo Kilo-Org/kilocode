@@ -322,10 +322,10 @@ for (const item of targets) {
       KILO_VERSION: `'${Script.version}'`,
       KILO_MIGRATIONS: JSON.stringify(migrations),
       KILO_MODELS_DEV: generated.modelsData,
-      OTUI_TREE_SITTER_WORKER_PATH: bunfsRoot + workerRelativePath,
-      KILO_WORKER_PATH: workerPath,
-      KILO_SESSION_EXPORT_WORKER_PATH: sessionExportWorkerPath, // kilocode_change
-      KILO_INDEXING_WORKER_PATH: indexingWorkerPath, // kilocode_change
+      OTUI_TREE_SITTER_WORKER_PATH: JSON.stringify(bunfsRoot + workerRelativePath), // kilocode_change
+      KILO_WORKER_PATH: JSON.stringify(workerPath), // kilocode_change
+      KILO_SESSION_EXPORT_WORKER_PATH: JSON.stringify(sessionExportWorkerPath), // kilocode_change
+      KILO_INDEXING_WORKER_PATH: JSON.stringify(indexingWorkerPath), // kilocode_change
       KILO_SANDBOX_MUTATION_WORKER_PATH: JSON.stringify(KiloSandboxWorker.filename), // kilocode_change
       KILO_CHANNEL: `'${Script.channel}'`,
       KILO_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "",

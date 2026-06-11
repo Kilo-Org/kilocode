@@ -16,7 +16,7 @@ The Kilo Community is [on Discord](https://kilo.ai/discord).
 
 ## Prerequisites
 
-- **Bun 1.3.14+** — required for all packages.
+- **Bun 1.4.0 canary** - required for all packages. Until Bun 1.4 is stable, install the Rust implementation with `bun upgrade --canary`. CI, Nix, and build containers use the exact revision pinned in `package.json`.
 - **Java 21** — required by the JetBrains plugin. The root `bun turbo typecheck` and `bun turbo test:ci` commands include `@kilocode/kilo-jetbrains` and will fail without Java 21.
 
   The preferred way to install Java is via [SDKMAN](https://sdkman.io/install):
@@ -41,7 +41,7 @@ The Kilo Community is [on Discord](https://kilo.ai/discord).
 
 ## Developing Kilo CLI
 
-- **Requirements:** Bun 1.3.14+, Java 21 (see [Prerequisites](#prerequisites) above)
+- **Requirements:** Bun 1.4.0 canary, Java 21 (see [Prerequisites](#prerequisites) above)
 - Install dependencies and start the CLI from the repo root:
 
   ```bash
