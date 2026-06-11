@@ -145,7 +145,7 @@
   line-height: 1.4;
 }
 
-@media (max-width: 280px) {
+@media (max-width: 320px) {
   .message-list-empty.work-style-empty {
     padding-inline: 8px;
   }
