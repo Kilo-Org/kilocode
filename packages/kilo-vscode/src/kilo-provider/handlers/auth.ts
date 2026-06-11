@@ -32,9 +32,11 @@ export async function handleLogin(ctx: AuthContext, attempt: number, getAttempt:
   try {
     const dir = ctx.getWorkspaceDirectory()
 
-    // Step 1: Initiate OAuth authorization
+    // Step 1: Initiate OAuth authorization.
+    // The llmapi provider declares methods [api, oauth]; index 1 is the
+    // "Sign in with LLMAPI" device-authorization flow used by the profile.
     const { data: auth } = await ctx.client.provider.oauth.authorize(
-      { providerID: "kilo", method: 0, directory: dir },
+      { providerID: "llmapi", method: 1, directory: dir },
       { throwOnError: true },
     )
     console.log("[Kilo New] KiloProvider: 🔐 Got auth URL:", auth.url)
@@ -52,7 +54,10 @@ export async function handleLogin(ctx: AuthContext, attempt: number, getAttempt:
     })
 
     // Step 2: Wait for callback (blocks until polling completes)
-    await ctx.client.provider.oauth.callback({ providerID: "kilo", method: 0, directory: dir }, { throwOnError: true })
+    await ctx.client.provider.oauth.callback(
+      { providerID: "llmapi", method: 1, directory: dir },
+      { throwOnError: true },
+    )
 
     // Check if this attempt was cancelled
     if (attempt !== getAttempt()) return
@@ -80,7 +85,7 @@ export async function handleLogout(ctx: AuthContext): Promise<void> {
 
   try {
     console.log("[Kilo New] KiloProvider: 🚪 Logging out...")
-    await ctx.client.auth.remove({ providerID: "kilo" }, { throwOnError: true })
+    await ctx.client.auth.remove({ providerID: "llmapi" }, { throwOnError: true })
     console.log("[Kilo New] KiloProvider: 🚪 Logged out successfully")
     ctx.postMessage({ type: "profileData", data: null })
 
@@ -93,49 +98,6 @@ export async function handleLogout(ctx: AuthContext): Promise<void> {
       type: "error",
       message: getErrorMessage(error) || "Failed to logout",
     })
-  }
-}
-
-/**
- * Handle organization switch.
- * Persists the selection and refreshes profile + providers since both change with org context.
- */
-export async function handleSetOrganization(ctx: AuthContext, organizationId: string | null): Promise<void> {
-  if (!ctx.client) return
-
-  console.log("[Kilo New] KiloProvider: Switching organization:", organizationId ?? "personal")
-  try {
-    await ctx.client.kilo.organization.set({ organizationId }, { throwOnError: true })
-  } catch (error) {
-    console.error("[Kilo New] KiloProvider: Failed to switch organization:", error)
-    // Re-fetch current profile to reset webview state — best-effort
-    try {
-      const result = await ctx.client.kilo.profile()
-      ctx.postMessage({ type: "profileData", data: result.data ?? null })
-    } catch (profileError) {
-      console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch error:", profileError)
-    }
-    return
-  }
-
-  await ctx.disposeGlobal()
-
-  // Org switch succeeded — refresh profile and providers independently (best-effort)
-  try {
-    const result = await ctx.client.kilo.profile()
-    ctx.postMessage({ type: "profileData", data: result.data ?? null })
-  } catch (error) {
-    console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch:", error)
-  }
-  try {
-    await ctx.fetchAndSendProviders()
-  } catch (error) {
-    console.error("[Kilo New] KiloProvider: Failed to refresh providers after org switch:", error)
-  }
-  try {
-    await ctx.fetchAndSendAgents()
-  } catch (error) {
-    console.error("[Kilo New] KiloProvider: Failed to refresh agents after org switch:", error)
   }
 }
 

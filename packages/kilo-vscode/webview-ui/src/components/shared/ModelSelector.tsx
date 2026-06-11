@@ -195,7 +195,8 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     const c = connected()
     return models().filter((m) => {
       if (!props.includeAutoSmall && isSmall(m)) return false
-      return m.providerID === KILO_GATEWAY_ID || c.includes(m.providerID)
+      // kilocode_change - llmapi is the gateway in this build: always show its models
+      return m.providerID === "llmapi" || m.providerID === KILO_GATEWAY_ID || c.includes(m.providerID)
     })
   })
 
