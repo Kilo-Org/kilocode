@@ -47,9 +47,53 @@ export class Service extends Context.Service<Service, Interface>()("@kilocode/Mo
 const log = Log.create({ service: "model-cache" })
 const ttl = Duration.minutes(5)
 const APERTIS_BASE_URL = "https://api.apertis.ai/v1"
-const ApertisItem = Schema.Struct({ id: Schema.String, owned_by: Schema.optional(Schema.String) })
-const ApertisResponse = Schema.Struct({ data: Schema.optional(Schema.Array(ApertisItem)) })
-type ApertisItem = Schema.Schema.Type<typeof ApertisItem>
+const LLMAPI_BASE_URL = "https://api.llmapi.ai/v1"
+
+// OpenAI-compatible /models. Beyond the minimal `{id, owned_by}` that any
+// OpenAI-style endpoint returns, OpenRouter-shaped gateways (LLMAPI) also expose
+// pricing/context/architecture/capabilities — all optional so a minimal endpoint
+// (e.g. apertis) still decodes and falls back to sensible defaults in `toModel`.
+const OpenAICompatItem = Schema.Struct({
+  id: Schema.String,
+  name: Schema.optional(Schema.String),
+  owned_by: Schema.optional(Schema.String),
+  family: Schema.optional(Schema.String),
+  released_at: Schema.optional(Schema.String),
+  context_length: Schema.optional(Schema.Number),
+  max_completion_tokens: Schema.optional(Schema.Number),
+  pricing: Schema.optional(
+    Schema.Struct({
+      prompt: Schema.optional(Schema.String),
+      completion: Schema.optional(Schema.String),
+      input_cache_read: Schema.optional(Schema.String),
+      input_cache_write: Schema.optional(Schema.String),
+    }),
+  ),
+  architecture: Schema.optional(
+    Schema.Struct({
+      input_modalities: Schema.optional(Schema.Array(Schema.String)),
+      output_modalities: Schema.optional(Schema.Array(Schema.String)),
+    }),
+  ),
+  top_provider: Schema.optional(Schema.Struct({ max_completion_tokens: Schema.optional(Schema.Number) })),
+  supported_parameters: Schema.optional(Schema.Array(Schema.String)),
+})
+const OpenAICompatModels = Schema.Struct({ data: Schema.optional(Schema.Array(OpenAICompatItem)) })
+type OpenAICompatItem = Schema.Schema.Type<typeof OpenAICompatItem>
+
+const KNOWN_MODALITIES = ["text", "audio", "image", "video", "pdf"] as const
+type KnownModality = (typeof KNOWN_MODALITIES)[number]
+const mapModalities = (xs: readonly string[] | undefined): KnownModality[] =>
+  (xs ?? []).filter((x): x is KnownModality => (KNOWN_MODALITIES as readonly string[]).includes(x))
+
+// OpenRouter-style gateways quote prices in $/token strings; Kilo's cost model
+// (and downstream usage math) expects $/M tokens.
+const parseApiPrice = (price: string | undefined): number | undefined => {
+  if (!price) return undefined
+  const parsed = Number.parseFloat(price)
+  if (Number.isNaN(parsed)) return undefined
+  return parsed * 1_000_000
+}
 
 export const layer: Layer.Layer<
   Service,
@@ -75,45 +119,76 @@ export const layer: Layer.Layer<
       return [...failures.keys()]
     })
 
-    const aperture = (item: ApertisItem): Models[string] => ({
-      id: item.id,
-      name: item.id,
-      family: item.owned_by ?? "",
-      release_date: "",
-      attachment: true,
-      reasoning: false,
-      temperature: true,
-      tool_call: true,
-      cost: { input: 0, output: 0 },
-      limit: { context: 128000, output: 4096 },
-      modalities: { input: ["text", "image"], output: ["text"] },
-    })
+    const toModel = (item: OpenAICompatItem): Models[string] => {
+      const supported = item.supported_parameters
+      const inputMods = mapModalities(item.architecture?.input_modalities)
+      const outputMods = mapModalities(item.architecture?.output_modalities)
+      const inputPrice = parseApiPrice(item.pricing?.prompt)
+      const outputPrice = parseApiPrice(item.pricing?.completion)
+      const cacheRead = parseApiPrice(item.pricing?.input_cache_read)
+      const cacheWrite = parseApiPrice(item.pricing?.input_cache_write)
+      const context = item.context_length && item.context_length > 0 ? item.context_length : 128000
+      const output =
+        item.top_provider?.max_completion_tokens ||
+        item.max_completion_tokens ||
+        (item.context_length ? Math.ceil(item.context_length * 0.2) : 4096)
 
-    const fetchApertisModels = Effect.fn("ModelCache.fetchApertisModels")(function* (options: Options) {
-      const baseURL = options.baseURL ?? APERTIS_BASE_URL
-      if (!options.apiKey) {
-        log.debug("no API key for apertis, skipping model fetch")
+      return {
+        id: item.id,
+        name: item.name ?? item.id,
+        family: item.family ?? item.owned_by ?? "",
+        release_date: item.released_at ?? "",
+        // When the endpoint advertises modalities/capabilities, derive from them;
+        // otherwise fall back to the permissive defaults a bare endpoint implies.
+        attachment: item.architecture?.input_modalities ? inputMods.includes("image") : true,
+        reasoning: supported ? supported.includes("reasoning") : false,
+        temperature: supported ? supported.includes("temperature") : true,
+        tool_call: supported ? supported.includes("tools") : true,
+        cost:
+          inputPrice !== undefined && outputPrice !== undefined
+            ? {
+                input: inputPrice,
+                output: outputPrice,
+                ...(cacheRead !== undefined ? { cache_read: cacheRead } : {}),
+                ...(cacheWrite !== undefined ? { cache_write: cacheWrite } : {}),
+              }
+            : { input: 0, output: 0 },
+        limit: { context, output },
+        modalities:
+          inputMods.length > 0 || outputMods.length > 0
+            ? { input: inputMods, output: outputMods }
+            : { input: ["text", "image"], output: ["text"] },
+      }
+    }
+
+    const fetchOpenAICompatModels = Effect.fn("ModelCache.fetchOpenAICompatModels")(function* (
+      defaultBaseURL: string,
+      options: Options,
+      // requireKey=false for endpoints whose /models list is public (LLMAPI);
+      // the bearer is still sent when present so per-key visibility can apply.
+      requireKey = true,
+    ) {
+      const baseURL = options.baseURL ?? defaultBaseURL
+      if (requireKey && !options.apiKey) {
+        log.debug("no API key, skipping model fetch", { baseURL })
         return {}
       }
 
       const url = `${baseURL.replace(/\/+$/, "")}/models`
-      const response = yield* HttpClientRequest.get(url).pipe(
-        HttpClientRequest.acceptJson,
-        HttpClientRequest.bearerToken(options.apiKey),
-        http.execute,
-        Effect.timeout("10 seconds"),
-      )
+      const base = HttpClientRequest.get(url).pipe(HttpClientRequest.acceptJson)
+      const authed = options.apiKey ? base.pipe(HttpClientRequest.bearerToken(options.apiKey)) : base
+      const response = yield* authed.pipe(http.execute, Effect.timeout("10 seconds"))
       if (response.status < 200 || response.status >= 300) {
-        log.error("apertis model fetch failed", { status: response.status })
+        log.error("openai-compatible model fetch failed", { url, status: response.status })
         return {}
       }
 
-      const json = yield* HttpClientResponse.schemaBodyJson(ApertisResponse)(response)
-      return Object.fromEntries((json.data ?? []).map((item) => [item.id, aperture(item)]))
+      const json = yield* HttpClientResponse.schemaBodyJson(OpenAICompatModels)(response)
+      return Object.fromEntries((json.data ?? []).map((item) => [item.id, toModel(item)]))
     })
 
     const authOptions = Effect.fn("ModelCache.authOptions")(function* (providerID: string) {
-      if (providerID !== "kilo" && providerID !== "apertis") return {}
+      if (providerID !== "kilo" && providerID !== "apertis" && providerID !== "llmapi") return {}
       const config = yield* cfg.get()
       const options: Options = {}
 
@@ -138,16 +213,19 @@ export const layer: Layer.Layer<
         })
       }
 
-      if (providerID === "apertis") {
+      if (providerID === "apertis" || providerID === "llmapi") {
         const item = config.provider?.[providerID]
         if (item?.options?.apiKey) options.apiKey = item.options.apiKey
         if (item?.options?.baseURL) options.baseURL = item.options.baseURL
 
         const info = yield* auth.get(providerID)
         if (info?.type === "api") options.apiKey = info.key
-        if (process.env.APERTIS_API_KEY) options.apiKey = process.env.APERTIS_API_KEY
-        if (process.env.APERTIS_BASE_URL) options.baseURL = process.env.APERTIS_BASE_URL
-        log.debug("apertis auth options resolved", {
+
+        const envKey = providerID === "apertis" ? "APERTIS_API_KEY" : "LLMAPI_API_KEY"
+        const envBase = providerID === "apertis" ? "APERTIS_BASE_URL" : "LLMAPI_BASE_URL"
+        if (process.env[envKey]) options.apiKey = process.env[envKey]
+        if (process.env[envBase]) options.baseURL = process.env[envBase]
+        log.debug("openai-compatible auth options resolved", {
           providerID,
           hasKey: !!options.apiKey,
           hasBaseURL: !!options.baseURL,
@@ -159,7 +237,11 @@ export const layer: Layer.Layer<
 
     const fetchModels = (providerID: string, options: Options): Effect.Effect<Result, unknown> => {
       if (providerID === "kilo") return kilo.fetch(options)
-      if (providerID === "apertis") return fetchApertisModels(options).pipe(Effect.map((models) => ({ models })))
+      if (providerID === "apertis")
+        return fetchOpenAICompatModels(APERTIS_BASE_URL, options).pipe(Effect.map((models) => ({ models })))
+      if (providerID === "llmapi")
+        // LLMAPI's /v1/models is public — fetch the catalog even without a key.
+        return fetchOpenAICompatModels(LLMAPI_BASE_URL, options, false).pipe(Effect.map((models) => ({ models })))
       log.debug("provider not implemented", { providerID })
       return Effect.succeed({ models: {} })
     }
@@ -180,7 +262,8 @@ export const layer: Layer.Layer<
       if (providerID === "kilo") {
         return JSON.stringify([providerID, options?.baseURL, options?.kilocodeOrganizationId, options?.kilocodeToken])
       }
-      if (providerID === "apertis") return JSON.stringify([providerID, options?.baseURL, options?.apiKey])
+      if (providerID === "apertis" || providerID === "llmapi")
+        return JSON.stringify([providerID, options?.baseURL, options?.apiKey])
       return providerID
     }
 

@@ -14,10 +14,8 @@ import {
   KILO_CHAT_URL,
   KILO_EVENT_SERVICE_URL,
   clearModesCache,
-  fetchBalance,
   fetchKilocodeNotifications,
   fetchOrganizationModes,
-  fetchProfile,
 } from "@kilocode/kilo-gateway"
 import { DIRECT_FIM_ENV, requestMistralFim, resolveFimTarget } from "@kilocode/kilo-gateway/fim"
 import { DIRECT_EDIT_ENV, extractFencedBody, resolveEditTarget } from "@kilocode/kilo-gateway/edit"
@@ -55,22 +53,52 @@ function logError(route: string, err: unknown) {
   log.error("unhandled error", { route, err })
 }
 
+// kilocode_change start - LLMAPI account view backs the profile screen
+const LLMAPI_BASE_URL = "https://api.llmapi.ai/v1"
+
+interface LlmapiAccount {
+  user?: { email?: string; name?: string }
+  organization?: { id?: string; name?: string; credits?: number }
+  project?: { id?: string; name?: string }
+}
+
+async function fetchLlmapiAccount(key: string): Promise<LlmapiAccount> {
+  const base = (process.env.LLMAPI_BASE_URL ?? LLMAPI_BASE_URL).replace(/\/+$/, "")
+  const res = await fetch(`${base}/me`, {
+    headers: { Authorization: `Bearer ${key}`, Accept: "application/json" },
+  })
+  if (!res.ok) throw new Error(`llmapi /v1/me failed: ${res.status}`)
+  return (await res.json()) as LlmapiAccount
+}
+// kilocode_change end
+
 export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo", (handlers) =>
   Effect.gen(function* () {
     const auth = yield* Auth.Service
     const store = yield* InstanceStore.Service
     const cache = yield* ModelCache.Service
 
+    // kilocode_change - the profile screen is now the LLMAPI account: read the
+    // stored llmapi API key and resolve the account via the gateway's /v1/me.
     const profile = Effect.fn("KiloGatewayHttpApi.profile")(function* () {
-      const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
-      if (!info || info.type !== "oauth") return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      const info = yield* auth.get("llmapi").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
+      if (!info || info.type !== "api") return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
-      const currentOrgId = info.accountId ?? null
-      const [profile, balance] = yield* Effect.tryPromise({
-        try: () => Promise.all([fetchProfile(info.access), fetchBalance(info.access, currentOrgId ?? undefined)]),
+      const account = yield* Effect.tryPromise({
+        try: () => fetchLlmapiAccount(info.key),
         catch: () => new HttpApiError.BadRequest({}),
       })
-      return { profile, balance, currentOrgId }
+
+      const orgId = account.organization?.id ?? null
+      return {
+        profile: {
+          email: account.user?.email ?? "",
+          name: account.user?.name,
+          organizations: orgId ? [{ id: orgId, name: account.organization?.name ?? "", role: "" }] : [],
+        },
+        balance: account.organization?.credits !== undefined ? { balance: account.organization.credits } : null,
+        currentOrgId: orgId,
+      }
     })
 
     const proxyAuth = Effect.fn("KiloGatewayHttpApi.proxyAuth")(function* () {
