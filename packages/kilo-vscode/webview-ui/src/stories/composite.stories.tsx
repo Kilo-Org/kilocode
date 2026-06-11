@@ -11,6 +11,7 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import type { AssistantMessage as SDKAssistantMessage, TextPart, ToolPart } from "@kilocode/sdk/v2"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { AssistantMessage } from "../components/chat/AssistantMessage"
+import { RevertBanner } from "../components/chat/RevertBanner"
 import { VscodeSessionTurn } from "../components/chat/VscodeSessionTurn"
 import { ChatView } from "../components/chat/ChatView"
 import { Part } from "@kilocode/kilo-ui/message-part"
@@ -468,6 +469,46 @@ function dataWith(parts: any[], permissions?: PermissionRequest[]) {
   }
 }
 
+const checkpointParts = [
+  {
+    id: "part-step-start-001",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "step-start",
+    snapshot: "snapshot-before-parallel",
+  },
+  readCompleted,
+  globCompleted,
+  {
+    id: "part-step-finish-001",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "step-finish",
+    reason: "tool-calls",
+    snapshot: "snapshot-after-parallel",
+    cost: 0,
+    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+  },
+  {
+    id: "part-step-start-002",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "step-start",
+    snapshot: "snapshot-before-question",
+  },
+  questionDismissedPart,
+  {
+    id: "part-step-finish-002",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "step-finish",
+    reason: "stop",
+    snapshot: "snapshot-after-question",
+    cost: 0,
+    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+  },
+]
+
 // ---------------------------------------------------------------------------
 // Meta
 // ---------------------------------------------------------------------------
@@ -707,6 +748,71 @@ export const MultipleToolCalls: Story = {
     const data = dataWith([readCompleted, globCompleted, textPart])
     return (
       <StoryProviders data={data} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+export const AgentStepCheckpoints: Story = {
+  name: "Agent Step Checkpoints",
+  render: () => (
+    <StoryProviders data={dataWith(checkpointParts)} sessionID={SESSION_ID}>
+      <AssistantMessage message={baseAssistantMessage} />
+    </StoryProviders>
+  ),
+}
+
+export const AgentStepCheckpoints200: Story = {
+  name: "Agent Step Checkpoints - 200px",
+  render: () => (
+    <StoryProviders data={dataWith(checkpointParts)} sessionID={SESSION_ID}>
+      <AssistantMessage message={baseAssistantMessage} />
+    </StoryProviders>
+  ),
+}
+
+export const AgentStepCheckpointLoading: Story = {
+  name: "Agent Step Checkpoint - loading",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
+      checkpointPending: (_messageID: string, partID: string) => partID === "part-step-start-001",
+    }
+    return (
+      <StoryProviders data={dataWith(checkpointParts)} sessionID={SESSION_ID}>
+        <SessionContext.Provider value={session as any}>
+          <AssistantMessage message={baseAssistantMessage} />
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const CheckpointRedoLoading: Story = {
+  name: "Checkpoint Redo - loading",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
+      revert: () => ({ messageID: ASST_MSG_ID, partID: "part-step-start-001" }),
+      redoPending: () => true,
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID}>
+        <SessionContext.Provider value={session as any}>
+          <RevertBanner inline />
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const AgentStepCheckpointUnavailable: Story = {
+  name: "Agent Step Checkpoint - unavailable snapshot",
+  render: () => {
+    const parts = checkpointParts.map((part) => (part.type === "step-start" ? { ...part, snapshot: undefined } : part))
+    return (
+      <StoryProviders data={dataWith(parts)} sessionID={SESSION_ID}>
         <AssistantMessage message={baseAssistantMessage} />
       </StoryProviders>
     )

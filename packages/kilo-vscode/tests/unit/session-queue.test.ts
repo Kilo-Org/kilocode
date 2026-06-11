@@ -386,6 +386,19 @@ describe("messageTurns", () => {
     ])
   })
 
+  it("keeps the target assistant and hides later messages for a part-level revert", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1"),
+      assistant("message_3", "message_1"),
+      assistant("message_4", "message_1"),
+    ]
+
+    expect(
+      messageTurns(messages, "message_3", undefined, "message_3")[0]?.assistant.map((message) => message.id),
+    ).toEqual(["message_2", "message_3"])
+  })
+
   it("stops at the revert boundary user turn", () => {
     const messages = [
       user("message_1"),

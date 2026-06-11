@@ -59,13 +59,16 @@ export function messageTurns(
   messages: Message[],
   boundary?: string,
   parts?: (msg: Message) => Message["parts"],
+  assistantBoundary?: string,
 ): MessageTurn[] {
+  const end = assistantBoundary ? messages.findIndex((msg) => msg.id === assistantBoundary) : -1
+  const visible = end >= 0 ? messages.slice(0, end + 1) : messages
   const result: MessageTurn[] = []
   const lead: Message[] = []
   const by = new Map<string, { turn: MessageTurn; index: number }>()
   let compact: { turn: MessageTurn; index: number } | undefined
 
-  for (const msg of messages) {
+  for (const msg of visible) {
     if (msg.role === "user") {
       if (boundary && msg.id >= boundary) break
       const turn = { id: msg.id, user: msg, assistant: [] }

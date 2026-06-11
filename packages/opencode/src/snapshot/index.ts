@@ -13,6 +13,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import { DiffFull } from "../kilocode/snapshot/diff-full" // kilocode_change
 import { KiloSnapshotTrack } from "../kilocode/snapshot/track" // kilocode_change
+import { SnapshotPin } from "../kilocode/snapshot/pin" // kilocode_change
 import type { MessageID, SessionID } from "../session/schema" // kilocode_change
 import { NonNegativeInt, withStatics } from "@opencode-ai/core/schema"
 import { zod } from "@opencode-ai/core/effect-zod"
@@ -338,6 +339,15 @@ export const layer: Layer.Layer<
               yield* add()
               const result = yield* git(args(["write-tree"]), { cwd: state.directory })
               const hash = result.text.trim()
+              // kilocode_change start - keep checkpoint trees reachable so git gc cannot invalidate old session rewinds
+              const pinned = yield* SnapshotPin.pin(hash, (cmd, env) =>
+                git([...cfg, ...args(cmd)], { cwd: state.directory, env }),
+              )
+              if (!pinned) {
+                log.error("failed to pin snapshot", { hash })
+                return
+              }
+              // kilocode_change end
               log.info("tracking", { hash, cwd: state.directory, git: state.gitdir })
               return hash
             }),
@@ -349,7 +359,10 @@ export const layer: Layer.Layer<
             Effect.gen(function* () {
               yield* add()
               const result = yield* git(
-                [...quote, ...args(["diff", "--cached", "--no-ext-diff", "--name-only", hash, "--", "."])],
+                [
+                  ...quote,
+                  ...args(["diff", "--cached", "--no-ext-diff", "--no-renames", "--name-only", hash, "--", "."]), // kilocode_change
+                ],
                 {
                   cwd: state.directory,
                 },
@@ -392,13 +405,14 @@ export const layer: Layer.Layer<
                   exitCode: checkout.code,
                   stderr: checkout.stderr,
                 })
-                return
+                return yield* Effect.die(new Error(`Failed to restore snapshot ${snapshot}`)) // kilocode_change
               }
               log.error("failed to restore snapshot", {
                 snapshot,
                 exitCode: result.code,
                 stderr: result.stderr,
               })
+              return yield* Effect.die(new Error(`Failed to restore snapshot ${snapshot}`)) // kilocode_change
             }),
           )
         })
@@ -406,6 +420,14 @@ export const layer: Layer.Layer<
         const revert = Effect.fnUntraced(function* (patches: Patch[]) {
           return yield* locked(
             Effect.gen(function* () {
+              // kilocode_change start - validate every referenced tree before mutating any workspace file
+              for (const hash of new Set(patches.filter((item) => item.files.length > 0).map((item) => item.hash))) {
+                const tree = yield* git([...core, ...args(["cat-file", "-e", `${hash}^{tree}`])], {
+                  cwd: state.worktree,
+                })
+                if (tree.code !== 0) return yield* Effect.die(new Error(`Snapshot ${hash} is unavailable`))
+              }
+              // kilocode_change end
               const ops: { hash: string; file: string; rel: string }[] = []
               const seen = new Set<string>()
               for (const item of patches) {
@@ -429,9 +451,11 @@ export const layer: Layer.Layer<
                 const tree = yield* git([...core, ...args(["ls-tree", op.hash, "--", op.rel])], {
                   cwd: state.worktree,
                 })
-                if (tree.code === 0 && tree.text.trim()) {
-                  log.info("file existed in snapshot but checkout failed, keeping", { file: op.file, hash: op.hash })
-                  return
+                if (tree.code !== 0) {
+                  return yield* Effect.die(new Error(`Snapshot ${op.hash} is unavailable`)) // kilocode_change
+                }
+                if (tree.text.trim()) {
+                  return yield* Effect.die(new Error(`Failed to restore ${op.file} from snapshot ${op.hash}`)) // kilocode_change
                 }
                 log.info("file did not exist in snapshot, deleting", { file: op.file, hash: op.hash })
                 yield* remove(op.file)
@@ -459,7 +483,7 @@ export const layer: Layer.Layer<
                 }
 
                 const tree = yield* git(
-                  [...core, ...args(["ls-tree", "--name-only", first.hash, "--", ...run.map((item) => item.rel)])],
+                  [...quote, ...args(["ls-tree", "--name-only", first.hash, "--", ...run.map((item) => item.rel)])], // kilocode_change
                   {
                     cwd: state.worktree,
                   },
@@ -541,6 +565,14 @@ export const layer: Layer.Layer<
         const diffFull = Effect.fnUntraced(function* (from: string, to: string) {
           return yield* locked(
             Effect.gen(function* () {
+              // kilocode_change start - missing checkpoint objects must fail instead of producing an empty diff
+              for (const hash of [from, to]) {
+                const tree = yield* git([...core, ...args(["cat-file", "-e", `${hash}^{tree}`])], {
+                  cwd: state.worktree,
+                })
+                if (tree.code !== 0) return yield* Effect.die(new Error(`Snapshot ${hash} is unavailable`))
+              }
+              // kilocode_change end
               type Row = {
                 file: string
                 status: "added" | "deleted" | "modified"

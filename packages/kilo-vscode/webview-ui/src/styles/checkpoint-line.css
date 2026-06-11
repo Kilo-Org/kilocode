@@ -1,0 +1,77 @@
+[data-component="checkpoint-line"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 1px 0;
+  min-width: 0;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.58;
+  transition: opacity 120ms ease;
+}
+
+[data-component="checkpoint-line"]:hover,
+[data-component="checkpoint-line"]:focus-within {
+  opacity: 1;
+}
+
+[data-component="checkpoint-line"] [data-slot="checkpoint-rule"] {
+  height: 1px;
+  flex: 1;
+  min-width: 8px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--vscode-editorGroup-border) 78%, transparent)
+  );
+}
+
+[data-component="checkpoint-line"] [data-slot="checkpoint-rule"]:last-child {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--vscode-editorGroup-border) 78%, transparent),
+    transparent
+  );
+}
+
+[data-component="checkpoint-line"] [data-slot="checkpoint-action"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 75%;
+  min-height: 20px;
+  border: 0;
+  padding: 1px 3px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-size: var(--kilo-font-size-11);
+  cursor: pointer;
+}
+
+[data-component="checkpoint-line"] [data-slot="checkpoint-diff"] {
+  min-width: 20px;
+  min-height: 20px;
+  padding: 1px 3px;
+}
+
+[data-component="checkpoint-line"] [data-slot="checkpoint-spinner"] {
+  width: 12px;
+  height: 12px;
+  flex: none;
+}
+
+[data-component="checkpoint-line"] [data-slot="checkpoint-action"] span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-component="checkpoint-line"] [data-slot="checkpoint-action"]:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+
+[data-component="checkpoint-line"][data-unavailable] {
+  opacity: 0.45;
+}

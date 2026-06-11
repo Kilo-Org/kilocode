@@ -22,6 +22,7 @@ import { useServer } from "./server"
 import { useProvider } from "./provider"
 import { useConfig } from "./config"
 import { useLanguage } from "./language"
+import { checkpointPrompt } from "../components/chat/checkpoint-groups"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type {
   SessionInfo,
@@ -229,12 +230,16 @@ interface SessionContextValue {
   revert: Accessor<SessionInfo["revert"]>
   revertedCount: Accessor<number>
   summary: Accessor<SessionInfo["summary"]>
+  checkpointPending: (messageID: string, partID: string) => boolean
+  redoPending: Accessor<boolean>
 
   // Live worktree diff stats (polled from CLI backend)
   worktreeStats: Accessor<{ files: number; additions: number; deletions: number } | undefined>
 
   // Actions
   revertSession: (messageID: string, partID?: string) => void
+  rewindCheckpoint: (messageID: string, partID?: string) => void
+  redoRevert: (messageID?: string) => void
   unrevertSession: () => void
   sendMessage: (
     text: string,
@@ -299,6 +304,14 @@ export const SessionProvider: ParentComponent = (props) => {
   const [statusMap, setStatusMap] = createStore<Record<string, SessionStatusInfo>>({})
   const [closeMap, setCloseMap] = createStore<Record<string, SessionCloseReason | undefined>>({})
   const [busySinceMap, setBusySinceMap] = createStore<Record<string, number>>({})
+  const checkpointPrompts = new Map<string, string>()
+  const [checkpointAction, setCheckpointAction] = createSignal<{
+    sessionID: string
+    requestID: string
+    messageID: string
+    partID?: string
+  }>()
+  const [redoSession, setRedoSession] = createSignal<string>()
 
   const idle: SessionStatusInfo = { type: "idle" }
 
@@ -857,7 +870,10 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handleError(message: Extract<ExtensionMessage, { type: "error" }>) {
     if (!message.sessionID || message.sessionID === currentSessionID()) setLoading(false)
-    if (message.sessionID) patchPage(message.sessionID, { loadingInitial: false, loadingOlder: false })
+    if (message.sessionID) {
+      patchPage(message.sessionID, { loadingInitial: false, loadingOlder: false })
+      if (redoSession() === message.sessionID) setRedoSession(undefined)
+    }
   }
 
   function toggleFavorite(providerID: string, modelID: string) {
@@ -1017,10 +1033,29 @@ export const SessionProvider: ParentComponent = (props) => {
     }
   }
 
+  function handleUnrevertResult(message: ExtensionMessage) {
+    if (message.type !== "unrevertSessionResult") return
+    if (redoSession() === message.sessionID) setRedoSession(undefined)
+  }
+
+  function handleCheckpointResult(message: ExtensionMessage) {
+    if (message.type !== "checkpointRewindResult") return
+    const text = checkpointPrompts.get(message.requestID)
+    checkpointPrompts.delete(message.requestID)
+    if (checkpointAction()?.requestID === message.requestID) setCheckpointAction(undefined)
+    if (message.success && text && message.sessionID === currentSessionID()) {
+      window.postMessage({ type: "setChatBoxMessage", text }, "*")
+    }
+  }
+
   // Handle messages from extension
   onMount(() => {
     const unsubscribe = vscode.onMessage(handleExtensionMessage)
+    const checkpoint = vscode.onMessage(handleCheckpointResult)
+    const unrevert = vscode.onMessage(handleUnrevertResult)
     onCleanup(unsubscribe)
+    onCleanup(checkpoint)
+    onCleanup(unrevert)
   })
 
   // Event handlers
@@ -1637,6 +1672,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleSessionUpdated(session: SessionInfo) {
+    if (redoSession() === session.id) setRedoSession(undefined)
     const prev = store.sessions[session.id]?.revert
     const next = session.revert ?? undefined
     setStore("sessions", session.id, session)
@@ -2400,29 +2436,62 @@ export const SessionProvider: ParentComponent = (props) => {
     return id ? (store.sessions[id]?.summary ?? undefined) : undefined
   })
 
+  function checkpointPending(messageID: string, partID: string) {
+    const action = checkpointAction()
+    if (!action) return false
+    return action.sessionID === currentSessionID() && action.messageID === messageID && action.partID === partID
+  }
+
+  const redoPending = () => redoSession() === currentSessionID()
+
   function revertSession(messageID: string, partID?: string) {
     const id = currentSessionID()
     if (!id) return
     clearClose(id)
-    // Restore the reverted user message's prompt text into the input.
-    // Dispatch as a window message so PromptInput picks it up via onMessage.
-    const parts = store.parts[messageID]
-    if (parts) {
-      const text = parts
-        .filter((p) => p.type === "text" && !(p as { synthetic?: boolean }).synthetic)
-        .map((p) => (p as { text: string }).text ?? "")
-        .join("")
-      if (text) window.postMessage({ type: "setChatBoxMessage", text }, "*")
-    }
+    // Restore prompt text only when the boundary is a user message. Part-level
+    // checkpoints target assistant messages and must never copy assistant text.
+    const message = (store.messages[id] ?? []).find((item) => item.id === messageID)
+    const text = checkpointPrompt(message?.role, store.parts[messageID], partID)
+    if (text) window.postMessage({ type: "setChatBoxMessage", text }, "*")
     vscode.postMessage({ type: "revertSession", sessionID: id, messageID, partID })
   }
 
-  function unrevertSession() {
+  function rewindCheckpoint(messageID: string, partID?: string) {
     const id = currentSessionID()
-    if (!id) return
+    if (!id || checkpointAction()) return
+    clearClose(id)
+    const message = (store.messages[id] ?? []).find((item) => item.id === messageID)
+    const text = checkpointPrompt(message?.role, store.parts[messageID], partID)
+    const requestID = crypto.randomUUID()
+    if (text) checkpointPrompts.set(requestID, text)
+    setCheckpointAction({ sessionID: id, requestID, messageID, partID })
+    vscode.postMessage({
+      type: "rewindCheckpoint",
+      sessionID: id,
+      messageID,
+      partID,
+      requestID,
+      warning: language.t("checkpoint.sharedDirectory"),
+      confirm: language.t("checkpoint.sharedDirectory.confirm"),
+      failed: language.t("checkpoint.failed"),
+    })
+  }
+
+  function redoRevert(messageID?: string) {
+    const id = currentSessionID()
+    if (!id || redoSession()) return
+    setRedoSession(id)
+    if (messageID) {
+      vscode.postMessage({ type: "revertSession", sessionID: id, messageID })
+      return
+    }
     // Clear the prompt input on full redo (matching TUI/desktop behavior)
     window.postMessage({ type: "setChatBoxMessage", text: "" }, "*")
     vscode.postMessage({ type: "unrevertSession", sessionID: id })
+  }
+
+  function unrevertSession() {
+    redoRevert()
   }
 
   function syncSession(sessionID: string) {
@@ -2605,8 +2674,12 @@ export const SessionProvider: ParentComponent = (props) => {
     revert,
     revertedCount,
     summary,
+    checkpointPending,
+    redoPending,
     worktreeStats,
     revertSession,
+    rewindCheckpoint,
+    redoRevert,
     unrevertSession,
     sendMessage,
     sendCommand,

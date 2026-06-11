@@ -148,7 +148,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
             </div>
           </Show>
 
-          {/* Assistant parts — flat list, no context grouping */}
+          {/* Assistant parts grouped by model step for checkpoint boundaries */}
           <Show when={assistantMessages().length > 0}>
             <div class="vscode-session-turn-assistant">
               <For each={assistantMessages()}>

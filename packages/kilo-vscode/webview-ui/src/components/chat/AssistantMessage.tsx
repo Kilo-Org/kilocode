@@ -1,6 +1,6 @@
 /**
  * AssistantMessage component
- * Renders all parts of an assistant message as a flat list — no context grouping.
+ * Renders assistant parts in model-step groups with checkpoint boundaries.
  * Unlike the upstream AssistantParts, this renders each read/glob/grep/list tool
  * individually for maximum verbosity in the VS Code sidebar context.
  *
@@ -23,15 +23,25 @@ import { useDisplay } from "../../context/display"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useServer } from "../../context/server"
+import { useVSCode } from "../../context/vscode"
 import { snapshotProgress } from "../../context/session-utils"
 import { planDisplayPath } from "../../utils/plan-path"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
+import { CheckpointLine } from "./CheckpointLine"
+import {
+  checkpointBoundary,
+  checkpointLayout,
+  stableCheckpointLayout,
+  type CheckpointLayout,
+} from "./checkpoint-groups"
+import { RevertBanner } from "./RevertBanner"
+import {
+  UPSTREAM_SUPPRESSED_TOOLS,
+  isKiloToolRenderable,
+  matchToolRequest,
+} from "./assistant-message-routing"
 
-// Tools that the upstream message-part renderer suppresses (returns null for).
-// We render these ourselves via ToolRegistry when they complete,
-// so the user can see what the AI set up.
-export const UPSTREAM_SUPPRESSED_TOOLS = new Set(["todowrite", "todoread"])
 
 /** Extract plan path from a completed plan_exit tool part. */
 function planExitInfo(part: SDKPart): { plan: string } | undefined {
@@ -78,37 +88,20 @@ function PlanExitCard(props: { part: ToolPart }) {
 }
 
 function isRenderable(part: SDKPart): boolean {
-  if (part.type === "tool") {
-    const tool = (part as SDKPart & { tool: string }).tool
-    const state = (part as SDKPart & { state: { status: string } }).state
-    if (UPSTREAM_SUPPRESSED_TOOLS.has(tool)) {
-      // Show todo parts only when completed (permissions are now in the dock)
-      return state.status === "completed"
-    }
-    // Always render question tool parts — active ones get the inline QuestionDock
-    return true
-  }
+  if (part.type === "tool") return isKiloToolRenderable(part as ToolPart)
   if (part.type === "text") return !snapshotProgress(part) && !!(part as SDKPart & { text: string }).text?.trim()
   if (part.type === "reasoning") return !!(part as SDKPart & { text: string }).text?.trim()
   return !!PART_MAPPING[part.type]
 }
 
-/**
- * Match a tool part to an active request (question or suggestion) by tool name
- * and callID/messageID. Returns the matched request or undefined.
- */
-function matchToolRequest<T extends { tool?: { callID: string; messageID: string } }>(
-  part: SDKPart,
-  name: string,
-  requests: T[],
-): T | undefined {
-  if (part.type !== "tool") return undefined
-  const tp = part as unknown as ToolPart
-  if (tp.tool !== name) return undefined
-  return requests.find((r) => r.tool?.callID === tp.callID && r.tool?.messageID === tp.messageID)
+interface AssistantMessageProps {
+  message: SDKAssistantMessage
+  showAssistantCopyPartID?: string | null
+  feedback?: MessageFeedbackControls
 }
 
-interface AssistantMessageProps {
+interface RenderedPartProps {
+  part: SDKPart
   message: SDKAssistantMessage
   showAssistantCopyPartID?: string | null
   feedback?: MessageFeedbackControls
@@ -169,112 +162,145 @@ function BashToolCard(props: { part: ToolPart; defaultOpen: boolean }) {
   )
 }
 
-export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
-  const data = useData()
+const RenderedPart: Component<RenderedPartProps> = (props) => {
   const session = useSession()
   const display = useDisplay()
   const { config } = useConfig()
   const open = createMemo(() => config().terminal_command_display !== "collapsed")
-
-  const parts = createMemo(() => {
-    const stored = data.store.part?.[props.message.id]
-    if (!stored) return []
-    return (stored as SDKPart[]).filter((part) => isRenderable(part))
+  const todo = createMemo(
+    () => props.part.type === "tool" && UPSTREAM_SUPPRESSED_TOOLS.has((props.part as ToolPart).tool),
+  )
+  const question = createMemo(() => matchToolRequest(props.part, "question", session.questions()))
+  const suggestion = createMemo(() => matchToolRequest(props.part, "suggest", session.suggestions()))
+  const bash = createMemo(() => {
+    if (props.part.type !== "tool") return
+    const part = props.part as ToolPart
+    if (part.tool !== "bash" || part.state?.status === "error") return
+    return part
+  })
+  const planExit = createMemo(() => {
+    if (props.part.type !== "tool") return
+    const part = props.part as ToolPart
+    if (part.tool !== "plan_exit" || part.state?.status !== "completed") return
+    return part
   })
 
   return (
-    <>
-      <For each={parts()}>
-        {(part) => {
-          // Upstream PART_MAPPING["tool"] returns null for todowrite/todoread,
-          // so we detect them here and render via ToolRegistry directly.
-          const isUpstreamSuppressed =
-            part.type === "tool" && UPSTREAM_SUPPRESSED_TOOLS.has((part as SDKPart & { tool: string }).tool)
-
-          // Active question tool parts render the interactive QuestionDock inline
-          const activeQuestion = createMemo(() => matchToolRequest(part, "question", session.questions()))
-
-          // Active suggestion tool parts render the interactive SuggestBar inline
-          const activeSuggestion = createMemo(() => matchToolRequest(part, "suggest", session.suggestions()))
-          const bash = createMemo(() => {
-            if (part.type !== "tool") return
-            const tool = part as unknown as ToolPart
-            if (tool.tool !== "bash") return
-            if (tool.state?.status === "error") return
-            return part
-          })
-          const planExit = createMemo(() => {
-            if (part.type !== "tool") return
-            const tp = part as unknown as ToolPart
-            if (tp.tool !== "plan_exit") return
-            if (tp.state?.status !== "completed") return
-            return tp
-          })
-
-          return (
+    <Show when={todo() || question() || suggestion() || bash() || planExit() || PART_MAPPING[props.part.type]}>
+      <div data-component="tool-part-wrapper" data-part-type={props.part.type}>
+        <Show
+          when={question()}
+          fallback={
             <Show
-              when={
-                isUpstreamSuppressed ||
-                activeQuestion() ||
-                activeSuggestion() ||
-                bash() ||
-                planExit() ||
-                PART_MAPPING[part.type]
-              }
-            >
-              <div data-component="tool-part-wrapper" data-part-type={part.type}>
+              when={suggestion()}
+              fallback={
                 <Show
-                  when={activeQuestion()}
+                  when={planExit()}
                   fallback={
                     <Show
-                      when={activeSuggestion()}
+                      when={bash()}
                       fallback={
                         <Show
-                          when={planExit()}
+                          when={todo()}
                           fallback={
-                            <Show
-                              when={bash()}
-                              fallback={
-                                <Show
-                                  when={isUpstreamSuppressed}
-                                  fallback={
-                                    <Part
-                                      part={part}
-                                      message={props.message as SDKMessage}
-                                      showAssistantCopyPartID={props.showAssistantCopyPartID}
-                                      reasoningAutoCollapse={display.reasoningAutoCollapse()}
-                                      feedback={props.feedback}
-                                      animate={
-                                        part.type === "tool" &&
-                                        ((part as unknown as ToolPart).state?.status === "pending" ||
-                                          (part as unknown as ToolPart).state?.status === "running")
-                                      }
-                                    />
-                                  }
-                                >
-                                  <TodoToolCard part={part as unknown as ToolPart} />
-                                </Show>
+                            <Part
+                              part={props.part}
+                              message={props.message as SDKMessage}
+                              showAssistantCopyPartID={props.showAssistantCopyPartID}
+                              reasoningAutoCollapse={display.reasoningAutoCollapse()}
+                              feedback={props.feedback}
+                              animate={
+                                props.part.type === "tool" &&
+                                ((props.part as ToolPart).state?.status === "pending" ||
+                                  (props.part as ToolPart).state?.status === "running")
                               }
-                            >
-                              {(tool) => <BashToolCard part={tool() as unknown as ToolPart} defaultOpen={open()} />}
-                            </Show>
+                            />
                           }
                         >
-                          {(tp) => <PlanExitCard part={tp()} />}
+                          <TodoToolCard part={props.part as ToolPart} />
                         </Show>
                       }
                     >
-                      {(req) => <SuggestBar request={req()} />}
+                      {(part) => <BashToolCard part={part()} defaultOpen={open()} />}
                     </Show>
                   }
                 >
-                  {(req) => <QuestionDock request={req()} />}
+                  {(part) => <PlanExitCard part={part()} />}
                 </Show>
-              </div>
+              }
+            >
+              {(request) => <SuggestBar request={request()} />}
             </Show>
-          )
-        }}
+          }
+        >
+          {(request) => <QuestionDock request={request()} />}
+        </Show>
+      </div>
+    </Show>
+  )
+}
+
+export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
+  const data = useData()
+  const session = useSession()
+  const vscode = useVSCode()
+  const raw = createMemo(() => (data.store.part?.[props.message.id] ?? []) as SDKPart[])
+  const boundary = createMemo(() => {
+    const info = session.revert()
+    if (info?.messageID !== props.message.id) return
+    return info.partID
+  })
+  const layout = createMemo<CheckpointLayout>((prev) =>
+    stableCheckpointLayout(checkpointLayout(checkpointBoundary(raw(), boundary())), prev),
+  )
+  const part = (value: SDKPart) => (
+    <Show when={isRenderable(value)}>
+      <RenderedPart
+        part={value}
+        message={props.message}
+        showAssistantCopyPartID={props.showAssistantCopyPartID}
+        feedback={props.feedback}
+      />
+    </Show>
+  )
+  const rewind = (start: SDKPart & { snapshot?: string }) => {
+    session.rewindCheckpoint(props.message.id, start.id)
+  }
+
+  return (
+    <>
+      <For each={layout().preamble}>{part}</For>
+      <For each={layout().groups}>
+        {(group) => (
+          <>
+            <Show when={group.tools.length > 0}>
+              <CheckpointLine
+                snapshot={group.start.snapshot}
+                busy={session.status() !== "idle"}
+                parallel={group.parallel}
+                tools={group.tools.length}
+                loading={session.checkpointPending(props.message.id, group.start.id)}
+                onRewind={() => rewind(group.start)}
+                onViewDiff={
+                  group.finish?.snapshot && group.start.snapshot
+                    ? () =>
+                        vscode.postMessage({
+                          type: "openChanges",
+                          messageId: props.message.id,
+                          partId: group.start.id,
+                        })
+                    : undefined
+                }
+              />
+            </Show>
+            <For each={group.parts}>{part}</For>
+          </>
+        )}
       </For>
+      <For each={layout().tail}>{part}</For>
+      <Show when={boundary()}>
+        <RevertBanner inline />
+      </Show>
     </>
   )
 }

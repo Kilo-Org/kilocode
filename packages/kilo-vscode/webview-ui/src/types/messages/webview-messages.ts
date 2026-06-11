@@ -44,6 +44,17 @@ export interface RevertSessionRequest {
   partID?: string
 }
 
+export interface RewindCheckpointRequest {
+  type: "rewindCheckpoint"
+  sessionID: string
+  messageID: string
+  partID?: string
+  requestID: string
+  warning: string
+  confirm: string
+  failed: string
+}
+
 export interface UnrevertSessionRequest {
   type: "unrevertSession"
   sessionID: string
@@ -794,6 +805,8 @@ export interface OpenChangesRequest {
    * for this mode.
    */
   turnId?: string
+  messageId?: string
+  partId?: string
 }
 
 // Open diff virtual (permission diff) in the lightweight diff virtual panel
@@ -1068,6 +1081,7 @@ export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
   | RevertSessionRequest
+  | RewindCheckpointRequest
   | UnrevertSessionRequest
   | PermissionResponseRequest
   | CreateSessionRequest

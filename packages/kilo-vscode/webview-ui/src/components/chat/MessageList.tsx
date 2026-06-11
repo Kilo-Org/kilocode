@@ -91,9 +91,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const positions = new Map<string, { top: number; userScrolled: boolean }>()
 
   const boundary = () => session.revert()?.messageID
+  const assistantBoundary = () => (session.revert()?.partID ? session.revert()?.messageID : undefined)
   const turns = createMemo((prev: MessageTurn[] | undefined) =>
     stableMessageTurns(
-      messageTurns(session.messages(), boundary(), (msg) => session.getParts(msg.id)),
+      messageTurns(session.messages(), boundary(), (msg) => session.getParts(msg.id), assistantBoundary()),
       prev,
     ),
   )

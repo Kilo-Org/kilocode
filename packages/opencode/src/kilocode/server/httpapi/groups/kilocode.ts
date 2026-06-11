@@ -7,6 +7,8 @@ import {
   WorkspaceRoutingQuery,
 } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
+import { MessageID, PartID, SessionID } from "@/session/schema"
+import { FileDiff } from "@/snapshot"
 
 const root = "/kilocode"
 
@@ -18,10 +20,17 @@ export const RemoveAgentPayload = Schema.Struct({
   name: Schema.String,
 })
 
+export const CheckpointDiffPayload = Schema.Struct({
+  sessionID: SessionID,
+  messageID: MessageID,
+  partID: PartID,
+})
+
 export const KilocodePaths = {
   heapSnapshot: `${root}/heap/snapshot`,
   removeSkill: `${root}/skill/remove`,
   removeAgent: `${root}/agent/remove`,
+  checkpointDiff: `${root}/checkpoint/diff`,
 } as const
 
 export const KilocodeApi = HttpApi.make("kilocode")
@@ -62,6 +71,18 @@ export const KilocodeApi = HttpApi.make("kilocode")
             summary: "Remove a custom agent",
             description:
               "Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state.",
+          }),
+        ),
+        HttpApiEndpoint.post("checkpointDiff", KilocodePaths.checkpointDiff, {
+          query: WorkspaceRoutingQuery,
+          payload: CheckpointDiffPayload,
+          success: Schema.Array(FileDiff),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.checkpoint.diff",
+            summary: "Get checkpoint changes",
+            description: "Get file changes produced by one completed agent step.",
           }),
         ),
       )

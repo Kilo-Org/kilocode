@@ -923,6 +923,19 @@ export interface RemoteStatusMessage {
   connected: boolean
 }
 
+export interface CheckpointRewindResultMessage {
+  type: "checkpointRewindResult"
+  sessionID: string
+  requestID: string
+  success: boolean
+}
+
+export interface UnrevertSessionResultMessage {
+  type: "unrevertSessionResult"
+  sessionID: string
+  success: boolean
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | FontSizeChangedMessage
@@ -943,6 +956,8 @@ export type ExtensionMessage =
   | SessionCreatedMessage
   | SessionForkedMessage
   | SessionUpdatedMessage
+  | CheckpointRewindResultMessage
+  | UnrevertSessionResultMessage
   | SessionDeletedMessage
   | MessageRemovedMessage
   | MessagesLoadedMessage

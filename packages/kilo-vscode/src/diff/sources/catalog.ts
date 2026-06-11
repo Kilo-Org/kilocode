@@ -16,6 +16,7 @@ import {
   type SnapshotEnabledCheck,
 } from "./session"
 import { TURN_PREFIX, createTurnDiffSource, type TurnDiffFetch } from "./turn"
+import { CHECKPOINT_PREFIX, createCheckpointDiffSource, type CheckpointDiffFetch } from "./checkpoint"
 import { STAGED_DESCRIPTOR, STAGED_SOURCE_ID, createStagedDiffSource } from "./staged"
 import { UNSTAGED_DESCRIPTOR, UNSTAGED_SOURCE_ID, createUnstagedDiffSource } from "./unstaged"
 
@@ -53,6 +54,15 @@ export class DiffSourceCatalog implements vscode.Disposable {
     const info = data?.info
     if (!info || info.role !== "user") return []
     return info.summary?.diffs ?? []
+  }
+
+  private readonly checkpointFetch: CheckpointDiffFetch = async ({ sessionID, messageID, partID, directory }) => {
+    const client = this.connection.getClient()
+    const { data } = await client.kilocode.checkpoint.diff(
+      { sessionID, messageID, partID, directory },
+      { throwOnError: true },
+    )
+    return data ?? []
   }
 
   private readonly checkSnapshotsEnabled: SnapshotEnabledCheck = async (directory) => {
@@ -96,6 +106,14 @@ export class DiffSourceCatalog implements vscode.Disposable {
 
     if (id === STAGED_SOURCE_ID) return createStagedDiffSource()
     if (id === UNSTAGED_SOURCE_ID) return createUnstagedDiffSource()
+
+    if (id.startsWith(CHECKPOINT_PREFIX)) {
+      const [sessionID, messageID, partID] = id.slice(CHECKPOINT_PREFIX.length).split(":")
+      if (!sessionID || !messageID || !partID) {
+        throw new Error(`DiffSourceCatalog.build: malformed checkpoint id "${id}"`)
+      }
+      return createCheckpointDiffSource(sessionID, messageID, partID, this.checkpointFetch, ctx.workspaceRoot)
+    }
 
     if (id.startsWith(TURN_PREFIX)) {
       const [sessionId, messageId] = id.slice(TURN_PREFIX.length).split(":")

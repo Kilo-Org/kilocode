@@ -61,4 +61,34 @@ describe("todo revert helpers", () => {
       todos("pending", "pending", "pending"),
     )
   })
+
+  it("restores todo state before a model-step checkpoint boundary", () => {
+    const ordered = {
+      message_2: [
+        part("prt_001", "message_2", todos("pending", "pending")),
+        { ...base, id: "prt_002", messageID: "message_2", type: "step-finish" as const },
+        { ...base, id: "prt_003", messageID: "message_2", type: "step-start" as const },
+        part("prt_004", "message_2", todos("completed", "pending")),
+      ],
+    }
+
+    expect(state({ messages, parts: ordered, revert: { messageID: "message_2", partID: "prt_003" } })).toEqual(
+      todos("pending", "pending"),
+    )
+  })
+
+  it("keeps todo state from earlier assistant messages at a checkpoint", () => {
+    const more = [...messages, assistant("message_3", "message_1")]
+    const split = {
+      message_2: [part("prt_001", "message_2", todos("pending", "pending"))],
+      message_3: [
+        { ...base, id: "prt_002", messageID: "message_3", type: "step-start" as const },
+        part("prt_003", "message_3", todos("completed", "pending")),
+      ],
+    }
+
+    expect(state({ messages: more, parts: split, revert: { messageID: "message_3", partID: "prt_002" } })).toEqual(
+      todos("pending", "pending"),
+    )
+  })
 })

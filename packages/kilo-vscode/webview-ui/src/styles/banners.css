@@ -81,6 +81,10 @@
   font-size: var(--kilo-font-size-12);
 }
 
+.revert-banner[data-inline] {
+  margin: 8px 0;
+}
+
 .revert-banner-header {
   display: flex;
   align-items: center;

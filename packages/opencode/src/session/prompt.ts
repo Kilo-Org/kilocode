@@ -150,6 +150,7 @@ export const layer = Layer.effect(
       yield* elog.info("cancel", { sessionID })
       yield* KiloSessionPromptQueue.cancel(sessionID) // kilocode_change - drop queued follow-up loops on abort
       KiloSessionPrompt.abortPlanFollowup(sessionID) // kilocode_change - abort pending plan-followup handover work
+      yield* KiloSessionPrompt.dismissBlockers(sessionID, permission, question) // kilocode_change
       yield* state.cancel(sessionID)
     })
 

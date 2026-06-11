@@ -98,6 +98,8 @@ import type {
   KiloCloudSessionImportResponses,
   KiloCloudSessionsErrors,
   KiloCloudSessionsResponses,
+  KilocodeCheckpointDiffErrors,
+  KilocodeCheckpointDiffResponses,
   KilocodeHeapSnapshotErrors,
   KilocodeHeapSnapshotResponses,
   KilocodeRemoveAgentErrors,
@@ -6623,6 +6625,53 @@ export class Heap extends HeyApiClient {
   }
 }
 
+export class Checkpoint extends HeyApiClient {
+  /**
+   * Get checkpoint changes
+   *
+   * Get file changes produced by one completed agent step.
+   */
+  public diff<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      sessionID?: string
+      messageID?: string
+      partID?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "sessionID" },
+            { in: "body", key: "messageID" },
+            { in: "body", key: "partID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeCheckpointDiffResponses,
+      KilocodeCheckpointDiffErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/checkpoint/diff",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class SessionImport extends HeyApiClient {
   /**
    * Insert project for session import
@@ -7089,6 +7138,11 @@ export class Kilocode extends HeyApiClient {
   private _heap?: Heap
   get heap(): Heap {
     return (this._heap ??= new Heap({ client: this.client }))
+  }
+
+  private _checkpoint?: Checkpoint
+  get checkpoint(): Checkpoint {
+    return (this._checkpoint ??= new Checkpoint({ client: this.client }))
   }
 
   private _sessionImport?: SessionImport

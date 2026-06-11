@@ -26,6 +26,16 @@ import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 export namespace KiloSessionPrompt {
   const modes = ["ask", "plan", "architect"]
 
+  export const dismissBlockers = Effect.fn("KiloSessionPrompt.dismissBlockers")(function* (
+    sessionID: SessionID,
+    permission: Permission.Interface,
+    question: Question.Interface,
+  ) {
+    const pending = (yield* permission.list()).find((item) => item.sessionID === sessionID)
+    if (pending) yield* permission.reply({ requestID: pending.id, reply: "reject" })
+    yield* question.dismissAll(sessionID)
+  })
+
   export function titleID(sessionID: SessionID) {
     return `title-${sessionID}`
   }

@@ -6,6 +6,7 @@ import { buildWebviewHtml, getWebviewFontSize } from "../utils"
 import { watchFontSizeConfig } from "../kilo-provider/font-size"
 import type { DiffSourceCatalog } from "./sources/catalog"
 import { turnSourceId } from "./sources/turn"
+import { checkpointSourceId } from "./sources/checkpoint"
 import type { PanelContext } from "./types"
 import { SourceController } from "./SourceController"
 
@@ -66,18 +67,25 @@ export class DiffViewerProvider implements vscode.Disposable {
    * PanelContext from the arg + injected session/workspace lookups so
    * callers don't have to know about it.
    *
-   * When `turnId` is passed, opens the panel scoped to that single turn with
-   * the source picker hidden — the view becomes a static "diff of this turn"
-   * rather than the switchable workspace/session viewer.
+   * A turn or checkpoint target opens a static diff with the source picker
+   * hidden rather than the switchable workspace/session viewer.
    */
-  openFromCommand(arg?: { sessionId?: string; turnId?: string; initialSourceId?: string }): void {
+  openFromCommand(arg?: {
+    sessionId?: string
+    turnId?: string
+    messageId?: string
+    partId?: string
+    initialSourceId?: string
+  }): void {
     const sessionId = arg?.sessionId ?? this.sessionIdProvider()
-    const turnInitialSourceId = arg?.turnId && sessionId ? turnSourceId(sessionId, arg.turnId) : undefined
+    const checkpoint =
+      sessionId && arg?.messageId && arg.partId ? checkpointSourceId(sessionId, arg.messageId, arg.partId) : undefined
+    const turn = arg?.turnId && sessionId ? turnSourceId(sessionId, arg.turnId) : undefined
     this.openPanel({
       workspaceRoot: getWorkspaceRoot(),
       sessionId,
-      initialSourceId: turnInitialSourceId ?? arg?.initialSourceId,
-      hidePicker: !!turnInitialSourceId,
+      initialSourceId: checkpoint ?? turn ?? arg?.initialSourceId,
+      hidePicker: !!checkpoint || !!turn,
     })
   }
 

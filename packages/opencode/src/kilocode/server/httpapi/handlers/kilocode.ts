@@ -1,14 +1,20 @@
 import { Effect } from "effect"
-import { HttpApiBuilder } from "effect/unstable/httpapi"
+import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import * as KiloAgent from "@/kilocode/agent"
 import { EffectBridge } from "@/effect/bridge"
 import { HeapSnapshot } from "@/kilocode/cli/heap-snapshot"
+import { CheckpointDiff } from "@/kilocode/session/checkpoint-diff"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { Skill } from "@/skill"
-import { RemoveAgentPayload, RemoveSkillPayload } from "../groups/kilocode"
+import { Session } from "@/session/session"
+import { Snapshot } from "@/snapshot"
+import { CheckpointDiffPayload, RemoveAgentPayload, RemoveSkillPayload } from "../groups/kilocode"
 
 export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode", (handlers) =>
   Effect.gen(function* () {
+    const sessions = yield* Session.Service
+    const snapshot = yield* Snapshot.Service
+
     const heapSnapshot = Effect.fn("KilocodeHttpApi.heapSnapshot")(function* () {
       return yield* Effect.sync(() => HeapSnapshot.write())
     })
@@ -27,9 +33,21 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return true
     })
 
+    const checkpointDiff = Effect.fn("KilocodeHttpApi.checkpointDiff")(function* (ctx: {
+      payload: typeof CheckpointDiffPayload.Type
+    }) {
+      const messages = yield* sessions.messages({ sessionID: ctx.payload.sessionID })
+      const range = CheckpointDiff.snapshots(messages, ctx.payload.messageID, ctx.payload.partID)
+      if (!range) return yield* new HttpApiError.BadRequest({})
+      return yield* snapshot
+        .diffFull(range.from, range.to)
+        .pipe(Effect.catchCause(() => Effect.fail(new HttpApiError.BadRequest({}))))
+    })
+
     return handlers
       .handle("heapSnapshot", heapSnapshot)
       .handle("removeSkill", removeSkill)
       .handle("removeAgent", removeAgent)
+      .handle("checkpointDiff", checkpointDiff)
   }),
 )

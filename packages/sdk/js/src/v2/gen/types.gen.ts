@@ -8857,6 +8857,38 @@ export type KilocodeRemoveAgentResponses = {
 
 export type KilocodeRemoveAgentResponse = KilocodeRemoveAgentResponses[keyof KilocodeRemoveAgentResponses]
 
+export type KilocodeCheckpointDiffData = {
+  body?: {
+    sessionID: string
+    messageID: string
+    partID: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/checkpoint/diff"
+}
+
+export type KilocodeCheckpointDiffErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeCheckpointDiffError = KilocodeCheckpointDiffErrors[keyof KilocodeCheckpointDiffErrors]
+
+export type KilocodeCheckpointDiffResponses = {
+  /**
+   * Success
+   */
+  200: Array<SnapshotFileDiff>
+}
+
+export type KilocodeCheckpointDiffResponse = KilocodeCheckpointDiffResponses[keyof KilocodeCheckpointDiffResponses]
+
 export type NetworkListData = {
   body?: never
   path?: never

@@ -69,6 +69,7 @@ import { childID } from "./kilo-provider/task-session"
 import { VisibleTaskStreams } from "./kilo-provider/visible-task-streams"
 import { handleNetworkEvent, clearNetworkWaits } from "./kilo-provider/network"
 import { abortSession } from "./kilo-provider/abort"
+import { hasActiveOverlap, rewindCheckpoint } from "./kilo-provider/checkpoint-rewind"
 import {
   buildAutocompleteSettingsMessage,
   validAutocompleteSetting,
@@ -664,8 +665,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           post: (msg) => this.postMessage(msg),
           openAgentManager: () => vscode.commands.executeCommand("kilo-code.new.agentManagerOpen"),
           openAdvancedWorktree: () => vscode.commands.executeCommand("kilo-code.new.agentManager.advancedWorktree"),
-          openChanges: (sessionId?: string, turnId?: string) =>
-            vscode.commands.executeCommand("kilo-code.new.showChanges", { sessionId, turnId }),
+          openChanges: (sessionId?: string, turnId?: string, messageId?: string, partId?: string) =>
+            vscode.commands.executeCommand("kilo-code.new.showChanges", { sessionId, turnId, messageId, partId }),
           currentSessionId: this.currentSession?.id,
           createWorktree: async (baseBranch, branchName) => {
             await this.createWorktreeHandler?.(baseBranch, branchName)
@@ -729,6 +730,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.handleRevertSession(message.sessionID, message.messageID, message.partID).catch((e) =>
             console.error("[Kilo New] handleRevertSession failed:", e),
           )
+          break
+        case "rewindCheckpoint":
+          this.handleRewindCheckpoint(
+            message.sessionID,
+            message.messageID,
+            message.partID,
+            message.requestID,
+            message.warning,
+            message.confirm,
+            message.failed,
+          ).catch((e) => console.error("[Kilo New] handleRewindCheckpoint failed:", e))
           break
         case "unrevertSession":
           this.handleUnrevertSession(message.sessionID).catch((e) =>
@@ -2606,6 +2618,56 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  private async handleRewindCheckpoint(
+    sessionID: string,
+    messageID: string,
+    partID: string | undefined,
+    requestID: string,
+    warning: string,
+    confirm: string,
+    failed: string,
+  ): Promise<void> {
+    if (!this.client) {
+      this.postMessage({ type: "checkpointRewindResult", sessionID, requestID, success: false })
+      return
+    }
+    const client = this.client
+    const dir = this.getWorkspaceDirectory(sessionID)
+    const overlap = await hasActiveOverlap({
+      sessionID,
+      directory: dir,
+      statuses: this.sessionStatusMap,
+      directoryFor: (id) => this.getWorkspaceDirectory(id),
+    })
+
+    try {
+      const success = await rewindCheckpoint({
+        sessionID,
+        overlap,
+        confirm: async () => {
+          const action = await vscode.window.showWarningMessage(warning, { modal: true }, confirm)
+          return action === confirm
+        },
+        abort: async () => {
+          this.cancelRetry(sessionID)
+          await abortSession({ client, sessionID, dir })
+        },
+        revert: async () => {
+          const { data } = await client.session.revert(
+            { sessionID, messageID, partID, directory: dir },
+            { throwOnError: true },
+          )
+          if (data) this.postMessage({ type: "sessionUpdated", session: sessionToWebview(data) })
+        },
+      })
+      this.postMessage({ type: "checkpointRewindResult", sessionID, requestID, success })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to rewind checkpoint:", error)
+      this.postMessage({ type: "checkpointRewindResult", sessionID, requestID, success: false })
+      this.postMessage({ type: "error", message: failed, sessionID })
+    }
+  }
+
   private async handleRevertSession(sessionID: string, messageID: string, partID?: string): Promise<void> {
     if (!this.client) return
     const dir = this.getWorkspaceDirectory(sessionID)
@@ -2619,15 +2681,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private async handleUnrevertSession(sessionID: string): Promise<void> {
-    if (!this.client) return
+    if (!this.client) {
+      this.postMessage({ type: "unrevertSessionResult", sessionID, success: false })
+      return
+    }
     const dir = this.getWorkspaceDirectory(sessionID)
     const { data, error } = await this.client.session.unrevert({ sessionID, directory: dir })
     if (error) {
       console.error("[Kilo New] KiloProvider: Failed to unrevert session:", error)
+      this.postMessage({ type: "unrevertSessionResult", sessionID, success: false })
       this.postMessage({ type: "error", message: "Failed to redo session", sessionID })
       return
     }
     if (data) this.postMessage({ type: "sessionUpdated", session: sessionToWebview(data) })
+    this.postMessage({ type: "unrevertSessionResult", sessionID, success: true })
   }
 
   /**

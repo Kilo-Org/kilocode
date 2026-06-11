@@ -7,11 +7,12 @@
 import { Component, For, Show } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 
-export const RevertBanner: Component = () => {
+export const RevertBanner: Component<{ inline?: boolean }> = (props) => {
   const session = useSession()
   const language = useLanguage()
 
@@ -22,34 +23,54 @@ export const RevertBanner: Component = () => {
   const users = () => session.userMessages()
 
   const handleRedo = () => {
+    if (props.inline) {
+      session.redoRevert()
+      return
+    }
     const boundary = info()?.messageID
     if (!boundary) return
     const next = users().find((m) => m.id > boundary)
-    if (!next) {
-      session.unrevertSession()
-      return
-    }
-    session.revertSession(next.id)
+    session.redoRevert(next?.id)
   }
 
   return (
-    <Show when={info()}>
-      <div class="revert-banner">
+    <Show when={info() && (props.inline ? !!info()?.partID : !info()?.partID)}>
+      <div class="revert-banner" data-inline={props.inline ? "" : undefined}>
         <div class="revert-banner-header">
           <div class="revert-banner-info">
             <Icon name="arrow-left" size="small" />
             <span class="revert-banner-count">
-              {count() === 1
-                ? language.t("revert.banner.count_one", { count: count() })
-                : language.t("revert.banner.count_other", { count: count() })}
+              {props.inline
+                ? language.t("revert.banner.step")
+                : count() === 1
+                  ? language.t("revert.banner.count_one", { count: count() })
+                  : language.t("revert.banner.count_other", { count: count() })}
             </span>
           </div>
           <div class="revert-banner-actions">
-            <Button variant="ghost" size="small" onClick={handleRedo}>
+            <Button
+              variant="ghost"
+              size="small"
+              disabled={session.redoPending()}
+              aria-busy={session.redoPending()}
+              onClick={handleRedo}
+            >
+              <Show when={session.redoPending()}>
+                <Spinner style={{ width: "12px", height: "12px" }} />
+              </Show>
               {language.t("revert.banner.redo")}
             </Button>
-            <Show when={count() > 1}>
-              <Button variant="ghost" size="small" onClick={() => session.unrevertSession()}>
+            <Show when={!props.inline && count() > 1}>
+              <Button
+                variant="ghost"
+                size="small"
+                disabled={session.redoPending()}
+                aria-busy={session.redoPending()}
+                onClick={() => session.redoRevert()}
+              >
+                <Show when={session.redoPending()}>
+                  <Spinner style={{ width: "12px", height: "12px" }} />
+                </Show>
                 {language.t("revert.banner.redo.all")}
               </Button>
             </Show>
