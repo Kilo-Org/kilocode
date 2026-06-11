@@ -1,6 +1,6 @@
 import type { Message, SessionCloseReason, TodoItem } from "../types/messages"
 
-type TerminalKind = "incomplete" | "limit" | "unknown" | "filtered" | "unexpected" | "interrupted" | "error"
+type TerminalKind = "incomplete" | "limit" | "unknown" | "filtered" | "unexpected" | "error"
 type TerminalTone = "warning" | "critical"
 
 export interface TerminalState {
@@ -23,7 +23,7 @@ export function terminal(input: Input): TerminalState | undefined {
   const finish = last?.role === "assistant" ? last.finish : undefined
   const remaining = input.todos.filter((item) => item.status !== "completed" && item.status !== "cancelled").length
 
-  if (input.reason === "interrupted") return { kind: "interrupted", tone: "warning", finish, remaining }
+  if (input.reason === "interrupted") return undefined
   if (input.reason === "error") {
     if (last?.role === "assistant" && last.error && !input.hidden?.(last.id)) return undefined
     return { kind: "error", tone: "critical", finish, remaining }

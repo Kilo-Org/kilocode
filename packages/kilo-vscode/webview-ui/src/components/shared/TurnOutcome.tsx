@@ -17,7 +17,6 @@ export const TurnOutcome: Component = () => {
   )
 
   const label = (value: TerminalState) => {
-    if (value.kind === "interrupted") return language.t("session.outcome.interrupted")
     if (value.kind === "error") return language.t("session.outcome.error")
     if (value.kind === "limit") return language.t("session.outcome.limit")
     if (value.kind === "unknown") return language.t("session.outcome.unknown")

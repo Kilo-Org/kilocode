@@ -48,13 +48,11 @@ describe("terminal", () => {
     expect(terminal({ reason: "completed", messages: [message("other")], todos: [] })?.kind).toBe("unexpected")
   })
 
-  it("surfaces interruption and failures without a rendered error", () => {
-    expect(terminal({ reason: "interrupted", messages: [message("stop")], todos: [todo("pending")] })).toEqual({
-      kind: "interrupted",
-      tone: "warning",
-      finish: "stop",
-      remaining: 1,
-    })
+  it("does not warn on interruption", () => {
+    expect(terminal({ reason: "interrupted", messages: [message("stop")], todos: [todo("pending")] })).toBeUndefined()
+  })
+
+  it("surfaces failures without a rendered error", () => {
     expect(terminal({ reason: "error", messages: [message("error")], todos: [] })?.kind).toBe("error")
   })
 
