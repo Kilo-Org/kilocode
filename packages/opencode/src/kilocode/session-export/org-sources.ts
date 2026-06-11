@@ -1,7 +1,7 @@
 import { Auth } from "@/auth"
 import { Config } from "@/config/config"
 import { makeRuntime } from "@/effect/run-service"
-import { resolveKiloIndexingAuth } from "@/kilocode/indexing-auth"
+import { resolveKiloCredentials } from "@/kilocode/auth/credentials"
 
 export type OrgState = { type: "personal" } | { type: "org"; id: string } | { type: "unknown" }
 export type OrgSource = () => Promise<OrgState>
@@ -15,7 +15,7 @@ export async function getAuthOrgId(): Promise<OrgState> {
       config.runPromise((svc) => svc.get()),
       auth.runPromise((svc) => svc.get("kilo")),
     ])
-    const id = resolveKiloIndexingAuth({ config: cfg, auth: info }).organizationId
+    const id = resolveKiloCredentials({ config: cfg, auth: info }).organizationId
     if (id) return { type: "org", id }
     return { type: "personal" }
   } catch (err) {

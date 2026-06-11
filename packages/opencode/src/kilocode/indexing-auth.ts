@@ -1,4 +1,5 @@
 import type { IndexingConfig } from "@kilocode/kilo-indexing/config"
+import { resolveKiloCredentials } from "./auth/credentials"
 
 type Auth = unknown
 
@@ -35,25 +36,6 @@ function record(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>
 }
 
-function text(value: unknown): string | undefined {
-  if (typeof value !== "string") return
-  const trimmed = value.trim()
-  return trimmed || undefined
-}
-
-function token(auth: Auth): string | undefined {
-  const data = record(auth)
-  if (data.type === "api") return text(data.key)
-  if (data.type === "oauth") return text(data.access)
-  return
-}
-
-function org(auth: Auth): string | undefined {
-  const data = record(auth)
-  if (data.type === "oauth") return text(data.accountId)
-  return
-}
-
 function value(input: unknown): boolean {
   if (input === undefined || input === null) return false
   if (typeof input === "string") return input.trim().length > 0
@@ -73,28 +55,22 @@ export function resolveKiloIndexingAuth(input: {
   env?: Env
 }): KiloIndexingAuth {
   const config = record(input.config)
-  const options = record(record(config.provider).kilo)
   const provider = input.provider ?? record(input.provider)
-  const providerOptions = record(provider.options)
-  const providerConfig = record(options.options)
   const kilo = record(record(config.indexing).kilo)
-  const env = input.env ?? process.env
+  const credentials = resolveKiloCredentials({
+    env: input.env,
+    config,
+    provider,
+    auth: input.auth,
+    token: kilo.apiKey,
+    organizationId: kilo.organizationId,
+    baseUrl: kilo.baseUrl,
+  })
 
   return {
-    apiKey:
-      text(kilo.apiKey) ??
-      text(providerConfig.apiKey) ??
-      token(input.auth) ??
-      text(provider.key) ??
-      text(providerOptions.kilocodeToken) ??
-      text(env.KILO_API_KEY),
-    baseUrl: text(kilo.baseUrl) ?? text(providerConfig.baseURL) ?? text(providerConfig.baseUrl),
-    organizationId:
-      text(kilo.organizationId) ??
-      text(providerConfig.kilocodeOrganizationId) ??
-      org(input.auth) ??
-      text(providerOptions.kilocodeOrganizationId) ??
-      text(env.KILO_ORG_ID),
+    apiKey: credentials.token,
+    baseUrl: credentials.baseUrl,
+    organizationId: credentials.organizationId,
   }
 }
 

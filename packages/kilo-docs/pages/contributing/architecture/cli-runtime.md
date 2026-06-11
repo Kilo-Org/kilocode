@@ -252,14 +252,16 @@ Later sources override earlier values during instance config load:
 | 2 | Organization modes |
 | 3 | Auth-record `.well-known/opencode` remote config |
 | 4 | Global config files |
-| 5 | Explicit `KILO_CONFIG` file |
-| 6 | Project `kilo.json[c]` and `opencode.json[c]` files plus discovered config directories |
+| 5 | Project `kilo.json[c]` and `opencode.json[c]` files plus discovered config directories |
+| 6 | Explicit `KILO_CONFIG` file |
 | 7 | `KILO_CONFIG_DIR` directory |
 | 8 | `KILO_CONFIG_CONTENT` |
-| 9 | Active Kilo Cloud organization config |
-| 10 | Managed config directory |
-| 11 | macOS managed preferences |
-| 12 | Runtime flag-derived permission, tool, compaction, and plugin behavior |
+| 9 | Runtime environment overlays such as `KILO_PERMISSION`, `KILO_DISABLE_AUTOCOMPACT`, and `KILO_DISABLE_PRUNE` |
+| 10 | Active Kilo Cloud organization config |
+| 11 | Managed config directory |
+| 12 | macOS managed preferences |
+
+Environment-backed Kilo credentials and config sources override persisted user configuration. Managed organization and device policy remains authoritative. Explicit CLI arguments such as `--model`, `--agent`, `--port`, and `--hostname` are applied outside this config merge and override matching environment defaults without bypassing managed restrictions.
 
 Global config files load from `${Global.Path.config}`. Project updates prefer existing config files found in ancestor `.kilo`, `.kilocode`, or `.opencode` directories, then existing project root config files, then create `.kilo/kilo.json`. Global indexing settings can carry provider and storage defaults, but global `indexing.enabled` is stripped so project enablement remains local in effective instance config.
 

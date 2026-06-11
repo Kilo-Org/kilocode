@@ -10,13 +10,14 @@ import * as Log from "@opencode-ai/core/util/log"
 Log.init({ print: false })
 
 import { Auth } from "../../src/auth"
+import { Config } from "../../src/config/config"
 import { ModelCache } from "../../src/provider/model-cache"
 import { TestConfig } from "../fixture/config"
 import { testEffect } from "../lib/effect"
 
 type Options = Parameters<ModelCache.KiloModels["fetch"]>[0]
 
-function layer(info: Auth.Info | undefined, captured: Ref.Ref<Options | undefined>) {
+function layer(info: Auth.Info | undefined, captured: Ref.Ref<Options | undefined>, config: Config.Info = {}) {
   const auth = Layer.mock(Auth.Service)({
     get: (id) => Effect.succeed(id === "kilo" ? info : undefined),
   })
@@ -40,7 +41,7 @@ function layer(info: Auth.Info | undefined, captured: Ref.Ref<Options | undefine
   )
   return Layer.fresh(ModelCache.layer).pipe(
     Layer.provide(FetchHttpClient.layer),
-    Layer.provide(TestConfig.layer()),
+    Layer.provide(TestConfig.layer({ get: () => Effect.succeed(config) })),
     Layer.provide(auth),
     Layer.provide(models),
   )
@@ -62,6 +63,31 @@ it.live("model fetch uses accountId from OAuth auth as kilocodeOrganizationId", 
     expect(yield* Ref.get(captured)).toMatchObject({
       kilocodeToken: "test-oauth-token",
       kilocodeOrganizationId: "org-enterprise-123",
+    })
+  }),
+)
+
+it.live("effective config credentials override stored and caller model options", () =>
+  Effect.gen(function* () {
+    const captured = yield* Ref.make<Options | undefined>(undefined)
+    const info = new Auth.Oauth({
+      type: "oauth",
+      access: "stored-token",
+      refresh: "stored-refresh",
+      expires: Date.now() + 3600000,
+      accountId: "stored-org",
+    })
+    const config = {
+      provider: {
+        kilo: { options: { apiKey: "config-token", kilocodeOrganizationId: "config-org" } },
+      },
+    }
+    yield* ModelCache.Service.use((cache) =>
+      cache.fetch("kilo", { kilocodeToken: "caller-token", kilocodeOrganizationId: "caller-org" }),
+    ).pipe(Effect.provide(layer(info, captured, config)))
+    expect(yield* Ref.get(captured)).toMatchObject({
+      kilocodeToken: "config-token",
+      kilocodeOrganizationId: "config-org",
     })
   }),
 )

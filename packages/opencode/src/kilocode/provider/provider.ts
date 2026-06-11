@@ -13,6 +13,7 @@ import { optionalOmitUndefined } from "@opencode-ai/core/schema"
 import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
+import { resolveKiloCredentials } from "@/kilocode/auth/credentials"
 
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
 export const REQUEST_TIMEOUT_MS = 300_000 // 5 minutes
@@ -128,21 +129,13 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
       }),
 
     kilo: Effect.fnUntraced(function* (input: any) {
-      const env = yield* dep.env()
-      const hasKey = yield* Effect.gen(function* () {
-        if (input.env.some((item: string) => env[item])) return true
-        if (yield* dep.auth(input.id)) return true
-        if ((yield* dep.config()).provider?.["kilo"]?.options?.apiKey) return true
-        return false
-      })
-
+      const auth = yield* dep.auth(input.id)
+      const config = yield* dep.config()
+      const credentials = resolveKiloCredentials({ auth, config, provider: input })
       const options: Record<string, string> = {}
-      if (env.KILO_ORG_ID) {
-        options.kilocodeOrganizationId = env.KILO_ORG_ID
-      }
-      if (!hasKey) {
-        options.apiKey = "anonymous"
-      }
+      if (credentials.token) options.kilocodeToken = credentials.token
+      if (credentials.organizationId) options.kilocodeOrganizationId = credentials.organizationId
+      if (!credentials.token) options.apiKey = "anonymous"
 
       return {
         autoload: Object.keys(input.models).length > 0,

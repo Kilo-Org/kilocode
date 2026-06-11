@@ -1,8 +1,8 @@
 import { Config } from "@/config/config"
 // kilocode_change start - preserve Kilo API default model overlay
-import { fetchDefaultModel } from "@kilocode/kilo-gateway"
 import { Auth } from "@/auth"
 import { ModelID, ProviderID } from "@/provider/schema"
+import { fetchKiloDefaultModel } from "@/kilocode/server/routes/instance/httpapi/handlers/config"
 // kilocode_change end
 import { Provider } from "@/provider/provider"
 import * as InstanceState from "@/effect/instance-state"
@@ -40,9 +40,8 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
       if (providers[ProviderID.kilo]) {
         const auth = yield* Auth.Service
         const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({}))) // kilocode_change
-        const token = info?.type === "oauth" ? info.access : info?.key
-        const organizationId = info?.type === "oauth" ? info.accountId : undefined
-        const model = yield* Effect.promise(() => fetchDefaultModel(token, organizationId))
+        const config = yield* configSvc.get()
+        const model = yield* Effect.promise(() => fetchKiloDefaultModel(config, info))
         if (model && providers[ProviderID.kilo]?.models[model]) defaults[ProviderID.kilo] = ModelID.make(model)
       }
       // kilocode_change end

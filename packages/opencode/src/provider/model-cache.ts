@@ -6,6 +6,8 @@ import { Config } from "../config/config"
 import { Auth } from "../auth"
 import type { Provider } from "@opencode-ai/core/models"
 import * as Log from "@opencode-ai/core/util/log"
+import { resolveKiloCredentials } from "@/kilocode/auth/credentials"
+import { mergeKiloModelOptions } from "@/kilocode/provider/models"
 
 type Models = Provider["models"]
 type KiloOptions = NonNullable<Parameters<typeof fetchKiloModels>[0]>
@@ -118,19 +120,10 @@ export const layer: Layer.Layer<
       const options: Options = {}
 
       if (providerID === "kilo") {
-        const item = config.provider?.[providerID]
-        if (item?.options?.apiKey) options.kilocodeToken = item.options.apiKey
-        if (item?.options?.kilocodeOrganizationId) options.kilocodeOrganizationId = item.options.kilocodeOrganizationId
-
         const info = yield* auth.get(providerID)
-        if (info?.type === "api") options.kilocodeToken = info.key
-        if (info?.type === "oauth") {
-          options.kilocodeToken = info.access
-          if (info.accountId) options.kilocodeOrganizationId = info.accountId
-        }
-
-        if (process.env.KILO_API_KEY) options.kilocodeToken = process.env.KILO_API_KEY
-        if (process.env.KILO_ORG_ID) options.kilocodeOrganizationId = process.env.KILO_ORG_ID
+        const credentials = resolveKiloCredentials({ config, auth: info })
+        if (credentials.token) options.kilocodeToken = credentials.token
+        if (credentials.organizationId) options.kilocodeOrganizationId = credentials.organizationId
         log.debug("auth options resolved", {
           providerID,
           hasToken: !!options.kilocodeToken,
@@ -173,7 +166,7 @@ export const layer: Layer.Layer<
           }),
         ),
       )
-      return yield* fetchModels(providerID, { ...resolved, ...options })
+      return yield* fetchModels(providerID, mergeKiloModelOptions(providerID, resolved, options))
     })
 
     const key = (providerID: string, options?: Options) => {

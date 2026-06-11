@@ -4,6 +4,7 @@ import { Provider } from "@/provider/provider"
 import { Session } from "@/session/session"
 import { SessionSummary } from "@/session/summary"
 import { KiloSession } from "@/kilocode/session"
+import { resolveKiloCredentials } from "@/kilocode/auth/credentials"
 import { SessionID } from "@/session/schema"
 import { ModelID, ProviderID } from "@/provider/schema"
 import { MessageV2 } from "@/session/message-v2"
@@ -106,13 +107,10 @@ export namespace KiloSessions {
   async function kilocodeToken() {
     return withInFlightCache(tokenKey, ttlMs, async () => {
       const auth = await runtime.runPromise((svc) => svc.get("kilo"))
-      if (auth?.type === "api" && auth.key.length > 0) return auth.key
-      if (auth?.type === "oauth" && auth.access.length > 0) return auth.access
-      if (auth?.type === "wellknown" && auth.token.length > 0) return auth.token
-
-      const key = process.env["KILO_API_KEY"]?.trim()
-      if (key) return key
-      return undefined
+      return resolveKiloCredentials({
+        env: { KILO_API_KEY: process.env.KILO_API_KEY, KILO_ORG_ID: process.env.KILO_ORG_ID },
+        auth,
+      }).token
     })
   }
 
@@ -793,13 +791,13 @@ export namespace KiloSessions {
   }
 
   async function getOrgId(): Promise<Uuid | undefined> {
-    const env = process.env["KILO_ORG_ID"]
-    if (isUuid(env)) return env
-
     return withInFlightCache(orgKey, ttlMs, async () => {
       const auth = await runtime.runPromise((svc) => svc.get("kilo"))
-      if (auth?.type === "oauth" && isUuid(auth.accountId)) return auth.accountId
-      return undefined
+      const org = resolveKiloCredentials({
+        env: { KILO_API_KEY: process.env.KILO_API_KEY, KILO_ORG_ID: process.env.KILO_ORG_ID },
+        auth,
+      }).organizationId
+      return isUuid(org) ? org : undefined
     })
   }
 

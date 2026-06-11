@@ -161,7 +161,7 @@ it.effect("enables a paid catalog when config apiKey is present", () =>
   Effect.gen(function* () {
     const result = yield* load({ config: { provider: { kilo: { options: { apiKey: "test-key" } } } } })
     expect(result.autoload).toBe(true)
-    expect(result.options).toEqual({})
+    expect(result.options).toEqual({ kilocodeToken: "test-key" })
   }),
 )
 
@@ -169,6 +169,20 @@ it.effect("enables a paid catalog when auth exists", () =>
   Effect.gen(function* () {
     const result = yield* load({ auth: { type: "api", key: "test-key" } })
     expect(result.autoload).toBe(true)
-    expect(result.options).toEqual({})
+    expect(result.options).toEqual({ kilocodeToken: "test-key" })
+  }),
+)
+
+it.effect("prefers effective config credentials over stored auth", () =>
+  Effect.gen(function* () {
+    const result = yield* load({
+      auth: { type: "oauth", access: "stored-token", accountId: "stored-org" },
+      config: {
+        provider: {
+          kilo: { options: { apiKey: "config-token", kilocodeOrganizationId: "config-org" } },
+        },
+      },
+    })
+    expect(result.options).toEqual({ kilocodeToken: "config-token", kilocodeOrganizationId: "config-org" })
   }),
 )
