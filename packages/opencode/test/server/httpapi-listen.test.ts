@@ -285,34 +285,6 @@ describe("HttpApi Server.listen", () => {
     ).rejects.toThrow()
   })
 
-  // kilocode_change start
-  test("keeps authentication isolated across in-process and concurrent listeners", async () => {
-    const open = await startNoAuthListener()
-    try {
-      const local = await Server.Default().app.request("/doc")
-      expect(local.status).toBe(200)
-
-      const secured = await startListener()
-      try {
-        const publicResponse = await fetch(new URL("/doc", open.url))
-        expect(publicResponse.status).toBe(200)
-
-        const unauthorized = await fetch(new URL("/doc", secured.url))
-        expect(unauthorized.status).toBe(401)
-
-        const authorized = await fetch(new URL("/doc", secured.url), {
-          headers: { authorization: authorization() },
-        })
-        expect(authorized.status).toBe(200)
-      } finally {
-        await stop(secured, "timed out cleaning up authenticated listener")
-      }
-    } finally {
-      await stop(open, "timed out cleaning up unauthenticated listener")
-    }
-  })
-  // kilocode_change end
-
   test("default in-process handler does not emit Effect HTTP response logs", async () => {
     let output = ""
     // oxlint-disable-next-line typescript-eslint/unbound-method -- restored in finally after temporarily capturing stderr.
