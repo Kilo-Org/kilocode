@@ -1,9 +1,0 @@
-[data-component="diff-changes"] {
-  [data-slot="diff-changes-additions"] {
-    font-size: var(--kilo-font-size-12);
-  }
-
-  [data-slot="diff-changes-deletions"] {
-    font-size: var(--kilo-font-size-12);
-  }
-}

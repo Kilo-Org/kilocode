@@ -1,8 +1,0 @@
-{
-  "extends": "../webview-ui/tsconfig.json",
-  "compilerOptions": {
-    "jsx": "preserve",
-    "jsxImportSource": "solid-js"
-  },
-  "include": ["./**/*", "../webview-ui/src/**/*"]
-}

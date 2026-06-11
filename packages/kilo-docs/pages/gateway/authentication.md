@@ -85,6 +85,7 @@ BYOK lets you use your own provider API keys with the Kilo AI Gateway. When a BY
 | Google AI Studio | `google` |
 | Inception | `inception` |
 | OpenAI | `openai` |
+| OpenCode Go | `opencode-go` |
 | MiniMax | `minimax` |
 | Mistral | `mistral` |
 | xAI | `xai` |

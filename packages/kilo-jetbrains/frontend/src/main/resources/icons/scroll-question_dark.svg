@@ -1,5 +1,0 @@
-<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <circle id="ScrollQuestion.Background" cx="20" cy="20" r="18" fill="#F29D1F"/>
-  <path id="ScrollQuestion.Foreground" d="M15.75 15.5C15.95 12.95 17.85 11.5 20.25 11.5C22.95 11.5 25 13.2 25 15.8C25 17.7 24 18.85 22.3 19.9C20.75 20.85 20.15 21.55 20.15 23.1V24" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle id="ScrollQuestion.ForegroundDot" cx="19.95" cy="28.25" r="1.25" fill="#FFFFFF"/>
-</svg>
