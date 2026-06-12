@@ -2072,8 +2072,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             toolChoice: format.type === "json_schema" ? "required" : undefined,
           })
 
-          // kilocode_change - apply backend-authoritative question option mode handoff before the next loop step
+          // kilocode_change start
           yield* KiloSessionPrompt.applyQuestionMode({ messageID: handle.message.id, lastUser, sessions, agents, sync })
+          // kilocode_change end
 
           if (structured !== undefined) {
             handle.message.structured = structured
