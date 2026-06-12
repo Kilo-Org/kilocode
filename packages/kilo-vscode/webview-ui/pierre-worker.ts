@@ -38,7 +38,7 @@ function createPool(lineDiffType: "none" | "word-alt") {
     { workerFactory, poolSize: 2 },
     { theme: "Kilo", lineDiffType, preferredHighlighter: ENGINE },
   )
-  void pool.initialize().catch((err) => console.error("[Kilo New] Failed to initialize Pierre worker pool", err))
+  void pool.initialize().catch((err) => console.warn("[Kilo New] Failed to initialize Pierre worker pool", err))
   return pool
 }
 

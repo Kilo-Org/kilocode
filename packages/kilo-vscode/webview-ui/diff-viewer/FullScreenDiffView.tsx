@@ -49,7 +49,9 @@ import {
   LONG_DIFF_MARKER_FILE_COUNT,
   allOpenFiles,
   initialOpenFiles,
+  isDiffExpandable,
   isLargeDiffFile,
+  sanitizeOpenFiles,
   shouldVirtualizeDiff,
   toggleOpenFiles,
 } from "./diff-open-policy"
@@ -228,7 +230,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
         const added = diffs.filter((diff) => !known.has(diff.file)).map((diff) => diff.file)
         known = fileSet
         setOpen((prev) => {
-          const next = [...prev.filter((file) => fileSet.has(file)), ...added]
+          const next = sanitizeOpenFiles(diffs, [...prev.filter((file) => fileSet.has(file)), ...added])
           if (next.length === prev.length && next.every((file, index) => file === prev[index])) return prev
           return next
         })
@@ -263,7 +265,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
         for (const file of next) {
           if (props.loadingFiles?.has(file)) continue
           const diff = props.diffs.find((item) => item.file === file)
-          if (!diff || diff.summarized !== true) continue
+          if (!diff || !isDiffExpandable(diff) || diff.summarized !== true) continue
           const value = diffToken(diff)
           if (requested.get(file) === value) continue
           requested.set(file, value)
@@ -455,7 +457,8 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
 
   const handleFileSelect = (path: string) => {
     setActiveFile(path)
-    if (!open().includes(path)) setOpen((prev) => [...prev, path])
+    const diff = props.diffs.find((item) => item.file === path)
+    if (diff && isDiffExpandable(diff) && !open().includes(path)) setOpen((prev) => [...prev, path])
     requestAnimationFrame(() => {
       const index = rows().findIndex((diff) => diff.file === path)
       if (index < 0) return
@@ -514,8 +517,8 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     files: props.diffs.length,
     additions: props.diffs.reduce((s, d) => s + d.additions, 0),
     deletions: props.diffs.reduce((s, d) => s + d.deletions, 0),
-    large: props.diffs.filter((diff) => isLargeDiffFile(diff)).length,
-    collapsed: Math.max(props.diffs.length - open().length, 0),
+    large: props.diffs.filter((diff) => isDiffExpandable(diff) && isLargeDiffFile(diff)).length,
+    collapsed: props.diffs.filter((diff) => isDiffExpandable(diff) && !open().includes(diff.file)).length,
   }))
   const allOpen = createMemo(() => allOpenFiles(props.diffs, open()))
   const openLabel = () => (allOpen() ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll"))
@@ -617,7 +620,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
 
           <Show when={props.diffs.length > 0}>
             <div class="am-review-diff-content" data-component="session-review">
-              <Accordion multiple value={open()} onChange={setOpen}>
+              <Accordion multiple value={open()} onChange={(files) => setOpen(sanitizeOpenFiles(props.diffs, files))}>
                 <VirtualDiffList
                   data={rows()}
                   scroll={scroller()}
@@ -723,9 +726,11 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                     />
                                   </Tooltip>
                                 </Show>
-                                <span data-slot="session-review-diff-chevron">
-                                  <Icon name="chevron-down" size="small" />
-                                </span>
+                                <Show when={isDiffExpandable(diff)}>
+                                  <span data-slot="session-review-diff-chevron">
+                                    <Icon name="chevron-down" size="small" />
+                                  </span>
+                                </Show>
                               </div>
                             </div>
                           </Accordion.Trigger>

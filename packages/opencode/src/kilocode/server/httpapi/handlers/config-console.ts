@@ -10,6 +10,7 @@ import { KilocodeKeybinds } from "@/kilocode/tui/keybinds"
 import { KilocodeTuiConfig } from "@/kilocode/tui/config"
 import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecycle"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
+import { markInstanceForDisposal } from "@/server/routes/instance/httpapi/lifecycle"
 import { Effect, Option } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import {
@@ -87,6 +88,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
         return result.info
       }
       yield* config.update(patch)
+      yield* markInstanceForDisposal(yield* InstanceState.context)
       return yield* config.get()
     })
 

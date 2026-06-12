@@ -13,8 +13,17 @@ export function shouldVirtualizeDiff(diff: WorktreeFileDiff): boolean {
   return !diff.patch || isLargeDiffFile(diff)
 }
 
+export function isDiffExpandable(diff: WorktreeFileDiff): boolean {
+  return diff.summarized === true || Boolean(diff.patch || diff.before || diff.after)
+}
+
+export function sanitizeOpenFiles(diffs: WorktreeFileDiff[], open: string[]): string[] {
+  const blocked = new Set(diffs.filter((diff) => !isDiffExpandable(diff)).map((diff) => diff.file))
+  return open.filter((file) => !blocked.has(file))
+}
+
 export function expandableOpenFiles(diffs: WorktreeFileDiff[]): string[] {
-  return diffs.map((diff) => diff.file)
+  return diffs.filter(isDiffExpandable).map((diff) => diff.file)
 }
 
 export function initialOpenFiles(diffs: WorktreeFileDiff[]): string[] {

@@ -189,6 +189,21 @@ describe("diffSummary", () => {
     })
   })
 
+  it("classifies untracked files from content rather than their extension", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "tone.wav"), Buffer.from([0x52, 0x49, 0x46, 0x46, 0x00, 0x01, 0x02, 0x03]))
+      await fs.writeFile(path.join(dir, "notes.bin"), "plain text\n")
+
+      const result = await diffSummary(git(), dir, base)
+      expect(result.find((entry) => entry.file === "tone.wav")?.additions).toBe(0)
+      expect(result.find((entry) => entry.file === "notes.bin")?.additions).toBe(1)
+
+      const detail = await diffFile(git(), dir, base, "tone.wav")
+      expect(detail?.summarized).toBe(false)
+      expect(detail?.patch).toBe("")
+    })
+  })
+
   it("all entries are summarized with empty before/after/patch", async () => {
     await withRepo(async (dir, base) => {
       await fs.writeFile(path.join(dir, "untracked.txt"), "x\n")
@@ -204,6 +219,21 @@ describe("diffSummary", () => {
         expect(entry.patch).toBe("")
         expect(typeof entry.stamp).toBe("string")
       }
+    })
+  })
+
+  it("uses git numstat metadata for tracked binary files", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "tone.wav"), Buffer.from([0x52, 0x49, 0x46, 0x46, 0x00, 0x01, 0x02, 0x03]))
+      runSync(dir, ["add", "tone.wav"])
+      runSync(dir, ["commit", "-m", "add audio"])
+
+      const summary = await diffSummary(git(), dir, base)
+      expect(summary.find((entry) => entry.file === "tone.wav")?.additions).toBe(0)
+
+      const detail = await diffFile(git(), dir, base, "tone.wav")
+      expect(detail?.summarized).toBe(false)
+      expect(detail?.patch).toBe("")
     })
   })
 
@@ -283,6 +313,21 @@ describe("diffFile", () => {
       expect(result?.before).toBe("seed\n")
       expect(result?.after).toBe("seed\ncached\n")
       expect(result?.patch).toContain("+cached")
+    })
+  })
+
+  it("does not materialize binary detail from a cached summary", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "tone.wav"), Buffer.from([0x52, 0x49, 0x46, 0x46, 0x00, 0x01, 0x02, 0x03]))
+      const local = createLocalDiff(git())
+
+      await local.summary(dir, base)
+      const result = await local.file(dir, base, "tone.wav")
+
+      expect(result?.summarized).toBe(false)
+      expect(result?.patch).toBe("")
+      expect(result?.before).toBe("")
+      expect(result?.after).toBe("")
     })
   })
 

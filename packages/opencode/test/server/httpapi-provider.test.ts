@@ -7,6 +7,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
 import { TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
+import { preparePluginDependencies } from "../kilocode/plugin-dependencies" // kilocode_change
 
 void Log.init({ print: false })
 
@@ -118,6 +119,7 @@ function requestCallback(input: {
 function writeProviderAuthPlugin(dir: string) {
   return Effect.gen(function* () {
     const fs = yield* AppFileSystem.Service
+    yield* Effect.promise(() => preparePluginDependencies(dir)) // kilocode_change
 
     yield* fs.writeWithDirs(
       path.join(dir, ".opencode", "plugin", "provider-oauth-parity.ts"),
@@ -152,6 +154,7 @@ function writeProviderAuthPlugin(dir: string) {
 function writeProviderAuthValidationPlugin(dir: string) {
   return Effect.gen(function* () {
     const fs = yield* AppFileSystem.Service
+    yield* Effect.promise(() => preparePluginDependencies(dir)) // kilocode_change
 
     yield* fs.writeWithDirs(
       path.join(dir, ".opencode", "plugin", "provider-oauth-validation.ts"),
@@ -193,6 +196,7 @@ function writeProviderAuthValidationPlugin(dir: string) {
 function writeFunctionOptionsPlugin(dir: string) {
   return Effect.gen(function* () {
     const fs = yield* AppFileSystem.Service
+    yield* Effect.promise(() => preparePluginDependencies(dir)) // kilocode_change
 
     yield* fs.writeWithDirs(
       path.join(dir, ".opencode", "plugin", "provider-function-options.ts"),
@@ -224,6 +228,7 @@ function writeFunctionOptionsPlugin(dir: string) {
 function writeProviderModelsMutationPlugin(dir: string) {
   return Effect.gen(function* () {
     const fs = yield* AppFileSystem.Service
+    yield* Effect.promise(() => preparePluginDependencies(dir)) // kilocode_change
 
     yield* fs.writeWithDirs(
       path.join(dir, ".opencode", "plugin", "provider-models-mutation.ts"),

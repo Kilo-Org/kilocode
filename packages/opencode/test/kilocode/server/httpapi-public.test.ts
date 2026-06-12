@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test"
+import { Result, Schema as EffectSchema } from "effect"
 import { OpenApi } from "effect/unstable/httpapi"
 import { AgentBuilderPaths } from "../../../src/kilocode/server/httpapi/groups/agent-builder"
 import { BackgroundProcessPaths } from "../../../src/kilocode/server/httpapi/groups/background-process"
 import { ConfigConsolePaths } from "../../../src/kilocode/server/httpapi/groups/config-console"
-import { IndexingPaths } from "../../../src/kilocode/server/httpapi/groups/indexing"
+import { IndexingPaths, KiloEmbeddingModel } from "../../../src/kilocode/server/httpapi/groups/indexing"
 import { KiloGatewayPaths } from "../../../src/kilocode/server/httpapi/groups/kilo-gateway"
 import { NetworkPaths } from "../../../src/kilocode/server/httpapi/groups/network"
 import { TelemetryPaths } from "../../../src/kilocode/server/httpapi/groups/telemetry"
@@ -38,6 +39,25 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     const spec = OpenApi.fromApi(PublicApi)
     expect(spec.info.title).toBe("kilo")
     expect(spec.info.description).toBe("kilo api")
+  })
+
+  test("constrains embedding model metadata", () => {
+    const accepts = (dimension: number, scoreThreshold: number) =>
+      Result.isSuccess(
+        EffectSchema.decodeUnknownResult(KiloEmbeddingModel)({
+          id: "provider/model",
+          name: "Model",
+          dimension,
+          scoreThreshold,
+        }),
+      )
+
+    expect(accepts(1, 0)).toBe(true)
+    expect(accepts(1024, 1)).toBe(true)
+    expect(accepts(0, 0.5)).toBe(false)
+    expect(accepts(1.5, 0.5)).toBe(false)
+    expect(accepts(1024, -0.1)).toBe(false)
+    expect(accepts(1024, 1.1)).toBe(false)
   })
 
   test("constrains agent builder route ids", () => {
@@ -83,6 +103,7 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       { method: "get", path: ConfigConsolePaths.overlay },
       { method: "patch", path: ConfigConsolePaths.overlay },
       { method: "get", path: IndexingPaths.status },
+      { method: "get", path: IndexingPaths.models },
     ] satisfies Array<{ method: Method; path: string }>
 
     for (const route of routes) {
