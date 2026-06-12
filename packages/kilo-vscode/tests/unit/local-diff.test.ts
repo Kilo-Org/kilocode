@@ -286,6 +286,22 @@ describe("diffFile", () => {
     })
   })
 
+  it("keeps summary snapshots isolated by worktree", async () => {
+    await withRepo(async (first, firstBase) => {
+      await withRepo(async (second, secondBase) => {
+        await fs.writeFile(path.join(first, "seed.txt"), "seed\nfirst\n")
+        await fs.writeFile(path.join(second, "seed.txt"), "seed\nsecond\n")
+        const local = createLocalDiff(git())
+
+        await local.summary(first, firstBase)
+        await local.summary(second, secondBase)
+
+        expect((await local.file(first, firstBase, "seed.txt"))?.after).toBe("seed\nfirst\n")
+        expect((await local.file(second, secondBase, "seed.txt"))?.after).toBe("seed\nsecond\n")
+      })
+    })
+  })
+
   it("falls back to summarized entry when the working-copy file exceeds the detail cap", async () => {
     await withRepo(async (dir, base) => {
       // Write a tracked file that's ~2.5x the cap on the working-copy side.

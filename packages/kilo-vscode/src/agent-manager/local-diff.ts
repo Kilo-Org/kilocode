@@ -249,31 +249,28 @@ export async function diffSummary(git: GitOps, dir: string, base: string, log?: 
 }
 
 export function createLocalDiff(git: GitOps, log?: Log) {
-  let key: string | undefined
-  let anc: string | undefined
-  let metas = new Map<string, Meta>()
+  const states = new Map<string, { anc: string; metas: Map<string, Meta> }>()
 
   return {
     summary: async (dir: string, base: string): Promise<WorktreeDiffEntry[]> => {
-      const next = await ancestor(git, dir, base, log)
       const id = `${dir}\0${base}`
-      if (!next) {
-        key = id
-        anc = undefined
-        metas = new Map()
+      const anc = await ancestor(git, dir, base, log)
+      if (!anc) {
+        states.delete(id)
         return []
       }
 
-      const items = await list(git, dir, next, log)
-      key = id
-      anc = next
-      metas = new Map(items.map((item) => [item.file, item]))
+      const items = await list(git, dir, anc, log)
+      states.delete(id)
+      states.set(id, { anc, metas: new Map(items.map((item) => [item.file, item])) })
+      if (states.size > 8) states.delete(states.keys().next().value!)
       return items.map(summarize)
     },
     file: async (dir: string, base: string, file: string): Promise<WorktreeDiffEntry | null> => {
-      const meta = key === `${dir}\0${base}` ? metas.get(file) : undefined
-      if (!anc || !meta) return diffFile(git, dir, base, file, log)
-      return materialize(git, dir, anc, meta, log)
+      const state = states.get(`${dir}\0${base}`)
+      const meta = state?.metas.get(file)
+      if (!state || !meta) return diffFile(git, dir, base, file, log)
+      return materialize(git, dir, state.anc, meta, log)
     },
   }
 }
