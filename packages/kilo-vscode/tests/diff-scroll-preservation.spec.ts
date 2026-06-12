@@ -73,6 +73,47 @@ test("preserves diff scroll position while an agent edit refreshes a file", asyn
   expect(next).toBeCloseTo(top, 0)
 })
 
+test("preserves scroll while adding and editing a review comment", async ({ page }) => {
+  await openStory(page)
+  const scroller = page.locator(".am-review-diff")
+  const target = page.locator('[data-file-path="src/target.ts"]')
+
+  const align = async () => {
+    await scroller.evaluate((el) => {
+      const target = el.querySelector('[data-file-path="src/target.ts"]')
+      if (!(target instanceof HTMLElement)) throw new Error("Target diff row not found")
+      el.scrollTop += target.getBoundingClientRect().top - el.getBoundingClientRect().top - 24
+    })
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+  }
+  await align()
+  await align()
+
+  const line = target.locator('[data-line="1"]').last()
+  await line.hover()
+  await target.locator("[data-utility-button]").last().click()
+  await expect(target.locator(".am-annotation-textarea")).toBeVisible()
+  await target.locator(".am-annotation-textarea").fill("Keep this stable")
+  const top = await target.evaluate((el) => el.getBoundingClientRect().top)
+  const before = await scroller.evaluate((el) => el.scrollTop)
+
+  await page.getByRole("button", { name: "Apply agent edit" }).click()
+  await expect(page.getByTestId("agent-edit-version")).toHaveText("after")
+  await expect(target.locator(".am-annotation-textarea")).toHaveValue("Keep this stable")
+  await expect.poll(async () => scroller.evaluate((el) => el.scrollTop)).toBeCloseTo(before, 0)
+  await expect.poll(async () => target.evaluate((el) => el.getBoundingClientRect().top)).toBeCloseTo(top, 0)
+
+  await target.getByRole("button", { name: "Comment" }).click()
+  await expect(target.getByText("Keep this stable")).toBeVisible()
+  const saved = await scroller.evaluate((el) => el.scrollTop)
+
+  await target.getByTitle("Edit").click()
+  await target.locator(".am-annotation-textarea").fill("Still stable")
+  await target.getByRole("button", { name: "Save" }).click()
+  await expect(target.getByText("Still stable")).toBeVisible()
+  await expect.poll(async () => scroller.evaluate((el) => el.scrollTop)).toBeCloseTo(saved, 0)
+})
+
 test("resets virtual measurements and scroll when the review context changes", async ({ page }) => {
   const first = await openStory(page)
   const scroller = page.locator(".am-review-diff")
