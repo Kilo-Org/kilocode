@@ -138,6 +138,8 @@ test("resets virtual measurements and scroll when the review context changes", a
     })
   })
 
+  // Move away from the origin so the context switch must reset both the
+  // virtualizer's cached measurements and the shared scroller position.
   await scroller.evaluate((el) => {
     el.scrollTop = 2_000
   })
