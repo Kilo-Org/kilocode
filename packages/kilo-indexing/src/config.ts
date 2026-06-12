@@ -1,7 +1,10 @@
 import { Schema } from "effect"
 import z from "zod"
 import type { IndexingConfigInput } from "./indexing/config-manager"
+import { DEFAULT_VECTOR_STORE } from "./indexing/constants"
 import type { EmbedderProvider } from "./indexing/interfaces/manager"
+
+export { DEFAULT_VECTOR_STORE } from "./indexing/constants"
 
 const providers = [
   "kilo",
@@ -29,7 +32,7 @@ export const IndexingConfig = z
       .nullable()
       .optional()
       .describe("Override embedding vector dimension (auto-detected from model if omitted)"),
-    vectorStore: z.enum(stores).optional().describe("Vector store backend (default: qdrant)"),
+    vectorStore: z.enum(stores).optional().describe("Vector store backend (default: lancedb)"),
     kilo: z
       .object({
         apiKey: z.string().optional(),
@@ -147,7 +150,7 @@ export const IndexingSchema = Schema.Struct({
   dimension: Schema.optional(Schema.NullOr(PositiveInt)).annotate({
     description: "Override embedding vector dimension (auto-detected from model if omitted)",
   }),
-  vectorStore: Schema.optional(Store).annotate({ description: "Vector store backend (default: qdrant)" }),
+  vectorStore: Schema.optional(Store).annotate({ description: "Vector store backend (default: lancedb)" }),
   kilo: Schema.optional(
     Schema.Struct({
       apiKey: Schema.optional(Schema.String),
@@ -237,7 +240,7 @@ export function toIndexingConfigInput(cfg: IndexingConfig | undefined): Indexing
   return {
     enabled: cfg?.enabled ?? false,
     embedderProvider: provider,
-    vectorStoreProvider: cfg?.vectorStore,
+    vectorStoreProvider: cfg?.vectorStore ?? DEFAULT_VECTOR_STORE,
     modelId: cfg?.model ?? undefined,
     modelDimension: cfg?.dimension ?? undefined,
     lancedbVectorStoreDirectory: cfg?.lancedb?.directory,

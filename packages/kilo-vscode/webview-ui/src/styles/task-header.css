@@ -121,8 +121,7 @@
 }
 
 .task-timeline {
-  display: flex;
-  align-items: flex-end;
+  position: relative;
   overflow-x: auto;
   overflow-y: hidden;
   cursor: grab;
@@ -130,37 +129,36 @@
   scrollbar-width: none; /* Firefox */
 }
 
+.task-timeline:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
 .task-timeline::-webkit-scrollbar {
   display: none;
 }
 
-.task-timeline-bar {
+.task-timeline-content {
   position: relative;
-  flex-shrink: 0;
-  margin-right: 1px;
-  overflow: hidden;
 }
 
-.task-timeline-bar-fill {
+.task-timeline-svg {
+  display: block;
+  overflow: visible;
+}
+
+.task-timeline-bar {
   position: absolute;
   bottom: 0;
-  left: 0;
-  right: 0;
+  box-sizing: border-box;
   border-radius: 2px 2px 0 0;
-  transition: opacity 0.15s;
-}
-
-.task-timeline-bar:hover .task-timeline-bar-fill {
+  background: var(--timeline-color);
   opacity: 0.7;
+  pointer-events: none;
 }
 
-/* Fade-in animation for new bars */
-.task-timeline-bar-fill--new {
-  animation: timeline-fade-in 0.3s ease-out;
-}
-
-/* Active (latest) bar pulse when session is busy */
-.task-timeline-bar-fill--active {
+.task-timeline-bar--active {
+  opacity: 1;
   animation: timeline-pulse 2s ease-in-out infinite 0.5s;
 }
 
@@ -170,18 +168,6 @@
   transform: translate(-50%, calc(-100% - 4px));
   white-space: normal;
   pointer-events: none;
-}
-
-@keyframes timeline-fade-in {
-  from {
-    opacity: 0;
-    transform: scaleY(0);
-    transform-origin: bottom;
-  }
-  to {
-    opacity: 1;
-    transform: scaleY(1);
-  }
 }
 
 @keyframes timeline-pulse {

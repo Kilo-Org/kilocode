@@ -1259,8 +1259,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Otomatik kod biçimlendiriciyi etkinleştir",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Dil sunucu protokolü entegrasyonunu etkinleştir",
-  "settings.experimental.pasteSummary.title": "Yapıştırma Özetini Devre Dışı Bırak",
-  "settings.experimental.pasteSummary.description": "Büyük yapıştırılan içeriği özetleme",
   "settings.experimental.batch.title": "Toplu Araç",
   "settings.experimental.batch.description": "Birden fazla araç çağrısının toplu işlenmesini etkinleştir",
   "settings.experimental.codebaseSearch.title": "Kod Tabanı Araması",
@@ -1406,8 +1404,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Görev listesini yönet. Dahili görev listesini okuma ve güncellemeye izin verir.",
   "settings.autoApprove.tool.webfetch": "URL getir. Belirli bir URL'den içerik almaya izin verir.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Web veya kod ara. Harici web veya kod aramaları yapmaya izin verir.",
+  "settings.autoApprove.tool.websearch": "Web'de ara. Harici web aramaları yapmaya izin verir.",
   "settings.autoApprove.tool.doom_loop":
     "Tekrarlanan aynı eylemleri önle. Aynı araç çağrısı aynı girdiyle tekrarlandığında tetiklenir.",
 

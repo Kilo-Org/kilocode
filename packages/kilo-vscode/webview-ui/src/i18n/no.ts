@@ -1230,8 +1230,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Aktiver automatisk kodeformatering",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Aktiver språkserverprotokoll-integrasjon",
-  "settings.experimental.pasteSummary.title": "Deaktiver lim-sammendrag",
-  "settings.experimental.pasteSummary.description": "Ikke oppsummer stort limt innhold",
   "settings.experimental.batch.title": "Batchverktøy",
   "settings.experimental.batch.description": "Aktiver batchbehandling av verktøykall",
   "settings.experimental.codebaseSearch.title": "Kodesøk",
@@ -1440,8 +1438,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Administrer oppgaveliste. Tillater lesing og oppdatering av den interne oppgavelisten.",
   "settings.autoApprove.tool.webfetch": "Hent en URL. Tillater henting av innhold fra en spesifikk URL.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Søk på nettet eller i kode. Tillater å utføre eksterne nett- eller kodesøk.",
+  "settings.autoApprove.tool.websearch": "Søk på nettet. Tillater å utføre eksterne nettsøk.",
   "settings.autoApprove.tool.external_directory":
     "Få tilgang til filer utenfor arbeidsområdet. Utløses ved tilgang til filer utenfor gjeldende prosjektkatalog.",
   "settings.autoApprove.tool.doom_loop":

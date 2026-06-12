@@ -1,6 +1,6 @@
 // kilocode_change - new file
 import { afterEach, describe, expect, test } from "bun:test"
-import { Effect, Layer, Option } from "effect"
+import { Effect, Layer, Option, Schema } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
@@ -49,9 +49,22 @@ const clear = () =>
   Effect.runPromise(Config.Service.use((svc) => svc.invalidate()).pipe(Effect.scoped, Effect.provide(layer)))
 const saveGlobal = (config: Config.Info) =>
   Effect.runPromise(Config.Service.use((svc) => svc.updateGlobal(config)).pipe(Effect.scoped, Effect.provide(layer)))
+const saveProject = (config: Config.Info) =>
+  Effect.runPromise(Config.Service.use((svc) => svc.update(config)).pipe(Effect.scoped, Effect.provide(layer)))
 
 async function writeConfig(dir: string, config: object, name = "kilo.json") {
   await Filesystem.write(path.join(dir, name), JSON.stringify(config))
+}
+
+function decode(input: unknown): Config.Info {
+  const config = Schema.decodeUnknownSync(Config.Info)(input)
+  return {
+    ...config,
+    skills: config.skills && {
+      paths: config.skills.paths && [...config.skills.paths],
+      urls: config.skills.urls && [...config.skills.urls],
+    },
+  }
 }
 
 const cfg: Partial<Config.Info> = {
@@ -180,13 +193,29 @@ describe("kilocode indexing config", () => {
     }
   })
 
-  test("global indexing enabled applies when project indexing is disabled", async () => {
+  test("project indexing enabled overrides global enablement", async () => {
     const input = KiloIndexing.input({ enabled: false }, { enabled: true })
-    expect(input.enabled).toBe(true)
+    expect(input.enabled).toBe(false)
+    expect(KiloIndexing.input(undefined, { enabled: true }).enabled).toBe(true)
+    expect(KiloIndexing.input({ enabled: true }, { enabled: false }).enabled).toBe(true)
+  })
+
+  test("creates missing project config as .kilo/kilo.jsonc", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    await WithInstance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        await saveProject({ indexing: { enabled: true } })
+      },
+    })
+
+    expect(await Bun.file(path.join(tmp.path, ".kilo", "kilo.jsonc")).exists()).toBe(true)
+    expect(await Bun.file(path.join(tmp.path, ".kilo", "kilo.json")).exists()).toBe(false)
   })
 
   test("accepts delete sentinels for indexing model overrides", () => {
-    const patch = Config.Info.zod.parse({ indexing: { model: null, dimension: null } })
+    const patch = decode({ indexing: { model: null, dimension: null } })
     const merged = KilocodeConfig.mergeConfig(
       {
         indexing: {
@@ -207,7 +236,7 @@ describe("kilocode indexing config", () => {
 
 describe("agent config", () => {
   test("accepts delete sentinels for agent model and variant overrides", () => {
-    const patch = Config.Info.zod.parse({ agent: { explore: { model: null, variant: null } } })
+    const patch = decode({ agent: { explore: { model: null, variant: null } } })
     const merged = KilocodeConfig.mergeConfig(
       {
         agent: {
@@ -226,7 +255,7 @@ describe("agent config", () => {
   })
 
   test("removes an agent variant override without removing its model", () => {
-    const patch = Config.Info.zod.parse({ agent: { explore: { variant: null } } })
+    const patch = decode({ agent: { explore: { variant: null } } })
     const merged = KilocodeConfig.mergeConfig(
       {
         agent: {
@@ -267,7 +296,7 @@ describe("agent config", () => {
           "}",
         ].join("\n"),
       )
-      const patch = Config.Info.zod.parse({ agent: { explore: { model: null, variant: null } } })
+      const patch = decode({ agent: { explore: { model: null, variant: null } } })
 
       await saveGlobal(patch)
 

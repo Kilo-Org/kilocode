@@ -1240,6 +1240,10 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                 )
               }
               const [title, ...rest] = cleaned.split(": ")
+              const message = rest.join(": ")
+              const status = message.match(/^(\d{3})(?:\s+|$)/)
+              const code = status?.[1]
+              const detail = code ? message.slice(code.length).trimStart() : message
               return (
                 <Card variant="error">
                   <div data-component="tool-error">
@@ -1247,8 +1251,15 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                     <Switch>
                       <Match when={title && title.length < 30}>
                         <div data-slot="message-part-tool-error-content">
-                          <div data-slot="message-part-tool-error-title">{title}</div>
-                          <span data-slot="message-part-tool-error-message">{rest.join(": ")}</span>
+                          <div data-slot="message-part-tool-error-heading">
+                            <div data-slot="message-part-tool-error-title">{title}</div>
+                            <Show when={code}>
+                              <span data-slot="message-part-tool-error-code">{code}</span>
+                            </Show>
+                          </div>
+                          <Show when={detail}>
+                            <span data-slot="message-part-tool-error-message">{detail}</span>
+                          </Show>
                         </div>
                       </Match>
                       <Match when={true}>

@@ -7,6 +7,8 @@ import {
   eagerDiffFiles,
   expandableOpenFiles,
   initialOpenFiles,
+  isDiffExpandable,
+  sanitizeOpenFiles,
   toggleOpenFiles,
 } from "../../webview-ui/diff-viewer/diff-open-policy"
 import type { WorktreeFileDiff } from "../../webview-ui/src/types/messages"
@@ -72,6 +74,7 @@ describe("agent manager diff state", () => {
       initialOpenFiles([
         diff({ file: "src/app.ts", generatedLike: false, additions: 3 }),
         diff({ file: "node_modules/pkg/index.js", generatedLike: true, additions: 3 }),
+        diff({ file: "audio/notification.wav", summarized: false, additions: 0 }),
         diff({ file: "src/huge.ts", additions: EXTREME_DIFF_CHANGED_LINES + 1 }),
       ]),
     ).toEqual(["src/app.ts"])
@@ -85,6 +88,7 @@ describe("agent manager diff state", () => {
       expandableOpenFiles([
         diff({ file: "src/app.ts", generatedLike: false, additions: 3 }),
         diff({ file: "src/generated.ts", generatedLike: true, additions: 3 }),
+        diff({ file: "assets/archive.zip", summarized: false, additions: 0 }),
         diff({ file: "src/huge.ts", additions: EXTREME_DIFF_CHANGED_LINES + 1 }),
       ]),
     ).toEqual(["src/app.ts"])
@@ -95,6 +99,7 @@ describe("agent manager diff state", () => {
       diff({ file: "src/app.ts" }),
       diff({ file: "src/panel.ts" }),
       diff({ file: "src/generated.ts", generatedLike: true }),
+      diff({ file: "audio/alert.mp3", summarized: false, additions: 0 }),
       diff({ file: "src/huge.ts", additions: EXTREME_DIFF_CHANGED_LINES + 1 }),
     ]
 
@@ -108,6 +113,15 @@ describe("agent manager diff state", () => {
     expect(toggleOpenFiles(diffs, ["stale.ts"])).toEqual(["src/app.ts", "src/panel.ts"])
     expect(toggleOpenFiles(diffs, ["src/app.ts"])).toEqual(["src/app.ts", "src/panel.ts"])
     expect(toggleOpenFiles(diffs, ["src/app.ts", "src/panel.ts"])).toEqual([])
+  })
+
+  it("prevents non-text diffs from entering open state", () => {
+    const audio = diff({ file: "audio/alert.wav", summarized: false, additions: 0 })
+    const text = diff({ file: "src/app.ts" })
+
+    expect(isDiffExpandable(audio)).toBe(false)
+    expect(isDiffExpandable(text)).toBe(true)
+    expect(sanitizeOpenFiles([audio, text], [audio.file, text.file])).toEqual([text.file])
   })
 })
 

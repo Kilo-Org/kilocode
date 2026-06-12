@@ -1,5 +1,6 @@
 import * as fs from "fs/promises"
 import * as path from "path"
+import { binaryFile } from "../diff/shared/binary"
 import type { GitOps } from "./GitOps"
 import type { WorktreeDiffEntry } from "./types"
 
@@ -12,6 +13,7 @@ type Meta = {
   status: Status
   tracked: boolean
   generatedLike: boolean
+  binary: boolean
   stamp: string
 }
 
@@ -118,7 +120,7 @@ async function numstat(git: GitOps, dir: string, base: string, file?: string) {
   const args = ["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", base]
   if (file) args.push("--", file)
   const result = await git.execGit(args, dir)
-  const map = new Map<string, { additions: number; deletions: number }>()
+  const map = new Map<string, { additions: number; deletions: number; binary: boolean }>()
   if (result.code !== 0) return map
   for (const line of result.stdout.trim().split("\n")) {
     if (!line) continue
@@ -130,6 +132,7 @@ async function numstat(git: GitOps, dir: string, base: string, file?: string) {
     map.set(name, {
       additions: add === "-" ? 0 : parseInt(add || "0", 10) || 0,
       deletions: del === "-" ? 0 : parseInt(del || "0", 10) || 0,
+      binary: add === "-" || del === "-",
     })
   }
   return map
@@ -179,7 +182,7 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<M
     if (!file || !code) continue
     seen.add(file)
     const status = statusFromCode(code)
-    const stat = counts.get(file) ?? { additions: 0, deletions: 0 }
+    const stat = counts.get(file) ?? { additions: 0, deletions: 0, binary: false }
     result.push({
       file,
       additions: stat.additions,
@@ -187,6 +190,7 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<M
       status,
       tracked: true,
       generatedLike: generatedLike(file),
+      binary: stat.binary,
       stamp: status === "deleted" ? `deleted:${anc}` : await statStamp(dir, file),
     })
   }
@@ -205,13 +209,15 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<M
     const full = path.join(dir, file)
     const exists = await fs.stat(full).catch(() => undefined)
     if (!exists) continue
+    const binary = await binaryFile(full)
     result.push({
       file,
-      additions: await lineCount(full),
+      additions: binary ? 0 : await lineCount(full),
       deletions: 0,
       status: "added",
       tracked: false,
       generatedLike: generatedLike(file),
+      binary,
       stamp: await statStamp(dir, file),
     })
   }
@@ -230,7 +236,7 @@ function summarize(meta: Meta): WorktreeDiffEntry {
     status: meta.status,
     tracked: meta.tracked,
     generatedLike: meta.generatedLike,
-    summarized: true,
+    summarized: !meta.binary,
     stamp: meta.stamp,
   }
 }
@@ -254,13 +260,15 @@ async function detailMeta(git: GitOps, dir: string, anc: string, file: string): 
     const full = path.join(dir, file)
     const exists = await fs.stat(full).catch(() => undefined)
     if (!exists) return undefined
+    const binary = await binaryFile(full)
     return {
       file,
-      additions: await lineCount(full),
+      additions: binary ? 0 : await lineCount(full),
       deletions: 0,
       status: "added",
       tracked: false,
       generatedLike: generatedLike(file),
+      binary,
       stamp: await statStamp(dir, file),
     }
   }
@@ -278,7 +286,7 @@ async function detailMeta(git: GitOps, dir: string, anc: string, file: string): 
   if (!code) return undefined
 
   const counts = await numstat(git, dir, anc, file)
-  const stat = counts.get(file) ?? counts.get(pathPart) ?? { additions: 0, deletions: 0 }
+  const stat = counts.get(file) ?? counts.get(pathPart) ?? { additions: 0, deletions: 0, binary: false }
   const status = statusFromCode(code)
   return {
     file: pathPart,
@@ -287,6 +295,7 @@ async function detailMeta(git: GitOps, dir: string, anc: string, file: string): 
     status,
     tracked: true,
     generatedLike: generatedLike(pathPart),
+    binary: stat.binary,
     stamp: status === "deleted" ? `deleted:${anc}` : await statStamp(dir, pathPart),
   }
 }
@@ -345,6 +354,7 @@ export async function diffFile(
   if (!anc) return null
   const meta = await detailMeta(git, dir, anc, file)
   if (!meta) return null
+  if (meta.binary) return summarize(meta)
 
   // Cheap size probe before materializing content — protects the extension
   // host from OOM on huge tracked files. `git cat-file -s` returns the blob

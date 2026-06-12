@@ -5,7 +5,14 @@ import type { SessionMode } from "../../context/worktree-mode"
 import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../marketplace"
 import type { ConnectionState, ServerInfo, SessionStatus } from "./connection"
 import type { FileAttachment, Part } from "./parts"
-import type { CloudSessionInfo, Message, MessageLoadMode, SessionCloseReason, SessionInfo } from "./sessions"
+import type {
+  CloudSessionInfo,
+  Message,
+  MessageLoadMode,
+  SessionCloseReason,
+  SessionInfo,
+  SessionUpdate,
+} from "./sessions"
 import type { PermissionRequest } from "./permissions"
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
@@ -24,6 +31,7 @@ import type {
   ReviewComment,
   RunStatus,
   SectionState,
+  TerminalFont,
   WorktreeErrorCode,
   WorktreeFileDiff,
   WorktreeGitStats,
@@ -159,7 +167,7 @@ export interface SessionForkedMessage {
 
 export interface SessionUpdatedMessage {
   type: "sessionUpdated"
-  session: SessionInfo
+  session: SessionUpdate
 }
 
 export interface SessionDeletedMessage {
@@ -455,6 +463,7 @@ export interface ConfigLoadedMessage {
   type: "configLoaded"
   config: Config
   globalConfig?: Config
+  projectConfig?: Config
   features: FeatureFlags
 }
 
@@ -462,6 +471,7 @@ export interface ConfigUpdatedMessage {
   type: "configUpdated"
   config: Config
   globalConfig?: Config
+  projectConfig?: Config
   features: FeatureFlags
 }
 
@@ -573,6 +583,12 @@ export interface AgentManagerTerminalCreatedMessage {
   terminalId: string
   title: string
   wsUrl: string
+  font: TerminalFont
+}
+
+export interface AgentManagerTerminalFontChangedMessage {
+  type: "agentManager.terminal.fontChanged"
+  font: TerminalFont
 }
 
 export interface AgentManagerTerminalClosedMessage {
@@ -1024,6 +1040,7 @@ export type ExtensionMessage =
   | AgentManagerLocalStatsMessage
   | AgentManagerPRStatusMessage
   | AgentManagerTerminalCreatedMessage
+  | AgentManagerTerminalFontChangedMessage
   | AgentManagerTerminalClosedMessage
   | AgentManagerTerminalErrorMessage
   // legacy-migration start

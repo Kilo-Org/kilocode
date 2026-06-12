@@ -35,6 +35,8 @@ import { diffSummary as localDiffSummary, diffFile as localDiffFile } from "./lo
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
 import { stopSessionProcesses } from "../kilo-provider/background-process"
 
+import { startSession } from "./mcp-warmup"
+import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
 import { Semaphore } from "./semaphore"
@@ -68,9 +70,11 @@ export class AgentManagerProvider implements Disposable {
   private gitOps: GitOps
   private diffs: WorktreeDiffController
   private staleWorktreeIds = new Set<string>()
+  private toolRequests = new Set<string>()
   private cachedWorktreeStats: { type: "agentManager.worktreeStats"; stats: WorktreeStats[] } | undefined
   private cachedLocalStats: { type: "agentManager.localStats"; stats: LocalStats } | undefined
   private unsubTool: (() => void) | undefined
+  private unsubFont: (() => void) | undefined
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
 
@@ -94,6 +98,10 @@ export class AgentManagerProvider implements Disposable {
       getWorktreePath: (id) => this.getStateManager()?.getWorktree(id)?.path,
       log: (...args) => this.log("[XTerm]", ...args),
       post: (msg) => this.postToWebview(msg),
+      getTerminalFont: () => readTerminalFont(),
+    })
+    this.unsubFont = watchTerminalFont((font) => {
+      this.postToWebview({ type: "agentManager.terminal.fontChanged", font })
     })
     this.run = new RunController({
       root: () => this.getRoot(),
@@ -810,9 +818,11 @@ export class AgentManagerProvider implements Disposable {
     })
 
     try {
-      const { data: session } = await client.session.create(
-        { directory: worktreePath, platform: PLATFORM },
-        { throwOnError: true },
+      const { data: session } = await startSession(
+        client,
+        worktreePath,
+        () => client.session.create({ directory: worktreePath, platform: PLATFORM }, { throwOnError: true }),
+        (...args) => this.log(...args),
       )
       return session
     } catch (error) {
@@ -910,6 +920,13 @@ export class AgentManagerProvider implements Disposable {
         openPanel: (preserveFocus) => this.openPanel(preserveFocus),
         waitReady: (context) => this.waitForStateReady(context),
         createWorktree: (opts) => this.createWorktreeOnDisk(opts),
+        claimRequest: (id) => {
+          if (this.toolRequests.has(id)) return false
+          const oldest = this.toolRequests.size >= 100 ? this.toolRequests.values().next().value : undefined
+          if (oldest) this.toolRequests.delete(oldest)
+          this.toolRequests.add(id)
+          return true
+        },
         cleanupWorktree: async (wid, dir) => {
           this.getStateManager()?.removeWorktree(wid)
           await this.getWorktreeManager()?.removeWorktree(dir)
@@ -1780,6 +1797,7 @@ export class AgentManagerProvider implements Disposable {
     await this.stateReady?.catch((err) => this.log("dispose: stateReady rejected:", err))
     await this.state?.flush().catch((err) => this.log("dispose: state flush failed:", err))
     this.unsubTool?.()
+    this.unsubFont?.()
     this.connectionService.unregisterFocused("agent-manager")
     this.connectionService.registerOpen("agent-manager", [])
     this.diffs.stop()

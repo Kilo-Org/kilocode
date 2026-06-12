@@ -11,9 +11,15 @@ export interface BasicToolProps extends BaseProps {
   partID?: string
 }
 
+type OpenProps = Pick<BasicToolProps, "tool" | "callID" | "partID" | "forceOpen" | "defaultOpen">
+
+export function initialOpen(props: OpenProps) {
+  return props.forceOpen ? true : readToolOpen(toolOpenKey(props), props.defaultOpen)
+}
+
 export function BasicTool(props: BasicToolProps) {
   const key = () => toolOpenKey(props)
-  const initial = () => (props.forceOpen ? true : readToolOpen(key(), props.defaultOpen))
+  const initial = () => initialOpen(props)
   return (
     <Base
       {...props}

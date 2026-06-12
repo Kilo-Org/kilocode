@@ -11,13 +11,13 @@ export interface AtomicChatModelsResponse {
   data: AtomicChatModel[]
 }
 
-export type ModelType = 'chat' | 'embedding' | 'unknown'
+export type ModelType = "chat" | "embedding" | "unknown"
 
-export type LoadingStatus = 'not_loaded' | 'loading' | 'loaded' | 'error'
+export type LoadingStatus = "not_loaded" | "loading" | "loaded" | "error"
 
 export interface ModelValidationError {
-  type: 'offline' | 'not_found' | 'network' | 'permission' | 'timeout' | 'unknown'
-  severity: 'low' | 'medium' | 'high' | 'critical'
+  type: "offline" | "not_found" | "network" | "permission" | "timeout" | "unknown"
+  severity: "low" | "medium" | "high" | "critical"
   message: string
   canRetry: boolean
   autoFixAvailable: boolean

@@ -57,8 +57,10 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   const input = createMemo(() => store.custom[store.tab] ?? "")
   const multi = createMemo(() => question()?.multiple === true)
   const customPicked = createMemo(() => {
+    if (!multi() && store.editing) return true
     const value = input()
     if (!value) return false
+    if (store.kinds[store.tab]?.[value] !== "custom") return false
     return store.answers[store.tab]?.includes(value) ?? false
   })
 
@@ -115,10 +117,12 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     reply(questions().map((_, i) => [...(store.answers[i] ?? [])]))
   }
 
+  const close = () => setStore("editing", false)
+
   const back = () => {
     if (store.sending || store.tab <= 0) return
     setStore("tab", store.tab - 1)
-    setStore("editing", false)
+    close()
   }
 
   const syncAgent = (answers: string[][], kinds: Record<string, "option" | "custom">[] = store.kinds) => {
@@ -170,14 +174,32 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
 
   const selectTab = (index: number) => {
     setStore("tab", index)
-    setStore("editing", false)
+    close()
+  }
+
+  const selectCustom = () => {
+    if (store.sending) return
+    if (!multi()) {
+      const answer = store.answers[store.tab]?.[0]
+      if (answer && store.kinds[store.tab]?.[answer] !== "custom") {
+        const answers = [...store.answers]
+        answers[store.tab] = []
+        setStore("answers", answers)
+
+        const kinds = [...store.kinds]
+        kinds[store.tab] = {}
+        setStore("kinds", kinds)
+        syncAgent(answers, kinds)
+      }
+    }
+    setStore("editing", true)
   }
 
   const selectOption = (optIndex: number) => {
     if (store.sending) return
 
     if (optIndex === options().length) {
-      setStore("editing", true)
+      selectCustom()
       return
     }
 
@@ -187,6 +209,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       toggle(opt.label)
       return
     }
+    close()
     pick(opt.label)
   }
 
@@ -217,7 +240,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
 
     const value = input().trim()
     if (!value) {
-      setStore("editing", false)
+      close()
       return
     }
 
@@ -235,12 +258,12 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       kinds[store.tab] = current
       setStore("kinds", kinds)
       syncAgent(answers, kinds)
-      setStore("editing", false)
+      close()
       return
     }
 
     pick(value, true)
-    setStore("editing", false)
+    close()
     if (single()) submit()
   }
 
@@ -259,7 +282,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       e.preventDefault()
       e.stopPropagation()
       if (store.editing) {
-        setStore("editing", false)
+        close()
         return
       }
       reject()
@@ -425,6 +448,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                       placeholder={language.t("ui.question.custom.placeholder")}
                       value={input()}
                       disabled={store.sending}
+                      onFocus={selectCustom}
                       onInput={(e) => {
                         const inputs = [...store.custom]
                         inputs[store.tab] = e.currentTarget.value
@@ -434,13 +458,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                     <Button type="submit" variant="primary" size="small" disabled={store.sending}>
                       {multi() ? language.t("ui.common.add") : language.t("ui.common.submit")}
                     </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="small"
-                      disabled={store.sending}
-                      onClick={() => setStore("editing", false)}
-                    >
+                    <Button type="button" variant="ghost" size="small" disabled={store.sending} onClick={close}>
                       {language.t("ui.common.cancel")}
                     </Button>
                   </form>
@@ -474,34 +492,36 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
             <Button variant="ghost" size="small" onClick={reject} disabled={store.sending}>
               {language.t("ui.common.dismiss")}
             </Button>
-            <div data-slot="question-footer-actions">
-              <Show when={store.tab > 0}>
-                <Button variant="secondary" size="small" onClick={back} disabled={store.sending}>
-                  {language.t("ui.common.back")}
-                </Button>
-              </Show>
-              <Show
-                when={confirm()}
-                fallback={
-                  <Button
-                    variant={last() && single() ? "primary" : "secondary"}
-                    size="small"
-                    onClick={last() && single() ? submit : () => selectTab(store.tab + 1)}
-                    disabled={store.sending || (!confirm() && (store.answers[store.tab]?.length ?? 0) === 0)}
-                  >
-                    {last() && single()
-                      ? language.t("ui.common.submit")
-                      : last()
-                        ? language.t("common.review")
-                        : language.t("ui.common.next")}
+            <Show when={!store.editing}>
+              <div data-slot="question-footer-actions">
+                <Show when={store.tab > 0}>
+                  <Button variant="secondary" size="small" onClick={back} disabled={store.sending}>
+                    {language.t("ui.common.back")}
                   </Button>
-                }
-              >
-                <Button variant="primary" size="small" onClick={submit} disabled={store.sending}>
-                  {language.t("ui.common.submit")}
-                </Button>
-              </Show>
-            </div>
+                </Show>
+                <Show
+                  when={confirm()}
+                  fallback={
+                    <Button
+                      variant={last() && single() ? "primary" : "secondary"}
+                      size="small"
+                      onClick={last() && single() ? submit : () => selectTab(store.tab + 1)}
+                      disabled={store.sending || (!confirm() && (store.answers[store.tab]?.length ?? 0) === 0)}
+                    >
+                      {last() && single()
+                        ? language.t("ui.common.submit")
+                        : last()
+                          ? language.t("common.review")
+                          : language.t("ui.common.next")}
+                    </Button>
+                  }
+                >
+                  <Button variant="primary" size="small" onClick={submit} disabled={store.sending}>
+                    {language.t("ui.common.submit")}
+                  </Button>
+                </Show>
+              </div>
+            </Show>
           </div>
         </div>
       </div>

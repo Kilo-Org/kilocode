@@ -1110,8 +1110,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Abilita il formatter automatico del codice",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Abilita integrazione language server protocol",
-  "settings.experimental.pasteSummary.title": "Disabilita riassunto incolla",
-  "settings.experimental.pasteSummary.description": "Non riassumere contenuti incollati molto lunghi",
   "settings.experimental.batch.title": "Tool batch",
   "settings.experimental.batch.description": "Abilita batching di più chiamate tool",
   "settings.experimental.semanticIndexing.title": "Indicizzazione semantica",
@@ -1281,7 +1279,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Gestisci lista task. Consente lettura e aggiornamento della lista task interna.",
   "settings.autoApprove.tool.webfetch": "Recupera URL. Consente di recuperare contenuti da un URL specifico.",
-  "settings.autoApprove.tool.websearchcodesearch": "Cerca web o codice. Consente ricerche web o di codice esterne.",
+  "settings.autoApprove.tool.websearch": "Cerca sul web. Consente ricerche web esterne.",
   "settings.autoApprove.tool.doom_loop":
     "Previeni azioni identiche ripetute. Si attiva quando la stessa chiamata tool si ripete con input identico.",
   "settings.checkpoints.enable.title": "Abilita snapshot",

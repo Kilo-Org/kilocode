@@ -1242,8 +1242,6 @@ export const dict = {
   "settings.experimental.formatter.description": "تمكين منسق الكود التلقائي",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "تمكين تكامل بروتوكول خادم اللغة",
-  "settings.experimental.pasteSummary.title": "تعطيل ملخص اللصق",
-  "settings.experimental.pasteSummary.description": "عدم تلخيص المحتوى الملصق الكبير",
   "settings.experimental.batch.title": "أداة دفعية",
   "settings.experimental.batch.description": "تمكين المعالجة الدفعية لاستدعاءات الأدوات",
   "settings.experimental.codebaseSearch.title": "بحث في قاعدة الكود",
@@ -1414,8 +1412,7 @@ export const dict = {
   "settings.autoApprove.tool.lsp": "الاستعلام من خادم اللغة. يسمح بتشغيل استعلامات خادم اللغة لذكاء الكود.",
   "settings.autoApprove.tool.todoreadwrite": "إدارة قائمة المهام. يسمح بقراءة وتحديث قائمة المهام الداخلية.",
   "settings.autoApprove.tool.webfetch": "جلب رابط ويب. يسمح باسترداد المحتوى من رابط (URL) محدد.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "البحث في الويب أو الكود. يسمح بإجراء عمليات بحث خارجية في الويب أو الكود.",
+  "settings.autoApprove.tool.websearch": "البحث في الويب. يسمح بإجراء عمليات بحث خارجية في الويب.",
   "settings.autoApprove.tool.external_directory":
     "الوصول للملفات خارج مساحة العمل. يتم تشغيله عند الوصول إلى ملفات خارج مسار المشروع الحالي.",
   "settings.autoApprove.tool.doom_loop":

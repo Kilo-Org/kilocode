@@ -1,7 +1,6 @@
 import { Button } from "@kilocode/kilo-web-ui/button"
 import { Card } from "@kilocode/kilo-web-ui/card"
-import { Tag } from "@kilocode/kilo-web-ui/tag"
-import { ConfigPage } from "./ConfigPage"
+import { ConfigPage, ConfigTag as Tag } from "./ConfigPage"
 import { useTuiNotificationSettings } from "./state/ui"
 
 function Toggle(props: {

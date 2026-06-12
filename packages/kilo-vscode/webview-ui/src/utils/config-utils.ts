@@ -17,6 +17,51 @@ export function deepMerge(target: Config, source: Partial<Config>): Config {
   return result as Config
 }
 
+function stripUndefined(value: unknown): unknown {
+  if (!isRecord(value)) return value
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([key, item]) => {
+      if (item === undefined) return []
+      return [[key, stripUndefined(item)]]
+    }),
+  )
+}
+
+/** Merge raw scoped config while preserving schema-valid indexing null overrides. */
+export function mergeScopedConfig(target: Config, source: Partial<Config>): Config {
+  const merged = deepMerge(target, source)
+  const result = stripNulls(merged)
+  if (isRecord(merged.indexing)) result.indexing = stripUndefined(merged.indexing) as Config["indexing"]
+  return result
+}
+
+function indexingNull(path: readonly string[]) {
+  return path.length === 2 && path[0] === "indexing" && (path[1] === "model" || path[1] === "dimension")
+}
+
+export function configUnsetPaths(value: unknown, prefix: string[] = []): string[][] {
+  if (!isRecord(value)) return []
+  return Object.entries(value).flatMap(([key, item]) => {
+    const path = [...prefix, key]
+    if (item === undefined || (item === null && !indexingNull(path))) return [path]
+    return configUnsetPaths(item, path)
+  })
+}
+
+/** Prepare an overlay set payload while preserving schema-valid indexing null overrides. */
+export function pruneConfigSet(value: unknown, prefix: string[] = []): unknown {
+  if (!isRecord(value)) return value
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([key, item]) => {
+      const path = [...prefix, key]
+      if (item === undefined || (item === null && !indexingNull(path))) return []
+      const next = pruneConfigSet(item, path)
+      if (path[0] === "indexing" && isRecord(next) && Object.keys(next).length === 0) return []
+      return [[key, next]]
+    }),
+  )
+}
+
 /** Recursively remove keys whose value is null (null = "deleted"). */
 export function stripNulls(obj: Config): Config {
   const result: Record<string, unknown> = {}

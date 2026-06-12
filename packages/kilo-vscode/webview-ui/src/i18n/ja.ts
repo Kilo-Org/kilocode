@@ -1259,8 +1259,6 @@ export const dict = {
   "settings.experimental.formatter.description": "自動コードフォーマッターを有効にする",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "言語サーバープロトコル統合を有効にする",
-  "settings.experimental.pasteSummary.title": "ペースト要約を無効にする",
-  "settings.experimental.pasteSummary.description": "大量のペーストコンテンツを要約しない",
   "settings.experimental.batch.title": "バッチツール",
   "settings.experimental.batch.description": "複数のツール呼び出しのバッチ処理を有効にする",
   "settings.experimental.codebaseSearch.title": "コードベース検索",
@@ -1437,8 +1435,7 @@ export const dict = {
     "言語サーバーにクエリ。コードインテリジェンスのために言語サーバークエリの実行を許可します。",
   "settings.autoApprove.tool.todoreadwrite": "タスクリストの管理。内部タスクリストの読み取りと更新を許可します。",
   "settings.autoApprove.tool.webfetch": "URLをフェッチ。特定のURLからコンテンツを取得することを許可します。",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Webまたはコードの検索。外部のWebまたはコード検索の実行を許可します。",
+  "settings.autoApprove.tool.websearch": "ウェブを検索。外部のWeb検索の実行を許可します。",
   "settings.autoApprove.tool.external_directory":
     "ワークスペース外のファイルにアクセス。現在のプロジェクトディレクトリ外のファイルにアクセスしたときにトリガーされます。",
   "settings.autoApprove.tool.doom_loop":

@@ -47,7 +47,9 @@ import {
   allOpenFiles,
   eagerDiffFiles,
   initialOpenFiles,
+  isDiffExpandable,
   isLargeDiffFile,
+  sanitizeOpenFiles,
   toggleOpenFiles,
 } from "../diff-viewer/diff-open-policy"
 import { DiffEndMarker } from "../diff-viewer/DiffEndMarker"
@@ -216,8 +218,11 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         // Already initialized for this key — preserve manual expand/collapse,
         // only prune files that no longer exist (e.g. deleted during session)
         setOpen((prev) => {
-          const filtered = prev.filter((file) => fileSet.has(file))
-          if (filtered.length === prev.length && prev.every((f) => fileSet.has(f))) return prev
+          const filtered = sanitizeOpenFiles(
+            diffs,
+            prev.filter((file) => fileSet.has(file)),
+          )
+          if (filtered.length === prev.length && prev.every((file) => filtered.includes(file))) return prev
           return filtered
         })
       },
@@ -252,7 +257,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         for (const file of next) {
           if (loading.has(file)) continue
           const diff = props.diffs.find((item) => item.file === file)
-          if (!diff || diff.summarized !== true) continue
+          if (!diff || !isDiffExpandable(diff) || diff.summarized !== true) continue
           const value = diffToken(diff)
           if (requested.get(file) === value) continue
           requested.set(file, value)
@@ -440,8 +445,8 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     files: props.diffs.length,
     additions: props.diffs.reduce((sum, diff) => sum + diff.additions, 0),
     deletions: props.diffs.reduce((sum, diff) => sum + diff.deletions, 0),
-    large: props.diffs.filter((diff) => isLargeDiffFile(diff)).length,
-    collapsed: Math.max(props.diffs.length - open().length, 0),
+    large: props.diffs.filter((diff) => isDiffExpandable(diff) && isLargeDiffFile(diff)).length,
+    collapsed: props.diffs.filter((diff) => isDiffExpandable(diff) && !open().includes(diff.file)).length,
   }))
   const allOpen = createMemo(() => allOpenFiles(props.diffs, open()))
   const openLabel = () => (allOpen() ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll"))
@@ -527,7 +532,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
 
       <Show when={props.diffs.length > 0}>
         <div class="am-diff-content" data-component="session-review" ref={scroller}>
-          <Accordion multiple value={open()} onChange={setOpen}>
+          <Accordion multiple value={open()} onChange={(files) => setOpen(sanitizeOpenFiles(props.diffs, files))}>
             <For each={rows()}>
               {(diff) => {
                 const isAdded = () => diff.status === "added"
@@ -629,9 +634,11 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                                 />
                               </Tooltip>
                             </Show>
-                            <span data-slot="session-review-diff-chevron">
-                              <Icon name="chevron-down" size="small" />
-                            </span>
+                            <Show when={isDiffExpandable(diff)}>
+                              <span data-slot="session-review-diff-chevron">
+                                <Icon name="chevron-down" size="small" />
+                              </span>
+                            </Show>
                           </div>
                         </div>
                       </Accordion.Trigger>

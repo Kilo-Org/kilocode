@@ -19,6 +19,7 @@ import { MessageList } from "../components/chat/MessageList"
 import { TurnOutcome } from "../components/shared/TurnOutcome"
 import { SessionContext } from "../context/session"
 import { ServerContext } from "../context/server"
+import { WorktreeModeProvider } from "../context/worktree-mode"
 import type { Message, Part, QuestionRequest, SuggestionRequest, TodoItem } from "../types/messages"
 
 const SESSION_ID = "story-session-chat-001"
@@ -144,6 +145,30 @@ export const ChatViewWithMessages: Story = {
             <ChatView />
           </div>
         </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const ChatViewAgentManagerCompleted: Story = {
+  name: "ChatView — completed Agent Manager session actions",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle", closeReason: "completed" }),
+      messages: () => [{ id: "msg-001" }] as any[],
+      worktreeStats: () => ({ files: 2, additions: 12, deletions: 4 }),
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+        <ServerContext.Provider value={mockServer as any}>
+          <SessionContext.Provider value={session as any}>
+            <WorktreeModeProvider>
+              <div style={{ height: "200px", display: "flex", "flex-direction": "column" }}>
+                <ChatView onForkSession={() => undefined} continueInWorktree />
+              </div>
+            </WorktreeModeProvider>
+          </SessionContext.Provider>
+        </ServerContext.Provider>
       </StoryProviders>
     )
   },

@@ -1,23 +1,25 @@
 /**
  * TaskToolExpanded component
- * Registers a custom "task" tool renderer that matches the v1.0.25 layout:
- * a BasicTool open by default with a compact scrollable list of child tool calls,
- * each shown as: icon + title + subtitle.
+ * Registers a custom "task" tool renderer with a compact scrollable list of
+ * child tool calls. Running tasks open immediately; completed tasks load their
+ * child details only when expanded.
  *
  * Call registerExpandedTaskTool() once at app startup to activate.
  */
 
-import { Component, createEffect, createMemo, For, Show, onCleanup } from "solid-js"
+import { Component, createEffect, createMemo, createSignal, For, Show, onCleanup } from "solid-js"
 import { ToolRegistry, ToolProps, getToolInfo } from "@kilocode/kilo-ui/message-part"
-import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
+import { BasicTool, initialOpen } from "@kilocode/kilo-ui/basic-tool"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { useLanguage } from "../../context/language"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { childID } from "../../context/session-utils"
+import { taskResult, taskRunning, taskVisible } from "./task-tool-state"
 
 const TaskToolRenderer: Component<ToolProps> = (props) => {
   const i18n = useI18n()
@@ -33,12 +35,17 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       state: { metadata: props.metadata as { sessionId?: string } },
     })
 
-  const running = createMemo(() => props.status === "pending" || props.status === "running")
+  const running = createMemo(() => taskRunning(props.status))
+  const [open, setOpen] = createSignal(
+    initialOpen({
+      tool: props.tool,
+      partID: props.partID,
+      defaultOpen: running(),
+    }),
+  )
 
-  // Warm child session data immediately so completed task tools already have
-  // their compact child tool list available when the user expands them.
   createEffect(() => {
-    const id = childSessionId()
+    const id = taskVisible(open(), childSessionId())
     if (!id) return
     session.syncSession(id)
   })
@@ -62,15 +69,17 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     return id ? session.getSessionToolCount(id) : 0
   })
 
+  const result = createMemo(() => taskResult(props.output, childSessionId()))
+
   createEffect((prev: string | undefined) => {
-    const id = childSessionId()
+    const id = taskVisible(open(), childSessionId())
     if (prev && prev !== id) vscode.postMessage({ type: "streamSessionVisible", sessionID: prev, visible: false })
     if (id && id !== prev) vscode.postMessage({ type: "streamSessionVisible", sessionID: id, visible: true })
     return id
   })
 
   onCleanup(() => {
-    const id = childSessionId()
+    const id = taskVisible(open(), childSessionId())
     if (id) vscode.postMessage({ type: "streamSessionVisible", sessionID: id, visible: false })
   })
 
@@ -119,9 +128,10 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         status={props.status}
         tool={props.tool}
         partID={props.partID}
-        callID={props.callID}
         trigger={trigger()}
-        defaultOpen
+        defaultOpen={running()}
+        defer
+        onOpenChange={setOpen}
       >
         <div ref={autoScroll.scrollRef} onScroll={autoScroll.handleScroll} data-component="tool-output" data-scrollable>
           <div ref={autoScroll.contentRef} data-component="task-tools">
@@ -130,6 +140,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
                 <span data-slot="task-tool-title">{language.t("session.messages.taskStarting")}</span>
               </div>
             </Show>
+            <Show when={result()}>{(text) => <Markdown text={text()} />}</Show>
             <For each={childToolParts()}>
               {(item) => {
                 const info = createMemo(() => getToolInfo(item.tool, item.state?.input))

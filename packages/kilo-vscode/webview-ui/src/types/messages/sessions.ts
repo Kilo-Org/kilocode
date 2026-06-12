@@ -56,6 +56,8 @@ export interface SessionInfo {
   } | null
 }
 
+export type SessionUpdate = Partial<SessionInfo> & Pick<SessionInfo, "id">
+
 // Cloud session info (from Kilo cloud API)
 export interface CloudSessionInfo {
   session_id: string

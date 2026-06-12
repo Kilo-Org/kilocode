@@ -1277,8 +1277,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Habilitar el formateador automático de código",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Habilitar integración del protocolo de servidor de lenguaje",
-  "settings.experimental.pasteSummary.title": "Deshabilitar resumen de pegado",
-  "settings.experimental.pasteSummary.description": "No resumir contenido pegado grande",
   "settings.experimental.batch.title": "Herramienta por lotes",
   "settings.experimental.batch.description": "Habilitar procesamiento por lotes de llamadas a herramientas",
   "settings.experimental.codebaseSearch.title": "Búsqueda de código",
@@ -1463,8 +1461,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Administrar lista de tareas. Permite leer y actualizar la lista de tareas interna.",
   "settings.autoApprove.tool.webfetch": "Obtener una URL. Permite recuperar contenido de una URL específica.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Buscar en la web o en el código. Permite realizar búsquedas externas en la web o en el código.",
+  "settings.autoApprove.tool.websearch": "Buscar en la web. Permite realizar búsquedas externas en la web.",
   "settings.autoApprove.tool.external_directory":
     "Acceder a archivos fuera del espacio de trabajo. Se activa al acceder a archivos fuera del directorio del proyecto actual.",
   "settings.autoApprove.tool.doom_loop":

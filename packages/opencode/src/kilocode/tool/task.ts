@@ -1,5 +1,5 @@
 // kilocode_change - new file
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import path from "path"
 import { Permission } from "@/permission"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -17,7 +17,12 @@ const log = Log.create({ service: "kilocode-task-model" })
 // RATIONALE: Mirror narrow state slice Task tool consumes and ignore unrelated TUI fields.
 const ModelState = z
   .object({
-    model: z.record(z.string(), z.object({ providerID: ProviderID.zod, modelID: ModelID.zod })).optional(),
+    model: z
+      .record(
+        z.string(),
+        z.object({ providerID: z.custom<ProviderID>(Schema.is(ProviderID)), modelID: z.custom<ModelID>(Schema.is(ModelID)) }),
+      )
+      .optional(),
     variant: z.record(z.string(), z.string().optional()).optional(),
   })
   .passthrough()
@@ -56,7 +61,11 @@ export namespace KiloTask {
 
   /** Extra permission rules appended to subagent sessions */
   export function permissions(rules: Permission.Ruleset): Permission.Ruleset {
-    return [{ permission: "task", pattern: "*", action: "deny" }, ...rules]
+    return [
+      { permission: "task", pattern: "*", action: "deny" },
+      { permission: "question", pattern: "*", action: "deny" },
+      ...rules,
+    ]
   }
 
   export function merge(...rulesets: Permission.Ruleset[]): Permission.Ruleset {
@@ -130,7 +139,7 @@ export namespace KiloTask {
       if (!choice) continue
       if (choice.direct) return { model: choice.model, variant: choice.variant }
       const full = yield* input.provider.getModel(choice.model.providerID, choice.model.modelID).pipe(
-        Effect.catchDefect((err) =>
+        Effect.catchTag("ProviderModelNotFoundError", (err) =>
           Effect.sync(() => {
             log.debug("skipping unavailable task subagent model", {
               providerID: choice.model.providerID,

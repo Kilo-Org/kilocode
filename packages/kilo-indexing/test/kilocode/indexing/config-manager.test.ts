@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { toIndexingConfigInput } from "../../../src/config"
 import { CodeIndexConfigManager, type IndexingConfigInput } from "../../../src/indexing/config-manager"
 
 function createInput(input: Partial<IndexingConfigInput> = {}): IndexingConfigInput {
@@ -25,9 +26,21 @@ describe("CodeIndexConfigManager", () => {
     expect(cfg.getConfig().ollamaOptions?.baseUrl).toBe("http://localhost:11434")
   })
 
-  test("defaults vector store to qdrant when omitted", () => {
+  test("defaults vector store to LanceDB when omitted", () => {
     const cfg = new CodeIndexConfigManager(createInput({ vectorStoreProvider: undefined }))
 
+    expect(cfg.getConfig().vectorStoreProvider).toBe("lancedb")
+  })
+
+  test("normalizes omitted vector store config to LanceDB for hosts", () => {
+    expect(toIndexingConfigInput(undefined).vectorStoreProvider).toBe("lancedb")
+  })
+
+  test("preserves an explicit Qdrant override", () => {
+    const input = toIndexingConfigInput({ vectorStore: "qdrant" })
+    const cfg = new CodeIndexConfigManager(input)
+
+    expect(input.vectorStoreProvider).toBe("qdrant")
     expect(cfg.getConfig().vectorStoreProvider).toBe("qdrant")
   })
 

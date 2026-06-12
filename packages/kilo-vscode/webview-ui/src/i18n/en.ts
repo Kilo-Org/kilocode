@@ -1251,8 +1251,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Enable the automatic code formatter",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Enable language server protocol integration",
-  "settings.experimental.pasteSummary.title": "Disable Paste Summary",
-  "settings.experimental.pasteSummary.description": "Don't summarize large pasted content",
   "settings.experimental.batch.title": "Batch Tool",
   "settings.experimental.batch.description": "Enable batching of multiple tool calls",
   "settings.experimental.codebaseSearch.title": "Codebase Search",
@@ -1428,8 +1426,7 @@ export const dict = {
     "Query language server. Allows running language server queries for code intelligence.",
   "settings.autoApprove.tool.todoreadwrite": "Manage task list. Allows reading and updating the internal task list.",
   "settings.autoApprove.tool.webfetch": "Fetch a URL. Allows retrieving content from a specific URL.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Search web or code. Allows performing external web or code searches.",
+  "settings.autoApprove.tool.websearch": "Search the web. Allows performing external web searches.",
   "settings.autoApprove.tool.doom_loop":
     "Prevent repeated identical actions. Triggered when the same tool call repeats with identical input.",
 

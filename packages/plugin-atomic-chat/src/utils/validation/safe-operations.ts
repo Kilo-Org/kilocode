@@ -1,7 +1,7 @@
 export async function safeAsyncOperation<T>(
   operation: () => Promise<T>,
   fallback?: T,
-  onError?: (error: Error) => void
+  onError?: (error: Error) => void,
 ): Promise<T | undefined> {
   try {
     return await operation()

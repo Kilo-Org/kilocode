@@ -35,6 +35,7 @@ export const KILO_MODEL_SCHEMA_EXTENSIONS = {
   recommendedIndex: optionalOmitUndefined(Schema.Finite),
   prompt: Schema.optional(Schema.Literals(PROMPTS)),
   isFree: Schema.optional(Schema.Boolean),
+  mayTrainOnYourPrompts: Schema.optional(Schema.Boolean),
   terminalBench: optionalOmitUndefined(
     Schema.Struct({
       overallScore: Schema.Finite,
@@ -49,12 +50,12 @@ export const KILO_MODEL_SCHEMA_EXTENSIONS = {
 // ---------------------------------------------------------------------------
 
 export function patchModelsDevModel(providerID: string, source: any) {
-  const free = providerID === "kilo" && source.cost?.input === 0 && source.cost?.output === 0
   return {
     variants: providerID === "kilo" ? (source.variants ?? {}) : {},
     recommendedIndex: source.recommendedIndex,
     prompt: source.prompt,
-    isFree: source.isFree ?? (free ? true : undefined),
+    isFree: source.isFree,
+    mayTrainOnYourPrompts: source.mayTrainOnYourPrompts,
     terminalBench: source.terminalBench,
     ai_sdk_provider: source.ai_sdk_provider,
     options: source.options ?? {},
@@ -70,6 +71,7 @@ export function patchConfigModel(cfg: any, existing: any) {
     recommendedIndex: cfg.recommendedIndex ?? existing?.recommendedIndex,
     prompt: cfg.prompt ?? existing?.prompt,
     isFree: cfg.isFree ?? existing?.isFree,
+    mayTrainOnYourPrompts: cfg.mayTrainOnYourPrompts ?? existing?.mayTrainOnYourPrompts,
     terminalBench: existing?.terminalBench,
     ai_sdk_provider: cfg.ai_sdk_provider ?? existing?.ai_sdk_provider,
     variants: cfg.variants

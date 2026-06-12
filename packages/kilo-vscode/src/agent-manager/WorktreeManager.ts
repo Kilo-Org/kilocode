@@ -222,32 +222,11 @@ export class WorktreeManager {
       parentRemote = startPoint.remote
     }
 
-    const sanitized = params.branchName ? sanitizeBranchName(params.branchName) : undefined
-    let branch: string
-    if (params.existingBranch) {
-      branch = params.existingBranch
-    } else if (sanitized) {
-      branch = sanitized
-    } else {
-      const existing = await this.git
-        .branch()
-        .then((b) => b.all)
-        .catch(() => [] as string[])
-      branch = generateBranchName(params.prompt || "agent-task", existing)
-    }
-
-    if (params.existingBranch) {
-      const exists = await this.branchExists(branch)
-      if (!exists) throw new Error(`Branch "${branch}" does not exist`)
-    }
-
+    let branch = await this.resolveBranch(params)
     const dirName = branch.replace(/\//g, "-")
     let worktreePath = path.join(this.dir, dirName)
 
-    if (fs.existsSync(worktreePath)) {
-      this.log(`Worktree directory exists, cleaning up before re-creation: ${worktreePath}`)
-      await this.removeWorktreeImpl(worktreePath)
-    }
+    await this.prepareWorktreePath(worktreePath, !!params.existingBranch)
 
     params.onProgress?.("creating", `Creating worktree for ${branch}...`)
 
@@ -270,8 +249,8 @@ export class WorktreeManager {
       if (!msg.includes("already exists") || params.existingBranch) {
         throw new Error(`Failed to create worktree: ${msg}`)
       }
-      // Branch name collision -- retry with unique suffix
-      branch = `${branch}-${Date.now()}`
+      // Another process may create the branch after resolveBranch checks it.
+      branch = await this.resolveBranch(params)
       const retryDir = branch.replace(/\//g, "-")
       worktreePath = path.join(this.dir, retryDir)
       const retryArgs = params.existingBranch
@@ -290,6 +269,46 @@ export class WorktreeManager {
       remote: parentRemote,
       startPointSource: startPoint.source,
       startPointWarning: startPoint.warning,
+    }
+  }
+
+  private async prepareWorktreePath(worktreePath: string, reuse: boolean): Promise<void> {
+    if (!fs.existsSync(worktreePath)) return
+    if (!reuse) throw new Error(`Worktree path already exists: ${worktreePath}`)
+    this.log(`Worktree directory exists, cleaning up before re-creation: ${worktreePath}`)
+    await this.removeWorktreeImpl(worktreePath)
+  }
+
+  private async resolveBranch(params: {
+    prompt?: string
+    existingBranch?: string
+    branchName?: string
+  }): Promise<string> {
+    if (params.existingBranch) {
+      const exists = await this.branchExists(params.existingBranch)
+      if (!exists) throw new Error(`Branch "${params.existingBranch}" does not exist`)
+      return params.existingBranch
+    }
+
+    const existing = await this.git
+      .branch()
+      .then((result) => result.all)
+      .catch(() => [] as string[])
+    const sanitized = params.branchName ? sanitizeBranchName(params.branchName) : undefined
+    const branch = sanitized || generateBranchName(params.prompt || "agent-task", existing)
+    return this.availableBranch(branch, existing)
+  }
+
+  private availableBranch(base: string, existing: string[]): string {
+    const branches = new Set(existing)
+    const available = (branch: string) => {
+      const dir = path.join(this.dir, branch.replace(/\//g, "-"))
+      return !branches.has(branch) && !fs.existsSync(dir)
+    }
+    if (available(base)) return base
+    for (let suffix = 2; ; suffix++) {
+      const branch = `${base}-${suffix}`
+      if (available(branch)) return branch
     }
   }
 

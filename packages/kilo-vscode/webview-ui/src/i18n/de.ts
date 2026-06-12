@@ -1285,8 +1285,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Automatischen Code-Formatierer aktivieren",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Language-Server-Protokoll-Integration aktivieren",
-  "settings.experimental.pasteSummary.title": "Einfüge-Zusammenfassung deaktivieren",
-  "settings.experimental.pasteSummary.description": "Große eingefügte Inhalte nicht zusammenfassen",
   "settings.experimental.batch.title": "Batch-Werkzeug",
   "settings.experimental.batch.description": "Bündelung mehrerer Werkzeugaufrufe aktivieren",
   "settings.experimental.codebaseSearch.title": "Codebase-Suche",
@@ -1470,8 +1468,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Aufgabenliste verwalten. Ermöglicht das Lesen und Aktualisieren der internen Aufgabenliste.",
   "settings.autoApprove.tool.webfetch": "URL abrufen. Erlaubt das Abrufen von Inhalten einer bestimmten URL.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Web oder Code durchsuchen. Ermöglicht die Durchführung externer Web- oder Code-Suchen.",
+  "settings.autoApprove.tool.websearch": "Das Web durchsuchen. Ermöglicht die Durchführung externer Web-Suchen.",
   "settings.autoApprove.tool.external_directory":
     "Zugriff auf Dateien außerhalb des Arbeitsbereichs. Wird ausgelöst, wenn auf Dateien außerhalb des aktuellen Projektverzeichnisses zugegriffen wird.",
   "settings.autoApprove.tool.doom_loop":

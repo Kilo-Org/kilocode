@@ -1,6 +1,7 @@
 // kilocode_change - new file
 import { describe, expect, test } from "bun:test"
-import { TuiConfig } from "../../../../src/cli/cmd/tui/config/tui"
+import { createBindingLookup } from "@opentui/keymap/extras"
+import { TuiKeybind } from "../../../../src/cli/cmd/tui/config/keybind"
 import * as AppExit from "../../../../src/kilocode/tui/app-exit"
 
 const prompt = (focused: boolean, input: string): AppExit.Prompt => ({
@@ -10,7 +11,10 @@ const prompt = (focused: boolean, input: string): AppExit.Prompt => ({
 
 describe("app_exit", () => {
   test("blocks exit when the command matcher is disabled", () => {
-    const bindings = TuiConfig.resolve({}).keybinds.gather("app_exit", ["app.exit"])
+    const bindings = createBindingLookup(TuiKeybind.toBindingConfig(TuiKeybind.parse({})), {
+      commandMap: TuiKeybind.CommandMap,
+      bindingDefaults: TuiKeybind.bindingDefaults(),
+    }).gather("app_exit", ["app.exit"])
 
     expect(bindings.length).toBeGreaterThan(0)
     expect(AppExit.enabled(false)).toBe(false)

@@ -1266,8 +1266,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Schakel de automatische code formatter in",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Schakel language server protocol integratie in",
-  "settings.experimental.pasteSummary.title": "Plak-samenvatting uitschakelen",
-  "settings.experimental.pasteSummary.description": "Vat grote geplakte inhoud niet samen",
   "settings.experimental.batch.title": "Batch Tool",
   "settings.experimental.batch.description": "Schakel batching van meerdere tool calls in",
   "settings.experimental.codebaseSearch.title": "Codebase Zoeken",
@@ -1417,8 +1415,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Takenlijst beheren. Staat het lezen en bijwerken van de interne takenlijst toe.",
   "settings.autoApprove.tool.webfetch": "Een URL ophalen. Staat het ophalen van inhoud van een specifieke URL toe.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Zoek op web of in code. Staat het uitvoeren van externe web- of code-zoekopdrachten toe.",
+  "settings.autoApprove.tool.websearch": "Zoek op het web. Staat het uitvoeren van externe web-zoekopdrachten toe.",
   "settings.autoApprove.tool.doom_loop":
     "Voorkom herhaalde identieke acties. Geactiveerd wanneer dezelfde tool call herhaald wordt met identieke invoer.",
 

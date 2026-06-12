@@ -5,6 +5,7 @@ import * as Stream from "effect/Stream"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Image } from "../../src/image/image"
 import { KiloCompactionPayloadRecovery } from "../../src/kilocode/session/compaction-payload-recovery"
 import { KiloSessionCompaction } from "../../src/kilocode/session/compaction"
@@ -195,6 +196,7 @@ function runtime(layer: Layer.Layer<LLM.Service>, config = Config.defaultLayer) 
       Layer.provide(status),
       Layer.provide(bus),
       Layer.provide(config),
+      Layer.provide(RuntimeFlags.layer()),
       Layer.provide(SyncEvent.defaultLayer),
     ),
   )

@@ -1253,8 +1253,6 @@ export const dict = {
   "settings.experimental.formatter.description": "자동 코드 포매터 활성화",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "언어 서버 프로토콜 통합 활성화",
-  "settings.experimental.pasteSummary.title": "붙여넣기 요약 비활성화",
-  "settings.experimental.pasteSummary.description": "대량 붙여넣기 콘텐츠를 요약하지 않음",
   "settings.experimental.batch.title": "배치 도구",
   "settings.experimental.batch.description": "여러 도구 호출의 배치 처리 활성화",
   "settings.experimental.codebaseSearch.title": "코드베이스 검색",
@@ -1422,8 +1420,7 @@ export const dict = {
   "settings.autoApprove.tool.lsp": "언어 서버 쿼리. 코드 인텔리전스를 위해 언어 서버 쿼리 실행을 허용합니다.",
   "settings.autoApprove.tool.todoreadwrite": "작업 목록 관리. 내부 작업 목록을 읽고 업데이트할 수 있도록 허용합니다.",
   "settings.autoApprove.tool.webfetch": "URL 가져오기. 특정 URL에서 콘텐츠를 검색할 수 있도록 허용합니다.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "웹 또는 코드 검색. 외부 웹 또는 코드 검색을 수행할 수 있도록 허용합니다.",
+  "settings.autoApprove.tool.websearch": "웹 검색. 외부 웹 검색을 수행할 수 있도록 허용합니다.",
   "settings.autoApprove.tool.external_directory":
     "작업 공간 외부 파일 접근. 현재 프로젝트 디렉토리 외부의 파일에 접근할 때 트리거됩니다.",
   "settings.autoApprove.tool.doom_loop":

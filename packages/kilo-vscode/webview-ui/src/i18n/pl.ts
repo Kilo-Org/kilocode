@@ -1229,8 +1229,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Włącz automatyczny formater kodu",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Włącz integrację protokołu serwera języka",
-  "settings.experimental.pasteSummary.title": "Wyłącz podsumowanie wklejania",
-  "settings.experimental.pasteSummary.description": "Nie podsumowuj dużego wklejonego tekstu",
   "settings.experimental.batch.title": "Narzędzie wsadowe",
   "settings.experimental.batch.description": "Włącz przetwarzanie wsadowe wywołań narzędzi",
   "settings.experimental.codebaseSearch.title": "Wyszukiwanie kodu",
@@ -1448,8 +1446,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Zarządzaj listą zadań. Pozwala na odczytywanie i aktualizowanie wewnętrznej listy zadań.",
   "settings.autoApprove.tool.webfetch": "Pobieranie URL. Pozwala na pobieranie zawartości z określonego adresu URL.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Przeszukuj sieć lub kod. Pozwala na wykonywanie zewnętrznych wyszukiwań w sieci lub kodzie.",
+  "settings.autoApprove.tool.websearch":
+    "Przeszukiwanie sieci. Pozwala na wykonywanie zewnętrznych wyszukiwań w sieci.",
   "settings.autoApprove.tool.external_directory":
     "Dostęp do plików poza obszarem roboczym. Uruchamiane przy dostępie do plików poza bieżącym katalogiem projektu.",
   "settings.autoApprove.tool.doom_loop":

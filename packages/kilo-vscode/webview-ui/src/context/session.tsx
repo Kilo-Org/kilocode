@@ -25,6 +25,7 @@ import { useLanguage } from "./language"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type {
   SessionInfo,
+  SessionUpdate,
   Message,
   Part,
   PartDelta,
@@ -122,6 +123,7 @@ interface SessionContextValue {
   closeReason: Accessor<SessionCloseReason | undefined>
   statusText: Accessor<string | undefined>
   busySince: Accessor<number | undefined>
+  submitting: Accessor<boolean>
   loading: Accessor<boolean>
   loadingOlderMessages: Accessor<boolean>
   hasOlderMessages: Accessor<boolean>
@@ -299,6 +301,8 @@ export const SessionProvider: ParentComponent = (props) => {
   const [statusMap, setStatusMap] = createStore<Record<string, SessionStatusInfo>>({})
   const [closeMap, setCloseMap] = createStore<Record<string, SessionCloseReason | undefined>>({})
   const [busySinceMap, setBusySinceMap] = createStore<Record<string, number>>({})
+  const [submissionMap, setSubmissionMap] = createStore<Record<string, number>>({})
+  const pendingSubmissions = new Map<string, string>()
 
   const idle: SessionStatusInfo = { type: "idle" }
 
@@ -319,8 +323,12 @@ export const SessionProvider: ParentComponent = (props) => {
       }),
     )
   const busySince = () => {
-    const id = currentSessionID()
+    const id = currentSessionID() ?? draftSessionID()
     return id ? busySinceMap[id] : undefined
+  }
+  const submitting = () => {
+    const id = currentSessionID() ?? draftSessionID()
+    return id ? (submissionMap[id] ?? 0) > 0 : false
   }
 
   const [loading, setLoading] = createSignal(false)
@@ -427,6 +435,43 @@ export const SessionProvider: ParentComponent = (props) => {
   // Tracks optimistic messageIDs that haven't been confirmed by the server yet.
   // Prevents handleMessagesLoaded from wiping them when it replaces the array.
   const pendingOptimistic = new Map<string, Set<string>>()
+
+  const startSubmission = (sid: string, messageID: string) => {
+    pendingSubmissions.set(messageID, sid)
+    setSubmissionMap(sid, (count = 0) => count + 1)
+    if (!busySinceMap[sid]) setBusySinceMap(sid, Date.now())
+  }
+  const finishSubmission = (messageID: string) => {
+    const sid = pendingSubmissions.get(messageID)
+    if (!sid) return
+    pendingSubmissions.delete(messageID)
+    const count = submissionMap[sid] ?? 0
+    if (count > 1) {
+      setSubmissionMap(sid, count - 1)
+      return
+    }
+    setSubmissionMap(
+      produce((map) => {
+        delete map[sid]
+      }),
+    )
+    if ((statusMap[sid] ?? idle).type !== "idle") return
+    setBusySinceMap(
+      produce((map) => {
+        delete map[sid]
+      }),
+    )
+  }
+  const confirmSubmissions = (sid: string) => {
+    for (const [id, scope] of pendingSubmissions) {
+      if (scope === sid) pendingSubmissions.delete(id)
+    }
+    setSubmissionMap(
+      produce((map) => {
+        delete map[sid]
+      }),
+    )
+  }
 
   // Store for sessions, messages, parts, todos, modelSelections, agentSelections
   const [store, setStore] = createStore<SessionStore>({
@@ -1028,6 +1073,63 @@ export const SessionProvider: ParentComponent = (props) => {
     batch(() => {
       setStore("sessions", session.id, session)
 
+      if (draftID && submissionMap[draftID]) {
+        const submissions = submissionMap[draftID]
+        for (const [id, scope] of pendingSubmissions) {
+          if (scope === draftID) pendingSubmissions.set(id, session.id)
+        }
+        setSubmissionMap(session.id, (count = 0) => count + submissions)
+        setSubmissionMap(
+          produce((map) => {
+            delete map[draftID]
+          }),
+        )
+        if (busySinceMap[draftID] && !busySinceMap[session.id]) {
+          setBusySinceMap(session.id, busySinceMap[draftID])
+        }
+        setBusySinceMap(
+          produce((map) => {
+            delete map[draftID]
+          }),
+        )
+      }
+
+      const drafts = draftID ? store.messages[draftID] : undefined
+      if (draftID && drafts?.length) {
+        const current = store.messages[session.id] ?? []
+        const ids = new Set(current.map((message) => message.id))
+        const promoted = drafts
+          .filter((message) => !ids.has(message.id))
+          .map((message) => ({ ...message, sessionID: session.id }))
+        setStore("messages", session.id, [...current, ...promoted])
+        setStore(
+          "messages",
+          produce((messages) => {
+            delete messages[draftID]
+          }),
+        )
+
+        const pending = pendingOptimistic.get(draftID)
+        if (pending) {
+          const merged = pendingOptimistic.get(session.id) ?? new Set<string>()
+          for (const id of pending) merged.add(id)
+          pendingOptimistic.set(session.id, merged)
+          pendingOptimistic.delete(draftID)
+        }
+        setLoaded((prev) => {
+          if (prev.has(session.id)) return prev
+          const next = new Set(prev)
+          next.add(session.id)
+          return next
+        })
+        patchPage(session.id, { initialLoaded: true, lastMutation: "append" })
+        setPages(
+          produce((state) => {
+            delete state[draftID]
+          }),
+        )
+      }
+
       // Only initialize messages if none exist yet — a cloud session import
       // (handleCloudSessionImported) may have already populated messages for
       // this session ID. The SSE session.created event can race with the
@@ -1394,6 +1496,7 @@ export const SessionProvider: ParentComponent = (props) => {
     message?: string,
     next?: number,
   ) {
+    confirmSubmissions(sessionID)
     const prev = statusMap[sessionID] ?? { type: "idle" }
     const info: SessionStatusInfo =
       newStatus === "retry"
@@ -1405,7 +1508,7 @@ export const SessionProvider: ParentComponent = (props) => {
     // Track busy start time and discard the previous turn's terminal state.
     if (prev.type === "idle" && newStatus !== "idle") {
       clearClose(sessionID)
-      setBusySinceMap(sessionID, Date.now())
+      if (!busySinceMap[sessionID]) setBusySinceMap(sessionID, Date.now())
     }
     if (newStatus === "idle") {
       setBusySinceMap(
@@ -1535,12 +1638,14 @@ export const SessionProvider: ParentComponent = (props) => {
    * by listening for the same sendMessageFailed event.
    */
   function handleSendMessageFailed(message: SendMessageFailedMessage) {
-    if (message.sessionID && message.messageID) {
-      pendingOptimistic.get(message.sessionID)?.delete(message.messageID)
+    const sid = message.sessionID ?? message.draftID
+    if (message.messageID) finishSubmission(message.messageID)
+    if (sid && message.messageID) {
+      pendingOptimistic.get(sid)?.delete(message.messageID)
       stash.remove(message.messageID)
       batch(() => {
-        setStore("messages", message.sessionID!, (msgs = []) => msgs.filter((m) => m.id !== message.messageID))
-        dropMessageTools(message.sessionID!, message.messageID!)
+        setStore("messages", sid, (msgs = []) => msgs.filter((m) => m.id !== message.messageID))
+        dropMessageTools(sid, message.messageID!)
         setStore(
           "parts",
           produce((parts) => {
@@ -1636,11 +1741,12 @@ export const SessionProvider: ParentComponent = (props) => {
     setStore("todos", sessionID, items)
   }
 
-  function handleSessionUpdated(session: SessionInfo) {
+  function handleSessionUpdated(session: SessionUpdate) {
+    const changed = session.revert !== undefined
     const prev = store.sessions[session.id]?.revert
     const next = session.revert ?? undefined
     setStore("sessions", session.id, session)
-    if (prev?.messageID === next?.messageID && prev?.partID === next?.partID) return
+    if (!changed || (prev?.messageID === next?.messageID && prev?.partID === next?.partID)) return
     clearClose(session.id)
     resetTodos(session.id, next)
   }
@@ -1671,6 +1777,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handleSessionDeleted(sessionID: string) {
     pendingOptimistic.delete(sessionID)
+    confirmSubmissions(sessionID)
     batch(() => {
       // Collect message IDs so we can clean up their parts (store + stash)
       const msgs = store.messages[sessionID] ?? []
@@ -1995,12 +2102,14 @@ export const SessionProvider: ParentComponent = (props) => {
     for (const q of scopedQuestions(sid)) {
       rejectQuestion(q.id)
     }
-    if (sid) {
-      clearClose(sid)
-      addOptimistic(sid, messageID, text, files)
-    }
 
     const scope = draftID ?? sid
+    if (scope) {
+      clearClose(scope)
+      addOptimistic(scope, messageID, text, files)
+      startSubmission(scope, messageID)
+      if (!sid) setDraftSessionID(scope)
+    }
     const agent = promptAgent(scope)
 
     vscode.postMessage({
@@ -2061,12 +2170,13 @@ export const SessionProvider: ParentComponent = (props) => {
       rejectQuestion(q.id)
     }
 
-    if (sid) {
-      clearClose(sid)
-      addOptimistic(sid, messageID, `/${command} ${args}`.trim(), files)
-    }
-
     const scope = draftID ?? sid
+    if (scope) {
+      clearClose(scope)
+      addOptimistic(scope, messageID, `/${command} ${args}`.trim(), files)
+      startSubmission(scope, messageID)
+      if (!sid) setDraftSessionID(scope)
+    }
     const agent = promptAgent(scope)
 
     vscode.postMessage({
@@ -2332,7 +2442,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   const pageState = () => {
-    const id = currentSessionID()
+    const id = currentSessionID() ?? draftSessionID()
     return id ? (pages[id] ?? emptyPageState) : emptyPageState
   }
 
@@ -2341,7 +2451,7 @@ export const SessionProvider: ParentComponent = (props) => {
   const messageMutation = () => pageState().lastMutation
 
   const messages = () => {
-    const id = currentSessionID()
+    const id = currentSessionID() ?? draftSessionID()
     return id ? store.messages[id] || [] : []
   }
 
@@ -2385,7 +2495,7 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   const visibleMessages = createMemo(() => {
-    const id = currentSessionID()
+    const id = currentSessionID() ?? draftSessionID()
     return id ? visible(id) : []
   })
 
@@ -2524,6 +2634,7 @@ export const SessionProvider: ParentComponent = (props) => {
     closeReason,
     statusText,
     busySince,
+    submitting,
     loading,
     loadingOlderMessages,
     hasOlderMessages,

@@ -28,6 +28,7 @@ import { testEffect } from "../lib/effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { TestConfig } from "../fixture/config"
 import { SyncEvent } from "@/sync"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 
 void Log.init({ print: false })
 
@@ -211,9 +212,8 @@ function layer(result: "continue" | "compact") {
 }
 
 function cfg(compaction?: Config.Info["compaction"]) {
-  const base = Config.Info.zod.parse({})
   return TestConfig.layer({
-    get: () => Effect.succeed({ ...base, compaction }),
+    get: () => Effect.succeed({ compaction }),
   })
 }
 
@@ -225,17 +225,19 @@ const deps = Layer.mergeAll(
   Bus.layer,
   Config.defaultLayer,
   SyncEvent.defaultLayer,
-)
+).pipe(Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })))
 
 const env = Layer.mergeAll(
   SessionNs.defaultLayer,
   CrossSpawnSpawner.defaultLayer,
   SessionCompaction.layer.pipe(Layer.provide(SessionNs.defaultLayer), Layer.provideMerge(deps)),
-)
+).pipe(Layer.provideMerge(Layer.mergeAll(RuntimeFlags.layer({ experimentalEventSystem: true }), Config.defaultLayer)))
 
 const it = testEffect(env)
 
-const compactionEnv = Layer.mergeAll(SessionNs.defaultLayer, CrossSpawnSpawner.defaultLayer)
+const compactionEnv = Layer.mergeAll(SessionNs.defaultLayer, CrossSpawnSpawner.defaultLayer).pipe(
+  Layer.provideMerge(Layer.mergeAll(RuntimeFlags.layer({ experimentalEventSystem: true }), Config.defaultLayer)),
+)
 const itCompaction = testEffect(compactionEnv)
 
 type CompactionProcessOptions = {

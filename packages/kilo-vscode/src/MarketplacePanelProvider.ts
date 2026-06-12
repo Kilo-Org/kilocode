@@ -1,6 +1,6 @@
 import * as os from "os"
 import * as vscode from "vscode"
-import type { Event, SessionStatus } from "@kilocode/sdk/v2/client"
+import type { GlobalEvent, SessionStatus } from "@kilocode/sdk/v2/client"
 import { buildWebviewHtml, getWebviewFontSize } from "./utils"
 import { watchFontSizeConfig } from "./kilo-provider/font-size"
 import { mapSSEEventToWebviewMessage } from "./kilo-provider-utils"
@@ -114,7 +114,9 @@ export class MarketplacePanelProvider implements vscode.Disposable {
       this.connection.onLanguageChanged((locale) => this.post({ type: "languageChanged", locale })),
       this.connection.onEventFiltered(
         (event) => event.type === "session.status",
-        (event) => this.handleStatus(event),
+        (event) => {
+          if (event.type === "session.status") this.handleStatus(event)
+        },
       ),
     )
     void this.connect()
@@ -236,8 +238,7 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     this.post({ type: "marketplaceRemoveResult", ...result })
   }
 
-  private handleStatus(event: Event): void {
-    if (event.type !== "session.status") return
+  private handleStatus(event: Extract<GlobalEvent["payload"], { type: "session.status" }>): void {
     const sid = event.properties.sessionID
     this.statuses.set(sid, event.properties.status.type)
     const msg = mapSSEEventToWebviewMessage(event, sid)

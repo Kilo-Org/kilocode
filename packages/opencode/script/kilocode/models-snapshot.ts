@@ -45,7 +45,9 @@ async function replace(file: string, body: string) {
     await fs.writeFile(tmp, body)
     await fs.rename(tmp, file)
   } catch (err) {
-    await fs.rm(tmp, { force: true }).catch((cause) => console.warn(`Failed to remove temporary models snapshot ${tmp}`, cause))
+    await fs
+      .rm(tmp, { force: true })
+      .catch((cause) => console.warn(`Failed to remove temporary models snapshot ${tmp}`, cause))
     throw err
   }
 }
