@@ -119,6 +119,7 @@ export namespace KiloTask {
     agent: Pick<Agent.Info, "model" | "variant">
     config: Pick<Config.Info, "subagent_model" | "subagent_variant">
     parent: Model
+    variant?: string
     provider: Provider.Interface
   }) {
     const state = yield* saved(input.name)
@@ -158,6 +159,6 @@ export namespace KiloTask {
       }
     }
 
-    return { model: input.parent, variant: undefined }
+    return { model: input.parent, variant: input.variant }
   })
 }

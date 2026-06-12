@@ -77,6 +77,8 @@ export function toSessionDiffFile(raw: SnapshotFileDiff): DiffFile {
     status: raw.status,
     tracked: true,
     generatedLike: false,
-    summarized: raw.patch === "",
+    // A zero-stat empty patch has no text body to fetch; nonzero stats
+    // indicate a deferred large-file summary.
+    summarized: raw.patch === "" && (raw.additions !== 0 || raw.deletions !== 0),
   }
 }

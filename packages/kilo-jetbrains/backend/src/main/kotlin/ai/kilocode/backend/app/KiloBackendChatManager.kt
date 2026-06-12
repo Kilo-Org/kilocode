@@ -19,10 +19,18 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.IOException
+import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * Chat orchestrator that handles message sending, history loading,
@@ -39,6 +47,7 @@ class KiloBackendChatManager(
 ) {
     companion object {
         private val JSON_TYPE = "application/json".toMediaType()
+        private const val ENHANCE_TIMEOUT_MINUTES = 2L
 
         private val CHAT_EVENTS = setOf(
             "message.updated",
@@ -106,6 +115,28 @@ class KiloBackendChatManager(
     }
 
     // ------ prompt ------
+
+    suspend fun enhancePrompt(dir: String, text: String): String {
+        val http = requireClient()
+        val url = requireBase()
+        val body = KiloCliDataParser.buildEnhancePromptJson(text)
+        val request = Request.Builder()
+            .url("$url/enhance-prompt?directory=${encode(dir)}")
+            .post(body.toRequestBody(JSON_TYPE))
+            .build()
+        val call = http.newCall(request)
+        call.timeout().timeout(ENHANCE_TIMEOUT_MINUTES, TimeUnit.MINUTES)
+
+        return call.await().use { response ->
+            val raw = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                log.warn("enhance prompt failed: HTTP ${response.code}")
+                raw.takeIf { it.isNotBlank() }?.let { log.debug { "kind=enhancePrompt error=${ChatLogSummary.body(it)}" } }
+                throw RuntimeException("Enhance prompt failed: HTTP ${response.code}")
+            }
+            KiloCliDataParser.parseEnhancedPrompt(raw)
+        }
+    }
 
     fun prompt(id: String, dir: String, prompt: PromptDto) {
         val meta = if (log.isDebugEnabled) {
@@ -323,6 +354,19 @@ class KiloBackendChatManager(
 
     private fun requireBase(): String =
         base ?: throw IllegalStateException("Chat manager not started")
+
+    private suspend fun Call.await(): Response = suspendCancellableCoroutine { cont ->
+        cont.invokeOnCancellation { cancel() }
+        enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                if (!cont.isCancelled) cont.resumeWithException(e)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                cont.resume(response) { _, value, _ -> value.close() }
+            }
+        })
+    }
 
     private fun encode(value: String): String =
         java.net.URLEncoder.encode(value, "UTF-8")

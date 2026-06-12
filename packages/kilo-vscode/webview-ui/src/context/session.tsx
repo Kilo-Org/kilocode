@@ -69,8 +69,10 @@ import { PartStash } from "./part-stash"
 import { mergeParts, sameParts } from "./session-parts"
 import { state as todoState } from "./todo-revert"
 import { getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
-import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
+import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
+import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
 import { visibleMessages as filterVisibleMessages } from "./session-queue"
+import { createAbortState } from "./abort-state"
 
 const RECENT_LIMIT = 5
 const MESSAGE_PAGE_LIMIT = 80
@@ -245,6 +247,7 @@ interface SessionContextValue {
     files?: FileAttachment[],
     draftID?: string,
     context?: string,
+    review?: ReviewMessageData,
   ) => void
   sendCommand: (
     command: string,
@@ -303,6 +306,7 @@ export const SessionProvider: ParentComponent = (props) => {
   const [busySinceMap, setBusySinceMap] = createStore<Record<string, number>>({})
   const [submissionMap, setSubmissionMap] = createStore<Record<string, number>>({})
   const pendingSubmissions = new Map<string, string>()
+  const aborts = createAbortState()
 
   const idle: SessionStatusInfo = { type: "idle" }
 
@@ -364,6 +368,8 @@ export const SessionProvider: ParentComponent = (props) => {
   const [agents, setAgents] = createSignal<AgentInfo[]>([])
   const [allAgents, setAllAgents] = createSignal<AgentInfo[]>([])
   const [defaultAgent, setDefaultAgent] = createSignal("code")
+  const [pendingKiloModel, setPendingKiloModel] = createSignal<{ modelID: string; after: number } | null>(null)
+  const [catalog, setCatalog] = createSignal(0)
 
   // Skills loaded from the CLI backend
   const [skills, setSkills] = createSignal<SkillInfo[]>([])
@@ -442,6 +448,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (!busySinceMap[sid]) setBusySinceMap(sid, Date.now())
   }
   const finishSubmission = (messageID: string) => {
+    aborts.finish(messageID)
     const sid = pendingSubmissions.get(messageID)
     if (!sid) return
     pendingSubmissions.delete(messageID)
@@ -464,7 +471,9 @@ export const SessionProvider: ParentComponent = (props) => {
   }
   const confirmSubmissions = (sid: string) => {
     for (const [id, scope] of pendingSubmissions) {
-      if (scope === sid) pendingSubmissions.delete(id)
+      if (scope !== sid) continue
+      aborts.finish(id)
+      pendingSubmissions.delete(id)
     }
     setSubmissionMap(
       produce((map) => {
@@ -588,6 +597,31 @@ export const SessionProvider: ParentComponent = (props) => {
       hideErrors(sid)
     }
   }
+
+  function selectKiloModel(modelID: string) {
+    setPendingKiloModel({ modelID, after: catalog() })
+    vscode.postMessage({ type: "requestProviders" })
+  }
+
+  const unsubKiloModel = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type === "providersLoaded") {
+      setCatalog((value) => value + 1)
+      return
+    }
+    if (message.type === "selectKiloModel") selectKiloModel(message.modelID)
+  })
+  onCleanup(unsubKiloModel)
+
+  createEffect(() => {
+    const pending = pendingKiloModel()
+    if (!pending || agents().length === 0 || catalog() <= pending.after) return
+    setPendingKiloModel(null)
+    if (!provider.providers()[KILO_PROVIDER_ID]?.models[pending.modelID]) {
+      console.warn("[Kilo New] Ignoring unavailable Kilo catalog model:", pending.modelID)
+      return
+    }
+    selectModel(KILO_PROVIDER_ID, pending.modelID)
+  })
 
   function promptAgent(sessionID?: string) {
     const name = agentForScope(sessionID)
@@ -1070,6 +1104,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Event handlers
   function handleSessionCreated(session: SessionInfo, draftID?: string) {
+    if (draftID) aborts.move(draftID, session.id)
     batch(() => {
       setStore("sessions", session.id, session)
 
@@ -1496,6 +1531,7 @@ export const SessionProvider: ParentComponent = (props) => {
     message?: string,
     next?: number,
   ) {
+    const shouldAbort = aborts.update(sessionID, newStatus)
     confirmSubmissions(sessionID)
     const prev = statusMap[sessionID] ?? { type: "idle" }
     const info: SessionStatusInfo =
@@ -1522,6 +1558,7 @@ export const SessionProvider: ParentComponent = (props) => {
       // messages themselves will be reconciled on the next messagesLoaded.
       pendingOptimistic.delete(sessionID)
     }
+    if (shouldAbort) vscode.postMessage({ type: "abort", sessionID })
   }
 
   function handlePermissionRequest(permission: PermissionRequest) {
@@ -1640,6 +1677,7 @@ export const SessionProvider: ParentComponent = (props) => {
   function handleSendMessageFailed(message: SendMessageFailedMessage) {
     const sid = message.sessionID ?? message.draftID
     if (message.messageID) finishSubmission(message.messageID)
+    if (!message.messageID && sid) aborts.clear(sid)
     if (sid && message.messageID) {
       pendingOptimistic.get(sid)?.delete(message.messageID)
       stash.remove(message.messageID)
@@ -1777,6 +1815,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handleSessionDeleted(sessionID: string) {
     pendingOptimistic.delete(sessionID)
+    aborts.clear(sessionID)
     confirmSubmissions(sessionID)
     batch(() => {
       // Collect message IDs so we can clean up their parts (store + stash)
@@ -2028,7 +2067,13 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   /** Create an optimistic user message + parts in the store so the UI updates instantly. */
-  function addOptimistic(sid: string, messageID: string, text: string, files?: FileAttachment[]) {
+  function addOptimistic(
+    sid: string,
+    messageID: string,
+    text: string,
+    files?: FileAttachment[],
+    review?: ReviewMessageData,
+  ) {
     const now = Date.now()
     const temp: Message = {
       id: messageID,
@@ -2043,7 +2088,13 @@ export const SessionProvider: ParentComponent = (props) => {
 
     const parts: Part[] = []
     if (text) {
-      parts.push({ type: "text" as const, id: Identifier.ascending("part"), messageID, text })
+      parts.push({
+        type: "text" as const,
+        id: Identifier.ascending("part"),
+        messageID,
+        text,
+        metadata: review ? reviewMetadata(review) : undefined,
+      })
     }
     for (const file of files ?? []) {
       parts.push({
@@ -2070,6 +2121,7 @@ export const SessionProvider: ParentComponent = (props) => {
     files?: FileAttachment[],
     draftID?: string,
     context?: string,
+    review?: ReviewMessageData,
   ) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send message: not connected")
@@ -2092,6 +2144,7 @@ export const SessionProvider: ParentComponent = (props) => {
         agent,
         variant: currentVariant(scope),
         files,
+        review,
       })
       return
     }
@@ -2106,7 +2159,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const scope = draftID ?? sid
     if (scope) {
       clearClose(scope)
-      addOptimistic(scope, messageID, text, files)
+      addOptimistic(scope, messageID, text, files, review)
       startSubmission(scope, messageID)
       if (!sid) setDraftSessionID(scope)
     }
@@ -2123,6 +2176,7 @@ export const SessionProvider: ParentComponent = (props) => {
       agent,
       variant: currentVariant(scope),
       files,
+      review,
       agentManagerContext: context,
     })
   }
@@ -2197,10 +2251,13 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function abort() {
     const sessionID = currentSessionID()
-    if (!sessionID) {
-      console.warn("[Kilo New] Cannot abort: no current session")
+    const scope = sessionID ?? draftSessionID()
+    if (!scope) {
+      console.warn("[Kilo New] Cannot abort: no current or pending session")
       return
     }
+    const messageID = [...pendingSubmissions].reverse().find(([, sid]) => sid === scope)?.[0]
+    if (!aborts.request(scope, status(), messageID) || !sessionID) return
 
     vscode.postMessage({
       type: "abort",

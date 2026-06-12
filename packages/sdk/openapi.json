@@ -18195,6 +18195,22 @@
           "indexing": {
             "$ref": "#/components/schemas/IndexingConfig"
           },
+          "console": {
+            "type": "object",
+            "properties": {
+              "context_sidebar_width": {
+                "type": "integer",
+                "minimum": 250,
+                "maximum": 800,
+                "description": "Width of the Kilo Console project context sidebar in pixels"
+              },
+              "diff_style": {
+                "type": "string",
+                "enum": ["unified", "split"]
+              }
+            },
+            "additionalProperties": false
+          },
           "terminal_command_display": {
             "type": "string",
             "enum": ["expanded", "collapsed"]
