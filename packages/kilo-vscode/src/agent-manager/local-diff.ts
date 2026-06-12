@@ -248,6 +248,36 @@ export async function diffSummary(git: GitOps, dir: string, base: string, log?: 
   return items.map(summarize)
 }
 
+export function createLocalDiff(git: GitOps, log?: Log) {
+  let key: string | undefined
+  let anc: string | undefined
+  let metas = new Map<string, Meta>()
+
+  return {
+    summary: async (dir: string, base: string): Promise<WorktreeDiffEntry[]> => {
+      const next = await ancestor(git, dir, base, log)
+      const id = `${dir}\0${base}`
+      if (!next) {
+        key = id
+        anc = undefined
+        metas = new Map()
+        return []
+      }
+
+      const items = await list(git, dir, next, log)
+      key = id
+      anc = next
+      metas = new Map(items.map((item) => [item.file, item]))
+      return items.map(summarize)
+    },
+    file: async (dir: string, base: string, file: string): Promise<WorktreeDiffEntry | null> => {
+      const meta = key === `${dir}\0${base}` ? metas.get(file) : undefined
+      if (!anc || !meta) return diffFile(git, dir, base, file, log)
+      return materialize(git, dir, anc, meta, log)
+    },
+  }
+}
+
 async function detailMeta(git: GitOps, dir: string, anc: string, file: string): Promise<Meta | undefined> {
   const tracked = await git.execGit(["ls-files", "--error-unmatch", "--", file], dir)
   if (tracked.code !== 0) {
@@ -345,7 +375,10 @@ export async function diffFile(
   if (!anc) return null
   const meta = await detailMeta(git, dir, anc, file)
   if (!meta) return null
+  return materialize(git, dir, anc, meta, log)
+}
 
+async function materialize(git: GitOps, dir: string, anc: string, meta: Meta, log?: Log): Promise<WorktreeDiffEntry> {
   // Cheap size probe before materializing content — protects the extension
   // host from OOM on huge tracked files. `git cat-file -s` returns the blob
   // size without streaming its contents, and `fs.stat` is a plain syscall.

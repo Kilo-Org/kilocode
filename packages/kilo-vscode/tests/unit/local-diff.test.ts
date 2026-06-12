@@ -2,7 +2,14 @@ import { describe, it, expect } from "bun:test"
 import * as fs from "fs/promises"
 import * as os from "os"
 import * as path from "path"
-import { diffSummary, diffFile, generatedLike, resolveBase, MAX_DETAIL_BYTES } from "../../src/agent-manager/local-diff"
+import {
+  createLocalDiff,
+  diffSummary,
+  diffFile,
+  generatedLike,
+  resolveBase,
+  MAX_DETAIL_BYTES,
+} from "../../src/agent-manager/local-diff"
 import { GitOps } from "../../src/agent-manager/GitOps"
 import { WorktreeDiffReverter } from "../../src/diff/shared/reverter"
 import { resolveLocalDiffTarget } from "../../src/diff/shared/target"
@@ -257,6 +264,25 @@ describe("diffFile", () => {
       expect(result?.patch).toContain("new file mode")
       expect(result?.patch).toContain("+one")
       expect(result?.patch).toContain("+two")
+    })
+  })
+
+  it("loads full detail from the latest summary snapshot", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\ncached\n")
+      const local = createLocalDiff(git())
+      const summary = await local.summary(dir, base)
+      const entry = summary.find((item) => item.file === "seed.txt")
+      const result = await local.file(dir, base, "seed.txt")
+
+      expect(entry?.summarized).toBe(true)
+      expect(result?.summarized).toBe(false)
+      expect(result?.additions).toBe(entry?.additions)
+      expect(result?.deletions).toBe(entry?.deletions)
+      expect(result?.stamp).toBe(entry?.stamp)
+      expect(result?.before).toBe("seed\n")
+      expect(result?.after).toBe("seed\ncached\n")
+      expect(result?.patch).toContain("+cached")
     })
   })
 
