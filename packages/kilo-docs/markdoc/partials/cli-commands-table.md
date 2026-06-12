@@ -13,12 +13,14 @@
 | `kilo upgrade [target]` | upgrade kilo to the latest or a specific version |
 | `kilo uninstall` | uninstall kilo and remove all related files |
 | `kilo serve` | starts a headless kilo server |
+| `kilo web` | start kilo server and open web interface |
 | `kilo models [provider]` | list all available models |
 | `kilo roll-call <filter>` | batch-test text models matching a filter for connectivity and latency |
 | `kilo profile` | show Kilo account profile |
 | `kilo stats` | show token usage and cost statistics |
 | `kilo export [sessionID]` | export session data as JSON |
 | `kilo import <file>` | import session data from JSON file or URL |
+| `kilo github` | manage GitHub agent |
 | `kilo pr <number>` | fetch and checkout a GitHub PR branch, then run kilo |
 | `kilo session` | manage sessions |
 | `kilo remote` | enable remote connection for real-time session relay |
