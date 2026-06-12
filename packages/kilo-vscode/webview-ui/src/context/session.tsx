@@ -70,6 +70,7 @@ import { mergeParts, sameParts } from "./session-parts"
 import { state as todoState } from "./todo-revert"
 import { getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
+import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
 import { visibleMessages as filterVisibleMessages } from "./session-queue"
 
 const RECENT_LIMIT = 5
@@ -245,6 +246,7 @@ interface SessionContextValue {
     files?: FileAttachment[],
     draftID?: string,
     context?: string,
+    review?: ReviewMessageData,
   ) => void
   sendCommand: (
     command: string,
@@ -2055,7 +2057,13 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   /** Create an optimistic user message + parts in the store so the UI updates instantly. */
-  function addOptimistic(sid: string, messageID: string, text: string, files?: FileAttachment[]) {
+  function addOptimistic(
+    sid: string,
+    messageID: string,
+    text: string,
+    files?: FileAttachment[],
+    review?: ReviewMessageData,
+  ) {
     const now = Date.now()
     const temp: Message = {
       id: messageID,
@@ -2070,7 +2078,13 @@ export const SessionProvider: ParentComponent = (props) => {
 
     const parts: Part[] = []
     if (text) {
-      parts.push({ type: "text" as const, id: Identifier.ascending("part"), messageID, text })
+      parts.push({
+        type: "text" as const,
+        id: Identifier.ascending("part"),
+        messageID,
+        text,
+        metadata: review ? reviewMetadata(review) : undefined,
+      })
     }
     for (const file of files ?? []) {
       parts.push({
@@ -2097,6 +2111,7 @@ export const SessionProvider: ParentComponent = (props) => {
     files?: FileAttachment[],
     draftID?: string,
     context?: string,
+    review?: ReviewMessageData,
   ) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send message: not connected")
@@ -2119,6 +2134,7 @@ export const SessionProvider: ParentComponent = (props) => {
         agent,
         variant: currentVariant(scope),
         files,
+        review,
       })
       return
     }
@@ -2133,7 +2149,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const scope = draftID ?? sid
     if (scope) {
       clearClose(scope)
-      addOptimistic(scope, messageID, text, files)
+      addOptimistic(scope, messageID, text, files, review)
       startSubmission(scope, messageID)
       if (!sid) setDraftSessionID(scope)
     }
@@ -2150,6 +2166,7 @@ export const SessionProvider: ParentComponent = (props) => {
       agent,
       variant: currentVariant(scope),
       files,
+      review,
       agentManagerContext: context,
     })
   }

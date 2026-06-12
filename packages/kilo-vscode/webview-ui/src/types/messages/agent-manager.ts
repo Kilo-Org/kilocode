@@ -166,14 +166,7 @@ export interface LocalGitStats {
   behind: number
 }
 
-export interface ReviewComment {
-  id: string
-  file: string
-  side: "additions" | "deletions"
-  line: number
-  comment: string
-  selectedText: string
-}
+export type { ReviewCommentData as ReviewComment } from "../../../../src/shared/review-comments"
 
 /**
  * Maximum number of parallel worktree versions for multi-version mode.

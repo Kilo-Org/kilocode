@@ -103,6 +103,7 @@ export interface SendMessageFailedMessage {
   draftID?: string
   messageID?: string
   files?: FileAttachment[]
+  review?: import("../../../../src/shared/review-comments").ReviewMessageData
 }
 
 // Wire shape lives in src/shared/stream-messages.ts; narrow `part` to the
