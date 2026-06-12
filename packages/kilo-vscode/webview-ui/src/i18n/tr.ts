@@ -112,6 +112,7 @@ export const dict = {
   "dialog.provider.google.note": "Hızlı ve yapılandırılmış yanıtlar için Gemini modelleri",
   "dialog.provider.openrouter.note": "Tek bir sağlayıcıdan tüm desteklenen modellere eriş",
   "dialog.provider.vercel.note": "Akıllı yönlendirme ile yapay zeka modellerine birleşik erişim",
+  "dialog.provider.morph.note": "Auto Router, bağlı sağlayıcılarınız arasından her istem için en iyi modeli seçer",
 
   "dialog.model.select.title": "Model seç",
   "dialog.model.search.placeholder": "Model ara",

@@ -112,6 +112,7 @@ export const dict = {
   "dialog.provider.google.note": "Gemini modeli za brze, strukturirane odgovore",
   "dialog.provider.openrouter.note": "Pristup svim podržanim modelima preko jednog provajdera",
   "dialog.provider.vercel.note": "Jedinstven pristup AI modelima uz pametno rutiranje",
+  "dialog.provider.morph.note": "Auto Router bira najbolji model za svaki prompt među povezanim pružaocima",
 
   "dialog.model.select.title": "Odaberi model",
   "dialog.model.search.placeholder": "Pretraži modele",

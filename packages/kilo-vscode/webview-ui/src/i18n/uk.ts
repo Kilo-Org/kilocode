@@ -112,6 +112,7 @@ export const dict = {
   "dialog.provider.google.note": "Моделі Gemini для швидких і структурованих відповідей",
   "dialog.provider.openrouter.note": "Доступ до всіх підтримуваних моделей від одного провайдера",
   "dialog.provider.vercel.note": "Уніфікований доступ до моделей ШІ з інтелектуальною маршрутизацією",
+  "dialog.provider.morph.note": "Auto Router обирає найкращу модель для кожного запиту серед підключених провайдерів",
 
   "dialog.model.select.title": "Вибір моделі",
   "dialog.model.search.placeholder": "Пошук моделі",

@@ -103,6 +103,7 @@ export const dict = {
   "dialog.provider.deepseek.note": "Modelli DeepSeek per ragionamento e attività di coding",
   "dialog.provider.openrouter.note": "Accesso a tutti i modelli supportati da un solo provider",
   "dialog.provider.vercel.note": "Accesso unificato ai modelli AI con routing intelligente",
+  "dialog.provider.morph.note": "Auto Router sceglie il modello migliore per ogni prompt tra i provider connessi",
   "dialog.model.select.title": "Seleziona modello",
   "dialog.model.search.placeholder": "Cerca modelli",
   "dialog.model.empty": "Nessun risultato modello",
