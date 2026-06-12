@@ -214,15 +214,15 @@ describe("partitionRows", () => {
     expect(handed.virtual.filter((row) => row.turn === "u2")).toHaveLength(1)
   })
 
-  it("retains a completed suffix while its turn is held", () => {
+  it("does not retain an older turn after a newer visible turn", () => {
     const u1 = user("u1")
     const a1 = assistant("a1", "u1")
     const u2 = user("u2")
     const rows = transcriptRows(messageTurns([u1, a1, u2]), lookup({ a1: [part("p1", "a1")] }))
     const result = partitionRows(rows, new Set(["u1"]))
 
-    expect(result.virtual.map((row) => `${row.turn}:${row.type}`)).toEqual(["u1:user"])
-    expect(result.direct.map((row) => `${row.turn}:${row.type}`)).toEqual(["u1:assistant", "u2:user"])
+    expect(result.virtual.map((row) => `${row.turn}:${row.type}`)).toEqual(["u1:user", "u1:assistant", "u2:user"])
+    expect(result.direct).toEqual([])
   })
 
   it("skips a held turn without assistant output", () => {

@@ -182,10 +182,9 @@ export function transcriptRows(
 export function partitionRows(rows: TranscriptRow[], direct: ReadonlySet<string> = new Set()): TranscriptPartition {
   const queued = rows.filter((row) => row.queued)
   const visible = rows.filter((row) => !row.queued)
-  const turn = visible.find((row) => row.type === "assistant" && direct.has(row.turn))?.turn
-
-  // No active assistant output needs direct rendering.
-  if (!turn) return { virtual: visible, direct: [], queued }
+  const turn = visible.at(-1)?.turn
+  // Only the latest visible turn can render directly.
+  if (!turn || !direct.has(turn)) return { virtual: visible, direct: [], queued }
 
   let boundary = -1
   for (let i = 0; i < visible.length; i += 1) {
