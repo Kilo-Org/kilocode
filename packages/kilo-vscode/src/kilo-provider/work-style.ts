@@ -75,10 +75,7 @@ export async function handleWorkStyleMessage(input: {
     input.post(initialized ? payload : { ...payload, style: "skipped" })
     return true
   }
-  if (await handleWorkStyleApplyMessage(input)) {
-    input.post(getWorkStylePayload())
-    return true
-  }
+  if (await handleWorkStyleApplyMessage(input)) return true
   if (input.message.type !== "setWorkStyle") return false
   if (!input.message.style) {
     console.error("[Kilo New] Missing style in setWorkStyle message")
