@@ -81,6 +81,7 @@ export enum TelemetryEventName {
   SUGGESTION_BUTTON_CLICKED = "Suggestion Button Clicked",
   FREE_MODELS_LINK_CLICKED = "Free Models Link Clicked",
   CREATE_ORGANIZATION_LINK_CLICKED = "Create Organization Link Clicked",
+  KILO_PASS_BANNER_CLICKED = "Kilo Pass Banner Clicked",
   GHOST_SERVICE_DISABLED = "Ghost Service Disabled",
 
   // Feedback
