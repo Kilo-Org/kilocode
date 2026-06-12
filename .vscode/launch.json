@@ -21,7 +21,9 @@
       "outFiles": ["${workspaceFolder}/packages/kilo-vscode/dist/**/*.js"],
       "preLaunchTask": "VSCode - Compile",
       "env": {
-        "KILO_API_URL": "http://localhost:3000"
+        "KILO_API_URL": "http://localhost:3000",
+        "LLMAPI_API_URL": "http://localhost:8081",
+        "LLMAPI_BASE_URL": "http://localhost:4001/v1"
       }
     },
     {

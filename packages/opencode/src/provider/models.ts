@@ -68,8 +68,30 @@ export const layer: Layer.Layer<
         if (Object.keys(models).length === 0) yield* cache.refresh("apertis", aptOpts).pipe(Effect.ignore, Effect.forkDetach)
       })
 
+      // LLMAPI_BASE_URL env overrides config so a single env var points the whole
+      // provider (catalog + inference) at a local cluster; mirrors model-cache.
+      const llmapi = cfg.provider?.llmapi?.options
+      const llmapiBase = process.env.LLMAPI_BASE_URL ?? llmapi?.baseURL
+      const llmapiURL = llmapiBase ?? "https://api.llmapi.ai/v1"
+      const llmapiOpts = llmapiBase ? { baseURL: llmapiBase } : {}
+
+      const addLlmapi = Effect.fnUntraced(function* () {
+        if (providers.llmapi) return
+        const models = yield* cache.fetch("llmapi", llmapiOpts).pipe(Effect.catch(() => Effect.succeed({})))
+        providers.llmapi = {
+          id: "llmapi",
+          name: "LLMAPI",
+          env: ["LLMAPI_API_KEY"],
+          api: llmapiURL,
+          npm: "@ai-sdk/openai-compatible",
+          models,
+        }
+        if (Object.keys(models).length === 0) yield* cache.refresh("llmapi", llmapiOpts).pipe(Effect.ignore, Effect.forkDetach)
+      })
+
       if (!allowed) {
         yield* addApertis()
+        yield* addLlmapi()
         return providers
       }
 
@@ -92,6 +114,7 @@ export const layer: Layer.Layer<
       }
       if (Object.keys(models).length === 0) yield* cache.refresh("kilo", fetch).pipe(Effect.ignore, Effect.forkDetach)
       yield* addApertis()
+      yield* addLlmapi()
       return providers
     })
 

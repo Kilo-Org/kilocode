@@ -55,8 +55,13 @@ export const ProviderProvider: ParentComponent = (props) => {
       return
     }
 
-    setProviders(message.providers)
-    setConnected(message.connected)
+    // LLMAPI-only build: surface only the llmapi provider in the picker and the
+    // model list. Other providers (kilo, openai, models.dev catalog, …) are hidden.
+    const llmapiOnly = Object.fromEntries(
+      Object.entries(message.providers).filter(([id]) => id === "llmapi"),
+    )
+    setProviders(llmapiOnly)
+    setConnected(message.connected.filter((id) => id === "llmapi"))
     setDefaults(message.defaults)
     setDefaultSelection(message.defaultSelection)
     setAuthMethods(message.authMethods)

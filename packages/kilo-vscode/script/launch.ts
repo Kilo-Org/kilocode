@@ -340,6 +340,23 @@ async function launch() {
     if (key.startsWith("ELECTRON_") || key.startsWith("VSCODE_")) delete env[key]
   }
 
+  // Local dev override: merge packages/kilo-vscode/.env.local (KEY=VALUE lines)
+  // into the spawned VS Code env, so `bun run extension` can point the bundled
+  // CLI at a local cluster (e.g. LLMAPI_API_URL / LLMAPI_BASE_URL) without
+  // exporting the vars in the shell. The file is gitignored and never shipped.
+  const localEnvFile = join(root, ".env.local")
+  if (existsSync(localEnvFile)) {
+    for (const line of readFileSync(localEnvFile, "utf8").split("\n")) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith("#")) continue
+      const eq = trimmed.indexOf("=")
+      if (eq <= 0) continue
+      const key = trimmed.slice(0, eq).trim()
+      env[key] = trimmed.slice(eq + 1).trim().replace(/^['"]|['"]$/g, "")
+    }
+    console.log(`[launch] Loaded env overrides from .env.local`)
+  }
+
   console.log(`[launch] Starting VS Code (${mode} mode)`)
   console.log(`[launch] Executable: ${app}`)
   console.log(`[launch] Workspace:  ${workspace}`)

@@ -98,7 +98,6 @@ import {
 import {
   handleLogin,
   handleLogout,
-  handleSetOrganization,
   handleRefreshProfile,
   type AuthContext,
 } from "./kilo-provider/handlers/auth"
@@ -860,11 +859,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "logout":
           await handleLogout(this.authCtx)
-          break
-        case "setOrganization":
-          if (typeof message.organizationId === "string" || message.organizationId === null) {
-            await handleSetOrganization(this.authCtx, message.organizationId)
-          }
           break
         case "refreshProfile":
           await handleRefreshProfile(this.authCtx)

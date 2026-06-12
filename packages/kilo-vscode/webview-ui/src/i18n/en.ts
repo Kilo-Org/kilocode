@@ -650,7 +650,7 @@ export const dict = {
 
   "sidebar.menu.toggle": "Toggle menu",
   "sidebar.nav.projectsAndSessions": "Projects and sessions",
-  "sidebar.settings": "Settings",
+  "sidebar.settings": "LLMAPI Settings",
   "sidebar.help": "Help",
   "sidebar.workspaces.enable": "Enable workspaces",
   "sidebar.workspaces.disable": "Disable workspaces",
@@ -1029,7 +1029,7 @@ export const dict = {
   "common.retry": "Retry",
   "common.refresh": "Refresh",
 
-  "profile.title": "Profile",
+  "profile.title": "LLMAPI Profile",
   "profile.notLoggedIn": "Not logged in",
   "profile.action.login": "Login with Kilo Code",
   "profile.balance.title": "Balance",
