@@ -2,15 +2,22 @@ import { For } from "solid-js"
 import type { Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode"
 import { useWorkStyle } from "../../context/work-style"
 import { WORK_STYLE_CHOICES } from "../../../../src/shared/work-style-presets"
 
-const details = ["permissions", "bash", "visibility"] as const
+const details = ["permissions", "visibility"] as const
 
 export const WorkStylePicker: Component = () => {
   const language = useLanguage()
+  const vscode = useVSCode()
   const work = useWorkStyle()
+  const open = (event: MouseEvent) => {
+    event.preventDefault()
+    vscode.postMessage({ type: "openSettingsPanel", tab: "autoApprove" })
+  }
 
   return (
     <Card class="work-style-picker">
@@ -36,6 +43,14 @@ export const WorkStylePicker: Component = () => {
           )}
         </For>
       </div>
+
+      <p data-slot="work-style-settings-note">
+        <span>{language.t("workStyle.onboarding.settingsNote")}</span>
+        <a href="#" onClick={open}>
+          <Icon name="settings-gear" size="small" />
+          <span>{language.t("workStyle.onboarding.settings")}</span>
+        </a>
+      </p>
     </Card>
   )
 }

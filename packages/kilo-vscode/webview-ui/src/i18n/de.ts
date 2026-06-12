@@ -1063,11 +1063,13 @@ export const dict = {
   "feedback.dialog.discord": "Unserer Discord-Community beitreten",
   "feedback.dialog.support": "Kundensupport",
   "workStyle.onboarding.welcome": "Willkommen bei Kilo",
-  "workStyle.onboarding.title": "Wähle, wie du mit deinen KI-Agenten arbeiten möchtest",
+  "workStyle.onboarding.title": "Wähle, wie du arbeiten möchtest",
+  "workStyle.onboarding.settingsNote": "Du kannst diese Optionen jederzeit ändern unter",
+  "workStyle.onboarding.settings": "Einstellungen.",
   "workStyle.onboarding.description":
     "Hiermit werden die anfänglichen Standardeinstellungen für Berechtigungen, Denkblöcke, Terminalausgabe und Kontextzeitleiste festgelegt. Dies gilt nur einmal und überspringt Einstellungen, die Sie bereits angepasst haben.",
   "workStyle.onboarding.skip": "Vorerst überspringen",
-  "workStyle.toast.saved.title": "Einstellungen gespeichert",
+  "workStyle.toast.saved.title": "Modus erfolgreich gespeichert",
   "workStyle.toast.saved.description": "Du kannst deine Einstellungen jederzeit in den Einstellungen ändern.",
   "workStyle.toast.saved.action": "Zu den Einstellungen",
   "workStyle.choice.permissions": "Berechtigungen",
@@ -1075,19 +1077,18 @@ export const dict = {
   "workStyle.choice.visibility": "Sichtbarkeit",
   "workStyle.choice.human-in-the-loop.eyebrow": "Menschliche Kontrolle",
   "workStyle.choice.human-in-the-loop.title": "Zuerst überprüfen",
-  "workStyle.choice.human-in-the-loop.description":
-    "Kilo pausiert häufig und zeigt dir während der Arbeit, was es als Nächstes vorhat.",
-  "workStyle.choice.human-in-the-loop.permissions": "Der Agent fragt vor dem Bearbeiten von Dateien um Erlaubnis.",
+  "workStyle.choice.human-in-the-loop.description": "Kilo pausiert und zeigt dir während der Arbeit seinen Plan.",
+  "workStyle.choice.human-in-the-loop.permissions":
+    "Fragt vor dem Bearbeiten von Dateien oder Ausführen von Befehlen nach.",
   "workStyle.choice.human-in-the-loop.bash": "Der Agent fragt bei allen Terminalbefehlen um Erlaubnis.",
-  "workStyle.choice.human-in-the-loop.visibility":
-    "Der Agent zeigt Gesprächsdetails einschließlich Befehlen und Überlegungen.",
+  "workStyle.choice.human-in-the-loop.visibility": "Zeigt alle Gesprächsdetails einschließlich der Überlegungen.",
   "workStyle.choice.autonomous.eyebrow": "Weniger Unterbrechungen",
   "workStyle.choice.autonomous.title": "Hohe Autonomie",
-  "workStyle.choice.autonomous.description":
-    "Arbeite mit weniger Unterbrechungen und einer übersichtlicheren Benutzeroberfläche.",
-  "workStyle.choice.autonomous.permissions": "Kann Dateien im Arbeitsbereich automatisch bearbeiten.",
+  "workStyle.choice.autonomous.description": "Weniger Unterbrechungen und eine optimierte Benutzeroberfläche.",
+  "workStyle.choice.autonomous.permissions":
+    "Bearbeitet Dateien und führt Befehle im Arbeitsbereich ohne Nachfrage aus.",
   "workStyle.choice.autonomous.bash": "Kann Terminalbefehle im Arbeitsbereich ohne Genehmigung ausführen.",
-  "workStyle.choice.autonomous.visibility": "Details der Unterhaltung bleiben verborgen, bis du sie aufklappst.",
+  "workStyle.choice.autonomous.visibility": "Details bleiben eingeklappt, bis du sie aufklappst.",
   "session.cloud.import.title": "Aus der Cloud importieren",
   "session.cloud.import.placeholder": "Sitzungs-ID, URL oder kilo import-Befehl",
   "session.cloud.import.button": "Importieren",

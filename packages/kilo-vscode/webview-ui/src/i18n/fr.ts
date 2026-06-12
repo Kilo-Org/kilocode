@@ -1067,11 +1067,13 @@ export const dict = {
   "feedback.dialog.discord": "Rejoindre notre communauté Discord",
   "feedback.dialog.support": "Service client",
   "workStyle.onboarding.welcome": "Bienvenue dans Kilo",
-  "workStyle.onboarding.title": "Choisissez comment travailler avec vos agents IA",
+  "workStyle.onboarding.title": "Choisissez votre façon de travailler",
+  "workStyle.onboarding.settingsNote": "Vous pouvez modifier ces options à tout moment dans les",
+  "workStyle.onboarding.settings": "Paramètres.",
   "workStyle.onboarding.description":
     "Ceci définit les paramètres initiaux pour les autorisations, les blocs de raisonnement, la sortie du terminal et la chronologie du contexte. Ce réglage ne s'applique qu'une fois et ignore les paramètres que vous avez déjà personnalisés.",
   "workStyle.onboarding.skip": "Ignorer pour l'instant",
-  "workStyle.toast.saved.title": "Préférences enregistrées",
+  "workStyle.toast.saved.title": "Mode enregistré avec succès",
   "workStyle.toast.saved.description": "Modifiez vos préférences à tout moment dans les paramètres.",
   "workStyle.toast.saved.action": "Accéder aux paramètres",
   "workStyle.choice.permissions": "Autorisations",
@@ -1080,19 +1082,20 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.eyebrow": "Contrôle humain",
   "workStyle.choice.human-in-the-loop.title": "Vérifier d'abord",
   "workStyle.choice.human-in-the-loop.description":
-    "Kilo s'interrompt fréquemment et vous montre ce qu'il prévoit de faire au fil de son travail.",
-  "workStyle.choice.human-in-the-loop.permissions": "L'agent demande l'autorisation avant de modifier des fichiers.",
+    "Kilo s'interrompt et vous présente son plan au fil de son travail.",
+  "workStyle.choice.human-in-the-loop.permissions":
+    "Demande avant de modifier des fichiers ou d'exécuter des commandes.",
   "workStyle.choice.human-in-the-loop.bash": "L'agent demande l'autorisation pour chaque commande du terminal.",
   "workStyle.choice.human-in-the-loop.visibility":
-    "L'agent affiche les détails de la conversation, les commandes et le raisonnement.",
+    "Affiche tous les détails de la conversation, y compris le raisonnement.",
   "workStyle.choice.autonomous.eyebrow": "Moins d'interruptions",
   "workStyle.choice.autonomous.title": "Autonomie élevée",
-  "workStyle.choice.autonomous.description": "Travaillez avec moins d'interruptions et une interface simplifiée.",
-  "workStyle.choice.autonomous.permissions": "Peut modifier automatiquement les fichiers de l'espace de travail.",
+  "workStyle.choice.autonomous.description": "Moins d'interruptions et une interface simplifiée.",
+  "workStyle.choice.autonomous.permissions":
+    "Modifie les fichiers et exécute les commandes dans l'espace de travail sans demander.",
   "workStyle.choice.autonomous.bash":
     "Peut exécuter des commandes dans le terminal de l'espace de travail sans autorisation.",
-  "workStyle.choice.autonomous.visibility":
-    "Les détails de la conversation restent masqués jusqu'à ce que vous les développiez.",
+  "workStyle.choice.autonomous.visibility": "Les détails restent repliés jusqu'à ce que vous les développiez.",
   "session.cloud.import.title": "Importer depuis le cloud",
   "session.cloud.import.placeholder": "ID de session, URL ou commande kilo import",
   "session.cloud.import.button": "Importer",

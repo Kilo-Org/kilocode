@@ -145,6 +145,32 @@
   line-height: 1.4;
 }
 
+[data-slot="work-style-settings-note"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  margin: 0;
+  color: var(--text-weak-base, var(--vscode-descriptionForeground));
+  font-size: var(--kilo-font-size-11);
+  line-height: 1.4;
+  text-align: left;
+}
+
+[data-slot="work-style-settings-note"] a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--vscode-textLink-foreground);
+  text-decoration: none;
+}
+
+[data-slot="work-style-settings-note"] a:hover {
+  color: var(--vscode-textLink-activeForeground);
+  text-decoration: underline;
+}
+
 @media (max-width: 320px) {
   .message-list-empty.work-style-empty {
     padding-inline: 8px;
@@ -165,10 +191,6 @@
 
   [data-component="button"].work-style-mode {
     padding: 12px;
-  }
-
-  [data-slot="work-style-mode-details"] {
-    display: none;
   }
 }
 

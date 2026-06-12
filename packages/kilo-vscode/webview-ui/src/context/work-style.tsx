@@ -25,9 +25,7 @@ export const WorkStyleProvider: ParentComponent = (props) => {
   const [loading, setLoading] = createSignal(true)
   const [applying, setApplying] = createSignal(false)
   const [display, setDisplay] = createSignal(false)
-  const toast = createWorkStyleToasts(language.t, () =>
-    vscode.postMessage({ type: "openSettingsPanel", tab: "autoApprove" }),
-  )
+  const toast = createWorkStyleToasts(language.t)
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "workStyleLoaded") {
