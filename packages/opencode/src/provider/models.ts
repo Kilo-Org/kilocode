@@ -1,4 +1,4 @@
-// kilocode_change - adapt Kilo model assembly to the upstream core models service
+// kilocode_change - new file
 import { Config } from "@/config/config"
 import { Auth } from "@/auth"
 import { ModelCache } from "./model-cache"
