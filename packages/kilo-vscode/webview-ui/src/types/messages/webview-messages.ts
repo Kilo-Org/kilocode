@@ -425,8 +425,10 @@ export interface UpdateConfigMessage {
   type: "updateConfig"
   /** Global config patch written to ~/.config/kilo/kilo.json. */
   config: Partial<Config>
-  /** Project config patch written to the workspace's .kilo/kilo.json or existing project config. */
+  globalUnset?: string[][]
+  /** Project config patch written to the workspace's .kilo/kilo.jsonc or existing project config. */
   projectConfig?: Partial<Config>
+  projectUnset?: string[][]
 }
 
 export interface RequestNotificationSettingsMessage {

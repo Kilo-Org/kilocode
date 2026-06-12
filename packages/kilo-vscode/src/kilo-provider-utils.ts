@@ -718,5 +718,5 @@ export function isEventFromForeignProject(event: StreamEvent, expectedProjectID:
   }
   if (event.name !== "session.updated.1") return false
   const project = event.data.info.projectID
-  return project != null && project !== expectedProjectID
+  return project !== undefined && project !== expectedProjectID
 }

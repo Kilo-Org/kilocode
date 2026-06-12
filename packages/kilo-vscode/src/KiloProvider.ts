@@ -988,7 +988,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           )
           break
         case "updateConfig":
-          await this.handleUpdateConfig(message.config, message.projectConfig)
+          await this.handleUpdateConfig(
+            message.config,
+            message.projectConfig,
+            message.globalUnset,
+            message.projectUnset,
+          )
           break
         case "openSettingsTab":
           if (message.tab === "indexing") {
@@ -2057,16 +2062,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory()
-      const { data: config } = await retry(() =>
-        this.client!.config.get({ directory: workspaceDir }, { throwOnError: true }),
-      )
-      const { data: global } = await this.client.global.config.get({ throwOnError: true })
+      const [{ data: config }, { data: global }, { data: overlay }] = await Promise.all([
+        retry(() => this.client!.config.get({ directory: workspaceDir }, { throwOnError: true })),
+        this.client.global.config.get({ throwOnError: true }),
+        this.client.config.overlay({ directory: workspaceDir, scope: "project" }, { throwOnError: true }),
+      ])
       this.cachedGlobalConfig = global ?? null
 
       const message = {
         type: "configLoaded",
         config,
         globalConfig: global,
+        projectConfig: overlay?.project,
         features: configFeatures(config),
       }
       this.cachedConfigMessage = message
@@ -2151,16 +2158,26 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (!this.client || this.connectionState !== "connected") return
     try {
       const dir = this.getWorkspaceDirectory()
-      const { data: config } = await retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true }))
-      const { data: global } = await this.client.global.config.get({ throwOnError: true })
+      const [{ data: config }, { data: global }, { data: overlay }] = await Promise.all([
+        retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true })),
+        this.client.global.config.get({ throwOnError: true }),
+        this.client.config.overlay({ directory: dir, scope: "project" }, { throwOnError: true }),
+      ])
       this.cachedGlobalConfig = global ?? null
       this.cachedConfigMessage = {
         type: "configLoaded",
         config,
         globalConfig: global,
+        projectConfig: overlay?.project,
         features: configFeatures(config),
       }
-      this.postMessage({ type: "configUpdated", config, globalConfig: global, features: configFeatures(config) })
+      this.postMessage({
+        type: "configUpdated",
+        config,
+        globalConfig: global,
+        projectConfig: overlay?.project,
+        features: configFeatures(config),
+      })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch config after update:", error)
     }
@@ -2316,7 +2333,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return getBusySessionCount(this.sessionStatusMap)
   }
 
-  private async handleUpdateConfig(partial: Partial<Config>, project: Partial<Config> = {}): Promise<void> {
+  private async handleUpdateConfig(
+    partial: Partial<Config>,
+    project: Partial<Config> = {},
+    globalUnset: string[][] = [],
+    projectUnset: string[][] = [],
+  ): Promise<void> {
     if (!this.client || this.connectionState !== "connected") {
       this.postMessage({ type: "configUpdateFailed", message: "Not connected to CLI backend" })
       return
@@ -2331,16 +2353,26 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       partial.agent !== undefined ||
       project.default_agent !== undefined ||
       project.agent !== undefined
-    const hasGlobal = Object.keys(partial).length > 0
-    const hasProject = Object.keys(project).length > 0
+    const hasGlobal = Object.keys(partial).length > 0 || globalUnset.length > 0
+    const hasProject = Object.keys(project).length > 0 || projectUnset.length > 0
 
     this.pending++
     const dir = this.getWorkspaceDirectory()
 
     try {
       await this.connectionService.drainPendingPrompts()
-      if (hasGlobal) await this.client.global.config.update({ config: partial }, { throwOnError: true })
-      if (hasProject) await this.client.config.update({ config: project, directory: dir }, { throwOnError: true })
+      if (hasGlobal) {
+        await this.client.config.overlayUpdate(
+          { scope: "global", set: partial, unset: globalUnset, directory: dir },
+          { throwOnError: true },
+        )
+      }
+      if (hasProject) {
+        await this.client.config.overlayUpdate(
+          { scope: "project", set: project, unset: projectUnset, directory: dir },
+          { throwOnError: true },
+        )
+      }
     } catch (error) {
       this.postConfigFailure(error)
       this.pending--
@@ -2348,19 +2380,24 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const { data: merged } = await retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true }))
-      const { data: global } = await this.client.global.config.get({ throwOnError: true })
+      const [{ data: merged }, { data: global }, { data: overlay }] = await Promise.all([
+        retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true })),
+        this.client.global.config.get({ throwOnError: true }),
+        this.client.config.overlay({ directory: dir, scope: "project" }, { throwOnError: true }),
+      ])
       this.cachedGlobalConfig = global ?? null
       this.cachedConfigMessage = {
         type: "configLoaded",
         config: merged,
         globalConfig: global,
+        projectConfig: overlay?.project,
         features: configFeatures(merged),
       }
       this.postMessage({
         type: "configUpdated",
         config: merged,
         globalConfig: global,
+        projectConfig: overlay?.project,
         features: configFeatures(merged),
       })
       await Promise.all([
