@@ -1,5 +1,21 @@
 # kilo-code
 
+## 7.3.45
+
+### Minor Changes
+
+- [#9750](https://github.com/Kilo-Org/kilocode/pull/9750) [`57f2e79`](https://github.com/Kilo-Org/kilocode/commit/57f2e794ca2301108dd01c73f43d0171c00756c6) - Support choosing an agent autonomy preset during VS Code onboarding.
+
+- [#10827](https://github.com/Kilo-Org/kilocode/pull/10827) [`235e769`](https://github.com/Kilo-Org/kilocode/commit/235e769fb359531da4716999ef5feac839affdcc) - Support selecting Kilo Gateway catalog models from VS Code deep links.
+
+### Patch Changes
+
+- [#11152](https://github.com/Kilo-Org/kilocode/pull/11152) [`b23d3df`](https://github.com/Kilo-Org/kilocode/commit/b23d3dfd756461ae02e2ed2872aded09d65dc1af) - Allow Escape to stop Agent Manager prompts while their sessions are still starting.
+
+- [#11173](https://github.com/Kilo-Org/kilocode/pull/11173) [`555dc23`](https://github.com/Kilo-Org/kilocode/commit/555dc2359373774a68e546b1dbe58d9d942d453f) - Show submitted review comments as interactive message cards instead of raw markdown.
+
+- [#11175](https://github.com/Kilo-Org/kilocode/pull/11175) [`fb62e61`](https://github.com/Kilo-Org/kilocode/commit/fb62e61caf1a4a14ec8db30648e9f008e70604b3) - Hide turn outcome warnings caused only by unfinished to-dos.
+
 ## 7.3.44
 
 ### Minor Changes
