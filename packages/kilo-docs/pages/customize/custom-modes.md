@@ -401,7 +401,7 @@ model: anthropic/claude-sonnet-4-20250514
 
 The TUI also **remembers the last model you picked for each agent** across sessions. A config-pinned `model` acts as the default when no manual pick exists. To reset a pick and let the config take over, use the model picker (`Ctrl+X m`) and select a different model, or remove the saved pick from `~/.local/state/kilo/model.json`.
 
-For organization-managed modes, administrators can also set a mode default in Kilo Cloud. That value is a lower-priority fallback than a local `agent.<slug>.model` or your saved per-mode pick, but it wins over generic global or recent-model fallback. Organization mode defaults use Kilo catalog IDs such as `kilo-auto/balanced` or `openai/gpt-4o:free`, not `kilo/...` or normal `provider/model` config strings.
+For organization-managed modes, administrators can also set a mode default in Kilo Cloud. That value is a lower-priority fallback than a local `agent.<slug>.model` or your saved per-mode pick, but it wins over generic global or recent-model fallback. Organization mode defaults use Kilo catalog IDs such as `kilo-auto/balanced` or `openai/gpt-4o:free`, not `kilo/...` or normal `provider/model` config strings. In the TUI, `--model` is part of generic fallback resolution, so an organization mode default can still win over it when there is no local mode-specific pick or configured model.
 
 ### `steps`
 

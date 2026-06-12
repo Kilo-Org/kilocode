@@ -313,6 +313,7 @@ export namespace KilocodeConfig {
           const defaults = ModesMigrator.extractOrgDefaultModels(modes)
           for (const [slug, model] of Object.entries(defaults)) {
             const target = ModesMigrator.defaultTarget(slug, agents)
+            // Alias defaults can target a native agent with no org row, so this partial config intentionally merges onto it later.
             agents[target] = {
               ...agents[target],
               options: { ...agents[target]?.options, orgDefaultModel: model },

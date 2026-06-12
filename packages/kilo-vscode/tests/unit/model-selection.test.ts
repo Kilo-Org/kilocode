@@ -75,6 +75,17 @@ describe("resolveModelSelection", () => {
     expect(result).toEqual({ providerID: "kilo", modelID: "openai/gpt-4o:free" })
   })
 
+  it("uses a kilo organization mode default without requiring a connected provider", () => {
+    const result = resolveModelSelection({
+      providers,
+      connected: [],
+      orgDefault: { providerID: "kilo", modelID: "openai/gpt-4o:free" },
+      global: { providerID: "openai", modelID: "gpt-4.1" },
+      fallback: KILO_AUTO,
+    })
+    expect(result).toEqual({ providerID: "kilo", modelID: "openai/gpt-4o:free" })
+  })
+
   it("falls back from an invalid organization mode default to the global model", () => {
     const result = resolveModelSelection({
       providers,

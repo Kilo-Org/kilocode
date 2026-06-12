@@ -74,6 +74,10 @@ describe("ModesMigrator", () => {
         {},
       )
     })
+
+    test("ignores null and empty defaults", () => {
+      expect(ModesMigrator.extractOrgDefaultModels([mode("plan", null), mode("code", "")])).toEqual({})
+    })
   })
 
   describe("convertPermissions", () => {

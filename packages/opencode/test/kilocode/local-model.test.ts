@@ -51,31 +51,34 @@ const mockProviders = [
   },
 ]
 
-let mockAgents: Array<{
+type MockModel = { providerID: string; modelID: string }
+type MockAgent = {
   name: string
   mode: "primary"
   hidden: boolean
-  model: any
-  options?: any
-  color: any
-  permission: {}
-}> = [
+  model?: MockModel
+  options?: Record<string, unknown>
+  color?: string
+  permission: Record<string, unknown>
+}
+
+let mockAgents: MockAgent[] = [
   {
     name: "code",
     mode: "primary" as const,
     hidden: false,
-    model: undefined as any,
-    options: undefined as any,
-    color: undefined as any,
+    model: undefined,
+    options: undefined,
+    color: undefined,
     permission: {},
   },
   {
     name: "plan",
     mode: "primary" as const,
     hidden: false,
-    model: undefined as any,
-    options: undefined as any,
-    color: undefined as any,
+    model: undefined,
+    options: undefined,
+    color: undefined,
     permission: {},
   },
 ]
