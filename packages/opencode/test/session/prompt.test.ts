@@ -24,7 +24,7 @@ import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Question } from "../../src/question"
 import { Todo } from "../../src/session/todo"
 import { Session } from "@/session/session"
-import { SessionMessageTable } from "../../src/session/session.sql"
+import { SessionMessageTable, SessionTable } from "../../src/session/session.sql"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
@@ -57,6 +57,7 @@ import { testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
 import { SyncEvent } from "@/sync"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { eq } from "drizzle-orm"
 import { BackgroundJob } from "@/background/job"
 
 void Log.init({ print: false })
@@ -308,6 +309,38 @@ function providerCfg(url: string) {
   }
 }
 
+const org = { providerID: ProviderID.make("kilo"), modelID: ModelID.make("openai/gpt-4o:free") }
+
+function orgCfg(url: string, defaultModel: string = org.modelID, catalogModel: string = org.modelID) {
+  const base = providerCfg(url)
+  return {
+    ...base,
+    provider: {
+      ...base.provider,
+      kilo: {
+        name: "Kilo Gateway",
+        id: "kilo",
+        env: [],
+        npm: "@ai-sdk/openai-compatible",
+        models: {
+          [catalogModel]: {
+            ...cfg.provider.test.models["test-model"],
+            id: catalogModel,
+            name: "Org Default",
+          },
+        },
+        options: {
+          apiKey: "test-key",
+          baseURL: url,
+        },
+      },
+    },
+    agent: {
+      build: { options: { orgDefaultModel: defaultModel } },
+    },
+  }
+}
+
 const user = Effect.fn("test.user")(function* (sessionID: SessionID, text: string) {
   const session = yield* Session.Service
   const msg = yield* session.updateMessage({
@@ -381,6 +414,154 @@ const boot = Effect.fn("test.boot")(function* (input?: { title?: string }) {
   const chat = yield* sessions.create(input ?? { title: "Pinned" })
   return { prompt, run, sessions, chat }
 })
+
+// Organization mode defaults
+
+it.live("prompt uses an organization default before provider fallback", () =>
+  provideTmpdirServer(
+    (_input) =>
+      Effect.gen(function* () {
+        const { prompt, chat } = yield* boot()
+        const result = yield* prompt.prompt({
+          sessionID: chat.id,
+          agent: "build",
+          noReply: true,
+          parts: [{ type: "text", text: "hello" }],
+        })
+        if (result.info.role !== "user") throw new Error("expected user message")
+        expect(result.info.model).toEqual(org)
+      }),
+    { git: true, config: orgCfg },
+  ),
+)
+
+it.live("prompt keeps a persisted session model above an organization default", () =>
+  provideTmpdirServer(
+    (_input) =>
+      Effect.gen(function* () {
+        const { prompt, chat } = yield* boot()
+        Database.use((db) =>
+          db.update(SessionTable).set({ model: { id: ref.modelID, providerID: ref.providerID } }).where(eq(SessionTable.id, chat.id)).run(),
+        )
+        const result = yield* prompt.prompt({
+          sessionID: chat.id,
+          agent: "build",
+          noReply: true,
+          parts: [{ type: "text", text: "hello" }],
+        })
+        if (result.info.role !== "user") throw new Error("expected user message")
+        expect(result.info.model).toEqual(ref)
+      }),
+    { git: true, config: orgCfg },
+  ),
+)
+
+it.live("prompt keeps the previous user model above an organization default", () =>
+  provideTmpdirServer(
+    (_input) =>
+      Effect.gen(function* () {
+        const { prompt, chat } = yield* boot()
+        yield* prompt.prompt({
+          sessionID: chat.id,
+          agent: "build",
+          model: ref,
+          noReply: true,
+          parts: [{ type: "text", text: "first" }],
+        })
+        const result = yield* prompt.prompt({
+          sessionID: chat.id,
+          agent: "build",
+          noReply: true,
+          parts: [{ type: "text", text: "second" }],
+        })
+        if (result.info.role !== "user") throw new Error("expected user message")
+        expect(result.info.model).toEqual(ref)
+      }),
+    { git: true, config: orgCfg },
+  ),
+)
+
+it.live("prompt skips an invalid organization default", () =>
+  provideTmpdirServer(
+    (_input) =>
+      Effect.gen(function* () {
+        const { prompt, chat } = yield* boot()
+        const result = yield* prompt.prompt({
+          sessionID: chat.id,
+          agent: "build",
+          noReply: true,
+          parts: [{ type: "text", text: "hello" }],
+        })
+        if (result.info.role !== "user") throw new Error("expected user message")
+        expect(result.info.model).toEqual(ref)
+      }),
+    { git: true, config: (url) => ({ ...orgCfg(url, "missing", org.modelID), model: "test/test-model" }) },
+  ),
+)
+
+it.live("shell uses an organization default", () =>
+  provideTmpdirServer(
+    (_input) =>
+      Effect.gen(function* () {
+        const { prompt, sessions, chat } = yield* boot()
+        yield* prompt.shell({ sessionID: chat.id, agent: "build", command: "printf shell" })
+        const messages = yield* sessions.messages({ sessionID: chat.id })
+        const result = messages.findLast((message) => message.info.role === "user")
+        if (result?.info.role !== "user") throw new Error("expected user message")
+        expect(result.info.model).toEqual(org)
+      }),
+    { git: true, config: orgCfg },
+  ),
+)
+
+it.live("command uses its own agent default while keeping command agent model precedence", () =>
+  provideTmpdirServer(
+    ({ llm }) =>
+      Effect.gen(function* () {
+        const { prompt, sessions, chat } = yield* boot()
+        yield* llm.text("done")
+        yield* prompt.command({ sessionID: chat.id, command: "org", arguments: "" })
+        const first = yield* sessions.messages({ sessionID: chat.id })
+        const orgMessage = first.findLast((message) => message.info.role === "user")
+        if (orgMessage?.info.role !== "user") throw new Error("expected user message")
+        expect(orgMessage.info.model).toEqual(org)
+
+        yield* llm.text("done")
+        yield* prompt.command({ sessionID: chat.id, command: "pinned", arguments: "", model: "kilo/openai/gpt-4o:free" })
+        const second = yield* sessions.messages({ sessionID: chat.id })
+        const pinned = second.findLast((message) => message.info.role === "user")
+        if (pinned?.info.role !== "user") throw new Error("expected user message")
+        expect(pinned.info.model).toEqual(ref)
+
+        const childSession = yield* sessions.create({ title: "child" })
+        yield* llm.text("done")
+        yield* prompt.command({ sessionID: childSession.id, command: "child", arguments: "", agent: "child" })
+        const third = yield* sessions.messages({ sessionID: childSession.id })
+        const child = third.find((message) => message.info.role === "user" && message.parts.some((part) => part.type === "subtask"))
+        if (child?.info.role !== "user") throw new Error("expected user message")
+        expect(child.info.model).toEqual(org)
+        const task = child.parts.find((part) => part.type === "subtask")
+        if (task?.type !== "subtask") throw new Error("expected subtask part")
+        expect(task.model).toEqual(org)
+      }),
+    {
+      git: true,
+      config: (url) => ({
+        ...orgCfg(url),
+        agent: {
+          build: { model: "test/test-model", options: { orgDefaultModel: org.modelID } },
+          worker: { options: { orgDefaultModel: org.modelID } },
+          child: { mode: "subagent", options: { orgDefaultModel: org.modelID } },
+        },
+        command: {
+          org: { template: "org", agent: "worker" },
+          pinned: { template: "pinned", agent: "build" },
+          child: { template: "child", agent: "child", subtask: true },
+        },
+      }),
+    },
+  ),
+)
 
 // Loop semantics
 

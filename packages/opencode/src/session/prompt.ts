@@ -2270,15 +2270,11 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
       const taskModel = yield* Effect.gen(function* () {
         if (cmd.model) return Provider.parseModel(cmd.model)
-        if (input.model) return Provider.parseModel(input.model)
-        // kilocode_change start - keep the effective command agent available for org fallback
-        const taskAgent = cmd.agent
-          ? yield* agents.get(cmd.agent)
-          : input.agent
-            ? yield* agents.get(input.agent)
-            : yield* agents.defaultInfo()
+        // kilocode_change start - use only the command's own agent for org fallback
+        const taskAgent = cmd.agent ? yield* agents.get(cmd.agent) : undefined
         if (taskAgent?.model) return taskAgent.model
         // kilocode_change end
+        if (input.model) return Provider.parseModel(input.model)
         return yield* currentModel(input.sessionID, taskAgent) // kilocode_change
       })
 

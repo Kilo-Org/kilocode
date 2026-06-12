@@ -1,5 +1,5 @@
 import { NodeHttpServer } from "@effect/platform-node"
-import { describe, expect } from "bun:test"
+import { afterEach, describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { HttpClient, HttpClientRequest, HttpRouter } from "effect/unstable/http"
 import { HttpApi, HttpApiBuilder } from "effect/unstable/httpapi"
@@ -19,11 +19,19 @@ import {
 import { testEffect } from "../../lib/effect"
 
 const TestHttpApi = HttpApi.make("opencode-instance").addHttpApi(KiloGatewayApi)
+const authState = { current: new Auth.Api({ type: "api", key: "test-token" }) as Auth.Info | undefined }
 const auth = Layer.mock(Auth.Service)({
-  get: () => Effect.succeed(new Auth.Api({ type: "api", key: "test-token" })),
+  get: () => Effect.succeed(authState.current),
+  set: (_key, info) => Effect.sync(() => {
+    authState.current = info
+  }),
 })
-const store = Layer.mock(InstanceStore.Service)({})
-const cache = Layer.mock(ModelCache.Service)({})
+const store = Layer.mock(InstanceStore.Service)({
+  disposeAll: () => Effect.void,
+})
+const cache = Layer.mock(ModelCache.Service)({
+  clear: () => Effect.void,
+})
 const session = Layer.mock(Session.Service)({})
 const passthroughAuthorization = Layer.succeed(
   Authorization,
@@ -57,6 +65,10 @@ const layer = HttpRouter.serve(
 ).pipe(Layer.provideMerge(NodeHttpServer.layerTest))
 const it = testEffect(layer)
 
+afterEach(() => {
+  authState.current = new Auth.Api({ type: "api", key: "test-token" })
+})
+
 function stub(run: () => Response | Promise<Response>) {
   // These tests run sequentially; scope the process-global override and delegate in-process server traffic.
   const original = globalThis.fetch
@@ -84,6 +96,31 @@ function post(path: string, body: Record<string, unknown>) {
 }
 
 describe("Kilo gateway HttpApi statuses", () => {
+  it.live("clears accountId when switching from an organization to personal", () =>
+    Effect.gen(function* () {
+      const expires = Date.now() + 60_000
+      authState.current = new Auth.Oauth({
+        type: "oauth",
+        access: "token",
+        refresh: "refresh",
+        expires,
+        accountId: "org-a",
+      })
+
+      const response = yield* post(KiloGatewayPaths.organization, { organizationId: null })
+
+      expect(response.status).toBe(200)
+      expect(authState.current).toEqual(
+        new Auth.Oauth({
+          type: "oauth",
+          access: "token",
+          refresh: "refresh",
+          expires,
+        }),
+      )
+    }),
+  )
+
   it.live("preserves cloud session list rate limits", () =>
     Effect.gen(function* () {
       yield* stub(() => new Response("rate limited", { status: 429 }))
