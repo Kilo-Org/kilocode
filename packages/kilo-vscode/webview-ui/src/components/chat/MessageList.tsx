@@ -9,17 +9,14 @@
  * Shows recent sessions in the empty state for quick resumption.
  */
 
-import { type Component, For, Show, createEffect, createMemo, createSignal, on, onCleanup, JSX } from "solid-js"
+import { type Component, type JSX, For, Show, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
-import { recentSessions } from "../../context/session-utils"
-import { formatRelativeDate } from "../../utils/date"
-import { FeedbackDialog } from "./FeedbackDialog"
+import { WelcomeEmptyState } from "./WelcomeEmptyState"
 import { TranscriptRowView } from "./TranscriptRow"
 import { RevertBanner } from "./RevertBanner"
 import { AccountSwitcher } from "../shared/AccountSwitcher"
@@ -48,19 +45,6 @@ import {
 import { partitionRows, transcriptRows, type TranscriptRow } from "../../context/transcript-rows"
 import type { QuestionRequest, SuggestionRequest } from "../../types/messages"
 
-const KiloLogo = (): JSX.Element => {
-  const iconsBaseUri = (window as { ICONS_BASE_URI?: string }).ICONS_BASE_URI || ""
-  const isLight =
-    document.body.classList.contains("vscode-light") || document.body.classList.contains("vscode-high-contrast-light")
-  const iconFile = isLight ? "kilo-light.svg" : "kilo-dark.svg"
-
-  return (
-    <div class="kilo-logo">
-      <img src={`${iconsBaseUri}/${iconFile}`} alt="Kilo Code" />
-    </div>
-  )
-}
-
 interface MessageListProps {
   onSelectSession?: (id: string) => void
   onShowHistory?: () => void
@@ -71,13 +55,14 @@ interface MessageListProps {
   suggestions?: () => SuggestionRequest[]
   /** When true (subagent viewer), replace the welcome screen with an initializing indicator */
   readonly?: boolean
+  /** Optionally replace the standard welcome content while the conversation is empty. */
+  emptyState?: () => JSX.Element
 }
 
 export const MessageList: Component<MessageListProps> = (props) => {
   const session = useSession()
   const server = useServer()
   const language = useLanguage()
-  const dialog = useDialog()
 
   const autoScroll = createAutoScroll({
     working: () => session.status() !== "idle",
@@ -109,8 +94,6 @@ export const MessageList: Component<MessageListProps> = (props) => {
   )
   const isEmpty = () => turns().length === 0 && !session.loading() && !boundary()
 
-  const recent = createMemo(() => recentSessions(session.sessions()))
-
   const activeUserID = createMemo(() =>
     getActiveUserMessageID(session.messages(), session.statusInfo(), (msg) => session.getParts(msg.id)),
   )
@@ -130,7 +113,33 @@ export const MessageList: Component<MessageListProps> = (props) => {
       prev,
     )
   })
-  const partition = createMemo(() => partitionRows(rows()))
+  const [held, setHeld] = createSignal<{ sid: string; turn: string }>()
+  createEffect(() => {
+    const id = activeUserID()
+    const sid = session.currentSessionID()
+    const paused = autoScroll.userScrolled()
+    if (!sid || (!id && !paused)) {
+      setHeld(undefined)
+      return
+    }
+    if (!id) return
+    if (!paused) {
+      setHeld({ sid, turn: id })
+      return
+    }
+    setHeld((prev) => (prev?.sid === sid ? prev : { sid, turn: id }))
+  })
+  const direct = createMemo(() => {
+    const item = held()
+    const ids = new Set<string>()
+    if (item && item.sid === session.currentSessionID()) ids.add(item.turn)
+    const active = activeUserID()
+    if (active) ids.add(active)
+    return ids
+  })
+  // Virtua continues to own completed history and stable live chunks, but not
+  // the growing assistant suffix whose measurements would produce visible jumps.
+  const partition = createMemo(() => partitionRows(rows(), direct()))
   const keys = createMemo(() => partition().virtual.map((row) => row.key))
   const fingerprint = createMemo(() => rowFingerprint(keys()))
   const measurement = createMemo(() => {
@@ -272,33 +281,11 @@ export const MessageList: Component<MessageListProps> = (props) => {
             </div>
           </Show>
           <Show when={isEmpty() && !props.readonly}>
-            <div class="message-list-empty">
-              <KiloLogo />
-              <p class="kilo-about-text">{language.t("session.messages.welcome")}</p>
-              <Show when={recent().length > 0 && props.onSelectSession}>
-                <div class="recent-sessions">
-                  <span class="recent-sessions-label">{language.t("session.recent")}</span>
-                  <For each={recent()}>
-                    {(s) => (
-                      <button class="recent-session-item" onClick={() => props.onSelectSession?.(s.id)}>
-                        <span class="recent-session-title">{s.title || language.t("session.untitled")}</span>
-                        <span class="recent-session-date">{formatRelativeDate(s.updatedAt)}</span>
-                      </button>
-                    )}
-                  </For>
-                  <Show when={props.onShowHistory}>
-                    <button class="show-history-btn" onClick={() => props.onShowHistory?.()}>
-                      <Icon name="history" size="small" />
-                      {language.t("session.showHistory")}
-                    </button>
-                  </Show>
-                </div>
-              </Show>
-              <button class="feedback-button" onClick={() => dialog.show(() => <FeedbackDialog />)}>
-                <Icon name="bubble-5" size="small" />
-                {language.t("feedback.button")}
-              </button>
-            </div>
+            {props.emptyState ? (
+              props.emptyState()
+            ) : (
+              <WelcomeEmptyState onSelectSession={props.onSelectSession} onShowHistory={props.onShowHistory} />
+            )}
           </Show>
           <Show when={!session.loading() && !isEmpty()}>
             <Show when={session.loadingOlderMessages()}>
@@ -312,22 +299,21 @@ export const MessageList: Component<MessageListProps> = (props) => {
                 {language.t("session.messages.loadEarlier")}
               </button>
             </Show>
-            <Show when={partition().virtual.length > 0}>
+            <Show when={partition().virtual.length > 0 || partition().direct.length > 0}>
               <div
                 class="message-list-turns"
                 data-loaded-messages={session.messages().length}
                 data-row-count={partition().virtual.length}
+                data-direct-count={partition().direct.length}
                 data-queued-count={partition().queued.length}
-                data-kept-count={partition().keep.length}
               >
-                <Show when={scrollEl()}>
+                <Show when={scrollEl() && partition().virtual.length > 0}>
                   <Virtualizer
                     ref={setVirtualizer}
                     data={partition().virtual}
                     scrollRef={scrollEl()}
                     shift={session.messageMutation() === "prepend"}
                     cache={measurement()}
-                    keepMounted={partition().keep}
                     overscan={2}
                     itemSize={260}
                   >
@@ -336,6 +322,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     )}
                   </Virtualizer>
                 </Show>
+                <For each={partition().direct}>
+                  {(row) => <TranscriptRowView row={row} onForkMessage={props.onForkMessage} />}
+                </For>
               </div>
             </Show>
             <Show when={boundary()}>

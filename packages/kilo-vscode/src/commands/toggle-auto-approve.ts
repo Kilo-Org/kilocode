@@ -88,7 +88,8 @@ export function registerToggleAutoApprove(
     if (event.type !== "permission.asked") return
     const client = tryGetClient(connectionService)
     if (!client) return
-    const dir = directory ?? resolve(event.properties.sessionID)
+    const dir =
+      directory ?? connectionService.getPermissionDirectory(event.properties.id) ?? resolve(event.properties.sessionID)
     client.permission.reply({ requestID: event.properties.id, directory: dir, reply: "once" }).catch((err) => {
       console.error("[Kilo New] toggleAutoApprove: failed to auto-reply:", err)
     })

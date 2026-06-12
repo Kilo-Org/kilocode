@@ -1,5 +1,65 @@
 # @kilocode/cli
 
+## 7.3.45
+
+### Patch Changes
+
+- [#11152](https://github.com/Kilo-Org/kilocode/pull/11152) [`b23d3df`](https://github.com/Kilo-Org/kilocode/commit/b23d3dfd756461ae02e2ed2872aded09d65dc1af) - Allow Escape to stop Agent Manager prompts while their sessions are still starting.
+
+- [#11138](https://github.com/Kilo-Org/kilocode/pull/11138) [`e354305`](https://github.com/Kilo-Org/kilocode/commit/e35430580be89361304c4b599ccd7eeb62fce7c1) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Restart the daemon when `kilo console` or `kilo daemon start` receives explicit network options that don't match the running daemon, instead of silently ignoring the requested settings.
+
+## 7.3.44
+
+### Minor Changes
+
+- [#11082](https://github.com/Kilo-Org/kilocode/pull/11082) [`a16e82a`](https://github.com/Kilo-Org/kilocode/commit/a16e82a77abf883c2c07c11464d50e08a518acd7) - Use embedded LanceDB as the default semantic search vector store so indexing works without a separate Qdrant server. Existing Qdrant users and Intel Mac users can select `qdrant` with `indexing.vectorStore`.
+
+### Patch Changes
+
+- [#10922](https://github.com/Kilo-Org/kilocode/pull/10922) [`bc3af9a`](https://github.com/Kilo-Org/kilocode/commit/bc3af9a145c8bd5f90fa0c9b22a48cceb095f8b4) - Prevent unnecessary repeat auto-compactions when providers report inconsistent token totals.
+
+- [#11160](https://github.com/Kilo-Org/kilocode/pull/11160) [`78d83c0`](https://github.com/Kilo-Org/kilocode/commit/78d83c0651d5343c0f9f877265dc5136cd7761f0) - Preserve the calling model's reasoning effort when task subagents inherit that model.
+
+- [#10478](https://github.com/Kilo-Org/kilocode/pull/10478) [`5bc8df8`](https://github.com/Kilo-Org/kilocode/commit/5bc8df843a2492d2eee01963b5a2c1a55beab56c) - Allow hosted runtimes to cap shell command duration and explain environment-enforced timeouts.
+
+- [#11085](https://github.com/Kilo-Org/kilocode/pull/11085) [`2a6596b`](https://github.com/Kilo-Org/kilocode/commit/2a6596b0c578b20ea803fa69a8427fc3e4c2e823) - Indicate when no models are available in model-not-found errors.
+
+- [#11072](https://github.com/Kilo-Org/kilocode/pull/11072) [`6920f37`](https://github.com/Kilo-Org/kilocode/commit/6920f37b77f820d9f8542d352cf60e061670933b) - Speed up the first Agent Manager prompt in new worktrees by seeding snapshots from the checkout's Git index.
+
+- [#11075](https://github.com/Kilo-Org/kilocode/pull/11075) [`e17ce0c`](https://github.com/Kilo-Org/kilocode/commit/e17ce0c9ecaf4cc4cad3e0fd99b28bef561705fc) - Speed up large session forks by retaining final task outcomes instead of duplicating resumable subagent histories, and load completed task details only when expanded.
+
+- [#11143](https://github.com/Kilo-Org/kilocode/pull/11143) [`12144cf`](https://github.com/Kilo-Org/kilocode/commit/12144cf8275200a7dd8e29cf478c39504da59b04) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Warn when `kilo console` or `kilo daemon` is invoked with an explicit `--port` outside the discovery range (4097–4116).
+
+- [#11006](https://github.com/Kilo-Org/kilocode/pull/11006) [`69a0b38`](https://github.com/Kilo-Org/kilocode/commit/69a0b384e6c61d190241087f88f2be4312e7517e) - Refresh connected provider model lists when the models catalog updates.
+
+- [#11081](https://github.com/Kilo-Org/kilocode/pull/11081) [`9c279a1`](https://github.com/Kilo-Org/kilocode/commit/9c279a16b4a14fc117f34d7aa19e771149031931) - Show model free and prompt-training indicators only when their explicit catalog metadata is enabled.
+
+- [#11101](https://github.com/Kilo-Org/kilocode/pull/11101) [`294c532`](https://github.com/Kilo-Org/kilocode/commit/294c532f6a355b78ed86d2188891883b07e90cc8) - Prevent task subagents from asking questions that users cannot answer from the parent session.
+
+- [#11102](https://github.com/Kilo-Org/kilocode/pull/11102) [`8a72708`](https://github.com/Kilo-Org/kilocode/commit/8a727084ae0327fbf195149660c19d2215fb558a) - Prevent duplicate CLI attention alerts and route Kilo prompts through the configurable notification system.
+
+- [#10866](https://github.com/Kilo-Org/kilocode/pull/10866) [`d5112ed`](https://github.com/Kilo-Org/kilocode/commit/d5112edf90d33333d1064c7ab885cf0a4d92d892) - Stabilize code indexing workers, retry Kilo model catalog downloads, reduce progress log noise, and show indexing failures as TUI notifications instead of writing over the terminal interface.
+
+- [#11147](https://github.com/Kilo-Org/kilocode/pull/11147) [`9a187d5`](https://github.com/Kilo-Org/kilocode/commit/9a187d5aad5c3bf90a6dac589a0b26069057c3b0) - Configure the project context sidebar width and default diff layout from Global Settings.
+
+- [#11091](https://github.com/Kilo-Org/kilocode/pull/11091) [`57bef8a`](https://github.com/Kilo-Org/kilocode/commit/57bef8ae68793c9b627ba0400b596bf932311e17) - Prevent streamed tool calls from executing twice and leaving answered questions disabled in VS Code.
+
+- [#11139](https://github.com/Kilo-Org/kilocode/pull/11139) [`7226635`](https://github.com/Kilo-Org/kilocode/commit/72266359d497f407f951c1b468a50d3093ec9dc3) - Restore Kilo branding, fork-specific CLI commands, and CLI lifecycle initialization after upstream merges.
+
+- [#11031](https://github.com/Kilo-Org/kilocode/pull/11031) [`bbfd59b`](https://github.com/Kilo-Org/kilocode/commit/bbfd59b85c383277fd8db77fcfd0ec56ea1a25d8) - Remove the unsupported code search tool.
+
+- [#11117](https://github.com/Kilo-Org/kilocode/pull/11117) [`b75af0d`](https://github.com/Kilo-Org/kilocode/commit/b75af0de8865234a745f71eac03bf2bdea2271b4) - Update the Vercel AI SDK providers for Cerebras, xAI, and OpenAI-compatible endpoints.
+
+- [#10866](https://github.com/Kilo-Org/kilocode/pull/10866) [`d5112ed`](https://github.com/Kilo-Org/kilocode/commit/d5112edf90d33333d1064c7ab885cf0a4d92d892) - Support configuring code indexing separately for global and project settings in Kilo Console, the CLI TUI, and VS Code.
+
+- [#11031](https://github.com/Kilo-Org/kilocode/pull/11031) [`28a26b1`](https://github.com/Kilo-Org/kilocode/commit/28a26b11c133686a4656af8be21af619c919301a) - Restore streamed responses in the CLI TUI and move code indexing status into the session sidebar.
+
+- Updated dependencies [[`a16e82a`](https://github.com/Kilo-Org/kilocode/commit/a16e82a77abf883c2c07c11464d50e08a518acd7), [`9c279a1`](https://github.com/Kilo-Org/kilocode/commit/9c279a16b4a14fc117f34d7aa19e771149031931), [`57bef8a`](https://github.com/Kilo-Org/kilocode/commit/57bef8ae68793c9b627ba0400b596bf932311e17), [`b75af0d`](https://github.com/Kilo-Org/kilocode/commit/b75af0de8865234a745f71eac03bf2bdea2271b4)]:
+  - @kilocode/kilo-indexing@7.4.0
+  - @kilocode/kilo-gateway@7.3.43
+  - @kilocode/kilo-telemetry@7.3.43
+  - @opencode-ai/ui@7.3.43
+
 ## 7.3.42
 
 ### Patch Changes

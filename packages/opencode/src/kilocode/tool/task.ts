@@ -87,6 +87,10 @@ export namespace KiloTask {
   type Saved = Model & { variant?: string }
   type Choice = { model: Model; variant?: string; sticky?: boolean; direct?: boolean }
 
+  function key(model: Model) {
+    return `${model.providerID}/${model.modelID}`
+  }
+
   function parse(value: string | null | undefined): Model | undefined {
     if (!value) return undefined
     const [providerID, ...parts] = value.split("/")
@@ -120,12 +124,14 @@ export namespace KiloTask {
   export const resolveModel = Effect.fn("KiloTask.resolveModel")(function* (input: {
     name: string
     agent: Pick<Agent.Info, "model" | "variant">
-    config: Pick<Config.Info, "subagent_model" | "subagent_variant">
+    config: Pick<Config.Info, "subagent_model" | "subagent_variant" | "subagent_variant_overrides">
     parent: Model
+    variant?: string
     provider: Provider.Interface
   }) {
     const state = yield* saved(input.name)
     const cfg = parse(input.config.subagent_model)
+    const override = (model: Model) => input.config.subagent_variant_overrides?.[key(model)] ?? undefined
     const choices: Array<Choice | undefined> = [
       state
         ? {
@@ -140,7 +146,13 @@ export namespace KiloTask {
 
     for (const choice of choices) {
       if (!choice) continue
-      if (choice.direct) return { model: choice.model, variant: choice.variant }
+      if (choice.direct) {
+        const value = override(choice.model)
+        if (!value) return { model: choice.model, variant: choice.variant }
+        const full = yield* input.provider.getModel(choice.model.providerID, choice.model.modelID)
+        const variant = full.variants?.[value] ? value : choice.variant
+        return { model: choice.model, variant }
+      }
       const full = yield* input.provider.getModel(choice.model.providerID, choice.model.modelID).pipe(
         Effect.catchTag("ProviderModelNotFoundError", (err) =>
           Effect.sync(() => {
@@ -154,13 +166,21 @@ export namespace KiloTask {
         ),
       )
       if (!full) continue
-      const variant = choice.variant && full.variants?.[choice.variant] ? choice.variant : undefined
+      const fallback = choice.variant && full.variants?.[choice.variant] ? choice.variant : undefined
+      const value = override(choice.model)
+      const variant = value && full.variants?.[value] ? value : fallback
       return {
         model: choice.sticky && variant ? { ...choice.model, variant } : choice.model,
         variant,
       }
     }
 
-    return { model: input.parent, variant: undefined }
+    const value = override(input.parent)
+    if (!value) return { model: input.parent, variant: input.variant }
+    const full = yield* input.provider
+      .getModel(input.parent.providerID, input.parent.modelID)
+      .pipe(Effect.catchTag("ProviderModelNotFoundError", () => Effect.succeed(undefined)))
+    const variant = full?.variants?.[value] ? value : input.variant
+    return { model: input.parent, variant }
   })
 }

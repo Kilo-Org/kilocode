@@ -731,6 +731,9 @@ export function UserMessageDisplay(props: {
   interrupted?: boolean
   animate?: boolean
   queued?: boolean
+  text?: string
+  copyText?: string
+  header?: JSX.Element
   onFork?: () => void
   onRevert?: () => void
 }) {
@@ -743,7 +746,7 @@ export function UserMessageDisplay(props: {
     () => props.parts?.find((p) => p.type === "text" && !(p as TextPart).synthetic) as TextPart | undefined,
   )
 
-  const text = createMemo(() => textPart()?.text || "")
+  const text = createMemo(() => props.text ?? textPart()?.text ?? "")
 
   const files = createMemo(() => (props.parts?.filter((p) => p.type === "file") as FilePart[]) ?? [])
 
@@ -797,7 +800,7 @@ export function UserMessageDisplay(props: {
   }
 
   const handleCopy = async () => {
-    const content = text()
+    const content = props.copyText ?? text()
     if (!content) return
     await navigator.clipboard.writeText(content)
     setCopied(true)
@@ -840,12 +843,15 @@ export function UserMessageDisplay(props: {
             </For>
           </div>
         </Show>
-        <Show when={text()}>
+        <Show when={text() || props.header}>
           <>
             <div data-slot="user-message-body">
-              <div data-slot="user-message-text" data-queued={props.queued ? "" : undefined}>
-                <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
-              </div>
+              {props.header}
+              <Show when={text()}>
+                <div data-slot="user-message-text" data-queued={props.queued ? "" : undefined}>
+                  <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
+                </div>
+              </Show>
               <GrowBox animate={!!props.animate} open={!!props.queued}>
                 <div data-slot="user-message-queued-indicator">
                   <TextShimmer text={i18n.t("ui.message.queued")} />
