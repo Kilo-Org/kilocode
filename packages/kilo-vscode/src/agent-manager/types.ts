@@ -12,7 +12,6 @@ import type { Worktree, ManagedSession, Section } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"
 import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
-import type { ExternalWorktreeItem } from "./WorktreeManager"
 import type { RunStatus } from "./run/manager"
 import type { TerminalFont } from "./terminal-font"
 
@@ -220,11 +219,6 @@ interface BranchesMessage {
   defaultBranch: string
 }
 
-interface ExternalWorktreesMessage {
-  type: "agentManager.externalWorktrees"
-  worktrees: ExternalWorktreeItem[]
-}
-
 interface ImportResultMessage {
   type: "agentManager.importResult"
   success: boolean
@@ -308,7 +302,6 @@ export type AgentManagerOutMessage =
   | SetSessionModelMessage
   | SendInitialMessage
   | BranchesMessage
-  | ExternalWorktreesMessage
   | ImportResultMessage
   | KeybindingsMessage
   | RepoInfoMessage
@@ -488,10 +481,6 @@ interface SetDefaultBaseBranchIn {
   branch?: string
 }
 
-interface RequestExternalWorktreesIn {
-  type: "agentManager.requestExternalWorktrees"
-}
-
 interface ImportFromBranchIn {
   type: "agentManager.importFromBranch"
   branch: string
@@ -500,16 +489,6 @@ interface ImportFromBranchIn {
 interface ImportFromPRIn {
   type: "agentManager.importFromPR"
   url: string
-}
-
-interface ImportExternalWorktreeIn {
-  type: "agentManager.importExternalWorktree"
-  path: string
-  branch: string
-}
-
-interface ImportAllExternalWorktreesIn {
-  type: "agentManager.importAllExternalWorktrees"
 }
 
 interface RequestWorktreeDiffIn {
@@ -759,11 +738,8 @@ export type AgentManagerInMessage =
   | SetReviewDiffStyleIn
   | SetReviewMarkdownRenderIn
   | SetDefaultBaseBranchIn
-  | RequestExternalWorktreesIn
   | ImportFromBranchIn
   | ImportFromPRIn
-  | ImportExternalWorktreeIn
-  | ImportAllExternalWorktreesIn
   | RequestWorktreeDiffIn
   | RequestWorktreeDiffFileIn
   | ApplyWorktreeDiffIn

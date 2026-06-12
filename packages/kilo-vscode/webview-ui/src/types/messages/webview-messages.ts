@@ -697,10 +697,6 @@ export interface RequestBranchesMessage {
   type: "agentManager.requestBranches"
 }
 
-export interface RequestExternalWorktreesMessage {
-  type: "agentManager.requestExternalWorktrees"
-}
-
 export interface ImportFromBranchRequest {
   type: "agentManager.importFromBranch"
   branch: string
@@ -709,16 +705,6 @@ export interface ImportFromBranchRequest {
 export interface ImportFromPRRequest {
   type: "agentManager.importFromPR"
   url: string
-}
-
-export interface ImportExternalWorktreeRequest {
-  type: "agentManager.importExternalWorktree"
-  path: string
-  branch: string
-}
-
-export interface ImportAllExternalWorktreesRequest {
-  type: "agentManager.importAllExternalWorktrees"
 }
 
 // Agent Manager: Request one-shot diff fetch (webview → extension)
@@ -1178,11 +1164,8 @@ export type WebviewMessage =
   | RequestCloudSessionDataMessage
   | ImportAndSendMessage
   | RequestBranchesMessage
-  | RequestExternalWorktreesMessage
   | ImportFromBranchRequest
   | ImportFromPRRequest
-  | ImportExternalWorktreeRequest
-  | ImportAllExternalWorktreesRequest
   | RequestWorktreeDiffMessage
   | RequestWorktreeDiffFileMessage
   | StartDiffWatchMessage

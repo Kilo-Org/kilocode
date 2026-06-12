@@ -1,18 +1,9 @@
-/**
- * Pure navigation logic for the agent manager sidebar.
- *
- * The sidebar has a fixed "local" item at index -1, followed by
- * session items at indices 0..N-1 (sorted newest-first).
- *
- * Returns the action to take: select a session by ID, go to local, or do nothing.
- */
+/** Pure state and navigation helpers for the Agent Manager sidebar. */
 
 import { isRootSession } from "../src/context/session-utils"
 
 /** Sentinel value for the local repo selection. */
 export const LOCAL = "local" as const
-
-type NavResult = { action: "select"; id: string } | { action: typeof LOCAL } | { action: "none" }
 
 type SessionLike = { id: string; parentID?: string | null; createdAt: string }
 
@@ -24,40 +15,6 @@ export function filterUnassignedSessions<T extends SessionLike>(
   return [...sessions]
     .filter((s) => isRootSession(s) && !worktree.has(s.id) && !local.has(s.id))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-}
-
-export function resolveNavigation(direction: "up" | "down", current: string | undefined, ids: string[]): NavResult {
-  // Determine current position: -1 = local, 0..N-1 = session index
-  if (!current) {
-    // On local
-    if (direction === "up") return { action: "none" }
-    if (ids.length === 0) return { action: "none" }
-    return { action: "select", id: ids[0]! }
-  }
-
-  const idx = ids.indexOf(current)
-  // Current session not found in list — don't navigate
-  if (idx === -1) return { action: "none" }
-
-  const next = direction === "up" ? idx - 1 : idx + 1
-
-  // Moving up past the first session → go to local
-  if (next === -1) return { action: LOCAL }
-
-  // At the bottom boundary
-  if (next >= ids.length) return { action: "none" }
-
-  return { action: "select", id: ids[next]! }
-}
-
-/**
- * Validate a persisted local session ID against the current sessions list.
- * Returns the ID if it still exists, undefined otherwise.
- */
-export function validateLocalSession(persisted: string | undefined, ids: string[]): string | undefined {
-  if (!persisted) return undefined
-  if (ids.indexOf(persisted) === -1) return undefined
-  return persisted
 }
 
 /**

@@ -24,7 +24,6 @@ import type {
   AgentManagerApplyWorktreeDiffStatus,
   BranchInfo,
   ContinueInWorktreeStatus,
-  ExternalWorktreeInfo,
   LocalGitStats,
   ManagedSessionState,
   PRStatus,
@@ -659,11 +658,6 @@ export interface AgentManagerBranchesMessage {
   defaultBranch: string
 }
 
-export interface AgentManagerExternalWorktreesMessage {
-  type: "agentManager.externalWorktrees"
-  worktrees: ExternalWorktreeInfo[]
-}
-
 // Agent Manager Import tab: result feedback (extension → webview)
 export interface AgentManagerImportResultMessage {
   type: "agentManager.importResult"
@@ -1034,7 +1028,6 @@ export type ExtensionMessage =
   | OpenCloudSessionMessage
   | SelectKiloModelMessage
   | AgentManagerBranchesMessage
-  | AgentManagerExternalWorktreesMessage
   | AgentManagerImportResultMessage
   | WorkspaceDirectoryChangedMessage
   | AgentManagerWorktreeDiffMessage

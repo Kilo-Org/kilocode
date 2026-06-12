@@ -182,8 +182,6 @@ describe("Agent Manager Provider Messages", () => {
       "agentManager.forgetSession",
       "agentManager.importFromBranch",
       "agentManager.importFromPR",
-      "agentManager.importExternalWorktree",
-      "agentManager.importAllExternalWorktrees",
       "agentManager.createSection",
       "agentManager.moveToSection",
     ]
@@ -439,7 +437,6 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const providerText = body("onImportMessage")
     expect(text).toContain("class WorktreeImporter")
     expect(text).toContain("createFromPR")
-    expect(text).toContain("listExternalWorktrees")
     expect(text).toContain("createWorktree")
     expect(providerText).toContain("this.importer")
   })

@@ -117,12 +117,6 @@ export interface BranchInfo {
   isCheckedOut?: boolean
 }
 
-// Agent Manager Import tab: external worktrees (extension → webview)
-export interface ExternalWorktreeInfo {
-  path: string
-  branch: string
-}
-
 // Shared FileDiff shape (matches Snapshot.FileDiff from CLI backend)
 export interface WorktreeFileDiff {
   file: string
