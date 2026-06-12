@@ -149,10 +149,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const direct = createMemo(() => {
     const item = held()
     const ids = new Set<string>()
-    if (item && item.sid === session.currentSessionID()) turns.add(item.turn)
+    if (item && item.sid === session.currentSessionID()) ids.add(item.turn)
     const active = activeUserID()
-    if (active) turns.add(active)
-    return turns
+    if (active) ids.add(active)
+    return ids
   })
   // Virtua continues to own completed history and stable live chunks, but not
   // the growing assistant suffix whose measurements would produce visible jumps.
