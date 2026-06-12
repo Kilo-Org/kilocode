@@ -19,6 +19,9 @@ jobs:
         uses: ./.github/actions/setup-bun
 
       # kilocode_change start
+      - name: Check formatting
+        run: bun run prettier --ignore-unknown --check .
+
       - name: Run TypeScript typecheck
         run: bun turbo typecheck --filter='!@kilocode/kilo-jetbrains'
       # kilocode_change end

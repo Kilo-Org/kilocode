@@ -6,7 +6,9 @@ insert_final_newline = true
 end_of_line = lf
 indent_style = space
 indent_size = 2
-max_line_length = 80
+# kilocode_change start - keep editor wrapping aligned with Prettier
+max_line_length = 120
+# kilocode_change end
 
 [*.{kt,kts}]
 indent_size = 4

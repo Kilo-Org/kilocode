@@ -263,7 +263,8 @@ export function Markdown(
       key: local.cacheKey,
       streaming: local.streaming ?? false,
     }),
-    async (src): Promise<Rendered> => { // kilocode_change
+    async (src): Promise<Rendered> => {
+      // kilocode_change
       if (isServer) return { content: fallback(src.text), blocks: [] } // kilocode_change
       if (!src.text) return { content: "", blocks: [] } // kilocode_change
 

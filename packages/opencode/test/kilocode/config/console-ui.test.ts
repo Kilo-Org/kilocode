@@ -17,7 +17,9 @@ describe("Config.Info console UI", () => {
     expect(() => Schema.decodeUnknownSync(Config.Info)({ console: { context_sidebar_width: 801 } })).toThrow()
     expect(() => Schema.decodeUnknownSync(Config.Info)({ console: { context_sidebar_width: 420.5 } })).toThrow()
     expect(() => Schema.decodeUnknownSync(Config.Info)({ console: { context_sidebar_width: Number.NaN } })).toThrow()
-    expect(() => Schema.decodeUnknownSync(Config.Info)({ console: { context_sidebar_width: Number.POSITIVE_INFINITY } })).toThrow()
+    expect(() =>
+      Schema.decodeUnknownSync(Config.Info)({ console: { context_sidebar_width: Number.POSITIVE_INFINITY } }),
+    ).toThrow()
     expect(() => Schema.decodeUnknownSync(Config.Info)({ console: { diff_style: "side-by-side" } })).toThrow()
   })
 })

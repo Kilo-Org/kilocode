@@ -67,14 +67,17 @@ function app(input?: { password?: string; username?: string }) {
   ).handler
   return {
     request(input: string | URL | Request, init?: RequestInit) {
-      return Effect.promise((): Promise<Response> =>
-        Promise.resolve(
-          handler(
-            input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
-            HttpApiApp.context,
+      // kilocode_change start
+      return Effect.promise(
+        (): Promise<Response> =>
+          Promise.resolve(
+            handler(
+              input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
+              HttpApiApp.context,
+            ),
           ),
-        ),
       )
+      // kilocode_change end
     },
   }
 }
@@ -112,18 +115,21 @@ function uiApp(input?: {
     ),
     { disableLogger: true },
   ).handler
+  // kilocode_change start
   return {
     request(input: string | URL | Request, init?: RequestInit) {
-      return Effect.promise((): Promise<Response> =>
-        Promise.resolve(
-          handler(
-            input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
-            HttpApiApp.context,
+      return Effect.promise(
+        (): Promise<Response> =>
+          Promise.resolve(
+            handler(
+              input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
+              HttpApiApp.context,
+            ),
           ),
-        ),
       )
     },
   }
+  // kilocode_change end
 }
 
 function routeOrderingApp() {
@@ -152,20 +158,23 @@ function routeOrderingApp() {
       ]),
     ),
     { disableLogger: true },
-  ).handler
+  ).handler // kilocode_change
+  // kilocode_change start
   return {
     proxiedUrl: () => proxiedUrl,
     request(input: string | URL | Request, init?: RequestInit) {
-      return Effect.promise((): Promise<Response> =>
-        Promise.resolve(
-          handler(
-            input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
-            HttpApiApp.context,
+      return Effect.promise(
+        (): Promise<Response> =>
+          Promise.resolve(
+            handler(
+              input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
+              HttpApiApp.context,
+            ),
           ),
-        ),
       )
     },
   }
+  // kilocode_change end
 }
 
 function httpClient(response: Response, onRequest?: (request: HttpClientRequest.HttpClientRequest) => void) {

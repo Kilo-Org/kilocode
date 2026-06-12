@@ -9,12 +9,8 @@ describe("model not found errors", () => {
       modelsEmpty: true,
     }
 
-    expect(FormatError({ name: "ProviderModelNotFoundError", data })).toContain(
-      "No models are currently available.",
-    )
-    expect(FormatError({ _tag: "ProviderModelNotFoundError", ...data })).toContain(
-      "No models are currently available.",
-    )
+    expect(FormatError({ name: "ProviderModelNotFoundError", data })).toContain("No models are currently available.")
+    expect(FormatError({ _tag: "ProviderModelNotFoundError", ...data })).toContain("No models are currently available.")
   })
 
   test("omits the indication when models are available", () => {
