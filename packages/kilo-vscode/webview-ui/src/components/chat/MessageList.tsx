@@ -148,7 +148,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   })
   const direct = createMemo(() => {
     const item = held()
-    const turns = new Set<string>()
+    const ids = new Set<string>()
     if (item && item.sid === session.currentSessionID()) turns.add(item.turn)
     const active = activeUserID()
     if (active) turns.add(active)
