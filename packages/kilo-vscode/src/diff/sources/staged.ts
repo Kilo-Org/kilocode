@@ -53,6 +53,7 @@ export function createStagedDiffSource(): DiffSource {
       additions: counts.get(item.file)?.additions ?? 0,
       deletions: counts.get(item.file)?.deletions ?? 0,
       tracked: true,
+      binary: counts.get(item.file)?.binary ?? false,
     }))
   }
 
@@ -79,6 +80,8 @@ export function createStagedDiffSource(): DiffSource {
       // skip impossible reads (e.g. HEAD: for an added file).
       const entry = await fileEntry(git, dir, file, log)
       if (!entry) return null
+
+      if (entry.binary) return summarize(entry)
 
       const beforeBytes = entry.status === "added" ? 0 : await blobSize(git, dir, "HEAD", file)
       const afterBytes = entry.status === "deleted" ? 0 : await blobSize(git, dir, INDEX_REF, file)
@@ -147,5 +150,6 @@ async function fileEntry(
     additions: stats.get(item.file)?.additions ?? 0,
     deletions: stats.get(item.file)?.deletions ?? 0,
     tracked: true,
+    binary: stats.get(item.file)?.binary ?? false,
   }
 }

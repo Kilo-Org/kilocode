@@ -50,7 +50,7 @@ export interface TranscriptOptions {
 
 export interface TranscriptPartition {
   virtual: TranscriptRow[]
-  keep: number[]
+  direct: TranscriptRow[]
   queued: TranscriptRow[]
 }
 
@@ -179,15 +179,26 @@ export function transcriptRows(
   })
 }
 
-export function partitionRows(rows: TranscriptRow[], limit = 2): TranscriptPartition {
+export function partitionRows(rows: TranscriptRow[], direct: ReadonlySet<string> = new Set()): TranscriptPartition {
   const queued = rows.filter((row) => row.queued)
-  const virtual = rows.filter((row) => !row.queued)
-  const size = Math.max(0, Math.floor(limit))
-  const keep: number[] = []
-  for (let i = virtual.length - 1; i >= 0 && keep.length < size; i -= 1) {
-    const row = virtual[i]!
-    if (!row.live) break
-    keep.unshift(i)
+  const visible = rows.filter((row) => !row.queued)
+  const turn = visible.at(-1)?.turn
+  // Only the latest visible turn can render directly.
+  if (!turn || !direct.has(turn)) return { virtual: visible, direct: [], queued }
+
+  let boundary = -1
+  for (let i = 0; i < visible.length; i += 1) {
+    const row = visible[i]!
+    if (row.turn === turn && row.type === "assistant") boundary = i
   }
-  return { virtual, keep, queued }
+
+  // The selected turn has no renderable assistant row.
+  if (boundary === -1) return { virtual: visible, direct: [], queued }
+
+  // Boundary starts the direct suffix, preserving rows after the streaming assistant.
+  return {
+    virtual: visible.slice(0, boundary),
+    direct: visible.slice(boundary),
+    queued,
+  }
 }

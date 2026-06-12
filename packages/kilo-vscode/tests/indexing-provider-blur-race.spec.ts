@@ -12,6 +12,7 @@ const GLOBALS = "colorScheme:dark;theme:kilo-vscode;vscodeTheme:dark-modern"
 const STORY_ID = "settings--indexing-provider-blur-race"
 const KILO_STORY_ID = "settings--indexing-kilo-model-preset"
 const KILO_LOADING_STORY_ID = "settings--indexing-kilo-catalog-loading"
+const SCOPE_STORY_ID = "settings--indexing-scope-switch"
 
 type Saved = {
   provider?: string
@@ -19,6 +20,7 @@ type Saved = {
   dimension?: number | null
   openai?: { apiKey?: string }
   gemini?: { apiKey?: string }
+  qdrant?: { url?: string; apiKey?: string }
 }
 
 function storyUrl(id = STORY_ID) {
@@ -76,6 +78,41 @@ test("provider switch writes to selected provider bucket", async ({ page }) => {
   await expect(model).toHaveAttribute("placeholder", "Enter model ID")
 })
 
+test("scope switching preserves raw overrides and commits blur to the original scope", async ({ page }) => {
+  await page.setViewportSize({ width: 420, height: 720 })
+  await page.goto(storyUrl(SCOPE_STORY_ID), { waitUntil: "load" })
+  await disableAnimations(page)
+  await page.waitForSelector("#storybook-root *", { state: "attached" })
+
+  await expect(page.locator('[data-slot="settings-row"] [data-component="tag"]')).toHaveCount(0)
+
+  const url = field(page, "Qdrant URL").first()
+  await url.fill("http://edited-global:6333")
+  await page.getByRole("button", { name: "Local", exact: true }).click()
+
+  const global = page.getByTestId("indexing-global-save")
+  await expect
+    .poll(async () => {
+      const cfg = JSON.parse(((await global.textContent()) ?? "{}").trim()) as Saved
+      return cfg.qdrant?.url
+    })
+    .toBe("http://edited-global:6333")
+
+  const project = JSON.parse(((await page.getByTestId("indexing-project-save").textContent()) ?? "{}").trim()) as Saved
+  expect(project.qdrant?.url).toBeUndefined()
+
+  await expect(field(page, "Embedding model").first()).toHaveValue("")
+  await expect(url).toHaveValue("http://edited-global:6333")
+  const urlRow = page.locator('[data-slot="settings-row"]', { hasText: "Qdrant URL" })
+  const keyRow = page.locator('[data-slot="settings-row"]', { hasText: "Qdrant API key" })
+  const modelRow = page.locator('[data-slot="settings-row"]', { hasText: "Embedding model" })
+  const tuningRow = page.locator('[data-slot="settings-row"]', { hasText: "Search max results" })
+  await expect(urlRow.locator('[data-component="tag"]')).toHaveText("Global")
+  await expect(keyRow.locator('[data-component="tag"]')).toHaveText("Local")
+  await expect(modelRow.locator('[data-component="tag"]')).toHaveText("Local")
+  await expect(tuningRow.locator('[data-component="tag"]')).toHaveText("Default")
+})
+
 test("Kilo exposes only supported embedding model presets", async ({ page }) => {
   await page.setViewportSize({ width: 420, height: 720 })
   await page.goto(storyUrl(KILO_STORY_ID), { waitUntil: "load" })
@@ -110,11 +147,18 @@ test("enabling Kilo before its catalog loads does not store an empty model", asy
   await page.goto(storyUrl(KILO_LOADING_STORY_ID), { waitUntil: "load" })
   await disableAnimations(page)
   await page.waitForSelector("#storybook-root *", { state: "attached" })
-  await page.locator('[data-component="switch"] [data-slot="switch-control"]').nth(1).click()
+  await page.getByRole("button", { name: "Local", exact: true }).click()
+  await page
+    .locator('[data-slot="settings-row"]', { hasText: "Enable for this project" })
+    .locator('[data-slot="switch-control"]')
+    .click()
   await verify()
 
   await page.goto(storyUrl(KILO_LOADING_STORY_ID), { waitUntil: "load" })
   await page.waitForSelector("#storybook-root *", { state: "attached" })
-  await page.locator('[data-component="switch"] [data-slot="switch-control"]').first().click()
+  await page
+    .locator('[data-slot="settings-row"]', { hasText: "Enable globally" })
+    .locator('[data-slot="switch-control"]')
+    .click()
   await verify()
 })

@@ -130,7 +130,33 @@ export const MessageList: Component<MessageListProps> = (props) => {
       prev,
     )
   })
-  const partition = createMemo(() => partitionRows(rows()))
+  const [held, setHeld] = createSignal<{ sid: string; turn: string }>()
+  createEffect(() => {
+    const id = activeUserID()
+    const sid = session.currentSessionID()
+    const paused = autoScroll.userScrolled()
+    if (!sid || (!id && !paused)) {
+      setHeld(undefined)
+      return
+    }
+    if (!id) return
+    if (!paused) {
+      setHeld({ sid, turn: id })
+      return
+    }
+    setHeld((prev) => (prev?.sid === sid ? prev : { sid, turn: id }))
+  })
+  const direct = createMemo(() => {
+    const item = held()
+    const ids = new Set<string>()
+    if (item && item.sid === session.currentSessionID()) ids.add(item.turn)
+    const active = activeUserID()
+    if (active) ids.add(active)
+    return ids
+  })
+  // Virtua continues to own completed history and stable live chunks, but not
+  // the growing assistant suffix whose measurements would produce visible jumps.
+  const partition = createMemo(() => partitionRows(rows(), direct()))
   const keys = createMemo(() => partition().virtual.map((row) => row.key))
   const fingerprint = createMemo(() => rowFingerprint(keys()))
   const measurement = createMemo(() => {
@@ -312,22 +338,21 @@ export const MessageList: Component<MessageListProps> = (props) => {
                 {language.t("session.messages.loadEarlier")}
               </button>
             </Show>
-            <Show when={partition().virtual.length > 0}>
+            <Show when={partition().virtual.length > 0 || partition().direct.length > 0}>
               <div
                 class="message-list-turns"
                 data-loaded-messages={session.messages().length}
                 data-row-count={partition().virtual.length}
+                data-direct-count={partition().direct.length}
                 data-queued-count={partition().queued.length}
-                data-kept-count={partition().keep.length}
               >
-                <Show when={scrollEl()}>
+                <Show when={scrollEl() && partition().virtual.length > 0}>
                   <Virtualizer
                     ref={setVirtualizer}
                     data={partition().virtual}
                     scrollRef={scrollEl()}
                     shift={session.messageMutation() === "prepend"}
                     cache={measurement()}
-                    keepMounted={partition().keep}
                     overscan={2}
                     itemSize={260}
                   >
@@ -336,6 +361,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     )}
                   </Virtualizer>
                 </Show>
+                <For each={partition().direct}>
+                  {(row) => <TranscriptRowView row={row} onForkMessage={props.onForkMessage} />}
+                </For>
               </div>
             </Show>
             <Show when={boundary()}>

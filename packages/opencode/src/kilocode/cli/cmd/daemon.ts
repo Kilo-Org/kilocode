@@ -3,6 +3,7 @@ import { cmd } from "@/cli/cmd/cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 import { AppRuntime } from "@/effect/app-runtime"
 import { Daemon } from "@/kilocode/daemon/daemon"
+import { warnPort } from "@/kilocode/cli/port-warning"
 
 function withJson<T>(yargs: Argv<T>) {
   return yargs.option("json", {
@@ -60,6 +61,7 @@ const StartCommand = cmd({
   builder: (yargs) => withJson(withNetworkOptions(yargs)),
   handler: async (args) => {
     const opts = await AppRuntime.runPromise(resolveNetworkOptions(args))
+    warnPort(opts.port)
     const result = await Daemon.start(opts)
     if (args.json) {
       print(result, true)
@@ -99,6 +101,7 @@ const RestartCommand = cmd({
   builder: (yargs) => withJson(withNetworkOptions(yargs)),
   handler: async (args) => {
     const opts = await AppRuntime.runPromise(resolveNetworkOptions(args))
+    warnPort(opts.port)
     const result = await Daemon.restart(opts)
     if (args.json) {
       print(result, true)

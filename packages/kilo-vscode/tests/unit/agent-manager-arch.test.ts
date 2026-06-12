@@ -653,6 +653,10 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
   "run/task.ts": {
     note: "vscode adapter for Agent Manager run scripts",
   },
+  // Reads terminal.integrated.* and editor.font* config for xterm font settings
+  "terminal-font.ts": {
+    note: "vscode config reader for integrated terminal font settings",
+  },
 }
 
 /**

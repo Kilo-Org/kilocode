@@ -1129,7 +1129,7 @@ const AgentManagerContent: Component = () => {
       onCreated: (contextKey, terminalId) => appendToTabOrder(contextKey, terminalId),
     })
     const unsubTerminals = vscode.onMessage((msg) => {
-      terminalDispatch(msg as unknown as { type: string } & Record<string, unknown>)
+      terminalDispatch(msg)
     })
 
     const unsub = vscode.onMessage((msg) => {

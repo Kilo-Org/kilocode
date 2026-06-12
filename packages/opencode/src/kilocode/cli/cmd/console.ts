@@ -3,6 +3,7 @@ import { cmd } from "@/cli/cmd/cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 import { AppRuntime } from "@/effect/app-runtime"
 import { Daemon } from "@/kilocode/daemon/daemon"
+import { warnPort } from "@/kilocode/cli/port-warning"
 
 function publicUrl(state: Daemon.State) {
   return new URL("/console", state.url).toString()
@@ -41,6 +42,7 @@ export const KiloConsoleCommand = cmd({
   builder: (yargs) => withNetworkOptions(yargs),
   handler: async (args) => {
     const opts = await AppRuntime.runPromise(resolveNetworkOptions(args))
+    warnPort(opts.port)
     const result = await Daemon.start(opts)
     const state = result.state
     if (!state) throw new Error("Kilo daemon did not provide connection state")

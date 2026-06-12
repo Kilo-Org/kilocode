@@ -52,6 +52,7 @@ const cfg = {
   modelID: ModelID.make("config-model"),
 }
 
+const inherited = "thorough"
 const savedVariant = "fast"
 const cfgVariant = "balanced"
 const sub = {
@@ -110,7 +111,7 @@ const it = testEffect(
   ),
 )
 
-const seed = Effect.fn("TaskToolModelTest.seed")(function* (title = "Parent") {
+const seed = Effect.fn("TaskToolModelTest.seed")(function* (title = "Parent", variant?: string) {
   const session = yield* Session.Service
   const chat = yield* session.create({ title })
   const user = yield* session.updateMessage({
@@ -133,6 +134,7 @@ const seed = Effect.fn("TaskToolModelTest.seed")(function* (title = "Parent") {
     tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
     modelID: parent.modelID,
     providerID: parent.providerID,
+    variant,
     time: { created: Date.now() },
   }
   yield* session.updateMessage(assistant)
@@ -194,6 +196,7 @@ function run(input: {
   agent: "pinned" | "worker"
   state?: unknown
   client?: string
+  variant?: string
   config?: Pick<Config.Info, "subagent_model" | "subagent_variant">
 }) {
   return provideTmpdirInstance(
@@ -202,7 +205,7 @@ function run(input: {
         process.env.KILO_CLIENT = input.client ?? "cli"
         if (input.state) yield* writeState(input.state)
 
-        const { chat, assistant } = yield* seed(input.agent)
+        const { chat, assistant } = yield* seed(input.agent, input.variant)
         const tool = yield* TaskTool
         const def = yield* tool.init()
         let seen: SessionPrompt.PromptInput | undefined
@@ -282,6 +285,7 @@ describe("tool.task model resolution", () => {
   it.live("saved model without variant leaves variant undefined", () =>
     run({
       agent: "worker",
+      variant: inherited,
       state: { model: { worker: saved } },
     }).pipe(
       Effect.tap((result) =>
@@ -330,6 +334,7 @@ describe("tool.task model resolution", () => {
   it.live("configured subagent default model and variant apply to task workers", () =>
     run({
       agent: "worker",
+      variant: inherited,
       config: { subagent_model: "sub-provider/sub-model", subagent_variant: subVariant },
     }).pipe(
       Effect.tap((result) =>
@@ -346,6 +351,7 @@ describe("tool.task model resolution", () => {
   it.live("per-agent task model remains above the configured subagent default", () =>
     run({
       agent: "pinned",
+      variant: inherited,
       config: { subagent_model: "sub-provider/sub-model", subagent_variant: subVariant },
     }).pipe(
       Effect.tap((result) =>
@@ -362,14 +368,15 @@ describe("tool.task model resolution", () => {
   it.live("unavailable configured subagent model falls back to the parent model", () =>
     run({
       agent: "worker",
+      variant: inherited,
       config: { subagent_model: "missing-provider/missing-model", subagent_variant: subVariant },
     }).pipe(
       Effect.tap((result) =>
         Effect.sync(() => {
           expect(result.prompt).toEqual(parent)
-          expect(result.variant).toBeUndefined()
+          expect(result.variant).toEqual(inherited)
           expect(result.model).toEqual(parent)
-          expect(result.metadataVariant).toBeUndefined()
+          expect(result.metadataVariant).toEqual(inherited)
         }),
       ),
     ),
@@ -391,16 +398,17 @@ describe("tool.task model resolution", () => {
     ),
   )
 
-  it.live("no file and no agent config falls back to parent for worker", () =>
+  it.live("no file and no agent config inherits the parent model and variant", () =>
     run({
       agent: "worker",
+      variant: inherited,
     }).pipe(
       Effect.tap((result) =>
         Effect.sync(() => {
           expect(result.prompt).toEqual(parent)
-          expect(result.variant).toBeUndefined()
+          expect(result.variant).toEqual(inherited)
           expect(result.model).toEqual(parent)
-          expect(result.metadataVariant).toBeUndefined()
+          expect(result.metadataVariant).toEqual(inherited)
         }),
       ),
     ),

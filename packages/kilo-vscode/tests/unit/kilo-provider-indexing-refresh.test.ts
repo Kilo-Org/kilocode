@@ -10,7 +10,12 @@ type Internals = {
   cachedIndexingStatusMessage: unknown
   handleEvent: (event: unknown, directory?: string) => void
   reloadAfterAuthChange: () => Promise<void>
-  handleUpdateConfig: (partial: Partial<Config>) => Promise<void>
+  handleUpdateConfig: (
+    partial: Partial<Config>,
+    project?: Partial<Config>,
+    globalUnset?: string[][],
+    projectUnset?: string[][],
+  ) => Promise<void>
   fetchAndSendConfig: () => Promise<void>
   fetchAndSendProviders: () => Promise<void>
   fetchAndSendAgents: () => Promise<void>
@@ -22,6 +27,7 @@ type Internals = {
 
 function createConnection() {
   let drains = 0
+  const patches: unknown[] = []
   const client = {
     global: {
       config: {
@@ -32,11 +38,17 @@ function createConnection() {
     config: {
       get: async () => ({ data: {} }),
       update: async () => ({ data: {} }),
+      overlay: async () => ({ data: { project: {} } }),
+      overlayUpdate: async (patch: unknown) => {
+        patches.push(patch)
+        return { data: {} }
+      },
     },
   }
 
   return {
     drains: () => drains,
+    patches: () => patches,
     service: {
       drainPendingPrompts: async () => {
         drains += 1
@@ -95,6 +107,33 @@ describe("KiloProvider indexing refresh", () => {
 
     expect(conn.drains()).toBe(1)
     expect(indexing).toBe(0)
+  })
+
+  it("passes scoped unset paths to the config overlay endpoint", async () => {
+    const conn = createConnection()
+    const provider = new KiloProvider({} as never, conn.service as never)
+    const internal = provider as unknown as Internals
+    internal.connectionState = "connected"
+
+    await internal.handleUpdateConfig(
+      { indexing: { qdrant: { apiKey: undefined } } },
+      { indexing: { searchMinScore: undefined } },
+      [["indexing", "qdrant", "apiKey"]],
+      [["indexing", "searchMinScore"]],
+    )
+
+    expect(conn.patches()).toEqual([
+      expect.objectContaining({
+        scope: "global",
+        set: { indexing: { qdrant: { apiKey: undefined } } },
+        unset: [["indexing", "qdrant", "apiKey"]],
+      }),
+      expect.objectContaining({
+        scope: "project",
+        set: { indexing: { searchMinScore: undefined } },
+        unset: [["indexing", "searchMinScore"]],
+      }),
+    ])
   })
 
   it("fetchAndSendIndexingStatus uses current session directory header", async () => {

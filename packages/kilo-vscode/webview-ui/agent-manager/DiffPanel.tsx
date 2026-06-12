@@ -1,4 +1,5 @@
-import { type Component, createSignal, createMemo, For, Show, createEffect, on } from "solid-js"
+import { type Component, createSignal, createMemo, Show, createEffect, on } from "solid-js"
+import type { VirtualizerHandle } from "virtua/solid"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { Accordion } from "@kilocode/kilo-ui/accordion"
 import { StickyAccordionHeader } from "@kilocode/kilo-ui/sticky-accordion-header"
@@ -45,12 +46,15 @@ import { createReviewAnnotationSpeechRenderer } from "../diff-viewer/review-anno
 import {
   LONG_DIFF_MARKER_FILE_COUNT,
   allOpenFiles,
-  eagerDiffFiles,
   initialOpenFiles,
+  isDiffExpandable,
   isLargeDiffFile,
+  sanitizeOpenFiles,
+  shouldVirtualizeDiff,
   toggleOpenFiles,
 } from "../diff-viewer/diff-open-policy"
 import { DiffEndMarker } from "../diff-viewer/DiffEndMarker"
+import { VirtualDiffList } from "../diff-viewer/VirtualDiffList"
 import { treeOrder } from "../diff-viewer/file-tree-utils"
 import { isMarkdownFile, MarkdownDiffView } from "../diff-viewer/MarkdownDiffView"
 import { createDiffRows, diffToken } from "../diff-viewer/diff-state"
@@ -124,17 +128,16 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     keys: speechKeys,
   })
   let nextId = 0
-  // Tracks the session key for which initial open state has already run. When the
-  // key changes (different worktree) we expand reviewable files. Within the same key,
-  // only pruning happens so the user's manual collapse state is preserved.
+  // Initialize each worktree with every file expanded, then preserve manual
+  // collapse state while adding and removing files from live summaries.
   let initializedKey: string | undefined
+  let known = new Set<string>()
   const requested = new Map<string, string>()
 
   // Reorder diffs to match the file-tree's depth-first visual order so
   // scrolling through the accordion matches the tree grouping.
   const sorted = createMemo(() => treeOrder(props.diffs))
   const rows = createDiffRows(sorted, () => props.sessionKey)
-  const eager = createMemo(() => eagerDiffFiles(sorted()))
 
   const comments = () => props.comments
   const setComments = (next: ReviewComment[]) => props.onCommentsChange(next)
@@ -148,7 +151,8 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   // Ref to the scrollable container — used to preserve scroll position when
   // annotation changes cause pierre to fully re-render diffs
   let rootRef: HTMLDivElement | undefined
-  let scroller: HTMLDivElement | undefined
+  const [scroller, setScroller] = createSignal<HTMLDivElement>()
+  const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
 
   const focusRoot = () => {
     requestAnimationFrame(() => {
@@ -164,19 +168,20 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     return false
   }
 
-  // Run a callback while preserving the scroll position of the diff container.
-  // Pierre destroys and rebuilds the DOM on annotation changes (via innerHTML = ""),
-  // which resets scrollTop. We capture it before the update and restore it across
-  // two animation frames to account for the async shadow-DOM render of <diffs-container>.
+  // Preserve the visible file and its intra-row offset while Pierre rebuilds a
+  // row. Raw scrollTop is not stable once the virtualizer remeasures dynamic rows.
   const preserveScroll = (fn: () => void) => {
-    const el = scroller
-    if (!el) return fn()
-    const top = el.scrollTop
+    const handle = virtualizer()
+    const index = handle?.findStartIndex()
+    const file = index === undefined ? undefined : rows()[index]?.file
+    const offset = index === undefined ? 0 : (handle?.scrollOffset ?? 0) - (handle?.getItemOffset(index) ?? 0)
     fn()
+    if (!file) return
     requestAnimationFrame(() => {
-      el.scrollTop = top
       requestAnimationFrame(() => {
-        el.scrollTop = top
+        const next = rows().findIndex((diff) => diff.file === file)
+        if (next < 0) return
+        virtualizer()?.scrollToIndex(next, { offset })
       })
     })
   }
@@ -209,16 +214,19 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         // New context: initialize open state from the diff policy.
         if (key !== initializedKey) {
           initializedKey = key
+          known = fileSet
           setOpen(initialOpenFiles(diffs))
           return
         }
 
-        // Already initialized for this key — preserve manual expand/collapse,
-        // only prune files that no longer exist (e.g. deleted during session)
+        // Preserve manual collapse state for known files, while keeping newly
+        // arriving files expanded when a live summary grows.
+        const added = diffs.filter((diff) => !known.has(diff.file)).map((diff) => diff.file)
+        known = fileSet
         setOpen((prev) => {
-          const filtered = prev.filter((file) => fileSet.has(file))
-          if (filtered.length === prev.length && prev.every((f) => fileSet.has(f))) return prev
-          return filtered
+          const next = sanitizeOpenFiles(diffs, [...prev.filter((file) => fileSet.has(file)), ...added])
+          if (next.length === prev.length && next.every((file, index) => file === prev[index])) return prev
+          return next
         })
       },
     ),
@@ -248,11 +256,10 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
           if (!files.has(file)) requested.delete(file)
         }
         if (!props.onRequestDiff) return
-        const loading = props.loadingFiles ?? new Set<string>()
         for (const file of next) {
-          if (loading.has(file)) continue
+          if (props.loadingFiles?.has(file)) continue
           const diff = props.diffs.find((item) => item.file === file)
-          if (!diff || diff.summarized !== true) continue
+          if (!diff || !isDiffExpandable(diff) || diff.summarized !== true) continue
           const value = diffToken(diff)
           if (requested.get(file) === value) continue
           requested.set(file, value)
@@ -360,6 +367,17 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     }
     return map
   })
+  const pinned = createMemo(() => {
+    const files = new Set<string>()
+    const current = draft()
+    if (current) files.add(current.file)
+    const edit = editing()
+    if (edit) {
+      const comment = comments().find((item) => item.id === edit)
+      if (comment) files.add(comment.file)
+    }
+    return rows().flatMap((diff, index) => (files.has(diff.file) ? [index] : []))
+  })
 
   const annotationsForFile = (file: string): DiffLineAnnotation<AnnotationMeta>[] => {
     const result = buildFileAnnotations(file, commentsByFile().get(file) ?? [], editing(), draft(), draftMeta, editMeta)
@@ -440,8 +458,8 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     files: props.diffs.length,
     additions: props.diffs.reduce((sum, diff) => sum + diff.additions, 0),
     deletions: props.diffs.reduce((sum, diff) => sum + diff.deletions, 0),
-    large: props.diffs.filter((diff) => isLargeDiffFile(diff)).length,
-    collapsed: Math.max(props.diffs.length - open().length, 0),
+    large: props.diffs.filter((diff) => isDiffExpandable(diff) && isLargeDiffFile(diff)).length,
+    collapsed: props.diffs.filter((diff) => isDiffExpandable(diff) && !open().includes(diff.file)).length,
   }))
   const allOpen = createMemo(() => allOpenFiles(props.diffs, open()))
   const openLabel = () => (allOpen() ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll"))
@@ -526,10 +544,15 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       </Show>
 
       <Show when={props.diffs.length > 0}>
-        <div class="am-diff-content" data-component="session-review" ref={scroller}>
-          <Accordion multiple value={open()} onChange={setOpen}>
-            <For each={rows()}>
-              {(diff) => {
+        <div class="am-diff-content" data-component="session-review" ref={setScroller}>
+          <Accordion multiple value={open()} onChange={(files) => setOpen(sanitizeOpenFiles(props.diffs, files))}>
+            <VirtualDiffList
+              context={props.sessionKey}
+              data={rows()}
+              scroll={scroller()}
+              keep={pinned()}
+              onReady={setVirtualizer}
+              render={(diff) => {
                 const isAdded = () => diff.status === "added"
                 const isDeleted = () => diff.status === "deleted"
                 const isLargeCollapsed = () => isLargeDiffFile(diff) && !open().includes(diff.file)
@@ -537,7 +560,11 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                 const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
 
                 return (
-                  <Accordion.Item value={diff.file} data-slot="session-review-accordion-item">
+                  <Accordion.Item
+                    value={diff.file}
+                    data-slot="session-review-accordion-item"
+                    data-file-path={diff.file}
+                  >
                     <StickyAccordionHeader>
                       <Accordion.Trigger>
                         <div data-slot="session-review-trigger-content">
@@ -629,9 +656,11 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                                 />
                               </Tooltip>
                             </Show>
-                            <span data-slot="session-review-diff-chevron">
-                              <Icon name="chevron-down" size="small" />
-                            </span>
+                            <Show when={isDiffExpandable(diff)}>
+                              <span data-slot="session-review-diff-chevron">
+                                <Icon name="chevron-down" size="small" />
+                              </span>
+                            </Show>
                           </div>
                         </div>
                       </Accordion.Trigger>
@@ -659,7 +688,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                                 after={{ name: diff.file, contents: diff.after }}
                                 patch={diff.patch}
                                 diffStyle={props.diffStyle ?? "unified"}
-                                virtualized={!eager().has(diff.file)}
+                                virtualized={shouldVirtualizeDiff(diff)}
                                 annotations={annotationsForFile(diff.file)}
                                 renderAnnotation={buildAnnotation}
                                 enableGutterUtility={true}
@@ -689,7 +718,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                   </Accordion.Item>
                 )
               }}
-            </For>
+            />
           </Accordion>
           <Show when={props.diffs.length > LONG_DIFF_MARKER_FILE_COUNT}>
             <DiffEndMarker />

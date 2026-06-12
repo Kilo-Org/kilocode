@@ -1,11 +1,10 @@
 import { For, Show } from "solid-js"
 import { Button } from "@kilocode/kilo-web-ui/button"
 import { IconButton } from "@kilocode/kilo-web-ui/icon-button"
-import { Tag } from "@kilocode/kilo-web-ui/tag"
 import type { Model } from "@kilocode/sdk/v2/client"
 import { SearchField } from "../../components/SearchField"
 import { text } from "../../shared/utils"
-import { ConfigPage, SourceBadge } from "./ConfigPage"
+import { ConfigPage, ConfigTag as Tag, SourceBadge } from "./ConfigPage"
 import { type Capability, type ModelField, useModelSettings } from "./state/models"
 
 function money(n: number) {
