@@ -22,6 +22,7 @@ import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { useWorktreeMode } from "../../context/worktree-mode"
 import { useServer } from "../../context/server"
+import { useConfig } from "../../context/config"
 import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
 
 interface ChatViewProps {
@@ -42,6 +43,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const language = useLanguage()
   const worktreeMode = useWorktreeMode()
   const server = useServer()
+  const { features } = useConfig()
   // Show "Show Changes" only in the standalone sidebar, not inside Agent Manager
   const isSidebar = () => worktreeMode === undefined
   // Show "Continue in Worktree": only when explicitly enabled via prop
@@ -190,9 +192,10 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
   const canFork = (hasChat: boolean) => hasChat && !isSidebar() && session.status() === "idle" && !!props.onForkSession
 
-  const canStartWorktree = () => isSidebar() && server.gitInstalled()
+  const canStartWorktree = () => features().worktree && isSidebar() && server.gitInstalled()
 
-  const canMoveToWorktree = (hasChat: boolean) => hasChat && canContinueInWorktree() && server.gitInstalled()
+  const canMoveToWorktree = (hasChat: boolean) =>
+    features().worktree && hasChat && canContinueInWorktree() && server.gitInstalled()
 
   const hasActions = (hasChat: boolean) =>
     canStartSession(hasChat) || canFork(hasChat) || canStartWorktree() || canMoveToWorktree(hasChat)

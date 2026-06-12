@@ -48,7 +48,13 @@ export const ConfigProvider: ParentComponent = (props) => {
   const [config, setConfig] = createSignal<Config>({})
   const [globalConfig, setGlobalConfig] = createSignal<Config>({})
   const [settings, setSettings] = createSignal<Record<string, unknown>>({})
-  const [features, setFeatures] = createSignal<FeatureFlags>({ indexing: false })
+  const [features, setFeatures] = createSignal<FeatureFlags>({
+    indexing: false,
+    agentManager: false,
+    kiloClaw: false,
+    marketplace: false,
+    worktree: false,
+  })
   const [loading, setLoading] = createSignal(true)
   const [draft, setDraft] = createSignal<Partial<Config>>({})
   const [globalDraft, setGlobalDraft] = createSignal<Partial<Config>>({})

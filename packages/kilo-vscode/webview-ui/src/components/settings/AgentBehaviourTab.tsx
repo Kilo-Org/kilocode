@@ -48,7 +48,7 @@ type AgentView = "list" | "create" | "edit"
 
 const AgentBehaviourTab: Component = () => {
   const language = useLanguage()
-  const { config, updateConfig } = useConfig()
+  const { config, updateConfig, features } = useConfig()
   const session = useSession()
   const dialog = useDialog()
   const vscode = useVSCode()
@@ -325,9 +325,11 @@ const AgentBehaviourTab: Component = () => {
             <Button variant="ghost" size="small" onClick={triggerImport}>
               {language.t("settings.agentBehaviour.importMode")}
             </Button>
-            <Button variant="ghost" size="small" onClick={browse}>
-              {language.t("settings.agentBehaviour.mcpBrowseMarketplace")}
-            </Button>
+            <Show when={features().marketplace}>
+              <Button variant="ghost" size="small" onClick={browse}>
+                {language.t("settings.agentBehaviour.mcpBrowseMarketplace")}
+              </Button>
+            </Show>
             <Button variant="secondary" size="small" onClick={() => setAgentView("create")}>
               {language.t("settings.agentBehaviour.createMode")}
             </Button>
@@ -581,9 +583,11 @@ const AgentBehaviourTab: Component = () => {
             "margin-bottom": "8px",
           }}
         >
-          <Button variant="secondary" size="small" onClick={browse}>
-            {language.t("settings.agentBehaviour.mcpBrowseMarketplace")}
-          </Button>
+          <Show when={features().marketplace}>
+            <Button variant="secondary" size="small" onClick={browse}>
+              {language.t("settings.agentBehaviour.mcpBrowseMarketplace")}
+            </Button>
+          </Show>
         </div>
         <Show
           when={mcpEntries().length > 0}
@@ -808,9 +812,11 @@ const AgentBehaviourTab: Component = () => {
           "margin-bottom": "8px",
         }}
       >
-        <Button variant="secondary" size="small" onClick={browse}>
-          {language.t("settings.agentBehaviour.mcpBrowseMarketplace")}
-        </Button>
+        <Show when={features().marketplace}>
+          <Button variant="secondary" size="small" onClick={browse}>
+            {language.t("settings.agentBehaviour.mcpBrowseMarketplace")}
+          </Button>
+        </Show>
       </div>
       {/* Discovered skills */}
       <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>

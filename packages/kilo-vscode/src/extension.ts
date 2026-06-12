@@ -22,6 +22,7 @@ import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
 import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
 import { markWorkspace } from "./util/spotlight"
+import { configFeatures, isFeatureEnabled } from "./features"
 
 let agentManager: AgentManagerProvider | undefined
 let shuttingDown = false
@@ -310,6 +311,18 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   )
 
+  // Publish per-feature flags as context keys so package.json `when` clauses can hide
+  // disabled features (toolbar icons, command palette, keybindings).
+  const features = configFeatures()
+  for (const [key, value] of [
+    ["agentManager", features.agentManager],
+    ["kiloClaw", features.kiloClaw],
+    ["marketplace", features.marketplace],
+    ["worktree", features.worktree],
+  ] as const) {
+    void vscode.commands.executeCommand("setContext", `kilocode.feature.${key}`, value)
+  }
+
   // Sidebar menus use wrapper commands so this event measures real title button presses,
   // not programmatic opens, shortcuts, or editor title commands.
   const track = (button: string, command: string) => {
@@ -349,12 +362,15 @@ export function activate(context: vscode.ExtensionContext) {
       else provider.postMessage({ type: "action", action: "plusButtonClicked" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManagerOpen", () => {
+      if (!isFeatureEnabled("agentManager")) return
       agentManagerProvider.openPanel()
     }),
     vscode.commands.registerCommand("kilo-code.new.marketplaceButtonClicked", (directory?: string | null) => {
+      if (!isFeatureEnabled("marketplace")) return
       marketplacePanelProvider.openPanel(directory)
     }),
     vscode.commands.registerCommand("kilo-code.new.kiloClawOpen", () => {
+      if (!isFeatureEnabled("kiloClaw")) return
       kiloClawProvider.openPanel()
     }),
     vscode.commands.registerCommand("kilo-code.new.historyButtonClicked", () => {

@@ -452,6 +452,18 @@
         {
           "command": "kilo-code.new.sidebarTitle.settingsButtonClicked",
           "when": "false"
+        },
+        {
+          "command": "kilo-code.new.agentManagerOpen",
+          "when": "kilocode.feature.agentManager"
+        },
+        {
+          "command": "kilo-code.new.kiloClawOpen",
+          "when": "kilocode.feature.kiloClaw"
+        },
+        {
+          "command": "kilo-code.new.marketplaceButtonClicked",
+          "when": "kilocode.feature.marketplace"
         }
       ],
       "view/title": [
@@ -468,17 +480,17 @@
         {
           "command": "kilo-code.new.sidebarTitle.agentManagerOpen",
           "group": "navigation@2",
-          "when": "view == kilo-code.SidebarProvider"
+          "when": "view == kilo-code.SidebarProvider && kilocode.feature.agentManager"
         },
         {
           "command": "kilo-code.new.sidebarTitle.kiloClawOpen",
           "group": "navigation@3",
-          "when": "view == kilo-code.SidebarProvider"
+          "when": "view == kilo-code.SidebarProvider && kilocode.feature.kiloClaw"
         },
         {
           "command": "kilo-code.new.sidebarTitle.marketplaceButtonClicked",
           "group": "navigation@4",
-          "when": "view == kilo-code.SidebarProvider"
+          "when": "view == kilo-code.SidebarProvider && kilocode.feature.marketplace"
         },
         {
           "command": "kilo-code.new.sidebarTitle.profileButtonClicked",
@@ -596,7 +608,8 @@
       {
         "command": "kilo-code.new.agentManagerOpen",
         "key": "ctrl+shift+m",
-        "mac": "cmd+shift+m"
+        "mac": "cmd+shift+m",
+        "when": "kilocode.feature.agentManager"
       },
       {
         "command": "kilo-code.new.addToContext",
