@@ -293,6 +293,10 @@ const ConfigWrapper: ParentComponent<{ config?: Config; onConfigChange?: (config
 
       return {
         indexing: hasIndexingPlugin(config.plugin ?? []),
+        agentManager: false,
+        kiloClaw: false,
+        marketplace: false,
+        worktree: false,
       }
     })
 

@@ -145,4 +145,8 @@ export interface Config {
 
 export interface FeatureFlags {
   indexing: boolean
+  agentManager: boolean
+  kiloClaw: boolean
+  marketplace: boolean
+  worktree: boolean
 }

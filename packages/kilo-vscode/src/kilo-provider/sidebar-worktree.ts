@@ -1,6 +1,7 @@
 import { GitOps } from "../agent-manager/GitOps"
 import { getWorkspaceRoot } from "../review-utils"
 import { handleContinueInWorktree } from "./continue-worktree"
+import { isFeatureEnabled } from "../features"
 
 interface Msg {
   type: string
@@ -35,6 +36,7 @@ async function repo(post: Ctx["post"]) {
 
 export async function handleSidebarWorktreeMessage(message: Msg, ctx: Ctx) {
   if (message.type === "openAgentManager") {
+    if (!isFeatureEnabled("agentManager")) return true
     await ctx.openAgentManager()
     return true
   }

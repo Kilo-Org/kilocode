@@ -24,7 +24,7 @@ In scope — four feature flags:
 
 | Flag | Hides |
 |------|-------|
-| `agentManager` | Toolbar icon, Cmd+Shift+M keybinding, command-palette entry, ChatView `openAgentManager` button |
+| `agentManager` | Toolbar icon, Cmd+Shift+M keybinding, command-palette entry (no live webview button — `openAgentManager` in ChatView is dead code) |
 | `kiloClaw` | Toolbar icon, command-palette entry (no webview entry points) |
 | `marketplace` | Toolbar icon, command-palette entry, 3× "Browse Marketplace" buttons in Settings → Agent Behaviour |
 | `worktree` | ChatView "New Worktree" split button + Configure, "Move to Worktree" button |
@@ -50,7 +50,8 @@ configFeatures() [src/features.ts]   ← env override, default = hidden (false)
 
 ### Flag definitions
 
-Default `false`. Build-time override via env, inlined by esbuild `define`:
+Default `false`. Runtime override via env, read directly from `process.env` in the
+extension host (Node) — no esbuild `define` needed:
 
 | Flag | Env override |
 |------|--------------|
@@ -66,9 +67,8 @@ Files changed for the flag plumbing:
   `isFeatureEnabled(name)` helper so the extension side reads the same values it pushes via
   `setContext`.
 - `webview-ui/src/types/messages/config.ts` (~L146) — extend `FeatureFlags` interface.
-- `webview-ui/src/context/config.tsx` (~L51) — extend the default `features` signal so the
+- `webview-ui/src/context/config.tsx` (L51) — extend the default `features` signal so the
   flags are `false` until `configLoaded` arrives.
-- `esbuild.js` — add `define` entries for the four env vars if not already inlined.
 
 The existing `configLoaded` / `configUpdated` messages already carry `features`
 (`KiloProvider.ts`), so no new message type is needed.
@@ -82,8 +82,8 @@ The existing `configLoaded` / `configUpdated` messages already carry `features`
   - `agentManagerOpen` → `view == kilo-code.SidebarProvider && kilocode.feature.agentManager`
   - `kiloClawOpen` → `... && kilocode.feature.kiloClaw`
   - `marketplaceButtonClicked` → `... && kilocode.feature.marketplace`
-- **editor/title** duplicates of the same commands (~L520–L527) — gate identically.
-- **commandPalette** (`package.json` ~L440–L455): give the real commands
+- **editor/title** (L508–L533): does NOT list these three commands, so no gating needed there.
+- **commandPalette** (`package.json` L427–L455): give the real commands
   `kilo-code.new.agentManagerOpen`, `kilo-code.new.kiloClawOpen`,
   `kilo-code.new.marketplaceButtonClicked` a `when: "kilocode.feature.<flag>"`. Currently
   only the `sidebarTitle.*` wrapper commands are hidden (`when: false`); the underlying
@@ -96,13 +96,15 @@ The existing `configLoaded` / `configUpdated` messages already carry `features`
 - **Marketplace** — `webview-ui/src/components/settings/AgentBehaviourTab.tsx`, the three
   "Browse Marketplace" buttons (~L328 Agents, ~L584 MCP, ~L811 Skills): wrap each in
   `<Show when={features().marketplace}>`.
-- **Agent Manager** — `webview-ui/src/components/chat/ChatView.tsx` `openAgentManager`
-  button (~L144): gate with `features().agentManager`.
-- **Worktree** — `ChatView.tsx`:
-  - New Worktree split button + Configure (~L230–L274): condition becomes the existing
-    `canStartWorktree()` guard **AND** `features().worktree`.
-  - Move to Worktree button (~L275–L292): gate with `features().worktree`.
-  - Show Changes (~L294–L313): **unchanged**.
+- **Agent Manager** — no live webview entry point. `openAgentManager` (ChatView.tsx L144)
+  is defined but never rendered/called, so nothing to gate in the webview. The message
+  router still gets a defensive guard (below).
+- **Worktree** — `ChatView.tsx`, gated by folding `features().worktree` into the existing
+  guard helpers `canStartWorktree()` (L193) and `canMoveToWorktree()` (L195). This single
+  change hides the New Worktree split button + Configure (`<Show when={canStartWorktree()}>`
+  L230), the Move to Worktree button (`<Show when={canMoveToWorktree(hasChat)}>` L275), and
+  removes them from the `canShowAnyAction` aggregate (L198). "Show Changes" (L294–L313)
+  stays. ChatView must add `import { useConfig }` and destructure `features`.
 - **KiloClaw** — no in-webview entry points.
 
 ## Defensive guards

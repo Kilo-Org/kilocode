@@ -23,6 +23,20 @@
       "env": {
         "KILO_API_URL": "http://localhost:3000"
       }
+    },
+    {
+      "name": "VSCode - Run Extension (All Features)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": ["--disable-extensions", "--extensionDevelopmentPath=${workspaceFolder}/packages/kilo-vscode"],
+      "outFiles": ["${workspaceFolder}/packages/kilo-vscode/dist/**/*.js"],
+      "preLaunchTask": "VSCode - Compile",
+      "env": {
+        "KILOCODE_FEATURE_AGENT_MANAGER": "true",
+        "KILOCODE_FEATURE_KILOCLAW": "true",
+        "KILOCODE_FEATURE_MARKETPLACE": "true",
+        "KILOCODE_FEATURE_WORKTREE": "true"
+      }
     }
   ]
 }
