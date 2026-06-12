@@ -36,6 +36,7 @@ import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
 import { stopSessionProcesses } from "../kilo-provider/background-process"
 
 import { startSession } from "./mcp-warmup"
+import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
 import { Semaphore } from "./semaphore"
@@ -73,6 +74,7 @@ export class AgentManagerProvider implements Disposable {
   private cachedWorktreeStats: { type: "agentManager.worktreeStats"; stats: WorktreeStats[] } | undefined
   private cachedLocalStats: { type: "agentManager.localStats"; stats: LocalStats } | undefined
   private unsubTool: (() => void) | undefined
+  private unsubFont: (() => void) | undefined
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
 
@@ -96,6 +98,10 @@ export class AgentManagerProvider implements Disposable {
       getWorktreePath: (id) => this.getStateManager()?.getWorktree(id)?.path,
       log: (...args) => this.log("[XTerm]", ...args),
       post: (msg) => this.postToWebview(msg),
+      getTerminalFont: () => readTerminalFont(),
+    })
+    this.unsubFont = watchTerminalFont((font) => {
+      this.postToWebview({ type: "agentManager.terminal.fontChanged", font })
     })
     this.run = new RunController({
       root: () => this.getRoot(),
@@ -1791,6 +1797,7 @@ export class AgentManagerProvider implements Disposable {
     await this.stateReady?.catch((err) => this.log("dispose: stateReady rejected:", err))
     await this.state?.flush().catch((err) => this.log("dispose: state flush failed:", err))
     this.unsubTool?.()
+    this.unsubFont?.()
     this.connectionService.unregisterFocused("agent-manager")
     this.connectionService.registerOpen("agent-manager", [])
     this.diffs.stop()

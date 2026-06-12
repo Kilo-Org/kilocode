@@ -28,8 +28,19 @@ export function eagerDiffFiles(diffs: WorktreeFileDiff[]): Set<string> {
   return eager
 }
 
+export function isDiffExpandable(diff: WorktreeFileDiff): boolean {
+  return diff.summarized === true || Boolean(diff.patch || diff.before || diff.after)
+}
+
+export function sanitizeOpenFiles(diffs: WorktreeFileDiff[], open: string[]): string[] {
+  const blocked = new Set(diffs.filter((diff) => !isDiffExpandable(diff)).map((diff) => diff.file))
+  return open.filter((file) => !blocked.has(file))
+}
+
 export function expandableOpenFiles(diffs: WorktreeFileDiff[]): string[] {
-  return diffs.filter((diff) => !isLargeDiffFile(diff) && diff.generatedLike !== true).map((diff) => diff.file)
+  return diffs
+    .filter((diff) => isDiffExpandable(diff) && !isLargeDiffFile(diff) && diff.generatedLike !== true)
+    .map((diff) => diff.file)
 }
 
 export function initialOpenFiles(diffs: WorktreeFileDiff[]): string[] {
