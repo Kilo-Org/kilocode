@@ -3,8 +3,6 @@ import {
   fetchCloudSession,
   fetchCloudSessionForImport,
   getCloudSessions,
-  getOrganizationId,
-  getToken,
   importSessionToDb,
 } from "@kilocode/kilo-gateway"
 import {
@@ -29,6 +27,7 @@ import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import * as Log from "@opencode-ai/core/util/log"
 import { Auth } from "@/auth"
+import { Config } from "@/config/config"
 import { EffectBridge } from "@/effect/bridge"
 import { Bus } from "@/bus"
 import { Identifier } from "@/id/id"
@@ -43,6 +42,7 @@ import { Storage } from "@/storage/storage"
 import { AudioTranscriptionsBody, ClawStatus, EditBody, FimBody } from "../groups/kilo-gateway"
 import { baseKey } from "../../../session-portability/cumulative-diff"
 import { extractSessionDiffs, restoreSessionDiffs } from "../../../session-portability/session-diff-restore"
+import { resolveKiloCredentials } from "@/kilocode/auth/credentials"
 
 const FIM_TIMEOUT_MS = 30_000
 const log = Log.create({ service: "kilo-gateway" })
@@ -58,6 +58,7 @@ function logError(route: string, err: unknown) {
 export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo", (handlers) =>
   Effect.gen(function* () {
     const auth = yield* Auth.Service
+    const config = yield* Config.Service
     const store = yield* InstanceStore.Service
     const cache = yield* ModelCache.Service
 
@@ -74,12 +75,9 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const proxyAuth = Effect.fn("KiloGatewayHttpApi.proxyAuth")(function* () {
-      const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
-      return {
-        auth: info,
-        token: getToken(info),
-        organizationId: getOrganizationId(info),
-      }
+      const info = yield* auth.get("kilo").pipe(Effect.catch(() => Effect.succeed(undefined)))
+      const cfg = yield* config.get()
+      return { auth: info, ...resolveKiloCredentials({ config: cfg, auth: info }) }
     })
 
     const modes = Effect.fn("KiloGatewayHttpApi.modes")(function* () {
@@ -103,7 +101,6 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
         return DIRECT_FIM_ENV[target.provider].map((key) => process.env[key]).find(Boolean)
       })
 
-      if (target.provider === "kilo" && !info?.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
       if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
       const request = yield* HttpServerRequest.HttpServerRequest
@@ -181,7 +178,6 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
         if (item?.type === "api") return item.key
         return DIRECT_EDIT_ENV[target.provider].map((key) => process.env[key]).find(Boolean)
       })
-      if (target.provider === "kilo" && !proxy?.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
       if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
       const request = yield* HttpServerRequest.HttpServerRequest
@@ -272,7 +268,6 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       payload: typeof AudioTranscriptionsBody.Type
     }) {
       const info = yield* proxyAuth()
-      if (!info.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
       if (!info.token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
       const request = yield* HttpServerRequest.HttpServerRequest
@@ -299,14 +294,13 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const notifications = Effect.fn("KiloGatewayHttpApi.notifications")(function* () {
-      const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
-      const token = getToken(info)
-      if (!token) return []
+      const credentials = yield* proxyAuth()
+      if (!credentials.token) return []
 
       return yield* Effect.promise(() =>
         fetchKilocodeNotifications({
-          kilocodeToken: token,
-          kilocodeOrganizationId: getOrganizationId(info),
+          kilocodeToken: credentials.token,
+          kilocodeOrganizationId: credentials.organizationId,
         }),
       )
     })
@@ -332,16 +326,14 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const clawStatus = Effect.fn("KiloGatewayHttpApi.clawStatus")(function* () {
-      const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.ServiceUnavailable({})))
-      const token = getToken(info)
-      if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      const credentials = yield* proxyAuth()
+      if (!credentials.token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
       const headers: Record<string, string> = {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${credentials.token}`,
         "Content-Type": "application/json",
       }
-      const org = getOrganizationId(info)
-      if (org) headers[HEADER_ORGANIZATIONID] = org
+      if (credentials.organizationId) headers[HEADER_ORGANIZATIONID] = credentials.organizationId
 
       return yield* Effect.tryPromise({
         try: async () => {
@@ -364,13 +356,13 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const clawChatCredentials = Effect.fn("KiloGatewayHttpApi.clawChatCredentials")(function* () {
-      const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
-      const token = getToken(info)
-      if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      const credentials = yield* proxyAuth()
+      if (!credentials.token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
-      const expires = info?.type === "oauth" ? info.expires : Date.now() + 365 * 24 * 60 * 60 * 1000
+      const expires =
+        credentials.auth?.type === "oauth" ? credentials.auth.expires : Date.now() + 365 * 24 * 60 * 60 * 1000
       return {
-        token,
+        token: credentials.token,
         expiresAt: new Date(expires).toISOString(),
         kiloChatUrl: KILO_CHAT_URL,
         eventServiceUrl: KILO_EVENT_SERVICE_URL,
@@ -378,9 +370,9 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const cloudSessions = Effect.fn("KiloGatewayHttpApi.cloudSessions")(function* (ctx) {
-      const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
-      const token = getToken(info)
-      if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      const credentials = yield* proxyAuth()
+      if (!credentials.token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      const token = credentials.token
 
       const query = {
         ...ctx.query,
@@ -403,9 +395,9 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const cloudSession = Effect.fn("KiloGatewayHttpApi.cloudSession")(function* (ctx) {
-      const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
-      const token = getToken(info)
-      if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      const credentials = yield* proxyAuth()
+      if (!credentials.token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      const token = credentials.token
 
       const result = yield* Effect.tryPromise({
         try: () => fetchCloudSession(token, ctx.params.id),
@@ -424,9 +416,9 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const cloudSessionImport = Effect.fn("KiloGatewayHttpApi.cloudSessionImport")(function* (ctx) {
-      const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
-      const token = getToken(info)
-      if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      const credentials = yield* proxyAuth()
+      if (!credentials.token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      const token = credentials.token
 
       const fetched = yield* Effect.tryPromise({
         try: () => fetchCloudSessionForImport(token, ctx.payload.sessionId),

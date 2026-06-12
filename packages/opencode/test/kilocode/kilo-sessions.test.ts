@@ -90,7 +90,7 @@ it.instance("bootstraps session ingest from KILO_API_KEY without stored auth", (
   )
 })
 
-it.instance("prefers stored auth over KILO_API_KEY for session ingest", () => {
+it.instance("prefers KILO_API_KEY over stored auth for session ingest", () => {
   const original = process.env.KILO_API_KEY
   const calls: string[] = []
   const fetch: typeof globalThis.fetch = Object.assign(
@@ -117,7 +117,7 @@ it.instance("prefers stored auth over KILO_API_KEY for session ingest", () => {
     const auth = yield* Auth.Service
     yield* auth.set("kilo", { type: "api", key: "stored-token" })
     yield* Effect.promise(() => KiloSessions.bootstrap("session-auth"))
-    expect(calls).toEqual(["Bearer stored-token", "Bearer stored-token"])
+    expect(calls).toEqual(["Bearer env-token", "Bearer env-token"])
   }).pipe(
     Effect.ensuring(
       Effect.gen(function* () {

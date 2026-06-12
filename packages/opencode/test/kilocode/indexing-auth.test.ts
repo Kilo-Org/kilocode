@@ -34,6 +34,20 @@ describe("Kilo indexing auth resolution", () => {
     })
   })
 
+  test("prefers environment credentials over all persisted sources", () => {
+    expect(
+      resolveKiloIndexingAuth({
+        env: { KILO_API_KEY: "env-token", KILO_ORG_ID: "org_env" },
+        config: {
+          indexing: { kilo: { apiKey: "index-token", organizationId: "org_index" } },
+          provider: { kilo: { options: { apiKey: "config-token", kilocodeOrganizationId: "org_config" } } },
+        },
+        provider: { key: "provider-token", options: { kilocodeOrganizationId: "org_provider" } },
+        auth: { type: "oauth", access: "oauth-token", accountId: "org_oauth" },
+      }),
+    ).toEqual({ apiKey: "env-token", organizationId: "org_env", baseUrl: undefined })
+  })
+
   test("defaults to Kilo only when no provider or other embedder config is present", () => {
     const auth = { apiKey: "kilo-token" }
 

@@ -31,6 +31,7 @@ const env = {
   KILO_CONFIG_DIR: process.env.KILO_CONFIG_DIR,
   KILO_DISABLE_PROJECT_CONFIG: process.env.KILO_DISABLE_PROJECT_CONFIG,
   KILO_TEST_MANAGED_CONFIG_DIR: process.env.KILO_TEST_MANAGED_CONFIG_DIR,
+  KILO_DISABLE_AUTOCOMPACT: process.env.KILO_DISABLE_AUTOCOMPACT,
   flagConfig: Flag.KILO_CONFIG,
 }
 
@@ -46,6 +47,7 @@ function restore() {
   set("KILO_CONFIG_DIR", env.KILO_CONFIG_DIR)
   set("KILO_DISABLE_PROJECT_CONFIG", env.KILO_DISABLE_PROJECT_CONFIG)
   set("KILO_TEST_MANAGED_CONFIG_DIR", env.KILO_TEST_MANAGED_CONFIG_DIR)
+  set("KILO_DISABLE_AUTOCOMPACT", env.KILO_DISABLE_AUTOCOMPACT)
   Flag.KILO_CONFIG = env.flagConfig
 }
 
@@ -103,15 +105,18 @@ describe("config source routes", () => {
     process.env.KILO_CONFIG_CONTENT = '{"username":"secret-inline-value"}'
     process.env.KILO_CONFIG_DIR = path.join(tmp.path, "extra")
     process.env.KILO_TEST_MANAGED_CONFIG_DIR = path.join(tmp.path, "managed")
+    process.env.KILO_DISABLE_AUTOCOMPACT = "1"
 
     const body = await sources(tmp.path)
     const inline = body.sources.find((source) => source.source === "KILO_CONFIG_CONTENT")
+    const runtime = body.sources.find((source) => source.source === "KILO_DISABLE_AUTOCOMPACT")
 
-    expect(order(body, envFile)).toBeLessThan(order(body, projectFile))
     expect(order(body, projectFile)).toBeLessThan(order(body, configFile))
-    expect(order(body, configFile)).toBeLessThan(order(body, extraFile))
+    expect(order(body, configFile)).toBeLessThan(order(body, envFile))
+    expect(order(body, envFile)).toBeLessThan(order(body, extraFile))
     expect(inline?.order).toBeGreaterThan(order(body, extraFile))
-    expect(inline?.order).toBeLessThan(order(body, managedFile))
+    expect(runtime?.order).toBeGreaterThan(inline!.order)
+    expect(runtime?.order).toBeLessThan(order(body, managedFile))
 
     expect(body.sources.find((source) => source.path === configFile)).toMatchObject({
       kind: "config-dir-file",

@@ -386,6 +386,95 @@ export namespace KilocodeConfig {
     log.info("migrated bash permission to allow for existing user", { path: target })
   }
 
+  export function applyEnvironment(
+    config: Config.Info,
+    input: {
+      apiKey?: string
+      organizationId?: string
+      permission?: string
+      autoShare: boolean
+      disableAutoupdate: boolean
+      notifyUpdate: boolean
+      disableAutocompact: boolean
+      disablePrune: boolean
+    },
+  ) {
+    const permission = parsePermission(input.permission)
+    const provider =
+      input.apiKey || input.organizationId
+        ? {
+            provider: {
+              kilo: {
+                options: {
+                  ...(input.apiKey ? { apiKey: input.apiKey } : {}),
+                  ...(input.organizationId ? { kilocodeOrganizationId: input.organizationId } : {}),
+                },
+              },
+            },
+          }
+        : {}
+    const indexing =
+      input.apiKey || input.organizationId
+        ? {
+            indexing: {
+              kilo: {
+                ...(input.apiKey ? { apiKey: input.apiKey } : {}),
+                ...(input.organizationId ? { organizationId: input.organizationId } : {}),
+              },
+            },
+          }
+        : {}
+    const autoupdate: false | "notify" | undefined = input.disableAutoupdate
+      ? false
+      : input.notifyUpdate
+        ? "notify"
+        : undefined
+    const overlay = {
+      ...provider,
+      ...indexing,
+      ...permission,
+      ...(input.autoShare ? { share: "auto" as const } : {}),
+      ...(autoupdate !== undefined ? { autoupdate } : {}),
+      ...(input.disableAutocompact || input.disablePrune
+        ? {
+            compaction: {
+              ...(input.disableAutocompact ? { auto: false } : {}),
+              ...(input.disablePrune ? { prune: false } : {}),
+            },
+          }
+        : {}),
+    }
+    return mergeConfig(config, overlay)
+  }
+
+  function parsePermission(input?: string) {
+    if (!input) return {}
+    try {
+      return { permission: JSON.parse(input) }
+    } catch (err) {
+      log.warn("ignored invalid KILO_PERMISSION", { err })
+      return {}
+    }
+  }
+
+  export function loadEnvConfig(input: {
+    file?: string
+    load: (file: string) => Effect.Effect<Config.Info>
+    merge: (source: string, config: Config.Info) => Effect.Effect<void>
+    caught: (source: string, err: unknown) => void
+  }) {
+    if (!input.file) return Effect.void
+    const file = input.file
+    return input.load(file).pipe(
+      Effect.catchDefect((err) => {
+        input.caught(file, err)
+        return Effect.succeed({} as Config.Info)
+      }),
+      Effect.flatMap((config) => input.merge(file, config)),
+      Effect.tap(() => Effect.sync(() => log.debug("loaded custom config", { path: file }))),
+    )
+  }
+
   // ── Config merge utilities ───────────────────────────────────────────
 
   /** Recursively remove null values and drop objects left empty after removal. */

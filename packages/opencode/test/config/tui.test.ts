@@ -412,28 +412,6 @@ it.instance("top-level keys in tui.json take precedence over nested tui key", ()
   ),
 )
 
-it.instance("project config takes precedence over KILO_TUI_CONFIG (matches KILO_CONFIG)", () =>
-  withCleanState(
-    Effect.gen(function* () {
-      const fs = yield* AppFileSystem.Service
-      const test = yield* TestInstance
-      const custom = path.join(test.directory, "custom-tui.json")
-      yield* fs.writeJson(path.join(test.directory, "tui.json"), { theme: "project", diff_style: "auto" })
-      yield* fs.writeJson(custom, { theme: "custom", diff_style: "stacked" })
-
-      yield* withEnv(
-        "KILO_TUI_CONFIG",
-        custom,
-        Effect.gen(function* () {
-          const config = yield* getTuiConfig(test.directory)
-          expect(config.theme).toBe("project")
-          expect(config.diff_style).toBe("auto")
-        }),
-      )
-    }),
-  ),
-)
-
 it.instance("merges keybind overrides across precedence layers", () =>
   withCleanState(
     Effect.gen(function* () {

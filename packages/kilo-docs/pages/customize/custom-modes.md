@@ -179,7 +179,9 @@ Agent configurations merge from lowest to highest priority:
 2. Global config (`~/.config/kilo/kilo.jsonc`)
 3. Project config (`kilo.jsonc` at project root)
 4. `.kilo/` / `.opencode/` directory configs and agent `.md` files
-5. Environment variable overrides (`KILO_CONFIG_CONTENT`)
+5. Environment variable overrides (`KILO_CONFIG`, `KILO_CONFIG_DIR`, and `KILO_CONFIG_CONTENT`)
+6. Explicit CLI arguments such as `--agent` and `--model` for matching environment defaults
+7. Managed Kilo Cloud organization and device restrictions
 
 When the same agent name appears at multiple levels, properties are merged (not replaced wholesale), so you can override just a model or temperature without redefining the entire agent.
 
@@ -415,7 +417,9 @@ Agent configurations merge from lowest to highest priority:
 2. Global config (`~/.config/kilo/kilo.jsonc`)
 3. Project config (`kilo.jsonc` at project root)
 4. `.kilo/` / `.opencode/` directory configs and agent `.md` files
-5. Environment variable overrides (`KILO_CONFIG_CONTENT`)
+5. Environment variable overrides (`KILO_CONFIG`, `KILO_CONFIG_DIR`, and `KILO_CONFIG_CONTENT`)
+6. Explicit CLI arguments such as `--agent` and `--model` for matching environment defaults
+7. Managed Kilo Cloud organization and device restrictions
 
 When the same agent name appears at multiple levels, properties are merged (not replaced wholesale), so you can override just a model or temperature without redefining the entire agent.
 

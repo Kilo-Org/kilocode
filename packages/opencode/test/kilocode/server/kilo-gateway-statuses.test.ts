@@ -17,14 +17,31 @@ import {
   WorkspaceRoutingMiddleware,
 } from "../../../src/server/routes/instance/httpapi/middleware/workspace-routing"
 import { testEffect } from "../../lib/effect"
+import { TestConfig } from "../../fixture/config"
 
 const TestHttpApi = HttpApi.make("opencode-instance").addHttpApi(KiloGatewayApi)
 const auth = Layer.mock(Auth.Service)({
   get: () => Effect.succeed(new Auth.Api({ type: "api", key: "test-token" })),
 })
+const empty = Layer.mock(Auth.Service)({
+  get: () => Effect.fail(new Auth.AuthError({ message: "missing auth" })),
+})
 const store = Layer.mock(InstanceStore.Service)({})
 const cache = Layer.mock(ModelCache.Service)({})
 const session = Layer.mock(Session.Service)({})
+const config = TestConfig.layer({
+  get: () =>
+    Effect.succeed({
+      provider: {
+        kilo: {
+          options: {
+            ...(process.env.KILO_API_KEY ? { apiKey: process.env.KILO_API_KEY } : {}),
+            ...(process.env.KILO_ORG_ID ? { kilocodeOrganizationId: process.env.KILO_ORG_ID } : {}),
+          },
+        },
+      },
+    }),
+})
 const passthroughAuthorization = Layer.succeed(
   Authorization,
   Authorization.of((effect) => effect),
@@ -39,32 +56,38 @@ const testWorkspaceRouting = Layer.succeed(
     effect.pipe(Effect.provideService(WorkspaceRouteContext, WorkspaceRouteContext.of({ directory: process.cwd() }))),
   ),
 )
-const layer = HttpRouter.serve(
-  HttpApiBuilder.layer(TestHttpApi).pipe(
-    Layer.provide(kiloGatewayHandlers),
-    Layer.provide(schemaErrorLayer),
-    Layer.provide([
-      passthroughAuthorization,
-      passthroughInstanceContext,
-      testWorkspaceRouting,
-      auth,
-      store,
-      cache,
-      session,
-    ]),
-  ),
-  { disableListenLog: true, disableLogger: true },
-).pipe(Layer.provideMerge(NodeHttpServer.layerTest))
+function serve(auth: Layer.Layer<Auth.Service>) {
+  return HttpRouter.serve(
+    HttpApiBuilder.layer(TestHttpApi).pipe(
+      Layer.provide(kiloGatewayHandlers),
+      Layer.provide(schemaErrorLayer),
+      Layer.provide([
+        passthroughAuthorization,
+        passthroughInstanceContext,
+        testWorkspaceRouting,
+        auth,
+        config,
+        store,
+        cache,
+        session,
+      ]),
+    ),
+    { disableListenLog: true, disableLogger: true },
+  ).pipe(Layer.provideMerge(NodeHttpServer.layerTest))
+}
+const layer = serve(auth)
+const envLayer = serve(empty)
+const env = testEffect(envLayer)
 const it = testEffect(layer)
 
-function stub(run: () => Response | Promise<Response>) {
+function stub(run: (input: RequestInfo | URL, init?: RequestInit) => Response | Promise<Response>) {
   // These tests run sequentially; scope the process-global override and delegate in-process server traffic.
   const original = globalThis.fetch
   const fetch: typeof globalThis.fetch = Object.assign(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url
       if (url.startsWith("http://127.0.0.1:")) return original(input, init)
-      return run()
+      return run(input, init)
     },
     { preconnect: original.preconnect },
   )
@@ -84,6 +107,62 @@ function post(path: string, body: Record<string, unknown>) {
 }
 
 describe("Kilo gateway HttpApi statuses", () => {
+  env.live("uses environment credentials without stored auth", () => {
+    const key = process.env.KILO_API_KEY
+    const org = process.env.KILO_ORG_ID
+    process.env.KILO_API_KEY = "env-only-token"
+    process.env.KILO_ORG_ID = "env-only-org"
+
+    return Effect.gen(function* () {
+      yield* stub((_input, init) => {
+        const headers = new Headers(init?.headers)
+        expect(headers.get("Authorization")).toBe("Bearer env-only-token")
+        expect(headers.get("X-KiloCode-OrganizationId")).toBe("env-only-org")
+        return Response.json({ status: "running" })
+      })
+
+      const response = yield* HttpClient.get(KiloGatewayPaths.clawStatus)
+      expect(response.status).toBe(200)
+    }).pipe(
+      Effect.ensuring(
+        Effect.sync(() => {
+          if (key === undefined) delete process.env.KILO_API_KEY
+          else process.env.KILO_API_KEY = key
+          if (org === undefined) delete process.env.KILO_ORG_ID
+          else process.env.KILO_ORG_ID = org
+        }),
+      ),
+    )
+  })
+
+  it.live("environment credentials override stored auth for operational routes", () => {
+    const key = process.env.KILO_API_KEY
+    const org = process.env.KILO_ORG_ID
+    process.env.KILO_API_KEY = "env-token"
+    process.env.KILO_ORG_ID = "env-org"
+
+    return Effect.gen(function* () {
+      yield* stub((_input, init) => {
+        const headers = new Headers(init?.headers)
+        expect(headers.get("Authorization")).toBe("Bearer env-token")
+        expect(headers.get("X-KiloCode-OrganizationId")).toBe("env-org")
+        return Response.json({ status: "running" })
+      })
+
+      const response = yield* HttpClient.get(KiloGatewayPaths.clawStatus)
+      expect(response.status).toBe(200)
+    }).pipe(
+      Effect.ensuring(
+        Effect.sync(() => {
+          if (key === undefined) delete process.env.KILO_API_KEY
+          else process.env.KILO_API_KEY = key
+          if (org === undefined) delete process.env.KILO_ORG_ID
+          else process.env.KILO_ORG_ID = org
+        }),
+      ),
+    )
+  })
+
   it.live("preserves cloud session list rate limits", () =>
     Effect.gen(function* () {
       yield* stub(() => new Response("rate limited", { status: 429 }))

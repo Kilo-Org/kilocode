@@ -22,6 +22,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { ConfigVariable } from "@/config/variable"
 import { Npm } from "@opencode-ai/core/npm"
 import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins" // kilocode_change
+import { mergeEnvTuiConfig } from "@/kilocode/cli/cmd/tui/config/tui" // kilocode_change
 import type { DeepMutable } from "@opencode-ai/core/schema"
 import type { TuiAttentionSoundName } from "@kilocode/plugin/tui"
 import { FormatError, FormatUnknownError } from "@/cli/error"
@@ -208,34 +209,33 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
     yield* mergeFile(acc, file)
   }
 
-  // 2. Explicit KILO_TUI_CONFIG override, if set.
-  if (Flag.KILO_TUI_CONFIG) {
-    const configFile = Flag.KILO_TUI_CONFIG
-    yield* mergeFile(acc, configFile)
-    log.debug("loaded custom tui config", { path: configFile })
-  }
-
-  // 3. Project tui files, applied root-first so the closest file wins.
+  // kilocode_change start - order Kilo TUI config sources by precedence
+  // 2. Project tui files, applied root-first so the closest file wins.
   for (const file of projectFiles) {
     yield* mergeFile(acc, file)
   }
 
-  // 4. `.opencode` directories (and KILO_CONFIG_DIR) discovered while
+  // 3. `.opencode` directories (and KILO_CONFIG_DIR) discovered while
   // walking up the tree. Also returned below so callers can install plugin
   // dependencies from each location.
-  // kilocode_change start - also load tui.json from .kilo/.kilocode
   const dirs = unique(directories).filter(
     (dir) =>
       dir.endsWith(".kilo") || dir.endsWith(".kilocode") || dir.endsWith(".opencode") || dir === Flag.KILO_CONFIG_DIR,
   )
-  // kilocode_change end
 
   for (const dir of dirs) {
-    // if (!dir.endsWith(".opencode") && dir !== Flag.KILO_CONFIG_DIR) continue // kilocode_change
+    // if (!dir.endsWith(".opencode") && dir !== Flag.KILO_CONFIG_DIR) continue
     for (const file of ConfigPaths.fileInDirectory(dir, "tui")) {
       yield* mergeFile(acc, file)
     }
   }
+
+  yield* mergeEnvTuiConfig({
+    file: Flag.KILO_TUI_CONFIG,
+    merge: (file) => mergeFile(acc, file),
+    loaded: (file) => log.debug("loaded custom tui config", { path: file }),
+  })
+  // kilocode_change end
 
   const keybinds = { ...acc.result.keybinds }
   if (process.platform === "win32") {

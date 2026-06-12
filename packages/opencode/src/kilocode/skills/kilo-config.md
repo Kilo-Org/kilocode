@@ -374,7 +374,9 @@ Example: `~/.config/kilo/command/*.md` (modern global), `~/.kilocode/command/*.m
 
 | Variable | Description |
 |---|---|
-| `KILO_CONFIG` | Path to an additional config file (loaded after global) |
-| `KILO_CONFIG_DIR` | Path to an additional config directory (appended to search list) |
-| `KILO_CONFIG_CONTENT` | Inline JSON config string (high precedence, after project dirs) |
-| `KILO_DISABLE_PROJECT_CONFIG` | Skip all project-level config (files and directories) |
+| `KILO_CONFIG` | Config file that overrides global and project configuration |
+| `KILO_CONFIG_DIR` | Config directory that overrides project configuration and `KILO_CONFIG` |
+| `KILO_CONFIG_CONTENT` | Inline JSON config that overrides all user-controlled config files and directories |
+| `KILO_DISABLE_PROJECT_CONFIG` | Skip all project-level config while retaining explicit environment config sources |
+
+Managed Kilo Cloud organization config, managed directories, and macOS MDM policy override environment configuration. Explicit CLI arguments override matching environment defaults but do not bypass managed restrictions.

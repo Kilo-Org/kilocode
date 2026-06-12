@@ -3,7 +3,6 @@ import { SessionID } from "@/session/schema"
 import { SyncEvent } from "@/sync"
 import { Effect, Layer, Scope, Context } from "effect"
 import { Config } from "@/config/config"
-import { RuntimeFlags } from "@/effect/runtime-flags"
 import { KiloSession } from "@/kilocode/session" // kilocode_change
 
 export interface Interface {
@@ -21,7 +20,6 @@ export const layer = Layer.effect(
     const session = yield* Session.Service
     const scope = yield* Scope.Scope
     const sync = yield* SyncEvent.Service
-    const flags = yield* RuntimeFlags.Service
 
     const share = Effect.fn("SessionShare.share")(function* (sessionID: SessionID) {
       const conf = yield* cfg.get()
@@ -40,7 +38,7 @@ export const layer = Layer.effect(
       const result = yield* session.create(input)
       if (result.parentID) return result
       const conf = yield* cfg.get()
-      if (!(flags.autoShare || conf.share === "auto")) return result
+      if (conf.share !== "auto") return result // kilocode_change - env overlay is applied before managed config
       yield* share(result.id).pipe(Effect.ignore, Effect.forkIn(scope))
       return result
     })
@@ -53,7 +51,6 @@ export const defaultLayer = layer.pipe(
   Layer.provide(Session.defaultLayer),
   Layer.provide(Config.defaultLayer),
   Layer.provide(SyncEvent.defaultLayer),
-  Layer.provide(RuntimeFlags.defaultLayer),
 )
 
 export * as SessionShare from "./session"

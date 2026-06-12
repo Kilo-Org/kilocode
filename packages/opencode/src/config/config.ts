@@ -761,21 +761,6 @@ export const layer = Layer.effect(
 
         yield* merge(Global.Path.config, global, "global")
 
-        if (Flag.KILO_CONFIG) {
-          // kilocode_change start - capture KILO_CONFIG failures as warnings
-          yield* merge(
-            Flag.KILO_CONFIG,
-            yield* loadFile(Flag.KILO_CONFIG).pipe(
-              Effect.catchDefect((err: unknown) => {
-                caughtWarning(warnings, Flag.KILO_CONFIG!, err)
-                return Effect.succeed({} as Info)
-              }),
-            ),
-          )
-          // kilocode_change end
-          log.debug("loaded custom config", { path: Flag.KILO_CONFIG })
-        }
-
         if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
           // kilocode_change start - also discover kilo.json project files
           for (const name of ["kilo", "opencode"] as const) {
@@ -808,7 +793,16 @@ export const layer = Layer.effect(
         const deps: Fiber.Fiber<void, never>[] = []
 
         // kilocode_change start
+        const mergeEnvFile = () =>
+          KilocodeConfig.loadEnvConfig({
+            file: Flag.KILO_CONFIG,
+            load: loadFile,
+            merge: (source, config) => merge(source, config),
+            caught: (source, err) => caughtWarning(warnings, source, err),
+          })
+
         for (const dir of unique(directories)) {
+          if (dir === Flag.KILO_CONFIG_DIR) yield* mergeEnvFile()
           if (KilocodeConfig.isConfigDir(dir, Flag.KILO_CONFIG_DIR)) {
             for (const file of KilocodeConfig.ALL_CONFIG_FILES) {
               const source = path.join(dir, file)
@@ -867,6 +861,7 @@ export const layer = Layer.effect(
           const list = yield* Effect.promise(() => ConfigPlugin.load(dir))
           yield* mergePluginOrigins(dir, list)
         }
+        if (!Flag.KILO_CONFIG_DIR) yield* mergeEnvFile() // kilocode_change
 
         if (process.env.KILO_CONFIG_CONTENT) {
           // kilocode_change start - capture KILO_CONFIG_CONTENT parse failures as warnings
@@ -887,6 +882,19 @@ export const layer = Layer.effect(
           )
           // kilocode_change end
         }
+
+        // kilocode_change start - environment overlays beat local config but remain below managed policy
+        result = KilocodeConfig.applyEnvironment(result, {
+          apiKey: process.env.KILO_API_KEY,
+          organizationId: process.env.KILO_ORG_ID,
+          permission: Flag.KILO_PERMISSION,
+          autoShare: Flag.KILO_AUTO_SHARE,
+          disableAutoupdate: Flag.KILO_DISABLE_AUTOUPDATE,
+          notifyUpdate: Flag.KILO_ALWAYS_NOTIFY_UPDATE,
+          disableAutocompact: Flag.KILO_DISABLE_AUTOCOMPACT,
+          disablePrune: Flag.KILO_DISABLE_PRUNE,
+        })
+        // kilocode_change end
 
         const activeAccount = Option.getOrUndefined(
           yield* accountSvc.active().pipe(Effect.catch(() => Effect.succeed(Option.none()))),
@@ -961,10 +969,6 @@ export const layer = Layer.effect(
           })
         }
 
-        if (Flag.KILO_PERMISSION) {
-          result.permission = mergeDeep(result.permission ?? {}, JSON.parse(Flag.KILO_PERMISSION))
-        }
-
         if (result.tools) {
           const perms: Record<string, ConfigPermission.Action> = {}
           for (const [tool, enabled] of Object.entries(result.tools)) {
@@ -984,12 +988,6 @@ export const layer = Layer.effect(
           result.share = "auto"
         }
 
-        if (Flag.KILO_DISABLE_AUTOCOMPACT) {
-          result.compaction = { ...result.compaction, auto: false }
-        }
-        if (Flag.KILO_DISABLE_PRUNE) {
-          result.compaction = { ...result.compaction, prune: false }
-        }
         // kilocode_change start — inject Kilo default plugins into both plugin list and origins
         KilocodeDefaultPlugins.apply(result, { disabled: Flag.KILO_DISABLE_DEFAULT_PLUGINS, log })
         // kilocode_change end

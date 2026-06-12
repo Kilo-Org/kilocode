@@ -61,17 +61,20 @@ export namespace KilocodeConfigSources {
 
   export async function list(input: Input): Promise<Result> {
     const project = Flag.KILO_DISABLE_PROJECT_CONFIG ? [] : await projectSources(input)
-    const dirs = Flag.KILO_DISABLE_PROJECT_CONFIG ? [] : await configDirSources(input)
+    const dirs = await configDirSources(input)
+    const regular = dirs.filter((source) => source.scope !== "env")
+    const env = dirs.filter((source) => source.scope === "env")
     const sources = [
       ...wellknownSources(input.auth ?? {}),
       ...(await globalSources()),
-      ...(await envFileSources()),
       ...project,
-      ...dirs,
+      ...regular,
+      ...(await envFileSources()),
+      ...env,
       ...envContentSources(),
+      ...runtimeSources(),
       ...cloudSources(input.account),
       ...(await managedSources()),
-      ...runtimeSources(),
     ]
 
     return {
@@ -133,7 +136,9 @@ export namespace KilocodeConfigSources {
   }
 
   async function configDirSources(input: Input): Promise<Pending[]> {
-    const project = await Filesystem.findUp([...roots], input.directory, input.worktree)
+    const project = Flag.KILO_DISABLE_PROJECT_CONFIG
+      ? []
+      : await Filesystem.findUp([...roots], input.directory, input.worktree)
     const home = await Filesystem.findUp([...roots], Global.Path.home, Global.Path.home)
     const env = Flag.KILO_CONFIG_DIR ? [Flag.KILO_CONFIG_DIR] : []
     const dirs = unique([Global.Path.config, ...project, ...home, ...env]).filter((dir) =>
@@ -274,7 +279,12 @@ export namespace KilocodeConfigSources {
 
   function runtimeSources(): Pending[] {
     return [
+      runtimeSource("KILO_API_KEY", process.env.KILO_API_KEY, "Overrides persisted Kilo credentials."),
+      runtimeSource("KILO_ORG_ID", process.env.KILO_ORG_ID, "Overrides the persisted Kilo organization."),
       runtimeSource("KILO_PERMISSION", Flag.KILO_PERMISSION, "Runtime permission overlay."),
+      runtimeSource("KILO_AUTO_SHARE", process.env.KILO_AUTO_SHARE, "Enables automatic session sharing."),
+      runtimeSource("KILO_DISABLE_AUTOUPDATE", process.env.KILO_DISABLE_AUTOUPDATE, "Disables automatic updates."),
+      runtimeSource("KILO_ALWAYS_NOTIFY_UPDATE", process.env.KILO_ALWAYS_NOTIFY_UPDATE, "Uses update notifications."),
       runtimeSource("KILO_DISABLE_AUTOCOMPACT", process.env.KILO_DISABLE_AUTOCOMPACT, "Disables automatic compaction."),
       runtimeSource("KILO_DISABLE_PRUNE", process.env.KILO_DISABLE_PRUNE, "Disables tool-output pruning."),
     ].filter((item): item is Pending => item !== undefined)

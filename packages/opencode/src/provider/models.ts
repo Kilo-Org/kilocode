@@ -5,6 +5,7 @@ import { ModelCache } from "./model-cache"
 import * as Core from "@opencode-ai/core/models"
 import { Context, Effect, Layer } from "effect"
 import { AI_SDK_PROVIDERS, KILO_OPENROUTER_BASE, PROMPTS } from "@kilocode/kilo-gateway"
+import { resolveKiloModelOptions } from "@/kilocode/provider/models" // kilocode_change
 
 export const Model = Core.Model
 export type Model = Core.Model
@@ -16,19 +17,6 @@ export type CatalogModelStatus = Core.CatalogModelStatus
 export interface Interface extends Core.Interface {}
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/ModelsDev") {}
-
-function baseURL(url: string | undefined, org: string | undefined) {
-  if (!url) return
-  const base = url.replace(/\/+$/, "")
-  if (org) {
-    if (base.includes("/api/organizations/")) return base
-    if (base.endsWith("/api")) return `${base}/organizations/${org}`
-    return `${base}/api/organizations/${org}`
-  }
-  if (base.includes("/openrouter")) return base
-  if (base.endsWith("/api")) return `${base}/openrouter`
-  return `${base}/api/openrouter`
-}
 
 export const layer: Layer.Layer<
   Service,
@@ -73,14 +61,9 @@ export const layer: Layer.Layer<
         return providers
       }
 
-      const opts = cfg.provider?.kilo?.options
+      // kilocode_change start - resolve model fetch options from effective Kilo credentials
       const info = yield* auth.get("kilo").pipe(Effect.catch(() => Effect.succeed(undefined)))
-      const org = opts?.kilocodeOrganizationId ?? (info?.type === "oauth" ? info.accountId : undefined)
-      const url = baseURL(opts?.baseURL, org)
-      const fetch = {
-        ...(url ? { baseURL: url } : {}),
-        ...(org ? { kilocodeOrganizationId: org } : {}),
-      }
+      const fetch = resolveKiloModelOptions({ config: cfg, auth: info })
       const models = yield* cache.fetch("kilo", fetch).pipe(Effect.catch(() => Effect.succeed({})))
       providers.kilo = {
         id: "kilo",
@@ -91,6 +74,7 @@ export const layer: Layer.Layer<
         models,
       }
       if (Object.keys(models).length === 0) yield* cache.refresh("kilo", fetch).pipe(Effect.ignore, Effect.forkDetach)
+      // kilocode_change end
       yield* addApertis()
       return providers
     })
