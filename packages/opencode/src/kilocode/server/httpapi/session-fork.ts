@@ -1,4 +1,3 @@
-import { remapChildren } from "@/kilocode/session/fork"
 import { SessionID } from "@/session/schema"
 import { ForkPayload } from "@/server/routes/instance/httpapi/groups/session"
 import { Effect, Schema } from "effect"
@@ -30,10 +29,7 @@ export namespace KiloSessionHttpApi {
           Effect.mapError(() => new HttpApiError.BadRequest({})),
         )
       })
-      const session = yield* fork({ params: ctx.params, payload })
-      const remapped = new Map<string, SessionID>([[ctx.params.sessionID, session.id]])
-      yield* remapChildren(session.id, remapped).pipe(Effect.orDie)
-      return session
+      return yield* fork({ params: ctx.params, payload })
     })
   }
 }

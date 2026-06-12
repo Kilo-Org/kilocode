@@ -32,6 +32,7 @@ import type {
   ReviewComment,
   RunStatus,
   SectionState,
+  TerminalFont,
   WorktreeErrorCode,
   WorktreeFileDiff,
   WorktreeGitStats,
@@ -463,6 +464,7 @@ export interface ConfigLoadedMessage {
   type: "configLoaded"
   config: Config
   globalConfig?: Config
+  projectConfig?: Config
   features: FeatureFlags
 }
 
@@ -470,6 +472,7 @@ export interface ConfigUpdatedMessage {
   type: "configUpdated"
   config: Config
   globalConfig?: Config
+  projectConfig?: Config
   features: FeatureFlags
 }
 
@@ -597,6 +600,12 @@ export interface AgentManagerTerminalCreatedMessage {
   terminalId: string
   title: string
   wsUrl: string
+  font: TerminalFont
+}
+
+export interface AgentManagerTerminalFontChangedMessage {
+  type: "agentManager.terminal.fontChanged"
+  font: TerminalFont
 }
 
 export interface AgentManagerTerminalClosedMessage {
@@ -1051,6 +1060,7 @@ export type ExtensionMessage =
   | AgentManagerLocalStatsMessage
   | AgentManagerPRStatusMessage
   | AgentManagerTerminalCreatedMessage
+  | AgentManagerTerminalFontChangedMessage
   | AgentManagerTerminalClosedMessage
   | AgentManagerTerminalErrorMessage
   // legacy-migration start

@@ -4,6 +4,7 @@ import { AgentBuilderRoute, AgentsRoute } from "./AgentsRoute"
 import { CliNotificationsRoute } from "./CliNotificationsRoute"
 import { CliUiRoute } from "./CliUiRoute"
 import { FormattersRoute, LspRoute } from "./FormattersRoute"
+import { IndexingRoute } from "./IndexingRoute"
 import { KeybindsRoute } from "./KeybindsRoute"
 import { McpRoute } from "./McpRoute"
 import { ModelsAvailableRoute, ModelsDefaultRoute, ModelsRoute } from "./ModelsRoute"
@@ -92,7 +93,21 @@ export const configNav: ConfigNode[] = [
   {
     id: "behaviour",
     label: "Behaviour",
-    items: [agents, tools, permissions, mcp, formatters, lsp],
+    items: [
+      agents,
+      tools,
+      permissions,
+      mcp,
+      formatters,
+      lsp,
+      {
+        path: "/indexing",
+        href: "/settings/indexing",
+        icon: "circuit-board",
+        label: "Code Indexing",
+        component: IndexingRoute,
+      },
+    ],
   },
   {
     id: "cli",

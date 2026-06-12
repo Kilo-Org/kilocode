@@ -84,6 +84,33 @@ export namespace KilocodeConfigOverlay {
     ["disabled_providers"],
     ["watcher", "ignore"],
     ["instructions"],
+    ["indexing", "enabled"],
+    ["indexing", "provider"],
+    ["indexing", "model"],
+    ["indexing", "dimension"],
+    ["indexing", "vectorStore"],
+    ["indexing", "kilo", "apiKey"],
+    ["indexing", "kilo", "baseUrl"],
+    ["indexing", "kilo", "organizationId"],
+    ["indexing", "openai", "apiKey"],
+    ["indexing", "ollama", "baseUrl"],
+    ["indexing", "openai-compatible", "baseUrl"],
+    ["indexing", "openai-compatible", "apiKey"],
+    ["indexing", "gemini", "apiKey"],
+    ["indexing", "mistral", "apiKey"],
+    ["indexing", "vercel-ai-gateway", "apiKey"],
+    ["indexing", "bedrock", "region"],
+    ["indexing", "bedrock", "profile"],
+    ["indexing", "openrouter", "apiKey"],
+    ["indexing", "openrouter", "specificProvider"],
+    ["indexing", "voyage", "apiKey"],
+    ["indexing", "qdrant", "url"],
+    ["indexing", "qdrant", "apiKey"],
+    ["indexing", "lancedb", "directory"],
+    ["indexing", "searchMinScore"],
+    ["indexing", "searchMaxResults"],
+    ["indexing", "embeddingBatchSize"],
+    ["indexing", "scannerMaxBatchRetries"],
   ] as const
 
   const collectionPaths = ["provider", "mcp", "permission", "agent", "formatter", "lsp"] as const
@@ -99,7 +126,7 @@ export namespace KilocodeConfigOverlay {
     const found = await Filesystem.findUp([...dirs], input.directory, input.worktree)
     const roots = await Filesystem.findUp([...files], input.directory, input.worktree)
     const candidates = [...found.flatMap((dir) => files.map((file) => path.join(dir, file))), ...roots]
-    return candidates.find((file) => existsSync(file)) ?? path.join(input.directory, ".kilo", "kilo.json")
+    return candidates.find((file) => existsSync(file)) ?? path.join(input.directory, ".kilo", "kilo.jsonc")
   }
 
   export function globalTarget() {
@@ -188,17 +215,44 @@ export namespace KilocodeConfigOverlay {
     parts: string[],
   ): Resolved {
     const key = parts.join(".")
+    const value = fieldValue(scope, effective, global, local, parts)
+    const hasValue = hasFieldValue(scope, effective, global, local, parts)
     return resolved({
       key,
       path: parts,
       scope,
-      value: get(effective, parts),
+      value,
       global: get(global, parts),
       local: get(local, parts),
-      hasValue: has(effective, parts),
+      hasValue,
       hasGlobal: has(global, parts),
       hasLocal: has(local, parts),
     })
+  }
+
+  function isIndexing(parts: string[]) {
+    return parts[0] === "indexing"
+  }
+
+  function fieldValue(scope: Scope, effective: Config.Info, global: Config.Info, local: Config.Info, parts: string[]) {
+    if (!isIndexing(parts)) return get(effective, parts)
+    if (scope === "project" && has(local, parts)) return get(local, parts)
+    if (has(global, parts)) return get(global, parts)
+    if (scope === "global" && has(local, parts)) return undefined
+    return get(effective, parts)
+  }
+
+  function hasFieldValue(
+    scope: Scope,
+    effective: Config.Info,
+    global: Config.Info,
+    local: Config.Info,
+    parts: string[],
+  ) {
+    if (!isIndexing(parts)) return has(effective, parts)
+    if (scope === "project" && has(local, parts)) return true
+    if (has(global, parts)) return true
+    return !has(local, parts) && has(effective, parts)
   }
 
   function collection(scope: Scope, effective: Config.Info, global: Config.Info, local: Config.Info, key: string) {

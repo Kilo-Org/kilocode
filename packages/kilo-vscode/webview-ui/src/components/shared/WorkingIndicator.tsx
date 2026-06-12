@@ -98,7 +98,7 @@ export const WorkingIndicator: Component = () => {
 
   return (
     <div class="working-indicator-slot">
-      <Show when={session.status() !== "idle" && !blocked()}>
+      <Show when={session.submitting() || (session.status() !== "idle" && !blocked())}>
         <div class="working-indicator">
           <Spinner />
           <span class="working-text">{statusText()}</span>

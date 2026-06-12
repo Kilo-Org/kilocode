@@ -3,7 +3,7 @@ import { hideBin } from "yargs/helpers"
 import { RunCommand } from "./cli/cmd/run"
 import { GenerateCommand } from "./cli/cmd/generate"
 import * as Log from "@opencode-ai/core/util/log"
-import { ConsoleCommand } from "./cli/cmd/account"
+// import { ConsoleCommand } from "./cli/cmd/account" // kilocode_change - reserve `kilo console` for local settings
 import { ProvidersCommand } from "./cli/cmd/providers"
 import { AgentCommand } from "./cli/cmd/agent"
 import { UpgradeCommand } from "./cli/cmd/upgrade"
@@ -40,6 +40,7 @@ import { Heap } from "./cli/heap"
 import { drizzle } from "drizzle-orm/bun-sqlite"
 import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process"
 import { isRecord } from "@/util/record"
+import { KiloCli } from "@/kilocode/cli/setup" // kilocode_change
 
 const processMetadata = ensureProcessMetadata("main")
 
@@ -67,9 +68,9 @@ function show(out: string) {
   process.stderr.write(out)
 }
 
-const cli = yargs(args)
+let cli = yargs(args) // kilocode_change
   .parserConfiguration({ "populate--": true })
-  .scriptName("opencode")
+  .scriptName("kilo") // kilocode_change
   .wrap(100)
   .help("help", "show help")
   .alias("help", "h")
@@ -115,6 +116,8 @@ const cli = yargs(args)
       process_role: processMetadata.processRole,
       run_id: processMetadata.runID,
     })
+
+    await KiloCli.bootstrap() // kilocode_change - env tagging, telemetry init, legacy auth migration
 
     const marker = path.join(Global.Path.data, "kilo.db")
     if (!(await Filesystem.exists(marker))) {
@@ -162,7 +165,7 @@ const cli = yargs(args)
   .command(RunCommand)
   .command(GenerateCommand)
   .command(DebugCommand)
-  .command(ConsoleCommand)
+  // kilocode_change - upstream account console intentionally not registered; KiloConsole is added by KiloCli.register
   .command(ProvidersCommand)
   .command(AgentCommand)
   .command(UpgradeCommand)
@@ -178,6 +181,11 @@ const cli = yargs(args)
   .command(SessionCommand)
   .command(PluginCommand)
   .command(DbCommand)
+
+// kilocode_change start - register Kilo-specific commands after the upstream chain
+cli = KiloCli.register(cli)
+cli = cli
+  // kilocode_change end
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||
@@ -243,6 +251,8 @@ try {
   }
   process.exitCode = 1
 } finally {
+  await KiloCli.shutdown() // kilocode_change - telemetry/session-export shutdown + instance disposal
+
   // Some subprocesses don't react properly to SIGTERM and similar signals.
   // Most notably, some docker-container-based MCP servers don't handle such signals unless
   // run using `docker run --init`.

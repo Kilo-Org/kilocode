@@ -39,6 +39,7 @@ import type {
   ManagedSessionState,
   SectionState,
   SessionInfo,
+  SessionCreatedMessage,
   BranchInfo,
 } from "../src/types/messages"
 import { IndexingProvider } from "../src/context/indexing"
@@ -1085,14 +1086,17 @@ const AgentManagerContent: Component = () => {
     // backend follow-ups). Dedups HTTP + SSE firing together.
     const unsubCreate = vscode.onMessage((msg) => {
       if (msg.type !== "sessionCreated") return
-      const created = msg as { type: string; session: { id: string } }
-      if (localSessionIDs().includes(created.session.id)) return
+      const created = msg as SessionCreatedMessage
+      const pending = created.draftID && localSessionIDs().includes(created.draftID) ? created.draftID : undefined
+      if (!pending && localSessionIDs().includes(created.session.id)) return
       if (worktreeSessionIds().has(created.session.id)) return
-      const pending = selection() === LOCAL ? activePendingId() : undefined
+
+      const active = activePendingId()
+      const focus = !pending || (selection() === LOCAL && pending === active)
       if (pending) {
         setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? created.session.id : id)))
         tabOrderSync.replaceOrAppend(LOCAL, pending, created.session.id)
-        setActivePendingId(undefined)
+        if (pending === active) setActivePendingId(undefined)
       } else {
         saveTabMemory()
         setLocalSessionIDs((prev) => [...prev, created.session.id])
@@ -1100,7 +1104,7 @@ const AgentManagerContent: Component = () => {
         setSelection(LOCAL)
       }
       vscode.postMessage({ type: "agentManager.persistSession", sessionId: created.session.id })
-      session.selectSession(created.session.id)
+      if (focus) session.selectSession(created.session.id)
     })
 
     // Mark sessions loaded as soon as the session context receives data (even if empty)
@@ -1125,7 +1129,7 @@ const AgentManagerContent: Component = () => {
       onCreated: (contextKey, terminalId) => appendToTabOrder(contextKey, terminalId),
     })
     const unsubTerminals = vscode.onMessage((msg) => {
-      terminalDispatch(msg as unknown as { type: string } & Record<string, unknown>)
+      terminalDispatch(msg)
     })
 
     const unsub = vscode.onMessage((msg) => {

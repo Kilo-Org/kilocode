@@ -10,6 +10,7 @@ import type {
   FormatterStatusResponse,
   GlobalHealthResponse,
   GlobalEvent,
+  KiloEmbeddingModelCatalog,
   LspStatusResponse,
   McpStatusResponse,
   Pty as PtyInfo,
@@ -400,6 +401,10 @@ export async function load(input: Query): Promise<Snapshot> {
   }
 }
 
+export async function loadEmbeddingModels(input: Query): Promise<KiloEmbeddingModelCatalog> {
+  return demand("Kilo embedding models", await client(input).indexing.models())
+}
+
 export async function loadProjects(input: ProjectQuery): Promise<ProjectItem[]> {
   const sdk = client(input)
   const dir = value(input.dir)
@@ -611,16 +616,24 @@ export function ptyWsUrl(input: Query, pty: string, cursor = 0) {
   return url.toString()
 }
 
-export async function saveConfig(input: Query, patch: Partial<ConfigPatch>) {
+export async function patchConfig(input: Query, patch: Partial<ConfigPatch>, unset?: ConfigUnset) {
   const sdk = client(input)
-  const result = await sdk.config.overlayUpdate({ directory: value(input.dir), scope: input.scope, set: patch })
+  const set = Object.keys(patch).length ? patch : undefined
+  const result = await sdk.config.overlayUpdate({
+    directory: value(input.dir),
+    scope: input.scope,
+    set,
+    unset,
+  })
   return demand("Update config", result)
 }
 
+export async function saveConfig(input: Query, patch: Partial<ConfigPatch>) {
+  return patchConfig(input, patch)
+}
+
 export async function unsetConfig(input: Query, unset: ConfigUnset) {
-  const sdk = client(input)
-  const result = await sdk.config.overlayUpdate({ directory: value(input.dir), scope: input.scope, unset })
-  return demand("Update config", result)
+  return patchConfig(input, {}, unset)
 }
 
 export async function saveModelState(input: Query, favorite: ModelRef[]) {

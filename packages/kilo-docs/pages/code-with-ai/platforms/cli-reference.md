@@ -904,6 +904,8 @@ Options:
 
 ## kilo console
 
+Open Kilo Console to manage CLI configuration, including **Settings > CLI > Notifications**. See [CLI Notifications and Sounds](/docs/code-with-ai/platforms/cli#cli-notifications-and-sounds) for the equivalent `tui.json` settings and custom sound overrides.
+
 ```
 open the local Kilo Console
 

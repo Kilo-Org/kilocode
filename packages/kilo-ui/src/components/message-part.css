@@ -292,26 +292,50 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
 
   [data-slot="message-part-tool-error-content"] {
     display: flex;
-    align-items: start;
-    gap: 8px;
-  }
-
-  [data-slot="message-part-tool-error-title"] {
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 8px;
+    min-width: 0;
     font-family: var(--font-family-sans);
     font-size: var(--font-size-base);
     font-style: normal;
-    font-weight: var(--font-weight-medium);
     line-height: var(--line-height-large);
     letter-spacing: var(--letter-spacing-normal);
+  }
+
+  [data-slot="message-part-tool-error-heading"] {
+    display: inline-flex;
+    flex: none;
+    align-items: baseline;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  [data-slot="message-part-tool-error-title"] {
+    font-weight: var(--font-weight-medium);
     color: var(--text-on-critical-base);
     white-space: nowrap;
   }
 
+  [data-slot="message-part-tool-error-code"] {
+    color: var(--text-on-critical-weak);
+  }
+
   [data-slot="message-part-tool-error-message"] {
     color: var(--text-on-critical-weak);
+    flex: 1 0 auto;
+    min-width: 0;
+    max-width: 100%;
     max-height: 240px;
     overflow-y: auto;
-    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 240px) {
+  [data-component="tool-error"] > [data-component="icon"] {
+    display: none;
   }
 }
 

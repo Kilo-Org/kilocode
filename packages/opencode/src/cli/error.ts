@@ -57,7 +57,7 @@ export function FormatError(input: unknown) {
     return (input as ErrorLike).message ?? ""
   }
 
-  // ProviderModelNotFoundError: { providerID: string, modelID: string, suggestions?: string[] }
+  // ProviderModelNotFoundError: { providerID: string, modelID: string, suggestions?: string[], modelsEmpty?: boolean } // kilocode_change
   const providerModelNotFound = configData(input, "ProviderModelNotFoundError")
   if (providerModelNotFound) {
     const suggestions = Array.isArray(providerModelNotFound.suggestions)
@@ -66,6 +66,7 @@ export function FormatError(input: unknown) {
     return [
       `Model not found: ${providerModelNotFound.providerID}/${providerModelNotFound.modelID}`,
       ...(suggestions.length ? ["Did you mean: " + suggestions.join(", ")] : []),
+      ...(providerModelNotFound.modelsEmpty === true ? ["No models are currently available."] : []), // kilocode_change
       `Try: \`kilo models\` to list available models`, // kilocode_change
       `Or check your config (opencode.json) provider/model names`,
     ].join("\n")

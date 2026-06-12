@@ -155,7 +155,7 @@ describe("Kilo task nesting", () => {
     ),
   )
 
-  it.live("disables nested task tool even when global task permission allows it", () =>
+  it.live("disables nested task and question tools even when global permissions allow them", () =>
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
@@ -186,10 +186,16 @@ describe("Kilo task nesting", () => {
 
           const child = yield* sessions.get(result.metadata.sessionId)
           expect(seen?.tools?.task).toBe(false)
+          expect(seen?.tools?.question).toBe(false)
           expect(child.permission).toEqual(
             expect.arrayContaining([
               {
                 permission: "task",
+                pattern: "*",
+                action: "deny",
+              },
+              {
+                permission: "question",
                 pattern: "*",
                 action: "deny",
               },
@@ -200,6 +206,7 @@ describe("Kilo task nesting", () => {
         config: {
           permission: {
             task: "allow",
+            question: "allow",
           },
         },
       },
