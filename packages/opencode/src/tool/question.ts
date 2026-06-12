@@ -11,6 +11,7 @@ export const Parameters = Schema.Struct({
 type Metadata = {
   answers: ReadonlyArray<Question.Answer>
   dismissed?: boolean // kilocode_change
+  mode?: string // kilocode_change
 }
 
 export const QuestionTool = Tool.define<typeof Parameters, Metadata, Question.Service>(
@@ -35,6 +36,7 @@ export const QuestionTool = Tool.define<typeof Parameters, Metadata, Question.Se
             .pipe(KiloQuestionTool.catchDismissed)
           if (KiloQuestionTool.isDismissed(answers)) return KiloQuestionTool.dismissedResult()
           // kilocode_change end
+          const mode = KiloQuestionTool.selectedMode({ questions: params.questions, answers }) // kilocode_change
 
           const formatted = params.questions
             .map((q, i) => `"${q.question}"="${answers[i]?.length ? answers[i].join(", ") : "Unanswered"}"`)
@@ -45,6 +47,7 @@ export const QuestionTool = Tool.define<typeof Parameters, Metadata, Question.Se
             output: `User has answered your questions: ${formatted}. You can now continue with the user's answers in mind.`,
             metadata: {
               answers,
+              ...(mode ? { mode } : {}), // kilocode_change
             },
           }
         }).pipe(Effect.orDie),
