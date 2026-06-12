@@ -462,6 +462,7 @@ export interface ConfigLoadedMessage {
   type: "configLoaded"
   config: Config
   globalConfig?: Config
+  projectConfig?: Config
   features: FeatureFlags
 }
 
@@ -469,6 +470,7 @@ export interface ConfigUpdatedMessage {
   type: "configUpdated"
   config: Config
   globalConfig?: Config
+  projectConfig?: Config
   features: FeatureFlags
 }
 

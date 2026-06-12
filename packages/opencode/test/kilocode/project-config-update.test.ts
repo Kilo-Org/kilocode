@@ -54,14 +54,14 @@ async function writeConfig(dir: string, config: unknown) {
   await Filesystem.write(path.join(dir, "kilo.json"), JSON.stringify(config, null, 2))
 }
 
-test("project config update creates .kilo/kilo.json and reloads it", async () => {
+test("project config update creates .kilo/kilo.jsonc and reloads it", async () => {
   await using tmp = await tmpdir()
   await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       await save({ model: "updated/model" } as any)
 
-      const written = await Filesystem.readJson<{ model: string }>(path.join(tmp.path, ".kilo", "kilo.json"))
+      const written = await Filesystem.readJson<{ model: string }>(path.join(tmp.path, ".kilo", "kilo.jsonc"))
       expect(written.model).toBe("updated/model")
 
       const loaded = await load()
@@ -77,7 +77,7 @@ test("project config update skips empty delete-only writes when no config exists
     fn: async () => {
       await save({ provider: { missing: null } } as any)
 
-      await expect(fs.access(path.join(tmp.path, ".kilo", "kilo.json"))).rejects.toThrow()
+      await expect(fs.access(path.join(tmp.path, ".kilo", "kilo.jsonc"))).rejects.toThrow()
     },
   })
 })

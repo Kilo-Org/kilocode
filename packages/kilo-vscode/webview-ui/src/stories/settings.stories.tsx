@@ -443,6 +443,49 @@ export const IndexingProviderBlurRace: Story = {
   },
 }
 
+export const IndexingScopeSwitch: Story = {
+  name: "IndexingTab - global and local scopes",
+  render: () => {
+    const [global, setGlobal] = createSignal<Record<string, unknown>>({})
+    const [project, setProject] = createSignal<Record<string, unknown>>({})
+    const globalConfig: Config = {
+      indexing: {
+        enabled: true,
+        provider: "openai",
+        model: "text-embedding-3-large",
+        dimension: 3072,
+        vectorStore: "qdrant",
+        openai: { apiKey: "global-secret" },
+        qdrant: { url: "http://global:6333", apiKey: "global-qdrant" },
+        searchMinScore: 0.4,
+      },
+    }
+    const projectConfig: Config = {
+      indexing: {
+        model: null,
+        qdrant: { apiKey: "project-qdrant" },
+      },
+    }
+    return (
+      <>
+        <StoryProviders
+          config={globalConfig}
+          globalConfig={globalConfig}
+          projectConfig={projectConfig}
+          onGlobalConfigChange={(next) => setGlobal((next.indexing ?? {}) as Record<string, unknown>)}
+          onProjectConfigChange={(next) => setProject((next.indexing ?? {}) as Record<string, unknown>)}
+        >
+          <div style={{ width: "420px", "max-height": "700px", overflow: "auto" }}>
+            <IndexingTab />
+          </div>
+        </StoryProviders>
+        <pre data-testid="indexing-global-save">{JSON.stringify(global(), null, 2)}</pre>
+        <pre data-testid="indexing-project-save">{JSON.stringify(project(), null, 2)}</pre>
+      </>
+    )
+  },
+}
+
 export const IndexingKiloModelPreset: Story = {
   name: "IndexingTab - Kilo stale custom model fallback",
   render: () => {

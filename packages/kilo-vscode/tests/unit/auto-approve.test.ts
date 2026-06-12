@@ -79,7 +79,7 @@ function context() {
   return { subscriptions: [] as Array<{ dispose(): void }> } as vscode.ExtensionContext
 }
 
-function connection(client: KiloClient | null) {
+function connection(client: KiloClient | null, dirs = new Map<string, string>()) {
   const listeners: Array<(event: Event, directory?: string) => void> = []
   const svc = {
     getClient: () => {
@@ -93,6 +93,7 @@ function connection(client: KiloClient | null) {
         if (index >= 0) listeners.splice(index, 1)
       }
     },
+    getPermissionDirectory: (id: string) => dirs.get(id),
   } as unknown as KiloConnectionService
 
   return {
@@ -169,6 +170,27 @@ describe("registerToggleAutoApprove", () => {
     expect(replies).toEqual([
       { requestID: "perm_worktree", directory: "/workspace/.kilo/worktrees/feature", reply: "once" },
       { requestID: "perm_child", directory: "/workspace/.kilo/worktrees/feature", reply: "once" },
+    ])
+  })
+
+  it("uses the shared permission directory before falling back to session mappings", () => {
+    config(true)
+    const replies: unknown[] = []
+    const conn = connection(
+      client({ reply: async (args) => replies.push(args) }),
+      new Map([["perm_shared", "/workspace/.kilo/worktrees/shared"]]),
+    )
+    registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    conn.emit(asked("perm_shared", "ses_child"))
+
+    expect(replies).toEqual([
+      { requestID: "perm_shared", directory: "/workspace/.kilo/worktrees/shared", reply: "once" },
     ])
   })
 
