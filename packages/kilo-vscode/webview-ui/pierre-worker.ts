@@ -38,7 +38,7 @@ function createPool(lineDiffType: "none" | "word-alt") {
     { workerFactory, poolSize: 2 },
     { theme: "Kilo", lineDiffType, preferredHighlighter: ENGINE },
   )
-  void pool.initialize()
+  void pool.initialize().catch((err) => console.warn("[Kilo New] Failed to initialize Pierre worker pool", err))
   return pool
 }
 
@@ -46,17 +46,17 @@ let unified: WorkerPoolManager | undefined
 let split: WorkerPoolManager | undefined
 
 export function getWorkerPool(style: WorkerPoolStyle | undefined): WorkerPoolManager | undefined {
-  // No injected worker URI means we can't spawn the worker; returning undefined
-  // makes Pierre fall back to the existing main-thread highlighter.
+  // A missing URI or a pool still starting up uses Pierre's main-thread fallback.
+  // Passing a half-ready pool drops its first plain-text render before workers drain.
   if (!uri()) return undefined
 
   if (style === "split") {
     if (!split) split = createPool("word-alt")
-    return split
+    return split.isInitialized() ? split : undefined
   }
 
   if (!unified) unified = createPool("none")
-  return unified
+  return unified.isInitialized() ? unified : undefined
 }
 
 export function getWorkerPools() {
