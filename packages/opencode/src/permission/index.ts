@@ -500,14 +500,7 @@ export function disabled(tools: string[], ruleset: Ruleset): Set<string> {
 export const defaultLayer = layer.pipe(Layer.provide(Bus.layer), Layer.provide(Config.defaultLayer)) // kilocode_change
 
 // kilocode_change start — inverse of fromConfig: convert rules back to config format
-const SCALAR_ONLY_PERMISSIONS = new Set([
-  "todowrite",
-  "todoread",
-  "question",
-  "webfetch",
-  "websearch",
-  "doom_loop",
-])
+const SCALAR_ONLY_PERMISSIONS = new Set(["todowrite", "todoread", "question", "webfetch", "websearch", "doom_loop"])
 
 export function toConfig(rules: Ruleset): ConfigPermission.Info {
   const result: ConfigPermission.Info = {}

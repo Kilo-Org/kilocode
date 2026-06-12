@@ -661,10 +661,11 @@ export const layer: Layer.Layer<
     const updateMessage = <T extends MessageV2.Info>(msg: T): Effect.Effect<T> =>
       Effect.gen(function* () {
         // kilocode_change start - ignore FK errors when session was deleted while processor was still running
-        yield* KiloSession.runSyncSafe(
-          sync.run(MessageV2.Event.Updated, { sessionID: msg.sessionID, info: msg }),
-          { type: "message update", id: msg.id, sessionID: msg.sessionID },
-        )
+        yield* KiloSession.runSyncSafe(sync.run(MessageV2.Event.Updated, { sessionID: msg.sessionID, info: msg }), {
+          type: "message update",
+          id: msg.id,
+          sessionID: msg.sessionID,
+        })
         // kilocode_change end
         return msg
       }).pipe(Effect.withSpan("Session.updateMessage"))

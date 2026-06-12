@@ -762,9 +762,7 @@ describe("run stream transport", () => {
 
       transport.selectSubagent("child-1")
 
-      global.push(
-        globalEvent(assistant("msg-child-1", "child-1")),
-      )
+      global.push(globalEvent(assistant("msg-child-1", "child-1")))
       global.push(globalEvent(textUpdated(textPart("txt-child-1", "msg-child-1", "hello", "child-1"))))
 
       expect(

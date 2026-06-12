@@ -20,7 +20,10 @@ const ModelState = z
     model: z
       .record(
         z.string(),
-        z.object({ providerID: z.custom<ProviderID>(Schema.is(ProviderID)), modelID: z.custom<ModelID>(Schema.is(ModelID)) }),
+        z.object({
+          providerID: z.custom<ProviderID>(Schema.is(ProviderID)),
+          modelID: z.custom<ModelID>(Schema.is(ModelID)),
+        }),
       )
       .optional(),
     variant: z.record(z.string(), z.string().optional()).optional(),
