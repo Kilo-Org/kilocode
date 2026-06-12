@@ -27,6 +27,10 @@ export namespace ModesMigrator {
 
   // Default modes to skip - these have native Opencode equivalents
   const DEFAULT_MODE_SLUGS = new Set(["code", "build", "architect", "ask", "debug", "orchestrator"])
+  const CANONICAL_SLUGS: Record<string, string> = {
+    build: "code",
+    architect: "plan",
+  }
 
   // Group to permission mapping
   const GROUP_TO_PERMISSION: Record<string, string> = {
@@ -124,6 +128,42 @@ export namespace ModesMigrator {
     for (const mode of modes) {
       result[mode.slug] = convertOrganizationMode(mode)
     }
+    return result
+  }
+
+  export function canonicalSlug(slug: string) {
+    return CANONICAL_SLUGS[slug] ?? slug
+  }
+
+  export function defaultTarget(slug: string, agents: Record<string, ConfigAgent.Info>) {
+    // `build` is still remapped to `code` by the agent loader, so keep its
+    // fallback on the legacy source row until that existing compatibility pass runs.
+    if (slug === "code" && agents.build && !agents.code) return "build"
+    return slug
+  }
+
+  export function extractOrgDefaultModels(modes: OrganizationMode[]): Record<string, string> {
+    const result: Record<string, string> = {}
+    const present = new Set<string>()
+    const sorted = [...modes].sort((a, b) => a.slug.localeCompare(b.slug))
+
+    for (const mode of sorted) {
+      const slug = canonicalSlug(mode.slug)
+      if (slug !== mode.slug) continue
+      present.add(slug)
+      if (typeof mode.config.defaultModel === "string" && mode.config.defaultModel.length > 0) {
+        result[slug] = mode.config.defaultModel
+      }
+    }
+
+    for (const mode of sorted) {
+      const slug = canonicalSlug(mode.slug)
+      if (slug === mode.slug || present.has(slug)) continue
+      if (typeof mode.config.defaultModel === "string" && mode.config.defaultModel.length > 0) {
+        result[slug] = mode.config.defaultModel
+      }
+    }
+
     return result
   }
 

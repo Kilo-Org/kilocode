@@ -2,8 +2,26 @@ import { test, expect, describe } from "bun:test"
 import { ModesMigrator } from "../../src/kilocode/modes-migrator"
 import { tmpdir } from "../fixture/fixture"
 import path from "path"
+import type { OrganizationMode } from "@kilocode/kilo-gateway"
 
 describe("ModesMigrator", () => {
+  function mode(slug: string, defaultModel?: string | null): OrganizationMode {
+    return {
+      id: slug,
+      organization_id: "org",
+      name: slug,
+      slug,
+      created_by: "user",
+      created_at: "2026-01-01T00:00:00.000Z",
+      updated_at: "2026-01-01T00:00:00.000Z",
+      config: {
+        roleDefinition: "role",
+        groups: ["read"],
+        ...(defaultModel !== undefined ? { defaultModel } : {}),
+      },
+    }
+  }
+
   describe("isDefaultMode", () => {
     test("returns true for default modes", () => {
       expect(ModesMigrator.isDefaultMode("code")).toBe(true)
@@ -17,6 +35,44 @@ describe("ModesMigrator", () => {
       expect(ModesMigrator.isDefaultMode("translate")).toBe(false)
       expect(ModesMigrator.isDefaultMode("my-custom-mode")).toBe(false)
       expect(ModesMigrator.isDefaultMode("reviewer")).toBe(false)
+    })
+  })
+
+  describe("defaultTarget", () => {
+    test("keeps a legacy build fallback on the source row until agent preprocessing", () => {
+      const agents = ModesMigrator.convertOrganizationModes([mode("build", "kilo-auto/balanced")])
+      expect(ModesMigrator.defaultTarget("code", agents)).toBe("build")
+    })
+
+    test("uses the canonical row when it already exists", () => {
+      const agents = ModesMigrator.convertOrganizationModes([mode("code", "kilo-auto/balanced")])
+      expect(ModesMigrator.defaultTarget("code", agents)).toBe("code")
+    })
+  })
+
+  describe("extractOrgDefaultModels", () => {
+    test("maps legacy built-in slugs to canonical agent slugs", () => {
+      expect(ModesMigrator.extractOrgDefaultModels([mode("architect", "openai/gpt-4o:thinking")])).toEqual({
+        plan: "openai/gpt-4o:thinking",
+      })
+      expect(ModesMigrator.extractOrgDefaultModels([mode("build", "kilo-auto/balanced")])).toEqual({
+        code: "kilo-auto/balanced",
+      })
+    })
+
+    test("prefers canonical rows over legacy aliases", () => {
+      expect(
+        ModesMigrator.extractOrgDefaultModels([
+          mode("architect", "openai/gpt-4o:thinking"),
+          mode("plan", "kilo-auto/balanced"),
+        ]),
+      ).toEqual({ plan: "kilo-auto/balanced" })
+    })
+
+    test("does not let a legacy row fill a canonical row with no default", () => {
+      expect(ModesMigrator.extractOrgDefaultModels([mode("architect", "openai/gpt-4o:thinking"), mode("plan")])).toEqual(
+        {},
+      )
     })
   })
 

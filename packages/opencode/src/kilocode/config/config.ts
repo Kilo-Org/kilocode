@@ -310,6 +310,14 @@ export namespace KilocodeConfig {
         const modes = await fetchOrganizationModes(kilo.access, kilo.accountId)
         if (modes.length > 0) {
           const agents = ModesMigrator.convertOrganizationModes(modes)
+          const defaults = ModesMigrator.extractOrgDefaultModels(modes)
+          for (const [slug, model] of Object.entries(defaults)) {
+            const target = ModesMigrator.defaultTarget(slug, agents)
+            agents[target] = {
+              ...agents[target],
+              options: { ...agents[target]?.options, orgDefaultModel: model },
+            }
+          }
           log.debug("loaded organization custom modes", {
             count: modes.length,
             modes: modes.map((m: any) => m.slug),

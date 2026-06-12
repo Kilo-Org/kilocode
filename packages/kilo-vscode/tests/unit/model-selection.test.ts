@@ -12,7 +12,7 @@ function makeProvider(id: string, name: string, modelIds: string[]): Provider {
 }
 
 const providers = {
-  kilo: makeProvider("kilo", "Kilo Gateway", ["kilo-auto/free"]),
+  kilo: makeProvider("kilo", "Kilo Gateway", ["kilo-auto/free", "openai/gpt-4o:free"]),
   anthropic: makeProvider("anthropic", "Anthropic", ["claude-sonnet-4"]),
   openai: makeProvider("openai", "OpenAI", ["gpt-4.1"]),
 }
@@ -45,6 +45,7 @@ describe("resolveModelSelection", () => {
       connected: ["anthropic", "openai"],
       override: { providerID: "openai", modelID: "gpt-4.1" },
       mode: { providerID: "anthropic", modelID: "claude-sonnet-4" },
+      orgDefault: { providerID: "kilo", modelID: "openai/gpt-4o:free" },
       fallback: KILO_AUTO,
     })
     expect(result).toEqual({ providerID: "openai", modelID: "gpt-4.1" })
@@ -56,9 +57,33 @@ describe("resolveModelSelection", () => {
       connected: ["anthropic"],
       override: { providerID: "openai", modelID: "gpt-4.1" },
       mode: { providerID: "anthropic", modelID: "claude-sonnet-4" },
+      orgDefault: { providerID: "kilo", modelID: "openai/gpt-4o:free" },
       fallback: KILO_AUTO,
     })
     expect(result).toEqual({ providerID: "anthropic", modelID: "claude-sonnet-4" })
+  })
+
+  it("prefers an organization mode default over global and recent models", () => {
+    const result = resolveModelSelection({
+      providers,
+      connected: ["openai"],
+      orgDefault: { providerID: "kilo", modelID: "openai/gpt-4o:free" },
+      global: { providerID: "openai", modelID: "gpt-4.1" },
+      recent: [{ providerID: "openai", modelID: "gpt-4.1" }],
+      fallback: KILO_AUTO,
+    })
+    expect(result).toEqual({ providerID: "kilo", modelID: "openai/gpt-4o:free" })
+  })
+
+  it("falls back from an invalid organization mode default to the global model", () => {
+    const result = resolveModelSelection({
+      providers,
+      connected: ["openai"],
+      orgDefault: { providerID: "kilo", modelID: "missing" },
+      global: { providerID: "openai", modelID: "gpt-4.1" },
+      fallback: KILO_AUTO,
+    })
+    expect(result).toEqual({ providerID: "openai", modelID: "gpt-4.1" })
   })
 
   it("falls back from invalid config to the first valid recent model", () => {

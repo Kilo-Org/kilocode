@@ -15,6 +15,7 @@ export interface AuthContext {
   disposeGlobal(): Promise<void>
   fetchAndSendProviders(): Promise<void>
   fetchAndSendAgents(): Promise<void>
+  fetchAndSendConfig(): Promise<void>
 }
 
 /**
@@ -98,7 +99,7 @@ export async function handleLogout(ctx: AuthContext): Promise<void> {
 
 /**
  * Handle organization switch.
- * Persists the selection and refreshes profile + providers since both change with org context.
+ * Persists the selection and refreshes profile, providers, agents, and config since all change with org context.
  */
 export async function handleSetOrganization(ctx: AuthContext, organizationId: string | null): Promise<void> {
   if (!ctx.client) return
@@ -120,7 +121,7 @@ export async function handleSetOrganization(ctx: AuthContext, organizationId: st
 
   await ctx.disposeGlobal()
 
-  // Org switch succeeded — refresh profile and providers independently (best-effort)
+  // Org switch succeeded — refresh profile, providers, agents, and config independently (best-effort)
   try {
     const result = await ctx.client.kilo.profile()
     ctx.postMessage({ type: "profileData", data: result.data ?? null })
@@ -136,6 +137,11 @@ export async function handleSetOrganization(ctx: AuthContext, organizationId: st
     await ctx.fetchAndSendAgents()
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to refresh agents after org switch:", error)
+  }
+  try {
+    await ctx.fetchAndSendConfig()
+  } catch (error) {
+    console.error("[Kilo New] KiloProvider: Failed to refresh config after org switch:", error)
   }
 }
 

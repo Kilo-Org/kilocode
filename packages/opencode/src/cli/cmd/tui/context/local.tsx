@@ -16,6 +16,7 @@ import { useSDK } from "./sdk"
 import { useProject } from "./project" // kilocode_change
 import { RGBA } from "@opentui/core"
 import { Filesystem } from "@/util/filesystem"
+import { orgDefaultModel } from "@/kilocode/org-default-model" // kilocode_change
 
 export function parseModel(model: string) {
   const [providerID, ...rest] = model.split("/")
@@ -257,6 +258,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             () => a && modelStore.override[key(a.name)],
             () => a && a.model,
             () => a && modelStore.model[a.name],
+            () => a && orgDefaultModel(a), // kilocode_change
             fallbackModel,
           ) ?? undefined
         )

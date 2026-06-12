@@ -69,7 +69,7 @@ import { PartStash } from "./part-stash"
 import { mergeParts, sameParts } from "./session-parts"
 import { state as todoState } from "./todo-revert"
 import { getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
-import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
+import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { visibleMessages as filterVisibleMessages } from "./session-queue"
 
 const RECENT_LIMIT = 5
@@ -509,6 +509,13 @@ export const SessionProvider: ParentComponent = (props) => {
     return parseModelString(config().agent?.[agentName]?.model)
   }
 
+  /** Organization mode default from config (config.agent.code.options.orgDefaultModel). */
+  function getOrgDefaultModel(agentName: string): ModelSelection | null {
+    const model = config().agent?.[agentName]?.options?.orgDefaultModel
+    if (typeof model !== "string" || model.length === 0) return null
+    return { providerID: KILO_PROVIDER_ID, modelID: model }
+  }
+
   /** Global default model from config (config.model). */
   function getGlobalModel(): ModelSelection | null {
     return parseModelString(config().model)
@@ -520,6 +527,7 @@ export const SessionProvider: ParentComponent = (props) => {
       connected: provider.connected(),
       override,
       mode: getModeModel(agentName),
+      orgDefault: getOrgDefaultModel(agentName),
       global: getGlobalModel(),
       recent: store.recentModels,
       fallback: KILO_AUTO,

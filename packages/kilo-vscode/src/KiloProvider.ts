@@ -2856,6 +2856,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       disposeGlobal: () => this.disposeGlobal(),
       fetchAndSendProviders: () => this.fetchAndSendProviders(),
       fetchAndSendAgents: () => this.fetchAndSendAgents(),
+      fetchAndSendConfig: () => this.fetchAndSendConfig(),
     }
   }
 

@@ -163,6 +163,8 @@ model: anthropic/claude-sonnet-4-20250514
 
 The model selector also **remembers the last model you picked for each agent** across sessions. A config-pinned `model` acts as the default when no manual pick exists. To reset a pick and let the config take over, use the **reset button** in the model selector (visible when your active model differs from what the config specifies).
 
+For organization-managed modes, administrators can also set a mode default in Kilo Cloud. That value is a lower-priority fallback than a local `agent.<slug>.model` or your saved per-mode pick, but it wins over generic global or recent-model fallback. Organization mode defaults use Kilo catalog IDs such as `kilo-auto/balanced` or `openai/gpt-4o:free`, not `kilo/...` or normal `provider/model` config strings.
+
 ### `steps`
 
 Limits the number of agentic iterations (tool call rounds) before the agent is forced to respond with text only. Useful for preventing runaway agents:
@@ -398,6 +400,8 @@ model: anthropic/claude-sonnet-4-20250514
 ```
 
 The TUI also **remembers the last model you picked for each agent** across sessions. A config-pinned `model` acts as the default when no manual pick exists. To reset a pick and let the config take over, use the model picker (`Ctrl+X m`) and select a different model, or remove the saved pick from `~/.local/state/kilo/model.json`.
+
+For organization-managed modes, administrators can also set a mode default in Kilo Cloud. That value is a lower-priority fallback than a local `agent.<slug>.model` or your saved per-mode pick, but it wins over generic global or recent-model fallback. Organization mode defaults use Kilo catalog IDs such as `kilo-auto/balanced` or `openai/gpt-4o:free`, not `kilo/...` or normal `provider/model` config strings.
 
 ### `steps`
 

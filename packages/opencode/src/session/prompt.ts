@@ -5,6 +5,7 @@ import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
+import { orgDefaultModel } from "@/kilocode/org-default-model" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
@@ -962,7 +963,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
               throw error
             }
-            const model = input.model ?? agent.model ?? (yield* currentModel(input.sessionID)) // kilocode_change
+            const model = input.model ?? agent.model ?? (yield* currentModel(input.sessionID, agent)) // kilocode_change
             const userMsg: MessageV2.User = {
               id: input.messageID ?? MessageID.ascending(),
               sessionID: input.sessionID,
@@ -1137,7 +1138,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     })
 
     // kilocode_change start - preserve persisted per-session model selection
-    const currentModel = Effect.fnUntraced(function* (sessionID: SessionID) {
+    const currentModel = Effect.fnUntraced(function* (sessionID: SessionID, agent?: Agent.Info) {
       const current = Database.use((db) =>
         db.select({ model: SessionTable.model }).from(SessionTable).where(eq(SessionTable.id, sessionID)).get(),
       )
@@ -1152,6 +1153,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         .findMessage(sessionID, (m) => m.info.role === "user" && !!m.info.model)
         .pipe(Effect.orDie)
       if (Option.isSome(match) && match.value.info.role === "user") return match.value.info.model
+      const org = orgDefaultModel(agent)
+      if (org) {
+        const providers = yield* provider.list()
+        const modelID = ModelID.make(org.modelID)
+        if (providers[ProviderID.kilo]?.models[modelID]) {
+          return { providerID: ProviderID.kilo, modelID }
+        }
+      }
       return yield* provider.defaultModel()
     })
     // kilocode_change end
@@ -1174,7 +1183,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           .where(eq(SessionTable.id, input.sessionID))
           .get(),
       )
-      const model = input.model ?? ag.model ?? (yield* currentModel(input.sessionID)) // kilocode_change
+      const model = input.model ?? ag.model ?? (yield* currentModel(input.sessionID, ag)) // kilocode_change
       const same = ag.model && model.providerID === ag.model.providerID && model.modelID === ag.model.modelID
       const full =
         !input.variant && ag.variant && same
@@ -2261,12 +2270,16 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
       const taskModel = yield* Effect.gen(function* () {
         if (cmd.model) return Provider.parseModel(cmd.model)
-        if (cmd.agent) {
-          const cmdAgent = yield* agents.get(cmd.agent)
-          if (cmdAgent?.model) return cmdAgent.model
-        }
         if (input.model) return Provider.parseModel(input.model)
-        return yield* currentModel(input.sessionID) // kilocode_change
+        // kilocode_change start - keep the effective command agent available for org fallback
+        const taskAgent = cmd.agent
+          ? yield* agents.get(cmd.agent)
+          : input.agent
+            ? yield* agents.get(input.agent)
+            : yield* agents.defaultInfo()
+        if (taskAgent?.model) return taskAgent.model
+        // kilocode_change end
+        return yield* currentModel(input.sessionID, taskAgent) // kilocode_change
       })
 
       yield* getModel(taskModel.providerID, taskModel.modelID, input.sessionID)
@@ -2297,10 +2310,17 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         : [...templateParts, ...(input.parts ?? [])]
 
       const userAgent = isSubtask ? (input.agent ?? (yield* agents.defaultInfo()).name) : agent.name
+      // kilocode_change start - keep subtask user fallback scoped to the user-facing agent
+      const userInfo = isSubtask
+        ? input.agent
+          ? yield* agents.get(input.agent)
+          : yield* agents.defaultInfo()
+        : agent
+      // kilocode_change end
       const userModel = isSubtask
         ? input.model
           ? Provider.parseModel(input.model)
-          : yield* currentModel(input.sessionID) // kilocode_change
+          : yield* currentModel(input.sessionID, userInfo) // kilocode_change
         : taskModel
 
       yield* plugin.trigger(

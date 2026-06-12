@@ -132,6 +132,7 @@ export const OrganizationMode = Schema.Struct({
     description: Schema.optional(Schema.String),
     customInstructions: Schema.optional(Schema.String),
     groups: Schema.optional(Schema.Array(GroupEntry)),
+    defaultModel: Schema.optional(Schema.NullOr(Schema.String)),
   }),
 })
 

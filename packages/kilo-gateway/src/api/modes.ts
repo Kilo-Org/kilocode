@@ -19,6 +19,7 @@ const OrganizationModeConfigSchema = z.object({
   description: z.string().optional(),
   customInstructions: z.string().optional(),
   groups: z.array(GroupEntrySchema).optional(),
+  defaultModel: z.string().nullable().optional(),
 })
 
 const OrganizationModeSchema = z.object({

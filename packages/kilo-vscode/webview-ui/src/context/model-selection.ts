@@ -28,6 +28,7 @@ export function resolveModelSelection(input: {
   connected: string[]
   override?: ModelSelection | null
   mode?: ModelSelection | null
+  orgDefault?: ModelSelection | null
   global?: ModelSelection | null
   recent?: ModelSelection[]
   fallback?: ModelSelection | null
@@ -35,6 +36,7 @@ export function resolveModelSelection(input: {
   return (
     validate(input.providers, input.connected, input.override) ??
     validate(input.providers, input.connected, input.mode) ??
+    validate(input.providers, input.connected, input.orgDefault) ??
     validate(input.providers, input.connected, input.global) ??
     recent(input.providers, input.connected, input.recent) ??
     input.fallback ??

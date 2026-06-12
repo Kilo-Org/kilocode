@@ -40,4 +40,5 @@ export interface AgentConfig {
   top_p?: number | null
   steps?: number | null
   permission?: PermissionConfig
+  options?: Record<string, unknown> & { orgDefaultModel?: string }
 }

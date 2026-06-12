@@ -34,14 +34,38 @@ const mockProviders = [
       },
     },
   },
+  {
+    id: "kilo",
+    name: "Kilo Gateway",
+    source: "custom" as const,
+    env: [],
+    options: {},
+    models: {
+      "openai/gpt-4o:free": {
+        id: "openai/gpt-4o:free",
+        providerID: "kilo",
+        name: "GPT-4o Free",
+        capabilities: {},
+      },
+    },
+  },
 ]
 
-let mockAgents = [
+let mockAgents: Array<{
+  name: string
+  mode: "primary"
+  hidden: boolean
+  model: any
+  options?: any
+  color: any
+  permission: {}
+}> = [
   {
     name: "code",
     mode: "primary" as const,
     hidden: false,
     model: undefined as any,
+    options: undefined as any,
     color: undefined as any,
     permission: {},
   },
@@ -50,6 +74,7 @@ let mockAgents = [
     mode: "primary" as const,
     hidden: false,
     model: undefined as any,
+    options: undefined as any,
     color: undefined as any,
     permission: {},
   },
@@ -237,6 +262,7 @@ async function removeModelJson() {
 
 const SONNET = { providerID: "anthropic", modelID: "claude-sonnet" }
 const OPUS = { providerID: "anthropic", modelID: "claude-opus" }
+const ORG_DEFAULT = { providerID: "kilo", modelID: "openai/gpt-4o:free" }
 
 // ── Setup ───────────────────────────────────────────────────────────────────
 
@@ -250,6 +276,28 @@ afterEach(async () => {
 })
 
 // ── Tests ───────────────────────────────────────────────────────────────────
+
+describe("organization mode defaults", () => {
+  test("uses a bare kilo catalog id before generic fallback", async () => {
+    mockAgents[0] = { ...mockAgents[0], options: { orgDefaultModel: "openai/gpt-4o:free" } }
+    const { local, dispose } = await initLocal()
+    try {
+      expect(local.model.current()).toEqual(ORG_DEFAULT)
+    } finally {
+      dispose()
+    }
+  })
+
+  test("keeps a saved mode pick above the organization default", async () => {
+    mockAgents[0] = { ...mockAgents[0], options: { orgDefaultModel: "openai/gpt-4o:free" } }
+    const { local, dispose } = await initLocal({ prewrite: { model: { code: OPUS } } })
+    try {
+      expect(local.model.current()).toEqual(OPUS)
+    } finally {
+      dispose()
+    }
+  })
+})
 
 describe("model.set persists per-agent model", () => {
   test("1: model.set for agent 'code' writes model.code to model.json", async () => {

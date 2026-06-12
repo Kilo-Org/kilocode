@@ -263,7 +263,7 @@ Later sources override earlier values during instance config load:
 
 Global config files load from `${Global.Path.config}`. Project updates prefer existing config files found in ancestor `.kilo`, `.kilocode`, or `.opencode` directories, then existing project root config files, then create `.kilo/kilo.json`. Global indexing settings can carry provider and storage defaults, but global `indexing.enabled` is stripped so project enablement remains local in effective instance config.
 
-Signed-in organization modes become normal agent configuration during load. They override migrated legacy modes and remain overridable by later config sources in table.
+Signed-in organization modes become normal agent configuration during load. They override migrated legacy modes and remain overridable by later config sources in table. Their optional `defaultModel` is carried separately as `agent.<canonical-slug>.options.orgDefaultModel`, so it remains a fallback rather than becoming an explicit `agent.model` override. Runtime model resolution uses explicit turn input, local agent model, persisted mode pick, organization mode default, then generic provider/global fallback. Legacy `build` and `architect` organization rows map only for this fallback layer to canonical `code` and `plan`; their existing prompt and permission overlays remain unchanged.
 
 Runtime config loading is separate from editor-facing JSON Schema publication. Cloud-served schema improves validation and completion for `kilo.json` and `kilo.jsonc`; it does not load, apply, or override effective runtime config. When adding or changing config key, follow [CLI Config Schema](/docs/contributing/architecture/config-schema) so CLI source and cloud overlay stay aligned.
 
