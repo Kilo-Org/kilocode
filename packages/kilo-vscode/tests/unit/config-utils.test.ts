@@ -1,5 +1,12 @@
 import { describe, it, expect } from "bun:test"
-import { deepMerge, stripNulls, ConfigState } from "../../webview-ui/src/utils/config-utils"
+import {
+  configUnsetPaths,
+  ConfigState,
+  deepMerge,
+  mergeScopedConfig,
+  pruneConfigSet,
+  stripNulls,
+} from "../../webview-ui/src/utils/config-utils"
 import type { Config } from "../../webview-ui/src/types/messages"
 
 // ---------------------------------------------------------------------------
@@ -39,6 +46,38 @@ describe("deepMerge", () => {
     const result = deepMerge(target, source)
     expect(result.agent?.code?.disable).toBe(false)
     expect(result.agent?.code?.hidden).toBe(false)
+  })
+})
+
+describe("scoped config normalization", () => {
+  it("preserves indexing null overrides while stripping unrelated nulls", () => {
+    const target = { username: "alice", indexing: { model: "global", dimension: 1024 } } as Config
+    const source = { username: null, indexing: { model: null, dimension: null } } as unknown as Partial<Config>
+
+    expect(mergeScopedConfig(target, source)).toEqual({ indexing: { model: null, dimension: null } })
+  })
+
+  it("builds clean set and unset payloads while preserving indexing null overrides", () => {
+    const patch = {
+      formatter: {},
+      username: null,
+      indexing: {
+        model: null,
+        dimension: null,
+        searchMinScore: undefined,
+        qdrant: { apiKey: undefined },
+      },
+    }
+
+    expect(pruneConfigSet(patch)).toEqual({
+      formatter: {},
+      indexing: { model: null, dimension: null },
+    })
+    expect(configUnsetPaths(patch)).toEqual([
+      ["username"],
+      ["indexing", "searchMinScore"],
+      ["indexing", "qdrant", "apiKey"],
+    ])
   })
 })
 

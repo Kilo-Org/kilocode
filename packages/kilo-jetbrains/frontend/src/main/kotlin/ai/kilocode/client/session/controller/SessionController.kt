@@ -51,6 +51,7 @@ import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -193,6 +194,29 @@ class SessionController(
         assertEdt()
         if (disposed) return
         updates.requestFlush(true)
+    }
+
+    fun enhancePrompt(text: String, complete: (Result<String>) -> Unit) {
+        assertEdt()
+        capture("Prompt Enhance Clicked", mapOf("textLength" to bucket(text)))
+        cs.launch {
+            val result = try {
+                Result.success(sessions.enhancePrompt(directory, text))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+            edt {
+                if (disposed) return@edt
+                result.onSuccess {
+                    capture("Prompt Enhanced", mapOf("textLength" to bucket(text)))
+                }.onFailure { e ->
+                    capture("Session Error", mapOf("context" to "enhance-prompt", "errorClass" to e::class.java.name))
+                }
+                complete(result)
+            }
+        }
     }
 
     fun prompt(text: String) {

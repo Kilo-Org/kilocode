@@ -68,6 +68,7 @@ export class KiloConnectionService {
   private readonly favoritesChangeListeners: Set<FavoritesChangeListener> = new Set()
   private readonly clearPendingPromptsListeners: Set<ClearPendingPromptsListener> = new Set()
   private readonly directoryProviders: Set<DirectoryProvider> = new Set()
+  private readonly permissionDirectories: Map<string, string> = new Map()
 
   /**
    * Shared mapping used to resolve session scope for events that don't reliably include a sessionID.
@@ -240,6 +241,33 @@ export class KiloConnectionService {
       (messageId) => this.messageSessionIdsByMessageId.get(messageId),
       (messageId, sessionId) => this.recordMessageSessionId(messageId, sessionId),
     )
+  }
+
+  recordPermissionDirectory(requestID: string, directory: string): void {
+    if (!requestID || !directory) {
+      return
+    }
+    this.permissionDirectories.set(requestID, directory)
+  }
+
+  getPermissionDirectory(requestID: string): string | undefined {
+    return this.permissionDirectories.get(requestID)
+  }
+
+  clearPermissionDirectory(requestID: string): void {
+    this.permissionDirectories.delete(requestID)
+  }
+
+  prunePermissionDirectories(active: Set<string>, dirs?: Set<string>): void {
+    for (const [id, dir] of this.permissionDirectories) {
+      if (active.has(id)) {
+        continue
+      }
+      if (dirs && !dirs.has(dir)) {
+        continue
+      }
+      this.permissionDirectories.delete(id)
+    }
   }
 
   /**
@@ -487,6 +515,7 @@ export class KiloConnectionService {
     this.clearPendingPromptsListeners.clear()
     this.directoryProviders.clear()
     this.messageSessionIdsByMessageId.clear()
+    this.permissionDirectories.clear()
     this.focused.clear()
     this.opened.clear()
     if (this.debounceTimer) {
@@ -565,6 +594,7 @@ export class KiloConnectionService {
     this.client = null
     this.config = null
     this.info = null
+    this.permissionDirectories.clear()
   }
 
   private handleServerExit(code: number | null): void {
@@ -616,6 +646,7 @@ export class KiloConnectionService {
     // Wire SSE events → broadcast to all registered listeners
     sse.onEvent((event, directory) => {
       if (this.sseClient !== sse) return
+      this.handlePermissionEvent(event, directory)
       for (const listener of this.eventListeners) {
         listener(event, directory)
       }
@@ -660,6 +691,16 @@ export class KiloConnectionService {
 
     // Start the independent health poll once we are confirmed connected.
     this.startHealthPoll(config.baseUrl, config.password)
+  }
+
+  private handlePermissionEvent(event: SSEPayload, directory?: string): void {
+    if (event.type === "permission.asked" && directory) {
+      this.recordPermissionDirectory(event.properties.id, directory)
+      return
+    }
+    if (event.type === "permission.replied") {
+      this.clearPermissionDirectory(event.properties.requestID)
+    }
   }
 }
 

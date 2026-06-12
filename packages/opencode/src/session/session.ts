@@ -744,6 +744,7 @@ export const layer: Layer.Layer<
       })
       const msgs = yield* messages({ sessionID: input.sessionID })
       const idMap = new Map<string, MessageID>()
+      const writer = KiloSession.writer(session.id, sync) // kilocode_change - commit copied transcript in one transaction
 
       for (const msg of msgs) {
         if (input.messageID && msg.info.id >= input.messageID) break
@@ -751,13 +752,15 @@ export const layer: Layer.Layer<
         idMap.set(msg.info.id, newID)
 
         const parentID = msg.info.role === "assistant" && msg.info.parentID ? idMap.get(msg.info.parentID) : undefined
-        const cloned = yield* updateMessage({
+        // kilocode_change start - queue copied messages for the atomic transcript commit
+        const cloned = writer.message({
           ...msg.info,
           sessionID: session.id,
           id: newID,
-          ...(msg.info.role === "assistant" && { cost: 0 }), // kilocode_change - count only spend incurred after the fork
+          ...(msg.info.role === "assistant" && { cost: 0 }), // count only spend incurred after the fork
           ...(parentID && { parentID }),
         })
+        // kilocode_change end
 
         for (const part of msg.parts) {
           const p: MessageV2.Part = {
@@ -770,9 +773,10 @@ export const layer: Layer.Layer<
           if (p.type === "compaction" && p.tail_start_id) {
             p.tail_start_id = idMap.get(p.tail_start_id)
           }
-          yield* updatePart(p)
+          writer.part(p) // kilocode_change - queue copied parts for the atomic transcript commit
         }
       }
+      yield* writer.commit() // kilocode_change - the caller hydrates after commit; copied-row events stay silent
       // kilocode_change start - preserve imported/cumulative diffs when forking sessions
       const local = yield* storage
         .read<Snapshot.FileDiff[]>(["session_diff", input.sessionID])
@@ -1033,7 +1037,7 @@ export function* listGlobal(input?: {
 }
 // kilocode_change end
 
-// kilocode_change - preserve Kilo recursive fork/remap behavior without a Session service-local Promise runtime
+// kilocode_change - delegate the exported Promise facade to the Kilo session runtime
 export const fork = kiloSessionFork
 
 export * as Session from "./session"

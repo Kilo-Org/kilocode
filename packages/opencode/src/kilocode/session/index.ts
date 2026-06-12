@@ -1,4 +1,4 @@
-import { remapChildren as _remapChildren } from "./fork"
+import { writer as _writer } from "./fork"
 import z from "zod"
 import { Cause, Effect, Schema } from "effect"
 import { BusEvent } from "@/bus/bus-event"
@@ -407,21 +407,13 @@ export namespace KiloSession {
     }
   }
 
-  export const remapChildren = _remapChildren
+  export const writer = _writer
 }
 
 export const kiloSessionFork = fn(
   z.object({ sessionID: toZod(SessionID), messageID: toZod(MessageID).optional() }),
   async (input) => {
     const { AppRuntime } = await import("@/effect/app-runtime")
-    return AppRuntime.runPromise(
-      Effect.gen(function* () {
-        const sessions = yield* Session.Service
-        const session = yield* sessions.fork(input)
-        const remapped = new Map<string, SessionID>([[input.sessionID, session.id]])
-        yield* KiloSession.remapChildren(session.id, remapped)
-        return session
-      }),
-    )
+    return AppRuntime.runPromise(Session.Service.use((sessions) => sessions.fork(input)))
   },
 )

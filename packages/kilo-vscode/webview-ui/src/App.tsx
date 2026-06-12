@@ -244,6 +244,10 @@ const AppContent: Component = () => {
     setCurrentView("newTask")
   }
 
+  const handleKiloModel = (message: { type?: string }) => {
+    if (message.type === "selectKiloModel") setCurrentView("newTask")
+  }
+
   onMount(() => {
     const handler = (event: MessageEvent) => {
       const message = event.data
@@ -262,6 +266,7 @@ const AppContent: Component = () => {
         session.selectCloudSession(message.sessionId)
         setCurrentView("newTask")
       }
+      handleKiloModel(message)
       handleForked(message)
       if (message?.type === "viewSubAgentSession" && message.sessionID) {
         console.log("[Kilo New] App: 🔍 viewSubAgentSession:", message.sessionID)

@@ -69,7 +69,7 @@ import { PartStash } from "./part-stash"
 import { mergeParts, sameParts } from "./session-parts"
 import { state as todoState } from "./todo-revert"
 import { getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
-import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
+import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { visibleMessages as filterVisibleMessages } from "./session-queue"
 
 const RECENT_LIMIT = 5
@@ -364,6 +364,8 @@ export const SessionProvider: ParentComponent = (props) => {
   const [agents, setAgents] = createSignal<AgentInfo[]>([])
   const [allAgents, setAllAgents] = createSignal<AgentInfo[]>([])
   const [defaultAgent, setDefaultAgent] = createSignal("code")
+  const [pendingKiloModel, setPendingKiloModel] = createSignal<{ modelID: string; after: number } | null>(null)
+  const [catalog, setCatalog] = createSignal(0)
 
   // Skills loaded from the CLI backend
   const [skills, setSkills] = createSignal<SkillInfo[]>([])
@@ -588,6 +590,31 @@ export const SessionProvider: ParentComponent = (props) => {
       hideErrors(sid)
     }
   }
+
+  function selectKiloModel(modelID: string) {
+    setPendingKiloModel({ modelID, after: catalog() })
+    vscode.postMessage({ type: "requestProviders" })
+  }
+
+  const unsubKiloModel = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type === "providersLoaded") {
+      setCatalog((value) => value + 1)
+      return
+    }
+    if (message.type === "selectKiloModel") selectKiloModel(message.modelID)
+  })
+  onCleanup(unsubKiloModel)
+
+  createEffect(() => {
+    const pending = pendingKiloModel()
+    if (!pending || agents().length === 0 || catalog() <= pending.after) return
+    setPendingKiloModel(null)
+    if (!provider.providers()[KILO_PROVIDER_ID]?.models[pending.modelID]) {
+      console.warn("[Kilo New] Ignoring unavailable Kilo catalog model:", pending.modelID)
+      return
+    }
+    selectModel(KILO_PROVIDER_ID, pending.modelID)
+  })
 
   function promptAgent(sessionID?: string) {
     const name = agentForScope(sessionID)

@@ -17,6 +17,7 @@ export interface FileEntry {
   additions: number
   deletions: number
   tracked: boolean
+  binary: boolean
   stamp?: string
 }
 
@@ -35,16 +36,17 @@ export function parseNameStatus(stdout: string): { file: string; status: Status 
 }
 
 /** Parse `git diff --numstat` output into a per-file `{additions, deletions}` map. */
-export function parseNumstat(stdout: string): Map<string, { additions: number; deletions: number }> {
-  const map = new Map<string, { additions: number; deletions: number }>()
+export function parseNumstat(stdout: string): Map<string, { additions: number; deletions: number; binary: boolean }> {
+  const map = new Map<string, { additions: number; deletions: number; binary: boolean }>()
   for (const line of stdout.split("\n")) {
     if (!line.trim()) continue
     const parts = line.split("\t")
     if (parts.length < 3) continue
-    const additions = parts[0] === "-" ? 0 : parseInt(parts[0]!, 10) || 0
-    const deletions = parts[1] === "-" ? 0 : parseInt(parts[1]!, 10) || 0
+    const binary = parts[0] === "-" || parts[1] === "-"
+    const additions = binary ? 0 : parseInt(parts[0]!, 10) || 0
+    const deletions = binary ? 0 : parseInt(parts[1]!, 10) || 0
     const file = parts.slice(2).join("\t")
-    if (file) map.set(file, { additions, deletions })
+    if (file) map.set(file, { additions, deletions, binary })
   }
   return map
 }
@@ -69,7 +71,8 @@ export function summarize(entry: FileEntry): DiffFile {
     status: entry.status,
     tracked: entry.tracked,
     generatedLike: generatedLike(entry.file),
-    summarized: true,
+    // Binary metadata is complete because no deferred text body exists.
+    summarized: !entry.binary,
     // Synthetic stamp keyed on the stats we actually polled: any change to
     // the file's diff produces new additions/deletions, which invalidates
     // the webview-side cached detail via mergeWorktreeDiffs. Callers can

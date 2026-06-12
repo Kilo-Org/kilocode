@@ -1,11 +1,13 @@
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@kilocode/plugin/tui"
 import { createEffect, createMemo, createSignal, onCleanup, onMount, Show } from "solid-js"
 import type { IndexingStatus, IndexingStatusState } from "@kilocode/kilo-indexing/status"
+import * as Log from "@opencode-ai/core/util/log"
 import { useSync } from "@/cli/cmd/tui/context/sync"
 import { formatIndexingLabel } from "../indexing-label"
 import { indexingEnabled } from "../indexing-feature"
 
 const id = "internal:kilo-sidebar-indexing"
+const log = Log.create({ service: "sidebar-indexing" })
 
 function tone(state: IndexingStatusState, api: TuiPluginApi) {
   const theme = api.theme.current
@@ -46,7 +48,7 @@ function View(props: { api: TuiPluginApi }) {
       .then((res) => {
         if (res.data) setStatus(res.data)
       })
-      .catch(() => undefined)
+      .catch((err) => log.debug("indexing status poll failed", { err }))
   }
 
   createEffect(() => {

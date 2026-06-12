@@ -71,6 +71,9 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
 
     // ------ chat ------
 
+    /** Rewrite a draft prompt using the configured small model. */
+    suspend fun enhancePrompt(directory: String, text: String): String
+
     /** Send a prompt to a session (fire-and-forget). */
     suspend fun prompt(id: String, directory: String, prompt: PromptDto)
 
