@@ -547,6 +547,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         <div class="am-diff-content" data-component="session-review" ref={setScroller}>
           <Accordion multiple value={open()} onChange={(files) => setOpen(sanitizeOpenFiles(props.diffs, files))}>
             <VirtualDiffList
+              context={props.sessionKey}
               data={rows()}
               scroll={scroller()}
               keep={pinned()}

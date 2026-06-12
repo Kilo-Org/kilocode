@@ -622,6 +622,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
             <div class="am-review-diff-content" data-component="session-review">
               <Accordion multiple value={open()} onChange={(files) => setOpen(sanitizeOpenFiles(props.diffs, files))}>
                 <VirtualDiffList
+                  context={props.sessionKey}
                   data={rows()}
                   scroll={scroller()}
                   keep={pinned()}

@@ -73,8 +73,9 @@ test("preserves diff scroll position while an agent edit refreshes a file", asyn
   expect(next).toBeCloseTo(top, 0)
 })
 
-test("remounts diff rows when the review context changes", async ({ page }) => {
+test("resets virtual measurements and scroll when the review context changes", async ({ page }) => {
   const first = await openStory(page)
+  const scroller = page.locator(".am-review-diff")
   await page.evaluate(() => {
     class IdleObserver {
       readonly root = null
@@ -96,7 +97,13 @@ test("remounts diff rows when the review context changes", async ({ page }) => {
     })
   })
 
+  await scroller.evaluate((el) => {
+    el.scrollTop = 2_000
+  })
+  await expect.poll(async () => scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(1_000)
+
   await page.getByRole("button", { name: "Switch review context" }).click()
   await expect(page.getByTestId("review-context")).toHaveText("changed-context")
   await expect.poll(async () => first.evaluate((el) => el.getBoundingClientRect().height)).toBe(1_200)
+  await expect.poll(async () => scroller.evaluate((el) => el.scrollTop)).toBe(0)
 })
