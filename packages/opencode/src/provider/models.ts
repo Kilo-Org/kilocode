@@ -30,6 +30,13 @@ function baseURL(url: string | undefined, org: string | undefined) {
   return `${base}/api/openrouter`
 }
 
+// kilocode_change start - NEAR AI Cloud provider
+const normalizeOptionalBaseURL = (url: string | undefined): string | undefined => {
+  const trimmed = url?.trim().replace(/\/+$/, "")
+  return trimmed || undefined
+}
+// kilocode_change end
+
 export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | Auth.Service | ModelCache.Service> =
   Layer.effect(
     Service,
@@ -66,8 +73,31 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
             yield* cache.refresh("apertis", aptOpts).pipe(Effect.ignore, Effect.forkDetach)
         })
 
+        // kilocode_change start - NEAR AI Cloud provider
+        const near = cfg.provider?.nearai?.options
+        const nearConfiguredBase = normalizeOptionalBaseURL(near?.baseURL ?? process.env.NEARAI_BASE_URL)
+        const nearURL = nearConfiguredBase ?? "https://cloud-api.near.ai/v1"
+        const nearOpts = nearConfiguredBase ? { baseURL: nearConfiguredBase } : {}
+
+        const addNearAI = Effect.fnUntraced(function* () {
+          if (providers.nearai) return
+          const models = yield* cache.fetch("nearai", nearOpts).pipe(Effect.catch(() => Effect.succeed({})))
+          providers.nearai = {
+            id: "nearai",
+            name: "NEAR AI Cloud",
+            env: ["NEARAI_API_KEY"],
+            api: nearURL,
+            npm: "@ai-sdk/openai-compatible",
+            models,
+          }
+          if (Object.keys(models).length === 0)
+            yield* cache.refresh("nearai", nearOpts).pipe(Effect.ignore, Effect.forkDetach)
+        })
+        // kilocode_change end
+
         if (!allowed) {
           yield* addApertis()
+          yield* addNearAI() // kilocode_change
           return providers
         }
 
@@ -90,6 +120,7 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
         }
         if (Object.keys(models).length === 0) yield* cache.refresh("kilo", fetch).pipe(Effect.ignore, Effect.forkDetach)
         yield* addApertis()
+        yield* addNearAI() // kilocode_change
         return providers
       })
 

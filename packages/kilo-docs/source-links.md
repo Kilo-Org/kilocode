@@ -47,6 +47,9 @@
   <!-- packages/opencode/src/provider/error.ts -->
 - <https://cli.github.com/>
   <!-- packages/kilo-vscode/src/agent-manager/WorktreeManager.ts -->
+- <https://cloud-api.near.ai/v1>
+  <!-- packages/opencode/src/provider/model-cache.ts -->
+  <!-- packages/opencode/src/provider/models.ts -->
 - <https://cloud.digitalocean.com/v1/oauth/authorize>
   <!-- packages/opencode/src/plugin/digitalocean.ts -->
 - <https://cloudflare.com/cdn-cgi/trace>
