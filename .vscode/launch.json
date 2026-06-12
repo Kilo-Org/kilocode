@@ -22,8 +22,8 @@
       "preLaunchTask": "VSCode - Compile",
       "env": {
         "KILO_API_URL": "http://localhost:3000",
-        "LLMAPI_API_URL": "http://localhost:8081",
-        "LLMAPI_BASE_URL": "http://localhost:4001/v1"
+        "LLMAPI_API_URL":  "https://api.dev.llmapi.ai",
+        "LLMAPI_BASE_URL": "https://api.dev.llmapi.ai/v1"
       }
     },
     {
