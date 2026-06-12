@@ -131,8 +131,14 @@ export async function fetchAndSendPendingPermissions(ctx: PermissionContext): Pr
     const dirs = recoveryDirs(ctx.getWorkspaceDirectory(), ctx.sessionDirectories, ctx.extraDirectories?.() ?? [])
 
     const seen = new Set<string>()
+    const valid = new Set<string>()
     for (const dir of dirs) {
-      const { data } = await ctx.client.permission.list({ directory: dir })
+      const { data, error } = await ctx.client.permission.list({ directory: dir })
+      if (error) {
+        console.error(`[Kilo New] KiloProvider: Failed to fetch pending permissions for ${dir}:`, error)
+        continue
+      }
+      valid.add(dir)
       if (!data) continue
       for (const perm of recoverablePermissions(data, ctx.trackedSessionIds, seen)) {
         ctx.recordPermissionDirectory(perm.id, dir)
@@ -151,7 +157,7 @@ export async function fetchAndSendPendingPermissions(ctx: PermissionContext): Pr
         })
       }
     }
-    ctx.prunePermissionDirectories(seen, new Set(dirs))
+    ctx.prunePermissionDirectories(seen, valid)
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to fetch pending permissions:", error)
   }
