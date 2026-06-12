@@ -7,6 +7,7 @@ import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilo
 import { KiloSession } from "@/kilocode/session" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
+import { KiloMorphRouter } from "@/kilocode/provider/morph-router" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
@@ -1808,6 +1809,24 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         // kilocode_change end
 
         if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
+
+        // kilocode_change start - Morph auto model routing: resolve the "morph/auto"
+        // pseudo-model to a concrete provider/model for this turn before anything
+        // downstream (title, compaction, the LLM call itself) reads lastUser.model
+        if (KiloMorphRouter.isRouterModel(lastUser.model)) {
+          const routed = yield* KiloMorphRouter.route({
+            providers: yield* provider.list(),
+            messages: msgs,
+            messageID: lastUser.id,
+          })
+          if (routed.type === "error") {
+            const error = new NamedError.Unknown({ message: routed.message })
+            yield* bus.publish(Session.Event.Error, { sessionID, error: error.toObject() })
+            return yield* Effect.die(error)
+          }
+          lastUser.model = { ...lastUser.model, providerID: routed.providerID, modelID: routed.modelID }
+        }
+        // kilocode_change end
 
         const lastAssistantMsg = msgs.findLast(
           (msg) => msg.info.role === "assistant" && msg.info.id === lastAssistant?.id,

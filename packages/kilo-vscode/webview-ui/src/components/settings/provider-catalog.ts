@@ -40,6 +40,7 @@ export function providerNoteKey(providerID: string) {
   if (providerID === "google") return "dialog.provider.google.note"
   if (providerID === "openrouter") return "dialog.provider.openrouter.note"
   if (providerID === "vercel") return "dialog.provider.vercel.note"
+  if (providerID === "morph") return "dialog.provider.morph.note"
   return undefined
 }
 

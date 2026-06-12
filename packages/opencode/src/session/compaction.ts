@@ -19,6 +19,8 @@ import { isOverflow as overflow, usable } from "./overflow"
 import { makeRuntime } from "@/effect/run-service"
 import { serviceUse } from "@/effect/service-use"
 // kilocode_change start
+import { KiloMorphRouter } from "@/kilocode/provider/morph-router"
+import { NamedError } from "@opencode-ai/core/util/error"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-payload-recovery"
 import { KiloCompactionChunks } from "@/kilocode/session/compaction-chunks"
@@ -409,9 +411,19 @@ export const layer: Layer.Layer<
       // kilocode_change end
 
       const agent = yield* agents.get("compaction")
-      const model = agent.model
-        ? yield* provider.getModel(agent.model.providerID, agent.model.modelID).pipe(Effect.orDie)
-        : yield* provider.getModel(userMessage.model.providerID, userMessage.model.modelID).pipe(Effect.orDie)
+      // kilocode_change start - Morph auto model routing: resolve the "morph/auto" pseudo-model before compacting
+      let compactionModel = agent.model ?? userMessage.model
+      if (KiloMorphRouter.isRouterModel(compactionModel)) {
+        const routed = yield* KiloMorphRouter.route({
+          providers: yield* provider.list(),
+          messages: input.messages,
+          messageID: userMessage.id,
+        })
+        if (routed.type === "error") return yield* Effect.die(new NamedError.Unknown({ message: routed.message }))
+        compactionModel = { providerID: routed.providerID, modelID: routed.modelID }
+      }
+      const model = yield* provider.getModel(compactionModel.providerID, compactionModel.modelID).pipe(Effect.orDie)
+      // kilocode_change end
       const cfg = yield* config.get()
       const history = compactionPart && messages.at(-1)?.info.id === input.parentID ? messages.slice(0, -1) : messages
       const prior = completedCompactions(history)

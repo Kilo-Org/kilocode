@@ -40,6 +40,7 @@ import {
   REQUEST_TIMEOUT_MS,
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
+import { KiloMorphRouter } from "@/kilocode/provider/morph-router"
 // kilocode_change end
 
 const log = Log.create({ service: "provider" })
@@ -1150,6 +1151,7 @@ export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
       }
     }
   }
+  Object.assign(models, KiloMorphRouter.catalogModels(provider)) // kilocode_change - Morph auto router pseudo-model
   return {
     id: ProviderID.make(provider.id),
     source: "custom",

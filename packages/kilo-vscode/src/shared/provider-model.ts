@@ -11,6 +11,7 @@ export const PROVIDER_PRIORITY = [
   "google",
   "openrouter",
   "vercel",
+  "morph",
 ] as const
 
 export function parseModelString(raw: string | undefined | null) {
