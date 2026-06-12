@@ -125,6 +125,8 @@ class SessionController(
     ) { sid ?: ref?.key ?: "pending" }
 
     private var disposed = false
+    private var enhancement = 0L
+    private val enhancements = mutableMapOf<Long, (Result<String>) -> Unit>()
     private var partType: String? = null
     private var tool: String? = null
     private var eventJob: Job? = null
@@ -198,23 +200,31 @@ class SessionController(
 
     fun enhancePrompt(text: String, complete: (Result<String>) -> Unit) {
         assertEdt()
+        if (disposed) {
+            complete(Result.failure(CancellationException("Session controller disposed")))
+            return
+        }
+        val id = ++enhancement
+        enhancements[id] = complete
         capture("Prompt Enhance Clicked", mapOf("textLength" to bucket(text)))
         cs.launch {
             val result = try {
                 Result.success(sessions.enhancePrompt(directory, text))
             } catch (e: CancellationException) {
-                throw e
+                Result.failure(e)
             } catch (e: Exception) {
                 Result.failure(e)
             }
             edt {
-                if (disposed) return@edt
+                val callback = enhancements.remove(id) ?: return@edt
                 result.onSuccess {
                     capture("Prompt Enhanced", mapOf("textLength" to bucket(text)))
                 }.onFailure { e ->
-                    capture("Session Error", mapOf("context" to "enhance-prompt", "errorClass" to e::class.java.name))
+                    if (e !is CancellationException) {
+                        capture("Session Error", mapOf("context" to "enhance-prompt", "errorClass" to e::class.java.name))
+                    }
                 }
-                complete(result)
+                callback(result)
             }
         }
     }
@@ -1740,13 +1750,18 @@ class SessionController(
 
     override fun dispose() {
         runEdt {
+            if (disposed) return@runEdt
             disposed = true
             connectionDelay.dispose()
             cancelSubscriptions()
             drainJob?.cancel()
             drainJob = null
+            val callbacks = enhancements.values.toList()
+            enhancements.clear()
+            cs.cancel()
+            val result = Result.failure<String>(CancellationException("Session controller disposed"))
+            callbacks.forEach { it(result) }
         }
-        cs.cancel()
     }
 
     override fun toString(): String {

@@ -5,13 +5,17 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import com.intellij.icons.AllIcons
+import com.intellij.notification.Notification
+import com.intellij.notification.Notifications
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.EditorTextField
 import com.intellij.util.ui.EmptyIcon
+import kotlinx.coroutines.CancellationException
 import java.awt.Container
 import javax.swing.JButton
 import javax.swing.SwingUtilities
@@ -230,6 +234,11 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals("make a plan", seen)
         assertFalse(enhance.isEnabled)
         assertTrue(enhance.icon is AnimatedIcon)
+        val icon = enhance.icon
+
+        panel.setReady(true)
+
+        assertSame(icon, enhance.icon)
 
         complete!!(Result.success("Use a focused implementation plan"))
 
@@ -252,6 +261,31 @@ class PromptPanelTest : BasePlatformTestCase() {
 
         assertEquals("edited draft", editor.text)
         assertTrue(enhance.isEnabled)
+    }
+
+    fun `test cancelled enhancement restores button without notification`() {
+        val notes = mutableListOf<Notification>()
+        val listener = object : Notifications {
+            override fun notify(notification: Notification) {
+                notes.add(notification)
+            }
+        }
+        ApplicationManager.getApplication().messageBus.connect(testRootDisposable).subscribe(Notifications.TOPIC, listener)
+        project.messageBus.connect(testRootDisposable).subscribe(Notifications.TOPIC, listener)
+        var complete: ((Result<String>) -> Unit)? = null
+        val panel = PromptPanel(project, {}, {}, { _, done -> complete = done })
+        val editor = panel.defaultFocusedComponent as EditorTextField
+        val enhance = enhanceButton(panel)
+        panel.setReady(true)
+        editor.text = "keep this draft"
+
+        enhance.doClick()
+        complete!!(Result.failure(CancellationException("disposed")))
+
+        assertEquals("keep this draft", editor.text)
+        assertTrue(enhance.isEnabled)
+        assertFalse(enhance.icon is AnimatedIcon)
+        assertTrue(notes.isEmpty())
     }
 
     fun `test empty enhancement inserts explanation without request`() {

@@ -1,6 +1,6 @@
 import open from "open"
 import { cmd } from "@/cli/cmd/cmd"
-import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
+import { explicitNetworkOptions, withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 import { AppRuntime } from "@/effect/app-runtime"
 import { Daemon } from "@/kilocode/daemon/daemon"
 import { warnPort } from "@/kilocode/cli/port-warning"
@@ -43,8 +43,9 @@ export const KiloConsoleCommand = cmd({
   handler: async (args) => {
     const opts = await AppRuntime.runPromise(resolveNetworkOptions(args))
     warnPort(opts.port)
-    const result = await Daemon.start(opts)
-    const state = result.state
+    const daemon = await Daemon.ensure(opts, explicitNetworkOptions())
+    if (daemon.restarted) console.warn("Restarted the Kilo daemon to apply the requested network options")
+    const state = daemon.result.state
     if (!state) throw new Error("Kilo daemon did not provide connection state")
 
     const url = publicUrl(state)

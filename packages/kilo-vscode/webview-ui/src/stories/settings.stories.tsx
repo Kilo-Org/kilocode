@@ -16,6 +16,8 @@ import ModeEditView from "../components/settings/ModeEditView"
 import McpEditView from "../components/settings/McpEditView"
 import type { AgentConfig, CommandConfig, Config } from "../types/messages"
 import IndexingTab from "../components/settings/IndexingTab"
+import { SidebarEmptyState } from "../components/chat/SidebarEmptyState"
+import { WorkStyleContext, type WorkStyleContextValue } from "../context/work-style"
 
 const meta: Meta = {
   title: "Settings",
@@ -94,6 +96,36 @@ function OpenModelPicker(props: { children: any }) {
       {props.children}
     </div>
   )
+}
+
+const work: WorkStyleContextValue = {
+  style: () => "unset",
+  loading: () => false,
+  applying: () => false,
+  shouldShowOnboarding: () => true,
+  apply: noop,
+}
+
+function WorkStyleOnboarding() {
+  return (
+    <StoryProviders noPadding>
+      <WorkStyleContext.Provider value={work}>
+        <div style={{ height: "700px", overflow: "auto" }}>
+          <SidebarEmptyState />
+        </div>
+      </WorkStyleContext.Provider>
+    </StoryProviders>
+  )
+}
+
+export const WorkStyleOnboardingDefault: Story = {
+  name: "Work style onboarding — default width",
+  render: () => <WorkStyleOnboarding />,
+}
+
+export const WorkStyleOnboarding200: Story = {
+  name: "Work style onboarding — narrow width",
+  render: () => <WorkStyleOnboarding />,
 }
 
 export const AgentBehaviourAgents: Story = {

@@ -1,6 +1,6 @@
 import type { Argv } from "yargs"
 import { cmd } from "@/cli/cmd/cmd"
-import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
+import { explicitNetworkOptions, withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 import { AppRuntime } from "@/effect/app-runtime"
 import { Daemon } from "@/kilocode/daemon/daemon"
 import { warnPort } from "@/kilocode/cli/port-warning"
@@ -62,12 +62,19 @@ const StartCommand = cmd({
   handler: async (args) => {
     const opts = await AppRuntime.runPromise(resolveNetworkOptions(args))
     warnPort(opts.port)
-    const result = await Daemon.start(opts)
+    const daemon = await Daemon.ensure(opts, explicitNetworkOptions())
+    const result = daemon.result
     if (args.json) {
       print(result, true)
       return
     }
-    console.log(result.reused ? "kilo daemon already running" : "kilo daemon started")
+    console.log(
+      result.reused
+        ? "kilo daemon already running"
+        : daemon.restarted
+          ? "kilo daemon restarted"
+          : "kilo daemon started",
+    )
     print(result)
   },
 })

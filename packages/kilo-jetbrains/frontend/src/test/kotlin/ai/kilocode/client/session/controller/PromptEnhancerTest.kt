@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.controller
 
 import com.intellij.openapi.application.ApplicationManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 
@@ -36,18 +37,31 @@ class PromptEnhancerTest : SessionControllerTestBase() {
         assertSame(before, edt { controller.model.state })
     }
 
-    fun `test enhance prompt ignores completion after disposal`() {
+    fun `test enhance prompt cancels pending completions on disposal`() {
         val controller = controller()
         val gate = CompletableDeferred<Unit>()
+        val results = mutableListOf<Result<String>>()
         rpc.enhanceGate = gate
-        var completed = false
 
-        edt { controller.enhancePrompt("make a plan") { completed = true } }
+        edt {
+            controller.enhancePrompt("make a plan") {
+                assertTrue(ApplicationManager.getApplication().isDispatchThread)
+                results.add(it)
+            }
+            controller.enhancePrompt("rewrite a plan") {
+                assertTrue(ApplicationManager.getApplication().isDispatchThread)
+                results.add(it)
+            }
+        }
         settle()
         controller.dispose()
+
+        assertEquals(2, results.size)
+        assertTrue(results.all { it.exceptionOrNull() is CancellationException })
+
         runBlocking { gate.complete(Unit) }
         settle()
 
-        assertFalse(completed)
+        assertEquals(2, results.size)
     }
 }

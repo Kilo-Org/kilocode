@@ -15,6 +15,16 @@ export namespace Daemon {
   const lock = "kilocode-daemon"
   export const PortRange = { start: 4097, end: 4116 } as const
 
+  export const Network = z.object({
+    hostname: z.string(),
+    port: z.number().int().nonnegative(),
+    mdns: z.boolean(),
+    mdnsDomain: z.string(),
+    cors: z.array(z.string()).transform((items) => [...new Set(items)].sort()),
+  })
+  export type Network = z.infer<typeof Network>
+  export type NetworkOption = keyof Network
+
   export const State = z.object({
     pid: z.number().int().positive(),
     hostname: z.string(),
@@ -26,6 +36,7 @@ export namespace Daemon {
     version: z.string(),
     startedAt: z.string(),
     log: z.string(),
+    options: Network.optional(),
   })
   export type State = z.infer<typeof State>
 
@@ -44,12 +55,7 @@ export namespace Daemon {
   })
   export type Status = z.infer<typeof Status>
 
-  export type Options = {
-    hostname: string
-    port: number
-    mdns?: boolean
-    mdnsDomain?: string
-    cors?: string[]
+  export type Options = Network & {
     command?: string[]
     env?: NodeJS.ProcessEnv
     timeout?: number
@@ -58,6 +64,11 @@ export namespace Daemon {
   export type Start = Status & {
     started: boolean
     reused: boolean
+  }
+
+  export type Ensure = {
+    result: Start
+    restarted: boolean
   }
 
   export type Stop = Status & {
@@ -157,13 +168,31 @@ export namespace Daemon {
     return { running: true, stale: false, state, health: probe, file: file() }
   }
 
-  export async function start(input: Options): Promise<Start> {
+  export function matches(state: State, input: Options, explicit: readonly NetworkOption[]) {
+    const options = Network.parse(input)
+    return explicit.every((name) => {
+      if (name === "hostname") return state.hostname === options.hostname
+      if (name === "port") return options.port === 0 || state.port === options.port
+      if (name === "mdns" && state.hostname !== options.hostname) return false
+      if (!state.options) return false
+      if (name === "cors") return state.options.cors.join("\n") === options.cors.join("\n")
+      return state.options[name] === options[name]
+    })
+  }
+
+  async function run(input: Options, explicit: readonly NetworkOption[] = [], force = false): Promise<Ensure> {
     return await Flock.withLock(
       lock,
       async () => {
         const current = await status()
-        if (current.running) return { ...current, started: false, reused: true }
-        if (current.stale && current.state) await terminate(current.state.pid, true)
+        const restarted = current.running && !!current.state && (force || !matches(current.state, input, explicit))
+        if (current.running && !restarted) {
+          return { result: { ...current, started: false, reused: true }, restarted: false }
+        }
+        if (current.state && (current.stale || restarted)) {
+          await terminate(current.state.pid, current.stale)
+          if (alive(current.state.pid)) await terminate(current.state.pid, true)
+        }
         await clear()
         const password = "kilo"
         const token = auth(password)
@@ -182,13 +211,22 @@ export namespace Daemon {
           version: InstallationVersion,
           startedAt: new Date().toISOString(),
           log: out,
+          options: Network.parse(input),
         }
         await write(state)
         const next = await status()
-        return { ...next, started: true, reused: false, state }
+        return { result: { ...next, started: true, reused: false, state }, restarted }
       },
       { dir: path.join(root(), "locks"), timeoutMs: 15_000, staleMs: 30_000 },
     )
+  }
+
+  export async function start(input: Options): Promise<Start> {
+    return (await run(input)).result
+  }
+
+  export async function ensure(input: Options, explicit: readonly NetworkOption[]): Promise<Ensure> {
+    return await run(input, explicit)
   }
 
   export async function stop(): Promise<Stop> {
@@ -209,8 +247,7 @@ export namespace Daemon {
   }
 
   export async function restart(input: Options): Promise<Start> {
-    await stop()
-    return await start(input)
+    return (await run(input, [], true)).result
   }
 
   export function command(
@@ -248,6 +285,7 @@ export namespace Daemon {
 
   async function port(input: Options) {
     if (input.port !== 0) return input.port
+    if (input.env?.KILO_TEST_DAEMON_EPHEMERAL_PORT) return 0
     const ports = Array.from({ length: PortRange.end - PortRange.start + 1 }, (_, index) => PortRange.start + index)
     const free = await Promise.any(
       ports.map((item) =>
@@ -289,7 +327,10 @@ export namespace Daemon {
       })
       const failure = new Promise<never>((_, reject) => child.once("error", reject))
       child.unref()
-      return await Promise.race([wait(out, child.pid, input.timeout ?? 10_000), failure])
+      return await Promise.race([wait(out, child.pid, input.timeout ?? 10_000), failure]).catch(async (err) => {
+        if (child.pid && alive(child.pid)) await terminate(child.pid, true)
+        throw err
+      })
     } finally {
       await Promise.all([stdout.close(), stderr.close()])
     }

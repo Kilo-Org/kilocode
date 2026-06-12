@@ -17,10 +17,12 @@ import { ServerProvider, useServer } from "./context/server"
 import { ProviderProvider, useProvider } from "./context/provider"
 import { ConfigProvider } from "./context/config"
 import { DisplayProvider } from "./context/display"
+import { WorkStyleProvider } from "./context/work-style"
 import { IndexingProvider } from "./context/indexing"
 import { SessionProvider, useSession } from "./context/session"
 import { LanguageBridge } from "./context/language-bridge"
 import { ChatView } from "./components/chat"
+import { SidebarEmptyState } from "./components/chat/SidebarEmptyState"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
 
@@ -292,6 +294,10 @@ const AppContent: Component = () => {
     vscode.postMessage({ type: "forkSession", sessionId, messageId })
   }
 
+  const emptyState = () => (
+    <SidebarEmptyState onSelectSession={handleSelectSession} onShowHistory={() => setCurrentView("history")} />
+  )
+
   return (
     <div class="container">
       {/* legacy-migration start — state-driven overlay, independent of currentView */}
@@ -304,6 +310,7 @@ const AppContent: Component = () => {
                 continueInWorktree
                 onForkMessage={session.status() === "idle" ? handleForkMessage : undefined}
                 promptBoxId="sidebar:fallback"
+                emptyState={emptyState}
               />
             }
           >
@@ -314,6 +321,7 @@ const AppContent: Component = () => {
                 onForkMessage={session.status() === "idle" ? handleForkMessage : undefined}
                 continueInWorktree
                 promptBoxId="sidebar:new-task"
+                emptyState={emptyState}
               />
             </Match>
             <Match when={currentView() === "history"}>
@@ -365,19 +373,21 @@ const App: Component = () => {
                       <ProviderProvider>
                         <ConfigProvider>
                           <DisplayProvider>
-                            <IndexingProvider>
-                              <KiloEmbeddingModelsProvider>
-                                <NotificationsProvider>
-                                  <SessionProvider>
-                                    <FeedbackProvider>
-                                      <DataBridge>
-                                        <AppContent />
-                                      </DataBridge>
-                                    </FeedbackProvider>
-                                  </SessionProvider>
-                                </NotificationsProvider>
-                              </KiloEmbeddingModelsProvider>
-                            </IndexingProvider>
+                            <WorkStyleProvider>
+                              <IndexingProvider>
+                                <KiloEmbeddingModelsProvider>
+                                  <NotificationsProvider>
+                                    <SessionProvider>
+                                      <FeedbackProvider>
+                                        <DataBridge>
+                                          <AppContent />
+                                        </DataBridge>
+                                      </FeedbackProvider>
+                                    </SessionProvider>
+                                  </NotificationsProvider>
+                                </KiloEmbeddingModelsProvider>
+                              </IndexingProvider>
+                            </WorkStyleProvider>
                           </DisplayProvider>
                         </ConfigProvider>
                       </ProviderProvider>

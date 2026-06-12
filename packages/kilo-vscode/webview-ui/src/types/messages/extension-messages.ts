@@ -18,6 +18,7 @@ import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
 import type { AgentInfo, SkillInfo, SlashCommandInfo } from "./agents"
 import type { BrowserSettings, Config, FeatureFlags, IndexingStatus, KiloEmbeddingModelCatalog } from "./config"
+import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { KilocodeNotification, ProfileData } from "./profile"
 import type {
   AgentManagerApplyWorktreeDiffConflict,
@@ -102,6 +103,7 @@ export interface SendMessageFailedMessage {
   draftID?: string
   messageID?: string
   files?: FileAttachment[]
+  review?: import("../../../../src/shared/review-comments").ReviewMessageData
 }
 
 // Wire shape lives in src/shared/stream-messages.ts; narrow `part` to the
@@ -506,6 +508,22 @@ export interface NotificationSettingsLoadedMessage {
 export interface TimelineSettingLoadedMessage {
   type: "timelineSettingLoaded"
   visible: boolean
+}
+
+export interface WorkStyleLoadedMessage {
+  type: "workStyleLoaded"
+  style: WorkStyleState
+}
+
+export interface WorkStyleAppliedMessage {
+  type: "workStyleApplied"
+  style: WorkStyle
+}
+
+export interface WorkStyleApplyFailedMessage {
+  type: "workStyleApplyFailed"
+  message: string
+  rollbackFailed: boolean
 }
 
 export interface NotificationsLoadedMessage {
@@ -1009,6 +1027,9 @@ export type ExtensionMessage =
   | GlobalConfigLoadedMessage
   | NotificationSettingsLoadedMessage
   | TimelineSettingLoadedMessage
+  | WorkStyleLoadedMessage
+  | WorkStyleAppliedMessage
+  | WorkStyleApplyFailedMessage
   | NotificationsLoadedMessage
   | AgentManagerSessionMetaMessage
   | AgentManagerRepoInfoMessage

@@ -234,6 +234,43 @@ describe("kilocode indexing config", () => {
   })
 })
 
+describe("subagent variant overrides", () => {
+  test("removes one model override without removing sibling models", () => {
+    const patch = decode({
+      subagent_variant_overrides: {
+        "anthropic/claude-sonnet-4-6": null,
+      },
+    })
+    const merged = KilocodeConfig.mergeConfig(
+      {
+        subagent_variant_overrides: {
+          "anthropic/claude-sonnet-4-6": "high",
+          "openai/gpt-5": "xhigh",
+        },
+      },
+      patch,
+    )
+
+    expect(patch.subagent_variant_overrides?.["anthropic/claude-sonnet-4-6"]).toBeNull()
+    expect(merged.subagent_variant_overrides).toEqual({ "openai/gpt-5": "xhigh" })
+  })
+
+  test("accepts a delete sentinel for the complete override map", () => {
+    const patch = decode({ subagent_variant_overrides: null })
+    const merged = KilocodeConfig.mergeConfig(
+      {
+        subagent_variant_overrides: {
+          "anthropic/claude-sonnet-4-6": "high",
+        },
+      },
+      patch,
+    )
+
+    expect(patch.subagent_variant_overrides).toBeNull()
+    expect(merged.subagent_variant_overrides).toBeUndefined()
+  })
+})
+
 describe("agent config", () => {
   test("accepts delete sentinels for agent model and variant overrides", () => {
     const patch = decode({ agent: { explore: { model: null, variant: null } } })

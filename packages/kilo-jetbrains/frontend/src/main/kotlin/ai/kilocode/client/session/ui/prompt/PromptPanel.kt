@@ -43,6 +43,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
 import com.intellij.util.messages.MessageBusConnection
+import kotlinx.coroutines.CancellationException
 import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.Graphics
@@ -150,6 +151,7 @@ class PromptPanel(
         addActionListener { onAutoApproveToggle(!autoApprove) }
     }
 
+    private val enhancingIcon = AnimatedIcon.Default()
     private val enhance = HoverIcon().apply {
         icon = WAND_ICON
         toolTipText = KiloBundle.message("prompt.action.enhance")
@@ -326,6 +328,7 @@ class PromptPanel(
             editor.text = it
             focus()
         }.onFailure {
+            if (it is CancellationException) return@onFailure
             KiloNotifications.error(
                 project,
                 KiloBundle.message("prompt.action.enhance.failed"),
@@ -344,7 +347,7 @@ class PromptPanel(
     @RequiresEdt
     private fun syncEnhance() {
         enhance.isEnabled = ready && !busy && !enhancing
-        enhance.icon = if (enhancing) AnimatedIcon.Default() else WAND_ICON
+        enhance.icon = if (enhancing) enhancingIcon else WAND_ICON
         enhance.toolTipText = if (enhancing) {
             KiloBundle.message("prompt.action.enhance.loading")
         } else {
