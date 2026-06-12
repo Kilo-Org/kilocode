@@ -1314,9 +1314,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Language-Server-Protokoll-Integration aktivieren",
   "settings.experimental.batch.title": "Batch-Werkzeug",
   "settings.experimental.batch.description": "Bündelung mehrerer Werkzeugaufrufe aktivieren",
-  "settings.experimental.codebaseSearch.title": "Codebase-Suche",
-  "settings.experimental.codebaseSearch.description":
-    "KI-gestützte Suche in natürlicher Sprache über die gesamte Codebasis aktivieren",
   "settings.experimental.speechToText.title": "Sprache zu Text",
   "settings.experimental.speechToText.description":
     "Aktivieren Sie die Spracheingabe in Prompt-Feldern mit Ihrem Kilo-Konto über Kilo Gateway.",

@@ -18535,9 +18535,6 @@
               "batch_tool": {
                 "type": "boolean"
               },
-              "codebase_search": {
-                "type": "boolean"
-              },
               "speech_to_text_model": {
                 "type": "string"
               },

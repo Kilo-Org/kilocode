@@ -1227,8 +1227,6 @@ export const dict = {
   "settings.experimental.lsp.description": "啟用語言伺服器協定整合",
   "settings.experimental.batch.title": "批次工具",
   "settings.experimental.batch.description": "啟用多個工具呼叫的批次處理",
-  "settings.experimental.codebaseSearch.title": "程式碼庫搜尋",
-  "settings.experimental.codebaseSearch.description": "啟用 AI 驅動的自然語言程式碼庫搜尋",
   "settings.experimental.speechToText.title": "語音轉文字",
   "settings.experimental.speechToText.description": "透過 Kilo Gateway 使用您的 Kilo 帳戶在提示詞欄位中啟用語音輸入。",
   "settings.experimental.speechToText.disabledDescription":

@@ -100,7 +100,7 @@ enum class ToolExecState { PENDING, RUNNING, COMPLETED, ERROR }
 
 enum class ToolKind { READ, WRITE, GENERIC }
 
-private val READ_TOOLS = setOf("read", "glob", "grep", "find", "ls", "diagnostics", "warpgrep")
+private val READ_TOOLS = setOf("read", "glob", "grep", "find", "ls", "diagnostics")
 private val WRITE_TOOLS = setOf("edit", "write", "patch", "multi_edit", "multiedit", "apply_patch")
 
 fun toolKind(name: String?): ToolKind = when (name?.lowercase()) {

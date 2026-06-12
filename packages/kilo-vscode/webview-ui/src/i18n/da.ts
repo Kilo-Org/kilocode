@@ -1292,8 +1292,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Aktiver sprogserverprotokol-integration",
   "settings.experimental.batch.title": "Batchværktøj",
   "settings.experimental.batch.description": "Aktiver batchbehandling af flere værktøjskald",
-  "settings.experimental.codebaseSearch.title": "Kodesøgning",
-  "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig sprogsøgning på tværs af kodebasen",
   "settings.experimental.speechToText.title": "Tale til tekst",
   "settings.experimental.speechToText.description":
     "Aktivér stemmeinput i prompt-felter ved hjælp af din Kilo-konto gennem Kilo Gateway.",

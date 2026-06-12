@@ -146,7 +146,6 @@ function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
     question: "allow",
     webfetch: "allow",
     websearch: "allow",
-    codebase_search: "allow",
     semantic_search: "allow",
     external_directory: {
       [Truncate.GLOB]: "allow",
@@ -199,7 +198,6 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
     list: "allow",
     webfetch: "allow",
     websearch: "allow",
-    codebase_search: "allow",
     semantic_search: "allow",
     external_directory: {
       [Truncate.GLOB]: "allow",
@@ -276,7 +274,7 @@ export function telemetryOptions(_cfg: Config.Info) {
 // Patch the base agents map in-place with all kilo-specific changes:
 // - Rename build → code
 // - Patch plan with readOnlyBash, mcpRules, .kilo paths
-// - Patch explore with codebase_search and conditional prompt
+  // - Patch explore with conditional prompt
 // - Patch appropriate agents with semantic_search
 // - Add debug, orchestrator, ask agents
 export function patchAgents(
@@ -303,7 +301,6 @@ export function patchAgents(
   >,
   defaults: Permission.Ruleset,
   user: Permission.Ruleset,
-  cfg: Config.Info,
   kilo: KiloData,
   worktree: string,
   whitelistedDirs: string[],
@@ -338,7 +335,7 @@ export function patchAgents(
     }
   }
 
-  // Patch explore with codebase_search and conditional prompt
+  // Patch explore with conditional prompt
   if (agents.explore) {
     agents.explore = {
       ...agents.explore,
@@ -353,7 +350,6 @@ export function patchAgents(
           skill: "allow",
           webfetch: "allow",
           websearch: "allow",
-          codebase_search: "allow",
           semantic_search: "allow",
           read: "allow",
           external_directory: {
@@ -368,9 +364,7 @@ export function patchAgents(
         }),
         user,
       ),
-      prompt: cfg.experimental?.codebase_search
-        ? `Prefer using the codebase_search tool for codebase searches — it performs intelligent multi-step code search and returns the most relevant code spans.\n\n${PROMPT_EXPLORE}`
-        : PROMPT_EXPLORE,
+      prompt: PROMPT_EXPLORE,
     }
   }
 
@@ -416,7 +410,6 @@ export function patchAgents(
         todowrite: "allow",
         webfetch: "allow",
         websearch: "allow",
-        codebase_search: "allow",
         external_directory: {
           [Truncate.GLOB]: "allow",
         },

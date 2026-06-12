@@ -113,7 +113,6 @@
     "@kilocode/sdk": "workspace:*",
     "@lydell/node-pty": "catalog:",
     "@modelcontextprotocol/sdk": "1.29.0",
-    "@morphllm/morphsdk": "0.2.166",
     "@npmcli/arborist": "9.4.0",
     "@npmcli/config": "10.8.1",
     "@octokit/graphql": "9.0.2",

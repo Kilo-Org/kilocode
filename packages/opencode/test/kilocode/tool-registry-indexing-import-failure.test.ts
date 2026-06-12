@@ -35,7 +35,6 @@ describe("kilocode tool registry indexing import failure", () => {
 
 function infos() {
   return {
-    codebase: info("codebase_search"),
     recall: info("recall"),
     manager: info("agent_manager"),
     process: info("background_process"),

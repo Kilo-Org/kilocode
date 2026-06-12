@@ -1321,9 +1321,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Activer l'intégration du protocole de serveur de langage",
   "settings.experimental.batch.title": "Outil par lot",
   "settings.experimental.batch.description": "Activer le traitement par lot d'appels d'outils",
-  "settings.experimental.codebaseSearch.title": "Recherche de code",
-  "settings.experimental.codebaseSearch.description":
-    "Activer la recherche en langage naturel par IA dans toute la base de code",
   "settings.experimental.speechToText.title": "Transcription vocale",
   "settings.experimental.speechToText.description":
     "Activez la saisie vocale dans les champs de prompt en utilisant votre compte Kilo via Kilo Gateway.",

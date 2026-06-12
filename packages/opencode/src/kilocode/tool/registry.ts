@@ -1,5 +1,4 @@
 // kilocode_change - new file
-import { CodebaseSearchTool } from "../../tool/warpgrep"
 import { RecallTool } from "../../tool/recall"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
@@ -25,24 +24,22 @@ export namespace KiloToolRegistry {
    * satisfied at the outer registry scope instead of leaking into InstanceState's Effect. */
   export function infos() {
     return Effect.gen(function* () {
-      const codebase = yield* CodebaseSearchTool
       const recall = yield* RecallTool
       const manager = yield* AgentManagerTool
       const process = yield* BackgroundProcessTool
-      return { codebase, recall, manager, process }
+      return { recall, manager, process }
     })
   }
 
   /** Finalize Kilo-specific tools into Tool.Defs. Call this inside the InstanceState state Effect —
    * it has no Service deps beyond what Tool.init itself needs. */
   export function build(
-    tools: { codebase: Tool.Info; recall: Tool.Info; manager: Tool.Info; process: Tool.Info },
+    tools: { recall: Tool.Info; manager: Tool.Info; process: Tool.Info },
     deps: Deps,
     loaders: Loaders = {},
   ) {
     return Effect.gen(function* () {
       const base = yield* Effect.all({
-        codebase: Tool.init(tools.codebase),
         recall: Tool.init(tools.recall),
         manager: Tool.init(tools.manager),
         process: Tool.init(tools.process),
@@ -87,11 +84,9 @@ export namespace KiloToolRegistry {
 
   /** Kilo-specific tools to append to the builtin list */
   export function extra(
-    tools: { codebase: Tool.Def; semantic?: Tool.Def; recall: Tool.Def; manager: Tool.Def; process: Tool.Def },
-    cfg: { experimental?: { codebase_search?: boolean } },
+    tools: { semantic?: Tool.Def; recall: Tool.Def; manager: Tool.Def; process: Tool.Def },
   ): Tool.Def[] {
     return [
-      ...(cfg.experimental?.codebase_search === true ? [tools.codebase] : []),
       ...(tools.semantic ? [tools.semantic] : []),
       tools.recall,
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),

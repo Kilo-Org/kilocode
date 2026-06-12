@@ -293,7 +293,7 @@ export const layer = Layer.effect(
         }
 
         // kilocode_change start - rename build→code, add debug/orchestrator/ask, patch plan/explore
-        KiloAgent.patchAgents(agents, defaults, user, cfg, kilo, ctx.worktree, whitelistedDirs)
+        KiloAgent.patchAgents(agents, defaults, user, kilo, ctx.worktree, whitelistedDirs)
 
         const agentConfigs = KiloAgent.preprocessConfig(cfg.agent ?? {})
         for (const [key, value] of Object.entries(agentConfigs)) {

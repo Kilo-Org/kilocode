@@ -191,8 +191,6 @@
   <!-- packages/opencode/src/cli/cmd/providers.ts -->
 - <https://www.eclipse.org/downloads/download.php?file=/jdtls/snapshots/jdt-language-server-latest.tar.gz>
   <!-- packages/opencode/src/lsp/server.ts -->
-- <https://www.morphllm.com/>
-  <!-- packages/opencode/src/tool/warpgrep.ts -->
 - <https://www.rfc-editor.org/rfc/rfc8628#section-3.5>
   <!-- packages/opencode/src/plugin/github-copilot/copilot.ts -->
 - <https://x.com>

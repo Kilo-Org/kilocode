@@ -152,19 +152,6 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.experimental.codebaseSearch.title")}
-          description={language.t("settings.experimental.codebaseSearch.description")}
-        >
-          <Switch
-            checked={experimental().codebase_search ?? false}
-            onChange={(checked) => updateExperimental("codebase_search", checked)}
-            hideLabel
-          >
-            {language.t("settings.experimental.codebaseSearch.title")}
-          </Switch>
-        </SettingsRow>
-
-        <SettingsRow
           title={language.t("settings.experimental.speechToTextModel.title")}
           description={
             kiloReady()

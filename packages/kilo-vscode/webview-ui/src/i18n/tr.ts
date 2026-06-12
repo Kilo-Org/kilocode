@@ -1288,9 +1288,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Dil sunucu protokolü entegrasyonunu etkinleştir",
   "settings.experimental.batch.title": "Toplu Araç",
   "settings.experimental.batch.description": "Birden fazla araç çağrısının toplu işlenmesini etkinleştir",
-  "settings.experimental.codebaseSearch.title": "Kod Tabanı Araması",
-  "settings.experimental.codebaseSearch.description":
-    "Kod tabanınız genelinde yapay zeka destekli doğal dil aramasını etkinleştir",
   "settings.experimental.speechToText.title": "Sesten metne",
   "settings.experimental.speechToText.description":
     "Kilo Gateway üzerinden Kilo hesabınızı kullanarak komut alanlarında sesli girişi etkinleştirin.",

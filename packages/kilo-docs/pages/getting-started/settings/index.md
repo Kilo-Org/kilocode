@@ -217,7 +217,6 @@ Advanced options not exposed in the UI can be configured via the `experimental` 
 ```json
 {
   "experimental": {
-    "codebase_search": true,
     "batch_tool": false,
     "openTelemetry": true,
     "disable_paste_summary": false,

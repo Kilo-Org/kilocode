@@ -48,7 +48,6 @@ describe("timeline colors", () => {
     expect(color(mkTool("grep"))).toBe(palette.read)
     expect(color(mkTool("ls"))).toBe(palette.read)
     expect(color(mkTool("diagnostics"))).toBe(palette.read)
-    expect(color(mkTool("warpgrep"))).toBe(palette.read)
   })
 
   it("classifies write tools as write color", () => {

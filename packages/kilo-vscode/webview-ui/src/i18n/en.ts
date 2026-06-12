@@ -1278,8 +1278,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Enable language server protocol integration",
   "settings.experimental.batch.title": "Batch Tool",
   "settings.experimental.batch.description": "Enable batching of multiple tool calls",
-  "settings.experimental.codebaseSearch.title": "Codebase Search",
-  "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
   "settings.experimental.speechToText.title": "Speech to Text",
   "settings.experimental.speechToText.description":
     "Enable voice input in prompt fields using your Kilo account through Kilo Gateway.",

@@ -39,7 +39,6 @@ export interface WatcherConfig {
 
 export interface ExperimentalConfig {
   batch_tool?: boolean
-  codebase_search?: boolean
   speech_to_text_model?: string
   primary_tools?: string[]
   continue_loop_on_deny?: boolean

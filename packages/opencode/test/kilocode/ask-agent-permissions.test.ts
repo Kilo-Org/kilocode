@@ -19,7 +19,6 @@ function askRuleset() {
     question: "allow",
     webfetch: "allow",
     websearch: "allow",
-    codebase_search: "allow",
   })
 }
 
@@ -47,7 +46,6 @@ function askRulesetWithMcp(servers: string[], user: Permission.Ruleset = []) {
       question: "allow",
       webfetch: "allow",
       websearch: "allow",
-      codebase_search: "allow",
       ...mcpRules,
     }),
     user,
@@ -214,7 +212,7 @@ describe("Ask agent tool disabled checks", () => {
   })
 
   test("allowed tools are not disabled", () => {
-    const tools = ["read", "grep", "glob", "list", "question", "webfetch", "websearch", "codebase_search"]
+    const tools = ["read", "grep", "glob", "list", "question", "webfetch", "websearch"]
     const result = Permission.disabled(tools, ruleset)
     for (const tool of tools) {
       expect(result.has(tool)).toBe(false)
