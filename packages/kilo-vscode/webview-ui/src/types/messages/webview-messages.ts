@@ -5,7 +5,7 @@ import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
 import type { ModelAllocation, ReviewComment } from "./agent-manager"
-import type { WorkStyleState } from "../../../../src/shared/work-style-presets"
+import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type {
   ClearLegacyDataMessage,
   FinalizeLegacyMigrationMessage,
@@ -394,6 +394,11 @@ export interface RequestWorkStyleMessage {
 export interface SetWorkStyleMessage {
   type: "setWorkStyle"
   style: WorkStyleState
+}
+
+export interface ApplyWorkStyleMessage {
+  type: "applyWorkStyle"
+  style: WorkStyle
 }
 
 export interface StreamSessionVisibleMessage {
@@ -1135,6 +1140,7 @@ export type WebviewMessage =
   | RequestTimelineSettingMessage
   | RequestWorkStyleMessage
   | SetWorkStyleMessage
+  | ApplyWorkStyleMessage
   | StreamSessionVisibleMessage
   | RequestBrowserSettingsMessage
   | RequestClaudeCompatSettingMessage

@@ -1077,13 +1077,13 @@ export const dict = {
   "workStyle.choice.permissions": "Autorisations",
   "workStyle.choice.bash": "Bash",
   "workStyle.choice.visibility": "Visibilité",
-  "workStyle.choice.human.eyebrow": "Contrôle humain",
-  "workStyle.choice.human.title": "Vérifier d'abord",
-  "workStyle.choice.human.description":
+  "workStyle.choice.human-in-the-loop.eyebrow": "Contrôle humain",
+  "workStyle.choice.human-in-the-loop.title": "Vérifier d'abord",
+  "workStyle.choice.human-in-the-loop.description":
     "Kilo s'interrompt fréquemment et vous montre ce qu'il prévoit de faire au fil de son travail.",
-  "workStyle.choice.human.permissions": "L'agent demande l'autorisation avant de modifier des fichiers.",
-  "workStyle.choice.human.bash": "L'agent demande l'autorisation pour chaque commande du terminal.",
-  "workStyle.choice.human.visibility":
+  "workStyle.choice.human-in-the-loop.permissions": "L'agent demande l'autorisation avant de modifier des fichiers.",
+  "workStyle.choice.human-in-the-loop.bash": "L'agent demande l'autorisation pour chaque commande du terminal.",
+  "workStyle.choice.human-in-the-loop.visibility":
     "L'agent affiche les détails de la conversation, les commandes et le raisonnement.",
   "workStyle.choice.autonomous.eyebrow": "Moins d'interruptions",
   "workStyle.choice.autonomous.title": "Autonomie élevée",

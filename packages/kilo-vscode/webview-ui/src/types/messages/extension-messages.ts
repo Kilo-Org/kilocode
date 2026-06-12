@@ -18,7 +18,7 @@ import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
 import type { AgentInfo, SkillInfo, SlashCommandInfo } from "./agents"
 import type { BrowserSettings, Config, FeatureFlags, IndexingStatus, KiloEmbeddingModelCatalog } from "./config"
-import type { WorkStyleSettings, WorkStyleState } from "../../../../src/shared/work-style-presets"
+import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { KilocodeNotification, ProfileData } from "./profile"
 import type {
   AgentManagerApplyWorktreeDiffConflict,
@@ -504,7 +504,17 @@ export interface TimelineSettingLoadedMessage {
 export interface WorkStyleLoadedMessage {
   type: "workStyleLoaded"
   style: WorkStyleState
-  defaults: Record<keyof WorkStyleSettings, boolean>
+}
+
+export interface WorkStyleAppliedMessage {
+  type: "workStyleApplied"
+  style: WorkStyle
+}
+
+export interface WorkStyleApplyFailedMessage {
+  type: "workStyleApplyFailed"
+  message: string
+  rollbackFailed: boolean
 }
 
 export interface NotificationsLoadedMessage {
@@ -1003,6 +1013,8 @@ export type ExtensionMessage =
   | NotificationSettingsLoadedMessage
   | TimelineSettingLoadedMessage
   | WorkStyleLoadedMessage
+  | WorkStyleAppliedMessage
+  | WorkStyleApplyFailedMessage
   | NotificationsLoadedMessage
   | AgentManagerSessionMetaMessage
   | AgentManagerRepoInfoMessage

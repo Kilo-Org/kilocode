@@ -11,7 +11,7 @@ describe("work style presets", () => {
   })
 
   it("uses ask-first permissions for human in the loop", () => {
-    const cfg = WORK_STYLE_PRESETS.human.config
+    const cfg = WORK_STYLE_PRESETS["human-in-the-loop"].config
     const bash = cfg.permission?.bash as Record<string, string>
     expect(cfg.terminal_command_display).toBe("expanded")
     expect(cfg.auto_collapse_reasoning).toBe(false)
@@ -35,7 +35,7 @@ describe("work style presets", () => {
       expect(command in bash).toBe(false)
     }
     expect("git diff *" in bash).toBe(false)
-    expect(WORK_STYLE_PRESETS.human.settings).toEqual({
+    expect(WORK_STYLE_PRESETS["human-in-the-loop"].settings).toEqual({
       showTaskTimeline: true,
     })
   })
@@ -52,7 +52,7 @@ describe("work style presets", () => {
 
   it("does not overwrite existing new-user settings", () => {
     const plan = buildWorkStyleApplyPlan({
-      style: "human",
+      style: "human-in-the-loop",
       config: { permission: { edit: "allow" }, terminal_command_display: "collapsed", auto_collapse_reasoning: true },
       settingDefault: () => false,
     })

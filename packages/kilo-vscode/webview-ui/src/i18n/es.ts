@@ -1069,13 +1069,14 @@ export const dict = {
   "workStyle.choice.permissions": "Permisos",
   "workStyle.choice.bash": "Bash",
   "workStyle.choice.visibility": "Visibilidad",
-  "workStyle.choice.human.eyebrow": "Supervisión humana",
-  "workStyle.choice.human.title": "Revisar primero",
-  "workStyle.choice.human.description":
+  "workStyle.choice.human-in-the-loop.eyebrow": "Supervisión humana",
+  "workStyle.choice.human-in-the-loop.title": "Revisar primero",
+  "workStyle.choice.human-in-the-loop.description":
     "Kilo se detiene con frecuencia y te muestra lo que planea hacer mientras trabaja.",
-  "workStyle.choice.human.permissions": "Pide permiso antes de editar archivos.",
-  "workStyle.choice.human.bash": "Pide permiso para ejecutar todos los comandos del terminal.",
-  "workStyle.choice.human.visibility": "Muestra detalles de la conversación, incluidos comandos y razonamiento.",
+  "workStyle.choice.human-in-the-loop.permissions": "Pide permiso antes de editar archivos.",
+  "workStyle.choice.human-in-the-loop.bash": "Pide permiso para ejecutar todos los comandos del terminal.",
+  "workStyle.choice.human-in-the-loop.visibility":
+    "Muestra detalles de la conversación, incluidos comandos y razonamiento.",
   "workStyle.choice.autonomous.eyebrow": "Menos interrupciones",
   "workStyle.choice.autonomous.title": "Alta autonomía",
   "workStyle.choice.autonomous.description": "Trabaja con menos interrupciones y una interfaz más sencilla.",

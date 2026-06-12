@@ -8,7 +8,7 @@ export interface WorkStyleConfig {
   auto_collapse_reasoning?: boolean
 }
 
-export type WorkStyle = "human" | "autonomous"
+export type WorkStyle = "human-in-the-loop" | "autonomous"
 export type WorkStyleState = WorkStyle | "skipped" | "unset"
 
 export interface WorkStyleSettings {
@@ -58,11 +58,11 @@ const BASH: Record<string, PermissionLevel> = {
   "*>*": "ask",
 }
 
-export const WORK_STYLE_CHOICES: WorkStyle[] = ["human", "autonomous"]
+export const WORK_STYLE_CHOICES: WorkStyle[] = ["human-in-the-loop", "autonomous"]
 
 export const WORK_STYLE_PRESETS: Record<WorkStyle, WorkStylePreset> = {
-  human: {
-    style: "human",
+  "human-in-the-loop": {
+    style: "human-in-the-loop",
     config: {
       terminal_command_display: "expanded",
       auto_collapse_reasoning: false,

@@ -19,7 +19,12 @@ export const WorkStylePicker: Component = () => {
       <div data-slot="work-style-options">
         <For each={WORK_STYLE_CHOICES}>
           {(choice) => (
-            <Button class="work-style-mode" variant="ghost" onClick={() => work.apply(choice)}>
+            <Button
+              class="work-style-mode"
+              variant="ghost"
+              disabled={work.applying()}
+              onClick={() => work.apply(choice)}
+            >
               <div data-slot="work-style-mode-copy">
                 <h3 data-slot="work-style-mode-title">{language.t(`workStyle.choice.${choice}.title`)}</h3>
                 <p data-slot="work-style-mode-description">{language.t(`workStyle.choice.${choice}.description`)}</p>

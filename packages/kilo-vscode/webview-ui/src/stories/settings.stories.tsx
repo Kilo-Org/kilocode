@@ -101,9 +101,9 @@ function OpenModelPicker(props: { children: any }) {
 const work: WorkStyleContextValue = {
   style: () => "unset",
   loading: () => false,
+  applying: () => false,
   shouldShowOnboarding: () => true,
   apply: noop,
-  dismiss: noop,
 }
 
 function WorkStyleOnboarding() {

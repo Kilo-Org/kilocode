@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
-import { getInitialWorkStyle, type WorkStyleSettings, type WorkStyleState } from "../shared/work-style-presets"
+import { getInitialWorkStyle, type WorkStyleState } from "../shared/work-style-presets"
+import { handleWorkStyleApplyMessage } from "./work-style-apply-handler"
 
 export const WORK_STYLE_SETTING_KEYS = ["showTaskTimeline"] as const
 
@@ -13,23 +14,9 @@ function isWorkStyleConfigured(): boolean {
 }
 
 export function getWorkStylePayload() {
-  const config = getConfig()
-  const inspect = (key: (typeof WORK_STYLE_SETTING_KEYS)[number]) => config.inspect(key)
-  const defaults = Object.fromEntries(
-    WORK_STYLE_SETTING_KEYS.map((key) => {
-      const info = inspect(key)
-      const customized =
-        info?.globalValue !== undefined ||
-        info?.workspaceValue !== undefined ||
-        info?.workspaceFolderValue !== undefined
-      return [key, !customized]
-    }),
-  ) as Record<keyof WorkStyleSettings, boolean>
-
   return {
     type: "workStyleLoaded" as const,
-    style: config.get<WorkStyleState>("agentWorkStyle", "unset"),
-    defaults,
+    style: getConfig().get<WorkStyleState>("agentWorkStyle", "unset"),
   }
 }
 
@@ -86,6 +73,10 @@ export async function handleWorkStyleMessage(input: {
       })
     const payload = getWorkStylePayload()
     input.post(initialized ? payload : { ...payload, style: "skipped" })
+    return true
+  }
+  if (await handleWorkStyleApplyMessage(input)) {
+    input.post(getWorkStylePayload())
     return true
   }
   if (input.message.type !== "setWorkStyle") return false

@@ -995,7 +995,7 @@
           "default": "unset",
           "enum": [
             "unset",
-            "human",
+            "human-in-the-loop",
             "autonomous",
             "skipped"
           ],
