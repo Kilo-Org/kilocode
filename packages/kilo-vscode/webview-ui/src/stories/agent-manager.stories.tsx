@@ -5,14 +5,24 @@
  */
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import { StoryProviders } from "./StoryProviders"
+import type {
+  AssistantMessage as SDKAssistantMessage,
+  ReasoningPart,
+  TextPart,
+  ToolPart,
+  UserMessage,
+} from "@kilocode/sdk/v2"
+import { StoryProviders, defaultMockData } from "./StoryProviders"
 import { FileTree } from "../../diff-viewer/FileTree"
 import { DiffPanel } from "../../agent-manager/DiffPanel"
 import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
+import { AssistantMessage } from "../components/chat/AssistantMessage"
+import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { UserMessageDisplay } from "@kilocode/kilo-ui/message-part"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { createSignal, type JSX } from "solid-js"
@@ -20,6 +30,8 @@ import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats, PRStatus } from
 import type { ReviewComment } from "../../diff-viewer/review-comments"
 import "../../agent-manager/agent-manager.css"
 import "../../agent-manager/agent-manager-review.css"
+
+registerVscodeToolOverrides()
 
 // ---------------------------------------------------------------------------
 // Shared mock data
@@ -116,6 +128,111 @@ const meta: Meta = {
 }
 export default meta
 type Story = StoryObj
+
+// ---------------------------------------------------------------------------
+// Transcript layout
+// ---------------------------------------------------------------------------
+
+const transcriptSessionID = "story-agent-manager-transcript"
+const transcriptUserID = "story-agent-manager-user"
+const transcriptAssistantID = "story-agent-manager-assistant"
+const transcriptNow = 1_700_000_000_000
+
+const transcriptUser: UserMessage = {
+  id: transcriptUserID,
+  sessionID: transcriptSessionID,
+  role: "user",
+  time: { created: transcriptNow },
+  agent: "default",
+  model: { providerID: "anthropic", modelID: "claude-sonnet-4" },
+}
+
+const transcriptAssistant: SDKAssistantMessage = {
+  id: transcriptAssistantID,
+  sessionID: transcriptSessionID,
+  role: "assistant",
+  parentID: transcriptUserID,
+  time: { created: transcriptNow + 1000, completed: transcriptNow + 5000 },
+  modelID: "claude-sonnet-4",
+  providerID: "anthropic",
+  mode: "default",
+  agent: "default",
+  path: { cwd: "/project", root: "/project" },
+  cost: 0.003,
+  tokens: { input: 400, output: 240, reasoning: 80, cache: { read: 0, write: 0 } },
+}
+
+const transcriptUserText: TextPart = {
+  id: "story-agent-manager-user-text",
+  sessionID: transcriptSessionID,
+  messageID: transcriptUserID,
+  type: "text",
+  text: "Verify the updated pull request and watch its checks to completion.",
+}
+
+const transcriptReasoning: ReasoningPart = {
+  id: "story-agent-manager-reasoning",
+  sessionID: transcriptSessionID,
+  messageID: transcriptAssistantID,
+  type: "reasoning",
+  text: "I will inspect the pull request state first, then follow the checks until they finish.",
+  time: { start: transcriptNow + 1000, end: transcriptNow + 1800 },
+}
+
+const transcriptTool: ToolPart = {
+  id: "story-agent-manager-tool",
+  sessionID: transcriptSessionID,
+  messageID: transcriptAssistantID,
+  type: "tool",
+  callID: "story-agent-manager-call",
+  tool: "bash",
+  state: {
+    status: "completed",
+    input: { command: "gh pr checks 11090 --watch", description: "Watch updated pull request checks" },
+    output: "build        pass   2m14s\nunit-tests   pass   3m08s\nwindows      pass   4m31s",
+    title: "Watch updated pull request checks",
+    metadata: {},
+    time: { start: transcriptNow + 2000, end: transcriptNow + 4800 },
+  },
+}
+
+const transcriptText: TextPart = {
+  id: "story-agent-manager-assistant-text",
+  sessionID: transcriptSessionID,
+  messageID: transcriptAssistantID,
+  type: "text",
+  text: "The pull request is mergeable and all required checks pass.",
+}
+
+const transcriptParts = [transcriptReasoning, transcriptTool, transcriptText]
+const transcriptData = {
+  ...defaultMockData,
+  message: { [transcriptSessionID]: [transcriptUser, transcriptAssistant] },
+  part: {
+    [transcriptUserID]: [transcriptUserText],
+    [transcriptAssistantID]: transcriptParts,
+  },
+}
+
+export const TranscriptAlignmentWide: Story = {
+  name: "Transcript - constrained assistant and right-aligned user",
+  render: () => (
+    <StoryProviders data={transcriptData} sessionID={transcriptSessionID} noPadding>
+      <div class="am-chat-wrapper" style={{ "max-height": "680px" }}>
+        <div class="message-list">
+          <div class="vscode-session-turn">
+            <div class="vscode-session-turn-user">
+              <UserMessageDisplay message={transcriptUser} parts={[transcriptUserText]} />
+            </div>
+            <div class="vscode-session-turn-assistant" data-slot="session-turn-assistant">
+              <AssistantMessage message={transcriptAssistant} parts={transcriptParts} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </StoryProviders>
+  ),
+}
 
 // ---------------------------------------------------------------------------
 // FileTree

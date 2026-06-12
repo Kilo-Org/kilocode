@@ -1570,6 +1570,11 @@ body.am-wt-dragging-active * {
   position: relative;
 }
 
+.am-chat-wrapper [data-slot="session-turn-assistant"] {
+  align-self: flex-start;
+  max-width: 720px;
+}
+
 .am-readonly-banner {
   display: flex;
   align-items: center;

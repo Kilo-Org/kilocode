@@ -71,7 +71,7 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
 
       <Show when={props.row.type === "assistant" ? props.row : undefined}>
         {(row) => (
-          <div class="vscode-session-turn-assistant">
+          <div class="vscode-session-turn-assistant" data-slot="session-turn-assistant">
             <AssistantMessage
               message={row().message as unknown as SDKAssistantMessage}
               parts={row().parts as unknown as SDKPart[]}
