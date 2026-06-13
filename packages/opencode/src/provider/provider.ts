@@ -1151,7 +1151,15 @@ export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
       }
     }
   }
-  Object.assign(models, KiloMorphRouter.catalogModels(provider)) // kilocode_change - Morph auto router pseudo-model
+  // kilocode_change start - Morph exposes only the Auto Router model. Its
+  // catalog v3 models are apply/edit-only (no tool calling) and not usable as
+  // chat/agent models, so they are replaced by the router pseudo-model.
+  const morphModels = KiloMorphRouter.catalogModels(provider)
+  if (provider.id === KiloMorphRouter.PROVIDER_ID) {
+    for (const key of Object.keys(models)) delete models[key]
+  }
+  Object.assign(models, morphModels)
+  // kilocode_change end
   return {
     id: ProviderID.make(provider.id),
     source: "custom",

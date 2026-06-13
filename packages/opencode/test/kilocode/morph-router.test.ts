@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { KiloMorphRouter } from "../../src/kilocode/provider/morph-router"
-import type { Provider } from "../../src/provider/provider"
+import { Provider } from "../../src/provider/provider"
 import type { MessageV2 } from "../../src/session/message-v2"
+import snapshot from "../../src/provider/models-snapshot.json"
 
 function providerInfo(input: { models: string[]; key?: string; options?: Record<string, any> }) {
   return {
@@ -60,6 +61,22 @@ describe("KiloMorphRouter.catalogModels", () => {
     expect(models["auto"].name).toBe(KiloMorphRouter.MODEL_NAME)
     expect(models["auto"].capabilities.toolcall).toBe(true)
     expect(KiloMorphRouter.catalogModels({ id: "anthropic" })).toEqual({})
+  })
+})
+
+describe("Morph provider catalog (via fromModelsDevProvider)", () => {
+  test("Morph exposes only the Auto Router model — apply-only v3 models are dropped", () => {
+    const info = Provider.fromModelsDevProvider((snapshot as any).morph)
+    expect(Object.keys(info.models)).toEqual(["auto"])
+    expect(info.models["morph-v3-fast"]).toBeUndefined()
+    expect(info.models["morph-v3-large"]).toBeUndefined()
+  })
+
+  test("other providers are unaffected by the Morph-only filter", () => {
+    const info = Provider.fromModelsDevProvider((snapshot as any).anthropic)
+    expect(Object.keys(info.models).length).toBeGreaterThan(1)
+    expect(info.models["claude-sonnet-4-6"]).toBeDefined()
+    expect(info.models["auto"]).toBeUndefined()
   })
 })
 
