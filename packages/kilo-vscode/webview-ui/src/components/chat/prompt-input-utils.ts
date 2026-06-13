@@ -87,8 +87,8 @@ export function isPromptBlocked(permissions: number): boolean {
  * Returns false (idle-like) when the session is busy only because
  * a suggestion or question tool call is pending.
  */
-export function isPromptBusy(status: string, suggesting: boolean, questioning: boolean): boolean {
-  return status !== "idle" && !suggesting && !questioning
+export function isPromptBusy(status: string, suggesting: boolean, questioning: boolean, submitting: boolean): boolean {
+  return submitting || (status !== "idle" && !suggesting && !questioning)
 }
 
 /**

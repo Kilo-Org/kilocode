@@ -207,6 +207,7 @@ Commands:
   kilo debug snapshot      snapshot debugging utilities
   kilo debug startup       print startup timing
   kilo debug agent <name>  show agent configuration details
+  kilo debug v2            debug v2 catalog and built-in plugins
   kilo debug info          show debug information
   kilo debug paths         show global paths (data, config, cache, state)
   kilo debug wait          wait indefinitely (for debugging)
@@ -507,6 +508,16 @@ Options:
   --version  Show version number  [boolean]
   --tool     Tool id to execute  [string]
   --params   Tool params as JSON or a JS object literal  [string]
+```
+
+### kilo debug v2
+
+```
+debug v2 catalog and built-in plugins
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug info
@@ -892,6 +903,8 @@ Options:
 ```
 
 ## kilo console
+
+Open Kilo Console to manage CLI configuration, including **Settings > CLI > Notifications**. See [CLI Notifications and Sounds](/docs/code-with-ai/platforms/cli#cli-notifications-and-sounds) for the equivalent `tui.json` settings and custom sound overrides.
 
 ```
 open the local Kilo Console

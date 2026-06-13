@@ -85,6 +85,53 @@ describe("TUI config routes", () => {
     expect(saved).toEqual({ theme: "nord" })
   })
 
+  test("patches attention config without dropping advanced notification settings", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        const cfg = path.join(dir, ".kilo")
+        await fs.mkdir(cfg, { recursive: true })
+        await Bun.write(
+          path.join(cfg, "tui.json"),
+          JSON.stringify(
+            {
+              attention: {
+                enabled: false,
+                sound_pack: "custom.pack",
+                sounds: { question: "./question.mp3" },
+              },
+            },
+            null,
+            2,
+          ),
+        )
+      },
+    })
+
+    const response = await Server.Default().app.request("/tui/config?scope=project", {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+        "x-kilo-directory": tmp.path,
+      },
+      body: JSON.stringify({
+        attention: { enabled: true, notifications: false, sound: true, volume: 0.25 },
+      }),
+    })
+
+    expect(response.status).toBe(200)
+    const saved = await Bun.file(path.join(tmp.path, ".kilo", "tui.json")).json()
+    expect(saved).toEqual({
+      attention: {
+        enabled: true,
+        notifications: false,
+        sound: true,
+        volume: 0.25,
+        sound_pack: "custom.pack",
+        sounds: { question: "./question.mp3" },
+      },
+    })
+  })
+
   test("emits global.config.updated when patching TUI config so open TUIs hot-reload", async () => {
     await using tmp = await tmpdir()
 

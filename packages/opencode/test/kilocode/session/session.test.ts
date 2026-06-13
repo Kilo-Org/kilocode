@@ -5,6 +5,8 @@ import { Bus } from "../../../src/bus"
 import * as Log from "@opencode-ai/core/util/log"
 import { WithInstance } from "../../../src/project/with-instance"
 import { AppRuntime } from "../../../src/effect/app-runtime"
+import { RuntimeFlags } from "../../../src/effect/runtime-flags"
+import { Effect } from "effect"
 import { tmpdir } from "../../fixture/fixture"
 import type { SessionID } from "../../../src/session/schema"
 
@@ -31,12 +33,15 @@ describe("session.created event", () => {
         let eventReceived = false
         let receivedInfo: SessionNs.Info | undefined
 
+        const title = `created-event-${Date.now()}`
         const unsub = Bus.subscribe(SessionNs.Event.Created, (event) => {
+          const info = event.properties.info as SessionNs.Info
+          if (info.title !== title) return
           eventReceived = true
-          receivedInfo = event.properties.info as SessionNs.Info
+          receivedInfo = info
         })
 
-        const info = await create({})
+        const info = await create({ title })
         await new Promise((resolve) => setTimeout(resolve, 100))
         unsub()
 
@@ -54,31 +59,43 @@ describe("session.created event", () => {
   })
 
   test("session.created event should be emitted before session.updated", async () => {
-    await WithInstance.provide({
-      directory: projectRoot,
-      fn: async () => {
-        const events: string[] = []
+    const previous = process.env.KILO_EXPERIMENTAL_WORKSPACES
+    delete process.env.KILO_EXPERIMENTAL_WORKSPACES
+    try {
+      await WithInstance.provide({
+        directory: projectRoot,
+        fn: async () => {
+          const flags = AppRuntime.runSync(Effect.service(RuntimeFlags.Service))
+          const enabled = flags.experimentalWorkspaces
+          Object.assign(flags, { experimentalWorkspaces: false })
+          const events: string[] = []
+          const title = `event-order-${Date.now()}`
 
-        const unsubCreated = Bus.subscribe(SessionNs.Event.Created, () => {
-          events.push("created")
-        })
+          const unsubCreated = Bus.subscribe(SessionNs.Event.Created, (event) => {
+            if (event.properties.info.title === title) events.push("created")
+          })
 
-        const unsubUpdated = Bus.subscribe(SessionNs.Event.Updated, () => {
-          events.push("updated")
-        })
+          const unsubUpdated = Bus.subscribe(SessionNs.Event.Updated, (event) => {
+            if (event.properties.info.title === title) events.push("updated")
+          })
 
-        const info = await create({})
-        await new Promise((resolve) => setTimeout(resolve, 100))
-        unsubCreated()
-        unsubUpdated()
+          const info = await create({ title })
+          await new Promise((resolve) => setTimeout(resolve, 100))
+          unsubCreated()
+          unsubUpdated()
 
-        expect(events).toContain("created")
-        expect(events).toContain("updated")
-        expect(events.indexOf("created")).toBeLessThan(events.indexOf("updated"))
+          expect(events).toContain("created")
+          expect(events).toContain("updated")
+          expect(events.indexOf("created")).toBeLessThan(events.indexOf("updated"))
 
-        await remove(info.id)
-      },
-    })
+          await remove(info.id)
+          Object.assign(flags, { experimentalWorkspaces: enabled })
+        },
+      })
+    } finally {
+      if (previous === undefined) delete process.env.KILO_EXPERIMENTAL_WORKSPACES
+      else process.env.KILO_EXPERIMENTAL_WORKSPACES = previous
+    }
   })
 })
 

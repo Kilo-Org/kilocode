@@ -48,6 +48,7 @@ import { Truncate } from "@/tool/truncate"
 import * as Log from "@opencode-ai/core/util/log"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import * as Database from "../../src/storage/db"
+import { Storage } from "../../src/storage/storage"
 import { Ripgrep } from "../../src/file/ripgrep"
 import { Format } from "../../src/format"
 import { Reference } from "../../src/reference/reference"
@@ -55,6 +56,8 @@ import { provideTmpdirInstance, provideTmpdirServer } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
 import { SyncEvent } from "@/sync"
+import { RuntimeFlags } from "@/effect/runtime-flags"
+import { BackgroundJob } from "@/background/job"
 
 void Log.init({ print: false })
 const summary = Layer.succeed(
@@ -178,6 +181,7 @@ const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLaye
 function makeHttp() {
   const deps = Layer.mergeAll(
     Session.defaultLayer,
+    BackgroundJob.defaultLayer,
     Snapshot.defaultLayer,
     LLM.defaultLayer,
     Env.defaultLayer,
@@ -192,7 +196,7 @@ function makeHttp() {
     AppFileSystem.defaultLayer,
     status,
     SyncEvent.defaultLayer,
-  ).pipe(Layer.provideMerge(infra))
+  ).pipe(Layer.provideMerge(infra), Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })))
   const question = Question.layer.pipe(Layer.provideMerge(deps))
   const todo = Todo.layer.pipe(Layer.provideMerge(deps))
   const registry = ToolRegistry.layer.pipe(
@@ -216,6 +220,7 @@ function makeHttp() {
   const compact = SessionCompaction.layer.pipe(Layer.provideMerge(proc), Layer.provideMerge(deps))
   return Layer.mergeAll(
     TestLLMServer.layer,
+    BackgroundJob.defaultLayer,
     SessionPrompt.layer.pipe(
       Layer.provide(SessionRevert.defaultLayer),
       Layer.provide(Image.defaultLayer),
@@ -230,7 +235,21 @@ function makeHttp() {
       Layer.provide(SystemPrompt.defaultLayer),
       Layer.provideMerge(deps),
     ),
-  ).pipe(Layer.provide(summary))
+  ).pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        summary,
+        deps,
+        Config.defaultLayer,
+        RuntimeFlags.layer({ experimentalEventSystem: true }),
+        BackgroundJob.defaultLayer,
+        Bus.layer,
+        infra,
+        Storage.defaultLayer,
+        Reference.defaultLayer,
+      ),
+    ),
+  )
 }
 
 const it = testEffect(makeHttp())
@@ -1132,9 +1151,13 @@ it.live(
             yield* sessions.updateMessage(childAssistant)
             yield* ctx.metadata({
               title: "done",
-              metadata: { sessionId: child.id, model: ref, variant: undefined },
+              metadata: { parentSessionId: ctx.sessionID, sessionId: child.id, model: ref, variant: undefined },
             })
-            return { title: "done", metadata: { sessionId: child.id, model: ref, variant: undefined }, output: "done" }
+            return {
+              title: "done",
+              metadata: { parentSessionId: ctx.sessionID, sessionId: child.id, model: ref, variant: undefined },
+              output: "done",
+            }
           })
         yield* Effect.addFinalizer(() => Effect.sync(() => void (task.execute = original)))
 
@@ -2164,7 +2187,7 @@ it.live("keeps stored part order stable when file resolution is async", () =>
 
         if (msg.info.role !== "user") throw new Error("expected user message")
 
-        const stored = MessageV2.get({
+        const stored = yield* MessageV2.get({
           sessionID: session.id,
           messageID: msg.info.id,
         })
@@ -2206,7 +2229,7 @@ it.live("handles filenames with # character", () =>
           parts,
           noReply: true,
         })
-        const stored = MessageV2.get({ sessionID: session.id, messageID: message.info.id })
+        const stored = yield* MessageV2.get({ sessionID: session.id, messageID: message.info.id })
         const textParts = stored.parts.filter((part) => part.type === "text")
         const hasContent = textParts.some((part) => part.text.includes("special content"))
         expect(hasContent).toBe(true)

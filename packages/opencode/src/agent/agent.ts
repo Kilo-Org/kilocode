@@ -1,5 +1,4 @@
 import { Config } from "@/config/config"
-import z from "zod"
 import { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "../provider/schema"
 import { generateObject, streamObject, type ModelMessage } from "ai"
@@ -17,16 +16,15 @@ import { Permission } from "@/permission"
 import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { Global } from "@opencode-ai/core/global"
 import { KilocodePaths } from "@/kilocode/paths" // kilocode_change
-import { Flag } from "@opencode-ai/core/flag/flag"
 import path from "path"
 import { Plugin } from "@/plugin"
 import { Skill } from "../skill"
 import { Effect, Context, Layer, Schema } from "effect"
 import { InstanceState } from "@/effect/instance-state"
-import { zod } from "@opencode-ai/core/effect-zod"
-import { withStatics, type DeepMutable } from "@opencode-ai/core/schema"
-import { Reference } from "@/reference/reference"
+import { type DeepMutable } from "@opencode-ai/core/schema"
 import * as KiloAgent from "@/kilocode/agent" // kilocode_change
+import { RuntimeFlags } from "@/effect/runtime-flags"
+import { Reference } from "@/reference/reference" // kilocode_change
 
 export const Info = Schema.Struct({
   name: Schema.String,
@@ -50,23 +48,31 @@ export const Info = Schema.Struct({
   prompt: Schema.optional(Schema.String),
   options: Schema.Record(Schema.String, Schema.Unknown),
   steps: Schema.optional(Schema.Finite),
-})
-  .annotate({ identifier: "Agent" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "Agent" })
 export type Info = DeepMutable<Schema.Schema.Type<typeof Info>>
+
+const GeneratedAgent = Schema.Struct({
+  identifier: Schema.String,
+  whenToUse: Schema.String,
+  systemPrompt: Schema.String,
+})
 
 export interface Interface {
   readonly get: (agent: string) => Effect.Effect<Info>
   readonly list: () => Effect.Effect<Info[]>
+  readonly defaultInfo: () => Effect.Effect<Info>
   readonly defaultAgent: () => Effect.Effect<string>
   readonly generate: (input: {
     description: string
     model?: { providerID: ProviderID; modelID: ModelID }
-  }) => Effect.Effect<{
-    identifier: string
-    whenToUse: string
-    systemPrompt: string
-  }>
+  }) => Effect.Effect<
+    {
+      identifier: string
+      whenToUse: string
+      systemPrompt: string
+    },
+    Provider.ModelNotFoundError
+  >
 }
 
 type State = Omit<Interface, "generate"> & { version: string } // kilocode_change
@@ -81,6 +87,7 @@ export const layer = Layer.effect(
     const plugin = yield* Plugin.Service
     const skill = yield* Skill.Service
     const provider = yield* Provider.Service
+    const flags = yield* RuntimeFlags.Service
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("Agent.state")(function* (ctx) {
@@ -207,7 +214,7 @@ export const layer = Layer.effect(
             mode: "subagent",
             native: true,
           },
-          ...(Flag.KILO_EXPERIMENTAL_SCOUT
+          ...(flags.experimentalScout
             ? {
                 scout: {
                   name: "scout",
@@ -219,7 +226,6 @@ export const layer = Layer.effect(
                       glob: "allow",
                       webfetch: "allow",
                       websearch: "allow",
-                      codesearch: "allow",
                       read: "allow",
                       repo_clone: "allow",
                       repo_overview: "allow",
@@ -246,10 +252,10 @@ export const layer = Layer.effect(
             prompt: PROMPT_COMPACTION,
             permission: Permission.merge(
               defaults,
+              user,
               Permission.fromConfig({
                 "*": "deny",
               }),
-              user,
             ),
             options: {},
           },
@@ -262,10 +268,10 @@ export const layer = Layer.effect(
             temperature: 0.5,
             permission: Permission.merge(
               defaults,
+              user,
               Permission.fromConfig({
                 "*": "deny",
               }),
-              user,
             ),
             prompt: PROMPT_TITLE,
           },
@@ -277,10 +283,10 @@ export const layer = Layer.effect(
             hidden: true,
             permission: Permission.merge(
               defaults,
+              user,
               Permission.fromConfig({
                 "*": "deny",
               }),
-              user,
             ),
             prompt: PROMPT_SUMMARY,
           },
@@ -357,7 +363,7 @@ export const layer = Layer.effect(
           return `Invalid Scout reference for repository ${reference.repository}`
         }
 
-        if (Flag.KILO_EXPERIMENTAL_SCOUT) {
+        if (flags.experimentalScout) {
           const resolvedReferences = Reference.resolveAll({
             references: cfg.reference ?? {},
             directory: ctx.directory,
@@ -423,7 +429,7 @@ export const layer = Layer.effect(
           )
         })
 
-        const defaultAgent = Effect.fnUntraced(function* () {
+        const defaultInfo = Effect.fnUntraced(function* () {
           const c = yield* config.get()
           if (c.default_agent) {
             // kilocode_change start
@@ -433,21 +439,26 @@ export const layer = Layer.effect(
             if (!agent) throw new Error(`default agent "${c.default_agent}" not found`)
             if (agent.mode === "subagent") throw new Error(`default agent "${c.default_agent}" is a subagent`)
             if (agent.hidden === true) throw new Error(`default agent "${c.default_agent}" is hidden`)
-            return agent.name
+            return agent
           }
           // kilocode_change start - prefer "code" as default agent (key order changes after rename from "build")
           const code = agents.code
-          if (code && code.mode !== "subagent" && code.hidden !== true) return code.name
+          if (code && code.mode !== "subagent" && code.hidden !== true) return code
           // kilocode_change end
           const visible = Object.values(agents).find((a) => a.mode !== "subagent" && a.hidden !== true)
           if (!visible) throw new Error("no primary visible agent found")
-          return visible.name
+          return visible
+        })
+
+        const defaultAgent = Effect.fnUntraced(function* () {
+          return (yield* defaultInfo()).name
         })
 
         return {
           version: KiloAgent.cacheKey(cfg), // kilocode_change
           get,
           list,
+          defaultInfo,
           defaultAgent,
         } satisfies State
       }),
@@ -469,6 +480,9 @@ export const layer = Layer.effect(
       }),
       list: Effect.fn("Agent.list")(function* () {
         return yield* current((s) => s.list()) // kilocode_change
+      }),
+      defaultInfo: Effect.fn("Agent.defaultInfo")(function* () {
+        return yield* current((s) => s.defaultInfo()) // kilocode_change
       }),
       defaultAgent: Effect.fn("Agent.defaultAgent")(function* () {
         return yield* current((s) => s.defaultAgent()) // kilocode_change
@@ -510,11 +524,10 @@ export const layer = Layer.effect(
             },
           ],
           model: language,
-          schema: z.object({
-            identifier: z.string(),
-            whenToUse: z.string(),
-            systemPrompt: z.string(),
-          }),
+          schema: Object.assign(
+            Schema.toStandardSchemaV1(GeneratedAgent),
+            Schema.toStandardJSONSchemaV1(GeneratedAgent),
+          ),
         } satisfies Parameters<typeof generateObject>[0]
 
         if (isOpenaiOauth) {
@@ -546,6 +559,7 @@ export const defaultLayer = layer.pipe(
   Layer.provide(Auth.defaultLayer),
   Layer.provide(Config.defaultLayer),
   Layer.provide(Skill.defaultLayer),
+  Layer.provide(RuntimeFlags.defaultLayer),
 )
 
 export * as Agent from "./agent"

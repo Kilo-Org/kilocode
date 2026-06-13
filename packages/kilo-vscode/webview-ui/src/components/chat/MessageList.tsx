@@ -11,6 +11,7 @@
 
 import {
   type Component,
+  type JSX,
   For,
   Show,
   createEffect,
@@ -19,50 +20,42 @@ import {
   on,
   onCleanup,
   onMount,
-  JSX,
 } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
-import { recentSessions } from "../../context/session-utils"
-import { formatRelativeDate } from "../../utils/date"
-import { FeedbackDialog } from "./FeedbackDialog"
-import { VscodeSessionTurn } from "./VscodeSessionTurn"
+import { WelcomeEmptyState } from "./WelcomeEmptyState"
+import { TranscriptRowView } from "./TranscriptRow"
 import { RevertBanner } from "./RevertBanner"
 import { AccountSwitcher } from "../shared/AccountSwitcher"
 import { KiloNotifications } from "./KiloNotifications"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { TurnOutcome } from "../shared/TurnOutcome"
 import { QuestionDock } from "./QuestionDock"
-import { Virtualizer } from "virtua/solid"
+import { Virtualizer, type VirtualizerHandle } from "virtua/solid"
 import { SuggestBar } from "./SuggestBar"
+import {
+  getMeasurement,
+  getScroll,
+  layoutFingerprint,
+  resolveAnchor,
+  rowFingerprint,
+  setMeasurement,
+  setScroll,
+} from "./transcript-cache"
 import {
   activeUserMessageID as getActiveUserMessageID,
   messageTurns,
-  partitionTurns,
   queuedUserMessageIDs,
   stableMessageTurns,
   type MessageTurn,
 } from "../../context/session-queue"
+import { partitionRows, transcriptRows, type TranscriptRow } from "../../context/transcript-rows"
 import type { ExtensionMessage, QuestionRequest, SuggestionRequest } from "../../types/messages"
-
-const KiloLogo = (): JSX.Element => {
-  const iconsBaseUri = (window as { ICONS_BASE_URI?: string }).ICONS_BASE_URI || ""
-  const isLight =
-    document.body.classList.contains("vscode-light") || document.body.classList.contains("vscode-high-contrast-light")
-  const iconFile = isLight ? "kilo-light.svg" : "kilo-dark.svg"
-
-  return (
-    <div class="kilo-logo">
-      <img src={`${iconsBaseUri}/${iconFile}`} alt="Kilo Code" />
-    </div>
-  )
-}
 
 interface MessageListProps {
   onSelectSession?: (id: string) => void
@@ -74,6 +67,8 @@ interface MessageListProps {
   suggestions?: () => SuggestionRequest[]
   /** When true (subagent viewer), replace the welcome screen with an initializing indicator */
   readonly?: boolean
+  /** Optionally replace the standard welcome content while the conversation is empty. */
+  emptyState?: () => JSX.Element
 }
 
 export const MessageList: Component<MessageListProps> = (props) => {
@@ -81,7 +76,6 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const server = useServer()
   const language = useLanguage()
   const vscode = useVSCode()
-  const dialog = useDialog()
 
   const autoScroll = createAutoScroll({
     working: () => session.status() !== "idle",
@@ -101,7 +95,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
   })
 
   const [scrollEl, setScrollEl] = createSignal<HTMLElement>()
-  const positions = new Map<string, { top: number; userScrolled: boolean }>()
+  const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
+  const [layout, setLayout] = createSignal("")
 
   const boundary = () => session.revert()?.messageID
   const turns = createMemo((prev: MessageTurn[] | undefined) =>
@@ -111,8 +106,6 @@ export const MessageList: Component<MessageListProps> = (props) => {
     ),
   )
   const isEmpty = () => turns().length === 0 && !session.loading() && !boundary()
-
-  const recent = createMemo(() => recentSessions(session.sessions()))
 
   const activeUserID = createMemo(() =>
     getActiveUserMessageID(session.messages(), session.statusInfo(), (msg) => session.getParts(msg.id)),
@@ -127,7 +120,20 @@ export const MessageList: Component<MessageListProps> = (props) => {
   window.addEventListener("message", handler)
   onMount(() => vscode.postMessage({ type: "requestTimelineSetting" }))
   onCleanup(() => window.removeEventListener("message", handler))
-  const [held, setHeld] = createSignal<{ sid: string; ids: Set<string> }>()
+  const rows = createMemo((prev: TranscriptRow[] | undefined) => {
+    const active = activeUserID()
+    return transcriptRows(
+      turns(),
+      (msg) => session.getParts(msg),
+      {
+        queued: queuedIDs(),
+        live: new Set(active ? [active] : []),
+        hidden: session.isErrorHidden,
+      },
+      prev,
+    )
+  })
+  const [held, setHeld] = createSignal<{ sid: string; turn: string }>()
   createEffect(() => {
     const id = activeUserID()
     const sid = session.currentSessionID()
@@ -138,34 +144,57 @@ export const MessageList: Component<MessageListProps> = (props) => {
     }
     if (!id) return
     if (!paused) {
-      setHeld({ sid, ids: new Set([id]) })
+      setHeld({ sid, turn: id })
       return
     }
-    setHeld((prev) => {
-      if (prev?.sid === sid && prev.ids.has(id)) return prev
-      const ids = prev?.sid === sid ? new Set(prev.ids) : new Set<string>()
-      ids.add(id)
-      return { sid, ids }
-    })
+    setHeld((prev) => (prev?.sid === sid ? prev : { sid, turn: id }))
   })
-  const directIDs = createMemo(() => {
+  const direct = createMemo(() => {
     const item = held()
-    const ids = item && item.sid === session.currentSessionID() ? new Set(item.ids) : new Set<string>()
+    const ids = new Set<string>()
+    if (item && item.sid === session.currentSessionID()) ids.add(item.turn)
     const active = activeUserID()
     if (active) ids.add(active)
     return ids
   })
-  // Keep the growing live turn out of Virtua. Resizing a tall virtual item while
-  // the user reads within it makes Virtua compensate scrollTop as if earlier
-  // content moved, dragging the viewport downward during streaming. Preserve
-  // direct-rendered tail turns while paused so completion and queue handoffs do
-  // not move a turn being read back into the virtualized history.
-  const partition = createMemo(() => partitionTurns(turns(), directIDs(), queuedIDs()))
+  // Virtua continues to own completed history and stable live chunks, but not
+  // the growing assistant suffix whose measurements would produce visible jumps.
+  const partition = createMemo(() => partitionRows(rows(), direct()))
+  const keys = createMemo(() => partition().virtual.map((row) => row.key))
+  const fingerprint = createMemo(() => rowFingerprint(keys()))
+  const measurement = createMemo(() => {
+    const id = session.currentSessionID()
+    const token = layout()
+    if (!id || !token || session.loading() || keys().length === 0) return undefined
+    return getMeasurement(id, fingerprint(), token)
+  })
 
-  const save = (id: string | undefined) => {
+  let active = { id: session.currentSessionID(), keys: keys(), fingerprint: fingerprint() }
+  createEffect(() => {
+    const id = session.currentSessionID()
+    const current = keys()
+    const value = fingerprint()
+    if (!id || session.loading() || active.id !== id) return
+    active = { id, keys: current, fingerprint: value }
+  })
+
+  const save = (id: string | undefined, saved = active) => {
     const el = scrollEl()
-    if (!id || !el) return
-    positions.set(id, { top: el.scrollTop, userScrolled: autoScroll.userScrolled() })
+    if (!id || !el || saved.id !== id) return
+    const handle = virtualizer()
+    const token = layout()
+    if (handle && token && saved.keys.length > 0) {
+      setMeasurement(id, saved.fingerprint, token, handle.cache)
+    }
+    if (!autoScroll.userScrolled()) {
+      setScroll(id, { type: "bottom" })
+      return
+    }
+    if (!handle || saved.keys.length === 0) return
+    const index = handle.findStartIndex()
+    const key = saved.keys[index]
+    if (!key) return
+    setScroll(id, { type: "anchor", key, offset: handle.scrollOffset - handle.getItemOffset(index) })
   }
 
   const maybeLoadOlder = () => {
@@ -179,16 +208,44 @@ export const MessageList: Component<MessageListProps> = (props) => {
     maybeLoadOlder()
   }
 
+  let resize: ResizeObserver | undefined
+  const refreshLayout = () => {
+    const el = scrollEl()
+    if (!el) return
+    const style = getComputedStyle(el)
+    setLayout(
+      layoutFingerprint({
+        width: Math.round(el.clientWidth),
+        ratio: window.devicePixelRatio,
+        font: style.fontFamily,
+        size: style.fontSize,
+        line: style.lineHeight,
+      }),
+    )
+  }
   const setScrollRef = (el: HTMLElement | undefined) => {
+    resize?.disconnect()
     setScrollEl(el)
     autoScroll.scrollRef(el)
+    if (!el) return
+    refreshLayout()
+    resize = new ResizeObserver(refreshLayout)
+    resize.observe(el)
   }
+  window.addEventListener("resize", refreshLayout)
+  document.fonts?.addEventListener("loadingdone", refreshLayout)
+  onCleanup(() => {
+    resize?.disconnect()
+    window.removeEventListener("resize", refreshLayout)
+    document.fonts?.removeEventListener("loadingdone", refreshLayout)
+  })
 
   const [pendingRestore, setPendingRestore] = createSignal<string>()
 
   createEffect(
     on(session.currentSessionID, (id, prev) => {
       save(prev)
+      active = { id, keys: [], fingerprint: rowFingerprint([]) }
       setPendingRestore(id)
     }),
   )
@@ -205,9 +262,11 @@ export const MessageList: Component<MessageListProps> = (props) => {
         if (pendingRestore() !== id) return
         const el = scrollEl()
         if (!el) return
-        const pos = positions.get(id)
-        if (pos?.userScrolled) {
-          el.scrollTop = pos.top
+        const state = getScroll(id)
+        const anchor = resolveAnchor(state, keys())
+        const handle = virtualizer()
+        if (state?.type === "anchor" && anchor && handle) {
+          handle.scrollToIndex(anchor.index, { offset: anchor.offset })
           autoScroll.pause()
           maybeLoadOlder()
         } else {
@@ -242,33 +301,11 @@ export const MessageList: Component<MessageListProps> = (props) => {
             </div>
           </Show>
           <Show when={isEmpty() && !props.readonly}>
-            <div class="message-list-empty">
-              <KiloLogo />
-              <p class="kilo-about-text">{language.t("session.messages.welcome")}</p>
-              <Show when={recent().length > 0 && props.onSelectSession}>
-                <div class="recent-sessions">
-                  <span class="recent-sessions-label">{language.t("session.recent")}</span>
-                  <For each={recent()}>
-                    {(s) => (
-                      <button class="recent-session-item" onClick={() => props.onSelectSession?.(s.id)}>
-                        <span class="recent-session-title">{s.title || language.t("session.untitled")}</span>
-                        <span class="recent-session-date">{formatRelativeDate(s.updatedAt)}</span>
-                      </button>
-                    )}
-                  </For>
-                  <Show when={props.onShowHistory}>
-                    <button class="show-history-btn" onClick={() => props.onShowHistory?.()}>
-                      <Icon name="history" size="small" />
-                      {language.t("session.showHistory")}
-                    </button>
-                  </Show>
-                </div>
-              </Show>
-              <button class="feedback-button" onClick={() => dialog.show(() => <FeedbackDialog />)}>
-                <Icon name="bubble-5" size="small" />
-                {language.t("feedback.button")}
-              </button>
-            </div>
+            {props.emptyState ? (
+              props.emptyState()
+            ) : (
+              <WelcomeEmptyState onSelectSession={props.onSelectSession} onShowHistory={props.onShowHistory} />
+            )}
           </Show>
           <Show when={!session.loading() && !isEmpty()}>
             <Show when={session.loadingOlderMessages()}>
@@ -283,18 +320,27 @@ export const MessageList: Component<MessageListProps> = (props) => {
               </button>
             </Show>
             <Show when={partition().virtual.length > 0 || partition().direct.length > 0}>
-              <div class="message-list-turns">
+              <div
+                class="message-list-turns"
+                data-loaded-messages={session.messages().length}
+                data-row-count={partition().virtual.length}
+                data-direct-count={partition().direct.length}
+                data-queued-count={partition().queued.length}
+              >
                 <Show when={scrollEl() && partition().virtual.length > 0}>
                   <Virtualizer
+                    ref={setVirtualizer}
                     data={partition().virtual}
                     scrollRef={scrollEl()}
                     shift={session.messageMutation() === "prepend"}
-                    overscan={6}
+                    cache={measurement()}
+                    overscan={2}
                     itemSize={260}
                   >
-                    {(turn) => (
-                      <VscodeSessionTurn
-                        turn={turn}
+                    {(row, index) => (
+                      <TranscriptRowView
+                        row={row}
+                        index={index()}
                         showTokenThroughput={metrics()}
                         onForkMessage={props.onForkMessage}
                       />
@@ -302,12 +348,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
                   </Virtualizer>
                 </Show>
                 <For each={partition().direct}>
-                  {(turn) => (
-                    <VscodeSessionTurn
-                      turn={turn}
-                      showTokenThroughput={metrics()}
-                      onForkMessage={props.onForkMessage}
-                    />
+                  {(row) => (
+                    <TranscriptRowView row={row} showTokenThroughput={metrics()} onForkMessage={props.onForkMessage} />
                   )}
                 </For>
               </div>
@@ -316,7 +358,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
               <RevertBanner />
             </Show>
             <For each={partition().queued}>
-              {(turn) => <VscodeSessionTurn turn={turn} queued showTokenThroughput={metrics()} />}
+              {(row) => <TranscriptRowView row={row} showTokenThroughput={metrics()} />}
             </For>
             <WorkingIndicator />
             <TurnOutcome />

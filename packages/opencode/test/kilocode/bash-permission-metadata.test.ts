@@ -13,6 +13,7 @@ import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Plugin } from "../../src/plugin"
 import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
 
 const runtime = ManagedRuntime.make(
   Layer.mergeAll(
@@ -22,6 +23,7 @@ const runtime = ManagedRuntime.make(
     Truncate.defaultLayer,
     Agent.defaultLayer,
     Config.defaultLayer,
+    RuntimeFlags.layer(),
   ),
 )
 

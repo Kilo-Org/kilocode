@@ -3,15 +3,17 @@
 
 import { expect } from "bun:test"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { ModelsDev } from "../../src/provider/models"
+import * as CoreModels from "@opencode-ai/core/models"
 import { Effect, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import { kiloCustomLoaders } from "../../src/kilocode/provider/provider"
 import { Auth } from "../../src/auth"
 import { ModelCache } from "../../src/provider/model-cache"
-import { ModelsDev } from "../../src/provider/models"
 import { Provider } from "../../src/provider/provider"
 import { TestConfig } from "../fixture/config"
 import { testEffect } from "../lib/effect"
+import { provideInstance } from "../fixture/fixture"
 
 const input = {
   id: "kilo",
@@ -84,6 +86,8 @@ function layer() {
               id: "paid-model",
               name: "Paid Model",
               cost: { input: 1, output: 2 },
+              isFree: false,
+              mayTrainOnYourPrompts: true,
               limit: { context: 128000, output: 4096 },
             },
           },
@@ -96,7 +100,15 @@ function layer() {
     Layer.provide(auth),
     Layer.provide(models),
   )
+  const core = Layer.succeed(
+    CoreModels.Service,
+    CoreModels.Service.of({
+      get: () => Effect.succeed(seed),
+      refresh: () => Effect.void,
+    }),
+  )
   return Layer.fresh(ModelsDev.layer).pipe(
+    Layer.provide(core),
     Layer.provide(FetchHttpClient.layer),
     Layer.provide(files),
     Layer.provide(cfg),
@@ -109,23 +121,31 @@ const it = testEffect(Layer.empty)
 
 it.live("assembles paid Kilo models without auth", () =>
   Effect.gen(function* () {
-    const providers = yield* ModelsDev.Service.use((models) => models.get()).pipe(Effect.provide(layer()))
+    const providers = yield* ModelsDev.Service.use((models) => models.get()).pipe(
+      Effect.provide(layer()),
+      provideInstance(process.cwd()),
+    )
     const kilo = Provider.fromModelsDevProvider(providers.kilo)
 
     expect(kilo.models["paid-model"]).toMatchObject({
       id: "paid-model",
       providerID: "kilo",
       cost: { input: 1, output: 2 },
+      isFree: false,
+      mayTrainOnYourPrompts: true,
     })
   }),
 )
 
-it.live("marks zero-cost Kilo models as free when the catalog omits isFree", () =>
+it.live("does not infer free status from zero catalog prices", () =>
   Effect.gen(function* () {
-    const providers = yield* ModelsDev.Service.use((models) => models.get()).pipe(Effect.provide(layer()))
+    const providers = yield* ModelsDev.Service.use((models) => models.get()).pipe(
+      Effect.provide(layer()),
+      provideInstance(process.cwd()),
+    )
     const kilo = Provider.fromModelsDevProvider(providers.kilo)
 
-    expect(kilo.models["free-model"].isFree).toBe(true)
+    expect(kilo.models["free-model"].isFree).toBeUndefined()
   }),
 )
 

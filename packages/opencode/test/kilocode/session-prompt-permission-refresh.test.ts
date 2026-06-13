@@ -7,9 +7,11 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import * as Log from "@opencode-ai/core/util/log"
 import { Agent as AgentSvc } from "../../src/agent/agent"
+import { BackgroundJob } from "../../src/background/job"
 import { Bus } from "../../src/bus"
 import { Command } from "../../src/command"
 import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Env } from "../../src/env"
 import { Format } from "../../src/format"
 import { Git } from "../../src/git"
@@ -115,6 +117,7 @@ const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLaye
 function makeHttp() {
   const deps = Layer.mergeAll(
     Session.defaultLayer,
+    BackgroundJob.defaultLayer,
     Snapshot.defaultLayer,
     LLM.defaultLayer,
     Env.defaultLayer,
@@ -123,10 +126,12 @@ function makeHttp() {
     Permission.defaultLayer,
     Plugin.defaultLayer,
     Config.defaultLayer,
+    RuntimeFlags.layer(),
     ProviderSvc.defaultLayer,
     lsp,
     mcp,
     AppFileSystem.defaultLayer,
+    Reference.defaultLayer,
     SyncEvent.defaultLayer,
     status,
   ).pipe(Layer.provideMerge(infra))
@@ -162,11 +167,14 @@ function makeHttp() {
       Layer.provideMerge(proc),
       Layer.provideMerge(registry),
       Layer.provideMerge(trunc),
+      Layer.provideMerge(question),
       Layer.provide(Instruction.defaultLayer),
       Layer.provide(SystemPrompt.defaultLayer),
       Layer.provideMerge(deps),
     ),
-  ).pipe(Layer.provide(summary))
+  ).pipe(
+    Layer.provide(Layer.mergeAll(summary, deps, Config.defaultLayer, RuntimeFlags.layer(), BackgroundJob.defaultLayer)),
+  )
 }
 
 const it = testEffect(makeHttp())

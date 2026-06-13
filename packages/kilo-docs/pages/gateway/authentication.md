@@ -90,10 +90,20 @@ BYOK lets you use your own provider API keys with the Kilo AI Gateway. When a BY
 | xAI | `xai` |
 | Z.AI | `zai` |
 | BytePlus Coding Plan | `byteplus-coding` |
+| Chutes BYOK | `chutes-byok` |
 | Codestral (FIM) | `codestral` |
+| CrofAI | `crofai` |
+| Inceptron BYOK | `inceptron-byok` |
 | Kimi Code | `kimi-coding` |
+| Martian | `martian` |
 | Neuralwatt | `neuralwatt` |
-| Z.AI Coding Plan | `zai-coding` |
+| Ollama Cloud | `ollama-cloud` |
+| OpenCode Go | `opencode-go` |
+| OrcaRouter | `orcarouter` |
+| Synthetic | `synthetic` |
+| Xiaomi Token Plan (Europe) | `xiaomi-token-plan-ams` |
+| Xiaomi Token Plan (Singapore) | `xiaomi-token-plan-sgp` |
+| Z.ai Coding Plan | `zai-coding` |
 
 ### How BYOK works
 

@@ -22,8 +22,8 @@ export function isFree(model: Pick<EnrichedModel, "isFree">): boolean {
   return model.isFree === true
 }
 
-export function isDataCollectedModel(model: Pick<EnrichedModel, "providerID" | "isFree">): boolean {
-  return model.isFree === true && model.providerID === KILO_GATEWAY_ID
+export function isDataCollectedModel(model: Pick<EnrichedModel, "mayTrainOnYourPrompts">): boolean {
+  return model.mayTrainOnYourPrompts === true
 }
 
 export function freeDataLabel(_free: string, data: string): string {

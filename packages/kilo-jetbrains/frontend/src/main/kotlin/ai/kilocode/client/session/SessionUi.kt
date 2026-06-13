@@ -308,6 +308,7 @@ class SessionUi(
             project = project,
             onSend = { text -> sendPrompt(text) },
             onAbort = { controller.abort() },
+            onEnhance = controller::enhancePrompt,
         )
 
         sessionContent.add(header, BorderLayout.NORTH)

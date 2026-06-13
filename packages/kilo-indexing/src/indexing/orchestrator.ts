@@ -16,6 +16,7 @@ import type { CacheManager } from "./cache-manager"
 import type { Disposable } from "./runtime"
 import { Log } from "../util/log"
 import { sanitizeErrorMessage } from "./shared/validation-helpers"
+import { DEFAULT_VECTOR_STORE } from "./constants"
 
 const log = Log.create({ service: "indexing-orchestrator" })
 
@@ -39,7 +40,7 @@ export class CodeIndexOrchestrator {
     const cfg = this.configManager.getConfig()
     return {
       provider: cfg.embedderProvider,
-      vectorStore: cfg.vectorStoreProvider ?? "qdrant",
+      vectorStore: cfg.vectorStoreProvider ?? DEFAULT_VECTOR_STORE,
       modelId: cfg.modelId,
     }
   }

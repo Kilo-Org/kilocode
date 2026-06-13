@@ -64,9 +64,7 @@ export const OAuth = Schema.Struct({
   redirectUri: Schema.optional(Schema.String).annotate({
     description: "OAuth redirect URI (default: http://127.0.0.1:19876/mcp/oauth/callback).",
   }),
-})
-  .annotate({ identifier: "McpOAuthConfig" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "McpOAuthConfig" })
 export type OAuth = Schema.Schema.Type<typeof OAuth>
 
 export const Remote = Schema.Struct({
@@ -84,14 +82,10 @@ export const Remote = Schema.Struct({
   timeout: Schema.optional(PositiveInt).annotate({
     description: "Timeout in ms for MCP server requests. Defaults to 5000 (5 seconds) if not specified.",
   }),
-})
-  .annotate({ identifier: "McpRemoteConfig" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "McpRemoteConfig" })
 export type Remote = Schema.Schema.Type<typeof Remote>
 
-export const Info = Schema.Union([Local, Remote])
-  .annotate({ discriminator: "type" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export const Info = Schema.Union([Local, Remote]).annotate({ discriminator: "type" })
 export type Info = Schema.Schema.Type<typeof Info>
 
 export * as ConfigMCP from "./mcp"

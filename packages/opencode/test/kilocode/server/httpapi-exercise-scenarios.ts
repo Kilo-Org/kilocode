@@ -129,6 +129,8 @@ export const kiloScenarios: Scenario[] = [
     }))
     .json(200, (body) => check(body === null, "missing worktree diff detail should return null")),
   http.protected.get("/indexing/status", "indexing.status").json(200, object),
+  http.protected.get("/indexing/models", "indexing.models").json(200, object),
+  http.protected.get("/indexing/warnings", "indexing.warnings").json(200, array),
   http.protected.get("/kilo/profile", "kilo.profile").probe({ path: "/path" }).status(401),
   http.protected.get("/kilo/modes", "kilo.modes").json(200, (body) => {
     object(body)

@@ -1013,6 +1013,32 @@ export const dict = {
   "feedback.dialog.github": "Zgłoś problem na GitHubie",
   "feedback.dialog.discord": "Dołącz do naszej społeczności Discord",
   "feedback.dialog.support": "Wsparcie klienta",
+  "workStyle.onboarding.welcome": "Witamy w Kilo",
+  "workStyle.onboarding.title": "Wybierz sposób pracy",
+  "workStyle.onboarding.description":
+    "Ustawia początkowe wartości domyślne uprawnień, bloków rozumowania, danych wyjściowych terminala i osi czasu kontekstu. Jest stosowane tylko raz i pomija ustawienia, które zostały już przez Ciebie zmienione.",
+  "workStyle.onboarding.settingsNote": "Te opcje możesz zmienić w dowolnym momencie w",
+  "workStyle.onboarding.settings": "Ustawieniach.",
+  "workStyle.onboarding.skip": "Pomiń na razie",
+  "workStyle.toast.saved.title": "Tryb został pomyślnie zapisany",
+  "workStyle.toast.saved.description": "Możesz je zmienić w dowolnym momencie w Ustawieniach.",
+  "workStyle.toast.saved.action": "Przejdź do Ustawień",
+  "workStyle.choice.permissions": "Uprawnienia",
+  "workStyle.choice.bash": "Bash",
+  "workStyle.choice.visibility": "Widoczność",
+  "workStyle.choice.human-in-the-loop.eyebrow": "Człowiek w pętli",
+  "workStyle.choice.human-in-the-loop.title": "Najpierw przejrzyj",
+  "workStyle.choice.human-in-the-loop.description": "Kilo wstrzymuje pracę i pokazuje swój plan w trakcie działania.",
+  "workStyle.choice.human-in-the-loop.permissions": "Prosi o zgodę przed edycją plików lub uruchomieniem poleceń.",
+  "workStyle.choice.human-in-the-loop.bash": "Prosi o pozwolenie na każde polecenie terminala.",
+  "workStyle.choice.human-in-the-loop.visibility": "Wyświetla wszystkie szczegóły rozmowy, w tym tok rozumowania.",
+  "workStyle.choice.autonomous.eyebrow": "Mniej przerw",
+  "workStyle.choice.autonomous.title": "Wysoka autonomia",
+  "workStyle.choice.autonomous.description": "Mniej przerw i uproszczony interfejs.",
+  "workStyle.choice.autonomous.permissions":
+    "Edytuje pliki i uruchamia polecenia w przestrzeni roboczej bez pytania o zgodę.",
+  "workStyle.choice.autonomous.bash": "Może uruchamiać polecenia terminala w przestrzeni roboczej bez zatwierdzenia.",
+  "workStyle.choice.autonomous.visibility": "Szczegóły pozostają zwinięte, dopóki ich nie rozwiniesz.",
   "session.cloud.import.title": "Importuj z chmury",
   "session.cloud.import.placeholder": "ID sesji, URL lub polecenie kilo import",
   "session.cloud.import.button": "Importuj",
@@ -1229,8 +1255,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Włącz automatyczny formater kodu",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Włącz integrację protokołu serwera języka",
-  "settings.experimental.pasteSummary.title": "Wyłącz podsumowanie wklejania",
-  "settings.experimental.pasteSummary.description": "Nie podsumowuj dużego wklejonego tekstu",
   "settings.experimental.batch.title": "Narzędzie wsadowe",
   "settings.experimental.batch.description": "Włącz przetwarzanie wsadowe wywołań narzędzi",
   "settings.experimental.codebaseSearch.title": "Wyszukiwanie kodu",
@@ -1448,8 +1472,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Zarządzaj listą zadań. Pozwala na odczytywanie i aktualizowanie wewnętrznej listy zadań.",
   "settings.autoApprove.tool.webfetch": "Pobieranie URL. Pozwala na pobieranie zawartości z określonego adresu URL.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Przeszukuj sieć lub kod. Pozwala na wykonywanie zewnętrznych wyszukiwań w sieci lub kodzie.",
+  "settings.autoApprove.tool.websearch":
+    "Przeszukiwanie sieci. Pozwala na wykonywanie zewnętrznych wyszukiwań w sieci.",
   "settings.autoApprove.tool.external_directory":
     "Dostęp do plików poza obszarem roboczym. Uruchamiane przy dostępie do plików poza bieżącym katalogiem projektu.",
   "settings.autoApprove.tool.doom_loop":
