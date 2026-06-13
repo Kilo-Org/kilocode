@@ -336,7 +336,7 @@ describe("RemoteSender", () => {
   })
 
   // kilocode_change start
-  test("send_message normalizes string model without prefix", async () => {
+  test("send_message splits string model at the provider prefix", async () => {
     const { conn, sent } = fakeConn()
     const calls: SessionPrompt.PromptInput[] = []
     const sender = RemoteSender.create({
@@ -366,7 +366,7 @@ describe("RemoteSender", () => {
       {
         sessionID: SessionID.make("ses_x"),
         parts: [{ type: "text", text: "hello" }],
-        model: { providerID: ProviderID.make("kilo"), modelID: ModelID.make("anthropic/claude-sonnet-4-20250514") },
+        model: { providerID: ProviderID.make("anthropic"), modelID: ModelID.make("claude-sonnet-4-20250514") },
       },
     ])
   })
@@ -432,7 +432,7 @@ describe("RemoteSender", () => {
     expect(sent[0].error).toContain("invalid send_message data")
   })
 
-  test("send_message does not special-case kilo-prefixed model", async () => {
+  test("send_message correctly splits kilo-prefixed model", async () => {
     const { conn, sent } = fakeConn()
     const calls: SessionPrompt.PromptInput[] = []
     const sender = RemoteSender.create({
@@ -462,7 +462,7 @@ describe("RemoteSender", () => {
       {
         sessionID: SessionID.make("ses_x"),
         parts: [{ type: "text", text: "hello" }],
-        model: { providerID: ProviderID.make("kilo"), modelID: ModelID.make("kilo/gpt-5-mini") },
+        model: { providerID: ProviderID.make("kilo"), modelID: ModelID.make("gpt-5-mini") },
       },
     ])
   })

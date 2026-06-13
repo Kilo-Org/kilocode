@@ -49,9 +49,25 @@ function getRemotePromptInput() {
 // kilocode_change end
 function normalizeModel(model: string | undefined) {
   if (!model) return undefined
+  // "kilocode/xxx" is an alias for the kilo provider
+  if (model.startsWith("kilocode/")) {
+    return {
+      providerID: ProviderID.make("kilo"),
+      modelID: ModelID.make(model.slice("kilocode/".length)),
+    }
+  }
+  // "provider/model" — split on the first slash to respect the provider prefix
+  const slashIndex = model.indexOf("/")
+  if (slashIndex > 0) {
+    return {
+      providerID: ProviderID.make(model.slice(0, slashIndex)),
+      modelID: ModelID.make(model.slice(slashIndex + 1)),
+    }
+  }
+  // Bare model name — default to the kilo provider
   return {
     providerID: ProviderID.make("kilo"),
-    modelID: ModelID.make(model.startsWith("kilocode/") ? model.slice("kilocode/".length) : model),
+    modelID: ModelID.make(model),
   }
 }
 
