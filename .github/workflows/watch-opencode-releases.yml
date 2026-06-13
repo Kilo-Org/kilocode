@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   check-release:
-    if: github.repository == 'Kilo-Org/kilocode' && vars.OPENCODE_WATCH_ENABLED != 'false'
+    if: github.repository == 'Kilo-Org/kilocode' && vars.OPENCODE_WATCH_ENABLED != 'false' # kilocode_change
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

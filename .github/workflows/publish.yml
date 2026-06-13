@@ -134,6 +134,7 @@ jobs:
   validate-cli-unix:
     name: Validate CLI (${{ matrix.target }})
     needs: build-cli
+    if: github.repository == 'Kilo-Org/kilocode' # kilocode_change
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
     strategy:
@@ -257,6 +258,7 @@ jobs:
   validate-cli-windows:
     name: Validate CLI (windows-${{ matrix.arch }})
     needs: build-cli
+    if: github.repository == 'Kilo-Org/kilocode' # kilocode_change
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     strategy:
@@ -389,6 +391,7 @@ jobs:
       - validate-cli-unix # kilocode_change
       - validate-cli-windows # kilocode_change
       - smoke-test
+    if: github.repository == 'Kilo-Org/kilocode' # kilocode_change
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6 # kilocode_change

@@ -21,6 +21,7 @@ on:
 jobs:
   unit:
     name: unit tests
+    if: github.repository == 'Kilo-Org/kilocode' # kilocode_change
     runs-on: blacksmith-4vcpu-ubuntu-2404
     defaults:
       run:
