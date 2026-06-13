@@ -23,6 +23,7 @@ env:
 jobs:
   unit:
     name: unit (${{ matrix.settings.name }})
+    if: github.repository == 'Kilo-Org/kilocode' # kilocode_change
     strategy:
       fail-fast: false
       matrix:
@@ -107,6 +108,7 @@ jobs:
   # kilocode_change start
   jetbrains:
     name: jetbrains
+    if: github.repository == 'Kilo-Org/kilocode' # kilocode_change
     runs-on: blacksmith-4vcpu-ubuntu-2404
     defaults:
       run:
@@ -162,7 +164,7 @@ jobs:
     needs:
       - unit
       - jetbrains
-    if: always()
+    if: github.repository == 'Kilo-Org/kilocode' && always() # kilocode_change
     steps:
       - name: Verify upstream test jobs passed
         run: |

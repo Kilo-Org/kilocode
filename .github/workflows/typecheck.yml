@@ -10,6 +10,7 @@ on:
 jobs:
   typecheck-js:
     name: typecheck-js
+    if: github.repository == 'Kilo-Org/kilocode' # kilocode_change
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout repository
@@ -26,6 +27,7 @@ jobs:
   # kilocode_change start
   typecheck-jetbrains:
     name: typecheck-jetbrains
+    if: github.repository == 'Kilo-Org/kilocode' # kilocode_change
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout repository
@@ -55,7 +57,7 @@ jobs:
     needs:
       - typecheck-js
       - typecheck-jetbrains
-    if: always()
+    if: github.repository == 'Kilo-Org/kilocode' && always() # kilocode_change
     steps:
       - name: Verify typecheck jobs passed
         run: |
