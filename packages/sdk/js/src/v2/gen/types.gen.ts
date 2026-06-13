@@ -1320,6 +1320,13 @@ export type Config = {
   remote_control?: boolean
   auto_collapse_reasoning?: boolean
   indexing?: IndexingConfig
+  console?: {
+    /**
+     * Width of the Kilo Console project context sidebar in pixels
+     */
+    context_sidebar_width?: number
+    diff_style?: "unified" | "split"
+  }
   terminal_command_display?: "expanded" | "collapsed"
   model?: string
   small_model?: string

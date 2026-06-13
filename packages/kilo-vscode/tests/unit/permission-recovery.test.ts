@@ -26,13 +26,15 @@ function permissionClient(
   queries: string[],
   saves: unknown[] = [],
   replies: unknown[] = [],
-  errors?: { save?: unknown; reply?: unknown },
+  errors?: { list?: Record<string, unknown>; save?: unknown; reply?: unknown },
 ) {
   return {
     permission: {
       list: async (args?: { directory?: string }) => {
         const dir = args?.directory ?? ""
         queries.push(dir)
+        const error = errors?.list?.[dir]
+        if (error) return { data: undefined, error }
         return { data: permsPerDir[dir] ?? [] }
       },
       saveAlwaysRules: async (args: unknown) => {
@@ -54,7 +56,7 @@ function client(
   queries: string[],
   saves: unknown[] = [],
   replies: unknown[] = [],
-  errors?: { save?: unknown; reply?: unknown },
+  errors?: { list?: Record<string, unknown>; save?: unknown; reply?: unknown },
 ): PermissionContext["client"] {
   return permissionClient(permsPerDir, queries, saves, replies, errors) as unknown as PermissionContext["client"]
 }
@@ -64,7 +66,8 @@ function ctx(opts: {
   dirs?: Map<string, string>
   permsPerDir?: Record<string, ReturnType<typeof pending>[]>
   workspace?: string
-  errors?: { save?: unknown; reply?: unknown }
+  errors?: { list?: Record<string, unknown>; save?: unknown; reply?: unknown }
+  extra?: string[]
 }) {
   const messages: unknown[] = []
   const queries: string[] = []
@@ -79,6 +82,7 @@ function ctx(opts: {
     currentSessionId: undefined,
     trackedSessionIds: new Set(opts.tracked),
     sessionDirectories: opts.dirs ?? new Map(),
+    extraDirectories: () => opts.extra ?? [],
     postMessage: (msg) => messages.push(msg),
     getWorkspaceDirectory: () => opts.workspace ?? "/workspace",
     recordPermissionDirectory: (id, dir) => permDirs.set(id, dir),
@@ -86,9 +90,15 @@ function ctx(opts: {
     clearPermissionDirectory: (id) => {
       permDirs.delete(id)
     },
-    prunePermissionDirectories: (active) => {
-      for (const key of permDirs.keys()) {
-        if (!active.has(key)) permDirs.delete(key)
+    prunePermissionDirectories: (active, dirs) => {
+      for (const [key, dir] of permDirs) {
+        if (active.has(key)) {
+          continue
+        }
+        if (dirs && !dirs.has(dir)) {
+          continue
+        }
+        permDirs.delete(key)
       }
     },
   }
@@ -108,6 +118,15 @@ describe("recoveryDirs", () => {
       ["s3", "/workspace/.kilo/worktrees/alpha"],
     ])
     expect(recoveryDirs("/workspace", dirs)).toEqual([
+      "/workspace",
+      "/workspace/.kilo/worktrees/alpha",
+      "/workspace/.kilo/worktrees/beta",
+    ])
+  })
+
+  it("includes extra worktree directories", () => {
+    const dirs = new Map([["s1", "/workspace/.kilo/worktrees/alpha"]])
+    expect(recoveryDirs("/workspace", dirs, ["/workspace/.kilo/worktrees/beta", "/workspace"])).toEqual([
       "/workspace",
       "/workspace/.kilo/worktrees/alpha",
       "/workspace/.kilo/worktrees/beta",
@@ -229,6 +248,36 @@ describe("fetchAndSendPendingPermissions", () => {
     expect(queries).toHaveLength(3)
   })
 
+  it("queries extra Agent Manager worktree directories", async () => {
+    const { fake, queries, permDirs } = ctx({
+      tracked: ["s1"],
+      extra: ["/workspace/.kilo/worktrees/late"],
+      permsPerDir: { "/workspace/.kilo/worktrees/late": [pending("p1", "s1")] },
+    })
+    await fetchAndSendPendingPermissions(fake)
+    expect(queries).toEqual(["/workspace", "/workspace/.kilo/worktrees/late"])
+    expect(permDirs.get("p1")).toBe("/workspace/.kilo/worktrees/late")
+  })
+
+  it("preserves cached routes for directories that fail to list", async () => {
+    const dirs = new Map([["s1", "/workspace/.kilo/worktrees/failing"]])
+    const error = new Error("temporary failure")
+    const { fake, permDirs } = ctx({
+      tracked: ["s1"],
+      dirs,
+      errors: { list: { "/workspace/.kilo/worktrees/failing": error } },
+    })
+    const spy = spyOn(console, "error").mockImplementation(() => {})
+    permDirs.set("workspace-stale", "/workspace")
+    permDirs.set("worktree-pending", "/workspace/.kilo/worktrees/failing")
+
+    await fetchAndSendPendingPermissions(fake)
+    spy.mockRestore()
+
+    expect(permDirs.has("workspace-stale")).toBe(false)
+    expect(permDirs.get("worktree-pending")).toBe("/workspace/.kilo/worktrees/failing")
+  })
+
   it("deduplicates directories", async () => {
     const dirs = new Map([
       ["s1", "/workspace/.kilo/worktrees/alpha"],
@@ -282,6 +331,7 @@ describe("fetchAndSendPendingPermissions", () => {
       currentSessionId: undefined,
       trackedSessionIds: new Set(["s1"]),
       sessionDirectories: new Map(),
+      extraDirectories: () => [],
       postMessage: (msg) => messages.push(msg),
       getWorkspaceDirectory: () => "/workspace",
       recordPermissionDirectory: (id, dir) => permDirs.set(id, dir),
@@ -289,9 +339,15 @@ describe("fetchAndSendPendingPermissions", () => {
       clearPermissionDirectory: (id) => {
         permDirs.delete(id)
       },
-      prunePermissionDirectories: (active) => {
-        for (const key of permDirs.keys()) {
-          if (!active.has(key)) permDirs.delete(key)
+      prunePermissionDirectories: (active, dirs) => {
+        for (const [key, dir] of permDirs) {
+          if (active.has(key)) {
+            continue
+          }
+          if (dirs && !dirs.has(dir)) {
+            continue
+          }
+          permDirs.delete(key)
         }
       },
     }

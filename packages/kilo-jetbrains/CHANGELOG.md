@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.4.0
+
+### Minor Changes
+
+- [#11165](https://github.com/Kilo-Org/kilocode/pull/11165) [`bf67155`](https://github.com/Kilo-Org/kilocode/commit/bf6715594bae4a1160abb7cfdfdedaba4b8358ec) - Enhance draft prompts from the JetBrains chat composer using the configured small model.
+
 ## 7.3.42
 
 ### Patch Changes

@@ -51,6 +51,7 @@ import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -124,6 +125,8 @@ class SessionController(
     ) { sid ?: ref?.key ?: "pending" }
 
     private var disposed = false
+    private var enhancement = 0L
+    private val enhancements = mutableMapOf<Long, (Result<String>) -> Unit>()
     private var partType: String? = null
     private var tool: String? = null
     private var eventJob: Job? = null
@@ -193,6 +196,37 @@ class SessionController(
         assertEdt()
         if (disposed) return
         updates.requestFlush(true)
+    }
+
+    fun enhancePrompt(text: String, complete: (Result<String>) -> Unit) {
+        assertEdt()
+        if (disposed) {
+            complete(Result.failure(CancellationException("Session controller disposed")))
+            return
+        }
+        val id = ++enhancement
+        enhancements[id] = complete
+        capture("Prompt Enhance Clicked", mapOf("textLength" to bucket(text)))
+        cs.launch {
+            val result = try {
+                Result.success(sessions.enhancePrompt(directory, text))
+            } catch (e: CancellationException) {
+                Result.failure(e)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+            edt {
+                val callback = enhancements.remove(id) ?: return@edt
+                result.onSuccess {
+                    capture("Prompt Enhanced", mapOf("textLength" to bucket(text)))
+                }.onFailure { e ->
+                    if (e !is CancellationException) {
+                        capture("Session Error", mapOf("context" to "enhance-prompt", "errorClass" to e::class.java.name))
+                    }
+                }
+                callback(result)
+            }
+        }
     }
 
     fun prompt(text: String) {
@@ -1716,13 +1750,18 @@ class SessionController(
 
     override fun dispose() {
         runEdt {
+            if (disposed) return@runEdt
             disposed = true
             connectionDelay.dispose()
             cancelSubscriptions()
             drainJob?.cancel()
             drainJob = null
+            val callbacks = enhancements.values.toList()
+            enhancements.clear()
+            cs.cancel()
+            val result = Result.failure<String>(CancellationException("Session controller disposed"))
+            callbacks.forEach { it(result) }
         }
-        cs.cancel()
     }
 
     override fun toString(): String {
