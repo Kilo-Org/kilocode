@@ -7,10 +7,13 @@ import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilo
 import { KiloSession } from "@/kilocode/session" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
+import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
-import * as EffectZod from "@opencode-ai/core/effect-zod"
+import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
+import { withStatics } from "@opencode-ai/core/schema" // kilocode_change
 import { SessionID, MessageID, PartID } from "./schema"
+import type { NotFoundError } from "@/storage/storage"
 import { MessageV2 } from "./message-v2"
 import * as Log from "@opencode-ai/core/util/log"
 import { SessionRevert } from "./revert"
@@ -29,9 +32,9 @@ import { Plugin } from "../plugin"
 import CODE_SWITCH from "../session/prompt/code-switch.txt"
 import MAX_STEPS from "../session/prompt/max-steps.txt"
 import { ToolRegistry } from "@/tool/registry"
+import { ToolJsonSchema } from "@/tool/json-schema"
 import { MCP } from "../mcp"
 import { LSP } from "@/lsp/lsp"
-import { Flag } from "@opencode-ai/core/flag/flag"
 import { ulid } from "ulid"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -51,28 +54,31 @@ import { Shell } from "@/shell/shell"
 import { ShellID } from "@/tool/shell/id"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Truncate } from "@/tool/truncate"
+import { Image } from "@/image/image"
 import { decodeDataUrl } from "@/util/data-url"
-import { Process } from "@/util/process"
-import { Cause, Effect, Exit, Latch, Layer, Option, Scope, Context, Schema, Types } from "effect"
-import { zod } from "@opencode-ai/core/effect-zod"
-import { withStatics } from "@opencode-ai/core/schema"
+import { Cause, Effect, Exit, Latch, Layer, Option, Scope, Context, Schema, Types } from "effect" // kilocode_change - Process moved to the timeout helper
 import * as EffectLogger from "@opencode-ai/core/effect/logger"
 import { InstanceState } from "@/effect/instance-state"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
 import { SessionRunState } from "./run-state"
 import { EffectBridge } from "@/effect/bridge"
 import { SyncEvent } from "@/sync" // kilocode_change - preserve Kilo v2 event dual-write wiring
+import { RuntimeFlags } from "@/effect/runtime-flags"
 import { SessionEvent } from "@/v2/session-event"
-import { Modelv2 } from "@/v2/model"
-import { AgentAttachment, FileAttachment, Source } from "@/v2/session-prompt"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { AgentAttachment, FileAttachment, ReferenceAttachment, Source } from "@opencode-ai/core/session-prompt"
+import { Reference } from "@/reference/reference"
 import * as DateTime from "effect/DateTime"
 import { eq } from "@/storage/db"
 import * as Database from "@/storage/db"
 import { SessionTable } from "./session.sql"
-import { Image } from "@/image/image" // kilocode_change - normalize user image data before persistence
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
+
+const decodeMessageInfo = Schema.decodeUnknownExit(MessageV2.Info)
+const decodeMessagePart = Schema.decodeUnknownExit(MessageV2.Part)
 
 const STRUCTURED_OUTPUT_DESCRIPTION = `Use this tool to return your final response in the requested structured format.
 
@@ -94,12 +100,94 @@ const REQUEST_PRUNE_BYTES = 1_250_000
 const log = Log.create({ service: "session.prompt" })
 const elog = EffectLogger.create({ service: "session.prompt" })
 
+type ReferencePromptMetadata = {
+  name: string
+  kind: "local" | "git" | "invalid"
+  path?: string
+  repository?: string
+  branch?: string
+  target?: string
+  targetPath?: string
+  problem?: string
+  source: { value: string; start: number; end: number }
+}
+
+function stringField(record: Record<string, unknown>, key: string) {
+  return typeof record[key] === "string" ? record[key] : undefined
+}
+
+function referencePromptMetadata(input: unknown): ReferencePromptMetadata | undefined {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return
+  const record = input as Record<string, unknown>
+  const name = stringField(record, "name")
+  const kind = stringField(record, "kind")
+  if (!name || (kind !== "local" && kind !== "git" && kind !== "invalid")) return
+  if (!record.source || typeof record.source !== "object" || Array.isArray(record.source)) return
+  const source = record.source as Record<string, unknown>
+  const value = stringField(source, "value")
+  if (!value || typeof source.start !== "number" || typeof source.end !== "number") return
+  return {
+    name,
+    kind,
+    path: stringField(record, "path"),
+    repository: stringField(record, "repository"),
+    branch: stringField(record, "branch"),
+    target: stringField(record, "target"),
+    targetPath: stringField(record, "targetPath"),
+    problem: stringField(record, "problem"),
+    source: { value, start: source.start, end: source.end },
+  }
+}
+
+function referenceTextPart(input: {
+  reference: Reference.Resolved
+  source: ReferencePromptMetadata["source"]
+  target?: string
+  targetPath?: string
+  problem?: string
+}): MessageV2.TextPartInput {
+  const metadata: ReferencePromptMetadata = {
+    name: input.reference.name,
+    kind: input.reference.kind,
+    ...(input.reference.kind === "invalid"
+      ? { repository: input.reference.repository }
+      : { path: input.reference.path }),
+    ...(input.reference.kind === "git"
+      ? { repository: input.reference.repository, branch: input.reference.branch }
+      : {}),
+    ...(input.target === undefined ? {} : { target: input.target }),
+    ...(input.targetPath ? { targetPath: input.targetPath } : {}),
+    problem: input.problem ?? (input.reference.kind === "invalid" ? input.reference.message : undefined),
+    source: input.source,
+  }
+  const label = metadata.target === undefined ? `@${metadata.name}` : `@${metadata.name}/${metadata.target}`
+  return {
+    type: "text",
+    synthetic: true,
+    text: [
+      `Referenced configured reference ${label}.`,
+      ...(metadata.kind === "local" ? ["Kind: local directory"] : []),
+      ...(metadata.kind === "git" ? ["Kind: git repository"] : []),
+      ...(metadata.repository ? [`Repository: ${metadata.repository}`] : []),
+      ...(metadata.branch ? [`Branch/ref: ${metadata.branch}`] : []),
+      ...(metadata.path ? [`Reference root: ${metadata.path}`] : []),
+      ...(metadata.targetPath ? [`Resolved path: ${metadata.targetPath}`] : []),
+      ...(metadata.problem
+        ? [`Problem: ${metadata.problem}`]
+        : [
+            "For targeted context, inspect the reference path directly with Read, Glob, and Grep. For broader research, call the task tool with subagent scout and include this reference path.",
+          ]),
+    ].join("\n"),
+    metadata: { reference: metadata },
+  }
+}
+
 export interface Interface {
   readonly cancel: (sessionID: SessionID) => Effect.Effect<void>
-  readonly prompt: (input: PromptInput) => Effect.Effect<MessageV2.WithParts>
+  readonly prompt: (input: PromptInput) => Effect.Effect<MessageV2.WithParts, Image.Error>
   readonly loop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts>
-  readonly shell: (input: ShellInput) => Effect.Effect<MessageV2.WithParts>
-  readonly command: (input: CommandInput) => Effect.Effect<MessageV2.WithParts>
+  readonly shell: (input: ShellInput) => Effect.Effect<MessageV2.WithParts, Session.BusyError>
+  readonly command: (input: CommandInput) => Effect.Effect<MessageV2.WithParts, Image.Error>
   readonly resolvePromptParts: (template: string) => Effect.Effect<PromptInput["parts"]>
 }
 
@@ -125,6 +213,7 @@ export const layer = Layer.effect(
     const lsp = yield* LSP.Service
     const registry = yield* ToolRegistry.Service
     const truncate = yield* Truncate.Service
+    const image = yield* Image.Service
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
     const scope = yield* Scope.Scope
     const instruction = yield* Instruction.Service
@@ -133,8 +222,9 @@ export const layer = Layer.effect(
     const summary = yield* SessionSummary.Service
     const sys = yield* SystemPrompt.Service
     const llm = yield* LLM.Service
-    const image = yield* Image.Service // kilocode_change - normalize user image data before persistence
+    const references = yield* Reference.Service
     const sync = yield* SyncEvent.Service // kilocode_change - preserve Kilo v2 event dual-write wiring
+    const flags = yield* RuntimeFlags.Service
     const runner = Effect.fn("SessionPrompt.runner")(function* () {
       return yield* EffectBridge.make()
     })
@@ -142,7 +232,8 @@ export const layer = Layer.effect(
       return {
         cancel: (sessionID: SessionID) => cancel(sessionID),
         resolvePromptParts: (template: string) => resolvePromptParts(template),
-        prompt: (input: PromptInput) => prompt(input),
+        prompt: (input: PromptInput) => prompt(input).pipe(Effect.catch(Effect.die)),
+        loop: (input: LoopInput) => loop(input).pipe(Effect.orDie),
       } satisfies TaskPromptOps
     })
 
@@ -158,12 +249,74 @@ export const layer = Layer.effect(
       const parts: Types.DeepMutable<PromptInput["parts"]> = [{ type: "text", text: template }]
       const files = ConfigMarkdown.files(template)
       const seen = new Set<string>()
+      const mentionSource = (match: RegExpMatchArray) => {
+        const start = match.index ?? 0
+        return { value: match[0], start, end: start + match[0].length }
+      }
       yield* Effect.forEach(
         files,
         Effect.fnUntraced(function* (match) {
           const name = match[1]
+          if (!name) return
           if (seen.has(name)) return
           seen.add(name)
+
+          const slash = name.indexOf("/")
+          const alias = slash === -1 ? name : name.slice(0, slash)
+          const reference = yield* references.get(alias)
+          if (reference) {
+            const source = mentionSource(match)
+            if (reference.kind === "invalid") {
+              parts.push(
+                referenceTextPart({ reference, source, target: slash === -1 ? undefined : name.slice(slash + 1) }),
+              )
+              return
+            }
+
+            yield* references.ensure(reference.path)
+            if (slash === -1) {
+              parts.push(referenceTextPart({ reference, source }))
+              return
+            }
+
+            const target = name.slice(slash + 1)
+            const targetPath = path.resolve(reference.path, target)
+            if (!AppFileSystem.contains(reference.path, targetPath)) {
+              parts.push(
+                referenceTextPart({
+                  reference,
+                  source,
+                  target,
+                  targetPath,
+                  problem: `Path escapes configured reference @${alias}: ${target}`,
+                }),
+              )
+              return
+            }
+
+            const info = yield* fsys.stat(targetPath).pipe(Effect.option)
+            if (Option.isNone(info)) {
+              parts.push(
+                referenceTextPart({
+                  reference,
+                  source,
+                  target,
+                  targetPath,
+                  problem: `Path does not exist inside configured reference @${alias}: ${target}`,
+                }),
+              )
+              return
+            }
+
+            parts.push({
+              type: "file",
+              url: pathToFileURL(targetPath).href,
+              filename: name,
+              mime: info.value.type === "Directory" ? "application/x-directory" : "text/plain",
+            })
+            return
+          }
+
           const filepath = name.startsWith("~/")
             ? path.join(os.homedir(), name.slice(2))
             : path.resolve(ctx.worktree, name)
@@ -257,7 +410,7 @@ export const layer = Layer.effect(
       const userMessage = input.messages.findLast((msg) => msg.info.role === "user")
       if (!userMessage) return input.messages
 
-      if (!Flag.KILO_EXPERIMENTAL_PLAN_MODE) {
+      if (!flags.experimentalPlanMode) {
         // kilocode_change start - inject plan file path so agent writes to .kilo/plans/
         yield* Effect.promise(() =>
           KiloSessionPrompt.insertPlanReminders({
@@ -445,7 +598,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         providerID: input.model.providerID,
         agent: input.agent,
       })) {
-        const schema = ProviderTransform.schema(input.model, EffectZod.toJsonSchema(item.parameters))
+        const schema = ProviderTransform.schema(input.model, ToolJsonSchema.fromTool(item))
         tools[item.id] = tool({
           description: item.description,
           inputSchema: jsonSchema(schema),
@@ -861,7 +1014,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             }
             yield* sessions.updatePart(part)
             // kilocode_change start - preserve Kilo v2 shell event dual-write
-            if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+            if (flags.experimentalEventSystem) {
               yield* sync.run(SessionEvent.Shell.Started.Sync, {
                 sessionID: input.sessionID,
                 timestamp: DateTime.makeUnsafe(started),
@@ -878,15 +1031,17 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           const args = Shell.args(sh, input.command, cwd)
           let output = ""
           let aborted = false
+          let timeout: string | undefined // kilocode_change
 
           const finish = Effect.uninterruptible(
             Effect.gen(function* () {
               if (aborted) {
                 output += "\n\n" + ["<metadata>", "User aborted the command", "</metadata>"].join("\n")
               }
+              if (timeout) output += "\n\n" + ["<metadata>", timeout, "</metadata>"].join("\n") // kilocode_change
               const completed = Date.now()
               // kilocode_change start - preserve Kilo v2 shell event dual-write
-              if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+              if (flags.experimentalEventSystem) {
                 yield* sync.run(SessionEvent.Shell.Ended.Sync, {
                   sessionID: input.sessionID,
                   timestamp: DateTime.makeUnsafe(completed),
@@ -928,16 +1083,21 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                 forceKillAfter: "3 seconds",
               })
               const handle = yield* spawner.spawn(cmd)
-              yield* Stream.runForEach(Stream.decodeText(handle.all), (chunk) =>
-                Effect.gen(function* () {
-                  output += chunk
-                  if (part.state.status === "running") {
-                    part.state.metadata = { output, description: "" }
-                    yield* sessions.updatePart(part)
-                  }
-                }),
+              // kilocode_change start
+              timeout = yield* CommandTimeout.drain(
+                handle,
+                Stream.runForEach(Stream.decodeText(handle.all), (chunk) =>
+                  Effect.gen(function* () {
+                    output += chunk
+                    if (part.state.status === "running") {
+                      part.state.metadata = { output, description: "" }
+                      yield* sessions.updatePart(part)
+                    }
+                  }),
+                ),
+                "shell command terminated",
               )
-              yield* handle.exitCode
+              // kilocode_change end
             }).pipe(Effect.scoped, Effect.orDie),
           ).pipe(Effect.exit)
 
@@ -964,15 +1124,16 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       if (Exit.isSuccess(exit)) return exit.value
       const err = Cause.squash(exit.cause)
       if (Provider.ModelNotFoundError.isInstance(err)) {
-        const hint = err.data.suggestions?.length ? ` Did you mean: ${err.data.suggestions.join(", ")}?` : ""
+        const hint = err.suggestions?.length ? ` Did you mean: ${err.suggestions.join(", ")}?` : ""
+        const empty = err.modelsEmpty ? " No models are currently available." : "" // kilocode_change
         yield* bus.publish(Session.Event.Error, {
           sessionID,
           error: new NamedError.Unknown({
-            message: `Model not found: ${err.data.providerID}/${err.data.modelID}.${hint}`,
+            message: `Model not found: ${err.providerID}/${err.modelID}.${hint}${empty}`, // kilocode_change
           }).toObject(),
         })
       }
-      return yield* Effect.failCause(exit.cause)
+      return yield* Effect.die(err)
     })
 
     // kilocode_change start - preserve persisted per-session model selection
@@ -987,15 +1148,17 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           ...(current.model.variant && current.model.variant !== "default" ? { variant: current.model.variant } : {}),
         }
       }
-      const match = yield* sessions.findMessage(sessionID, (m) => m.info.role === "user" && !!m.info.model)
+      const match = yield* sessions
+        .findMessage(sessionID, (m) => m.info.role === "user" && !!m.info.model)
+        .pipe(Effect.orDie)
       if (Option.isSome(match) && match.value.info.role === "user") return match.value.info.model
       return yield* provider.defaultModel()
     })
     // kilocode_change end
 
     const createUserMessage = Effect.fn("SessionPrompt.createUserMessage")(function* (input: PromptInput) {
-      const agentName = input.agent || (yield* agents.defaultAgent())
-      const ag = yield* agents.get(agentName)
+      const agentName = input.agent
+      const ag = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
       if (!ag) {
         const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
         const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
@@ -1015,7 +1178,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       const same = ag.model && model.providerID === ag.model.providerID && model.modelID === ag.model.modelID
       const full =
         !input.variant && ag.variant && same
-          ? yield* provider.getModel(model.providerID, model.modelID).pipe(Effect.catchDefect(() => Effect.void))
+          ? yield* provider
+              .getModel(model.providerID, model.modelID)
+              .pipe(Effect.catchIf(Provider.ModelNotFoundError.isInstance, () => Effect.succeed(undefined)))
           : undefined
       const variant = input.variant ?? (ag.variant && full?.variants?.[ag.variant] ? ag.variant : undefined)
 
@@ -1052,9 +1217,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           sessionID: input.sessionID,
           timestamp: DateTime.makeUnsafe(info.time.created),
           model: {
-            id: Modelv2.ID.make(info.model.modelID),
-            providerID: Modelv2.ProviderID.make(info.model.providerID),
-            variant: Modelv2.VariantID.make(info.model.variant ?? "default"),
+            id: ModelV2.ID.make(info.model.modelID),
+            providerID: ProviderV2.ID.make(info.model.providerID),
+            variant: ModelV2.VariantID.make(info.model.variant ?? "default"),
           },
         })
       }
@@ -1065,6 +1230,30 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       const assign = (part: Draft<MessageV2.Part>): MessageV2.Part => ({
         ...part,
         id: part.id ? PartID.make(part.id) : PartID.ascending(),
+      })
+
+      const referenceContextFromFilePart = Effect.fnUntraced(function* (
+        part: Extract<PromptInput["parts"][number], { type: "file" }>,
+        filepath: string,
+      ) {
+        const name = part.filename?.replace(/#\d+(?:-\d*)?$/, "")
+        if (!name) return
+        const slash = name.indexOf("/")
+        if (slash === -1) return
+
+        const reference = yield* references.get(name.slice(0, slash))
+        if (!reference || reference.kind === "invalid") return
+        if (!AppFileSystem.contains(reference.path, filepath)) return
+
+        const target = path.relative(reference.path, filepath).split(path.sep).join("/")
+        if (!target || target.startsWith("../") || target === "..") return
+
+        return referenceTextPart({
+          reference,
+          source: part.source?.text ?? { value: `@${name}`, start: 0, end: name.length + 1 },
+          target,
+          targetPath: filepath,
+        })
       })
 
       const resolvePart: (part: PromptInput["parts"][number]) => Effect.Effect<Draft<MessageV2.Part>[]> = Effect.fn(
@@ -1160,6 +1349,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             case "file:": {
               log.info("file", { mime: part.mime })
               const filepath = fileURLToPath(part.url)
+              const referenceContext = yield* referenceContextFromFilePart(part, filepath)
               const mime = (yield* fsys.isDir(filepath)) ? "application/x-directory" : part.mime
 
               const { read } = yield* registry.named()
@@ -1205,6 +1395,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                 }
                 const args = { filePath: filepath, offset, limit }
                 const pieces: Draft<MessageV2.Part>[] = [
+                  ...(referenceContext
+                    ? [{ ...referenceContext, messageID: info.id, sessionID: input.sessionID }]
+                    : []),
                   {
                     messageID: info.id,
                     sessionID: input.sessionID,
@@ -1270,6 +1463,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                     error: new NamedError.Unknown({ message }).toObject(),
                   })
                   return [
+                    ...(referenceContext
+                      ? [{ ...referenceContext, messageID: info.id, sessionID: input.sessionID }]
+                      : []),
                     {
                       messageID: info.id,
                       sessionID: input.sessionID,
@@ -1280,6 +1476,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                   ]
                 }
                 return [
+                  ...(referenceContext
+                    ? [{ ...referenceContext, messageID: info.id, sessionID: input.sessionID }]
+                    : []),
                   {
                     messageID: info.id,
                     sessionID: input.sessionID,
@@ -1332,6 +1531,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               const attachment = mime.startsWith("image/") ? yield* image.normalize(file).pipe(Effect.orDie) : file
               // kilocode_change end
               return [
+                ...(referenceContext ? [{ ...referenceContext, messageID: info.id, sessionID: input.sessionID }] : []),
                 {
                   messageID: info.id,
                   sessionID: input.sessionID,
@@ -1386,26 +1586,26 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       const parts = resolvedParts
       // kilocode_change end
 
-      const parsed = MessageV2.Info.zod.safeParse(info)
-      if (!parsed.success) {
+      const parsed = decodeMessageInfo(info, { errors: "all", propertyOrder: "original" })
+      if (Exit.isFailure(parsed)) {
         log.error("invalid user message before save", {
           sessionID: input.sessionID,
           messageID: info.id,
           agent: info.agent,
           model: info.model,
-          issues: parsed.error.issues,
+          cause: Cause.pretty(parsed.cause),
         })
       }
       parts.forEach((part, index) => {
-        const p = MessageV2.Part.zod.safeParse(part)
-        if (p.success) return
+        const p = decodeMessagePart(part, { errors: "all", propertyOrder: "original" })
+        if (Exit.isSuccess(p)) return
         log.error("invalid user part before save", {
           sessionID: input.sessionID,
           messageID: info.id,
           partID: part.id,
           partType: part.type,
           index,
-          issues: p.error.issues,
+          cause: Cause.pretty(p.cause),
           part,
         })
       })
@@ -1417,6 +1617,26 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           if (part.type === "text") {
             if (part.synthetic) result.synthetic.push(part.text)
             else result.text.push(part.text)
+            const reference = referencePromptMetadata(part.metadata?.reference)
+            if (reference) {
+              result.references.push(
+                new ReferenceAttachment({
+                  name: reference.name,
+                  kind: reference.kind,
+                  uri: reference.path ? pathToFileURL(reference.path).href : undefined,
+                  repository: reference.repository,
+                  branch: reference.branch,
+                  target: reference.target,
+                  targetUri: reference.targetPath ? pathToFileURL(reference.targetPath).href : undefined,
+                  problem: reference.problem,
+                  source: new Source({
+                    start: reference.source.start,
+                    end: reference.source.end,
+                    text: reference.source.value,
+                  }),
+                }),
+              )
+            }
           }
           if (part.type === "file") {
             result.files.push(
@@ -1454,12 +1674,13 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           text: [] as string[],
           files: [] as FileAttachment[],
           agents: [] as AgentAttachment[],
+          references: [] as ReferenceAttachment[],
           synthetic: [] as string[],
         },
       )
       // kilocode_change start - preserve Kilo v2 prompt event dual-write
       // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-      if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+      if (flags.experimentalEventSystem) {
         yield* sync.run(SessionEvent.Prompted.Sync, {
           sessionID: input.sessionID,
           timestamp: DateTime.makeUnsafe(info.time.created),
@@ -1467,12 +1688,13 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             text: nextPrompt.text.join("\n"),
             files: nextPrompt.files,
             agents: nextPrompt.agents,
+            references: nextPrompt.references,
           },
         })
       }
       for (const text of nextPrompt.synthetic) {
         // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-        if (Flag.KILO_EXPERIMENTAL_EVENT_SYSTEM) {
+        if (flags.experimentalEventSystem) {
           yield* sync.run(SessionEvent.Synthetic.Sync, {
             sessionID: input.sessionID,
             timestamp: DateTime.makeUnsafe(info.time.created),
@@ -1528,11 +1750,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         return yield* KiloSessionPromptQueue.enqueue(
           input.sessionID,
           message.info.id,
-          bridge.run(loop({ sessionID: input.sessionID, snapshotInitialization: input.snapshotInitialization })), // kilocode_change
+          bridge.run(
+            loop({ sessionID: input.sessionID, snapshotInitialization: input.snapshotInitialization }).pipe(Effect.orDie),
+          ), // kilocode_change
           bridge.run(lastAssistant(input.sessionID)),
         )
         // kilocode_change end
       },
+      Effect.catchTag("NotFoundError", Effect.die),
     )
 
     const lastAssistant = Effect.fnUntraced(function* (sessionID: SessionID) {
@@ -1552,7 +1777,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     const closeReasons = new Map<string, KiloSession.CloseReason>()
 
     // kilocode_change start - retain request-scoped snapshot initialization policy
-    const runLoop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.run")(function* (
+    const runLoop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts, NotFoundError> = Effect.fn(
+      "SessionPrompt.run",
+    )(function* (
       input: LoopInput,
     ) {
       const sessionID = input.sessionID
@@ -1729,13 +1956,24 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           sessionID,
         }
         yield* sessions.updateMessage(msg)
-        const handle = yield* processor.create({
-          assistantMessage: msg,
-          sessionID,
-          model,
-          telemetry, // kilocode_change
-          snapshotInitialization: input.snapshotInitialization, // kilocode_change
+        const finalize = Effect.gen(function* () {
+          if (msg.time.completed) return
+          msg.error ??= MessageV2.fromError(new DOMException("Aborted", "AbortError"), {
+            providerID: msg.providerID,
+            aborted: true,
+          })
+          msg.time.completed = Date.now()
+          yield* sessions.updateMessage(msg)
         })
+        const handle = yield* processor
+          .create({
+            assistantMessage: msg,
+            sessionID,
+            model,
+            telemetry, // kilocode_change
+            snapshotInitialization: input.snapshotInitialization, // kilocode_change
+          })
+          .pipe(Effect.onInterrupt(() => finalize))
 
         const outcome: "break" | "continue" = yield* Effect.gen(function* () {
           const lastUserMsg = msgs.findLast((m) => m.info.role === "user")
@@ -1916,7 +2154,10 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           }
           // kilocode_change end
           return "continue" as const
-        }).pipe(Effect.ensuring(instruction.clear(handle.message.id)))
+        }).pipe(
+          Effect.ensuring(instruction.clear(handle.message.id)),
+          Effect.onInterrupt(() => finalize),
+        )
         if (outcome === "break") break
         continue
       }
@@ -1925,7 +2166,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       return yield* lastAssistant(sessionID)
     })
 
-    const loop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.loop")(function* (
+    const loop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts, NotFoundError> = Effect.fn(
+      "SessionPrompt.loop",
+    )(function* (
       input: LoopInput,
     ) {
       // kilocode_change start
@@ -1933,7 +2176,11 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
       yield* bus.publish(KiloSession.Event.TurnOpen, { sessionID: input.sessionID })
       return yield* Effect.onExit(
-        state.ensureRunning(input.sessionID, lastAssistant(input.sessionID), runLoop(input)), // kilocode_change
+        state.ensureRunning(
+          input.sessionID,
+          lastAssistant(input.sessionID).pipe(Effect.orDie),
+          runLoop(input).pipe(Effect.orDie),
+        ), // kilocode_change
         Effect.fnUntraced(function* (exit) {
           yield* bus.publish(KiloSession.Event.TurnClose, {
             sessionID: input.sessionID,
@@ -1948,12 +2195,17 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       // kilocode_change end
     })
 
-    const shell: (input: ShellInput) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.shell")(
-      function* (input: ShellInput) {
-        const ready = yield* Latch.make()
-        return yield* state.startShell(input.sessionID, lastAssistant(input.sessionID), shellImpl(input, ready), ready)
-      },
-    )
+    const shell: (input: ShellInput) => Effect.Effect<MessageV2.WithParts, Session.BusyError> = Effect.fn(
+      "SessionPrompt.shell",
+    )(function* (input: ShellInput) {
+      const ready = yield* Latch.make()
+      return yield* state.startShell(
+        input.sessionID,
+        lastAssistant(input.sessionID).pipe(Effect.orDie),
+        shellImpl(input, ready),
+        ready,
+      )
+    })
 
     const command = Effect.fn("SessionPrompt.command")(function* (input: CommandInput) {
       yield* elog.info("command", { sessionID: input.sessionID, command: input.command, agent: input.agent })
@@ -1965,7 +2217,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
         throw error
       }
-      const agentName = cmd.agent ?? input.agent ?? (yield* agents.defaultAgent())
+      const agentName = cmd.agent ?? input.agent
 
       const raw = input.arguments.match(argsRegex) ?? []
       const args = raw.map((arg) => arg.replace(quoteTrimRegex, ""))
@@ -1996,11 +2248,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       if (shellMatches.length > 0) {
         const cfg = yield* config.get()
         const sh = Shell.preferred(cfg.shell)
-        const results = yield* Effect.promise(() =>
-          Promise.all(
-            shellMatches.map(async ([, cmd]) => (await Process.text([cmd], { shell: sh, nothrow: true })).text),
-          ),
-        )
+        // kilocode_change start
+        const results = yield* CommandTimeout.texts(
+          shellMatches.map(([, cmd]) => cmd),
+          sh,
+        ).pipe(Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner))
+        // kilocode_change end
         let index = 0
         template = template.replace(bashRegex, () => results[index++])
       }
@@ -2018,7 +2271,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
       yield* getModel(taskModel.providerID, taskModel.modelID, input.sessionID)
 
-      const agent = yield* agents.get(agentName)
+      const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
       if (!agent) {
         const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
         const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
@@ -2043,7 +2296,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           ]
         : [...templateParts, ...(input.parts ?? [])]
 
-      const userAgent = isSubtask ? (input.agent ?? (yield* agents.defaultAgent())) : agentName
+      const userAgent = isSubtask ? (input.agent ?? (yield* agents.defaultInfo()).name) : agent.name
       const userModel = isSubtask
         ? input.model
           ? Provider.parseModel(input.model)
@@ -2077,7 +2330,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     return Service.of({
       cancel,
       prompt,
-      loop,
+      loop: (input) => loop(input).pipe(Effect.orDie),
       shell,
       command,
       resolvePromptParts,
@@ -2086,39 +2339,43 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 )
 
 export const defaultLayer = Layer.suspend(() =>
-  layer.pipe(
-    Layer.provide(SessionRunState.defaultLayer),
-    Layer.provide(SessionStatus.defaultLayer),
-    Layer.provide(SessionCompaction.defaultLayer),
-    Layer.provide(SessionProcessor.defaultLayer),
-    Layer.provide(Command.defaultLayer),
-    Layer.provide(Permission.defaultLayer),
-    Layer.provide(Question.defaultLayer), // kilocode_change - provide pending question dismissal dependency
-    Layer.provide(MCP.defaultLayer),
-    Layer.provide(LSP.defaultLayer),
-    Layer.provide(ToolRegistry.defaultLayer),
-    Layer.provide(Truncate.defaultLayer),
-  ).pipe(
-    Layer.provide(Image.defaultLayer), // kilocode_change - provide user image normalization service
-    Layer.provide(Provider.defaultLayer),
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(Instruction.defaultLayer),
-    Layer.provide(AppFileSystem.defaultLayer),
-    Layer.provide(Plugin.defaultLayer),
-    Layer.provide(Session.defaultLayer),
-    Layer.provide(SessionRevert.defaultLayer),
-    Layer.provide(SessionSummary.defaultLayer),
-    Layer.provide(
-      Layer.mergeAll(
-        Agent.defaultLayer,
-        SystemPrompt.defaultLayer,
-        LLM.defaultLayer,
-        Bus.layer,
-        CrossSpawnSpawner.defaultLayer,
-        SyncEvent.defaultLayer, // kilocode_change - provide Kilo v2 event dual-write service
+  layer
+    .pipe(
+      Layer.provide(SessionRunState.defaultLayer),
+      Layer.provide(SessionStatus.defaultLayer),
+      Layer.provide(SessionCompaction.defaultLayer),
+      Layer.provide(SessionProcessor.defaultLayer),
+      Layer.provide(Command.defaultLayer),
+      Layer.provide(Permission.defaultLayer),
+      Layer.provide(Question.defaultLayer), // kilocode_change - provide pending question dismissal dependency
+      Layer.provide(MCP.defaultLayer),
+      Layer.provide(LSP.defaultLayer),
+      Layer.provide(ToolRegistry.defaultLayer),
+      Layer.provide(Truncate.defaultLayer),
+    )
+    .pipe(
+      Layer.provide(Image.defaultLayer), // kilocode_change - provide user image normalization service
+      Layer.provide(Provider.defaultLayer),
+      Layer.provide(Config.defaultLayer),
+      Layer.provide(Instruction.defaultLayer),
+      Layer.provide(AppFileSystem.defaultLayer),
+      Layer.provide(Plugin.defaultLayer),
+      Layer.provide(Session.defaultLayer),
+      Layer.provide(SessionRevert.defaultLayer),
+      Layer.provide(SessionSummary.defaultLayer),
+      Layer.provide(
+        Layer.mergeAll(
+          Agent.defaultLayer,
+          SystemPrompt.defaultLayer,
+          LLM.defaultLayer,
+          Reference.defaultLayer,
+          Bus.layer,
+          CrossSpawnSpawner.defaultLayer,
+          SyncEvent.defaultLayer, // kilocode_change - provide Kilo v2 event dual-write service
+          RuntimeFlags.defaultLayer,
+        ),
       ),
     ),
-  ),
 )
 const ModelRef = Schema.Struct({
   providerID: ProviderID,
@@ -2184,7 +2441,7 @@ export const ShellInput = Schema.Struct({
   agent: Schema.String,
   model: Schema.optional(ModelRef),
   command: Schema.String,
-}).pipe(withStatics((s) => ({ zod: zod(s) })))
+})
 export type ShellInput = Schema.Schema.Type<typeof ShellInput>
 
 export const CommandInput = Schema.Struct({
@@ -2217,7 +2474,7 @@ export const CommandInput = Schema.Struct({
       ]).annotate({ discriminator: "type" }),
     ),
   ),
-}).pipe(withStatics((s) => ({ zod: zod(s) })))
+})
 export type CommandInput = Schema.Schema.Type<typeof CommandInput>
 
 /** @internal Exported for testing */

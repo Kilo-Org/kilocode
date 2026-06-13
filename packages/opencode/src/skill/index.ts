@@ -1,9 +1,6 @@
 import path from "path"
 import { pathToFileURL } from "url"
-import z from "zod"
 import { Effect, Layer, Context, Schema } from "effect"
-import { zod } from "@opencode-ai/core/effect-zod"
-import { withStatics } from "@opencode-ai/core/schema"
 import { NamedError } from "@opencode-ai/core/util/error"
 import type { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
@@ -14,6 +11,7 @@ import { Permission } from "@/permission"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Config } from "@/config/config"
 import { ConfigMarkdown } from "@/config/markdown"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Glob } from "@opencode-ai/core/util/glob"
 import * as Log from "@opencode-ai/core/util/log"
 import { Discovery } from "./discovery"
@@ -21,6 +19,7 @@ import { rm } from "fs/promises" // kilocode_change
 import { BUILTIN_SKILLS } from "../kilocode/skills/builtin" // kilocode_change
 import { ProjectDesignSkill } from "../kilocode/skill/design" // kilocode_change
 import CUSTOMIZE_OPENCODE_SKILL_BODY from "./prompt/customize-opencode.md" with { type: "text" }
+import { isRecord } from "@/util/record"
 
 const log = Log.create({ service: "skill" })
 const CLAUDE_EXTERNAL_DIR = ".claude"
@@ -46,26 +45,36 @@ export const Info = Schema.Struct({
   description: Schema.optional(Schema.String),
   location: Schema.String,
   content: Schema.String,
-}).pipe(withStatics((s) => ({ zod: zod(s) })))
+})
 export type Info = Schema.Schema.Type<typeof Info>
 
-export const InvalidError = NamedError.create(
-  "SkillInvalidError",
-  z.object({
-    path: z.string(),
-    message: z.string().optional(),
-    issues: z.custom<z.core.$ZodIssue[]>().optional(),
+const Issue = Schema.StructWithRest(
+  Schema.Struct({
+    message: Schema.String,
+    path: Schema.Array(Schema.String),
   }),
+  [Schema.Record(Schema.String, Schema.Unknown)],
 )
 
-export const NameMismatchError = NamedError.create(
-  "SkillNameMismatchError",
-  z.object({
-    path: z.string(),
-    expected: z.string(),
-    actual: z.string(),
-  }),
-)
+function isSkillFrontmatter(data: unknown): data is { name: string; description?: string } {
+  return (
+    isRecord(data) &&
+    typeof data.name === "string" &&
+    (data.description === undefined || typeof data.description === "string")
+  )
+}
+
+export const InvalidError = NamedError.create("SkillInvalidError", {
+  path: Schema.String,
+  message: Schema.optional(Schema.String),
+  issues: Schema.optional(Schema.Array(Issue)),
+})
+
+export const NameMismatchError = NamedError.create("SkillNameMismatchError", {
+  path: Schema.String,
+  expected: Schema.String,
+  actual: Schema.String,
+})
 
 type State = {
   skills: Record<string, Info>
@@ -109,21 +118,20 @@ const add = Effect.fnUntraced(function* (state: State, match: string, bus: Bus.I
 
   if (!md) return
 
-  const parsed = z.object({ name: z.string(), description: z.string().optional() }).safeParse(md.data)
-  if (!parsed.success) return
+  if (!isSkillFrontmatter(md.data)) return
 
-  if (state.skills[parsed.data.name]) {
+  if (state.skills[md.data.name]) {
     log.warn("duplicate skill name", {
-      name: parsed.data.name,
-      existing: state.skills[parsed.data.name].location,
+      name: md.data.name,
+      existing: state.skills[md.data.name].location,
       duplicate: match,
     })
   }
 
   state.dirs.add(path.dirname(match))
-  state.skills[parsed.data.name] = {
-    name: parsed.data.name,
-    description: parsed.data.description,
+  state.skills[md.data.name] = {
+    name: md.data.name,
+    description: md.data.description,
     location: match,
     content: md.content,
   }
@@ -164,6 +172,7 @@ const discoverSkills = Effect.fnUntraced(function* (
   discovery: Discovery.Interface,
   fsys: AppFileSystem.Interface,
   global: Global.Interface,
+  disableClaudeCodeSkills: boolean,
   directory: string,
   worktree: string,
 ) {
@@ -171,7 +180,7 @@ const discoverSkills = Effect.fnUntraced(function* (
 
   const externalDirs: string[] = []
   if (!Flag.KILO_DISABLE_EXTERNAL_SKILLS) {
-    if (!Flag.KILO_DISABLE_CLAUDE_CODE_SKILLS) externalDirs.push(CLAUDE_EXTERNAL_DIR)
+    if (!disableClaudeCodeSkills) externalDirs.push(CLAUDE_EXTERNAL_DIR)
     externalDirs.push(AGENTS_EXTERNAL_DIR)
 
     for (const dir of externalDirs) {
@@ -209,7 +218,7 @@ const discoverSkills = Effect.fnUntraced(function* (
   for (const url of cfg.skills?.urls ?? []) {
     const pulledDirs = yield* discovery.pull(url)
     for (const dir of pulledDirs) {
-      yield* scan(state, dir, SKILL_PATTERN) // kilocode_change
+      yield* scan(state, dir, SKILL_PATTERN)
     }
   }
 
@@ -248,11 +257,20 @@ export const layer = Layer.effect(
     const discovery = yield* Discovery.Service
     const config = yield* Config.Service
     const bus = yield* Bus.Service
-    const fsys = yield* AppFileSystem.Service // kilocode_change
-    const global = yield* Global.Service // kilocode_change
+    const fsys = yield* AppFileSystem.Service
+    const global = yield* Global.Service
+    const flags = yield* RuntimeFlags.Service
     const discovered = yield* InstanceState.make(
       Effect.fn("Skill.discovery")(function* (ctx) {
-        return yield* discoverSkills(config, discovery, fsys, global, ctx.directory, ctx.project.worktree) // kilocode_change
+        return yield* discoverSkills(
+          config,
+          discovery,
+          fsys,
+          global,
+          flags.disableClaudeCodeSkills,
+          ctx.directory,
+          ctx.project.worktree,
+        )
       }),
     )
     const state = yield* InstanceState.make(
@@ -260,13 +278,11 @@ export const layer = Layer.effect(
         const s: State = { skills: {}, dirs: new Set() }
         // Register the built-in skill BEFORE disk discovery so a user-disk
         // skill with the same name can override it.
-        if (Flag.KILO_EXPERIMENTAL_CUSTOMIZE_SKILL) {
-          s.skills[CUSTOMIZE_OPENCODE_SKILL_NAME] = {
-            name: CUSTOMIZE_OPENCODE_SKILL_NAME,
-            description: CUSTOMIZE_OPENCODE_SKILL_DESCRIPTION,
-            location: "<built-in>",
-            content: CUSTOMIZE_OPENCODE_SKILL_BODY,
-          }
+        s.skills[CUSTOMIZE_OPENCODE_SKILL_NAME] = {
+          name: CUSTOMIZE_OPENCODE_SKILL_NAME,
+          description: CUSTOMIZE_OPENCODE_SKILL_DESCRIPTION,
+          location: "<built-in>",
+          content: CUSTOMIZE_OPENCODE_SKILL_BODY,
         }
         const ctx = yield* InstanceState.context // kilocode_change
         yield* loadSkills(s, yield* InstanceState.get(discovered), bus, { fsys, directory: ctx.directory, worktree: ctx.worktree }) // kilocode_change
@@ -305,6 +321,7 @@ export const defaultLayer = layer.pipe(
   Layer.provide(Bus.layer),
   Layer.provide(AppFileSystem.defaultLayer),
   Layer.provide(Global.layer),
+  Layer.provide(RuntimeFlags.defaultLayer),
 )
 
 export function fmt(list: Info[], opts: { verbose: boolean }) {

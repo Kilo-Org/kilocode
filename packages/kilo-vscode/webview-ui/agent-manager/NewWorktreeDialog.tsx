@@ -396,7 +396,6 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                 <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
                   <textarea
                     ref={textareaRef}
-                    autofocus
                     class="prompt-input am-prompt-input"
                     placeholder={t(
                       isMac

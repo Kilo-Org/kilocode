@@ -82,6 +82,10 @@ class MockCliServer : AutoCloseable {
     @Volatile var summarizeStatus = 200
     @Volatile var lastSummarizePath: String? = null
     @Volatile var lastSummarizeBody: String? = null
+    @Volatile var enhanced = """{"text":"Enhanced prompt"}"""
+    @Volatile var enhanceStatus = 200
+    @Volatile var lastEnhancePath: String? = null
+    @Volatile var lastEnhanceBody: String? = null
     @Volatile var sessionRenameStatus = 200
     @Volatile var sessionRenameResponse = """{"id":"ses_test","slug":"test","projectID":"prj_test","directory":"/test","title":"Renamed","version":"1.0.0","time":{"created":1000,"updated":2000}}"""
     @Volatile var lastSessionRenamePath: String? = null
@@ -324,6 +328,11 @@ class MockCliServer : AutoCloseable {
                     lastSummarizePath = path
                     lastSummarizeBody = body
                     respond(output, summarizeStatus, summarizeResponse)
+                }
+                bare == "/enhance-prompt" && method == "POST" -> {
+                    lastEnhancePath = path
+                    lastEnhanceBody = body
+                    respond(output, enhanceStatus, enhanced)
                 }
                 else -> respond(output, 404, """{"error":"Not found"}""")
             }

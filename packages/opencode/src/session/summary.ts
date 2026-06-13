@@ -2,8 +2,6 @@ import { Effect, Layer, Context, Schema } from "effect"
 import { Bus } from "@/bus"
 import { Snapshot } from "@/snapshot"
 import { Storage } from "@/storage/storage"
-import { zod } from "@opencode-ai/core/effect-zod"
-import { withStatics } from "@opencode-ai/core/schema"
 import * as Session from "./session"
 import { MessageV2 } from "./message-v2"
 import { SessionID, MessageID } from "./schema"
@@ -105,7 +103,7 @@ export const layer = Layer.effect(
       sessionID: SessionID
       messageID: MessageID
     }) {
-      const all = yield* sessions.messages({ sessionID: input.sessionID })
+      const all = yield* sessions.messages({ sessionID: input.sessionID }).pipe(Effect.orDie)
       if (!all.length) return
 
       // kilocode_change start - preserve imported cumulative diffs when summarizing cloud-forked sessions
@@ -117,12 +115,12 @@ export const layer = Layer.effect(
       const local = base.length > 0 && target?.info.role === "user" ? yield* computeDiff({ messages }) : []
       const diffs =
         base.length > 0
-          ? yield* storage
-              .read<Snapshot.FileDiff[]>(["session_diff", input.sessionID])
-              .pipe(
-                Effect.orElseSucceed((): Snapshot.FileDiff[] => base),
-                Effect.map((existing) => appendSessionDiffs({ existing: existing.length > 0 ? existing : base, next: local })),
-              )
+          ? yield* storage.read<Snapshot.FileDiff[]>(["session_diff", input.sessionID]).pipe(
+              Effect.orElseSucceed((): Snapshot.FileDiff[] => base),
+              Effect.map((existing) =>
+                appendSessionDiffs({ existing: existing.length > 0 ? existing : base, next: local }),
+              ),
+            )
           : yield* computeDiff({ messages: all })
       // kilocode_change end
       yield* sessions.setSummary({
@@ -181,7 +179,7 @@ export const defaultLayer = Layer.suspend(() =>
 export const DiffInput = Schema.Struct({
   sessionID: SessionID,
   messageID: Schema.optional(MessageID),
-}).pipe(withStatics((s) => ({ zod: zod(s) })))
+})
 export type DiffInput = Schema.Schema.Type<typeof DiffInput>
 
 export * as SessionSummary from "./summary"

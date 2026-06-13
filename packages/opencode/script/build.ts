@@ -250,7 +250,9 @@ const targets = singleFlag
 
 // kilocode_change start - prepare one validated models snapshot before any target compile
 const snapshot = await prepareModelsSnapshot()
-console.log(`Prepared models snapshot from ${snapshot.source} (${snapshot.providers} providers, ${snapshot.models} models)`)
+console.log(
+  `Prepared models snapshot from ${snapshot.source} (${snapshot.providers} providers, ${snapshot.models} models)`,
+)
 // kilocode_change end
 
 await $`rm -rf dist`

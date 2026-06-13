@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { Schema } from "effect"
 import type { ModelMessage } from "ai"
 import { Config } from "@/config/config"
 import type { Provider } from "@/provider/provider"
@@ -7,8 +8,15 @@ import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import type { MessageV2 } from "@/session/message-v2"
 import { isOverflow, usable } from "@/session/overflow"
 
-function cfg(compaction?: Config.Info["compaction"]) {
-  return Config.Info.zod.parse({ compaction })
+function cfg(compaction?: Config.Info["compaction"]): Config.Info {
+  const config = Schema.decodeUnknownSync(Config.Info)({ compaction })
+  return {
+    ...config,
+    skills: config.skills && {
+      paths: config.skills.paths && [...config.skills.paths],
+      urls: config.skills.urls && [...config.skills.urls],
+    },
+  }
 }
 
 function model(opts: { context: number; output: number; input?: number }): Provider.Model {
@@ -77,6 +85,27 @@ describe("Kilo auto-compaction threshold", () => {
     const mdl = model({ context: 200_000, output: 32_000 })
 
     expect(isOverflow({ cfg: conf, model: mdl, tokens: tokens(150_000) })).toBe(false)
+  })
+
+  test("uses normalized fields when the provider total disagrees", () => {
+    const conf = cfg({ threshold_percent: 75 })
+    const mdl = model({ context: 200_000, output: 32_000 })
+
+    expect(isOverflow({ cfg: conf, model: mdl, tokens: { ...tokens(80_000), total: 250_000 } })).toBe(false)
+  })
+
+  test("counts reasoning tokens", () => {
+    const conf = cfg({ threshold_percent: 75 })
+    const mdl = model({ context: 200_000, output: 32_000 })
+
+    expect(isOverflow({ cfg: conf, model: mdl, tokens: { ...tokens(149_999), reasoning: 1 } })).toBe(true)
+  })
+
+  test("falls back to provider total when normalized usage is unavailable", () => {
+    const conf = cfg({ threshold_percent: 75 })
+    const mdl = model({ context: 200_000, output: 32_000 })
+
+    expect(isOverflow({ cfg: conf, model: mdl, tokens: { ...tokens(0), total: 150_000 } })).toBe(true)
   })
 })
 

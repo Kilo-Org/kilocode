@@ -39,6 +39,7 @@ describe("kilocode tool registry indexing", () => {
             const ids = yield* registry.ids()
 
             expect(ids).not.toContain("semantic_search")
+            expect(ids).not.toContain("codesearch")
             expect(ids).toContain("question")
             expect(ids).toContain("read")
             expect(ids).toContain("suggest")

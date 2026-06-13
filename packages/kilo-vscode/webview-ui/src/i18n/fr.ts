@@ -1066,6 +1066,36 @@ export const dict = {
   "feedback.dialog.github": "Signaler un problème sur GitHub",
   "feedback.dialog.discord": "Rejoindre notre communauté Discord",
   "feedback.dialog.support": "Service client",
+  "workStyle.onboarding.welcome": "Bienvenue dans Kilo",
+  "workStyle.onboarding.title": "Choisissez votre façon de travailler",
+  "workStyle.onboarding.settingsNote": "Vous pouvez modifier ces options à tout moment dans les",
+  "workStyle.onboarding.settings": "Paramètres.",
+  "workStyle.onboarding.description":
+    "Ceci définit les paramètres initiaux pour les autorisations, les blocs de raisonnement, la sortie du terminal et la chronologie du contexte. Ce réglage ne s'applique qu'une fois et ignore les paramètres que vous avez déjà personnalisés.",
+  "workStyle.onboarding.skip": "Ignorer pour l'instant",
+  "workStyle.toast.saved.title": "Mode enregistré avec succès",
+  "workStyle.toast.saved.description": "Modifiez vos préférences à tout moment dans les paramètres.",
+  "workStyle.toast.saved.action": "Accéder aux paramètres",
+  "workStyle.choice.permissions": "Autorisations",
+  "workStyle.choice.bash": "Bash",
+  "workStyle.choice.visibility": "Visibilité",
+  "workStyle.choice.human-in-the-loop.eyebrow": "Contrôle humain",
+  "workStyle.choice.human-in-the-loop.title": "Vérifier d'abord",
+  "workStyle.choice.human-in-the-loop.description":
+    "Kilo s'interrompt et vous présente son plan au fil de son travail.",
+  "workStyle.choice.human-in-the-loop.permissions":
+    "Demande avant de modifier des fichiers ou d'exécuter des commandes.",
+  "workStyle.choice.human-in-the-loop.bash": "L'agent demande l'autorisation pour chaque commande du terminal.",
+  "workStyle.choice.human-in-the-loop.visibility":
+    "Affiche tous les détails de la conversation, y compris le raisonnement.",
+  "workStyle.choice.autonomous.eyebrow": "Moins d'interruptions",
+  "workStyle.choice.autonomous.title": "Autonomie élevée",
+  "workStyle.choice.autonomous.description": "Moins d'interruptions et une interface simplifiée.",
+  "workStyle.choice.autonomous.permissions":
+    "Modifie les fichiers et exécute les commandes dans l'espace de travail sans demander.",
+  "workStyle.choice.autonomous.bash":
+    "Peut exécuter des commandes dans le terminal de l'espace de travail sans autorisation.",
+  "workStyle.choice.autonomous.visibility": "Les détails restent repliés jusqu'à ce que vous les développiez.",
   "session.cloud.import.title": "Importer depuis le cloud",
   "session.cloud.import.placeholder": "ID de session, URL ou commande kilo import",
   "session.cloud.import.button": "Importer",
@@ -1289,8 +1319,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Activer le formateur de code automatique",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Activer l'intégration du protocole de serveur de langage",
-  "settings.experimental.pasteSummary.title": "Désactiver le résumé du collage",
-  "settings.experimental.pasteSummary.description": "Ne pas résumer le contenu collé volumineux",
   "settings.experimental.batch.title": "Outil par lot",
   "settings.experimental.batch.description": "Activer le traitement par lot d'appels d'outils",
   "settings.experimental.codebaseSearch.title": "Recherche de code",
@@ -1478,8 +1506,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Gérer la liste des tâches. Permet de lire et de mettre à jour la liste des tâches interne.",
   "settings.autoApprove.tool.webfetch": "Récupérer une URL. Permet de récupérer le contenu d'une URL spécifique.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Rechercher sur le Web ou dans le code. Permet d'effectuer des recherches externes sur le Web ou dans le code.",
+  "settings.autoApprove.tool.websearch":
+    "Rechercher sur le Web. Permet d'effectuer des recherches externes sur le Web.",
   "settings.autoApprove.tool.external_directory":
     "Accéder aux fichiers en dehors de l'espace de travail. Déclenché lors de l'accès à des fichiers en dehors du répertoire de projet actuel.",
   "settings.autoApprove.tool.doom_loop":

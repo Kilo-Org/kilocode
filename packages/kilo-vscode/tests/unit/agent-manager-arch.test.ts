@@ -163,6 +163,16 @@ describe("Agent Manager Provider Messages", () => {
     expect(body).toContain("agentManager.sessionAdded")
   })
 
+  it("warms MCP before creating every new worktree session", () => {
+    const body = getMethodBody("createSessionInWorktree")
+    const warmup = body.indexOf("startSession(")
+    const create = body.indexOf("client.session.create(")
+
+    expect(warmup).toBeGreaterThanOrEqual(0)
+    expect(create).toBeGreaterThanOrEqual(0)
+    expect(warmup).toBeLessThan(create)
+  })
+
   it("state-mutating messages wait for state initialization", () => {
     const body = getMethodBody("shouldWaitForState")
     const messages = [
@@ -643,6 +653,10 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
   "run/task.ts": {
     note: "vscode adapter for Agent Manager run scripts",
   },
+  // Reads terminal.integrated.* and editor.font* config for xterm font settings
+  "terminal-font.ts": {
+    note: "vscode config reader for integrated terminal font settings",
+  },
 }
 
 /**
@@ -770,6 +784,8 @@ describe("Agent Manager — provider chain parity with sidebar", () => {
     // which the agent manager already includes in its provider chain.
     "LanguageProvider",
     "DataProvider",
+    // Work-style onboarding is injected only into the sidebar empty state.
+    "WorkStyleProvider",
   ]
 
   it("agent manager includes all context providers from sidebar App.tsx", () => {

@@ -85,7 +85,7 @@ export function renderTerminalLayer(props: { state: TerminalStateControls }): JS
             const visible = () => slotVisible(term.id, term.contextKey)
             return (
               <div class={`am-terminal-slot ${visible() ? "am-terminal-slot-visible" : ""}`}>
-                <TerminalTab terminalId={term.id} wsUrl={term.wsUrl} active={visible()} />
+                <TerminalTab terminalId={term.id} wsUrl={term.wsUrl} active={visible()} font={term.font} />
               </div>
             )
           }}

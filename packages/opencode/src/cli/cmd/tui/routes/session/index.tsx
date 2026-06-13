@@ -11,6 +11,7 @@ import {
   onMount,
   Show,
   Switch,
+  untrack,
   useContext,
 } from "solid-js"
 import { Dynamic } from "solid-js/web"
@@ -68,7 +69,6 @@ import { DialogForkFromTimeline } from "./dialog-fork-from-timeline"
 import { DialogSessionRename } from "../../component/dialog-session-rename"
 import { Sidebar } from "./sidebar"
 import { SubagentFooter } from "./subagent-footer.tsx"
-import { Flag } from "@opencode-ai/core/flag/flag"
 import { LANGUAGE_EXTENSIONS } from "@/lsp/language"
 import parsers from "../../../../../../parsers-config.ts"
 import * as Clipboard from "../../util/clipboard"
@@ -97,8 +97,6 @@ import { splitDiffHunks } from "@/kilocode/tui/diff"
 import { session as banner } from "@/kilocode/cli/logo"
 
 import { formatMarkdownTables } from "../../util/markdown"
-import { bell } from "@/kilocode/bell"
-import { SessionIndexing } from "@/kilocode/components/session-indexing"
 import { submitFeedback } from "@/kilocode/cli/cmd/tui/feedback"
 // kilocode_change end
 import { getScrollAcceleration } from "../../util/scroll"
@@ -259,6 +257,7 @@ export function Session() {
       blockingSuggestions().length > 0 ||
       network().length > 0,
   )
+  // kilocode_change end
 
   const pending = createMemo(() => {
     return messages().findLast((x) => x.role === "assistant" && !x.time.completed)?.id
@@ -267,45 +266,6 @@ export function Session() {
   const lastAssistant = createMemo(() => {
     return messages().findLast((x) => x.role === "assistant")
   })
-
-  createEffect(
-    on(
-      () => [route.sessionID, sync.data.session_status?.[route.sessionID]?.type] as const,
-      ([id, type], prev) => {
-        if (!prev || prev[0] !== id) return
-        if (prev[1] && prev[1] !== "idle" && type === "idle" && bellEnabled()) bell()
-      },
-    ),
-  )
-
-  createEffect(
-    on(
-      () => [route.sessionID, permissions().length] as const,
-      ([id, len], prev) => {
-        if (!prev || prev[0] !== id) return
-        if (len > prev[1] && bellEnabled()) bell()
-      },
-    ),
-  )
-  createEffect(
-    on(
-      () => [route.sessionID, questions().length] as const,
-      ([id, len], prev) => {
-        if (!prev || prev[0] !== id) return
-        if (len > prev[1] && bellEnabled()) bell()
-      },
-    ),
-  )
-  createEffect(
-    on(
-      () => [route.sessionID, suggestions().length + network().length] as const,
-      ([id, len], prev) => {
-        if (!prev || prev[0] !== id) return
-        if (len > prev[1] && bellEnabled()) bell()
-      },
-    ),
-  )
-  // kilocode_change end
 
   const dimensions = useTerminalDimensions()
   const [sidebar, setSidebar] = kv.signal<"auto" | "hide">("sidebar", "auto")
@@ -318,7 +278,6 @@ export function Session() {
   const [showScrollbar, setShowScrollbar] = kv.signal("scrollbar_visible", false)
   const [diffWrapMode] = kv.signal<"word" | "none">("diff_wrap_mode", "word")
   const [_animationsEnabled, _setAnimationsEnabled] = kv.signal("animations_enabled", true)
-  const [bellEnabled, _setBellEnabled] = kv.signal("bell_enabled", true) // kilocode_change - terminal bell toggle (toggled via kv.set in app.tsx command)
   const [showGenericToolOutput, setShowGenericToolOutput] = kv.signal("generic_tool_output_visibility", false)
 
   const wide = createMemo(() => dimensions().width > 120)
@@ -378,7 +337,7 @@ export function Session() {
   createEffect(() => {
     const sessionID = route.sessionID
     void (async () => {
-      const previousWorkspace = project.workspace.current()
+      const previousWorkspace = untrack(() => project.workspace.current())
       const result = await sdk.client.session.get({ sessionID }, { throwOnError: true })
       if (!result.data) {
         toast.show({
@@ -416,8 +375,8 @@ export function Session() {
   })
 
   let lastSwitch: string | undefined = undefined
-  event.on("message.part.updated", (evt) => {
-    const part = evt.properties.part
+  event.onSync("message.part.updated.1", (evt) => {
+    const part = evt.data.part
     if (part.type !== "tool") return
     if (part.sessionID !== route.sessionID) return
     if (part.state.status !== "completed") return
@@ -887,7 +846,7 @@ export function Session() {
       title: "Line up",
       value: "session.line.up",
       category: "Session",
-      enabled: false,
+      hidden: true,
       run: () => {
         scroll.scrollBy(-1)
         dialog.clear()
@@ -897,7 +856,7 @@ export function Session() {
       title: "Line down",
       value: "session.line.down",
       category: "Session",
-      enabled: false,
+      hidden: true,
       run: () => {
         scroll.scrollBy(1)
         dialog.clear()
@@ -1439,9 +1398,6 @@ export function Session() {
                 {/* kilocode_change end */}
               </box>
             </Show>
-            {/* kilocode_change start */}
-            <SessionIndexing />
-            {/* kilocode_change end */}
             <Toast />
           </box>
           <Show when={sidebarVisible()}>
@@ -1732,29 +1688,15 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
   return (
     <Show when={props.part.text.trim()}>
       <box id={"text-" + props.part.id} paddingLeft={3} marginTop={1} flexShrink={0}>
-        <Switch>
-          <Match when={Flag.KILO_EXPERIMENTAL_MARKDOWN}>
-            <markdown
-              syntaxStyle={syntax()}
-              streaming={true}
-              content={props.part.text.trim()}
-              conceal={ctx.conceal()}
-              fg={theme.markdownText}
-              bg={theme.background}
-            />
-          </Match>
-          <Match when={!Flag.KILO_EXPERIMENTAL_MARKDOWN}>
-            <code
-              filetype="markdown"
-              drawUnstyledText={false}
-              streaming={true}
-              syntaxStyle={syntax()}
-              content={props.part.text.trim()}
-              conceal={ctx.conceal()}
-              fg={theme.text}
-            />
-          </Match>
-        </Switch>
+        <markdown
+          syntaxStyle={syntax()}
+          streaming={true}
+          internalBlockMode="top-level"
+          content={props.part.text.trim()}
+          conceal={ctx.conceal()}
+          fg={theme.markdownText}
+          bg={theme.background}
+        />
       </box>
     </Show>
   )
@@ -2212,11 +2154,11 @@ function WebFetch(props: ToolProps<typeof WebFetchTool>) {
 }
 
 function WebSearch(props: ToolProps<typeof WebSearchTool>) {
-  const metadata = props.metadata as { numResults?: number; provider?: unknown }
+  const metadata = () => props.metadata as { numResults?: number; provider?: unknown }
   return (
     <InlineTool icon="◈" pending="Searching web..." complete={props.input.query} part={props.part}>
-      {webSearchProviderLabel(metadata.provider)} "{props.input.query}"{" "}
-      <Show when={metadata.numResults}>({metadata.numResults} results)</Show>
+      {webSearchProviderLabel(metadata().provider)} "{props.input.query}"{" "}
+      <Show when={metadata().numResults}>({metadata().numResults} results)</Show>
     </InlineTool>
   )
 }
@@ -2319,7 +2261,9 @@ function Task(props: ToolProps<typeof TaskTool>) {
 
   const content = createMemo(() => {
     if (!props.input.description) return ""
-    let content = [`${Locale.titlecase(props.input.subagent_type ?? "General")} Task — ${props.input.description}`]
+    const description =
+      props.metadata.background === true ? `${props.input.description} (background)` : props.input.description
+    let content = [`${Locale.titlecase(props.input.subagent_type ?? "General")} Task — ${description}`]
 
     // kilocode_change start
     if (isRunning()) {
@@ -2336,7 +2280,11 @@ function Task(props: ToolProps<typeof TaskTool>) {
     // kilocode_change end
 
     if (props.part.state.status === "completed") {
-      content.push(`└ ${tools().length} toolcalls · ${Locale.duration(duration())}`)
+      content.push(
+        props.metadata.background === true
+          ? `└ ${tools().length} toolcalls`
+          : `└ ${tools().length} toolcalls · ${Locale.duration(duration())}`,
+      )
     }
 
     return content.join("\n")

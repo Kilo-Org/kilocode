@@ -32,6 +32,7 @@ function dirs(root: string) {
     XDG_CONFIG_HOME: path.join(root, "xdg-config"),
     XDG_STATE_HOME: path.join(root, "xdg-state"),
     XDG_CACHE_HOME: path.join(root, "xdg-cache"),
+    KILO_TEST_DAEMON_EPHEMERAL_PORT: "1",
   }
 }
 
@@ -124,8 +125,7 @@ describe("daemon manager", () => {
     expect(started.running).toBe(true)
     expect(started.state?.pid).toBeGreaterThan(0)
     expect(started.state?.token).toBeTruthy()
-    expect(started.state?.port).toBeGreaterThanOrEqual(Daemon.PortRange.start)
-    expect(started.state?.port).toBeLessThanOrEqual(Daemon.PortRange.end)
+    expect(started.state?.port).toBeGreaterThan(0)
 
     const blocked = await fetch(`${started.state!.url}/config?directory=${encodeURIComponent(tmp.path)}`)
     expect(blocked.status).toBe(401)

@@ -24,6 +24,7 @@ export interface TextPart extends BasePart {
   text: string
   synthetic?: boolean
   time?: { start: number; end?: number }
+  metadata?: Record<string, unknown>
 }
 
 export interface FilePartSource {

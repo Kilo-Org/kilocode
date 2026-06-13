@@ -38,7 +38,6 @@ export interface WatcherConfig {
 }
 
 export interface ExperimentalConfig {
-  disable_paste_summary?: boolean
   batch_tool?: boolean
   codebase_search?: boolean
   speech_to_text_model?: string
@@ -117,6 +116,7 @@ export interface Config {
   small_model?: string | null
   subagent_model?: string | null
   subagent_variant?: string | null
+  subagent_variant_overrides?: Record<string, string | null> | null
   default_agent?: string | null
   agent?: Record<string, AgentConfig>
   provider?: Record<string, ProviderConfig>

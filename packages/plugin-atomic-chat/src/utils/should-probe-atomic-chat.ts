@@ -1,4 +1,4 @@
-import { ATOMIC_CHAT_PROVIDER_KEY } from '../constants'
+import { ATOMIC_CHAT_PROVIDER_KEY } from "../constants"
 
 export function getAtomicSection(config: any) {
   return config?.provider?.[ATOMIC_CHAT_PROVIDER_KEY]
@@ -15,10 +15,10 @@ export function isAtomicChatAutoDetectEnabled(config: any): boolean {
 }
 
 function modelRefUsesAtomicChat(ref: unknown): boolean {
-  if (typeof ref === 'string') {
+  if (typeof ref === "string") {
     return ref.startsWith(`${ATOMIC_CHAT_PROVIDER_KEY}/`)
   }
-  if (!ref || typeof ref !== 'object') {
+  if (!ref || typeof ref !== "object") {
     return false
   }
   const record = ref as Record<string, unknown>
@@ -31,7 +31,7 @@ export function isAtomicChatModelSelected(config: any): boolean {
     return true
   }
   const modes = config?.model
-  if (!modes || typeof modes !== 'object' || Array.isArray(modes)) {
+  if (!modes || typeof modes !== "object" || Array.isArray(modes)) {
     return false
   }
   for (const value of Object.values(modes)) {
@@ -48,8 +48,6 @@ export function isAtomicChatModelSelected(config: any): boolean {
  */
 export function shouldProbeAtomicChat(config: any): boolean {
   return (
-    hasAtomicChatProviderSection(config) ||
-    isAtomicChatAutoDetectEnabled(config) ||
-    isAtomicChatModelSelected(config)
+    hasAtomicChatProviderSection(config) || isAtomicChatAutoDetectEnabled(config) || isAtomicChatModelSelected(config)
   )
 }

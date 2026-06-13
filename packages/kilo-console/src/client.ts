@@ -10,6 +10,7 @@ import type {
   FormatterStatusResponse,
   GlobalHealthResponse,
   GlobalEvent,
+  KiloEmbeddingModelCatalog,
   LspStatusResponse,
   McpStatusResponse,
   Pty as PtyInfo,
@@ -51,6 +52,7 @@ export type ProjectConsoleQuery = ProjectQuery & {
 
 export type ProjectConsoleSnapshot = {
   project: ProjectItem
+  config: EffectiveConfig
   vcs: VcsInfo
   worktrees: string[]
   terminals: ProjectTerminalItem[]
@@ -400,6 +402,10 @@ export async function load(input: Query): Promise<Snapshot> {
   }
 }
 
+export async function loadEmbeddingModels(input: Query): Promise<KiloEmbeddingModelCatalog> {
+  return demand("Kilo embedding models", await client(input).indexing.models())
+}
+
 export async function loadProjects(input: ProjectQuery): Promise<ProjectItem[]> {
   const sdk = client(input)
   const dir = value(input.dir)
@@ -434,7 +440,8 @@ export async function loadProjectConsole(input: ProjectConsoleQuery): Promise<Pr
   const project = await resolved(input)
   const query = { url: input.url, dir: project.worktree }
   const sdk = client(query)
-  const [vcs, worktrees] = await Promise.all([
+  const [config, vcs, worktrees] = await Promise.all([
+    sdk.config.overlay({ scope: "global" }),
     sdk.vcs.get({ directory: query.dir }),
     sdk.worktree.list({ directory: query.dir }),
   ])
@@ -445,6 +452,7 @@ export async function loadProjectConsole(input: ProjectConsoleQuery): Promise<Pr
 
   return {
     project,
+    config: demand("Config", config).effective,
     vcs: demand("VCS", vcs),
     worktrees: dirs,
     terminals: terminals.flat(),
@@ -611,16 +619,24 @@ export function ptyWsUrl(input: Query, pty: string, cursor = 0) {
   return url.toString()
 }
 
-export async function saveConfig(input: Query, patch: Partial<ConfigPatch>) {
+export async function patchConfig(input: Query, patch: Partial<ConfigPatch>, unset?: ConfigUnset) {
   const sdk = client(input)
-  const result = await sdk.config.overlayUpdate({ directory: value(input.dir), scope: input.scope, set: patch })
+  const set = Object.keys(patch).length ? patch : undefined
+  const result = await sdk.config.overlayUpdate({
+    directory: value(input.dir),
+    scope: input.scope,
+    set,
+    unset,
+  })
   return demand("Update config", result)
 }
 
+export async function saveConfig(input: Query, patch: Partial<ConfigPatch>) {
+  return patchConfig(input, patch)
+}
+
 export async function unsetConfig(input: Query, unset: ConfigUnset) {
-  const sdk = client(input)
-  const result = await sdk.config.overlayUpdate({ directory: value(input.dir), scope: input.scope, unset })
-  return demand("Update config", result)
+  return patchConfig(input, {}, unset)
 }
 
 export async function saveModelState(input: Query, favorite: ModelRef[]) {

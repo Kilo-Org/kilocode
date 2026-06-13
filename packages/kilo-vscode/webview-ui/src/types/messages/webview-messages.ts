@@ -5,6 +5,8 @@ import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
 import type { ModelAllocation, ReviewComment } from "./agent-manager"
+import type { ReviewMessageData } from "../../../../src/shared/review-comments"
+import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type {
   ClearLegacyDataMessage,
   FinalizeLegacyMigrationMessage,
@@ -28,6 +30,7 @@ export interface SendMessageRequest {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+  review?: ReviewMessageData
   agentManagerContext?: string
   contextDirectory?: string
 }
@@ -104,6 +107,7 @@ export interface ImportAndSendMessage {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+  review?: ReviewMessageData
   command?: string
   commandArgs?: string
 }
@@ -386,6 +390,20 @@ export interface RequestTimelineSettingMessage {
   type: "requestTimelineSetting"
 }
 
+export interface RequestWorkStyleMessage {
+  type: "requestWorkStyle"
+}
+
+export interface SetWorkStyleMessage {
+  type: "setWorkStyle"
+  style: WorkStyleState
+}
+
+export interface ApplyWorkStyleMessage {
+  type: "applyWorkStyle"
+  style: WorkStyle
+}
+
 export interface StreamSessionVisibleMessage {
   type: "streamSessionVisible"
   sessionID: string
@@ -425,8 +443,10 @@ export interface UpdateConfigMessage {
   type: "updateConfig"
   /** Global config patch written to ~/.config/kilo/kilo.json. */
   config: Partial<Config>
-  /** Project config patch written to the workspace's .kilo/kilo.json or existing project config. */
+  globalUnset?: string[][]
+  /** Project config patch written to the workspace's .kilo/kilo.jsonc or existing project config. */
   projectConfig?: Partial<Config>
+  projectUnset?: string[][]
 }
 
 export interface RequestNotificationSettingsMessage {
@@ -1123,6 +1143,9 @@ export type WebviewMessage =
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
+  | RequestWorkStyleMessage
+  | SetWorkStyleMessage
+  | ApplyWorkStyleMessage
   | StreamSessionVisibleMessage
   | RequestBrowserSettingsMessage
   | RequestClaudeCompatSettingMessage

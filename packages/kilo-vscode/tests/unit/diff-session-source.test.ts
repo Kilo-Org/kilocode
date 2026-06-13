@@ -57,13 +57,20 @@ describe("createSessionDiffSource.fetch", () => {
         deletions: 0,
         status: "modified",
       },
+      {
+        file: "large.txt",
+        patch: "",
+        additions: 500,
+        deletions: 200,
+        status: "modified",
+      },
     ]
     const { fetch } = recording(raw)
     const source = createSessionDiffSource("s2", fetch, "/repo")
 
     const result = await source.fetch()
 
-    expect(result.diffs).toHaveLength(2)
+    expect(result.diffs).toHaveLength(3)
 
     const foo = result.diffs[0]!
     expect(foo.file).toBe("foo.ts")
@@ -78,9 +85,10 @@ describe("createSessionDiffSource.fetch", () => {
     expect(foo.summarized).toBe(false)
 
     const big = result.diffs[1]!
-    expect(big.summarized).toBe(true)
+    expect(big.summarized).toBe(false)
     expect(big.before).toBe("")
     expect(big.after).toBe("")
+    expect(result.diffs[2]?.summarized).toBe(true)
   })
 
   it("propagates errors from the underlying fetch", async () => {

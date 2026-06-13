@@ -89,6 +89,15 @@ class KiloSessionServiceTest : BasePlatformTestCase() {
         assertTrue(service.sessions.value.any { it.id == "ses_2" })
     }
 
+    fun `test enhance prompt delegates directory and text`() = runBlocking(Dispatchers.Default) {
+        rpc.enhanced = "Use a focused implementation plan"
+
+        val result = service.enhancePrompt("/workspace", "make a plan")
+
+        assertEquals("Use a focused implementation plan", result)
+        assertEquals(listOf("/workspace" to "make a plan"), rpc.enhancements)
+    }
+
     private fun session(id: String, title: String) = SessionDto(
         id = id,
         projectID = "prj",
