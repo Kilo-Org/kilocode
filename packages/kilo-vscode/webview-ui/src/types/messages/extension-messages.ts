@@ -5,12 +5,20 @@ import type { SessionMode } from "../../context/worktree-mode"
 import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../marketplace"
 import type { ConnectionState, ServerInfo, SessionStatus } from "./connection"
 import type { FileAttachment, Part } from "./parts"
-import type { CloudSessionInfo, Message, MessageLoadMode, SessionCloseReason, SessionInfo } from "./sessions"
+import type {
+  CloudSessionInfo,
+  Message,
+  MessageLoadMode,
+  SessionCloseReason,
+  SessionInfo,
+  SessionUpdate,
+} from "./sessions"
 import type { PermissionRequest } from "./permissions"
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
 import type { AgentInfo, SkillInfo, SlashCommandInfo } from "./agents"
 import type { BrowserSettings, Config, FeatureFlags, IndexingStatus, KiloEmbeddingModelCatalog } from "./config"
+import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { KilocodeNotification, ProfileData } from "./profile"
 import type {
   AgentManagerApplyWorktreeDiffConflict,
@@ -24,6 +32,7 @@ import type {
   ReviewComment,
   RunStatus,
   SectionState,
+  TerminalFont,
   WorktreeErrorCode,
   WorktreeFileDiff,
   WorktreeGitStats,
@@ -94,6 +103,7 @@ export interface SendMessageFailedMessage {
   draftID?: string
   messageID?: string
   files?: FileAttachment[]
+  review?: import("../../../../src/shared/review-comments").ReviewMessageData
 }
 
 // Wire shape lives in src/shared/stream-messages.ts; narrow `part` to the
@@ -159,7 +169,7 @@ export interface SessionForkedMessage {
 
 export interface SessionUpdatedMessage {
   type: "sessionUpdated"
-  session: SessionInfo
+  session: SessionUpdate
 }
 
 export interface SessionDeletedMessage {
@@ -227,6 +237,11 @@ export interface CloudSessionImportFailedMessage {
 export interface OpenCloudSessionMessage {
   type: "openCloudSession"
   sessionId: string
+}
+
+export interface SelectKiloModelMessage {
+  type: "selectKiloModel"
+  modelID: string
 }
 
 export interface ActionMessage {
@@ -455,6 +470,7 @@ export interface ConfigLoadedMessage {
   type: "configLoaded"
   config: Config
   globalConfig?: Config
+  projectConfig?: Config
   features: FeatureFlags
 }
 
@@ -462,6 +478,7 @@ export interface ConfigUpdatedMessage {
   type: "configUpdated"
   config: Config
   globalConfig?: Config
+  projectConfig?: Config
   features: FeatureFlags
 }
 
@@ -491,6 +508,22 @@ export interface NotificationSettingsLoadedMessage {
 export interface TimelineSettingLoadedMessage {
   type: "timelineSettingLoaded"
   visible: boolean
+}
+
+export interface WorkStyleLoadedMessage {
+  type: "workStyleLoaded"
+  style: WorkStyleState
+}
+
+export interface WorkStyleAppliedMessage {
+  type: "workStyleApplied"
+  style: WorkStyle
+}
+
+export interface WorkStyleApplyFailedMessage {
+  type: "workStyleApplyFailed"
+  message: string
+  rollbackFailed: boolean
 }
 
 export interface NotificationsLoadedMessage {
@@ -573,6 +606,12 @@ export interface AgentManagerTerminalCreatedMessage {
   terminalId: string
   title: string
   wsUrl: string
+  font: TerminalFont
+}
+
+export interface AgentManagerTerminalFontChangedMessage {
+  type: "agentManager.terminal.fontChanged"
+  font: TerminalFont
 }
 
 export interface AgentManagerTerminalClosedMessage {
@@ -988,6 +1027,9 @@ export type ExtensionMessage =
   | GlobalConfigLoadedMessage
   | NotificationSettingsLoadedMessage
   | TimelineSettingLoadedMessage
+  | WorkStyleLoadedMessage
+  | WorkStyleAppliedMessage
+  | WorkStyleApplyFailedMessage
   | NotificationsLoadedMessage
   | AgentManagerSessionMetaMessage
   | AgentManagerRepoInfoMessage
@@ -1011,6 +1053,7 @@ export type ExtensionMessage =
   | CloudSessionImportedMessage
   | CloudSessionImportFailedMessage
   | OpenCloudSessionMessage
+  | SelectKiloModelMessage
   | AgentManagerBranchesMessage
   | AgentManagerExternalWorktreesMessage
   | AgentManagerImportResultMessage
@@ -1024,6 +1067,7 @@ export type ExtensionMessage =
   | AgentManagerLocalStatsMessage
   | AgentManagerPRStatusMessage
   | AgentManagerTerminalCreatedMessage
+  | AgentManagerTerminalFontChangedMessage
   | AgentManagerTerminalClosedMessage
   | AgentManagerTerminalErrorMessage
   // legacy-migration start

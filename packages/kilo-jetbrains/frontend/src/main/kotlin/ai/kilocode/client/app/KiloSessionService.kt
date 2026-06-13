@@ -155,6 +155,9 @@ class KiloSessionService internal constructor(
 
     // ------ Chat ops (explicit session ID) ------
 
+    suspend fun enhancePrompt(dir: String, text: String): String =
+        call { enhancePrompt(dir, text) }
+
     /** Send a prompt to a session. */
     suspend fun prompt(id: String, dir: String, dto: PromptDto) {
         val meta = if (LOG.isDebugEnabled) {

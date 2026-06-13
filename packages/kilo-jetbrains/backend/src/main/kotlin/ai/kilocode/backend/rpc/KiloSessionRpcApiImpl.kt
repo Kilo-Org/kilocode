@@ -100,6 +100,9 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
 
     // ------ chat ------
 
+    override suspend fun enhancePrompt(directory: String, text: String): String =
+        ready { chat.enhancePrompt(directory, text) }
+
     override suspend fun prompt(id: String, directory: String, prompt: PromptDto) {
         app.requireReady()
         LOG.info("prompt RPC: session=$id, dir=$directory, parts=${prompt.parts.size}")

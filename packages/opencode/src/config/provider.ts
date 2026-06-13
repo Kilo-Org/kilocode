@@ -1,7 +1,6 @@
 import { Schema } from "effect"
 import { PROMPTS, AI_SDK_PROVIDERS } from "@kilocode/kilo-gateway" // kilocode_change
-import { zod } from "@opencode-ai/core/effect-zod"
-import { PositiveInt, withStatics } from "@opencode-ai/core/schema"
+import { PositiveInt } from "@opencode-ai/core/schema"
 import { ModelStatus } from "@/provider/model-status"
 
 export const Model = Schema.Struct({
@@ -74,7 +73,7 @@ export const Model = Schema.Struct({
       ),
     ).annotate({ description: "Variant-specific configuration" }),
   ),
-}).pipe(withStatics((s) => ({ zod: zod(s) })))
+})
 
 export const Info = Schema.Struct({
   api: Schema.optional(Schema.String),
@@ -113,9 +112,7 @@ export const Info = Schema.Struct({
     ),
   ),
   models: Schema.optional(Schema.Record(Schema.String, Schema.NullOr(Model))), // kilocode_change - allow null values so removed models can be deleted via stripNulls on save
-})
-  .annotate({ identifier: "ProviderConfig" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "ProviderConfig" })
 export type Info = Schema.Schema.Type<typeof Info>
 
 export * as ConfigProvider from "./provider"

@@ -9,6 +9,7 @@ import type { KiloClient, Session, TextPartInput, FilePartInput } from "@kilocod
 import type { CloudSessionData, EditorContext } from "../../services/cli-backend/types"
 import { getErrorMessage, sessionToWebview, mapCloudSessionMessageToWebviewMessage } from "../../kilo-provider-utils"
 import type { MessageFile } from "../message-files"
+import { reviewMetadata, type ReviewMessageData } from "../../shared/review-comments"
 
 const TIMEOUT = 30_000
 
@@ -119,6 +120,7 @@ export async function handleImportAndSend(
   agent?: string,
   variant?: string,
   files?: MessageFile[],
+  review?: ReviewMessageData,
   command?: string,
   commandArgs?: string,
 ): Promise<void> {
@@ -213,7 +215,7 @@ export async function handleImportAndSend(
           parts.push({ type: "file", mime: f.mime, url: f.url, filename: f.filename, source: f.source })
         }
       }
-      parts.push({ type: "text", text })
+      parts.push({ type: "text", text, metadata: review ? reviewMetadata(review) : undefined })
 
       const editorContext = await ctx.gatherEditorContext()
       await client.session.promptAsync(
@@ -240,6 +242,7 @@ export async function handleImportAndSend(
       draftID: session.id,
       messageID,
       files,
+      review: command ? undefined : review,
     })
   }
 }

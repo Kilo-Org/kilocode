@@ -110,6 +110,7 @@ function matchToolRequest<T extends { tool?: { callID: string; messageID: string
 
 interface AssistantMessageProps {
   message: SDKAssistantMessage
+  parts?: SDKPart[]
   showAssistantCopyPartID?: string | null
   feedback?: MessageFeedbackControls
 }
@@ -177,7 +178,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const open = createMemo(() => config().terminal_command_display !== "collapsed")
 
   const parts = createMemo(() => {
-    const stored = data.store.part?.[props.message.id]
+    const stored = props.parts ?? data.store.part?.[props.message.id]
     if (!stored) return []
     return (stored as SDKPart[]).filter((part) => isRenderable(part))
   })

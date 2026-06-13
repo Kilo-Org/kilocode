@@ -39,6 +39,7 @@ export {
   fetchKiloEmbeddingModelCatalog,
   type KiloEmbeddingModel,
   type KiloEmbeddingModelCatalog,
+  type KiloEmbeddingModelCatalogIssue,
 } from "./api/embedding-models.js"
 export { resolveKiloGatewayBaseUrl, resolveKiloOpenRouterBaseUrl } from "./api/url.js"
 export {

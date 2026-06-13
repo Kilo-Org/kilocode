@@ -1,10 +1,11 @@
 import { Component, For, Show, createMemo, createSignal } from "solid-js"
+import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
+import { DEFAULT_VECTOR_STORE } from "@kilocode/kilo-indexing/config"
 import { formatKiloEmbeddingModelLabel, getKiloEmbeddingModel } from "@kilocode/kilo-indexing/embedding-models"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { TextField } from "@kilocode/kilo-ui/text-field"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useConfig } from "../../context/config"
 import { formatIndexingLabel, useIndexing } from "../../context/indexing"
 import { useKiloEmbeddingModels } from "../../context/kilo-embedding-models"
@@ -14,6 +15,17 @@ import { useServer } from "../../context/server"
 import type { IndexingConfig, IndexingProvider as ProviderId } from "../../types/messages"
 import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
 import SettingsRow from "./SettingsRow"
+import {
+  indexingConfig,
+  indexingDescription,
+  indexingEnabled,
+  indexingEnabledInherited,
+  indexingInheritance,
+  indexingSource,
+  indexingUpdate,
+  type IndexingScope,
+  type IndexingSource,
+} from "./indexing-tab-state"
 
 type Option = { value: string; label: string }
 type TuningKey = "searchMinScore" | "searchMaxResults" | "embeddingBatchSize" | "scannerMaxBatchRetries"
@@ -32,8 +44,8 @@ const allProviders: { value: ProviderId; label: string }[] = [
 ]
 
 const stores: Option[] = [
-  { value: "qdrant", label: "Qdrant (default)" },
-  { value: "lancedb", label: "LanceDB" },
+  { value: "lancedb", label: "LanceDB (default)" },
+  { value: "qdrant", label: "Qdrant" },
 ]
 
 const tuning: Array<{ key: TuningKey; label: string; placeholder: string }> = [
@@ -42,6 +54,14 @@ const tuning: Array<{ key: TuningKey; label: string; placeholder: string }> = [
   { key: "embeddingBatchSize", label: "Embedding Batch Size", placeholder: "60" },
   { key: "scannerMaxBatchRetries", label: "Scanner Max Batch Retries", placeholder: "3" },
 ]
+
+function sourceLabel(source: IndexingSource) {
+  if (source === "global") return "Global"
+  if (source === "local") return "Local"
+  if (source === "mixed") return "Global + Local"
+  if (source === "default") return "Default"
+  return ""
+}
 
 function providerFields(provider: ProviderId | undefined): Array<{ key: string; label: string; placeholder: string }> {
   if (provider === "kilo") return []
@@ -73,7 +93,7 @@ function providerFields(provider: ProviderId | undefined): Array<{ key: string; 
 }
 
 const IndexingTab: Component = () => {
-  const { config, globalConfig, updateConfig, updateGlobalConfig } = useConfig()
+  const { globalConfig, projectConfig, updateGlobalConfig, updateProjectConfig } = useConfig()
   const indexing = useIndexing()
   const embeds = useKiloEmbeddingModels()
   const language = useLanguage()
@@ -82,16 +102,36 @@ const IndexingTab: Component = () => {
   const [providerDrafts, setProviderDrafts] = createSignal<Record<string, string>>({})
   const [storeDrafts, setStoreDrafts] = createSignal<Record<string, string>>({})
   const [tuningDrafts, setTuningDrafts] = createSignal<Record<string, string>>({})
+  const [scope, setScope] = createSignal<IndexingScope>("global")
 
-  const cfg = createMemo<IndexingConfig>(() => config().indexing ?? {})
   const globalCfg = createMemo<IndexingConfig>(() => globalConfig().indexing ?? {})
-  const globalOn = createMemo(() => globalCfg().enabled === true)
-
-  const updateIndexing = (partial: IndexingConfig) => {
-    updateConfig({ indexing: { ...cfg(), ...partial } })
+  const projectCfg = createMemo<IndexingConfig>(() => projectConfig().indexing ?? {})
+  const raw = createMemo<IndexingConfig>(() => (scope() === "global" ? globalCfg() : projectCfg()))
+  const cfg = createMemo<IndexingConfig>(() => indexingConfig(scope(), globalCfg(), projectCfg()))
+  const enabled = createMemo(() => indexingEnabled(scope(), globalCfg(), projectCfg()))
+  const inherited = createMemo(() => indexingEnabledInherited(scope(), globalCfg(), projectCfg()))
+  const inheritance = (paths: readonly (readonly string[])[]) =>
+    indexingInheritance(scope(), globalCfg(), projectCfg(), paths)
+  const tag = (current: IndexingScope, paths: readonly (readonly string[])[]) =>
+    sourceLabel(indexingSource(current, globalCfg(), projectCfg(), paths)) || undefined
+  const description = (value: string, paths: readonly (readonly string[])[]) =>
+    indexingDescription(value, inheritance(paths))
+  const changeScope = (next: IndexingScope) => {
+    const active = document.activeElement
+    if (active instanceof HTMLElement) active.blur()
+    setScope(next)
   }
 
-  const vectorStore = () => cfg().vectorStore ?? "qdrant"
+  const updateIndexing = (partial: IndexingConfig) => {
+    const patch = { indexing: indexingUpdate(scope(), globalCfg(), projectCfg(), partial) }
+    if (scope() === "global") {
+      updateGlobalConfig(patch)
+      return
+    }
+    updateProjectConfig(patch)
+  }
+
+  const vectorStore = () => cfg().vectorStore ?? DEFAULT_VECTOR_STORE
   const kiloDefault = () =>
     getKiloEmbeddingModel(embeds.catalog().defaultModel, embeds.catalog())?.id ?? embeds.catalog().defaultModel
   const kiloModels = createMemo(() =>
@@ -137,21 +177,6 @@ const IndexingTab: Component = () => {
     updateIndexing({ enabled })
   }
 
-  const saveGlobalEnabled = (enabled: boolean) => {
-    if (enabled && !globalCfg().provider && !cfg().provider && kiloAvailable()) {
-      updateGlobalConfig({
-        indexing: {
-          enabled,
-          provider: "kilo",
-          model: knownKiloModel(cfg().model) ?? (kiloDefault() || null),
-          dimension: null,
-        },
-      })
-      return
-    }
-    updateGlobalConfig({ indexing: { enabled } })
-  }
-
   const saveModel = (value: string) => {
     if (selectedProvider() === "kilo") return
     const trimmed = value.trim()
@@ -159,7 +184,7 @@ const IndexingTab: Component = () => {
   }
 
   const providerValue = (group: string, key: string) => {
-    const draftKey = `${group}.${key}`
+    const draftKey = `${scope()}.${group}.${key}`
     const draft = providerDrafts()[draftKey]
     if (draft !== undefined) return draft
     const value = (cfg()[group as keyof IndexingConfig] as Record<string, string | undefined> | undefined)?.[key]
@@ -167,7 +192,7 @@ const IndexingTab: Component = () => {
   }
 
   const storeValue = (group: "qdrant" | "lancedb", key: string) => {
-    const draftKey = `${group}.${key}`
+    const draftKey = `${scope()}.${group}.${key}`
     const draft = storeDrafts()[draftKey]
     if (draft !== undefined) return draft
     const value = (cfg()[group] as Record<string, string | undefined> | undefined)?.[key]
@@ -175,13 +200,17 @@ const IndexingTab: Component = () => {
   }
 
   const saveProviderField = (group: ProviderId, key: string, value: string) => {
-    const current = (cfg()[group] as Record<string, string | undefined> | undefined) ?? {}
+    const current = (raw()[group] as Record<string, string | undefined> | undefined) ?? {}
     updateIndexing({ [group]: { ...current, [key]: value.trim() || undefined } })
+    const draftKey = `${scope()}.${group}.${key}`
+    setProviderDrafts((prev) => Object.fromEntries(Object.entries(prev).filter(([entry]) => entry !== draftKey)))
   }
 
   const saveStoreField = (group: "qdrant" | "lancedb", key: string, value: string) => {
-    const current = (cfg()[group] as Record<string, string | undefined> | undefined) ?? {}
+    const current = (raw()[group] as Record<string, string | undefined> | undefined) ?? {}
     updateIndexing({ [group]: { ...current, [key]: value.trim() || undefined } })
+    const draftKey = `${scope()}.${group}.${key}`
+    setStoreDrafts((prev) => Object.fromEntries(Object.entries(prev).filter(([entry]) => entry !== draftKey)))
   }
 
   const saveNumber = (
@@ -192,6 +221,10 @@ const IndexingTab: Component = () => {
     const trimmed = value.trim()
     if (!trimmed) {
       updateIndexing({ [key]: key === "dimension" ? null : undefined })
+      if (key !== "dimension") {
+        const draftKey = `${scope()}.${key}`
+        setTuningDrafts((prev) => Object.fromEntries(Object.entries(prev).filter(([entry]) => entry !== draftKey)))
+      }
       return
     }
 
@@ -201,16 +234,20 @@ const IndexingTab: Component = () => {
     if (options?.min !== undefined && num < options.min) return
     if (options?.max !== undefined && num > options.max) return
     updateIndexing({ [key]: num })
+    if (key !== "dimension") {
+      const draftKey = `${scope()}.${key}`
+      setTuningDrafts((prev) => Object.fromEntries(Object.entries(prev).filter(([entry]) => entry !== draftKey)))
+    }
   }
 
   const tuningValue = (key: TuningKey) => {
-    const draft = tuningDrafts()[key]
+    const draft = tuningDrafts()[`${scope()}.${key}`]
     if (draft !== undefined) return draft
     const value = cfg()[key]
     return value === undefined ? "" : String(value)
   }
 
-  return (
+  const content = (_scope: IndexingScope) => (
     <div style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>
       <Card>
         <SettingsRow title={language.t("settings.indexing.status.title")} description={indexing.status().message}>
@@ -219,34 +256,55 @@ const IndexingTab: Component = () => {
           </span>
         </SettingsRow>
         <SettingsRow
-          title={language.t("settings.indexing.globalEnable.title")}
-          description={language.t("settings.indexing.globalEnable.description")}
+          title="Configuration scope"
+          description={
+            scope() === "global"
+              ? language.t("settings.indexing.globalEnable.description")
+              : language.t("settings.indexing.projectEnable.description")
+          }
         >
-          <Switch checked={globalCfg().enabled ?? false} onChange={saveGlobalEnabled} hideLabel>
-            {language.t("settings.indexing.globalEnable.title")}
-          </Switch>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <Button
+              variant={scope() === "global" ? "primary" : "secondary"}
+              size="small"
+              onClick={() => changeScope("global")}
+            >
+              {language.t("settings.config.scope.global")}
+            </Button>
+            <Button
+              variant={scope() === "project" ? "primary" : "secondary"}
+              size="small"
+              onClick={() => changeScope("project")}
+            >
+              {language.t("settings.config.scope.local")}
+            </Button>
+          </div>
         </SettingsRow>
         <SettingsRow
-          title={language.t("settings.indexing.projectEnable.title")}
-          description={language.t("settings.indexing.projectEnable.description")}
+          title={
+            scope() === "global"
+              ? language.t("settings.indexing.globalEnable.title")
+              : language.t("settings.indexing.projectEnable.title")
+          }
+          description={
+            inherited()
+              ? `Inherited from global config (${enabled() ? "on" : "off"}) until a project value is saved.`
+              : language.t("settings.indexing.enable.description")
+          }
+          tag={() => tag(scope(), [["enabled"]])}
           last
         >
-          <Tooltip
-            value={language.t("settings.indexing.projectEnable.disabledTooltip")}
-            placement="top"
-            inactive={!globalOn()}
-          >
-            <Switch checked={cfg().enabled === true} onChange={saveEnabled} disabled={globalOn()} hideLabel>
-              {language.t("settings.indexing.projectEnable.title")}
-            </Switch>
-          </Tooltip>
+          <Switch checked={enabled()} onChange={saveEnabled} hideLabel>
+            {language.t("settings.indexing.enable.title")}
+          </Switch>
         </SettingsRow>
       </Card>
 
       <Card>
         <SettingsRow
           title={language.t("settings.indexing.provider.title")}
-          description={language.t("settings.indexing.provider.description")}
+          description={description(language.t("settings.indexing.provider.description"), [["provider"]])}
+          tag={() => tag(scope(), [["provider"]])}
         >
           <Select
             options={providers()}
@@ -264,7 +322,8 @@ const IndexingTab: Component = () => {
           <Show when={kiloModels().length > 0}>
             <SettingsRow
               title={language.t("settings.indexing.kiloModel.title")}
-              description={language.t("settings.indexing.kiloModel.description")}
+              description={description(language.t("settings.indexing.kiloModel.description"), [["model"]])}
+              tag={() => tag(scope(), [["model"]])}
             >
               <Select
                 options={kiloModels()}
@@ -283,14 +342,20 @@ const IndexingTab: Component = () => {
         <Show when={selectedProvider() !== "kilo"}>
           <SettingsRow
             title={language.t("settings.indexing.model.title")}
-            description={language.t("settings.indexing.model.description")}
+            description={description(language.t("settings.indexing.model.description"), [["model"]])}
+            tag={() => tag(scope(), [["model"]])}
           >
             <TextField value={cfg().model ?? ""} placeholder="Enter model ID" onChange={saveModel} />
           </SettingsRow>
         </Show>
         <SettingsRow
           title={language.t("settings.indexing.dimension.title")}
-          description={language.t("settings.indexing.dimension.description")}
+          description={
+            selectedProvider() === "kilo"
+              ? language.t("settings.indexing.dimension.description")
+              : description(language.t("settings.indexing.dimension.description"), [["dimension"]])
+          }
+          tag={() => (selectedProvider() === "kilo" ? undefined : tag(scope(), [["dimension"]]))}
           last={!selectedProvider() || (fields().length === 0 && !(selectedProvider() === "kilo" && !kiloAvailable()))}
         >
           <TextField
@@ -299,7 +364,10 @@ const IndexingTab: Component = () => {
                 ? ""
                 : String(cfg().dimension)
             }
-            placeholder={language.t("settings.indexing.dimension.placeholder")}
+            placeholder={
+              selectedProvider() === "kilo" ? "Provided by Kilo" : language.t("settings.indexing.dimension.placeholder")
+            }
+            disabled={selectedProvider() === "kilo"}
             onChange={(value) => saveNumber("dimension", value, { integer: true, min: 1 })}
           />
         </SettingsRow>
@@ -315,13 +383,16 @@ const IndexingTab: Component = () => {
         <Show when={fields().length > 0 ? selectedProvider() : undefined} keyed>
           {(group) => {
             const fields = providerFields(group)
-            const label = allProviders.find((item) => item.value === group)?.label ?? group
+            const name = allProviders.find((item) => item.value === group)?.label ?? group
             return (
               <For each={fields}>
                 {(field, index) => (
                   <SettingsRow
-                    title={`${label} ${field.label}`}
-                    description={language.t("settings.indexing.providerField.description")}
+                    title={`${name} ${field.label}`}
+                    description={description(language.t("settings.indexing.providerField.description"), [
+                      [group, field.key],
+                    ])}
+                    tag={() => tag(scope(), [[group, field.key]])}
                     last={index() === fields.length - 1}
                   >
                     <TextField
@@ -330,7 +401,7 @@ const IndexingTab: Component = () => {
                       placeholder={field.placeholder}
                       onInput={(e: InputEvent) => {
                         const target = e.currentTarget as HTMLInputElement
-                        setProviderDrafts((prev) => ({ ...prev, [`${group}.${field.key}`]: target.value }))
+                        setProviderDrafts((prev) => ({ ...prev, [`${scope()}.${group}.${field.key}`]: target.value }))
                       }}
                       onBlur={(e: FocusEvent) => {
                         const target = e.currentTarget as HTMLInputElement
@@ -348,7 +419,8 @@ const IndexingTab: Component = () => {
       <Card>
         <SettingsRow
           title={language.t("settings.indexing.vectorStore.title")}
-          description={language.t("settings.indexing.vectorStore.description")}
+          description={description(language.t("settings.indexing.vectorStore.description"), [["vectorStore"]])}
+          tag={() => tag(scope(), [["vectorStore"]])}
         >
           <Select
             options={stores}
@@ -366,7 +438,10 @@ const IndexingTab: Component = () => {
           fallback={
             <SettingsRow
               title={language.t("settings.indexing.lancedbDirectory.title")}
-              description={language.t("settings.indexing.lancedbDirectory.description")}
+              description={description(language.t("settings.indexing.lancedbDirectory.description"), [
+                ["lancedb", "directory"],
+              ])}
+              tag={() => tag(scope(), [["lancedb", "directory"]])}
               last
             >
               <TextField
@@ -374,7 +449,7 @@ const IndexingTab: Component = () => {
                 placeholder={language.t("settings.indexing.lancedbDirectory.placeholder")}
                 onInput={(e: InputEvent) => {
                   const target = e.currentTarget as HTMLInputElement
-                  setStoreDrafts((prev) => ({ ...prev, "lancedb.directory": target.value }))
+                  setStoreDrafts((prev) => ({ ...prev, [`${scope()}.lancedb.directory`]: target.value }))
                 }}
                 onBlur={(e: FocusEvent) => {
                   const target = e.currentTarget as HTMLInputElement
@@ -387,14 +462,15 @@ const IndexingTab: Component = () => {
           <>
             <SettingsRow
               title={language.t("settings.indexing.qdrantUrl.title")}
-              description={language.t("settings.indexing.qdrantUrl.description")}
+              description={description(language.t("settings.indexing.qdrantUrl.description"), [["qdrant", "url"]])}
+              tag={() => tag(scope(), [["qdrant", "url"]])}
             >
               <TextField
                 value={storeValue("qdrant", "url")}
                 placeholder="http://localhost:6333"
                 onInput={(e: InputEvent) => {
                   const target = e.currentTarget as HTMLInputElement
-                  setStoreDrafts((prev) => ({ ...prev, "qdrant.url": target.value }))
+                  setStoreDrafts((prev) => ({ ...prev, [`${scope()}.qdrant.url`]: target.value }))
                 }}
                 onBlur={(e: FocusEvent) => {
                   const target = e.currentTarget as HTMLInputElement
@@ -404,7 +480,10 @@ const IndexingTab: Component = () => {
             </SettingsRow>
             <SettingsRow
               title={language.t("settings.indexing.qdrantApiKey.title")}
-              description={language.t("settings.indexing.qdrantApiKey.description")}
+              description={description(language.t("settings.indexing.qdrantApiKey.description"), [
+                ["qdrant", "apiKey"],
+              ])}
+              tag={() => tag(scope(), [["qdrant", "apiKey"]])}
               last
             >
               <TextField
@@ -413,7 +492,7 @@ const IndexingTab: Component = () => {
                 placeholder={language.t("settings.indexing.qdrantApiKey.placeholder")}
                 onInput={(e: InputEvent) => {
                   const target = e.currentTarget as HTMLInputElement
-                  setStoreDrafts((prev) => ({ ...prev, "qdrant.apiKey": target.value }))
+                  setStoreDrafts((prev) => ({ ...prev, [`${scope()}.qdrant.apiKey`]: target.value }))
                 }}
                 onBlur={(e: FocusEvent) => {
                   const target = e.currentTarget as HTMLInputElement
@@ -430,7 +509,8 @@ const IndexingTab: Component = () => {
           {(item, index) => (
             <SettingsRow
               title={item.label}
-              description={language.t("settings.indexing.tuning.description")}
+              description={description(language.t("settings.indexing.tuning.description"), [[item.key]])}
+              tag={() => tag(scope(), [[item.key]])}
               last={index() === tuning.length - 1}
             >
               <TextField
@@ -438,7 +518,7 @@ const IndexingTab: Component = () => {
                 placeholder={item.placeholder}
                 onInput={(e: InputEvent) => {
                   const target = e.currentTarget as HTMLInputElement
-                  setTuningDrafts((prev) => ({ ...prev, [item.key]: target.value }))
+                  setTuningDrafts((prev) => ({ ...prev, [`${scope()}.${item.key}`]: target.value }))
                 }}
                 onBlur={(e: FocusEvent) => {
                   const target = e.currentTarget as HTMLInputElement
@@ -452,6 +532,12 @@ const IndexingTab: Component = () => {
         </For>
       </Card>
     </div>
+  )
+
+  return (
+    <Show when={scope()} keyed>
+      {content}
+    </Show>
   )
 }
 

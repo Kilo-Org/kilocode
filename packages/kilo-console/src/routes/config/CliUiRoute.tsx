@@ -1,10 +1,9 @@
 import { For, Show } from "solid-js"
 import { Button } from "@kilocode/kilo-web-ui/button"
 import { Card } from "@kilocode/kilo-web-ui/card"
-import { Tag } from "@kilocode/kilo-web-ui/tag"
 import { CustomSelect, type SelectOption } from "../../components/CustomSelect"
 import { SearchField } from "../../components/SearchField"
-import { ConfigPage } from "./ConfigPage"
+import { ConfigPage, ConfigTag as Tag } from "./ConfigPage"
 import { type Theme, themeTitle, useTuiUiSettings } from "./state/ui"
 
 const diffs = [

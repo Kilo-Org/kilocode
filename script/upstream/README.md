@@ -48,7 +48,7 @@ bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.
 | `transforms/skip-files.ts` | Skip/remove files that shouldn't exist in Kilo |
 | `transforms/transform-i18n.ts` | Transform i18n files with Kilo branding |
 | `transforms/transform-take-theirs.ts` | Take upstream + apply Kilo branding for branding-only files |
-| `transforms/transform-package-json.ts` | Enhanced package.json with Kilo dependency injection |
+| `transforms/transform-package-json.ts` | Enhanced package.json with Kilo dependency injection and newest-Bun-wins reconciliation |
 | `transforms/transform-scripts.ts` | Transform script files with GitHub API references |
 | `transforms/transform-extensions.ts` | Transform extension files (Zed, etc.) |
 | `transforms/transform-web.ts` | Transform web/docs files (.mdx) |
@@ -195,6 +195,10 @@ Now:
 - Git sees no conflict for branding-only files
 
 The only remaining conflicts are files with **actual code differences** - files with `kilocode_change` markers that contain Kilo-specific logic.
+
+### Bun Version Safety
+
+Root `package.json` reconciliation uses the newer valid `packageManager` Bun version from Kilo and upstream. An older upstream version cannot downgrade Kilo, while a newer upstream version is retained as an upgrade. Before the merge is finalized, `merge.ts` also validates the result against the pristine Kilo base and upstream commit and aborts if the merged Bun version is lower than either input.
 
 ## CLI Options
 

@@ -1,9 +1,17 @@
 import { Show, splitProps, type ComponentProps, type JSX } from "solid-js"
 import { Card, CardContent, CardHeader, CardTitle } from "./card"
 import { Icon, type IconProps } from "./icon"
-import { Tag, CountTag } from "./tag"
+import { Tag } from "./tag"
 
-export { CountTag }
+export function ConfigTag(props: ComponentProps<typeof Tag>) {
+  return <Tag {...props} data-slot="config-tag" />
+}
+
+export function ConfigCountTag(props: ComponentProps<"span">) {
+  return <ConfigTag {...props} tone="neutral" />
+}
+
+export { ConfigCountTag as CountTag }
 
 type Tone = "neutral" | "success" | "warning" | "critical" | "info" | "brand"
 type Source = "default" | "global" | "project" | "system" | "inherited" | "local override" | string | undefined
@@ -39,10 +47,10 @@ export function StatusTag(props: {
     return { tone: "neutral" as const, label: props.status || "Unknown" }
   }
   return (
-    <Tag tone={meta().tone} class="kw-status-tag">
+    <ConfigTag tone={meta().tone} class="kw-status-tag">
       <StatusDot tone={meta().tone === "critical" ? "critical" : meta().tone === "success" ? "success" : "neutral"} />
       {meta().label}
-    </Tag>
+    </ConfigTag>
   )
 }
 
@@ -50,9 +58,9 @@ export function SourceBadge(props: { source?: Source; inherited?: boolean; overr
   const source = () => kind(props)
   const label = () => source().toUpperCase()
   return (
-    <Tag class="mono" tone={source() === "project" ? "info" : "neutral"}>
+    <ConfigTag class="mono" tone={source() === "project" ? "info" : "neutral"}>
       {label()}
-    </Tag>
+    </ConfigTag>
   )
 }
 

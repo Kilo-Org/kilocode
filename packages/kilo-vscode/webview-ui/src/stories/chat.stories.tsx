@@ -16,10 +16,14 @@ import { TaskHeader } from "../components/chat/TaskHeader"
 import { QuestionDock } from "../components/chat/QuestionDock"
 import { SuggestBar } from "../components/chat/SuggestBar"
 import { MessageList } from "../components/chat/MessageList"
+import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
 import { TurnOutcome } from "../components/shared/TurnOutcome"
 import { SessionContext } from "../context/session"
 import { ServerContext } from "../context/server"
-import type { Message, Part, QuestionRequest, SuggestionRequest, TodoItem } from "../types/messages"
+import { WorktreeModeProvider } from "../context/worktree-mode"
+import type { Message, Part, QuestionRequest, ReviewComment, SuggestionRequest, TodoItem } from "../types/messages"
+import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
+import { reviewMetadata } from "../../../src/shared/review-comments"
 
 const SESSION_ID = "story-session-chat-001"
 
@@ -144,6 +148,82 @@ export const ChatViewWithMessages: Story = {
             <ChatView />
           </div>
         </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const ChatViewAgentManagerCompleted: Story = {
+  name: "ChatView — completed Agent Manager session actions",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle", closeReason: "completed" }),
+      messages: () => [{ id: "msg-001" }] as any[],
+      worktreeStats: () => ({ files: 2, additions: 12, deletions: 4 }),
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+        <ServerContext.Provider value={mockServer as any}>
+          <SessionContext.Provider value={session as any}>
+            <WorktreeModeProvider>
+              <div style={{ height: "200px", display: "flex", "flex-direction": "column" }}>
+                <ChatView onForkSession={() => undefined} continueInWorktree />
+              </div>
+            </WorktreeModeProvider>
+          </SessionContext.Provider>
+        </ServerContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const UserMessageReviewComments: Story = {
+  name: "User message — interactive review comments",
+  render: () => {
+    const comments: ReviewComment[] = [
+      {
+        id: "review-1",
+        file: "src/components/chat/KiloBackendChatManager.kt",
+        side: "additions",
+        line: 114,
+        comment: "Keep this state synchronized when the active session changes.",
+        selectedText: "private val activeSession = MutableStateFlow<String?>(null)",
+      },
+      {
+        id: "review-2",
+        file: "resources/messages/KiloBundle_bs.properties",
+        side: "deletions",
+        line: 235,
+        comment: "Translate the modified setting description.",
+        selectedText: "settings.models.smallModel.description=The lightweight model used for quick tasks.",
+      },
+    ]
+    const prefix = formatReviewCommentsMarkdown(comments)
+    const text = `${prefix}\n\nPlease address these review comments.`
+    const review = { version: 1 as const, comments }
+    const message: Message = {
+      id: "review-user-message",
+      sessionID: SESSION_ID,
+      role: "user",
+      createdAt: new Date(0).toISOString(),
+      time: { created: 0 },
+    }
+    const parts: Part[] = [
+      {
+        id: "review-user-part",
+        sessionID: SESSION_ID,
+        messageID: message.id,
+        type: "text",
+        text,
+        metadata: reviewMetadata(review),
+      },
+    ]
+
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle">
+        <div style={{ "max-height": "400px", padding: "12px" }}>
+          <VscodeUserMessage message={message} parts={parts} />
+        </div>
       </StoryProviders>
     )
   },

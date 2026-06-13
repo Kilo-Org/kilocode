@@ -60,12 +60,12 @@ export namespace KilocodeKeybinds {
   }
 
   export function list(): Info[] {
-    return Object.entries(TuiKeybind.Keybinds.shape).map(([id, schema]) => ({
+    return Object.entries(TuiKeybind.Definitions).map(([id, definition]) => ({
       id,
       label: label(id),
       group: group(id),
-      default: fallback(id, schema.parse(undefined)),
-      description: TuiKeybind.Descriptions[id as keyof typeof TuiKeybind.Descriptions] ?? label(id),
+      default: fallback(id, definition.default),
+      description: definition.description,
     }))
   }
 }

@@ -1052,6 +1052,33 @@ export const dict = {
   "feedback.dialog.github": "Сообщить о проблеме на GitHub",
   "feedback.dialog.discord": "Присоединиться к нашему Discord",
   "feedback.dialog.support": "Служба поддержки",
+  "workStyle.onboarding.welcome": "Добро пожаловать в Kilo",
+  "workStyle.onboarding.title": "Выберите, как вы хотите работать",
+  "workStyle.onboarding.description":
+    "Задаёт начальные значения разрешений, блоков рассуждений, вывода терминала и временной шкалы контекста. Применяется только один раз и не затрагивает уже изменённые вами настройки.",
+  "workStyle.onboarding.skip": "Пока пропустить",
+  "workStyle.onboarding.settingsNote": "Эти параметры можно изменить в любое время в разделе",
+  "workStyle.onboarding.settings": "«Настройки».",
+  "workStyle.toast.saved.title": "Режим успешно сохранён",
+  "workStyle.toast.saved.description": "Изменить их можно в любое время в настройках.",
+  "workStyle.toast.saved.action": "Перейти в настройки",
+  "workStyle.choice.permissions": "Разрешения",
+  "workStyle.choice.bash": "Bash",
+  "workStyle.choice.visibility": "Видимость",
+  "workStyle.choice.human-in-the-loop.eyebrow": "Человек контролирует процесс",
+  "workStyle.choice.human-in-the-loop.title": "Сначала проверка",
+  "workStyle.choice.human-in-the-loop.description": "Kilo приостанавливается и показывает свой план по ходу работы.",
+  "workStyle.choice.human-in-the-loop.permissions":
+    "Запрашивает разрешение перед редактированием файлов или выполнением команд.",
+  "workStyle.choice.human-in-the-loop.bash": "Запрашивает разрешение на каждую команду терминала.",
+  "workStyle.choice.human-in-the-loop.visibility": "Показывает все детали разговора, включая ход рассуждений.",
+  "workStyle.choice.autonomous.eyebrow": "Меньше прерываний",
+  "workStyle.choice.autonomous.title": "Высокая автономность",
+  "workStyle.choice.autonomous.description": "Меньше прерываний, упрощённый интерфейс.",
+  "workStyle.choice.autonomous.permissions":
+    "Редактирует файлы и выполняет команды в рабочем пространстве без разрешения.",
+  "workStyle.choice.autonomous.bash": "Может выполнять команды терминала в рабочем пространстве без подтверждения.",
+  "workStyle.choice.autonomous.visibility": "Детали остаются свёрнутыми, пока вы их не развернёте.",
   "session.cloud.import.title": "Импорт из облака",
   "session.cloud.import.placeholder": "ID сессии, URL или команда kilo import",
   "session.cloud.import.button": "Импортировать",
@@ -1267,8 +1294,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Включить автоматическое форматирование кода",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Включить интеграцию протокола языкового сервера",
-  "settings.experimental.pasteSummary.title": "Отключить сводку вставки",
-  "settings.experimental.pasteSummary.description": "Не суммировать большой вставленный контент",
   "settings.experimental.batch.title": "Пакетный инструмент",
   "settings.experimental.batch.description": "Включить пакетную обработку вызовов инструментов",
   "settings.experimental.codebaseSearch.title": "Поиск по коду",
@@ -1447,8 +1472,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Управление списком задач. Разрешает чтение и обновление внутреннего списка задач.",
   "settings.autoApprove.tool.webfetch": "Получение URL. Разрешает извлечение содержимого по указанному URL-адресу.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Поиск в интернете или коде. Разрешает выполнение внешних поисковых запросов в интернете или коде.",
+  "settings.autoApprove.tool.websearch":
+    "Поиск в интернете. Разрешает выполнение внешних поисковых запросов в интернете.",
   "settings.autoApprove.tool.external_directory":
     "Доступ к файлам вне рабочей области. Срабатывает при доступе к файлам за пределами текущего каталога проекта.",
   "settings.autoApprove.tool.doom_loop":

@@ -26,6 +26,7 @@ import { registerKiloCommands } from "@/kilocode/kilo-commands"
 import { TuiAutoApprove } from "@/kilocode/cli/cmd/tui/auto-approve"
 import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui"
 import { DialogProcessList } from "@/kilocode/cli/cmd/tui/component/dialog-process-list"
+import { useIndexingWarnings } from "@/kilocode/cli/cmd/tui/indexing-warning"
 
 // Re-export so upstream can render the route without importing directly
 export { KiloClawView } from "@/kilocode/claw/view"
@@ -152,6 +153,8 @@ export function init() {
     if (route.data.type !== "session") return false
     return TuiAutoApprove.enabled(route.data.sessionID)
   }
+
+  useIndexingWarnings()
 
   // Inject TUI dependencies for kilo-gateway
   initializeTUIDependencies({

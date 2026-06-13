@@ -5,6 +5,8 @@
  */
 import { describe, expect, test } from "bun:test"
 import { createEffect, createRoot } from "solid-js"
+import { createBindingLookup } from "@opentui/keymap/extras"
+import { TuiKeybind } from "@/cli/cmd/tui/config/keybind"
 import { TuiConfig } from "@/cli/cmd/tui/config/tui"
 import { KiloTuiConfig } from "@/kilocode/cli/cmd/tui/context/tui-config"
 
@@ -12,9 +14,29 @@ function cfg(input: Partial<TuiConfig.Info>): TuiConfig.Info {
   return input as TuiConfig.Info
 }
 
+function resolve(input: TuiConfig.Info): TuiConfig.Resolved {
+  const keybinds = TuiKeybind.parse(input.keybinds ?? {})
+  return {
+    ...input,
+    attention: {
+      enabled: input.attention?.enabled ?? false,
+      notifications: input.attention?.notifications ?? true,
+      sound: input.attention?.sound ?? true,
+      volume: input.attention?.volume ?? 0.4,
+      sound_pack: input.attention?.sound_pack ?? "opencode.default",
+      sounds: input.attention?.sounds ?? {},
+    },
+    keybinds: createBindingLookup(TuiKeybind.toBindingConfig(keybinds), {
+      commandMap: TuiKeybind.CommandMap,
+      bindingDefaults: TuiKeybind.bindingDefaults(),
+    }),
+    leader_timeout: input.leader_timeout ?? 1_000,
+  }
+}
+
 describe("KiloTuiConfig.makeStore", () => {
   test("reactive reads update when set() reconciles a new config", () => {
-    const store = KiloTuiConfig.makeStore(TuiConfig.resolve(cfg({ keybinds: { app_exit: "ctrl+c" }, theme: "kilo" })))
+    const store = KiloTuiConfig.makeStore(resolve(cfg({ keybinds: { app_exit: "ctrl+c" }, theme: "kilo" })))
 
     const exits: Array<string | undefined> = []
     const themes: Array<string | undefined> = []
@@ -44,7 +66,7 @@ describe("KiloTuiConfig.makeStore", () => {
   })
 
   test("set() does not re-notify a tracked read when its value is unchanged", () => {
-    const store = KiloTuiConfig.makeStore(TuiConfig.resolve(cfg({ keybinds: { app_exit: "ctrl+c" }, theme: "kilo" })))
+    const store = KiloTuiConfig.makeStore(resolve(cfg({ keybinds: { app_exit: "ctrl+c" }, theme: "kilo" })))
 
     const exits: Array<string | undefined> = []
     let dispose!: () => void

@@ -1,6 +1,6 @@
 import type { EmbedderProvider } from "./interfaces/manager"
 import type { CodeIndexConfig, PreviousConfigSnapshot } from "./interfaces/config"
-import { DEFAULT_SEARCH_MIN_SCORE, DEFAULT_MAX_SEARCH_RESULTS } from "./constants"
+import { DEFAULT_SEARCH_MIN_SCORE, DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_VECTOR_STORE } from "./constants"
 import { getDefaultModelId, getModelDimension, getModelScoreThreshold } from "./model-registry"
 import { isEmbeddingProfileEqual, resolveEmbeddingProfile } from "./embedding-profile"
 
@@ -50,7 +50,7 @@ export interface IndexingConfigInput {
 export class CodeIndexConfigManager {
   private enabled = false
   private embedderProvider: EmbedderProvider = "openai"
-  private vectorStoreProvider: "lancedb" | "qdrant" = "qdrant"
+  private vectorStoreProvider: "lancedb" | "qdrant" = DEFAULT_VECTOR_STORE
   private lancedbVectorStoreDirectory?: string
   private modelId?: string
   private modelDimension?: number
@@ -88,7 +88,7 @@ export class CodeIndexConfigManager {
   private applyInput(input: IndexingConfigInput): void {
     this.enabled = input.enabled
     this.embedderProvider = input.embedderProvider
-    this.vectorStoreProvider = input.vectorStoreProvider ?? "qdrant"
+    this.vectorStoreProvider = input.vectorStoreProvider ?? DEFAULT_VECTOR_STORE
     this.lancedbVectorStoreDirectory = input.lancedbVectorStoreDirectory
     this.qdrantUrl = input.qdrantUrl ?? "http://localhost:6333"
     this.qdrantApiKey = input.qdrantApiKey
@@ -196,7 +196,7 @@ export class CodeIndexConfigManager {
     if (prevProvider !== this.embedderProvider) return true
 
     // Vector store provider change
-    if ((prev.vectorStoreProvider ?? "qdrant") !== this.vectorStoreProvider) return true
+    if ((prev.vectorStoreProvider ?? DEFAULT_VECTOR_STORE) !== this.vectorStoreProvider) return true
 
     // LanceDB path change
     if (
@@ -258,7 +258,7 @@ export class CodeIndexConfigManager {
     return {
       isConfigured: this.isConfigured(),
       embedderProvider: this.embedderProvider,
-      vectorStoreProvider: this.vectorStoreProvider ?? "qdrant",
+      vectorStoreProvider: this.vectorStoreProvider,
       lancedbVectorStoreDirectoryPlaceholder: this.lancedbVectorStoreDirectory,
       modelId: this.modelId,
       modelDimension: this.modelDimension,

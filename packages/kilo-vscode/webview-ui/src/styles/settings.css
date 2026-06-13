@@ -107,6 +107,11 @@
     & > * {
       max-width: 100%;
     }
+
+    [data-slot="popover-trigger"] {
+      min-width: 0;
+      max-width: 100%;
+    }
   }
 }
 
