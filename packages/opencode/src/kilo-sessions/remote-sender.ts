@@ -9,7 +9,7 @@ import { Permission } from "@/permission"
 import { PermissionID } from "@/permission/schema"
 import { SessionID } from "@/session/schema"
 import { QuestionID } from "@/question/schema"
-import { ModelID, ProviderID } from "@/provider/schema"
+
 import * as Log from "@opencode-ai/core/util/log"
 import z from "zod"
 import { zodObject } from "@opencode-ai/core/effect-zod"
@@ -47,35 +47,14 @@ function getRemotePromptInput() {
   }))
 }
 // kilocode_change end
-function normalizeModel(model: string | undefined) {
-  if (!model) return undefined
-  // "kilocode/xxx" is an alias for the kilo provider
-  if (model.startsWith("kilocode/")) {
-    return {
-      providerID: ProviderID.make("kilo"),
-      modelID: ModelID.make(model.slice("kilocode/".length)),
-    }
-  }
-  // "provider/model" — split on the first slash to respect the provider prefix
-  const slashIndex = model.indexOf("/")
-  if (slashIndex > 0) {
-    return {
-      providerID: ProviderID.make(model.slice(0, slashIndex)),
-      modelID: ModelID.make(model.slice(slashIndex + 1)),
-    }
-  }
-  // Bare model name — default to the kilo provider
-  return {
-    providerID: ProviderID.make("kilo"),
-    modelID: ModelID.make(model),
-  }
-}
-
 function normalizePrompt(input: SessionPrompt.PromptInput & { model?: string }): SessionPrompt.PromptInput {
-  return {
-    ...input,
-    model: normalizeModel(input.model),
-  }
+  // Don't override the session's own model from the remote relay. The session
+  // already has a model configured, and the cloud app may mangle the provider
+  // prefix for unknown providers (e.g. sending "kilo/deepseek-v4-flash" when
+  // the session uses "opencode-go/deepseek-v4-flash"). Let the session's model
+  // resolution chain (input.model ?? ag.model ?? currentModel) handle it.
+  const { model: _model, ...rest } = input
+  return rest
 }
 
 export namespace RemoteSender {

@@ -9,7 +9,6 @@ import { Question } from "../../../src/question"
 import { QuestionID } from "../../../src/question/schema"
 import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
-import { ModelID, ProviderID } from "../../../src/provider/schema"
 import { SessionID } from "../../../src/session/schema"
 import { Suggestion } from "../../../src/kilocode/suggestion" // kilocode_change
 
@@ -336,7 +335,7 @@ describe("RemoteSender", () => {
   })
 
   // kilocode_change start
-  test("send_message splits string model at the provider prefix", async () => {
+  test("send_message uses the session's own model, not the model string from the relay", async () => {
     const { conn, sent } = fakeConn()
     const calls: SessionPrompt.PromptInput[] = []
     const sender = RemoteSender.create({
@@ -350,7 +349,7 @@ describe("RemoteSender", () => {
 
     sender.handle({
       type: "command",
-      id: "req_model_string",
+      id: "req_model",
       command: "send_message",
       data: {
         sessionID: "ses_x",
@@ -361,46 +360,12 @@ describe("RemoteSender", () => {
 
     await new Promise((r) => setTimeout(r, 0))
 
-    expect(sent[0]).toEqual({ type: "response", id: "req_model_string", result: {} })
+    // The model from the cloud is stripped so the session uses its own model
+    expect(sent[0]).toEqual({ type: "response", id: "req_model", result: {} })
     expect(calls).toEqual([
       {
         sessionID: SessionID.make("ses_x"),
         parts: [{ type: "text", text: "hello" }],
-        model: { providerID: ProviderID.make("anthropic"), modelID: ModelID.make("claude-sonnet-4-20250514") },
-      },
-    ])
-  })
-
-  test("send_message keeps kilocode-prefixed model unchanged before internal conversion", async () => {
-    const { conn } = fakeConn()
-    const calls: SessionPrompt.PromptInput[] = []
-    const sender = RemoteSender.create({
-      conn,
-      directory: "/tmp/test",
-      log: nolog,
-      subscribe: fakeBus().subscribe,
-      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
-      prompt: prompts(calls),
-    })
-
-    sender.handle({
-      type: "command",
-      id: "req_model_kilocode",
-      command: "send_message",
-      data: {
-        sessionID: "ses_x",
-        parts: [{ type: "text", text: "hello" }],
-        model: "kilocode/gpt-5-mini",
-      },
-    })
-
-    await new Promise((r) => setTimeout(r, 0))
-
-    expect(calls).toEqual([
-      {
-        sessionID: SessionID.make("ses_x"),
-        parts: [{ type: "text", text: "hello" }],
-        model: { providerID: ProviderID.make("kilo"), modelID: ModelID.make("gpt-5-mini") },
       },
     ])
   })
@@ -432,40 +397,6 @@ describe("RemoteSender", () => {
     expect(sent[0].error).toContain("invalid send_message data")
   })
 
-  test("send_message correctly splits kilo-prefixed model", async () => {
-    const { conn, sent } = fakeConn()
-    const calls: SessionPrompt.PromptInput[] = []
-    const sender = RemoteSender.create({
-      conn,
-      directory: "/tmp/test",
-      log: nolog,
-      subscribe: fakeBus().subscribe,
-      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
-      prompt: prompts(calls),
-    })
-
-    sender.handle({
-      type: "command",
-      id: "req_model_kilo",
-      command: "send_message",
-      data: {
-        sessionID: "ses_x",
-        parts: [{ type: "text", text: "hello" }],
-        model: "kilo/gpt-5-mini",
-      },
-    })
-
-    await new Promise((r) => setTimeout(r, 0))
-
-    expect(sent[0]).toEqual({ type: "response", id: "req_model_kilo", result: {} })
-    expect(calls).toEqual([
-      {
-        sessionID: SessionID.make("ses_x"),
-        parts: [{ type: "text", text: "hello" }],
-        model: { providerID: ProviderID.make("kilo"), modelID: ModelID.make("gpt-5-mini") },
-      },
-    ])
-  })
   // kilocode_change end
 
   test("question_reply sends response after work completes", async () => {
