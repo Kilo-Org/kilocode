@@ -69,6 +69,8 @@ export function handleEditorAction(
     initialDiffStyle?: unknown
     dataUrl?: string
     filename?: string
+    id?: string
+    paths?: string[]
   },
   opts: {
     dir: () => string
@@ -86,11 +88,12 @@ export function handleEditorAction(
     return true
   }
   if (message.type === "validateFiles") {
-    const id = (message as { id?: string }).id
-    const paths = (message as { paths?: string[] }).paths
+    const id = message.id
+    const paths = message.paths
     if (id && paths && opts.post) {
+      const post = opts.post
       validateFiles(opts.dir(), paths).then(
-        (existing) => opts.post!({ type: "validateFilesResult", id, existing }),
+        (existing) => post({ type: "validateFilesResult", id, existing }),
         (err) => console.error("[Kilo New] KiloProvider: validateFiles failed:", err),
       )
     }
@@ -127,7 +130,9 @@ function show(uri: vscode.Uri, line?: number, column?: number): void {
         const pos = new vscode.Position(line - 1, col)
         options.selection = new vscode.Range(pos, pos)
       }
-      vscode.window.showTextDocument(doc, options)
+      vscode.window
+        .showTextDocument(doc, options)
+        .then(undefined, (err) => console.error("[Kilo New] KiloProvider: Failed to show document:", uri.fsPath, err))
     },
     (err) => console.error("[Kilo New] KiloProvider: Failed to open file:", uri.fsPath, err),
   )
@@ -139,7 +144,9 @@ function show(uri: vscode.Uri, line?: number, column?: number): void {
  */
 function findFallback(filePath: string, line?: number, column?: number): void {
   const name = filePath.split(/[\\/]/).pop() || filePath
-  Promise.resolve(vscode.workspace.findFiles(`**/${name}`, "**/node_modules/**", 5)).then(
+  // Escape glob metacharacters so filenames like `[id].tsx` or `[...slug].tsx` resolve correctly.
+  const escaped = name.replace(/[\[\]{}?*!()]/g, "\\$&")
+  Promise.resolve(vscode.workspace.findFiles(`**/${escaped}`, "**/node_modules/**", 5)).then(
     (matches) => {
       if (matches.length === 1) {
         show(matches[0], line, column)
@@ -147,9 +154,12 @@ function findFallback(filePath: string, line?: number, column?: number): void {
       }
       if (matches.length > 1) {
         const items = matches.map((m) => ({ label: vscode.workspace.asRelativePath(m), uri: m }))
-        vscode.window.showQuickPick(items, { placeHolder: `Multiple matches for "${name}"` }).then((pick) => {
-          if (pick) show(pick.uri, line, column)
-        })
+        vscode.window.showQuickPick(items, { placeHolder: `Multiple matches for "${name}"` }).then(
+          (pick) => {
+            if (pick) show(pick.uri, line, column)
+          },
+          (err) => console.error("[Kilo New] KiloProvider: showQuickPick failed:", err),
+        )
         return
       }
       vscode.window.showWarningMessage(`File not found: ${filePath}`)
