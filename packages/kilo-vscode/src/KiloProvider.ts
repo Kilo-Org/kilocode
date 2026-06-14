@@ -1233,6 +1233,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       dir: () => this.getWorkspaceDirectory(this.currentSession?.id),
       diff: this.diffVirtualProvider,
       storage: this.extensionContext?.globalStorageUri,
+      post: (msg) => this.postMessage(msg),
     })
   }
 

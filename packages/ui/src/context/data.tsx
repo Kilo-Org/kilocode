@@ -48,6 +48,8 @@ export type OpenDiffFn = (diff: {
 export type OpenUrlFn = (url: string) => void
 
 export type OpenContentFn = (content: string, language?: string) => void // kilocode_change
+
+export type ValidateFilesFn = (paths: string[]) => Promise<string[]> // kilocode_change
 // kilocode_change end
 
 export const { use: useData, provider: DataProvider } = createSimpleContext({
@@ -61,6 +63,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
     onOpenDiff?: OpenDiffFn // kilocode_change
     onOpenUrl?: OpenUrlFn // kilocode_change
     onOpenContent?: OpenContentFn // kilocode_change
+    onValidateFiles?: ValidateFilesFn // kilocode_change
   }) => {
     return {
       get store() {
@@ -75,6 +78,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       openDiff: props.onOpenDiff, // kilocode_change
       openUrl: props.onOpenUrl, // kilocode_change
       openContent: props.onOpenContent, // kilocode_change
+      validateFiles: props.onValidateFiles, // kilocode_change
     }
   },
 })
