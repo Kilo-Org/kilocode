@@ -39,11 +39,9 @@ export default `
 (require_expression
   (bareword) @name.definition.import) @definition.import
 
-; Variable declarations (my/our/local/state)
-(phaser_statement
-  (declaration_list
-    (declaration
-      name: [(varname) (array) (hash)]) @name.definition.variable)) @definition.variable
+; Variable declarations (my/our/state/field)
+(variable_declaration
+  (varname) @name.definition.variable) @definition.variable
 
 ; Statement labels
 (statement_label

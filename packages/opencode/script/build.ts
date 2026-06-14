@@ -19,6 +19,7 @@ process.chdir(dir)
 import { Script } from "@opencode-ai/script"
 import pkg from "../package.json"
 import { LanceDBRuntime } from "../src/kilocode/lancedb" // kilocode_change
+import { PERL_WASM_URL } from "../parsers-config" // kilocode_change
 
 // Load migrations from migration directories
 const migrationDirs = (
@@ -81,17 +82,18 @@ async function copyTreeSitterWasms(outputDir: string) {
   )
 
   // Perl WASM is not in tree-sitter-wasms package; download from GitHub release
-  const perlWasmUrl =
-    "https://github.com/tree-sitter-perl/tree-sitter-perl/releases/download/v1.1.2/tree-sitter-perl.wasm"
+  const perlWasmUrl = PERL_WASM_URL
   const perlWasmTarget = path.join(targetDir, "tree-sitter-perl.wasm")
+  let perlCount = 0
   try {
     await downloadTreeSitterWasm(perlWasmUrl, perlWasmTarget)
+    perlCount = 1
     console.log("downloaded tree-sitter-perl.wasm")
   } catch (err) {
     console.warn(`Failed to download tree-sitter-perl.wasm: ${err}`)
   }
 
-  console.log(`copied ${languageWasmFiles.length + 1} tree-sitter wasm files to ${targetDir}`)
+  console.log(`copied ${languageWasmFiles.length + 1 + perlCount} tree-sitter wasm files to ${targetDir}`)
 }
 // kilocode_change end
 
