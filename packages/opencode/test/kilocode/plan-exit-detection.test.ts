@@ -684,7 +684,7 @@ describe("plan_exit detection", () => {
       expect(text).toContain("Use the plan path specified by the user or project instructions")
       expect(text).toContain("plans/ or .plans/")
       expect(text).toContain("If none is specified")
-      expect(text).not.toContain(Session.plan(session, Instance.current))
+      expect(text).toContain(Session.plan(session, Instance.current))
     }))
 
   test("native plan reminder reuses custom plan_exit path when refining", () =>

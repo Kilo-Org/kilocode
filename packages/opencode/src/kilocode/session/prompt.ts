@@ -292,7 +292,7 @@ export namespace KiloSessionPrompt {
 
     const info = saved
       ? `The current saved plan file is ${target}. Read and edit this file when refining the plan.`
-      : `Use the plan path specified by the user or project instructions when present and permissions allow it. If none is specified, create a plan in ${dir} using a concise kebab-case filename based on the plan details.`
+      : `Use the plan path specified by the user or project instructions when present and permissions allow it. If none is specified, create the plan file at \`${target}\`.`
     const body = [
       "## Plan File",
       info,
