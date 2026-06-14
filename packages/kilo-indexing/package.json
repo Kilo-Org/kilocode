@@ -27,6 +27,7 @@
     "src"
   ],
   "scripts": {
+    "postinstall": "bun run script/postinstall.ts",
     "typecheck": "tsgo --noEmit",
     "build": "tsc",
     "test": "bun test --timeout 30000"

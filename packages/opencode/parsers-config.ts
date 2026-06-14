@@ -1,5 +1,4 @@
-export const PERL_WASM_URL =
-  "https://github.com/tree-sitter-perl/tree-sitter-perl/releases/download/v1.1.2/tree-sitter-perl.wasm"
+import { PERL_WASM_URL } from "@kilocode/plugin/parser-url"
 
 export default {
   // NOTE: FOR markdown, javascript and typescript, we use the opentui built-in parsers

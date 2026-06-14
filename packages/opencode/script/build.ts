@@ -19,7 +19,7 @@ process.chdir(dir)
 import { Script } from "@opencode-ai/script"
 import pkg from "../package.json"
 import { LanceDBRuntime } from "../src/kilocode/lancedb" // kilocode_change
-import { PERL_WASM_URL } from "../parsers-config" // kilocode_change
+import { PERL_WASM_URL } from "@kilocode/plugin/parser-url" // kilocode_change
 
 // Load migrations from migration directories
 const migrationDirs = (
