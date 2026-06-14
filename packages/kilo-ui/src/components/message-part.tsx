@@ -6,6 +6,7 @@ import {
   For,
   Match,
   onCleanup,
+  onMount,
   Show,
   Switch,
   type JSX,
@@ -1316,11 +1317,92 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  // Post-render: validate file-link candidates against the filesystem.
+  // Candidates that exist as files get promoted to .file-link; others stay plain code.
+  // Results are cached (capped at 500 entries) so morphdom re-renders resolve immediately.
+  let bodyRef: HTMLDivElement | undefined
+  const cache = new Map<string, boolean>()
+  const MAX_CACHE = 500
+
+  const promote = (el: HTMLElement, path: string, exists: boolean) => {
+    if (!exists) {
+      el.classList.remove("file-link-candidate")
+      el.removeAttribute("data-file-candidate")
+      el.removeAttribute("data-file-line")
+      el.removeAttribute("data-file-col")
+      return
+    }
+    // Strip ./ prefix for the click handler — VS Code resolves relative
+    // paths against the workspace root, so "./LICENSE" → "LICENSE".
+    const clean = path.startsWith("./") ? path.slice(2) : path
+    el.classList.remove("file-link-candidate")
+    el.classList.add("file-link")
+    el.setAttribute("data-file-path", clean)
+  }
+
+  const validate = () => {
+    if (!bodyRef || !data.validateFiles) return
+    const pending: string[] = []
+    const elements = new Map<string, HTMLElement[]>()
+    for (const el of bodyRef.querySelectorAll<HTMLElement>("code.file-link-candidate")) {
+      const p = el.getAttribute("data-file-candidate") ?? ""
+      if (!p) continue
+      // If already cached, apply immediately (no round-trip)
+      if (cache.has(p)) {
+        promote(el, p, cache.get(p)!)
+        continue
+      }
+      if (!elements.has(p)) {
+        elements.set(p, [])
+        pending.push(p)
+      }
+      elements.get(p)!.push(el)
+    }
+    if (!pending.length) return
+    data
+      .validateFiles(pending)
+      .then((existing) => {
+        const set = new Set(existing)
+        for (const p of pending) {
+          if (cache.size >= MAX_CACHE) cache.delete(cache.keys().next().value!)
+          cache.set(p, set.has(p))
+        }
+        for (const [p, els] of elements) {
+          for (const el of els) promote(el, p, set.has(p))
+        }
+      })
+      .catch(() => {
+        /* validateFiles timed out or failed — candidates stay as plain code */
+      })
+  }
+
+  // The Markdown component writes its DOM asynchronously (rAF-coalesced
+  // morphdom), so scanning for candidates synchronously misses them. Drive
+  // validation from a MutationObserver instead, coalescing streaming bursts
+  // into one pass per frame. promote() only mutates classes/attributes, which
+  // childList observation ignores, so it never re-triggers the observer.
+  onMount(() => {
+    if (!bodyRef) return
+    let scheduled = false
+    const schedule = () => {
+      if (scheduled) return
+      scheduled = true
+      requestAnimationFrame(() => {
+        scheduled = false
+        validate()
+      })
+    }
+    const observer = new MutationObserver(schedule)
+    observer.observe(bodyRef, { childList: true, subtree: true })
+    schedule()
+    onCleanup(() => observer.disconnect())
+  })
+
   const handleMarkdownClick = (e: MouseEvent) => {
     if (!data.openFile) return
     const target = e.target
     if (!(target instanceof HTMLElement)) return
-    // Handle .file-link code spans (e.g. `src/foo.ts:42`)
+    // Handle .file-link code spans (confirmed by filesystem validation)
     const fileLink = target.closest(".file-link[data-file-path]")
     if (fileLink) {
       const path = fileLink.getAttribute("data-file-path")
@@ -1337,17 +1419,17 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     if (anchor) {
       const href = anchor.getAttribute("href")
       if (!href) return
-      const filePath = extractFilePathFromHref(href)
-      if (!filePath) return
+      const result = extractFilePathFromHref(href)
+      if (!result) return
       e.preventDefault()
-      data.openFile(filePath)
+      data.openFile(result.path, result.line, result.column)
     }
   }
 
   return (
     <Show when={throttledText() && showSyntheticPart()}>
       <div data-component="text-part">
-        <div data-slot="text-part-body">
+        <div data-slot="text-part-body" ref={bodyRef}>
           <Markdown text={throttledText()} cacheKey={part().id} streaming={streaming()} onClick={handleMarkdownClick} />
         </div>
         <Show when={showCopy()}>
