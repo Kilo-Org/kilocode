@@ -84,6 +84,9 @@ const extensions = [
   "r",
   "rb",
   "vb",
+  "pl",
+  "pm",
+  "t",
 
   // Functional and specialized languages
   "ml",

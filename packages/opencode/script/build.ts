@@ -58,6 +58,13 @@ const plugin = createSolidTransformPlugin()
 // kilocode_change - packages/app was removed; the web UI embed step is no longer applicable
 
 // kilocode_change start - codebase indexing
+async function downloadTreeSitterWasm(url: string, targetPath: string) {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to download ${url}: ${res.status} ${res.statusText}`)
+  const buffer = Buffer.from(await res.arrayBuffer())
+  await fs.promises.writeFile(targetPath, buffer)
+}
+
 async function copyTreeSitterWasms(outputDir: string) {
   const runtimeWasmPath = require.resolve("web-tree-sitter/tree-sitter.wasm")
   const languagePackagePath = require.resolve("tree-sitter-wasms/package.json")
@@ -72,6 +79,17 @@ async function copyTreeSitterWasms(outputDir: string) {
   await Promise.all(
     languageWasmFiles.map((file) => fs.promises.copyFile(path.join(languageWasmDir, file), path.join(targetDir, file))),
   )
+
+  // Perl WASM is not in tree-sitter-wasms package; download from GitHub release
+  const perlWasmUrl =
+    "https://github.com/tree-sitter-perl/tree-sitter-perl/releases/download/v1.1.2/tree-sitter-perl.wasm"
+  const perlWasmTarget = path.join(targetDir, "tree-sitter-perl.wasm")
+  try {
+    await downloadTreeSitterWasm(perlWasmUrl, perlWasmTarget)
+    console.log("downloaded tree-sitter-perl.wasm")
+  } catch (err) {
+    console.warn(`Failed to download tree-sitter-perl.wasm: ${err}`)
+  }
 
   console.log(`copied ${languageWasmFiles.length + 1} tree-sitter wasm files to ${targetDir}`)
 }
