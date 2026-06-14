@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync } from "fs"
+import { existsSync, mkdirSync } from "fs"
 import { dirname, join } from "path"
 import { PERL_WASM_URL } from "@kilocode/plugin/parser-url"
 
