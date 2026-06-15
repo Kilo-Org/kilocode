@@ -1720,6 +1720,13 @@ export const layer = Layer.effect(
       const s = yield* InstanceState.get(state)
       const provider = s.providers[providerID]
       if (!provider) {
+        // kilocode_change start
+        const kilo = s.providers[ProviderID.make("kilo")]
+        if (kilo) {
+          const kiloModel = kilo.models[(providerID + "/" + modelID) as ModelID]
+          if (kiloModel) return kiloModel
+        }
+        // kilocode_change end
         const catalogProvider = s.catalog[providerID]
         const suggestions = catalogProvider
           ? modelSuggestions(catalogProvider, modelID, runtimeFlags.enableExperimentalModels)

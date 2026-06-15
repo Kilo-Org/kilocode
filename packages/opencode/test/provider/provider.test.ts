@@ -543,6 +543,37 @@ test("getModel throws ModelNotFoundError for invalid provider", async () => {
   })
 })
 
+// kilocode_change start - test kilo gateway fallback
+test("getModel resolves through kilo gateway when provider not found", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          provider: {
+            kilo: {
+              models: {
+                "openai/gpt-5-nano": { name: "GPT-5 Nano" },
+              },
+            },
+          },
+        }),
+      )
+    },
+  })
+  await withTestInstance({
+    directory: tmp.path,
+    fn: async (ctx) => {
+      const model = await getModel(ProviderID.make("openai"), ModelID.make("gpt-5-nano"), ctx)
+      expect(model).toBeDefined()
+      expect(String(model.providerID)).toBe("kilo")
+      expect(String(model.id)).toBe("openai/gpt-5-nano")
+    },
+  })
+})
+// kilocode_change end
+
 test("parseModel correctly parses provider/model string", () => {
   const result = Provider.parseModel("anthropic/claude-sonnet-4")
   expect(String(result.providerID)).toBe("anthropic")
