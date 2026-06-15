@@ -183,7 +183,8 @@ describe("withCustomProviderDeletions", () => {
       },
     } as typeof baseNext
     const result = withCustomProviderDeletions(existing, next)
-    const model = (result.models as Record<string, { reasoning?: boolean | null; variants?: Record<string, unknown> }>).keep
+    const model = (result.models as Record<string, { reasoning?: boolean | null; variants?: Record<string, unknown> }>)
+      .keep
     expect(model.reasoning).toBeNull()
     expect(model.variants?.high).toEqual({ reasoningEffort: "high" })
     expect(model.variants?.low).toBeNull()
