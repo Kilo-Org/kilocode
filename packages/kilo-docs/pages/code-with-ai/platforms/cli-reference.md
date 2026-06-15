@@ -682,6 +682,21 @@ Options:
   --cors         additional domains to allow for CORS  [array] [default: []]
 ```
 
+## kilo web
+
+```
+start kilo server and open web interface
+
+Options:
+  --help         Show help  [boolean]
+  --version      Show version number  [boolean]
+  --port         port to listen on  [number] [default: 0]
+  --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
+  --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
+  --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
+  --cors         additional domains to allow for CORS  [array] [default: []]
+```
+
 ## kilo models
 
 ```
@@ -766,6 +781,42 @@ Positionals:
 Options:
   --help     Show help  [boolean]
   --version  Show version number  [boolean]
+```
+
+## kilo github
+
+```
+manage GitHub agent
+
+Commands:
+  kilo github install  install the GitHub agent
+  kilo github run      run the GitHub agent
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo github install
+
+```
+install the GitHub agent
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo github run
+
+```
+run the GitHub agent
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --event    GitHub mock event to run the agent for  [string]
+  --token    GitHub personal access token (github_pat_********)  [string]
 ```
 
 ## kilo pr

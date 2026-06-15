@@ -1751,7 +1751,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           input.sessionID,
           message.info.id,
           bridge.run(
-            loop({ sessionID: input.sessionID, snapshotInitialization: input.snapshotInitialization }).pipe(Effect.orDie),
+            loop({ sessionID: input.sessionID, snapshotInitialization: input.snapshotInitialization }).pipe(
+              Effect.orDie,
+            ),
           ), // kilocode_change
           bridge.run(lastAssistant(input.sessionID)),
         )
@@ -1779,9 +1781,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     // kilocode_change start - retain request-scoped snapshot initialization policy
     const runLoop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts, NotFoundError> = Effect.fn(
       "SessionPrompt.run",
-    )(function* (
-      input: LoopInput,
-    ) {
+    )(function* (input: LoopInput) {
       const sessionID = input.sessionID
       // kilocode_change end
       // kilocode_change — cache environment details per turn (prompt caching)
@@ -2168,9 +2168,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
     const loop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts, NotFoundError> = Effect.fn(
       "SessionPrompt.loop",
-    )(function* (
-      input: LoopInput,
-    ) {
+    )(function* (input: LoopInput) {
       // kilocode_change start
       yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
       yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })

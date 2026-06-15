@@ -78,20 +78,20 @@ describe("kilocode default indexing plugin", () => {
 
     try {
       await using tmp = await tmpdir({
-      init: async (dir) => {
-        await Filesystem.write(
-          path.join(dir, "opencode.json"),
-          JSON.stringify({
-            $schema: "https://app.kilo.ai/config.json",
-            plugin: ["global-plugin-1"],
-          }),
-        )
-      },
-    })
+        init: async (dir) => {
+          await Filesystem.write(
+            path.join(dir, "opencode.json"),
+            JSON.stringify({
+              $schema: "https://app.kilo.ai/config.json",
+              plugin: ["global-plugin-1"],
+            }),
+          )
+        },
+      })
 
-    await WithInstance.provide({
-      directory: tmp.path,
-      fn: async () => {
+      await WithInstance.provide({
+        directory: tmp.path,
+        fn: async () => {
           const config = await load()
           expect(hasIndexingPlugin(config.plugin ?? [])).toBe(false)
         },

@@ -347,7 +347,8 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             )
           })
 
-          const track = Effect.fnUntraced(function* (opts?: Parameters<Interface["track"]>[0]) { // kilocode_change
+          const track = Effect.fnUntraced(function* (opts?: Parameters<Interface["track"]>[0]) {
+            // kilocode_change
             return yield* locked(
               Effect.gen(function* () {
                 if (!(yield* enabled())) return

@@ -434,6 +434,9 @@ export const kiloScenarios: Scenario[] = [
     }))
     .json(200, (body) => {
       object(body)
-      check(typeof body.success === "boolean" && body.slug === "memory", "marketplace uninstall should return result shape")
+      check(
+        typeof body.success === "boolean" && body.slug === "memory",
+        "marketplace uninstall should return result shape",
+      )
     }),
 ]

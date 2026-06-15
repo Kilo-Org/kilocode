@@ -76,7 +76,7 @@ describe("marketplace HttpApi routes", () => {
         body: JSON.stringify({ id: "memory", type: "mcp", target: "project" }),
       }),
     )
-    const file = Bun.file(path.join(tmp.path, ".kilo", "kilo.json"))
+    const file = Bun.file(path.join(tmp.path, ".kilo", "kilo.jsonc"))
     const cfg = JSON.parse(await file.text()) as { mcp?: Record<string, unknown> }
     const uninstall = await json<{ success: boolean; slug: string }>(
       await req(tmp.path, "/kilocode/marketplace/uninstall", {
