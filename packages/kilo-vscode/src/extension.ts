@@ -36,9 +36,9 @@ const panelTitleHandler = (panel: vscode.WebviewPanel) => (title: string) => {
   panel.title = title || EXTENSION_DISPLAY_NAME
 }
 
-// Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
-// autocomplete, commit-message generation, and URI deep links all work immediately — without
-// requiring the user to open a Kilo sidebar or panel first. The CLI backend is NOT spawned here;
+// Activated via "onStartupFinished" and "onUri" (package.json) so that commands, code actions,
+// keybindings, autocomplete, commit-message generation, and URI deep links all work immediately —
+// without requiring the user to open a Kilo sidebar or panel first. The CLI backend is NOT spawned here;
 // it starts lazily when a webview connects or when ensureBackendForAutocomplete() triggers it.
 export function activate(context: vscode.ExtensionContext) {
   console.log("Kilo Code extension is now active")
@@ -476,17 +476,25 @@ export function activate(context: vscode.ExtensionContext) {
     ),
   )
 
-  // Register URI handler for session imports (vscode://kilocode.kilo-code/kilocode/s/{sessionId})
+  // Register URI handler for extension deep links (vscode://kilocode.kilo-code/kilocode/...)
   context.subscriptions.push(
     vscode.window.registerUriHandler({
       async handleUri(uri: vscode.Uri) {
-        const match = uri.path.match(/^\/kilocode\/s\/([a-zA-Z0-9_-]+)$/)
-        if (!match) return
-        const sessionId = match[1]
-        if (!sessionId) return
-        console.log("[Kilo New] URI handler: opening cloud session:", sessionId)
+        const sessionMatch = uri.path.match(/^\/kilocode\/s\/([a-zA-Z0-9_-]+)$/)
+        const sessionId = sessionMatch?.[1]
+        if (sessionId) {
+          console.log("[Kilo New] URI handler: opening cloud session:", sessionId)
+          await vscode.commands.executeCommand(`${KiloProvider.viewType}.focus`)
+          provider.openCloudSession(sessionId)
+          return
+        }
+
+        if (uri.path !== "/kilocode/model") return
+        const modelID = new URLSearchParams(uri.query).get("model")
+        if (!modelID) return
+        console.log("[Kilo New] URI handler: selecting linked Kilo model:", modelID)
         await vscode.commands.executeCommand(`${KiloProvider.viewType}.focus`)
-        provider.openCloudSession(sessionId)
+        provider.selectKiloModel(modelID)
       },
     }),
   )

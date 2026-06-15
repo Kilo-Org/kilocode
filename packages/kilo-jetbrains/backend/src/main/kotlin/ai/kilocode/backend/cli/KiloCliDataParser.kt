@@ -365,6 +365,13 @@ object KiloCliDataParser {
     // JSON serialization (DTO → JSON for outgoing requests)
     // ================================================================
 
+    fun parseEnhancedPrompt(raw: String): String =
+        tryParseObject(raw)?.str("text")
+            ?: throw IllegalArgumentException("Enhance prompt response is missing text")
+
+    fun buildEnhancePromptJson(text: String): String =
+        """{"text":${escape(text)}}"""
+
     /**
      * Build the JSON body for `POST /session/{id}/prompt_async`.
      */

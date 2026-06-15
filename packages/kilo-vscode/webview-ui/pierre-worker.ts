@@ -13,6 +13,14 @@
 // plain render. The diff wrapper still needs to keep that initial render cheap,
 // which is why review surfaces pass hunk-bounded patches instead of full files.
 import { WorkerPoolManager } from "@pierre/diffs/worker"
+import { ensureKiloDiffTheme, KILO_DIFF_THEME } from "@opencode-ai/ui/pierre/kilo-diff-theme"
+
+// Register the "Kilo" theme before any pool initializes. resolveThemes([theme])
+// runs on the main thread during initialize() and throws "resolveTheme: No valid
+// loader for Kilo" if the theme name was never registered. Registering here makes
+// the worker self-sufficient rather than depending on the markdown context module
+// having been imported first.
+ensureKiloDiffTheme()
 
 export type WorkerPoolStyle = "unified" | "split"
 
@@ -36,7 +44,7 @@ export function workerFactory(): Worker {
 function createPool(lineDiffType: "none" | "word-alt") {
   const pool = new WorkerPoolManager(
     { workerFactory, poolSize: 2 },
-    { theme: "Kilo", lineDiffType, preferredHighlighter: ENGINE },
+    { theme: KILO_DIFF_THEME, lineDiffType, preferredHighlighter: ENGINE },
   )
   void pool.initialize().catch((err) => console.warn("[Kilo New] Failed to initialize Pierre worker pool", err))
   return pool

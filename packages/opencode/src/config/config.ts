@@ -209,6 +209,18 @@ export const Info = Schema.Struct({
     description: "Automatically collapse reasoning blocks after the agent finishes writing them",
   }),
   indexing: Schema.optional(IndexingRef).annotate({ description: "Codebase indexing configuration" }),
+  console: Schema.optional(
+    Schema.Struct({
+      context_sidebar_width: Schema.optional(
+        Schema.Int.check(Schema.isBetween({ minimum: 250, maximum: 800 })).annotate({
+          description: "Width of the Kilo Console project context sidebar in pixels",
+        }),
+      ),
+      diff_style: Schema.optional(Schema.Literals(["unified", "split"])).annotate({
+        description: "Default diff layout in Kilo Console project reviews",
+      }),
+    }),
+  ).annotate({ description: "Kilo Console user interface configuration" }),
   terminal_command_display: Schema.optional(Schema.Literals(["expanded", "collapsed"])).annotate({
     description: "Controls whether terminal command blocks are expanded or collapsed by default in the VS Code chat UI",
   }),
@@ -224,6 +236,12 @@ export const Info = Schema.Struct({
   }),
   subagent_variant: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description: "Default model variant for task-tool subagents when subagent_model is configured.",
+  }),
+  subagent_variant_overrides: Schema.optional(
+    Schema.NullOr(Schema.Record(Schema.String, Schema.NullOr(Schema.String))),
+  ).annotate({
+    description:
+      "Model-specific variant overrides for task-tool subagents, keyed by provider/model. Valid overrides take precedence over saved, agent-specific, and inherited variants.",
   }),
   default_agent: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description:

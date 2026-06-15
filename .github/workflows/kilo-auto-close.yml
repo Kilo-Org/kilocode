@@ -212,7 +212,7 @@ jobs:
 
             for (const pr of stalePrs) {
               const issue_number = pr.number
-              const closeComment = `To stay organized pull requests are automatically closed after ${PR_DAYS_INACTIVE} days of inactivity. If the pull request is still relevant please open a new one.`
+              const closeComment = `To stay organized pull requests are automatically closed after ${PR_DAYS_INACTIVE} days of inactivity. If the pull request is still relevant please reopen it or create a fresh new one.`
 
               if (dryRun) {
                 core.info(`[dry-run] Would close PR #${issue_number} from ${pr.author?.login || 'unknown'} (last activity: ${pr.activity.date.toISOString()} via ${pr.activity.source}): ${pr.title}`)
@@ -314,7 +314,7 @@ jobs:
             let skippedIssueCount = 0
 
             for (const issue of staleIssues) {
-              const closeComment = `To stay organized issues are automatically closed after ${ISSUE_DAYS_INACTIVE} days of no activity. If the issue is still relevant please open a new one.`
+              const closeComment = `To stay organized issues are automatically closed after ${ISSUE_DAYS_INACTIVE} days of no activity. If the issue is still relevant please reopen it or create a fresh new one.`
 
               if (dryRun) {
                 core.info(`[dry-run] Would close issue #${issue.number} (last activity: ${issue.activity.toISOString()} via updated): ${issue.title}`)
