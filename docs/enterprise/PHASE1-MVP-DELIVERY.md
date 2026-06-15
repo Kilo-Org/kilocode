@@ -93,7 +93,7 @@ cd ..\..\deploy\enterprise\scripts
 
 | # | 交付物 | 路径 | 状态 |
 |---|---|---|---|
-| 3-1 | 源代码 | Git 私有仓 tag `phase1-mvp` | 🟡 待打 tag |
+| 3-1 | 源代码 | Git 私有仓 tag `phase1-mvp` | ✅ f1459864d |
 | 3-2 | VSIX | `packages/kilo-vscode/yoyo-code-7.3.10.vsix` | ✅ |
 | 3-3 | 部署手册 | PHASE1-DEPLOY*.md | ✅ |
 | 3-4 | OpenAPI | `deploy/enterprise/openapi.yaml` | ✅ |

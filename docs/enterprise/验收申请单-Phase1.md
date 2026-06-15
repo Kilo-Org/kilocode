@@ -13,7 +13,7 @@
 
 | 序号 | 交付物 | 位置/说明 | 是否包含 |
 |---|---|---|---|
-| 1 | 源代码 | Git 仓库 / tag: `phase1-mvp`（待打） | ✅ |
+| 1 | 源代码 | Git 仓库 / tag: `phase1-mvp` | ✅ f1459864d |
 | 2 | VSIX 安装包 | `packages/kilo-vscode/yoyo-code-7.3.10.vsix` | ✅ |
 | 3 | Docker Compose 与脚本 | `deploy/enterprise/` | ✅ |
 | 4 | OpenAPI 草案 | `deploy/enterprise/openapi.yaml` | ✅ |
