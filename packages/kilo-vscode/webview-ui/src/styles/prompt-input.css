@@ -495,6 +495,36 @@
   color: var(--vscode-testing-iconPassed, #5cb85c);
 }
 
+[data-component="enterprise-license-status"] {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+[data-slot="enterprise-license-status"] {
+  font-size: var(--kilo-font-size-13);
+  font-weight: 500;
+  color: var(--vscode-errorForeground);
+}
+
+[data-slot="enterprise-license-status"][data-ok="true"] {
+  color: var(--vscode-testing-iconPassed);
+}
+
+[data-slot="enterprise-license-reason"] {
+  font-size: var(--kilo-font-size-12);
+  color: var(--vscode-descriptionForeground);
+  word-break: break-word;
+  text-align: right;
+}
+
+[data-slot="enterprise-engine-url"] {
+  font-size: var(--kilo-font-size-12);
+  word-break: break-all;
+}
+
 [data-slot="remote-settings-hint"] {
   font-size: var(--kilo-font-size-11);
   color: var(--text-weak);

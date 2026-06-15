@@ -1,5 +1,6 @@
 import * as fs from "fs"
 import * as vscode from "vscode"
+import { verifyRsaSha256 } from "./license-crypto"
 import { enterpriseSettings, type LicenseSettings } from "./settings"
 
 const CACHE_KEY = "enterprise.license.cache"
@@ -34,8 +35,8 @@ export async function ensureLicense(context: vscode.ExtensionContext): Promise<L
   const settings = enterpriseSettings().license
   if (!settings.enabled) return { ok: true, reason: "disabled" }
 
-  const offline = parseOfflineLicense(settings.offlinePath, settings.key)
-  if (offline) return offline
+  const offline = parseOfflineLicense(settings.offlinePath, settings.key, resolvePublicKey(settings))
+  if (offline?.ok) return offline
 
   const cached = readCache(context, settings)
   if (cached?.ok) return cached.result
@@ -82,7 +83,7 @@ function writeCache(context: vscode.ExtensionContext, cache: LicenseCache) {
   void context.globalState.update(CACHE_KEY, cache)
 }
 
-export function parseOfflineLicense(file: string, key: string): LicenseResult | null {
+export function parseOfflineLicense(file: string, key: string, publicKey = ""): LicenseResult | null {
   const path = file.trim()
   if (!path || !fs.existsSync(path)) return null
   try {
@@ -95,11 +96,28 @@ export function parseOfflineLicense(file: string, key: string): LicenseResult | 
     if (key && data.key && data.key !== key) {
       return { ok: false, reason: "offline_key_mismatch", readonly: true }
     }
+    const sig = data.signature?.trim() ?? ""
+    if (sig) {
+      const pem = publicKey.trim()
+      if (!pem) return { ok: false, reason: "offline_no_public_key", readonly: true }
+      const licenseKey = data.key ?? key
+      if (!licenseKey) return { ok: false, reason: "offline_missing_key", readonly: true }
+      const ok = verifyRsaSha256({ key: licenseKey, expiresAt: data.expiresAt }, sig, pem)
+      if (!ok) return { ok: false, reason: "offline_bad_signature", readonly: true }
+      return { ok: true, reason: "offline_rsa", readonly: false }
+    }
     return { ok: true, reason: "offline", readonly: false }
   } catch (err) {
     console.error("[Kilo New] Offline license read failed:", err)
     return { ok: false, reason: "offline_invalid", readonly: true }
   }
+}
+
+function resolvePublicKey(settings: LicenseSettings): string {
+  if (settings.offlinePublicKey) return settings.offlinePublicKey
+  const path = settings.offlinePublicKeyPath.trim()
+  if (!path || !fs.existsSync(path)) return ""
+  return fs.readFileSync(path, "utf8")
 }
 
 async function verifyOnline(settings: LicenseSettings): Promise<{

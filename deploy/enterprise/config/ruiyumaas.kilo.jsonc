@@ -1,0 +1,40 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "model": "ruiyumaas/glm-5.1",
+  "small_model": "ruiyumaas/glm-5",
+  "enabled_providers": ["ruiyumaas"],
+  "disabled_providers": ["kilo"],
+  "provider": {
+    "ruiyumaas": {
+      "name": "Ruiyu MaaS",
+      "npm": "@ai-sdk/openai-compatible",
+      "api": "https://ruiyumaas.com/v1",
+      "options": {
+        "apiKey": "{env:KILO_CUSTOM_API_KEY}",
+        "baseURL": "https://ruiyumaas.com/v1"
+      },
+      "models": {
+        "glm-5": {
+          "name": "GLM-5",
+          "tool_call": true,
+          "limit": { "context": 128000, "output": 8192 }
+        },
+        "glm-5.1": {
+          "name": "GLM-5.1",
+          "tool_call": true,
+          "limit": { "context": 128000, "output": 8192 }
+        },
+        "MiniMax-M2.7": {
+          "name": "MiniMax-M2.7",
+          "tool_call": true,
+          "limit": { "context": 128000, "output": 8192 }
+        },
+        "deepseek-v4-pro": {
+          "name": "DeepSeek V4 Pro",
+          "tool_call": true,
+          "limit": { "context": 128000, "output": 8192 }
+        }
+      }
+    }
+  }
+}

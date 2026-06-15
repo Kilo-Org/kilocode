@@ -20,6 +20,7 @@ import ContextTab from "./ContextTab"
 
 import CommitMessageTab from "./CommitMessageTab"
 import ExperimentalTab from "./ExperimentalTab"
+import EnterpriseTab from "./EnterpriseTab"
 import LanguageTab from "./LanguageTab"
 import AboutKiloCodeTab from "./AboutKiloCodeTab"
 import IndexingTab from "./IndexingTab"
@@ -196,6 +197,10 @@ const Settings: Component<SettingsProps> = (props) => {
               <span class="label">{language.t("settings.indexing.title")}</span>
             </Tabs.Trigger>
           </Show>
+          <Tabs.Trigger value="enterprise">
+            <Icon name="server" />
+            <span class="label">{language.t("settings.enterprise.title")}</span>
+          </Tabs.Trigger>
           <Tabs.Trigger value="experimental">
             <Icon name="settings-gear" />
             <span class="label">{language.t("settings.experimental.title")}</span>
@@ -261,6 +266,10 @@ const Settings: Component<SettingsProps> = (props) => {
             <IndexingTab />
           </Tabs.Content>
         </Show>
+        <Tabs.Content value="enterprise">
+          <h3>{language.t("settings.enterprise.title")}</h3>
+          <EnterpriseTab />
+        </Tabs.Content>
         <Tabs.Content value="experimental">
           <h3>{language.t("settings.experimental.title")}</h3>
           <ExperimentalTab />

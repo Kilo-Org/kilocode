@@ -52,6 +52,7 @@ console.log(`Loaded ${migrations.length} migrations`)
 
 const singleFlag = process.argv.includes("--single")
 const baselineFlag = process.argv.includes("--baseline")
+const dockerFlag = process.argv.includes("--docker") // kilocode_change
 const skipInstall = process.argv.includes("--skip-install")
 const sourcemapsFlag = process.argv.includes("--sourcemaps")
 const plugin = createSolidTransformPlugin()
@@ -168,7 +169,16 @@ const allTargets: {
   },
 ]
 
-const targets = singleFlag
+const targets = dockerFlag // kilocode_change start — Alpine Engine image (deploy/enterprise)
+  ? allTargets.filter((item) => {
+      if (item.os !== "linux") return false
+      if (process.arch === "arm64") {
+        return item.arch === "arm64" && item.abi === "musl" && item.avx2 !== false
+      }
+      return item.arch === "x64" && item.abi === "musl" && item.avx2 === false
+    })
+  : // kilocode_change end
+  singleFlag
   ? allTargets.filter((item) => {
       if (item.os !== process.platform || item.arch !== process.arch) {
         return false

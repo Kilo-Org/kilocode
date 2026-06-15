@@ -25,6 +25,8 @@ docker compose --profile gateway up -d
 ## 插件（Phase 1 示例）
 
 - `limit-count`：100 req/min（需 Redis 时在 Phase 2 补全）
-- `http-logger`：写 `/usr/local/apisix/logs/access.log`
+- `file-logger`：写 `logs/apisix/enterprise-audit.log`（勿用 `http-logger` + `file://`）
 
 生产环境请启用 TLS、JWT 与独立 Redis。
+
+SSE 验证步骤见 [SSE-VERIFY.md](./SSE-VERIFY.md)。审计日志写入 `../logs/apisix/enterprise-audit.log`。

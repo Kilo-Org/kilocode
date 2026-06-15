@@ -1,0 +1,10 @@
+{
+  "kilo-code.new.enterprise.productName": "XX智能编程",
+  "kilo-code.new.enterprise.remoteServer.enabled": true,
+  "kilo-code.new.enterprise.remoteServer.url": "http://ai.company.internal:9080/kilo",
+  "kilo-code.new.enterprise.remoteServer.password": "由IT下发",
+  "kilo-code.new.enterprise.license.enabled": true,
+  "kilo-code.new.enterprise.license.serverUrl": "http://ai.company.internal:9080",
+  "kilo-code.new.enterprise.license.key": "由IT下发",
+  "kilo-code.new.customApi.enabled": false
+}

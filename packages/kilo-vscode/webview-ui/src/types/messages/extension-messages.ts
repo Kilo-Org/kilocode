@@ -913,6 +913,18 @@ export interface RemoteStatusMessage {
   connected: boolean
 }
 
+export interface EnterpriseLicenseStatusMessage {
+  type: "enterpriseLicenseStatus"
+  licenseEnabled: boolean
+  licenseOk: boolean
+  licenseReason: string
+  licenseReadonly: boolean
+  remoteEnabled: boolean
+  engineUrl: string
+  gatewayUrl: string
+  productName: string
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | FontSizeChangedMessage
@@ -1053,3 +1065,4 @@ export type ExtensionMessage =
   | ExtensionDataReadyMessage
   | TelemetryStateMessage
   | RemoteStatusMessage
+  | EnterpriseLicenseStatusMessage

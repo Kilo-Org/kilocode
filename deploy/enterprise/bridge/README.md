@@ -6,8 +6,8 @@
 
 | 组件 | Phase 1 | Phase 2+ |
 |---|---|---|
-| API 抽象 | 透传 `POST /v1/chat/completions` → Kilo Engine | 统一内部 `/internal/v1/*` |
-| 版本适配 | 占位 | Kilo 版本字段映射 |
+| API 抽象 | `adapter/proxy.go` 反向代理 | 统一 `/internal/v1/*` |
+| 版本适配 | `adapter/version.go` 框架（`X-Enterprise-Api-Version`） | v0.x 路径/字段映射 |
 | 配置翻译 | 占位 | 企业 YAML ↔ `kilo.jsonc` |
 | 国产模型 | 由 Engine `provider` 配置 | 独立 model-adapter |
 
@@ -23,7 +23,11 @@ GET /internal/v1/models
 
 ## MVP 路径
 
-Phase 1 允许 **Extension → APISIX → Kilo Engine** 直连，不强制经过 bridge。桥接全量在 Phase 2 与 License/RBAC 同网关路由。
+Phase 1 路径：**Extension → APISIX → enterprise-bridge → Kilo Engine**（`up.ps1 -FullChain`）。
+
+POC：`docker compose --profile gateway up -d`（含 bridge）。`/health` 为桥接自检。
+
+API 契约草案：[`../openapi.yaml`](../openapi.yaml)。
 
 ## 上游合并
 

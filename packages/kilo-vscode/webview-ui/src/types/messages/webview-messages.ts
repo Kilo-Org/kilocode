@@ -902,6 +902,14 @@ export interface RequestRemoteStatusMessage {
   type: "requestRemoteStatus"
 }
 
+export interface RequestEnterpriseLicenseMessage {
+  type: "requestEnterpriseLicense"
+}
+
+export interface EnterpriseShowAboutMessage {
+  type: "enterpriseShowAbout"
+}
+
 export interface ConnectProviderMessage {
   type: "connectProvider"
   requestId: string
@@ -1225,6 +1233,8 @@ export type WebviewMessage =
   | ToggleRemoteMessage
   | SetRemoteEnabledMessage
   | RequestRemoteStatusMessage
+  | RequestEnterpriseLicenseMessage
+  | EnterpriseShowAboutMessage
   | ContinueInWorktreeRequest
   | CreateSectionRequest
   | RenameSectionRequest

@@ -1,0 +1,10 @@
+{
+  "kilo-code.new.enterprise.productName": "XX智能编程（测试）",
+  "kilo-code.new.enterprise.remoteServer.enabled": true,
+  "kilo-code.new.enterprise.remoteServer.url": "http://YOUR_CLOUD_PUBLIC_IP:9080/kilo",
+  "kilo-code.new.enterprise.remoteServer.password": "YOUR_TEST_KILO_SERVER_PASSWORD",
+  "kilo-code.new.enterprise.license.enabled": true,
+  "kilo-code.new.enterprise.license.serverUrl": "http://YOUR_CLOUD_PUBLIC_IP:9080",
+  "kilo-code.new.enterprise.license.key": "poc-demo-key",
+  "kilo-code.new.customApi.enabled": false
+}

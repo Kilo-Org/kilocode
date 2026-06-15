@@ -1,0 +1,17 @@
+{
+  "kilo-code.new.enterprise.productName": "YoYo Code Enterprise",
+  "kilo-code.new.enterprise.remoteServer.enabled": true,
+  "kilo-code.new.enterprise.remoteServer.url": "http://127.0.0.1:4096",
+  "kilo-code.new.enterprise.remoteServer.password": "local-phase1-dev",
+  "kilo-code.new.enterprise.license.enabled": true,
+  "kilo-code.new.enterprise.license.offlinePath": "D:/ai/kilocode-main/deploy/enterprise/samples/offline-license.signed.json",
+  "kilo-code.new.enterprise.license.offlinePublicKeyPath": "D:/ai/kilocode-main/deploy/enterprise/samples/license-dev-public.pem",
+  "kilo-code.new.enterprise.license.key": "enterprise-offline-demo",
+  "kilo-code.new.customApi.enabled": true,
+  "kilo-code.new.customApi.providerId": "ruiyumaas",
+  "kilo-code.new.customApi.baseUrl": "https://ruiyumaas.com/v1",
+  "kilo-code.new.customApi.apiKey": "在 VS Code 设置中填写你的 Ruiyu MaaS Key",
+  "kilo-code.new.customApi.defaultModel": "glm-5.1",
+  "kilo-code.new.customApi.smallModel": "glm-5",
+  "kilo-code.new.customApi.overwriteOnStartup": true
+}

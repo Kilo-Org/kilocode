@@ -11,17 +11,19 @@ services:
     environment:
       KILO_SERVER_PASSWORD: ${KILO_SERVER_PASSWORD:?set KILO_SERVER_PASSWORD in .env}
       KILO_CUSTOM_API_KEY: ${KILO_CUSTOM_API_KEY:-}
-      KILO_CUSTOM_API_BASE_URL: ${KILO_CUSTOM_API_BASE_URL:-http://vllm:8000/v1}
+      KILO_CUSTOM_API_BASE_URL: ${KILO_CUSTOM_API_BASE_URL:-}
     ports:
-      - "${KILO_ENGINE_PORT:-4096}:4096"
+      - "${KILO_ENGINE_BIND:-4096}:4096"
     volumes:
       - kilo-data:/root/.local/share/kilo
+      # Engine merges/writes config on startup — do not mount :ro
+      - ${KILO_ENGINE_CONFIG:-./config/deepseek.kilo.jsonc}:/root/.config/kilo/kilo.jsonc
     restart: unless-stopped
 
   qdrant:
     image: qdrant/qdrant:v1.13.4
     ports:
-      - "${QDRANT_PORT:-6333}:6333"
+      - "${QDRANT_BIND:-6333}:6333"
     volumes:
       - qdrant-data:/qdrant/storage
     restart: unless-stopped
@@ -37,7 +39,7 @@ services:
       - --port
       - "8000"
     ports:
-      - "${VLLM_PORT:-8000}:8000"
+      - "${VLLM_BIND:-8000}:8000"
     deploy:
       resources:
         reservations:
@@ -53,8 +55,24 @@ services:
     volumes:
       - ./apisix/config.yaml:/usr/local/apisix/conf/config.yaml:ro
       - ./apisix/apisix.yaml:/usr/local/apisix/conf/apisix.yaml:ro
+      - ./logs/apisix:/usr/local/apisix/logs
     ports:
-      - "${APISIX_HTTP_PORT:-9080}:9080"
+      - "${APISIX_HTTP_BIND:-9080}:9080"
+    depends_on:
+      - kilo-engine
+      - enterprise-bridge
+    restart: unless-stopped
+
+  enterprise-bridge:
+    profiles: ["gateway", "bridge"]
+    build:
+      context: ./bridge
+      dockerfile: Dockerfile
+    environment:
+      BRIDGE_LISTEN: ":8080"
+      KILO_UPSTREAM: http://kilo-engine:4096
+    ports:
+      - "${BRIDGE_BIND:-8080}:8080"
     depends_on:
       - kilo-engine
     restart: unless-stopped
@@ -67,7 +85,7 @@ services:
       - ./mock-license.mjs:/app/mock-license.mjs:ro
     command: ["bun", "/app/mock-license.mjs"]
     ports:
-      - "${LICENSE_MOCK_PORT:-19090}:19090"
+      - "${LICENSE_MOCK_BIND:-19090}:19090"
     restart: unless-stopped
 
 volumes:

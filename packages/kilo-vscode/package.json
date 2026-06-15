@@ -865,6 +865,11 @@
           "default": "",
           "description": "Override the product name shown in panel titles. Empty uses the extension displayName from package.json."
         },
+        "kilo-code.new.enterprise.gatewayUrl": {
+          "type": "string",
+          "default": "",
+          "description": "APISIX or API gateway base URL (e.g. http://gateway:9080). When set with remoteServer.url as a path (/kilo), requests go through the gateway."
+        },
         "kilo-code.new.enterprise.remoteServer.enabled": {
           "type": "boolean",
           "default": false,
@@ -882,7 +887,7 @@
         },
         "kilo-code.new.enterprise.license.enabled": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Verify enterprise license before connecting to the CLI backend."
         },
         "kilo-code.new.enterprise.license.serverUrl": {
@@ -898,7 +903,17 @@
         "kilo-code.new.enterprise.license.offlinePath": {
           "type": "string",
           "default": "",
-          "description": "Path to offline license JSON file (Phase 1 prototype: expiry validation only)."
+          "description": "Path to offline license JSON file (RSA-SHA256 signed when signature field is present)."
+        },
+        "kilo-code.new.enterprise.license.offlinePublicKey": {
+          "type": "string",
+          "default": "",
+          "description": "PEM-encoded RSA public key for offline license signature verification."
+        },
+        "kilo-code.new.enterprise.license.offlinePublicKeyPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to PEM file for offline license public key (alternative to inline PEM)."
         },
         "kilo-code.new.enterprise.license.cacheHours": {
           "type": "number",

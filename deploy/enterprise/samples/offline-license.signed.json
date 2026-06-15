@@ -1,0 +1,6 @@
+{
+  "key": "enterprise-offline-demo",
+  "expiresAt": "2027-12-31T23:59:59.000Z",
+  "signature": "nMrtYElg/mr9WqPHvVoTQWPv4G1Cb0C6BPxW6yi40QG+EHCGoxEIU1JL6Eo45Xl2Yu0HUm37JPD14yK08oS+Us3isfzQxoamBFIFa5WXL/IeUekSaPnwJfaR6ke+RK85L0nEMSevyUa3jF8SKd/RrxlrlaGDuMD5rQh0uQ4OqnOX5c4ButGL2OvuKSGmDJzwt1rh1IckPWu+q+kwoI23bz63GQKOSCVwq31/kxcrrHXTMyLjUB+GpYjs67UWt2A4WiJFpHSFj2qlZMOvSJwg4o6cd+ct4zXFMAgd8Po/fsJdwbBkH2TY51KcXjOTefW/dpEE3eR0QmYYjHIqSpUcNQ==",
+  "algorithm": "RSA-SHA256"
+}

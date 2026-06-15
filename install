@@ -355,6 +355,10 @@ download_and_install() {
     chmod 755 "${INSTALL_DIR}/kilo"
     # kilocode_change end
     rm -rf "$tmp_dir"
+
+    # kilocode_change start - copy default config if not exists
+    copy_default_config
+    # kilocode_change end
 }
 
 install_from_binary() {
@@ -363,7 +367,37 @@ install_from_binary() {
     cp "$binary_path" "${INSTALL_DIR}/kilo"
     chmod 755 "${INSTALL_DIR}/kilo"
     # kilocode_change end
+
+    # kilocode_change start - copy default config if not exists
+    copy_default_config
+    # kilocode_change end
 }
+
+# kilocode_change start - copy default config to global config directory
+copy_default_config() {
+    local config_dir=""
+    
+    if [ "$os" = "windows" ]; then
+        config_dir="$USERPROFILE/AppData/Roaming/kilo"
+    elif [ "$os" = "darwin" ]; then
+        config_dir="$HOME/Library/Application Support/kilo"
+    else
+        config_dir="$HOME/.config/kilo"
+    fi
+
+    # Create config directory if not exists
+    mkdir -p "$config_dir"
+
+    # Copy default config if it doesn't exist
+    if [ ! -f "$config_dir/opencode.json" ]; then
+        local script_dir="$(cd "$(dirname "$0")" && pwd)"
+        if [ -f "$script_dir/packages/opencode/default-opencode.json" ]; then
+            cp "$script_dir/packages/opencode/default-opencode.json" "$config_dir/opencode.json"
+            print_message info "${MUTED}Created default config at ${NC}$config_dir/opencode.json"
+        fi
+    fi
+}
+# kilocode_change end
 
 if [ -n "$binary_path" ]; then
     install_from_binary

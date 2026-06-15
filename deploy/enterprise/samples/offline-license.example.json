@@ -1,5 +1,7 @@
 {
   "key": "enterprise-offline-demo",
   "expiresAt": "2027-12-31T23:59:59.000Z",
-  "signature": "phase1-placeholder-rsa-sm2-in-phase2"
+  "signature": "REQUIRED — run: bun deploy/enterprise/scripts/gen-offline-license.mjs",
+  "algorithm": "RSA-SHA256",
+  "_note": "Use offline-license.signed.json + license-dev-public.pem for M2 RSA prototype demos."
 }

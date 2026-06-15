@@ -1,0 +1,69 @@
+openapi: 3.0.3
+info:
+  title: Enterprise Platform API (Phase 1 draft)
+  version: 0.1.0
+  description: Layer 3/4 契约草案。Phase 1 仅 License 与 Engine 健康检查落地。
+
+paths:
+  /api/v1/license/verify:
+    post:
+      summary: 校验 License（在线）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key]
+              properties:
+                key:
+                  type: string
+                machineId:
+                  type: string
+                client:
+                  type: string
+                  enum: [vscode, jetbrains, cli]
+      responses:
+        "200":
+          description: 校验结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  token:
+                    type: string
+                  expiresAt:
+                    type: string
+                    format: date-time
+                  readonly:
+                    type: boolean
+                  message:
+                    type: string
+        "403":
+          description: 无效 Key
+
+  /global/health:
+    get:
+      summary: Kilo Engine 健康检查（经网关时为 /kilo/global/health）
+      security:
+        - basicAuth: []
+      responses:
+        "200":
+          description: 服务正常
+
+  /internal/v1/chat:
+    post:
+      summary: 桥接层标准对话接口（Phase 2）
+      description: Phase 1 由 bridge POC 透传至 Engine，未实现业务转换。
+      responses:
+        "501":
+          description: Phase 1 未实现
+
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic

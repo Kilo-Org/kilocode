@@ -1,0 +1,12 @@
+{
+  "kilo-code.new.enterprise.productName": "YoYo Code Enterprise（测试云·隧道）",
+  "kilo-code.new.enterprise.remoteServer.enabled": true,
+  "kilo-code.new.enterprise.remoteServer.url": "http://127.0.0.1:9080/kilo",
+  "kilo-code.new.enterprise.remoteServer.password": "与云 .env 中 KILO_SERVER_PASSWORD 相同",
+  "kilo-code.new.enterprise.license.enabled": true,
+  "kilo-code.new.enterprise.license.serverUrl": "http://127.0.0.1:9080",
+  "kilo-code.new.enterprise.license.key": "poc-demo-key",
+  "kilo-code.new.enterprise.license.offlinePath": "",
+  "kilo-code.new.enterprise.license.offlinePublicKeyPath": "",
+  "kilo-code.new.customApi.enabled": false
+}

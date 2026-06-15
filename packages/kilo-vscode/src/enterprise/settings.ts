@@ -13,12 +13,15 @@ export type LicenseSettings = {
   serverUrl: string
   key: string
   offlinePath: string
+  offlinePublicKey: string
+  offlinePublicKeyPath: string
   cacheHours: number
   graceDays: number
 }
 
 export type EnterpriseSettings = {
   productName: string
+  gatewayUrl: string
   remote: RemoteServerSettings
   license: LicenseSettings
 }
@@ -31,6 +34,7 @@ export function enterpriseSettings(): EnterpriseSettings {
   const c = cfg()
   return {
     productName: c.get<string>("productName", ""),
+    gatewayUrl: c.get<string>("gatewayUrl", "").trim(),
     remote: {
       enabled: c.get<boolean>("remoteServer.enabled", false),
       url: c.get<string>("remoteServer.url", "").trim(),
@@ -41,6 +45,8 @@ export function enterpriseSettings(): EnterpriseSettings {
       serverUrl: c.get<string>("license.serverUrl", "").trim(),
       key: c.get<string>("license.key", "").trim(),
       offlinePath: c.get<string>("license.offlinePath", "").trim(),
+      offlinePublicKey: c.get<string>("license.offlinePublicKey", "").trim(),
+      offlinePublicKeyPath: c.get<string>("license.offlinePublicKeyPath", "").trim(),
       cacheHours: c.get<number>("license.cacheHours", 24),
       graceDays: c.get<number>("license.graceDays", 7),
     },

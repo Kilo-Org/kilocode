@@ -2,6 +2,8 @@
 
 面向 POC / 试点环境。生产环境请叠加 APISIX、TLS、备份与监控（Phase 2+）。
 
+面向客户的交付范围说明见 [PHASE1-客户交付说明.md](./PHASE1-客户交付说明.md)。
+
 ## 1. 架构（MVP）
 
 ```
@@ -30,6 +32,8 @@ docker build -t your-registry/kilo-engine:local .
 ```
 
 ## 4. Docker Compose 启动
+
+本地或云服务器均可用。 **云主机步骤见 [PHASE1-DEPLOY-CLOUD.md](./PHASE1-DEPLOY-CLOUD.md)。**
 
 ```bash
 cd deploy/enterprise
@@ -65,7 +69,16 @@ curl -u "kilo:$KILO_SERVER_PASSWORD" http://localhost:4096/global/health
 }
 ```
 
-经 APISIX 时，将 `remoteServer.url` 设为网关对外 Engine 路由（例如 `http://gateway:9080/kilo`）。
+经 APISIX 时，配置网关与路径分离：
+
+```json
+{
+  "kilo-code.new.enterprise.gatewayUrl": "http://your-gateway:9080",
+  "kilo-code.new.enterprise.remoteServer.url": "/kilo"
+}
+```
+
+或继续使用完整 URL：`http://your-gateway:9080/kilo`。
 
 ## 6. License Mock（开发/POC）
 
@@ -84,19 +97,17 @@ bun mock-license.mjs
 }
 ```
 
-## 7. 离线 License 文件（原型）
+## 7. 离线 License 文件（RSA 原型）
 
-路径由 `kilo-code.new.enterprise.license.offlinePath` 指定。JSON 格式：
+`license.offlinePath` + `license.offlinePublicKeyPath`（或 inline PEM）。
 
-```json
-{
-  "key": "offline-demo",
-  "expiresAt": "2027-12-31T23:59:59.000Z",
-  "signature": "phase1-placeholder"
-}
+生成样例：
+
+```bash
+bun deploy/enterprise/scripts/gen-offline-license.mjs
 ```
 
-Phase 1 仅校验 `expiresAt`；RSA/SM2 验签在 Phase 2 实现。
+含 `signature` 时须 RSA-SHA256 验签通过。详见 [PHASE1-MVP-DELIVERY.md](./PHASE1-MVP-DELIVERY.md) 阶段 2-6。
 
 ## 8. APISIX（可选）
 
@@ -135,7 +146,33 @@ docker compose --profile gateway up -d
 | 流式卡顿 | APISIX `proxy_buffering off`；GPU 利用率 |
 | 无模型 | `~/.config/kilo/kilo.jsonc` 是否由 `customApi` 写入 |
 
-## 12. 下一步（Phase 2）
+## 12. 无 Docker 轻量联调（推荐先做）
+
+```powershell
+# 终端 1 — 保持运行
+.\deploy\enterprise\scripts\local-dev.ps1
+
+# 终端 2
+cd packages/kilo-vscode
+bun run extension
+```
+
+工作区已可合并 `.vscode/settings.json` 中的 `kilo-code.new.enterprise.*` 项。  
+完整说明：[PHASE1-E2E-LOCAL.md](./PHASE1-E2E-LOCAL.md)
+
+## 13. 一键脚本（W6，需 Docker）
+
+| 脚本 | 作用 |
+|---|---|
+| `deploy/enterprise/scripts/build-engine.ps1` | 构建 CLI + Docker 镜像 |
+| `deploy/enterprise/scripts/up.ps1` | 启动 Compose 并跑 smoke |
+| `deploy/enterprise/scripts/e2e-smoke.ps1` | 健康检查 + License 校验 |
+| `deploy/enterprise/scripts/health-check.ps1` | 轻量健康检查 |
+
+完整联调清单：`PHASE1-E2E-CHECKLIST.md`  
+定制 VSIX：`PHASE1-VSIX.md`
+
+## 14. 下一步（Phase 2）
 
 - Go 桥接层全量代理
 - License 服务（订阅、只读降级）

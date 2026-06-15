@@ -11,19 +11,29 @@ routes:
     upstream:
       type: roundrobin
       nodes:
-        "kilo-engine:4096": 1
+        "enterprise-bridge:8080": 1
+      timeout:
+        connect: 10
+        send: 300
+        read: 300
     plugins:
       proxy-rewrite:
         regex_uri:
           - "^/kilo/(.*)"
           - "/$1"
+      response-rewrite:
+        headers:
+          set:
+            X-Accel-Buffering: "no"
       limit-count:
         count: 100
         time_window: 60
         rejected_code: 429
+        key_type: var
         key: remote_addr
-      http-logger:
-        uri: file:///usr/local/apisix/logs/enterprise-audit.log
+        policy: local
+      file-logger:
+        path: /usr/local/apisix/logs/enterprise-audit.log
     # SSE: disable buffering via plugin metadata where supported;
     # for nginx upstream, set via custom nginx snippet in production.
   - id: license-verify

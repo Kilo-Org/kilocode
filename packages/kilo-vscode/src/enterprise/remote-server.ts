@@ -1,5 +1,6 @@
-import type { RemoteServerSettings } from "./settings"
-import { remotePassword } from "./settings"
+import { engineBaseUrl } from "./gateway"
+import type { EnterpriseSettings, RemoteServerSettings } from "./settings"
+import { enterpriseSettings, remotePassword } from "./settings"
 
 export type RemoteEndpoint = {
   baseUrl: string
@@ -7,12 +8,15 @@ export type RemoteEndpoint = {
   password: string
 }
 
-export function remoteEndpoint(settings: RemoteServerSettings): RemoteEndpoint | null {
-  if (!settings.enabled) return null
-  const raw = settings.url.trim()
+export function remoteEndpoint(settings?: EnterpriseSettings): RemoteEndpoint | null {
+  const ent = settings ?? enterpriseSettings()
+  const remote = ent.remote
+  if (!remote.enabled) return null
+
+  const raw = engineBaseUrl(ent)
   if (!raw) return null
 
-  const password = remotePassword(settings)
+  const password = remotePassword(remote)
   if (!password) return null
 
   const baseUrl = raw.replace(/\/+$/, "")

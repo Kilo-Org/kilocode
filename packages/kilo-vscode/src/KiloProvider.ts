@@ -77,6 +77,7 @@ import { routeEarlyMessage } from "./kilo-provider/early-message"
 import * as ModelState from "./kilo-provider/model-state"
 import { handleForkSession } from "./kilo-provider/fork-session"
 import { openConfig } from "./kilo-provider/open-config"
+import { handleEnterpriseMessage, sendEnterpriseStatus } from "./enterprise/handler"
 import * as McpOAuth from "./kilo-provider/mcp-oauth"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
@@ -375,6 +376,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Always push connection state first so the UI can render appropriately.
     this.postMessage({ type: "connectionState", state: this.connectionState })
     pushTelemetryState((m) => this.postMessage(m))
+    void sendEnterpriseStatus(this.extensionContext, (msg) => this.postMessage(msg))
 
     // Re-send ready so the webview can recover after refresh.
     if (serverInfo) {
@@ -939,6 +941,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               if (s) this.sendRemoteStatus()
             })
             .catch((err) => console.error("[Kilo New] remote message failed:", err))
+          break
+        case "requestEnterpriseLicense":
+          void handleEnterpriseMessage(message.type, this.extensionContext, (msg) => this.postMessage(msg))
+          break
+        case "enterpriseShowAbout":
+          void vscode.commands.executeCommand("kilo-code.new.enterprise.showAbout")
           break
         case "deleteSession":
           await this.handleDeleteSession(message.sessionID)

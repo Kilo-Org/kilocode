@@ -54,7 +54,7 @@ export class ServerManager {
     }
 
     console.log("[Kilo New] ServerManager: 🚀 Starting server...")
-    const remote = remoteEndpoint(enterpriseSettings().remote)
+    const remote = remoteEndpoint()
     this.startupPromise = remote ? this.connectRemote(remote) : this.startServer()
     try {
       this.instance = await this.startupPromise
