@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.session.SessionUiTestBase
+import ai.kilocode.client.session.views.tool.ShellToolView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.PartDto
@@ -73,18 +74,24 @@ class SessionSelectionCopyTest : SessionUiTestBase() {
                 output = text,
             ),
         ))
-        for (view in toolViews(ui)) view.expand()
+        for (view in toolViews(ui)) expand(view)
         layout()
         return textComponent(text)
     }
 
-    private fun toolViews(root: Container): List<ToolView> {
-        val out = mutableListOf<ToolView>()
-        if (root is ToolView) out.add(root)
+    private fun toolViews(root: Container): List<Container> {
+        val out = mutableListOf<Container>()
+        if (root is ShellToolView || root is ToolView) out.add(root)
         for (child in root.components) {
             if (child is Container) out.addAll(toolViews(child))
         }
         return out
+    }
+
+    private fun expand(view: Container) = when (view) {
+        is ShellToolView -> view.expand()
+        is ToolView -> view.expand()
+        else -> false
     }
 
     private fun copyProvider(): CopyProvider? {

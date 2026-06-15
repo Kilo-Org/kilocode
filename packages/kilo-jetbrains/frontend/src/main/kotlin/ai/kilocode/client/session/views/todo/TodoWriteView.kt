@@ -101,7 +101,7 @@ private fun todoParts(): TodoParts {
     val glyph = JBLabel(SessionViewIcons.checklist)
     val title = JBLabel(KiloBundle.message("session.part.todo.title"))
     val sub = JBLabel().apply { foreground = UiStyle.Colors.weak() }
-    val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
+    val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         isOpaque = false
         add(title, BorderLayout.WEST)
         add(sub, BorderLayout.CENTER)

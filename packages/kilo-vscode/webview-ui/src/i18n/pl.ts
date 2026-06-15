@@ -1243,6 +1243,10 @@ export const dict = {
   "settings.notifications.errors.title": "Błędy",
   "settings.notifications.errors.description": "Pokaż powiadomienie przy błędach",
   "settings.notifications.sounds": "Dźwięki",
+  "settings.notifications.enable.title": "Włącz powiadomienia dźwiękowe",
+  "settings.notifications.enable.description":
+    "Odtwarzaj dźwięki, gdy sesje się zakończą, wystąpi błąd lub będzie potrzebna Twoja reakcja",
+  "settings.notifications.testSound": "Testuj",
   "settings.notifications.agentSound.title": "Dźwięk zakończenia agenta",
   "settings.notifications.agentSound.description": "Dźwięk odtwarzany po zakończeniu agenta",
   "settings.notifications.permSound.title": "Dźwięk żądania uprawnień",
@@ -1250,6 +1254,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Dźwięk błędu",
   "settings.notifications.errorSound.description": "Dźwięk odtwarzany przy błędach",
   "settings.notifications.sound.default": "Domyślny",
+  "settings.notifications.sound.system": "System",
+  "settings.notifications.sound.description":
+    "Opcja domyślna używa różnych dźwięków dla zakończenia, oczekiwania na reakcję i błędów. Pozostałe opcje używają jednego dźwięku dla wszystkich zdarzeń.",
   "settings.notifications.sound.none": "Brak",
   "settings.experimental.share.title": "Tryb udostępniania",
   "settings.experimental.share.description": "Zachowanie udostępniania sesji",

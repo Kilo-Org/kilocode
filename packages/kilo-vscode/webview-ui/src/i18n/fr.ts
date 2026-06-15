@@ -1307,6 +1307,10 @@ export const dict = {
   "settings.notifications.errors.title": "Erreurs",
   "settings.notifications.errors.description": "Afficher une notification en cas d'erreur",
   "settings.notifications.sounds": "Sons",
+  "settings.notifications.enable.title": "Activer les notifications sonores",
+  "settings.notifications.enable.description":
+    "Lire des sons lorsque les sessions se terminent, rencontrent une erreur ou nécessitent votre intervention",
+  "settings.notifications.testSound": "Tester",
   "settings.notifications.agentSound.title": "Son d'achèvement de l'agent",
   "settings.notifications.agentSound.description": "Son à jouer lorsque l'agent termine",
   "settings.notifications.permSound.title": "Son de demande d'autorisation",
@@ -1314,6 +1318,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Son d'erreur",
   "settings.notifications.errorSound.description": "Son à jouer en cas d'erreur",
   "settings.notifications.sound.default": "Par défaut",
+  "settings.notifications.sound.system": "Système",
+  "settings.notifications.sound.description":
+    "L’option par défaut utilise des sons différents pour la fin des sessions, les demandes d’intervention et les erreurs. Les autres options utilisent un même son pour tous les événements.",
   "settings.notifications.sound.none": "Aucun",
   "settings.experimental.share.title": "Mode de partage",
   "settings.experimental.share.description": "Comportement du partage de session",

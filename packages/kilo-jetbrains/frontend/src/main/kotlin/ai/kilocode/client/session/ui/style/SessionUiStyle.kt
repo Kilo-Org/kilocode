@@ -5,6 +5,7 @@ import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
+import java.awt.Insets
 import javax.swing.border.Border
 
 /** Static style tokens owned by the chat session UI. */
@@ -16,7 +17,7 @@ object SessionUiStyle {
     /** Geometry for the transcript list and its scroll behavior. */
     object SessionLayout {
         const val GAP = 3
-        const val TRANSCRIPT_PADDING = 12
+        val InnerInsets = Insets(UiStyle.Gap.md(), UiStyle.Gap.md(), UiStyle.Gap.sm(), UiStyle.Gap.sm())
         const val TRANSCRIPT_SCROLLBAR_PADDING = 10
         const val USER_PROMPT_INDENT = 100
         const val SCROLL_INCREMENT = 48
@@ -77,6 +78,31 @@ object SessionUiStyle {
             const val SHELL_HORIZONTAL_PADDING = 8
         }
 
+        /** Attachment preview card geometry. */
+        object Attachment {
+            const val CARD_WIDTH = 80
+            const val CARD_HEIGHT = 59
+            const val CLOSE_SIZE = 18
+            const val CORNER_ARC = 8
+        }
+
+        /** Full-session file drop overlay geometry and colors. */
+        object DropOverlay {
+            const val CARD_VERTICAL_PADDING = 16
+            const val CARD_HORIZONTAL_PADDING = 20
+            const val CARD_ARC = 12
+            const val LABEL_GAP = 2
+            const val ICON_GAP = 10
+            private const val SCRIM_ALPHA = 210
+
+            fun scrim(): Color = JBColor.lazy {
+                val bg = UiStyle.Colors.bg()
+                Color(bg.red, bg.green, bg.blue, SCRIM_ALPHA)
+            }
+
+            fun card(): Color = UiStyle.Colors.contentBackground()
+        }
+
         /** Reasoning block preview sizing. */
         object Reasoning {
             const val BODY_LINES = 5
@@ -96,16 +122,16 @@ object SessionUiStyle {
 
         /** Markdown code block geometry inside assistant messages. */
         object Code {
-            const val BLOCK_GAP = 6
+            const val BLOCK_GAP = SessionLayout.GAP
             const val MIN_ROWS = 1
             const val BORDER_WIDTH = 1
             const val VIEWPORT_TOP_PADDING = 6
             const val VIEWPORT_HORIZONTAL_PADDING = 8
-            const val VIEWPORT_BOTTOM_PADDING = 0
+            const val VIEWPORT_BOTTOM_PADDING = 6
             const val SCROLLBAR_HEIGHT = 12
             const val WIDTH_PADDING = 16
 
-            fun topPadding(): Int = VIEWPORT_TOP_PADDING + SCROLLBAR_HEIGHT
+            fun topPadding(): Int = VIEWPORT_TOP_PADDING
         }
 
         /** Permission session-view command preview limits. */
