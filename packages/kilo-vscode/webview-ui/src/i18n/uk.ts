@@ -1269,6 +1269,10 @@ export const dict = {
   "settings.notifications.errors.title": "Помилки",
   "settings.notifications.errors.description": "Показувати сповіщення при виникненні помилок",
   "settings.notifications.sounds": "Звуки",
+  "settings.notifications.enable.title": "Увімкнути звукові сповіщення",
+  "settings.notifications.enable.description":
+    "Відтворювати звуки, коли сеанси завершуються, виникає помилка або потрібна ваша відповідь",
+  "settings.notifications.testSound": "Тест",
   "settings.notifications.agentSound.title": "Звук завершення агента",
   "settings.notifications.agentSound.description": "Звук, що відтворюється після завершення агента",
   "settings.notifications.permSound.title": "Звук запиту дозволу",
@@ -1276,6 +1280,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Звук помилки",
   "settings.notifications.errorSound.description": "Звук, що відтворюється при виникненні помилок",
   "settings.notifications.sound.default": "За замовчуванням",
+  "settings.notifications.sound.system": "Системний",
+  "settings.notifications.sound.description":
+    "За замовчуванням для завершення, запиту на введення та помилок використовуються різні звуки. В інших варіантах для всіх подій використовується один і той самий звук.",
   "settings.notifications.sound.none": "Немає",
 
   "settings.experimental.share.title": "Режим публікації",
@@ -1484,6 +1491,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Модель субагента",
   "settings.providers.subagentModel.description":
     "Модель за замовчуванням та рівень міркування для субагентів task-tool. Залиште порожнім, щоб успадкувати модель агента, що викликає.",
+  "settings.models.hidePromptTraining.title": "Приховувати моделі, що навчаються на запитах",
+  "settings.models.hidePromptTraining.description":
+    "Приховувати моделі Kilo Gateway, постачальники яких можуть використовувати ваші запити для навчання.",
   "settings.providers.modeModels": "Модель для кожного режиму",
   "settings.providers.modeModels.description":
     "Перевизначити стандартну модель для певних режимів. Якщо не встановлено, використовується загальна стандартна модель.",

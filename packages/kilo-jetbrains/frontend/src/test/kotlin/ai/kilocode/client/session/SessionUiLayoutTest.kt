@@ -10,6 +10,7 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.ConnectionPanel
 import ai.kilocode.client.session.ui.empty.EmptySessionPanel
 import ai.kilocode.client.session.ui.LoadingPanel
+import ai.kilocode.client.session.ui.SessionDropOverlay
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.SessionMessageListPanel
@@ -54,6 +55,59 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(stack, connection.parent)
         assertTrue(root.overlay.components.any { it is SessionAccountOverlay })
         assertEquals(listOf(connection, prompt), stack.components.toList())
+    }
+
+    fun `test drop overlay is attached under root overlay layer`() {
+        val root = find<SessionRootPanel>(ui)
+        val drop = find<SessionDropOverlay>(ui)
+
+        assertSame(root.overlay, drop.parent)
+        assertTrue(drop.isVisible)
+        assertFalse(drop.contains(1, 1))
+        assertFalse(root.blocker.components.contains(drop))
+    }
+
+    fun `test drop overlay is visual only and not native file drop target`() {
+        val drop = find<SessionDropOverlay>(ui)
+
+        assertNull(drop.dropTarget)
+    }
+
+    fun `test prompt file drag leave does not immediately hide drop overlay`() {
+        val prompt = find<PromptPanel>(ui)
+        val drop = find<SessionDropOverlay>(ui)
+        val card = dropCard(drop)
+
+        layout()
+        prompt.onFileDrag(true)
+        assertFalse(drop.contains(1, 1))
+        assertTrue(card.isVisible)
+
+        prompt.onFileDrag(false)
+        assertFalse(drop.contains(1, 1))
+        assertTrue(card.isVisible)
+
+        prompt.onFileDrag(true)
+        drop.setActive(false)
+    }
+
+    fun `test drop overlay covers full session after layout`() {
+        val root = find<SessionRootPanel>(ui)
+        val drop = find<SessionDropOverlay>(ui)
+
+        layout()
+
+        assertEquals(java.awt.Rectangle(0, 0, root.overlay.width, root.overlay.height), drop.bounds)
+    }
+
+    fun `test drop overlay is above account and scroll overlays`() {
+        val root = find<SessionRootPanel>(ui)
+        val drop = find<SessionDropOverlay>(ui)
+        val account = find<SessionAccountOverlay>(ui)
+        val jump = jumpButton()
+
+        assertTrue(root.overlay.getComponentZOrder(drop) < root.overlay.getComponentZOrder(account))
+        assertTrue(root.overlay.getComponentZOrder(drop) < root.overlay.getComponentZOrder(jump))
     }
 
     fun `test active views are children of message list panel`() {
@@ -465,4 +519,11 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertEquals(top, overlay.y)
         assertEquals(root.overlay.width - overlay.width - right, overlay.x)
     }
+
+    private fun dropCard(drop: SessionDropOverlay) = drop.components
+        .single()
+        .let { it as javax.swing.JComponent }
+        .components
+        .single()
+        .let { it as javax.swing.JComponent }
 }

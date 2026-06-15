@@ -14,7 +14,6 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Glob } from "@opencode-ai/core/util/glob"
 import * as Log from "@opencode-ai/core/util/log"
 import { Discovery } from "./discovery"
-import { rm } from "fs/promises" // kilocode_change
 import { BUILTIN_SKILLS } from "../kilocode/skills/builtin" // kilocode_change
 import CUSTOMIZE_OPENCODE_SKILL_BODY from "./prompt/customize-opencode.md" with { type: "text" }
 import { isRecord } from "@/util/record"
@@ -348,16 +347,5 @@ export function fmt(list: Info[], opts: { verbose: boolean }) {
       .map((skill) => `- **${skill.name}**: ${skill.description}`),
   ].join("\n")
 }
-
-// kilocode_change start - skill removal
-export async function remove(location: string) {
-  if (location === BUILTIN_LOCATION) {
-    throw new Error("cannot remove built-in skill")
-  }
-  const resolved = path.resolve(location)
-  const dir = path.dirname(resolved)
-  await rm(dir, { recursive: true, force: true })
-}
-// kilocode_change end
 
 export * as Skill from "."

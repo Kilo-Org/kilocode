@@ -829,6 +829,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "하위 에이전트 모델",
   "settings.providers.subagentModel.description":
     "task-tool 하위 에이전트의 기본 모델 및 추론 수준입니다. 호출하는 에이전트의 모델을 상속하려면 비워 두세요.",
+  "settings.models.hidePromptTraining.title": "프롬프트를 학습에 사용하는 모델 숨기기",
+  "settings.models.hidePromptTraining.description":
+    "제공업체가 사용자의 프롬프트를 학습에 사용할 수 있는 Kilo Gateway 모델을 숨깁니다.",
   "settings.providers.modeModels": "모드별 모델",
   "settings.providers.custom.note": "Base URL로 OpenAI 호환 공급자를 추가합니다.",
   "settings.providers.modeModels.description":
@@ -1263,6 +1266,10 @@ export const dict = {
   "settings.notifications.errors.title": "오류",
   "settings.notifications.errors.description": "오류 발생 시 알림 표시",
   "settings.notifications.sounds": "소리",
+  "settings.notifications.enable.title": "소리 알림 활성화",
+  "settings.notifications.enable.description":
+    "세션이 완료되거나 오류가 발생하거나 사용자 입력이 필요할 때 소리를 재생합니다",
+  "settings.notifications.testSound": "테스트",
   "settings.notifications.agentSound.title": "에이전트 완료 소리",
   "settings.notifications.agentSound.description": "에이전트 완료 시 재생할 소리",
   "settings.notifications.permSound.title": "권한 요청 소리",
@@ -1270,6 +1277,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "오류 소리",
   "settings.notifications.errorSound.description": "오류 발생 시 재생할 소리",
   "settings.notifications.sound.default": "기본값",
+  "settings.notifications.sound.system": "시스템",
+  "settings.notifications.sound.description":
+    "기본값은 완료, 입력, 오류에 서로 다른 소리를 사용합니다. 다른 옵션에서는 모든 이벤트에 동일한 소리를 사용합니다.",
   "settings.notifications.sound.none": "없음",
   "settings.experimental.share.title": "공유 모드",
   "settings.experimental.share.description": "세션 공유 동작 방식",

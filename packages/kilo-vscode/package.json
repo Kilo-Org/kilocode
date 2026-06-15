@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.3.45",
+  "version": "7.3.46",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -943,47 +943,64 @@
           "default": false,
           "description": "Run browser automation in headless mode (no visible window). When disabled, you can watch the agent interact with the browser."
         },
-        "kilo-code.new.notifications.agent": {
+        "kilo-code.new.attention.enabled": {
           "type": "boolean",
-          "default": true,
-          "description": "Show notification when agent completes a task"
+          "default": false,
+          "description": "Play sounds when sessions complete, error, or need input"
         },
-        "kilo-code.new.notifications.permissions": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show notification on permission requests"
-        },
-        "kilo-code.new.notifications.errors": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show notification on errors"
-        },
-        "kilo-code.new.sounds.agent": {
+        "kilo-code.new.attention.sound": {
           "type": "string",
           "default": "default",
           "enum": [
             "default",
-            "none"
+            "system",
+            "alert-01",
+            "alert-02",
+            "alert-03",
+            "alert-04",
+            "alert-05",
+            "alert-06",
+            "alert-07",
+            "alert-08",
+            "alert-09",
+            "alert-10",
+            "bip-bop-01",
+            "bip-bop-02",
+            "bip-bop-03",
+            "bip-bop-04",
+            "bip-bop-05",
+            "bip-bop-06",
+            "bip-bop-07",
+            "bip-bop-08",
+            "bip-bop-09",
+            "bip-bop-10",
+            "staplebops-01",
+            "staplebops-02",
+            "staplebops-03",
+            "staplebops-04",
+            "staplebops-05",
+            "staplebops-06",
+            "staplebops-07",
+            "nope-01",
+            "nope-02",
+            "nope-03",
+            "nope-04",
+            "nope-05",
+            "nope-06",
+            "nope-07",
+            "nope-08",
+            "nope-09",
+            "nope-10",
+            "nope-11",
+            "nope-12",
+            "yup-01",
+            "yup-02",
+            "yup-03",
+            "yup-04",
+            "yup-05",
+            "yup-06"
           ],
-          "description": "Sound to play when agent completes"
-        },
-        "kilo-code.new.sounds.permissions": {
-          "type": "string",
-          "default": "default",
-          "enum": [
-            "default",
-            "none"
-          ],
-          "description": "Sound to play on permission requests"
-        },
-        "kilo-code.new.sounds.errors": {
-          "type": "string",
-          "default": "default",
-          "enum": [
-            "default",
-            "none"
-          ],
-          "description": "Sound to play on errors"
+          "description": "Use different sounds for completion, input, and errors, or choose one sound for every event"
         },
         "kilo-code.new.showTaskTimeline": {
           "type": "boolean",
@@ -1083,6 +1100,7 @@
     "@kilocode/kilo-i18n": "workspace:*",
     "@kilocode/kilo-indexing": "workspace:*",
     "@kilocode/kilo-ui": "workspace:*",
+    "@kilocode/plugin": "workspace:*",
     "@kilocode/sdk": "workspace:*",
     "@opencode-ai/ui": "workspace:*",
     "@pierre/diffs": "catalog:",

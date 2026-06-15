@@ -77,6 +77,31 @@ object SessionUiStyle {
             const val SHELL_HORIZONTAL_PADDING = 8
         }
 
+        /** Attachment preview card geometry. */
+        object Attachment {
+            const val CARD_WIDTH = 80
+            const val CARD_HEIGHT = 59
+            const val CLOSE_SIZE = 18
+            const val CORNER_ARC = 8
+        }
+
+        /** Full-session file drop overlay geometry and colors. */
+        object DropOverlay {
+            const val CARD_VERTICAL_PADDING = 16
+            const val CARD_HORIZONTAL_PADDING = 20
+            const val CARD_ARC = 12
+            const val LABEL_GAP = 2
+            const val ICON_GAP = 10
+            private const val SCRIM_ALPHA = 210
+
+            fun scrim(): Color = JBColor.lazy {
+                val bg = UiStyle.Colors.bg()
+                Color(bg.red, bg.green, bg.blue, SCRIM_ALPHA)
+            }
+
+            fun card(): Color = UiStyle.Colors.contentBackground()
+        }
+
         /** Reasoning block preview sizing. */
         object Reasoning {
             const val BODY_LINES = 5

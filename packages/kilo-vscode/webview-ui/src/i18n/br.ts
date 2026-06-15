@@ -836,6 +836,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Modelo de Subagente",
   "settings.providers.subagentModel.description":
     "Modelo padrão e esforço de raciocínio para subagentes do task-tool. Deixe em branco para herdar o modelo do agente chamador.",
+  "settings.models.hidePromptTraining.title": "Ocultar modelos que treinam com prompts",
+  "settings.models.hidePromptTraining.description":
+    "Oculte os modelos do Kilo Gateway cujos provedores podem usar seus prompts para treinamento.",
   "settings.providers.modeModels": "Modelo por Modo",
   "settings.providers.custom.note": "Adicione um provedor compatível com OpenAI por URL base.",
   "settings.providers.modeModels.description":
@@ -1281,6 +1284,10 @@ export const dict = {
   "settings.notifications.errors.title": "Erros",
   "settings.notifications.errors.description": "Mostrar notificação em erros",
   "settings.notifications.sounds": "Sons",
+  "settings.notifications.enable.title": "Ativar notificações sonoras",
+  "settings.notifications.enable.description":
+    "Reproduzir sons quando as sessões forem concluídas, ocorrer um erro ou sua interação for necessária",
+  "settings.notifications.testSound": "Testar",
   "settings.notifications.agentSound.title": "Som de conclusão do agente",
   "settings.notifications.agentSound.description": "Som ao concluir o agente",
   "settings.notifications.permSound.title": "Som de solicitação de permissão",
@@ -1288,6 +1295,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Som de erro",
   "settings.notifications.errorSound.description": "Som em erros",
   "settings.notifications.sound.default": "Padrão",
+  "settings.notifications.sound.system": "Sistema",
+  "settings.notifications.sound.description":
+    "A opção padrão usa sons diferentes para conclusão, interação e erros. As outras opções usam um único som para todos os eventos.",
   "settings.notifications.sound.none": "Nenhum",
   "settings.experimental.share.title": "Modo de compartilhamento",
   "settings.experimental.share.description": "Comportamento do compartilhamento de sessão",

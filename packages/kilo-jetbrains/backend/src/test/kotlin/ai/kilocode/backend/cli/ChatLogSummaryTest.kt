@@ -155,6 +155,26 @@ class ChatLogSummaryTest {
     }
 
     @Test
+    fun `prompt dto summary redacts file attachment urls`() {
+        System.setProperty("kilo.dev.log.chat.content", "preview")
+
+        val out = ChatLogSummary.prompt(
+            PromptDto(
+                parts = listOf(
+                    PromptPartDto(type = "text", text = "inspect"),
+                    PromptPartDto(type = "file", mime = "image/png", url = "file:///secret/path.png", filename = "path.png"),
+                )
+            )
+        )
+
+        assertTrue(out.contains("attachments=1"), out)
+        assertTrue(out.contains("media=1"), out)
+        assertTrue(out.contains("attachmentTypes=image/png"), out)
+        assertFalse(out.contains("secret"), out)
+        assertFalse(out.contains("file:///"), out)
+    }
+
+    @Test
     fun `message updated summary includes role and model`() {
         val out = ChatLogSummary.event(
             ChatEventDto.MessageUpdated(

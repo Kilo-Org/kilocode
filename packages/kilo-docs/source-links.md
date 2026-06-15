@@ -122,6 +122,8 @@
   <!-- packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx -->
 - <https://kilo.ai/gateway>
   <!-- packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx -->
+- <https://kilo.ai/install>
+  <!-- packages/opencode/src/kilocode/installation/index.ts -->
 - <https://kilo.ai/kiloclaw>
   <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/SetupView.tsx -->
   <!-- packages/opencode/src/kilocode/components/dialog-claw-setup.tsx -->
@@ -143,8 +145,6 @@
   <!-- packages/opencode/src/cli/cmd/providers.ts -->
 - <https://opencode.ai/go>
   <!-- packages/opencode/src/cli/cmd/tui/component/dialog-retry-action.tsx -->
-- <https://opencode.ai/install>
-  <!-- packages/opencode/src/installation/index.ts -->
 - <https://opencode.ai/tui.json>
   <!-- packages/opencode/src/cli/cmd/tui/config/tui-migrate.ts -->
 - <https://opencode.ai/zen>

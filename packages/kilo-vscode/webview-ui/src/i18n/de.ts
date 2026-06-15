@@ -883,6 +883,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Subagenten-Modell",
   "settings.providers.subagentModel.description":
     "Standardmodell und Aufwand für Schlussfolgerungen für task-tool-Subagenten. Leer lassen, um das Modell des aufrufenden Agenten zu übernehmen.",
+  "settings.models.hidePromptTraining.title": "Modelle mit Prompt-Training ausblenden",
+  "settings.models.hidePromptTraining.description":
+    "Blendet Kilo-Gateway-Modelle aus, deren Anbieter Ihre Prompts möglicherweise zum Training verwenden.",
   "settings.providers.modeModels": "Modell pro Modus",
   "settings.providers.custom.note": "Fügen Sie einen OpenAI-kompatiblen Anbieter per Basis-URL hinzu.",
   "settings.providers.modeModels.description":
@@ -1297,6 +1300,10 @@ export const dict = {
   "settings.notifications.errors.title": "Fehler",
   "settings.notifications.errors.description": "Benachrichtigung bei Fehlern anzeigen",
   "settings.notifications.sounds": "Töne",
+  "settings.notifications.enable.title": "Tonbenachrichtigungen aktivieren",
+  "settings.notifications.enable.description":
+    "Töne wiedergeben, wenn Sitzungen abgeschlossen werden, ein Fehler auftritt oder Ihre Eingabe erforderlich ist",
+  "settings.notifications.testSound": "Testen",
   "settings.notifications.agentSound.title": "Agent-Abschlusston",
   "settings.notifications.agentSound.description": "Ton bei Agent-Abschluss abspielen",
   "settings.notifications.permSound.title": "Berechtigungsanfrageton",
@@ -1304,6 +1311,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Fehlerton",
   "settings.notifications.errorSound.description": "Ton bei Fehlern abspielen",
   "settings.notifications.sound.default": "Standard",
+  "settings.notifications.sound.system": "System",
+  "settings.notifications.sound.description":
+    "Die Standardeinstellung verwendet unterschiedliche Töne für Abschluss, Eingabe und Fehler. Bei anderen Optionen wird für alle Ereignisse derselbe Ton verwendet.",
   "settings.notifications.sound.none": "Kein",
   "settings.experimental.share.title": "Freigabemodus",
   "settings.experimental.share.description": "Verhalten der Sitzungsfreigabe",

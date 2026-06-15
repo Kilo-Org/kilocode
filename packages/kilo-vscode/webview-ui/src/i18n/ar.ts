@@ -824,6 +824,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "نموذج الوكيل الفرعي",
   "settings.providers.subagentModel.description":
     "النموذج الافتراضي وجهد التفكير للوكلاء الفرعيين لـ task-tool. اتركه فارغًا ليرث نموذج الوكيل المستدعي.",
+  "settings.models.hidePromptTraining.title": "إخفاء النماذج التي تدرّب على المطالبات",
+  "settings.models.hidePromptTraining.description":
+    "إخفاء نماذج Kilo Gateway التي قد يستخدم مزودوها مطالباتك لأغراض التدريب.",
   "settings.providers.modeModels": "نموذج لكل وضع",
   "settings.providers.custom.note": "أضف موفرًا متوافقًا مع OpenAI عبر عنوان URL الأساسي.",
   "settings.providers.modeModels.description":
@@ -1252,6 +1255,9 @@ export const dict = {
   "settings.notifications.errors.title": "أخطاء",
   "settings.notifications.errors.description": "إظهار إشعار عند الأخطاء",
   "settings.notifications.sounds": "أصوات",
+  "settings.notifications.enable.title": "تمكين الإشعارات الصوتية",
+  "settings.notifications.enable.description": "تشغيل أصوات عند اكتمال الجلسات أو حدوث خطأ أو الحاجة إلى ردّك",
+  "settings.notifications.testSound": "اختبار",
   "settings.notifications.agentSound.title": "صوت إكمال الوكيل",
   "settings.notifications.agentSound.description": "الصوت عند إكمال الوكيل",
   "settings.notifications.permSound.title": "صوت طلب الأذونات",
@@ -1259,6 +1265,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "صوت الخطأ",
   "settings.notifications.errorSound.description": "الصوت عند الأخطاء",
   "settings.notifications.sound.default": "افتراضي",
+  "settings.notifications.sound.system": "النظام",
+  "settings.notifications.sound.description":
+    "يستخدم الخيار الافتراضي أصواتًا مختلفة عند الاكتمال أو الحاجة إلى ردّك أو حدوث خطأ. تستخدم الخيارات الأخرى صوتًا واحدًا لجميع الأحداث.",
   "settings.notifications.sound.none": "بدون",
   "settings.experimental.share.title": "وضع المشاركة",
   "settings.experimental.share.description": "سلوك مشاركة الجلسة",

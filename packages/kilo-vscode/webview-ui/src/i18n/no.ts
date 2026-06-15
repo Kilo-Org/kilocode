@@ -838,6 +838,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Underagentmodell",
   "settings.providers.subagentModel.description":
     "Standardmodell og resonneringsinnsats for task-tool-underagenter. La stå tom for å arve den kallende agentens modell.",
+  "settings.models.hidePromptTraining.title": "Skjul modeller som trener på ledetekster",
+  "settings.models.hidePromptTraining.description":
+    "Skjul Kilo Gateway-modeller der leverandørene kan bruke ledetekstene dine til trening.",
   "settings.providers.modeModels": "Modell per modus",
   "settings.providers.custom.note": "Legg til en OpenAI-kompatibel leverandør via basis-URL.",
   "settings.providers.modeModels.description":
@@ -1240,6 +1243,10 @@ export const dict = {
   "settings.notifications.errors.title": "Feil",
   "settings.notifications.errors.description": "Vis varsling ved feil",
   "settings.notifications.sounds": "Lyder",
+  "settings.notifications.enable.title": "Aktiver lydvarsler",
+  "settings.notifications.enable.description":
+    "Spill av lyder når økter fullføres, det oppstår en feil eller det trengs innspill fra deg",
+  "settings.notifications.testSound": "Test",
   "settings.notifications.agentSound.title": "Agentfullføringslyd",
   "settings.notifications.agentSound.description": "Lyd ved agentfullføring",
   "settings.notifications.permSound.title": "Tillatelsesforespørselslyd",
@@ -1247,6 +1254,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Feillyd",
   "settings.notifications.errorSound.description": "Lyd ved feil",
   "settings.notifications.sound.default": "Standard",
+  "settings.notifications.sound.system": "System",
+  "settings.notifications.sound.description":
+    "Standardvalget bruker forskjellige lyder for fullføring, innspill og feil. Andre valg bruker én lyd for alle hendelser.",
   "settings.notifications.sound.none": "Ingen",
   "settings.experimental.share.title": "Delingsmodus",
   "settings.experimental.share.description": "Oppførsel for sesjonsdeling",

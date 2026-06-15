@@ -66,6 +66,13 @@ class Reasoning(id: String) : Content(id) {
     var done: Boolean = true
 }
 
+/** User-provided file or image attachment. */
+class FileAttachment(id: String) : Content(id) {
+    var mime: String = "application/octet-stream"
+    var url: String = ""
+    var filename: String? = null
+}
+
 /** Tool invocation with lifecycle state. */
 class Tool(id: String, val name: String, var kind: ToolKind) : Content(id) {
     var state: ToolExecState = ToolExecState.PENDING

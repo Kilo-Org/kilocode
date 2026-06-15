@@ -867,6 +867,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "サブエージェントモデル",
   "settings.providers.subagentModel.description":
     "task-tool サブエージェントのデフォルトモデルと推論の労力。呼び出し元のエージェントのモデルを継承する場合は未設定のままにしてください。",
+  "settings.models.hidePromptTraining.title": "プロンプトを学習に使用するモデルを非表示",
+  "settings.models.hidePromptTraining.description":
+    "プロバイダーがプロンプトを学習に使用する可能性のある Kilo Gateway モデルを非表示にします。",
   "settings.providers.modeModels": "モードごとのモデル",
   "settings.providers.custom.note": "Base URL で OpenAI 互換プロバイダーを追加します。",
   "settings.providers.modeModels.description":
@@ -1269,6 +1272,10 @@ export const dict = {
   "settings.notifications.errors.title": "エラー",
   "settings.notifications.errors.description": "エラー発生時に通知を表示",
   "settings.notifications.sounds": "サウンド",
+  "settings.notifications.enable.title": "サウンド通知を有効にする",
+  "settings.notifications.enable.description":
+    "セッションの完了時、エラーの発生時、またはユーザー入力が必要なときにサウンドを再生します",
+  "settings.notifications.testSound": "テスト",
   "settings.notifications.agentSound.title": "エージェント完了サウンド",
   "settings.notifications.agentSound.description": "エージェント完了時に再生するサウンド",
   "settings.notifications.permSound.title": "権限リクエストサウンド",
@@ -1276,6 +1283,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "エラーサウンド",
   "settings.notifications.errorSound.description": "エラー発生時に再生するサウンド",
   "settings.notifications.sound.default": "デフォルト",
+  "settings.notifications.sound.system": "システム",
+  "settings.notifications.sound.description":
+    "デフォルトでは、完了、入力、エラーにそれぞれ異なるサウンドが使用されます。その他の選択肢では、すべてのイベントに同じサウンドが使用されます。",
   "settings.notifications.sound.none": "なし",
   "settings.experimental.share.title": "共有モード",
   "settings.experimental.share.description": "セッション共有の動作",

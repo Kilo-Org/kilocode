@@ -871,6 +871,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Underagentmodel",
   "settings.providers.subagentModel.description":
     "Standardmodel og ræsonnementsindsats for task-tool-underagenter. Lad den være tom for at nedarve den kaldende agents model.",
+  "settings.models.hidePromptTraining.title": "Skjul modeller, der træner på prompts",
+  "settings.models.hidePromptTraining.description":
+    "Skjul Kilo Gateway-modeller, hvis udbydere muligvis bruger dine prompts til træning.",
   "settings.providers.modeModels": "Model pr. tilstand",
   "settings.providers.custom.note": "Tilføj en OpenAI-kompatibel udbyder via basis-URL.",
   "settings.providers.modeModels.description":
@@ -1275,6 +1278,10 @@ export const dict = {
   "settings.notifications.errors.title": "Fejl",
   "settings.notifications.errors.description": "Vis notifikation ved fejl",
   "settings.notifications.sounds": "Lyde",
+  "settings.notifications.enable.title": "Aktivér lydnotifikationer",
+  "settings.notifications.enable.description":
+    "Afspil lyde, når sessioner fuldføres, der opstår en fejl, eller der er brug for input fra dig",
+  "settings.notifications.testSound": "Test",
   "settings.notifications.agentSound.title": "Agentafslutningslyd",
   "settings.notifications.agentSound.description": "Lyd ved agentafslutning",
   "settings.notifications.permSound.title": "Tilladelsesanmodningslyd",
@@ -1282,6 +1289,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Fejllyd",
   "settings.notifications.errorSound.description": "Lyd ved fejl",
   "settings.notifications.sound.default": "Standard",
+  "settings.notifications.sound.system": "System",
+  "settings.notifications.sound.description":
+    "Standardindstillingen bruger forskellige lyde til afslutning, input og fejl. Andre valg bruger én lyd til alle hændelser.",
   "settings.notifications.sound.none": "Ingen",
   "settings.experimental.share.title": "Delingstilstand",
   "settings.experimental.share.description": "Adfærd for sessionsdeling",

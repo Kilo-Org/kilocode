@@ -1396,6 +1396,7 @@ export type Config = {
     diff_style?: "unified" | "split"
   }
   terminal_command_display?: "expanded" | "collapsed"
+  hide_prompt_training_models?: boolean
   model?: string
   small_model?: string
   subagent_model?: string

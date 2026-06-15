@@ -1270,6 +1270,10 @@ export const dict = {
   "settings.notifications.errors.title": "Hatalar",
   "settings.notifications.errors.description": "Hata oluştuğunda bildirim göster",
   "settings.notifications.sounds": "Sesler",
+  "settings.notifications.enable.title": "Sesli bildirimleri etkinleştir",
+  "settings.notifications.enable.description":
+    "Oturumlar tamamlandığında, bir hatayla karşılaşıldığında veya sizden giriş beklendiğinde ses çal",
+  "settings.notifications.testSound": "Test et",
   "settings.notifications.agentSound.title": "Ajan Tamamlanma Sesi",
   "settings.notifications.agentSound.description": "Ajan tamamlandığında çalınacak ses",
   "settings.notifications.permSound.title": "İzin İsteği Sesi",
@@ -1277,6 +1281,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Hata Sesi",
   "settings.notifications.errorSound.description": "Hata oluştuğunda çalınacak ses",
   "settings.notifications.sound.default": "Varsayılan",
+  "settings.notifications.sound.system": "Sistem",
+  "settings.notifications.sound.description":
+    "Varsayılan seçenekte tamamlanma, giriş ve hatalar için farklı sesler kullanılır. Diğer seçeneklerde tüm etkinlikler için tek bir ses kullanılır.",
   "settings.notifications.sound.none": "Yok",
 
   "settings.experimental.share.title": "Paylaşım Modu",
@@ -1485,6 +1492,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Alt Aracı Modeli",
   "settings.providers.subagentModel.description":
     "task-tool alt aracıları için varsayılan model ve akıl yürütme çabası. Çağıran aracının modelini devralmak için boş bırakın.",
+  "settings.models.hidePromptTraining.title": "İstemlerle eğitilen modelleri gizle",
+  "settings.models.hidePromptTraining.description":
+    "Sağlayıcıları istemlerinizi eğitim için kullanabilecek Kilo Gateway modellerini gizleyin.",
   "settings.providers.modeModels": "Mod Başına Model",
   "settings.providers.modeModels.description":
     "Belirli modlar için varsayılan modeli geçersiz kılın. Ayarlanmadıysa genel varsayılan model kullanılır.",

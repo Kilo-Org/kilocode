@@ -863,6 +863,8 @@ export const dict = {
   "settings.providers.subagentModel.title": "โมเดลตัวแทนย่อย",
   "settings.providers.subagentModel.description":
     "โมเดลเริ่มต้นและระดับการใช้เหตุผลสำหรับตัวแทนย่อยของ task-tool ปล่อยว่างไว้เพื่อรับค่าโมเดลจากตัวแทนที่เรียก",
+  "settings.models.hidePromptTraining.title": "ซ่อนโมเดลที่ใช้พรอมต์ในการฝึก",
+  "settings.models.hidePromptTraining.description": "ซ่อนโมเดล Kilo Gateway ที่ผู้ให้บริการอาจใช้พรอมต์ของคุณในการฝึก",
   "settings.providers.modeModels": "โมเดลต่อโหมด",
   "settings.providers.custom.note": "เพิ่มผู้ให้บริการที่รองรับ OpenAI ด้วย Base URL",
   "settings.providers.modeModels.description":
@@ -1260,6 +1262,10 @@ export const dict = {
   "settings.notifications.errors.title": "ข้อผิดพลาด",
   "settings.notifications.errors.description": "แสดงการแจ้งเตือนเมื่อเกิดข้อผิดพลาด",
   "settings.notifications.sounds": "เสียง",
+  "settings.notifications.enable.title": "เปิดใช้การแจ้งเตือนด้วยเสียง",
+  "settings.notifications.enable.description":
+    "เล่นเสียงเมื่อเซสชันเสร็จสิ้น เกิดข้อผิดพลาด หรือต้องการให้คุณป้อนข้อมูล",
+  "settings.notifications.testSound": "ทดสอบ",
   "settings.notifications.agentSound.title": "เสียงเอเจนต์เสร็จสิ้น",
   "settings.notifications.agentSound.description": "เสียงเมื่อเอเจนต์ทำงานเสร็จ",
   "settings.notifications.permSound.title": "เสียงคำขออนุญาต",
@@ -1267,6 +1273,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "เสียงข้อผิดพลาด",
   "settings.notifications.errorSound.description": "เสียงเมื่อเกิดข้อผิดพลาด",
   "settings.notifications.sound.default": "ค่าเริ่มต้น",
+  "settings.notifications.sound.system": "ระบบ",
+  "settings.notifications.sound.description":
+    "ค่าเริ่มต้นจะใช้เสียงที่แตกต่างกันสำหรับการเสร็จสิ้น การป้อนข้อมูล และข้อผิดพลาด ส่วนตัวเลือกอื่นจะใช้เสียงเดียวสำหรับทุกเหตุการณ์",
   "settings.notifications.sound.none": "ไม่มี",
   "settings.experimental.share.title": "โหมดแชร์",
   "settings.experimental.share.description": "พฤติกรรมการแชร์เซสชัน",
