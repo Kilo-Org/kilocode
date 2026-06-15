@@ -52,6 +52,17 @@ export function resolveLabel(tool: string, t: (key: string) => string): string {
   return key ? t(key) : tool
 }
 
+export function describeRule(
+  tool: string,
+  rule: string,
+  t: (key: string, params?: Record<string, string>) => string,
+): string {
+  if (tool === "doom_loop") {
+    return t("ui.permission.doomLoop.rule", { tool: resolveLabel(rule, t) })
+  }
+  return rule === "*" ? resolveLabel(tool, t) : `${resolveLabel(tool, t)} ${rule}`
+}
+
 /**
  * Build a human-readable description for a permission request's patterns.
  *
@@ -62,13 +73,20 @@ export function resolveLabel(tool: string, t: (key: string) => string): string {
 export function describePatterns(
   tool: string,
   patterns: string[],
-  t: (key: string) => string,
+  t: (key: string, params?: Record<string, string>) => string,
 ): PatternDescription | null {
   const filtered = patterns.filter((p) => p !== "*")
   if (filtered.length === 0) return null
 
-  const key = TOOL_LABEL_KEYS[tool]
-  const label = key ? t(key) : tool
+  // doom-loop requests always contain one repeated tool pattern.
+  if (tool === "doom_loop") {
+    return {
+      kind: "single",
+      text: t("ui.permission.doomLoop.prompt", { tool: resolveLabel(filtered[0], t) }),
+    }
+  }
+
+  const label = resolveLabel(tool, t)
   if (filtered.length === 1) return { kind: "single", text: `${label} ${filtered[0]}` }
   return { kind: "multi", title: `${label}:`, paths: filtered }
 }

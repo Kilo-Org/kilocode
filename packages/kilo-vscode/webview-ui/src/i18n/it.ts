@@ -448,6 +448,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Autorizzazione richiesta (sub-agent)",
   "notification.permission.description": "{{sessionTitle}} in {{projectName}} richiede autorizzazione",
   "ui.permission.manageAutoApprove": "Gestisci regole approvazione automatica",
+  "ui.permission.doomLoop.prompt": "Rilevato un potenziale ciclo nello strumento {{tool}}. Continuare l'esecuzione?",
+  "ui.permission.doomLoop.rule": "Continua le chiamate a {{tool}}",
   "ui.permission.rule.addToAllowed": "Aggiungi alla lista consentiti",
   "ui.permission.rule.removeFromAllowed": "Rimuovi dalla lista consentiti",
   "ui.permission.rule.addToDenied": "Aggiungi alla lista negati",

@@ -524,6 +524,8 @@ export const dict = {
   "notification.permission.titleSubagent": "権限が必要です（サブエージェント）",
   "notification.permission.description": "{{projectName}} の {{sessionTitle}} が権限を必要としています",
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
+  "ui.permission.doomLoop.prompt": "{{tool}} ツールでループの可能性が検出されました。実行を続行しますか？",
+  "ui.permission.doomLoop.rule": "{{tool}} の呼び出しを続行",
   "ui.permission.rule.addToAllowed": "許可リストに追加",
   "ui.permission.rule.removeFromAllowed": "許可リストから削除",
   "ui.permission.rule.addToDenied": "拒否リストに追加",

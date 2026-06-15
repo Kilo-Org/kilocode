@@ -518,6 +518,8 @@ export const dict = {
   "notification.permission.titleSubagent": "需要權限（子代理）",
   "notification.permission.description": "{{sessionTitle}}（{{projectName}}）需要權限",
   "ui.permission.manageAutoApprove": "管理自動核准規則",
+  "ui.permission.doomLoop.prompt": "偵測到 {{tool}} 工具可能陷入迴圈。是否繼續執行？",
+  "ui.permission.doomLoop.rule": "繼續呼叫 {{tool}}",
   "ui.permission.rule.addToAllowed": "加入允許清單",
   "ui.permission.rule.removeFromAllowed": "從允許清單移除",
   "ui.permission.rule.addToDenied": "加入拒絕清單",

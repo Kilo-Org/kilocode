@@ -531,6 +531,9 @@ export const dict = {
   "notification.permission.titleSubagent": "Потрібен дозвіл (підагент)",
   "notification.permission.description": "{{sessionTitle}} у {{projectName}} потребує дозволу",
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
+  "ui.permission.doomLoop.prompt":
+    "Виявлено потенційний цикл під час роботи інструмента {{tool}}. Продовжити виконання?",
+  "ui.permission.doomLoop.rule": "Продовжувати виклики {{tool}}",
   "ui.permission.rule.addToAllowed": "Додати до дозволених",
   "ui.permission.rule.removeFromAllowed": "Видалити з дозволених",
   "ui.permission.rule.addToDenied": "Додати до заблокованих",
