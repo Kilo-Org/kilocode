@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "bun:test"
 import os from "node:os"
 import path from "node:path"
 import fs from "node:fs/promises"
+import { existsSync } from "node:fs"
 import { WorktreeManager } from "../../src/agent-manager/WorktreeManager"
 import { generateBranchName, sanitizeBranchName, versionedName } from "../../src/agent-manager/branch-name"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
@@ -35,6 +36,12 @@ async function createTempRepo(): Promise<string> {
 function createManager(root: string): WorktreeManager {
   const logs: string[] = []
   return new WorktreeManager(root, (msg) => logs.push(msg))
+}
+
+// Test-only helper to verify metadata writes keep the temp worktree checkout clean.
+async function changedFiles(cwd: string): Promise<string[]> {
+  const raw = await simpleGit(cwd).raw(["status", "--porcelain", "--untracked-files=all", "--"])
+  return raw.trim().split("\n").filter(Boolean)
 }
 
 /** Create a temp repo with a bare origin remote so origin/<branch> refs exist. */
@@ -543,11 +550,24 @@ describe("WorktreeManager metadata", () => {
     const mgr = createManager(root)
     const result = await mgr.createWorktree({ prompt: "session-test" })
 
-    await mgr.writeMetadata(result.path, "sess-abc-123", "feature-branch")
+    await mgr.writeMetadata(result.path, "sess-abc-123", "feature-branch", "origin")
     const meta = await mgr.readMetadata(result.path)
 
     expect(meta?.sessionId).toBe("sess-abc-123")
     expect(meta?.parentBranch).toBe("feature-branch")
+    expect(meta?.remote).toBe("origin")
+  })
+
+  it("writes metadata outside the worktree checkout", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const result = await mgr.createWorktree({ prompt: "session-status" })
+
+    await mgr.writeMetadata(result.path, "sess-clean-123", "feature-branch", "origin")
+
+    expect(existsSync(path.join(result.path, ".kilo", "session-id"))).toBe(false)
+    expect(existsSync(path.join(result.path, ".kilo", "metadata.json"))).toBe(false)
+    expect(await changedFiles(result.path)).toEqual([])
   })
 
   it("returns undefined when no metadata exists", async () => {
@@ -660,7 +680,7 @@ describe("WorktreeManager.discoverWorktrees", () => {
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager.ensureGitExclude", () => {
-  it("adds .kilo/worktrees/ to .git/info/exclude", async () => {
+  it("adds Agent Manager state and worktrees to .git/info/exclude", async () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
 
@@ -668,6 +688,7 @@ describe("WorktreeManager.ensureGitExclude", () => {
 
     const content = await fs.readFile(path.join(root, ".git", "info", "exclude"), "utf-8")
     expect(content).toContain(".kilo/worktrees/")
+    expect(content).toContain(".kilo/agent-manager.json")
   })
 
   it("adds only specific legacy Agent Manager paths", async () => {
@@ -702,39 +723,35 @@ describe("WorktreeManager.ensureGitExclude", () => {
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager.createWorktree branch collision", () => {
-  /**
-   * Exercise the retry path in WorktreeManager when `git worktree add -b <name>`
-   * fails because a branch with that name already exists.
-   *
-   * We force the collision by creating a worktree with branchName "collide",
-   * removing the worktree (keeping the branch), then requesting the same
-   * branchName again.
-   */
-  it("retries with a unique suffix when generated branch name collides", async () => {
+  it("creates a suffixed worktree without replacing an active explicitly named worktree", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const first = await mgr.createWorktree({ branchName: "echo-hello-world" })
+    const second = await mgr.createWorktree({ branchName: "echo-hello-world" })
+
+    expect(first.branch).toBe("echo-hello-world")
+    expect(second.branch).toBe("echo-hello-world-2")
+    expect((await fs.stat(path.join(first.path, ".git"))).isFile()).toBe(true)
+    expect((await fs.stat(path.join(second.path, ".git"))).isFile()).toBe(true)
+    expect((await simpleGit(root).branch()).all.filter((branch) => branch.startsWith("echo-hello-world"))).toEqual([
+      "echo-hello-world",
+      "echo-hello-world-2",
+    ])
+  })
+
+  it("uses the same suffix sequence when only the requested branch already exists", async () => {
     const root = await createTempRepo()
     const git = simpleGit(root)
     const mgr = createManager(root)
-
-    // Create a first worktree with a fixed branch name
     const first = await mgr.createWorktree({ branchName: "collide" })
-    expect(first.branch).toBe("collide")
 
-    // Remove the worktree via git but keep the branch ref alive
     await git.raw(["worktree", "remove", "--force", first.path])
+    expect((await git.branch()).all).toContain("collide")
 
-    // Verify the branch still exists (worktree is gone, branch is not)
-    const branches = await git.branch()
-    expect(branches.all).toContain("collide")
-
-    // Request the same branchName — git will fail, triggering the retry
     const second = await mgr.createWorktree({ branchName: "collide" })
 
-    // The retry appends a timestamp suffix, so the branch name differs
-    expect(second.branch).not.toBe("collide")
-    expect(second.branch).toStartWith("collide-")
-
-    const stat = await fs.stat(path.join(second.path, ".git"))
-    expect(stat.isFile()).toBe(true)
+    expect(second.branch).toBe("collide-2")
+    expect((await fs.stat(path.join(second.path, ".git"))).isFile()).toBe(true)
   })
 })
 

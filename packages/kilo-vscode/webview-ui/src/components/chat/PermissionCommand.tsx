@@ -4,7 +4,8 @@
  * Includes a copy-to-clipboard button that appears on hover.
  */
 
-import { Component, createSignal } from "solid-js"
+import { Component, createEffect, createSignal, onCleanup } from "solid-js"
+import { deferredHighlight } from "@kilocode/kilo-ui/context/marked"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
@@ -12,6 +13,29 @@ import { useLanguage } from "../../context/language"
 export const PermissionCommand: Component<{ command: string }> = (props) => {
   const language = useLanguage()
   const [copied, setCopied] = createSignal(false)
+  const state = { signal: { aborted: false } }
+  let ref: HTMLDivElement | undefined
+
+  createEffect(() => {
+    state.signal.aborted = true
+    const command = props.command
+    if (!ref || !command) return
+
+    const pre = document.createElement("pre")
+    const code = document.createElement("code")
+    code.dataset.lang = "shellscript"
+    code.textContent = command
+    pre.append(code)
+    ref.replaceChildren(pre)
+
+    const signal = { aborted: false }
+    state.signal = signal
+    void deferredHighlight(ref, undefined, signal)
+  })
+
+  onCleanup(() => {
+    state.signal.aborted = true
+  })
 
   const copy = () => {
     navigator.clipboard.writeText(props.command)
@@ -21,7 +45,7 @@ export const PermissionCommand: Component<{ command: string }> = (props) => {
 
   return (
     <div data-slot="permission-command">
-      <pre data-slot="permission-command-pre">{props.command}</pre>
+      <div data-slot="permission-command-code" ref={ref} />
       <Tooltip value={language.t("ui.permission.copyCommand")} placement="top">
         <button
           data-slot="permission-command-copy"

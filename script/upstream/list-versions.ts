@@ -7,7 +7,7 @@
  */
 
 import { getAvailableUpstreamVersions, getCurrentKiloVersion } from "./utils/version"
-import { fetchUpstream, hasUpstreamRemote } from "./utils/git"
+import { fetchUpstream, hasUpstreamRemote, isAncestor } from "./utils/git"
 import { header, info, success, warn, error } from "./utils/logger"
 
 async function main() {
@@ -34,11 +34,15 @@ async function main() {
   console.log()
 
   const limit = process.argv.includes("--all") ? versions.length : 20
+  const shown = versions.slice(0, Math.min(limit, versions.length))
 
-  for (let i = 0; i < Math.min(limit, versions.length); i++) {
-    const v = versions[i]
+  // Check merge status in parallel — fast because is-ancestor short-circuits.
+  const merged = await Promise.all(shown.map((v) => isAncestor(v.commit, "HEAD")))
+
+  for (let i = 0; i < shown.length; i++) {
+    const v = shown[i]
     if (!v) continue
-    const marker = i === 0 ? " (latest)" : ""
+    const marker = merged[i] ? " ✓ merged" : i === 0 ? " (latest)" : ""
     console.log(`  ${v.tag.padEnd(12)} ${v.commit.slice(0, 8)}${marker}`)
   }
 

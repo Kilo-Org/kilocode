@@ -1,8 +1,8 @@
-import z from "zod"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { WarpGrepClient } from "@morphllm/morphsdk/tools/warp-grep/client" // kilocode_change
-import { Instance } from "../project/instance"
+import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
+import { Instance } from "../kilocode/instance" // kilocode_change
 import { Bus } from "../bus"
 import { TuiEvent } from "../cli/cmd/tui/event"
 import DESCRIPTION from "./warpgrep.txt"
@@ -12,10 +12,10 @@ import DESCRIPTION from "./warpgrep.txt"
 // return an error when it is missing.
 const KILO_WARPGREP_PROXY_URL = "https://api.kilo.ai/api/gateway"
 
-const Parameters = z.object({
-  query: z
-    .string()
-    .describe("Search query describing what code you are looking for. Be specific and descriptive for best results."), // kilocode_change
+const Parameters = Schema.Struct({
+  query: Schema.String.annotate({
+    description: "Search query describing what code you are looking for. Be specific and descriptive for best results.", // kilocode_change
+  }),
 })
 
 export const CodebaseSearchTool = Tool.define(
@@ -24,7 +24,7 @@ export const CodebaseSearchTool = Tool.define(
     return {
       description: DESCRIPTION,
       parameters: Parameters,
-      execute: (params: z.infer<typeof Parameters>, ctx: Tool.Context) =>
+      execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
           yield* ctx.ask({
             permission: "codebase_search",
@@ -32,6 +32,7 @@ export const CodebaseSearchTool = Tool.define(
             always: ["*"],
             metadata: { query: params.query },
           })
+          Telemetry.trackToolUsed("codebase_search", ctx.sessionID) // kilocode_change
 
           const apiKey = process.env["MORPH_API_KEY"]
 
@@ -60,7 +61,7 @@ export const CodebaseSearchTool = Tool.define(
               "Codebase search unavailable: free period ended. Set MORPH_API_KEY to continue. Get your key at https://www.morphllm.com/"
             if (isAuthOrRateLimit) {
               yield* Effect.promise(() =>
-                Bus.publish(TuiEvent.ToastShow, {
+                Bus.publish(Instance.current, TuiEvent.ToastShow, { // kilocode_change
                   title: "Codebase Search Unavailable",
                   message: "Free period has ended. Set MORPH_API_KEY to continue. Get your key at morphllm.com",
                   variant: "error",

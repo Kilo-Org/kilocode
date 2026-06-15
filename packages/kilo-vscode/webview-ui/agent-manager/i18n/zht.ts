@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "本機",
+  "agentManager.sidebar.collapse": "收合側邊欄",
+  "agentManager.sidebar.expand": "顯示側邊欄",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "工作階段",
   "agentManager.notGitRepo": "不是 git 儲存庫",
@@ -49,6 +51,11 @@ export const dict = {
   "agentManager.tab.terminal": "終端機",
   "agentManager.tab.openTerminal": "開啟終端機",
   "agentManager.tab.newOptions": "更多新增分頁選項",
+  "agentManager.tabsMenu.label": "搜尋開啟的分頁",
+  "agentManager.tabsMenu.search": "搜尋分頁...",
+  "agentManager.tabsMenu.empty": "沒有相符的分頁",
+  "agentManager.tabsMenu.status.waiting": "等待",
+  "agentManager.tabsMenu.status.retry": "重試",
 
   "agentManager.terminal.new": "新增終端分頁",
   "agentManager.terminal.ended": "終端已結束 — 關閉分頁以消除",
@@ -69,7 +76,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "下一個項目",
   "agentManager.shortcuts.newWorktree": "新建 Worktree",
   "agentManager.shortcuts.openWorktree": "開啟 Worktree",
-  "agentManager.shortcuts.advancedWorktree": "進階 Worktree",
+  "agentManager.shortcuts.advancedWorktree": "配置新 worktree",
   "agentManager.shortcuts.deleteWorktree": "刪除 Worktree",
   "agentManager.shortcuts.previousTab": "上一個分頁",
   "agentManager.shortcuts.nextTab": "下一個分頁",
@@ -90,6 +97,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "移除失效 Worktree",
 
   "agentManager.dialog.openWorktree": "新建工作樹",
+  "agentManager.dialog.configureWorktree": "配置新 Worktree...",
   "agentManager.dialog.tab.new": "新建",
   "agentManager.dialog.tab.import": "匯入",
   "agentManager.dialog.namePlaceholder": "Worktree 名稱（選填）",

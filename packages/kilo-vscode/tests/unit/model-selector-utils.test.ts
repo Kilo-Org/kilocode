@@ -6,6 +6,9 @@ import {
   sanitizeName,
   KILO_GATEWAY_ID,
   PROVIDER_ORDER,
+  freeDataLabel,
+  isDataCollectedModel,
+  isFree,
 } from "../../webview-ui/src/components/shared/model-selector-utils"
 
 const labels = { select: "Select model", noProviders: "No providers", notSet: "Not set" }
@@ -38,9 +41,9 @@ describe("providerSortKey", () => {
   })
 
   it("sorts providers correctly when used with sort", () => {
-    const ids = ["google", "anthropic", "kilo", "openai", "github-copilot"]
+    const ids = ["google", "anthropic", "kilo", "openai", "deepseek"]
     const sorted = ids.slice().sort((a, b) => providerSortKey(a) - providerSortKey(b))
-    expect(sorted).toEqual(["kilo", "anthropic", "github-copilot", "openai", "google"])
+    expect(sorted).toEqual(["kilo", "anthropic", "deepseek", "openai", "google"])
   })
 })
 
@@ -66,24 +69,20 @@ describe("sanitizeName", () => {
     expect(sanitizeName("Llama 3 (free)")).toBe("Llama 3")
   })
 
-  it("strips trailing free suffix", () => {
-    expect(sanitizeName("Mixtral free")).toBe("Mixtral")
-  })
-
-  it("strips trailing :free suffix", () => {
-    expect(sanitizeName("Mistral:free")).toBe("Mistral")
-  })
-
-  it("strips trailing -free suffix", () => {
-    expect(sanitizeName("Gemma-free")).toBe("Gemma")
-  })
-
-  it("is case-insensitive", () => {
+  it("is case-insensitive for parenthesized suffix", () => {
     expect(sanitizeName("Model (Free)")).toBe("Model")
-    expect(sanitizeName("Model FREE")).toBe("Model")
+    expect(sanitizeName("Model (FREE)")).toBe("Model")
   })
 
-  it("leaves names without free suffix unchanged", () => {
+  it("preserves bare trailing Free in names like 'Kilo Auto Free'", () => {
+    expect(sanitizeName("Kilo Auto Free")).toBe("Kilo Auto Free")
+    expect(sanitizeName("Mixtral free")).toBe("Mixtral free")
+    expect(sanitizeName("Mistral:free")).toBe("Mistral:free")
+    expect(sanitizeName("Gemma-free")).toBe("Gemma-free")
+    expect(sanitizeName("Model FREE")).toBe("Model FREE")
+  })
+
+  it("leaves names without (free) suffix unchanged", () => {
     expect(sanitizeName("GPT-4o")).toBe("GPT-4o")
     expect(sanitizeName("Claude Sonnet")).toBe("Claude Sonnet")
   })
@@ -92,9 +91,31 @@ describe("sanitizeName", () => {
     expect(sanitizeName("FreeAgent Pro")).toBe("FreeAgent Pro")
   })
 
-  it("handles extra whitespace around suffix", () => {
+  it("handles extra whitespace around (free) suffix", () => {
     expect(sanitizeName("Llama 3 (free)  ")).toBe("Llama 3")
-    expect(sanitizeName("Model  free  ")).toBe("Model")
+    expect(sanitizeName("Model  (free)  ")).toBe("Model")
+  })
+})
+
+describe("freeDataLabel", () => {
+  it("uses the data collection label without repeating free", () => {
+    expect(freeDataLabel("Free", "Data may be used for training")).toBe("Data may be used for training")
+  })
+})
+
+describe("isFree", () => {
+  it("uses only explicit free metadata", () => {
+    expect(isFree({ isFree: true })).toBe(true)
+    expect(isFree({ isFree: false })).toBe(false)
+    expect(isFree({})).toBe(false)
+  })
+})
+
+describe("isDataCollectedModel", () => {
+  it("uses only explicit prompt training metadata", () => {
+    expect(isDataCollectedModel({ mayTrainOnYourPrompts: true })).toBe(true)
+    expect(isDataCollectedModel({ mayTrainOnYourPrompts: false })).toBe(false)
+    expect(isDataCollectedModel({})).toBe(false)
   })
 })
 

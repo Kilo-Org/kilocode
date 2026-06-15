@@ -1,11 +1,12 @@
 package ai.kilocode.client.ui.md
 
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.awt.Color
 import java.awt.Font
 
 /**
- * Tests for [MdView] created via [MdView.html].
+ * Tests for the fallback HTML [MdView].
  *
  * Uses [BasePlatformTestCase] to get a real IntelliJ Application so that
  * JBHtmlPane initialisation works correctly.
@@ -17,7 +18,7 @@ class MdViewTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
-        view = MdView.html()
+        view = MdViewFactory.html()
     }
 
     // ---- set ----
@@ -211,10 +212,13 @@ class MdViewTest : BasePlatformTestCase() {
         assertTrue(view.html().contains("Done."))
     }
 
-    // ---- style overrides (empty by default) ----
+    // ---- style overrides ----
 
-    fun `test no overrides produces empty override sheet`() {
-        assertEquals("", view.overrideSheet())
+    fun `test override sheet includes session style defaults`() {
+        val style = SessionEditorStyle.current()
+
+        assertTrue(view.overrideSheet().contains(style.editorFamily))
+        assertTrue(view.overrideSheet().contains("${style.editorSize}pt"))
     }
 
     // ---- style overrides appear in override sheet when set ----
@@ -243,6 +247,7 @@ class MdViewTest : BasePlatformTestCase() {
         view.set("```\ncode\n```")
         val sheet = view.overrideSheet()
         assertTrue(sheet.contains("#0a0b0c"))
+        assertTrue(sheet.contains("pre {"))
         assertTrue(sheet.contains("#d0e0f0"))
     }
 
@@ -279,10 +284,37 @@ class MdViewTest : BasePlatformTestCase() {
         assertTrue(view.overrideSheet().contains("18pt"))
     }
 
+    fun `test italic font override appears in override sheet`() {
+        view.font = Font("Arial", Font.ITALIC, 18)
+        view.set("text")
+        assertTrue(view.overrideSheet().contains("font-style: italic"))
+    }
+
+    fun `test font override targets markdown elements`() {
+        view.font = Font("Courier New", Font.PLAIN, 14)
+        view.set("# title\n\ntext\n\n`code`")
+        val sheet = view.overrideSheet()
+
+        assertTrue(sheet.contains("p {"))
+        assertTrue(sheet.contains("h1 {"))
+        assertTrue(sheet.contains("code {"))
+    }
+
     fun `test style change re-renders and override sheet reflects change`() {
         view.set("hello")
         view.foreground = Color(0xDE, 0xAD, 0x00)
         assertTrue(view.overrideSheet().contains("#dead00"))
+        assertTrue(view.html().contains("hello"))
+    }
+
+    fun `test applying same style reapplies component background`() {
+        view.set("hello")
+        view.component.background = Color.RED
+        val style = SessionEditorStyle.current()
+
+        view.applyStyle(style)
+
+        assertEquals(view.background, view.component.background)
         assertTrue(view.html().contains("hello"))
     }
 
@@ -293,16 +325,16 @@ class MdViewTest : BasePlatformTestCase() {
         assertEquals("", view.markdown())
     }
 
-    // ---- default codeFont uses editor font placeholder ----
+    // ---- default codeFont uses session style ----
 
-    fun `test default codeFont is editor font placeholder`() {
-        // When no codeFont override is set, the getter returns the editor font placeholder
-        assertTrue(view.codeFont.contains("_Editor"))
+    fun `test default codeFont is session editor font`() {
+        val style = SessionEditorStyle.current()
+
+        assertEquals(style.editorFamily, view.codeFont)
     }
 
-    fun `test default override sheet is empty before any set`() {
-        // Only overrides appear in the sheet; editor defaults are handled by JBHtmlPane
-        assertEquals("", view.overrideSheet())
+    fun `test default override sheet includes session style before any set`() {
+        assertTrue(view.overrideSheet().contains(SessionEditorStyle.current().editorFamily))
     }
 
     // ---- background sets component background ----
@@ -368,7 +400,7 @@ class MdViewTest : BasePlatformTestCase() {
     fun `test resetStyles clears foreground override`() {
         view.foreground = Color.RED
         view.resetStyles()
-        assertEquals("", view.overrideSheet())
+        assertFalse(view.overrideSheet().contains("#ff0000"))
     }
 
     fun `test resetStyles clears all overrides`() {
@@ -383,7 +415,9 @@ class MdViewTest : BasePlatformTestCase() {
         view.tableBorder = Color.YELLOW
         view.font = Font("Arial", Font.PLAIN, 18)
         view.resetStyles()
-        assertEquals("", view.overrideSheet())
+        val sheet = view.overrideSheet()
+        assertFalse(sheet.contains("Arial"))
+        assertTrue(sheet.contains(SessionEditorStyle.current().editorFamily))
     }
 
     fun `test resetStyles restores opaque to true`() {
@@ -398,4 +432,5 @@ class MdViewTest : BasePlatformTestCase() {
         view.resetStyles()
         assertTrue(view.html().contains("<strong>"))
     }
+
 }

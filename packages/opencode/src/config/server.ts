@@ -1,8 +1,8 @@
 import { Schema } from "effect"
-import { zod } from "@/util/effect-zod"
+import { PositiveInt } from "@opencode-ai/core/schema"
 
-export class Server extends Schema.Class<Server>("ServerConfig")({
-  port: Schema.optional(Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThan(0))).annotate({
+export const Server = Schema.Struct({
+  port: Schema.optional(PositiveInt).annotate({
     description: "Port to listen on",
   }),
   hostname: Schema.optional(Schema.String).annotate({ description: "Hostname to listen on" }),
@@ -13,8 +13,7 @@ export class Server extends Schema.Class<Server>("ServerConfig")({
   cors: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
     description: "Additional domains to allow for CORS",
   }),
-}) {
-  static readonly zod = zod(this)
-}
+}).annotate({ identifier: "ServerConfig" })
+export type Server = Schema.Schema.Type<typeof Server>
 
 export * as ConfigServer from "./server"

@@ -24,8 +24,8 @@
   padding: 6px 8px;
   padding-right: 36px;
   font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
-  font-size: var(--vscode-editor-font-size, 13px);
-  line-height: var(--vscode-editor-line-height, normal);
+  font-size: var(--font-size-base);
+  line-height: 1.4;
   color: var(--text-strong, var(--vscode-input-foreground, #cccccc));
 }
 
@@ -33,8 +33,8 @@
 [data-component="prompt-input-form"] [data-slot="prompt-input-placeholder"] {
   padding: 6px 8px;
   padding-right: 36px;
-  font-size: var(--vscode-editor-font-size, 13px);
-  line-height: var(--vscode-editor-line-height, normal);
+  font-size: var(--font-size-base);
+  line-height: 1.4;
 }
 
 /* Bottom toolbar: tighter padding to match legacy control bar */
@@ -55,7 +55,7 @@
       height: auto !important;
       min-height: 22px;
       padding: 4px 6px !important;
-      font-size: 12px;
+      font-size: var(--kilo-font-size-12);
       line-height: normal;
       border-radius: 6px;
       background: var(--surface-base);

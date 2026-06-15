@@ -8,17 +8,14 @@
 
 import { createKilo, type KiloProvider, AI_SDK_PROVIDERS, PROMPTS } from "@kilocode/kilo-gateway"
 import { DEFAULT_HEADERS } from "@/kilocode/const"
-import { AiSdkProvider, Prompt } from "@/provider/models"
 import { ProviderID, ModelID } from "@/provider/schema"
+import { optionalOmitUndefined } from "@opencode-ai/core/schema"
 import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
 
-// Re-export for consumers that previously imported from provider.ts
-export { Prompt, AiSdkProvider }
-
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
-export const REQUEST_TIMEOUT_MS = 120_000 // 2 minutes
+export const REQUEST_TIMEOUT_MS = 300_000 // 5 minutes
 
 // ---------------------------------------------------------------------------
 // Bundled providers
@@ -35,9 +32,16 @@ export const KILO_BUNDLED_PROVIDERS: Record<string, () => Promise<(options: any)
 // ---------------------------------------------------------------------------
 
 export const KILO_MODEL_SCHEMA_EXTENSIONS = {
-  recommendedIndex: Schema.optional(Schema.Number),
+  recommendedIndex: optionalOmitUndefined(Schema.Finite),
   prompt: Schema.optional(Schema.Literals(PROMPTS)),
   isFree: Schema.optional(Schema.Boolean),
+  mayTrainOnYourPrompts: Schema.optional(Schema.Boolean),
+  terminalBench: optionalOmitUndefined(
+    Schema.Struct({
+      overallScore: Schema.Finite,
+      avgAttemptCostUsd: Schema.Finite,
+    }),
+  ),
   ai_sdk_provider: Schema.optional(Schema.Literals(AI_SDK_PROVIDERS)),
 }
 
@@ -51,6 +55,8 @@ export function patchModelsDevModel(providerID: string, source: any) {
     recommendedIndex: source.recommendedIndex,
     prompt: source.prompt,
     isFree: source.isFree,
+    mayTrainOnYourPrompts: source.mayTrainOnYourPrompts,
+    terminalBench: source.terminalBench,
     ai_sdk_provider: source.ai_sdk_provider,
     options: source.options ?? {},
   }
@@ -65,6 +71,8 @@ export function patchConfigModel(cfg: any, existing: any) {
     recommendedIndex: cfg.recommendedIndex ?? existing?.recommendedIndex,
     prompt: cfg.prompt ?? existing?.prompt,
     isFree: cfg.isFree ?? existing?.isFree,
+    mayTrainOnYourPrompts: cfg.mayTrainOnYourPrompts ?? existing?.mayTrainOnYourPrompts,
+    terminalBench: existing?.terminalBench,
     ai_sdk_provider: cfg.ai_sdk_provider ?? existing?.ai_sdk_provider,
     variants: cfg.variants
       ? mapValues(
@@ -128,13 +136,6 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
         return false
       })
 
-      if (!hasKey) {
-        for (const [key, value] of Object.entries(input.models)) {
-          if ((value as any).cost.input === 0) continue
-          delete input.models[key]
-        }
-      }
-
       const options: Record<string, string> = {}
       if (env.KILO_ORG_ID) {
         options.kilocodeOrganizationId = env.KILO_ORG_ID
@@ -150,6 +151,7 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
           const provider = input.models[modelID]?.ai_sdk_provider
           if (provider === "alibaba") return sdk.alibaba(modelID)
           if (provider === "anthropic") return sdk.anthropic(modelID)
+          if (provider === "mistral") return sdk.mistral(modelID)
           if (provider === "openai") return sdk.openai(modelID)
           if (provider === "openai-compatible") return sdk.openaiCompatible(modelID)
           return sdk.languageModel(modelID)
@@ -180,20 +182,6 @@ export function patchCustomLoaderResult(
   if (!result.options) return
 
   switch (providerID) {
-    case "anthropic": {
-      // Prepend claude-code beta flag to the anthropic-beta header
-      // TODO: Add adaptive thinking headers when @ai-sdk/anthropic supports it:
-      // adaptive-thinking-2026-01-28,effort-2025-11-24,max-effort-2026-01-24
-      const existing = result.options.headers?.["anthropic-beta"] ?? ""
-      const prefix = "claude-code-20250219"
-      if (!existing.includes(prefix)) {
-        result.options.headers = {
-          ...result.options.headers,
-          "anthropic-beta": existing ? `${prefix},${existing}` : prefix,
-        }
-      }
-      break
-    }
     case "openrouter":
     case "vercel":
     case "zenmux":
@@ -215,8 +203,10 @@ export function patchCustomLoaderResult(
       })()
       if (url) {
         result.options.baseURL = url
+        delete result.options.resourceName
       } else if (resource) {
         result.options.resourceName = resource
+        delete result.options.baseURL
       }
       break
     }

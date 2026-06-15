@@ -1,4 +1,6 @@
 ---
+title: "Using DeepSeek with Kilo Code"
+description: "Connect DeepSeek's reasoning and coding models to Kilo Code. Setup guide for DeepSeek-V3 and DeepSeek-R1 in VS Code and the CLI."
 sidebar_label: DeepSeek
 ---
 

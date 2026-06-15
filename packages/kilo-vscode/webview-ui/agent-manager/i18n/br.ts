@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "local",
+  "agentManager.sidebar.collapse": "Recolher barra lateral",
+  "agentManager.sidebar.expand": "Mostrar barra lateral",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESSÕES",
   "agentManager.notGitRepo": "Não é um repositório git",
@@ -49,6 +51,11 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Abrir Terminal",
   "agentManager.tab.newOptions": "Mais opções de nova aba",
+  "agentManager.tabsMenu.label": "Pesquisar abas abertas",
+  "agentManager.tabsMenu.search": "Pesquisar abas...",
+  "agentManager.tabsMenu.empty": "Nenhuma aba correspondente",
+  "agentManager.tabsMenu.status.waiting": "Espera",
+  "agentManager.tabsMenu.status.retry": "Repetir",
 
   "agentManager.terminal.new": "Nova aba de terminal",
   "agentManager.terminal.ended": "terminal encerrado — feche a aba para dispensar",
@@ -72,7 +79,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Próximo item",
   "agentManager.shortcuts.newWorktree": "Novo Worktree",
   "agentManager.shortcuts.openWorktree": "Abrir Worktree",
-  "agentManager.shortcuts.advancedWorktree": "Worktree avançado",
+  "agentManager.shortcuts.advancedWorktree": "Configurar novo worktree",
   "agentManager.shortcuts.deleteWorktree": "Excluir Worktree",
   "agentManager.shortcuts.previousTab": "Aba anterior",
   "agentManager.shortcuts.nextTab": "Próxima aba",
@@ -94,6 +101,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Remover Worktree obsoleto",
 
   "agentManager.dialog.openWorktree": "Novo Worktree",
+  "agentManager.dialog.configureWorktree": "Configurar Novo Worktree...",
   "agentManager.dialog.tab.new": "Novo",
   "agentManager.dialog.tab.import": "Importar",
   "agentManager.dialog.namePlaceholder": "Nome do Worktree (opcional)",

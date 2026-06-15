@@ -1,51 +1,57 @@
 import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
-import { InstanceState } from "@/effect"
+import { InstanceState } from "@/effect/instance-state"
 import { SessionID } from "./schema"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
-import { Effect, Layer, Context } from "effect"
-import z from "zod"
+import { QuestionID } from "@/question/schema" // kilocode_change
+import { NonNegativeInt } from "@opencode-ai/core/schema"
+import { Effect, Layer, Context, Schema } from "effect"
 
-export const Info = z
-  .union([
-    z.object({
-      type: z.literal("idle"),
-    }),
-    z.object({
-      type: z.literal("retry"),
-      attempt: z.number(),
-      message: z.string(),
-      next: z.number(),
-    }),
-    z.object({
-      type: z.literal("busy"),
-    }),
-    // kilocode_change start
-    z.object({
-      type: z.literal("offline"),
-      requestID: z.string(),
-      message: z.string(),
-    }),
-    // kilocode_change end
-  ])
-  .meta({
-    ref: "SessionStatus",
-  })
-export type Info = z.infer<typeof Info>
+export const Info = Schema.Union([
+  Schema.Struct({
+    type: Schema.Literal("idle"),
+  }),
+  Schema.Struct({
+    type: Schema.Literal("retry"),
+    attempt: NonNegativeInt,
+    message: Schema.String,
+    action: Schema.optional(
+      Schema.Struct({
+        reason: Schema.String,
+        provider: Schema.String,
+        title: Schema.String,
+        message: Schema.String,
+        label: Schema.String,
+        link: Schema.optional(Schema.String),
+      }),
+    ),
+    next: NonNegativeInt,
+  }),
+  Schema.Struct({
+    type: Schema.Literal("busy"),
+  }),
+  // kilocode_change start
+  Schema.Struct({
+    type: Schema.Literal("offline"),
+    requestID: QuestionID,
+    message: Schema.String,
+  }),
+  // kilocode_change end
+]).annotate({ identifier: "SessionStatus" })
+export type Info = Schema.Schema.Type<typeof Info>
 
 export const Event = {
   Status: BusEvent.define(
     "session.status",
-    z.object({
-      sessionID: SessionID.zod,
+    Schema.Struct({
+      sessionID: SessionID,
       status: Info,
     }),
   ),
   // deprecated
   Idle: BusEvent.define(
     "session.idle",
-    z.object({
-      sessionID: SessionID.zod,
+    Schema.Struct({
+      sessionID: SessionID,
     }),
   ),
 }
@@ -92,13 +98,5 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer.pipe(Layer.provide(Bus.layer))
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-
-export const list = () => runPromise((svc) => svc.list())
-export const get = (sessionID: SessionID) => runPromise((svc) => svc.get(sessionID))
-export const set = (sessionID: SessionID, status: Info) => runPromise((svc) => svc.set(sessionID, status))
-// kilocode_change end
 
 export * as SessionStatus from "./status"

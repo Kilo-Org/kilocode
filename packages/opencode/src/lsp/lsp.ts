@@ -1,80 +1,63 @@
 import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
-import { Log } from "../util"
+import * as Log from "@opencode-ai/core/util/log"
 import * as LSPClient from "./client"
 import path from "path"
 import { pathToFileURL, fileURLToPath } from "url"
 import * as LSPServer from "./server"
-import z from "zod"
-import { Config } from "../config"
-import { Flag } from "@/flag/flag"
-import { Process } from "../util"
+import { Config } from "@/config/config"
+import { Process } from "@/util/process"
 import { spawn as lspspawn } from "./launch"
-import { Effect, Layer, Context } from "effect"
-import { InstanceState } from "@/effect"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import { Effect, Layer, Context, Schema } from "effect"
+import { InstanceState } from "@/effect/instance-state"
+import { containsPath } from "@/project/instance-context"
 import { TsClient } from "../kilocode/ts-client" // kilocode_change
+import { NonNegativeInt } from "@opencode-ai/core/schema"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 
 const log = Log.create({ service: "lsp" })
 
 export const Event = {
-  Updated: BusEvent.define("lsp.updated", z.object({})),
+  Updated: BusEvent.define("lsp.updated", Schema.Struct({})),
 }
 
-export const Range = z
-  .object({
-    start: z.object({
-      line: z.number(),
-      character: z.number(),
-    }),
-    end: z.object({
-      line: z.number(),
-      character: z.number(),
-    }),
-  })
-  .meta({
-    ref: "Range",
-  })
-export type Range = z.infer<typeof Range>
+const Position = Schema.Struct({
+  line: NonNegativeInt,
+  character: NonNegativeInt,
+})
 
-export const Symbol = z
-  .object({
-    name: z.string(),
-    kind: z.number(),
-    location: z.object({
-      uri: z.string(),
-      range: Range,
-    }),
-  })
-  .meta({
-    ref: "Symbol",
-  })
-export type Symbol = z.infer<typeof Symbol>
+export const Range = Schema.Struct({
+  start: Position,
+  end: Position,
+}).annotate({ identifier: "Range" })
+export type Range = typeof Range.Type
 
-export const DocumentSymbol = z
-  .object({
-    name: z.string(),
-    detail: z.string().optional(),
-    kind: z.number(),
+export const Symbol = Schema.Struct({
+  name: Schema.String,
+  kind: NonNegativeInt,
+  location: Schema.Struct({
+    uri: Schema.String,
     range: Range,
-    selectionRange: Range,
-  })
-  .meta({
-    ref: "DocumentSymbol",
-  })
-export type DocumentSymbol = z.infer<typeof DocumentSymbol>
+  }),
+}).annotate({ identifier: "Symbol" })
+export type Symbol = typeof Symbol.Type
 
-export const Status = z
-  .object({
-    id: z.string(),
-    name: z.string(),
-    root: z.string(),
-    status: z.union([z.literal("connected"), z.literal("error")]),
-  })
-  .meta({
-    ref: "LSPStatus",
-  })
-export type Status = z.infer<typeof Status>
+export const DocumentSymbol = Schema.Struct({
+  name: Schema.String,
+  detail: Schema.optional(Schema.String),
+  kind: NonNegativeInt,
+  range: Range,
+  selectionRange: Range,
+}).annotate({ identifier: "DocumentSymbol" })
+export type DocumentSymbol = typeof DocumentSymbol.Type
+
+export const Status = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  root: Schema.String,
+  status: Schema.Literals(["connected", "error"]),
+}).annotate({ identifier: "LSPStatus" })
+export type Status = typeof Status.Type
 
 enum SymbolKind {
   File = 1,
@@ -116,8 +99,8 @@ const kinds = [
   SymbolKind.Enum,
 ]
 
-const filterExperimentalServers = (servers: Record<string, LSPServer.Info>) => {
-  if (Flag.KILO_EXPERIMENTAL_LSP_TY) {
+const filterExperimentalServers = (servers: Record<string, LSPServer.Info>, flags: RuntimeFlags.Info) => {
+  if (flags.experimentalLspTy) {
     if (servers["pyright"]) {
       log.info("LSP server pyright is disabled because KILO_EXPERIMENTAL_LSP_TY is enabled")
       delete servers["pyright"]
@@ -142,7 +125,7 @@ export interface Interface {
   readonly init: () => Effect.Effect<void>
   readonly status: () => Effect.Effect<Status[]>
   readonly hasClients: (file: string) => Effect.Effect<boolean>
-  readonly touchFile: (input: string, waitForDiagnostics?: boolean) => Effect.Effect<void>
+  readonly touchFile: (input: string, diagnostics?: "document" | "full") => Effect.Effect<void>
   readonly diagnostics: () => Effect.Effect<Record<string, LSPClient.Diagnostic[]>>
   readonly hover: (input: LocInput) => Effect.Effect<any>
   readonly definition: (input: LocInput) => Effect.Effect<any[]>
@@ -161,6 +144,7 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const config = yield* Config.Service
+    const flags = yield* RuntimeFlags.Service
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("LSP.state")(function* (ctx) {
@@ -175,7 +159,7 @@ export const layer = Layer.effect(
             servers[server.id] = server
           }
 
-          filterExperimentalServers(servers)
+          filterExperimentalServers(servers, flags)
 
           if (cfg.lsp !== true) {
             for (const [name, item] of Object.entries(cfg.lsp)) {
@@ -227,12 +211,7 @@ export const layer = Layer.effect(
 
     const getClients = Effect.fnUntraced(function* (file: string) {
       const ctx = yield* InstanceState.context
-      if (
-        !AppFileSystem.contains(ctx.directory, file) &&
-        (ctx.worktree === "/" || !AppFileSystem.contains(ctx.worktree, file))
-      ) {
-        return [] as LSPClient.Info[]
-      }
+      if (!containsPath(file, ctx)) return [] as LSPClient.Info[]
       const s = yield* InstanceState.get(state)
       return yield* Effect.promise(async () => {
         const extension = path.parse(file).ext || file
@@ -240,7 +219,7 @@ export const layer = Layer.effect(
 
         async function schedule(server: LSPServer.Info, root: string, key: string) {
           const handle = await server
-            .spawn(root, ctx)
+            .spawn(root, ctx, flags)
             .then((value) => {
               if (!value) s.broken.add(key)
               return value
@@ -259,6 +238,7 @@ export const layer = Layer.effect(
             server: handle,
             root,
             directory: ctx.directory,
+            instance: ctx,
           }).catch(async (err) => {
             s.broken.add(key)
             await Process.stop(handle.process)
@@ -286,7 +266,7 @@ export const layer = Layer.effect(
           if (s.broken.has(root + server.id)) continue
 
           // kilocode_change start - use lightweight tsgo-based client when persistent LSP is not enabled
-          if (server.id === "typescript" && !Flag.KILO_EXPERIMENTAL_LSP_TOOL) {
+          if (server.id === "typescript" && !flags.experimentalLspTool) {
             const existing = s.clients.find((x) => x.root === root && x.serverID === server.id)
             if (existing) {
               result.push(existing)
@@ -295,7 +275,7 @@ export const layer = Layer.effect(
             const client = TsClient.create({ root })
             s.clients.push(client)
             result.push(client)
-            Bus.publish(Event.Updated, {})
+            await Bus.publish(ctx, Event.Updated, {})
             continue
           }
           // kilocode_change end
@@ -327,7 +307,7 @@ export const layer = Layer.effect(
           if (!client) continue
 
           result.push(client)
-          Bus.publish(Event.Updated, {})
+          await Bus.publish(ctx, Event.Updated, {})
         }
 
         return result
@@ -379,15 +359,21 @@ export const layer = Layer.effect(
       })
     })
 
-    const touchFile = Effect.fn("LSP.touchFile")(function* (input: string, waitForDiagnostics?: boolean) {
+    const touchFile = Effect.fn("LSP.touchFile")(function* (input: string, diagnostics?: "document" | "full") {
       log.info("touching file", { file: input })
       const clients = yield* getClients(input)
       yield* Effect.promise(() =>
         Promise.all(
           clients.map(async (client) => {
-            const wait = waitForDiagnostics ? client.waitForDiagnostics({ path: input }) : Promise.resolve()
-            await client.notify.open({ path: input })
-            return wait
+            const after = Date.now()
+            const version = await client.notify.open({ path: input })
+            if (!diagnostics) return
+            return client.waitForDiagnostics({
+              path: input,
+              version,
+              mode: diagnostics,
+              after,
+            })
           }),
         ).catch((err) => {
           log.error("failed to touch file", { err, file: input })
@@ -530,6 +516,8 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(Layer.provide(Config.defaultLayer))
+export const defaultLayer = layer.pipe(Layer.provide(Config.defaultLayer), Layer.provide(RuntimeFlags.defaultLayer))
 
 export * as Diagnostic from "./diagnostic"
+
+export * as LSP from "./lsp"

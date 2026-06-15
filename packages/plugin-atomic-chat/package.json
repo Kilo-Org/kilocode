@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@kilocode/plugin-atomic-chat",
+  "version": "7.3.45",
+  "description": "Kilo Code plugin for Atomic Chat: auto-detection and dynamic model discovery (OpenAI-compatible local API)",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsgo --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@kilocode/plugin": "workspace:*"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "vitest": "^4.0.16"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kilo-Org/kilocode",
+    "directory": "packages/plugin-atomic-chat"
+  },
+  "peerDependencies": {}
+}

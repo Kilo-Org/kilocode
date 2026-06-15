@@ -28,27 +28,38 @@ import type { MarkdocNextJsPageProps } from "@markdoc/next.js"
 const TITLE = "Kilo Code Documentation"
 const DESCRIPTION = "Build, ship, and iterate faster with the most popular open source coding agent."
 
-function collectHeadings(node, sections = []) {
+function slugify(label) {
+  return label
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+}
+
+function collectHeadings(node, sections = [], tab = undefined) {
   if (node) {
-    // Skip headings inside tabs - they're not always visible
     if (node.name === "Tabs") {
+      for (const child of node.children || []) {
+        const label = child.attributes?.label
+        collectHeadings(child, sections, typeof label === "string" ? { label, slug: slugify(label) } : undefined)
+      }
       return sections
     }
 
     if (node.name === "Heading") {
-      const title = node.children[0]
+      const title = typeof node.children[0] === "string" ? node.children[0].trim() : node.children[0]
 
       if (typeof title === "string") {
         sections.push({
           ...node.attributes,
           title,
+          tab,
         })
       }
     }
 
     if (node.children) {
       for (const child of node.children) {
-        collectHeadings(child, sections)
+        collectHeadings(child, sections, tab)
       }
     }
   }
@@ -126,6 +137,7 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
       description = markdoc.frontmatter.description
     }
   }
+  const noindex = markdoc?.frontmatter?.noindex === true
 
   const toc = pageProps.markdoc?.content ? collectHeadings(pageProps.markdoc.content) : []
 
@@ -139,6 +151,7 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
         <meta name="referrer" content="strict-origin" />
         <meta name="title" content={title} />
         <meta name="description" content={description} />
+        {noindex && <meta name="robots" content="noindex, nofollow" />}
         <link rel="icon" href="/docs/favicon/favicon.ico" sizes="48x48" type="image/x-icon" />
         <link rel="shortcut icon" href="/docs/favicon/favicon.ico" />
         <link rel="icon" href="/docs/favicon/favicon.svg" type="image/svg+xml" />

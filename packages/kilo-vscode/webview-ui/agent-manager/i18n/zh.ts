@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "本地",
+  "agentManager.sidebar.collapse": "折叠侧边栏",
+  "agentManager.sidebar.expand": "显示侧边栏",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "会话",
   "agentManager.notGitRepo": "不是 git 仓库",
@@ -49,6 +51,11 @@ export const dict = {
   "agentManager.tab.terminal": "终端",
   "agentManager.tab.openTerminal": "打开终端",
   "agentManager.tab.newOptions": "更多新建标签页选项",
+  "agentManager.tabsMenu.label": "搜索打开的标签页",
+  "agentManager.tabsMenu.search": "搜索标签页...",
+  "agentManager.tabsMenu.empty": "无匹配标签页",
+  "agentManager.tabsMenu.status.waiting": "等待",
+  "agentManager.tabsMenu.status.retry": "重试",
 
   "agentManager.terminal.new": "新建终端标签页",
   "agentManager.terminal.ended": "终端已结束 — 关闭标签页以消除",
@@ -69,7 +76,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "下一项",
   "agentManager.shortcuts.newWorktree": "新建 Worktree",
   "agentManager.shortcuts.openWorktree": "打开 Worktree",
-  "agentManager.shortcuts.advancedWorktree": "高级 Worktree",
+  "agentManager.shortcuts.advancedWorktree": "配置新 worktree",
   "agentManager.shortcuts.deleteWorktree": "删除 Worktree",
   "agentManager.shortcuts.previousTab": "上一个标签页",
   "agentManager.shortcuts.nextTab": "下一个标签页",
@@ -90,6 +97,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "移除失效 Worktree",
 
   "agentManager.dialog.openWorktree": "新建工作树",
+  "agentManager.dialog.configureWorktree": "配置新 Worktree...",
   "agentManager.dialog.tab.new": "新建",
   "agentManager.dialog.tab.import": "导入",
   "agentManager.dialog.namePlaceholder": "Worktree 名称（可选）",

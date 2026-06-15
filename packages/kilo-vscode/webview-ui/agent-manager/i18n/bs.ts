@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "lokalno",
+  "agentManager.sidebar.collapse": "Skupi bočnu traku",
+  "agentManager.sidebar.expand": "Prikaži bočnu traku",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESIJE",
   "agentManager.notGitRepo": "Nije git repozitorij",
@@ -49,6 +51,11 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Otvori Terminal",
   "agentManager.tab.newOptions": "Više opcija nove kartice",
+  "agentManager.tabsMenu.label": "Pretraži otvorene kartice",
+  "agentManager.tabsMenu.search": "Pretraži kartice...",
+  "agentManager.tabsMenu.empty": "Nema podudarnih kartica",
+  "agentManager.tabsMenu.status.waiting": "Čeka",
+  "agentManager.tabsMenu.status.retry": "Pokušaj",
 
   "agentManager.terminal.new": "Nova kartica terminala",
   "agentManager.terminal.ended": "terminal je završen — zatvorite karticu da biste odbacili",
@@ -73,7 +80,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Sljedeći element",
   "agentManager.shortcuts.newWorktree": "Novi Worktree",
   "agentManager.shortcuts.openWorktree": "Otvori worktree",
-  "agentManager.shortcuts.advancedWorktree": "Napredni Worktree",
+  "agentManager.shortcuts.advancedWorktree": "Konfiguriši novi worktree",
   "agentManager.shortcuts.deleteWorktree": "Obriši Worktree",
   "agentManager.shortcuts.previousTab": "Prethodna kartica",
   "agentManager.shortcuts.nextTab": "Sljedeća kartica",
@@ -95,6 +102,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Ukloni zastarjeli Worktree",
 
   "agentManager.dialog.openWorktree": "Novi worktree",
+  "agentManager.dialog.configureWorktree": "Konfiguriši Novi Worktree...",
   "agentManager.dialog.tab.new": "Novo",
   "agentManager.dialog.tab.import": "Uvezi",
   "agentManager.dialog.namePlaceholder": "Naziv Worktree-a (opcionalno)",

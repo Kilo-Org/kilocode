@@ -14,12 +14,17 @@ export interface PermissionContext {
   readonly currentSessionId: string | undefined
   readonly trackedSessionIds: Set<string>
   readonly sessionDirectories: ReadonlyMap<string, string>
+  readonly extraDirectories?: () => string[]
   postMessage(msg: unknown): void
   getWorkspaceDirectory(sessionId?: string): string
+  recordPermissionDirectory(requestID: string, directory: string): void
+  getPermissionDirectory(requestID: string): string | undefined
+  clearPermissionDirectory(requestID: string): void
+  prunePermissionDirectories(active: Set<string>, dirs?: Set<string>): void
 }
 
-export function recoveryDirs(workspace: string, dirs: ReadonlyMap<string, string>) {
-  return [...new Set([workspace, ...dirs.values()])]
+export function recoveryDirs(workspace: string, dirs: ReadonlyMap<string, string>, extra: string[] = []) {
+  return [...new Set([workspace, ...dirs.values(), ...extra])]
 }
 
 export function recoverablePermissions(perms: RecoverablePermission[], tracked: Set<string>, seen: Set<string>) {
@@ -28,6 +33,19 @@ export function recoverablePermissions(perms: RecoverablePermission[], tracked: 
     seen.add(perm.id)
     return tracked.has(perm.sessionID)
   })
+}
+
+function isNotFoundError(error: unknown): boolean {
+  const record = (value: unknown) =>
+    value && typeof value === "object" ? (value as Record<string, unknown>) : undefined
+  const obj = record(error)
+  if (!obj) return false
+
+  const cause = record(obj.cause)
+  const body = record(cause?.body)
+  return [obj, record(obj.data), cause, body, record(body?.data)].some(
+    (value) => value?.name === "NotFoundError" || value?.status === 404,
+  )
 }
 
 /**
@@ -54,12 +72,17 @@ export async function handlePermissionResponse(
     return
   }
 
-  try {
-    const dir = ctx.getWorkspaceDirectory(target)
+  const dir = ctx.getPermissionDirectory(permissionId) ?? ctx.getWorkspaceDirectory(target)
 
-    // Save per-pattern rules before replying (reply deletes the pending request)
-    if (approvedAlways.length > 0 || deniedAlways.length > 0) {
-      await ctx.client.permission.saveAlwaysRules(
+  const staleCleanup = () => {
+    ctx.clearPermissionDirectory(permissionId)
+    ctx.postMessage({ type: "permissionError", permissionID: permissionId, stale: true })
+    void fetchAndSendPendingPermissions(ctx)
+  }
+
+  if (approvedAlways.length > 0 || deniedAlways.length > 0) {
+    const saveResult = await ctx.client.permission
+      .saveAlwaysRules(
         {
           requestID: permissionId,
           directory: dir,
@@ -68,15 +91,31 @@ export async function handlePermissionResponse(
         },
         { throwOnError: true },
       )
+      .then(() => "ok" as const)
+      .catch((error: unknown) => {
+        if (isNotFoundError(error)) return "stale" as const
+        console.error("[Kilo New] KiloProvider: Failed to save always-rules:", error)
+        ctx.postMessage({ type: "permissionError", permissionID: permissionId })
+        return "error" as const
+      })
+    if (saveResult === "stale") {
+      staleCleanup()
+      return
     }
+    if (saveResult === "error") return
+  }
 
-    await ctx.client.permission.reply(
-      { requestID: permissionId, reply: response, directory: dir },
-      { throwOnError: true },
-    )
-  } catch (error) {
-    console.error("[Kilo New] KiloProvider: Failed to respond to permission:", error)
-    ctx.postMessage({ type: "permissionError", permissionID: permissionId })
+  const replyResult = await ctx.client.permission
+    .reply({ requestID: permissionId, reply: response, directory: dir }, { throwOnError: true })
+    .then(() => "ok" as const)
+    .catch((error: unknown) => {
+      if (isNotFoundError(error)) return "stale" as const
+      console.error("[Kilo New] KiloProvider: Failed to respond to permission:", error)
+      ctx.postMessage({ type: "permissionError", permissionID: permissionId })
+      return "error" as const
+    })
+  if (replyResult === "stale") {
+    staleCleanup()
   }
 }
 
@@ -89,13 +128,20 @@ export async function handlePermissionResponse(
 export async function fetchAndSendPendingPermissions(ctx: PermissionContext): Promise<void> {
   if (!ctx.client) return
   try {
-    const dirs = recoveryDirs(ctx.getWorkspaceDirectory(), ctx.sessionDirectories)
+    const dirs = recoveryDirs(ctx.getWorkspaceDirectory(), ctx.sessionDirectories, ctx.extraDirectories?.() ?? [])
 
     const seen = new Set<string>()
+    const valid = new Set<string>()
     for (const dir of dirs) {
-      const { data } = await ctx.client.permission.list({ directory: dir })
+      const { data, error } = await ctx.client.permission.list({ directory: dir })
+      if (error) {
+        console.error(`[Kilo New] KiloProvider: Failed to fetch pending permissions for ${dir}:`, error)
+        continue
+      }
+      valid.add(dir)
       if (!data) continue
       for (const perm of recoverablePermissions(data, ctx.trackedSessionIds, seen)) {
+        ctx.recordPermissionDirectory(perm.id, dir)
         ctx.postMessage({
           type: "permissionRequest",
           permission: {
@@ -111,6 +157,7 @@ export async function fetchAndSendPendingPermissions(ctx: PermissionContext): Pr
         })
       }
     }
+    ctx.prunePermissionDirectories(seen, valid)
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to fetch pending permissions:", error)
   }

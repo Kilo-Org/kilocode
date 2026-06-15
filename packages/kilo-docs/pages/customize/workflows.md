@@ -41,12 +41,12 @@ agent: code
 You are helping submit a pull request...
 ```
 
-| Field         | Description                                   |
-| ------------- | --------------------------------------------- |
-| `description` | Shown in the command picker                   |
-| `agent`       | Which agent to use when invoking this command |
-| `model`       | Model override for this command               |
-| `subtask`     | When `true`, runs as a sub-agent session      |
+| Field | Description |
+|---|---|
+| `description` | Shown in the command picker |
+| `agent` | Which agent to use when invoking this command |
+| `model` | Model override for this command |
+| `subtask` | When `true`, runs as a sub-agent session |
 
 ### Workflow Capabilities
 

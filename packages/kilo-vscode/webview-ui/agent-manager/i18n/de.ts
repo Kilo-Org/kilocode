@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "lokal",
+  "agentManager.sidebar.collapse": "Seitenleiste einklappen",
+  "agentManager.sidebar.expand": "Seitenleiste anzeigen",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SITZUNGEN",
   "agentManager.notGitRepo": "Kein Git-Repository",
@@ -49,6 +51,11 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Terminal öffnen",
   "agentManager.tab.newOptions": "Weitere Tab-Optionen",
+  "agentManager.tabsMenu.label": "Offene Tabs suchen",
+  "agentManager.tabsMenu.search": "Tabs suchen...",
+  "agentManager.tabsMenu.empty": "Keine passenden Tabs",
+  "agentManager.tabsMenu.status.waiting": "Warten",
+  "agentManager.tabsMenu.status.retry": "Erneut",
 
   "agentManager.terminal.new": "Neuer Terminal-Tab",
   "agentManager.terminal.ended": "Terminal beendet — Tab schließen zum Verwerfen",
@@ -73,7 +80,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Nächstes Element",
   "agentManager.shortcuts.newWorktree": "Neuer Worktree",
   "agentManager.shortcuts.openWorktree": "Worktree öffnen",
-  "agentManager.shortcuts.advancedWorktree": "Erweiterter Worktree",
+  "agentManager.shortcuts.advancedWorktree": "Neuen Worktree konfigurieren",
   "agentManager.shortcuts.deleteWorktree": "Worktree löschen",
   "agentManager.shortcuts.previousTab": "Vorheriger Tab",
   "agentManager.shortcuts.nextTab": "Nächster Tab",
@@ -95,6 +102,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Veralteten Worktree entfernen",
 
   "agentManager.dialog.openWorktree": "Neuer Worktree",
+  "agentManager.dialog.configureWorktree": "Neuen Worktree konfigurieren...",
   "agentManager.dialog.tab.new": "Neu",
   "agentManager.dialog.tab.import": "Importieren",
   "agentManager.dialog.namePlaceholder": "Worktree-Name (optional)",

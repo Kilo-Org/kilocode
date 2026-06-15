@@ -1,23 +1,35 @@
 import { BusEvent } from "@/bus/bus-event"
 import { SessionID, MessageID, PartID } from "./schema"
-import z from "zod"
-import { NamedError } from "@opencode-ai/shared/util/error"
+import { NamedError } from "@opencode-ai/core/util/error"
 import { APICallError, convertToModelMessages, LoadAPIKeyError, type ModelMessage, type UIMessage } from "ai"
-import { LSP } from "../lsp"
+import { LSP } from "@/lsp/lsp"
 import { Snapshot } from "@/snapshot"
 import { SyncEvent } from "../sync"
-import { Database, NotFoundError, and, desc, eq, inArray, lt, or } from "@/storage"
+import { Database } from "@/storage/db"
+import { NotFoundError } from "@/storage/storage"
+import { and } from "drizzle-orm"
+import { desc } from "drizzle-orm"
+import { eq } from "drizzle-orm"
+import { inArray } from "drizzle-orm"
+import { lt } from "drizzle-orm"
+import { or } from "drizzle-orm"
 import { MessageTable, PartTable, SessionTable } from "./session.sql"
-import { ProviderError } from "@/provider"
+import * as ProviderError from "@/provider/error"
 import { iife } from "@/util/iife"
 import { errorMessage } from "@/util/error"
 import { isMedia } from "@/util/media"
 import type { SystemError } from "bun"
-import type { Provider } from "@/provider"
+import type { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "@/provider/schema"
-import { Effect } from "effect"
 import { SessionNetwork } from "./network" // kilocode_change
-import { EffectLogger } from "@/effect"
+import { CodexAuthExpiredError } from "@/kilocode/provider/codex-refresh" // kilocode_change
+import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
+import { Effect, Schema, Types } from "effect"
+import { NonNegativeInt } from "@opencode-ai/core/schema"
+import * as EffectLogger from "@opencode-ai/core/effect/logger"
+import { MessageError } from "./message-error"
+import { AuthError, OutputLengthError } from "./message-error"
+export { AuthError, OutputLengthError } from "./message-error"
 
 /** Error shape thrown by Bun's fetch() when gzip/br decompression fails mid-stream */
 interface FetchDecompressionError extends Error {
@@ -26,504 +38,574 @@ interface FetchDecompressionError extends Error {
   path: string
 }
 
-export const SYNTHETIC_ATTACHMENT_PROMPT = "Attached image(s) from tool result:"
+export const SYNTHETIC_ATTACHMENT_PROMPT = "Attached media from tool result:"
 export { isMedia }
 
-export const OutputLengthError = NamedError.create("MessageOutputLengthError", z.object({}))
-export const AbortedError = NamedError.create("MessageAbortedError", z.object({ message: z.string() }))
-export const StructuredOutputError = NamedError.create(
-  "StructuredOutputError",
-  z.object({
-    message: z.string(),
-    retries: z.number(),
-  }),
-)
-export const AuthError = NamedError.create(
-  "ProviderAuthError",
-  z.object({
-    providerID: z.string(),
-    message: z.string(),
-  }),
-)
-export const APIError = NamedError.create(
-  "APIError",
-  z.object({
-    message: z.string(),
-    statusCode: z.number().optional(),
-    isRetryable: z.boolean(),
-    responseHeaders: z.record(z.string(), z.string()).optional(),
-    responseBody: z.string().optional(),
-    metadata: z.record(z.string(), z.string()).optional(),
-  }),
-)
-export type APIError = z.infer<typeof APIError.Schema>
-export const ContextOverflowError = NamedError.create(
-  "ContextOverflowError",
-  z.object({ message: z.string(), responseBody: z.string().optional() }),
-)
-
-export const OutputFormatText = z
-  .object({
-    type: z.literal("text"),
-  })
-  .meta({
-    ref: "OutputFormatText",
-  })
-
-export const OutputFormatJsonSchema = z
-  .object({
-    type: z.literal("json_schema"),
-    schema: z.record(z.string(), z.any()).meta({ ref: "JSONSchema" }),
-    retryCount: z.number().int().min(0).default(2),
-  })
-  .meta({
-    ref: "OutputFormatJsonSchema",
-  })
-
-export const Format = z.discriminatedUnion("type", [OutputFormatText, OutputFormatJsonSchema]).meta({
-  ref: "OutputFormat",
+export const AbortedError = NamedError.create("MessageAbortedError", { message: Schema.String })
+export const StructuredOutputError = NamedError.create("StructuredOutputError", {
+  message: Schema.String,
+  retries: NonNegativeInt,
 })
-export type OutputFormat = z.infer<typeof Format>
-
-const PartBase = z.object({
-  id: PartID.zod,
-  sessionID: SessionID.zod,
-  messageID: MessageID.zod,
+export const APIError = NamedError.create("APIError", {
+  message: Schema.String,
+  statusCode: Schema.optional(NonNegativeInt),
+  isRetryable: Schema.Boolean,
+  responseHeaders: Schema.optional(Schema.Record(Schema.String, Schema.String)),
+  responseBody: Schema.optional(Schema.String),
+  metadata: Schema.optional(Schema.Record(Schema.String, Schema.String)),
+})
+export type APIError = Schema.Schema.Type<typeof APIError.Schema>
+export const ContextOverflowError = NamedError.create("ContextOverflowError", {
+  message: Schema.String,
+  responseBody: Schema.optional(Schema.String),
 })
 
-export const SnapshotPart = PartBase.extend({
-  type: z.literal("snapshot"),
-  snapshot: z.string(),
-}).meta({
-  ref: "SnapshotPart",
-})
-export type SnapshotPart = z.infer<typeof SnapshotPart>
+export class OutputFormatText extends Schema.Class<OutputFormatText>("OutputFormatText")({
+  type: Schema.Literal("text"),
+}) {}
 
-export const PatchPart = PartBase.extend({
-  type: z.literal("patch"),
-  hash: z.string(),
-  files: z.string().array(),
-}).meta({
-  ref: "PatchPart",
-})
-export type PatchPart = z.infer<typeof PatchPart>
+export class OutputFormatJsonSchema extends Schema.Class<OutputFormatJsonSchema>("OutputFormatJsonSchema")({
+  type: Schema.Literal("json_schema"),
+  schema: Schema.Record(Schema.String, Schema.Any).annotate({ identifier: "JSONSchema" }),
+  retryCount: NonNegativeInt.pipe(Schema.optional, Schema.withDecodingDefault(Effect.succeed(2))),
+}) {}
 
-export const TextPart = PartBase.extend({
-  type: z.literal("text"),
-  text: z.string(),
-  synthetic: z.boolean().optional(),
-  ignored: z.boolean().optional(),
-  time: z
-    .object({
-      start: z.number(),
-      end: z.number().optional(),
-    })
-    .optional(),
-  metadata: z.record(z.string(), z.any()).optional(),
-}).meta({
-  ref: "TextPart",
+export const Format = Schema.Union([OutputFormatText, OutputFormatJsonSchema]).annotate({
+  discriminator: "type",
+  identifier: "OutputFormat",
 })
-export type TextPart = z.infer<typeof TextPart>
+export type OutputFormat = Schema.Schema.Type<typeof Format>
 
-export const ReasoningPart = PartBase.extend({
-  type: z.literal("reasoning"),
-  text: z.string(),
-  metadata: z.record(z.string(), z.any()).optional(),
-  time: z.object({
-    start: z.number(),
-    end: z.number().optional(),
-  }),
-}).meta({
-  ref: "ReasoningPart",
-})
-export type ReasoningPart = z.infer<typeof ReasoningPart>
+const partBase = {
+  id: PartID,
+  sessionID: SessionID,
+  messageID: MessageID,
+}
 
-const FilePartSourceBase = z.object({
-  text: z
-    .object({
-      value: z.string(),
-      start: z.number().int(),
-      end: z.number().int(),
-    })
-    .meta({
-      ref: "FilePartSourceText",
+export const SnapshotPart = Schema.Struct({
+  ...partBase,
+  type: Schema.Literal("snapshot"),
+  snapshot: Schema.String,
+}).annotate({ identifier: "SnapshotPart" })
+export type SnapshotPart = Types.DeepMutable<Schema.Schema.Type<typeof SnapshotPart>>
+
+export const PatchPart = Schema.Struct({
+  ...partBase,
+  type: Schema.Literal("patch"),
+  hash: Schema.String,
+  files: Schema.Array(Schema.String),
+}).annotate({ identifier: "PatchPart" })
+export type PatchPart = Types.DeepMutable<Schema.Schema.Type<typeof PatchPart>>
+
+export const TextPart = Schema.Struct({
+  ...partBase,
+  type: Schema.Literal("text"),
+  text: Schema.String,
+  synthetic: Schema.optional(Schema.Boolean),
+  ignored: Schema.optional(Schema.Boolean),
+  time: Schema.optional(
+    Schema.Struct({
+      start: NonNegativeInt,
+      end: Schema.optional(NonNegativeInt),
     }),
-})
+  ),
+  metadata: Schema.optional(Schema.Record(Schema.String, Schema.Any)),
+}).annotate({ identifier: "TextPart" })
+export type TextPart = Types.DeepMutable<Schema.Schema.Type<typeof TextPart>>
 
-export const FileSource = FilePartSourceBase.extend({
-  type: z.literal("file"),
-  path: z.string(),
-}).meta({
-  ref: "FileSource",
-})
+export const ReasoningPart = Schema.Struct({
+  ...partBase,
+  type: Schema.Literal("reasoning"),
+  text: Schema.String,
+  metadata: Schema.optional(Schema.Record(Schema.String, Schema.Any)),
+  time: Schema.Struct({
+    start: NonNegativeInt,
+    end: Schema.optional(NonNegativeInt),
+  }),
+}).annotate({ identifier: "ReasoningPart" })
+export type ReasoningPart = Types.DeepMutable<Schema.Schema.Type<typeof ReasoningPart>>
 
-export const SymbolSource = FilePartSourceBase.extend({
-  type: z.literal("symbol"),
-  path: z.string(),
+const filePartSourceBase = {
+  text: Schema.Struct({
+    value: Schema.String,
+    start: Schema.Finite,
+    end: Schema.Finite,
+  }).annotate({ identifier: "FilePartSourceText" }),
+}
+
+export const FileSource = Schema.Struct({
+  ...filePartSourceBase,
+  type: Schema.Literal("file"),
+  path: Schema.String,
+}).annotate({ identifier: "FileSource" })
+
+export const SymbolSource = Schema.Struct({
+  ...filePartSourceBase,
+  type: Schema.Literal("symbol"),
+  path: Schema.String,
   range: LSP.Range,
-  name: z.string(),
-  kind: z.number().int(),
-}).meta({
-  ref: "SymbolSource",
+  name: Schema.String,
+  kind: NonNegativeInt,
+}).annotate({ identifier: "SymbolSource" })
+
+export const ResourceSource = Schema.Struct({
+  ...filePartSourceBase,
+  type: Schema.Literal("resource"),
+  clientName: Schema.String,
+  uri: Schema.String,
+}).annotate({ identifier: "ResourceSource" })
+
+export const FilePartSource = Schema.Union([FileSource, SymbolSource, ResourceSource]).annotate({
+  discriminator: "type",
+  identifier: "FilePartSource",
 })
 
-export const ResourceSource = FilePartSourceBase.extend({
-  type: z.literal("resource"),
-  clientName: z.string(),
-  uri: z.string(),
-}).meta({
-  ref: "ResourceSource",
-})
+export const FilePart = Schema.Struct({
+  ...partBase,
+  type: Schema.Literal("file"),
+  mime: Schema.String,
+  filename: Schema.optional(Schema.String),
+  url: Schema.String,
+  source: Schema.optional(FilePartSource),
+}).annotate({ identifier: "FilePart" })
+export type FilePart = Types.DeepMutable<Schema.Schema.Type<typeof FilePart>>
 
-export const FilePartSource = z.discriminatedUnion("type", [FileSource, SymbolSource, ResourceSource]).meta({
-  ref: "FilePartSource",
-})
+export const AgentPart = Schema.Struct({
+  ...partBase,
+  type: Schema.Literal("agent"),
+  name: Schema.String,
+  source: Schema.optional(
+    Schema.Struct({
+      value: Schema.String,
+      start: NonNegativeInt,
+      end: NonNegativeInt,
+    }),
+  ),
+}).annotate({ identifier: "AgentPart" })
+export type AgentPart = Types.DeepMutable<Schema.Schema.Type<typeof AgentPart>>
 
-export const FilePart = PartBase.extend({
-  type: z.literal("file"),
-  mime: z.string(),
-  filename: z.string().optional(),
-  url: z.string(),
-  source: FilePartSource.optional(),
-}).meta({
-  ref: "FilePart",
-})
-export type FilePart = z.infer<typeof FilePart>
+export const CompactionPart = Schema.Struct({
+  ...partBase,
+  type: Schema.Literal("compaction"),
+  auto: Schema.Boolean,
+  overflow: Schema.optional(Schema.Boolean),
+  tail_start_id: Schema.optional(MessageID),
+}).annotate({ identifier: "CompactionPart" })
+export type CompactionPart = Types.DeepMutable<Schema.Schema.Type<typeof CompactionPart>>
 
-export const AgentPart = PartBase.extend({
-  type: z.literal("agent"),
-  name: z.string(),
-  source: z
-    .object({
-      value: z.string(),
-      start: z.number().int(),
-      end: z.number().int(),
-    })
-    .optional(),
-}).meta({
-  ref: "AgentPart",
-})
-export type AgentPart = z.infer<typeof AgentPart>
+export const SubtaskPart = Schema.Struct({
+  ...partBase,
+  type: Schema.Literal("subtask"),
+  prompt: Schema.String,
+  description: Schema.String,
+  agent: Schema.String,
+  model: Schema.optional(
+    Schema.Struct({
+      providerID: ProviderID,
+      modelID: ModelID,
+    }),
+  ),
+  command: Schema.optional(Schema.String),
+}).annotate({ identifier: "SubtaskPart" })
+export type SubtaskPart = Types.DeepMutable<Schema.Schema.Type<typeof SubtaskPart>>
 
-export const CompactionPart = PartBase.extend({
-  type: z.literal("compaction"),
-  auto: z.boolean(),
-  overflow: z.boolean().optional(),
-}).meta({
-  ref: "CompactionPart",
-})
-export type CompactionPart = z.infer<typeof CompactionPart>
-
-export const SubtaskPart = PartBase.extend({
-  type: z.literal("subtask"),
-  prompt: z.string(),
-  description: z.string(),
-  agent: z.string(),
-  model: z
-    .object({
-      providerID: ProviderID.zod,
-      modelID: ModelID.zod,
-    })
-    .optional(),
-  command: z.string().optional(),
-}).meta({
-  ref: "SubtaskPart",
-})
-export type SubtaskPart = z.infer<typeof SubtaskPart>
-
-export const RetryPart = PartBase.extend({
-  type: z.literal("retry"),
-  attempt: z.number(),
-  error: APIError.Schema,
-  time: z.object({
-    created: z.number(),
+export const RetryPart = Schema.Struct({
+  ...partBase,
+  type: Schema.Literal("retry"),
+  attempt: NonNegativeInt,
+  error: APIError.EffectSchema,
+  time: Schema.Struct({
+    created: NonNegativeInt,
   }),
-}).meta({
-  ref: "RetryPart",
-})
-export type RetryPart = z.infer<typeof RetryPart>
+}).annotate({ identifier: "RetryPart" })
+export type RetryPart = Omit<Types.DeepMutable<Schema.Schema.Type<typeof RetryPart>>, "error"> & {
+  error: APIError
+}
 
-export const StepStartPart = PartBase.extend({
-  type: z.literal("step-start"),
-  snapshot: z.string().optional(),
-}).meta({
-  ref: "StepStartPart",
-})
-export type StepStartPart = z.infer<typeof StepStartPart>
+export const StepStartPart = Schema.Struct({
+  ...partBase,
+  type: Schema.Literal("step-start"),
+  snapshot: Schema.optional(Schema.String),
+}).annotate({ identifier: "StepStartPart" })
+export type StepStartPart = Types.DeepMutable<Schema.Schema.Type<typeof StepStartPart>>
 
-export const StepFinishPart = PartBase.extend({
-  type: z.literal("step-finish"),
-  reason: z.string(),
-  snapshot: z.string().optional(),
-  cost: z.number(),
-  tokens: z.object({
-    total: z.number().optional(),
-    input: z.number(),
-    output: z.number(),
-    reasoning: z.number(),
-    cache: z.object({
-      read: z.number(),
-      write: z.number(),
+export const StepFinishPart = Schema.Struct({
+  ...partBase,
+  type: Schema.Literal("step-finish"),
+  reason: Schema.String,
+  snapshot: Schema.optional(Schema.String),
+  cost: Schema.Finite,
+  tokens: Schema.Struct({
+    total: Schema.optional(Schema.Finite),
+    input: Schema.Finite,
+    output: Schema.Finite,
+    reasoning: Schema.Finite,
+    cache: Schema.Struct({
+      read: Schema.Finite,
+      write: Schema.Finite,
     }),
   }),
-}).meta({
-  ref: "StepFinishPart",
+}).annotate({ identifier: "StepFinishPart" })
+export type StepFinishPart = Types.DeepMutable<Schema.Schema.Type<typeof StepFinishPart>>
+
+export const ToolStatePending = Schema.Struct({
+  status: Schema.Literal("pending"),
+  input: Schema.Record(Schema.String, Schema.Any),
+  raw: Schema.String,
+}).annotate({ identifier: "ToolStatePending" })
+export type ToolStatePending = Types.DeepMutable<Schema.Schema.Type<typeof ToolStatePending>>
+
+export const ToolStateRunning = Schema.Struct({
+  status: Schema.Literal("running"),
+  input: Schema.Record(Schema.String, Schema.Any),
+  title: Schema.optional(Schema.String),
+  metadata: Schema.optional(Schema.Record(Schema.String, Schema.Any)),
+  time: Schema.Struct({
+    start: NonNegativeInt,
+  }),
+}).annotate({ identifier: "ToolStateRunning" })
+export type ToolStateRunning = Types.DeepMutable<Schema.Schema.Type<typeof ToolStateRunning>>
+
+export const ToolStateCompleted = Schema.Struct({
+  status: Schema.Literal("completed"),
+  input: Schema.Record(Schema.String, Schema.Any),
+  output: Schema.String,
+  title: Schema.String,
+  metadata: Schema.Record(Schema.String, Schema.Any),
+  time: Schema.Struct({
+    start: NonNegativeInt,
+    end: NonNegativeInt,
+    compacted: Schema.optional(NonNegativeInt),
+  }),
+  attachments: Schema.optional(Schema.Array(FilePart)),
+}).annotate({ identifier: "ToolStateCompleted" })
+export type ToolStateCompleted = Types.DeepMutable<Schema.Schema.Type<typeof ToolStateCompleted>>
+
+function truncateToolOutput(text: string, maxChars?: number) {
+  if (!maxChars || text.length <= maxChars) return text
+  const omitted = text.length - maxChars
+  return `${text.slice(0, maxChars)}\n[Tool output truncated for compaction: omitted ${omitted} chars]`
+}
+
+export const ToolStateError = Schema.Struct({
+  status: Schema.Literal("error"),
+  input: Schema.Record(Schema.String, Schema.Any),
+  error: Schema.String,
+  metadata: Schema.optional(Schema.Record(Schema.String, Schema.Any)),
+  time: Schema.Struct({
+    start: NonNegativeInt,
+    end: NonNegativeInt,
+  }),
+}).annotate({ identifier: "ToolStateError" })
+export type ToolStateError = Types.DeepMutable<Schema.Schema.Type<typeof ToolStateError>>
+
+export const ToolState = Schema.Union([
+  ToolStatePending,
+  ToolStateRunning,
+  ToolStateCompleted,
+  ToolStateError,
+]).annotate({
+  discriminator: "status",
+  identifier: "ToolState",
 })
-export type StepFinishPart = z.infer<typeof StepFinishPart>
+export type ToolState = ToolStatePending | ToolStateRunning | ToolStateCompleted | ToolStateError
 
-export const ToolStatePending = z
-  .object({
-    status: z.literal("pending"),
-    input: z.record(z.string(), z.any()),
-    raw: z.string(),
-  })
-  .meta({
-    ref: "ToolStatePending",
-  })
-
-export type ToolStatePending = z.infer<typeof ToolStatePending>
-
-export const ToolStateRunning = z
-  .object({
-    status: z.literal("running"),
-    input: z.record(z.string(), z.any()),
-    title: z.string().optional(),
-    metadata: z.record(z.string(), z.any()).optional(),
-    time: z.object({
-      start: z.number(),
-    }),
-  })
-  .meta({
-    ref: "ToolStateRunning",
-  })
-export type ToolStateRunning = z.infer<typeof ToolStateRunning>
-
-export const ToolStateCompleted = z
-  .object({
-    status: z.literal("completed"),
-    input: z.record(z.string(), z.any()),
-    output: z.string(),
-    title: z.string(),
-    metadata: z.record(z.string(), z.any()),
-    time: z.object({
-      start: z.number(),
-      end: z.number(),
-      compacted: z.number().optional(),
-    }),
-    attachments: FilePart.array().optional(),
-  })
-  .meta({
-    ref: "ToolStateCompleted",
-  })
-export type ToolStateCompleted = z.infer<typeof ToolStateCompleted>
-
-export const ToolStateError = z
-  .object({
-    status: z.literal("error"),
-    input: z.record(z.string(), z.any()),
-    error: z.string(),
-    metadata: z.record(z.string(), z.any()).optional(),
-    time: z.object({
-      start: z.number(),
-      end: z.number(),
-    }),
-  })
-  .meta({
-    ref: "ToolStateError",
-  })
-export type ToolStateError = z.infer<typeof ToolStateError>
-
-export const ToolState = z
-  .discriminatedUnion("status", [ToolStatePending, ToolStateRunning, ToolStateCompleted, ToolStateError])
-  .meta({
-    ref: "ToolState",
-  })
-
-export const ToolPart = PartBase.extend({
-  type: z.literal("tool"),
-  callID: z.string(),
-  tool: z.string(),
+export const ToolPart = Schema.Struct({
+  ...partBase,
+  type: Schema.Literal("tool"),
+  callID: Schema.String,
+  tool: Schema.String,
   state: ToolState,
-  metadata: z.record(z.string(), z.any()).optional(),
-}).meta({
-  ref: "ToolPart",
-})
-export type ToolPart = z.infer<typeof ToolPart>
+  metadata: Schema.optional(Schema.Record(Schema.String, Schema.Any)),
+}).annotate({ identifier: "ToolPart" })
+export type ToolPart = Omit<Types.DeepMutable<Schema.Schema.Type<typeof ToolPart>>, "state"> & {
+  state: ToolState
+}
 
-const Base = z.object({
-  id: MessageID.zod,
-  sessionID: SessionID.zod,
-})
+const messageBase = {
+  id: MessageID,
+  sessionID: SessionID,
+}
 
-export const User = Base.extend({
-  role: z.literal("user"),
-  time: z.object({
-    created: z.number(),
+// kilocode_change start - shared editor context schema (used by MessageV2.User and SessionPrompt.PromptInput)
+export const EditorContext = Schema.Struct({
+  visibleFiles: Schema.optional(Schema.Array(Schema.String)),
+  openTabs: Schema.optional(Schema.Array(Schema.String)),
+  activeFile: Schema.optional(Schema.String),
+  shell: Schema.optional(Schema.String),
+})
+export type EditorContext = Types.DeepMutable<Schema.Schema.Type<typeof EditorContext>>
+// kilocode_change end
+
+export const User = Schema.Struct({
+  ...messageBase,
+  role: Schema.Literal("user"),
+  time: Schema.Struct({
+    created: NonNegativeInt,
   }),
-  format: Format.optional(),
-  summary: z
-    .object({
-      title: z.string().optional(),
-      body: z.string().optional(),
-      diffs: Snapshot.FileDiff.array(),
-    })
-    .optional(),
-  agent: z.string(),
-  model: z.object({
-    providerID: ProviderID.zod,
-    modelID: ModelID.zod,
-    variant: z.string().optional(),
+  format: Schema.optional(Format),
+  summary: Schema.optional(
+    Schema.Struct({
+      title: Schema.optional(Schema.String),
+      body: Schema.optional(Schema.String),
+      diffs: Schema.Array(Snapshot.FileDiff),
+    }),
+  ),
+  agent: Schema.String,
+  model: Schema.Struct({
+    providerID: ProviderID,
+    modelID: ModelID,
+    variant: Schema.optional(Schema.String),
   }),
-  system: z.string().optional(),
-  tools: z.record(z.string(), z.boolean()).optional(),
+  system: Schema.optional(Schema.String),
+  tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
   // kilocode_change start
-  editorContext: z
-    .object({
-      visibleFiles: z.array(z.string()).optional(),
-      openTabs: z.array(z.string()).optional(),
-      activeFile: z.string().optional(),
-      shell: z.string().optional(),
-    })
-    .optional(),
+  editorContext: Schema.optional(EditorContext),
   // kilocode_change end
-}).meta({
-  ref: "UserMessage",
-})
-export type User = z.infer<typeof User>
+}).annotate({ identifier: "UserMessage" })
+export type User = Types.DeepMutable<Schema.Schema.Type<typeof User>>
 
-export const Part = z
-  .discriminatedUnion("type", [
-    TextPart,
-    SubtaskPart,
-    ReasoningPart,
-    FilePart,
-    ToolPart,
-    StepStartPart,
-    StepFinishPart,
-    SnapshotPart,
-    PatchPart,
-    AgentPart,
-    RetryPart,
-    CompactionPart,
-  ])
-  .meta({
-    ref: "Part",
-  })
-export type Part = z.infer<typeof Part>
+export const Part = Schema.Union([
+  TextPart,
+  SubtaskPart,
+  ReasoningPart,
+  FilePart,
+  ToolPart,
+  StepStartPart,
+  StepFinishPart,
+  SnapshotPart,
+  PatchPart,
+  AgentPart,
+  RetryPart,
+  CompactionPart,
+]).annotate({ discriminator: "type", identifier: "Part" })
+export type Part =
+  | TextPart
+  | SubtaskPart
+  | ReasoningPart
+  | FilePart
+  | ToolPart
+  | StepStartPart
+  | StepFinishPart
+  | SnapshotPart
+  | PatchPart
+  | AgentPart
+  | RetryPart
+  | CompactionPart
 
-export const Assistant = Base.extend({
-  role: z.literal("assistant"),
-  time: z.object({
-    created: z.number(),
-    completed: z.number().optional(),
+const AssistantErrorSchema = Schema.Union([
+  ...MessageError.Shared,
+  AbortedError.EffectSchema,
+  StructuredOutputError.EffectSchema,
+  ContextOverflowError.EffectSchema,
+  APIError.EffectSchema,
+]).annotate({ discriminator: "name" })
+type AssistantError = Schema.Schema.Type<typeof AssistantErrorSchema>
+
+// ── Prompt input schemas ─────────────────────────────────────────────────────
+//
+// Consumers of `SessionPrompt.PromptInput.parts` send part drafts without the
+// ambient IDs (`messageID`, `sessionID`) that live on stored parts, and may
+// omit `id` to let the server allocate one.  These Schema-Struct variants
+// carry that shape so prompt decoding can accept drafts without stored IDs.
+
+export const TextPartInput = Schema.Struct({
+  id: Schema.optional(PartID),
+  type: Schema.Literal("text"),
+  text: Schema.String,
+  synthetic: Schema.optional(Schema.Boolean),
+  ignored: Schema.optional(Schema.Boolean),
+  time: Schema.optional(
+    Schema.Struct({
+      start: NonNegativeInt,
+      end: Schema.optional(NonNegativeInt),
+    }),
+  ),
+  metadata: Schema.optional(Schema.Record(Schema.String, Schema.Any)),
+}).annotate({ identifier: "TextPartInput" })
+export type TextPartInput = Types.DeepMutable<Schema.Schema.Type<typeof TextPartInput>>
+
+export const FilePartInput = Schema.Struct({
+  id: Schema.optional(PartID),
+  type: Schema.Literal("file"),
+  mime: Schema.String,
+  filename: Schema.optional(Schema.String),
+  url: Schema.String,
+  source: Schema.optional(FilePartSource),
+}).annotate({ identifier: "FilePartInput" })
+export type FilePartInput = Types.DeepMutable<Schema.Schema.Type<typeof FilePartInput>>
+
+export const AgentPartInput = Schema.Struct({
+  id: Schema.optional(PartID),
+  type: Schema.Literal("agent"),
+  name: Schema.String,
+  source: Schema.optional(
+    Schema.Struct({
+      value: Schema.String,
+      start: NonNegativeInt,
+      end: NonNegativeInt,
+    }),
+  ),
+}).annotate({ identifier: "AgentPartInput" })
+export type AgentPartInput = Types.DeepMutable<Schema.Schema.Type<typeof AgentPartInput>>
+
+export const SubtaskPartInput = Schema.Struct({
+  id: Schema.optional(PartID),
+  type: Schema.Literal("subtask"),
+  prompt: Schema.String,
+  description: Schema.String,
+  agent: Schema.String,
+  model: Schema.optional(
+    Schema.Struct({
+      providerID: ProviderID,
+      modelID: ModelID,
+    }),
+  ),
+  command: Schema.optional(Schema.String),
+}).annotate({ identifier: "SubtaskPartInput" })
+export type SubtaskPartInput = Types.DeepMutable<Schema.Schema.Type<typeof SubtaskPartInput>>
+
+export const Assistant = Schema.Struct({
+  ...messageBase,
+  role: Schema.Literal("assistant"),
+  time: Schema.Struct({
+    created: NonNegativeInt,
+    completed: Schema.optional(NonNegativeInt),
   }),
-  error: z
-    .discriminatedUnion("name", [
-      AuthError.Schema,
-      NamedError.Unknown.Schema,
-      OutputLengthError.Schema,
-      AbortedError.Schema,
-      StructuredOutputError.Schema,
-      ContextOverflowError.Schema,
-      APIError.Schema,
-    ])
-    .optional(),
-  parentID: MessageID.zod,
-  modelID: ModelID.zod,
-  providerID: ProviderID.zod,
+  error: Schema.optional(AssistantErrorSchema),
+  parentID: MessageID,
+  modelID: ModelID,
+  providerID: ProviderID,
   /**
    * @deprecated
    */
-  mode: z.string(),
-  agent: z.string(),
-  path: z.object({
-    cwd: z.string(),
-    root: z.string(),
+  mode: Schema.String,
+  agent: Schema.String,
+  path: Schema.Struct({
+    cwd: Schema.String,
+    root: Schema.String,
   }),
-  summary: z.boolean().optional(),
-  cost: z.number(),
-  tokens: z.object({
-    total: z.number().optional(),
-    input: z.number(),
-    output: z.number(),
-    reasoning: z.number(),
-    cache: z.object({
-      read: z.number(),
-      write: z.number(),
+  summary: Schema.optional(Schema.Boolean),
+  cost: Schema.Finite,
+  tokens: Schema.Struct({
+    total: Schema.optional(Schema.Finite),
+    input: Schema.Finite,
+    output: Schema.Finite,
+    reasoning: Schema.Finite,
+    cache: Schema.Struct({
+      read: Schema.Finite,
+      write: Schema.Finite,
     }),
   }),
-  structured: z.any().optional(),
-  variant: z.string().optional(),
-  finish: z.string().optional(),
-}).meta({
-  ref: "AssistantMessage",
-})
-export type Assistant = z.infer<typeof Assistant>
+  structured: Schema.optional(Schema.Any),
+  variant: Schema.optional(Schema.String),
+  finish: Schema.optional(Schema.String),
+}).annotate({ identifier: "AssistantMessage" })
+export type Assistant = Omit<Types.DeepMutable<Schema.Schema.Type<typeof Assistant>>, "error"> & {
+  error?: AssistantError
+}
 
-export const Info = z.discriminatedUnion("role", [User, Assistant]).meta({
-  ref: "Message",
+export const Info = Schema.Union([User, Assistant]).annotate({ discriminator: "role", identifier: "Message" })
+export type Info = User | Assistant
+
+const UpdatedEventSchema = Schema.Struct({
+  sessionID: SessionID,
+  info: Info,
 })
-export type Info = z.infer<typeof Info>
+
+const RemovedEventSchema = Schema.Struct({
+  sessionID: SessionID,
+  messageID: MessageID,
+})
+
+const PartUpdatedEventSchema = Schema.Struct({
+  sessionID: SessionID,
+  part: Part,
+  time: NonNegativeInt,
+})
+
+const PartRemovedEventSchema = Schema.Struct({
+  sessionID: SessionID,
+  messageID: MessageID,
+  partID: PartID,
+})
 
 export const Event = {
   Updated: SyncEvent.define({
     type: "message.updated",
     version: 1,
     aggregate: "sessionID",
-    schema: z.object({
-      sessionID: SessionID.zod,
-      info: Info,
-    }),
+    schema: UpdatedEventSchema,
   }),
   Removed: SyncEvent.define({
     type: "message.removed",
     version: 1,
     aggregate: "sessionID",
-    schema: z.object({
-      sessionID: SessionID.zod,
-      messageID: MessageID.zod,
-    }),
+    schema: RemovedEventSchema,
   }),
   PartUpdated: SyncEvent.define({
     type: "message.part.updated",
     version: 1,
     aggregate: "sessionID",
-    schema: z.object({
-      sessionID: SessionID.zod,
-      part: Part,
-      time: z.number(),
-    }),
+    schema: PartUpdatedEventSchema,
   }),
   PartDelta: BusEvent.define(
     "message.part.delta",
-    z.object({
-      sessionID: SessionID.zod,
-      messageID: MessageID.zod,
-      partID: PartID.zod,
-      field: z.string(),
-      delta: z.string(),
+    Schema.Struct({
+      sessionID: SessionID,
+      messageID: MessageID,
+      partID: PartID,
+      field: Schema.String,
+      delta: Schema.String,
     }),
   ),
   PartRemoved: SyncEvent.define({
     type: "message.part.removed",
     version: 1,
     aggregate: "sessionID",
-    schema: z.object({
-      sessionID: SessionID.zod,
-      messageID: MessageID.zod,
-      partID: PartID.zod,
-    }),
+    schema: PartRemovedEventSchema,
   }),
 }
 
-export const WithParts = z.object({
+export const WithParts = Schema.Struct({
   info: Info,
-  parts: z.array(Part),
+  parts: Schema.Array(Part),
 })
-export type WithParts = z.infer<typeof WithParts>
+export type WithParts = {
+  info: Info
+  parts: Part[]
+}
+
+const Cursor = Schema.Struct({
+  id: MessageID,
+  time: Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0)),
+})
+type Cursor = typeof Cursor.Type
+
+const decodeCursor = Schema.decodeUnknownSync(Cursor)
+
+export const cursor = {
+  encode(input: Cursor) {
+    return Buffer.from(JSON.stringify(input)).toString("base64url")
+  },
+  decode(input: string) {
+    return decodeCursor(JSON.parse(Buffer.from(input, "base64url").toString("utf8")))
+  },
+}
 
 // kilocode_change start - strip bloated metadata fields from stored parts to prevent multi-MB payloads
 // This handles both legacy data that was stored with full file contents and keeps the API response lean.
+function stripPatch(value: unknown) {
+  if (typeof value !== "string") return undefined
+  if (Buffer.byteLength(value) > Snapshot.MAX_DIFF_SIZE) return undefined
+  return value
+}
+
+function withPatch(value: unknown) {
+  const kept = stripPatch(value)
+  return kept ? { patch: kept } : {}
+}
+
 export function stripPartMetadata(part: Part): Part {
   // kilocode_change - exported for testing
   if (part.type !== "tool") return part
@@ -535,20 +617,41 @@ export function stripPartMetadata(part: Part): Part {
   let changed = false
   let next = meta
 
-  // Strip edit tool's filediff.before/after (full file contents)
-  if (meta.filediff && (meta.filediff.before || meta.filediff.after)) {
-    const { before, after, ...rest } = meta.filediff
-    next = { ...next, filediff: rest }
+  if (meta.diff !== undefined) {
+    const { diff, ...rest } = next
+    next = rest
     changed = true
   }
 
-  // Strip apply_patch tool's files[].before/after (full file contents per file)
-  if (Array.isArray(meta.files) && meta.files.length > 0 && meta.files[0]?.before !== undefined) {
+  // Strip edit/write tool filediff.before/after (full file contents) and cap patches.
+  if (meta.filediff) {
+    const { before, after, patch, ...rest } = meta.filediff
+    next = { ...next, filediff: { ...rest, ...withPatch(patch) } }
+    changed = true
+  }
+
+  // Strip apply_patch tool's files[].before/after (full file contents per file) and cap per-file patches.
+  if (Array.isArray(meta.files) && meta.files.length > 0) {
     next = {
       ...next,
       files: meta.files.map((f: Record<string, unknown>) => {
-        const { before, after, ...rest } = f
-        return rest
+        const { before, after, patch, diff, ...rest } = f
+        const kept = stripPatch(patch) ?? stripPatch(diff)
+        return { ...rest, ...(kept ? { patch: kept } : {}) }
+      }),
+    }
+    changed = true
+  }
+
+  if (Array.isArray(meta.results) && meta.results.length > 0) {
+    next = {
+      ...next,
+      results: meta.results.map((r: Record<string, unknown>) => {
+        const { diff, ...rest } = r
+        if (!r.filediff || typeof r.filediff !== "object") return rest
+        const fd = r.filediff as Record<string, unknown>
+        const { before, after, patch, ...file } = fd
+        return { ...rest, filediff: { ...file, ...withPatch(patch) } }
       }),
     }
     changed = true
@@ -576,21 +679,6 @@ export function stripMessageMetadata(info: Info): Info {
   } as Info
 }
 // kilocode_change end
-
-const Cursor = z.object({
-  id: MessageID.zod,
-  time: z.number(),
-})
-type Cursor = z.infer<typeof Cursor>
-
-export const cursor = {
-  encode(input: Cursor) {
-    return Buffer.from(JSON.stringify(input)).toString("base64url")
-  },
-  decode(input: string) {
-    return Cursor.parse(JSON.parse(Buffer.from(input, "base64url").toString("utf8")))
-  },
-}
 
 // kilocode_change - apply stripping inside helpers so all read paths are covered
 const info = (row: typeof MessageTable.$inferSelect) =>
@@ -647,30 +735,30 @@ function providerMeta(metadata: Record<string, any> | undefined) {
 export const toModelMessagesEffect = Effect.fnUntraced(function* (
   input: WithParts[],
   model: Provider.Model,
-  options?: { stripMedia?: boolean },
+  options?: { stripMedia?: boolean; toolOutputMaxChars?: number },
 ) {
   const result: UIMessage[] = []
   const toolNames = new Set<string>()
   // Track media from tool results that need to be injected as user messages
-  // for providers that don't support media in tool results.
+  // for providers that don't support that media type in tool results.
   //
   // OpenAI-compatible APIs only support string content in tool results, so we need
-  // to extract media and inject as user messages. Other SDKs (anthropic, google,
-  // bedrock) handle type: "content" with media parts natively.
+  // to extract media and inject as user messages. Some SDKs only support a subset
+  // of media in tool results; e.g. Bedrock supports images but not PDFs there.
   //
-  // Only apply this workaround if the model actually supports image input -
-  // otherwise there's no point extracting images.
-  const supportsMediaInToolResults = (() => {
+  // Only apply this workaround if the model actually supports that media input -
+  // otherwise unsupportedParts() will turn it into a user-visible error.
+  const supportsMediaInToolResult = (attachment: { mime: string }) => {
     if (model.api.npm === "@ai-sdk/anthropic") return true
     if (model.api.npm === "@ai-sdk/openai") return true
-    if (model.api.npm === "@ai-sdk/amazon-bedrock") return true
+    if (model.api.npm === "@ai-sdk/amazon-bedrock") return attachment.mime.startsWith("image/")
     if (model.api.npm === "@ai-sdk/google-vertex/anthropic") return true
     if (model.api.npm === "@ai-sdk/google") {
       const id = model.api.id.toLowerCase()
       return id.includes("gemini-3") && !id.includes("gemini-2")
     }
     return false
-  })()
+  }
 
   const toModelOutput = (options: { toolCallId: string; input: unknown; output: unknown }) => {
     const output = options.output
@@ -690,7 +778,7 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
       return {
         type: "content",
         value: [
-          { type: "text", text: outputObject.text },
+          ...(outputObject.text ? [{ type: "text", text: outputObject.text }] : []),
           ...attachments.map((attachment) => ({
             type: "media",
             mediaType: attachment.mime,
@@ -715,9 +803,9 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
         role: "user",
         parts: [],
       }
-      result.push(userMessage)
       for (const part of msg.parts) {
-        if (part.type === "text" && !part.ignored)
+        // User message parts should never be empty
+        if (part.type === "text" && !part.ignored && part.text !== "")
           userMessage.parts.push({
             type: "text",
             text: part.text,
@@ -752,11 +840,12 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
           })
         }
       }
+      if (userMessage.parts.length > 0) result.push(userMessage)
     }
 
     if (msg.info.role === "assistant") {
       const differentModel = `${model.providerID}/${model.id}` !== `${msg.info.providerID}/${msg.info.modelID}`
-      const media: Array<{ mime: string; url: string }> = []
+      const media: Array<{ mime: string; url: string; filename?: string }> = []
 
       if (
         msg.info.error &&
@@ -772,13 +861,31 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
         role: "assistant",
         parts: [],
       }
+      // Anthropic adaptive thinking can persist assistant turns like:
+      // step-start, reasoning(signature), text(""), step-start,
+      // reasoning(signature). The empty text part is a structural separator,
+      // but it does not carry the signature metadata itself. Dropping it shifts
+      // signed thinking positions after step-start splitting/provider regrouping;
+      // keeping it as "" is filtered by the AI SDK and rejected by Anthropic.
+      // It is unclear whether this shape originates in our stream processing,
+      // a proxy, or a lower-level library, but preserving a non-empty separator
+      // here is the only safe replay point we have.
+      // Use a single space so the separator survives replay without changing
+      // the neighboring signed reasoning blocks.
+      const hasSignedReasoning = msg.parts.some((part) => {
+        if (part.type !== "reasoning") return false
+        return part.metadata?.anthropic?.signature != null
+      })
       for (const part of msg.parts) {
-        if (part.type === "text")
+        // kilocode_change - !part.ignored keeps local UI warnings out of future prompts
+        if (part.type === "text" && !part.ignored) {
+          const text = part.text === "" && hasSignedReasoning ? " " : part.text
           assistantMessage.parts.push({
             type: "text",
-            text: part.text,
+            text,
             ...(differentModel ? {} : { providerMetadata: part.metadata }),
           })
+        }
         if (part.type === "step-start")
           assistantMessage.parts.push({
             type: "step-start",
@@ -786,17 +893,19 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
         if (part.type === "tool") {
           toolNames.add(part.tool)
           if (part.state.status === "completed") {
-            const outputText = part.state.time.compacted ? "[Old tool result content cleared]" : part.state.output
+            const outputText = part.state.time.compacted
+              ? "[Old tool result content cleared]"
+              : truncateToolOutput(part.state.output, options?.toolOutputMaxChars)
             const attachments = part.state.time.compacted || options?.stripMedia ? [] : (part.state.attachments ?? [])
 
             // For providers that don't support media in tool results, extract media files
             // (images, PDFs) to be sent as a separate user message
             const mediaAttachments = attachments.filter((a) => isMedia(a.mime))
-            const nonMediaAttachments = attachments.filter((a) => !isMedia(a.mime))
-            if (!supportsMediaInToolResults && mediaAttachments.length > 0) {
-              media.push(...mediaAttachments)
+            const extractedMedia = mediaAttachments.filter((a) => !supportsMediaInToolResult(a))
+            if (extractedMedia.length > 0) {
+              media.push(...extractedMedia)
             }
-            const finalAttachments = supportsMediaInToolResults ? attachments : nonMediaAttachments
+            const finalAttachments = attachments.filter((a) => !isMedia(a.mime) || supportsMediaInToolResult(a))
 
             const output =
               finalAttachments.length > 0
@@ -854,10 +963,18 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
             })
         }
         if (part.type === "reasoning") {
+          if (differentModel) {
+            if (part.text.trim().length > 0)
+              assistantMessage.parts.push({
+                type: "text",
+                text: part.text,
+              })
+            continue
+          }
           assistantMessage.parts.push({
             type: "reasoning",
             text: part.text,
-            ...(differentModel ? {} : { providerMetadata: part.metadata }),
+            providerMetadata: part.metadata,
           })
         }
       }
@@ -878,6 +995,7 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
                 type: "file" as const,
                 url: attachment.url,
                 mediaType: attachment.mime,
+                filename: attachment.filename,
               })),
             ],
           })
@@ -902,12 +1020,16 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
 export function toModelMessages(
   input: WithParts[],
   model: Provider.Model,
-  options?: { stripMedia?: boolean },
+  options?: { stripMedia?: boolean; toolOutputMaxChars?: number },
 ): Promise<ModelMessage[]> {
   return Effect.runPromise(toModelMessagesEffect(input, model, options).pipe(Effect.provide(EffectLogger.layer)))
 }
 
-export function page(input: { sessionID: SessionID; limit: number; before?: string }) {
+export const page = Effect.fn("MessageV2.page")(function* (input: {
+  sessionID: SessionID
+  limit: number
+  before?: string
+}) {
   const before = input.before ? cursor.decode(input.before) : undefined
   const where = before
     ? and(eq(MessageTable.session_id, input.sessionID), older(before))
@@ -925,7 +1047,7 @@ export function page(input: { sessionID: SessionID; limit: number; before?: stri
     const row = Database.use((db) =>
       db.select({ id: SessionTable.id }).from(SessionTable).where(eq(SessionTable.id, input.sessionID)).get(),
     )
-    if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
+    if (!row) return yield* new NotFoundError({ message: `Session not found: ${input.sessionID}` })
     return {
       items: [] as WithParts[],
       more: false,
@@ -942,13 +1064,19 @@ export function page(input: { sessionID: SessionID; limit: number; before?: stri
     more,
     cursor: more && tail ? cursor.encode({ id: tail.id, time: tail.time_created }) : undefined,
   }
-}
+})
 
 export function* stream(sessionID: SessionID) {
   const size = 50
   let before: string | undefined
   while (true) {
-    const next = page({ sessionID, limit: size, before })
+    const next = Effect.runSync(
+      page({ sessionID, limit: size, before }).pipe(
+        Effect.catchIf(NotFoundError.isInstance, () =>
+          Effect.succeed({ items: [] as WithParts[], more: false, cursor: undefined }),
+        ),
+      ),
+    )
     if (next.items.length === 0) break
     for (let i = next.items.length - 1; i >= 0; i--) {
       yield next.items[i]
@@ -975,7 +1103,7 @@ export function parts(message_id: MessageID) {
   )
 }
 
-export function get(input: { sessionID: SessionID; messageID: MessageID }): WithParts {
+export const get = Effect.fn("MessageV2.get")(function* (input: { sessionID: SessionID; messageID: MessageID }) {
   const row = Database.use((db) =>
     db
       .select()
@@ -983,30 +1111,95 @@ export function get(input: { sessionID: SessionID; messageID: MessageID }): With
       .where(and(eq(MessageTable.id, input.messageID), eq(MessageTable.session_id, input.sessionID)))
       .get(),
   )
-  if (!row) throw new NotFoundError({ message: `Message not found: ${input.messageID}` })
+  if (!row) return yield* new NotFoundError({ message: `Message not found: ${input.messageID}` })
   return {
     info: info(row),
     parts: parts(input.messageID),
   }
-}
+})
 
 export function filterCompacted(msgs: Iterable<WithParts>) {
   const result = [] as WithParts[]
   const completed = new Set<string>()
+  let retain: MessageID | undefined
   for (const msg of msgs) {
     result.push(msg)
+    if (retain) {
+      if (msg.info.id === retain) break
+      continue
+    }
+    if (msg.info.role === "user" && completed.has(msg.info.id)) {
+      const part = msg.parts.find((item): item is CompactionPart => item.type === "compaction")
+      if (!part) continue
+      if (!part.tail_start_id) break
+      retain = part.tail_start_id
+      if (msg.info.id === retain) break
+      continue
+    }
     if (msg.info.role === "user" && completed.has(msg.info.id) && msg.parts.some((part) => part.type === "compaction"))
       break
     if (msg.info.role === "assistant" && msg.info.summary && msg.info.finish && !msg.info.error)
       completed.add(msg.info.parentID)
   }
   result.reverse()
+  KiloSessionMessageOrder.annotate(result) // kilocode_change - preserve chronology before retained-tail projection
+  const compactionIndex = result.findLastIndex(
+    (msg) =>
+      msg.info.role === "user" &&
+      msg.parts.some((item): item is CompactionPart => item.type === "compaction" && item.tail_start_id !== undefined),
+  )
+  const compaction = result[compactionIndex]
+  const part = compaction?.parts.find(
+    (item): item is CompactionPart => item.type === "compaction" && item.tail_start_id !== undefined,
+  )
+  const summaryIndex = compaction
+    ? result.findIndex(
+        (msg, index) =>
+          index > compactionIndex &&
+          msg.info.role === "assistant" &&
+          msg.info.summary &&
+          msg.info.parentID === compaction.info.id,
+      )
+    : -1
+  const tailIndex = part?.tail_start_id ? result.findIndex((msg) => msg.info.id === part.tail_start_id) : -1
+  if (tailIndex >= 0 && tailIndex < compactionIndex && summaryIndex > compactionIndex) {
+    return [
+      ...result.slice(compactionIndex, summaryIndex + 1),
+      ...result.slice(tailIndex, compactionIndex),
+      ...result.slice(summaryIndex + 1),
+    ]
+  }
   return result
 }
 
 export const filterCompactedEffect = Effect.fnUntraced(function* (sessionID: SessionID) {
   return filterCompacted(stream(sessionID))
 })
+
+// filterCompacted reorders messages for model consumption
+// ([compaction-user, summary, ...retained tail..., continue-user]), so array
+// position is not chronological. Derive each binding by max id (MessageID
+// is monotonic via MessageID.ascending) so a pre-compaction overflowing tail
+// assistant doesn't get mistaken for the most recent turn. tasks are
+// compaction/subtask parts attached to user messages newer than the latest
+// finished assistant — i.e. unprocessed work.
+export function latest(msgs: WithParts[]) {
+  let user: User | undefined
+  let assistant: Assistant | undefined
+  let finished: Assistant | undefined
+  for (const msg of msgs) {
+    const info = msg.info
+    if (info.role === "user" && (!user || info.id > user.id)) user = info
+    if (info.role === "assistant" && (!assistant || info.id > assistant.id)) assistant = info
+    if (info.role === "assistant" && info.finish && (!finished || info.id > finished.id)) finished = info
+  }
+  const tasks = msgs.flatMap((m) =>
+    finished && m.info.id <= finished.id
+      ? []
+      : m.parts.filter((p): p is CompactionPart | SubtaskPart => p.type === "compaction" || p.type === "subtask"),
+  )
+  return { user, assistant, finished, tasks }
+}
 
 export function fromError(
   e: unknown,
@@ -1030,6 +1223,14 @@ export function fromError(
         },
         { cause: e },
       ).toObject()
+    case e instanceof CodexAuthExpiredError: // kilocode_change start
+      return new AuthError(
+        {
+          providerID: "openai",
+          message: e.message,
+        },
+        { cause: e },
+      ).toObject() // kilocode_change end
     case SessionNetwork.disconnected(e): // kilocode_change start
       return new APIError(
         {

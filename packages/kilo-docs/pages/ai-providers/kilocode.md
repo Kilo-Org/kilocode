@@ -1,4 +1,6 @@
 ---
+title: "Using the Kilo Code Provider"
+description: "The built-in Kilo Code provider gives you access to top AI models with one account. Setup and sign-in guide."
 sidebar_label: Kilo Code Provider
 ---
 

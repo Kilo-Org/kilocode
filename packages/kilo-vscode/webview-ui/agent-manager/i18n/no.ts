@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "lokal",
+  "agentManager.sidebar.collapse": "Skjul sidefelt",
+  "agentManager.sidebar.expand": "Vis sidefelt",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "ØKTER",
   "agentManager.notGitRepo": "Ikke et git-repositorium",
@@ -49,6 +51,11 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Åpne Terminal",
   "agentManager.tab.newOptions": "Flere alternativer for ny fane",
+  "agentManager.tabsMenu.label": "Søk i åpne faner",
+  "agentManager.tabsMenu.search": "Søk i faner...",
+  "agentManager.tabsMenu.empty": "Ingen treffende faner",
+  "agentManager.tabsMenu.status.waiting": "Venter",
+  "agentManager.tabsMenu.status.retry": "Igjen",
 
   "agentManager.terminal.new": "Ny terminalfane",
   "agentManager.terminal.ended": "terminal avsluttet — lukk fanen for å avvise",
@@ -72,7 +79,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Neste element",
   "agentManager.shortcuts.newWorktree": "Nytt Worktree",
   "agentManager.shortcuts.openWorktree": "Åpne Worktree",
-  "agentManager.shortcuts.advancedWorktree": "Avansert Worktree",
+  "agentManager.shortcuts.advancedWorktree": "Konfigurer nytt worktree",
   "agentManager.shortcuts.deleteWorktree": "Slett Worktree",
   "agentManager.shortcuts.previousTab": "Forrige fane",
   "agentManager.shortcuts.nextTab": "Neste fane",
@@ -94,6 +101,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Fjern utdatert Worktree",
 
   "agentManager.dialog.openWorktree": "Ny worktree",
+  "agentManager.dialog.configureWorktree": "Konfigurer Nytt Worktree...",
   "agentManager.dialog.tab.new": "Ny",
   "agentManager.dialog.tab.import": "Importer",
   "agentManager.dialog.namePlaceholder": "Worktree-navn (valgfritt)",

@@ -136,6 +136,29 @@ Actual description here.`
         workflows.some((w) => w.source === "global" && w.path.includes(path.join(".kilo", "workflows", "global.md"))),
       ).toBe(true)
     })
+
+    test("applies markdown substitutions to workflow content", async () => {
+      process.env.KILO_WORKFLOW_TEST = "env content"
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const workflowsDir = path.join(dir, ".kilo", "workflows")
+          await Bun.write(path.join(dir, "guide.md"), "file content")
+          await Bun.write(
+            path.join(workflowsDir, "workflow.md"),
+            ["# Workflow", "", "{file:../../guide.md}", "{env:KILO_WORKFLOW_TEST}"].join("\n"),
+          )
+        },
+      })
+
+      try {
+        const workflows = await WorkflowsMigrator.discoverWorkflows(tmp.path, true)
+
+        expect(workflows[0].content).toContain("file content")
+        expect(workflows[0].content).toContain("env content")
+      } finally {
+        delete process.env.KILO_WORKFLOW_TEST
+      }
+    })
   })
 
   describe("convertToCommand", () => {

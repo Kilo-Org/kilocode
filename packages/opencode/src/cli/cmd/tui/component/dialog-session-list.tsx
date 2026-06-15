@@ -2,39 +2,44 @@ import { useDialog } from "@tui/ui/dialog"
 import { DialogSelect } from "@tui/ui/dialog-select"
 import { useRoute } from "@tui/context/route"
 import { useSync } from "@tui/context/sync"
-import { createMemo, createResource, createSignal, onMount } from "solid-js"
-import { Locale } from "@/util"
+import { createMemo, createResource, createSignal, onMount, type JSX } from "solid-js"
+import { Locale } from "@/util/locale"
 import { useProject } from "@tui/context/project"
-import { useKeybind } from "../context/keybind"
 import { useTheme } from "../context/theme"
 import { useSDK } from "../context/sdk"
-import { Flag } from "@/flag/flag"
+import { useLocal } from "../context/local"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { DialogSessionRename } from "./dialog-session-rename"
-import { Keybind } from "@/util"
 import { createDebouncedSignal } from "../util/signal"
 import { useToast } from "../ui/toast"
-import { DialogWorkspaceCreate, openWorkspaceSession, restoreWorkspaceSession } from "./dialog-workspace-create"
+import { openWorkspaceSelect, type WorkspaceSelection, warpWorkspaceSession } from "./dialog-workspace-create"
 import { Spinner } from "./spinner"
 import path from "path" // kilocode_change
 import { errorMessage } from "@/util/error"
 import { DialogSessionDeleteFailed } from "./dialog-session-delete-failed"
-
-type WorkspaceStatus = "connected" | "connecting" | "disconnected" | "error"
+import { WorkspaceLabel } from "./workspace-label"
+import { useCommandShortcut } from "../keymap"
 
 export function DialogSessionList() {
   const dialog = useDialog()
   const route = useRoute()
   const sync = useSync()
   const project = useProject()
-  const keybind = useKeybind()
   const { theme } = useTheme()
   const sdk = useSDK()
+  const local = useLocal()
   const toast = useToast()
   const [toDelete, setToDelete] = createSignal<string>()
   const [search, setSearch] = createDebouncedSignal("", 150)
   const [global, setGlobal] = createSignal(true) // kilocode_change - show all worktrees by default
+  const deleteHint = useCommandShortcut("session.delete")
+  const quickSwitch1 = useCommandShortcut("session.quick_switch.1")
+  const quickSwitch9 = useCommandShortcut("session.quick_switch.9")
 
   // kilocode_change start - always fetch from experimental endpoint (returns GlobalSession with worktree info)
+  // TODO: extend /experimental/session to accept `scope`/`path` so this dialog can respect the
+  // upstream `session_directory_filter_enabled` KV toggle (via sync.session.query()) while
+  // keeping worktree grouping. Currently the toggle has no effect here.
   const [searchResults, searchActions] = createResource(
     () => search(),
     async (query) => {
@@ -64,26 +69,41 @@ export function DialogSessionList() {
   })
   // kilocode_change end
 
-  function createWorkspace() {
-    dialog.replace(() => (
-      <DialogWorkspaceCreate
-        onSelect={(workspaceID) =>
-          openWorkspaceSession({
-            dialog,
-            route,
-            sdk,
-            sync,
-            toast,
-            workspaceID,
-          })
-        }
-      />
-    ))
-  }
-
   function recover(session: NonNullable<ReturnType<typeof sessions>[number]>) {
     const workspace = project.workspace.get(session.workspaceID!)
     const list = () => dialog.replace(() => <DialogSessionList />)
+    const warp = async (selection: WorkspaceSelection) => {
+      const workspaceID = await (async () => {
+        if (selection.type === "none") return null
+        if (selection.type === "existing") return selection.workspaceID
+        const result = await sdk.client.experimental.workspace
+          .create({ type: selection.workspaceType, branch: null })
+          .catch(() => undefined)
+        const workspace = result?.data
+        if (!workspace) {
+          toast.show({
+            message: `Failed to create workspace: ${errorMessage(result?.error ?? "no response")}`,
+            variant: "error",
+          })
+          return
+        }
+        await project.workspace.sync()
+        return workspace.id
+      })()
+      if (workspaceID === undefined) return
+      await warpWorkspaceSession({
+        dialog,
+        sdk,
+        sync,
+        project,
+        toast,
+        sourceWorkspaceID: session.workspaceID,
+        workspaceID,
+        sessionID: session.id,
+        copyChanges: false,
+        done: list,
+      })
+    }
     dialog.replace(() => (
       <DialogSessionDeleteFailed
         session={session.title}
@@ -110,89 +130,112 @@ export function DialogSessionList() {
           return true
         }}
         onRestore={() => {
-          dialog.replace(() => (
-            <DialogWorkspaceCreate
-              onSelect={(workspaceID) =>
-                restoreWorkspaceSession({
-                  dialog,
-                  sdk,
-                  sync,
-                  project,
-                  toast,
-                  workspaceID,
-                  sessionID: session.id,
-                  done: list,
-                })
-              }
-            />
-          ))
+          void openWorkspaceSelect({
+            dialog,
+            sdk,
+            sync,
+            project,
+            toast,
+            onSelect: (selection) => {
+              void warp(selection)
+            },
+          })
           return false
         }}
       />
     ))
   }
 
+  // kilocode_change - support local and global sessions
+  function orderByRecency(sessionsList: { id: string; parentID?: string; time: { updated: number } }[]) {
+    return sessionsList
+      .filter((x) => x.parentID === undefined)
+      .toSorted((a, b) => b.time.updated - a.time.updated)
+      .map((x) => x.id)
+  }
+
+  const [browseOrder] = createSignal<string[]>(orderByRecency(sync.data.session))
+
+  const quickSwitchHint = createMemo(() => {
+    const first = quickSwitch1()
+    const last = quickSwitch9()
+    if (!first || !last) return undefined
+    return quickSwitchRange(first, last)
+  })
+  const quickSwitchFooterHints = createMemo(() => {
+    const hint = quickSwitchHint()
+    return hint && local.session.slots().length > 0 ? [{ title: "switch", label: hint }] : []
+  })
+
   const options = createMemo(() => {
     const today = new Date().toDateString()
     const all = global() // kilocode_change
-    return sessions()
-      .filter((x) => x.parentID === undefined)
-      .toSorted((a, b) => {
-        const updatedDay = new Date(b.time.updated).setHours(0, 0, 0, 0) - new Date(a.time.updated).setHours(0, 0, 0, 0)
-        if (updatedDay !== 0) return updatedDay
-        return b.time.created - a.time.created
-      })
-      .map((x) => {
-        const workspace = x.workspaceID ? project.workspace.get(x.workspaceID) : undefined
+    const sessionMap = new Map(
+      sessions()
+        .filter((x) => x.parentID === undefined)
+        .map((x) => [x.id, x]),
+    )
 
-        let workspaceStatus: WorkspaceStatus | null = null
+    const searchResult = searchResults()
+    const displayOrder = searchResult ? orderByRecency(searchResult) : browseOrder()
+
+    const pinned = local.session.pinned().filter((id) => sessionMap.has(id))
+    const pinnedSet = new Set(pinned)
+    const slotByID = new Map<string, number>(local.session.slots().map((id, i) => [id, i + 1]))
+
+    function buildOption(id: string, category: string) {
+      const x = sessionMap.get(id)
+      if (!x) return undefined
+      const workspace = x.workspaceID ? project.workspace.get(x.workspaceID) : undefined
+
+      let footer: JSX.Element | string = ""
+      if (Flag.KILO_EXPERIMENTAL_WORKSPACES) {
         if (x.workspaceID) {
-          workspaceStatus = project.workspace.status(x.workspaceID) || "error"
+          footer = workspace ? (
+            <WorkspaceLabel
+              type={workspace.type}
+              name={workspace.name}
+              status={project.workspace.status(x.workspaceID) ?? "error"}
+            />
+          ) : (
+            <WorkspaceLabel type="unknown" name={x.workspaceID} status="error" />
+          )
         }
+      } else {
+        footer = Locale.time(x.time.updated)
+      }
 
-        let footer = ""
-        if (Flag.KILO_EXPERIMENTAL_WORKSPACES) {
-          if (x.workspaceID) {
-            let desc = "unknown"
-            if (workspace) {
-              desc = `${workspace.type}: ${workspace.name}`
-            }
+      const isDeleting = toDelete() === x.id
+      const status = sync.data.session_status?.[x.id]
+      const isWorking = status?.type === "busy" || status?.type === "retry"
+      const slot = slotByID.get(x.id)
+      const gutter = isWorking
+        ? () => <Spinner />
+        : slot !== undefined
+          ? () => <text fg={theme.accent}>{slot}</text>
+          : undefined
+      return {
+        title: isDeleting ? `Press ${deleteHint()} again to confirm` : x.title,
+        description: all && x.worktreeName ? `(${x.worktreeName})` : undefined, // kilocode_change - worktree label
+        bg: isDeleting ? theme.error : undefined,
+        value: x.id,
+        category,
+        footer,
+        gutter,
+      }
+    }
 
-            footer = (
-              <>
-                {desc}{" "}
-                <span
-                  style={{
-                    fg: workspaceStatus === "connected" ? theme.success : theme.error,
-                  }}
-                >
-                  ●
-                </span>
-              </>
-            )
-          }
-        } else {
-          footer = Locale.time(x.time.updated)
-        }
-
-        const date = new Date(x.time.updated)
-        let category = date.toDateString()
-        if (category === today) {
-          category = "Today"
-        }
-        const isDeleting = toDelete() === x.id
-        const status = sync.data.session_status?.[x.id]
-        const isWorking = status?.type === "busy"
-        return {
-          title: isDeleting ? `Press ${keybind.print("session_delete")} again to confirm` : x.title,
-          description: all && x.worktreeName ? `(${x.worktreeName})` : undefined, // kilocode_change - worktree label
-          bg: isDeleting ? theme.error : undefined,
-          value: x.id,
-          category,
-          footer,
-          gutter: isWorking ? <Spinner /> : undefined,
-        }
+    const remaining = displayOrder
+      .filter((id) => !pinnedSet.has(id))
+      .map((id) => {
+        const x = sessionMap.get(id)
+        if (!x) return undefined
+        const label = new Date(x.time.updated).toDateString()
+        return buildOption(id, label === today ? "Today" : label)
       })
+      .filter((x) => x !== undefined)
+
+    return [...pinned.map((id) => buildOption(id, "Pinned")).filter((x) => x !== undefined), ...remaining]
   })
 
   onMount(() => {
@@ -216,9 +259,16 @@ export function DialogSessionList() {
         })
         dialog.clear()
       }}
-      keybind={[
+      actions={[
         {
-          keybind: keybind.all.session_delete?.[0],
+          command: "session.pin.toggle",
+          title: "pin/unpin",
+          onTrigger: (option: { value: string }) => {
+            local.session.togglePin(option.value)
+          },
+        },
+        {
+          command: "session.delete",
           title: "delete",
           onTrigger: async (option) => {
             if (toDelete() === option.value) {
@@ -266,8 +316,8 @@ export function DialogSessionList() {
           },
         },
         {
-          keybind: keybind.all.session_rename?.[0],
-          title: "rename", // kilocode_change
+          command: "session.rename",
+          title: "rename",
           // kilocode_change start
           onTrigger: async (option) => {
             const item = sessions().find((x) => x.id === option.value)
@@ -283,7 +333,7 @@ export function DialogSessionList() {
           },
         },
         {
-          keybind: { name: "a", ctrl: true, meta: false, shift: false, leader: false },
+          command: "session.scope.toggle",
           title: global() ? "current" : "all",
           onTrigger: async () => {
             setToDelete(undefined)
@@ -291,16 +341,17 @@ export function DialogSessionList() {
           },
         },
         // kilocode_change end
-        {
-          keybind: Keybind.parse("ctrl+w")[0],
-          title: "new workspace",
-          side: "right",
-          disabled: !Flag.KILO_EXPERIMENTAL_WORKSPACES,
-          onTrigger: () => {
-            createWorkspace()
-          },
-        },
       ]}
+      // kilocode_change start - preserve Ctrl+A worktree scope toggle with the upstream keymap engine
+      bindings={[{ key: "ctrl+a", cmd: "session.scope.toggle" }]}
+      // kilocode_change end
+      footerHints={quickSwitchFooterHints()}
     />
   )
+}
+
+function quickSwitchRange(first: string, last: string) {
+  const prefix = first.slice(0, -1)
+  if (first.endsWith("1") && last === `${prefix}9`) return `${prefix}1-9`
+  return `${first} through ${last}`
 }

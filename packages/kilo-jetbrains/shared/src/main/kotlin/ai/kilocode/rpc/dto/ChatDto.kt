@@ -39,6 +39,8 @@ data class TokensDto(
 data class MessageErrorDto(
     val type: String,
     val message: String? = null,
+    val statusCode: Int? = null,
+    val responseBody: String? = null,
 )
 
 @Serializable
@@ -60,6 +62,22 @@ data class PartDto(
     val callID: String? = null,
     val state: String? = null,
     val title: String? = null,
+    val input: Map<String, String> = emptyMap(),
+    val metadata: Map<String, String> = emptyMap(),
+    val output: String? = null,
+    val error: String? = null,
+    val time: PartTimeDto? = null,
+    val todos: List<TodoDto> = emptyList(),
+    val todoView: TodoViewDto? = null,
+    val reason: String? = null,
+    val cost: Double? = null,
+    val tokens: TokensDto? = null,
+)
+
+@Serializable
+data class PartTimeDto(
+    val start: Double? = null,
+    val end: Double? = null,
 )
 
 // --- Prompt Input ---
@@ -67,9 +85,12 @@ data class PartDto(
 @Serializable
 data class PromptDto(
     val parts: List<PromptPartDto>,
+    val messageID: String? = null,
     val providerID: String? = null,
     val modelID: String? = null,
     val agent: String? = null,
+    val variant: String? = null,
+    val noReply: Boolean? = null,
 )
 
 @Serializable
@@ -129,6 +150,13 @@ sealed class ChatEventDto {
     ) : ChatEventDto()
 
     @Serializable
+    @SerialName("session.created")
+    data class SessionCreated(
+        val sessionID: String,
+        val info: SessionDto,
+    ) : ChatEventDto()
+
+    @Serializable
     @SerialName("session.error")
     data class Error(
         val sessionID: String?,
@@ -185,6 +213,13 @@ sealed class ChatEventDto {
     ) : ChatEventDto()
 
     @Serializable
+    @SerialName("session.updated")
+    data class SessionUpdated(
+        val sessionID: String,
+        val session: SessionDto,
+    ) : ChatEventDto()
+
+    @Serializable
     @SerialName("session.idle")
     data class SessionIdle(
         val sessionID: String,
@@ -214,6 +249,16 @@ sealed class ChatEventDto {
 // --- Permission DTOs ---
 
 @Serializable
+data class PermissionFileDiffDto(
+    val file: String,
+    val patch: String? = null,
+    val before: String? = null,
+    val after: String? = null,
+    val additions: Int = 0,
+    val deletions: Int = 0,
+)
+
+@Serializable
 data class PermissionRequestDto(
     val id: String,
     val sessionID: String,
@@ -222,6 +267,11 @@ data class PermissionRequestDto(
     val metadata: Map<String, String> = emptyMap(),
     val always: List<String> = emptyList(),
     val tool: ToolRefDto? = null,
+    val message: String? = null,
+    val command: String? = null,
+    val rules: List<String> = emptyList(),
+    val filePath: String? = null,
+    val fileDiffs: List<PermissionFileDiffDto> = emptyList(),
 )
 
 @Serializable
@@ -250,6 +300,7 @@ data class QuestionRequestDto(
     val sessionID: String,
     val questions: List<QuestionInfoDto>,
     val tool: ToolRefDto? = null,
+    val blocking: Boolean = false,
 )
 
 @Serializable
@@ -259,12 +310,17 @@ data class QuestionInfoDto(
     val options: List<QuestionOptionDto> = emptyList(),
     val multiple: Boolean = false,
     val custom: Boolean = true,
+    val questionKey: String? = null,
+    val headerKey: String? = null,
 )
 
 @Serializable
 data class QuestionOptionDto(
     val label: String,
     val description: String,
+    val labelKey: String? = null,
+    val descriptionKey: String? = null,
+    val mode: String? = null,
 )
 
 @Serializable
@@ -279,6 +335,16 @@ data class TodoDto(
     val content: String,
     val status: String,
     val priority: String,
+    val changed: Boolean = false,
+)
+
+@Serializable
+data class TodoViewDto(
+    val mode: String = "full",
+    val todos: List<TodoDto> = emptyList(),
+    val hiddenBefore: Int = 0,
+    val hiddenAfter: Int = 0,
+    val changed: Int = 0,
 )
 
 // --- Diff DTO ---

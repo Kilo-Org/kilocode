@@ -21,20 +21,20 @@ Once setup is complete, your KiloClaw machine will have the following configured
 - Real-time Gmail push notifications via Google Pub/Sub, so KiloClaw can react to incoming emails sent to the dedicated account without polling
 - Access to the full range of Google Workspace services:
 
-| Service               | What KiloClaw can do         |
-| --------------------- | ---------------------------- |
-| **Gmail**             | Read, draft, and send emails |
-| **Google Calendar**   | View and manage events       |
-| **Google Drive**      | Access and organize files    |
-| **Google Docs**       | Read and edit documents      |
-| **Google Sheets**     | Read and edit spreadsheets   |
-| **Google Slides**     | Read and edit presentations  |
-| **Google Tasks**      | View and manage tasks        |
-| **People (Contacts)** | Access contact information   |
-| **Google Forms**      | Read and manage forms        |
-| **Google Chat**       | Send and read messages       |
-| **Google Classroom**  | Access classroom resources   |
-| **Apps Script**       | Manage Apps Script projects  |
+| Service | What KiloClaw can do |
+|---|---|
+| **Gmail** | Read, draft, and send emails |
+| **Google Calendar** | View and manage events |
+| **Google Drive** | Access and organize files |
+| **Google Docs** | Read and edit documents |
+| **Google Sheets** | Read and edit spreadsheets |
+| **Google Slides** | Read and edit presentations |
+| **Google Tasks** | View and manage tasks |
+| **People (Contacts)** | Access contact information |
+| **Google Forms** | Read and manage forms |
+| **Google Chat** | Send and read messages |
+| **Google Classroom** | Access classroom resources |
+| **Apps Script** | Manage Apps Script projects |
 
 ## Prerequisites
 
@@ -68,13 +68,13 @@ KiloClaw will automatically use the dedicated account's credentials to fulfill t
 
 KiloClaw's credentials are tied to its dedicated Google account — not your personal one. To let KiloClaw work with your personal Google data, you need to **share or delegate access from your personal account to the KiloClaw account**:
 
-| Service                           | How to share access                                                                                                                                                                                    |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Google Calendar**               | Share your calendar with the KiloClaw account's email address ([instructions](https://support.google.com/calendar/answer/37082))                                                                       |
-| **Google Drive**                  | Share specific files or folders with the KiloClaw account's email address                                                                                                                              |
-| **Gmail** (Option 1: Delegation)  | Set up [Gmail delegation](https://support.google.com/mail/answer/138350) to grant KiloClaw read and write access to your inbox — it can read, draft, and send emails on your behalf                    |
-| **Gmail** (Option 2: Forwarding)  | Set up [email forwarding](https://support.google.com/mail/answer/10957) so KiloClaw receives its own copy of all incoming emails — it can read them but cannot make any changes to your original inbox |
-| **Google Docs / Sheets / Slides** | Share individual documents with the KiloClaw account's email address                                                                                                                                   |
+| Service | How to share access |
+|---|---|
+| **Google Calendar** | Share your calendar with the KiloClaw account's email address ([instructions](https://support.google.com/calendar/answer/37082)) |
+| **Google Drive** | Share specific files or folders with the KiloClaw account's email address |
+| **Gmail** (Option 1: Delegation) | Set up [Gmail delegation](https://support.google.com/mail/answer/138350) to grant KiloClaw read and write access to your inbox — it can read, draft, and send emails on your behalf |
+| **Gmail** (Option 2: Forwarding) | Set up [email forwarding](https://support.google.com/mail/answer/10957) so KiloClaw receives its own copy of all incoming emails — it can read them but cannot make any changes to your original inbox |
+| **Google Docs / Sheets / Slides** | Share individual documents with the KiloClaw account's email address |
 
 Once access is shared, reference the delegation in your prompts so KiloClaw knows where to look:
 

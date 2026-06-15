@@ -2,14 +2,17 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import path from "path"
 import { ConfigValidation } from "../../src/kilocode/config-validation"
-import { Instance } from "../../src/project/instance"
-import { Config } from "../../src/config"
-import { Filesystem } from "../../src/util"
-import { tmpdir } from "../fixture/fixture"
+import { provideTestInstance } from "../fixture/fixture"
+import { Config } from "../../src/config/config"
+import { AppRuntime } from "../../src/effect/app-runtime"
+import { Filesystem } from "../../src/util/filesystem"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
+
+const check = (filepath: string) => ConfigValidation.check(filepath)
 
 describe("ConfigValidation.check", () => {
   test("returns empty string for non-config files", async () => {
@@ -17,9 +20,9 @@ describe("ConfigValidation.check", () => {
     const filepath = path.join(tmp.path, "src", "index.ts")
     await Filesystem.write(filepath, "export const x = 1")
 
-    const result = await Instance.provide({
+    const result = await provideTestInstance({
       directory: tmp.path,
-      fn: () => ConfigValidation.check(filepath),
+      fn: () => check(filepath),
     })
     expect(result).toBe("")
   })
@@ -29,9 +32,9 @@ describe("ConfigValidation.check", () => {
     const filepath = path.join(tmp.path, "kilo.json")
     await Filesystem.write(filepath, JSON.stringify({ model: "anthropic/claude-sonnet-4-20250514" }))
 
-    const result = await Instance.provide({
+    const result = await provideTestInstance({
       directory: tmp.path,
-      fn: () => ConfigValidation.check(filepath),
+      fn: () => check(filepath),
     })
     expect(result).toContain("config_validation")
     expect(result).toContain("validated successfully")
@@ -42,9 +45,9 @@ describe("ConfigValidation.check", () => {
     const filepath = path.join(tmp.path, "kilo.json")
     await Filesystem.write(filepath, '{ "model": "test/model" "extra": true }')
 
-    const result = await Instance.provide({
+    const result = await provideTestInstance({
       directory: tmp.path,
-      fn: () => ConfigValidation.check(filepath),
+      fn: () => check(filepath),
     })
     expect(result).toContain("config_validation")
     expect(result).toContain("ERROR")
@@ -57,9 +60,9 @@ describe("ConfigValidation.check", () => {
     // Config.Info uses .strict() so unknown fields produce errors
     await Filesystem.write(filepath, JSON.stringify({ notAField: true }))
 
-    const result = await Instance.provide({
+    const result = await provideTestInstance({
       directory: tmp.path,
-      fn: () => ConfigValidation.check(filepath),
+      fn: () => check(filepath),
     })
     expect(result).toContain("config_validation")
     expect(result).toContain("WARNING")
@@ -77,9 +80,9 @@ description: A test command
 Do something useful`,
     )
 
-    const result = await Instance.provide({
+    const result = await provideTestInstance({
       directory: tmp.path,
-      fn: () => ConfigValidation.check(filepath),
+      fn: () => check(filepath),
     })
     expect(result).toContain("config_validation")
     expect(result).toContain("validated successfully")
@@ -98,9 +101,9 @@ subtask: "not-a-boolean"
 Do something`,
     )
 
-    const result = await Instance.provide({
+    const result = await provideTestInstance({
       directory: tmp.path,
-      fn: () => ConfigValidation.check(filepath),
+      fn: () => check(filepath),
     })
     expect(result).toContain("config_validation")
     expect(result).toContain("WARNING")
@@ -119,9 +122,9 @@ description: A helper agent
 You are a helpful agent.`,
     )
 
-    const result = await Instance.provide({
+    const result = await provideTestInstance({
       directory: tmp.path,
-      fn: () => ConfigValidation.check(filepath),
+      fn: () => check(filepath),
     })
     expect(result).toContain("config_validation")
     expect(result).toContain("validated successfully")
@@ -132,9 +135,9 @@ You are a helpful agent.`,
     const filepath = path.join(tmp.path, "AGENTS.md")
     await Filesystem.write(filepath, "# Project agents")
 
-    const result = await Instance.provide({
+    const result = await provideTestInstance({
       directory: tmp.path,
-      fn: () => ConfigValidation.check(filepath),
+      fn: () => check(filepath),
     })
     expect(result).toBe("")
   })
@@ -144,9 +147,9 @@ You are a helpful agent.`,
     const filepath = path.join(tmp.path, ".kilo", "plans", "plan.md")
     await Filesystem.write(filepath, "# Plan")
 
-    const result = await Instance.provide({
+    const result = await provideTestInstance({
       directory: tmp.path,
-      fn: () => ConfigValidation.check(filepath),
+      fn: () => check(filepath),
     })
     expect(result).toBe("")
   })
@@ -169,12 +172,12 @@ Broken agent`,
     const filepath = path.join(tmp.path, "kilo.json")
     await Filesystem.write(filepath, JSON.stringify({ model: "anthropic/claude-sonnet-4-20250514" }))
 
-    const result = await Instance.provide({
+    const result = await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         // Force config load to populate warnings
-        await Config.get()
-        return ConfigValidation.check(filepath)
+        await AppRuntime.runPromise(Config.Service.use((svc) => svc.get()))
+        return check(filepath)
       },
     })
     expect(result).toContain("Pre-existing config issues")

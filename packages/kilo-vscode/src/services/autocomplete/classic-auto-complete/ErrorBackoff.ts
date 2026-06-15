@@ -134,13 +134,6 @@ export class ErrorBackoff {
   }
 
   /**
-   * Whether a fatal (non-retriable) error is active — credits depleted, auth invalid, etc.
-   */
-  isFatal(): boolean {
-    return this.fatal !== null
-  }
-
-  /**
    * The HTTP status code of the fatal error, or null.
    */
   getFatalStatus(): number | null {

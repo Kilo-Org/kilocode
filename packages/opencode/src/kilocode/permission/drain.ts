@@ -2,10 +2,12 @@ import { Bus } from "@/bus"
 import { Deferred, Effect } from "effect"
 import { Permission } from "@/permission"
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
+import { Instance } from "@/kilocode/instance"
 
 interface PendingEntry {
   info: Permission.Request
   ruleset: Permission.Ruleset
+  hardRuleset?: Permission.Ruleset
   deferred: Deferred.Deferred<void, Permission.RejectedError | Permission.CorrectedError>
 }
 
@@ -25,22 +27,27 @@ export function drainCovered(
       if (id === exclude) continue
       // Never auto-resolve config file edit permissions
       if (ConfigProtection.isRequest(entry.info)) continue
-      const actions = entry.info.patterns.map((pattern: string) =>
-        Permission.evaluate(entry.info.permission, pattern, entry.ruleset, approved),
-      )
+      const actions = entry.info.patterns.map((pattern: string) => {
+        const rule = Permission.resolve(entry.info.permission, pattern, entry.ruleset, approved)
+        const hard = entry.hardRuleset
+          ? Permission.evaluate(entry.info.permission, pattern, entry.hardRuleset)
+          : undefined
+        if (hard?.action === "deny") return hard
+        return rule
+      })
       const denied = actions.some((r: Permission.Rule) => r.action === "deny")
       const allowed = !denied && actions.every((r: Permission.Rule) => r.action === "allow")
       if (!denied && !allowed) continue
       pending.delete(id)
       if (denied) {
-        void Bus.publish(Permission.Event.Replied, {
+        void Bus.publish(Instance.current, Permission.Event.Replied, {
           sessionID: entry.info.sessionID,
           requestID: entry.info.id,
           reply: "reject",
         })
         yield* Deferred.fail(entry.deferred, new Permission.RejectedError())
       } else {
-        void Bus.publish(Permission.Event.Replied, {
+        void Bus.publish(Instance.current, Permission.Event.Replied, {
           sessionID: entry.info.sessionID,
           requestID: entry.info.id,
           reply: "always",

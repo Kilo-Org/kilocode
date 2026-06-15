@@ -36,9 +36,11 @@ function providerIconsPlugin() {
   return {
     name: "provider-icons-plugin",
     configureServer() {
+      if (!process.env.KILO_FETCH_PROVIDER_ICONS) return // kilocode_change
       void fetchProviderIcons()
     },
     buildStart() {
+      if (!process.env.KILO_FETCH_PROVIDER_ICONS) return // kilocode_change
       void fetchProviderIcons()
     },
   }

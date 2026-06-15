@@ -1,13 +1,13 @@
 on:
   schedule:
-    - cron: "7,37 * * * *"   # every 30 min at :07 and :37
+    - cron: "7,37 * * * *" # every 30 min at :07 and :37
   workflow_dispatch:
 
 concurrency:
   group: opencode-release-watch
   cancel-in-progress: false
 
-permissions:                                                                                           
+permissions:
   contents: read
 
 jobs:
@@ -66,4 +66,3 @@ jobs:
         with:
           path: .cache/last-seen
           key: last-seen-${{ steps.fetch.outputs.tag }}
-

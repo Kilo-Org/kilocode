@@ -3,29 +3,33 @@ import type {
   PluginInput,
   Plugin as PluginInstance,
   PluginModule,
-  WorkspaceAdaptor as PluginWorkspaceAdaptor,
+  WorkspaceAdapter as PluginWorkspaceAdapter,
 } from "@kilocode/plugin"
-import { Config } from "../config"
+import { Config } from "@/config/config"
 import { Bus } from "../bus"
-import { Log } from "../util"
+import * as Log from "@opencode-ai/core/util/log"
 import { createKiloClient } from "@kilocode/sdk"
-import { Flag } from "../flag/flag"
+import { ServerAuth } from "@/server/auth"
 import { CodexAuthPlugin } from "./codex"
-import { Session } from "../session"
-import { NamedError } from "@opencode-ai/shared/util/error"
+import { Session } from "@/session/session"
+import { NamedError } from "@opencode-ai/core/util/error"
 import { CopilotAuthPlugin } from "./github-copilot/copilot"
 import { gitlabAuthPlugin as GitlabAuthPlugin } from "opencode-gitlab-auth"
 import { PoeAuthPlugin } from "opencode-poe-auth"
 import { CloudflareAIGatewayAuthPlugin, CloudflareWorkersAuthPlugin } from "./cloudflare"
+import { AzureAuthPlugin } from "./azure"
+import { XaiAuthPlugin } from "./xai" // kilocode_change
+import { DigitalOceanAuthPlugin } from "./digitalocean"
 import { Effect, Layer, Context, Stream } from "effect"
-import { EffectBridge } from "@/effect"
-import { InstanceState } from "@/effect"
+import { EffectBridge } from "@/effect/bridge"
+import { InstanceState } from "@/effect/instance-state"
 import { errorMessage } from "@/util/error"
 import { PluginLoader } from "./loader"
 import { parsePluginSpecifier, readPluginId, readV1Plugin, resolvePluginId } from "./shared"
-import { registerAdaptor } from "@/control-plane/adaptors"
-import type { WorkspaceAdaptor } from "@/control-plane/types"
 import { KiloAuthPlugin } from "@kilocode/kilo-gateway" // kilocode_change
+import { registerAdapter } from "@/control-plane/adapters"
+import type { WorkspaceAdapter } from "@/control-plane/types"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 
 const log = Log.create({ service: "plugin" })
 
@@ -60,11 +64,16 @@ const INTERNAL_PLUGINS: PluginInstance[] = [
   KiloAuthPlugin,
   CodexAuthPlugin,
   CopilotAuthPlugin,
+  // kilocode_change - external auth plugins ship against @opencode-ai/plugin; bridge to our @kilocode/plugin types
   GitlabAuthPlugin as unknown as PluginInstance,
   PoeAuthPlugin as unknown as PluginInstance,
-  CloudflareWorkersAuthPlugin as unknown as PluginInstance,
-  CloudflareAIGatewayAuthPlugin as unknown as PluginInstance,
-] // kilocode_change end
+  CloudflareWorkersAuthPlugin,
+  CloudflareAIGatewayAuthPlugin,
+  AzureAuthPlugin,
+  XaiAuthPlugin,
+  DigitalOceanAuthPlugin,
+]
+// kilocode_change end
 
 function isServerPlugin(value: unknown): value is PluginInstance {
   return typeof value === "function"
@@ -85,7 +94,8 @@ function getLegacyPlugins(mod: Record<string, unknown>) {
     if (seen.has(entry)) continue
     seen.add(entry)
     const plugin = getServerPlugin(entry)
-    if (!plugin) throw new TypeError("Plugin export is not a function")
+    // kilocode_change: skip named exports (e.g. constants from @kilocode/plugin-atomic-chat)
+    if (!plugin) continue // kilocode_change
     result.push(plugin)
   }
 
@@ -110,6 +120,7 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const bus = yield* Bus.Service
     const config = yield* Config.Service
+    const flags = yield* RuntimeFlags.Service
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("Plugin.state")(function* (ctx) {
@@ -125,12 +136,8 @@ export const layer = Layer.effect(
         const client = createKiloClient({
           baseUrl: "http://localhost:4096",
           directory: ctx.directory,
-          headers: Flag.KILO_SERVER_PASSWORD
-            ? {
-                Authorization: `Basic ${Buffer.from(`${Flag.KILO_SERVER_USERNAME ?? "opencode"}:${Flag.KILO_SERVER_PASSWORD}`).toString("base64")}`,
-              }
-            : undefined,
-          fetch: async (...args) => (await Server.Default()).app.fetch(...args),
+          headers: ServerAuth.headers(),
+          fetch: async (...args) => Server.Default().app.fetch(...args),
         })
         const cfg = yield* config.get()
         const input: PluginInput = {
@@ -139,8 +146,8 @@ export const layer = Layer.effect(
           worktree: ctx.worktree,
           directory: ctx.directory,
           experimental_workspace: {
-            register(type: string, adaptor: PluginWorkspaceAdaptor) {
-              registerAdaptor(ctx.project.id, type, adaptor as WorkspaceAdaptor)
+            register(type: string, adapter: PluginWorkspaceAdapter) {
+              registerAdapter(ctx.project.id, type, adapter as WorkspaceAdapter)
             },
           },
           get serverUrl(): URL {
@@ -150,7 +157,7 @@ export const layer = Layer.effect(
           $: typeof Bun === "undefined" ? undefined : Bun.$,
         }
 
-        for (const plugin of INTERNAL_PLUGINS) {
+        for (const plugin of flags.disableDefaultPlugins ? [] : INTERNAL_PLUGINS) {
           log.info("loading internal plugin", { name: plugin.name })
           const init = yield* Effect.tryPromise({
             try: () => plugin(input),
@@ -161,8 +168,8 @@ export const layer = Layer.effect(
           if (init._tag === "Some") hooks.push(init.value)
         }
 
-        const plugins = Flag.KILO_PURE ? [] : (cfg.plugin_origins ?? [])
-        if (Flag.KILO_PURE && cfg.plugin_origins?.length) {
+        const plugins = flags.pure ? [] : (cfg.plugin_origins ?? [])
+        if (flags.pure && cfg.plugin_origins?.length) {
           log.info("skipping external plugins in pure mode", { count: cfg.plugin_origins.length })
         }
         if (plugins.length) yield* config.waitForDependencies()
@@ -287,6 +294,10 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(Layer.provide(Bus.layer), Layer.provide(Config.defaultLayer))
+export const defaultLayer = layer.pipe(
+  Layer.provide(Bus.layer),
+  Layer.provide(Config.defaultLayer),
+  Layer.provide(RuntimeFlags.defaultLayer),
+)
 
 export * as Plugin from "."

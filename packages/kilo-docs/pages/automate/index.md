@@ -23,9 +23,10 @@ Automated AI code reviews for every pull request:
 Manage and orchestrate multiple AI agents:
 
 - [**Agent Manager**](/docs/automate/agent-manager) — Control panel for running agents
-- Local and cloud-synced sessions
-- Parallel Mode with Git worktree isolation
-- Resume existing sessions
+- Same providers, settings, and extension features as the sidebar
+- Local and cloud session history
+- Worktree-isolated and multi-version sessions
+- Continue work from branches, PRs, external worktrees, or sidebar sessions
 
 ## MCP (Model Context Protocol)
 
@@ -63,7 +64,7 @@ Customize and extend Kilo Code's capabilities:
 
 ## Get Started
 
-1. Set up the [Agent Manager](/docs/automate/agent-manager) for local automation
+1. Open the [Agent Manager](/docs/automate/agent-manager) for local automation
 2. Configure [MCP servers](/docs/automate/mcp/using-in-kilo-code) for external integrations
 3. Enable [Code Reviews](/docs/automate/code-reviews) for your repositories
 4. Explore [integrations](/docs/automate/integrations) to connect your toolchain

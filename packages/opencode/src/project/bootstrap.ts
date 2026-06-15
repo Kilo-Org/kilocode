@@ -1,45 +1,85 @@
 import { Plugin } from "../plugin"
 import { Format } from "../format"
-import { LSP } from "../lsp"
+import { LSP } from "@/lsp/lsp"
 import { File } from "../file"
 import { Snapshot } from "../snapshot"
 import * as Project from "./project"
 import * as Vcs from "./vcs"
 import { Bus } from "../bus"
-import { Command } from "../command"
-import { Instance } from "./instance"
-import { Log } from "@/util"
+import { InstanceState } from "@/effect/instance-state"
 import { FileWatcher } from "@/file/watcher"
-import { KiloSessions } from "@/kilo-sessions/kilo-sessions" // kilocode_change
-import * as Effect from "effect/Effect"
-import { Config } from "@/config"
+// kilocode_change start
+import { KilocodeBootstrap } from "@/kilocode/bootstrap"
+// import { ShareNext } from "@/share/share-next"
+// kilocode_change end
+import { Effect, Layer } from "effect"
+import { Config } from "@/config/config"
+import { Service } from "./bootstrap-service"
+import { Reference } from "@/reference/reference"
 
-export const InstanceBootstrap = Effect.gen(function* () {
-  Log.Default.info("bootstrapping", { directory: Instance.directory })
-  // everything depends on config so eager load it for nice traces
-  yield* Config.Service.use((svc) => svc.get())
-  // Plugin can mutate config so it has to be initialized before anything else.
-  yield* Plugin.Service.use((svc) => svc.init())
-  // kilocode_change start - bootstrap Kilo session ingest/remote subscriptions instead of ShareNext
-  yield* Effect.promise(() => KiloSessions.init()).pipe(Effect.forkDetach)
-  // kilocode_change end
-  yield* Effect.all(
-    [
-      LSP.Service,
-      // ShareNext.Service, kilocode_change
-      Format.Service,
-      File.Service,
-      FileWatcher.Service,
-      Vcs.Service,
-      Snapshot.Service,
-    ].map((s) => Effect.forkDetach(s.use((i) => i.init()))),
-  ).pipe(Effect.withSpan("InstanceBootstrap.init"))
+export { Service } from "./bootstrap-service"
+export type { Interface } from "./bootstrap-service"
 
-  yield* Bus.Service.use((svc) =>
-    svc.subscribeCallback(Command.Event.Executed, async (payload) => {
-      if (payload.properties.name === Command.Default.INIT) {
-        Project.setInitialized(Instance.project.id)
-      }
-    }),
-  )
-}).pipe(Effect.withSpan("InstanceBootstrap"))
+export const layer = Layer.effect(
+  Service,
+  Effect.gen(function* () {
+    // Yield each bootstrap dep at layer init so `run` itself has R = never.
+    // InstanceStore imports only the lightweight tag from bootstrap-service.ts,
+    // so it can depend on bootstrap without importing this implementation graph.
+    const config = yield* Config.Service
+    const file = yield* File.Service
+    const fileWatcher = yield* FileWatcher.Service
+    const format = yield* Format.Service
+    const lsp = yield* LSP.Service
+    const plugin = yield* Plugin.Service
+    const project = yield* Project.Service
+    const reference = yield* Reference.Service
+    // kilocode_change start
+    const kilocode = yield* KilocodeBootstrap.Service
+    // const shareNext = yield* ShareNext.Service
+    // kilocode_change end
+    const snapshot = yield* Snapshot.Service
+    const vcs = yield* Vcs.Service
+
+    const run = Effect.gen(function* () {
+      const ctx = yield* InstanceState.context
+      yield* Effect.logDebug("bootstrapping").pipe(Effect.annotateLogs("directory", ctx.directory)) // kilocode_change - was logInfo; downgraded to avoid printing to TUI on every startup
+      // everything depends on config so eager load it for nice traces
+      yield* config.get()
+      // Plugin can mutate config so it has to be initialized before anything else.
+      yield* plugin.init()
+      yield* kilocode.init().pipe(Effect.catchCause((cause) => Effect.logWarning("kilocode init failed", { cause }))) // kilocode_change
+      // Each service self-manages its own slow work via Effect.forkScoped against
+      // its per-instance state scope. We just await materialization here.
+      yield* Effect.forEach(
+        [reference, lsp, format, file, fileWatcher, vcs, snapshot, project], // kilocode_change - shareNext removed, handled by KilocodeBootstrap
+        (s) => s.init().pipe(Effect.catchCause((cause) => Effect.logWarning("init failed", { cause }))),
+        { concurrency: "unbounded", discard: true },
+      ).pipe(Effect.withSpan("InstanceBootstrap.init"))
+    }).pipe(Effect.withSpan("InstanceBootstrap"))
+
+    return Service.of({ run })
+  }),
+)
+
+export const defaultLayer: Layer.Layer<Service> = layer.pipe(
+  Layer.provide([
+    Bus.layer,
+    Config.defaultLayer,
+    File.defaultLayer,
+    FileWatcher.defaultLayer,
+    Format.defaultLayer,
+    LSP.defaultLayer,
+    Plugin.defaultLayer,
+    Project.defaultLayer,
+    Reference.defaultLayer,
+    // kilocode_change start
+    KilocodeBootstrap.defaultLayer,
+    // ShareNext.defaultLayer,
+    // kilocode_change end
+    Snapshot.defaultLayer,
+    Vcs.defaultLayer,
+  ]),
+)
+
+export * as InstanceBootstrap from "./bootstrap"

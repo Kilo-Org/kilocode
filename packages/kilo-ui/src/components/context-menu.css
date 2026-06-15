@@ -11,7 +11,7 @@
   [data-slot="context-menu-sub-trigger"] {
     border-radius: 0;
     padding: 0 2px 1px;
-    font-size: 13px;
+    font-size: var(--kilo-font-size-13);
     line-height: normal;
     cursor: pointer;
 

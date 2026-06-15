@@ -27,43 +27,43 @@ The migrator reads custom modes from these locations (in order, later entries ov
 
 ### Global Modes (VSCode Extension Storage)
 
-| Platform | Path                                                                                                  |
-| -------- | ----------------------------------------------------------------------------------------------------- |
-| macOS    | `~/Library/Application Support/Code/User/globalStorage/kilocode.kilo-code/settings/custom_modes.yaml` |
-| Windows  | `%APPDATA%/Code/User/globalStorage/kilocode.kilo-code/settings/custom_modes.yaml`                     |
-| Linux    | `~/.config/Code/User/globalStorage/kilocode.kilo-code/settings/custom_modes.yaml`                     |
+| Platform | Path |
+|---|---|
+| macOS | `~/Library/Application Support/Code/User/globalStorage/kilocode.kilo-code/settings/custom_modes.yaml` |
+| Windows | `%APPDATA%/Code/User/globalStorage/kilocode.kilo-code/settings/custom_modes.yaml` |
+| Linux | `~/.config/Code/User/globalStorage/kilocode.kilo-code/settings/custom_modes.yaml` |
 
 ### Project Modes
 
-| Location         | Description                                  |
-| ---------------- | -------------------------------------------- |
+| Location | Description |
+|---|---|
 | `.kilocodemodes` | Project-specific modes in the workspace root |
 
 ## Field Mapping
 
 ### Migrated Fields
 
-| Kilocode Field       | Opencode Field | Notes                                                 |
-| -------------------- | -------------- | ----------------------------------------------------- |
-| `slug`               | Agent key      | Used as the agent identifier                          |
-| `roleDefinition`     | `prompt`       | Combined with `customInstructions`                    |
-| `customInstructions` | `prompt`       | Appended after `roleDefinition` with `\n\n` separator |
-| `groups`             | `permission`   | See permission mapping below                          |
-| `description`        | `description`  | Primary source for description                        |
-| `whenToUse`          | `description`  | Fallback if no `description`                          |
-| `name`               | `description`  | Final fallback                                        |
+| Kilocode Field | Opencode Field | Notes |
+|---|---|---|
+| `slug` | Agent key | Used as the agent identifier |
+| `roleDefinition` | `prompt` | Combined with `customInstructions` |
+| `customInstructions` | `prompt` | Appended after `roleDefinition` with `\n\n` separator |
+| `groups` | `permission` | See permission mapping below |
+| `description` | `description` | Primary source for description |
+| `whenToUse` | `description` | Fallback if no `description` |
+| `name` | `description` | Final fallback |
 
 ### Permission Mapping
 
 Kilocode uses "groups" to define what tools a mode can access. These are converted to Opencode's permission system:
 
-| Kilocode Group | Opencode Permission | Notes                      |
-| -------------- | ------------------- | -------------------------- |
-| `read`         | `read: "allow"`     | File reading               |
-| `edit`         | `edit: "allow"`     | File editing               |
-| `command`      | `bash: "allow"`     | Shell commands             |
-| `browser`      | `bash: "allow"`     | Browser actions (via bash) |
-| `mcp`          | `mcp: "allow"`      | MCP server access          |
+| Kilocode Group | Opencode Permission | Notes |
+|---|---|---|
+| `read` | `read: "allow"` | File reading |
+| `edit` | `edit: "allow"` | File editing |
+| `command` | `bash: "allow"` | Shell commands |
+| `browser` | `bash: "allow"` | Browser actions (via bash) |
+| `mcp` | `mcp: "allow"` | MCP server access |
 
 **Important:** Permissions that are NOT in the groups list are explicitly set to `"deny"`. This ensures that a mode with only `read` and `edit` groups cannot run shell commands or access MCP servers.
 
@@ -101,13 +101,13 @@ Note: `bash` and `mcp` are explicitly denied because they weren't in the origina
 
 The following Kilocode default modes are **skipped** during migration because Opencode has native equivalents:
 
-| Kilocode Mode  | Reason                                                   |
-| -------------- | -------------------------------------------------------- |
-| `code`         | Maps to Opencode's `build` agent                         |
-| `architect`    | Maps to Opencode's `plan` agent                          |
-| `ask`          | Read-only exploration (use `explore` subagent)           |
-| `debug`        | Debugging workflow (use `build` with debug instructions) |
-| `orchestrator` | Redundant - all Opencode agents can spawn subagents      |
+| Kilocode Mode | Reason |
+|---|---|
+| `code` | Maps to Opencode's `build` agent |
+| `architect` | Maps to Opencode's `plan` agent |
+| `ask` | Read-only exploration (use `explore` subagent) |
+| `debug` | Debugging workflow (use `build` with debug instructions) |
+| `orchestrator` | Redundant - all Opencode agents can spawn subagents |
 
 ## Example Conversion
 
@@ -155,14 +155,14 @@ customModes:
 
 The following Kilocode features are not yet migrated:
 
-| Feature                            | Status      | Notes                                |
-| ---------------------------------- | ----------- | ------------------------------------ |
-| Rules (`.kilocode/rules/`)         | Phase 2     | Will map to `instructions` array     |
-| Workflows (`.kilocode/workflows/`) | Phase 2     | Will map to custom commands          |
-| MCP Servers (`mcp_settings.json`)  | Phase 2     | Will map to `mcp` config             |
-| Provider Settings                  | Phase 2     | Will map to `provider` config        |
-| Mode-specific API configs          | Phase 2     | Different models per mode            |
-| Organization modes                 | Not planned | `source: organization` not preserved |
+| Feature | Status | Notes |
+|---|---|---|
+| Rules (`.kilocode/rules/`) | Phase 2 | Will map to `instructions` array |
+| Workflows (`.kilocode/workflows/`) | Phase 2 | Will map to custom commands |
+| MCP Servers (`mcp_settings.json`) | Phase 2 | Will map to `mcp` config |
+| Provider Settings | Phase 2 | Will map to `provider` config |
+| Mode-specific API configs | Phase 2 | Different models per mode |
+| Organization modes | Not planned | `source: organization` not preserved |
 
 ## Troubleshooting
 
@@ -220,17 +220,17 @@ Running from `packages/my-package/` discovers both `package-skill` and `project-
 
 ### Global Skills
 
-| Platform | Path                  |
-| -------- | --------------------- |
-| All      | `~/.kilocode/skills/` |
+| Platform | Path |
+|---|---|
+| All | `~/.kilocode/skills/` |
 
 ### VSCode Extension Storage (Marketplace Skills)
 
-| Platform | Path                                                                               |
-| -------- | ---------------------------------------------------------------------------------- |
-| macOS    | `~/Library/Application Support/Code/User/globalStorage/kilocode.kilo-code/skills/` |
-| Windows  | `%APPDATA%/Code/User/globalStorage/kilocode.kilo-code/skills/`                     |
-| Linux    | `~/.config/Code/User/globalStorage/kilocode.kilo-code/skills/`                     |
+| Platform | Path |
+|---|---|
+| macOS | `~/Library/Application Support/Code/User/globalStorage/kilocode.kilo-code/skills/` |
+| Windows | `%APPDATA%/Code/User/globalStorage/kilocode.kilo-code/skills/` |
+| Linux | `~/.config/Code/User/globalStorage/kilocode.kilo-code/skills/` |
 
 ## Skill File Format
 
@@ -305,12 +305,12 @@ Kilocode rules are migrated to Opencode's `instructions` array. See [`rules-migr
 
 ## Source Locations
 
-| Location                      | Description                   |
-| ----------------------------- | ----------------------------- |
-| `.kilocoderules`              | Legacy project rules file     |
-| `.kilocode/rules/*.md`        | Project rules directory       |
-| `~/.kilocode/rules/*.md`      | Global rules directory        |
-| `.kilocoderules-{mode}`       | Mode-specific legacy rules    |
+| Location | Description |
+|---|---|
+| `.kilocoderules` | Legacy project rules file |
+| `.kilocode/rules/*.md` | Project rules directory |
+| `~/.kilocode/rules/*.md` | Global rules directory |
+| `.kilocoderules-{mode}` | Mode-specific legacy rules |
 | `.kilocode/rules-{mode}/*.md` | Mode-specific rules directory |
 
 ---
@@ -321,11 +321,11 @@ Kilocode workflows are migrated to Opencode commands. See [`workflows-migrator.t
 
 ## Source Locations
 
-| Location                     | Description                     |
-| ---------------------------- | ------------------------------- |
-| `.kilocode/workflows/*.md`   | Project workflows               |
-| `~/.kilocode/workflows/*.md` | Global workflows                |
-| VSCode extension storage     | Marketplace-installed workflows |
+| Location | Description |
+|---|---|
+| `.kilocode/workflows/*.md` | Project workflows |
+| `~/.kilocode/workflows/*.md` | Global workflows |
+| VSCode extension storage | Marketplace-installed workflows |
 
 ---
 
@@ -344,8 +344,8 @@ Use a top-level `"mcp"` object. Each key is the server name. For a local server,
 
 ## Source Location (migration from Kilocode)
 
-| Location                                                    | Description               |
-| ----------------------------------------------------------- | ------------------------- |
+| Location | Description |
+|---|---|
 | VSCode extension storage `settings/cline_mcp_settings.json` | MCP server configurations |
 
 ---
@@ -385,11 +385,11 @@ Action: Learn More -> https://docs.kilo.ai/skills
 
 ## Display Conditions
 
-| Condition                 | Notifications Shown |
-| ------------------------- | ------------------- |
-| Connected to Kilo Gateway | Yes                 |
-| Not connected to Kilo     | No                  |
-| No notifications from API | No                  |
+| Condition | Notifications Shown |
+|---|---|
+| Connected to Kilo Gateway | Yes |
+| Not connected to Kilo | No |
+| No notifications from API | No |
 
 ## Related Files
 

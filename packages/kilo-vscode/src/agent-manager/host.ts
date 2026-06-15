@@ -56,6 +56,12 @@ export interface PanelContext {
   /** Send a message to the webview. */
   postMessage(msg: unknown): void
 
+  /** Resolve once the panel webview is ready to receive messages. */
+  waitForReady(): Promise<void>
+
+  /** Resolve once the panel is the active editor tab. */
+  waitForActive(): Promise<void>
+
   /** Reveal the panel. */
   reveal(preserveFocus?: boolean): void
 
@@ -87,6 +93,7 @@ export interface Host {
    */
   openPanel(opts: {
     onBeforeMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
+    worktreeDirectories?: () => string[]
   }): PanelContext
 
   /** Get the workspace/project root path. */

@@ -8,24 +8,30 @@ import { describe, expect } from "bun:test"
 import { Deferred, Effect, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import { Agent as AgentSvc } from "../../src/agent/agent"
+import { BackgroundJob } from "../../src/background/job"
 import { Bus } from "../../src/bus"
 import { Command } from "../../src/command"
-import { Config } from "../../src/config"
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
+import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
+import { EventV2Bridge } from "../../src/event-v2-bridge"
+import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Env } from "../../src/env"
 import { Ripgrep } from "../../src/file/ripgrep"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Format } from "../../src/format"
+import { Git } from "../../src/git"
+import { Image } from "../../src/image/image"
 import { KiloSession } from "../../src/kilocode/session"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
-import { LSP } from "../../src/lsp"
+import { LSP } from "../../src/lsp/lsp"
 import { MCP } from "../../src/mcp"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
-import { Provider as ProviderSvc } from "../../src/provider"
+import { Provider as ProviderSvc } from "../../src/provider/provider"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Question } from "../../src/question"
-import { Session } from "../../src/session"
+import { Reference } from "../../src/reference/reference"
+import { Session } from "../../src/session/session"
 import { SessionCompaction } from "../../src/session/compaction"
 import { Instruction } from "../../src/session/instruction"
 import { LLM } from "../../src/session/llm"
@@ -41,8 +47,11 @@ import { SessionSummary } from "../../src/session/summary"
 import { Todo } from "../../src/session/todo"
 import { Skill } from "../../src/skill"
 import { Snapshot } from "../../src/snapshot"
-import { ToolRegistry, Truncate } from "../../src/tool"
-import { Log } from "../../src/util"
+import { Storage } from "../../src/storage/storage"
+import { SyncEvent } from "../../src/sync"
+import { ToolRegistry } from "../../src/tool/registry"
+import { Truncate } from "../../src/tool/truncate"
+import * as Log from "@opencode-ai/core/util/log"
 import { provideTmpdirServer } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { TestLLMServer } from "../lib/llm-server"
@@ -123,6 +132,7 @@ const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLaye
 function makeHttp() {
   const deps = Layer.mergeAll(
     Session.defaultLayer,
+    BackgroundJob.defaultLayer,
     Snapshot.defaultLayer,
     LLM.defaultLayer,
     Env.defaultLayer,
@@ -131,10 +141,14 @@ function makeHttp() {
     Permission.defaultLayer,
     plugin,
     Config.defaultLayer,
+    RuntimeFlags.layer(),
     ProviderSvc.defaultLayer,
     lsp,
     mcp,
     AppFileSystem.defaultLayer,
+    SyncEvent.defaultLayer,
+    EventV2Bridge.defaultLayer,
+    Reference.defaultLayer,
     status,
   ).pipe(Layer.provideMerge(infra))
   const question = Question.layer.pipe(Layer.provideMerge(deps))
@@ -145,28 +159,49 @@ function makeHttp() {
     Layer.provide(CrossSpawnSpawner.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Format.defaultLayer),
+    Layer.provide(Git.defaultLayer),
     Layer.provideMerge(todo),
     Layer.provideMerge(question),
     Layer.provideMerge(deps),
   )
   const trunc = Truncate.layer.pipe(Layer.provideMerge(deps))
-  const proc = SessionProcessor.layer.pipe(Layer.provide(summary), Layer.provideMerge(deps))
+  const proc = SessionProcessor.layer.pipe(
+    Layer.provide(summary),
+    Layer.provide(Image.defaultLayer),
+    Layer.provideMerge(deps),
+  )
   const compact = SessionCompaction.layer.pipe(Layer.provideMerge(proc), Layer.provideMerge(deps))
   return Layer.mergeAll(
     TestLLMServer.layer,
     SessionPrompt.layer.pipe(
       Layer.provide(SessionRevert.defaultLayer),
+      Layer.provide(Image.defaultLayer),
       Layer.provide(summary),
       Layer.provideMerge(runState),
       Layer.provideMerge(compact),
       Layer.provideMerge(proc),
       Layer.provideMerge(registry),
       Layer.provideMerge(trunc),
+      Layer.provideMerge(question),
       Layer.provide(Instruction.defaultLayer),
       Layer.provide(SystemPrompt.defaultLayer),
       Layer.provideMerge(deps),
     ),
-  ).pipe(Layer.provide(summary))
+  ).pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        summary,
+        deps,
+        Config.defaultLayer,
+        RuntimeFlags.layer(),
+        BackgroundJob.defaultLayer,
+        Bus.layer,
+        infra,
+        Storage.defaultLayer,
+        Reference.defaultLayer,
+      ),
+    ),
+  )
 }
 
 const it = testEffect(makeHttp())

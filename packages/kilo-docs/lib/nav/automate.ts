@@ -34,6 +34,11 @@ export const AutomateNav: NavSection[] = [
         children: "Shell Integration",
       },
       {
+        href: "/automate/extending/plugins",
+        children: "Plugins",
+        platform: "new",
+      },
+      {
         href: "/automate/extending/auto-launch",
         children: "Auto-launch Configuration",
         platform: "legacy",

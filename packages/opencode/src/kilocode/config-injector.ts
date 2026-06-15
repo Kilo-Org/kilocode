@@ -1,5 +1,5 @@
-import { Config } from "../config"
-import { ConfigPermission } from "../config"
+import { Config } from "../config/config"
+import { ConfigPermission } from "../config/permission"
 import { ModesMigrator } from "./modes-migrator"
 import { RulesMigrator } from "./rules-migrator"
 import { WorkflowsMigrator } from "./workflows-migrator"
@@ -84,7 +84,10 @@ export namespace KilocodeConfigInjector {
    * Merge permission configs, preserving order and handling duplicates.
    * Incoming rules take precedence (kilocode patterns override).
    */
-  function mergePermissions(existing: ConfigPermission.Info | undefined, incoming: ConfigPermission.Info): ConfigPermission.Info {
+  function mergePermissions(
+    existing: ConfigPermission.Info | undefined,
+    incoming: ConfigPermission.Info,
+  ): ConfigPermission.Info {
     if (!existing) return incoming
 
     const result: ConfigPermission.Info = { ...existing }

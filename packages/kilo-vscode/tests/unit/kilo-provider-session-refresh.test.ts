@@ -52,9 +52,13 @@ function createClient() {
     },
     app: {
       agents: async () => ({ data: [] }),
+      skills: async () => ({ data: [] }),
     },
     config: {
       get: async () => ({ data: {} }),
+    },
+    indexing: {
+      status: async () => ({ data: { state: "disabled" } }),
     },
     kilo: {
       notifications: async () => ({ data: [] }),
@@ -85,7 +89,9 @@ function createConnection(client: ReturnType<typeof createClient>) {
     onClearPendingPrompts: () => () => undefined,
     registerDirectoryProvider: () => () => undefined,
     getServerInfo: () => ({ port: 12345 }),
+    getServerConfig: () => ({ baseUrl: "http://127.0.0.1:12345", password: "test" }),
     getConnectionState: () => "connected" as const,
+    getConnectionError: () => null,
     resolveEventSessionId: () => undefined,
     recordMessageSessionId: () => undefined,
     notifyNotificationDismissed: () => undefined,

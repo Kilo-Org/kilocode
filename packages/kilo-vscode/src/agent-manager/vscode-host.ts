@@ -9,13 +9,16 @@ import * as vscode from "vscode"
 import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } from "./host"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
+import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
 import { DiffVirtualProvider } from "../DiffVirtualProvider"
 import { buildWebviewHtml } from "../utils"
 import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
 import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
+import type { AutoApproveController } from "../commands/toggle-auto-approve"
 
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
+  private autoApprove: AutoApproveController | undefined
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -27,8 +30,13 @@ export class VscodeHost implements Host {
     this.diffVirtual = provider
   }
 
+  setAutoApproveController(ctrl: AutoApproveController): void {
+    this.autoApprove = ctrl
+  }
+
   openPanel(opts: {
     onBeforeMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
+    worktreeDirectories?: () => string[]
   }): PanelContext {
     const panel = vscode.window.createWebviewPanel(
       "kilo-code.new.AgentManagerPanel",
@@ -48,6 +56,7 @@ export class VscodeHost implements Host {
     panel: vscode.WebviewPanel,
     opts: {
       onBeforeMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
+      worktreeDirectories?: () => string[]
     },
   ): PanelContext {
     return this.wirePanel(panel, opts)
@@ -57,6 +66,7 @@ export class VscodeHost implements Host {
     panel: vscode.WebviewPanel,
     opts: {
       onBeforeMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
+      worktreeDirectories?: () => string[]
     },
   ): PanelContext {
     panel.webview.options = {
@@ -74,12 +84,16 @@ export class VscodeHost implements Host {
       scriptUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "agent-manager.js")),
       styleUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "agent-manager.css")),
       iconsBaseUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
+      workerUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "shiki-worker.js")),
       title: "Agent Manager",
       port,
     })
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
+      platform: PLATFORM,
+      snapshotInitialization: SNAPSHOT_INITIALIZATION,
       slimEditMetadata: true,
+      worktreeDirectories: () => opts.worktreeDirectories?.() ?? [],
     })
     if (this.diffVirtual) {
       provider.setDiffVirtualProvider(this.diffVirtual)
@@ -87,6 +101,11 @@ export class VscodeHost implements Host {
     provider.attachToWebview(panel.webview, {
       onBeforeMessage: opts.onBeforeMessage,
     })
+    provider.setStreamVisibility(panel.active && panel.visible)
+    const streams = panel.onDidChangeViewState((event) =>
+      provider.setStreamVisibility(event.webviewPanel.active && event.webviewPanel.visible),
+    )
+    if (this.autoApprove) provider.setAutoApproveController(this.autoApprove)
 
     const sessions: SessionProvider = {
       setSessionDirectory: (id, dir) => provider.setSessionDirectory(id, dir),
@@ -110,6 +129,19 @@ export class VscodeHost implements Host {
       postMessage(msg) {
         void panel.webview.postMessage(msg)
       },
+      waitForReady() {
+        return provider.waitForReady()
+      },
+      waitForActive() {
+        if (panel.active) return Promise.resolve()
+        return new Promise((resolve) => {
+          const sub = panel.onDidChangeViewState((e) => {
+            if (!e.webviewPanel.active) return
+            sub.dispose()
+            resolve()
+          })
+        })
+      },
       reveal(preserveFocus) {
         panel.reveal(vscode.ViewColumn.One, preserveFocus ?? false)
       },
@@ -121,6 +153,7 @@ export class VscodeHost implements Host {
         return panel.onDidDispose(cb)
       },
       dispose() {
+        streams.dispose()
         provider.dispose()
         panel.dispose()
       },

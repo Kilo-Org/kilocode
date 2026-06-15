@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "lokaal",
+  "agentManager.sidebar.collapse": "Zijbalk inklappen",
+  "agentManager.sidebar.expand": "Zijbalk tonen",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESSIES",
   "agentManager.notGitRepo": "Geen git repository",
@@ -53,6 +55,11 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Terminal openen",
   "agentManager.tab.newOptions": "Meer opties voor nieuwe tabblad",
+  "agentManager.tabsMenu.label": "Open tabbladen zoeken",
+  "agentManager.tabsMenu.search": "Tabbladen zoeken...",
+  "agentManager.tabsMenu.empty": "Geen overeenkomende tabbladen",
+  "agentManager.tabsMenu.status.waiting": "Wacht",
+  "agentManager.tabsMenu.status.retry": "Opnieuw",
 
   "agentManager.terminal.new": "Nieuw terminaltabblad",
   "agentManager.terminal.ended": "terminal beëindigd — sluit tabblad om te negeren",
@@ -77,7 +84,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Volgend item",
   "agentManager.shortcuts.newWorktree": "Nieuwe worktree",
   "agentManager.shortcuts.openWorktree": "Worktree openen",
-  "agentManager.shortcuts.advancedWorktree": "Geavanceerde worktree",
+  "agentManager.shortcuts.advancedWorktree": "Nieuwe worktree configureren",
   "agentManager.shortcuts.deleteWorktree": "Worktree verwijderen",
   "agentManager.shortcuts.previousTab": "Vorig tabblad",
   "agentManager.shortcuts.nextTab": "Volgend tabblad",
@@ -100,6 +107,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Verouderde worktree verwijderen",
 
   "agentManager.dialog.openWorktree": "Nieuwe worktree",
+  "agentManager.dialog.configureWorktree": "Nieuwe Worktree Configureren...",
   "agentManager.dialog.tab.new": "Nieuw",
   "agentManager.dialog.tab.import": "Importeren",
   "agentManager.dialog.namePlaceholder": "Worktree naam (optioneel)",

@@ -22,13 +22,19 @@ export function isFree(model: Pick<EnrichedModel, "isFree">): boolean {
   return model.isFree === true
 }
 
-// Strips trailing free-indicator suffixes from model display names, e.g.
-// "Llama 3 (free)" → "Llama 3", "Mixtral free" → "Mixtral"
+export function isDataCollectedModel(model: Pick<EnrichedModel, "mayTrainOnYourPrompts">): boolean {
+  return model.mayTrainOnYourPrompts === true
+}
+
+export function freeDataLabel(_free: string, data: string): string {
+  return data
+}
+
+// Strips trailing "(free)" parenthesized suffix from model display names, e.g.
+// "Llama 3 (free)" → "Llama 3". A separate "Free" label/tag is rendered
+// elsewhere, so preserve bare trailing "Free" words (e.g. "Kilo Auto Free").
 export function sanitizeName(name: string): string {
-  return name
-    .replace(/[\s:_-]*\(free\)\s*$/i, "")
-    .replace(/[\s:_-]+free\s*$/i, "")
-    .trim()
+  return name.replace(/[\s:_-]*\(free\)\s*$/i, "").trim()
 }
 
 export function stripSubProviderPrefix(name: string): string {

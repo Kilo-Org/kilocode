@@ -7,8 +7,12 @@ export const SETUP_SCRIPT_TEMPLATE = `#!/bin/sh
 #   WORKTREE_PATH  - Absolute path to the worktree directory
 #   REPO_PATH      - Absolute path to the main repository
 #
+# Kilo already copies root-level .env and .env.* files before this script runs.
+# Use this script for dependencies, nested env files, local config, databases,
+# certificates, or other project-specific setup that is not committed to git.
+#
 # Example tasks:
-#   - Copy .env files from main repo
+#   - Copy nested env files from main repo
 #   - Install dependencies
 #   - Run database migrations
 #   - Set up local configuration
@@ -19,10 +23,10 @@ echo "Setting up worktree: $WORKTREE_PATH"
 
 # Uncomment and modify as needed:
 
-# Copy environment files
-# if [ -f "$REPO_PATH/.env" ]; then
-#     cp "$REPO_PATH/.env" "$WORKTREE_PATH/.env"
-#     echo "Copied .env"
+# Copy a nested environment file
+# if [ -f "$REPO_PATH/apps/web/.env.local" ] && [ ! -f "$WORKTREE_PATH/apps/web/.env.local" ]; then
+#     cp "$REPO_PATH/apps/web/.env.local" "$WORKTREE_PATH/apps/web/.env.local"
+#     echo "Copied apps/web/.env.local"
 # fi
 
 # Install dependencies (Node.js)
@@ -48,8 +52,12 @@ export const SETUP_SCRIPT_TEMPLATE_POWERSHELL = `# Kilo Code Worktree Setup Scri
 #   $env:WORKTREE_PATH  - Absolute path to the worktree directory
 #   $env:REPO_PATH      - Absolute path to the main repository
 #
+# Kilo already copies root-level .env and .env.* files before this script runs.
+# Use this script for dependencies, nested env files, local config, databases,
+# certificates, or other project-specific setup that is not committed to git.
+#
 # Example tasks:
-#   - Copy .env files from main repo
+#   - Copy nested env files from main repo
 #   - Install dependencies
 #   - Run database migrations
 #   - Set up local configuration
@@ -60,10 +68,10 @@ Write-Host "Setting up worktree: $env:WORKTREE_PATH"
 
 # Uncomment and modify as needed:
 
-# Copy environment files
-# if (Test-Path "$env:REPO_PATH/.env") {
-#   Copy-Item "$env:REPO_PATH/.env" "$env:WORKTREE_PATH/.env" -Force
-#   Write-Host "Copied .env"
+# Copy a nested environment file
+# if ((Test-Path "$env:REPO_PATH/apps/web/.env.local") -and !(Test-Path "$env:WORKTREE_PATH/apps/web/.env.local")) {
+#   Copy-Item "$env:REPO_PATH/apps/web/.env.local" "$env:WORKTREE_PATH/apps/web/.env.local"
+#   Write-Host "Copied apps/web/.env.local"
 # }
 
 # Install dependencies (Node.js)

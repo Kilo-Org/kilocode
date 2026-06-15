@@ -1,36 +1,43 @@
-import { Slug } from "@opencode-ai/shared/util/slug"
+import { Slug } from "@opencode-ai/core/util/slug"
 import path from "path"
+import { BackgroundJob } from "@/background/job"
 import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import { Decimal } from "decimal.js"
-import z from "zod"
 import { type ProviderMetadata, type LanguageModelUsage } from "ai"
-import { Flag } from "../flag/flag"
-import { InstallationVersion } from "../installation/version"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
 
-import { Database, NotFoundError, eq, and, gte, isNull, desc, like } from "../storage" // kilocode_change - listGlobal delegated to KiloSession
+import { Database } from "@/storage/db"
+import { NotFoundError } from "@/storage/storage"
+// kilocode_change - drop unused inArray/lt (listGlobal delegated to KiloSession)
+import { eq, and, gte, isNull, desc, like, or } from "drizzle-orm"
 import { SyncEvent } from "../sync"
 import { PartTable, SessionTable } from "./session.sql"
-import { Storage } from "@/storage"
-import { Log } from "../util"
-import { updateSchema } from "../util/update-schema"
+// kilocode_change - ProjectTable removed (unused)
+import { Storage } from "@/storage/storage"
+import * as Log from "@opencode-ai/core/util/log"
 import { MessageV2 } from "./message-v2"
-import { Instance } from "../project/instance"
-import { InstanceState } from "@/effect"
+import type { InstanceContext } from "../project/instance-context"
+import { InstanceState } from "@/effect/instance-state"
+import { capture } from "@/kilocode/instance" // kilocode_change - children() scopes by current project when available
 import { Snapshot } from "@/snapshot"
 import { ProjectID } from "../project/schema"
 import { WorkspaceID } from "../control-plane/schema"
 import { SessionID, MessageID, PartID } from "./schema"
+import { ModelID, ProviderID } from "@/provider/schema"
 
-import type { Provider } from "@/provider"
+import type { Provider } from "@/provider/provider"
 import { Permission } from "@/permission"
-import { Global } from "@/global"
-import { Effect, Layer, Option, Context } from "effect"
-// kilocode_change start - legacy promise helpers + kilocode extensions
-import { makeRuntime } from "@/effect/run-service"
+import { Global } from "@opencode-ai/core/global"
+// kilocode_change start - Kilo session behavior extensions
+import { BackgroundProcess } from "@/kilocode/background-process"
 import { KiloSession, kiloSessionFork } from "@/kilocode/session"
-import { fn } from "@/util/fn"
+import { SessionExport } from "@/kilocode/session-export"
+import { baseKey, cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff" // kilocode_change
 // kilocode_change end
+import { Effect, Layer, Option, Context, Schema, Types } from "effect"
+import { NonNegativeInt, optionalOmitUndefined } from "@opencode-ai/core/schema"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 
 const log = Log.create({ service: "session" })
 
@@ -67,10 +74,29 @@ export function fromRow(row: SessionRow): Info {
     projectID: row.project_id,
     workspaceID: row.workspace_id ?? undefined,
     directory: row.directory,
+    path: row.path ?? undefined,
     parentID: row.parent_id ?? undefined,
     title: row.title,
+    agent: row.agent ?? undefined,
+    model: row.model
+      ? {
+          id: ModelID.make(row.model.id),
+          providerID: ProviderID.make(row.model.providerID),
+          variant: row.model.variant,
+        }
+      : undefined,
     version: row.version,
     summary,
+    cost: row.cost,
+    tokens: {
+      input: row.tokens_input,
+      output: row.tokens_output,
+      reasoning: row.tokens_reasoning,
+      cache: {
+        read: row.tokens_cache_read,
+        write: row.tokens_cache_write,
+      },
+    },
     share,
     revert,
     permission: row.permission ?? undefined,
@@ -91,13 +117,22 @@ export function toRow(info: Info) {
     parent_id: info.parentID,
     slug: info.slug,
     directory: info.directory,
+    path: info.path,
     title: info.title,
+    agent: info.agent,
+    model: info.model,
     version: info.version,
     share_url: info.share?.url,
     summary_additions: info.summary?.additions,
     summary_deletions: info.summary?.deletions,
     summary_files: info.summary?.files,
     summary_diffs: info.summary?.diffs,
+    cost: info.cost ?? 0,
+    tokens_input: (info.tokens ?? EmptyTokens).input,
+    tokens_output: (info.tokens ?? EmptyTokens).output,
+    tokens_reasoning: (info.tokens ?? EmptyTokens).reasoning,
+    tokens_cache_read: (info.tokens ?? EmptyTokens).cache.read,
+    tokens_cache_write: (info.tokens ?? EmptyTokens).cache.write,
     revert: info.revert ?? null,
     permission: info.permission,
     time_created: info.time.created,
@@ -117,151 +152,218 @@ function getForkedTitle(title: string): string {
   return `${title} (fork #1)`
 }
 
-export const Info = z
-  .object({
-    id: SessionID.zod,
-    slug: z.string(),
-    projectID: ProjectID.zod,
-    workspaceID: WorkspaceID.zod.optional(),
-    directory: z.string(),
-    parentID: SessionID.zod.optional(),
-    summary: z
-      .object({
-        additions: z.number(),
-        deletions: z.number(),
-        files: z.number(),
-        // kilocode_change start - use lightweight diff schema (without before/after file contents)
-        diffs: z
-          .object({
-            file: z.string(),
-            additions: z.number(),
-            deletions: z.number(),
-            status: z.enum(["added", "deleted", "modified"]).optional(),
-          })
-          .array()
-          .optional(),
-        // kilocode_change end
-      })
-      .optional(),
-    share: z
-      .object({
-        url: z.string(),
-      })
-      .optional(),
-    title: z.string(),
-    version: z.string(),
-    time: z.object({
-      created: z.number(),
-      updated: z.number(),
-      compacting: z.number().optional(),
-      archived: z.number().optional(),
-    }),
-    permission: Permission.Ruleset.zod.optional(),
-    revert: z
-      .object({
-        messageID: MessageID.zod,
-        partID: PartID.zod.optional(),
-        snapshot: z.string().optional(),
-        diff: z.string().optional(),
-      })
-      .optional(),
-  })
-  .meta({
-    ref: "Session",
-  })
-export type Info = z.output<typeof Info>
+function sessionPath(worktree: string, cwd: string) {
+  return path.relative(path.resolve(worktree), cwd).replaceAll("\\", "/")
+}
 
-export const ProjectInfo = z
-  .object({
-    id: ProjectID.zod,
-    name: z.string().optional(),
-    worktree: z.string(),
-  })
-  .meta({
-    ref: "ProjectSummary",
-  })
-export type ProjectInfo = z.output<typeof ProjectInfo>
-
-export const GlobalInfo = Info.extend({
-  project: ProjectInfo.nullable(),
-  worktreeName: z.string().optional(), // kilocode_change - basename of the specific worktree directory
-}).meta({
-  ref: "GlobalSession",
+const Summary = Schema.Struct({
+  additions: Schema.Finite,
+  deletions: Schema.Finite,
+  files: Schema.Finite,
+  diffs: optionalOmitUndefined(Schema.Array(Snapshot.SummaryFileDiff)), // kilocode_change - lightweight diff without patch
 })
-export type GlobalInfo = z.output<typeof GlobalInfo>
 
-export const CreateInput = z
-  .object({
-    parentID: SessionID.zod.optional(),
-    title: z.string().optional(),
-    permission: Info.shape.permission,
-    platform: z.string().optional(), // kilocode_change - per-session platform override for telemetry attribution
-    workspaceID: WorkspaceID.zod.optional(),
-  })
-  .optional()
-export type CreateInput = z.output<typeof CreateInput>
-
-export const ForkInput = z.object({ sessionID: SessionID.zod, messageID: MessageID.zod.optional() })
-export const GetInput = SessionID.zod
-export const ChildrenInput = SessionID.zod
-export const RemoveInput = SessionID.zod
-export const SetTitleInput = z.object({ sessionID: SessionID.zod, title: z.string() })
-export const SetArchivedInput = z.object({ sessionID: SessionID.zod, time: z.number().optional() })
-export const SetPermissionInput = z.object({ sessionID: SessionID.zod, permission: Permission.Ruleset.zod })
-export const SetRevertInput = z.object({
-  sessionID: SessionID.zod,
-  revert: Info.shape.revert,
-  summary: Info.shape.summary,
+const Tokens = Schema.Struct({
+  input: Schema.Finite,
+  output: Schema.Finite,
+  reasoning: Schema.Finite,
+  cache: Schema.Struct({
+    read: Schema.Finite,
+    write: Schema.Finite,
+  }),
 })
-export const MessagesInput = z.object({ sessionID: SessionID.zod, limit: z.number().optional() })
+
+const EmptyTokens = { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } }
+
+const Share = Schema.Struct({
+  url: Schema.String,
+})
+
+// Legacy HTTP accepted negative values here. Keep archive timestamps permissive
+// while excluding non-finite values that cannot round-trip through JSON.
+export const ArchivedTimestamp = Schema.Finite
+
+const Time = Schema.Struct({
+  created: NonNegativeInt,
+  updated: NonNegativeInt,
+  compacting: optionalOmitUndefined(NonNegativeInt),
+  archived: optionalOmitUndefined(ArchivedTimestamp),
+})
+
+const Revert = Schema.Struct({
+  messageID: MessageID,
+  partID: optionalOmitUndefined(PartID),
+  snapshot: optionalOmitUndefined(Schema.String),
+  diff: optionalOmitUndefined(Schema.String),
+})
+
+const Model = Schema.Struct({
+  id: ModelID,
+  providerID: ProviderID,
+  variant: optionalOmitUndefined(Schema.String),
+})
+
+export const Info = Schema.Struct({
+  id: SessionID,
+  slug: Schema.String,
+  projectID: ProjectID,
+  workspaceID: optionalOmitUndefined(WorkspaceID),
+  directory: Schema.String,
+  path: optionalOmitUndefined(Schema.String),
+  parentID: optionalOmitUndefined(SessionID),
+  summary: optionalOmitUndefined(Summary),
+  cost: optionalOmitUndefined(Schema.Finite),
+  tokens: optionalOmitUndefined(Tokens),
+  share: optionalOmitUndefined(Share),
+  title: Schema.String,
+  agent: optionalOmitUndefined(Schema.String),
+  model: optionalOmitUndefined(Model),
+  version: Schema.String,
+  time: Time,
+  permission: optionalOmitUndefined(Permission.Ruleset),
+  revert: optionalOmitUndefined(Revert),
+}).annotate({ identifier: "Session" })
+export type Info = Types.DeepMutable<Schema.Schema.Type<typeof Info>>
+
+export const ProjectInfo = Schema.Struct({
+  id: ProjectID,
+  name: optionalOmitUndefined(Schema.String),
+  worktree: Schema.String,
+}).annotate({ identifier: "ProjectSummary" })
+export type ProjectInfo = Types.DeepMutable<Schema.Schema.Type<typeof ProjectInfo>>
+
+export const GlobalInfo = Schema.Struct({
+  ...Info.fields,
+  project: Schema.NullOr(ProjectInfo),
+  worktreeName: Schema.optional(Schema.String), // kilocode_change - basename of the specific worktree directory
+}).annotate({ identifier: "GlobalSession" })
+export type GlobalInfo = Types.DeepMutable<Schema.Schema.Type<typeof GlobalInfo>>
+
+export const CreateInput = Schema.optional(
+  Schema.Struct({
+    parentID: Schema.optional(SessionID),
+    title: Schema.optional(Schema.String),
+    agent: Schema.optional(Schema.String),
+    model: Schema.optional(Model),
+    permission: Schema.optional(Permission.Ruleset),
+    platform: Schema.optional(Schema.String), // kilocode_change - per-session platform override for telemetry attribution
+    workspaceID: Schema.optional(WorkspaceID),
+  }),
+)
+export type CreateInput = Types.DeepMutable<Schema.Schema.Type<typeof CreateInput>>
+
+export const ForkInput = Schema.Struct({
+  sessionID: SessionID,
+  messageID: Schema.optional(MessageID),
+})
+export const GetInput = SessionID
+export const ChildrenInput = SessionID
+export const RemoveInput = SessionID
+export const SetTitleInput = Schema.Struct({ sessionID: SessionID, title: Schema.String })
+export const SetArchivedInput = Schema.Struct({
+  sessionID: SessionID,
+  time: Schema.optional(ArchivedTimestamp),
+})
+export const SetPermissionInput = Schema.Struct({
+  sessionID: SessionID,
+  permission: Permission.Ruleset,
+})
+export const SetRevertInput = Schema.Struct({
+  sessionID: SessionID,
+  revert: Schema.optional(Revert),
+  summary: Schema.optional(Summary),
+})
+export const MessagesInput = Schema.Struct({
+  sessionID: SessionID,
+  limit: Schema.optional(NonNegativeInt),
+})
+export type ListInput = {
+  directory?: string
+  scope?: "project"
+  path?: string
+  workspaceID?: WorkspaceID
+  roots?: boolean
+  start?: number
+  search?: string
+  limit?: number
+}
+
+const CreatedEventSchema = Schema.Struct({
+  sessionID: SessionID,
+  info: Info,
+})
+
+const UpdatedShare = Schema.Struct({
+  url: Schema.optional(Schema.NullOr(Schema.String)),
+})
+
+const UpdatedTime = Schema.Struct({
+  created: Schema.optional(Schema.NullOr(NonNegativeInt)),
+  updated: Schema.optional(Schema.NullOr(NonNegativeInt)),
+  compacting: Schema.optional(Schema.NullOr(NonNegativeInt)),
+  archived: Schema.optional(Schema.NullOr(ArchivedTimestamp)),
+})
+
+const UpdatedInfo = Schema.Struct({
+  id: Schema.optional(Schema.NullOr(SessionID)),
+  slug: Schema.optional(Schema.NullOr(Schema.String)),
+  projectID: Schema.optional(Schema.NullOr(ProjectID)),
+  workspaceID: Schema.optional(Schema.NullOr(WorkspaceID)),
+  directory: Schema.optional(Schema.NullOr(Schema.String)),
+  path: Schema.optional(Schema.NullOr(Schema.String)),
+  parentID: Schema.optional(Schema.NullOr(SessionID)),
+  summary: Schema.optional(Schema.NullOr(Summary)),
+  cost: Schema.optional(Schema.Finite),
+  tokens: Schema.optional(Tokens),
+  share: Schema.optional(UpdatedShare),
+  title: Schema.optional(Schema.NullOr(Schema.String)),
+  agent: Schema.optional(Schema.NullOr(Schema.String)),
+  model: Schema.optional(Schema.NullOr(Model)),
+  version: Schema.optional(Schema.NullOr(Schema.String)),
+  time: Schema.optional(UpdatedTime),
+  permission: Schema.optional(Schema.NullOr(Permission.Ruleset)),
+  revert: Schema.optional(Schema.NullOr(Revert)),
+})
+
+const UpdatedEventSchema = Schema.Struct({
+  sessionID: SessionID,
+  info: UpdatedInfo,
+})
 
 export const Event = {
   Created: SyncEvent.define({
     type: "session.created",
     version: 1,
     aggregate: "sessionID",
-    schema: z.object({
-      sessionID: SessionID.zod,
-      info: Info,
-    }),
+    schema: CreatedEventSchema,
   }),
   Updated: SyncEvent.define({
     type: "session.updated",
     version: 1,
     aggregate: "sessionID",
-    schema: z.object({
-      sessionID: SessionID.zod,
-      info: updateSchema(Info).extend({
-        share: updateSchema(Info.shape.share.unwrap()).optional(),
-        time: updateSchema(Info.shape.time).optional(),
-      }),
-    }),
-    busSchema: z.object({
-      sessionID: SessionID.zod,
-      info: Info,
-    }),
+    schema: UpdatedEventSchema,
+    busSchema: CreatedEventSchema,
   }),
   Deleted: SyncEvent.define({
     type: "session.deleted",
     version: 1,
     aggregate: "sessionID",
-    schema: z.object({
-      sessionID: SessionID.zod,
-      info: Info,
-    }),
+    schema: CreatedEventSchema,
   }),
   Diff: BusEvent.define(
     "session.diff",
-    z.object({
-      sessionID: SessionID.zod,
-      diff: Snapshot.FileDiff.array(),
+    Schema.Struct({
+      sessionID: SessionID,
+      diff: Schema.Array(Snapshot.FileDiff),
     }),
   ),
   Error: BusEvent.define(
     "session.error",
-    z.object({
-      sessionID: SessionID.zod.optional(),
-      error: MessageV2.Assistant.shape.error,
+    Schema.Struct({
+      sessionID: Schema.optional(SessionID),
+      // Reuses MessageV2.Assistant.fields.error (already Schema.optional) so
+      // the derived zod keeps the same discriminated-union shape on the bus.
+      error: MessageV2.Assistant.fields.error,
     }),
   ),
   // kilocode_change start
@@ -270,9 +372,9 @@ export const Event = {
   // kilocode_change end
 }
 
-export function plan(input: { slug: string; time: { created: number } }) {
-  const base = Instance.project.vcs
-    ? path.join(Instance.worktree, ".kilo", "plans") // kilocode_change
+export function plan(input: { slug: string; time: { created: number } }, instance: InstanceContext) {
+  const base = instance.project.vcs
+    ? path.join(instance.worktree, ".kilo", "plans") // kilocode_change
     : path.join(Global.Path.data, "plans")
   return path.join(base, [input.time.created, input.slug].join("-") + ".md")
 }
@@ -285,7 +387,7 @@ export const getUsage = (input: {
 }) => {
   const safe = (value: number) => {
     if (!Number.isFinite(value)) return 0
-    return value
+    return Math.max(0, value)
   }
   const inputTokens = safe(input.usage.inputTokens ?? 0)
   const outputTokens = safe(input.usage.outputTokens ?? 0)
@@ -330,16 +432,21 @@ export const getUsage = (input: {
   // kilocode_change start - Use provider-reported cost when available for OpenRouter/Kilo
   const reported = KiloSession.providerCost({
     metadata: input.metadata,
+    usage: input.usage,
     provider: input.provider,
     providerID: input.model.providerID,
   })
   if (reported !== undefined) return { cost: safe(reported), tokens }
   // kilocode_change end
 
+  const contextTokens = inputTokens
   const costInfo =
-    input.model.cost?.experimentalOver200K && tokens.input + tokens.cache.read > 200_000
+    input.model.cost?.tiers
+      ?.filter((item) => item.tier.type === "context" && contextTokens > item.tier.size)
+      .sort((a, b) => b.tier.size - a.tier.size)[0] ??
+    (input.model.cost?.experimentalOver200K && contextTokens > 200_000
       ? input.model.cost.experimentalOver200K
-      : input.model.cost
+      : input.model.cost)
   return {
     cost: safe(
       new Decimal(0)
@@ -356,23 +463,26 @@ export const getUsage = (input: {
   }
 }
 
-export class BusyError extends Error {
-  constructor(public readonly sessionID: string) {
-    super(`Session ${sessionID} is busy`)
-  }
-}
+export class BusyError extends Schema.TaggedErrorClass<BusyError>()("SessionBusyError", {
+  sessionID: SessionID,
+}) {}
+
+export type NotFound = NotFoundError
 
 export interface Interface {
+  readonly list: (input?: ListInput) => Effect.Effect<Info[]>
   readonly create: (input?: {
     parentID?: SessionID
     title?: string
+    agent?: string
+    model?: Schema.Schema.Type<typeof Model>
     permission?: Permission.Ruleset
     platform?: string // kilocode_change - per-session platform override for telemetry attribution
     workspaceID?: WorkspaceID
   }) => Effect.Effect<Info>
-  readonly fork: (input: { sessionID: SessionID; messageID?: MessageID }) => Effect.Effect<Info>
+  readonly fork: (input: { sessionID: SessionID; messageID?: MessageID }) => Effect.Effect<Info, NotFound>
   readonly touch: (sessionID: SessionID) => Effect.Effect<void>
-  readonly get: (id: SessionID) => Effect.Effect<Info>
+  readonly get: (id: SessionID) => Effect.Effect<Info, NotFound>
   readonly setTitle: (input: { sessionID: SessionID; title: string }) => Effect.Effect<void>
   readonly setArchived: (input: { sessionID: SessionID; time?: number }) => Effect.Effect<void>
   readonly setPermission: (input: { sessionID: SessionID; permission: Permission.Ruleset }) => Effect.Effect<void>
@@ -384,9 +494,9 @@ export interface Interface {
   readonly clearRevert: (sessionID: SessionID) => Effect.Effect<void>
   readonly setSummary: (input: { sessionID: SessionID; summary: Info["summary"] }) => Effect.Effect<void>
   readonly diff: (sessionID: SessionID) => Effect.Effect<Snapshot.FileDiff[]>
-  readonly messages: (input: { sessionID: SessionID; limit?: number }) => Effect.Effect<MessageV2.WithParts[]>
+  readonly messages: (input: { sessionID: SessionID; limit?: number }) => Effect.Effect<MessageV2.WithParts[], NotFound>
   readonly children: (parentID: SessionID) => Effect.Effect<Info[]>
-  readonly remove: (sessionID: SessionID) => Effect.Effect<void>
+  readonly remove: (sessionID: SessionID) => Effect.Effect<void, NotFound>
   readonly updateMessage: <T extends MessageV2.Info>(msg: T) => Effect.Effect<T>
   readonly removeMessage: (input: { sessionID: SessionID; messageID: MessageID }) => Effect.Effect<MessageID>
   readonly removePart: (input: { sessionID: SessionID; messageID: MessageID; partID: PartID }) => Effect.Effect<PartID>
@@ -407,29 +517,40 @@ export interface Interface {
   readonly findMessage: (
     sessionID: SessionID,
     predicate: (msg: MessageV2.WithParts) => boolean,
-  ) => Effect.Effect<Option.Option<MessageV2.WithParts>>
+  ) => Effect.Effect<Option.Option<MessageV2.WithParts>, NotFound>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Session") {}
 
-type Patch = z.infer<typeof Event.Updated.schema>["info"]
+export type Patch = Types.DeepMutable<SyncEvent.Event<typeof Event.Updated>["data"]["info"]>
 
 const db = <T>(fn: (d: Parameters<typeof Database.use>[0] extends (trx: infer D) => any ? D : never) => T) =>
   Effect.sync(() => Database.use(fn))
 
-export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> = Layer.effect(
+export const layer: Layer.Layer<
+  Service,
+  never,
+  BackgroundJob.Service | Bus.Service | Storage.Service | SyncEvent.Service | RuntimeFlags.Service
+> = Layer.effect(
   Service,
   Effect.gen(function* () {
+    const background = yield* BackgroundJob.Service
     const bus = yield* Bus.Service
     const storage = yield* Storage.Service
+    const sync = yield* SyncEvent.Service
+    const flags = yield* RuntimeFlags.Service
 
     const createNext = Effect.fn("Session.createNext")(function* (input: {
       id?: SessionID
       title?: string
+      agent?: string
+      model?: Schema.Schema.Type<typeof Model>
       parentID?: SessionID
       workspaceID?: WorkspaceID
       directory: string
+      path?: string
       permission?: Permission.Ruleset
+      platform?: string // kilocode_change - per-session platform override for telemetry attribution
     }) {
       const ctx = yield* InstanceState.context
       const result: Info = {
@@ -438,10 +559,15 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
         version: InstallationVersion,
         projectID: ctx.project.id,
         directory: input.directory,
+        path: input.path,
         workspaceID: input.workspaceID,
         parentID: input.parentID,
         title: input.title ?? createDefaultTitle(!!input.parentID),
+        agent: input.agent,
+        model: input.model,
         permission: input.permission,
+        cost: 0,
+        tokens: EmptyTokens,
         time: {
           created: Date.now(),
           updated: Date.now(),
@@ -449,9 +575,13 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
       }
       log.info("created", result)
 
-      yield* Effect.sync(() => SyncEvent.run(Event.Created, { sessionID: result.id, info: result }))
+      // kilocode_change start - register attribution before session.created subscribers run
+      KiloSession.register({ id: result.id, parentID: result.parentID, platform: input.platform })
+      // kilocode_change end
 
-      if (!Flag.KILO_EXPERIMENTAL_WORKSPACES) {
+      yield* sync.run(Event.Created, { sessionID: result.id, info: result })
+
+      if (!flags.experimentalWorkspaces) {
         // This only exist for backwards compatibility. We should not be
         // manually publishing this event; it is a sync event now
         yield* bus.publish(Event.Updated, {
@@ -465,15 +595,22 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
 
     const get = Effect.fn("Session.get")(function* (id: SessionID) {
       const row = yield* db((d) => d.select().from(SessionTable).where(eq(SessionTable.id, id)).get())
-      if (!row) throw new NotFoundError({ message: `Session not found: ${id}` })
+      if (!row) return yield* Effect.fail(new NotFoundError({ message: `Session not found: ${id}` }))
       return fromRow(row)
+    })
+
+    const list = Effect.fn("Session.list")(function* (input?: ListInput) {
+      const ctx = yield* InstanceState.context
+      return Array.from(
+        listByProject({ projectID: ctx.project.id, experimentalWorkspaces: flags.experimentalWorkspaces, ...input }),
+      )
     })
 
     // kilocode_change start - scope by project_id when instance context is available
     const children = Effect.fn("Session.children")(function* (parentID: SessionID) {
-      const ctx = yield* Effect.try({ try: () => Instance.current, catch: () => undefined }).pipe(Effect.option)
+      const ctx = capture()
       const conditions = [eq(SessionTable.parent_id, parentID)]
-      if (Option.isSome(ctx)) conditions.push(eq(SessionTable.project_id, ctx.value.project.id))
+      if (ctx) conditions.push(eq(SessionTable.project_id, ctx.project.id))
       const rows = yield* db((d) =>
         d
           .select()
@@ -486,35 +623,36 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
     // kilocode_change end
 
     const remove: Interface["remove"] = Effect.fnUntraced(function* (sessionID: SessionID) {
+      const session = yield* get(sessionID)
       try {
-        const session = yield* get(sessionID)
-        const kids = yield* children(sessionID)
-        for (const child of kids) {
-          yield* remove(child.id)
-        }
-
-        // `remove` needs to work in all cases, such as a broken
-        // sessions that run cleanup. In certain cases these will
-        // run without any instance state, so we need to turn off
-        // publishing of events in that case
+        // `remove` needs to work in all cases, such as broken sessions that
+        // run cleanup without instance state.
         const hasInstance = yield* InstanceState.directory.pipe(
           Effect.as(true),
           Effect.catchCause(() => Effect.succeed(false)),
         )
 
+        if (hasInstance) yield* cancelBackgroundJobs(background, sessionID)
+        const kids = yield* children(sessionID)
+        for (const child of kids) {
+          yield* remove(child.id)
+        }
+
         // kilocode_change start
         yield* Effect.promise(() => KiloSession.removeSession(sessionID)).pipe(Effect.ignore)
         KiloSession.clearPlatformOverride(sessionID)
         if (hasInstance) {
+          yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID)).pipe(Effect.ignore)
           void Promise.all([import("@/effect/app-runtime"), import("./run-state")]).then(([app, run]) =>
             app.AppRuntime.runPromise(run.SessionRunState.Service.use((svc) => svc.cancel(sessionID))).catch(() => {}),
           )
         }
         // kilocode_change end
-        yield* Effect.sync(() => {
-          SyncEvent.run(Event.Deleted, { sessionID, info: session }, { publish: hasInstance })
-          SyncEvent.remove(sessionID)
-        })
+        yield* sync.run(Event.Deleted, { sessionID, info: session }, { publish: hasInstance })
+        // kilocode_change - capture final session-export workspace delta on close/delete
+        const workspaceKey = hasInstance ? yield* InstanceState.directory : undefined // kilocode_change
+        yield* Effect.promise(() => SessionExport.onSessionClose(sessionID, workspaceKey)) // kilocode_change
+        yield* sync.remove(sessionID)
       } catch (e) {
         log.error(e)
       }
@@ -523,12 +661,11 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
     const updateMessage = <T extends MessageV2.Info>(msg: T): Effect.Effect<T> =>
       Effect.gen(function* () {
         // kilocode_change start - ignore FK errors when session was deleted while processor was still running
-        yield* Effect.sync(() =>
-          KiloSession.runSyncSafe(
-            () => SyncEvent.run(MessageV2.Event.Updated, { sessionID: msg.sessionID, info: msg }),
-            { type: "message update", id: msg.id, sessionID: msg.sessionID },
-          ),
-        )
+        yield* KiloSession.runSyncSafe(sync.run(MessageV2.Event.Updated, { sessionID: msg.sessionID, info: msg }), {
+          type: "message update",
+          id: msg.id,
+          sessionID: msg.sessionID,
+        })
         // kilocode_change end
         return msg
       }).pipe(Effect.withSpan("Session.updateMessage"))
@@ -536,16 +673,13 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
     const updatePart = <T extends MessageV2.Part>(part: T): Effect.Effect<T> =>
       Effect.gen(function* () {
         // kilocode_change start - ignore FK errors when session was deleted while processor was still running
-        yield* Effect.sync(() =>
-          KiloSession.runSyncSafe(
-            () =>
-              SyncEvent.run(MessageV2.Event.PartUpdated, {
-                sessionID: part.sessionID,
-                part: structuredClone(part),
-                time: Date.now(),
-              }),
-            { type: "part update", id: part.id, sessionID: part.sessionID },
-          ),
+        yield* KiloSession.runSyncSafe(
+          sync.run(MessageV2.Event.PartUpdated, {
+            sessionID: part.sessionID,
+            part: structuredClone(part),
+            time: Date.now(),
+          }),
+          { type: "part update", id: part.id, sessionID: part.sessionID },
         )
         // kilocode_change end
         return part
@@ -577,38 +711,41 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
     const create = Effect.fn("Session.create")(function* (input?: {
       parentID?: SessionID
       title?: string
+      agent?: string
+      model?: Schema.Schema.Type<typeof Model>
       permission?: Permission.Ruleset
       platform?: string // kilocode_change - per-session platform override for telemetry attribution
       workspaceID?: WorkspaceID
     }) {
-      const directory = yield* InstanceState.directory
+      const ctx = yield* InstanceState.context
       const workspace = yield* InstanceState.workspaceID
       const session = yield* createNext({
         parentID: input?.parentID,
-        directory,
+        directory: ctx.directory,
+        path: sessionPath(ctx.worktree, ctx.directory),
         title: input?.title,
+        agent: input?.agent,
+        model: input?.model,
         permission: input?.permission,
-        workspaceID: input?.workspaceID ?? workspace, // kilocode_change - allow explicit override
+        platform: input?.platform, // kilocode_change
+        workspaceID: input?.workspaceID ?? workspace,
       })
-      // kilocode_change start - store platform override for session ingest
-      if (input?.platform) {
-        KiloSession.setPlatformOverride(session.id, input.platform)
-      }
-      // kilocode_change end
       return session
     })
 
     const fork = Effect.fn("Session.fork")(function* (input: { sessionID: SessionID; messageID?: MessageID }) {
-      const directory = yield* InstanceState.directory
+      const ctx = yield* InstanceState.context
       const original = yield* get(input.sessionID)
       const title = getForkedTitle(original.title)
       const session = yield* createNext({
-        directory,
+        directory: ctx.directory,
+        path: sessionPath(ctx.worktree, ctx.directory),
         workspaceID: original.workspaceID,
         title,
       })
       const msgs = yield* messages({ sessionID: input.sessionID })
       const idMap = new Map<string, MessageID>()
+      const writer = KiloSession.writer(session.id, sync) // kilocode_change - commit copied transcript in one transaction
 
       for (const msg of msgs) {
         if (input.messageID && msg.info.id >= input.messageID) break
@@ -616,27 +753,45 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
         idMap.set(msg.info.id, newID)
 
         const parentID = msg.info.role === "assistant" && msg.info.parentID ? idMap.get(msg.info.parentID) : undefined
-        const cloned = yield* updateMessage({
+        // kilocode_change start - queue copied messages for the atomic transcript commit
+        const cloned = writer.message({
           ...msg.info,
           sessionID: session.id,
           id: newID,
+          ...(msg.info.role === "assistant" && { cost: 0 }), // count only spend incurred after the fork
           ...(parentID && { parentID }),
         })
+        // kilocode_change end
 
         for (const part of msg.parts) {
-          yield* updatePart({
+          const p: MessageV2.Part = {
             ...part,
             id: PartID.ascending(),
             messageID: cloned.id,
             sessionID: session.id,
-          })
+            ...(part.type === "step-finish" && { cost: 0 }), // kilocode_change - exclude pre-fork spend from model stats
+          }
+          if (p.type === "compaction" && p.tail_start_id) {
+            p.tail_start_id = idMap.get(p.tail_start_id)
+          }
+          writer.part(p) // kilocode_change - queue copied parts for the atomic transcript commit
         }
       }
+      yield* writer.commit() // kilocode_change - the caller hydrates after commit; copied-row events stay silent
+      // kilocode_change start - preserve imported/cumulative diffs when forking sessions
+      const local = yield* storage
+        .read<Snapshot.FileDiff[]>(["session_diff", input.sessionID])
+        .pipe(Effect.orElseSucceed((): Snapshot.FileDiff[] => []))
+      const base = yield* cumulativeSessionDiff(storage, input.sessionID, local)
+      if (base.length > 0) {
+        yield* storage.write(baseKey(session.id), base).pipe(Effect.ignore)
+        yield* storage.write(["session_diff", session.id], base).pipe(Effect.ignore)
+      }
+      // kilocode_change end
       return session
     })
 
-    const patch = (sessionID: SessionID, info: Patch) =>
-      Effect.sync(() => SyncEvent.run(Event.Updated, { sessionID, info }))
+    const patch = (sessionID: SessionID, info: Patch) => sync.run(Event.Updated, { sessionID, info })
 
     const touch = Effect.fn("Session.touch")(function* (sessionID: SessionID) {
       yield* patch(sessionID, { time: { updated: Date.now() } })
@@ -682,23 +837,35 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
         .pipe(Effect.orElseSucceed((): Snapshot.FileDiff[] => []))
     })
 
-    const messages = Effect.fn("Session.messages")(function* (input: { sessionID: SessionID; limit?: number }) {
+    const messages: Interface["messages"] = Effect.fn("Session.messages")(function* (input) {
       if (input.limit) {
-        return MessageV2.page({ sessionID: input.sessionID, limit: input.limit }).items
+        return (yield* MessageV2.page({ sessionID: input.sessionID, limit: input.limit })).items
       }
-      return Array.from(MessageV2.stream(input.sessionID)).reverse()
+
+      const size = 50
+      const result = [] as MessageV2.WithParts[]
+      let before: string | undefined
+      while (true) {
+        const page = yield* MessageV2.page({ sessionID: input.sessionID, limit: size, before })
+        if (page.items.length === 0) break
+        for (let i = page.items.length - 1; i >= 0; i--) {
+          const item = page.items[i]
+          if (item) result.push(item)
+        }
+        if (!page.more || !page.cursor) break
+        before = page.cursor
+      }
+      return result.reverse()
     })
 
     const removeMessage = Effect.fn("Session.removeMessage")(function* (input: {
       sessionID: SessionID
       messageID: MessageID
     }) {
-      yield* Effect.sync(() =>
-        SyncEvent.run(MessageV2.Event.Removed, {
-          sessionID: input.sessionID,
-          messageID: input.messageID,
-        }),
-      )
+      yield* sync.run(MessageV2.Event.Removed, {
+        sessionID: input.sessionID,
+        messageID: input.messageID,
+      })
       return input.messageID
     })
 
@@ -707,13 +874,11 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
       messageID: MessageID
       partID: PartID
     }) {
-      yield* Effect.sync(() =>
-        SyncEvent.run(MessageV2.Event.PartRemoved, {
-          sessionID: input.sessionID,
-          messageID: input.messageID,
-          partID: input.partID,
-        }),
-      )
+      yield* sync.run(MessageV2.Event.PartRemoved, {
+        sessionID: input.sessionID,
+        messageID: input.messageID,
+        partID: input.partID,
+      })
       return input.partID
     })
 
@@ -728,17 +893,24 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
     })
 
     /** Finds the first message matching the predicate, searching newest-first. */
-    const findMessage = Effect.fn("Session.findMessage")(function* (
-      sessionID: SessionID,
-      predicate: (msg: MessageV2.WithParts) => boolean,
-    ) {
-      for (const item of MessageV2.stream(sessionID)) {
-        if (predicate(item)) return Option.some(item)
+    const findMessage: Interface["findMessage"] = Effect.fn("Session.findMessage")(function* (sessionID, predicate) {
+      const size = 50
+      let before: string | undefined
+      while (true) {
+        const page = yield* MessageV2.page({ sessionID, limit: size, before })
+        if (page.items.length === 0) break
+        for (let i = page.items.length - 1; i >= 0; i--) {
+          const item = page.items[i]
+          if (item && predicate(item)) return Option.some(item)
+        }
+        if (!page.more || !page.cursor) break
+        before = page.cursor
       }
       return Option.none<MessageV2.WithParts>()
     })
 
     return Service.of({
+      list,
       create,
       fork,
       touch,
@@ -764,41 +936,77 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
   }),
 )
 
-export const defaultLayer = layer.pipe(Layer.provide(Bus.layer), Layer.provide(Storage.defaultLayer))
+export const defaultLayer = layer.pipe(
+  Layer.provide(BackgroundJob.defaultLayer),
+  Layer.provide(Bus.layer),
+  Layer.provide(Storage.defaultLayer),
+  Layer.provide(SyncEvent.defaultLayer),
+  Layer.provide(RuntimeFlags.defaultLayer),
+)
 
-export function* list(input?: {
-  directory?: string
-  workspaceID?: WorkspaceID
-  roots?: boolean
-  start?: number
-  search?: string
-  limit?: number
-}) {
-  const project = Instance.project
-  const conditions = KiloSession.filters({ projectID: project.id, directory: input?.directory }) // kilocode_change
+const cancelBackgroundJobs = Effect.fn("Session.cancelBackgroundJobs")(function* (
+  background: BackgroundJob.Interface,
+  sessionID: SessionID,
+) {
+  const jobs = yield* background.list()
+  yield* Effect.forEach(
+    jobs.filter((job) => {
+      if (job.status !== "running") return false
+      if (job.id === sessionID) return true
+      if (job.metadata?.sessionId === sessionID) return true
+      return job.metadata?.parentSessionId === sessionID
+    }),
+    (job) => background.cancel(job.id),
+    { concurrency: "unbounded", discard: true },
+  )
+})
 
-  if (input?.workspaceID) {
-    conditions.push(eq(SessionTable.workspace_id, input.workspaceID))
-  }
-  // kilocode_change start - directory filtering handled by KiloSession.filters above
-  // if (!Flag.KILO_EXPERIMENTAL_WORKSPACES) {
-  //   if (input?.directory) {
-  //     conditions.push(eq(SessionTable.directory, input.directory))
-  //   }
-  // }
+function* listByProject(
+  input: ListInput & {
+    projectID: ProjectID
+    experimentalWorkspaces: boolean
+  },
+) {
+  // kilocode_change start - KiloSession.filters keeps sessions visible across project_id changes
+  // (see PR #8875). That directory-anchored filter conflicts with upstream's path-prefix filter,
+  // so bypass it when input.path is provided and fall back to the plain project_id base.
+  const conditions =
+    input.path !== undefined
+      ? [eq(SessionTable.project_id, input.projectID)]
+      : KiloSession.filters({ projectID: input.projectID, directory: input.directory })
   // kilocode_change end
 
-  if (input?.roots) {
+  if (input.workspaceID) {
+    conditions.push(eq(SessionTable.workspace_id, input.workspaceID))
+  }
+  if (input.path !== undefined) {
+    if (input.path) {
+      const conds = [eq(SessionTable.path, input.path), like(SessionTable.path, `${input.path}/%`)]
+
+      conditions.push(
+        input.directory
+          ? or(...conds, and(isNull(SessionTable.path), eq(SessionTable.directory, input.directory))!)!
+          : or(...conds)!,
+      )
+    }
+  } else if (input.scope !== "project" && !input.experimentalWorkspaces) {
+    // kilocode_change start - directory filtering handled by KiloSession.filters above
+    // if (input.directory) {
+    //   conditions.push(eq(SessionTable.directory, input.directory))
+    // }
+    // kilocode_change end
+  }
+  if (input.roots) {
     conditions.push(isNull(SessionTable.parent_id))
   }
-  if (input?.start) {
+  if (input.start) {
     conditions.push(gte(SessionTable.time_updated, input.start))
   }
-  if (input?.search) {
+  if (input.search) {
     conditions.push(like(SessionTable.title, `%${input.search}%`))
   }
 
-  const limit = input?.limit ?? 100
+  const limit = input.limit ?? 100
 
   const rows = Database.use((db) =>
     db
@@ -830,48 +1038,7 @@ export function* listGlobal(input?: {
 }
 // kilocode_change end
 
-// kilocode_change start - keep legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-
-export const create = fn(CreateInput, (input) => runPromise((svc) => svc.create(input)))
+// kilocode_change - delegate the exported Promise facade to the Kilo session runtime
 export const fork = kiloSessionFork
-export const get = fn(GetInput, (id) => runPromise((svc) => svc.get(id)))
-export const setTitle = fn(SetTitleInput, (input) => runPromise((svc) => svc.setTitle(input)))
-export const setArchived = fn(SetArchivedInput, (input) => runPromise((svc) => svc.setArchived(input)))
-export const setPermission = fn(SetPermissionInput, (input) => runPromise((svc) => svc.setPermission(input)))
-export const setRevert = fn(SetRevertInput, (input) =>
-  runPromise((svc) => svc.setRevert({ sessionID: input.sessionID, revert: input.revert, summary: input.summary })),
-)
-export const messages = fn(MessagesInput, (input) => runPromise((svc) => svc.messages(input)))
-export const children = fn(ChildrenInput, (id) => runPromise((svc) => svc.children(id)))
-export const remove = fn(RemoveInput, (id) => runPromise((svc) => svc.remove(id)))
-export async function updateMessage<T extends MessageV2.Info>(msg: T): Promise<T> {
-  MessageV2.Info.parse(msg)
-  return runPromise((svc) => svc.updateMessage(msg))
-}
 
-export const removeMessage = fn(z.object({ sessionID: SessionID.zod, messageID: MessageID.zod }), (input) =>
-  runPromise((svc) => svc.removeMessage(input)),
-)
-
-export const removePart = fn(
-  z.object({ sessionID: SessionID.zod, messageID: MessageID.zod, partID: PartID.zod }),
-  (input) => runPromise((svc) => svc.removePart(input)),
-)
-
-export async function updatePart<T extends MessageV2.Part>(part: T): Promise<T> {
-  MessageV2.Part.parse(part)
-  return runPromise((svc) => svc.updatePart(part))
-}
-
-export const updatePartDelta = fn(
-  z.object({
-    sessionID: SessionID.zod,
-    messageID: MessageID.zod,
-    partID: PartID.zod,
-    field: z.string(),
-    delta: z.string(),
-  }),
-  (input) => runPromise((svc) => svc.updatePartDelta(input)),
-)
-// kilocode_change end
+export * as Session from "./session"

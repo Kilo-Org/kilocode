@@ -14,18 +14,26 @@
 
 import { test, expect, afterEach, mock } from "bun:test"
 import { $ } from "bun"
-import { Instance } from "../../src/project/instance"
+import { Effect, Fiber } from "effect"
+import { provideTestInstance } from "../fixture/fixture"
 import { Server } from "../../src/server/server"
-import { Session } from "../../src/session"
+import { Session } from "../../src/session/session"
 import { Snapshot } from "../../src/snapshot"
-import { Filesystem, Log } from "../../src/util"
-import { tmpdir } from "../fixture/fixture"
+import { Filesystem } from "../../src/util/filesystem"
+import * as Log from "@opencode-ai/core/util/log"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
-Log.init({ print: false })
+void Log.init({ print: false })
+
+function run<A>(body: (snapshot: Snapshot.Interface) => Effect.Effect<A, never, Session.Service>) {
+  return Effect.runPromise(
+    Snapshot.Service.use(body).pipe(Effect.provide(Snapshot.defaultLayer), Effect.provide(Session.defaultLayer)),
+  )
+}
 
 afterEach(async () => {
   mock.restore()
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 test("pathological diffFull workload finishes quickly and does not block abort", async () => {
@@ -44,57 +52,63 @@ test("pathological diffFull workload finishes quickly and does not block abort",
     },
   })
 
-  await Instance.provide({
+  await provideTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      const session = await Session.create({})
+    fn: () =>
+      run((snapshot) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const session = yield* sessions.create({})
 
-      const before = await Snapshot.track()
-      expect(before).toBeTruthy()
+          const before = yield* snapshot.track()
+          expect(before).toBeTruthy()
 
-      await Filesystem.write(`${tmp.path}/fat.json`, v2)
-      const after = await Snapshot.track()
-      expect(after).toBeTruthy()
+          yield* Effect.promise(() => Filesystem.write(`${tmp.path}/fat.json`, v2))
+          const after = yield* snapshot.track()
+          expect(after).toBeTruthy()
 
-      // Kick off a diffFull that exercises the freeze path.
-      const diffPromise = Snapshot.diffFull(before!, after!)
+          // Kick off a diffFull that exercises the freeze path.
+          const diff = yield* snapshot.diffFull(before!, after!).pipe(Effect.forkChild({ startImmediately: true }))
 
-      // Concurrently keep a tick counter running. If the event loop blocks we
-      // will see this count fall behind wall-clock elapsed.
-      let ticks = 0
-      const start = Date.now()
-      const timer = setInterval(() => {
-        ticks++
-      }, 25)
+          // Concurrently keep a tick counter running. If the event loop blocks we
+          // will see this count fall behind wall-clock elapsed.
+          let ticks = 0
+          const start = Date.now()
+          const timer = setInterval(() => {
+            ticks++
+          }, 25)
 
-      // Fire an abort request against the Hono app in the middle of the diff.
-      const app = Server.Default().app
-      const abortStart = Date.now()
-      const res = await app.request(`/session/${session.id}/abort`, { method: "POST" })
-      const abortLatency = Date.now() - abortStart
-      expect(res.status).toBe(200)
-      // The abort endpoint must respond well under a second even under load.
-      expect(abortLatency).toBeLessThan(2000)
+          // Fire an abort request against the Hono app in the middle of the diff.
+          const app = Server.Default().app
+          const abortStart = Date.now()
+          const res = yield* Effect.promise(() =>
+            Promise.resolve(app.request(`/session/${session.id}/abort`, { method: "POST" })),
+          )
+          const abortLatency = Date.now() - abortStart
+          expect(res.status).toBe(200)
+          // The abort endpoint must respond well under a second even under load.
+          expect(abortLatency).toBeLessThan(2000)
 
-      const diffs = await diffPromise
-      clearInterval(timer)
-      const total = Date.now() - start
+          const diffs = yield* Fiber.join(diff)
+          clearInterval(timer)
+          const total = Date.now() - start
 
-      // The freeze workload must finish in bounded time. Five seconds is
-      // generous even for a slow CI box; without the fix this hangs.
-      expect(total).toBeLessThan(5000)
-      // And we must have ticked at least a few times during the work — proves
-      // the event loop stayed responsive (ESC would actually arrive).
-      expect(ticks).toBeGreaterThan(0)
+          // The freeze workload must finish in bounded time. Five seconds is
+          // generous even for a slow CI box; without the fix this hangs.
+          expect(total).toBeLessThan(5000)
+          // And we must have ticked at least a few times during the work, proving
+          // the event loop stayed responsive (ESC would actually arrive).
+          expect(ticks).toBeGreaterThan(0)
 
-      // With git-based diff the patch is a real unified diff, not empty.
-      const hit = diffs.find((d) => d.file === "fat.json")
-      expect(hit).toBeDefined()
-      expect(hit!.patch).toMatch(/^diff --git /m)
-      expect(hit!.patch).toContain("-v1_line_0")
-      expect(hit!.patch).toContain("+v2_line_0")
-      expect(hit!.additions).toBeGreaterThan(0)
-      expect(hit!.deletions).toBeGreaterThan(0)
-    },
+          // With git-based diff the patch is a real unified diff, not empty.
+          const hit = diffs.find((d) => d.file === "fat.json")
+          expect(hit).toBeDefined()
+          expect(hit!.patch).toMatch(/^diff --git /m)
+          expect(hit!.patch).toContain("-v1_line_0")
+          expect(hit!.patch).toContain("+v2_line_0")
+          expect(hit!.additions).toBeGreaterThan(0)
+          expect(hit!.deletions).toBeGreaterThan(0)
+        }),
+      ),
   })
 })

@@ -4,18 +4,21 @@
 
 import { describe, test, expect, spyOn, afterEach } from "bun:test"
 import path from "path"
-import { LSPServer } from "../../src/lsp"
+import * as LSPServer from "../../src/lsp/server"
 import { TsClient } from "../../src/kilocode/ts-client"
 import { TsCheck } from "../../src/kilocode/ts-check"
-import { Flag } from "../../src/flag/flag"
-import { Instance, type InstanceContext } from "../../src/project/instance"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { Instance, type InstanceContext } from "../../src/kilocode/instance"
+import { disposeAllInstances } from "../fixture/fixture"
+import type { RuntimeFlags } from "../../src/effect/runtime-flags"
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 // Typescript.spawn doesn't use ctx, so a cast-through is fine for these tests.
 const fakeCtx = {} as InstanceContext
+const fakeFlags = {} as RuntimeFlags.Info
 
 describe("typescript lightweight mode", () => {
   describe("spawn gate", () => {
@@ -23,7 +26,7 @@ describe("typescript lightweight mode", () => {
       const saved = Flag.KILO_EXPERIMENTAL_LSP_TOOL
       Flag.KILO_EXPERIMENTAL_LSP_TOOL = false
       try {
-        const result = await LSPServer.Typescript.spawn("/tmp/any", fakeCtx)
+        const result = await LSPServer.Typescript.spawn("/tmp/any", fakeCtx, fakeFlags)
         expect(result).toBeUndefined()
       } finally {
         Flag.KILO_EXPERIMENTAL_LSP_TOOL = saved
@@ -36,7 +39,7 @@ describe("typescript lightweight mode", () => {
       const spy = spyOn(TsCheck, "native_tsgo").mockResolvedValue(undefined)
 
       try {
-        const result = await LSPServer.Typescript.spawn("/tmp/any", fakeCtx)
+        const result = await LSPServer.Typescript.spawn("/tmp/any", fakeCtx, fakeFlags)
         expect(spy).toHaveBeenCalled()
         expect(result).toBeUndefined() // undefined because mock returns no binary
       } finally {
@@ -82,7 +85,7 @@ describe("typescript lightweight mode", () => {
     test("lsp/lsp.ts uses TsClient for lightweight diagnostics", async () => {
       const src = await Bun.file(path.resolve(import.meta.dir, "../../src/lsp/lsp.ts")).text()
       expect(src).toContain("TsClient.create")
-      expect(src).toContain("KILO_EXPERIMENTAL_LSP_TOOL")
+      expect(src).toContain("flags.experimentalLspTool")
     })
   })
 })

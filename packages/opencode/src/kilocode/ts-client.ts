@@ -3,13 +3,13 @@
 // instead of spawning a persistent typescript-language-server process.
 // This drops memory from ~500MB persistent to ~50MB peak (0 idle).
 
-import { LSPClient } from "../lsp"
+import { LSPClient } from "../lsp/client"
 import { Bus } from "../bus"
 import { TsCheck } from "./ts-check"
-import { Log } from "../util"
+import * as Log from "@opencode-ai/core/util/log"
 import { withTimeout } from "../util/timeout"
 import path from "path"
-import { Instance } from "../project/instance"
+import { Instance } from "./instance"
 
 export namespace TsClient {
   const log = Log.create({ service: "ts-client" })
@@ -30,7 +30,7 @@ export namespace TsClient {
             diagnostics.set(file, diags)
           }
           for (const file of result.keys()) {
-            Bus.publish(LSPClient.Event.Diagnostics, {
+            Bus.publish(Instance.current, LSPClient.Event.Diagnostics, {
               path: file,
               serverID: client.serverID,
             })
@@ -72,12 +72,13 @@ export namespace TsClient {
           // trigger notify.open() but should NOT spawn tsgo. The actual
           // check is deferred to waitForDiagnostics() which is only
           // called when tools need diagnostics (write, edit, apply_patch).
+          return 0
         },
       },
       get diagnostics() {
         return diagnostics
       },
-      async waitForDiagnostics(_input: { path: string }) {
+      async waitForDiagnostics(_input: { path: string; version: number; mode?: "document" | "full"; after?: number }) {
         // Run tsgo --noEmit and wait for results. Coalesces concurrent calls.
         // 30s cap matches the process timeout in TsCheck.run(). Silent catch
         // matches the real LSPClient's .catch(() => {}) on its 3s timeout.

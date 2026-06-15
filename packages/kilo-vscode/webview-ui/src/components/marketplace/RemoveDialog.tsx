@@ -15,20 +15,24 @@ export const RemoveDialog = (props: Props) => {
 
   const typeName = () => {
     if (props.item.type === "mcp") return t("marketplace.remove.type.mcp")
-    if (props.item.type === "mode") return t("marketplace.remove.type.mode")
+    if (props.item.type === "agent") return t("marketplace.remove.type.agent")
     return t("marketplace.remove.type.skill")
   }
 
   return (
     <Dialog title={t("marketplace.remove.title", { name: props.item.name })} fit>
-      <p>{t("marketplace.remove.confirm", { type: typeName(), scope: t(`marketplace.scope.${props.scope}`) })}</p>
-      <div class="marketplace-remove-actions">
-        <Button variant="secondary" onClick={props.onClose}>
-          {t("marketplace.remove.cancel")}
-        </Button>
-        <Button variant="primary" class="danger-btn" onClick={props.onConfirm}>
-          {t("marketplace.remove.confirm.button")}
-        </Button>
+      <div class="dialog-confirm-body">
+        <span>
+          {t("marketplace.remove.confirm", { type: typeName(), scope: t(`marketplace.scope.${props.scope}`) })}
+        </span>
+        <div class="dialog-confirm-actions">
+          <Button variant="secondary" onClick={props.onClose}>
+            {t("marketplace.remove.cancel")}
+          </Button>
+          <Button variant="primary" class="danger-btn" onClick={props.onConfirm}>
+            {t("marketplace.remove.confirm.button")}
+          </Button>
+        </div>
       </div>
     </Dialog>
   )

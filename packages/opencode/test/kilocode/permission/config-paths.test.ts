@@ -2,7 +2,7 @@
 import path from "path"
 import { describe, expect, test } from "bun:test"
 import { ConfigProtection } from "../../../src/kilocode/permission/config-paths"
-import { Global } from "../../../src/global"
+import { Global } from "@opencode-ai/core/global"
 import { KilocodePaths } from "../../../src/kilocode/paths"
 
 describe("ConfigProtection.isRequest", () => {

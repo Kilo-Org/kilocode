@@ -12,7 +12,7 @@ export const ToolsNav: NavSection[] = [
       { href: "/automate/tools/search-files", children: "search_files" },
       { href: "/automate/tools/list-files", children: "list_files" },
       { href: "/automate/tools/list-code-definition-names", children: "list_code_definition_names" },
-      { href: "/automate/tools/codebase-search", children: "codebase_search" },
+      { href: "/automate/tools/semantic-search", children: "semantic_search" },
     ],
   },
   {

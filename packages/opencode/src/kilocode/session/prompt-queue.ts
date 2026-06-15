@@ -27,6 +27,11 @@ export namespace KiloSessionPromptQueue {
   const activeSince = new Map<SessionID, number>()
   let seq = 0
 
+  /** @internal - test-only helper */
+  export function _hasInternalState(sessionID: SessionID): boolean {
+    return versions.has(sessionID) || targets.has(sessionID) || latest.has(sessionID) || activeSince.has(sessionID)
+  }
+
   const version = (sessionID: SessionID) => versions.get(sessionID) ?? 0
   const settle = (promise: Promise<void>) =>
     promise.then(
@@ -36,14 +41,21 @@ export namespace KiloSessionPromptQueue {
 
   export function cancel(sessionID: SessionID) {
     return Effect.sync(() => {
+      if (!tails.has(sessionID)) {
+        versions.delete(sessionID)
+        targets.delete(sessionID)
+        latest.delete(sessionID)
+        activeSince.delete(sessionID)
+        return
+      }
       versions.set(sessionID, version(sessionID) + 1)
     })
   }
 
   /**
    * Exempt an injected user message from being hidden by scope().
-   * Called after PlanFollowup.inject() so the injected follow-up is visible
-   * without also unhiding unrelated prompts that were queued mid-turn.
+   * Called after internal follow-ups or compaction markers are persisted so
+   * they are visible without also unhiding unrelated prompts queued mid-turn.
    */
   export function retarget(sessionID: SessionID, id: MessageID) {
     const current = targets.get(sessionID)

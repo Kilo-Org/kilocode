@@ -383,6 +383,10 @@ export type FileStatsMap = {
   [path: string]: FileStats
 }
 
+export interface Disposable {
+  dispose(): void
+}
+
 export interface IDE {
   getIdeInfo(): Promise<IdeInfo>
 
@@ -423,7 +427,7 @@ export interface IDE {
   getDocumentSymbols(textDocumentIdentifier: string): Promise<DocumentSymbol[]>
 
   // Callbacks
-  onDidChangeActiveTextEditor(callback: (fileUri: string) => void): void
+  onDidChangeActiveTextEditor(callback: (fileUri: string) => void): Disposable | void
 }
 export type ContextProviderName =
   | "diff"
@@ -527,7 +531,6 @@ export interface TabAutocompleteOptions {
   experimental_includeClipboard: boolean | number
   experimental_includeRecentlyVisitedRanges: boolean | number
   experimental_includeRecentlyEditedRanges: boolean | number
-  experimental_includeDiff: boolean | number
   experimental_enableStaticContextualization: boolean
 }
 

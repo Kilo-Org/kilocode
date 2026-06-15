@@ -1,17 +1,23 @@
-import { useMarked, deferredHighlight, fnv1a } from "../context/marked"
+import { useMarked } from "../context/marked"
+import { deferredHighlight, fnv1a } from "../context/marked" // kilocode_change
 import { useI18n } from "../context/i18n"
 import DOMPurify from "dompurify"
 import morphdom from "morphdom"
-import { checksum } from "@opencode-ai/shared/util/encode"
+import { checksum } from "@opencode-ai/core/util/encode"
 import { ComponentProps, createEffect, createResource, createSignal, onCleanup, splitProps } from "solid-js"
 import { isServer } from "solid-js/web"
 import { stream } from "./markdown-stream"
 import { tryFastRender } from "../kilocode/markdown-fast-path" // kilocode_change
+import { hasMermaid, preserveMermaid, renderMermaid, type MermaidLabels } from "../kilocode/markdown-mermaid" // kilocode_change
+import { preserveStreamingHighlight } from "../kilocode/markdown-stream-highlight" // kilocode_change
+import { createIncrementalMarkdown, type MarkdownBlock } from "../kilocode/markdown-incremental-dom" // kilocode_change
 
 type Entry = {
   hash: string
   html: string
 }
+
+type Rendered = { content: string; blocks: MarkdownBlock[] } // kilocode_change
 
 const max = 200
 const cache = new Map<string, Entry>()
@@ -34,6 +40,8 @@ const config = {
   SANITIZE_NAMED_PROPS: true,
   FORBID_TAGS: ["style"],
   FORBID_CONTENTS: ["style", "script"],
+  ADD_TAGS: ["svg", "path"],
+  ADD_ATTR: ["d", "viewBox", "preserveAspectRatio", "xmlns"],
 }
 
 const iconPaths = {
@@ -256,34 +264,34 @@ export function Markdown(
       key: local.cacheKey,
       streaming: local.streaming ?? false,
     }),
-    async (src) => {
-      if (isServer) return fallback(src.text)
-      if (!src.text) return ""
+    async (src): Promise<Rendered> => { // kilocode_change
+      if (isServer) return { content: fallback(src.text), blocks: [] } // kilocode_change
+      if (!src.text) return { content: "", blocks: [] } // kilocode_change
 
       const base = src.key ?? checksum(src.text)
       return Promise.all(
         stream(src.text, src.streaming).map(async (block, index) => {
-          const hash = checksum(block.raw)
+          const hash = checksum(block.raw) ?? "" // kilocode_change
           const key = base ? `${base}:${index}:${block.mode}` : hash
 
           if (key && hash) {
             const cached = cache.get(key)
             if (cached && cached.hash === hash) {
               touch(key, cached)
-              return cached.html
+              return { key: `${base}:${index}`, hash, html: cached.html, mode: block.mode } // kilocode_change
             }
           }
 
           const next = await Promise.resolve(marked.parse(block.src))
           const safe = sanitize(next)
           if (key && hash) touch(key, { hash, html: safe })
-          return safe
+          return { key: `${base}:${index}`, hash, html: safe, mode: block.mode } // kilocode_change
         }),
       )
-        .then((list) => list.join(""))
-        .catch(() => fallback(src.text))
+        .then((blocks) => ({ content: blocks.map((block) => block.html).join(""), blocks })) // kilocode_change
+        .catch(() => ({ content: fallback(src.text), blocks: [] })) // kilocode_change
     },
-    { initialValue: fallback(local.text) },
+    { initialValue: { content: fallback(local.text), blocks: [] } }, // kilocode_change
   )
 
   let copyCleanup: (() => void) | undefined
@@ -292,6 +300,10 @@ export function Markdown(
   // The abort signal cancels the previous in-flight highlight pass so rapid
   // streaming tokens don't spawn concurrent passes racing on the same DOM nodes.
   const highlightState = { gen: 0, signal: { aborted: false } }
+  // kilocode_change end
+
+  // kilocode_change start: Mermaid diagram rendering
+  const mermaidState = { gen: 0, signal: { aborted: false } }
   // kilocode_change end
 
   // kilocode_change start: rAF-coalesced morphdom render.
@@ -305,10 +317,27 @@ export function Markdown(
   let pendingContent: string | undefined
   let pendingLabels: { copy: string; copied: string } | undefined
   // kilocode_change end
+  // kilocode_change start
+  const incremental = createIncrementalMarkdown<MermaidLabels>(decorate, {
+    cancel: () => {
+      if (pendingFrame === undefined) return
+      cancelAnimationFrame(pendingFrame)
+      pendingFrame = undefined
+      pendingContent = undefined
+      pendingLabels = undefined
+    },
+    ready: (container, labels, mermaid) => {
+      copyCleanup ??= setupCodeCopy(container, () => labels)
+      kickMermaid(container, true, mermaid)
+      kickHighlight(container, labels)
+    },
+  })
+  // kilocode_change end
 
   createEffect(() => {
     const container = root()
-    const content = local.text ? (html.latest ?? html() ?? "") : ""
+    const rendered = html.latest ?? html() ?? { content: "", blocks: [] } // kilocode_change
+    const content = local.text ? rendered.content : "" // kilocode_change
     if (!container) return
     if (isServer) return
 
@@ -322,7 +351,12 @@ export function Markdown(
         pendingLabels = undefined
       }
       // kilocode_change end
+      incremental.reset() // kilocode_change
       container.innerHTML = ""
+      // kilocode_change start: Mermaid diagram rendering
+      mermaidState.signal.aborted = true
+      mermaidState.gen++
+      // kilocode_change end
       return
     }
 
@@ -330,6 +364,23 @@ export function Markdown(
       copy: i18n.t("ui.message.copy"),
       copied: i18n.t("ui.message.copied"),
     }
+
+    // kilocode_change start: Mermaid diagram rendering
+    const mermaid = {
+      rendering: i18n.t("ui.mermaid.rendering"),
+      renderError: (message: string) => i18n.t("ui.mermaid.renderError", { message }),
+      errorDefault: i18n.t("ui.mermaid.errorDefault"),
+      errorEmpty: i18n.t("ui.mermaid.errorEmpty"),
+      copied: i18n.t("ui.message.copied"),
+      copy: i18n.t("ui.message.copy"),
+      download: i18n.t("ui.mermaid.download"),
+      copySource: i18n.t("ui.mermaid.copySource"),
+      copySvg: i18n.t("ui.mermaid.copySvg"),
+      copyPng: i18n.t("ui.mermaid.copyPng"),
+      downloadSvg: i18n.t("ui.mermaid.downloadSvg"),
+      downloadPng: i18n.t("ui.mermaid.downloadPng"),
+    }
+    // kilocode_change end
 
     // kilocode_change start
     const fast = tryFastRender(container, content, local.streaming, decorate, setupCodeCopy, () => labels, copyCleanup)
@@ -342,11 +393,16 @@ export function Markdown(
         pendingContent = undefined
         pendingLabels = undefined
       }
+      incremental.reset() // kilocode_change
       copyCleanup = fast.copyCleanup
+      kickMermaid(container, local.streaming ?? false, mermaid)
       kickHighlight(container, labels)
       return
     }
     // kilocode_change end
+
+    if (incremental.render(local.streaming ?? false, container, rendered.blocks, labels, mermaid)) return // kilocode_change
+    incremental.reset() // kilocode_change
 
     // kilocode_change start: queue the latest content for a single rAF tick.
     // Further updates before the frame runs simply overwrite pendingContent,
@@ -383,6 +439,11 @@ export function Markdown(
             setCopyState(toEl, nextLabels, true)
           }
           if (fromEl.isEqualNode(toEl)) return false
+          // kilocode_change start: preserve rendered Mermaid diagrams across
+          // normal markdown morphdom refreshes so they do not flicker back to
+          // their source code while being re-rendered.
+          if (preserveMermaid(fromEl, toEl)) return false
+          // kilocode_change end
           // Preserve Shiki-highlighted blocks — don't let morphdom revert them
           // to plain <pre><code> during streaming re-renders.
           // Note: "shiki" class is on <pre> (set by Shiki's codeToHtml output).
@@ -402,7 +463,8 @@ export function Markdown(
             const fromHash = fromEl.getAttribute("data-source-hash")
             const toCode = toEl.querySelector("code")?.textContent ?? ""
             if (fromHash === fnv1a(toCode)) return false
-            // Source changed during streaming — fall through so morphdom replaces
+            if (preserveStreamingHighlight(fromEl, toEl, local.streaming ?? false)) return false // kilocode_change
+            // Source changed during streaming — fall through so morphdom replaces // kilocode_change
             // the stale highlighted block with the updated plain block, which will
             // be re-highlighted on the next deferredHighlight pass.
           }
@@ -411,6 +473,7 @@ export function Markdown(
       })
       // kilocode_change end
 
+      kickMermaid(container, local.streaming ?? false, mermaid) // kilocode_change
       kickHighlight(container, nextLabels)
     })
     // kilocode_change end
@@ -439,11 +502,32 @@ export function Markdown(
   }
   // kilocode_change end
 
+  // kilocode_change start: Mermaid diagram rendering
+  function kickMermaid(container: HTMLDivElement, streaming: boolean, labels: MermaidLabels) {
+    mermaidState.signal.aborted = true
+    mermaidState.gen++
+    if (!hasMermaid(container)) return
+    if (streaming) return
+
+    const gen = mermaidState.gen
+    const signal = { aborted: false }
+    mermaidState.signal = signal
+    void renderMermaid(container, signal, labels).catch((err) => {
+      if (gen !== mermaidState.gen || signal.aborted) return
+      console.warn("Mermaid render failed", err)
+    })
+  }
+  // kilocode_change end
+
   onCleanup(() => {
     // kilocode_change: cancel any in-flight deferredHighlight pass so its
     // completion callback doesn't touch the unmounted DOM.
     highlightState.signal.aborted = true
     highlightState.gen++
+    // kilocode_change start: Mermaid diagram rendering
+    mermaidState.signal.aborted = true
+    mermaidState.gen++
+    // kilocode_change end
     // kilocode_change: cancel any queued rAF parse so it doesn't touch the
     // unmounted DOM after dispose.
     if (pendingFrame !== undefined) {

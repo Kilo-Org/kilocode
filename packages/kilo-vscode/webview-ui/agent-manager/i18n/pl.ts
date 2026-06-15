@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "lokalne",
+  "agentManager.sidebar.collapse": "Zwiń pasek boczny",
+  "agentManager.sidebar.expand": "Pokaż pasek boczny",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESJE",
   "agentManager.notGitRepo": "Nie jest repozytorium git",
@@ -49,6 +51,11 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Otwórz Terminal",
   "agentManager.tab.newOptions": "Więcej opcji nowej karty",
+  "agentManager.tabsMenu.label": "Szukaj otwartych kart",
+  "agentManager.tabsMenu.search": "Szukaj kart...",
+  "agentManager.tabsMenu.empty": "Brak pasujących kart",
+  "agentManager.tabsMenu.status.waiting": "Czeka",
+  "agentManager.tabsMenu.status.retry": "Ponów",
 
   "agentManager.terminal.new": "Nowa karta terminala",
   "agentManager.terminal.ended": "terminal zakończony — zamknij kartę, aby zamknąć",
@@ -72,7 +79,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Następny element",
   "agentManager.shortcuts.newWorktree": "Nowy Worktree",
   "agentManager.shortcuts.openWorktree": "Otwórz Worktree",
-  "agentManager.shortcuts.advancedWorktree": "Zaawansowany Worktree",
+  "agentManager.shortcuts.advancedWorktree": "Skonfiguruj nowe worktree",
   "agentManager.shortcuts.deleteWorktree": "Usuń Worktree",
   "agentManager.shortcuts.previousTab": "Poprzednia karta",
   "agentManager.shortcuts.nextTab": "Następna karta",
@@ -94,6 +101,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Usuń nieaktualny Worktree",
 
   "agentManager.dialog.openWorktree": "Nowy Worktree",
+  "agentManager.dialog.configureWorktree": "Skonfiguruj Nowe Worktree...",
   "agentManager.dialog.tab.new": "Nowy",
   "agentManager.dialog.tab.import": "Importuj",
   "agentManager.dialog.namePlaceholder": "Nazwa Worktree (opcjonalnie)",

@@ -1,15 +1,13 @@
 import { BusEvent } from "@/bus/bus-event"
-import { InstanceState } from "@/effect"
-import { EffectBridge } from "@/effect"
-import type { InstanceContext } from "@/project/instance"
+import { InstanceState } from "@/effect/instance-state"
+import { EffectBridge } from "@/effect/bridge"
+import type { InstanceContext } from "@/project/instance-context"
 import { SessionID, MessageID } from "@/session/schema"
-import { Effect, Layer, Context } from "effect"
-import z from "zod"
-import { Config } from "../config"
+import { Effect, Layer, Context, Schema } from "effect"
+import { Config } from "@/config/config"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
 import { localReviewCommand, localReviewUncommittedCommand } from "@/kilocode/review/command" // kilocode_change
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 import PROMPT_REVIEW from "./template/review.txt"
 
@@ -20,34 +18,28 @@ type State = {
 export const Event = {
   Executed: BusEvent.define(
     "command.executed",
-    z.object({
-      name: z.string(),
-      sessionID: SessionID.zod,
-      arguments: z.string(),
-      messageID: MessageID.zod,
+    Schema.Struct({
+      name: Schema.String,
+      sessionID: SessionID,
+      arguments: Schema.String,
+      messageID: MessageID,
     }),
   ),
 }
 
-export const Info = z
-  .object({
-    name: z.string(),
-    description: z.string().optional(),
-    agent: z.string().optional(),
-    model: z.string().optional(),
-    source: z.enum(["command", "mcp", "skill"]).optional(),
-    // workaround for zod not supporting async functions natively so we use getters
-    // https://zod.dev/v4/changelog?id=zfunction
-    template: z.promise(z.string()).or(z.string()),
-    subtask: z.boolean().optional(),
-    hints: z.array(z.string()),
-  })
-  .meta({
-    ref: "Command",
-  })
+export const Info = Schema.Struct({
+  name: Schema.String,
+  description: Schema.optional(Schema.String),
+  agent: Schema.optional(Schema.String),
+  model: Schema.optional(Schema.String),
+  source: Schema.optional(Schema.Literals(["command", "mcp", "skill"])),
+  // Some command templates are lazy promises from MCP prompt resolution.
+  template: Schema.Unknown,
+  subtask: Schema.optional(Schema.Boolean),
+  hints: Schema.Array(Schema.String),
+}).annotate({ identifier: "Command" })
 
-// for some reason zod is inferring `string` for z.promise(z.string()).or(z.string()) so we have to manually override it
-export type Info = Omit<z.infer<typeof Info>, "template"> & { template: Promise<string> | string }
+export type Info = Omit<Schema.Schema.Type<typeof Info>, "template"> & { template: Promise<string> | string }
 
 export function hints(template: string) {
   const result: string[] = []
@@ -72,6 +64,28 @@ export interface Interface {
   readonly get: (name: string) => Effect.Effect<Info | undefined>
   readonly list: () => Effect.Effect<Info[]>
 }
+
+// kilocode_change start - skills can share names with slash commands
+function fromSkill(item: Skill.Info): Info {
+  return {
+    name: item.name,
+    description: item.description,
+    source: "skill",
+    get template() {
+      return item.content
+    },
+    hints: [],
+  }
+}
+
+function skillName(name: string) {
+  return name.endsWith(":skill") ? name.slice(0, -6) : undefined
+}
+
+function mcpName(name: string) {
+  return name.endsWith(":mcp") ? name.slice(0, -4) : undefined
+}
+// kilocode_change end
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Command") {}
 
@@ -158,15 +172,7 @@ export const layer = Layer.effect(
 
       for (const item of yield* skill.all()) {
         if (commands[item.name]) continue
-        commands[item.name] = {
-          name: item.name,
-          description: item.description,
-          source: "skill",
-          get template() {
-            return item.content
-          },
-          hints: [],
-        }
+        commands[item.name] = fromSkill(item) // kilocode_change
       }
 
       return {
@@ -178,13 +184,41 @@ export const layer = Layer.effect(
 
     const get = Effect.fn("Command.get")(function* (name: string) {
       const s = yield* InstanceState.get(state)
-      return s.commands[name]
+      // kilocode_change start
+      const exact = s.commands[name]
+      if (exact) return exact
+      // kilocode_change end
+
+      // kilocode_change start
+      const target = skillName(name)
+      if (target) {
+        const item = yield* skill.get(target)
+        if (item) return fromSkill(item)
+        return undefined
+      }
+      // kilocode_change end
+      // kilocode_change start
+      const prompt = mcpName(name)
+      if (prompt) {
+        const cmd = s.commands[prompt]
+        return cmd?.source === "mcp" ? cmd : undefined
+      }
+      // kilocode_change end
+      return undefined // kilocode_change
     })
 
+    // kilocode_change start
     const list = Effect.fn("Command.list")(function* () {
       const s = yield* InstanceState.get(state)
-      return Object.values(s.commands)
+      const result = Object.values(s.commands)
+      const names = new Set(result.map((item) => item.name))
+      for (const item of yield* skill.all()) {
+        if (s.commands[item.name]?.source === "skill") continue
+        if (names.has(item.name)) result.push(fromSkill(item))
+      }
+      return result
     })
+    // kilocode_change end
 
     return Service.of({ get, list })
   }),
@@ -195,13 +229,5 @@ export const defaultLayer = layer.pipe(
   Layer.provide(MCP.defaultLayer),
   Layer.provide(Skill.defaultLayer),
 )
-
-// kilocode_change start
-const { runPromise } = makeRuntime(Service, defaultLayer)
-
-export async function get(name: string) {
-  return runPromise((svc) => svc.get(name))
-}
-// kilocode_change end
 
 export * as Command from "."

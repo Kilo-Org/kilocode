@@ -3,20 +3,20 @@ import { Effect, Layer } from "effect"
 import { symlink } from "fs/promises"
 import path from "path"
 import { Agent } from "../../src/agent/agent"
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
-import { LSP } from "../../src/lsp"
+import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { LSP } from "../../src/lsp/lsp"
 import { Instruction } from "../../src/session/instruction"
-import { Truncate } from "../../src/tool"
+import { Truncate } from "../../src/tool/truncate"
 import { MessageID, SessionID } from "../../src/session/schema"
 import { ReadTool } from "../../src/tool/read"
-import { Tool } from "../../src/tool"
+import { Tool } from "../../src/tool/tool"
 import { provideInstance, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 const baseCtx = {
   sessionID: SessionID.make("ses_test"),
-  messageID: MessageID.make(""),
+  messageID: MessageID.make("msg_test"),
   callID: "",
   agent: "code",
   abort: AbortSignal.any([]),

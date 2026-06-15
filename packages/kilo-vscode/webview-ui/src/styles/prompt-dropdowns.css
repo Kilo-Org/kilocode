@@ -22,7 +22,7 @@
   gap: 6px;
   padding: 4px 10px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--vscode-foreground);
   min-width: 0;
 }
@@ -53,13 +53,13 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   opacity: 0.6;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   text-align: right;
 }
 
 .file-mention-empty {
   padding: 8px 10px;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--vscode-descriptionForeground);
   text-align: center;
 }
@@ -88,7 +88,7 @@
   gap: 8px;
   padding: 4px 10px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--vscode-foreground);
   min-width: 0;
 }
@@ -110,12 +110,12 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   opacity: 0.6;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
 }
 
 .slash-command-empty {
   padding: 8px 10px;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--vscode-descriptionForeground);
   text-align: center;
 }
@@ -129,7 +129,7 @@
 
 .slash-command-group-label {
   padding: 4px 10px 2px;
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;

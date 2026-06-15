@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "локальний",
+  "agentManager.sidebar.collapse": "Згорнути бічну панель",
+  "agentManager.sidebar.expand": "Показати бічну панель",
   "agentManager.section.worktrees": "РОБОЧІ ДЕРЕВА",
   "agentManager.section.sessions": "СЕСІЇ",
   "agentManager.notGitRepo": "Не є git-репозиторієм",
@@ -53,6 +55,11 @@ export const dict = {
   "agentManager.tab.terminal": "Термінал",
   "agentManager.tab.openTerminal": "Відкрити термінал",
   "agentManager.tab.newOptions": "Інші параметри нової вкладки",
+  "agentManager.tabsMenu.label": "Шукати відкриті вкладки",
+  "agentManager.tabsMenu.search": "Шукати вкладки...",
+  "agentManager.tabsMenu.empty": "Немає відповідних вкладок",
+  "agentManager.tabsMenu.status.waiting": "Очікує",
+  "agentManager.tabsMenu.status.retry": "Повтор",
 
   "agentManager.terminal.new": "Нова вкладка термінала",
   "agentManager.terminal.ended": "термінал завершено — закрийте вкладку, щоб відхилити",
@@ -78,7 +85,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Наступний елемент",
   "agentManager.shortcuts.newWorktree": "Нове робоче дерево",
   "agentManager.shortcuts.openWorktree": "Відкрити робоче дерево",
-  "agentManager.shortcuts.advancedWorktree": "Розширене робоче дерево",
+  "agentManager.shortcuts.advancedWorktree": "Налаштувати нове worktree",
   "agentManager.shortcuts.deleteWorktree": "Видалити робоче дерево",
   "agentManager.shortcuts.previousTab": "Попередня вкладка",
   "agentManager.shortcuts.nextTab": "Наступна вкладка",
@@ -101,6 +108,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Видалити застаріле робоче дерево",
 
   "agentManager.dialog.openWorktree": "Нове робоче дерево",
+  "agentManager.dialog.configureWorktree": "Налаштувати нове Worktree...",
   "agentManager.dialog.tab.new": "Нове",
   "agentManager.dialog.tab.import": "Імпортувати",
   "agentManager.dialog.namePlaceholder": "Назва робочого дерева (необов'язково)",

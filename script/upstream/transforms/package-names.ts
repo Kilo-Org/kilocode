@@ -14,7 +14,7 @@
  */
 
 import { Glob } from "bun"
-import { info, success, warn, debug } from "../utils/logger"
+import { info, success } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
 
 export interface TransformResult {
@@ -92,26 +92,33 @@ const PACKAGE_PATTERNS = [
 ]
 
 /**
+ * Apply package name and branding transforms to content.
+ */
+export function applyPackageNameTransforms(input: string): { result: string; changes: number } {
+  return PACKAGE_PATTERNS.reduce(
+    (state, { pattern, replacement }) => {
+      const regex = typeof pattern === "string" ? new RegExp(pattern, "g") : pattern
+      regex.lastIndex = 0
+      const count = (state.result.match(regex) || []).length
+      regex.lastIndex = 0
+      const result = state.result.replace(regex, replacement)
+      if (result === state.result) return state
+      return { result, changes: state.changes + count }
+    },
+    { result: input, changes: 0 },
+  )
+}
+
+/**
  * Transform package names in a single file
  */
 export async function transformFile(filePath: string, options: TransformOptions = {}): Promise<TransformResult> {
   const file = Bun.file(filePath)
-  let content = await file.text()
-  const original = content
-  let changes = 0
-
-  for (const { pattern, replacement } of PACKAGE_PATTERNS) {
-    const regex = typeof pattern === "string" ? new RegExp(pattern, "g") : pattern
-    const newContent = content.replace(regex, replacement)
-    if (newContent !== content) {
-      const count = (content.match(regex) || []).length
-      changes += count
-      content = newContent
-    }
-  }
+  const input = await file.text()
+  const { result, changes } = applyPackageNameTransforms(input)
 
   if (changes > 0 && !options.dryRun) {
-    await Bun.write(filePath, content)
+    await Bun.write(filePath, result)
   }
 
   return {

@@ -10,11 +10,12 @@
 
 import { describe, expect, it } from "bun:test"
 import * as Config from "../../src/config/config"
+import { Schema } from "effect"
 import { KilocodeConfig } from "../../src/kilocode/config/config"
 
 describe("Config.Info — null sentinels for custom provider deletes", () => {
   it("accepts a null model value inside a provider", () => {
-    const parsed = Config.Info.safeParse({
+    const parsed = Schema.decodeUnknownResult(Config.Info)({
       provider: {
         myprovider: {
           name: "My Provider",
@@ -24,11 +25,20 @@ describe("Config.Info — null sentinels for custom provider deletes", () => {
         },
       },
     })
-    expect(parsed.success).toBe(true)
+    expect(parsed._tag).toBe("Success")
+  })
+
+  it("accepts a null provider value", () => {
+    const parsed = Schema.decodeUnknownResult(Config.Info)({
+      provider: {
+        myprovider: null,
+      },
+    })
+    expect(parsed._tag).toBe("Success")
   })
 
   it("accepts a null variant value inside a model", () => {
-    const parsed = Config.Info.safeParse({
+    const parsed = Schema.decodeUnknownResult(Config.Info)({
       provider: {
         myprovider: {
           name: "My Provider",
@@ -42,7 +52,7 @@ describe("Config.Info — null sentinels for custom provider deletes", () => {
         },
       },
     })
-    expect(parsed.success).toBe(true)
+    expect(parsed._tag).toBe("Success")
   })
 })
 
@@ -74,6 +84,29 @@ describe("KilocodeConfig.mergeConfig — custom provider model/variant deletion"
     const models = (merged.provider as Record<string, { models: Record<string, unknown> }>).myprovider.models
     expect(models["model-keep"]).toBeDefined()
     expect("model-gone" in models).toBe(false)
+  })
+
+  it("drops a provider when the patch sets it to null", () => {
+    const existing = {
+      provider: {
+        myprovider: {
+          name: "My Provider",
+          models: { keep: { name: "Keep" } },
+        },
+        openai: {
+          name: "OpenAI",
+        },
+      },
+    } as unknown as Config.Info
+    const patch = {
+      provider: {
+        myprovider: null,
+      },
+    } as unknown as Config.Info
+
+    const merged = KilocodeConfig.mergeConfig(existing, patch)
+    expect(merged.provider?.openai).toBeDefined()
+    expect("myprovider" in (merged.provider ?? {})).toBe(false)
   })
 
   it("drops a variant from an existing model when the patch sets it to null", () => {

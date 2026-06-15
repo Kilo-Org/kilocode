@@ -2,9 +2,14 @@ import { Bus } from "../../bus"
 import { BusEvent } from "../../bus/bus-event"
 import { Identifier } from "../../id/id"
 import { SessionID } from "../../session/schema"
-import { Log } from "../../util"
+import { zod as toZod } from "@opencode-ai/core/effect-zod"
+import * as Log from "@opencode-ai/core/util/log"
+import { Telemetry } from "@kilocode/kilo-telemetry"
 import z from "zod"
+import { Schema } from "effect"
 import { KiloSessionPromptQueue } from "../session/prompt-queue"
+import { Instance } from "../instance"
+import { parseReviewCommand } from "../review/command"
 
 export namespace Suggestion {
   const log = Log.create({ service: "suggestion" })
@@ -20,6 +25,20 @@ export namespace Suggestion {
     })
   export type Action = z.infer<typeof Action>
 
+  export const ActionSchema = Schema.Struct({
+    label: Schema.String.annotate({ description: "Button or option label (1-5 words)" }),
+    description: Schema.optional(Schema.String).annotate({
+      description: "Brief explanation of what this action does",
+    }),
+    prompt: Schema.String.annotate({
+      description: "Synthetic user prompt to inject when this action is accepted",
+    }),
+  })
+
+  const SuggestionIDSchema = Schema.String.check(Schema.isStartsWith("sug"))
+  const SuggestionID = toZod(SuggestionIDSchema)
+  const SessionIDZod = toZod(SessionID)
+
   export const Info = z
     .object({
       text: z.string().describe("Suggestion text shown to the user"),
@@ -32,8 +51,8 @@ export namespace Suggestion {
 
   export const Request = z
     .object({
-      id: Identifier.schema("suggestion"),
-      sessionID: Identifier.schema("session"),
+      id: SuggestionID,
+      sessionID: SessionIDZod,
       text: z.string().describe("Suggestion text shown to the user"),
       actions: z.array(Action).min(1).max(2).describe("Available actions the user can take"),
       blocking: z
@@ -54,32 +73,45 @@ export namespace Suggestion {
     })
   export type Request = z.infer<typeof Request>
 
+  export const RequestSchema = Schema.Struct({
+    id: SuggestionIDSchema,
+    sessionID: SessionID,
+    text: Schema.String,
+    actions: Schema.Array(ActionSchema).check(Schema.isMinLength(1), Schema.isMaxLength(2)),
+    blocking: Schema.optional(Schema.Boolean),
+    tool: Schema.optional(
+      Schema.Struct({
+        messageID: Schema.String,
+        callID: Schema.String,
+      }),
+    ),
+  }).annotate({ identifier: "SuggestionRequest" })
+
   export const Accept = z.object({
     index: z.number().int().nonnegative().describe("Zero-based action index to accept"),
   })
   export type Accept = z.infer<typeof Accept>
 
   export const Event = {
-    Shown: BusEvent.define("suggestion.shown", Request),
+    Shown: BusEvent.define("suggestion.shown", RequestSchema),
     Accepted: BusEvent.define(
       "suggestion.accepted",
-      z.object({
-        sessionID: z.string(),
-        requestID: z.string(),
-        index: z.number().int().nonnegative(),
-        action: Action,
+      Schema.Struct({
+        sessionID: SessionID,
+        requestID: SuggestionIDSchema,
+        index: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+        action: ActionSchema,
       }),
     ),
     Dismissed: BusEvent.define(
       "suggestion.dismissed",
-      z.object({
-        sessionID: z.string(),
-        requestID: z.string(),
+      Schema.Struct({
+        sessionID: SessionID,
+        requestID: SuggestionIDSchema,
       }),
     ),
   }
 
-  // kilocode_change - Instance.state() removed in v1.4.4; use module-level state
   // (request IDs are globally unique so instance scoping is not needed)
   const pending: Record<
     string,
@@ -113,7 +145,7 @@ export namespace Suggestion {
     return new Promise<Action>((resolve, reject) => {
       const info: Request = {
         id,
-        sessionID: input.sessionID,
+        sessionID: SessionID.make(input.sessionID),
         text: input.text,
         actions: input.actions,
         blocking: input.blocking,
@@ -124,7 +156,19 @@ export namespace Suggestion {
         resolve,
         reject,
       }
-      Bus.publish(Event.Shown, info)
+      info.actions.forEach((action, index) => {
+        const cmd = parseReviewCommand(action.prompt)
+        if (!cmd) return
+        Telemetry.trackSuggestionShown({
+          sessionId: info.sessionID,
+          requestId: info.id,
+          index,
+          tool: "suggest",
+          command: cmd,
+          actionCount: info.actions.length,
+        })
+      })
+      Bus.publish(Instance.current, Event.Shown, { ...info, sessionID: SessionID.make(info.sessionID) })
     })
   }
 
@@ -148,8 +192,20 @@ export namespace Suggestion {
 
     log.info("accepted", { requestID: input.requestID, index: input.index, label: action.label })
 
-    Bus.publish(Event.Accepted, {
-      sessionID: existing.info.sessionID,
+    const cmd = parseReviewCommand(action.prompt)
+    if (cmd) {
+      Telemetry.trackSuggestionAccepted({
+        sessionId: existing.info.sessionID,
+        requestId: existing.info.id,
+        index: input.index,
+        tool: "suggest",
+        command: cmd,
+        actionCount: existing.info.actions.length,
+      })
+    }
+
+    Bus.publish(Instance.current, Event.Accepted, {
+      sessionID: SessionID.make(existing.info.sessionID),
       requestID: existing.info.id,
       index: input.index,
       action,
@@ -170,8 +226,8 @@ export namespace Suggestion {
 
     log.info("dismissed", { requestID })
 
-    Bus.publish(Event.Dismissed, {
-      sessionID: existing.info.sessionID,
+    Bus.publish(Instance.current, Event.Dismissed, {
+      sessionID: SessionID.make(existing.info.sessionID),
       requestID: existing.info.id,
     })
 
@@ -191,8 +247,8 @@ export namespace Suggestion {
       if (entry.info.sessionID !== sessionID) continue
       delete s.pending[id]
       log.info("dismissed", { requestID: id })
-      Bus.publish(Event.Dismissed, {
-        sessionID: entry.info.sessionID,
+      Bus.publish(Instance.current, Event.Dismissed, {
+        sessionID: SessionID.make(entry.info.sessionID),
         requestID: entry.info.id,
       })
       entry.reject(new DismissedError())

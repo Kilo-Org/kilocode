@@ -11,8 +11,9 @@ import * as fs from "fs"
 import { randomUUID } from "crypto"
 import simpleGit, { type SimpleGit } from "simple-git"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
-import { type GitOps, nonInteractiveEnv } from "./GitOps"
+import { type GitOps, isKiloOwnedSshCommand, nonInteractiveEnv } from "./GitOps"
 import { execWithShellEnv } from "./shell-env"
+import { markNoIndex } from "../util/spotlight"
 import {
   parsePRUrl,
   localBranchName,
@@ -30,7 +31,7 @@ import {
 const TEMP_PREFIX = ".kilo-delete-"
 const RM_OPTS: fs.RmOptions = { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }
 
-interface WorktreeInfo {
+export interface WorktreeInfo {
   branch: string
   path: string
   /** Bare branch name (e.g. "main"), without remote prefix. */
@@ -85,6 +86,7 @@ import { KILO_DIR, LEGACY_DIR, migrateAgentManagerData } from "./constants"
 
 const SESSION_ID_FILE = "session-id"
 const METADATA_FILE = "metadata.json"
+const GIT_METADATA_FILE = "kilo-agent-manager-metadata.json"
 
 export class WorktreeManager {
   private readonly root: string
@@ -220,32 +222,11 @@ export class WorktreeManager {
       parentRemote = startPoint.remote
     }
 
-    const sanitized = params.branchName ? sanitizeBranchName(params.branchName) : undefined
-    let branch: string
-    if (params.existingBranch) {
-      branch = params.existingBranch
-    } else if (sanitized) {
-      branch = sanitized
-    } else {
-      const existing = await this.git
-        .branch()
-        .then((b) => b.all)
-        .catch(() => [] as string[])
-      branch = generateBranchName(params.prompt || "agent-task", existing)
-    }
-
-    if (params.existingBranch) {
-      const exists = await this.branchExists(branch)
-      if (!exists) throw new Error(`Branch "${branch}" does not exist`)
-    }
-
+    let branch = await this.resolveBranch(params)
     const dirName = branch.replace(/\//g, "-")
     let worktreePath = path.join(this.dir, dirName)
 
-    if (fs.existsSync(worktreePath)) {
-      this.log(`Worktree directory exists, cleaning up before re-creation: ${worktreePath}`)
-      await this.removeWorktreeImpl(worktreePath)
-    }
+    await this.prepareWorktreePath(worktreePath, !!params.existingBranch)
 
     params.onProgress?.("creating", `Creating worktree for ${branch}...`)
 
@@ -268,8 +249,8 @@ export class WorktreeManager {
       if (!msg.includes("already exists") || params.existingBranch) {
         throw new Error(`Failed to create worktree: ${msg}`)
       }
-      // Branch name collision -- retry with unique suffix
-      branch = `${branch}-${Date.now()}`
+      // Another process may create the branch after resolveBranch checks it.
+      branch = await this.resolveBranch(params)
       const retryDir = branch.replace(/\//g, "-")
       worktreePath = path.join(this.dir, retryDir)
       const retryArgs = params.existingBranch
@@ -288,6 +269,46 @@ export class WorktreeManager {
       remote: parentRemote,
       startPointSource: startPoint.source,
       startPointWarning: startPoint.warning,
+    }
+  }
+
+  private async prepareWorktreePath(worktreePath: string, reuse: boolean): Promise<void> {
+    if (!fs.existsSync(worktreePath)) return
+    if (!reuse) throw new Error(`Worktree path already exists: ${worktreePath}`)
+    this.log(`Worktree directory exists, cleaning up before re-creation: ${worktreePath}`)
+    await this.removeWorktreeImpl(worktreePath)
+  }
+
+  private async resolveBranch(params: {
+    prompt?: string
+    existingBranch?: string
+    branchName?: string
+  }): Promise<string> {
+    if (params.existingBranch) {
+      const exists = await this.branchExists(params.existingBranch)
+      if (!exists) throw new Error(`Branch "${params.existingBranch}" does not exist`)
+      return params.existingBranch
+    }
+
+    const existing = await this.git
+      .branch()
+      .then((result) => result.all)
+      .catch(() => [] as string[])
+    const sanitized = params.branchName ? sanitizeBranchName(params.branchName) : undefined
+    const branch = sanitized || generateBranchName(params.prompt || "agent-task", existing)
+    return this.availableBranch(branch, existing)
+  }
+
+  private availableBranch(base: string, existing: string[]): string {
+    const branches = new Set(existing)
+    const available = (branch: string) => {
+      const dir = path.join(this.dir, branch.replace(/\//g, "-"))
+      return !branches.has(branch) && !fs.existsSync(dir)
+    }
+    if (available(base)) return base
+    for (let suffix = 2; ; suffix++) {
+      const branch = `${base}-${suffix}`
+      if (available(branch)) return branch
     }
   }
 
@@ -424,6 +445,7 @@ export class WorktreeManager {
   async discoverWorktrees(): Promise<WorktreeInfo[]> {
     await this.ensureMigrated()
     if (!fs.existsSync(this.dir)) return []
+    await markNoIndex(this.dir, this.log)
 
     const entries = await fs.promises.readdir(this.dir, { withFileTypes: true })
     this.cleanupOrphanedTempDirs()
@@ -436,30 +458,65 @@ export class WorktreeManager {
   }
 
   async writeMetadata(worktreePath: string, sessionId: string, parentBranch: string, remote?: string): Promise<void> {
-    const dir = path.join(worktreePath, KILO_DIR)
-    if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
-
     const meta: Record<string, string> = { sessionId, parentBranch }
     if (remote) meta.remote = remote
 
-    // Write both formats: session-id for backward compat, metadata.json for parentBranch+remote
-    await Promise.all([
-      fs.promises.writeFile(path.join(dir, SESSION_ID_FILE), sessionId, "utf-8"),
-      fs.promises.writeFile(path.join(dir, METADATA_FILE), JSON.stringify(meta), "utf-8"),
-    ])
+    const file = await this.gitMetadataPath(worktreePath)
+    if (!file) throw new Error(`Could not resolve git metadata directory for ${worktreePath}`)
+    await fs.promises.writeFile(file, JSON.stringify(meta), "utf-8")
     this.log(`Wrote metadata for session ${sessionId} to ${worktreePath}`)
-    await this.ensureWorktreeExclude(worktreePath)
   }
 
   async readMetadata(
     worktreePath: string,
   ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
+    const current = await this.readCurrentMetadata(worktreePath)
+    if (current) return current
+
     // Check .kilo/ first, then legacy .kilocode/
     for (const dirName of [KILO_DIR, LEGACY_DIR]) {
       const result = await this.readMetadataFrom(worktreePath, dirName)
       if (result) return result
     }
     return undefined
+  }
+
+  private async readCurrentMetadata(
+    worktreePath: string,
+  ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
+    try {
+      const file = await this.gitMetadataPath(worktreePath)
+      if (!file) return undefined
+      const content = await fs.promises.readFile(file, "utf-8")
+      const data = JSON.parse(content) as { sessionId?: string; parentBranch?: string; remote?: string }
+      if (!data.sessionId) return undefined
+      return {
+        sessionId: data.sessionId,
+        parentBranch: data.parentBranch,
+        remote: data.remote,
+      }
+    } catch (e) {
+      this.log(`readMetadata: git metadata unreadable in ${worktreePath}: ${e}`)
+      return undefined
+    }
+  }
+
+  private async gitMetadataPath(worktreePath: string): Promise<string | undefined> {
+    const dir = await this.worktreeGitDir(worktreePath)
+    if (!dir) return undefined
+    return path.join(dir, GIT_METADATA_FILE)
+  }
+
+  private async worktreeGitDir(worktreePath: string): Promise<string | undefined> {
+    const gitPath = path.join(worktreePath, ".git")
+    const stat = await fs.promises.stat(gitPath)
+    if (stat.isDirectory()) return gitPath
+    if (!stat.isFile()) return undefined
+
+    const content = await fs.promises.readFile(gitPath, "utf-8")
+    const match = content.match(/^gitdir:\s*(.+)$/m)
+    if (!match) return undefined
+    return path.resolve(worktreePath, match[1].trim())
   }
 
   private async readMetadataFrom(
@@ -524,20 +581,6 @@ export class WorktreeManager {
     }
   }
 
-  private async ensureWorktreeExclude(worktreePath: string): Promise<void> {
-    try {
-      const content = await fs.promises.readFile(path.join(worktreePath, ".git"), "utf-8")
-      const match = content.match(/^gitdir:\s*(.+)$/m)
-      if (!match) return
-
-      const worktreeGitDir = path.resolve(worktreePath, match[1].trim())
-      const mainGitDir = path.dirname(path.dirname(worktreeGitDir))
-      await this.addExcludeEntry(path.join(mainGitDir, "info", "exclude"), `${KILO_DIR}/`, "Kilo Code session metadata")
-    } catch (error) {
-      this.log(`Warning: Failed to update git exclude for worktree: ${error}`)
-    }
-  }
-
   /**
    * Returns true when target is strictly inside the managed worktrees directory.
    * Prevents sibling-prefix confusion such as "/worktrees-evil".
@@ -575,6 +618,7 @@ export class WorktreeManager {
     if (!fs.existsSync(this.dir)) {
       await fs.promises.mkdir(this.dir, { recursive: true })
     }
+    await markNoIndex(this.dir, this.log)
   }
 
   private async resolveGitDir(): Promise<string> {
@@ -666,7 +710,13 @@ export class WorktreeManager {
       // Use non-interactive env to prevent SSH passphrase popups.
       onProgress?.("fetching", `Fetching ${remote}/${branch}...`)
       try {
-        await simpleGit(this.root).env(nonInteractiveEnv()).fetch(remote, branch)
+        // Only opt into simple-git's allowUnsafeSshCommand when the SSH command
+        // is the fixed value Kilo injects — never for an inherited one, which
+        // could be attacker-controlled.
+        const env = nonInteractiveEnv()
+        await simpleGit(this.root, { unsafe: { allowUnsafeSshCommand: isKiloOwnedSshCommand(env) } })
+          .env(env)
+          .fetch(remote, branch, { "--quiet": null, "--no-tags": null })
         WorktreeManager.fetchCache.set(cacheKey, Date.now())
         if (await this.refExistsLocally(`${remote}/${branch}`)) {
           return {

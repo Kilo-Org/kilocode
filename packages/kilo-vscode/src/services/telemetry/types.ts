@@ -29,6 +29,8 @@ export enum TelemetryEventName {
   // UI Interactions
   TAB_SHOWN = "Tab Shown",
   TITLE_BUTTON_CLICKED = "Title Button Clicked",
+  WORK_STYLE_ONBOARDING_SHOWN = "Work Style Onboarding Shown",
+  WORK_STYLE_SELECTED = "Work Style Selected",
   PROMPT_ENHANCED = "Prompt Enhanced",
 
   // Marketplace
@@ -82,6 +84,9 @@ export enum TelemetryEventName {
   FREE_MODELS_LINK_CLICKED = "Free Models Link Clicked",
   CREATE_ORGANIZATION_LINK_CLICKED = "Create Organization Link Clicked",
   GHOST_SERVICE_DISABLED = "Ghost Service Disabled",
+
+  // Feedback
+  FEEDBACK_SUBMITTED = "Feedback Submitted",
 }
 
 /**

@@ -2,20 +2,44 @@
 import path from "path"
 import fs from "fs/promises"
 import { StringDecoder } from "string_decoder"
-import { Cause, Exit } from "effect"
+import { Cause, Effect, Exit } from "effect"
 import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
-import { Session } from "@/session"
-import { Flag } from "@/flag/flag"
+import { Session } from "@/session/session"
+import { Agent } from "@/agent/agent"
+import { Instance } from "@/kilocode/instance"
+import type { SessionStatus } from "@/session/status"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { PlanFollowup } from "@/kilocode/plan-followup"
+import { PlanFile } from "@/kilocode/plan-file"
 import { KiloSession } from "@/kilocode/session"
+import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
+import { Permission } from "@/permission"
+import { Question } from "@/question"
 import { environmentDetails, type EditorContext } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
-import { Filesystem } from "@/util"
+import { Filesystem } from "@/util/filesystem"
+import { InstanceState } from "@/effect/instance-state"
 import PROMPT_PLAN from "@/session/prompt/plan.txt"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
 export namespace KiloSessionPrompt {
+  const modes = ["ask", "plan", "architect"]
+
+  export function titleID(sessionID: SessionID) {
+    return `title-${sessionID}`
+  }
+
+  function mode(name: string) {
+    return name.toLowerCase()
+  }
+
+  function planning(input: { name: string; options?: Record<string, unknown> }) {
+    const id = typeof input.options?.id === "string" ? mode(input.options.id) : undefined
+    const name = mode(input.name)
+    return id === "architect" || name === "plan" || name === "architect"
+  }
+
   /**
    * Determines whether the plan follow-up prompt should be shown.
    * Checks if the plan_exit tool was called in the last assistant turn.
@@ -23,7 +47,7 @@ export namespace KiloSessionPrompt {
    */
   export function shouldAskPlanFollowup(input: { messages: MessageV2.WithParts[]; abort: AbortSignal }) {
     if (input.abort.aborted) return false
-    if (!["cli", "vscode"].includes(Flag.KILO_CLIENT)) return false
+    if (!["cli", "vscode", "jetbrains"].includes(Flag.KILO_CLIENT)) return false
     const idx = input.messages.findLastIndex((m) => m.info.role === "user")
     return input.messages
       .slice(idx + 1)
@@ -40,12 +64,24 @@ export namespace KiloSessionPrompt {
     sessionID: SessionID
     messages: MessageV2.WithParts[]
     abort: AbortSignal
+    question: Pick<Question.Interface, "ask" | "list" | "reject">
   }): Promise<"continue" | "break"> {
     if (!shouldAskPlanFollowup({ messages: input.messages, abort: input.abort })) return "break"
-    const action = await PlanFollowup.ask({
+    const ask = Instance.bind(PlanFollowup.ask)
+    const action = await ask({
       sessionID: input.sessionID,
       messages: input.messages,
       abort: input.abort,
+      // Keep the request in the listener-local Question service so HTTP replies can resolve it.
+      question: {
+        ask: Instance.bind((request: Parameters<Question.Interface["ask"]>[0]) =>
+          Effect.runPromise(input.question.ask(request)),
+        ),
+        list: Instance.bind(() => Effect.runPromise(input.question.list())),
+        reject: Instance.bind((requestID: Parameters<Question.Interface["reject"]>[0]) =>
+          Effect.runPromise(input.question.reject(requestID)),
+        ),
+      },
     })
     return action === "continue" ? "continue" : "break"
   }
@@ -53,6 +89,91 @@ export namespace KiloSessionPrompt {
   export function abortPlanFollowup(sessionID: SessionID) {
     return PlanFollowup.abort(sessionID)
   }
+
+  export const recoverDanglingAssistant = Effect.fn("KiloSessionPrompt.recoverDanglingAssistant")(function* (input: {
+    sessionID: SessionID
+    status: Pick<SessionStatus.Interface, "get">
+    sessions: Pick<Session.Interface, "messages" | "removeMessage">
+  }) {
+    const state = yield* input.status.get(input.sessionID)
+    if (state.type !== "idle") return
+
+    const msgs = yield* input.sessions.messages({ sessionID: input.sessionID, limit: 2 })
+    const tail = msgs.at(-1)
+    if (!tail || tail.info.role !== "assistant") return
+    if (tail.parts.length > 0 || tail.info.finish || tail.info.error) return
+
+    const prev = msgs.at(-2)
+    if (!prev || prev.info.role !== "user") return
+    if (tail.info.parentID !== prev.info.id) return
+
+    yield* input.sessions.removeMessage({ sessionID: input.sessionID, messageID: tail.info.id })
+  })
+
+  export const recoverProviderFinishError = Effect.fn("KiloSessionPrompt.recoverProviderFinishError")(
+    function* (input: {
+      sessionID: SessionID
+      status: Pick<SessionStatus.Interface, "get">
+      sessions: Pick<Session.Interface, "messages" | "removeMessage">
+    }) {
+      const state = yield* input.status.get(input.sessionID)
+      if (state.type !== "idle") return
+
+      const msgs = yield* input.sessions.messages({ sessionID: input.sessionID, limit: 2 })
+      const tail = msgs.at(-1)
+      if (!tail || tail.info.role !== "assistant") return
+      if (tail.info.finish !== "error" || tail.info.error) return
+      if (!tail.parts.some((part) => part.type === "step-finish" && part.reason === "error")) return
+
+      const prev = msgs.at(-2)
+      if (!prev || prev.info.role !== "user") return
+      if (tail.info.parentID !== prev.info.id) return
+
+      yield* input.sessions.removeMessage({ sessionID: input.sessionID, messageID: tail.info.id })
+    },
+  )
+
+  export function guardPermissions(input: {
+    agent: { name: string; permission: Permission.Ruleset }
+    session: Pick<Session.Info, "permission">
+  }) {
+    const rules = input.session.permission ?? []
+    if (!modes.includes(mode(input.agent.name))) return rules
+    return Permission.merge(
+      rules,
+      input.agent.permission,
+      rules.filter((rule) => rule.action === "deny"),
+    )
+  }
+
+  export function hardPermissions(input: { agent: { name: string; permission: Permission.Ruleset } }) {
+    if (!modes.includes(mode(input.agent.name))) return
+    return input.agent.permission
+  }
+
+  export function mergeToolPermissions(input: { existing: Permission.Ruleset; toggles: Permission.Ruleset }) {
+    const names = new Set(input.toggles.map((rule) => rule.permission))
+    return [...input.existing.filter((rule) => !names.has(rule.permission)), ...input.toggles]
+  }
+
+  export const askPermission = Effect.fn("KiloSessionPrompt.askPermission")(function* (input: {
+    permission: Pick<Permission.Interface, "ask">
+    agents: Pick<Agent.Interface, "get">
+    sessions: Pick<Session.Interface, "get">
+    agent: Agent.Info
+    session: Session.Info
+    request: Omit<Permission.AskInput, "ruleset" | "hardRuleset">
+  }) {
+    const agent = (yield* input.agents.get(input.agent.name)) ?? input.agent
+    const session = yield* input.sessions
+      .get(input.session.id)
+      .pipe(Effect.catchCause(() => Effect.succeed(input.session)))
+    yield* input.permission.ask({
+      ...input.request,
+      ruleset: Permission.merge(agent.permission, guardPermissions({ agent, session })),
+      hardRuleset: hardPermissions({ agent }),
+    })
+  })
 
   /**
    * Mutable cache for environment details, keyed by user message ID
@@ -75,7 +196,17 @@ export namespace KiloSessionPrompt {
     cache: EnvCache
   }) {
     if (input.cache.user !== input.lastUser.id) {
-      input.cache.block = environmentDetails(input.lastUser.editorContext)
+      const ctx = (() => {
+        try {
+          return Instance.current
+        } catch {
+          return undefined
+        }
+      })()
+      input.cache.block = environmentDetails({
+        ...input.lastUser.editorContext,
+        ...(ctx ? { directory: ctx.directory, worktree: ctx.worktree } : {}),
+      })
       input.cache.user = input.lastUser.id
     }
     if (!input.cache.block) return
@@ -91,6 +222,7 @@ export namespace KiloSessionPrompt {
           messageID: input.msgs[idx].info.id,
           type: "text",
           text: input.cache.block,
+          synthetic: true,
         } satisfies MessageV2.TextPart,
       ],
     }
@@ -116,29 +248,73 @@ export namespace KiloSessionPrompt {
   }
 
   /**
+   * Ensures the plan file directory exists. Pre-checks with `Filesystem.isDir`
+   * because `fs.mkdir(recursive: true)` still throws `EEXIST` on Windows
+   * OneDrive ReparsePoint directories in some Node versions (kilocode#9755).
+   */
+  export async function ensurePlanDir(dir: string) {
+    if (await Filesystem.isDir(dir)) return
+    await fs.mkdir(dir, { recursive: true })
+  }
+
+  /**
    * Injects plan-specific reminders into the user message when using the plan agent.
    * Ensures the plan file directory exists and tells the agent where to write.
    */
   export async function insertPlanReminders(input: {
-    agent: { name: string }
+    agent: { name: string; options?: Record<string, unknown> }
     session: Session.Info
     userMessage: MessageV2.WithParts
+    messages?: MessageV2.WithParts[]
   }) {
-    if (input.agent.name !== "plan") return
-    const plan = Session.plan(input.session)
-    const exists = await Filesystem.exists(plan)
-    if (!exists) await fs.mkdir(path.dirname(plan), { recursive: true })
-    const info = exists
-      ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.`
-      : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`
-    input.userMessage.parts.push({
-      id: PartID.ascending(),
-      messageID: input.userMessage.info.id,
-      sessionID: input.userMessage.info.sessionID,
-      type: "text",
-      text: PROMPT_PLAN + `\n\n## Plan File\n${info}\nThis is the ONLY file you are allowed to write to or edit.`,
-      synthetic: true,
-    })
+    if (!planning(input.agent)) return
+    const add = (text: string) =>
+      input.userMessage.parts.push({
+        id: PartID.ascending(),
+        messageID: input.userMessage.info.id,
+        sessionID: input.userMessage.info.sessionID,
+        type: "text",
+        text,
+        synthetic: true,
+      })
+
+    // keep bind(): inside Effect.promise the project context is lost, so Instance.current throws without it
+    const ctx = Instance.bind(() => Instance.current)()
+    const plan = Session.plan(input.session, ctx)
+
+    if (mode(input.agent.name) === "plan") {
+      add(
+        [
+          PROMPT_PLAN,
+          "",
+          "## Plan File",
+          "Use the plan path specified by the user or project instructions when present and permissions allow it.",
+          "If none is specified, create a plan in .kilo/plans/ using a concise kebab-case filename based on the plan details.",
+          "Do not choose .kilo/plans/ when instructions specify an allowed plan path such as .plans/.",
+          "You may write/edit plan Markdown files only. Do not edit source files.",
+          "When finalizing, call plan_exit with the path of the plan file you wrote.",
+        ].join("\n"),
+      )
+      return
+    }
+
+    const file = input.messages ? PlanFile.latest(input.messages) : undefined
+    const saved = PlanFile.resolve(file, ctx)
+    const target = saved ?? plan
+    const dir = path.dirname(target)
+    if (saved && !(await Filesystem.exists(target))) await ensurePlanDir(dir)
+
+    const info = saved
+      ? `The current saved plan file is ${target}. Read and edit this file when refining the plan.`
+      : `Use the plan path specified by the user or project instructions when present and permissions allow it. If none is specified, create a plan in ${dir} using a concise kebab-case filename based on the plan details.`
+    const body = [
+      "## Plan File",
+      info,
+      "Use the chosen plan path as the main plan file. Do not write or edit other files unless the user explicitly asks and your permissions allow it.",
+      "Project/user instructions about plan location (for example .plans/) are authorized when permissions allow them; they do not conflict with this reminder. When finalizing, call plan_exit with the path of the plan file you wrote.",
+      'Before creating or updating the plan file, or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the main plan file, then call plan_exit.',
+    ].join("\n")
+    add(`<system-reminder>\n${body}\n</system-reminder>`)
   }
 
   /**
@@ -197,5 +373,98 @@ export namespace KiloSessionPrompt {
       input.message.finish ??= "error"
     }
     return { exhausted: true as const, error }
+  }
+
+  /**
+   * Returns true when `msgs` contains at least one completed, error-free summary
+   * assistant.
+   */
+  export function hasCompletedSummary(msgs: MessageV2.WithParts[]): boolean {
+    return msgs.some((m) => m.info.role === "assistant" && m.info.summary === true && !!m.info.finish && !m.info.error)
+  }
+
+  /**
+   * Returns a possibly-trimmed copy of `msgs` where everything earlier than the
+   * newest completed summary's parent user message is dropped. Idempotent — a
+   * second call on the already-trimmed list is a no-op.
+   *
+   * Complements the shared `MessageV2.filterCompacted`, which only breaks when
+   * the summary's parent has a `compaction` part. Manual `/compact` and auto-
+   * compactions dispatched against a plain text user produce summaries whose
+   * parent is a text user; `filterCompacted` keeps the full pre-summary history
+   * in that case, which is how the reference session ended up re-shipping
+   * multi-MB base-64 images on every turn.
+   *
+   * If no completed summary is found, or the summary's parent is absent from
+   * `msgs`, `msgs` is returned unchanged.
+   */
+  export function trimBeforeLastSummary(msgs: MessageV2.WithParts[]): MessageV2.WithParts[] {
+    const summary = msgs.reduce<{ msg: MessageV2.WithParts; index: number } | undefined>((latest, msg, index) => {
+      const info = msg.info
+      if (info.role !== "assistant" || info.summary !== true || !info.finish || info.error) return latest
+      if (!latest || KiloSessionMessageOrder.compare(msg, latest.msg, index, latest.index) > 0) return { msg, index }
+      return latest
+    }, undefined)
+    if (!summary) return msgs
+    const info = summary.msg.info
+    if (info.role !== "assistant") return msgs
+    const parentIdx = msgs.findIndex((m) => m.info.id === info.parentID)
+    if (parentIdx === -1) return msgs
+    return parentIdx === 0 ? msgs : msgs.slice(parentIdx)
+  }
+
+  /**
+   * Returns a shallow-modified copy of `msgs` where every message before the
+   * last real user turn has its media stripped:
+   *   - `file` parts with an image/PDF MIME become placeholder `text` parts
+   *     (same placeholder shape as `toModelMessagesEffect({ stripMedia: true })`).
+   *   - Completed assistant `tool` parts keep their non-media attachments but
+   *     drop image/PDF attachments.
+   *
+   * The cutoff anchors on the newest user message that carries at least one
+   * non-synthetic part. Synthetic-only user turns — e.g. the `"Summarize the
+   * task tool output above…"` message emitted by `handleSubtask` when a task
+   * command continues a turn, or the auto-compaction continue prompt in
+   * `compaction.process` — do not count as the current turn, so attachments
+   * the user just sent before that handoff are preserved.
+   *
+   * Media in and after the cutoff is left alone so the model can still
+   * analyse attachments the user just sent. Shallow copies only — input is
+   * never mutated.
+   */
+  export function stripHistoricalMedia(msgs: MessageV2.WithParts[]): MessageV2.WithParts[] {
+    const cutoff = msgs.findLastIndex(
+      (m) => m.info.role === "user" && m.parts.some((p) => p.type !== "text" || !p.synthetic),
+    )
+    if (cutoff <= 0) return msgs
+    return msgs.map((msg, idx) => {
+      if (idx >= cutoff) return msg
+      const parts = msg.parts.map((part) => {
+        if (part.type === "file" && MessageV2.isMedia(part.mime)) {
+          return {
+            id: part.id,
+            sessionID: part.sessionID,
+            messageID: part.messageID,
+            type: "text" as const,
+            text: `[Attached ${part.mime}: ${part.filename ?? "file"}]`,
+          } satisfies MessageV2.TextPart
+        }
+        if (part.type === "tool" && part.state.status === "completed" && part.state.attachments?.length) {
+          const kept = part.state.attachments.filter((a) => !MessageV2.isMedia(a.mime))
+          if (kept.length === part.state.attachments.length) return part
+          return { ...part, state: { ...part.state, attachments: kept } }
+        }
+        return part
+      })
+      return { ...msg, parts }
+    })
+  }
+
+  /**
+   * Convenience wrapper: calls `stripHistoricalMedia` only when `msgs` contains
+   * a completed summary. Keeps the main-prompt call site to a single line.
+   */
+  export function maybeStripHistoricalMedia(msgs: MessageV2.WithParts[]): MessageV2.WithParts[] {
+    return hasCompletedSummary(msgs) ? stripHistoricalMedia(msgs) : msgs
   }
 }

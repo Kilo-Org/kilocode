@@ -2,7 +2,8 @@
 import { cmd } from "./cmd"
 import { bootstrap } from "../bootstrap"
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions"
-import { Instance } from "@/project/instance"
+import { context } from "@/project/instance-context"
+import { InstanceRuntime } from "@/project/instance-runtime"
 
 export const RemoteCommand = cmd({
   command: "remote",
@@ -17,7 +18,7 @@ export const RemoteCommand = cmd({
       const shutdown = async () => {
         try {
           KiloSessions.disableRemote()
-          await Instance.dispose()
+          await InstanceRuntime.disposeInstance(context.use())
         } finally {
           abort.abort()
         }

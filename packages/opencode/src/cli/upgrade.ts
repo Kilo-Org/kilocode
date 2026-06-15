@@ -1,35 +1,55 @@
-import { Bus } from "@/bus"
-import { Config } from "@/config"
+import { Config } from "@/config/config"
 import { AppRuntime } from "@/effect/app-runtime"
-import { Flag } from "@/flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { Installation } from "@/installation"
-import { InstallationVersion } from "@/installation/version"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
+import { GlobalBus } from "@/bus/global"
 
 export async function upgrade() {
   const config = await AppRuntime.runPromise(Config.Service.use((cfg) => cfg.getGlobal()))
-  const method = await AppRuntime.runPromise(Installation.Service.use((svc) => svc.method()))
+  if (config.autoupdate === false || Flag.KILO_DISABLE_AUTOUPDATE) return
+  const method = await Installation.method()
   // kilocode_change start - only auto-upgrade for npm/pnpm/bun (we only publish @kilocode/cli via npm registry)
   if (method !== "npm" && method !== "pnpm" && method !== "bun") return
   // kilocode_change end
-  const latest = await AppRuntime.runPromise(Installation.Service.use((svc) => svc.latest(method))).catch(() => {})
+  const latest = await Installation.latest(method).catch(() => {})
   if (!latest) return
 
   if (Flag.KILO_ALWAYS_NOTIFY_UPDATE) {
-    await Bus.publish(Installation.Event.UpdateAvailable, { version: latest })
+    GlobalBus.emit("event", {
+      directory: "global",
+      payload: {
+        type: Installation.Event.UpdateAvailable.type,
+        properties: { version: latest },
+      },
+    })
     return
   }
 
   if (InstallationVersion === latest) return
-  if (config.autoupdate === false || Flag.KILO_DISABLE_AUTOUPDATE) return
 
   const kind = Installation.getReleaseType(InstallationVersion, latest)
 
   if (config.autoupdate === "notify" || kind !== "patch") {
-    await Bus.publish(Installation.Event.UpdateAvailable, { version: latest })
+    GlobalBus.emit("event", {
+      directory: "global",
+      payload: {
+        type: Installation.Event.UpdateAvailable.type,
+        properties: { version: latest },
+      },
+    })
     return
   }
 
-  await AppRuntime.runPromise(Installation.Service.use((svc) => svc.upgrade(method, latest)))
-    .then(() => Bus.publish(Installation.Event.Updated, { version: latest }))
+  await Installation.upgrade(method, latest)
+    .then(() =>
+      GlobalBus.emit("event", {
+        directory: "global",
+        payload: {
+          type: Installation.Event.Updated.type,
+          properties: { version: latest },
+        },
+      }),
+    )
     .catch(() => {})
 }

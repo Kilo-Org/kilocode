@@ -1,4 +1,56 @@
 /* ============================================
+   Task Header Rename
+   ============================================ */
+
+[data-slot="task-header-title"] {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+[data-slot="task-header-title-trigger"] {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  border-radius: var(--radius-md);
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+[data-slot="task-header-title-trigger"][data-renamable] {
+  margin: -4px -6px;
+  padding: 4px 6px;
+  cursor: text;
+}
+
+[data-slot="task-header-title-trigger"][data-renamable] [data-slot="task-header-title-label"] {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: color-mix(in srgb, var(--text-weak) 45%, transparent);
+  text-underline-offset: 5px;
+  transition: text-decoration-color 0.15s ease;
+}
+
+[data-slot="task-header-title-trigger"][data-renamable]:hover,
+[data-slot="task-header-title-trigger"][data-renamable]:focus-visible {
+  background-color: var(--surface-interactive-hover, var(--vscode-toolbar-hoverBackground));
+  outline: none;
+}
+
+[data-slot="task-header-title-trigger"][data-renamable]:hover [data-slot="task-header-title-label"],
+[data-slot="task-header-title-trigger"][data-renamable]:focus-visible [data-slot="task-header-title-label"] {
+  text-decoration-color: var(--text-weak);
+}
+
+[data-slot="task-header-title-label"] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============================================
    Task Header Todos
    ============================================ */
 
@@ -15,7 +67,7 @@
     width: 100%;
     padding: 6px 16px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: var(--kilo-font-size-12);
     color: var(--text-weak);
     box-sizing: border-box;
 
@@ -48,7 +100,7 @@
   }
 
   [data-slot="task-header-todo-content"] {
-    font-size: 12px;
+    font-size: var(--kilo-font-size-12);
     color: var(--text-base);
 
     &[data-completed] {
@@ -69,8 +121,7 @@
 }
 
 .task-timeline {
-  display: flex;
-  align-items: flex-end;
+  position: relative;
   overflow-x: auto;
   overflow-y: hidden;
   cursor: grab;
@@ -78,50 +129,45 @@
   scrollbar-width: none; /* Firefox */
 }
 
+.task-timeline:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
 .task-timeline::-webkit-scrollbar {
   display: none;
 }
 
-.task-timeline-bar {
+.task-timeline-content {
   position: relative;
-  flex-shrink: 0;
-  margin-right: 1px;
-  overflow: hidden;
 }
 
-.task-timeline-bar-fill {
+.task-timeline-svg {
+  display: block;
+  overflow: visible;
+}
+
+.task-timeline-bar {
   position: absolute;
   bottom: 0;
-  left: 0;
-  right: 0;
+  box-sizing: border-box;
   border-radius: 2px 2px 0 0;
-  transition: opacity 0.15s;
-}
-
-.task-timeline-bar:hover .task-timeline-bar-fill {
+  background: var(--timeline-color);
   opacity: 0.7;
+  pointer-events: none;
 }
 
-/* Fade-in animation for new bars */
-.task-timeline-bar-fill--new {
-  animation: timeline-fade-in 0.3s ease-out;
-}
-
-/* Active (latest) bar pulse when session is busy */
-.task-timeline-bar-fill--active {
+.task-timeline-bar--active {
+  opacity: 1;
   animation: timeline-pulse 2s ease-in-out infinite 0.5s;
 }
 
-@keyframes timeline-fade-in {
-  from {
-    opacity: 0;
-    transform: scaleY(0);
-    transform-origin: bottom;
-  }
-  to {
-    opacity: 1;
-    transform: scaleY(1);
-  }
+.task-timeline-tooltip {
+  position: fixed;
+  max-width: min(320px, calc(100vw - 16px));
+  transform: translate(-50%, calc(-100% - 4px));
+  white-space: normal;
+  pointer-events: none;
 }
 
 @keyframes timeline-pulse {
@@ -144,7 +190,7 @@
   gap: 6px;
   flex: 1;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--vscode-descriptionForeground);
 }
 
@@ -210,7 +256,7 @@
   align-items: center;
   gap: 6px;
   padding: 0 8px;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--vscode-descriptionForeground);
   white-space: nowrap;
 }

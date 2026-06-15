@@ -78,14 +78,14 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 
 ### Cursor Feature Mapping
 
-| Cursor Feature         | Kilo Equivalent                                                |
-| ---------------------- | -------------------------------------------------------------- |
-| AI Chat                | Chat interface with multiple modes                             |
-| Code Generation        | Code mode with advanced tools                                  |
-| Code Editing           | Fast edits and surgical modifications                          |
-| Codebase Understanding | Codebase indexing and search                                   |
-| Team Management        | Comprehensive team dashboard (Enterprise adds SSO, audit logs) |
-| Usage Analytics        | Detailed usage and cost analytics                              |
+| Cursor Feature | Kilo Equivalent |
+|---|---|
+| AI Chat | Chat interface with multiple modes |
+| Code Generation | Code mode with advanced tools |
+| Code Editing | Fast edits and surgical modifications |
+| Codebase Understanding | Codebase indexing and search |
+| Team Management | Comprehensive team dashboard (Enterprise adds SSO, audit logs) |
+| Usage Analytics | Detailed usage and cost analytics |
 
 ## Migrating from GitHub Copilot
 
@@ -131,13 +131,13 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 
 ### GitHub Copilot Feature Comparison
 
-| GitHub Copilot   | Kilo                             | Advantage                     |
-| ---------------- | -------------------------------- | ----------------------------- |
-| Code suggestions | AI-powered code generation       | ✅ More model choices         |
-| Chat interface   | Multi-mode chat system           | ✅ Specialized modes          |
-| Team admin       | Comprehensive team management    | ✅ Enterprise adds audit logs |
-| Usage insights   | Detailed usage and cost tracking | ✅ Transparent pricing        |
-| Model selection  | 18+ AI providers and models      | ✅ No vendor lock-in          |
+| GitHub Copilot | Kilo | Advantage |
+|---|---|---|
+| Code suggestions | AI-powered code generation | ✅ More model choices |
+| Chat interface | Multi-mode chat system | ✅ Specialized modes |
+| Team admin | Comprehensive team management | ✅ Enterprise adds audit logs |
+| Usage insights | Detailed usage and cost tracking | ✅ Transparent pricing |
+| Model selection | 18+ AI providers and models | ✅ No vendor lock-in |
 
 ## Migrating from Other AI Coding Tools
 

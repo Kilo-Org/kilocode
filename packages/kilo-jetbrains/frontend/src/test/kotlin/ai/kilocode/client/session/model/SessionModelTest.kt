@@ -9,12 +9,19 @@ import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
+import ai.kilocode.rpc.dto.PartTimeDto
+import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionTimeDto
 import ai.kilocode.rpc.dto.TodoDto
+import ai.kilocode.rpc.dto.TodoViewDto
+import ai.kilocode.rpc.dto.TokensDto
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
-import com.intellij.testFramework.UsefulTestCase
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
-class SessionModelTest : UsefulTestCase() {
+@Suppress("UnstableApiUsage")
+class SessionModelTest : BasePlatformTestCase() {
 
     private lateinit var model: SessionModel
     private lateinit var parent: Disposable
@@ -25,7 +32,9 @@ class SessionModelTest : UsefulTestCase() {
         parent = Disposer.newDisposable("test")
         model = SessionModel()
         events = mutableListOf()
-        model.addListener(parent) { events.add(it) }
+        model.addListener(parent) {
+            if (it !is SessionModelEvent.HeaderUpdated) events.add(it)
+        }
     }
 
     override fun tearDown() {
@@ -41,6 +50,15 @@ class SessionModelTest : UsefulTestCase() {
         assertEquals(KiloWorkspaceStatusDto.PENDING, model.workspace.status)
         assertFalse(model.isReady())
         assertEquals(SessionState.Idle, model.state)
+    }
+
+    fun `test model mutation works through EDT`() {
+        // The test fixture does not consistently throw for @RequiresEdt when called
+        // from a pooled thread, so keep this as a behavioral EDT contract check.
+        edt { model.addMessage(msg("on_edt", "assistant")) }
+
+        assertNotNull(edt { model.message("on_edt") })
+        assertTrue(events.any { it is SessionModelEvent.MessageAdded && it.info.info.id == "on_edt" })
     }
 
     fun `test isReady requires app and workspace readiness`() {
@@ -123,6 +141,16 @@ class SessionModelTest : UsefulTestCase() {
         val p = model.message("m1")!!.parts["p1"]
         assertTrue(p is Reasoning)
         assertEquals("thinking", (p as Reasoning).content.toString())
+        assertTrue(p.done)
+    }
+
+    fun `test updateContent reasoning tracks done state`() {
+        model.addMessage(msg("m1", "assistant"))
+
+        model.updateContent("m1", part("p1", "m1", "reasoning", text = "thinking", time = PartTimeDto(1.0, 2.0)))
+
+        val p = model.message("m1")!!.parts["p1"] as Reasoning
+        assertTrue(p.done)
     }
 
     fun `test updateContent tool creates Tool content and tracks state`() {
@@ -132,8 +160,59 @@ class SessionModelTest : UsefulTestCase() {
 
         val p = model.message("m1")!!.parts["p1"] as Tool
         assertEquals("bash", p.name)
+        assertEquals(ToolKind.GENERIC, p.kind)
         assertEquals(ToolExecState.RUNNING, p.state)
         assertEquals("ls", p.title)
+    }
+
+    fun `test updateContent tool derives tool kind from name`() {
+        model.addMessage(msg("m1", "assistant"))
+
+        model.updateContent("m1", part("p1", "m1", "tool", tool = "read"))
+        model.updateContent("m1", part("p2", "m1", "tool", tool = "glob"))
+        model.updateContent("m1", part("p3", "m1", "tool", tool = "write"))
+        model.updateContent("m1", part("p4", "m1", "tool", tool = "apply_patch"))
+        model.updateContent("m1", part("p5", "m1", "tool", tool = "bash"))
+
+        assertEquals(ToolKind.READ, (model.message("m1")!!.parts["p1"] as Tool).kind)
+        assertEquals(ToolKind.READ, (model.message("m1")!!.parts["p2"] as Tool).kind)
+        assertEquals(ToolKind.WRITE, (model.message("m1")!!.parts["p3"] as Tool).kind)
+        assertEquals(ToolKind.WRITE, (model.message("m1")!!.parts["p4"] as Tool).kind)
+        assertEquals(ToolKind.GENERIC, (model.message("m1")!!.parts["p5"] as Tool).kind)
+    }
+
+    fun `test updateContent tool stores rich fields`() {
+        model.addMessage(msg("m1", "assistant"))
+        val todos = listOf(TodoDto("Write tests", "completed", "high", changed = true))
+        val view = TodoViewDto("compact", todos, hiddenBefore = 1, hiddenAfter = 2, changed = 1)
+
+        model.updateContent(
+            "m1",
+            part(
+                "p1", "m1", "tool",
+                tool = "bash",
+                state = "completed",
+                title = "Show history",
+                input = mapOf("command" to "git log", "description" to "Show history"),
+                metadata = mapOf("source" to "state"),
+                output = "abc123 init",
+                error = "failed",
+                time = PartTimeDto(1.0, 2.0),
+                todos = todos,
+                todoView = view,
+            ),
+        )
+
+        val p = model.message("m1")!!.parts["p1"] as Tool
+        assertEquals("git log", p.input["command"])
+        assertEquals("Show history", p.input["description"])
+        assertEquals("state", p.metadata["source"])
+        assertEquals("abc123 init", p.output)
+        assertEquals("failed", p.error)
+        assertEquals(1.0, p.time?.start)
+        assertEquals(2.0, p.time?.end)
+        assertEquals(todos, p.todos)
+        assertEquals(view, p.todoView)
     }
 
     fun `test updateContent tool updates lifecycle`() {
@@ -144,7 +223,33 @@ class SessionModelTest : UsefulTestCase() {
         model.updateContent("m1", part("p1", "m1", "tool", tool = "bash", state = "completed"))
 
         val p = model.message("m1")!!.parts["p1"] as Tool
+        assertEquals(ToolKind.GENERIC, p.kind)
         assertEquals(ToolExecState.COMPLETED, p.state)
+        assertTrue(events.single() is SessionModelEvent.ContentUpdated)
+    }
+
+    fun `test updateContent tool updates rich fields`() {
+        model.addMessage(msg("m1", "assistant"))
+        model.updateContent("m1", part("p1", "m1", "tool", tool = "bash", state = "pending"))
+        events.clear()
+        val todos = listOf(TodoDto("Review", "pending", "medium"))
+
+        model.updateContent(
+            "m1",
+            part(
+                "p1", "m1", "tool",
+                tool = "bash",
+                state = "completed",
+                input = mapOf("command" to "git remote -v"),
+                output = "origin",
+                todos = todos,
+            ),
+        )
+
+        val p = model.message("m1")!!.parts["p1"] as Tool
+        assertEquals("git remote -v", p.input["command"])
+        assertEquals("origin", p.output)
+        assertEquals(todos, p.todos)
         assertTrue(events.single() is SessionModelEvent.ContentUpdated)
     }
 
@@ -166,14 +271,25 @@ class SessionModelTest : UsefulTestCase() {
         assertTrue(events.isEmpty())
     }
 
-    fun `test updateContent silently drops step-finish parts`() {
+    fun `test updateContent stores step-finish parts`() {
         model.addMessage(msg("m1", "assistant"))
         events.clear()
 
-        model.updateContent("m1", part("p1", "m1", "step-finish"))
+        model.updateContent("m1", part(
+            "p1",
+            "m1",
+            "step-finish",
+            reason = "stop",
+            cost = 0.005,
+            tokens = TokensDto(100, 50, 10, 20, 5),
+        ))
 
-        assertNull(model.message("m1")!!.parts["p1"])
-        assertTrue(events.isEmpty())
+        val part = model.message("m1")!!.parts["p1"]
+        assertTrue(part is StepFinish)
+        assertEquals("stop", (part as StepFinish).reason)
+        assertEquals(0.005, part.cost)
+        assertEquals(100L, part.tokens?.input)
+        assertTrue(events.single() is SessionModelEvent.ContentAdded)
     }
 
     fun `test updateContent unknown type stored as Generic`() {
@@ -241,6 +357,17 @@ class SessionModelTest : UsefulTestCase() {
 
         assertEquals(state, model.state)
         assertEquals(state, (events.single() as SessionModelEvent.StateChanged).state)
+    }
+
+    fun `test setState duplicate is no-op`() {
+        val state = SessionState.Busy("thinking")
+        model.setState(state)
+        events.clear()
+
+        model.setState(state)
+
+        assertTrue(events.isEmpty())
+        assertEquals(state, model.state)
     }
 
     fun `test setState to Error stores error data`() {
@@ -362,6 +489,24 @@ class SessionModelTest : UsefulTestCase() {
         assertTrue(events.single() is SessionModelEvent.HistoryLoaded)
     }
 
+    fun `test loadHistory preserves rich tool fields and reasoning done`() {
+        model.loadHistory(listOf(
+            MessageWithPartsDto(
+                msg("m1", "assistant"),
+                listOf(
+                    part("r1", "m1", "reasoning", text = "done", time = PartTimeDto(1.0, 2.0)),
+                    part("t1", "m1", "tool", tool = "read", state = "completed", input = mapOf("filePath" to "README.MD"), output = "content"),
+                ),
+            ),
+        ))
+
+        val reasoning = model.message("m1")!!.parts["r1"] as Reasoning
+        val tool = model.message("m1")!!.parts["t1"] as Tool
+        assertTrue(reasoning.done)
+        assertEquals("README.MD", tool.input["filePath"])
+        assertEquals("content", tool.output)
+    }
+
     fun `test loadHistory stores unknown content types as Generic`() {
         val text = PartDto(id = "p1", sessionID = "s1", messageID = "m1", type = "text", text = "visible")
         val snapshot = PartDto(id = "p2", sessionID = "s1", messageID = "m1", type = "snapshot")
@@ -375,15 +520,27 @@ class SessionModelTest : UsefulTestCase() {
         assertEquals("snapshot", (entry.parts["p2"] as Generic).type)
     }
 
-    fun `test loadHistory silently drops step-start and step-finish parts`() {
+    fun `test loadHistory drops silent parts and preserves step-finish parts`() {
         val text = PartDto(id = "p1", sessionID = "s1", messageID = "m1", type = "text", text = "visible")
         val stepStart = PartDto(id = "p2", sessionID = "s1", messageID = "m1", type = "step-start")
         val stepFinish = PartDto(id = "p3", sessionID = "s1", messageID = "m1", type = "step-finish")
+        val patch = PartDto(id = "p4", sessionID = "s1", messageID = "m1", type = "patch")
 
-        model.loadHistory(listOf(MessageWithPartsDto(msg("m1", "assistant"), listOf(text, stepStart, stepFinish))))
+        model.loadHistory(listOf(MessageWithPartsDto(msg("m1", "assistant"), listOf(text, stepStart, stepFinish, patch))))
 
         val entry = model.message("m1")!!
-        assertEquals(listOf("p1"), entry.parts.keys.toList())
+        assertEquals(listOf("p1", "p3"), entry.parts.keys.toList())
+        assertTrue(entry.parts["p3"] is StepFinish)
+    }
+
+    fun `test updateContent drops patch parts`() {
+        model.addMessage(msg("m1", "assistant"))
+        events.clear()
+
+        model.updateContent("m1", PartDto(id = "p1", sessionID = "s1", messageID = "m1", type = "patch"))
+
+        assertFalse(model.message("m1")!!.parts.containsKey("p1"))
+        assertTrue(events.isEmpty())
     }
 
     fun `test upsertMessage adds new message and returns true`() {
@@ -549,7 +706,9 @@ class SessionModelTest : UsefulTestCase() {
         Disposer.register(parent, child)
 
         val extra = mutableListOf<SessionModelEvent>()
-        model.addListener(child) { extra.add(it) }
+        model.addListener(child) {
+            if (it !is SessionModelEvent.HeaderUpdated) extra.add(it)
+        }
 
         model.addMessage(msg("m1", "user"))
         assertEquals(2, extra.size)  // MessageAdded + TurnAdded
@@ -561,11 +720,114 @@ class SessionModelTest : UsefulTestCase() {
         assertTrue(extra.isEmpty())
     }
 
-    private fun msg(id: String, role: String) = MessageDto(
+    fun `test header snapshot hidden with no messages`() {
+        assertFalse(model.header.visible)
+        assertEquals("New Session", model.header.title)
+        assertFalse(model.header.canCompact)
+    }
+
+    fun `test header snapshot totals assistant cost only`() {
+        model.model = "kilo/gpt-5"
+        model.upsertMessage(msg("u1", "user", cost = 10.0))
+        model.upsertMessage(msg("a1", "assistant", cost = 0.25))
+        model.upsertMessage(msg("a2", "assistant", cost = 0.75))
+
+        assertTrue(model.header.visible)
+        assertEquals(1.0, model.header.cost)
+        assertTrue(model.header.canCompact)
+    }
+
+    fun `test header snapshot uses last assistant tokens and model limit`() {
+        model.models = listOf(ModelItem(
+            id = "gpt-5",
+            display = "GPT-5",
+            provider = "kilo",
+            providerName = "Kilo",
+            recommendedIndex = null,
+            free = false,
+            variants = emptyList(),
+            limit = ModelLimitItem(context = 1000, input = 800, output = 200),
+        ))
+        model.model = "kilo/gpt-5"
+        model.upsertMessage(msg("a1", "assistant", tokens = TokensDto(100, 50, 25, 25, 0)))
+        model.upsertMessage(msg("a2", "assistant", tokens = TokensDto(200, 100, 0, 0, 0)))
+
+        assertEquals(300L, model.header.context?.tokens)
+        assertEquals(30, model.header.context?.percentage)
+        assertEquals(1000L, model.header.context?.limit)
+        assertEquals(200L, model.header.context?.output)
+        assertEquals(200L, model.header.tokens?.input)
+    }
+
+    fun `test header snapshot tracks todo summary`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.setTodos(listOf(
+            TodoDto("Write tests", "completed", "high"),
+            TodoDto("Ship it", "pending", "medium"),
+        ))
+
+        assertEquals(2, model.header.todos.total)
+        assertEquals(1, model.header.todos.completed)
+        assertEquals("Write tests", model.header.todos.items[0].content)
+    }
+
+    fun `test header snapshot tracks session title and timeline`() {
+        model.setSession(session("Updated title"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("t1", "a1", "tool", tool = "bash", state = "running", title = "Run tests", time = PartTimeDto(1.0, 3.0)))
+        model.updateContent("a1", part("s1", "a1", "step-finish", tokens = TokensDto(200, 100, 25, 0, 0)))
+
+        val item = model.header.timeline[0]
+        val step = model.header.timeline[1]
+        assertEquals("Updated title", model.header.title)
+        assertTrue(item.part is Tool)
+        assertEquals("bash", (item.part as Tool).name)
+        assertEquals("Run tests", item.title)
+        assertEquals(2000L, item.durationMs)
+        assertTrue(item.active)
+        assertTrue(step.part is StepFinish)
+        assertEquals("Step finish", step.title)
+        assertEquals(10, step.weight)
+        assertFalse(step.active)
+    }
+
+    fun `test header timeline clamps large step finish token weight`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("s1", "a1", "step-finish", tokens = TokensDto(Long.MAX_VALUE, 1, 1, 0, 0)))
+
+        assertEquals(10, model.header.timeline.single().weight)
+    }
+
+    fun `test loadHistory and clear reset header state`() {
+        model.setSession(session("Old title"))
+        model.upsertMessage(msg("a1", "assistant", cost = 1.0))
+
+        model.loadHistory(emptyList())
+        assertFalse(model.header.visible)
+        assertEquals("New Session", model.header.title)
+
+        model.upsertMessage(msg("a2", "assistant", cost = 1.0))
+        model.clear()
+        assertFalse(model.header.visible)
+        assertNull(model.header.cost)
+    }
+
+    private fun msg(id: String, role: String, cost: Double? = null, tokens: TokensDto? = null) = MessageDto(
         id = id,
         sessionID = "ses",
         role = role,
         time = MessageTimeDto(created = 0.0),
+        cost = cost,
+        tokens = tokens,
+    )
+
+    private fun session(title: String) = SessionDto(
+        id = "ses",
+        projectID = "proj",
+        directory = "/test",
+        title = title,
+        version = "1",
+        time = SessionTimeDto(created = 0.0, updated = 0.0),
     )
 
     private fun part(
@@ -576,6 +838,16 @@ class SessionModelTest : UsefulTestCase() {
         tool: String? = null,
         state: String? = null,
         title: String? = null,
+        input: Map<String, String> = emptyMap(),
+        metadata: Map<String, String> = emptyMap(),
+        output: String? = null,
+        error: String? = null,
+        time: PartTimeDto? = null,
+        reason: String? = null,
+        cost: Double? = null,
+        tokens: TokensDto? = null,
+        todos: List<TodoDto> = emptyList(),
+        todoView: TodoViewDto? = null,
     ) = PartDto(
         id = id,
         sessionID = "ses",
@@ -585,6 +857,16 @@ class SessionModelTest : UsefulTestCase() {
         tool = tool,
         state = state,
         title = title,
+        input = input,
+        metadata = metadata,
+        output = output,
+        error = error,
+        time = time,
+        todos = todos,
+        todoView = todoView,
+        reason = reason,
+        cost = cost,
+        tokens = tokens,
     )
 
     private fun question(id: String) = Question(
@@ -611,5 +893,12 @@ class SessionModelTest : UsefulTestCase() {
 
     private fun assertModel(expected: String) {
         assertEquals(expected.trimIndent().trim(), model.toString().trim())
+    }
+
+    private fun <T> edt(block: () -> T): T {
+        var result: T? = null
+        ApplicationManager.getApplication().invokeAndWait { result = block() }
+        @Suppress("UNCHECKED_CAST")
+        return result as T
     }
 }

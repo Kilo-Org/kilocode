@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "локальный",
+  "agentManager.sidebar.collapse": "Свернуть боковую панель",
+  "agentManager.sidebar.expand": "Показать боковую панель",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "СЕССИИ",
   "agentManager.notGitRepo": "Не является git-репозиторием",
@@ -49,6 +51,11 @@ export const dict = {
   "agentManager.tab.terminal": "Терминал",
   "agentManager.tab.openTerminal": "Открыть терминал",
   "agentManager.tab.newOptions": "Другие параметры новой вкладки",
+  "agentManager.tabsMenu.label": "Искать открытые вкладки",
+  "agentManager.tabsMenu.search": "Поиск вкладок...",
+  "agentManager.tabsMenu.empty": "Нет подходящих вкладок",
+  "agentManager.tabsMenu.status.waiting": "Ожидание",
+  "agentManager.tabsMenu.status.retry": "Повтор",
 
   "agentManager.terminal.new": "Новая вкладка терминала",
   "agentManager.terminal.ended": "терминал завершен — закройте вкладку, чтобы скрыть",
@@ -72,7 +79,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Следующий элемент",
   "agentManager.shortcuts.newWorktree": "Новый Worktree",
   "agentManager.shortcuts.openWorktree": "Открыть Worktree",
-  "agentManager.shortcuts.advancedWorktree": "Расширенный Worktree",
+  "agentManager.shortcuts.advancedWorktree": "Настроить новое worktree",
   "agentManager.shortcuts.deleteWorktree": "Удалить Worktree",
   "agentManager.shortcuts.previousTab": "Предыдущая вкладка",
   "agentManager.shortcuts.nextTab": "Следующая вкладка",
@@ -94,6 +101,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Удалить устаревший Worktree",
 
   "agentManager.dialog.openWorktree": "Новый worktree",
+  "agentManager.dialog.configureWorktree": "Настроить новое Worktree...",
   "agentManager.dialog.tab.new": "Новый",
   "agentManager.dialog.tab.import": "Импорт",
   "agentManager.dialog.namePlaceholder": "Имя Worktree (необязательно)",

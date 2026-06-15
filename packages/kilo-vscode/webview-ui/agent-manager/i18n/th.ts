@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "ในเครื่อง",
+  "agentManager.sidebar.collapse": "ย่อแถบด้านข้าง",
+  "agentManager.sidebar.expand": "แสดงแถบด้านข้าง",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "เซสชัน",
   "agentManager.notGitRepo": "ไม่ใช่ git repository",
@@ -49,6 +51,11 @@ export const dict = {
   "agentManager.tab.terminal": "เทอร์มินัล",
   "agentManager.tab.openTerminal": "เปิดเทอร์มินัล",
   "agentManager.tab.newOptions": "ตัวเลือกแท็บใหม่เพิ่มเติม",
+  "agentManager.tabsMenu.label": "ค้นหาแท็บที่เปิดอยู่",
+  "agentManager.tabsMenu.search": "ค้นหาแท็บ...",
+  "agentManager.tabsMenu.empty": "ไม่มีแท็บที่ตรงกัน",
+  "agentManager.tabsMenu.status.waiting": "รอ",
+  "agentManager.tabsMenu.status.retry": "ลองใหม่",
 
   "agentManager.terminal.new": "แท็บเทอร์มินัลใหม่",
   "agentManager.terminal.ended": "เทอร์มินัลสิ้นสุด — ปิดแท็บเพื่อยกเลิก",
@@ -69,7 +76,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "รายการถัดไป",
   "agentManager.shortcuts.newWorktree": "Worktree ใหม่",
   "agentManager.shortcuts.openWorktree": "เปิด Worktree",
-  "agentManager.shortcuts.advancedWorktree": "Worktree ขั้นสูง",
+  "agentManager.shortcuts.advancedWorktree": "กำหนดค่า worktree ใหม่",
   "agentManager.shortcuts.deleteWorktree": "ลบ Worktree",
   "agentManager.shortcuts.previousTab": "แท็บก่อนหน้า",
   "agentManager.shortcuts.nextTab": "แท็บถัดไป",
@@ -91,6 +98,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "ลบ Worktree ที่ล้าสมัย",
 
   "agentManager.dialog.openWorktree": "Worktree ใหม่",
+  "agentManager.dialog.configureWorktree": "กำหนดค่า Worktree ใหม่...",
   "agentManager.dialog.tab.new": "ใหม่",
   "agentManager.dialog.tab.import": "นำเข้า",
   "agentManager.dialog.namePlaceholder": "ชื่อ Worktree (ไม่บังคับ)",

@@ -7,8 +7,8 @@
  * ThinkingSelector     — thin wrapper wired to session context for chat usage.
  */
 
-import { Component, createSignal, For, Show } from "solid-js"
-import { Popover } from "@kilocode/kilo-ui/popover"
+import { type Accessor, Component, createSignal, For, onCleanup, Show } from "solid-js"
+import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
 
@@ -23,54 +23,158 @@ export interface ThinkingSelectorBaseProps {
   value: string | undefined
   /** Called when the user picks a variant */
   onSelect: (value: string) => void
+  /** Called when the user clears selection via default row. */
+  onClear?: () => void
+  /** Include default/unset row at top. */
+  allowClear?: boolean
+  /** Label for default/unset row. */
+  clearLabel?: string
+  /** Popover placement — defaults to top-start. */
+  placement?: "top-start" | "bottom-start" | "bottom-end" | "top-end"
+  /** Delay outside dismissal while the popover opens inside a dialog. */
+  deferDismiss?: boolean
+  /** Listen for the global prompt trigger event. Defaults to true. */
+  globalTrigger?: boolean
 }
 
 export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props) => {
   const [open, setOpen] = createSignal(false)
+  const [focused, setFocused] = createSignal(-1)
+  let listRef: HTMLDivElement | undefined
 
-  function pick(value: string) {
-    props.onSelect(value)
-    setOpen(false)
-    requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
+  const rows = () => (props.allowClear ? [undefined, ...props.variants] : props.variants)
+  const clearLabel = () => props.clearLabel ?? "Not set"
+
+  function display(value: string | undefined) {
+    if (!value) return clearLabel()
+    return value.charAt(0).toUpperCase() + value.slice(1)
   }
 
-  const label = () => {
-    const v = props.value
-    return v ? v.charAt(0).toUpperCase() + v.slice(1) : ""
+  function focusItem(idx: number) {
+    const items = listRef?.querySelectorAll<HTMLElement>("[role=option]")
+    if (!items) return
+    const clamped = Math.max(0, Math.min(idx, items.length - 1))
+    setFocused(clamped)
+    items[clamped]?.focus()
+  }
+
+  function refocus() {
+    requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
+  }
+
+  function onOpen(val: boolean) {
+    setOpen(val)
+    if (val) {
+      const items = rows()
+      const idx = items.findIndex((v) => v === props.value)
+      requestAnimationFrame(() => focusItem(idx >= 0 ? idx : 0))
+      return
+    }
+    refocus()
+  }
+
+  const onTrigger = () => {
+    if (rows().length === 0) return
+    onOpen(true)
+  }
+  if (props.globalTrigger ?? true) {
+    window.addEventListener("openVariantPicker", onTrigger)
+    onCleanup(() => window.removeEventListener("openVariantPicker", onTrigger))
+  }
+
+  function pick(value: string | undefined) {
+    if (value === undefined) {
+      props.onClear?.()
+      onOpen(false)
+      return
+    }
+    props.onSelect(value)
+    onOpen(false)
+  }
+
+  function onKeyDown(e: KeyboardEvent) {
+    const items = rows()
+    const len = items.length
+    const cur = focused()
+    if (len === 0) return
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      focusItem((cur + 1) % len)
+      return
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault()
+      focusItem((cur - 1 + len) % len)
+      return
+    }
+    if (e.key === "Home") {
+      e.preventDefault()
+      focusItem(0)
+      return
+    }
+    if (e.key === "End") {
+      e.preventDefault()
+      focusItem(len - 1)
+      return
+    }
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault()
+      if (cur >= 0 && cur < len) pick(items[cur])
+      return
+    }
+    if (e.key === "Escape") {
+      e.preventDefault()
+      e.stopPropagation()
+      onOpen(false)
+    }
   }
 
   return (
-    <Show when={props.variants.length > 0}>
-      <Popover
-        placement="top-start"
+    <Show when={rows().length > 0}>
+      <PopupSelector
+        expanded={false}
+        placement={props.placement ?? "top-start"}
+        preferredWidth={180}
+        minHeight={100}
+        deferDismiss={props.deferDismiss}
         open={open()}
-        onOpenChange={setOpen}
+        onOpenChange={onOpen}
         triggerAs={Button}
         triggerProps={{ variant: "ghost", size: "small" }}
         trigger={
           <>
-            <span class="thinking-selector-trigger-label">{label()}</span>
+            <span class="thinking-selector-trigger-label">{display(props.value)}</span>
             <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" style={{ "flex-shrink": "0" }}>
               <path d="M8 4l4 5H4l4-5z" />
             </svg>
           </>
         }
       >
-        <div class="thinking-selector-list" role="listbox">
-          <For each={props.variants}>
-            {(v) => (
-              <div
-                class={`thinking-selector-item${props.value === v ? " selected" : ""}`}
-                role="option"
-                aria-selected={props.value === v}
-                onClick={() => pick(v)}
-              >
-                <span class="thinking-selector-item-name">{v.charAt(0).toUpperCase() + v.slice(1)}</span>
-              </div>
-            )}
-          </For>
-        </div>
-      </Popover>
+        {(bodyH) => (
+          <div
+            class="thinking-selector-list"
+            role="listbox"
+            ref={listRef}
+            onKeyDown={onKeyDown}
+            style={bodyH() !== undefined ? { "max-height": `${bodyH()}px` } : {}}
+          >
+            <For each={rows()}>
+              {(v, i) => (
+                <div
+                  class={`thinking-selector-item${props.value === v ? " selected" : ""}`}
+                  role="option"
+                  aria-selected={props.value === v}
+                  tabindex={focused() === i() ? 0 : -1}
+                  onClick={() => pick(v)}
+                  onFocus={() => setFocused(i())}
+                >
+                  <span class="thinking-selector-item-name">{display(v)}</span>
+                </div>
+              )}
+            </For>
+          </div>
+        )}
+      </PopupSelector>
     </Show>
   )
 }
@@ -79,14 +183,19 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
 // Chat-specific wrapper (backwards-compatible)
 // ---------------------------------------------------------------------------
 
-export const ThinkingSelector: Component = () => {
+interface ThinkingSelectorProps {
+  sessionID?: Accessor<string | undefined>
+}
+
+export const ThinkingSelector: Component<ThinkingSelectorProps> = (props) => {
   const session = useSession()
+  const id = () => props.sessionID?.()
 
   return (
     <ThinkingSelectorBase
-      variants={session.variantList()}
-      value={session.currentVariant()}
-      onSelect={(value) => session.selectVariant(value)}
+      variants={session.variantList(id())}
+      value={session.currentVariant(id())}
+      onSelect={(value) => session.selectVariant(value, id())}
     />
   )
 }

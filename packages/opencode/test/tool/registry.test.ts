@@ -1,208 +1,498 @@
-import { afterEach, describe, expect, test } from "bun:test"
+import { afterEach, describe, expect } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
-import { Effect, Layer } from "effect"
-import { Instance } from "../../src/project/instance"
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
-import { ToolRegistry } from "../../src/tool"
-import { provideTmpdirInstance, tmpdir } from "../fixture/fixture" // kilocode_change
+import { fileURLToPath, pathToFileURL } from "url"
+import { Effect, Layer, Result, Schema } from "effect"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { ToolRegistry } from "@/tool/registry"
+import { Tool } from "@/tool/tool"
+import { disposeAllInstances, TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
+import { TestConfig } from "../fixture/config"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { Plugin } from "@/plugin"
+import { Question } from "@/question"
+import { Todo } from "@/session/todo"
+import { Skill } from "@/skill"
+import { Agent } from "@/agent/agent"
+import { BackgroundJob } from "@/background/job"
+import { Session } from "@/session/session"
+import { SessionStatus } from "@/session/status"
+import { Provider } from "@/provider/provider"
+import { Git } from "@/git"
+import { LSP } from "@/lsp/lsp"
+import { Instruction } from "@/session/instruction"
+import { Bus } from "@/bus"
+import { FetchHttpClient } from "effect/unstable/http"
+import { Format } from "@/format"
+import { Ripgrep } from "@/file/ripgrep"
+import * as Truncate from "@/tool/truncate"
+import { InstanceState } from "@/effect/instance-state"
+import { Reference } from "@/reference/reference"
+import { ProviderID, ModelID } from "@/provider/schema"
+import { ToolJsonSchema } from "@/tool/json-schema"
+import { MessageID, SessionID } from "@/session/schema"
+import { RuntimeFlags } from "@/effect/runtime-flags"
+import { Command } from "@/command"
 
 const node = CrossSpawnSpawner.defaultLayer
+const configLayer = TestConfig.layer({
+  directories: () => InstanceState.directory.pipe(Effect.map((dir) => [path.join(dir, ".opencode")])),
+})
 
-const it = testEffect(Layer.mergeAll(ToolRegistry.defaultLayer, node))
+const registryLayer = (flags: Partial<RuntimeFlags.Info> = {}) => {
+  const deps = Layer.mergeAll(
+    configLayer,
+    Plugin.defaultLayer,
+    Question.defaultLayer,
+    Todo.defaultLayer,
+    Skill.defaultLayer,
+    Agent.defaultLayer,
+    Session.defaultLayer,
+    Layer.mergeAll(SessionStatus.defaultLayer, BackgroundJob.defaultLayer),
+    Provider.defaultLayer,
+    Git.defaultLayer,
+    Reference.defaultLayer,
+    LSP.defaultLayer,
+    Instruction.defaultLayer,
+    Command.defaultLayer,
+    AppFileSystem.defaultLayer,
+    Bus.layer,
+    FetchHttpClient.layer,
+    Format.defaultLayer,
+    node,
+    Layer.mergeAll(Ripgrep.defaultLayer, Truncate.defaultLayer),
+  )
+  return ToolRegistry.layer.pipe(
+    Layer.provide(deps),
+    Layer.provide(RuntimeFlags.layer(flags)),
+    Layer.provide(node),
+    Layer.provide(Agent.defaultLayer),
+  )
+}
+
+const it = testEffect(Layer.mergeAll(registryLayer(), Agent.defaultLayer, RuntimeFlags.layer(), configLayer))
+const scout = testEffect(
+  Layer.mergeAll(registryLayer({ experimentalScout: true }), Agent.defaultLayer, RuntimeFlags.layer(), configLayer),
+)
+const background = testEffect(
+  Layer.mergeAll(
+    registryLayer({ experimentalBackgroundSubagents: true }),
+    Agent.defaultLayer,
+    RuntimeFlags.layer(),
+    configLayer,
+  ),
+)
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 describe("tool.registry", () => {
-  // kilocode_change start - plan_exit is always registered
-  it.live("plan_exit is always registered regardless of client", () =>
+  it.instance("hides repo research tools unless experimental", () =>
     Effect.gen(function* () {
-      const original = process.env["KILO_CLIENT"]
-      try {
-        for (const client of ["cli", "vscode", "desktop", "app"]) {
-          process.env["KILO_CLIENT"] = client
-          yield* provideTmpdirInstance(
-            () =>
-              Effect.gen(function* () {
-                const registry = yield* ToolRegistry.Service
-                const ids = yield* registry.ids()
-                expect(ids).toContain("plan_exit")
-              }),
-            { git: true },
-          )
-        }
-      } finally {
-        if (original === undefined) delete process.env["KILO_CLIENT"]
-        else process.env["KILO_CLIENT"] = original
-      }
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+
+      expect(ids).not.toContain("repo_clone")
+      expect(ids).not.toContain("repo_overview")
     }),
   )
-  // kilocode_change end
 
-  // kilocode_change start
-  test("suggest is registered for cli and vscode only", async () => {
-    const original = process.env["KILO_CLIENT"]
-    const originalQuestion = process.env["KILO_ENABLE_QUESTION_TOOL"]
-    const originalConfig = process.env["KILO_CONFIG_DIR"]
-    try {
-      for (const client of ["cli", "vscode", "desktop", "app"]) {
-        process.env["KILO_CLIENT"] = client
-        process.env["KILO_ENABLE_QUESTION_TOOL"] = client === "vscode" ? "true" : "false"
-        await using tmp = await tmpdir({ git: true })
-        process.env["KILO_CONFIG_DIR"] = tmp.path
-        await Instance.provide({
-          directory: tmp.path,
-          fn: async () => {
-            const ids = await ToolRegistry.ids()
-            if (client === "cli" || client === "vscode") expect(ids).toContain("suggest")
-            else expect(ids).not.toContain("suggest")
+  scout.instance("shows repo research tools when experimental scout is enabled", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+
+      expect(ids).toContain("repo_clone")
+      expect(ids).toContain("repo_overview")
+    }),
+  )
+
+  it.instance("hides task_status unless experimental background subagents are enabled", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+
+      expect(ids).not.toContain("task_status")
+    }),
+  )
+
+  it.instance("hides task background parameter unless experimental background subagents are enabled", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const agent = yield* Agent.Service
+      const build = yield* agent.get("build")
+      if (!build) throw new Error("build agent not found")
+      const task = (yield* registry.tools({
+        providerID: ProviderID.opencode,
+        modelID: ModelID.make("test"),
+        agent: build,
+      })).find((tool) => tool.id === "task")
+
+      expect(task?.jsonSchema).toBeDefined()
+      expect((task?.jsonSchema?.properties as Record<string, unknown> | undefined)?.background).toBeUndefined()
+    }),
+  )
+
+  background.instance("shows task_status when experimental background subagents are enabled", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+
+      expect(ids).toContain("task_status")
+    }),
+  )
+
+  it.instance("loads tools from .opencode/tool (singular)", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const opencode = path.join(test.directory, ".opencode")
+      const tool = path.join(opencode, "tool")
+      yield* Effect.promise(() => fs.mkdir(tool, { recursive: true }))
+      yield* Effect.promise(() =>
+        Bun.write(
+          path.join(tool, "hello.ts"),
+          [
+            "export default {",
+            "  description: 'hello tool',",
+            "  args: {},",
+            "  execute: async () => {",
+            "    return 'hello world'",
+            "  },",
+            "}",
+            "",
+          ].join("\n"),
+        ),
+      )
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+      expect(ids).toContain("hello")
+    }),
+  )
+
+  it.instance("ignores non-tool exports in .opencode/tool files", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const tool = path.join(test.directory, ".opencode", "tool")
+      yield* Effect.promise(() => fs.mkdir(tool, { recursive: true }))
+      yield* Effect.promise(() =>
+        Bun.write(
+          path.join(tool, "mixed.ts"),
+          [
+            "export const helper = 'not a tool'",
+            "export default {",
+            "  description: 'mixed tool',",
+            "  args: {},",
+            "  execute: async () => 'ok',",
+            "}",
+            "",
+          ].join("\n"),
+        ),
+      )
+
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+      expect(ids).toContain("mixed")
+      expect(ids).not.toContain("mixed_helper")
+    }),
+  )
+
+  it.instance("loads tools from .opencode/tools (plural)", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const opencode = path.join(test.directory, ".opencode")
+      const tools = path.join(opencode, "tools")
+      yield* Effect.promise(() => fs.mkdir(tools, { recursive: true }))
+      yield* Effect.promise(() =>
+        Bun.write(
+          path.join(tools, "hello.ts"),
+          [
+            "export default {",
+            "  description: 'hello tool',",
+            "  args: {},",
+            "  execute: async () => {",
+            "    return 'hello world'",
+            "  },",
+            "}",
+            "",
+          ].join("\n"),
+        ),
+      )
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+      expect(ids).toContain("hello")
+    }),
+  )
+
+  it.instance("loads Zod-schema custom tools with JSON Schema and validation", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const customTools = path.join(test.directory, ".opencode", "tools")
+      const pluginTool = pathToFileURL(path.resolve(import.meta.dir, "../../../plugin/src/tool.ts")).href
+      yield* Effect.promise(() => fs.mkdir(customTools, { recursive: true }))
+      yield* Effect.promise(() =>
+        Bun.write(
+          path.join(customTools, "sql.ts"),
+          [
+            `import { tool } from ${JSON.stringify(pluginTool)}`,
+            "export default tool({",
+            "  description: 'query database',",
+            "  args: { query: tool.schema.string().describe('SQL query to execute') },",
+            "  execute: async ({ query }) => query,",
+            "})",
+            "",
+          ].join("\n"),
+        ),
+      )
+
+      const registry = yield* ToolRegistry.Service
+      const loaded = (yield* registry.all()).find((tool) => tool.id === "sql")
+      if (!loaded) throw new Error("custom sql tool was not loaded")
+      expect(loaded?.jsonSchema).toMatchObject({
+        type: "object",
+        properties: {
+          query: { type: "string", description: "SQL query to execute" },
+        },
+        required: ["query"],
+      })
+      expect(Result.isSuccess(Schema.decodeUnknownResult(loaded.parameters)({ query: "select 1" }))).toBe(true)
+      expect(Result.isSuccess(Schema.decodeUnknownResult(loaded.parameters)({}))).toBe(false)
+
+      const agents = yield* Agent.Service
+      const promptTools = yield* registry.tools({
+        providerID: ProviderID.opencode,
+        modelID: ModelID.make("test"),
+        agent: yield* agents.defaultInfo(),
+      })
+      const promptTool = promptTools.find((tool) => tool.id === "sql")
+      if (!promptTool) throw new Error("custom sql tool was not returned for prompts")
+      expect(ToolJsonSchema.fromTool(promptTool)).toMatchObject({
+        properties: {
+          query: { type: "string", description: "SQL query to execute" },
+        },
+        required: ["query"],
+      })
+    }),
+  )
+
+  it.instance(
+    "preserves Zod arg descriptions from older config-scoped plugin packages",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const opencode = path.join(test.directory, ".opencode")
+        const customTools = path.join(opencode, "tools")
+        const plugin = path.join(opencode, "node_modules", "@kilocode", "plugin") // kilocode_change
+        yield* Effect.promise(() => fs.mkdir(path.join(plugin, "dist"), { recursive: true }))
+        yield* Effect.promise(() => fs.mkdir(customTools, { recursive: true }))
+        yield* Effect.promise(() =>
+          fs.cp(path.dirname(fileURLToPath(import.meta.resolve("zod"))), path.join(opencode, "node_modules", "zod"), {
+            dereference: true,
+            recursive: true,
+          }),
+        )
+        yield* Effect.promise(() =>
+          Bun.write(
+            path.join(plugin, "package.json"),
+            JSON.stringify({ name: "@kilocode/plugin", type: "module", exports: { ".": "./dist/index.js" } }), // kilocode_change
+          ),
+        )
+        yield* Effect.promise(() =>
+          Bun.write(
+            path.join(plugin, "dist", "index.js"),
+            [
+              "import { z } from 'zod'",
+              "export function tool(input) {",
+              "  return input",
+              "}",
+              "tool.schema = z",
+              "",
+            ].join("\n"),
+          ),
+        )
+        yield* Effect.promise(() =>
+          Bun.write(
+            path.join(customTools, "addition.ts"),
+            [
+              'import { tool } from "@kilocode/plugin"', // kilocode_change
+              "export default tool({",
+              "  description: 'Use this tool to add two numbers and return their sum.',",
+              "  args: {",
+              "    left: tool.schema.number().describe('The first number to add'),",
+              "    right: tool.schema.number().describe('The second number to add'),",
+              "  },",
+              "  execute: async (args) => `${args.left} + ${args.right} = ${args.left + args.right}`,",
+              "})",
+              "",
+            ].join("\n"),
+          ),
+        )
+
+        const registry = yield* ToolRegistry.Service
+        const loaded = (yield* registry.all()).find((tool) => tool.id === "addition")
+        if (!loaded) throw new Error("custom addition tool was not loaded")
+
+        expect(ToolJsonSchema.fromTool(loaded)).toMatchObject({
+          properties: {
+            left: { type: "number", description: "The first number to add" },
+            right: { type: "number", description: "The second number to add" },
           },
         })
-      }
-    } finally {
-      if (original === undefined) delete process.env["KILO_CLIENT"]
-      else process.env["KILO_CLIENT"] = original
-      if (originalQuestion === undefined) delete process.env["KILO_ENABLE_QUESTION_TOOL"]
-      else process.env["KILO_ENABLE_QUESTION_TOOL"] = originalQuestion
-      if (originalConfig === undefined) delete process.env["KILO_CONFIG_DIR"]
-      else process.env["KILO_CONFIG_DIR"] = originalConfig
-    }
-  })
-  // kilocode_change end
-
-  it.live("loads tools from .opencode/tool (singular)", () =>
-    provideTmpdirInstance((dir) =>
-      Effect.gen(function* () {
-        const opencode = path.join(dir, ".opencode")
-        const tool = path.join(opencode, "tool")
-        yield* Effect.promise(() => fs.mkdir(tool, { recursive: true }))
-        yield* Effect.promise(() =>
-          Bun.write(
-            path.join(tool, "hello.ts"),
-            [
-              "export default {",
-              "  description: 'hello tool',",
-              "  args: {},",
-              "  execute: async () => {",
-              "    return 'hello world'",
-              "  },",
-              "}",
-              "",
-            ].join("\n"),
-          ),
-        )
-        const registry = yield* ToolRegistry.Service
-        const ids = yield* registry.ids()
-        expect(ids).toContain("hello")
       }),
-    ),
+    20_000,
   )
 
-  it.live("loads tools from .opencode/tools (plural)", () =>
-    provideTmpdirInstance((dir) =>
-      Effect.gen(function* () {
-        const opencode = path.join(dir, ".opencode")
-        const tools = path.join(opencode, "tools")
-        yield* Effect.promise(() => fs.mkdir(tools, { recursive: true }))
-        yield* Effect.promise(() =>
-          Bun.write(
-            path.join(tools, "hello.ts"),
-            [
-              "export default {",
-              "  description: 'hello tool',",
-              "  args: {},",
-              "  execute: async () => {",
-              "    return 'hello world'",
-              "  },",
-              "}",
-              "",
-            ].join("\n"),
-          ),
-        )
-        const registry = yield* ToolRegistry.Service
-        const ids = yield* registry.ids()
-        expect(ids).toContain("hello")
-      }),
-    ),
+  it.instance("preserves attachments from structured custom tool results", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const customTools = path.join(test.directory, ".opencode", "tools")
+      const pluginTool = pathToFileURL(path.resolve(import.meta.dir, "../../../plugin/src/tool.ts")).href
+      yield* Effect.promise(() => fs.mkdir(customTools, { recursive: true }))
+      yield* Effect.promise(() =>
+        Bun.write(
+          path.join(customTools, "image.ts"),
+          [
+            `import { tool } from ${JSON.stringify(pluginTool)}`,
+            "export default tool({",
+            "  description: 'image tool',",
+            "  args: {},",
+            "  execute: async () => ({",
+            "    output: 'here is an image',",
+            "    attachments: [{ type: 'file', mime: 'image/png', filename: 'picture.png', url: 'data:image/png;base64,AAAA' }],",
+            "  }),",
+            "})",
+            "",
+          ].join("\n"),
+        ),
+      )
+
+      const registry = yield* ToolRegistry.Service
+      const loaded = (yield* registry.all()).find((tool) => tool.id === "image")
+      if (!loaded) throw new Error("custom image tool was not loaded")
+      const agents = yield* Agent.Service
+      const result = yield* loaded.execute({}, {
+        sessionID: SessionID.make("ses_test"),
+        messageID: MessageID.make("msg_test"),
+        agent: (yield* agents.defaultInfo()).name,
+        abort: new AbortController().signal,
+        messages: [],
+        metadata: () => Effect.void,
+        ask: () => Effect.void,
+      } satisfies Tool.Context)
+
+      expect(result.output).toBe("here is an image")
+      expect(result.attachments).toEqual([
+        { type: "file", mime: "image/png", filename: "picture.png", url: "data:image/png;base64,AAAA" },
+      ])
+    }),
   )
 
-  it.live("loads tools with external dependencies without crashing", () =>
-    provideTmpdirInstance((dir) =>
-      Effect.gen(function* () {
-        const opencode = path.join(dir, ".opencode")
-        const tools = path.join(opencode, "tools")
-        yield* Effect.promise(() => fs.mkdir(tools, { recursive: true }))
-        yield* Effect.promise(() =>
-          Bun.write(
-            path.join(opencode, "package.json"),
-            JSON.stringify({
-              name: "custom-tools",
-              dependencies: {
-                "@kilocode/plugin": "^0.0.0",
-                cowsay: "^1.6.0",
-              },
-            }),
-          ),
-        )
-        yield* Effect.promise(() =>
-          Bun.write(
-            path.join(opencode, "package-lock.json"),
-            JSON.stringify({
-              name: "custom-tools",
-              lockfileVersion: 3,
-              packages: {
-                "": {
-                  dependencies: {
-                    "@kilocode/plugin": "^0.0.0",
-                    cowsay: "^1.6.0",
-                  },
+  it.instance("loads legacy JSON-schema-shaped custom tools with wire schema", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const tools = path.join(test.directory, ".opencode", "tools")
+      yield* Effect.promise(() => fs.mkdir(tools, { recursive: true }))
+      yield* Effect.promise(() =>
+        Bun.write(
+          path.join(tools, "legacy.ts"),
+          [
+            "export default {",
+            "  description: 'legacy schema tool',",
+            "  args: { text: { type: 'string', description: 'Text to render' } },",
+            "  execute: async ({ text }) => text,",
+            "}",
+            "",
+          ].join("\n"),
+        ),
+      )
+
+      const registry = yield* ToolRegistry.Service
+      const loaded = (yield* registry.all()).find((tool) => tool.id === "legacy")
+      if (!loaded) throw new Error("legacy custom tool was not loaded")
+      expect(ToolJsonSchema.fromTool(loaded)).toMatchObject({
+        type: "object",
+        properties: {
+          text: { type: "string", description: "Text to render" },
+        },
+        required: ["text"],
+      })
+    }),
+  )
+
+  it.instance("loads tools with external dependencies without crashing", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const opencode = path.join(test.directory, ".opencode")
+      const tools = path.join(opencode, "tools")
+      yield* Effect.promise(() => fs.mkdir(tools, { recursive: true }))
+      yield* Effect.promise(() =>
+        Bun.write(
+          path.join(opencode, "package.json"),
+          JSON.stringify({
+            name: "custom-tools",
+            dependencies: {
+              "@opencode-ai/plugin": "^0.0.0",
+              cowsay: "^1.6.0",
+            },
+          }),
+        ),
+      )
+      yield* Effect.promise(() =>
+        Bun.write(
+          path.join(opencode, "package-lock.json"),
+          JSON.stringify({
+            name: "custom-tools",
+            lockfileVersion: 3,
+            packages: {
+              "": {
+                dependencies: {
+                  "@opencode-ai/plugin": "^0.0.0",
+                  cowsay: "^1.6.0",
                 },
               },
-            }),
-          ),
-        )
+            },
+          }),
+        ),
+      )
 
-        const cowsay = path.join(opencode, "node_modules", "cowsay")
-        yield* Effect.promise(() => fs.mkdir(cowsay, { recursive: true }))
-        yield* Effect.promise(() =>
-          Bun.write(
-            path.join(cowsay, "package.json"),
-            JSON.stringify({
-              name: "cowsay",
-              type: "module",
-              exports: "./index.js",
-            }),
-          ),
-        )
-        yield* Effect.promise(() =>
-          Bun.write(
-            path.join(cowsay, "index.js"),
-            ["export function say({ text }) {", "  return `moo ${text}`", "}", ""].join("\n"),
-          ),
-        )
-        yield* Effect.promise(() =>
-          Bun.write(
-            path.join(tools, "cowsay.ts"),
-            [
-              "import { say } from 'cowsay'",
-              "export default {",
-              "  description: 'tool that imports cowsay at top level',",
-              "  args: { text: { type: 'string' } },",
-              "  execute: async ({ text }: { text: string }) => {",
-              "    return say({ text })",
-              "  },",
-              "}",
-              "",
-            ].join("\n"),
-          ),
-        )
-        const registry = yield* ToolRegistry.Service
-        const ids = yield* registry.ids()
-        expect(ids).toContain("cowsay")
-      }),
-    ),
+      const cowsay = path.join(opencode, "node_modules", "cowsay")
+      yield* Effect.promise(() => fs.mkdir(cowsay, { recursive: true }))
+      yield* Effect.promise(() =>
+        Bun.write(
+          path.join(cowsay, "package.json"),
+          JSON.stringify({
+            name: "cowsay",
+            type: "module",
+            exports: "./index.js",
+          }),
+        ),
+      )
+      yield* Effect.promise(() =>
+        Bun.write(
+          path.join(cowsay, "index.js"),
+          ["export function say({ text }) {", "  return `moo ${text}`", "}", ""].join("\n"),
+        ),
+      )
+      yield* Effect.promise(() =>
+        Bun.write(
+          path.join(tools, "cowsay.ts"),
+          [
+            "import { say } from 'cowsay'",
+            "export default {",
+            "  description: 'tool that imports cowsay at top level',",
+            "  args: { text: { type: 'string' } },",
+            "  execute: async ({ text }: { text: string }) => {",
+            "    return say({ text })",
+            "  },",
+            "}",
+            "",
+          ].join("\n"),
+        ),
+      )
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+      expect(ids).toContain("cowsay")
+    }),
   )
 })

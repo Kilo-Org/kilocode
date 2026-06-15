@@ -1,16 +1,15 @@
 import { cmd } from "@/cli/cmd/cmd"
-import { tui } from "./app"
-import { Rpc } from "@/util"
+import { Rpc } from "@/util/rpc"
 import { type rpc } from "./worker"
 import path from "path"
 import { text as streamText } from "node:stream/consumers"
 import { fileURLToPath } from "url"
 import { UI } from "@/cli/ui"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { errorMessage } from "@/util/error"
 import { withTimeout } from "@/util/timeout"
 import { withNetworkOptions, resolveNetworkOptionsNoConfig } from "@/cli/network"
-import { Filesystem } from "@/util"
+import { Filesystem } from "@/util/filesystem"
 import type { GlobalEvent } from "@kilocode/sdk/v2"
 import type { EventSource } from "./context/sdk"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
@@ -18,13 +17,29 @@ import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session"
 import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
 import { writeHeapSnapshot } from "v8"
 import { TuiConfig } from "./config/tui"
-import { KILO_PROCESS_ROLE, KILO_RUN_ID, ensureRunID, sanitizedProcessEnv } from "@/util/opencode-process"
+import { KiloTuiThreadDaemon } from "@/kilocode/cli/cmd/tui/thread" // kilocode_change
+import {
+  KILO_PROCESS_ROLE,
+  KILO_RUN_ID,
+  ensureRunID,
+  sanitizedProcessEnv,
+} from "@opencode-ai/core/util/opencode-process"
+import { validateSession } from "./validate-session"
 
 declare global {
   const KILO_WORKER_PATH: string
 }
 
 type RpcClient = ReturnType<typeof Rpc.client<typeof rpc>>
+
+// kilocode_change start - lazy-load the TUI app after daemon attach in source mode
+type TuiInput = Parameters<typeof import("./app").tui>[0]
+
+async function start(input: TuiInput) {
+  const app = await import("./app")
+  return await app.tui(input)
+}
+// kilocode_change end
 
 function createWorkerFetch(client: RpcClient): typeof fetch {
   const fn = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -66,6 +81,15 @@ async function input(value?: string) {
   if (!value) return piped
   if (!piped) return value
   return piped + "\n" + value
+}
+
+export function resolveThreadDirectory(project?: string, envPWD = process.env.PWD, cwd = process.cwd()) {
+  // kilocode_change start - ignore stale PWD from wrappers such as `bun --cwd`
+  const real = Filesystem.resolve(cwd)
+  const root = envPWD && Filesystem.resolve(envPWD) === real ? Filesystem.resolve(envPWD) : real
+  // kilocode_change end
+  if (project) return Filesystem.resolve(path.isAbsolute(project) ? project : path.join(root, project))
+  return real // kilocode_change
 }
 
 export const TuiThreadCommand = cmd({
@@ -137,10 +161,7 @@ export const TuiThreadCommand = cmd({
 
       // Resolve relative --project paths from PWD, then use the real cwd after
       // chdir so the thread and worker share the same directory key.
-      const root = Filesystem.resolve(process.env.PWD ?? process.cwd())
-      const next = args.project
-        ? Filesystem.resolve(path.isAbsolute(args.project) ? args.project : path.join(root, args.project))
-        : Filesystem.resolve(process.cwd())
+      const next = resolveThreadDirectory(args.project)
       const file = await target()
       try {
         process.chdir(next)
@@ -149,9 +170,13 @@ export const TuiThreadCommand = cmd({
         return
       }
       const cwd = Filesystem.resolve(process.cwd())
+      // kilocode_change start - default TUI sessions attach to the daemon unless explicitly disabled
+      if (await KiloTuiThreadDaemon.attach({ args, cwd, input: () => input(args.prompt), start })) return
+      // kilocode_change end
       const env = sanitizedProcessEnv({
         [KILO_PROCESS_ROLE]: "worker",
         [KILO_RUN_ID]: ensureRunID(),
+        KILO_BACKGROUND_PROCESS_PORTS: "true", // kilocode_change - TUI surfaces inferred background process ports
       })
 
       const worker = new Worker(file, {
@@ -285,6 +310,19 @@ export const TuiThreadCommand = cmd({
             events: createEventSource(client),
           }
 
+      try {
+        await validateSession({
+          url: transport.url, // kilocode_change
+          sessionID: args.session,
+          directory: cwd,
+          fetch: transport.fetch,
+        })
+      } catch (error) {
+        UI.error(errorMessage(error))
+        process.exitCode = 1
+        return
+      }
+
       setTimeout(() => {
         client.call("checkUpgrade", { directory: cwd }).catch(() => {})
       }, 1000).unref?.()
@@ -309,7 +347,8 @@ export const TuiThreadCommand = cmd({
         }
         // kilocode_change end
 
-        await tui({
+        await start({
+          // kilocode_change - shared lazy loader also supports daemon attach
           url: transport.url,
           async onSnapshot() {
             const tui = writeHeapSnapshot("tui.heapsnapshot")
@@ -339,4 +378,3 @@ export const TuiThreadCommand = cmd({
     process.exit(0)
   },
 })
-// scratch

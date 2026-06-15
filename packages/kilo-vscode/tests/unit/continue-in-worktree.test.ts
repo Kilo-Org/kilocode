@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it, mock } from "bun:test"
 import {
   abortSession,
   captureState,
@@ -8,6 +8,7 @@ import {
   type StepResult,
 } from "../../src/agent-manager/continue-in-worktree"
 import type { CreateWorktreeResult } from "../../src/agent-manager/WorktreeManager"
+import { forkText } from "../../src/agent-manager/fork-handoff"
 import type { Session } from "@kilocode/sdk/v2/client"
 
 const noop = () => {}
@@ -100,17 +101,27 @@ describe("continue-in-worktree steps", () => {
       if (!res.ok) expect(res.error).toContain("fork failed")
     })
 
-    it("returns forked session on success", async () => {
+    it("records handoff instructions for the forked worktree session", async () => {
       const forked = session("forked-1")
+      const promptAsync = mock(async () => ({}))
       const c = ctx({
         getClient: () =>
           ({
-            session: { fork: () => Promise.resolve({ data: forked }) },
+            session: { fork: () => Promise.resolve({ data: forked }), promptAsync },
           }) as never,
       })
       const res = await forkSession(c, "session-1", "/tmp/wt")
       expect(res.ok).toBe(true)
       if (res.ok) expect(res.value.id).toBe("forked-1")
+      expect(promptAsync).toHaveBeenCalledWith(
+        {
+          sessionID: "forked-1",
+          directory: "/tmp/wt",
+          noReply: true,
+          parts: [{ type: "text", text: forkText({ directory: "/tmp/wt" }), synthetic: true }],
+        },
+        { throwOnError: true },
+      )
     })
   })
 

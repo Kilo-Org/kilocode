@@ -76,20 +76,20 @@ Remote servers support OAuth 2.0 authentication. If the server supports it, Kilo
 
 The CLI accepts several config filenames. The recommended file is `kilo.json`:
 
-| Scope       | Recommended Path                     | Also supported                                                 |
-| ----------- | ------------------------------------ | -------------------------------------------------------------- |
-| **Global**  | `~/.config/kilo/kilo.json`           | `kilo.jsonc`, `opencode.json`, `opencode.jsonc`, `config.json` |
-| **Project** | `./kilo.json` or `./.kilo/kilo.json` | `kilo.jsonc`, `opencode.jsonc`, `opencode.json`                |
+| Scope | Recommended Path | Also supported |
+|---|---|---|
+| **Global** | `~/.config/kilo/kilo.json` | `kilo.jsonc`, `opencode.json`, `opencode.jsonc`, `config.json` |
+| **Project** | `./kilo.json` or `./.kilo/kilo.json` | `kilo.jsonc`, `opencode.jsonc`, `opencode.json` |
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
 MCP server configurations can be managed at two levels: **global** (applies across all workspaces) and **project-level** (specific to a single project). Project-level configuration takes precedence over global settings.
 
-| Scope       | Path                 | Description                                                     |
-| ----------- | -------------------- | --------------------------------------------------------------- |
-| **Global**  | `mcp_settings.json`  | Accessible via VS Code settings. Applies across all workspaces. |
-| **Project** | `.kilocode/mcp.json` | In your project root. Auto-detected by Kilo Code.               |
+| Scope | Path | Description |
+|---|---|---|
+| **Global** | `mcp_settings.json` | Accessible via VS Code settings. Applies across all workspaces. |
+| **Project** | `.kilocode/mcp.json` | In your project root. Auto-detected by Kilo Code. |
 
 Project-level configs can be committed to version control to share with your team.
 
@@ -196,13 +196,13 @@ In the VS Code extension, open **Settings → MCP**, click **Add Server**, and c
 
 #### Local Server Options
 
-| Option        | Type    | Required | Description                                                           |
-| ------------- | ------- | -------- | --------------------------------------------------------------------- |
-| `type`        | String  | Yes      | Must be `"local"`.                                                    |
-| `command`     | Array   | Yes      | Command and arguments to run the MCP server.                          |
-| `environment` | Object  | No       | Environment variables to set when running the server.                 |
-| `enabled`     | Boolean | No       | Enable or disable the MCP server on startup.                          |
-| `timeout`     | Number  | No       | Timeout in ms for fetching tools from the MCP server. Default: 30000. |
+| Option | Type | Required | Description |
+|---|---|---|---|
+| `type` | String | Yes | Must be `"local"`. |
+| `command` | Array | Yes | Command and arguments to run the MCP server. |
+| `environment` | Object | No | Environment variables to set when running the server. |
+| `enabled` | Boolean | No | Enable or disable the MCP server on startup. |
+| `timeout` | Number | No | Timeout in ms for fetching tools from the MCP server. Default: 30000. |
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
@@ -260,13 +260,13 @@ In the VS Code extension, open **Settings → MCP**, click **Add Server**, and c
 
 #### Remote Server Options
 
-| Option    | Type    | Required | Description                                                           |
-| --------- | ------- | -------- | --------------------------------------------------------------------- |
-| `type`    | String  | Yes      | Must be `"remote"`.                                                   |
-| `url`     | String  | Yes      | URL of the remote MCP server.                                         |
-| `enabled` | Boolean | No       | Enable or disable the MCP server on startup.                          |
-| `headers` | Object  | No       | HTTP headers to send with requests.                                   |
-| `timeout` | Number  | No       | Timeout in ms for fetching tools from the MCP server. Default: 30000. |
+| Option | Type | Required | Description |
+|---|---|---|---|
+| `type` | String | Yes | Must be `"remote"`. |
+| `url` | String | Yes | URL of the remote MCP server. |
+| `enabled` | Boolean | No | Enable or disable the MCP server on startup. |
+| `headers` | Object | No | HTTP headers to send with requests. |
+| `timeout` | Number | No | Timeout in ms for fetching tools from the MCP server. Default: 30000. |
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
@@ -339,13 +339,13 @@ The extension also supports the `{env:VARIABLE_NAME}` syntax in config files to 
 
 ### CLI Commands
 
-| Command           | Description                     |
-| ----------------- | ------------------------------- |
-| `kilo mcp list`   | List all configured MCP servers |
-| `kilo mcp add`    | Add an MCP server               |
-| `kilo mcp auth`   | Authenticate with an MCP server |
-| `kilo mcp logout` | Log out from an MCP server      |
-| `kilo mcp debug`  | Debug an MCP server connection  |
+| Command | Description |
+|---|---|
+| `kilo mcp list` | List all configured MCP servers |
+| `kilo mcp add` | Add an MCP server |
+| `kilo mcp auth` | Authenticate with an MCP server |
+| `kilo mcp logout` | Log out from an MCP server |
+| `kilo mcp debug` | Debug an MCP server connection |
 
 ### Enabling or Disabling a Server
 
@@ -513,20 +513,20 @@ In the VS Code extension, open **Settings → MCP**, click **Add Server**, and c
 
 Use `cmd` as the command and pass the package command as arguments:
 
-| Field         | Value                                                       |
-| ------------- | ----------------------------------------------------------- |
-| **Name**      | `puppeteer`                                                 |
-| **Command**   | `cmd`                                                       |
+| Field | Value |
+|---|---|
+| **Name** | `puppeteer` |
+| **Command** | `cmd` |
 | **Arguments** | `/c`, `npx`, `-y`, `@modelcontextprotocol/server-puppeteer` |
 
 ### macOS and Linux
 
 Use the executable directly:
 
-| Field         | Value                                          |
-| ------------- | ---------------------------------------------- |
-| **Name**      | `puppeteer`                                    |
-| **Command**   | `npx`                                          |
+| Field | Value |
+|---|---|
+| **Name** | `puppeteer` |
+| **Command** | `npx` |
 | **Arguments** | `-y`, `@modelcontextprotocol/server-puppeteer` |
 
 {% /tab %}

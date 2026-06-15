@@ -1,25 +1,25 @@
-import z from "zod"
 import * as path from "path"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { Bus } from "../bus"
 import { FileWatcher } from "../file/watcher"
-import { Instance } from "../project/instance"
+import { InstanceState } from "@/effect/instance-state"
 import { Patch } from "../patch"
 import { createTwoFilesPatch, diffLines } from "diff"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import { trimDiff } from "./edit"
-import { LSP } from "../lsp"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import { LSP } from "@/lsp/lsp"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import DESCRIPTION from "./apply_patch.txt"
 import { File } from "../file"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
-import { EncodedIO } from "../kilocode/tool/encoded-io" // kilocode_change
+import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 import { Format } from "../format"
+import * as Bom from "@/util/bom"
 
-const PatchParams = z.object({
-  patchText: z.string().describe("The full patch text that describes all changes to be made"),
+export const Parameters = Schema.Struct({
+  patchText: Schema.String.annotate({ description: "The full patch text that describes all changes to be made" }),
 })
 
 export const ApplyPatchTool = Tool.define(
@@ -30,7 +30,10 @@ export const ApplyPatchTool = Tool.define(
     const format = yield* Format.Service
     const bus = yield* Bus.Service
 
-    const run = Effect.fn("ApplyPatchTool.execute")(function* (params: z.infer<typeof PatchParams>, ctx: Tool.Context) {
+    const run = Effect.fn("ApplyPatchTool.execute")(function* (
+      params: Schema.Schema.Type<typeof Parameters>,
+      ctx: Tool.Context,
+    ) {
       if (!params.patchText) {
         return yield* Effect.fail(new Error("patchText is required"))
       }
@@ -52,6 +55,8 @@ export const ApplyPatchTool = Tool.define(
         return yield* Effect.fail(new Error("apply_patch verification failed: no hunks found"))
       }
 
+      const instance = yield* InstanceState.context
+
       // Validate file paths and check permissions
       const fileChanges: Array<{
         filePath: string
@@ -62,13 +67,14 @@ export const ApplyPatchTool = Tool.define(
         diff: string
         additions: number
         deletions: number
+        bom: boolean
         encoding: string // kilocode_change - preserved per-file encoding
       }> = []
 
       let totalDiff = ""
 
       for (const hunk of hunks) {
-        const filePath = path.resolve(Instance.directory, hunk.path)
+        const filePath = path.resolve(instance.directory, hunk.path)
         yield* assertExternalDirectoryEffect(ctx, filePath)
 
         switch (hunk.type) {
@@ -76,11 +82,12 @@ export const ApplyPatchTool = Tool.define(
             const oldContent = ""
             const newContent =
               hunk.contents.length === 0 || hunk.contents.endsWith("\n") ? hunk.contents : `${hunk.contents}\n`
-            const diff = trimDiff(createTwoFilesPatch(filePath, filePath, oldContent, newContent))
+            const next = Bom.split(newContent)
+            const diff = trimDiff(createTwoFilesPatch(filePath, filePath, oldContent, next.text))
 
             let additions = 0
             let deletions = 0
-            for (const change of diffLines(oldContent, newContent)) {
+            for (const change of diffLines(oldContent, next.text)) {
               if (change.added) additions += change.count || 0
               if (change.removed) deletions += change.count || 0
             }
@@ -88,11 +95,12 @@ export const ApplyPatchTool = Tool.define(
             fileChanges.push({
               filePath,
               oldContent,
-              newContent,
+              newContent: next.text,
               type: "add",
               diff,
               additions,
               deletions,
+              bom: next.bom,
               encoding: "utf-8", // kilocode_change - new files default to utf-8
             })
 
@@ -109,15 +117,34 @@ export const ApplyPatchTool = Tool.define(
               )
             }
 
-            const oldContent = (yield* EncodedIO.read(filePath)).text // kilocode_change - encoding-aware read
+            // kilocode_change start - encoding-aware read so non-UTF-8 files decode without
+            // mojibake; the resulting diff, additions/deletions counts, and permission-prompt
+            // metadata shown to the user must reflect the real file contents.
+            const read = yield* EncodedIO.read(filePath).pipe(
+              Effect.catch((error) =>
+                Effect.fail(
+                  new Error(
+                    `apply_patch verification failed: ${error instanceof Error ? error.message : String(error)}`,
+                  ),
+                ),
+              ),
+            )
+            const source = Bom.split(read.text)
+            // kilocode_change end
+            const oldContent = source.text
             let newContent = oldContent
-            let encoding: string // kilocode_change - filled in by the patch helper below
+            let bom = source.bom
+            let encoding = read.encoding // kilocode_change - overwritten by deriveNewContentsFromChunks below
 
             // Apply the update chunks to get new content
             try {
-              const fileUpdate = Patch.deriveNewContentsFromChunks(filePath, hunk.chunks)
+              const fileUpdate = Patch.deriveNewContentsFromChunks(
+                filePath,
+                hunk.chunks,
+                Bom.join(source.text, source.bom),
+              )
               newContent = fileUpdate.content
-              encoding = fileUpdate.encoding // kilocode_change
+              bom = fileUpdate.bom
             } catch (error) {
               return yield* Effect.fail(new Error(`apply_patch verification failed: ${error}`))
             }
@@ -131,7 +158,7 @@ export const ApplyPatchTool = Tool.define(
               if (change.removed) deletions += change.count || 0
             }
 
-            const movePath = hunk.move_path ? path.resolve(Instance.directory, hunk.move_path) : undefined
+            const movePath = hunk.move_path ? path.resolve(instance.directory, hunk.move_path) : undefined
             yield* assertExternalDirectoryEffect(ctx, movePath)
 
             fileChanges.push({
@@ -143,6 +170,7 @@ export const ApplyPatchTool = Tool.define(
               diff,
               additions,
               deletions,
+              bom,
               encoding, // kilocode_change
             })
 
@@ -151,7 +179,7 @@ export const ApplyPatchTool = Tool.define(
           }
 
           case "delete": {
-            // kilocode_change start - encoding-aware read
+            // kilocode_change start - encoding-aware read so non-UTF-8 files decode without corruption
             const deleteRead = yield* EncodedIO.read(filePath).pipe(
               Effect.catch((error) =>
                 Effect.fail(
@@ -162,6 +190,7 @@ export const ApplyPatchTool = Tool.define(
               ),
             )
             const contentToDelete = deleteRead.text
+            const source = Bom.split(contentToDelete)
             // kilocode_change end
             const deleteDiff = trimDiff(createTwoFilesPatch(filePath, filePath, contentToDelete, ""))
 
@@ -175,6 +204,7 @@ export const ApplyPatchTool = Tool.define(
               diff: deleteDiff,
               additions: 0,
               deletions,
+              bom: source.bom,
               encoding: deleteRead.encoding, // kilocode_change
             })
 
@@ -187,7 +217,7 @@ export const ApplyPatchTool = Tool.define(
       // Build per-file metadata for UI rendering (used for both permission and result)
       const files = fileChanges.map((change) => ({
         filePath: change.filePath,
-        relativePath: path.relative(Instance.worktree, change.movePath ?? change.filePath).replaceAll("\\", "/"),
+        relativePath: path.relative(instance.worktree, change.movePath ?? change.filePath).replaceAll("\\", "/"),
         type: change.type,
         patch: change.diff,
         additions: change.additions,
@@ -196,7 +226,7 @@ export const ApplyPatchTool = Tool.define(
       }))
 
       // Check permissions if needed
-      const relativePaths = fileChanges.map((c) => path.relative(Instance.worktree, c.filePath).replaceAll("\\", "/"))
+      const relativePaths = fileChanges.map((c) => path.relative(instance.worktree, c.filePath).replaceAll("\\", "/"))
       yield* ctx.ask({
         permission: "edit",
         patterns: relativePaths,
@@ -216,19 +246,19 @@ export const ApplyPatchTool = Tool.define(
         switch (change.type) {
           case "add":
             // Create parent directories (recursive: true is safe on existing/root dirs)
-            yield* EncodedIO.write(change.filePath, change.newContent, change.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
+            yield* EncodedIO.write(change.filePath, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
             updates.push({ file: change.filePath, event: "add" })
             break
 
           case "update":
-            yield* EncodedIO.write(change.filePath, change.newContent, change.encoding) // kilocode_change - encoding-aware write replaces afs.writeWithDirs
+            yield* EncodedIO.write(change.filePath, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write replaces afs.writeWithDirs
             updates.push({ file: change.filePath, event: "change" })
             break
 
           case "move":
             if (change.movePath) {
               // Create parent directories (recursive: true is safe on existing/root dirs)
-              yield* EncodedIO.write(change.movePath!, change.newContent, change.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
+              yield* EncodedIO.write(change.movePath!, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
               yield* afs.remove(change.filePath)
               updates.push({ file: change.filePath, event: "unlink" })
               updates.push({ file: change.movePath, event: "add" })
@@ -242,7 +272,9 @@ export const ApplyPatchTool = Tool.define(
         }
 
         if (edited) {
-          yield* format.file(edited)
+          if (yield* format.file(edited)) {
+            yield* Bom.syncFile(afs, edited, change.bom)
+          }
           yield* bus.publish(File.Event.Edited, { file: edited })
         }
       }
@@ -256,20 +288,20 @@ export const ApplyPatchTool = Tool.define(
       for (const change of fileChanges) {
         if (change.type === "delete") continue
         const target = change.movePath ?? change.filePath
-        yield* lsp.touchFile(target, true)
+        yield* lsp.touchFile(target, "document")
       }
       const diagnostics = yield* lsp.diagnostics()
 
       // Generate output summary
       const summaryLines = fileChanges.map((change) => {
         if (change.type === "add") {
-          return `A ${path.relative(Instance.worktree, change.filePath).replaceAll("\\", "/")}`
+          return `A ${path.relative(instance.worktree, change.filePath).replaceAll("\\", "/")}`
         }
         if (change.type === "delete") {
-          return `D ${path.relative(Instance.worktree, change.filePath).replaceAll("\\", "/")}`
+          return `D ${path.relative(instance.worktree, change.filePath).replaceAll("\\", "/")}`
         }
         const target = change.movePath ?? change.filePath
-        return `M ${path.relative(Instance.worktree, target).replaceAll("\\", "/")}`
+        return `M ${path.relative(instance.worktree, target).replaceAll("\\", "/")}`
       })
       let output = `Success. Updated the following files:\n${summaryLines.join("\n")}`
 
@@ -284,7 +316,7 @@ export const ApplyPatchTool = Tool.define(
         const target = change.movePath ?? change.filePath
         const block = LSP.Diagnostic.report(target, diagnostics[AppFileSystem.normalizePath(target)] ?? [])
         if (!block) continue
-        const rel = path.relative(Instance.worktree, target).replaceAll("\\", "/")
+        const rel = path.relative(instance.worktree, target).replaceAll("\\", "/")
         output += `\n\nLSP errors detected in ${rel}, please fix:\n${block}`
       }
 
@@ -308,8 +340,9 @@ export const ApplyPatchTool = Tool.define(
 
     return {
       description: DESCRIPTION,
-      parameters: PatchParams,
-      execute: (params: z.infer<typeof PatchParams>, ctx: Tool.Context) => run(params, ctx).pipe(Effect.orDie),
+      parameters: Parameters,
+      execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
+        run(params, ctx).pipe(Effect.orDie),
     }
   }),
 )

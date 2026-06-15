@@ -11,16 +11,16 @@ import fs from "fs/promises"
 import path from "path"
 import { Effect, Layer, Option } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
-import { Config } from "../../src/config"
-import { EffectFlock } from "@opencode-ai/shared/util/effect-flock"
-import { Npm } from "../../src/npm"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import { Config } from "../../src/config/config"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
+import { Npm } from "@opencode-ai/core/npm"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Env } from "../../src/env"
 import { Auth } from "../../src/auth"
 import { Account } from "../../src/account/account"
-import { Instance } from "../../src/project/instance"
-import { Filesystem } from "../../src/util"
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
+import { provideTestInstance } from "../fixture/fixture"
+import { Filesystem } from "../../src/util/filesystem"
+import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { tmpdir } from "../fixture/fixture"
 
 const infra = CrossSpawnSpawner.defaultLayer.pipe(
@@ -39,7 +39,6 @@ const emptyAuth = Layer.mock(Auth.Service)({
 const noopNpm = Layer.mock(Npm.Service)({
   install: () => Effect.void,
   add: () => Effect.die("not implemented"),
-  outdated: () => Effect.succeed(false),
   which: () => Effect.succeed(Option.none()),
 })
 
@@ -59,7 +58,7 @@ test(".gitignore in .kilo config dir includes pnpm and yarn lockfile patterns", 
   const kilo = path.join(dir, ".kilo")
   await fs.mkdir(kilo, { recursive: true })
 
-  await Instance.provide({
+  await provideTestInstance({
     directory: dir,
     fn: async () => {
       await Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(testLayer)))

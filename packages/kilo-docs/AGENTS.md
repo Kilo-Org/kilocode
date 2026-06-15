@@ -38,13 +38,13 @@ If a docs page references a generated VS Code visual-regression screenshot, reco
 
 Image attributes:
 
-| Attribute | Type   | Required | Description                                 |
-| --------- | ------ | -------- | ------------------------------------------- |
-| `src`     | String | Yes      | The image source URL                        |
-| `alt`     | String | Yes      | Alternative text for the image              |
-| `width`   | String | No       | Width of the image (e.g., '500px', '80%')   |
-| `height`  | String | No       | Height of the image (e.g., '300px', 'auto') |
-| `caption` | String | No       | Caption displayed below the image           |
+| Attribute | Type | Required | Description |
+|---|---|---|---|
+| `src` | String | Yes | The image source URL |
+| `alt` | String | Yes | Alternative text for the image |
+| `width` | String | No | Width of the image (e.g., '500px', '80%') |
+| `height` | String | No | Height of the image (e.g., '300px', 'auto') |
+| `caption` | String | No | Caption displayed below the image |
 
 ### Callouts
 
@@ -58,11 +58,11 @@ You can report any bugs or feedback by chatting with us in our [Discord server](
 
 Callout attributes:
 
-| Attribute   | Type    | Default | Description                                       |
-| ----------- | ------- | ------- | ------------------------------------------------- |
-| `title`     | String  | -       | Optional custom title for the callout             |
-| `type`      | String  | "note"  | One of: generic, note, tip, info, warning, danger |
-| `collapsed` | Boolean | false   | When true, the callout starts collapsed           |
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `title` | String | - | Optional custom title for the callout |
+| `type` | String | "note" | One of: generic, note, tip, info, warning, danger |
+| `collapsed` | Boolean | false | When true, the callout starts collapsed |
 
 ### Codicons
 

@@ -6,6 +6,7 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
@@ -18,10 +19,18 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.IOException
+import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * Chat orchestrator that handles message sending, history loading,
@@ -38,6 +47,7 @@ class KiloBackendChatManager(
 ) {
     companion object {
         private val JSON_TYPE = "application/json".toMediaType()
+        private const val ENHANCE_TIMEOUT_MINUTES = 2L
 
         private val CHAT_EVENTS = setOf(
             "message.updated",
@@ -47,8 +57,10 @@ class KiloBackendChatManager(
             "message.part.removed",
             "session.turn.open",
             "session.turn.close",
+            "session.created",
             "session.error",
             "session.status",
+            "session.updated",
             "session.idle",
             "session.compacted",
             "session.diff",
@@ -78,6 +90,12 @@ class KiloBackendChatManager(
                     val parsed = KiloCliDataParser.parseChatEvent(event.type, event.data)
                     if (parsed != null) {
                         log.debug { ChatLogSummary.event(parsed) }
+                        if (parsed is ChatEventDto.SessionStatusChanged && parsed.status.type != "busy") {
+                            log.info(
+                                "${ChatLogSummary.sid(parsed.sessionID)} kind=status route=chat-events emit=true " +
+                                    "${ChatLogSummary.status(parsed.status)} bytes=${event.data.length}",
+                            )
+                        }
                         _events.emit(parsed)
                     } else {
                         log.warn("SSE parse returned null for type=${event.type} bytes=${event.data.length}")
@@ -97,6 +115,28 @@ class KiloBackendChatManager(
     }
 
     // ------ prompt ------
+
+    suspend fun enhancePrompt(dir: String, text: String): String {
+        val http = requireClient()
+        val url = requireBase()
+        val body = KiloCliDataParser.buildEnhancePromptJson(text)
+        val request = Request.Builder()
+            .url("$url/enhance-prompt?directory=${encode(dir)}")
+            .post(body.toRequestBody(JSON_TYPE))
+            .build()
+        val call = http.newCall(request)
+        call.timeout().timeout(ENHANCE_TIMEOUT_MINUTES, TimeUnit.MINUTES)
+
+        return call.await().use { response ->
+            val raw = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                log.warn("enhance prompt failed: HTTP ${response.code}")
+                raw.takeIf { it.isNotBlank() }?.let { log.debug { "kind=enhancePrompt error=${ChatLogSummary.body(it)}" } }
+                throw RuntimeException("Enhance prompt failed: HTTP ${response.code}")
+            }
+            KiloCliDataParser.parseEnhancedPrompt(raw)
+        }
+    }
 
     fun prompt(id: String, dir: String, prompt: PromptDto) {
         val meta = if (log.isDebugEnabled) {
@@ -153,6 +193,37 @@ class KiloBackendChatManager(
                 return
             }
             log.debug { "${ChatLogSummary.sid(id)} kind=abort op=abort ok=true code=${response.code}" }
+        }
+    }
+
+    // ------ compact ------
+
+    fun compact(id: String, dir: String, model: ModelSelectionDto) {
+        log.info("${ChatLogSummary.sid(id)} kind=compact ${ChatLogSummary.dir(dir)} model=${model.providerID}/${model.modelID} op=summarize")
+        val http = requireClient()
+        val url = requireBase()
+        val body = KiloCliDataParser.buildSummarizeJson(model)
+        val request = Request.Builder()
+            .url("$url/session/$id/summarize?directory=${encode(dir)}")
+            .post(body.toRequestBody(JSON_TYPE))
+            .build()
+
+        try {
+            http.newCall(request).execute().use { response ->
+                val code = response.code
+                if (!response.isSuccessful) {
+                    val raw = response.body?.string()
+                    log.warn("summarize failed: HTTP $code")
+                    raw?.let { log.debug { "${ChatLogSummary.sid(id)} kind=compact op=summarize error=${ChatLogSummary.body(it)}" } }
+                    throw RuntimeException("summarize failed: HTTP $code")
+                }
+                log.debug { "${ChatLogSummary.sid(id)} kind=compact op=summarize ok=true code=$code" }
+            }
+        } catch (e: RuntimeException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("${ChatLogSummary.sid(id)} kind=compact op=summarize dir=${ChatLogSummary.dir(dir)} failed message=${e.message}", e)
+            throw RuntimeException("summarize HTTP call failed: ${e.message}", e)
         }
     }
 
@@ -283,6 +354,19 @@ class KiloBackendChatManager(
 
     private fun requireBase(): String =
         base ?: throw IllegalStateException("Chat manager not started")
+
+    private suspend fun Call.await(): Response = suspendCancellableCoroutine { cont ->
+        cont.invokeOnCancellation { cancel() }
+        enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                if (!cont.isCancelled) cont.resumeWithException(e)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                cont.resume(response) { _, value, _ -> value.close() }
+            }
+        })
+    }
 
     private fun encode(value: String): String =
         java.net.URLEncoder.encode(value, "UTF-8")

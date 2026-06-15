@@ -7,6 +7,7 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharedFlow
+import okhttp3.OkHttpClient
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -28,6 +29,8 @@ class KiloBackendWorkspaceManager(
     private val workspaces = ConcurrentHashMap<String, KiloBackendWorkspace>()
 
     private var api: DefaultApi? = null
+    private var http: OkHttpClient? = null
+    private var port = 0
     private var events: SharedFlow<SseEvent>? = null
 
     /**
@@ -35,9 +38,11 @@ class KiloBackendWorkspaceManager(
      * Called by [KiloBackendAppService] after [KiloAppState.Ready].
      * Clears any stale workspaces from a previous connection.
      */
-    fun start(api: DefaultApi, events: SharedFlow<SseEvent>) {
+    fun start(api: DefaultApi, http: OkHttpClient, port: Int, events: SharedFlow<SseEvent>) {
         stop()
         this.api = api
+        this.http = http
+        this.port = port
         this.events = events
         log.info("Workspace manager started")
     }
@@ -49,6 +54,8 @@ class KiloBackendWorkspaceManager(
         workspaces.values.forEach { it.stop() }
         workspaces.clear()
         api = null
+        http = null
+        port = 0
         events = null
         log.info("Workspace manager stopped")
     }
@@ -59,10 +66,11 @@ class KiloBackendWorkspaceManager(
      */
     fun get(dir: String): KiloBackendWorkspace {
         val client = api ?: throw IllegalStateException("Workspace manager not started")
+        val http = http ?: throw IllegalStateException("Workspace manager not started")
         val ev = events!!
         return workspaces.computeIfAbsent(dir) { d ->
             log.info("Creating workspace for $d")
-            KiloBackendWorkspace(d, cs, client, ev, sessions, log).also { it.load() }
+            KiloBackendWorkspace(d, cs, client, http, port, ev, sessions, log).also { it.load() }
         }
     }
 

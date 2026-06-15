@@ -1,4 +1,6 @@
 ---
+title: "Using LM Studio with Kilo Code | Local LLMs"
+description: "Run local LLMs in Kilo Code by connecting to LM Studio's OpenAI-compatible server. Setup guide for VS Code and the CLI."
 sidebar_label: LM Studio
 ---
 
