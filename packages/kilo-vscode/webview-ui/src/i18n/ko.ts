@@ -525,6 +525,8 @@ export const dict = {
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",
   "notification.permission.description": "{{projectName}}의 {{sessionTitle}}에서 권한이 필요합니다",
   "ui.permission.manageAutoApprove": "자동 승인 규칙 관리",
+  "ui.permission.doomLoop.prompt": "{{tool}} 도구에서 잠재적인 반복 실행이 감지되었습니다. 계속 실행하시겠습니까?",
+  "ui.permission.doomLoop.rule": "{{tool}} 호출 계속",
   "ui.permission.rule.addToAllowed": "허용 목록에 추가",
   "ui.permission.rule.removeFromAllowed": "허용 목록에서 제거",
   "ui.permission.rule.addToDenied": "거부 목록에 추가",
@@ -827,6 +829,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "하위 에이전트 모델",
   "settings.providers.subagentModel.description":
     "task-tool 하위 에이전트의 기본 모델 및 추론 수준입니다. 호출하는 에이전트의 모델을 상속하려면 비워 두세요.",
+  "settings.models.hidePromptTraining.title": "프롬프트를 학습에 사용하는 모델 숨기기",
+  "settings.models.hidePromptTraining.description":
+    "제공업체가 사용자의 프롬프트를 학습에 사용할 수 있는 Kilo Gateway 모델을 숨깁니다.",
   "settings.providers.modeModels": "모드별 모델",
   "settings.providers.custom.note": "Base URL로 OpenAI 호환 공급자를 추가합니다.",
   "settings.providers.modeModels.description":

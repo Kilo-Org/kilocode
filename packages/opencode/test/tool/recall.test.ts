@@ -4,11 +4,10 @@ import { $ } from "bun"
 import { Effect } from "effect"
 import { Session } from "../../src/session/session"
 import path from "path"
-import { WithInstance } from "../../src/project/with-instance"
 import { RecallTool } from "../../src/tool/recall"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { resetDatabase } from "../fixture/db"
-import { tmpdir } from "../fixture/fixture"
+import { provideTestInstance, tmpdir } from "../fixture/fixture"
 import type { Tool } from "../../src/tool/tool"
 import { SessionID, MessageID } from "../../src/session/schema"
 import { RemoteSender } from "../../src/kilo-sessions/remote-sender"
@@ -33,8 +32,7 @@ afterEach(async () => {
   await resetDatabase()
 })
 
-const create = (title: string) =>
-  Effect.runPromise(Session.Service.use((svc) => svc.create({ title })).pipe(Effect.provide(Session.defaultLayer)))
+const create = (title: string) => AppRuntime.runPromise(Session.Service.use((svc) => svc.create({ title })))
 
 describe("tool.recall", () => {
   test("search is limited to the current project worktrees", async () => {
@@ -47,20 +45,20 @@ describe("tool.recall", () => {
       await Bun.write(path.join(first.path, ".git", "opencode"), "stale-project-id")
 
       try {
-        await WithInstance.provide({
+        await provideTestInstance({
           directory: first.path,
           fn: () => create("search-target root"),
         })
-        await WithInstance.provide({
+        await provideTestInstance({
           directory: worktree,
           fn: () => create("search-target worktree"),
         })
-        await WithInstance.provide({
+        await provideTestInstance({
           directory: second.path,
           fn: () => create("search-target other"),
         })
 
-        const result = await WithInstance.provide({
+        const result = await provideTestInstance({
           directory: first.path,
           fn: async () => {
             const info = await AppRuntime.runPromise(RecallTool)
@@ -85,12 +83,12 @@ describe("tool.recall", () => {
     await using second = await tmpdir({ git: true })
 
     try {
-      const session = await WithInstance.provide({
+      const session = await provideTestInstance({
         directory: second.path,
         fn: () => create("other-project-session"),
       })
 
-      const err = await WithInstance.provide({
+      const err = await provideTestInstance({
         directory: first.path,
         fn: async () => {
           const info = await AppRuntime.runPromise(RecallTool)
@@ -117,12 +115,12 @@ describe("tool.recall", () => {
       await Bun.write(path.join(first.path, ".git", "opencode"), "stale-project-id")
 
       try {
-        const session = await WithInstance.provide({
+        const session = await provideTestInstance({
           directory: worktree,
           fn: () => create("worktree readable"),
         })
 
-        const result = await WithInstance.provide({
+        const result = await provideTestInstance({
           directory: first.path,
           fn: async () => {
             const info = await AppRuntime.runPromise(RecallTool)

@@ -215,7 +215,7 @@ const live: Layer.Layer<
           maxOutputTokens:
             input.model.api.npm === "@ai-sdk/openai-compatible" && input.model.api.id.toLowerCase().includes("gpt-5")
               ? undefined
-              : ProviderTransform.maxOutputTokens(input.model),
+              : ProviderTransform.maxOutputTokens(input.model, flags.outputTokenMax),
           // kilocode_change end
           options,
         },
@@ -296,7 +296,7 @@ const live: Layer.Layer<
         KiloSessionOverflow.shouldCompact({
           cfg,
           model: input.model,
-          usable: usable({ cfg, model: input.model }),
+          usable: usable({ cfg, model: input.model, outputTokenMax: flags.outputTokenMax }), // kilocode_change
           tokens: usage.normalized,
           continuation: usage.continuation,
         })
@@ -346,7 +346,7 @@ const live: Layer.Layer<
 
         const bridge = yield* EffectBridge.make()
         const approvedToolsForSession = new Set<string>()
-        workflowModel.approvalHandler = InstanceState.bind(async (approvalTools) => {
+        workflowModel.approvalHandler = bridge.bind(async (approvalTools) => {
           const uniqueNames = [...new Set(approvalTools.map((t: { name: string }) => t.name))] as string[]
           // Auto-approve tools that were already approved in this session
           // (prevents infinite approval loops for server-side MCP tools)

@@ -1,7 +1,6 @@
 import type { TuiPluginApi } from "@kilocode/plugin/tui"
 import { createMemo, For, type Accessor } from "solid-js"
 import { DEFAULT_THEMES, useTheme } from "@tui/context/theme"
-import { Flag } from "@opencode-ai/core/flag/flag"
 import { useCommandShortcut } from "../../keymap"
 
 const themeCount = Object.keys(DEFAULT_THEMES).length
@@ -29,8 +28,6 @@ type Shortcuts = {
   messagesToggleConceal: TipShortcut
   modelCycleRecent: TipShortcut
   modelList: TipShortcut
-  sessionCycleRecent: TipShortcut
-  sessionCycleRecentReverse: TipShortcut
   sessionExport: TipShortcut
   sessionInterrupt: TipShortcut
   sessionList: TipShortcut
@@ -41,7 +38,6 @@ type Shortcuts = {
   sessionQuickSwitch9: TipShortcut
   sessionSidebarToggle: TipShortcut
   sessionTimeline: TipShortcut
-  sessionToggleRecent: TipShortcut
   statusView: TipShortcut
   terminalSuspend: TipShortcut
   themeList: TipShortcut
@@ -73,6 +69,7 @@ function parse(tip: string): TipPart[] {
 }
 
 const NO_MODELS_TIP = "Run {highlight}/connect{/highlight} to add an AI provider and start coding"
+const NO_MODELS_PARTS = parse(NO_MODELS_TIP)
 
 function shortcutText(value: string) {
   return `{highlight}${value}{/highlight}`
@@ -121,8 +118,6 @@ export function Tips(props: { api: TuiPluginApi; connected?: boolean }) {
     messagesToggleConceal: configShortcut(props.api, "session.toggle.conceal"),
     modelCycleRecent: useCommandShortcut("model.cycle_recent"),
     modelList: useCommandShortcut("model.list"),
-    sessionCycleRecent: useCommandShortcut("session.cycle_recent"),
-    sessionCycleRecentReverse: useCommandShortcut("session.cycle_recent_reverse"),
     sessionExport: configShortcut(props.api, "session.export"),
     sessionInterrupt: configShortcut(props.api, "session.interrupt"),
     sessionList: useCommandShortcut("session.list"),
@@ -133,7 +128,6 @@ export function Tips(props: { api: TuiPluginApi; connected?: boolean }) {
     sessionQuickSwitch9: useCommandShortcut("session.quick_switch.9"),
     sessionSidebarToggle: configShortcut(props.api, "session.sidebar.toggle"),
     sessionTimeline: configShortcut(props.api, "session.timeline"),
-    sessionToggleRecent: configShortcut(props.api, "session.toggle.recent"),
     statusView: useCommandShortcut("opencode.status"),
     terminalSuspend: useCommandShortcut("terminal.suspend"),
     themeList: useCommandShortcut("theme.switch"),
@@ -145,8 +139,13 @@ export function Tips(props: { api: TuiPluginApi; connected?: boolean }) {
       return value ? [value] : []
     })
     return tips[Math.floor(tipOffset * tips.length)] ?? NO_MODELS_TIP
-  })
-  const parts = createMemo(() => parse(tip()))
+  }, NO_MODELS_TIP)
+  // Solid can expose a memo's initial value while a pure computation is pending.
+  const parts = createMemo(() => {
+    const value = tip()
+    if (typeof value === "string") return parse(value)
+    return NO_MODELS_PARTS
+  }, NO_MODELS_PARTS)
 
   return (
     <box flexDirection="row" maxWidth="100%">
@@ -176,23 +175,12 @@ const TIPS: Tip[] = [
   (shortcuts) => `Use ${commandText("/models", shortcuts.modelList())} to see and switch between available AI models`,
   (shortcuts) => `Use ${commandText("/themes", shortcuts.themeList())} to switch between ${themeCount} built-in themes`,
   (shortcuts) => `Use ${commandText("/new", shortcuts.sessionNew())} to start a fresh conversation session`,
-  (shortcuts) => `Use ${commandText("/sessions", shortcuts.sessionList())} to list and continue previous conversations`,
-  ...(Flag.KILO_EXPERIMENTAL_SESSION_SWITCHING
-    ? ([
-        (shortcuts) =>
-          press(shortcuts.sessionPinToggle(), "in the session list to pin a session so it stays at the top"),
-        (shortcuts) =>
-          shortcuts.sessionQuickSwitch1() && shortcuts.sessionQuickSwitch9()
-            ? `Pinned and recent sessions are bound to ${shortcutText(shortcuts.sessionQuickSwitch1())} through ${shortcutText(shortcuts.sessionQuickSwitch9())} for one-press switching`
-            : undefined,
-        (shortcuts) =>
-          shortcuts.sessionCycleRecent() && shortcuts.sessionCycleRecentReverse()
-            ? `Press ${shortcutText(shortcuts.sessionCycleRecent())} / ${shortcutText(shortcuts.sessionCycleRecentReverse())} to cycle through recently visited sessions`
-            : undefined,
-        (shortcuts) =>
-          press(shortcuts.sessionToggleRecent(), "in the session list to show or hide a session in the Recent group"),
-      ] satisfies Tip[])
-    : []),
+  (shortcuts) => `Use ${commandText("/sessions", shortcuts.sessionList())} to list, pin, and continue sessions`,
+  (shortcuts) => press(shortcuts.sessionPinToggle(), "in the session list to pin a session so it stays at the top"),
+  (shortcuts) =>
+    shortcuts.sessionQuickSwitch1() && shortcuts.sessionQuickSwitch9()
+      ? `Pinned sessions are assigned quick slots; use ${shortcutText(shortcuts.sessionQuickSwitch1())} through ${shortcutText(shortcuts.sessionQuickSwitch9())} to switch`
+      : undefined,
   "Run {highlight}/compact{/highlight} to summarize long sessions near context limits",
   (shortcuts) => `Use ${commandText("/export", shortcuts.sessionExport())} to save the conversation as Markdown`,
   (shortcuts) => press(shortcuts.messagesCopy(), "to copy the assistant's last message to clipboard"),
@@ -245,15 +233,15 @@ const TIPS: Tip[] = [
   "Tool definitions can invoke scripts written in Python, Go, etc",
   "Add {highlight}.ts{/highlight} files to {highlight}.opencode/plugins/{/highlight} for event hooks",
   "Use plugins to send OS notifications when sessions complete",
-  "Create a plugin to prevent Kilo from reading sensitive files", // kilocode_change
+  "Create a plugin to prevent Kilo from reading sensitive files",
   "Use {highlight}kilo run{/highlight} for non-interactive scripting", // kilocode_change
   "Use {highlight}kilo --continue{/highlight} to resume the last session", // kilocode_change
   "Use {highlight}kilo run -f file.ts{/highlight} to attach files via CLI", // kilocode_change
   "Use {highlight}--format json{/highlight} for machine-readable output in scripts",
-  "Run {highlight}kilo serve{/highlight} for headless API access to Kilo", // kilocode_change
+  "Run {highlight}kilo serve{/highlight} for headless API access to Kilo",
   "Use {highlight}kilo run --attach{/highlight} to connect to a running server", // kilocode_change
-  "Run {highlight}kilo upgrade{/highlight} to update to the latest version", // kilocode_change
-  "Run {highlight}kilo auth list{/highlight} to see all configured providers", // kilocode_change
+  "Run {highlight}kilo upgrade{/highlight} to update to the latest version",
+  "Run {highlight}kilo auth list{/highlight} to see all configured providers",
   "Run {highlight}kilo agent create{/highlight} for guided agent creation", // kilocode_change
   "Use {highlight}/opencode{/highlight} in GitHub issues/PRs to trigger AI actions",
   "Run {highlight}kilo github install{/highlight} to set up the GitHub workflow", // kilocode_change

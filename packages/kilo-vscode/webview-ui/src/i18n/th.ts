@@ -524,6 +524,8 @@ export const dict = {
   "notification.permission.titleSubagent": "ต้องการสิทธิ์ (ตัวแทนย่อย)",
   "notification.permission.description": "{{sessionTitle}} ใน {{projectName}} ต้องการสิทธิ์",
   "ui.permission.manageAutoApprove": "จัดการกฎการอนุมัติอัตโนมัติ",
+  "ui.permission.doomLoop.prompt": "ตรวจพบการวนซ้ำที่อาจเกิดขึ้นในเครื่องมือ {{tool}} ต้องการดำเนินการต่อหรือไม่",
+  "ui.permission.doomLoop.rule": "เรียกใช้ {{tool}} ต่อไป",
   "ui.permission.rule.addToAllowed": "เพิ่มไปยังรายการที่อนุญาต",
   "ui.permission.rule.removeFromAllowed": "นำออกจากรายการที่อนุญาต",
   "ui.permission.rule.addToDenied": "เพิ่มไปยังรายการที่ถูกปฏิเสธ",
@@ -861,6 +863,8 @@ export const dict = {
   "settings.providers.subagentModel.title": "โมเดลตัวแทนย่อย",
   "settings.providers.subagentModel.description":
     "โมเดลเริ่มต้นและระดับการใช้เหตุผลสำหรับตัวแทนย่อยของ task-tool ปล่อยว่างไว้เพื่อรับค่าโมเดลจากตัวแทนที่เรียก",
+  "settings.models.hidePromptTraining.title": "ซ่อนโมเดลที่ใช้พรอมต์ในการฝึก",
+  "settings.models.hidePromptTraining.description": "ซ่อนโมเดล Kilo Gateway ที่ผู้ให้บริการอาจใช้พรอมต์ของคุณในการฝึก",
   "settings.providers.modeModels": "โมเดลต่อโหมด",
   "settings.providers.custom.note": "เพิ่มผู้ให้บริการที่รองรับ OpenAI ด้วย Base URL",
   "settings.providers.modeModels.description":

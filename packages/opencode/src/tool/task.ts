@@ -30,6 +30,14 @@ export interface TaskPromptOps {
 }
 
 const id = "task"
+const BACKGROUND_DESCRIPTION = [
+  "",
+  "",
+  [
+    "Background mode: background=true launches the subagent asynchronously.",
+    "Use task_status(task_id=..., wait=false) to poll, or wait=true to block until done.",
+  ].join(" "),
+].join("\n")
 
 const BaseParameters = Schema.Struct({
   description: Schema.String.annotate({ description: "A short (3-5 words) description of the task" }),
@@ -398,9 +406,12 @@ export const TaskTool = Tool.define(
                 const costAfter = yield* KiloCostPropagation.childCost(sessions, nextSession.id).pipe(
                   Effect.catchTag("NotFoundError", () => Effect.succeed(costBefore)),
                 )
-                yield* KiloCostPropagation.propagate(sessions, ctx.sessionID, ctx.messageID, costAfter - costBefore).pipe(
-                  Effect.catchTag("NotFoundError", () => Effect.void),
-                )
+                yield* KiloCostPropagation.propagate(
+                  sessions,
+                  ctx.sessionID,
+                  ctx.messageID,
+                  costAfter - costBefore,
+                ).pipe(Effect.catchTag("NotFoundError", () => Effect.void))
               }),
             ),
           ),
@@ -409,7 +420,7 @@ export const TaskTool = Tool.define(
     })
 
     return {
-      description: DESCRIPTION,
+      description: flags.experimentalBackgroundSubagents ? DESCRIPTION + BACKGROUND_DESCRIPTION : DESCRIPTION,
       parameters: Parameters,
       jsonSchema: flags.experimentalBackgroundSubagents ? undefined : ToolJsonSchema.fromSchema(BaseParameters),
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>

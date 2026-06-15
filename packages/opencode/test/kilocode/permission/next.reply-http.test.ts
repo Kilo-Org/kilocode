@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { WithInstance } from "../../../src/project/with-instance"
+import { provideTestInstance } from "../../fixture/fixture"
 import { tmpdir } from "../../fixture/fixture"
 
 async function app() {
@@ -11,7 +11,7 @@ describe("POST /permission/:requestID/reply", () => {
   test("returns 404 when requestID is not pending", async () => {
     await using tmp = await tmpdir({ git: true })
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const server = await app()
@@ -35,7 +35,7 @@ describe("POST /permission/:requestID/always-rules", () => {
   test("returns 404 when requestID is not pending", async () => {
     await using tmp = await tmpdir({ git: true })
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const server = await app()

@@ -527,6 +527,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Tilladelse påkrævet (underagent)",
   "notification.permission.description": "{{sessionTitle}} i {{projectName}} kræver tilladelse",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkendelse",
+  "ui.permission.doomLoop.prompt": "Der blev registreret en mulig løkke for værktøjet {{tool}}. Fortsæt kørslen?",
+  "ui.permission.doomLoop.rule": "Fortsæt {{tool}}-kald",
   "ui.permission.rule.addToAllowed": "Tilføj til tilladelseslisten",
   "ui.permission.rule.removeFromAllowed": "Fjern fra tilladelseslisten",
   "ui.permission.rule.addToDenied": "Tilføj til afvisningslisten",
@@ -869,6 +871,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Underagentmodel",
   "settings.providers.subagentModel.description":
     "Standardmodel og ræsonnementsindsats for task-tool-underagenter. Lad den være tom for at nedarve den kaldende agents model.",
+  "settings.models.hidePromptTraining.title": "Skjul modeller, der træner på prompts",
+  "settings.models.hidePromptTraining.description":
+    "Skjul Kilo Gateway-modeller, hvis udbydere muligvis bruger dine prompts til træning.",
   "settings.providers.modeModels": "Model pr. tilstand",
   "settings.providers.custom.note": "Tilføj en OpenAI-kompatibel udbyder via basis-URL.",
   "settings.providers.modeModels.description":

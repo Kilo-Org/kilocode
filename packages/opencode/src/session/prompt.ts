@@ -56,15 +56,16 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Truncate } from "@/tool/truncate"
 import { Image } from "@/image/image"
 import { decodeDataUrl } from "@/util/data-url"
-import { Cause, Effect, Exit, Latch, Layer, Option, Scope, Context, Schema, Types } from "effect" // kilocode_change - Process moved to the timeout helper
+import { Cause, Effect, Exit, Latch, Layer, Option, Scope, Context, Schema, Types } from "effect"
 import * as EffectLogger from "@opencode-ai/core/effect/logger"
 import { InstanceState } from "@/effect/instance-state"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
 import { SessionRunState } from "./run-state"
 import { EffectBridge } from "@/effect/bridge"
-import { SyncEvent } from "@/sync" // kilocode_change - preserve Kilo v2 event dual-write wiring
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { SessionEvent } from "@/v2/session-event"
+import { EventV2 } from "@opencode-ai/core/event"
+import { EventV2Bridge } from "@/event-v2-bridge"
+import { SessionEvent } from "@opencode-ai/core/session-event"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { AgentAttachment, FileAttachment, ReferenceAttachment, Source } from "@opencode-ai/core/session-prompt"
@@ -223,7 +224,7 @@ export const layer = Layer.effect(
     const sys = yield* SystemPrompt.Service
     const llm = yield* LLM.Service
     const references = yield* Reference.Service
-    const sync = yield* SyncEvent.Service // kilocode_change - preserve Kilo v2 event dual-write wiring
+    const events = yield* EventV2Bridge.Service
     const flags = yield* RuntimeFlags.Service
     const runner = Effect.fn("SessionPrompt.runner")(function* () {
       return yield* EffectBridge.make()
@@ -962,7 +963,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
               throw error
             }
-            const model = input.model ?? agent.model ?? (yield* currentModel(input.sessionID)) // kilocode_change
+            const model = input.model ?? agent.model ?? (yield* currentModel(input.sessionID))
             const userMsg: MessageV2.User = {
               id: input.messageID ?? MessageID.ascending(),
               sessionID: input.sessionID,
@@ -1013,16 +1014,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               },
             }
             yield* sessions.updatePart(part)
-            // kilocode_change start - preserve Kilo v2 shell event dual-write
             if (flags.experimentalEventSystem) {
-              yield* sync.run(SessionEvent.Shell.Started.Sync, {
+              yield* events.publish(SessionEvent.Shell.Started, {
                 sessionID: input.sessionID,
                 timestamp: DateTime.makeUnsafe(started),
-                callID,
+                callID: part.callID,
                 command: input.command,
               })
             }
-            // kilocode_change end
             return { msg, part, cwd: ctx.directory }
           }).pipe(Effect.ensuring(markReady))
 
@@ -1040,16 +1039,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               }
               if (timeout) output += "\n\n" + ["<metadata>", timeout, "</metadata>"].join("\n") // kilocode_change
               const completed = Date.now()
-              // kilocode_change start - preserve Kilo v2 shell event dual-write
               if (flags.experimentalEventSystem) {
-                yield* sync.run(SessionEvent.Shell.Ended.Sync, {
+                yield* events.publish(SessionEvent.Shell.Ended, {
                   sessionID: input.sessionID,
                   timestamp: DateTime.makeUnsafe(completed),
                   callID: part.callID,
                   output,
                 })
               }
-              // kilocode_change end
               if (!msg.time.completed) {
                 msg.time.completed = completed
                 yield* sessions.updateMessage(msg)
@@ -1136,7 +1133,6 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       return yield* Effect.die(err)
     })
 
-    // kilocode_change start - preserve persisted per-session model selection
     const currentModel = Effect.fnUntraced(function* (sessionID: SessionID) {
       const current = Database.use((db) =>
         db.select({ model: SessionTable.model }).from(SessionTable).where(eq(SessionTable.id, sessionID)).get(),
@@ -1154,7 +1150,6 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       if (Option.isSome(match) && match.value.info.role === "user") return match.value.info.model
       return yield* provider.defaultModel()
     })
-    // kilocode_change end
 
     const createUserMessage = Effect.fn("SessionPrompt.createUserMessage")(function* (input: PromptInput) {
       const agentName = input.agent
@@ -1174,7 +1169,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           .where(eq(SessionTable.id, input.sessionID))
           .get(),
       )
-      const model = input.model ?? ag.model ?? (yield* currentModel(input.sessionID)) // kilocode_change
+      const model = input.model ?? ag.model ?? (yield* currentModel(input.sessionID))
       const same = ag.model && model.providerID === ag.model.providerID && model.modelID === ag.model.modelID
       const full =
         !input.variant && ag.variant && same
@@ -1202,7 +1197,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       }
 
       if (current?.agent !== info.agent) {
-        yield* sync.run(SessionEvent.AgentSwitched.Sync, {
+        yield* events.publish(SessionEvent.AgentSwitched, {
           sessionID: input.sessionID,
           timestamp: DateTime.makeUnsafe(info.time.created),
           agent: info.agent,
@@ -1213,7 +1208,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         current.model.id !== info.model.modelID ||
         (current.model.variant === "default" ? undefined : current.model.variant) !== info.model.variant
       ) {
-        yield* sync.run(SessionEvent.ModelSwitched.Sync, {
+        yield* events.publish(SessionEvent.ModelSwitched, {
           sessionID: input.sessionID,
           timestamp: DateTime.makeUnsafe(info.time.created),
           model: {
@@ -1678,10 +1673,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           synthetic: [] as string[],
         },
       )
-      // kilocode_change start - preserve Kilo v2 prompt event dual-write
       // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
       if (flags.experimentalEventSystem) {
-        yield* sync.run(SessionEvent.Prompted.Sync, {
+        yield* events.publish(SessionEvent.Prompted, {
           sessionID: input.sessionID,
           timestamp: DateTime.makeUnsafe(info.time.created),
           prompt: {
@@ -1695,14 +1689,13 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       for (const text of nextPrompt.synthetic) {
         // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
         if (flags.experimentalEventSystem) {
-          yield* sync.run(SessionEvent.Synthetic.Sync, {
+          yield* events.publish(SessionEvent.Synthetic, {
             sessionID: input.sessionID,
             timestamp: DateTime.makeUnsafe(info.time.created),
             text,
           })
         }
       }
-      // kilocode_change end
 
       return { info, parts }
     }, Effect.scoped)
@@ -1751,7 +1744,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           input.sessionID,
           message.info.id,
           bridge.run(
-            loop({ sessionID: input.sessionID, snapshotInitialization: input.snapshotInitialization }).pipe(Effect.orDie),
+            loop({ sessionID: input.sessionID, snapshotInitialization: input.snapshotInitialization }).pipe(
+              Effect.orDie,
+            ),
           ), // kilocode_change
           bridge.run(lastAssistant(input.sessionID)),
         )
@@ -1779,9 +1774,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     // kilocode_change start - retain request-scoped snapshot initialization policy
     const runLoop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts, NotFoundError> = Effect.fn(
       "SessionPrompt.run",
-    )(function* (
-      input: LoopInput,
-    ) {
+    )(function* (input: LoopInput) {
       const sessionID = input.sessionID
       // kilocode_change end
       // kilocode_change — cache environment details per turn (prompt caching)
@@ -2168,9 +2161,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
     const loop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts, NotFoundError> = Effect.fn(
       "SessionPrompt.loop",
-    )(function* (
-      input: LoopInput,
-    ) {
+    )(function* (input: LoopInput) {
       // kilocode_change start
       yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
       yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
@@ -2266,7 +2257,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           if (cmdAgent?.model) return cmdAgent.model
         }
         if (input.model) return Provider.parseModel(input.model)
-        return yield* currentModel(input.sessionID) // kilocode_change
+        return yield* currentModel(input.sessionID)
       })
 
       yield* getModel(taskModel.providerID, taskModel.modelID, input.sessionID)
@@ -2300,7 +2291,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       const userModel = isSubtask
         ? input.model
           ? Provider.parseModel(input.model)
-          : yield* currentModel(input.sessionID) // kilocode_change
+          : yield* currentModel(input.sessionID)
         : taskModel
 
       yield* plugin.trigger(
@@ -2354,7 +2345,6 @@ export const defaultLayer = Layer.suspend(() =>
       Layer.provide(Truncate.defaultLayer),
     )
     .pipe(
-      Layer.provide(Image.defaultLayer), // kilocode_change - provide user image normalization service
       Layer.provide(Provider.defaultLayer),
       Layer.provide(Config.defaultLayer),
       Layer.provide(Instruction.defaultLayer),
@@ -2363,15 +2353,16 @@ export const defaultLayer = Layer.suspend(() =>
       Layer.provide(Session.defaultLayer),
       Layer.provide(SessionRevert.defaultLayer),
       Layer.provide(SessionSummary.defaultLayer),
+      Layer.provide(Image.defaultLayer), // kilocode_change - provide user image normalization service
       Layer.provide(
         Layer.mergeAll(
+          EventV2Bridge.defaultLayer,
           Agent.defaultLayer,
           SystemPrompt.defaultLayer,
           LLM.defaultLayer,
           Reference.defaultLayer,
           Bus.layer,
           CrossSpawnSpawner.defaultLayer,
-          SyncEvent.defaultLayer, // kilocode_change - provide Kilo v2 event dual-write service
           RuntimeFlags.defaultLayer,
         ),
       ),

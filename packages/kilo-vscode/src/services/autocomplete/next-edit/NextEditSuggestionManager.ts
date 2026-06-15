@@ -122,10 +122,6 @@ export class NextEditSuggestionManager implements vscode.Disposable {
     return this.pending !== null
   }
 
-  public getPending(): PendingNextEdit | null {
-    return this.pending
-  }
-
   public setPending(p: PendingNextEdit): void {
     this.clearDecorations()
     this.pending = p

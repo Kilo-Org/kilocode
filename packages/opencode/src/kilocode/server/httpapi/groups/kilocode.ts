@@ -48,7 +48,7 @@ export const KilocodeApi = HttpApi.make("kilocode")
           OpenApi.annotations({
             identifier: "kilocode.removeSkill",
             summary: "Remove a skill",
-            description: "Remove a skill by deleting its directory from disk and clearing it from cache.",
+            description: "Remove a skill by deleting its manifest from disk and clearing it from cache.",
           }),
         ),
         HttpApiEndpoint.post("removeAgent", KilocodePaths.removeAgent, {
