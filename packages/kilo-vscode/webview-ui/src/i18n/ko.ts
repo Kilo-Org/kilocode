@@ -126,7 +126,7 @@ export const dict = {
   "dialog.model.expand": "펼치기",
   "dialog.model.collapse": "접기",
 
-  "dialog.model.unpaid.freeModels.title": "Kilo에서 제공하는 무료 모델",
+  "dialog.model.unpaid.freeModels.title": "LLMAPI에서 제공하는 무료 모델",
   "dialog.model.unpaid.addMore.title": "인기 공급자의 모델 추가",
 
   "dialog.provider.viewAll": "더 많은 공급자 보기",
@@ -139,7 +139,7 @@ export const dict = {
   "provider.connect.status.waiting": "인증 대기 중...",
   "provider.connect.status.failed": "인증 실패: {{error}}",
   "provider.connect.apiKey.description":
-    "{{provider}} API 키를 입력하여 계정을 연결하고 Kilo에서 {{provider}} 모델을 사용하세요.",
+    "{{provider}} API 키를 입력하여 계정을 연결하고 LLMAPI에서 {{provider}} 모델을 사용하세요.",
   "provider.connect.apiKey.description.local":
     "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
   "provider.connect.atomicChat.description":
@@ -168,7 +168,7 @@ export const dict = {
   "provider.connect.oauth.code.visit.prefix": "",
   "provider.connect.oauth.code.visit.link": "이 링크",
   "provider.connect.oauth.code.visit.suffix":
-    "를 방문하여 인증 코드를 받아 계정을 연결하고 Kilo에서 {{provider}} 모델을 사용하세요.",
+    "를 방문하여 인증 코드를 받아 계정을 연결하고 LLMAPI에서 {{provider}} 모델을 사용하세요.",
   "provider.connect.oauth.code.label": "{{method}} 인증 코드",
   "provider.connect.oauth.code.placeholder": "인증 코드",
   "provider.connect.oauth.code.required": "인증 코드가 필요합니다",
@@ -176,7 +176,7 @@ export const dict = {
   "provider.connect.oauth.auto.visit.prefix": "",
   "provider.connect.oauth.auto.visit.link": "이 링크",
   "provider.connect.oauth.auto.visit.suffix":
-    "를 방문하고 아래 코드를 입력하여 계정을 연결하고 Kilo에서 {{provider}} 모델을 사용하세요.",
+    "를 방문하고 아래 코드를 입력하여 계정을 연결하고 LLMAPI에서 {{provider}} 모델을 사용하세요.",
   "provider.connect.oauth.auto.confirmationCode": "확인 코드",
   "provider.connect.toast.connected.title": "{{provider}} 연결됨",
   "provider.connect.toast.connected.description": "이제 {{provider}} 모델을 사용할 수 있습니다.",
@@ -296,12 +296,12 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "'프롬프트 향상' 버튼은 추가 컨텍스트, 명확화 또는 재구성을 제공하여 요청을 개선합니다. 여기에 요청을 입력한 다음 버튼을 다시 클릭하여 작동 방식을 확인해보세요.",
 
-  "speechToText.tooltip.start": "Kilo Gateway로 음성 입력 시작",
+  "speechToText.tooltip.start": "LLMAPI Gateway로 음성 입력 시작",
   "speechToText.tooltip.stop": "음성 캡처 중지",
   "speechToText.tooltip.transcribing": "변환 중... 취소하려면 클릭하세요.",
   "speechToText.tooltip.error": "음성 입력에 실패했습니다. 지우려면 클릭하세요.",
   "speechToText.error.title": "음성 입력 실패",
-  "speechToText.error.loginRequired": "음성 입력을 사용하려면 Kilo에 로그인하세요.",
+  "speechToText.error.loginRequired": "음성 입력을 사용하려면 LLMAPI에 로그인하세요.",
   "speechToText.error.permission": "마이크 권한이 거부되었습니다.",
   "speechToText.error.microphone": "마이크를 시작할 수 없습니다.",
   "speechToText.error.recording": "녹음에 실패했습니다.",
@@ -339,7 +339,7 @@ export const dict = {
   "dialog.directory.empty": "폴더 없음",
 
   "dialog.server.title": "서버",
-  "dialog.server.description": "이 앱이 연결할 Kilo 서버를 전환합니다.",
+  "dialog.server.description": "이 앱이 연결할 LLMAPI 서버를 전환합니다.",
   "dialog.server.search.placeholder": "서버 검색",
   "dialog.server.empty": "서버 없음",
   "dialog.server.add.title": "서버 추가",
@@ -465,7 +465,7 @@ export const dict = {
   "toast.session.listFailed.title": "{{project}}에 대한 세션을 로드하지 못했습니다",
 
   "toast.update.title": "업데이트 가능",
-  "toast.update.description": "Kilo의 새 버전({{version}})을 설치할 수 있습니다.",
+  "toast.update.description": "LLMAPI의 새 버전({{version}})을 설치할 수 있습니다.",
   "toast.update.action.installRestart": "설치 및 다시 시작",
   "toast.update.action.notYet": "나중에",
 
@@ -476,7 +476,7 @@ export const dict = {
   "error.page.action.checking": "확인 중...",
   "error.page.action.checkUpdates": "업데이트 확인",
   "error.page.action.updateTo": "{{version}} 버전으로 업데이트",
-  "error.page.report.prefix": "이 오류를 Kilo 팀에 제보해 주세요: ",
+  "error.page.report.prefix": "이 오류를 LLMAPI 팀에 제보해 주세요: ",
   "error.page.report.discord": "Discord",
   "error.page.version": "버전: {{version}}",
 
@@ -510,7 +510,7 @@ export const dict = {
   "error.chain.didYouMean": "혹시 {{suggestions}}을(를) 의미하셨나요?",
   "error.chain.modelNotFound": "모델을 찾을 수 없음: {{provider}}/{{model}}",
   "error.chain.checkConfig": "구성(opencode.json)의 공급자/모델 이름을 확인하세요",
-  "error.chain.mcpFailed": 'MCP 서버 "{{name}}" 실패. 참고: Kilo는 아직 MCP 인증을 지원하지 않습니다.',
+  "error.chain.mcpFailed": 'MCP 서버 "{{name}}" 실패. 참고: LLMAPI는 아직 MCP 인증을 지원하지 않습니다.',
   "error.chain.providerAuthFailed": "공급자 인증 실패 ({{provider}}): {{message}}",
   "error.chain.providerInitFailed": '공급자 "{{provider}}" 초기화 실패. 자격 증명과 구성을 확인하세요.',
   "error.chain.configJsonInvalid": "{{path}}의 구성 파일이 유효한 JSON(C)가 아닙니다",
@@ -679,12 +679,12 @@ export const dict = {
   "sidebar.workspaces.enable": "작업 공간 활성화",
   "sidebar.workspaces.disable": "작업 공간 비활성화",
   "sidebar.gettingStarted.title": "시작하기",
-  "sidebar.gettingStarted.line1": "Kilo에는 무료 모델이 포함되어 있어 즉시 시작할 수 있습니다.",
+  "sidebar.gettingStarted.line1": "LLMAPI에는 무료 모델이 포함되어 있어 즉시 시작할 수 있습니다.",
   "sidebar.gettingStarted.line2": "Claude, GPT, Gemini 등을 포함한 모델을 사용하려면 공급자를 연결하세요.",
   "sidebar.project.recentSessions": "최근 세션",
   "sidebar.project.viewAllSessions": "모든 세션 보기",
 
-  "app.name.desktop": "Kilo Desktop",
+  "app.name.desktop": "LLMAPI Desktop",
   "settings.section.desktop": "데스크톱",
   "settings.section.server": "서버",
   "settings.tab.general": "일반",
@@ -696,11 +696,11 @@ export const dict = {
   "settings.general.section.sounds": "효과음",
 
   "settings.general.row.language.title": "언어",
-  "settings.general.row.language.description": "Kilo 표시 언어 변경",
+  "settings.general.row.language.description": "LLMAPI 표시 언어 변경",
   "settings.general.row.appearance.title": "모양",
-  "settings.general.row.appearance.description": "기기에서 Kilo가 보이는 방식 사용자 지정",
+  "settings.general.row.appearance.description": "기기에서 LLMAPI가 보이는 방식 사용자 지정",
   "settings.general.row.theme.title": "테마",
-  "settings.general.row.theme.description": "Kilo 테마 사용자 지정",
+  "settings.general.row.theme.description": "LLMAPI 테마 사용자 지정",
   "settings.general.row.font.title": "글꼴",
   "settings.general.row.font.description": "코드 블록에 사용되는 고정폭 글꼴 사용자 지정",
 
@@ -708,13 +708,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": "업데이트 후 '새 소식' 팝업 표시",
 
   "settings.updates.row.startup.title": "시작 시 업데이트 확인",
-  "settings.updates.row.startup.description": "Kilo를 실행할 때 업데이트를 자동으로 확인합니다",
+  "settings.updates.row.startup.description": "LLMAPI를 실행할 때 업데이트를 자동으로 확인합니다",
   "settings.updates.row.check.title": "업데이트 확인",
   "settings.updates.row.check.description": "업데이트를 수동으로 확인하고, 사용 가능하면 설치합니다",
   "settings.updates.action.checkNow": "지금 확인",
   "settings.updates.action.checking": "확인 중...",
   "settings.updates.toast.latest.title": "최신 상태입니다",
-  "settings.updates.toast.latest.description": "현재 최신 버전의 Kilo를 사용 중입니다.",
+  "settings.updates.toast.latest.description": "현재 최신 버전의 LLMAPI를 사용 중입니다.",
 
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
@@ -808,7 +808,7 @@ export const dict = {
   "settings.providers.title": "공급자",
   "settings.providers.description": "공급자 설정은 여기서 구성할 수 있습니다.",
   "settings.providers.betaNotice":
-    "현재 설정 인터페이스에서는 Kilo Gateway 제공자만 설정할 수 있습니다. 다른 제공자 설정에 대한 지원은 베타 기간 동안 곧 제공될 예정입니다. 그동안에는 CLI 또는 설정 파일을 사용하여 제공자를 설정할 수 있습니다. 우리는 종속(lock-in) 없이 Kilo를 개방적으로 유지하기 위해 최선을 다하고 있습니다.",
+    "현재 설정 인터페이스에서는 LLMAPI Gateway 제공자만 설정할 수 있습니다. 다른 제공자 설정에 대한 지원은 베타 기간 동안 곧 제공될 예정입니다. 그동안에는 CLI 또는 설정 파일을 사용하여 제공자를 설정할 수 있습니다. 우리는 종속(lock-in) 없이 LLMAPI를 개방적으로 유지하기 위해 최선을 다하고 있습니다.",
   "settings.providers.section.connected": "연결된 공급자",
   "settings.providers.connected.empty": "연결된 공급자 없음",
   "settings.providers.section.popular": "인기 공급자",
@@ -916,11 +916,11 @@ export const dict = {
   "settings.config.status.loadedLegacy": "레거시 구성 로드됨",
   "settings.config.status.notLoaded": "로드되지 않음",
   "settings.config.status.create": "찾을 수 없음 - 이 파일 만들기",
-  "settings.config.title": "{{scope}} Kilo 구성 파일 열기",
+  "settings.config.title": "{{scope}} LLMAPI 구성 파일 열기",
   "settings.config.placeholder":
     "구성 파일은 순서대로 병합됩니다. 로드됨으로 표시된 파일이 현재 설정에 영향을 미칩니다.",
-  "settings.config.noWorkspace": "로컬 Kilo 구성 파일을 편집하려면 작업 영역 폴더를 엽니다.",
-  "settings.config.openFailed": "{{scope}} Kilo 구성 파일을 열지 못했습니다: {{message}}",
+  "settings.config.noWorkspace": "로컬 LLMAPI 구성 파일을 편집하려면 작업 영역 폴더를 엽니다.",
+  "settings.config.openFailed": "{{scope}} LLMAPI 구성 파일을 열지 못했습니다: {{message}}",
   "settings.config.source.xdg": "XDG 글로벌 구성",
   "settings.config.source.homeKilo": "Home .kilo 구성",
   "settings.config.source.homeKilocode": "Home .kilocode 구성",
@@ -1040,7 +1040,7 @@ export const dict = {
   "deviceAuth.toast.codeCopied": "코드가 클립보드에 복사되었습니다",
   "deviceAuth.toast.errorCopied": "오류가 클립보드에 복사되었습니다",
   "deviceAuth.status.initiating": "로그인 시작 중...",
-  "deviceAuth.title": "Kilo Code에 로그인",
+  "deviceAuth.title": "LLMAPI에 로그인",
   "deviceAuth.step1": "1단계: 이 URL을 여세요",
   "deviceAuth.action.copyUrl": "URL 복사",
   "deviceAuth.action.openBrowser": "브라우저 열기",
@@ -1061,7 +1061,7 @@ export const dict = {
 
   "profile.title": "프로필",
   "profile.notLoggedIn": "로그인하지 않음",
-  "profile.action.login": "Kilo Code로 로그인",
+  "profile.action.login": "LLMAPI로 로그인",
   "profile.balance.title": "잔액",
   "profile.balance.refresh": "잔액 새로고침",
   "profile.action.dashboard": "대시보드",
@@ -1081,7 +1081,7 @@ export const dict = {
 
   "settings.experimental.title": "실험적",
   "settings.language.title": "언어",
-  "settings.aboutKiloCode.title": "Kilo Code 정보",
+  "settings.aboutKiloCode.title": "LLMAPI 정보",
 
   "prompt.action.indexing": "인덱싱 설정",
   "settings.indexing.dimension.description": "비워두면 모델에서 임베딩 차원을 자동으로 감지합니다.",
@@ -1102,10 +1102,10 @@ export const dict = {
   "settings.indexing.model.description": "선택한 공급자의 기본 임베딩 모델을 재정의합니다.",
   "settings.indexing.model.title": "임베딩 모델",
   "settings.indexing.provider.description": "의미 검색을 위한 임베딩 생성에 사용할 공급자를 선택하세요.",
-  "settings.indexing.kiloModel.title": "Kilo 모델 프리셋",
-  "settings.indexing.kiloModel.description": "지원되는 Kilo 호스팅 임베딩 모델을 선택하세요.",
-  "settings.indexing.kiloSignIn.title": "Kilo 로그인이 필요합니다",
-  "settings.indexing.kiloSignIn.description": "호스팅 임베딩을 사용하려면 Kilo에 로그인하세요.",
+  "settings.indexing.kiloModel.title": "LLMAPI 모델 프리셋",
+  "settings.indexing.kiloModel.description": "지원되는 LLMAPI 호스팅 임베딩 모델을 선택하세요.",
+  "settings.indexing.kiloSignIn.title": "LLMAPI 로그인이 필요합니다",
+  "settings.indexing.kiloSignIn.description": "호스팅 임베딩을 사용하려면 LLMAPI에 로그인하세요.",
   "settings.indexing.provider.title": "임베딩 공급자",
   "settings.indexing.providerField.description": "공급자별 연결 설정.",
   "settings.indexing.qdrantApiKey.description": "Qdrant 인스턴스에 대한 선택적 API 키입니다.",
@@ -1121,7 +1121,7 @@ export const dict = {
 
   "session.messages.empty": "아래에 메시지를 입력하여 대화를 시작하세요.",
   "session.messages.welcome":
-    "Kilo Code는 AI 코딩 어시스턴트입니다. 기능 구축, 버그 수정 또는 코드베이스 설명을 요청하세요.",
+    "LLMAPI는 AI 코딩 어시스턴트입니다. 기능 구축, 버그 수정 또는 코드베이스 설명을 요청하세요.",
   "session.messages.scrollToBottom": "하단으로 스크롤",
   "session.messages.initializing": "초기화 중...",
   "session.messages.taskStarting": "시작 중...",
@@ -1173,7 +1173,7 @@ export const dict = {
   "settings.aboutKiloCode.port.label": "포트:",
   "settings.aboutKiloCode.versionInfo": "버전 정보",
   "settings.aboutKiloCode.version.label": "버전:",
-  "settings.aboutKiloCode.extensionName": "Kilo Code 확장 프로그램",
+  "settings.aboutKiloCode.extensionName": "LLMAPI 확장 프로그램",
   "settings.aboutKiloCode.community": "커뮤니티 및 지원",
   "settings.aboutKiloCode.feedback.prefix": "질문이나 피드백이 있으시면 다음에서 이슈를 열어주세요",
   "settings.aboutKiloCode.feedback.or": "또는",
@@ -1189,10 +1189,10 @@ export const dict = {
   "settings.aboutKiloCode.importSettings": "가져오기",
   "settings.aboutKiloCode.importSettings.invalidJson":
     "유효하지 않은 JSON 파일입니다. 올바른 설정 파일을 선택해 주세요.",
-  "settings.aboutKiloCode.importSettings.invalidConfig": "파일에 유효한 Kilo 설정이 포함되어 있지 않습니다.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "파일에 유효한 LLMAPI 설정이 포함되어 있지 않습니다.",
   "settings.aboutKiloCode.importSettings.tooLarge": "파일이 너무 큽니다. 설정 파일은 1 MB 이하여야 합니다.",
   "settings.aboutKiloCode.importSettings.newerVersion":
-    "이 파일은 더 최신 버전의 Kilo에서 내보낸 것입니다. 일부 설정이 무시될 수 있습니다.",
+    "이 파일은 더 최신 버전의 LLMAPI에서 내보낸 것입니다. 일부 설정이 무시될 수 있습니다.",
   "settings.aboutKiloCode.importSettings.success": "설정을 가져왔습니다. 위의 변경 사항을 확인한 후 저장을 클릭하세요.",
 
   "settings.aboutKiloCode.telemetry.title": "원격 측정",
@@ -1215,7 +1215,7 @@ export const dict = {
   "settings.browser.headless.title": "헤드리스 모드",
   "settings.browser.headless.description": "헤드리스 모드로 실행합니다 (브라우저 창이 표시되지 않음).",
 
-  "settings.language.description": 'Kilo Code UI의 언어를 선택하세요. "자동"은 VS Code 표시 언어를 사용합니다.',
+  "settings.language.description": 'LLMAPI UI의 언어를 선택하세요. "자동"은 VS Code 표시 언어를 사용합니다.',
   "settings.language.auto": "자동 (VS Code 언어)",
   "settings.language.current": "현재:",
 
@@ -1259,18 +1259,18 @@ export const dict = {
   "settings.experimental.codebaseSearch.description": "코드베이스 전체에서 AI 기반 자연어 검색 활성화",
   "settings.experimental.speechToText.title": "음성 텍스트 변환",
   "settings.experimental.speechToText.description":
-    "Kilo Gateway를 통해 Kilo 계정을 사용하여 프롬프트 필드에서 음성 입력을 활성화합니다.",
+    "LLMAPI Gateway를 통해 LLMAPI 계정을 사용하여 프롬프트 필드에서 음성 입력을 활성화합니다.",
   "settings.experimental.speechToText.disabledDescription":
-    "Speech to Text를 사용하려면 Kilo 제공자를 활성화하고 로그인하세요. 현재 Speech to Text는 Kilo Gateway에서만 지원됩니다.",
+    "Speech to Text를 사용하려면 LLMAPI 제공자를 활성화하고 로그인하세요. 현재 Speech to Text는 LLMAPI Gateway에서만 지원됩니다.",
   "settings.experimental.speechToTextModel.title": "음성 텍스트 변환 모델",
-  "settings.experimental.speechToTextModel.description": "음성 입력에 사용할 Kilo Gateway 변환 모델을 선택하세요.",
+  "settings.experimental.speechToTextModel.description": "음성 입력에 사용할 LLMAPI Gateway 변환 모델을 선택하세요.",
   "settings.experimental.continueOnDeny.title": "거부 시 계속",
   "settings.experimental.continueOnDeny.description": "권한이 거부되면 에이전트 루프 계속",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
   "settings.experimental.mcpTimeout.description": "MCP 서버 요청의 타임아웃 시간 (밀리초)",
   "settings.experimental.remote.title": "Remote 제어",
   "settings.experimental.remote.description":
-    "Kilo Cloud를 통한 세션의 Remote 제어를 활성화합니다. 이는 이 컴퓨터의 CLI에도 영향을 미칩니다.",
+    "LLMAPI Cloud를 통한 세션의 Remote 제어를 활성화합니다. 이는 이 컴퓨터의 CLI에도 영향을 미칩니다.",
   "settings.experimental.remote.current": "현재 상태:",
   "settings.experimental.remote.startup": "시작 시 자동 활성화:",
   "settings.experimental.remote.active": "활성",
@@ -1380,7 +1380,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 호환성",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code 파일 로드",
   "settings.agentBehaviour.claudeCompat.description":
-    "Claude Code 설정 디렉터리에서 세션으로 CLAUDE.md 지침 및 스킬을 로드합니다. Kilo가 Claude Code 지침 및 스킬을 사용하게 하려면 활성화하세요. 다시 시작해야 합니다.",
+    "Claude Code 설정 디렉터리에서 세션으로 CLAUDE.md 지침 및 스킬을 로드합니다. LLMAPI가 Claude Code 지침 및 스킬을 사용하게 하려면 활성화하세요. 다시 시작해야 합니다.",
   "settings.agentBehaviour.mcpDetail.command": "명령어",
   "settings.agentBehaviour.mcpDetail.args": "인수",
   "settings.agentBehaviour.mcpDetail.env": "환경",
@@ -1454,7 +1454,7 @@ export const dict = {
   "settings.display.layout.auto": "자동",
   "settings.display.layout.stretch": "늘리기",
   "settings.display.fontSize.title": "글꼴 크기",
-  "settings.display.fontSize.description": "VS Code와 독립적으로 Kilo webview UI 글꼴 크기를 조정합니다.",
+  "settings.display.fontSize.description": "VS Code와 독립적으로 LLMAPI webview UI 글꼴 크기를 조정합니다.",
   "settings.display.reasoningAutoCollapse.title": "추론 자동 접기",
   "settings.display.reasoningAutoCollapse.description":
     "에이전트가 추론 작성을 마친 뒤 추론 블록을 자동으로 접습니다. 수동으로 접기 전까지 추론을 펼친 상태로 두려면 끄세요.",
@@ -1485,10 +1485,10 @@ export const dict = {
   "settings.legacyMigration.link": "레거시 버전에서 마이그레이션",
   "settings.aboutKiloCode.legacyMigration.title": "레거시 마이그레이션",
   "settings.aboutKiloCode.legacyMigration.description":
-    "공급자 API 키 및 기본 모델을 포함하여 이전 Kilo Code 설치에서 설정을 마이그레이션합니다.",
+    "공급자 API 키 및 기본 모델을 포함하여 이전 LLMAPI 설치에서 설정을 마이그레이션합니다.",
 
   // Screen 1 — What's New
-  "migration.whatsNew.title": "Kilo Code의 새로운 기능",
+  "migration.whatsNew.title": "LLMAPI의 새로운 기능",
   "migration.whatsNew.subtitle": "더 빠르고 효율적인 기반 위에 확장 프로그램을 재구축했습니다.",
   "migration.whatsNew.features.performance.title": "더 빠른 에이전트 성능",
   "migration.whatsNew.features.performance.detail":
@@ -1500,7 +1500,7 @@ export const dict = {
     "여러 에이전트를 각자의 작업 트리에서 병렬로 실행할 수 있는 통합 인터페이스 — 진행 상황 모니터링, 컨텍스트 전환, 변경 사항 검토를 한 곳에서 수행합니다.",
   "migration.whatsNew.features.foundation.title": "공유 기반",
   "migration.whatsNew.features.foundation.detail":
-    "모든 Kilo 제품에 걸쳐 하나의 작고 효율적인 코어. 어떤 방식으로 작업하든 익숙한 경험을 제공합니다.",
+    "모든 LLMAPI 제품에 걸쳐 하나의 작고 효율적인 코어. 어떤 방식으로 작업하든 익숙한 경험을 제공합니다.",
   "migration.whatsNew.blogLink": "전체 공지 읽기",
   "migration.whatsNew.docsLink": "새로운 기능 및 자주 묻는 질문",
   "migration.whatsNew.continue": "계속",
@@ -1599,7 +1599,7 @@ export const dict = {
     "작업 트리에서 수정되었지만 아직 스테이징되지 않은 파일과 추적되지 않는(새) 파일입니다.",
   "diffViewer.source.session.label": "세션",
   "diffViewer.source.session.tooltip":
-    "현재 세션 동안 Kilo가 변경한 파일로, 턴별 스냅샷을 기반으로 합니다. 새 세션을 시작하면 초기화됩니다.",
+    "현재 세션 동안 LLMAPI가 변경한 파일로, 턴별 스냅샷을 기반으로 합니다. 새 세션을 시작하면 초기화됩니다.",
   "diffViewer.group.session": "세션",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

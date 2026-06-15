@@ -125,7 +125,7 @@ export const dict = {
   "dialog.model.expand": "Utvid",
   "dialog.model.collapse": "Skjul",
 
-  "dialog.model.unpaid.freeModels.title": "Gratis modeller levert av Kilo",
+  "dialog.model.unpaid.freeModels.title": "Gratis modeller levert av LLMAPI",
   "dialog.model.unpaid.addMore.title": "Legg til flere modeller fra populære leverandører",
 
   "dialog.provider.viewAll": "Vis flere leverandører",
@@ -138,7 +138,7 @@ export const dict = {
   "provider.connect.status.waiting": "Venter på autorisering...",
   "provider.connect.status.failed": "Autorisering mislyktes: {{error}}",
   "provider.connect.apiKey.description":
-    "Skriv inn din {{provider}} API-nøkkel for å koble til kontoen din og bruke {{provider}}-modeller i Kilo.",
+    "Skriv inn din {{provider}} API-nøkkel for å koble til kontoen din og bruke {{provider}}-modeller i LLMAPI.",
   "provider.connect.apiKey.description.local":
     "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
   "provider.connect.atomicChat.description":
@@ -168,7 +168,7 @@ export const dict = {
   "provider.connect.oauth.code.visit.prefix": "Besøk ",
   "provider.connect.oauth.code.visit.link": "denne lenken",
   "provider.connect.oauth.code.visit.suffix":
-    " for å hente autorisasjonskoden din for å koble til kontoen din og bruke {{provider}}-modeller i Kilo.",
+    " for å hente autorisasjonskoden din for å koble til kontoen din og bruke {{provider}}-modeller i LLMAPI.",
   "provider.connect.oauth.code.label": "{{method}} autorisasjonskode",
   "provider.connect.oauth.code.placeholder": "Autorisasjonskode",
   "provider.connect.oauth.code.required": "Autorisasjonskode er påkrevd",
@@ -176,7 +176,7 @@ export const dict = {
   "provider.connect.oauth.auto.visit.prefix": "Besøk ",
   "provider.connect.oauth.auto.visit.link": "denne lenken",
   "provider.connect.oauth.auto.visit.suffix":
-    " og skriv inn koden nedenfor for å koble til kontoen din og bruke {{provider}}-modeller i Kilo.",
+    " og skriv inn koden nedenfor for å koble til kontoen din og bruke {{provider}}-modeller i LLMAPI.",
   "provider.connect.oauth.auto.confirmationCode": "Bekreftelseskode",
   "provider.connect.toast.connected.title": "{{provider}} tilkoblet",
   "provider.connect.toast.connected.description": "{{provider}}-modeller er nå tilgjengelige.",
@@ -300,12 +300,12 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedre prompt' hjelper med å forbedre forespørselen din ved å gi ekstra kontekst, avklaring eller omformulering. Prøv å skrive en forespørsel her og klikk på knappen igjen for å se hvordan det fungerer.",
 
-  "speechToText.tooltip.start": "Start taleinndata med Kilo Gateway",
+  "speechToText.tooltip.start": "Start taleinndata med LLMAPI Gateway",
   "speechToText.tooltip.stop": "Stopp lydfangst",
   "speechToText.tooltip.transcribing": "Transkriberer... Klikk for å avbryte.",
   "speechToText.tooltip.error": "Taleinndata mislyktes. Klikk for å tømme.",
   "speechToText.error.title": "Taleinndata mislyktes",
-  "speechToText.error.loginRequired": "Logg på Kilo for å bruke taleinndata.",
+  "speechToText.error.loginRequired": "Logg på LLMAPI for å bruke taleinndata.",
   "speechToText.error.permission": "Mikrofontillatelse ble nektet.",
   "speechToText.error.microphone": "Kunne ikke starte mikrofonen.",
   "speechToText.error.recording": "Opptak mislyktes.",
@@ -343,7 +343,7 @@ export const dict = {
   "dialog.directory.empty": "Ingen mapper funnet",
 
   "dialog.server.title": "Servere",
-  "dialog.server.description": "Bytt hvilken Kilo-server denne appen kobler til.",
+  "dialog.server.description": "Bytt hvilken LLMAPI-server denne appen kobler til.",
   "dialog.server.search.placeholder": "Søk etter servere",
   "dialog.server.empty": "Ingen servere ennå",
   "dialog.server.add.title": "Legg til en server",
@@ -469,7 +469,7 @@ export const dict = {
   "toast.session.listFailed.title": "Kunne ikke laste sesjoner for {{project}}",
 
   "toast.update.title": "Oppdatering tilgjengelig",
-  "toast.update.description": "En ny versjon av Kilo ({{version}}) er nå tilgjengelig for installasjon.",
+  "toast.update.description": "En ny versjon av LLMAPI ({{version}}) er nå tilgjengelig for installasjon.",
   "toast.update.action.installRestart": "Installer og start på nytt",
   "toast.update.action.notYet": "Ikke nå",
 
@@ -481,7 +481,7 @@ export const dict = {
   "error.page.action.checking": "Sjekker...",
   "error.page.action.checkUpdates": "Se etter oppdateringer",
   "error.page.action.updateTo": "Oppdater til {{version}}",
-  "error.page.report.prefix": "Vennligst rapporter denne feilen til Kilo-teamet",
+  "error.page.report.prefix": "Vennligst rapporter denne feilen til LLMAPI-teamet",
   "error.page.report.discord": "på Discord",
   "error.page.version": "Versjon: {{version}}",
 
@@ -515,7 +515,7 @@ export const dict = {
   "error.chain.didYouMean": "Mente du: {{suggestions}}",
   "error.chain.modelNotFound": "Modell ikke funnet: {{provider}}/{{model}}",
   "error.chain.checkConfig": "Sjekk leverandør-/modellnavnene i konfigurasjonen din (opencode.json)",
-  "error.chain.mcpFailed": 'MCP-server "{{name}}" mislyktes. Merk at Kilo ikke støtter MCP-autentisering ennå.',
+  "error.chain.mcpFailed": 'MCP-server "{{name}}" mislyktes. Merk at LLMAPI ikke støtter MCP-autentisering ennå.',
   "error.chain.providerAuthFailed": "Leverandørautentisering mislyktes ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
     'Kunne ikke initialisere leverandør "{{provider}}". Sjekk legitimasjon og konfigurasjon.',
@@ -687,12 +687,12 @@ export const dict = {
   "sidebar.workspaces.enable": "Aktiver arbeidsområder",
   "sidebar.workspaces.disable": "Deaktiver arbeidsområder",
   "sidebar.gettingStarted.title": "Kom i gang",
-  "sidebar.gettingStarted.line1": "Kilo inkluderer gratis modeller så du kan starte umiddelbart.",
+  "sidebar.gettingStarted.line1": "LLMAPI inkluderer gratis modeller så du kan starte umiddelbart.",
   "sidebar.gettingStarted.line2": "Koble til en leverandør for å bruke modeller, inkl. Claude, GPT, Gemini osv.",
   "sidebar.project.recentSessions": "Nylige sesjoner",
   "sidebar.project.viewAllSessions": "Vis alle sesjoner",
 
-  "app.name.desktop": "Kilo Desktop",
+  "app.name.desktop": "LLMAPI Desktop",
   "settings.section.desktop": "Skrivebord",
   "settings.section.server": "Server",
   "settings.tab.general": "Generelt",
@@ -704,11 +704,11 @@ export const dict = {
   "settings.general.section.sounds": "Lydeffekter",
 
   "settings.general.row.language.title": "Språk",
-  "settings.general.row.language.description": "Endre visningsspråket for Kilo",
+  "settings.general.row.language.description": "Endre visningsspråket for LLMAPI",
   "settings.general.row.appearance.title": "Utseende",
-  "settings.general.row.appearance.description": "Tilpass hvordan Kilo ser ut på enheten din",
+  "settings.general.row.appearance.description": "Tilpass hvordan LLMAPI ser ut på enheten din",
   "settings.general.row.theme.title": "Tema",
-  "settings.general.row.theme.description": "Tilpass hvordan Kilo er tematisert.",
+  "settings.general.row.theme.description": "Tilpass hvordan LLMAPI er tematisert.",
   "settings.general.row.font.title": "Skrift",
   "settings.general.row.font.description": "Tilpass mono-skriften som brukes i kodeblokker",
 
@@ -716,13 +716,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": 'Vis "Hva er nytt"-vinduer etter oppdateringer',
 
   "settings.updates.row.startup.title": "Se etter oppdateringer ved oppstart",
-  "settings.updates.row.startup.description": "Se automatisk etter oppdateringer når Kilo starter",
+  "settings.updates.row.startup.description": "Se automatisk etter oppdateringer når LLMAPI starter",
   "settings.updates.row.check.title": "Se etter oppdateringer",
   "settings.updates.row.check.description": "Se etter oppdateringer manuelt og installer hvis tilgjengelig",
   "settings.updates.action.checkNow": "Sjekk nå",
   "settings.updates.action.checking": "Sjekker...",
   "settings.updates.toast.latest.title": "Du er oppdatert",
-  "settings.updates.toast.latest.description": "Du bruker den nyeste versjonen av Kilo.",
+  "settings.updates.toast.latest.description": "Du bruker den nyeste versjonen av LLMAPI.",
 
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
@@ -817,7 +817,7 @@ export const dict = {
   "settings.providers.title": "Leverandører",
   "settings.providers.description": "Leverandørinnstillinger vil kunne konfigureres her.",
   "settings.providers.betaNotice":
-    "For øyeblikket kan kun Kilo Gateway-leverandøren konfigureres i innstillingsgrensesnittet. Støtte for konfigurering av andre leverandører kommer snart i løpet av betaperioden. I mellomtiden kan du konfigurere leverandører via CLI eller konfigurasjonsfilen. Vi er forpliktet til å holde Kilo åpent, ingen lock-in.",
+    "For øyeblikket kan kun LLMAPI Gateway-leverandøren konfigureres i innstillingsgrensesnittet. Støtte for konfigurering av andre leverandører kommer snart i løpet av betaperioden. I mellomtiden kan du konfigurere leverandører via CLI eller konfigurasjonsfilen. Vi er forpliktet til å holde LLMAPI åpent, ingen lock-in.",
   "settings.providers.section.connected": "Tilkoblede leverandører",
   "settings.providers.connected.empty": "Ingen tilkoblede leverandører",
   "settings.providers.section.popular": "Populære leverandører",
@@ -926,11 +926,11 @@ export const dict = {
   "settings.config.status.loadedLegacy": "lastet inn eldre konfigurasjon",
   "settings.config.status.notLoaded": "ikke lastet",
   "settings.config.status.create": "ikke funnet - opprett denne filen",
-  "settings.config.title": "Åpne {{scope}} Kilo-konfigurasjonsfil",
+  "settings.config.title": "Åpne {{scope}} LLMAPI-konfigurasjonsfil",
   "settings.config.placeholder":
     "Konfigurasjonsfiler slås sammen i rekkefølge; filer merket som lastet påvirker for øyeblikket innstillingene.",
-  "settings.config.noWorkspace": "Åpne en arbeidsområdemappe for å redigere den lokale Kilo-konfigurasjonsfilen.",
-  "settings.config.openFailed": "Klarte ikke å åpne {{scope}} Kilo-konfigurasjonsfil: {{message}}",
+  "settings.config.noWorkspace": "Åpne en arbeidsområdemappe for å redigere den lokale LLMAPI-konfigurasjonsfilen.",
+  "settings.config.openFailed": "Klarte ikke å åpne {{scope}} LLMAPI-konfigurasjonsfil: {{message}}",
   "settings.config.source.xdg": "XDG global konfigurasjon",
   "settings.config.source.homeKilo": "Home .kilo-konfigurasjon",
   "settings.config.source.homeKilocode": "Home .kilocode-konfigurasjon",
@@ -1051,7 +1051,7 @@ export const dict = {
   "deviceAuth.toast.codeCopied": "Kode kopiert til utklippstavlen",
   "deviceAuth.toast.errorCopied": "Feil kopiert til utklippstavlen",
   "deviceAuth.status.initiating": "Starter pålogging...",
-  "deviceAuth.title": "Logg inn på Kilo Code",
+  "deviceAuth.title": "Logg inn på LLMAPI",
   "deviceAuth.step1": "Trinn 1: Åpne denne URLen",
   "deviceAuth.action.copyUrl": "Kopier URL",
   "deviceAuth.action.openBrowser": "Åpne nettleser",
@@ -1072,7 +1072,7 @@ export const dict = {
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Ikke pålogget",
-  "profile.action.login": "Logg inn med Kilo Code",
+  "profile.action.login": "Logg inn med LLMAPI",
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Oppdater saldo",
   "profile.action.dashboard": "Kontrollpanel",
@@ -1092,11 +1092,11 @@ export const dict = {
 
   "settings.experimental.title": "Eksperimentelt",
   "settings.language.title": "Språk",
-  "settings.aboutKiloCode.title": "Om Kilo Code",
+  "settings.aboutKiloCode.title": "Om LLMAPI",
 
   "session.messages.empty": "Start en samtale ved å skrive en melding nedenfor.",
   "session.messages.welcome":
-    "Kilo Code er en AI-kodingsassistent. Be den om å bygge funksjoner, fikse feil eller forklare kodebasen din.",
+    "LLMAPI er en AI-kodingsassistent. Be den om å bygge funksjoner, fikse feil eller forklare kodebasen din.",
   "session.messages.scrollToBottom": "Rull til bunnen",
   "session.messages.initializing": "Initialiserer...",
   "session.messages.taskStarting": "Starter...",
@@ -1148,7 +1148,7 @@ export const dict = {
   "settings.aboutKiloCode.port.label": "Port:",
   "settings.aboutKiloCode.versionInfo": "Versjonsinformasjon",
   "settings.aboutKiloCode.version.label": "Versjon:",
-  "settings.aboutKiloCode.extensionName": "Kilo Code-utvidelse",
+  "settings.aboutKiloCode.extensionName": "LLMAPI-utvidelse",
   "settings.aboutKiloCode.community": "Fellesskap og støtte",
   "settings.aboutKiloCode.feedback.prefix": "Hvis du har spørsmål eller tilbakemeldinger, åpne gjerne en issue på",
   "settings.aboutKiloCode.feedback.or": "eller",
@@ -1163,10 +1163,10 @@ export const dict = {
   "settings.aboutKiloCode.exportSettings": "Eksporter",
   "settings.aboutKiloCode.importSettings": "Importer",
   "settings.aboutKiloCode.importSettings.invalidJson": "Ugyldig JSON-fil. Vennligst velg en gyldig innstillingsfil.",
-  "settings.aboutKiloCode.importSettings.invalidConfig": "Filen inneholder ikke gyldige Kilo-innstillinger.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "Filen inneholder ikke gyldige LLMAPI-innstillinger.",
   "settings.aboutKiloCode.importSettings.tooLarge": "Filen er for stor. Innstillingsfiler må være under 1 MB.",
   "settings.aboutKiloCode.importSettings.newerVersion":
-    "Denne filen ble eksportert fra en nyere versjon av Kilo. Noen innstillinger kan bli ignorert.",
+    "Denne filen ble eksportert fra en nyere versjon av LLMAPI. Noen innstillinger kan bli ignorert.",
   "settings.aboutKiloCode.importSettings.success":
     "Innstillinger importert. Gjennomgå endringene ovenfor, og klikk deretter på Lagre.",
 
@@ -1191,7 +1191,7 @@ export const dict = {
   "settings.browser.headless.title": "Headless-modus",
   "settings.browser.headless.description": "Kjør i headless-modus (uten synlig nettleservindu).",
 
-  "settings.language.description": 'Velg språket for Kilo Code-grensesnittet. "Auto" bruker VS Codes visningsspråk.',
+  "settings.language.description": 'Velg språket for LLMAPI-grensesnittet. "Auto" bruker VS Codes visningsspråk.',
   "settings.language.auto": "Auto (VS Code-språk)",
   "settings.language.current": "Nåværende:",
 
@@ -1236,18 +1236,18 @@ export const dict = {
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig språksøk på tvers av kodebasen",
   "settings.experimental.speechToText.title": "Tale til tekst",
   "settings.experimental.speechToText.description":
-    "Aktiver taleinndata i prompt-felt ved å bruke din Kilo-konto gjennom Kilo Gateway.",
+    "Aktiver taleinndata i prompt-felt ved å bruke din LLMAPI-konto gjennom LLMAPI Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Aktiver og logg på Kilo-leverandøren for å bruke Speech to Text. Speech to Text støttes for øyeblikket bare med Kilo Gateway.",
+    "Aktiver og logg på LLMAPI-leverandøren for å bruke Speech to Text. Speech to Text støttes for øyeblikket bare med LLMAPI Gateway.",
   "settings.experimental.speechToTextModel.title": "Tale-til-tekst-modell",
-  "settings.experimental.speechToTextModel.description": "Velg Kilo Gateway-transkripsjonsmodellen for taleinndata.",
+  "settings.experimental.speechToTextModel.description": "Velg LLMAPI Gateway-transkripsjonsmodellen for taleinndata.",
   "settings.experimental.continueOnDeny.title": "Fortsett ved avvisning",
   "settings.experimental.continueOnDeny.description": "Fortsett agentløkken når en tillatelse avvises",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
   "settings.experimental.remote.title": "Remote-kontroll",
   "settings.experimental.remote.description":
-    "Aktiver Remote-kontroll av økter via Kilo Cloud. Dette vil også påvirke CLI-er på denne maskinen.",
+    "Aktiver Remote-kontroll av økter via LLMAPI Cloud. Dette vil også påvirke CLI-er på denne maskinen.",
   "settings.experimental.remote.current": "Nåværende status:",
   "settings.experimental.remote.startup": "Aktiver automatisk ved oppstart:",
   "settings.experimental.remote.active": "Aktiv",
@@ -1266,10 +1266,10 @@ export const dict = {
     "Global indeksering er aktivert, så dette prosjektet er allerede dekket.",
   "settings.indexing.provider.title": "Embedding-leverandør",
   "settings.indexing.provider.description": "Velg leverandøren som brukes til å generere embeddings for semantisk søk.",
-  "settings.indexing.kiloModel.title": "Kilo-modellforhåndsvalg",
-  "settings.indexing.kiloModel.description": "Velg en støttet Kilo-hostet embedding-modell.",
-  "settings.indexing.kiloSignIn.title": "Kilo-pålogging kreves",
-  "settings.indexing.kiloSignIn.description": "Logg inn på Kilo for å bruke hostede embeddings.",
+  "settings.indexing.kiloModel.title": "LLMAPI-modellforhåndsvalg",
+  "settings.indexing.kiloModel.description": "Velg en støttet LLMAPI-hostet embedding-modell.",
+  "settings.indexing.kiloSignIn.title": "LLMAPI-pålogging kreves",
+  "settings.indexing.kiloSignIn.description": "Logg inn på LLMAPI for å bruke hostede embeddings.",
   "settings.indexing.model.title": "Embedding-modell",
   "settings.indexing.model.description": "Overstyr standard embedding-modell for den valgte leverandøren.",
   "settings.indexing.vectorStore.title": "Vektordatabase",
@@ -1393,7 +1393,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-kompatibilitet",
   "settings.agentBehaviour.claudeCompat.title": "Last inn Claude Code-filer",
   "settings.agentBehaviour.claudeCompat.description":
-    "Last inn CLAUDE.md-instruksjoner og ferdigheter fra Claude Code-konfigurasjonsmappen din i økter. Aktiver dette hvis du vil at Kilo skal bruke dine Claude Code-instruksjoner og ferdigheter. Krever omstart.",
+    "Last inn CLAUDE.md-instruksjoner og ferdigheter fra Claude Code-konfigurasjonsmappen din i økter. Aktiver dette hvis du vil at LLMAPI skal bruke dine Claude Code-instruksjoner og ferdigheter. Krever omstart.",
   "settings.agentBehaviour.mcpDetail.command": "Kommando",
   "settings.agentBehaviour.mcpDetail.args": "Argumenter",
   "settings.agentBehaviour.mcpDetail.env": "Miljø",
@@ -1472,7 +1472,7 @@ export const dict = {
   "settings.display.layout.auto": "Automatisk",
   "settings.display.layout.stretch": "Strekk",
   "settings.display.fontSize.title": "Skriftstørrelse",
-  "settings.display.fontSize.description": "Juster skriftstørrelsen for Kilo webview UI uavhengig av VS Code.",
+  "settings.display.fontSize.description": "Juster skriftstørrelsen for LLMAPI webview UI uavhengig av VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Skjul resonnement automatisk",
   "settings.display.reasoningAutoCollapse.description":
     "Skjuler resonnementblokker etter at agenten er ferdig med å skrive dem. La være av for å holde resonnement utvidet med mindre du skjuler det manuelt.",
@@ -1503,10 +1503,10 @@ export const dict = {
   "settings.legacyMigration.link": "Migrer fra eldre versjon",
   "settings.aboutKiloCode.legacyMigration.title": "Migrering fra eldre versjon",
   "settings.aboutKiloCode.legacyMigration.description":
-    "Migrer innstillinger fra en tidligere installasjon av Kilo Code, inkludert API-nøkler for leverandører og standardmodell.",
+    "Migrer innstillinger fra en tidligere installasjon av LLMAPI, inkludert API-nøkler for leverandører og standardmodell.",
 
   // Screen 1 — What's New
-  "migration.whatsNew.title": "Hva er nytt i Kilo Code",
+  "migration.whatsNew.title": "Hva er nytt i LLMAPI",
   "migration.whatsNew.subtitle": "Vi har bygget utvidelsen på nytt med et raskere og mer effektivt grunnlag.",
   "migration.whatsNew.features.performance.title": "Raskere agentytelse",
   "migration.whatsNew.features.performance.detail":
@@ -1518,7 +1518,7 @@ export const dict = {
     "Et samlet grensesnitt for å kjøre flere agenter parallelt, hver på sitt eget worktree — overvåk fremdrift, bytt kontekst og gjennomgå endringer på ett sted.",
   "migration.whatsNew.features.foundation.title": "Delt grunnlag",
   "migration.whatsNew.features.foundation.detail":
-    "Én liten, effektiv kjerne på tvers av alle Kilo-produkter. En kjent opplevelse uansett hvordan du velger å jobbe.",
+    "Én liten, effektiv kjerne på tvers av alle LLMAPI-produkter. En kjent opplevelse uansett hvordan du velger å jobbe.",
   "migration.whatsNew.blogLink": "Les hele kunngjøringen",
   "migration.whatsNew.docsLink": "Nyheter og ofte stilte spørsmål",
   "migration.whatsNew.continue": "Fortsett",
@@ -1614,7 +1614,7 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip": "Filer endret i arbeidstreet, men ikke staget ennå, pluss usporet (nye) filer.",
   "diffViewer.source.session.label": "Økt",
   "diffViewer.source.session.tooltip":
-    "Filer endret av Kilo i løpet av gjeldende økt, basert på øyeblikksbilder per tur. Tilbakestilles når du starter en ny økt.",
+    "Filer endret av LLMAPI i løpet av gjeldende økt, basert på øyeblikksbilder per tur. Tilbakestilles når du starter en ny økt.",
   "diffViewer.group.session": "Økt",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

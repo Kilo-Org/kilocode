@@ -32,7 +32,7 @@ export interface WorktreeDiffSourceOptions {
  * extension host — no `kilo serve` round-trip.
  */
 export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): DiffSource {
-  const output = vscode.window.createOutputChannel("Kilo Diff: Workspace")
+  const output = vscode.window.createOutputChannel("LLMAPI Diff: Workspace")
   const log = (...args: unknown[]) => appendOutput(output, "WorktreeDiffSource", ...args)
   const git = new GitOps({ log })
 

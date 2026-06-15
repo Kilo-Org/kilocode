@@ -117,11 +117,11 @@ export class RemoteStatusService implements vscode.Disposable {
       return
     }
     if (this.state.connected) {
-      this.bar.text = "$(radio-tower) Kilo Remote"
+      this.bar.text = "$(radio-tower) LLMAPI Remote"
       this.bar.tooltip = t("remote.connected")
       this.bar.color = new vscode.ThemeColor("testing.iconPassed")
     } else {
-      this.bar.text = "$(radio-tower) Kilo Remote \u2026"
+      this.bar.text = "$(radio-tower) LLMAPI Remote \u2026"
       this.bar.tooltip = t("remote.connecting")
       this.bar.color = new vscode.ThemeColor("editorWarning.foreground")
     }

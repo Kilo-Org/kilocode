@@ -48,7 +48,7 @@ const KiloLogo = (): JSX.Element => {
   const icon = isLight ? "kilo-light.svg" : "kilo-dark.svg"
   return (
     <div class="migration-wizard__logo">
-      <img src={`${iconsBaseUri}/${icon}`} alt="Kilo Code" />
+      <img src={`${iconsBaseUri}/${icon}`} alt="LLMAPI" />
     </div>
   )
 }

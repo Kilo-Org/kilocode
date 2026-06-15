@@ -29,7 +29,7 @@ export function providerOrderIndex(providerID: string, order = PROVIDER_PRIORITY
 export function createKiloFallbackProvider() {
   return {
     id: KILO_PROVIDER_ID,
-    name: "Kilo Gateway",
+    name: "LLMAPI Gateway",
     source: "custom" as const,
     env: ["KILO_API_KEY"],
     models: {},
