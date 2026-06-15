@@ -852,6 +852,7 @@ export const dict = {
   "settings.providers.betaNotice":
     "I øjeblikket kan kun LLMAPI Gateway-udbyderen konfigureres i indstillingsgrænsefladen. Understøttelse af konfiguration af andre udbydere kommer snart i løbet af betaperioden. I mellemtiden kan du konfigurere udbydere via CLI eller konfigurationsfilen. Vi er dedikerede til at holde LLMAPI åben, ingen lock-in.",
   "settings.providers.section.connected": "Forbundne udbydere",
+  "settings.providers.gateway.name": "LLMAPI Gateway",
   "settings.providers.connected.empty": "Ingen forbundne udbydere",
   "settings.providers.section.popular": "Populære udbydere",
   "settings.providers.search.placeholder": "Søg udbydere",

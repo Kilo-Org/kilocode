@@ -128,7 +128,7 @@ const ProvidersTab: Component = () => {
               color: "var(--vscode-foreground)",
             }}
           >
-            LLMAPI Gateway
+            {language.t("settings.providers.gateway.name")}
           </span>
           <Show
             when={kiloLoggedIn()}

@@ -820,6 +820,7 @@ export const dict = {
   "settings.providers.betaNotice":
     "Наразі в інтерфейсі налаштувань можна налаштувати лише провайдера LLMAPI Gateway. Підтримка інших провайдерів з'явиться в бета-версії найближчим часом. Тим часом ви можете налаштовувати провайдерів через CLI або файл конфігурації. LLMAPI залишається відкритим — без прив'язки.",
   "settings.providers.section.connected": "Підключені провайдери",
+  "settings.providers.gateway.name": "LLMAPI Gateway",
   "settings.providers.connected.empty": "Підключених провайдерів немає",
   "settings.providers.section.popular": "Популярні провайдери",
   "settings.providers.tag.gateway": "Gateway",

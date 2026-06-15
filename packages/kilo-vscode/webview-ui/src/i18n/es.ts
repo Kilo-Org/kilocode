@@ -860,6 +860,7 @@ export const dict = {
   "settings.providers.betaNotice":
     "Actualmente, solo el proveedor LLMAPI Gateway se puede configurar en la interfaz de ajustes. El soporte para configurar otros proveedores llegará pronto durante el período beta. Mientras tanto, puedes configurar proveedores usando la CLI o el archivo de configuración. Estamos comprometidos a mantener LLMAPI abierto, sin ataduras.",
   "settings.providers.section.connected": "Proveedores conectados",
+  "settings.providers.gateway.name": "LLMAPI Gateway",
   "settings.providers.connected.empty": "No hay proveedores conectados",
   "settings.providers.section.popular": "Proveedores populares",
   "settings.providers.search.placeholder": "Buscar proveedores",

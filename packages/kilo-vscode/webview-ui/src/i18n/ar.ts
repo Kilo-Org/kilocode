@@ -805,6 +805,7 @@ export const dict = {
   "settings.providers.betaNotice":
     "حالياً، يمكن إعداد مزود LLMAPI Gateway فقط في واجهة الإعدادات. سيتوفر دعم إعداد المزودين الآخرين قريباً خلال الفترة التجريبية. في غضون ذلك، يمكنك إعداد المزودين باستخدام CLI أو ملف التكوين. نحن ملتزمون بإبقاء LLMAPI مفتوحاً، دون تقييد.",
   "settings.providers.section.connected": "الموفرون المتصلون",
+  "settings.providers.gateway.name": "LLMAPI Gateway",
   "settings.providers.connected.empty": "لا يوجد موفرون متصلون",
   "settings.providers.section.popular": "الموفرون الشائعون",
   "settings.providers.search.placeholder": "البحث عن موفرين",

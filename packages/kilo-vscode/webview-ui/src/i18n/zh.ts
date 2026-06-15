@@ -832,6 +832,7 @@ export const dict = {
   "settings.providers.betaNotice":
     "目前只能在设置界面中配置 LLMAPI Gateway 提供商。在 Beta 测试期间即将支持配置其他提供商。在此期间，您可以使用 CLI 或配置文件来配置提供商。我们致力于保持 LLMAPI 开放，无锁定。",
   "settings.providers.section.connected": "已连接的提供商",
+  "settings.providers.gateway.name": "LLMAPI Gateway",
   "settings.providers.connected.empty": "没有已连接的提供商",
   "settings.providers.section.popular": "热门提供商",
   "settings.providers.search.placeholder": "搜索提供商",

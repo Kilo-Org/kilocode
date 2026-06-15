@@ -810,6 +810,7 @@ export const dict = {
   "settings.providers.betaNotice":
     "현재 설정 인터페이스에서는 LLMAPI Gateway 제공자만 설정할 수 있습니다. 다른 제공자 설정에 대한 지원은 베타 기간 동안 곧 제공될 예정입니다. 그동안에는 CLI 또는 설정 파일을 사용하여 제공자를 설정할 수 있습니다. 우리는 종속(lock-in) 없이 LLMAPI를 개방적으로 유지하기 위해 최선을 다하고 있습니다.",
   "settings.providers.section.connected": "연결된 공급자",
+  "settings.providers.gateway.name": "LLMAPI Gateway",
   "settings.providers.connected.empty": "연결된 공급자 없음",
   "settings.providers.section.popular": "인기 공급자",
   "settings.providers.search.placeholder": "공급자 검색",

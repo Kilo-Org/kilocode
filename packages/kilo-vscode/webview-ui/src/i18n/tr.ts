@@ -820,6 +820,7 @@ export const dict = {
   "settings.providers.betaNotice":
     "Şu anda yalnızca LLMAPI Gateway sağlayıcısı ayarlar arayüzünde yapılandırılabilir. Diğer sağlayıcılar için destek beta döneminde yakında gelecek. Bu arada CLI veya yapılandırma dosyası ile sağlayıcıları yapılandırabilirsiniz. LLMAPI'yu açık tutmaya kararlıyız, kilitlenme yok.",
   "settings.providers.section.connected": "Bağlı sağlayıcılar",
+  "settings.providers.gateway.name": "LLMAPI Gateway",
   "settings.providers.connected.empty": "Bağlı sağlayıcı yok",
   "settings.providers.section.popular": "Popüler sağlayıcılar",
   "settings.providers.tag.gateway": "Gateway",

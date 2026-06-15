@@ -819,6 +819,7 @@ export const dict = {
   "settings.providers.betaNotice":
     "For øyeblikket kan kun LLMAPI Gateway-leverandøren konfigureres i innstillingsgrensesnittet. Støtte for konfigurering av andre leverandører kommer snart i løpet av betaperioden. I mellomtiden kan du konfigurere leverandører via CLI eller konfigurasjonsfilen. Vi er forpliktet til å holde LLMAPI åpent, ingen lock-in.",
   "settings.providers.section.connected": "Tilkoblede leverandører",
+  "settings.providers.gateway.name": "LLMAPI Gateway",
   "settings.providers.connected.empty": "Ingen tilkoblede leverandører",
   "settings.providers.section.popular": "Populære leverandører",
   "settings.providers.search.placeholder": "Søk etter leverandører",
