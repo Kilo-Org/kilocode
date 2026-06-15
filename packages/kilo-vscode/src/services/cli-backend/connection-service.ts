@@ -21,9 +21,11 @@ function isNotFound(err: unknown) {
   if (!err || typeof err !== "object") return false
   const obj = err as Record<string, unknown>
   if (obj.name === "NotFoundError") return true
+  if (obj._tag === "NotFound") return true
   if (obj.status === 404) return true
   if (obj.data && typeof obj.data === "object") {
-    return (obj.data as Record<string, unknown>).name === "NotFoundError"
+    const data = obj.data as Record<string, unknown>
+    return data.name === "NotFoundError" || data._tag === "NotFound"
   }
   return false
 }
@@ -69,6 +71,8 @@ export class KiloConnectionService {
   private readonly clearPendingPromptsListeners: Set<ClearPendingPromptsListener> = new Set()
   private readonly directoryProviders: Set<DirectoryProvider> = new Set()
   private readonly permissionDirectories: Map<string, string> = new Map()
+  private readonly questionDirectories: Map<string, string> = new Map()
+  private questionRevision = 0
 
   /**
    * Shared mapping used to resolve session scope for events that don't reliably include a sessionID.
@@ -270,6 +274,36 @@ export class KiloConnectionService {
     }
   }
 
+  recordQuestionDirectory(requestID: string, directory: string): void {
+    if (!requestID || !directory) {
+      return
+    }
+    this.questionDirectories.set(requestID, directory)
+  }
+
+  getQuestionDirectory(requestID: string): string | undefined {
+    return this.questionDirectories.get(requestID)
+  }
+
+  clearQuestionDirectory(requestID: string): void {
+    this.questionDirectories.delete(requestID)
+    // A resolved request must invalidate an in-flight recovery scan so stale list data cannot repost it.
+    this.questionRevision += 1
+  }
+
+  getQuestionRevision(): number {
+    return this.questionRevision
+  }
+
+  pruneQuestionDirectories(active: Set<string>, dirs: Set<string>): void {
+    const size = this.questionDirectories.size
+    for (const [id, dir] of this.questionDirectories) {
+      if (active.has(id) || !dirs.has(dir)) continue
+      this.questionDirectories.delete(id)
+    }
+    if (this.questionDirectories.size !== size) this.questionRevision += 1
+  }
+
   /**
    * Subscribe to notification dismiss events broadcast from any KiloProvider. Returns unsubscribe function.
    */
@@ -429,7 +463,7 @@ export class KiloConnectionService {
       if (qs) {
         for (const q of qs) {
           const { error } = await this.client.question.reject({ requestID: q.id, directory: dir })
-          if (error) throw new Error(`Failed to reject question ${q.id}: ${String(error)}`)
+          if (error && !isNotFound(error)) throw new Error(`Failed to reject question ${q.id}: ${String(error)}`)
         }
       }
       await drainSuggestions(this.client, dir)
@@ -516,6 +550,8 @@ export class KiloConnectionService {
     this.directoryProviders.clear()
     this.messageSessionIdsByMessageId.clear()
     this.permissionDirectories.clear()
+    this.questionDirectories.clear()
+    this.questionRevision += 1
     this.focused.clear()
     this.opened.clear()
     if (this.debounceTimer) {
@@ -595,6 +631,8 @@ export class KiloConnectionService {
     this.config = null
     this.info = null
     this.permissionDirectories.clear()
+    this.questionDirectories.clear()
+    this.questionRevision += 1
   }
 
   private handleServerExit(code: number | null): void {
@@ -647,6 +685,7 @@ export class KiloConnectionService {
     sse.onEvent((event, directory) => {
       if (this.sseClient !== sse) return
       this.handlePermissionEvent(event, directory)
+      this.handleQuestionEvent(event, directory)
       for (const listener of this.eventListeners) {
         listener(event, directory)
       }
@@ -700,6 +739,17 @@ export class KiloConnectionService {
     }
     if (event.type === "permission.replied") {
       this.clearPermissionDirectory(event.properties.requestID)
+    }
+  }
+
+  private handleQuestionEvent(event: SSEPayload, directory?: string): void {
+    if (event.type === "question.asked" && directory) {
+      this.questionRevision += 1
+      this.recordQuestionDirectory(event.properties.id, directory)
+      return
+    }
+    if (event.type === "question.replied" || event.type === "question.rejected") {
+      this.clearQuestionDirectory(event.properties.requestID)
     }
   }
 }

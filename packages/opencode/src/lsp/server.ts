@@ -1015,10 +1015,12 @@ export const Clangd: Info = {
     } = await releaseResponse.json()
 
     const tag = release.tag_name
-    if (!tag) {
+    // kilocode_change start - reject release metadata before it becomes an executable path
+    if (!tag || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(tag)) {
       log.error("clangd release did not include a tag name")
       return
     }
+    // kilocode_change end
     const platform = process.platform
     const tokens: Record<string, string> = {
       darwin: "mac",
@@ -1055,7 +1057,9 @@ export const Clangd: Info = {
       return
     }
 
-    const archive = path.join(Global.Path.bin, name)
+    // kilocode_change start - do not use remote metadata as a local path
+    const archive = path.join(Global.Path.bin, name.endsWith(".zip") ? "clangd.zip" : "clangd.tar.xz")
+    // kilocode_change end
     const buf = await downloadResponse.arrayBuffer()
     if (buf.byteLength === 0) {
       log.error("Failed to write clangd archive")
@@ -1492,7 +1496,9 @@ export const LuaLS: Info = {
         return
       }
 
-      const tempPath = path.join(Global.Path.bin, assetName)
+      // kilocode_change start - use a fixed local archive name
+      const tempPath = path.join(Global.Path.bin, `lua-language-server.${ext}`)
+      // kilocode_change end
       if (downloadResponse.body) await Filesystem.writeStream(tempPath, downloadResponse.body)
 
       // Unlike zls which is a single self-contained binary,

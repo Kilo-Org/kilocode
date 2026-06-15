@@ -1,5 +1,11 @@
 import { describe, expect, it } from "bun:test"
-import { connectProvider, disconnectProvider, fetchProviderData, saveCustomProvider } from "../../src/provider-actions"
+import {
+  connectProvider,
+  disconnectProvider,
+  fetchProviderData,
+  resolveStoredKey,
+  saveCustomProvider,
+} from "../../src/provider-actions"
 
 type ExistingGlobal = { disabled_providers?: string[]; provider?: Record<string, unknown> }
 
@@ -440,5 +446,70 @@ describe("fetchProviderData", () => {
 
     expect(result.authStates).toEqual({ "groq-test": "api" })
     expect("key" in item).toBe(false)
+  })
+
+  it("retains stripped keys for providers with a configured baseURL", async () => {
+    const client = {
+      provider: {
+        list: async () => ({
+          data: {
+            all: [
+              {
+                id: "myprovider",
+                name: "My Provider",
+                source: "config",
+                key: "sk-stored",
+                env: [],
+                options: { baseURL: "https://example.com/v1" },
+                models: {},
+              },
+              {
+                id: "no-url",
+                name: "No URL",
+                source: "config",
+                key: "sk-other",
+                env: [],
+                models: {},
+              },
+            ],
+            connected: [],
+            default: {},
+          },
+        }),
+        auth: async () => ({ data: {} }),
+      },
+    } as unknown as Parameters<typeof fetchProviderData>[0]
+
+    const result = await fetchProviderData(client, "/tmp")
+
+    expect(result.storedKeys).toEqual({
+      myprovider: { key: "sk-stored", baseURL: "https://example.com/v1" },
+    })
+    expect(result.response.all.every((item) => !("key" in (item as Record<string, unknown>)))).toBe(true)
+  })
+})
+
+describe("resolveStoredKey", () => {
+  const storedKeys = {
+    myprovider: { key: "sk-stored", baseURL: "https://example.com/v1" },
+  }
+
+  it("returns the stored key when the fetch URL matches the configured baseURL", () => {
+    expect(resolveStoredKey(storedKeys, "myprovider", "https://example.com/v1")).toBe("sk-stored")
+  })
+
+  it("tolerates trailing-slash differences", () => {
+    expect(resolveStoredKey(storedKeys, "myprovider", "https://example.com/v1/")).toBe("sk-stored")
+  })
+
+  it("refuses to apply the stored key to a different host or path", () => {
+    expect(resolveStoredKey(storedKeys, "myprovider", "https://evil.example.net/v1")).toBeUndefined()
+    expect(resolveStoredKey(storedKeys, "myprovider", "https://example.com/v2")).toBeUndefined()
+  })
+
+  it("returns undefined for unknown or missing provider ids", () => {
+    expect(resolveStoredKey(storedKeys, "other", "https://example.com/v1")).toBeUndefined()
+    expect(resolveStoredKey(storedKeys, undefined, "https://example.com/v1")).toBeUndefined()
+    expect(resolveStoredKey(storedKeys, "", "https://example.com/v1")).toBeUndefined()
   })
 })
