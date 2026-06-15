@@ -667,7 +667,7 @@ describe("plan_exit detection", () => {
             messageID: id,
             sessionID: session.id,
             type: "text",
-            text: "Create a plan. AGENTS says plans go in .plans/.",
+            text: "Create a plan. AGENTS says plans go in plans/.",
           },
         ],
       }
@@ -693,6 +693,7 @@ describe("plan_exit detection", () => {
       expect(text).toContain("Use the plan path specified by the user or project instructions")
       expect(text).toContain("Use the chosen plan path as the main plan file")
       expect(text).toContain("Project/user instructions about plan location")
+      expect(text).toContain("plans/ or .plans/")
       expect(text).toContain("Before creating or updating the plan file")
       expect(text).toContain("Finalize and save the plan")
       expect(text).toContain("Continue refining")
@@ -771,7 +772,7 @@ describe("plan_exit detection", () => {
             messageID: id,
             sessionID: session.id,
             type: "text",
-            text: "Create a plan. AGENTS says plans go in .plans/.",
+            text: "Create a plan. AGENTS says plans go in plans/.",
           },
         ],
       }
@@ -787,7 +788,7 @@ describe("plan_exit detection", () => {
       const text = part?.type === "text" ? part.text : ""
       expect(text).toContain("Use the plan path specified by the user or project instructions")
       expect(text).toContain("If none is specified")
-      expect(text).toContain(".plans/")
+      expect(text).toContain("plans/ or .plans/")
       expect(text).not.toContain("Default to")
       expect(text).not.toContain("A fallback plan file exists")
     }))
