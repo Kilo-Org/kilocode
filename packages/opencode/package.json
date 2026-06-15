@@ -36,7 +36,7 @@
     }
   },
   "devDependencies": {
-    "@babel/core": "7.28.4",
+    "@babel/core": "7.29.6",
     "@effect/language-service": "0.84.2",
     "@octokit/webhooks-types": "7.6.1",
     "@opencode-ai/script": "workspace:*",
