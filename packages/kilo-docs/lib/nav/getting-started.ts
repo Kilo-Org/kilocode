@@ -61,6 +61,10 @@ export const GettingStartedNav: NavSection[] = [
         children: "Migrating from Cursor",
       },
       {
+        href: "/getting-started/migrating-from-roo",
+        children: "Migrating from Roo Code",
+      },
+      {
         href: "/getting-started/troubleshooting",
         children: "Troubleshooting",
         subLinks: [
