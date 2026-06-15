@@ -310,19 +310,6 @@ export const TuiThreadCommand = cmd({
             events: createEventSource(client),
           }
 
-      try {
-        await validateSession({
-          url: transport.url, // kilocode_change
-          sessionID: args.session,
-          directory: cwd,
-          fetch: transport.fetch,
-        })
-      } catch (error) {
-        UI.error(errorMessage(error))
-        process.exitCode = 1
-        return
-      }
-
       setTimeout(() => {
         client.call("checkUpgrade", { directory: cwd }).catch(() => {})
       }, 1000).unref?.()
@@ -346,6 +333,19 @@ export const TuiThreadCommand = cmd({
           args.cloudFork = false
         }
         // kilocode_change end
+
+        try {
+          await validateSession({
+            url: transport.url, // kilocode_change
+            sessionID: args.session,
+            directory: cwd,
+            fetch: transport.fetch,
+          })
+        } catch (error) {
+          UI.error(errorMessage(error))
+          process.exitCode = 1
+          return
+        }
 
         await start({
           // kilocode_change - shared lazy loader also supports daemon attach

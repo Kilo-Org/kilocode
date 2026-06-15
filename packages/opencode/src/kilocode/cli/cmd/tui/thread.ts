@@ -51,10 +51,13 @@ export namespace KiloTuiThreadDaemon {
     const prompt = await input.input()
     const config = await TuiConfig.get()
 
+    const fork = await session(input, daemon)
+    if (!fork.ok) return true
+
     try {
       await validateSession({
         url: daemon.url,
-        sessionID: input.args.session,
+        sessionID: fork.id,
         directory: input.cwd,
         headers: daemon.headers,
       })
@@ -63,9 +66,6 @@ export namespace KiloTuiThreadDaemon {
       process.exitCode = 1
       return true
     }
-
-    const fork = await session(input, daemon)
-    if (!fork.ok) return true
 
     await input.start({
       url: daemon.url,
