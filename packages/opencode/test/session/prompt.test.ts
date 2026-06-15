@@ -24,7 +24,7 @@ import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Question } from "../../src/question"
 import { Todo } from "../../src/session/todo"
 import { Session } from "@/session/session"
-import { SessionMessageTable, SessionTable } from "../../src/session/session.sql"
+import { SessionMessageTable, SessionTable } from "../../src/session/session.sql" // kilocode_change
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
@@ -57,7 +57,7 @@ import { testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
 import { SyncEvent } from "@/sync"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { eq } from "drizzle-orm"
+import { eq } from "drizzle-orm" // kilocode_change
 import { BackgroundJob } from "@/background/job"
 import { EventV2Bridge } from "@/event-v2-bridge"
 
@@ -311,6 +311,7 @@ function providerCfg(url: string) {
   }
 }
 
+// kilocode_change start - organization mode default model test fixtures
 const org = { providerID: ProviderID.make("kilo"), modelID: ModelID.make("openai/gpt-4o:free") }
 
 function orgCfg(url: string, defaultModel: string = org.modelID, catalogModel: string = org.modelID) {
@@ -342,6 +343,7 @@ function orgCfg(url: string, defaultModel: string = org.modelID, catalogModel: s
     },
   }
 }
+// kilocode_change end
 
 const user = Effect.fn("test.user")(function* (sessionID: SessionID, text: string) {
   const session = yield* Session.Service
@@ -415,6 +417,7 @@ const boot = Effect.fn("test.boot")(function* (input?: { title?: string }) {
   yield* config.get()
   const chat = yield* sessions.create(input ?? { title: "Pinned" })
   return { prompt, run, sessions, chat }
+// kilocode_change start - organization mode default prompt coverage
 })
 
 // Organization mode defaults
@@ -564,6 +567,7 @@ it.live("command uses its own agent default while keeping command agent model pr
     },
   ),
 )
+// kilocode_change end
 
 // Loop semantics
 
