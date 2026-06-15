@@ -11489,6 +11489,16 @@
                                     }
                                   ]
                                 }
+                              },
+                              "defaultModel": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               }
                             },
                             "additionalProperties": false

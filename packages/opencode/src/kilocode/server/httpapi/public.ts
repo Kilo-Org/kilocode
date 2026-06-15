@@ -59,6 +59,9 @@ export function matchLegacyKiloOpenApi(input: Record<string, unknown>) {
   if (session?.title) session.title = nullable(session.title)
   if (sessions?.nextCursor) sessions.nextCursor = nullable(sessions.nextCursor)
 
+  const modes = json("/kilo/modes")?.schema?.properties?.modes?.items?.properties?.config?.properties
+  if (modes?.defaultModel) modes.defaultModel = nullable(modes.defaultModel)
+
   const claw = json("/kilo/claw/status")?.schema?.properties
   if (claw?.status) claw.status = nullable(claw.status)
   if (claw?.openclawVersion) claw.openclawVersion = nullable(claw.openclawVersion)

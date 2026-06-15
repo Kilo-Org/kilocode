@@ -171,6 +171,9 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     })
     expect(sessions?.nextCursor).toEqual({ anyOf: [{ type: "string" }, { type: "null" }] })
 
+    const modes = response(KiloGatewayPaths.modes)?.properties?.modes?.items?.properties?.config?.properties
+    expect(modes?.defaultModel).toEqual({ anyOf: [{ type: "string" }, { type: "null" }] })
+
     const claw = response(KiloGatewayPaths.clawStatus)?.properties
     expect(claw?.status).toEqual({ anyOf: [expect.objectContaining({ type: "string" }), { type: "null" }] })
     for (const field of ["openclawVersion", "lastStartedAt", "lastStoppedAt", "botName"]) {

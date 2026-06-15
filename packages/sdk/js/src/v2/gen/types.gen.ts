@@ -8868,7 +8868,7 @@ export type KiloModesResponses = {
               },
             ]
         >
-        defaultModel?: string
+        defaultModel?: string | null
       }
     }>
   }
