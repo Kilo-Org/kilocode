@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { buildRequestHeaders } from "../src/provider"
+import { buildRequestHeaders, createKilo } from "../src/provider"
 
 describe("Kilo provider request headers", () => {
   test("request headers override provider defaults", () => {
@@ -19,5 +19,11 @@ describe("Kilo provider request headers", () => {
     expect(headers.get("x-kilocode-feature")).toBe("agent-manager")
     expect(headers.get("x-default-only")).toBe("kept")
     expect(headers.get("x-request-only")).toBe("kept-too")
+  })
+
+  test("exposes Venice models through the native Venice SDK provider", () => {
+    const provider = createKilo({ apiKey: "test-key" })
+
+    expect(provider.venice("venice-test").provider).toBe("venice.chat")
   })
 })

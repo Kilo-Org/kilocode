@@ -12756,7 +12756,7 @@
             }
           }
         },
-        "description": "Remove a skill by deleting its directory from disk and clearing it from cache.",
+        "description": "Remove a skill by deleting its manifest from disk and clearing it from cache.",
         "summary": "Remove a skill",
         "requestBody": {
           "content": {
@@ -18127,7 +18127,7 @@
                 },
                 "ai_sdk_provider": {
                   "type": "string",
-                  "enum": ["alibaba", "anthropic", "mistral", "openai", "openai-compatible", "openrouter"]
+                  "enum": ["alibaba", "anthropic", "mistral", "openai", "openai-compatible", "openrouter", "venice"]
                 },
                 "release_date": {
                   "type": "string"
@@ -19199,7 +19199,7 @@
           },
           "ai_sdk_provider": {
             "type": "string",
-            "enum": ["alibaba", "anthropic", "mistral", "openai", "openai-compatible", "openrouter"]
+            "enum": ["alibaba", "anthropic", "mistral", "openai", "openai-compatible", "openrouter", "venice"]
           }
         },
         "required": [

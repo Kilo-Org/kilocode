@@ -165,6 +165,7 @@ export type KiloProvider = Provider & {
   mistral(modelId: string): LanguageModel
   openai(modelId: string): LanguageModel
   openaiCompatible(modelId: string): LanguageModel
+  venice(modelId: string): LanguageModel
 }
 
 // Re-export LanguageModelV3 for convenience
