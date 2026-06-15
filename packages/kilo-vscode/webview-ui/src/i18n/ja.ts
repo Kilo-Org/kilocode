@@ -867,6 +867,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "サブエージェントモデル",
   "settings.providers.subagentModel.description":
     "task-tool サブエージェントのデフォルトモデルと推論の労力。呼び出し元のエージェントのモデルを継承する場合は未設定のままにしてください。",
+  "settings.models.hidePromptTraining.title": "プロンプトを学習に使用するモデルを非表示",
+  "settings.models.hidePromptTraining.description":
+    "プロバイダーがプロンプトを学習に使用する可能性のある Kilo Gateway モデルを非表示にします。",
   "settings.providers.modeModels": "モードごとのモデル",
   "settings.providers.custom.note": "Base URL で OpenAI 互換プロバイダーを追加します。",
   "settings.providers.modeModels.description":

@@ -234,6 +234,61 @@ describe("kilocode indexing config", () => {
   })
 })
 
+describe("custom provider model config", () => {
+  test("persists and removes reasoning across a global config reload", async () => {
+    await using globalTmp = await tmpdir()
+    const file = path.join(globalTmp.path, "kilo.json")
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(globalTmp.path, {
+        provider: {
+          custom: {
+            name: "Custom",
+            models: { model: { name: "Model" } },
+          },
+        },
+      })
+      await saveGlobal(
+        decode({
+          provider: {
+            custom: {
+              models: { model: { reasoning: true } },
+            },
+          },
+        }),
+      )
+      const added = JSON.parse(await Bun.file(file).text())
+      expect(added.provider.custom.models.model.reasoning).toBe(true)
+
+      await saveGlobal(
+        decode({
+          provider: {
+            custom: {
+              models: { model: { reasoning: null } },
+            },
+          },
+        }),
+      )
+      const written = JSON.parse(await Bun.file(file).text())
+      expect(written.provider.custom.models.model).not.toHaveProperty("reasoning")
+
+      await clear()
+      const reloaded = await Effect.runPromise(
+        Config.Service.use((svc) => svc.getGlobal()).pipe(Effect.scoped, Effect.provide(layer)),
+      )
+      expect(reloaded.provider?.custom?.models?.model?.reasoning).toBeUndefined()
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+})
+
 describe("subagent variant overrides", () => {
   test("removes one model override without removing sibling models", () => {
     const patch = decode({

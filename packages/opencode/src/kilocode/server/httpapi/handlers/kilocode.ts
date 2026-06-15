@@ -1,6 +1,7 @@
 import { Effect } from "effect"
-import { HttpApiBuilder } from "effect/unstable/httpapi"
+import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import * as KiloAgent from "@/kilocode/agent"
+import * as KiloSkill from "@/kilocode/skill-remove"
 import { Agent } from "@/agent/agent"
 import { Config } from "@/config/config"
 import { EffectBridge } from "@/effect/bridge"
@@ -14,6 +15,7 @@ import { RemoveAgentPayload, RemoveSkillPayload } from "../groups/kilocode"
 export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode", (handlers) =>
   Effect.gen(function* () {
     const agents = yield* Agent.Service
+    const skills = yield* Skill.Service
     const config = yield* Config.Service
     const store = yield* InstanceStore.Service
 
@@ -24,7 +26,13 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const removeSkill = Effect.fn("KilocodeHttpApi.removeSkill")(function* (ctx: {
       payload: typeof RemoveSkillPayload.Type
     }) {
-      yield* Effect.promise(() => Skill.remove(ctx.payload.location))
+      const instance = yield* InstanceState.context
+      const entries = yield* skills.all()
+      yield* Effect.tryPromise({
+        try: () => KiloSkill.remove(ctx.payload.location, entries),
+        catch: () => new HttpApiError.BadRequest({}),
+      })
+      yield* store.dispose(instance)
       return true
     })
 

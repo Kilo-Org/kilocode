@@ -829,6 +829,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "하위 에이전트 모델",
   "settings.providers.subagentModel.description":
     "task-tool 하위 에이전트의 기본 모델 및 추론 수준입니다. 호출하는 에이전트의 모델을 상속하려면 비워 두세요.",
+  "settings.models.hidePromptTraining.title": "프롬프트를 학습에 사용하는 모델 숨기기",
+  "settings.models.hidePromptTraining.description":
+    "제공업체가 사용자의 프롬프트를 학습에 사용할 수 있는 Kilo Gateway 모델을 숨깁니다.",
   "settings.providers.modeModels": "모드별 모델",
   "settings.providers.custom.note": "Base URL로 OpenAI 호환 공급자를 추가합니다.",
   "settings.providers.modeModels.description":
