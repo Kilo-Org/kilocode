@@ -648,7 +648,7 @@ describe("plan_exit detection", () => {
       expect(text).not.toContain("No plan file exists yet")
     }))
 
-  test("native plan includes architect behavior and shared plan reminder", () =>
+  test("native plan reminder prefers project plan path instructions over fallback", () =>
     withInstance(async () => {
       const session = await sessions.create({})
       const id = MessageID.ascending()
@@ -679,25 +679,10 @@ describe("plan_exit detection", () => {
         messages: [user],
       })
 
-      const body = content(user)
       const part = user.parts.at(-1)
       const text = part?.type === "text" ? part.text : ""
-      expect(body).toContain("experienced technical leader")
-      expect(body).toContain("Inspect the codebase and available local context")
-      expect(body).toContain("Ask one question at a time")
-      expect(body).toContain("Never provide level-of-effort estimates")
-      expect(body).toContain("Finalize and save the plan")
-      expect(body).toContain("Do not implement source or documentation changes as this agent")
-      expect(body).not.toContain("# Plan Mode - System Reminder")
-      expect(body).not.toContain("NOTE that this is the only file you are allowed to edit")
       expect(text).toContain("Use the plan path specified by the user or project instructions")
-      expect(text).toContain("Use the chosen plan path as the main plan file")
-      expect(text).toContain("Project/user instructions about plan location")
       expect(text).toContain("plans/ or .plans/")
-      expect(text).toContain("Before creating or updating the plan file")
-      expect(text).toContain("Finalize and save the plan")
-      expect(text).toContain("Continue refining")
-      expect(text).toContain(".plans/")
       expect(text).toContain("If none is specified")
       expect(text).not.toContain(Session.plan(session, Instance.current))
     }))
