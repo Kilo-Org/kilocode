@@ -122,7 +122,7 @@ export const dict = {
   "dialog.model.expand": "Uitvouwen",
   "dialog.model.collapse": "Samenvouwen",
 
-  "dialog.model.unpaid.freeModels.title": "Gratis modellen aangeboden door Kilo",
+  "dialog.model.unpaid.freeModels.title": "Gratis modellen aangeboden door LLMAPI",
   "dialog.model.unpaid.addMore.title": "Meer modellen van populaire providers toevoegen",
 
   "dialog.provider.viewAll": "Meer providers tonen",
@@ -135,7 +135,7 @@ export const dict = {
   "provider.connect.status.waiting": "Wachten op autorisatie...",
   "provider.connect.status.failed": "Autorisatie mislukt: {{error}}",
   "provider.connect.apiKey.description":
-    "Voer uw {{provider}} API-sleutel in om uw account te verbinden en {{provider}} modellen te gebruiken in Kilo.",
+    "Voer uw {{provider}} API-sleutel in om uw account te verbinden en {{provider}} modellen te gebruiken in LLMAPI.",
   "provider.connect.apiKey.description.local":
     "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
   "provider.connect.atomicChat.description":
@@ -165,7 +165,7 @@ export const dict = {
   "provider.connect.oauth.code.visit.prefix": "Bezoek ",
   "provider.connect.oauth.code.visit.link": "deze link",
   "provider.connect.oauth.code.visit.suffix":
-    " om uw autorisatiecode op te halen waarmee u uw account kunt verbinden en {{provider}} modellen kunt gebruiken in Kilo.",
+    " om uw autorisatiecode op te halen waarmee u uw account kunt verbinden en {{provider}} modellen kunt gebruiken in LLMAPI.",
   "provider.connect.oauth.code.label": "{{method}} autorisatiecode",
   "provider.connect.oauth.code.placeholder": "Autorisatiecode",
   "provider.connect.oauth.code.required": "Autorisatiecode is vereist",
@@ -173,7 +173,7 @@ export const dict = {
   "provider.connect.oauth.auto.visit.prefix": "Bezoek ",
   "provider.connect.oauth.auto.visit.link": "deze link",
   "provider.connect.oauth.auto.visit.suffix":
-    " en voer de onderstaande code in om uw account te verbinden en {{provider}} modellen te gebruiken in Kilo.",
+    " en voer de onderstaande code in om uw account te verbinden en {{provider}} modellen te gebruiken in LLMAPI.",
   "provider.connect.oauth.auto.confirmationCode": "Bevestigingscode",
   "provider.connect.toast.connected.title": "{{provider}} verbonden",
   "provider.connect.toast.connected.description": "{{provider}} modellen zijn nu beschikbaar voor gebruik.",
@@ -298,12 +298,12 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Typ hier een prompt en klik nogmaals op de knop om te zien hoe het werkt.",
 
-  "speechToText.tooltip.start": "Spraakinvoer starten met Kilo Gateway",
+  "speechToText.tooltip.start": "Spraakinvoer starten met LLMAPI Gateway",
   "speechToText.tooltip.stop": "Audio vastleggen stoppen",
   "speechToText.tooltip.transcribing": "Transcriberen... Klik om te annuleren.",
   "speechToText.tooltip.error": "Spraakinvoer mislukt. Klik om te wissen.",
   "speechToText.error.title": "Spraakinvoer mislukt",
-  "speechToText.error.loginRequired": "Meld u aan bij Kilo om spraakinvoer te gebruiken.",
+  "speechToText.error.loginRequired": "Meld u aan bij LLMAPI om spraakinvoer te gebruiken.",
   "speechToText.error.permission": "Microfoontoegang is geweigerd.",
   "speechToText.error.microphone": "Kon de microfoon niet starten.",
   "speechToText.error.recording": "Opname mislukt.",
@@ -341,7 +341,7 @@ export const dict = {
   "dialog.directory.empty": "Geen mappen gevonden",
 
   "dialog.server.title": "Servers",
-  "dialog.server.description": "Wissel met welke Kilo-server deze app verbinding maakt.",
+  "dialog.server.description": "Wissel met welke LLMAPI-server deze app verbinding maakt.",
   "dialog.server.search.placeholder": "Servers zoeken",
   "dialog.server.empty": "Nog geen servers",
   "dialog.server.add.title": "Een server toevoegen",
@@ -469,7 +469,7 @@ export const dict = {
   "toast.session.listFailed.title": "Laden van sessies voor {{project}} is mislukt",
 
   "toast.update.title": "Update beschikbaar",
-  "toast.update.description": "Een nieuwe versie van Kilo ({{version}}) is nu beschikbaar om te installeren.",
+  "toast.update.description": "Een nieuwe versie van LLMAPI ({{version}}) is nu beschikbaar om te installeren.",
   "toast.update.action.installRestart": "Installeren en herstarten",
   "toast.update.action.notYet": "Nog niet",
 
@@ -480,7 +480,7 @@ export const dict = {
   "error.page.action.checking": "Controleren...",
   "error.page.action.checkUpdates": "Controleren op updates",
   "error.page.action.updateTo": "Updaten naar {{version}}",
-  "error.page.report.prefix": "Meld deze fout alsjeblieft aan het Kilo team",
+  "error.page.report.prefix": "Meld deze fout alsjeblieft aan het LLMAPI team",
   "error.page.report.discord": "op Discord",
   "error.page.version": "Versie: {{version}}",
 
@@ -514,7 +514,7 @@ export const dict = {
   "error.chain.didYouMean": "Bedoelde je: {{suggestions}}",
   "error.chain.modelNotFound": "Model niet gevonden: {{provider}}/{{model}}",
   "error.chain.checkConfig": "Controleer je configuratie (opencode.json) provider/model namen",
-  "error.chain.mcpFailed": 'MCP-server "{{name}}" is mislukt. Let op, Kilo ondersteunt nog geen MCP-authenticatie.',
+  "error.chain.mcpFailed": 'MCP-server "{{name}}" is mislukt. Let op, LLMAPI ondersteunt nog geen MCP-authenticatie.',
   "error.chain.providerAuthFailed": "Provider-authenticatie mislukt ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
     'Initialiseren van provider "{{provider}}" is mislukt. Controleer referenties en configuratie.',
@@ -689,12 +689,12 @@ export const dict = {
   "sidebar.workspaces.enable": "Werkruimtes inschakelen",
   "sidebar.workspaces.disable": "Werkruimtes uitschakelen",
   "sidebar.gettingStarted.title": "Aan de slag",
-  "sidebar.gettingStarted.line1": "Kilo bevat gratis modellen, zodat je meteen kunt beginnen.",
+  "sidebar.gettingStarted.line1": "LLMAPI bevat gratis modellen, zodat je meteen kunt beginnen.",
   "sidebar.gettingStarted.line2": "Koppel een provider om modellen te gebruiken, incl. Claude, GPT, Gemini enz.",
   "sidebar.project.recentSessions": "Recente sessies",
   "sidebar.project.viewAllSessions": "Bekijk alle sessies",
 
-  "app.name.desktop": "Kilo Desktop",
+  "app.name.desktop": "LLMAPI Desktop",
 
   "settings.section.desktop": "Desktop",
   "settings.section.server": "Server",
@@ -707,11 +707,11 @@ export const dict = {
   "settings.general.section.sounds": "Geluidseffecten",
 
   "settings.general.row.language.title": "Taal",
-  "settings.general.row.language.description": "Wijzig de weergavetaal voor Kilo",
+  "settings.general.row.language.description": "Wijzig de weergavetaal voor LLMAPI",
   "settings.general.row.appearance.title": "Uiterlijk",
-  "settings.general.row.appearance.description": "Pas aan hoe Kilo eruitziet op je apparaat",
+  "settings.general.row.appearance.description": "Pas aan hoe LLMAPI eruitziet op je apparaat",
   "settings.general.row.theme.title": "Thema",
-  "settings.general.row.theme.description": "Pas het thema van Kilo aan.",
+  "settings.general.row.theme.description": "Pas het thema van LLMAPI aan.",
   "settings.general.row.font.title": "Lettertype",
   "settings.general.row.font.description": "Pas het mono-lettertype aan dat wordt gebruikt in codeblokken",
 
@@ -719,13 +719,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": "Toon 'Wat is nieuw' pop-ups na updates",
 
   "settings.updates.row.startup.title": "Controleer op updates bij opstarten",
-  "settings.updates.row.startup.description": "Controleer automatisch op updates wanneer Kilo start",
+  "settings.updates.row.startup.description": "Controleer automatisch op updates wanneer LLMAPI start",
   "settings.updates.row.check.title": "Controleer op updates",
   "settings.updates.row.check.description": "Controleer handmatig op updates en installeer indien beschikbaar",
   "settings.updates.action.checkNow": "Nu controleren",
   "settings.updates.action.checking": "Controleren...",
   "settings.updates.toast.latest.title": "Je bent up-to-date",
-  "settings.updates.toast.latest.description": "Je gebruikt de nieuwste versie van Kilo.",
+  "settings.updates.toast.latest.description": "Je gebruikt de nieuwste versie van LLMAPI.",
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
   "font.option.firaCode": "Fira Code",
@@ -820,8 +820,9 @@ export const dict = {
   "settings.providers.title": "Providers",
   "settings.providers.description": "Provider-instellingen zullen hier configureerbaar zijn.",
   "settings.providers.betaNotice":
-    "Momenteel kan alleen de Kilo Gateway-provider worden geconfigureerd in de instellingeninterface. Ondersteuning voor het configureren van andere providers komt binnenkort tijdens de bèta-periode. In de tussentijd kun je providers configureren met behulp van de CLI of het configuratiebestand. We zijn toegewijd om Kilo open te houden, geen lock-in.",
+    "Momenteel kan alleen de LLMAPI Gateway-provider worden geconfigureerd in de instellingeninterface. Ondersteuning voor het configureren van andere providers komt binnenkort tijdens de bèta-periode. In de tussentijd kun je providers configureren met behulp van de CLI of het configuratiebestand. We zijn toegewijd om LLMAPI open te houden, geen lock-in.",
   "settings.providers.section.connected": "Gekoppelde providers",
+  "settings.providers.gateway.name": "LLMAPI Gateway",
   "settings.providers.connected.empty": "Geen gekoppelde providers",
   "settings.providers.section.popular": "Populaire providers",
   "settings.providers.tag.gateway": "Gateway",
@@ -922,11 +923,11 @@ export const dict = {
   "settings.config.status.loadedLegacy": "verouderde configuratie geladen",
   "settings.config.status.notLoaded": "niet geladen",
   "settings.config.status.create": "niet gevonden - maak dit bestand",
-  "settings.config.title": "Open {{scope}} Kilo-configuratiebestand",
+  "settings.config.title": "Open {{scope}} LLMAPI-configuratiebestand",
   "settings.config.placeholder":
     "Configuratiebestanden worden op volgorde samengevoegd; bestanden gemarkeerd als geladen hebben momenteel invloed op de instellingen.",
-  "settings.config.noWorkspace": "Open een werkruimtemap om het lokale Kilo-configuratiebestand te bewerken.",
-  "settings.config.openFailed": "Kan {{scope}} Kilo-configuratiebestand niet openen: {{message}}",
+  "settings.config.noWorkspace": "Open een werkruimtemap om het lokale LLMAPI-configuratiebestand te bewerken.",
+  "settings.config.openFailed": "Kan {{scope}} LLMAPI-configuratiebestand niet openen: {{message}}",
   "settings.config.source.xdg": "XDG globale configuratie",
   "settings.config.source.homeKilo": "Home .kilo-configuratie",
   "settings.config.source.homeKilocode": "Home .kilocode-configuratie",
@@ -1074,7 +1075,7 @@ export const dict = {
   "deviceAuth.toast.codeCopied": "Code gekopieerd naar klembord",
   "deviceAuth.toast.errorCopied": "Fout gekopieerd naar klembord",
   "deviceAuth.status.initiating": "Inloggen starten...",
-  "deviceAuth.title": "Meld je aan bij Kilo Code",
+  "deviceAuth.title": "Meld je aan bij LLMAPI",
   "deviceAuth.step1": "Stap 1: Open deze URL",
   "deviceAuth.action.copyUrl": "Kopieer URL",
   "deviceAuth.action.openBrowser": "Open Browser",
@@ -1095,7 +1096,7 @@ export const dict = {
 
   "profile.title": "Profiel",
   "profile.notLoggedIn": "Niet ingelogd",
-  "profile.action.login": "Inloggen met Kilo Code",
+  "profile.action.login": "Inloggen met LLMAPI",
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Saldo vernieuwen",
   "profile.action.dashboard": "Dashboard",
@@ -1147,11 +1148,11 @@ export const dict = {
 
   "settings.experimental.title": "Experimenteel",
   "settings.language.title": "Taal",
-  "settings.aboutKiloCode.title": "Over Kilo Code",
+  "settings.aboutKiloCode.title": "Over LLMAPI",
 
   "session.messages.empty": "Start een gesprek door hieronder een bericht te typen.",
   "session.messages.welcome":
-    "Kilo Code is een AI-codeerassistent. Vraag het om features te bouwen, bugs op te lossen of je codebase uit te leggen.",
+    "LLMAPI is een AI-codeerassistent. Vraag het om features te bouwen, bugs op te lossen of je codebase uit te leggen.",
   "session.messages.scrollToBottom": "Scroll naar beneden",
   "session.messages.initializing": "Initialiseren...",
   "session.messages.taskStarting": "Starten...",
@@ -1203,7 +1204,7 @@ export const dict = {
   "settings.aboutKiloCode.port.label": "Poort:",
   "settings.aboutKiloCode.versionInfo": "Versie-informatie",
   "settings.aboutKiloCode.version.label": "Versie:",
-  "settings.aboutKiloCode.extensionName": "Kilo Code Extensie",
+  "settings.aboutKiloCode.extensionName": "LLMAPI Extensie",
   "settings.aboutKiloCode.community": "Community & Ondersteuning",
   "settings.aboutKiloCode.feedback.prefix": "Als je vragen of feedback hebt, voel je vrij om een issue aan te maken op",
   "settings.aboutKiloCode.feedback.or": "of",
@@ -1220,11 +1221,11 @@ export const dict = {
   "settings.aboutKiloCode.importSettings": "Importeren",
   "settings.aboutKiloCode.importSettings.invalidJson":
     "Ongeldig JSON-bestand. Selecteer een geldig instellingenbestand.",
-  "settings.aboutKiloCode.importSettings.invalidConfig": "Het bestand bevat geen geldige Kilo-instellingen.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "Het bestand bevat geen geldige LLMAPI-instellingen.",
   "settings.aboutKiloCode.importSettings.tooLarge":
     "Het bestand is te groot. Instellingenbestanden moeten kleiner zijn dan 1 MB.",
   "settings.aboutKiloCode.importSettings.newerVersion":
-    "Dit bestand is geëxporteerd vanuit een nieuwere versie van Kilo. Sommige instellingen worden mogelijk genegeerd.",
+    "Dit bestand is geëxporteerd vanuit een nieuwere versie van LLMAPI. Sommige instellingen worden mogelijk genegeerd.",
   "settings.aboutKiloCode.importSettings.success":
     "Instellingen geïmporteerd. Controleer de bovenstaande wijzigingen en klik vervolgens op Opslaan.",
 
@@ -1249,7 +1250,7 @@ export const dict = {
   "settings.browser.headless.title": "Headless Modus",
   "settings.browser.headless.description": "Draai in headless modus (geen zichtbaar browservenster).",
 
-  "settings.language.description": 'Kies de taal voor de Kilo Code UI. "Auto" gebruikt je VS Code schermtaal.',
+  "settings.language.description": 'Kies de taal voor de LLMAPI UI. "Auto" gebruikt je VS Code schermtaal.',
   "settings.language.auto": "Auto (VS Code taal)",
   "settings.language.current": "Huidig:",
 
@@ -1300,11 +1301,11 @@ export const dict = {
     "Schakel AI-aangedreven zoeken in natuurlijke taal door je codebase in",
   "settings.experimental.speechToText.title": "Spraak naar tekst",
   "settings.experimental.speechToText.description":
-    "Schakel spraakinvoer in promptvelden in met uw Kilo-account via Kilo Gateway.",
+    "Schakel spraakinvoer in promptvelden in met uw LLMAPI-account via LLMAPI Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Schakel de Kilo-provider in en meld u aan om Speech to Text te gebruiken. Speech to Text wordt momenteel alleen ondersteund met Kilo Gateway.",
+    "Schakel de LLMAPI-provider in en meld u aan om Speech to Text te gebruiken. Speech to Text wordt momenteel alleen ondersteund met LLMAPI Gateway.",
   "settings.experimental.speechToTextModel.title": "Spraak-naar-tekst-model",
-  "settings.experimental.speechToTextModel.description": "Kies het Kilo Gateway-transcriptiemodel voor spraakinvoer.",
+  "settings.experimental.speechToTextModel.description": "Kies het LLMAPI Gateway-transcriptiemodel voor spraakinvoer.",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
   "settings.experimental.continueOnDeny.description":
     "Ga door met de agent loop wanneer een toestemming wordt geweigerd",
@@ -1312,7 +1313,7 @@ export const dict = {
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",
   "settings.experimental.remote.description":
-    "Schakel Remote-bediening van sessies in via Kilo Cloud. Dit heeft ook invloed op CLI's op deze machine.",
+    "Schakel Remote-bediening van sessies in via LLMAPI Cloud. Dit heeft ook invloed op CLI's op deze machine.",
   "settings.experimental.remote.current": "Huidige status:",
   "settings.experimental.remote.startup": "Automatisch inschakelen bij opstarten:",
   "settings.experimental.remote.active": "Actief",
@@ -1376,7 +1377,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-compatibiliteit",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code-bestanden laden",
   "settings.agentBehaviour.claudeCompat.description":
-    "Laad CLAUDE.md instructies en vaardigheden uit je Claude Code configuratiemap in sessies. Schakel dit in als je wilt dat Kilo je Claude Code instructies en vaardigheden gebruikt. Herstart vereist.",
+    "Laad CLAUDE.md instructies en vaardigheden uit je Claude Code configuratiemap in sessies. Schakel dit in als je wilt dat LLMAPI je Claude Code instructies en vaardigheden gebruikt. Herstart vereist.",
   "settings.agentBehaviour.removeMcp.title": "Verwijder MCP-server",
   "settings.agentBehaviour.removeMcp.confirm":
     'MCP-server "{{name}}" verwijderen? Dit zal deze uit je configuratie verwijderen.',
@@ -1477,7 +1478,7 @@ export const dict = {
   "settings.display.layout.auto": "Auto",
   "settings.display.layout.stretch": "Uitrekken",
   "settings.display.fontSize.title": "Lettergrootte",
-  "settings.display.fontSize.description": "Pas de lettergrootte van de Kilo webview UI onafhankelijk van VS Code aan.",
+  "settings.display.fontSize.description": "Pas de lettergrootte van de LLMAPI webview UI onafhankelijk van VS Code aan.",
   "settings.display.reasoningAutoCollapse.title": "Redenering automatisch inklappen",
   "settings.display.reasoningAutoCollapse.description":
     "Klapt redeneerblokken in nadat de agent klaar is met schrijven. Laat uitgeschakeld om redenering uitgeklapt te houden, tenzij je die handmatig inklapt.",
@@ -1522,10 +1523,10 @@ export const dict = {
   "settings.legacyMigration.link": "Migreer van Legacy Versie",
   "settings.aboutKiloCode.legacyMigration.title": "Legacy Migratie",
   "settings.aboutKiloCode.legacyMigration.description":
-    "Migreer instellingen van een eerdere installatie van Kilo Code, inclusief provider API-sleutels en standaard model.",
+    "Migreer instellingen van een eerdere installatie van LLMAPI, inclusief provider API-sleutels en standaard model.",
 
   // Screen 1 — What's New
-  "migration.whatsNew.title": "Wat is er Nieuw in Kilo Code",
+  "migration.whatsNew.title": "Wat is er Nieuw in LLMAPI",
   "migration.whatsNew.subtitle": "We hebben de extensie opnieuw opgebouwd op een snellere, efficiëntere basis.",
   "migration.whatsNew.features.performance.title": "Snellere Agent Prestaties",
   "migration.whatsNew.features.performance.detail":
@@ -1537,7 +1538,7 @@ export const dict = {
     "Een uniforme interface voor het parallel uitvoeren van meerdere agents, elk op zijn eigen worktree — monitor de voortgang, wissel van context en bekijk wijzigingen op één plek.",
   "migration.whatsNew.features.foundation.title": "Gedeelde Basis",
   "migration.whatsNew.features.foundation.detail":
-    "Één kleine, efficiënte kern voor elk Kilo-product. Een vertrouwde ervaring, hoe je ook wilt werken.",
+    "Één kleine, efficiënte kern voor elk LLMAPI-product. Een vertrouwde ervaring, hoe je ook wilt werken.",
   "migration.whatsNew.blogLink": "Lees de volledige aankondiging",
   "migration.whatsNew.docsLink": "Wat is er nieuw & veelgestelde vragen",
   "migration.whatsNew.continue": "Doorgaan",
@@ -1627,10 +1628,10 @@ export const dict = {
   "notifications.action.close": "Sluiten",
   "notifications.action.tryModel": "Probeer {{model}}",
   "notifications.action.tryModelGeneric": "Probeer model",
-  "settings.indexing.kiloModel.title": "Kilo-model voorinstelling",
-  "settings.indexing.kiloModel.description": "Kies een ondersteund Kilo-hosted embeddings model.",
-  "settings.indexing.kiloSignIn.title": "Kilo-aanmelding vereist",
-  "settings.indexing.kiloSignIn.description": "Log in op Kilo om hosted embeddings te gebruiken.",
+  "settings.indexing.kiloModel.title": "LLMAPI-model voorinstelling",
+  "settings.indexing.kiloModel.description": "Kies een ondersteund LLMAPI-hosted embeddings model.",
+  "settings.indexing.kiloSignIn.title": "LLMAPI-aanmelding vereist",
+  "settings.indexing.kiloSignIn.description": "Log in op LLMAPI om hosted embeddings te gebruiken.",
   // Missing translations - English fallbacks until translated
   "settings.agentBehaviour.createMode": "Nieuwe modus aanmaken",
   "settings.agentBehaviour.createMode.button": "Aanmaken",
@@ -1679,7 +1680,7 @@ export const dict = {
     "Bestanden gewijzigd in je werkboom maar nog niet gestaged, plus niet-gevolgde (nieuwe) bestanden.",
   "diffViewer.source.session.label": "Sessie",
   "diffViewer.source.session.tooltip":
-    "Bestanden die door Kilo tijdens de huidige sessie zijn gewijzigd, gebaseerd op snapshots per beurt. Wordt gereset bij het starten van een nieuwe sessie.",
+    "Bestanden die door LLMAPI tijdens de huidige sessie zijn gewijzigd, gebaseerd op snapshots per beurt. Wordt gereset bij het starten van een nieuwe sessie.",
   "diffViewer.group.session": "Sessie",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

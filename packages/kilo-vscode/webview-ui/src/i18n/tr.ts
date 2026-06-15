@@ -122,7 +122,7 @@ export const dict = {
   "dialog.model.expand": "Genişlet",
   "dialog.model.collapse": "Daralt",
 
-  "dialog.model.unpaid.freeModels.title": "Kilo tarafından sunulan ücretsiz modeller",
+  "dialog.model.unpaid.freeModels.title": "LLMAPI tarafından sunulan ücretsiz modeller",
   "dialog.model.unpaid.addMore.title": "Popüler sağlayıcılardan daha fazla model ekleyin",
 
   "dialog.provider.viewAll": "Daha fazla sağlayıcı göster",
@@ -135,7 +135,7 @@ export const dict = {
   "provider.connect.status.waiting": "Yetkilendirme bekleniyor...",
   "provider.connect.status.failed": "Yetkilendirme başarısız: {{error}}",
   "provider.connect.apiKey.description":
-    "{{provider}} hesabınızı bağlamak ve Kilo'da {{provider}} modellerini kullanmak için {{provider}} API anahtarınızı girin.",
+    "{{provider}} hesabınızı bağlamak ve LLMAPI'da {{provider}} modellerini kullanmak için {{provider}} API anahtarınızı girin.",
   "provider.connect.apiKey.description.local":
     "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
   "provider.connect.atomicChat.description":
@@ -162,7 +162,7 @@ export const dict = {
   "provider.connect.opencodeZen.visit.prefix": "",
   "provider.connect.opencodeZen.visit.link": "https://opencode.ai/zen",
   "provider.connect.opencodeZen.visit.suffix": " adresini ziyaret ederek API anahtarınızı alın.",
-  "provider.connect.oauth.code.visit.prefix": "Hesabınızı bağlamak ve Kilo'da {{provider}} modellerini kullanmak için ",
+  "provider.connect.oauth.code.visit.prefix": "Hesabınızı bağlamak ve LLMAPI'da {{provider}} modellerini kullanmak için ",
   "provider.connect.oauth.code.visit.link": "bu bağlantıya",
   "provider.connect.oauth.code.visit.suffix": " tıklayarak yetkilendirme kodunuzu alın.",
   "provider.connect.oauth.code.label": "{{method}} yetkilendirme kodu",
@@ -172,7 +172,7 @@ export const dict = {
   "provider.connect.oauth.auto.visit.prefix": "",
   "provider.connect.oauth.auto.visit.link": "Bu bağlantıya",
   "provider.connect.oauth.auto.visit.suffix":
-    " tıklayarak aşağıdaki kodu girin ve hesabınızı bağlayarak Kilo'da {{provider}} modellerini kullanın.",
+    " tıklayarak aşağıdaki kodu girin ve hesabınızı bağlayarak LLMAPI'da {{provider}} modellerini kullanın.",
   "provider.connect.oauth.auto.confirmationCode": "Onay kodu",
   "provider.connect.toast.connected.title": "{{provider}} bağlandı",
   "provider.connect.toast.connected.description": "{{provider}} modelleri artık kullanımda.",
@@ -295,12 +295,12 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "'Komutu Geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifadelendirme sağlayarak komutunuzu iyileştirmeye yardımcı olur. Buraya bir komut yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
 
-  "speechToText.tooltip.start": "Kilo Gateway ile sesli girişi başlatın",
+  "speechToText.tooltip.start": "LLMAPI Gateway ile sesli girişi başlatın",
   "speechToText.tooltip.stop": "Ses yakalamayı durdur",
   "speechToText.tooltip.transcribing": "Metne dönüştürülüyor... İptal etmek için tıklayın.",
   "speechToText.tooltip.error": "Sesli giriş başarısız oldu. Temizlemek için tıklayın.",
   "speechToText.error.title": "Sesli giriş başarısız oldu",
-  "speechToText.error.loginRequired": "Sesli girişi kullanmak için Kilo'ya giriş yapın.",
+  "speechToText.error.loginRequired": "Sesli girişi kullanmak için LLMAPI'ya giriş yapın.",
   "speechToText.error.permission": "Mikrofon izni reddedildi.",
   "speechToText.error.microphone": "Mikrofon başlatılamadı.",
   "speechToText.error.recording": "Kayıt başarısız oldu.",
@@ -338,7 +338,7 @@ export const dict = {
   "dialog.directory.empty": "Klasör bulunamadı",
 
   "dialog.server.title": "Sunucular",
-  "dialog.server.description": "Bu uygulamanın hangi Kilo sunucusuna bağlanacağını değiştirin.",
+  "dialog.server.description": "Bu uygulamanın hangi LLMAPI sunucusuna bağlanacağını değiştirin.",
   "dialog.server.search.placeholder": "Sunucu ara",
   "dialog.server.empty": "Henüz sunucu yok",
   "dialog.server.add.title": "Sunucu ekle",
@@ -466,7 +466,7 @@ export const dict = {
   "toast.session.listFailed.title": "{{project}} için oturumlar yüklenemedi",
 
   "toast.update.title": "Güncelleme mevcut",
-  "toast.update.description": "Kilo'nun yeni bir sürümü ({{version}}) yüklemeye hazır.",
+  "toast.update.description": "LLMAPI'nun yeni bir sürümü ({{version}}) yüklemeye hazır.",
   "toast.update.action.installRestart": "Yükle ve yeniden başlat",
   "toast.update.action.notYet": "Şimdi değil",
 
@@ -477,7 +477,7 @@ export const dict = {
   "error.page.action.checking": "Kontrol ediliyor...",
   "error.page.action.checkUpdates": "Güncellemeleri kontrol et",
   "error.page.action.updateTo": "{{version}} sürümüne güncelle",
-  "error.page.report.prefix": "Lütfen bu hatayı Kilo ekibine bildirin",
+  "error.page.report.prefix": "Lütfen bu hatayı LLMAPI ekibine bildirin",
   "error.page.report.discord": "Discord üzerinden",
   "error.page.version": "Sürüm: {{version}}",
 
@@ -512,7 +512,7 @@ export const dict = {
   "error.chain.modelNotFound": "Model bulunamadı: {{provider}}/{{model}}",
   "error.chain.checkConfig": "Yapılandırma dosyanızı (opencode.json) sağlayıcı/model adlarını kontrol edin",
   "error.chain.mcpFailed":
-    'MCP sunucusu "{{name}}" başarısız oldu. Not: Kilo henüz MCP kimlik doğrulamasını desteklemiyor.',
+    'MCP sunucusu "{{name}}" başarısız oldu. Not: LLMAPI henüz MCP kimlik doğrulamasını desteklemiyor.',
   "error.chain.providerAuthFailed": "Sağlayıcı kimlik doğrulaması başarısız ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
     '"{{provider}}" sağlayıcısı başlatılamadı. Kimlik bilgilerini ve yapılandırmayı kontrol edin.',
@@ -687,12 +687,12 @@ export const dict = {
   "sidebar.workspaces.enable": "Çalışma alanlarını etkinleştir",
   "sidebar.workspaces.disable": "Çalışma alanlarını devre dışı bırak",
   "sidebar.gettingStarted.title": "Başlarken",
-  "sidebar.gettingStarted.line1": "Kilo ücretsiz modeller içerir, böylece hemen başlayabilirsiniz.",
+  "sidebar.gettingStarted.line1": "LLMAPI ücretsiz modeller içerir, böylece hemen başlayabilirsiniz.",
   "sidebar.gettingStarted.line2": "Claude, GPT, Gemini vb. modelleri kullanmak için herhangi bir sağlayıcı bağlayın.",
   "sidebar.project.recentSessions": "Son oturumlar",
   "sidebar.project.viewAllSessions": "Tüm oturumları görüntüle",
 
-  "app.name.desktop": "Kilo Masaüstü",
+  "app.name.desktop": "LLMAPI Masaüstü",
 
   "settings.section.desktop": "Masaüstü",
   "settings.section.server": "Sunucu",
@@ -705,11 +705,11 @@ export const dict = {
   "settings.general.section.sounds": "Ses efektleri",
 
   "settings.general.row.language.title": "Dil",
-  "settings.general.row.language.description": "Kilo'nun görünüm dilini değiştirin",
+  "settings.general.row.language.description": "LLMAPI'nun görünüm dilini değiştirin",
   "settings.general.row.appearance.title": "Görünüm",
-  "settings.general.row.appearance.description": "Kilo'nun cihazınızdaki görünümünü özelleştirin",
+  "settings.general.row.appearance.description": "LLMAPI'nun cihazınızdaki görünümünü özelleştirin",
   "settings.general.row.theme.title": "Tema",
-  "settings.general.row.theme.description": "Kilo'nun temasını özelleştirin.",
+  "settings.general.row.theme.description": "LLMAPI'nun temasını özelleştirin.",
   "settings.general.row.font.title": "Yazı Tipi",
   "settings.general.row.font.description": "Kod bloklarında kullanılan monospace yazı tipini özelleştirin",
 
@@ -717,13 +717,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": "Güncellemelerden sonra Yenilikler bildirimlerini göster",
 
   "settings.updates.row.startup.title": "Başlangıçta güncellemeleri kontrol et",
-  "settings.updates.row.startup.description": "Kilo başladığında otomatik güncelleme kontrolü yap",
+  "settings.updates.row.startup.description": "LLMAPI başladığında otomatik güncelleme kontrolü yap",
   "settings.updates.row.check.title": "Güncellemeleri kontrol et",
   "settings.updates.row.check.description": "Elle güncelleme kontrolü yap ve varsa yükle",
   "settings.updates.action.checkNow": "Şimdi kontrol et",
   "settings.updates.action.checking": "Kontrol ediliyor...",
   "settings.updates.toast.latest.title": "Güncelsiniz",
-  "settings.updates.toast.latest.description": "Kilo'nun en son sürümünü kullanıyorsunuz.",
+  "settings.updates.toast.latest.description": "LLMAPI'nun en son sürümünü kullanıyorsunuz.",
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
   "font.option.firaCode": "Fira Code",
@@ -818,8 +818,9 @@ export const dict = {
   "settings.providers.title": "Sağlayıcılar",
   "settings.providers.description": "Sağlayıcı ayarları burada yapılandırılabilecek.",
   "settings.providers.betaNotice":
-    "Şu anda yalnızca Kilo Gateway sağlayıcısı ayarlar arayüzünde yapılandırılabilir. Diğer sağlayıcılar için destek beta döneminde yakında gelecek. Bu arada CLI veya yapılandırma dosyası ile sağlayıcıları yapılandırabilirsiniz. Kilo'yu açık tutmaya kararlıyız, kilitlenme yok.",
+    "Şu anda yalnızca LLMAPI Gateway sağlayıcısı ayarlar arayüzünde yapılandırılabilir. Diğer sağlayıcılar için destek beta döneminde yakında gelecek. Bu arada CLI veya yapılandırma dosyası ile sağlayıcıları yapılandırabilirsiniz. LLMAPI'yu açık tutmaya kararlıyız, kilitlenme yok.",
   "settings.providers.section.connected": "Bağlı sağlayıcılar",
+  "settings.providers.gateway.name": "LLMAPI Gateway",
   "settings.providers.connected.empty": "Bağlı sağlayıcı yok",
   "settings.providers.section.popular": "Popüler sağlayıcılar",
   "settings.providers.tag.gateway": "Gateway",
@@ -921,11 +922,11 @@ export const dict = {
   "settings.config.status.loadedLegacy": "eski yapılandırma yüklendi",
   "settings.config.status.notLoaded": "yüklenmedi",
   "settings.config.status.create": "bulunamadı - bu dosyayı oluştur",
-  "settings.config.title": "{{scope}} Kilo yapılandırma dosyasını aç",
+  "settings.config.title": "{{scope}} LLMAPI yapılandırma dosyasını aç",
   "settings.config.placeholder":
     "Yapılandırma dosyaları sırayla birleştirilir; yüklendi olarak işaretlenen dosyalar şu anda ayarları etkiler.",
-  "settings.config.noWorkspace": "Yerel Kilo yapılandırma dosyasını düzenlemek için bir çalışma alanı klasörü açın.",
-  "settings.config.openFailed": "{{scope}} Kilo yapılandırma dosyası açılamadı: {{message}}",
+  "settings.config.noWorkspace": "Yerel LLMAPI yapılandırma dosyasını düzenlemek için bir çalışma alanı klasörü açın.",
+  "settings.config.openFailed": "{{scope}} LLMAPI yapılandırma dosyası açılamadı: {{message}}",
   "settings.config.source.xdg": "XDG küresel yapılandırma",
   "settings.config.source.homeKilo": "Home .kilo yapılandırması",
   "settings.config.source.homeKilocode": "Home .kilocode yapılandırması",
@@ -1073,7 +1074,7 @@ export const dict = {
   "deviceAuth.toast.codeCopied": "Kod panoya kopyalandı",
   "deviceAuth.toast.errorCopied": "Hata panoya kopyalandı",
   "deviceAuth.status.initiating": "Giriş başlatılıyor...",
-  "deviceAuth.title": "Kilo Code'a giriş yap",
+  "deviceAuth.title": "LLMAPI'a giriş yap",
   "deviceAuth.step1": "Adım 1: Bu URL'yi açın",
   "deviceAuth.action.copyUrl": "URL'yi Kopyala",
   "deviceAuth.action.openBrowser": "Tarayıcıyı Aç",
@@ -1094,7 +1095,7 @@ export const dict = {
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Giriş yapılmadı",
-  "profile.action.login": "Kilo Code ile giriş yap",
+  "profile.action.login": "LLMAPI ile giriş yap",
   "profile.balance.title": "Bakiye",
   "profile.balance.refresh": "Bakiyeyi yenile",
   "profile.action.dashboard": "Kontrol Paneli",
@@ -1145,11 +1146,11 @@ export const dict = {
 
   "settings.experimental.title": "Deneysel",
   "settings.language.title": "Dil",
-  "settings.aboutKiloCode.title": "Kilo Code Hakkında",
+  "settings.aboutKiloCode.title": "LLMAPI Hakkında",
 
   "session.messages.empty": "Aşağıya bir mesaj yazarak sohbete başlayın.",
   "session.messages.welcome":
-    "Kilo Code bir yapay zeka kodlama asistanıdır. Özellik geliştirmesini, hata düzeltmesini veya kod tabanınızı açıklamasını isteyin.",
+    "LLMAPI bir yapay zeka kodlama asistanıdır. Özellik geliştirmesini, hata düzeltmesini veya kod tabanınızı açıklamasını isteyin.",
   "session.messages.scrollToBottom": "En alta kaydır",
   "session.messages.initializing": "Başlatılıyor...",
   "session.messages.taskStarting": "Başlıyor...",
@@ -1201,7 +1202,7 @@ export const dict = {
   "settings.aboutKiloCode.port.label": "Port:",
   "settings.aboutKiloCode.versionInfo": "Sürüm Bilgisi",
   "settings.aboutKiloCode.version.label": "Sürüm:",
-  "settings.aboutKiloCode.extensionName": "Kilo Code Uzantısı",
+  "settings.aboutKiloCode.extensionName": "LLMAPI Uzantısı",
   "settings.aboutKiloCode.community": "Topluluk ve Destek",
   "settings.aboutKiloCode.feedback.prefix":
     "Herhangi bir sorunuz veya geri bildiriminiz varsa, lütfen şu adreste bir sorun açın:",
@@ -1217,10 +1218,10 @@ export const dict = {
   "settings.aboutKiloCode.exportSettings": "Dışa Aktar",
   "settings.aboutKiloCode.importSettings": "İçe Aktar",
   "settings.aboutKiloCode.importSettings.invalidJson": "Geçersiz JSON dosyası. Lütfen geçerli bir ayar dosyası seçin.",
-  "settings.aboutKiloCode.importSettings.invalidConfig": "Dosya geçerli Kilo ayarları içermiyor.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "Dosya geçerli LLMAPI ayarları içermiyor.",
   "settings.aboutKiloCode.importSettings.tooLarge": "Dosya çok büyük. Ayar dosyaları 1 MB altında olmalıdır.",
   "settings.aboutKiloCode.importSettings.newerVersion":
-    "Bu dosya Kilo'nun daha yeni bir sürümünden dışa aktarılmış. Bazı ayarlar göz ardı edilebilir.",
+    "Bu dosya LLMAPI'nun daha yeni bir sürümünden dışa aktarılmış. Bazı ayarlar göz ardı edilebilir.",
   "settings.aboutKiloCode.importSettings.success":
     "Ayarlar içe aktarıldı. Yukarıdaki değişiklikleri gözden geçirin, ardından Kaydet'e tıklayın.",
 
@@ -1245,7 +1246,7 @@ export const dict = {
   "settings.browser.headless.description": "Başsız modda çalıştır (görünür tarayıcı penceresi yok).",
 
   "settings.language.description":
-    '"Otomatik" VS Code görüntüleme dilinizi kullanır. Kilo Code arayüzü için dil seçin.',
+    '"Otomatik" VS Code görüntüleme dilinizi kullanır. LLMAPI arayüzü için dil seçin.',
   "settings.language.auto": "Otomatik (VS Code dili)",
   "settings.language.current": "Mevcut:",
 
@@ -1293,18 +1294,18 @@ export const dict = {
     "Kod tabanınız genelinde yapay zeka destekli doğal dil aramasını etkinleştir",
   "settings.experimental.speechToText.title": "Sesten metne",
   "settings.experimental.speechToText.description":
-    "Kilo Gateway üzerinden Kilo hesabınızı kullanarak komut alanlarında sesli girişi etkinleştirin.",
+    "LLMAPI Gateway üzerinden LLMAPI hesabınızı kullanarak komut alanlarında sesli girişi etkinleştirin.",
   "settings.experimental.speechToText.disabledDescription":
-    "Speech to Text kullanmak için Kilo sağlayıcısını etkinleştirin ve giriş yapın. Speech to Text şu anda yalnızca Kilo Gateway ile desteklenmektedir.",
+    "Speech to Text kullanmak için LLMAPI sağlayıcısını etkinleştirin ve giriş yapın. Speech to Text şu anda yalnızca LLMAPI Gateway ile desteklenmektedir.",
   "settings.experimental.speechToTextModel.title": "Sesten metne modeli",
-  "settings.experimental.speechToTextModel.description": "Sesli giriş için Kilo Gateway transkripsiyon modelini seçin.",
+  "settings.experimental.speechToTextModel.description": "Sesli giriş için LLMAPI Gateway transkripsiyon modelini seçin.",
   "settings.experimental.continueOnDeny.title": "Reddetme Durumunda Devam Et",
   "settings.experimental.continueOnDeny.description": "Bir izin reddedildiğinde ajan döngüsüne devam et",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
   "settings.experimental.remote.title": "Remote Kontrolü",
   "settings.experimental.remote.description":
-    "Kilo Cloud üzerinden oturumların Remote kontrolünü etkinleştirin. Bu, bu makinedeki CLI'leri de etkileyecektir.",
+    "LLMAPI Cloud üzerinden oturumların Remote kontrolünü etkinleştirin. Bu, bu makinedeki CLI'leri de etkileyecektir.",
   "settings.experimental.remote.current": "Mevcut durum:",
   "settings.experimental.remote.startup": "Başlangıçta otomatik etkinleştir:",
   "settings.experimental.remote.active": "Aktif",
@@ -1368,7 +1369,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code Uyumluluğu",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code Dosyalarını Yükle",
   "settings.agentBehaviour.claudeCompat.description":
-    "Claude Code yapılandırma dizininizdeki CLAUDE.md talimatlarını ve becerilerini oturumlara yükleyin. Kilo'nun Claude Code talimatlarınızı ve becerilerinizi kullanmasını istiyorsanız bunu etkinleştirin. Yeniden başlatma gerektirir.",
+    "Claude Code yapılandırma dizininizdeki CLAUDE.md talimatlarını ve becerilerini oturumlara yükleyin. LLMAPI'nun Claude Code talimatlarınızı ve becerilerinizi kullanmasını istiyorsanız bunu etkinleştirin. Yeniden başlatma gerektirir.",
   "settings.agentBehaviour.removeMcp.title": "MCP sunucusunu kaldır",
   "settings.agentBehaviour.removeMcp.confirm":
     '"{{name}}" MCP sunucusu kaldırılsın mı? Bu, yapılandırmanızdan kaldırılacak.',
@@ -1466,7 +1467,7 @@ export const dict = {
   "settings.display.layout.auto": "Otomatik",
   "settings.display.layout.stretch": "Genişlet",
   "settings.display.fontSize.title": "Yazı Tipi Boyutu",
-  "settings.display.fontSize.description": "Kilo webview UI yazı tipi boyutunu VS Code'dan bağımsız olarak ayarlayın.",
+  "settings.display.fontSize.description": "LLMAPI webview UI yazı tipi boyutunu VS Code'dan bağımsız olarak ayarlayın.",
   "settings.display.reasoningAutoCollapse.title": "Akıl yürütmeyi otomatik daralt",
   "settings.display.reasoningAutoCollapse.description":
     "Ajan yazmayı bitirdikten sonra akıl yürütme bloklarını daraltır. Manuel olarak daraltmadığınız sürece akıl yürütmenin geniş kalması için kapalı bırakın.",
@@ -1510,10 +1511,10 @@ export const dict = {
   "settings.legacyMigration.link": "Eski Sürümden Taşı",
   "settings.aboutKiloCode.legacyMigration.title": "Eski Sürüm Taşıma",
   "settings.aboutKiloCode.legacyMigration.description":
-    "Sağlayıcı API anahtarları ve varsayılan model dahil olmak üzere Kilo Code'un önceki yüklemesinden ayarları taşıyın.",
+    "Sağlayıcı API anahtarları ve varsayılan model dahil olmak üzere LLMAPI'un önceki yüklemesinden ayarları taşıyın.",
 
   // Screen 1 — What's New
-  "migration.whatsNew.title": "Kilo Code'daki Yenilikler",
+  "migration.whatsNew.title": "LLMAPI'daki Yenilikler",
   "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Uzantıyı daha hızlı ve daha verimli bir temel üzerine yeniden inşa ettik.",
   "migration.whatsNew.features.performance.title": "Daha Hızlı Ajan Performansı",
@@ -1526,7 +1527,7 @@ export const dict = {
     "Birden fazla ajanı paralel olarak çalıştırmak için birleşik bir arayüz, her biri kendi worktree'sinde — ilerlemeyi izleyin, bağlam değiştirin ve değişiklikleri tek bir yerden inceleyin.",
   "migration.whatsNew.features.foundation.title": "Paylaşılan Temel",
   "migration.whatsNew.features.foundation.detail":
-    "Her Kilo ürününde küçük ve verimli bir çekirdek. Nasıl çalışmayı tercih ederseniz edin, tanıdık bir deneyim.",
+    "Her LLMAPI ürününde küçük ve verimli bir çekirdek. Nasıl çalışmayı tercih ederseniz edin, tanıdık bir deneyim.",
   "migration.whatsNew.blogLink": "Tam duyuruyu oku",
   "migration.whatsNew.docsLink": "Yenilikler ve sık sorulan sorular",
   "migration.whatsNew.continue": "Devam",
@@ -1615,10 +1616,10 @@ export const dict = {
   "notifications.action.close": "Kapat",
   "notifications.action.tryModel": "Dene {{model}}",
   "notifications.action.tryModelGeneric": "Modeli Dene",
-  "settings.indexing.kiloModel.title": "Kilo model önayarı",
-  "settings.indexing.kiloModel.description": "Desteklenen bir Kilo-hosted embeddings modeli seçin.",
-  "settings.indexing.kiloSignIn.title": "Kilo oturumu açmak gerekiyor",
-  "settings.indexing.kiloSignIn.description": "Hosted embeddings kullanmak için Kilo'da oturum açın.",
+  "settings.indexing.kiloModel.title": "LLMAPI model önayarı",
+  "settings.indexing.kiloModel.description": "Desteklenen bir LLMAPI-hosted embeddings modeli seçin.",
+  "settings.indexing.kiloSignIn.title": "LLMAPI oturumu açmak gerekiyor",
+  "settings.indexing.kiloSignIn.description": "Hosted embeddings kullanmak için LLMAPI'da oturum açın.",
   // Missing translations - English fallbacks until translated
   "profile.switchingAccount": "Hesap değiştiriliyor…",
   "settings.agentBehaviour.createMode": "Yeni Mod Oluştur",
@@ -1668,7 +1669,7 @@ export const dict = {
     "Çalışma ağacında değiştirilmiş ancak henüz staged edilmemiş dosyalar, artı takip edilmeyen (yeni) dosyalar.",
   "diffViewer.source.session.label": "Oturum",
   "diffViewer.source.session.tooltip":
-    "Geçerli oturum sırasında Kilo tarafından değiştirilen dosyalar, tur başı anlık görüntülere dayanır. Yeni bir oturum başlatıldığında sıfırlanır.",
+    "Geçerli oturum sırasında LLMAPI tarafından değiştirilen dosyalar, tur başı anlık görüntülere dayanır. Yeni bir oturum başlatıldığında sıfırlanır.",
   "diffViewer.group.session": "Oturum",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

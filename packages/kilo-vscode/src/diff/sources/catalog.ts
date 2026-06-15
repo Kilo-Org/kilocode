@@ -151,7 +151,7 @@ export class DiffSourceCatalog implements vscode.Disposable {
 
   private ensureBranchGit(): GitOps {
     if (this.branchGit) return this.branchGit
-    this.branchOutput = vscode.window.createOutputChannel("Kilo Diff: Branches")
+    this.branchOutput = vscode.window.createOutputChannel("LLMAPI Diff: Branches")
     this.branchGit = new GitOps({ log: this.branchLog })
     return this.branchGit
   }

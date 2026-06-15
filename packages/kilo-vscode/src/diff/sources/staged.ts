@@ -30,7 +30,7 @@ export const STAGED_DESCRIPTOR: DiffSourceDescriptor = {
  * a real git client). Read-only view.
  */
 export function createStagedDiffSource(): DiffSource {
-  const output = vscode.window.createOutputChannel("Kilo Diff: Staged")
+  const output = vscode.window.createOutputChannel("LLMAPI Diff: Staged")
   const log = (...args: unknown[]) => appendOutput(output, "StagedDiffSource", ...args)
   const git = new GitOps({ log })
 

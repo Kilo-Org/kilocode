@@ -18,7 +18,7 @@ const KiloLogo = (): JSX.Element => {
 
   return (
     <div class="feedback-dialog-logo">
-      <img src={`${iconsBaseUri}/${iconFile}`} alt="Kilo Code" />
+      <img src={`${iconsBaseUri}/${iconFile}`} alt="LLMAPI" />
     </div>
   )
 }

@@ -100,7 +100,7 @@ export class KiloClawProvider implements vscode.Disposable {
       return
     }
 
-    const panel = vscode.window.createWebviewPanel(KiloClawProvider.viewType, "KiloClaw", vscode.ViewColumn.One, {
+    const panel = vscode.window.createWebviewPanel(KiloClawProvider.viewType, "LLMAPI Claw", vscode.ViewColumn.One, {
       enableScripts: true,
       retainContextWhenHidden: true,
       localResourceRoots: [this.uri],
@@ -145,7 +145,7 @@ export class KiloClawProvider implements vscode.Disposable {
       styleUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.uri, "dist", "kiloclaw.css")),
       iconsBaseUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.uri, "assets", "icons")),
       workerUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.uri, "dist", "shiki-worker.js")),
-      title: "KiloClaw",
+      title: "LLMAPI Claw",
     })
 
     const msgSub = panel.webview.onDidReceiveMessage((msg: KiloClawInMessage) => this.onMessage(msg))

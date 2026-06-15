@@ -40,7 +40,7 @@ export class DiffViewerProvider implements vscode.Disposable {
     opts: DiffViewerProviderOptions = {},
   ) {
     this.sessionIdProvider = opts.sessionIdProvider ?? (() => undefined)
-    this.output = vscode.window.createOutputChannel("Kilo Diff Panel")
+    this.output = vscode.window.createOutputChannel("LLMAPI Diff Panel")
   }
 
   setCommentHandler(handler: CommentHandler): void {

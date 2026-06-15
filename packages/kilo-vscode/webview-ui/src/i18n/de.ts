@@ -126,7 +126,7 @@ export const dict = {
   "dialog.model.expand": "Erweitern",
   "dialog.model.collapse": "Einklappen",
 
-  "dialog.model.unpaid.freeModels.title": "Kostenlose Modelle von Kilo",
+  "dialog.model.unpaid.freeModels.title": "Kostenlose Modelle von LLMAPI",
   "dialog.model.unpaid.addMore.title": "Weitere Modelle von beliebten Anbietern hinzufügen",
 
   "dialog.provider.viewAll": "Mehr Anbieter anzeigen",
@@ -139,7 +139,7 @@ export const dict = {
   "provider.connect.status.waiting": "Warten auf Autorisierung...",
   "provider.connect.status.failed": "Autorisierung fehlgeschlagen: {{error}}",
   "provider.connect.apiKey.description":
-    "Geben Sie Ihren {{provider}} API-Schlüssel ein, um Ihr Konto zu verbinden und {{provider}} Modelle in Kilo zu nutzen.",
+    "Geben Sie Ihren {{provider}} API-Schlüssel ein, um Ihr Konto zu verbinden und {{provider}} Modelle in LLMAPI zu nutzen.",
   "provider.connect.apiKey.description.local":
     "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
   "provider.connect.atomicChat.description":
@@ -169,7 +169,7 @@ export const dict = {
   "provider.connect.oauth.code.visit.prefix": "Besuchen Sie ",
   "provider.connect.oauth.code.visit.link": "diesen Link",
   "provider.connect.oauth.code.visit.suffix":
-    ", um Ihren Autorisierungscode zu erhalten, Ihr Konto zu verbinden und {{provider}} Modelle in Kilo zu nutzen.",
+    ", um Ihren Autorisierungscode zu erhalten, Ihr Konto zu verbinden und {{provider}} Modelle in LLMAPI zu nutzen.",
   "provider.connect.oauth.code.label": "{{method}} Autorisierungscode",
   "provider.connect.oauth.code.placeholder": "Autorisierungscode",
   "provider.connect.oauth.code.required": "Autorisierungscode ist erforderlich",
@@ -177,7 +177,7 @@ export const dict = {
   "provider.connect.oauth.auto.visit.prefix": "Besuchen Sie ",
   "provider.connect.oauth.auto.visit.link": "diesen Link",
   "provider.connect.oauth.auto.visit.suffix":
-    " und geben Sie den untenstehenden Code ein, um Ihr Konto zu verbinden und {{provider}} Modelle in Kilo zu nutzen.",
+    " und geben Sie den untenstehenden Code ein, um Ihr Konto zu verbinden und {{provider}} Modelle in LLMAPI zu nutzen.",
   "provider.connect.oauth.auto.confirmationCode": "Bestätigungscode",
   "provider.connect.toast.connected.title": "{{provider}} verbunden",
   "provider.connect.toast.connected.description": "{{provider}} Modelle sind jetzt verfügbar.",
@@ -300,12 +300,12 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Die Schaltfläche 'Prompt verbessern' hilft, deine Anfrage durch zusätzlichen Kontext, Klarstellungen oder Umformulierungen zu verbessern. Versuche, hier eine Anfrage einzugeben und klicke erneut auf die Schaltfläche, um zu sehen, wie es funktioniert.",
 
-  "speechToText.tooltip.start": "Spracheingabe mit Kilo Gateway starten",
+  "speechToText.tooltip.start": "Spracheingabe mit LLMAPI Gateway starten",
   "speechToText.tooltip.stop": "Audioerfassung beenden",
   "speechToText.tooltip.transcribing": "Transkribieren... Zum Abbrechen klicken.",
   "speechToText.tooltip.error": "Spracheingabe fehlgeschlagen. Zum Löschen klicken.",
   "speechToText.error.title": "Spracheingabe fehlgeschlagen",
-  "speechToText.error.loginRequired": "Melden Sie sich bei Kilo an, um die Spracheingabe zu verwenden.",
+  "speechToText.error.loginRequired": "Melden Sie sich bei LLMAPI an, um die Spracheingabe zu verwenden.",
   "speechToText.error.permission": "Mikrofonberechtigung wurde verweigert.",
   "speechToText.error.microphone": "Mikrofon konnte nicht gestartet werden.",
   "speechToText.error.recording": "Aufnahme fehlgeschlagen.",
@@ -344,7 +344,7 @@ export const dict = {
   "dialog.directory.empty": "Keine Ordner gefunden",
 
   "dialog.server.title": "Server",
-  "dialog.server.description": "Wechseln Sie den Kilo-Server, mit dem sich diese App verbindet.",
+  "dialog.server.description": "Wechseln Sie den LLMAPI-Server, mit dem sich diese App verbindet.",
   "dialog.server.search.placeholder": "Server durchsuchen",
   "dialog.server.empty": "Noch keine Server",
   "dialog.server.add.title": "Server hinzufügen",
@@ -471,7 +471,7 @@ export const dict = {
   "toast.session.listFailed.title": "Sitzungen für {{project}} konnten nicht geladen werden",
 
   "toast.update.title": "Update verfügbar",
-  "toast.update.description": "Eine neue Version von Kilo ({{version}}) ist zur Installation verfügbar.",
+  "toast.update.description": "Eine neue Version von LLMAPI ({{version}}) ist zur Installation verfügbar.",
   "toast.update.action.installRestart": "Installieren und neu starten",
   "toast.update.action.notYet": "Noch nicht",
 
@@ -482,7 +482,7 @@ export const dict = {
   "error.page.action.checking": "Prüfen...",
   "error.page.action.checkUpdates": "Nach Updates suchen",
   "error.page.action.updateTo": "Auf {{version}} aktualisieren",
-  "error.page.report.prefix": "Bitte melden Sie diesen Fehler dem Kilo-Team",
+  "error.page.report.prefix": "Bitte melden Sie diesen Fehler dem LLMAPI-Team",
   "error.page.report.discord": "auf Discord",
   "error.page.version": "Version: {{version}}",
 
@@ -517,7 +517,7 @@ export const dict = {
   "error.chain.modelNotFound": "Modell nicht gefunden: {{provider}}/{{model}}",
   "error.chain.checkConfig": "Überprüfen Sie Ihre Konfiguration (opencode.json) auf Anbieter-/Modellnamen",
   "error.chain.mcpFailed":
-    'MCP-Server "{{name}}" fehlgeschlagen. Hinweis: Kilo unterstützt noch keine MCP-Authentifizierung.',
+    'MCP-Server "{{name}}" fehlgeschlagen. Hinweis: LLMAPI unterstützt noch keine MCP-Authentifizierung.',
   "error.chain.providerAuthFailed": "Anbieter-Authentifizierung fehlgeschlagen ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
     'Anbieter "{{provider}}" konnte nicht initialisiert werden. Überprüfen Sie Anmeldeinformationen und Konfiguration.',
@@ -692,13 +692,13 @@ export const dict = {
   "sidebar.workspaces.enable": "Arbeitsbereiche aktivieren",
   "sidebar.workspaces.disable": "Arbeitsbereiche deaktivieren",
   "sidebar.gettingStarted.title": "Erste Schritte",
-  "sidebar.gettingStarted.line1": "Kilo enthält kostenlose Modelle, damit Sie sofort loslegen können.",
+  "sidebar.gettingStarted.line1": "LLMAPI enthält kostenlose Modelle, damit Sie sofort loslegen können.",
   "sidebar.gettingStarted.line2":
     "Verbinden Sie einen beliebigen Anbieter, um Modelle wie Claude, GPT, Gemini usw. zu nutzen.",
   "sidebar.project.recentSessions": "Letzte Sitzungen",
   "sidebar.project.viewAllSessions": "Alle Sitzungen anzeigen",
 
-  "app.name.desktop": "Kilo Desktop",
+  "app.name.desktop": "LLMAPI Desktop",
   "settings.section.desktop": "Desktop",
   "settings.section.server": "Server",
   "settings.tab.general": "Allgemein",
@@ -710,11 +710,11 @@ export const dict = {
   "settings.general.section.sounds": "Soundeffekte",
 
   "settings.general.row.language.title": "Sprache",
-  "settings.general.row.language.description": "Die Anzeigesprache für Kilo ändern",
+  "settings.general.row.language.description": "Die Anzeigesprache für LLMAPI ändern",
   "settings.general.row.appearance.title": "Erscheinungsbild",
-  "settings.general.row.appearance.description": "Anpassen, wie Kilo auf Ihrem Gerät aussieht",
+  "settings.general.row.appearance.description": "Anpassen, wie LLMAPI auf Ihrem Gerät aussieht",
   "settings.general.row.theme.title": "Thema",
-  "settings.general.row.theme.description": "Das Thema von Kilo anpassen.",
+  "settings.general.row.theme.description": "Das Thema von LLMAPI anpassen.",
   "settings.general.row.font.title": "Schriftart",
   "settings.general.row.font.description": "Die in Codeblöcken verwendete Monospace-Schriftart anpassen",
 
@@ -722,13 +722,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": '"Neuigkeiten"-Pop-ups nach Updates anzeigen',
 
   "settings.updates.row.startup.title": "Beim Start nach Updates suchen",
-  "settings.updates.row.startup.description": "Beim Start von Kilo automatisch nach Updates suchen",
+  "settings.updates.row.startup.description": "Beim Start von LLMAPI automatisch nach Updates suchen",
   "settings.updates.row.check.title": "Nach Updates suchen",
   "settings.updates.row.check.description": "Manuell nach Updates suchen und installieren, wenn verfügbar",
   "settings.updates.action.checkNow": "Jetzt prüfen",
   "settings.updates.action.checking": "Wird geprüft...",
   "settings.updates.toast.latest.title": "Du bist auf dem neuesten Stand",
-  "settings.updates.toast.latest.description": "Du verwendest die aktuelle Version von Kilo.",
+  "settings.updates.toast.latest.description": "Du verwendest die aktuelle Version von LLMAPI.",
 
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
@@ -824,10 +824,10 @@ export const dict = {
   "settings.indexing.model.title": "Embedding-Modell",
   "settings.indexing.provider.description":
     "Wählen Sie den Anbieter, der für die Generierung von Embeddings für die semantische Suche verwendet wird.",
-  "settings.indexing.kiloModel.title": "Kilo-Modellvoreinstellung",
-  "settings.indexing.kiloModel.description": "Wählen Sie ein unterstütztes von Kilo gehostetes Embedding-Modell.",
-  "settings.indexing.kiloSignIn.title": "Kilo-Anmeldung erforderlich",
-  "settings.indexing.kiloSignIn.description": "Melden Sie sich bei Kilo an, um gehostete Embeddings zu verwenden.",
+  "settings.indexing.kiloModel.title": "LLMAPI-Modellvoreinstellung",
+  "settings.indexing.kiloModel.description": "Wählen Sie ein unterstütztes von LLMAPI gehostetes Embedding-Modell.",
+  "settings.indexing.kiloSignIn.title": "LLMAPI-Anmeldung erforderlich",
+  "settings.indexing.kiloSignIn.description": "Melden Sie sich bei LLMAPI an, um gehostete Embeddings zu verwenden.",
   "settings.indexing.provider.title": "Embedding-Anbieter",
   "settings.indexing.providerField.description": "Anbieterspezifische Verbindungseinstellung.",
   "settings.indexing.qdrantApiKey.description": "Optionaler API-Schlüssel für die Qdrant-Instanz.",
@@ -862,8 +862,9 @@ export const dict = {
   "settings.providers.title": "Anbieter",
   "settings.providers.description": "Anbietereinstellungen können hier konfiguriert werden.",
   "settings.providers.betaNotice":
-    "Derzeit kann in den Einstellungen nur der Kilo Gateway-Anbieter konfiguriert werden. Die Unterstützung für die Konfiguration weiterer Anbieter folgt in Kürze während der Beta-Phase. In der Zwischenzeit können Sie Anbieter über die CLI oder die Konfigurationsdatei konfigurieren. Wir setzen uns dafür ein, Kilo offen zu halten, ohne Lock-in.",
+    "Derzeit kann in den Einstellungen nur der LLMAPI Gateway-Anbieter konfiguriert werden. Die Unterstützung für die Konfiguration weiterer Anbieter folgt in Kürze während der Beta-Phase. In der Zwischenzeit können Sie Anbieter über die CLI oder die Konfigurationsdatei konfigurieren. Wir setzen uns dafür ein, LLMAPI offen zu halten, ohne Lock-in.",
   "settings.providers.section.connected": "Verbundene Anbieter",
+  "settings.providers.gateway.name": "LLMAPI Gateway",
   "settings.providers.connected.empty": "Keine verbundenen Anbieter",
   "settings.providers.section.popular": "Beliebte Anbieter",
   "settings.providers.search.placeholder": "Anbieter durchsuchen",
@@ -973,12 +974,12 @@ export const dict = {
   "settings.config.status.loadedLegacy": "veraltete Konfiguration geladen",
   "settings.config.status.notLoaded": "nicht geladen",
   "settings.config.status.create": "nicht gefunden - diese Datei erstellen",
-  "settings.config.title": "{{scope}} Kilo-Konfigurationsdatei öffnen",
+  "settings.config.title": "{{scope}} LLMAPI-Konfigurationsdatei öffnen",
   "settings.config.placeholder":
     "Konfigurationsdateien werden der Reihe nach zusammengeführt; als geladen markierte Dateien wirken sich aktuell auf die Einstellungen aus.",
   "settings.config.noWorkspace":
-    "Öffnen Sie einen Arbeitsbereichsordner, um die lokale Kilo-Konfigurationsdatei zu bearbeiten.",
-  "settings.config.openFailed": "Fehler beim Öffnen der {{scope}} Kilo-Konfigurationsdatei: {{message}}",
+    "Öffnen Sie einen Arbeitsbereichsordner, um die lokale LLMAPI-Konfigurationsdatei zu bearbeiten.",
+  "settings.config.openFailed": "Fehler beim Öffnen der {{scope}} LLMAPI-Konfigurationsdatei: {{message}}",
   "settings.config.source.xdg": "Globale XDG-Konfiguration",
   "settings.config.source.homeKilo": "Home .kilo-Konfiguration",
   "settings.config.source.homeKilocode": "Home .kilocode-Konfiguration",
@@ -1126,7 +1127,7 @@ export const dict = {
   "deviceAuth.toast.codeCopied": "Code in die Zwischenablage kopiert",
   "deviceAuth.toast.errorCopied": "Fehler in die Zwischenablage kopiert",
   "deviceAuth.status.initiating": "Anmeldung wird gestartet...",
-  "deviceAuth.title": "Bei Kilo Code anmelden",
+  "deviceAuth.title": "Bei LLMAPI anmelden",
   "deviceAuth.step1": "Schritt 1: Diese URL öffnen",
   "deviceAuth.action.copyUrl": "URL kopieren",
   "deviceAuth.action.openBrowser": "Browser öffnen",
@@ -1147,7 +1148,7 @@ export const dict = {
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Nicht angemeldet",
-  "profile.action.login": "Mit Kilo Code anmelden",
+  "profile.action.login": "Mit LLMAPI anmelden",
   "profile.balance.title": "Guthaben",
   "profile.balance.refresh": "Guthaben aktualisieren",
   "profile.action.dashboard": "Dashboard",
@@ -1167,11 +1168,11 @@ export const dict = {
 
   "settings.experimental.title": "Experimentell",
   "settings.language.title": "Sprache",
-  "settings.aboutKiloCode.title": "Über Kilo Code",
+  "settings.aboutKiloCode.title": "Über LLMAPI",
 
   "session.messages.empty": "Starten Sie eine Unterhaltung, indem Sie unten eine Nachricht eingeben.",
   "session.messages.welcome":
-    "Kilo Code ist ein KI-Programmierassistent. Bitten Sie ihn, Funktionen zu erstellen, Fehler zu beheben oder Ihre Codebasis zu erklären.",
+    "LLMAPI ist ein KI-Programmierassistent. Bitten Sie ihn, Funktionen zu erstellen, Fehler zu beheben oder Ihre Codebasis zu erklären.",
   "session.messages.scrollToBottom": "Nach unten scrollen",
   "session.messages.initializing": "Initialisierung...",
   "session.messages.taskStarting": "Wird gestartet...",
@@ -1224,7 +1225,7 @@ export const dict = {
   "settings.aboutKiloCode.port.label": "Port:",
   "settings.aboutKiloCode.versionInfo": "Versionsinformationen",
   "settings.aboutKiloCode.version.label": "Version:",
-  "settings.aboutKiloCode.extensionName": "Kilo Code Erweiterung",
+  "settings.aboutKiloCode.extensionName": "LLMAPI Erweiterung",
   "settings.aboutKiloCode.community": "Community & Support",
   "settings.aboutKiloCode.feedback.prefix": "Bei Fragen oder Feedback können Sie ein Issue eröffnen auf",
   "settings.aboutKiloCode.feedback.or": "oder",
@@ -1241,11 +1242,11 @@ export const dict = {
   "settings.aboutKiloCode.importSettings": "Importieren",
   "settings.aboutKiloCode.importSettings.invalidJson":
     "Ungültige JSON-Datei. Bitte wählen Sie eine gültige Einstellungsdatei aus.",
-  "settings.aboutKiloCode.importSettings.invalidConfig": "Die Datei enthält keine gültigen Kilo-Einstellungen.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "Die Datei enthält keine gültigen LLMAPI-Einstellungen.",
   "settings.aboutKiloCode.importSettings.tooLarge":
     "Die Datei ist zu groß. Einstellungsdateien müssen kleiner als 1 MB sein.",
   "settings.aboutKiloCode.importSettings.newerVersion":
-    "Diese Datei wurde mit einer neueren Version von Kilo exportiert. Einige Einstellungen werden möglicherweise ignoriert.",
+    "Diese Datei wurde mit einer neueren Version von LLMAPI exportiert. Einige Einstellungen werden möglicherweise ignoriert.",
   "settings.aboutKiloCode.importSettings.success":
     "Einstellungen importiert. Überprüfen Sie die obigen Änderungen und klicken Sie dann auf Speichern.",
 
@@ -1271,7 +1272,7 @@ export const dict = {
   "settings.browser.headless.description": "Im Headless-Modus ausführen (kein sichtbares Browserfenster).",
 
   "settings.language.description":
-    'Wählen Sie die Sprache für die Kilo Code Oberfläche. „Auto" verwendet die VS Code Anzeigesprache.',
+    'Wählen Sie die Sprache für die LLMAPI Oberfläche. „Auto" verwendet die VS Code Anzeigesprache.',
   "settings.language.auto": "Auto (VS Code Sprache)",
   "settings.language.current": "Aktuell:",
 
@@ -1319,12 +1320,12 @@ export const dict = {
     "KI-gestützte Suche in natürlicher Sprache über die gesamte Codebasis aktivieren",
   "settings.experimental.speechToText.title": "Sprache zu Text",
   "settings.experimental.speechToText.description":
-    "Aktivieren Sie die Spracheingabe in Prompt-Feldern mit Ihrem Kilo-Konto über Kilo Gateway.",
+    "Aktivieren Sie die Spracheingabe in Prompt-Feldern mit Ihrem LLMAPI-Konto über LLMAPI Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Aktivieren Sie den Kilo-Anbieter und melden Sie sich an, um Speech to Text zu verwenden. Speech to Text wird derzeit nur mit Kilo Gateway unterstützt.",
+    "Aktivieren Sie den LLMAPI-Anbieter und melden Sie sich an, um Speech to Text zu verwenden. Speech to Text wird derzeit nur mit LLMAPI Gateway unterstützt.",
   "settings.experimental.speechToTextModel.title": "Sprache-zu-Text-Modell",
   "settings.experimental.speechToTextModel.description":
-    "Wählen Sie das Kilo Gateway-Transkriptionsmodell für die Spracheingabe.",
+    "Wählen Sie das LLMAPI Gateway-Transkriptionsmodell für die Spracheingabe.",
   "settings.experimental.continueOnDeny.title": "Bei Ablehnung fortfahren",
   "settings.experimental.continueOnDeny.description":
     "Agent-Schleife fortsetzen, wenn eine Berechtigung abgelehnt wird",
@@ -1332,7 +1333,7 @@ export const dict = {
   "settings.experimental.mcpTimeout.description": "Zeitlimit für MCP-Server-Anfragen in Millisekunden",
   "settings.experimental.remote.title": "Remote-Steuerung",
   "settings.experimental.remote.description":
-    "Aktivieren Sie die Remote-Steuerung von Sitzungen über Kilo Cloud. Dies betrifft auch CLIs auf diesem Computer.",
+    "Aktivieren Sie die Remote-Steuerung von Sitzungen über LLMAPI Cloud. Dies betrifft auch CLIs auf diesem Computer.",
   "settings.experimental.remote.current": "Aktueller Status:",
   "settings.experimental.remote.startup": "Automatisch beim Start aktivieren:",
   "settings.experimental.remote.active": "Aktiv",
@@ -1447,7 +1448,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-Kompatibilität",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code-Dateien laden",
   "settings.agentBehaviour.claudeCompat.description":
-    "Lädt CLAUDE.md-Anweisungen und Skills aus Ihrem Claude Code-Konfigurationsverzeichnis in Sitzungen. Aktivieren Sie dies, wenn Kilo Ihre Claude Code-Anweisungen und Skills verwenden soll. Neustart erforderlich.",
+    "Lädt CLAUDE.md-Anweisungen und Skills aus Ihrem Claude Code-Konfigurationsverzeichnis in Sitzungen. Aktivieren Sie dies, wenn LLMAPI Ihre Claude Code-Anweisungen und Skills verwenden soll. Neustart erforderlich.",
   "settings.agentBehaviour.mcpDetail.command": "Befehl",
   "settings.agentBehaviour.mcpDetail.args": "Argumente",
   "settings.agentBehaviour.mcpDetail.env": "Umgebung",
@@ -1530,7 +1531,7 @@ export const dict = {
   "settings.display.layout.auto": "Automatisch",
   "settings.display.layout.stretch": "Gestreckt",
   "settings.display.fontSize.title": "Schriftgröße",
-  "settings.display.fontSize.description": "Passen Sie die Schriftgröße der Kilo webview UI unabhängig von VS Code an.",
+  "settings.display.fontSize.description": "Passen Sie die Schriftgröße der LLMAPI webview UI unabhängig von VS Code an.",
   "settings.display.reasoningAutoCollapse.title": "Reasoning automatisch einklappen",
   "settings.display.reasoningAutoCollapse.description":
     "Klappt Reasoning-Blöcke ein, nachdem der Agent sie fertig geschrieben hat. Deaktiviert lassen, damit Reasoning erweitert bleibt, sofern du es nicht manuell einklappst.",
@@ -1562,10 +1563,10 @@ export const dict = {
   "settings.legacyMigration.link": "Von der Legacy-Version migrieren",
   "settings.aboutKiloCode.legacyMigration.title": "Legacy-Migration",
   "settings.aboutKiloCode.legacyMigration.description":
-    "Migrieren Sie Einstellungen von einer früheren Installation von Kilo Code, einschließlich Anbieter-API-Schlüsseln und dem Standardmodell.",
+    "Migrieren Sie Einstellungen von einer früheren Installation von LLMAPI, einschließlich Anbieter-API-Schlüsseln und dem Standardmodell.",
 
   // Screen 1 — What's New
-  "migration.whatsNew.title": "Neuigkeiten in Kilo Code",
+  "migration.whatsNew.title": "Neuigkeiten in LLMAPI",
   "migration.whatsNew.subtitle":
     "Wir haben die Erweiterung auf einer schnelleren, effizienteren Grundlage neu aufgebaut.",
   "migration.whatsNew.features.performance.title": "Schnellere Agentenleistung",
@@ -1578,7 +1579,7 @@ export const dict = {
     "Eine einheitliche Oberfläche zum parallelen Ausführen mehrerer Agenten, jeweils in einem eigenen Worktree — Fortschritt überwachen, Kontext wechseln und Änderungen an einem Ort überprüfen.",
   "migration.whatsNew.features.foundation.title": "Gemeinsame Grundlage",
   "migration.whatsNew.features.foundation.detail":
-    "Ein kleiner, effizienter Kern über alle Kilo-Produkte hinweg. Ein vertrautes Erlebnis, egal wie Sie arbeiten.",
+    "Ein kleiner, effizienter Kern über alle LLMAPI-Produkte hinweg. Ein vertrautes Erlebnis, egal wie Sie arbeiten.",
   "migration.whatsNew.blogLink": "Die vollständige Ankündigung lesen",
   "migration.whatsNew.docsLink": "Neuigkeiten & häufige Fragen",
   "migration.whatsNew.continue": "Weiter",
@@ -1678,7 +1679,7 @@ export const dict = {
     "Dateien, die in deinem Arbeitsbaum geändert, aber noch nicht gestaged wurden, plus nicht verfolgte (neue) Dateien.",
   "diffViewer.source.session.label": "Sitzung",
   "diffViewer.source.session.tooltip":
-    "Von Kilo während der aktuellen Sitzung geänderte Dateien, basierend auf Snapshots pro Runde. Wird beim Start einer neuen Sitzung zurückgesetzt.",
+    "Von LLMAPI während der aktuellen Sitzung geänderte Dateien, basierend auf Snapshots pro Runde. Wird beim Start einer neuen Sitzung zurückgesetzt.",
   "diffViewer.group.session": "Sitzung",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

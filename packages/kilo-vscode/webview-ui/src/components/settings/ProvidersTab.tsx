@@ -2,10 +2,9 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
-import { Select } from "@kilocode/kilo-ui/select"
 import { Tag } from "@kilocode/kilo-ui/tag"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import { Component, For, Show, createMemo, createSignal, onCleanup } from "solid-js"
+import { Component, For, Show, createMemo, onCleanup } from "solid-js"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
@@ -14,24 +13,21 @@ import { useVSCode } from "../../context/vscode"
 import type { Provider } from "../../types/messages"
 import CustomProviderDialog from "./CustomProviderDialog"
 import ProviderConnectDialog from "./ProviderConnectDialog"
-import ProviderSelectDialog from "./ProviderSelectDialog"
-import { CUSTOM_PROVIDER_ID, isPopularProvider, providerIcon, providerNoteKey, sortProviders } from "./provider-catalog"
-import { disabledProviderOptions, providersWithKiloFallback, visibleConnectedIds } from "./provider-visibility"
+import { providerIcon } from "./provider-catalog"
+import { visibleConnectedIds } from "./provider-visibility"
 import { KILO_PROVIDER_ID, CUSTOM_PROVIDER_PACKAGE } from "../../../../src/shared/provider-model"
 import { createProviderAction } from "../../utils/provider-action"
 
 type ProviderSource = "env" | "api" | "config" | "custom"
-type ProviderOption = { value: string; label: string }
 
 const ProvidersTab: Component = () => {
   const dialog = useDialog()
-  const { config, updateConfig } = useConfig()
+  const { config } = useConfig()
   const provider = useProvider()
   const language = useLanguage()
   const server = useServer()
   const vscode = useVSCode()
   const action = createProviderAction(vscode)
-  const [disabled, setDisabled] = createSignal<ProviderOption | undefined>()
 
   onCleanup(action.dispose)
 
@@ -45,26 +41,6 @@ const ProvidersTab: Component = () => {
       .map((id) => all[id])
       .filter((item): item is Provider => !!item)
   })
-
-  const popularProviders = createMemo(() => {
-    const connected = new Set(provider.connected())
-    const disabled = new Set(config().disabled_providers ?? [])
-    const all = Object.values(provider.providers())
-    return sortProviders(
-      all.filter(
-        (item) =>
-          item.id !== KILO_PROVIDER_ID &&
-          isPopularProvider(item.id) &&
-          !connected.has(item.id) &&
-          !disabled.has(item.id),
-      ),
-    )
-  })
-
-  const disabledProviders = createMemo(() => config().disabled_providers ?? [])
-  const disabledIds = createMemo(() => new Set(disabledProviders()))
-  const providers = createMemo(() => providersWithKiloFallback(provider.providers()))
-  const disabledOptions = createMemo(() => disabledProviderOptions(providers(), disabledProviders()))
 
   function source(item: Provider): ProviderSource | undefined {
     if (!("source" in item)) return
@@ -121,35 +97,6 @@ const ProvidersTab: Component = () => {
     )
   }
 
-  function disableProvider(providerID: string) {
-    const current = disabledProviders()
-    if (!providerID || current.includes(providerID)) return
-    updateConfig({ disabled_providers: [...current, providerID] })
-  }
-
-  function enableProvider(index: number) {
-    const next = [...disabledProviders()]
-    next.splice(index, 1)
-    updateConfig({ disabled_providers: next })
-  }
-
-  function disabledName(id: string) {
-    const item = providers()[id]
-    return item?.name ?? id
-  }
-
-  function connectProvider(item: Provider) {
-    if (item.id === KILO_PROVIDER_ID) {
-      // Route Kilo Gateway sign-in through the Profile view so the user sees
-      // the full device-auth UI (URL, QR, code, timer, cancel). Triggering
-      // `startLogin()` from here alone would run the flow silently with no
-      // way to recover if the browser is dismissed.
-      server.goToLogin()
-      return
-    }
-    dialog.show(() => <ProviderConnectDialog providerID={item.id} />)
-  }
-
   function connectChatGPT(item: Provider) {
     dialog.show(() => <ProviderConnectDialog providerID={item.id} oauthOnly />)
   }
@@ -162,43 +109,41 @@ const ProvidersTab: Component = () => {
 
   return (
     <div>
-      <Show when={!disabledIds().has(KILO_PROVIDER_ID)}>
-        {/* Kilo Gateway — always at the top, not editable */}
-        <Card>
-          <div
+      {/* LLMAPI Gateway — always at the top, not editable */}
+      <Card>
+        <div
+          style={{
+            display: "flex",
+            "align-items": "center",
+            gap: "12px",
+            "min-height": "56px",
+            padding: "12px 0",
+          }}
+        >
+          <ProviderIcon id="synthetic" width={20} height={20} />
+          <span
             style={{
-              display: "flex",
-              "align-items": "center",
-              gap: "12px",
-              "min-height": "56px",
-              padding: "12px 0",
+              "font-size": "var(--kilo-font-size-14)",
+              "font-weight": "500",
+              color: "var(--vscode-foreground)",
             }}
           >
-            <ProviderIcon id="synthetic" width={20} height={20} />
-            <span
-              style={{
-                "font-size": "var(--kilo-font-size-14)",
-                "font-weight": "500",
-                color: "var(--vscode-foreground)",
-              }}
-            >
-              Kilo Gateway
-            </span>
-            <Show
-              when={kiloLoggedIn()}
-              fallback={
-                <Button size="small" variant="secondary" onClick={() => server.goToLogin()}>
-                  {language.t("common.signIn")}
-                </Button>
-              }
-            >
-              <Tag>{language.t("settings.providers.tag.gateway")}</Tag>
-            </Show>
-          </div>
-        </Card>
-      </Show>
+            {language.t("settings.providers.gateway.name")}
+          </span>
+          <Show
+            when={kiloLoggedIn()}
+            fallback={
+              <Button size="small" variant="secondary" onClick={() => server.goToLogin()}>
+                {language.t("common.signIn")}
+              </Button>
+            }
+          >
+            <Tag>{language.t("settings.providers.tag.gateway")}</Tag>
+          </Show>
+        </div>
+      </Card>
 
-      {/* Connected providers (excluding Kilo) */}
+      {/* Connected providers (excluding the Gateway) */}
       <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>
         {language.t("settings.providers.section.connected")}
       </h4>
@@ -281,63 +226,8 @@ const ProvidersTab: Component = () => {
         </Show>
       </Card>
 
-      {/* Popular providers */}
-      <h4 style={{ "margin-top": "24px", "margin-bottom": "8px" }}>
-        {language.t("settings.providers.section.popular")}
-      </h4>
-      <Card>
-        <For each={popularProviders()}>
-          {(item) => {
-            const noteKey = providerNoteKey(item.id)
-            return (
-              <div
-                style={{
-                  display: "flex",
-                  "flex-wrap": "wrap",
-                  "align-items": "center",
-                  "justify-content": "space-between",
-                  gap: "16px",
-                  "min-height": "56px",
-                  padding: "12px 0",
-                  "border-bottom": "1px solid var(--border-weak-base)",
-                }}
-              >
-                <div style={{ display: "flex", "flex-direction": "column", "min-width": 0 }}>
-                  <div style={{ display: "flex", "align-items": "center", gap: "12px" }}>
-                    <ProviderIcon id={providerIcon(item.id)} width={20} height={20} />
-                    <span
-                      style={{
-                        "font-size": "var(--kilo-font-size-14)",
-                        "font-weight": "500",
-                        color: "var(--vscode-foreground)",
-                      }}
-                    >
-                      {item.name}
-                    </span>
-                  </div>
-                  <Show when={noteKey}>
-                    {(key) => (
-                      <span
-                        style={{
-                          "font-size": "var(--kilo-font-size-12)",
-                          color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-                          "padding-left": "32px",
-                        }}
-                      >
-                        {language.t(key())}
-                      </span>
-                    )}
-                  </Show>
-                </div>
-                <Button size="large" variant="secondary" icon="plus-small" onClick={() => connectProvider(item)}>
-                  {language.t("common.connect")}
-                </Button>
-              </div>
-            )
-          }}
-        </For>
-
-        {/* Custom provider entry */}
+      {/* Custom provider — add an OpenAI-compatible provider by base URL */}
+      <Card style={{ "margin-top": "24px" }}>
         <div
           style={{
             display: "flex",
@@ -382,99 +272,6 @@ const ProvidersTab: Component = () => {
             {language.t("common.connect")}
           </Button>
         </div>
-      </Card>
-
-      {/* View all providers link */}
-      <div style={{ "margin-top": "16px" }}>
-        <Button variant="ghost" onClick={() => dialog.show(() => <ProviderSelectDialog />)} style={{ padding: "0" }}>
-          {language.t("dialog.provider.viewAll")}
-        </Button>
-      </div>
-
-      {/* Disabled providers */}
-      <h4 style={{ "margin-top": "24px", "margin-bottom": "8px" }}>{language.t("settings.providers.disabled")}</h4>
-      <Card>
-        <div
-          style={{
-            "font-size": "var(--kilo-font-size-12)",
-            color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-            "padding-bottom": "8px",
-            "border-bottom": "1px solid var(--border-weak-base)",
-          }}
-        >
-          {language.t("settings.providers.disabled.description")}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            "align-items": "center",
-            padding: "8px 0",
-            "border-bottom": disabledProviders().length > 0 ? "1px solid var(--border-weak-base)" : "none",
-          }}
-        >
-          <div style={{ flex: 1 }}>
-            <Select
-              options={disabledOptions()}
-              current={disabled()}
-              value={(item) => item.value}
-              label={(item) => item.label}
-              onSelect={(item) => setDisabled(item)}
-              variant="secondary"
-              triggerVariant="settings"
-              placeholder={language.t("settings.providers.select.placeholder")}
-            />
-          </div>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              const item = disabled()
-              if (!item) return
-              disableProvider(item.value)
-              setDisabled(undefined)
-            }}
-            disabled={!disabled()}
-          >
-            {language.t("common.add")}
-          </Button>
-        </div>
-        <For each={disabledProviders()}>
-          {(id, index) => (
-            <div
-              style={{
-                display: "flex",
-                "flex-wrap": "wrap",
-                "align-items": "center",
-                "justify-content": "space-between",
-                gap: "16px",
-                "min-height": "56px",
-                padding: "12px 0",
-                "border-bottom":
-                  index() < disabledProviders().length - 1 ? "1px solid var(--border-weak-base)" : "none",
-              }}
-            >
-              <div style={{ display: "flex", "align-items": "center", gap: "12px", "min-width": 0 }}>
-                <ProviderIcon id={providerIcon(id)} width={20} height={20} />
-                <span
-                  style={{
-                    "font-size": "var(--kilo-font-size-14)",
-                    "font-weight": "500",
-                    color: "var(--vscode-foreground)",
-                    overflow: "hidden",
-                    "text-overflow": "ellipsis",
-                    "white-space": "nowrap",
-                  }}
-                >
-                  {disabledName(id)}
-                </span>
-                <Tag>{language.t("settings.providers.disabled")}</Tag>
-              </div>
-              <Button size="large" variant="ghost" onClick={() => enableProvider(index())}>
-                {language.t("settings.providers.disabled.enable")}
-              </Button>
-            </div>
-          )}
-        </For>
       </Card>
     </div>
   )

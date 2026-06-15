@@ -13,13 +13,13 @@ export function openMcpOAuthUrlOnce(url: string): void {
     (opened) => {
       if (opened) return
       void vscode.window.showErrorMessage(
-        "MCP sign-in failed to open the browser. Check the Kilo logs for the authentication URL.",
+        "MCP sign-in failed to open the browser. Check the LLMAPI logs for the authentication URL.",
       )
     },
     (error) => {
       console.error("[Kilo New] Failed to open MCP OAuth URL:", error)
       void vscode.window.showErrorMessage(
-        "MCP sign-in failed to open the browser. Check the Kilo logs for the authentication URL.",
+        "MCP sign-in failed to open the browser. Check the LLMAPI logs for the authentication URL.",
       )
     },
   )
