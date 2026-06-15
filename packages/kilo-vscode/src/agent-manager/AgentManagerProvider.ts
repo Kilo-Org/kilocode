@@ -31,11 +31,12 @@ import { WorktreeDiffController } from "./worktree-diff-controller"
 import { WorktreeImporter } from "./worktree-importer"
 import { recordPromotionHandoff } from "./promotion-handoff"
 import { restoreWorktrees } from "./state-recovery"
-import { diffSummary as localDiffSummary, diffFile as localDiffFile } from "./local-diff"
+import { createLocalDiff, diffSummary as localDiffSummary } from "./local-diff"
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
 import { stopSessionProcesses } from "../kilo-provider/background-process"
 
 import { startSession } from "./mcp-warmup"
+import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
 import { Semaphore } from "./semaphore"
@@ -73,6 +74,7 @@ export class AgentManagerProvider implements Disposable {
   private cachedWorktreeStats: { type: "agentManager.worktreeStats"; stats: WorktreeStats[] } | undefined
   private cachedLocalStats: { type: "agentManager.localStats"; stats: LocalStats } | undefined
   private unsubTool: (() => void) | undefined
+  private unsubFont: (() => void) | undefined
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
 
@@ -96,6 +98,10 @@ export class AgentManagerProvider implements Disposable {
       getWorktreePath: (id) => this.getStateManager()?.getWorktree(id)?.path,
       log: (...args) => this.log("[XTerm]", ...args),
       post: (msg) => this.postToWebview(msg),
+      getTerminalFont: () => readTerminalFont(),
+    })
+    this.unsubFont = watchTerminalFont((font) => {
+      this.postToWebview({ type: "agentManager.terminal.fontChanged", font })
     })
     this.run = new RunController({
       root: () => this.getRoot(),
@@ -120,13 +126,14 @@ export class AgentManagerProvider implements Disposable {
     })
     const semaphore = new Semaphore(3)
     this.gitOps = new GitOps({ log: (...args) => this.log(...args), semaphore })
+    const local = createLocalDiff(this.gitOps, (...args) => this.log(...args))
     this.diffs = new WorktreeDiffController({
       getState: () => this.getStateManager(),
       getRoot: () => this.getRoot(),
       getStateReady: () => this.stateReady,
       git: this.gitOps,
-      localDiff: (dir, base) => localDiffSummary(this.gitOps, dir, base, (...args) => this.log(...args)),
-      localDiffFile: (dir, base, file) => localDiffFile(this.gitOps, dir, base, file, (...args) => this.log(...args)),
+      localDiff: local.summary,
+      localDiffFile: local.file,
       post: (msg) => this.postToWebview(msg),
       log: (...args) => this.log(...args),
     })
@@ -1791,6 +1798,7 @@ export class AgentManagerProvider implements Disposable {
     await this.stateReady?.catch((err) => this.log("dispose: stateReady rejected:", err))
     await this.state?.flush().catch((err) => this.log("dispose: state flush failed:", err))
     this.unsubTool?.()
+    this.unsubFont?.()
     this.connectionService.unregisterFocused("agent-manager")
     this.connectionService.registerOpen("agent-manager", [])
     this.diffs.stop()

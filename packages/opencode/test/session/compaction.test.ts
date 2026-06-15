@@ -29,6 +29,7 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { TestConfig } from "../fixture/config"
 import { SyncEvent } from "@/sync"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { EventV2Bridge } from "@/event-v2-bridge"
 
 void Log.init({ print: false })
 
@@ -225,6 +226,8 @@ const deps = Layer.mergeAll(
   Bus.layer,
   Config.defaultLayer,
   SyncEvent.defaultLayer,
+  RuntimeFlags.layer({ experimentalEventSystem: true }),
+  EventV2Bridge.defaultLayer,
 ).pipe(Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })))
 
 const env = Layer.mergeAll(
@@ -246,6 +249,7 @@ type CompactionProcessOptions = {
   plugin?: Layer.Layer<Plugin.Service>
   provider?: ReturnType<typeof ProviderTest.fake>
   config?: Layer.Layer<Config.Service>
+  flags?: Partial<RuntimeFlags.Info> // kilocode_change
 }
 
 function withCompaction(options?: CompactionProcessOptions) {
@@ -274,6 +278,8 @@ function compactionProcessLayer(options?: CompactionProcessOptions) {
     Layer.provide(bus),
     Layer.provide(options?.config ?? Config.defaultLayer),
     Layer.provide(SyncEvent.defaultLayer),
+    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true, ...options?.flags })), // kilocode_change
+    Layer.provide(EventV2Bridge.defaultLayer),
   )
 }
 
@@ -952,6 +958,40 @@ describe("session.compaction.process", () => {
       expect(part?.tail_start_id).toBe(keep.id)
     }).pipe(withCompaction({ config: cfg({ tail_turns: 2, preserve_recent_tokens: 10_000 }) })),
   )
+
+  // kilocode_change start - configured output ceiling controls automatic tail budgeting
+  itCompaction.instance(
+    "uses the configured output token ceiling for retained tail budgeting",
+    Effect.gen(function* () {
+      const ssn = yield* SessionNs.Service
+      const session = yield* ssn.create({})
+      yield* createUserMessage(session.id, "first")
+      const keep = yield* createUserMessage(session.id, "x".repeat(12_000))
+      yield* createUserMessage(session.id, "third")
+      yield* createSummaryCompaction(session.id)
+
+      const msgs = yield* ssn.messages({ sessionID: session.id })
+      const parent = msgs.at(-1)?.info.id
+      expect(parent).toBeTruthy()
+      if (!parent) return yield* Effect.die(new Error("compaction parent not found"))
+      yield* SessionCompaction.use.process({
+        parentID: parent,
+        messages: msgs,
+        sessionID: session.id,
+        auto: false,
+      })
+
+      const part = yield* readCompactionPart(session.id)
+      expect(part?.tail_start_id).toBe(keep.id)
+    }).pipe(
+      withCompaction({
+        config: cfg({ tail_turns: 2 }),
+        provider: ProviderTest.fake({ model: createModel({ context: 20_000, output: 10_000 }) }),
+        flags: { outputTokenMax: 2_000 },
+      }),
+    ),
+  )
+  // kilocode_change end
 
   itCompaction.instance(
     "shrinks retained tail to fit preserve token budget",

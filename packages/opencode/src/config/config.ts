@@ -10,7 +10,6 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { applyEdits, findNodeAtLocation, modify, parseTree } from "jsonc-parser" // kilocode_change - parseTree/findNodeAtLocation used in patchJsonc
-import { type InstanceContext } from "../project/instance"
 import { InstallationLocal, InstallationVersion } from "@opencode-ai/core/installation/version"
 import { existsSync } from "fs"
 // kilocode_change start
@@ -24,7 +23,7 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { InstanceState } from "@/effect/instance-state"
 import { Context, Duration, Effect, Exit, Fiber, Layer, Option, Schema } from "effect"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
-import { containsPath } from "../project/instance-context"
+import { containsPath, type InstanceContext } from "../project/instance-context"
 import { NonNegativeInt, PositiveInt, type DeepMutable } from "@opencode-ai/core/schema"
 import { ConfigAgent } from "./agent"
 import { ConfigAttachment } from "./attachment"
@@ -209,8 +208,23 @@ export const Info = Schema.Struct({
     description: "Automatically collapse reasoning blocks after the agent finishes writing them",
   }),
   indexing: Schema.optional(IndexingRef).annotate({ description: "Codebase indexing configuration" }),
+  console: Schema.optional(
+    Schema.Struct({
+      context_sidebar_width: Schema.optional(
+        Schema.Int.check(Schema.isBetween({ minimum: 250, maximum: 800 })).annotate({
+          description: "Width of the Kilo Console project context sidebar in pixels",
+        }),
+      ),
+      diff_style: Schema.optional(Schema.Literals(["unified", "split"])).annotate({
+        description: "Default diff layout in Kilo Console project reviews",
+      }),
+    }),
+  ).annotate({ description: "Kilo Console user interface configuration" }),
   terminal_command_display: Schema.optional(Schema.Literals(["expanded", "collapsed"])).annotate({
     description: "Controls whether terminal command blocks are expanded or collapsed by default in the VS Code chat UI",
+  }),
+  hide_prompt_training_models: Schema.optional(Schema.Boolean).annotate({
+    description: "Hide Kilo Gateway models that may train on your prompts from model listings",
   }),
   model: Schema.optional(Schema.NullOr(ConfigModelID)).annotate({
     description: "Model to use in the format of provider/model, eg anthropic/claude-2",
@@ -224,6 +238,12 @@ export const Info = Schema.Struct({
   }),
   subagent_variant: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description: "Default model variant for task-tool subagents when subagent_model is configured.",
+  }),
+  subagent_variant_overrides: Schema.optional(
+    Schema.NullOr(Schema.Record(Schema.String, Schema.NullOr(Schema.String))),
+  ).annotate({
+    description:
+      "Model-specific variant overrides for task-tool subagents, keyed by provider/model. Valid overrides take precedence over saved, agent-specific, and inherited variants.",
   }),
   default_agent: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description:

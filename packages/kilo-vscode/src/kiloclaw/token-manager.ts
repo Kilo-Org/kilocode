@@ -26,11 +26,6 @@ export class TokenManager {
 
   constructor(private readonly getClient: () => KiloClient | null) {}
 
-  /** Latest resolved token info (may be stale). Used for URL extraction. */
-  peek(): ChatToken | null {
-    return this.cached
-  }
-
   /** Drop the cached token; next `get` will refetch. */
   clear(): void {
     this.cached = null

@@ -84,10 +84,6 @@ vi.mock("../classic-auto-complete/AutocompleteInlineCompletionProvider", () => {
     public setModel(id: string) {
       this.modelId = id
     }
-    public getModelId(): string {
-      return this.modelId
-    }
-
     constructor(..._args: any[]) {}
   }
   return { AutocompleteInlineCompletionProvider }
@@ -316,22 +312,6 @@ describe("AutocompleteServiceManager (less mocked logic)", () => {
       ;(manager as any).settings = { snoozeUntil: Date.now() + 60_000 }
 
       expect(manager.isSnoozed()).toBe(true)
-    })
-
-    it("getSnoozeRemainingSeconds() returns 0 when not snoozed", async () => {
-      const manager = await createManager()
-      ;(manager as any).settings = {}
-
-      expect(manager.getSnoozeRemainingSeconds()).toBe(0)
-    })
-
-    it("getSnoozeRemainingSeconds() returns a positive number when snoozed", async () => {
-      const manager = await createManager()
-      ;(manager as any).settings = { snoozeUntil: Date.now() + 30_000 }
-
-      const remaining = manager.getSnoozeRemainingSeconds()
-      expect(remaining).toBeGreaterThan(0)
-      expect(remaining).toBeLessThanOrEqual(30)
     })
   })
 })

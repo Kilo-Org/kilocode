@@ -4,8 +4,7 @@ import { NamedError } from "@opencode-ai/core/util/error"
 import { Glob } from "@opencode-ai/core/util/glob"
 import * as Truncate from "../../tool/truncate"
 import { Config } from "../../config/config"
-import { Instance } from "../../project/instance"
-import { makeRuntime } from "@/effect/run-service"
+import type { Info as AgentInfo } from "../../agent/agent"
 import { Schema } from "effect"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
@@ -170,6 +169,7 @@ function planEditRules(worktree: string) {
   return {
     "*": "deny" as const,
     [path.join(".kilo", "plans", "*.md")]: "allow" as const,
+    [path.join("plans", "*.md")]: "allow" as const,
     [path.join(".plans", "*.md")]: "allow" as const,
     [path.join(".opencode", "plans", "*.md")]: "allow" as const,
     [path.relative(worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow" as const,
@@ -455,24 +455,22 @@ export const RemoveError = NamedError.create("AgentRemoveError", {
  * Scans all config directories for agent/mode .md files matching the name,
  * then also checks the .kilocodemodes files the ModesMigrator reads.
  */
-export async function remove(name: string) {
-  const { Agent } = await import("../../agent/agent")
-  const agents = makeRuntime(Agent.Service, Agent.defaultLayer)
-  const agent = await agents.runPromise((svc) => svc.get(name))
-  if (!agent) throw new RemoveError({ name, message: "agent not found" })
-  if (agent.native) throw new RemoveError({ name, message: "cannot remove native agent" })
+export async function remove(input: { name: string; agent?: AgentInfo; dirs: string[]; directory: string }) {
+  if (!input.agent) throw new RemoveError({ name: input.name, message: "agent not found" })
+  if (input.agent.native) throw new RemoveError({ name: input.name, message: "cannot remove native agent" })
   // Prevent removal of organization-managed agents
-  if (agent.options?.source === "organization")
-    throw new RemoveError({ name, message: "cannot remove organization agent — manage it from the cloud dashboard" })
+  if (input.agent.options?.source === "organization")
+    throw new RemoveError({
+      name: input.name,
+      message: "cannot remove organization agent — manage it from the cloud dashboard",
+    })
 
   const { unlink, writeFile } = await import("fs/promises")
   let found = false
 
   // 1. Delete .md files from config directories
-  const { AppRuntime } = await import("@/effect/app-runtime")
-  const dirs = await AppRuntime.runPromise(Config.Service.use((svc) => svc.directories()))
-  const patterns = ["{agent,agents}/**/" + name + ".md", "{mode,modes}/" + name + ".md"]
-  for (const dir of dirs) {
+  const patterns = ["{agent,agents}/**/" + input.name + ".md", "{mode,modes}/" + input.name + ".md"]
+  for (const dir of input.dirs) {
     for (const pattern of patterns) {
       const matches = await Glob.scan(pattern, { cwd: dir, absolute: true, dot: true })
       for (const file of matches) {
@@ -494,14 +492,14 @@ export async function remove(name: string) {
     path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "custom_modes.yaml"),
     path.join(home, ".kilocode", "cli", "global", "settings", "custom_modes.yaml"),
     path.join(home, ".kilocodemodes"),
-    path.join(Instance.directory, ".kilocodemodes"),
+    path.join(input.directory, ".kilocodemodes"),
   ]
 
   for (const file of modesFiles) {
     const modes = await ModesMigrator.readModesFile(file)
     if (!modes.length) continue
 
-    const filtered = modes.filter((m: { slug: string }) => m.slug !== name)
+    const filtered = modes.filter((m: { slug: string }) => m.slug !== input.name)
     if (filtered.length === modes.length) continue
 
     // Rewrite the file without the removed mode
@@ -513,8 +511,5 @@ export async function remove(name: string) {
     found = true
   }
 
-  if (!found) throw new RemoveError({ name, message: "no agent file found on disk" })
-
-  const runtime = await import("../../project/instance-runtime")
-  await runtime.InstanceRuntime.disposeInstance(Instance.current)
+  if (!found) throw new RemoveError({ name: input.name, message: "no agent file found on disk" })
 }

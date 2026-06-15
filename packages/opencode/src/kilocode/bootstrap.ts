@@ -8,7 +8,7 @@ import path from "node:path"
 import { Bus } from "@/bus"
 import { SessionExport } from "@/kilocode/session-export"
 import { createWorkspaceProvider } from "@/kilocode/session-export/workspace-provider"
-import { Instance } from "@/project/instance"
+import { Instance } from "@/kilocode/instance"
 import { Identity } from "@kilocode/kilo-telemetry"
 
 const log = Log.create({ service: "kilocode-bootstrap" })

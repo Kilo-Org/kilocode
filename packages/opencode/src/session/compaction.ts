@@ -16,7 +16,6 @@ import { Effect, Layer, Context, Schema } from "effect"
 import * as DateTime from "effect/DateTime"
 import { InstanceState } from "@/effect/instance-state"
 import { isOverflow as overflow, usable } from "./overflow"
-import { makeRuntime } from "@/effect/run-service"
 import { serviceUse } from "@/effect/service-use"
 // kilocode_change start
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
@@ -26,8 +25,8 @@ import { SessionExport } from "@/kilocode/session-export"
 import { KiloSession } from "@/kilocode/session"
 // kilocode_change end
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { SyncEvent } from "@/sync"
-import { SessionEvent } from "@/v2/session-event"
+import { EventV2Bridge } from "@/event-v2-bridge"
+import { SessionEvent } from "@opencode-ai/core/session-event"
 
 const log = Log.create({ service: "session.compaction" })
 
@@ -145,7 +144,7 @@ function buildPrompt(input: { previousSummary?: string; context: string[] }) {
   return [anchor, SUMMARY_TEMPLATE, ...input.context].join("\n\n")
 }
 
-function preserveRecentBudget(input: { cfg: Config.Info; model: Provider.Model }) {
+function preserveRecentBudget(input: { cfg: Config.Info; model: Provider.Model; outputTokenMax?: number }) { // kilocode_change
   return (
     input.cfg.compaction?.preserve_recent_tokens ??
     Math.min(MAX_PRESERVE_RECENT_TOKENS, Math.max(MIN_PRESERVE_RECENT_TOKENS, Math.floor(usable(input) * 0.25)))
@@ -221,19 +220,7 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/Se
 
 export const use = serviceUse(Service)
 
-export const layer: Layer.Layer<
-  Service,
-  never,
-  | Bus.Service
-  | Config.Service
-  | Session.Service
-  | Agent.Service
-  | Plugin.Service
-  | SessionProcessor.Service
-  | Provider.Service
-  | SyncEvent.Service
-  | RuntimeFlags.Service
-> = Layer.effect(
+export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const bus = yield* Bus.Service
@@ -243,14 +230,19 @@ export const layer: Layer.Layer<
     const plugin = yield* Plugin.Service
     const processors = yield* SessionProcessor.Service
     const provider = yield* Provider.Service
-    const sync = yield* SyncEvent.Service
+    const events = yield* EventV2Bridge.Service
     const flags = yield* RuntimeFlags.Service
 
     const isOverflow = Effect.fn("SessionCompaction.isOverflow")(function* (input: {
       tokens: MessageV2.Assistant["tokens"]
       model: Provider.Model
     }) {
-      return overflow({ cfg: yield* config.get(), tokens: input.tokens, model: input.model })
+      return overflow({
+        cfg: yield* config.get(),
+        tokens: input.tokens,
+        model: input.model,
+        outputTokenMax: flags.outputTokenMax,
+      })
     })
 
     const estimate = Effect.fn("SessionCompaction.estimate")(function* (input: {
@@ -268,7 +260,13 @@ export const layer: Layer.Layer<
     }) {
       const limit = input.cfg.compaction?.tail_turns ?? DEFAULT_TAIL_TURNS
       if (limit <= 0) return { head: input.messages, tail_start_id: undefined }
-      const budget = preserveRecentBudget({ cfg: input.cfg, model: input.model })
+      // kilocode_change start
+      const budget = preserveRecentBudget({
+        cfg: input.cfg,
+        model: input.model,
+        outputTokenMax: flags.outputTokenMax,
+      })
+      // kilocode_change end
       const all = turns(input.messages)
       if (!all.length) return { head: input.messages, tail_start_id: undefined }
       const recent = all.slice(-limit)
@@ -470,7 +468,7 @@ export const layer: Layer.Layer<
         model,
       })
       // kilocode_change start
-      const result = KiloCompactionChunks.needed({ cfg, model, tokens })
+      const result = KiloCompactionChunks.needed({ cfg, model, tokens, outputTokenMax: flags.outputTokenMax })
         ? "compact"
         : yield* KiloCompactionPayloadRecovery.process({
             processor,
@@ -497,6 +495,7 @@ export const layer: Layer.Layer<
             sessionID: input.sessionID,
             model,
             cfg,
+            outputTokenMax: flags.outputTokenMax,
             messages: selected.head,
             prompt: nextPrompt,
             target: processor.message,
@@ -523,8 +522,7 @@ export const layer: Layer.Layer<
         })
       }
 
-      if (fallback === "continue" && input.auto) {
-        // kilocode_change
+      if (fallback === "continue" && input.auto) { // kilocode_change
         if (replay) {
           // kilocode_change start - compact oversized replay turns instead of looping into replay overflow
           replay = yield* KiloCompactionChunks.replay({
@@ -535,6 +533,7 @@ export const layer: Layer.Layer<
             sessionID: input.sessionID,
             model,
             cfg,
+            outputTokenMax: flags.outputTokenMax,
             messages: selected.head,
             prompt: nextPrompt,
             target: processor.message,
@@ -641,7 +640,7 @@ export const layer: Layer.Layer<
           },
         )
         if (flags.experimentalEventSystem) {
-          yield* sync.run(SessionEvent.Compaction.Ended.Sync, {
+          yield* events.publish(SessionEvent.Compaction.Ended, {
             sessionID: input.sessionID,
             timestamp: DateTime.makeUnsafe(Date.now()),
             text: summary ?? "",
@@ -681,8 +680,8 @@ export const layer: Layer.Layer<
         yield* prune({ sessionID: input.sessionID, reason: "post-compaction" })
         yield* bus.publish(Event.Compacted, { sessionID: input.sessionID })
       }
+      return fallback
       // kilocode_change end
-      return fallback // kilocode_change
     })
 
     const create = Effect.fn("SessionCompaction.create")(function* (input: {
@@ -712,7 +711,7 @@ export const layer: Layer.Layer<
       KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
       // kilocode_change end
       if (flags.experimentalEventSystem) {
-        yield* sync.run(SessionEvent.Compaction.Started.Sync, {
+        yield* events.publish(SessionEvent.Compaction.Started, {
           sessionID: input.sessionID,
           timestamp: DateTime.makeUnsafe(Date.now()),
           reason: input.auto ? "auto" : "manual",
@@ -723,7 +722,7 @@ export const layer: Layer.Layer<
     return Service.of({
       isOverflow,
       prune,
-      process: (input) => processCompaction(input).pipe(Effect.orDie),
+      process: (input) => processCompaction(input).pipe(Effect.orDie), // kilocode_change
       create,
     })
   }),
@@ -738,20 +737,9 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(Plugin.defaultLayer),
     Layer.provide(Bus.layer),
     Layer.provide(Config.defaultLayer),
-    Layer.provide(SyncEvent.defaultLayer),
     Layer.provide(RuntimeFlags.defaultLayer),
+    Layer.provide(EventV2Bridge.defaultLayer),
   ),
 )
-
-const { runPromise } = makeRuntime(Service, defaultLayer)
-
-export async function isOverflow(input: { tokens: MessageV2.Assistant["tokens"]; model: Provider.Model }) {
-  return runPromise((svc) => svc.isOverflow(input))
-}
-
-export async function prune(input: { sessionID: SessionID; reason?: PruneReason }) {
-  // kilocode_change
-  return runPromise((svc) => svc.prune(input))
-}
 
 export * as SessionCompaction from "./compaction"

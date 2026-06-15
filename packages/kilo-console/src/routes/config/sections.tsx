@@ -3,6 +3,7 @@ import type { IconProps } from "@kilocode/kilo-web-ui/icon"
 import { AgentBuilderRoute, AgentsRoute } from "./AgentsRoute"
 import { CliNotificationsRoute } from "./CliNotificationsRoute"
 import { CliUiRoute } from "./CliUiRoute"
+import { ConsoleUiRoute } from "./ConsoleUiRoute"
 import { FormattersRoute, LspRoute } from "./FormattersRoute"
 import { IndexingRoute } from "./IndexingRoute"
 import { KeybindsRoute } from "./KeybindsRoute"
@@ -26,6 +27,7 @@ export type ConfigSection = {
 export type ConfigGroup = {
   id: string
   label: string
+  globalOnly?: boolean
   items: ConfigSection[]
 }
 
@@ -128,6 +130,14 @@ export const configNav: ConfigNode[] = [
         label: "Keybinds",
         component: KeybindsRoute,
       },
+    ],
+  },
+  {
+    id: "console",
+    label: "Console",
+    globalOnly: true,
+    items: [
+      { path: "/console/ui", href: "/settings/console/ui", icon: "sliders", label: "UI", component: ConsoleUiRoute },
     ],
   },
   {

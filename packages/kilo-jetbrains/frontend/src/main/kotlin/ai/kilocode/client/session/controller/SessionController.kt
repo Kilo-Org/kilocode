@@ -51,6 +51,7 @@ import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -124,6 +125,8 @@ class SessionController(
     ) { sid ?: ref?.key ?: "pending" }
 
     private var disposed = false
+    private var enhancement = 0L
+    private val enhancements = mutableMapOf<Long, (Result<String>) -> Unit>()
     private var partType: String? = null
     private var tool: String? = null
     private var eventJob: Job? = null
@@ -195,13 +198,44 @@ class SessionController(
         updates.requestFlush(true)
     }
 
-    fun prompt(text: String) {
+    fun enhancePrompt(text: String, complete: (Result<String>) -> Unit) {
+        assertEdt()
+        if (disposed) {
+            complete(Result.failure(CancellationException("Session controller disposed")))
+            return
+        }
+        val id = ++enhancement
+        enhancements[id] = complete
+        capture("Prompt Enhance Clicked", mapOf("textLength" to bucket(text)))
+        cs.launch {
+            val result = try {
+                Result.success(sessions.enhancePrompt(directory, text))
+            } catch (e: CancellationException) {
+                Result.failure(e)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+            edt {
+                val callback = enhancements.remove(id) ?: return@edt
+                result.onSuccess {
+                    capture("Prompt Enhanced", mapOf("textLength" to bucket(text)))
+                }.onFailure { e ->
+                    if (e !is CancellationException) {
+                        capture("Session Error", mapOf("context" to "enhance-prompt", "errorClass" to e::class.java.name))
+                    }
+                }
+                callback(result)
+            }
+        }
+    }
+
+    fun prompt(text: String, files: List<PromptPartDto> = emptyList()) {
         assertEdt()
         val start = sid ?: ref?.key ?: "pending"
         val exists = sid != null
-        val dto = promptDto(text)
-        val props = promptProps()
-        LOG.debug { "${ChatLogSummary.sid(start)} ${ChatLogSummary.prompt(text)} ${ChatLogSummary.dir(directory)}" }
+        val dto = promptDto(text, files)
+        val props = promptProps(files)
+        LOG.debug { "${ChatLogSummary.sid(start)} ${ChatLogSummary.prompt(dto)} ${ChatLogSummary.dir(directory)}" }
         capture("Conversation Send Clicked", sessionProps(sid ?: ref?.key) + mapOf(
             "source" to "user",
             "hasExistingSession" to exists.toString(),
@@ -624,11 +658,12 @@ class SessionController(
                                         info.name,
                                         provider.id,
                                         provider.name,
-                                        info.recommendedIndex,
-                                        info.free,
-                                        info.variants,
-                                        info.limit?.let { ModelLimitItem(it.context, it.input, it.output) },
-                                    )
+                                         info.recommendedIndex,
+                                         info.free,
+                                         info.variants,
+                                         info.limit?.let { ModelLimitItem(it.context, it.input, it.output) },
+                                         info.attachment,
+                                     )
                                 }
                             }
                     } ?: emptyList()
@@ -1203,12 +1238,16 @@ class SessionController(
         }
     }
 
-    private fun promptDto(text: String): PromptDto {
+    private fun promptDto(text: String, files: List<PromptPartDto> = emptyList()): PromptDto {
         val full = model.model
         val sel = full?.let(::parseModel)
         val variant = model.variant?.takeIf { it in model.variants }
+        val parts = buildList {
+            text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
+            addAll(files)
+        }
         return PromptDto(
-            parts = listOf(PromptPartDto(type = "text", text = text)),
+            parts = parts,
             providerID = sel?.first,
             modelID = sel?.second,
             agent = model.agent,
@@ -1421,7 +1460,7 @@ class SessionController(
         }
     }
 
-    private fun promptProps(): Map<String, String> = buildMap {
+    private fun promptProps(files: List<PromptPartDto> = emptyList()): Map<String, String> = buildMap {
         model.agent?.let { put("agent", it) }
         model.model?.let { key ->
             put("model", key)
@@ -1431,6 +1470,10 @@ class SessionController(
             }
         }
         model.variant?.takeIf { it in model.variants }?.let { put("variant", it) }
+        if (files.isNotEmpty()) {
+            put("attachmentCount", files.size.toString())
+            put("mediaAttachmentCount", files.count { it.mime?.startsWith("image/") == true || it.mime == "application/pdf" }.toString())
+        }
     }
 
     private fun bucket(text: String): String = when (text.length) {
@@ -1716,13 +1759,18 @@ class SessionController(
 
     override fun dispose() {
         runEdt {
+            if (disposed) return@runEdt
             disposed = true
             connectionDelay.dispose()
             cancelSubscriptions()
             drainJob?.cancel()
             drainJob = null
+            val callbacks = enhancements.values.toList()
+            enhancements.clear()
+            cs.cancel()
+            val result = Result.failure<String>(CancellationException("Session controller disposed"))
+            callbacks.forEach { it(result) }
         }
-        cs.cancel()
     }
 
     override fun toString(): String {

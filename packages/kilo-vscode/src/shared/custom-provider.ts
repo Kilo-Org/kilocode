@@ -149,13 +149,23 @@ export function sanitizeCustomProviderConfig(provider: unknown): { value: Saniti
 }
 
 type AnyRecord = Record<string, unknown>
+type ProviderPatch = Omit<SanitizedProviderConfig, "models"> & {
+  models: Record<
+    string,
+    null | {
+      name: string
+      reasoning?: true | null
+      variants?: Record<string, VariantConfig | null>
+    }
+  >
+}
 
 function isRecord(v: unknown): v is AnyRecord {
   return !!v && typeof v === "object" && !Array.isArray(v)
 }
 
 /**
- * Build a provider patch that includes null sentinels for models and variants
+ * Build a provider patch that includes null sentinels for model properties
  * that existed in the previous config but are absent from the new one. The CLI
  * `config.update` endpoint deep-merges the payload with the existing config;
  * without explicit nulls, removed entries would persist on disk.
@@ -163,7 +173,7 @@ function isRecord(v: unknown): v is AnyRecord {
 export function withCustomProviderDeletions(existing: unknown, next: SanitizedProviderConfig): SanitizedProviderConfig {
   if (!isRecord(existing)) return next
   const oldModels = isRecord(existing.models) ? existing.models : {}
-  const patched: AnyRecord = { ...next.models }
+  const patched: ProviderPatch["models"] = { ...next.models }
 
   for (const id of Object.keys(oldModels)) {
     if (!(id in patched)) {
@@ -171,15 +181,21 @@ export function withCustomProviderDeletions(existing: unknown, next: SanitizedPr
       continue
     }
     const oldModel = oldModels[id]
-    const oldVariants = isRecord(oldModel) && isRecord(oldModel.variants) ? oldModel.variants : {}
     const newModel = patched[id]
-    if (!isRecord(newModel)) continue
+    if (!isRecord(oldModel) || !isRecord(newModel)) continue
+    const oldVariants = isRecord(oldModel.variants) ? oldModel.variants : {}
     const newVariants = isRecord(newModel.variants) ? newModel.variants : {}
-    const removedVariants = Object.keys(oldVariants).filter((v) => !(v in newVariants))
-    if (removedVariants.length === 0) continue
-    const nulls = Object.fromEntries(removedVariants.map((v) => [v, null]))
-    patched[id] = { ...newModel, variants: { ...newVariants, ...nulls } }
+    const removed = Object.keys(oldVariants).filter((variant) => !(variant in newVariants))
+    const variants =
+      removed.length > 0
+        ? { ...newVariants, ...Object.fromEntries(removed.map((variant) => [variant, null])) }
+        : newModel.variants
+    patched[id] = {
+      ...newModel,
+      ...(variants ? { variants } : {}),
+      ...(oldModel.reasoning !== undefined && newModel.reasoning === undefined ? { reasoning: null } : {}),
+    }
   }
 
-  return { ...next, models: patched as SanitizedProviderConfig["models"] }
+  return { ...next, models: patched } as SanitizedProviderConfig
 }

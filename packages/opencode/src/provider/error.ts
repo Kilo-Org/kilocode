@@ -135,6 +135,18 @@ export function parseStreamError(input: unknown): ParsedStreamError | undefined 
         message: "Input exceeds context window of this model",
         responseBody,
       }
+    // kilocode_change start - normalize empty provider rate-limit stream errors
+    case "rate_limit_exceeded":
+      return {
+        type: "api_error",
+        message:
+          typeof body?.error?.message === "string" && body.error.message.trim()
+            ? body.error.message
+            : "Provider rate limit exceeded. Please try again shortly.",
+        isRetryable: true,
+        responseBody,
+      }
+    // kilocode_change end
     case "insufficient_quota":
       return {
         type: "api_error",

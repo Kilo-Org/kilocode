@@ -95,18 +95,14 @@ describe("CommandTimeout", () => {
             state.killed = true
           }),
       })
-      const fiber = yield* CommandTimeout.drain(child, Effect.never, "shell command terminated").pipe(
-        Effect.forkChild,
-      )
+      const fiber = yield* CommandTimeout.drain(child, Effect.never, "shell command terminated").pipe(Effect.forkChild)
       yield* Effect.yieldNow
 
       yield* TestClock.adjust("24 millis")
       expect(state.killed).toBe(false)
       yield* TestClock.adjust("1 millis")
       expect(state.killed).toBe(true)
-      expect(yield* Fiber.join(fiber)).toBe(
-        "shell command terminated after exceeding environment timeout 25 ms.",
-      )
+      expect(yield* Fiber.join(fiber)).toBe("shell command terminated after exceeding environment timeout 25 ms.")
     }),
   )
 

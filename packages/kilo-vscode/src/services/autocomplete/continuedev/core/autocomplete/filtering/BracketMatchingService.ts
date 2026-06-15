@@ -13,61 +13,27 @@ export const BRACKETS_REVERSE: { [key: string]: string } = {
  * But sometimes we started the pair in a previous autocomplete suggestion
  */
 export class BracketMatchingService {
-  private openingBracketsFromLastCompletion: string[] = []
-  private lastCompletionFile: string | undefined = undefined
-
-  handleAcceptedCompletion(completion: string, filepath: string) {
-    this.openingBracketsFromLastCompletion = []
-    const stack: string[] = []
-
-    for (let i = 0; i < completion.length; i++) {
-      const char = completion[i]
-      if (Object.keys(BRACKETS).includes(char)) {
-        // It's an opening bracket
-        stack.push(char)
-      } else if (Object.values(BRACKETS).includes(char)) {
-        // It's a closing bracket
-        if (stack.length === 0 || BRACKETS[stack.pop()!] !== char) {
-          break
-        }
-      }
-    }
-
-    // Any remaining opening brackets in the stack are uncompleted
-    this.openingBracketsFromLastCompletion = stack
-    this.lastCompletionFile = filepath
-  }
-
   async *stopOnUnmatchedClosingBracket(
     stream: AsyncGenerator<string>,
     prefix: string,
     suffix: string,
-    filepath: string,
+    _filepath: string,
     multiline: boolean, // Whether this is a multiline completion or not
   ): AsyncGenerator<string> {
-    let stack: string[] = []
-    if (multiline) {
-      // Add opening brackets from the previous response
-      if (this.lastCompletionFile === filepath) {
-        stack = [...this.openingBracketsFromLastCompletion]
-      } else {
-        this.lastCompletionFile = undefined
-      }
-    } else {
+    const stack: string[] = []
+    if (!multiline) {
       // If single line completion, then allow completing bracket pairs that are
       // started on the current line but not finished on the current line
-      if (!multiline) {
-        const currentLine = (prefix.split("\n").pop() ?? "") + (suffix.split("\n")[0] ?? "")
-        for (let i = 0; i < currentLine.length; i++) {
-          const char = currentLine[i]
-          if (Object.keys(BRACKETS).includes(char)) {
-            // It's an opening bracket
-            stack.push(char)
-          } else if (Object.values(BRACKETS).includes(char)) {
-            // It's a closing bracket
-            if (stack.length === 0 || BRACKETS[stack.pop()!] !== char) {
-              break
-            }
+      const currentLine = (prefix.split("\n").pop() ?? "") + (suffix.split("\n")[0] ?? "")
+      for (let i = 0; i < currentLine.length; i++) {
+        const char = currentLine[i]
+        if (Object.keys(BRACKETS).includes(char)) {
+          // It's an opening bracket
+          stack.push(char)
+        } else if (Object.values(BRACKETS).includes(char)) {
+          // It's a closing bracket
+          if (stack.length === 0 || BRACKETS[stack.pop()!] !== char) {
+            break
           }
         }
       }

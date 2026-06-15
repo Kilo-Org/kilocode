@@ -6,8 +6,8 @@ import path from "path"
 import { Identifier } from "../../src/id/id"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ModelID, ProviderID } from "../../src/provider/schema"
-import { Instance } from "../../src/project/instance"
-import { WithInstance } from "../../src/project/with-instance"
+import { Instance } from "../../src/kilocode/instance"
+import { provideTestInstance } from "../fixture/fixture"
 import { PlanFollowup } from "../../src/kilocode/plan-followup"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
 import { makeRuntime } from "../../src/effect/run-service"
@@ -56,7 +56,7 @@ const model = {
 
 async function withInstance(fn: () => Promise<void>) {
   await using tmp = await tmpdir({ git: true })
-  await WithInstance.provide({ directory: tmp.path, fn })
+  await provideTestInstance({ directory: tmp.path, fn })
 }
 
 async function seed(input: {
@@ -147,6 +147,13 @@ async function waitQuestion(sessionID: string) {
     if (question) return question
     await Bun.sleep(10)
   }
+}
+
+function content(message: MessageV2.WithParts) {
+  return message.parts
+    .filter((part): part is MessageV2.TextPart => part.type === "text")
+    .map((part) => part.text)
+    .join("\n")
 }
 
 describe("plan_exit detection", () => {
@@ -641,7 +648,7 @@ describe("plan_exit detection", () => {
       expect(text).not.toContain("No plan file exists yet")
     }))
 
-  test("plan reminder prefers project plan path instructions over fallback", () =>
+  test("native plan reminder prefers project plan path instructions over fallback", () =>
     withInstance(async () => {
       const session = await sessions.create({})
       const id = MessageID.ascending()
@@ -660,7 +667,7 @@ describe("plan_exit detection", () => {
             messageID: id,
             sessionID: session.id,
             type: "text",
-            text: "Create a plan. AGENTS says plans go in .plans/.",
+            text: "Create a plan. AGENTS says plans go in plans/.",
           },
         ],
       }
@@ -675,10 +682,60 @@ describe("plan_exit detection", () => {
       const part = user.parts.at(-1)
       const text = part?.type === "text" ? part.text : ""
       expect(text).toContain("Use the plan path specified by the user or project instructions")
-      expect(text).toContain("Do not choose .kilo/plans/")
-      expect(text).toContain(".plans/")
+      expect(text).toContain("plans/ or .plans/")
       expect(text).toContain("If none is specified")
       expect(text).not.toContain(Session.plan(session, Instance.current))
+    }))
+
+  test("native plan reminder reuses custom plan_exit path when refining", () =>
+    withInstance(async () => {
+      const seeded = await seed({
+        tools: [
+          {
+            tool: "plan_exit",
+            input: { path: ".plans/fix.md" },
+            output: "Plan is ready at .plans/fix.md. Ending planning turn.",
+          },
+        ],
+      })
+      const file = path.join(Instance.worktree, ".plans", "fix.md")
+      await fs.mkdir(path.dirname(file), { recursive: true })
+      await Bun.write(file, "Do implementation step 1")
+
+      const session = await sessions.get(seeded.sessionID)
+      const id = MessageID.ascending()
+      const user: MessageV2.WithParts = {
+        info: {
+          id,
+          role: "user",
+          sessionID: seeded.sessionID,
+          time: { created: Date.now() },
+          agent: "plan",
+          model,
+        },
+        parts: [
+          {
+            id: PartID.ascending(),
+            messageID: id,
+            sessionID: seeded.sessionID,
+            type: "text",
+            text: "Continue refining",
+          },
+        ],
+      }
+      await KiloSessionPrompt.insertPlanReminders({
+        agent: { name: "plan", options: {} },
+        session,
+        userMessage: user,
+        messages: [...seeded.messages, user],
+      })
+
+      const text = content(user)
+      expect(text).toContain("The current saved plan file is")
+      expect(text.replaceAll(path.sep, "/")).toContain(".plans/fix.md")
+      expect(text).toContain("Read and edit this file when refining the plan")
+      expect(text).toContain("experienced technical leader")
+      expect(text).not.toContain("No plan file exists yet")
     }))
 
   test("architect reminder prefers project plan path instructions over fallback", () =>
@@ -700,7 +757,7 @@ describe("plan_exit detection", () => {
             messageID: id,
             sessionID: session.id,
             type: "text",
-            text: "Create a plan. AGENTS says plans go in .plans/.",
+            text: "Create a plan. AGENTS says plans go in plans/.",
           },
         ],
       }
@@ -716,7 +773,7 @@ describe("plan_exit detection", () => {
       const text = part?.type === "text" ? part.text : ""
       expect(text).toContain("Use the plan path specified by the user or project instructions")
       expect(text).toContain("If none is specified")
-      expect(text).toContain(".plans/")
+      expect(text).toContain("plans/ or .plans/")
       expect(text).not.toContain("Default to")
       expect(text).not.toContain("A fallback plan file exists")
     }))

@@ -1,4 +1,5 @@
-import { useMarked, deferredHighlight, fnv1a } from "../context/marked"
+import { useMarked } from "../context/marked"
+import { deferredHighlight, fnv1a } from "../context/marked" // kilocode_change
 import { useI18n } from "../context/i18n"
 import DOMPurify from "dompurify"
 import morphdom from "morphdom"

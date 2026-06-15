@@ -5,6 +5,8 @@ import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
 import type { ModelAllocation, ReviewComment } from "./agent-manager"
+import type { ReviewMessageData } from "../../../../src/shared/review-comments"
+import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type {
   ClearLegacyDataMessage,
   FinalizeLegacyMigrationMessage,
@@ -28,6 +30,7 @@ export interface SendMessageRequest {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+  review?: ReviewMessageData
   agentManagerContext?: string
   contextDirectory?: string
 }
@@ -104,6 +107,7 @@ export interface ImportAndSendMessage {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+  review?: ReviewMessageData
   command?: string
   commandArgs?: string
 }
@@ -386,6 +390,20 @@ export interface RequestTimelineSettingMessage {
   type: "requestTimelineSetting"
 }
 
+export interface RequestWorkStyleMessage {
+  type: "requestWorkStyle"
+}
+
+export interface SetWorkStyleMessage {
+  type: "setWorkStyle"
+  style: WorkStyleState
+}
+
+export interface ApplyWorkStyleMessage {
+  type: "applyWorkStyle"
+  style: WorkStyle
+}
+
 export interface StreamSessionVisibleMessage {
   type: "streamSessionVisible"
   sessionID: string
@@ -433,6 +451,11 @@ export interface UpdateConfigMessage {
 
 export interface RequestNotificationSettingsMessage {
   type: "requestNotificationSettings"
+}
+
+export interface TestNotificationMessage {
+  type: "testNotification"
+  sound: string
 }
 
 export interface ResetAllSettingsRequest {
@@ -953,6 +976,13 @@ export interface FetchCustomProviderModelsMessage {
   requestId: string
   baseURL: string
   apiKey?: string
+  /**
+   * When editing an existing provider and the key field is untouched, the
+   * webview has no key to send (keys are stripped before they reach it).
+   * It sends the providerID instead so the extension can authenticate the
+   * fetch with the stored key — which never crosses into the webview.
+   */
+  providerID?: string
   headers?: Record<string, string>
 }
 
@@ -1125,6 +1155,9 @@ export type WebviewMessage =
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
+  | RequestWorkStyleMessage
+  | SetWorkStyleMessage
+  | ApplyWorkStyleMessage
   | StreamSessionVisibleMessage
   | RequestBrowserSettingsMessage
   | RequestClaudeCompatSettingMessage
@@ -1135,6 +1168,7 @@ export type WebviewMessage =
   | UpdateConfigMessage
   | OpenSettingsTabRequest
   | RequestNotificationSettingsMessage
+  | TestNotificationMessage
   | ResetAllSettingsRequest
   | SettingsTabChangedMessage
   | SyncSessionRequest

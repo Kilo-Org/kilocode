@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Content
+import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.model.StepFinish
@@ -15,6 +16,7 @@ import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.Graphics
 import java.awt.Graphics2D
@@ -38,6 +40,7 @@ class MessageView(
     private var style: SessionEditorStyle = SessionEditorStyle.current(),
     private val openUrl: (String) -> Unit = {},
     private val selection: SessionSelection? = null,
+    private val openAttachment: (String, FileAttachment) -> Unit = { _, item -> AttachmentView.openDefault(item, openFile, openUrl) },
     private val resize: ((JComponent, () -> Unit) -> Unit)? = null,
     private val repo: String? = null,
     private val hover: ((PartView, Boolean) -> Unit)? = null,
@@ -58,6 +61,7 @@ class MessageView(
     // so snapshot updates can append only deltas.
     private val aliases = LinkedHashMap<String, String>()
     private val sources = LinkedHashMap<String, String>()
+    private var attachments: PromptAttachmentView? = null
     private var hidden: ToolCallRef? = null
 
     init {
@@ -112,6 +116,11 @@ class MessageView(
         }
         val existing = parts[content.id]
         if (existing != null) {
+            if (existing is PromptAttachmentView && content is FileAttachment) {
+                existing.upsert(content)
+                refresh()
+                return
+            }
             if (ViewFactory.shouldReplace(existing, content)) {
                 replacePart(content, existing)
                 return
@@ -126,6 +135,10 @@ class MessageView(
     }
 
     private fun addPart(content: Content) {
+        if (content is FileAttachment && role == SessionUiStyle.View.Message.USER_ROLE) {
+            addAttachment(content)
+            return
+        }
         if (content is Reasoning) {
             val previous = parts.values.lastOrNull()
             if (previous is ReasoningView) {
@@ -141,6 +154,19 @@ class MessageView(
         view.applyStyle(style)
         parts[content.id] = view
         add(view)
+    }
+
+    @RequiresEdt
+    private fun addAttachment(content: FileAttachment) {
+        val view = attachments ?: PromptAttachmentView(msg.info.id) { openAttachment(msg.info.id, it) }.also {
+            it.resize = resize
+            it.hover = hover
+            it.applyStyle(style)
+            attachments = it
+            add(it)
+        }
+        view.upsert(content)
+        parts[content.id] = view
     }
 
     private fun updateAlias(content: Reasoning, id: String) {
@@ -184,6 +210,14 @@ class MessageView(
             return
         }
         val view = parts.remove(contentId) ?: return
+        if (view is PromptAttachmentView) {
+            view.remove(contentId)
+            if (!view.isEmpty()) {
+                refresh()
+                return
+            }
+            attachments = null
+        }
         aliases.values.removeAll { it == contentId }
         sources.keys.removeAll { it !in aliases }
         detach(view)
@@ -199,6 +233,7 @@ class MessageView(
      */
     private fun isHidden(content: Content): Boolean {
         if (content !is Tool) return false
+        if (role == SessionUiStyle.View.Message.USER_ROLE && content.name == "read") return true
         if (content.name == "todoread") return true
         if (content.name == "todowrite" && content.state != ToolExecState.COMPLETED) return true
         val ref = hidden ?: return false
@@ -212,7 +247,7 @@ class MessageView(
      * Called only when the hidden ref changes to avoid unnecessary rebuilds.
      */
     private fun rebuildParts() {
-        parts.values.forEach {
+        parts.values.distinct().forEach {
             detach(it)
             remove(it)
             Disposer.dispose(it)
@@ -220,6 +255,7 @@ class MessageView(
         parts.clear()
         aliases.clear()
         sources.clear()
+        attachments = null
         for ((_, content) in msg.parts) {
             if (content is StepFinish) continue
             if (isHidden(content)) continue
@@ -235,9 +271,9 @@ class MessageView(
     }
 
     private fun view(content: Content) = if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) {
-        ViewFactory.createUser(content, openFile, openUrl, selection, repo)
+        ViewFactory.createUser(content, openFile, openUrl, selection, repo) { openAttachment(msg.info.id, it) }
     } else {
-        ViewFactory.create(content, openFile, openUrl, selection, repo)
+        ViewFactory.create(content, openFile, openUrl, selection, repo) { openAttachment(msg.info.id, it) }
     }
 
     /** Append a streaming delta to the renderer for [contentId]. */

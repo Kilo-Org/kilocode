@@ -10,6 +10,7 @@ import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.model.Compaction
 import ai.kilocode.client.session.model.Content
+import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.Generic
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.model.StepFinish
@@ -34,18 +35,14 @@ object ViewFactory {
     fun create(
         content: Content,
         openFile: (String) -> Unit,
-        openUrl: (String) -> Unit,
-    ): PartView = create(content, openFile, openUrl, selection = null, repo = null)
-
-    fun create(
-        content: Content,
-        openFile: (String) -> Unit,
         openUrl: (String) -> Unit = {},
         selection: SessionSelection? = null,
         repo: String? = null,
+        openAttachment: (FileAttachment) -> Unit = { AttachmentView.openDefault(it, openFile, openUrl) },
     ): PartView = when (content) {
         is Text -> TextView(content, openUrl = openUrl, selection = selection)
         is Reasoning -> ReasoningView(content, openUrl = openUrl, selection = selection)
+        is FileAttachment -> AttachmentView(content, openAttachment)
         is Tool -> when {
             TodoWriteView.canRender(content) -> TodoWriteView(content)
             PlanExitView.canRender(content) -> PlanExitView(content, openFile, selection)
@@ -68,18 +65,13 @@ object ViewFactory {
     fun createUser(
         content: Content,
         openFile: (String) -> Unit,
-        openUrl: (String) -> Unit,
-    ): PartView = createUser(content, openFile, openUrl, selection = null, repo = null)
-
-    fun createUser(
-        content: Content,
-        openFile: (String) -> Unit,
         openUrl: (String) -> Unit = {},
         selection: SessionSelection? = null,
         repo: String? = null,
+        openAttachment: (FileAttachment) -> Unit = { AttachmentView.openDefault(it, openFile, openUrl) },
     ): PartView = when (content) {
         is Text -> PromptView(content, openUrl = openUrl, selection = selection)
-        else -> create(content, openFile, openUrl, selection, repo)
+        else -> create(content, openFile, openUrl, selection, repo, openAttachment)
     }
 
     /**

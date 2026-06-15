@@ -238,6 +238,7 @@ export const layer = Layer.effect(
             server: handle,
             root,
             directory: ctx.directory,
+            instance: ctx,
           }).catch(async (err) => {
             s.broken.add(key)
             await Process.stop(handle.process)
@@ -274,7 +275,7 @@ export const layer = Layer.effect(
             const client = TsClient.create({ root })
             s.clients.push(client)
             result.push(client)
-            Bus.publish(Event.Updated, {})
+            await Bus.publish(ctx, Event.Updated, {})
             continue
           }
           // kilocode_change end
@@ -306,7 +307,7 @@ export const layer = Layer.effect(
           if (!client) continue
 
           result.push(client)
-          Bus.publish(Event.Updated, {})
+          await Bus.publish(ctx, Event.Updated, {})
         }
 
         return result

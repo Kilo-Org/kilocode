@@ -1,5 +1,4 @@
 import { type Component, Show, createEffect } from "solid-js"
-import { UserMessageDisplay } from "@kilocode/kilo-ui/message-part"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
@@ -12,6 +11,7 @@ import { useVSCode } from "../../context/vscode"
 import { useFeedback } from "../../context/feedback"
 import { AssistantMessage } from "./AssistantMessage"
 import { ErrorDisplay, type ErrorDisplayProps } from "./ErrorDisplay"
+import { VscodeUserMessage } from "./VscodeUserMessage"
 
 interface TranscriptRowViewProps {
   row: TranscriptRow
@@ -48,9 +48,9 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
             data-revert-disabled={row().answered && session.status() !== "idle" ? "" : undefined}
             title={row().answered && session.status() !== "idle" ? language.t("revert.disabled.agentBusy") : undefined}
           >
-            <UserMessageDisplay
-              message={row().message as unknown as Parameters<typeof UserMessageDisplay>[0]["message"]}
-              parts={row().parts as unknown as Parameters<typeof UserMessageDisplay>[0]["parts"]}
+            <VscodeUserMessage
+              message={row().message}
+              parts={row().parts}
               interrupted={row().interrupted}
               queued={row().queued}
               onFork={

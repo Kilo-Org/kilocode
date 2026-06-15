@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.3.42",
+  "version": "7.3.46",
   "name": "@opencode-ai/llm",
   "type": "module",
   "license": "MIT",

@@ -188,7 +188,7 @@ describe("Kilo CLI customizations are wired into index.ts", () => {
   test("index.ts invokes the KiloCli integration points", async () => {
     // These thin call-sites are the only wiring between upstream index.ts and the Kilo
     // customizations in setup.ts. If a future upstream merge drops them, every Kilo command
-    // and the telemetry/lifecycle hooks silently disappear — exactly the regression this guards.
+    // and the telemetry/lifecycle hooks silently disappear, exactly the regression this guards.
     const index = await file(INDEX)
     expect(index).toContain("KiloCli.register(")
     expect(index).toContain("KiloCli.bootstrap(")
@@ -222,7 +222,7 @@ describe("Kilo CLI customizations are wired into index.ts", () => {
   test("every barrel command is registered in index.ts or setup.ts", async () => {
     // Reverse direction of the test above: every source-of-truth command must actually be
     // runnable. The merge dropped `daemon`/`profile`/`remote`/`config` from index.ts while the
-    // barrel still listed them — this catches that.
+    // barrel still listed them, this catches that.
     const index = await file(INDEX)
     const setup = await file(SETUP)
     const barrel = await file(BARREL)
@@ -233,14 +233,14 @@ describe("Kilo CLI customizations are wired into index.ts", () => {
 
     const arrayMatch = barrel.match(/export const commands\s*=\s*\[([\s\S]*?)\]/)
     expect(arrayMatch).toBeTruthy()
-    // Strip comments first — the array body contains a comment mentioning `AuthCommand`.
+    // Strip comments first, the array body contains a comment mentioning `AuthCommand`.
     const body = arrayMatch![1]!.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "")
     const entries = [...body.matchAll(/\b(\w+Command)\b/g)].map((m) => m[1]!)
 
     // Not registered as a bare `.command(Ident)`:
-    //  ConsoleCommand    → replaced by KiloConsoleCommand
-    //  CompletionCommand → provided by yargs `.completion(...)`
-    //  HelpCommand       → registered via createHelpCommand(() => cli)
+    //  ConsoleCommand    - replaced by KiloConsoleCommand
+    //  CompletionCommand - provided by yargs `.completion(...)`
+    //  HelpCommand       - registered via createHelpCommand(() => cli)
     //  (DevSetup/DevAlias enter the array via `...dev`, so they aren't scraped here)
     const except = new Set(["ConsoleCommand", "CompletionCommand", "HelpCommand"])
     const missing = entries.filter((name) => !except.has(name) && !registered.has(name))

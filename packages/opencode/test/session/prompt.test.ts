@@ -59,6 +59,7 @@ import { SyncEvent } from "@/sync"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { eq } from "drizzle-orm"
 import { BackgroundJob } from "@/background/job"
+import { EventV2Bridge } from "@/event-v2-bridge"
 
 void Log.init({ print: false })
 const summary = Layer.succeed(
@@ -197,6 +198,7 @@ function makeHttp() {
     AppFileSystem.defaultLayer,
     status,
     SyncEvent.defaultLayer,
+    EventV2Bridge.defaultLayer,
   ).pipe(Layer.provideMerge(infra), Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })))
   const question = Question.layer.pipe(Layer.provideMerge(deps))
   const todo = Todo.layer.pipe(Layer.provideMerge(deps))

@@ -52,6 +52,7 @@ export type ProjectConsoleQuery = ProjectQuery & {
 
 export type ProjectConsoleSnapshot = {
   project: ProjectItem
+  config: EffectiveConfig
   vcs: VcsInfo
   worktrees: string[]
   terminals: ProjectTerminalItem[]
@@ -439,7 +440,8 @@ export async function loadProjectConsole(input: ProjectConsoleQuery): Promise<Pr
   const project = await resolved(input)
   const query = { url: input.url, dir: project.worktree }
   const sdk = client(query)
-  const [vcs, worktrees] = await Promise.all([
+  const [config, vcs, worktrees] = await Promise.all([
+    sdk.config.overlay({ scope: "global" }),
     sdk.vcs.get({ directory: query.dir }),
     sdk.worktree.list({ directory: query.dir }),
   ])
@@ -450,6 +452,7 @@ export async function loadProjectConsole(input: ProjectConsoleQuery): Promise<Pr
 
   return {
     project,
+    config: demand("Config", config).effective,
     vcs: demand("VCS", vcs),
     worktrees: dirs,
     terminals: terminals.flat(),

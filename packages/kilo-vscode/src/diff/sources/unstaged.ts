@@ -3,6 +3,7 @@ import * as vscode from "vscode"
 import { GitOps } from "../../agent-manager/GitOps"
 import { generatedLike } from "../../agent-manager/local-diff"
 import { appendOutput, getWorkspaceRoot } from "../../review-utils"
+import { binaryFile } from "../shared/binary"
 import type { DiffFile } from "../types"
 import type { DiffSource, DiffSourceDescriptor, DiffSourceFetch } from "./types"
 import {
@@ -56,6 +57,7 @@ export function createUnstagedDiffSource(): DiffSource {
       additions: counts.get(item.file)?.additions ?? 0,
       deletions: counts.get(item.file)?.deletions ?? 0,
       tracked: true,
+      binary: counts.get(item.file)?.binary ?? false,
     }))
   }
 
@@ -82,6 +84,7 @@ export function createUnstagedDiffSource(): DiffSource {
         additions: 0,
         deletions: 0,
         tracked: false,
+        binary: await binaryFile(full),
         // Untracked entries always have additions/deletions = 0 (numstat
         // can't compute them without an index blob), so fold size+mtime
         // into the stamp. Editing the file changes mtime → the webview
@@ -117,6 +120,8 @@ export function createUnstagedDiffSource(): DiffSource {
 
       const entry = await fileEntry(git, dir, file, log)
       if (!entry) return null
+
+      if (entry.binary) return summarize(entry)
 
       const beforeBytes = !entry.tracked || entry.status === "added" ? 0 : await blobSize(git, dir, INDEX_REF, file)
       const afterBytes = entry.status === "deleted" ? 0 : await fileSize(dir, file)
@@ -191,6 +196,7 @@ async function fileEntry(
         additions: stats.get(item.file)?.additions ?? 0,
         deletions: stats.get(item.file)?.deletions ?? 0,
         tracked: true,
+        binary: stats.get(item.file)?.binary ?? false,
       }
     }
   }
@@ -215,6 +221,7 @@ async function fileEntry(
     additions: 0,
     deletions: 0,
     tracked: false,
+    binary: await binaryFile(full),
     stamp: `added:untracked:${stat.size}:${stat.mtimeMs}`,
   }
 }

@@ -14,6 +14,7 @@ import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
+import ai.kilocode.cli.KiloCliParser
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.EditorFactory
@@ -539,18 +540,10 @@ internal data class Target(
 internal fun target(tool: Tool): Target? {
     val out = output(tool)
     if (out.isBlank()) return null
-    val path = tag(out, "path") ?: return null
-    val type = tag(out, "type") ?: return null
+    val path = KiloCliParser.tag(out, "path") ?: return null
+    val type = KiloCliParser.tag(out, "type") ?: return null
     return Target(path, type.lowercase())
 }
-
-private fun tag(text: String, name: String): String? =
-    Regex("<$name>\\s*([\\s\\S]*?)\\s*</$name>")
-        .find(text)
-        ?.groupValues
-        ?.getOrNull(1)
-        ?.trim()
-        ?.takeIf { it.isNotBlank() }
 
 private fun shellTitle(tool: Tool): String =
     tool.input["description"]?.takeIf { it.isNotBlank() }

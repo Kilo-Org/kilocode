@@ -116,6 +116,7 @@ export interface Config {
   small_model?: string | null
   subagent_model?: string | null
   subagent_variant?: string | null
+  subagent_variant_overrides?: Record<string, string | null> | null
   default_agent?: string | null
   agent?: Record<string, AgentConfig>
   provider?: Record<string, ProviderConfig>
@@ -128,6 +129,7 @@ export interface Config {
   snapshot?: boolean
   remote_control?: boolean
   terminal_command_display?: TerminalCommandDisplay
+  hide_prompt_training_models?: boolean
   share?: "manual" | "auto" | "disabled"
   username?: string
   watcher?: WatcherConfig
