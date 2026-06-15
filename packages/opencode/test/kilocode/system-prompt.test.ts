@@ -13,6 +13,17 @@ import PROMPT_GPT55 from "../../src/session/prompt/kilocode-gpt-5.5.txt"
 import PROMPT_LING from "../../src/session/prompt/ling.txt"
 import PROMPT_TRINITY from "../../src/session/prompt/trinity.txt"
 
+describe("SystemPrompt.soul", () => {
+  test("distinguishes blocked clarification from social follow-up questions", () => {
+    const result = SystemPrompt.soul()
+    expect(result).toContain("Do not end a completed result with a purely social follow-up question")
+    expect(result).toContain(
+      "If the task is genuinely blocked after checking available context and no safe default exists, ask one concise, targeted clarification question instead.",
+    )
+    expect(result).not.toContain("NEVER end your result with a question")
+  })
+})
+
 describe("SystemPrompt.provider", () => {
   describe("model.prompt override", () => {
     test("anthropic prompt is selected when model.prompt is 'anthropic'", () => {
