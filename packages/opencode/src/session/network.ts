@@ -5,12 +5,15 @@ import { BusEvent } from "../bus/bus-event"
 import { QuestionID } from "../question/schema"
 import { SessionID } from "../session/schema"
 import { InstanceState } from "@/effect/instance-state"
+import { InstanceRef } from "@/effect/instance-ref"
+import { capture } from "@/kilocode/instance"
+import type { InstanceContext } from "@/project/instance-context"
 import { makeRuntime } from "@/effect/run-service"
 import * as Log from "@opencode-ai/core/util/log"
-import { fn } from "../util/fn"
+import { fn } from "@/kilocode/fn"
 import { MCP } from "../mcp"
-import { zod } from "@/util/effect-zod"
-import { withStatics } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { withStatics } from "@opencode-ai/core/schema"
 import z from "zod"
 
 export namespace SessionNetwork {
@@ -103,6 +106,7 @@ export namespace SessionNetwork {
   }
 
   interface StateShape {
+    context: InstanceContext
     pending: Map<
       QuestionID,
       {
@@ -122,8 +126,8 @@ export namespace SessionNetwork {
     StateService,
     Effect.gen(function* () {
       const is = yield* InstanceState.make(
-        Effect.fn("SessionNetwork.state")(function* () {
-          return { pending: new Map() } as StateShape
+        Effect.fn("SessionNetwork.state")(function* (ctx) {
+          return { context: ctx, pending: new Map() } as StateShape
         }),
       )
       return StateService.of({
@@ -133,7 +137,11 @@ export namespace SessionNetwork {
   )
 
   const stateRuntime = makeRuntime(StateService, stateLayer)
-  const state = (): Promise<StateShape> => stateRuntime.runPromise((svc) => svc.get())
+  const state = (): Promise<StateShape> => {
+    const ctx = capture()
+    if (!ctx) return Promise.reject(new Error("Instance context not available"))
+    return stateRuntime.runPromise((svc) => svc.get().pipe(Effect.provideService(InstanceRef, ctx)))
+  }
 
   export function code(err: unknown) {
     for (const item of chain(err)) {
@@ -272,7 +280,7 @@ export namespace SessionNetwork {
         if (!s.pending.has(id)) return
         input.abort.removeEventListener("abort", onAbort)
         s.pending.delete(id)
-        Bus.publish(Event.Rejected, {
+        void Bus.publish(s.context, Event.Rejected, {
           sessionID: input.sessionID,
           requestID: id,
         })
@@ -296,7 +304,7 @@ export namespace SessionNetwork {
         return
       }
       log.warn("waiting for network", { sessionID: input.sessionID, requestID: id, message: input.message })
-      Bus.publish(Event.Asked, info)
+      void Bus.publish(s.context, Event.Asked, info)
       void watch({ requestID: id, abort: input.abort }).catch((err) => {
         log.error("restore watch failed", { err, requestID: id })
       })
@@ -306,7 +314,7 @@ export namespace SessionNetwork {
 
   export const restore = fn(
     z.object({
-      requestID: QuestionID.zod,
+      requestID: z.custom<QuestionID>((value) => typeof value === "string" && value.startsWith("que")),
     }),
     async (input) => {
       const s = await state()
@@ -317,7 +325,7 @@ export namespace SessionNetwork {
       req.info.restored = true
       req.info.time = { ...req.info.time, restored: time }
       log.info("network restored", { sessionID: req.info.sessionID, requestID })
-      Bus.publish(Event.Restored, {
+      await Bus.publish(s.context, Event.Restored, {
         sessionID: req.info.sessionID,
         requestID: req.info.id,
         time,
@@ -330,7 +338,7 @@ export namespace SessionNetwork {
 
   export const reply = fn(
     z.object({
-      requestID: QuestionID.zod,
+      requestID: z.custom<QuestionID>((value) => typeof value === "string" && value.startsWith("que")),
     }),
     async (input) => {
       const s = await state()
@@ -341,22 +349,35 @@ export namespace SessionNetwork {
         return
       }
       s.pending.delete(requestID)
-      // kilocode_change start — reconnect failed remote MCP servers after network recovery
-      void MCP.status()
-        .then((statuses) => {
-          for (const [name, s] of Object.entries(statuses)) {
-            if (s.status === "failed") {
-              MCP.connect(name).catch((err) => {
-                log.error("remote reconnect failed", { name, err })
-              })
-            }
-          }
-        })
+      // kilocode_change start - reconnect failed remote MCP servers after network recovery
+      void import("@/effect/app-runtime")
+        .then(({ AppRuntime }) =>
+          AppRuntime.runPromise(
+            Effect.gen(function* () {
+              const mcp = yield* MCP.Service
+              const statuses = yield* mcp.status()
+              yield* Effect.forEach(
+                Object.entries(statuses),
+                ([name, status]) => {
+                  if (status.status !== "failed") return Effect.void
+                  return mcp.connect(name).pipe(
+                    Effect.catchCause((err) =>
+                      Effect.sync(() => {
+                        log.error("remote reconnect failed", { name, err })
+                      }),
+                    ),
+                  )
+                },
+                { concurrency: "unbounded" },
+              )
+            }),
+          ),
+        )
         .catch((err) => {
           log.error("failed to get MCP status for reconnect", { err })
         })
       // kilocode_change end
-      Bus.publish(Event.Replied, {
+      await Bus.publish(s.context, Event.Replied, {
         sessionID: req.info.sessionID,
         requestID: req.info.id,
       })
@@ -366,7 +387,7 @@ export namespace SessionNetwork {
 
   export const reject = fn(
     z.object({
-      requestID: QuestionID.zod,
+      requestID: z.custom<QuestionID>((value) => typeof value === "string" && value.startsWith("que")),
     }),
     async (input) => {
       const s = await state()
@@ -377,7 +398,7 @@ export namespace SessionNetwork {
         return
       }
       s.pending.delete(requestID)
-      Bus.publish(Event.Rejected, {
+      await Bus.publish(s.context, Event.Rejected, {
         sessionID: req.info.sessionID,
         requestID: req.info.id,
       })

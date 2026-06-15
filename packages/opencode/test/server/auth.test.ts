@@ -22,7 +22,8 @@ describe("ServerAuth", () => {
     expect(ServerAuth.headers()).toBeUndefined()
   })
 
-  test("defaults to the kilo username", () => { // kilocode_change
+  test("defaults to the kilo username", () => {
+    // kilocode_change
     Flag.KILO_SERVER_PASSWORD = "secret"
     Flag.KILO_SERVER_USERNAME = undefined
 

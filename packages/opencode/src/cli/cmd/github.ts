@@ -19,7 +19,7 @@ import type {
 import { UI } from "../ui"
 import { cmd } from "./cmd"
 import { effectCmd } from "../effect-cmd"
-import { ModelsDev } from "@/provider/models"
+import { ModelsDev } from "@opencode-ai/core/models"
 import { InstanceRef } from "@/effect/instance-ref"
 import { SessionShare } from "@/share/session"
 import { Session } from "@/session/session"
@@ -32,7 +32,9 @@ import { SessionPrompt } from "@/session/prompt"
 import { Git } from "@/git"
 import { setTimeout as sleep } from "node:timers/promises"
 import { Process } from "@/util/process"
+import { parseGitHubRemote } from "@/util/repository"
 import { Effect } from "effect"
+import { GitHubSecurity } from "@/kilocode/security/github" // kilocode_change
 
 type GitHubAuthor = {
   login: string
@@ -151,18 +153,7 @@ const SUPPORTED_EVENTS = [...USER_EVENTS, ...REPO_EVENTS] as const
 type UserEvent = (typeof USER_EVENTS)[number]
 type RepoEvent = (typeof REPO_EVENTS)[number]
 
-// Parses GitHub remote URLs in various formats:
-// - https://github.com/owner/repo.git
-// - https://github.com/owner/repo
-// - git@github.com:owner/repo.git
-// - git@github.com:owner/repo
-// - ssh://git@github.com/owner/repo.git
-// - ssh://git@github.com/owner/repo
-export function parseGitHubRemote(url: string): { owner: string; repo: string } | null {
-  const match = url.match(/^(?:(?:https?|ssh):\/\/)?(?:git@)?github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/)
-  if (!match) return null
-  return { owner: match[1], repo: match[2] }
-}
+export { parseGitHubRemote }
 
 /**
  * Extracts displayable text from assistant response parts.
@@ -452,6 +443,9 @@ export const GithubRunCommand = effectCmd({
     const sessionSvc = yield* Session.Service
     const sessionShare = yield* SessionShare.Service
     const sessionPrompt = yield* SessionPrompt.Service
+    const busSvc = yield* Bus.Service
+    const runLocalEffect = <A, E>(effect: Effect.Effect<A, E>) =>
+      Effect.runPromise(effect.pipe(Effect.provideService(InstanceRef, ctx)))
     yield* Effect.promise(async () => {
       const isMock = args.token || args.event
 
@@ -495,7 +489,7 @@ export const GithubRunCommand = effectCmd({
           ? (payload as IssueCommentEvent | IssuesEvent).issue.number
           : (payload as PullRequestEvent | PullRequestReviewCommentEvent).pull_request.number
       const runUrl = `/${owner}/${repo}/actions/runs/${runId}`
-      const shareBaseUrl = isMock ? "https://dev.kilo.ai" : "https://kilo.ai" // kilocode_change
+      const shareBaseUrl = isMock ? "https://dev.kilo.ai" : "https://kilo.ai"
 
       let appToken: string
       let octoRest: Octokit
@@ -565,7 +559,7 @@ export const GithubRunCommand = effectCmd({
 
         // Setup kilo session // kilocode_change
         const repoData = await fetchRepo()
-        session = await Effect.runPromise(
+        session = await runLocalEffect(
           sessionSvc.create({
             permission: [
               {
@@ -576,11 +570,11 @@ export const GithubRunCommand = effectCmd({
             ],
           }),
         )
-        subscribeSessionEvents()
+        await subscribeSessionEvents()
         shareId = await (async () => {
           if (share === false) return
           if (!share && repoData.data.private) return
-          await Effect.runPromise(sessionShare.share(session.id))
+          await runLocalEffect(sessionShare.share(session.id))
           return session.id.slice(-8)
         })()
         console.log("kilo session", session.id) // kilocode_change
@@ -756,7 +750,7 @@ export const GithubRunCommand = effectCmd({
 
       function normalizeOidcBaseUrl(): string {
         const value = process.env["OIDC_BASE_URL"]
-        if (!value) return "https://api.kilo.ai" // kilocode_change
+        if (!value) return "https://api.kilo.ai"
         return value.replace(/\/+$/, "")
       }
 
@@ -852,7 +846,10 @@ export const GithubRunCommand = effectCmd({
         let offset = 0
         for (const m of matches) {
           const tag = m[0]
-          const url = m[1]
+          // kilocode_change start - only fetch canonical GitHub attachment routes
+          const url = GitHubSecurity.attachment(m[1])
+          if (!url) continue
+          // kilocode_change end
           const start = m.index
           const filename = path.basename(url)
 
@@ -887,7 +884,7 @@ export const GithubRunCommand = effectCmd({
         return { userPrompt: prompt, promptFiles: imgData }
       }
 
-      function subscribeSessionEvents() {
+      async function subscribeSessionEvents() {
         const TOOL: Record<string, [string, string]> = {
           todowrite: ["Todo", UI.Style.TEXT_WARNING_BOLD],
           bash: ["Shell", UI.Style.TEXT_DANGER_BOLD],
@@ -910,33 +907,35 @@ export const GithubRunCommand = effectCmd({
         }
 
         let text = ""
-        Bus.subscribe(MessageV2.Event.PartUpdated, (evt) => {
-          if (evt.properties.part.sessionID !== session.id) return
-          //if (evt.properties.part.messageID === messageID) return
-          const part = evt.properties.part
+        await runLocalEffect(
+          busSvc.subscribeCallback(MessageV2.Event.PartUpdated, (evt) => {
+            if (evt.properties.part.sessionID !== session.id) return
+            //if (evt.properties.part.messageID === messageID) return
+            const part = evt.properties.part
 
-          if (part.type === "tool" && part.state.status === "completed") {
-            const [tool, color] = TOOL[part.tool] ?? [part.tool, UI.Style.TEXT_INFO_BOLD]
-            const title =
-              part.state.title || Object.keys(part.state.input).length > 0
-                ? JSON.stringify(part.state.input)
-                : "Unknown"
-            console.log()
-            printEvent(color, tool, title)
-          }
-
-          if (part.type === "text") {
-            text = part.text
-
-            if (part.time?.end) {
-              UI.empty()
-              UI.println(UI.markdown(text))
-              UI.empty()
-              text = ""
-              return
+            if (part.type === "tool" && part.state.status === "completed") {
+              const [tool, color] = TOOL[part.tool] ?? [part.tool, UI.Style.TEXT_INFO_BOLD]
+              const title =
+                part.state.title || Object.keys(part.state.input).length > 0
+                  ? JSON.stringify(part.state.input)
+                  : "Unknown"
+              console.log()
+              printEvent(color, tool, title)
             }
-          }
-        })
+
+            if (part.type === "text") {
+              text = part.text
+
+              if (part.time?.end) {
+                UI.empty()
+                UI.println(UI.markdown(text))
+                UI.empty()
+                text = ""
+                return
+              }
+            }
+          }),
+        )
       }
 
       async function summarize(response: string) {
@@ -953,7 +952,7 @@ export const GithubRunCommand = effectCmd({
       async function chat(message: string, files: PromptFiles = []) {
         console.log("Sending message to kilo...") // kilocode_change
 
-        return Effect.runPromise(
+        return runLocalEffect(
           Effect.gen(function* () {
             const prompt = sessionPrompt
             const result = yield* prompt.prompt({

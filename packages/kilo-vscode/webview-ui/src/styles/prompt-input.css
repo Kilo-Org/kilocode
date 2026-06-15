@@ -27,6 +27,10 @@
   padding: 6px;
 }
 
+.prompt-review-comments--message {
+  margin: 0;
+}
+
 .prompt-review-comments-header {
   display: flex;
   align-items: center;

@@ -17,7 +17,7 @@ export function kiloGatewayHidden(cfg: {
 export const PROVIDER_PRIORITY = [
   KILO_PROVIDER_ID,
   "anthropic",
-  "github-copilot",
+  "deepseek",
   "openai",
   "google",
   "openrouter",

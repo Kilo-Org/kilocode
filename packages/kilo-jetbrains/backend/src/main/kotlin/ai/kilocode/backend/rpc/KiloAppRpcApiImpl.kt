@@ -4,6 +4,7 @@ package ai.kilocode.backend.rpc
 
 import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.KiloBackendAppService
+import ai.kilocode.backend.telemetry.KiloBackendTelemetry
 import ai.kilocode.backend.app.ConfigWarning
 import ai.kilocode.backend.app.LoadError
 import ai.kilocode.backend.app.LoadProgress
@@ -11,10 +12,13 @@ import ai.kilocode.backend.app.ProfileResult
 import ai.kilocode.jetbrains.api.model.AgentConfig
 import ai.kilocode.jetbrains.api.model.Config
 import ai.kilocode.jetbrains.api.model.ConfigAgent
+import ai.kilocode.jetbrains.api.model.KiloProfile200Response
 import ai.kilocode.rpc.dto.AgentConfigDto
 import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.KiloAppRpcApi
 import ai.kilocode.rpc.dto.ConfigWarningDto
+import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -24,7 +28,11 @@ import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
+import ai.kilocode.rpc.dto.ProfileBalanceDto
+import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.ProfileOrganizationDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
+import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import com.intellij.openapi.components.service
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -53,15 +61,50 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
 
     override suspend fun reinstall() = app.reinstall()
 
-    override suspend fun modelState(): ModelStateDto = app.models.state()
+    override suspend fun modelState(): ModelStateDto {
+        app.requireReady()
+        return app.models.state()
+    }
 
-    override suspend fun updateModelFavorite(update: ModelFavoriteUpdateDto): ModelStateDto = app.models.favorite(update)
+    override suspend fun updateModelFavorite(update: ModelFavoriteUpdateDto): ModelStateDto {
+        app.requireReady()
+        return app.models.favorite(update)
+    }
 
-    override suspend fun updateModelSelection(update: ModelSelectionUpdateDto): ModelStateDto = app.models.selection(update)
+    override suspend fun updateModelSelection(update: ModelSelectionUpdateDto): ModelStateDto {
+        app.requireReady()
+        return app.models.selection(update)
+    }
 
-    override suspend fun clearModelSelection(agent: String): ModelStateDto = app.models.clear(agent)
+    override suspend fun clearModelSelection(agent: String): ModelStateDto {
+        app.requireReady()
+        return app.models.clear(agent)
+    }
 
-    override suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto = app.models.variant(update)
+    override suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto {
+        app.requireReady()
+        return app.models.variant(update)
+    }
+
+    override suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto {
+        app.requireReady()
+        return appStateDto(app.updateConfig(patch))
+    }
+
+    override suspend fun refreshProfile(): ProfileDto? = app.refreshProfile()?.let(::profileDto)
+
+    override suspend fun startLogin(directory: String?): DeviceAuthDto = app.startLogin(directory)
+
+    override suspend fun completeLogin(directory: String?): ProfileDto? = app.completeLogin(directory)?.let(::profileDto)
+
+    override suspend fun logout(): Boolean = app.logout()
+
+    override suspend fun setOrganization(organizationId: String?): ProfileDto? =
+        app.setOrganization(organizationId)?.let(::profileDto)
+
+    override suspend fun captureTelemetry(capture: TelemetryCaptureDto) {
+        service<KiloBackendTelemetry>().capture(app.http, app.port, capture.event, capture.properties)
+    }
 
     private fun dto(state: KiloAppState): KiloAppStateDto =
         appStateDto(state)
@@ -75,6 +118,10 @@ internal fun appStateDto(state: KiloAppState): KiloAppStateDto =
             status = KiloAppStatusDto.LOADING,
             progress = progress(state.progress),
         )
+        is KiloAppState.MigrationRequired -> KiloAppStateDto(
+            status = KiloAppStatusDto.MIGRATION_REQUIRED,
+            migration = MigrationRpcMapper.toDto(state.detection),
+        )
         is KiloAppState.Ready -> KiloAppStateDto(
             status = KiloAppStatusDto.READY,
             progress = LoadProgressDto(
@@ -85,6 +132,7 @@ internal fun appStateDto(state: KiloAppState): KiloAppStateDto =
             ),
             warnings = state.data.warnings.map(::warning),
             config = config(state.data.config),
+            profile = state.data.profile?.let(::profileDto),
         )
         is KiloAppState.Error -> KiloAppStateDto(
             status = KiloAppStatusDto.ERROR,
@@ -92,6 +140,16 @@ internal fun appStateDto(state: KiloAppState): KiloAppStateDto =
             errors = state.errors.map(::error),
         )
     }
+
+internal fun profileDto(p: KiloProfile200Response): ProfileDto = ProfileDto(
+    email = p.profile.email,
+    name = p.profile.name,
+    organizations = p.profile.organizations.orEmpty().map { org ->
+        ProfileOrganizationDto(id = org.id, name = org.name, role = org.role)
+    },
+    balance = p.balance?.let { ProfileBalanceDto(balance = it.balance) },
+    currentOrgId = p.currentOrgId,
+)
 
 private fun progress(p: LoadProgress) = LoadProgressDto(
     config = p.config,
@@ -117,6 +175,9 @@ private fun warning(w: ConfigWarning) = ConfigWarningDto(
 
 private fun config(c: Config) = ConfigDto(
     model = c.model,
+    smallModel = c.smallModel,
+    subagentModel = c.subagentModel,
+    subagentVariant = c.subagentVariant,
     agent = agents(c.agent),
 )
 

@@ -85,37 +85,19 @@ describe("indexing SSE mapping", () => {
 })
 
 describe("indexing feature detection", () => {
-  it("requires experimental.semantic_indexing when indexing plugin is present", () => {
-    expect(configFeatures({ plugin: ["kilo-indexing"] }).indexing).toBe(false)
-    expect(configFeatures({ plugin: ["kilo-indexing"], experimental: {} }).indexing).toBe(false)
-    expect(configFeatures({ plugin: ["kilo-indexing"], experimental: { semantic_indexing: false } }).indexing).toBe(
-      false,
-    )
+  it("enables indexing settings when the indexing plugin is present", () => {
+    expect(configFeatures({ plugin: ["kilo-indexing"] }).indexing).toBe(true)
   })
 
-  it("detects supported indexing plugin specifiers when experimental.semantic_indexing is true", () => {
-    expect(configFeatures({ plugin: ["kilo-indexing"], experimental: { semantic_indexing: true } }).indexing).toBe(true)
-    expect(
-      configFeatures({ plugin: ["kilo-indexing@1.2.3"], experimental: { semantic_indexing: true } }).indexing,
-    ).toBe(true)
-    expect(
-      configFeatures({ plugin: ["@kilocode/kilo-indexing"], experimental: { semantic_indexing: true } }).indexing,
-    ).toBe(true)
-    expect(
-      configFeatures({ plugin: ["@kilocode/kilo-indexing@1.2.3"], experimental: { semantic_indexing: true } }).indexing,
-    ).toBe(true)
-    expect(
-      configFeatures({
-        plugin: ["file:///tmp/.opencode/plugin/kilo-indexing.js"],
-        experimental: { semantic_indexing: true },
-      }).indexing,
-    ).toBe(true)
-    expect(
-      configFeatures({
-        plugin: ["file:///tmp/node_modules/@kilocode/kilo-indexing/index.js"],
-        experimental: { semantic_indexing: true },
-      }).indexing,
-    ).toBe(true)
+  it("detects supported indexing plugin specifiers", () => {
+    expect(configFeatures({ plugin: ["kilo-indexing"] }).indexing).toBe(true)
+    expect(configFeatures({ plugin: ["kilo-indexing@1.2.3"] }).indexing).toBe(true)
+    expect(configFeatures({ plugin: ["@kilocode/kilo-indexing"] }).indexing).toBe(true)
+    expect(configFeatures({ plugin: ["@kilocode/kilo-indexing@1.2.3"] }).indexing).toBe(true)
+    expect(configFeatures({ plugin: ["file:///tmp/.opencode/plugin/kilo-indexing.js"] }).indexing).toBe(true)
+    expect(configFeatures({ plugin: ["file:///tmp/node_modules/@kilocode/kilo-indexing/index.js"] }).indexing).toBe(
+      true,
+    )
   })
 
   it("ignores unrelated plugin lists", () => {

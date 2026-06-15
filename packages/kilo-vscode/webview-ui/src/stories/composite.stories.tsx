@@ -147,6 +147,104 @@ const bashPending = {
   },
 }
 
+const backgroundStartPending: ToolPart = {
+  id: "part-background-start-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-background-start-001",
+  tool: "background_process",
+  state: {
+    status: "running",
+    input: {
+      action: "start",
+      command: "bun run dev --host 127.0.0.1",
+      description: "Dev server",
+      workdir: "/project/web",
+      ready: { port: 5173, pattern: "ready in", timeout: 30000 },
+    },
+    metadata: {},
+    time: { start: now - 2500 },
+  },
+}
+
+const backgroundStartCompleted: ToolPart = {
+  id: "part-background-start-002",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-background-start-002",
+  tool: "background_process",
+  state: {
+    status: "completed",
+    input: {
+      action: "start",
+      command: "bun run dev --host 127.0.0.1",
+      description: "Dev server",
+      workdir: "/project/web",
+      ready: { port: 5173, pattern: "ready in", timeout: 30000 },
+    },
+    output: [
+      "id: bgp_01hv8devserver",
+      "status: ready",
+      "pid: 42817",
+      "cwd: /project/web",
+      "command: bun run dev --host 127.0.0.1",
+      "last_output: VITE v5.4.0 ready in 318 ms",
+    ].join("\n"),
+    title: "Started background process",
+    metadata: { processID: "bgp?", status: "ready" },
+    time: { start: now - 2400, end: now - 1800 },
+  },
+}
+
+const backgroundLogsCompleted: ToolPart = {
+  id: "part-background-logs-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-background-logs-001",
+  tool: "background_process",
+  state: {
+    status: "completed",
+    input: { action: "logs", id: "bgp_01hv8devserver" },
+    output: ["VITE v5.4.0 ready in 318 ms", "Local: http://127.0.0.1:5173/"].join("\n"),
+    title: "Logs: Dev server",
+    metadata: { processID: "bgp_01hv8devserver", status: "ready" },
+    time: { start: now - 1800, end: now - 1200 },
+  },
+}
+
+const githubApiError: ToolPart = {
+  id: "part-github-error-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-github-error-001",
+  tool: "github-pr-search",
+  state: {
+    status: "error",
+    input: { query: "status-inline-self-test" },
+    error: "GitHub API error: 401 Unauthorized",
+    time: { start: now - 3000, end: now - 2500 },
+  },
+}
+
+const fileError: ToolPart = {
+  id: "part-file-error-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-file-error-001",
+  tool: "edit",
+  state: {
+    status: "error",
+    input: { filePath: "src/missing-file.tsx" },
+    error: "ENOENT: no such file or directory 'src/missing-file.tsx'",
+    time: { start: now - 2000, end: now - 1500 },
+  },
+}
+
 const textPart: TextPart = {
   id: "part-text-001",
   sessionID: SESSION_ID,
@@ -173,9 +271,13 @@ const bashPermission: PermissionRequest = {
   id: "perm-bash-001",
   sessionID: SESSION_ID,
   toolName: "bash",
-  patterns: ["bun test"],
+  patterns: ['if [[ -f ".env" ]]; then source ".env"; fi\nbun test'],
   always: ["bun *"],
-  args: { command: "bun test", rules: ["bun *", "bun test"] },
+  args: {
+    command: 'if [[ -f ".env" ]]; then source ".env"; fi\nbun test',
+    description: "Load environment and run tests",
+    rules: ["bun *", "bun test"],
+  },
   tool: { messageID: ASST_MSG_ID, callID: "call-bash-001" },
 }
 
@@ -538,6 +640,18 @@ export const ToolCards: Story = {
     const data = dataWith([readCompleted, globCompleted, grepCompleted, lsCompleted])
     return (
       <StoryProviders data={data} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+export const BackgroundProcessToolCards: Story = {
+  name: "Tool Cards — background process",
+  render: () => {
+    const data = dataWith([backgroundStartPending, backgroundStartCompleted, backgroundLogsCompleted])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID} status="busy">
         <AssistantMessage message={baseAssistantMessage} />
       </StoryProviders>
     )
@@ -1106,6 +1220,30 @@ const mcpShort: ToolPart = {
     title: "Search issues",
     metadata: {},
     time: { start: now - 3000, end: now - 2800 },
+  },
+}
+
+export const ToolErrors: Story = {
+  name: "Tool Errors — HTTP and filesystem",
+  render: () => {
+    const data = dataWith([githubApiError, fileError])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+export const ToolErrors200: Story = {
+  name: "Tool Errors — HTTP and filesystem (200px)",
+  render: () => {
+    const data = dataWith([githubApiError, fileError])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
   },
 }
 

@@ -195,6 +195,12 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     const raw = fetchKey().trim()
     const env = raw.match(/^\{env:([^}]+)\}$/)?.[1]?.trim()
     const apiKey = raw && !env ? raw : undefined
+    // When editing an existing provider with the key field untouched, the
+    // webview has no key to send — keys are stripped before provider data
+    // reaches it. Send the providerID so the extension can authenticate the
+    // fetch with the stored key (#10139). Anything typed into the field
+    // (a key or {env:VAR} syntax) takes precedence.
+    const providerID = !raw && props.existing ? props.existing.providerID : undefined
     const existing = new Set(form.models.map((m) => m.id.trim()).filter(Boolean))
 
     const hdrs = form.headers
@@ -253,6 +259,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       requestId: rid,
       baseURL: url,
       apiKey,
+      providerID,
       headers,
     })
   }

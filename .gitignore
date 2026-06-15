@@ -5,6 +5,7 @@ node_modules
 .worktrees
 .sst
 .env
+.env.local
 .idea/*
 !.idea/gradle.xml
 !.idea/.run
@@ -34,6 +35,7 @@ a.out
 target
 .scripts
 .direnv/
+packages/kilo-jetbrains/build-tasks/.gradle/
 
 # Local dev files
 opencode-dev

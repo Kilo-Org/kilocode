@@ -1,7 +1,7 @@
 import { Question } from "@/question"
 import { QuestionID } from "@/question/schema"
 import { Effect } from "effect"
-import { HttpApiBuilder } from "effect/unstable/httpapi"
+import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi" // kilocode_change - map Question missing requests to declared 404 errors
 import { InstanceHttpApi } from "../api"
 
 export const questionHandlers = HttpApiBuilder.group(InstanceHttpApi, "question", (handlers) =>
@@ -16,15 +16,21 @@ export const questionHandlers = HttpApiBuilder.group(InstanceHttpApi, "question"
       params: { requestID: QuestionID }
       payload: Question.Reply
     }) {
-      yield* svc.reply({
-        requestID: ctx.params.requestID,
-        answers: ctx.payload.answers,
-      })
+      // kilocode_change start - map missing Question requests to the declared transport error
+      yield* svc
+        .reply({
+          requestID: ctx.params.requestID,
+          answers: ctx.payload.answers,
+        })
+        .pipe(Effect.mapError(() => new HttpApiError.NotFound({})))
+      // kilocode_change end
       return true
     })
 
     const reject = Effect.fn("QuestionHttpApi.reject")(function* (ctx: { params: { requestID: QuestionID } }) {
-      yield* svc.reject(ctx.params.requestID)
+      // kilocode_change start - map missing Question requests to the declared transport error
+      yield* svc.reject(ctx.params.requestID).pipe(Effect.mapError(() => new HttpApiError.NotFound({})))
+      // kilocode_change end
       return true
     })
 

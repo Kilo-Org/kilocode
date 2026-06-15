@@ -3,8 +3,8 @@
  * These modules are provided at runtime by the OpenCode TUI system
  */
 
-declare module "@tui/component/dialog-command" {
-  export function useCommandDialog(): any
+declare module "@tui/context/command-palette" {
+  export function useCommandPalette(): any
 }
 
 declare module "@tui/context/sync" {

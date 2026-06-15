@@ -48,31 +48,6 @@ export class StaticContextService {
     })
   }
 
-  public static formatAutocompleteStaticSnippet(ctx: StaticContext): string {
-    let output = `AutocompleteStaticSnippet:\n`
-    output += `  holeType: ${ctx.holeType}\n`
-
-    output += `  relevantTypes:\n`
-    if (ctx.relevantTypes.size === 0) {
-      output += `    (none)\n`
-    } else {
-      ctx.relevantTypes.forEach((types, filepath) => {
-        output += `    ${filepath}: [${types.join(", ")}]\n`
-      })
-    }
-
-    output += `  relevantHeaders:\n`
-    if (ctx.relevantHeaders.size === 0) {
-      output += `    (none)\n`
-    } else {
-      ctx.relevantHeaders.forEach((headers, filepath) => {
-        output += `    ${filepath}: [${headers.join(", ")}]\n`
-      })
-    }
-
-    return output
-  }
-
   public async getContext(helper: HelperVars): Promise<AutocompleteStaticSnippet[]> {
     const tsFiles = await this.getTypeScriptFilesFromWorkspaces(helper.workspaceUris)
     // Get the three contexts holeContext, relevantTypes, relevantHeaders.

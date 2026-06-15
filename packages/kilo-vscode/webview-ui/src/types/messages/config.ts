@@ -38,12 +38,8 @@ export interface WatcherConfig {
 }
 
 export interface ExperimentalConfig {
-  disable_paste_summary?: boolean
   batch_tool?: boolean
-  semantic_indexing?: boolean
   codebase_search?: boolean
-  agent_manager_tool?: boolean
-  speech_to_text?: boolean
   speech_to_text_model?: string
   primary_tools?: string[]
   continue_loop_on_deny?: boolean
@@ -69,8 +65,8 @@ export type IndexingProvider =
 export interface IndexingConfig {
   enabled?: boolean
   provider?: IndexingProvider
-  model?: string
-  dimension?: number
+  model?: string | null
+  dimension?: number | null
   vectorStore?: "lancedb" | "qdrant"
   kilo?: { apiKey?: string; baseUrl?: string; organizationId?: string }
   openai?: { apiKey?: string }
@@ -118,6 +114,9 @@ export interface Config {
   permission?: PermissionConfig
   model?: string | null
   small_model?: string | null
+  subagent_model?: string | null
+  subagent_variant?: string | null
+  subagent_variant_overrides?: Record<string, string | null> | null
   default_agent?: string | null
   agent?: Record<string, AgentConfig>
   provider?: Record<string, ProviderConfig>

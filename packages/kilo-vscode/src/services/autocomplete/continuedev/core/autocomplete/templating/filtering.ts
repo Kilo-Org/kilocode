@@ -44,7 +44,6 @@ export const getSnippets = (helper: HelperVars, payload: SnippetPayload): Autoco
     clipboard: payload.clipboardSnippets,
     recentlyVisitedRanges: payload.recentlyVisitedRangesSnippets,
     recentlyEditedRanges: payload.recentlyEditedRangeSnippets,
-    diff: payload.diffSnippets,
     recentlyOpenedFiles: payload.recentlyOpenedFileSnippets,
     base: shuffleArray(
       filterSnippetsAlreadyInCaretWindow(
@@ -87,13 +86,6 @@ export const getSnippets = (helper: HelperVars, payload: SnippetPayload): Autoco
       enabledOrPriority: helper.options.experimental_includeRecentlyEditedRanges,
       defaultPriority: 4,
       snippets: payload.recentlyEditedRangeSnippets,
-    },
-    {
-      key: "diff",
-      enabledOrPriority: helper.options.experimental_includeDiff,
-      defaultPriority: 5,
-      snippets: payload.diffSnippets,
-      // TODO: diff is commonly too large, thus anything lower in priority is not included.
     },
     {
       key: "base",

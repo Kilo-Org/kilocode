@@ -2,7 +2,7 @@ import { Effect, Schema } from "effect"
 import path from "path"
 import * as Tool from "@/tool/tool"
 import { KiloIndexing } from "@/kilocode/indexing"
-import { Instance } from "@/project/instance"
+import { Instance } from "@/kilocode/instance"
 
 import DESCRIPTION from "./semantic-search.txt"
 

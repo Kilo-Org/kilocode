@@ -12,7 +12,7 @@ MiniMax is a global AI foundation model company focused on fast, cost-efficient 
 
 ## Getting an API Key
 
-1. **Sign Up/Sign In:** Go to the [MiniMax Console](https://platform.minimax.io/). Create an account or sign in.
+1. **Sign Up/Sign In:** Go to the [MiniMax Console](https://platform.minimax.io/console/access). Create an account or sign in.
 2. **Open the API Keys Page:** Navigate to your **Profile > API Keys**.
 3. **Create a Key:** Click to generate a new API key and give it a descriptive name (e.g., "Kilo Code").
 4. **Copy the Key:** Copy the key immediately. You may not be able to view it again. Store it securely.

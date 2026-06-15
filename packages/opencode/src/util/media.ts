@@ -1,4 +1,5 @@
 const startsWith = (bytes: Uint8Array, prefix: number[]) => prefix.every((value, index) => bytes[index] === value)
+const icons = new Set(["image/vnd.microsoft.icon", "image/x-icon", "image/x-ico", "image/ico", "image/icon"]) // kilocode_change
 
 export function isPdfAttachment(mime: string) {
   return mime === "application/pdf"
@@ -8,9 +9,17 @@ export function isMedia(mime: string) {
   return mime.startsWith("image/") || isPdfAttachment(mime)
 }
 
-export function isImageAttachment(mime: string) {
-  return mime.startsWith("image/") && mime !== "image/svg+xml" && mime !== "image/vnd.fastbidsheet"
+// kilocode_change start
+export function isIconMimeType(mime: string) {
+  return icons.has(mime)
 }
+
+export function isImageAttachment(mime: string) {
+  return (
+    mime.startsWith("image/") && mime !== "image/svg+xml" && mime !== "image/vnd.fastbidsheet" && !isIconMimeType(mime)
+  )
+}
+// kilocode_change end
 
 export function sniffAttachmentMime(bytes: Uint8Array, fallback: string) {
   if (startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "image/png"

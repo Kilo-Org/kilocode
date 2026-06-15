@@ -23,6 +23,7 @@ import kotlinx.coroutines.cancel
 class SessionUiFactoryTest : BasePlatformTestCase() {
     private lateinit var scope: CoroutineScope
     private lateinit var workspace: Workspace
+    private lateinit var workspaces: KiloWorkspaceService
     private lateinit var sessions: KiloSessionService
     private lateinit var app: KiloAppService
 
@@ -33,7 +34,7 @@ class SessionUiFactoryTest : BasePlatformTestCase() {
         app = KiloAppService(scope, FakeAppRpcApi().also {
             it.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
         })
-        val workspaces = KiloWorkspaceService(scope, FakeWorkspaceRpcApi().also {
+        workspaces = KiloWorkspaceService(scope, FakeWorkspaceRpcApi().also {
             it.state.value = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.READY)
         })
         workspace = workspaces.workspace("/test")
@@ -56,7 +57,7 @@ class SessionUiFactoryTest : BasePlatformTestCase() {
     fun `test factory wires open callback`() {
         val manager = FakeManager()
         val rpc = session("ses_1")
-        val ui = SessionUi(project, workspace, sessions, app, scope, manager = manager)
+        val ui = SessionUi(project, workspace, sessions, app, scope, manager = manager, workspaces = workspaces)
         val controller = controller(ui)
 
         com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
@@ -69,9 +70,9 @@ class SessionUiFactoryTest : BasePlatformTestCase() {
     fun `test empty panel opens through SessionRef via controller`() {
         val manager = FakeManager()
         val rpc = session("ses_1")
-        val ui = SessionUi(project, workspace, sessions, app, scope, manager = manager)
+        val ui = SessionUi(project, workspace, sessions, app, scope, manager = manager, workspaces = workspaces)
         val controller = controller(ui)
-        val panel = ai.kilocode.client.session.ui.EmptySessionPanel(testRootDisposable, controller, listOf(rpc))
+        val panel = ai.kilocode.client.session.ui.empty.EmptySessionPanel(testRootDisposable, controller, listOf(rpc))
 
         panel.clickRecent(0)
 
@@ -81,13 +82,14 @@ class SessionUiFactoryTest : BasePlatformTestCase() {
 
     fun `test empty panel show history routes through manager`() {
         val manager = FakeManager()
-        val ui = SessionUi(project, workspace, sessions, app, scope, manager = manager)
+        val ui = SessionUi(project, workspace, sessions, app, scope, manager = manager, workspaces = workspaces)
         val controller = controller(ui)
-        val panel = ai.kilocode.client.session.ui.EmptySessionPanel(
+        val panel = ai.kilocode.client.session.ui.empty.EmptySessionPanel(
             testRootDisposable,
             controller,
             emptyList(),
-        ) { manager.showHistory() }
+            history = { manager.showHistory() },
+        )
 
         panel.clickShowHistory()
 

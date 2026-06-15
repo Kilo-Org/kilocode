@@ -1,7 +1,10 @@
+import org.jetbrains.changelog.Changelog
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.tasks.InstrumentCodeTask
 import org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask
 import org.jetbrains.intellij.platform.gradle.tasks.aware.SplitModeAware.SplitModeTarget
+import java.time.LocalDate
 
 group = "ai.kilocode.jetbrains"
 
@@ -31,6 +34,51 @@ fun checked(value: String): String {
     return value
 }
 
+data class Release(val major: Int, val minor: Int, val patch: Int, val rc: Int?) : Comparable<Release> {
+    val stable = rc == null
+    val base get() = if (stable) this else Release(major, minor, patch, null)
+    val text = listOfNotNull("$major.$minor.$patch", rc?.let { "rc.$it" }).joinToString("-")
+
+    override fun compareTo(other: Release): Int {
+        val cmp = compareValuesBy(this, other, Release::major, Release::minor, Release::patch)
+        if (cmp != 0) return cmp
+        return compareValues(rc ?: Int.MAX_VALUE, other.rc ?: Int.MAX_VALUE)
+    }
+}
+
+fun release(value: String): Release? {
+    val match = Regex("^(\\d+)\\.(\\d+)\\.(\\d+)(?:-rc\\.(\\d+))?$").matchEntire(value) ?: return null
+    return Release(
+        match.groupValues[1].toInt(),
+        match.groupValues[2].toInt(),
+        match.groupValues[3].toInt(),
+        match.groupValues[4].takeIf { it.isNotEmpty() }?.toInt(),
+    )
+}
+
+fun releases(): List<Release> {
+    val heading = Regex("^## \\[(.+?)](?: - .*)?$|^## ([^\\[]\\S*)$")
+    return file("CHANGELOG.md").readLines()
+        .mapNotNull { line ->
+            val match = heading.matchEntire(line.trim()) ?: return@mapNotNull null
+            release(match.groupValues[1].ifEmpty { match.groupValues[2] })
+        }
+        .distinctBy { it.text }
+}
+
+fun selected(value: String): List<String> {
+    val current = release(value) ?: return emptyList()
+    val entries = releases()
+    val rcs = if (current.stable) emptyList() else entries
+        .filter { !it.stable && it.base == current.base && it <= current }
+        .sortedDescending()
+    val stables = entries
+        .filter { it.stable && if (current.stable) it <= current else it < current.base }
+        .sortedDescending()
+        .take(5)
+    return (rcs + stables).map { it.text }
+}
+
 fun gitTag(): String? {
     val text = providers.exec {
         commandLine("git", "tag", "--points-at", "HEAD")
@@ -39,14 +87,15 @@ fun gitTag(): String? {
 }
 
 val release = providers.gradleProperty("production").map { it.toBoolean() }.orElse(false).get()
-val ver = if (release) checked(
-    gitTag()?.removePrefix("jetbrains/v")
-        ?: error("Missing JetBrains plugin version. Publish builds must run from a jetbrains/v<version> tag."),
-) else checked(gitTag()?.removePrefix("jetbrains/v") ?: "0.0.0-dev")
+val override = providers.gradleProperty("kilo.version").orNull?.trim()?.takeIf { it.isNotEmpty() }
+val prop = providers.gradleProperty("kilo.jetbrains.version").orNull?.trim()?.takeIf { it.isNotEmpty() }
+val tag = gitTag()?.removePrefix("jetbrains/v")
+val ver = override?.let(::checked) ?: prop?.let(::checked) ?: if (release) checked(
+    tag ?: error("Missing JetBrains plugin version. Publish builds must set kilo.jetbrains.version or run from a jetbrains/v<version> tag."),
+) else checked(tag ?: "0.0.0-dev")
 
-val notes = providers.gradleProperty("kilo.changeNotes").orElse("Release candidate build.")
 val channel = providers.gradleProperty("kilo.channel").map { it.trim() }.orElse("default")
-val splitPort = providers.gradleProperty("kilo.splitModeServerPort").map(::port).orElse(providers.provider(::fallback))
+val splitPort = providers.gradleProperty("kilo.splitModeServerPort").orNull?.let(::port) ?: fallback()
 val isolated = providers.gradleProperty("kilo.dev.storage.isolated").map { it.toBoolean() }.orElse(false)
 val worktreeRoot = providers.gradleProperty("kilo.dev.worktree.root").orElse(
     providers.provider { rootProject.layout.projectDirectory.asFile.parentFile.parentFile.canonicalPath }
@@ -59,11 +108,37 @@ plugins {
     id("java")
     alias(libs.plugins.intellij.platform)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.changelog)
 
     alias(libs.plugins.kotlin) apply false
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.compose.compiler) apply false
 }
+
+changelog {
+    version = ver
+    path = file("CHANGELOG.md").canonicalPath
+    header = provider { "[${version.get()}] - ${LocalDate.now()}" }
+    unreleasedTerm = "[Unreleased]"
+    keepUnreleasedSection = true
+    repositoryUrl = "https://github.com/Kilo-Org/kilocode"
+    groups = listOf("Added", "Changed", "Fixed", "Removed", "Security")
+    combinePreReleases = false
+}
+
+val notes = providers.gradleProperty("kilo.changeNotes").orElse(
+    provider {
+        val versions = selected(ver).filter { changelog.has(it) }
+        if (versions.isNotEmpty()) return@provider versions.joinToString("\n") { item ->
+            changelog.renderItem(
+                changelog.get(item).withHeader(true).withEmptySections(false),
+                Changelog.OutputType.HTML,
+            )
+        }
+        val item = if (changelog.has(ver)) changelog.get(ver) else changelog.getUnreleased()
+        changelog.renderItem(item.withHeader(false).withEmptySections(false), Changelog.OutputType.HTML)
+    },
+)
 
 subprojects {
     apply(plugin = "org.jetbrains.intellij.platform.module")
@@ -145,6 +220,10 @@ intellijPlatform {
 }
 
 tasks {
+    withType<InstrumentCodeTask> {
+        enabled = false
+    }
+
     runIdeBackend {
         splitModeServerPort.set(splitPort)
         dependsOn(":backend:prepareLocalCli")

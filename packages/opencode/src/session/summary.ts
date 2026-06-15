@@ -2,12 +2,10 @@ import { Effect, Layer, Context, Schema } from "effect"
 import { Bus } from "@/bus"
 import { Snapshot } from "@/snapshot"
 import { Storage } from "@/storage/storage"
-import { zod } from "@/util/effect-zod"
-import { withStatics } from "@/util/schema"
 import * as Session from "./session"
 import { MessageV2 } from "./message-v2"
 import { SessionID, MessageID } from "./schema"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
+import { appendSessionDiffs, readSessionDiffBase } from "@/kilocode/session-portability/cumulative-diff" // kilocode_change
 
 function unquoteGitPath(input: string) {
   if (!input.startsWith('"')) return input
@@ -105,10 +103,26 @@ export const layer = Layer.effect(
       sessionID: SessionID
       messageID: MessageID
     }) {
-      const all = yield* sessions.messages({ sessionID: input.sessionID })
+      const all = yield* sessions.messages({ sessionID: input.sessionID }).pipe(Effect.orDie)
       if (!all.length) return
 
-      const diffs = yield* computeDiff({ messages: all })
+      // kilocode_change start - preserve imported cumulative diffs when summarizing cloud-forked sessions
+      const base = yield* readSessionDiffBase(storage, input.sessionID)
+      const messages = all.filter(
+        (m) => m.info.id === input.messageID || (m.info.role === "assistant" && m.info.parentID === input.messageID),
+      )
+      const target = messages.find((m) => m.info.id === input.messageID)
+      const local = base.length > 0 && target?.info.role === "user" ? yield* computeDiff({ messages }) : []
+      const diffs =
+        base.length > 0
+          ? yield* storage.read<Snapshot.FileDiff[]>(["session_diff", input.sessionID]).pipe(
+              Effect.orElseSucceed((): Snapshot.FileDiff[] => base),
+              Effect.map((existing) =>
+                appendSessionDiffs({ existing: existing.length > 0 ? existing : base, next: local }),
+              ),
+            )
+          : yield* computeDiff({ messages: all })
+      // kilocode_change end
       yield* sessions.setSummary({
         sessionID: input.sessionID,
         summary: {
@@ -120,12 +134,8 @@ export const layer = Layer.effect(
       yield* storage.write(["session_diff", input.sessionID], diffs).pipe(Effect.ignore)
       yield* bus.publish(Session.Event.Diff, { sessionID: input.sessionID, diff: diffs })
 
-      const messages = all.filter(
-        (m) => m.info.id === input.messageID || (m.info.role === "assistant" && m.info.parentID === input.messageID),
-      )
-      const target = messages.find((m) => m.info.id === input.messageID)
       if (!target || target.info.role !== "user") return
-      const msgDiffs = yield* computeDiff({ messages })
+      const msgDiffs = base.length > 0 ? local : yield* computeDiff({ messages }) // kilocode_change
       target.info.summary = { ...target.info.summary, diffs: msgDiffs }
       yield* sessions.updateMessage(target.info)
     })
@@ -135,10 +145,11 @@ export const layer = Layer.effect(
         .read<Snapshot.FileDiff[]>(["session_diff", input.sessionID])
         .pipe(Effect.catch(() => Effect.succeed([] as Snapshot.FileDiff[])))
       const next = diffs.map((item) => {
+        if (item.file === undefined) return item
         const file = unquoteGitPath(item.file)
 
         // kilocode_change start — scrub oversized diffs from stored session_diff
-        const oversized = Buffer.byteLength(item.patch) > Snapshot.MAX_DIFF_SIZE
+        const oversized = item.patch !== undefined && Buffer.byteLength(item.patch) > Snapshot.MAX_DIFF_SIZE
         if (file === item.file && !oversized) return item
         return {
           ...item,
@@ -168,12 +179,7 @@ export const defaultLayer = Layer.suspend(() =>
 export const DiffInput = Schema.Struct({
   sessionID: SessionID,
   messageID: Schema.optional(MessageID),
-}).pipe(withStatics((s) => ({ zod: zod(s) })))
+})
 export type DiffInput = Schema.Schema.Type<typeof DiffInput>
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const diff = (input: { sessionID: SessionID; messageID?: MessageID }) => runPromise((svc) => svc.diff(input))
-// kilocode_change end
 
 export * as SessionSummary from "./summary"

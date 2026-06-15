@@ -9,7 +9,6 @@ import { Config } from "@/config/config"
 import { Bus } from "../bus"
 import * as Log from "@opencode-ai/core/util/log"
 import { createKiloClient } from "@kilocode/sdk"
-import { Flag } from "@opencode-ai/core/flag/flag"
 import { ServerAuth } from "@/server/auth"
 import { CodexAuthPlugin } from "./codex"
 import { Session } from "@/session/session"
@@ -19,6 +18,8 @@ import { gitlabAuthPlugin as GitlabAuthPlugin } from "opencode-gitlab-auth"
 import { PoeAuthPlugin } from "opencode-poe-auth"
 import { CloudflareAIGatewayAuthPlugin, CloudflareWorkersAuthPlugin } from "./cloudflare"
 import { AzureAuthPlugin } from "./azure"
+import { XaiAuthPlugin } from "./xai" // kilocode_change
+import { DigitalOceanAuthPlugin } from "./digitalocean"
 import { Effect, Layer, Context, Stream } from "effect"
 import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
@@ -28,6 +29,7 @@ import { parsePluginSpecifier, readPluginId, readV1Plugin, resolvePluginId } fro
 import { KiloAuthPlugin } from "@kilocode/kilo-gateway" // kilocode_change
 import { registerAdapter } from "@/control-plane/adapters"
 import type { WorkspaceAdapter } from "@/control-plane/types"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 
 const log = Log.create({ service: "plugin" })
 
@@ -68,6 +70,8 @@ const INTERNAL_PLUGINS: PluginInstance[] = [
   CloudflareWorkersAuthPlugin,
   CloudflareAIGatewayAuthPlugin,
   AzureAuthPlugin,
+  XaiAuthPlugin,
+  DigitalOceanAuthPlugin,
 ]
 // kilocode_change end
 
@@ -90,7 +94,8 @@ function getLegacyPlugins(mod: Record<string, unknown>) {
     if (seen.has(entry)) continue
     seen.add(entry)
     const plugin = getServerPlugin(entry)
-    if (!plugin) throw new TypeError("Plugin export is not a function")
+    // kilocode_change: skip named exports (e.g. constants from @kilocode/plugin-atomic-chat)
+    if (!plugin) continue // kilocode_change
     result.push(plugin)
   }
 
@@ -115,6 +120,7 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const bus = yield* Bus.Service
     const config = yield* Config.Service
+    const flags = yield* RuntimeFlags.Service
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("Plugin.state")(function* (ctx) {
@@ -151,7 +157,7 @@ export const layer = Layer.effect(
           $: typeof Bun === "undefined" ? undefined : Bun.$,
         }
 
-        for (const plugin of INTERNAL_PLUGINS) {
+        for (const plugin of flags.disableDefaultPlugins ? [] : INTERNAL_PLUGINS) {
           log.info("loading internal plugin", { name: plugin.name })
           const init = yield* Effect.tryPromise({
             try: () => plugin(input),
@@ -162,8 +168,8 @@ export const layer = Layer.effect(
           if (init._tag === "Some") hooks.push(init.value)
         }
 
-        const plugins = Flag.KILO_PURE ? [] : (cfg.plugin_origins ?? [])
-        if (Flag.KILO_PURE && cfg.plugin_origins?.length) {
+        const plugins = flags.pure ? [] : (cfg.plugin_origins ?? [])
+        if (flags.pure && cfg.plugin_origins?.length) {
           log.info("skipping external plugins in pure mode", { count: cfg.plugin_origins.length })
         }
         if (plugins.length) yield* config.waitForDependencies()
@@ -288,6 +294,10 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(Layer.provide(Bus.layer), Layer.provide(Config.defaultLayer))
+export const defaultLayer = layer.pipe(
+  Layer.provide(Bus.layer),
+  Layer.provide(Config.defaultLayer),
+  Layer.provide(RuntimeFlags.defaultLayer),
+)
 
 export * as Plugin from "."

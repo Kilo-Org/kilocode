@@ -39,6 +39,7 @@ import type {
   ManagedSessionState,
   SectionState,
   SessionInfo,
+  SessionCreatedMessage,
   BranchInfo,
 } from "../src/types/messages"
 import { IndexingProvider } from "../src/context/indexing"
@@ -84,7 +85,8 @@ import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
 import HistoryView from "../src/components/history/HistoryView"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
-import { LanguageBridge, DataBridge, MermaidDownloadBridge } from "../src/App"
+import { DataBridge, MermaidDownloadBridge } from "../src/App"
+import { LanguageBridge } from "../src/context/language-bridge"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
 import {
@@ -103,10 +105,11 @@ import { renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-render
 import { useTabScroll } from "./tab-scroll"
 import { DiffPanel } from "./DiffPanel"
 import { createRevertFile } from "./revert-file"
-import { FullScreenDiffView } from "./FullScreenDiffView"
+import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { ApplyDialog } from "./ApplyDialog"
 import { groupApplyConflicts } from "./apply-conflicts"
-import type { ReviewComment } from "./review-comments"
+import type { ReviewComment } from "../diff-viewer/review-comments"
+import { clearReviewComposer, createReviewComposer } from "../diff-viewer/review-annotations"
 import { CurrentTabsMenu, createCurrentTabItems, focusCurrentTab } from "./CurrentTabsMenu"
 import { BranchSelect } from "../src/components/shared/BranchSelect"
 import { WorktreeItem } from "./WorktreeItem"
@@ -124,7 +127,7 @@ import {
 } from "./section-helpers"
 import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
-import { mergeWorktreeDiffs } from "./diff-state"
+import { mergeWorktreeDiffs } from "../diff-viewer/diff-state"
 import { initialMessage, seedInitialVariant } from "./initial-message"
 import { createMarkdownRender } from "./review-preferences"
 import { createSidebarCollapse } from "./sidebar-collapse"
@@ -246,6 +249,7 @@ const AgentManagerContent: Component = () => {
 
   const [reviewOpenByContext, setReviewOpenByContext] = createSignal<Record<string, boolean>>({})
   const [reviewCommentsByContext, setReviewCommentsByContext] = createSignal<Record<string, ReviewComment[]>>({})
+  const reviewComposer = createReviewComposer()
   const [reviewActive, setReviewActive] = createSignal(false)
   const [reviewDiffStyle, setReviewDiffStyle] = createSignal<"unified" | "split">("unified")
   const markdown = createMarkdownRender(vscode)
@@ -285,6 +289,7 @@ const AgentManagerContent: Component = () => {
     setPendingDelete(null)
   }
   createEffect(on(selection, () => cancelPendingDelete(), { defer: true }))
+  createEffect(on(selection, () => clearReviewComposer(reviewComposer), { defer: true }))
   onCleanup(() => clearTimeout(pendingDeleteTimer))
 
   // Per-context tab memory: maps sidebar selection key -> last active session/pending ID
@@ -1081,14 +1086,17 @@ const AgentManagerContent: Component = () => {
     // backend follow-ups). Dedups HTTP + SSE firing together.
     const unsubCreate = vscode.onMessage((msg) => {
       if (msg.type !== "sessionCreated") return
-      const created = msg as { type: string; session: { id: string } }
-      if (localSessionIDs().includes(created.session.id)) return
+      const created = msg as SessionCreatedMessage
+      const pending = created.draftID && localSessionIDs().includes(created.draftID) ? created.draftID : undefined
+      if (!pending && localSessionIDs().includes(created.session.id)) return
       if (worktreeSessionIds().has(created.session.id)) return
-      const pending = selection() === LOCAL ? activePendingId() : undefined
+
+      const active = activePendingId()
+      const focus = !pending || (selection() === LOCAL && pending === active)
       if (pending) {
         setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? created.session.id : id)))
         tabOrderSync.replaceOrAppend(LOCAL, pending, created.session.id)
-        setActivePendingId(undefined)
+        if (pending === active) setActivePendingId(undefined)
       } else {
         saveTabMemory()
         setLocalSessionIDs((prev) => [...prev, created.session.id])
@@ -1096,7 +1104,7 @@ const AgentManagerContent: Component = () => {
         setSelection(LOCAL)
       }
       vscode.postMessage({ type: "agentManager.persistSession", sessionId: created.session.id })
-      session.selectSession(created.session.id)
+      if (focus) session.selectSession(created.session.id)
     })
 
     // Mark sessions loaded as soon as the session context receives data (even if empty)
@@ -1121,7 +1129,7 @@ const AgentManagerContent: Component = () => {
       onCreated: (contextKey, terminalId) => appendToTabOrder(contextKey, terminalId),
     })
     const unsubTerminals = vscode.onMessage((msg) => {
-      terminalDispatch(msg as unknown as { type: string } & Record<string, unknown>)
+      terminalDispatch(msg)
     })
 
     const unsub = vscode.onMessage((msg) => {
@@ -2995,6 +3003,7 @@ const AgentManagerContent: Component = () => {
                     }}
                     onShowHistory={() => setHistory(true)}
                     onForkMessage={readOnly() ? undefined : handleForkSession}
+                    onForkSession={readOnly() ? undefined : handleForkSession}
                     readonly={readOnly()}
                     continueInWorktree={selection() === LOCAL}
                     promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
@@ -3063,6 +3072,7 @@ const AgentManagerContent: Component = () => {
                         onMarkdownRenderChange={markdown.update}
                         comments={reviewComments()}
                         onCommentsChange={setReviewCommentsForSelection}
+                        composer={reviewComposer}
                         onClose={() => setSidePanel(null)}
                         onExpand={selection() !== null ? openReviewTab : undefined}
                         onRequestDiff={requestDiffFile}
@@ -3092,6 +3102,7 @@ const AgentManagerContent: Component = () => {
                   sessionKey={diffSessionKey()}
                   comments={reviewComments()}
                   onCommentsChange={setReviewCommentsForSelection}
+                  composer={reviewComposer}
                   onSendAll={closeReviewTab}
                   diffStyle={reviewDiffStyle()}
                   onDiffStyleChange={setSharedDiffStyle}

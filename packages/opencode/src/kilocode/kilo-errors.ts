@@ -1,4 +1,5 @@
 import type { NamedError } from "@opencode-ai/core/util/error"
+import { isRecord } from "@/util/record"
 
 export const KILO_ERROR_CODES = {
   PAID_MODEL_AUTH_REQUIRED: "PAID_MODEL_AUTH_REQUIRED",
@@ -69,7 +70,7 @@ export function showKiloErrorToast(
  */
 export function parseKiloErrorCode(error: ReturnType<NamedError["toObject"]>): KiloErrorCode | undefined {
   if (error.name !== "APIError") return undefined
-  const responseBody = error.data?.responseBody
+  const responseBody = isRecord(error.data) ? error.data.responseBody : undefined
   if (typeof responseBody !== "string") return undefined
   try {
     const body = JSON.parse(responseBody)

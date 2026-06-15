@@ -723,39 +723,35 @@ describe("WorktreeManager.ensureGitExclude", () => {
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager.createWorktree branch collision", () => {
-  /**
-   * Exercise the retry path in WorktreeManager when `git worktree add -b <name>`
-   * fails because a branch with that name already exists.
-   *
-   * We force the collision by creating a worktree with branchName "collide",
-   * removing the worktree (keeping the branch), then requesting the same
-   * branchName again.
-   */
-  it("retries with a unique suffix when generated branch name collides", async () => {
+  it("creates a suffixed worktree without replacing an active explicitly named worktree", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const first = await mgr.createWorktree({ branchName: "echo-hello-world" })
+    const second = await mgr.createWorktree({ branchName: "echo-hello-world" })
+
+    expect(first.branch).toBe("echo-hello-world")
+    expect(second.branch).toBe("echo-hello-world-2")
+    expect((await fs.stat(path.join(first.path, ".git"))).isFile()).toBe(true)
+    expect((await fs.stat(path.join(second.path, ".git"))).isFile()).toBe(true)
+    expect((await simpleGit(root).branch()).all.filter((branch) => branch.startsWith("echo-hello-world"))).toEqual([
+      "echo-hello-world",
+      "echo-hello-world-2",
+    ])
+  })
+
+  it("uses the same suffix sequence when only the requested branch already exists", async () => {
     const root = await createTempRepo()
     const git = simpleGit(root)
     const mgr = createManager(root)
-
-    // Create a first worktree with a fixed branch name
     const first = await mgr.createWorktree({ branchName: "collide" })
-    expect(first.branch).toBe("collide")
 
-    // Remove the worktree via git but keep the branch ref alive
     await git.raw(["worktree", "remove", "--force", first.path])
+    expect((await git.branch()).all).toContain("collide")
 
-    // Verify the branch still exists (worktree is gone, branch is not)
-    const branches = await git.branch()
-    expect(branches.all).toContain("collide")
-
-    // Request the same branchName — git will fail, triggering the retry
     const second = await mgr.createWorktree({ branchName: "collide" })
 
-    // The retry appends a timestamp suffix, so the branch name differs
-    expect(second.branch).not.toBe("collide")
-    expect(second.branch).toStartWith("collide-")
-
-    const stat = await fs.stat(path.join(second.path, ".git"))
-    expect(stat.isFile()).toBe(true)
+    expect(second.branch).toBe("collide-2")
+    expect((await fs.stat(path.join(second.path, ".git"))).isFile()).toBe(true)
   })
 })
 

@@ -105,6 +105,50 @@ function compareVersions(a: string, b: string): number | null {
   return 0
 }
 
+function bun(value: unknown): { value: string; version: string } | null {
+  if (typeof value !== "string") return null
+  const match = value.match(/^bun@(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)$/)
+  if (!match) return null
+  return { value, version: match[1] }
+}
+
+export function selectBunPackageManager(ours: unknown, theirs: unknown): string | undefined {
+  const left = bun(ours)
+  const right = bun(theirs)
+  if (left && right) return compareVersions(left.version, right.version)! >= 0 ? left.value : right.value
+  if (left) return left.value
+  if (right) return right.value
+  return undefined
+}
+
+export function fixPackageManager(
+  pkg: Record<string, unknown>,
+  path: string,
+  ours: Record<string, unknown> | null,
+  changes: string[],
+): void {
+  if (path !== "package.json") return
+  const next = selectBunPackageManager(ours?.packageManager, pkg.packageManager)
+  if (!next || pkg.packageManager === next) return
+  const prior = typeof pkg.packageManager === "string" ? pkg.packageManager : "missing or invalid"
+  changes.push(`packageManager: ${prior} -> ${next} (preserved Kilo pin)`)
+  pkg.packageManager = next
+}
+
+export function assertBunPackageManager(current: unknown, base: unknown, upstream: unknown): void {
+  const inputs = [bun(base), bun(upstream)].filter((item): item is NonNullable<typeof item> => item !== null)
+  if (inputs.length === 0) return
+  const required = inputs.reduce((max, item) => (compareVersions(item.version, max.version)! > 0 ? item : max))
+  const actual = bun(current)
+  if (!actual) {
+    throw new Error(
+      `Bun packageManager validation failed: merged value is invalid; expected at least ${required.value}`,
+    )
+  }
+  if (compareVersions(actual.version, required.version)! >= 0) return
+  throw new Error(`Bun packageManager downgrade detected: merged ${actual.value}, expected at least ${required.value}`)
+}
+
 /**
  * Merge two dependency objects using "newest wins" strategy
  * For non-comparable versions (URLs, catalog:, workspace:*), upstream (theirs) wins
@@ -289,6 +333,24 @@ export function fixCatalog(pkg: Record<string, unknown>, path: string, changes: 
   }
 }
 
+export function fixMetadata(
+  pkg: Record<string, unknown>,
+  path: string,
+  ours: Record<string, unknown> | null,
+  changes: string[],
+): void {
+  if (path !== "packages/opencode/package.json") return
+  if (!ours) return
+  if (Array.isArray(ours.keywords) && JSON.stringify(pkg.keywords) !== JSON.stringify(ours.keywords)) {
+    pkg.keywords = ours.keywords
+    changes.push("keywords: preserved from base")
+  }
+  if (typeof ours.private === "boolean" && pkg.private !== ours.private) {
+    pkg.private = ours.private
+    changes.push("private: preserved from base")
+  }
+}
+
 /**
  * Check if file is a package.json
  */
@@ -374,6 +436,8 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
       pkg.name = newName
     }
 
+    fixPackageManager(pkg, relativePath, ourPkg, changes)
+
     // 2. Preserve Kilo version if requested
     if (options.preserveVersion !== false) {
       const kiloVersion = await getCurrentVersion()
@@ -430,6 +494,8 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
         pkg.repository = ourRepo
         changes.push(`repository: preserved Kilo's repository configuration`)
       }
+
+      fixMetadata(pkg, relativePath, ourPkg, changes)
 
       // 7. Handle workspaces for root package.json
       // Kilo has removed hosted platform packages (console/*, slack, etc.)
@@ -592,6 +658,8 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
         pkg.name = newName
       }
 
+      fixPackageManager(pkg, path, kiloPkg, changes)
+
       // 2. Preserve Kilo version if requested
       if (options.preserveVersion !== false) {
         const kiloVersion = await getCurrentVersion()
@@ -648,6 +716,8 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
           pkg.repository = kiloRepo
           changes.push(`repository: preserved Kilo's repository configuration`)
         }
+
+        fixMetadata(pkg, path, kiloPkg, changes)
 
         // 7. Handle workspaces for root package.json
         // Kilo has removed hosted platform packages (console/*, slack, etc.)
@@ -793,6 +863,7 @@ export async function reconcilePackageJsonFromRefs(
     if (!ourPkg) return { file, action: "skipped", changes: [], dryRun }
     pkg = JSON.parse(JSON.stringify(ourPkg))
   }
+  if (!pkg) return { file, action: "skipped", changes: [], dryRun }
 
   const relativePath = file.replace(process.cwd() + "/", "")
   const newName = TRANSFORM_PACKAGE_NAMES[relativePath]
@@ -800,6 +871,8 @@ export async function reconcilePackageJsonFromRefs(
     changes.push(`name: ${pkg.name} -> ${newName}`)
     pkg.name = newName
   }
+
+  fixPackageManager(pkg, relativePath, ourPkg, changes)
 
   if (options.preserveVersion !== false) {
     const kiloVersion = await getCurrentVersion()
@@ -856,6 +929,8 @@ export async function reconcilePackageJsonFromRefs(
       pkg.repository = ourRepo
       changes.push(`repository: preserved Kilo's repository configuration`)
     }
+
+    fixMetadata(pkg, relativePath, ourPkg, changes)
 
     const ourWs = ourPkg.workspaces as { packages?: string[]; catalog?: Record<string, string> } | undefined
     const theirWs = pkg.workspaces as { packages?: string[]; catalog?: Record<string, string> } | undefined

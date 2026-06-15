@@ -49,7 +49,7 @@ The Auto Approve tab lists the following tool-specific permissions. Some tools a
 | `skill` | Loading specialized skills |
 | `lsp` | Language server protocol operations |
 | `todoread` / `todowrite` | Reading and updating the todo list |
-| `websearch` / `codesearch` | Performing web or code searches |
+| `websearch` | Performing web searches |
 | `webfetch` | Fetching content from URLs |
 | `doom_loop` | Allowing the agent to continue after repeated failures |
 
@@ -66,7 +66,7 @@ Use the shield button in the prompt controls to toggle runtime auto-approve for 
 
 Expand **Manage Auto-Approve Rules** to add commands or patterns to your allowed or denied lists. These rules are then appended to the bottom of the approval rules in settings and the config file.
 
-For the experimental `agent_manager` tool, runtime approvals use the requested mode as the pattern: `worktree` or `local`.
+For the `agent_manager` tool, runtime approvals use the requested mode as the pattern: `worktree` or `local`.
 
 ## MCP Tool Permissions
 
@@ -117,7 +117,7 @@ Permissions are configured under the `permission` key in `kilo.jsonc`. The follo
 | `skill` | Loading specialized skills |
 | `lsp` | Language server protocol operations |
 | `todoread` / `todowrite` | Reading and updating the todo list |
-| `websearch` / `codesearch` | Performing web or code searches |
+| `websearch` | Performing web searches |
 | `webfetch` | Fetching content from URLs |
 | `doom_loop` | Allowing the agent to continue after repeated failures |
 
@@ -247,7 +247,6 @@ This is a custom example showing the available configuration options — it does
     "todowrite": { "*": "allow" },
     "webfetch": { "*": "allow" },
     "websearch": { "*": "allow" },
-    "codesearch": { "*": "allow" },
     "external_directory": { "*": "ask" },
     "doom_loop": { "*": "ask" }
   },

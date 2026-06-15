@@ -144,6 +144,7 @@ export class KiloClawProvider implements vscode.Disposable {
       scriptUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.uri, "dist", "kiloclaw.js")),
       styleUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.uri, "dist", "kiloclaw.css")),
       iconsBaseUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.uri, "assets", "icons")),
+      workerUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.uri, "dist", "shiki-worker.js")),
       title: "KiloClaw",
     })
 
@@ -398,7 +399,7 @@ export class KiloClawProvider implements vscode.Disposable {
       return false
     }
 
-    this.attachEventHandlers(events, chat)
+    this.attachEventHandlers(events)
     this.subscribeSandboxContext()
     return true
   }
@@ -510,7 +511,7 @@ export class KiloClawProvider implements vscode.Disposable {
     this.subscribedConversationContext = null
   }
 
-  private attachEventHandlers(events: EventServiceClient, _chat: KiloChatClient): void {
+  private attachEventHandlers(events: EventServiceClient): void {
     // Reset on reconnect — the event stream may have missed events while
     // disconnected, so refetch authoritative state.
     const offReconnect = events.onReconnect(() => {

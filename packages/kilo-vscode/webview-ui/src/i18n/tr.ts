@@ -106,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Önerilen",
   "dialog.provider.opencode.note": "Claude, GPT, Gemini ve daha fazlasını içeren seçilmiş modeller",
   "dialog.provider.anthropic.note": "Pro ve Max dahil Claude modellerine doğrudan erişim",
+  "dialog.provider.deepseek.note": "Muhakeme ve kodlama görevleri için DeepSeek modelleri",
   "dialog.provider.copilot.note": "Kodlama yardımı için Claude modelleri",
   "dialog.provider.openai.note": "Hızlı ve yetenekli genel yapay zeka görevleri için GPT modelleri",
   "dialog.provider.google.note": "Hızlı ve yapılandırılmış yanıtlar için Gemini modelleri",
@@ -135,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "Yetkilendirme başarısız: {{error}}",
   "provider.connect.apiKey.description":
     "{{provider}} hesabınızı bağlamak ve Kilo'da {{provider}} modellerini kullanmak için {{provider}} API anahtarınızı girin.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "{{provider}} API anahtarı",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API anahtarı",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API anahtarı gerekli",
   "provider.connect.prompt.required": "{{field}} zorunludur",
   "provider.connect.azure.endpointType.label": "Azure uç nokta yapılandırmasını seçin",
@@ -174,6 +181,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "{{provider}} modelleri artık kullanılabilir değil.",
 
   "model.tag.free": "Ücretsiz",
+  "model.tag.dataCollected": "Veriler eğitim için kullanılabilir",
   "model.tag.latest": "En yeni",
   "model.group.recommended": "Önerilen",
   "model.group.favorites": "Favoriler",
@@ -201,6 +209,9 @@ export const dict = {
   "model.preview.label.cached": "Önbellek",
   "model.preview.label.average": "Tahmini Ort. Maliyet",
   "model.preview.label.context": "Bağlam",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Tamamlama",
+  "model.preview.label.costAttempt": "Maliyet / deneme",
   "model.preview.value.notSupported": "Desteklenmiyor",
   "model.preview.tooltip.average":
     "Tahmini ortalama maliyet; girdi, çıktı ve önbellek okuma tokenlerinin tipik bir oranına dayanmaktadır.",
@@ -284,7 +295,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "'Komutu Geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifadelendirme sağlayarak komutunuzu iyileştirmeye yardımcı olur. Buraya bir komut yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
 
-  "speechToText.tooltip.start": "Sesli girişi başlat",
+  "speechToText.tooltip.start": "Kilo Gateway ile sesli girişi başlatın",
   "speechToText.tooltip.stop": "Ses yakalamayı durdur",
   "speechToText.tooltip.transcribing": "Metne dönüştürülüyor... İptal etmek için tıklayın.",
   "speechToText.tooltip.error": "Sesli giriş başarısız oldu. Temizlemek için tıklayın.",
@@ -451,6 +462,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Oturum paylaşımı kaldırılamadı",
   "toast.session.unshare.failed.description": "Oturum paylaşımı kaldırılırken bir hata oluştu",
 
+  "toast.session.rename.invalid.title": "Geçersiz oturum başlığı",
   "toast.session.listFailed.title": "{{project}} için oturumlar yüklenemedi",
 
   "toast.update.title": "Güncelleme mevcut",
@@ -517,6 +529,8 @@ export const dict = {
   "notification.permission.titleSubagent": "İzin gerekli (alt ajan)",
   "notification.permission.description": "{{projectName}} içindeki {{sessionTitle}} izin gerektiriyor",
   "ui.permission.manageAutoApprove": "Otomatik Onay Kurallarını Yönet",
+  "ui.permission.doomLoop.prompt": "{{tool}} aracında olası bir döngü algılandı. Çalıştırmaya devam edilsin mi?",
+  "ui.permission.doomLoop.rule": "{{tool}} çağrılarına devam et",
   "ui.permission.rule.addToAllowed": "İzin listesine ekle",
   "ui.permission.rule.removeFromAllowed": "İzin listesinden kaldır",
   "ui.permission.rule.addToDenied": "Engel listesine ekle",
@@ -981,6 +995,8 @@ export const dict = {
   "session.delete.confirm": '"{{name}}" oturumu silinsin mi?',
   "session.delete.button": "Oturumu sil",
   "session.untitled": "Adsız",
+  "session.current": "Geçerli oturum",
+  "session.history.sources": "Geçmiş kaynağı",
   "session.recent": "Son",
   "session.showHistory": "Geçmişi Göster",
   "session.search.placeholder": "Oturum ara...",
@@ -995,6 +1011,33 @@ export const dict = {
   "feedback.dialog.github": "GitHub'da sorun bildirin",
   "feedback.dialog.discord": "Discord topluluğumuza katılın",
   "feedback.dialog.support": "Müşteri Desteği",
+  "workStyle.onboarding.welcome": "Kilo'ya hoş geldiniz",
+  "workStyle.onboarding.title": "Nasıl çalışmak istediğinizi seçin",
+  "workStyle.onboarding.description":
+    "İzinler, akıl yürütme blokları, terminal çıktısı ve bağlam zaman çizelgesi için başlangıç varsayılanlarını belirler. Yalnızca bir kez uygulanır ve daha önce özelleştirdiğiniz ayarları atlar.",
+  "workStyle.onboarding.skip": "Şimdilik atla",
+  "workStyle.onboarding.settingsNote": "Bu seçenekleri istediğiniz zaman şuradan değiştirebilirsiniz:",
+  "workStyle.onboarding.settings": "Ayarlar.",
+  "workStyle.toast.saved.title": "Mod başarıyla kaydedildi",
+  "workStyle.toast.saved.description": "Tercihlerinizi istediğiniz zaman Ayarlar'dan güncelleyebilirsiniz.",
+  "workStyle.toast.saved.action": "Ayarlara git",
+  "workStyle.choice.permissions": "İzinler",
+  "workStyle.choice.bash": "Bash",
+  "workStyle.choice.visibility": "Görünürlük",
+  "workStyle.choice.human-in-the-loop.eyebrow": "İnsan denetimli",
+  "workStyle.choice.human-in-the-loop.title": "Önce inceleyin",
+  "workStyle.choice.human-in-the-loop.description": "Kilo çalışırken duraklar ve planını size gösterir.",
+  "workStyle.choice.human-in-the-loop.permissions":
+    "Dosyaları düzenlemeden veya komutları çalıştırmadan önce izin ister.",
+  "workStyle.choice.human-in-the-loop.bash": "Her terminal komutunu çalıştırmadan önce izin ister.",
+  "workStyle.choice.human-in-the-loop.visibility": "Akıl yürütme dahil tüm konuşma ayrıntılarını gösterir.",
+  "workStyle.choice.autonomous.eyebrow": "Daha az kesinti",
+  "workStyle.choice.autonomous.title": "Yüksek özerklik",
+  "workStyle.choice.autonomous.description": "Daha az kesinti, daha sade bir arayüz.",
+  "workStyle.choice.autonomous.permissions":
+    "Çalışma alanındaki dosyaları izin istemeden düzenler ve komutları çalıştırır.",
+  "workStyle.choice.autonomous.bash": "Çalışma alanında terminal komutlarını onay almadan çalıştırabilir.",
+  "workStyle.choice.autonomous.visibility": "Ayrıntılar siz genişletene kadar daraltılmış olarak kalır.",
   "session.cloud.import.title": "Buluttan içe aktar",
   "session.cloud.import.placeholder": "Oturum kimliği, URL veya kilo import komutu",
   "session.cloud.import.button": "İçe Aktar",
@@ -1117,6 +1160,14 @@ export const dict = {
   "session.status.retrying": "Yeniden deneniyor (deneme {{ attempt }})… {{ message }}",
   "session.status.working": "Çalışıyor...",
   "session.status.offline": "Ağ bağlantısı kesildi — yeniden bağlanılıyor...",
+  "session.outcome.incomplete": "Tur, {{count}} yapılacak öğe kalarak sona erdi",
+  "session.outcome.limit": "Tamamlanmadan önce yanıt sınırına ulaşıldı",
+  "session.outcome.unknown": "Tur, model bitiş nedeni olmadan sona erdi",
+  "session.outcome.filtered": "Sağlayıcı, bir içerik filtresi nedeniyle bu yanıtı durdurdu.",
+  "session.outcome.unexpected": "Yanıt beklenmedik bir şekilde sona erdi ve eksik olabilir.",
+  "session.outcome.interrupted": "Tur kesintiye uğradı",
+  "session.outcome.error": "Tur başarısız oldu",
+  "session.outcome.finish": "Bitiş nedeni: {{reason}}",
 
   "ui.sessionTurn.cancel": "İptal",
   "ui.sessionTurn.status.thinking": "Düşünüyor...",
@@ -1180,7 +1231,6 @@ export const dict = {
     "Telemetri, VS Code'un yerleşik telemetri ayarı tarafından kontrol edilir. Devre dışı bırakmak için Ayarlar > Telemetri > Telemetri Düzeyi'ne gidin ve \"off\" olarak ayarlayın. Değişikliği uygulamak için VS Code'u yeniden başlatın.",
   "settings.aboutKiloCode.telemetry.openSettings": "Telemetri Ayarlarını Aç",
 
-  "settings.agentBehaviour.subtab.modes": "Modlar",
   "settings.agentBehaviour.subtab.agents": "Ajanlar",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Sunucuları",
   "settings.agentBehaviour.subtab.rules": "Kurallar",
@@ -1238,24 +1288,16 @@ export const dict = {
   "settings.experimental.formatter.description": "Otomatik kod biçimlendiriciyi etkinleştir",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Dil sunucu protokolü entegrasyonunu etkinleştir",
-  "settings.experimental.pasteSummary.title": "Yapıştırma Özetini Devre Dışı Bırak",
-  "settings.experimental.pasteSummary.description": "Büyük yapıştırılan içeriği özetleme",
   "settings.experimental.batch.title": "Toplu Araç",
   "settings.experimental.batch.description": "Birden fazla araç çağrısının toplu işlenmesini etkinleştir",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Kod Tabanı Araması",
   "settings.experimental.codebaseSearch.description":
     "Kod tabanınız genelinde yapay zeka destekli doğal dil aramasını etkinleştir",
-  "settings.experimental.agentManagerTool.title": "Agent Manager Aracı",
-  "settings.experimental.agentManagerTool.description":
-    "Ajanların bir araç çağrısından Agent Manager yerel oturumları ve worktree oturumları başlatmasına izin ver",
   "settings.experimental.speechToText.title": "Sesten metne",
   "settings.experimental.speechToText.description":
     "Kilo Gateway üzerinden Kilo hesabınızı kullanarak komut alanlarında sesli girişi etkinleştirin.",
   "settings.experimental.speechToText.disabledDescription":
-    "Komut alanlarında sesli girişi kullanmak için Kilo provider'ı etkinleştirin ve giriş yapın.",
+    "Speech to Text kullanmak için Kilo sağlayıcısını etkinleştirin ve giriş yapın. Speech to Text şu anda yalnızca Kilo Gateway ile desteklenmektedir.",
   "settings.experimental.speechToTextModel.title": "Sesten metne modeli",
   "settings.experimental.speechToTextModel.description": "Sesli giriş için Kilo Gateway transkripsiyon modelini seçin.",
   "settings.experimental.continueOnDeny.title": "Reddetme Durumunda Devam Et",
@@ -1280,6 +1322,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Yapılandırmak için bir ajan seçin…",
   "settings.agentBehaviour.modelOverride.title": "Model Geçersiz Kılma",
   "settings.agentBehaviour.modelOverride.description": "Bu ajan için varsayılan modeli geçersiz kıl",
+  "settings.agentBehaviour.variantOverride.title": "Varyant Geçersiz Kılma",
+  "settings.agentBehaviour.variantOverride.description": "Bu ajan için model varyantını geçersiz kıl",
   "settings.agentBehaviour.prompt.title": "Özel Komut",
   "settings.agentBehaviour.prompt.description": "Bu ajan için ek sistem komutu",
   "settings.agentBehaviour.temperature.title": "Sıcaklık",
@@ -1299,7 +1343,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Keşfedilen beceri yok. Becerileri kullanılabilir kılmak için aşağıya beceri klasör yolları veya URL'ler ekleyin.",
   "settings.agentBehaviour.availableModes": "Mevcut Özel Modlar",
-  "settings.agentBehaviour.noModesFound": "Mod bulunamadı.",
+  "settings.agentBehaviour.noAgentsFound": "Ajan bulunamadı.",
   "settings.agentBehaviour.importMode": "İçe Aktar",
   "settings.agentBehaviour.importMode.invalidName":
     "Dosyadaki mod adı geçersiz. Ad küçük harfle başlamalı ve yalnızca küçük harfler, rakamlar ve tire içermelidir.",
@@ -1308,10 +1352,10 @@ export const dict = {
     "Geçersiz JSON dosyası. Lütfen geçerli bir ajan tanım dosyası seçin.",
   "settings.agentBehaviour.importMode.tooLarge": "Dosya çok büyük. Ajan tanımları 1 MB'den küçük olmalıdır.",
   "settings.agentBehaviour.exportMode": "Ajan tanımını dışa aktar",
-  "settings.agentBehaviour.removeMode.title": "Modu kaldır",
-  "settings.agentBehaviour.removeMode.confirm":
-    '"{{name}}" modu kaldırılsın mı? Bu, yapılandırmanızı güncelleyerek modu devre dışı bırakacak.',
-  "settings.agentBehaviour.removeMode.button": "Kaldır",
+  "settings.agentBehaviour.removeAgent.title": "Ajanı kaldır",
+  "settings.agentBehaviour.removeAgent.confirm":
+    '"{{name}}" ajanını kaldır? Bu, yapılandırmanızı güncelleyerek ajanı devre dışı bırakır.',
+  "settings.agentBehaviour.removeAgent.button": "Kaldır",
   "settings.agentBehaviour.skillPaths": "Beceri Klasör Yolları",
   "settings.agentBehaviour.skillUrls": "Beceri URL'leri",
   "settings.agentBehaviour.removeSkill.title": "Beceriyi kaldır",
@@ -1389,8 +1433,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Görev listesini yönet. Dahili görev listesini okuma ve güncellemeye izin verir.",
   "settings.autoApprove.tool.webfetch": "URL getir. Belirli bir URL'den içerik almaya izin verir.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Web veya kod ara. Harici web veya kod aramaları yapmaya izin verir.",
+  "settings.autoApprove.tool.websearch": "Web'de ara. Harici web aramaları yapmaya izin verir.",
   "settings.autoApprove.tool.doom_loop":
     "Tekrarlanan aynı eylemleri önle. Aynı araç çağrısı aynı girdiyle tekrarlandığında tetiklenir.",
 
@@ -1439,6 +1482,9 @@ export const dict = {
   "settings.providers.smallModel.title": "Küçük Model",
   "settings.providers.smallModel.description":
     "Başlık oluşturma, commit mesajı oluşturma, komut istemi iyileştirme ve diğer hızlı görevler için hafif model",
+  "settings.providers.subagentModel.title": "Alt Aracı Modeli",
+  "settings.providers.subagentModel.description":
+    "task-tool alt aracıları için varsayılan model ve akıl yürütme çabası. Çağıran aracının modelini devralmak için boş bırakın.",
   "settings.providers.modeModels": "Mod Başına Model",
   "settings.providers.modeModels.description":
     "Belirli modlar için varsayılan modeli geçersiz kılın. Ayarlanmadıysa genel varsayılan model kullanılır.",

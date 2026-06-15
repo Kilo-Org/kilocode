@@ -19,12 +19,14 @@ class KiloBackendCliManagerEnvTest {
         tmp = Files.createTempDirectory("kilo-cli-env-test").toFile()
         System.clearProperty("kilo.dev.storage.isolated")
         System.clearProperty("kilo.dev.worktree.root")
+        System.clearProperty("idea.plugin.in.sandbox.mode")
     }
 
     @AfterTest
     fun tearDown() {
         System.clearProperty("kilo.dev.storage.isolated")
         System.clearProperty("kilo.dev.worktree.root")
+        System.clearProperty("idea.plugin.in.sandbox.mode")
         tmp.deleteRecursively()
     }
 
@@ -36,9 +38,35 @@ class KiloBackendCliManagerEnvTest {
         assertEquals("true", env["KILO_ENABLE_QUESTION_TOOL"])
         assertEquals("jetbrains", env["KILO_PLATFORM"])
         assertEquals("kilo-code", env["KILO_APP_NAME"])
+        assertEquals("all", env["KILO_TELEMETRY_LEVEL"])
         assertEquals("true", env["KILO_DISABLE_CLAUDE_CODE"])
         assertEquals("jetbrains-plugin", env["KILOCODE_FEATURE"])
         assertEquals("pwd123", env["KILO_SERVER_PASSWORD"])
+    }
+
+    @Test
+    fun `dev mode disables CLI telemetry`() {
+        System.setProperty("idea.plugin.in.sandbox.mode", "true")
+
+        val env = manager.buildEnv("pwd123", emptyMap())
+
+        assertEquals("off", env["KILO_TELEMETRY_LEVEL"])
+    }
+
+    @Test
+    fun `isolation disabled - default CLI config asks for edit and bash permissions`() {
+        val env = manager.buildEnv("pwd123", emptyMap())
+
+        assertEquals("""{"permission":{"edit":"ask","bash":"ask"}}""", env["KILO_CONFIG_CONTENT"])
+    }
+
+    @Test
+    fun `isolation disabled - base CLI config is preserved`() {
+        val cfg = """{"permission":{"edit":"allow"}}"""
+
+        val env = manager.buildEnv("pwd123", mapOf("KILO_CONFIG_CONTENT" to cfg))
+
+        assertEquals(cfg, env["KILO_CONFIG_CONTENT"])
     }
 
     @Test

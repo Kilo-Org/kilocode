@@ -29,7 +29,7 @@ class UiStyleTest : BasePlatformTestCase() {
     fun `test hover blends from panel toward border`() {
         val panel = Color(0, 0, 0)
         val border = UiStyle.Colors.contrast(panel, SessionUiStyle.View.BORDER_DELTA)
-        val hover = UiStyle.Colors.blend(panel, border, SessionUiStyle.View.HOVER_ALPHA)
+        val hover = UiStyle.Colors.blend(panel, border, SessionUiStyle.View.HOVER_FILL_ALPHA)
 
         assertTrue(hover.red > panel.red)
         assertTrue(hover.red < border.red)
@@ -39,9 +39,9 @@ class UiStyleTest : BasePlatformTestCase() {
 
     fun `test session layout constants provide shared geometry`() {
         assertTrue(JBUI.scale(SessionUiStyle.SessionLayout.GAP) > 0)
-        assertTrue(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP) > 0)
-        assertTrue(JBUI.scale(SessionUiStyle.View.CARD_VERTICAL_PADDING) > 0)
-        assertTrue(JBUI.scale(SessionUiStyle.View.CARD_HORIZONTAL_PADDING) > 0)
+        assertTrue(JBUI.scale(SessionUiStyle.View.Layout.GAP) > 0)
+        assertTrue(JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING) > 0)
+        assertTrue(JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING) > 0)
         assertTrue(SessionUiStyle.View.Tool.BODY_LINES > 0)
         assertTrue(SessionUiStyle.View.Reasoning.BODY_LINES > 0)
     }

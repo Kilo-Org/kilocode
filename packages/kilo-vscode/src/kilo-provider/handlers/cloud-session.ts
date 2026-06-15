@@ -9,6 +9,9 @@ import type { KiloClient, Session, TextPartInput, FilePartInput } from "@kilocod
 import type { CloudSessionData, EditorContext } from "../../services/cli-backend/types"
 import { getErrorMessage, sessionToWebview, mapCloudSessionMessageToWebviewMessage } from "../../kilo-provider-utils"
 import type { MessageFile } from "../message-files"
+import { reviewMetadata, type ReviewMessageData } from "../../shared/review-comments"
+
+const TIMEOUT = 30_000
 
 export interface CloudSessionContext {
   readonly client: KiloClient | null
@@ -73,7 +76,7 @@ export async function handleRequestCloudSessionData(ctx: CloudSessionContext, se
   }
 
   try {
-    const result = await ctx.client.kilo.cloud.session.get({ id: sessionId })
+    const result = await ctx.client.kilo.cloud.session.get({ id: sessionId }, { signal: AbortSignal.timeout(TIMEOUT) })
     const data = result.data as CloudSessionData | undefined
     if (!data) {
       ctx.postMessage({
@@ -117,6 +120,7 @@ export async function handleImportAndSend(
   agent?: string,
   variant?: string,
   files?: MessageFile[],
+  review?: ReviewMessageData,
   command?: string,
   commandArgs?: string,
 ): Promise<void> {
@@ -135,10 +139,13 @@ export async function handleImportAndSend(
   // Step 1: Import the cloud session with fresh IDs
   let session: Session | undefined
   try {
-    const result = await ctx.client.kilo.cloud.session.import({
-      sessionId: cloudSessionId,
-      directory: dir,
-    })
+    const result = await ctx.client.kilo.cloud.session.import(
+      {
+        sessionId: cloudSessionId,
+        directory: dir,
+      },
+      { signal: AbortSignal.timeout(TIMEOUT) },
+    )
     session = result.data as Session | undefined
   } catch (error) {
     console.error("[Kilo New] KiloProvider: ❌ Cloud session import failed:", error)
@@ -208,7 +215,7 @@ export async function handleImportAndSend(
           parts.push({ type: "file", mime: f.mime, url: f.url, filename: f.filename, source: f.source })
         }
       }
-      parts.push({ type: "text", text })
+      parts.push({ type: "text", text, metadata: review ? reviewMetadata(review) : undefined })
 
       const editorContext = await ctx.gatherEditorContext()
       await client.session.promptAsync(
@@ -235,6 +242,7 @@ export async function handleImportAndSend(
       draftID: session.id,
       messageID,
       files,
+      review: command ? undefined : review,
     })
   }
 }

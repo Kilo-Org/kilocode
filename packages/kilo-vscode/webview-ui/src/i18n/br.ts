@@ -106,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Recomendado",
   "dialog.provider.opencode.note": "Modelos selecionados incluindo Claude, GPT, Gemini e mais",
   "dialog.provider.anthropic.note": "Conectar com Claude Pro/Max ou chave de API",
+  "dialog.provider.deepseek.note": "Modelos DeepSeek para tarefas de raciocínio e programação",
   "dialog.provider.openai.note": "Conectar com ChatGPT Pro/Plus ou chave de API",
   "dialog.provider.google.note": "Modelos Gemini para respostas rápidas e estruturadas",
   "dialog.provider.openrouter.note": "Acesse todos os modelos suportados a partir de um único provedor",
@@ -135,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "Autorização falhou: {{error}}",
   "provider.connect.apiKey.description":
     "Digite sua chave de API do {{provider}} para conectar sua conta e usar modelos do {{provider}} no Kilo.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "Chave de API do {{provider}}",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "Chave de API",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "A chave de API é obrigatória",
   "provider.connect.prompt.required": "{{field}} é obrigatório",
   "provider.connect.azure.endpointType.label": "Selecionar configuração de endpoint do Azure",
@@ -174,6 +181,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.title": "{{provider}} desconectado",
   "provider.disconnect.toast.disconnected.description": "Os modelos de {{provider}} não estão mais disponíveis.",
   "model.tag.free": "Grátis",
+  "model.tag.dataCollected": "Os dados podem ser usados para treinamento",
   "model.tag.latest": "Mais recente",
   "model.group.recommended": "Recomendado",
   "model.group.favorites": "Favoritos",
@@ -201,6 +209,9 @@ export const dict = {
   "model.preview.label.cached": "Em cache",
   "model.preview.label.average": "Custo Médio Est.",
   "model.preview.label.context": "Contexto",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Conclusão",
+  "model.preview.label.costAttempt": "Custo / tentativa",
   "model.preview.value.notSupported": "Não suportado",
   "model.preview.tooltip.average":
     "O custo médio estimado é baseado em uma proporção típica de tokens de entrada, saída e leitura de cache.",
@@ -286,7 +297,7 @@ export const dict = {
     "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
   "prompt.action.indexing": "Configurações de indexação",
 
-  "speechToText.tooltip.start": "Iniciar entrada de voz",
+  "speechToText.tooltip.start": "Iniciar entrada de voz com o Kilo Gateway",
   "speechToText.tooltip.stop": "Parar captura",
   "speechToText.tooltip.transcribing": "Transcrevendo... Clique para cancelar.",
   "speechToText.tooltip.error": "Falha na entrada de voz. Clique para limpar.",
@@ -450,6 +461,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Falha ao parar de compartilhar sessão",
   "toast.session.unshare.failed.description": "Ocorreu um erro ao parar de compartilhar a sessão",
 
+  "toast.session.rename.invalid.title": "Título de sessão inválido",
   "toast.session.listFailed.title": "Falha ao carregar sessões para {{project}}",
 
   "toast.update.title": "Atualização disponível",
@@ -515,6 +527,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Permissão necessária (subagente)",
   "notification.permission.description": "{{sessionTitle}} em {{projectName}} precisa de permissão",
   "ui.permission.manageAutoApprove": "Gerenciar regras de aprovação automática",
+  "ui.permission.doomLoop.prompt": "Possível loop detectado na ferramenta {{tool}}. Continuar executando?",
+  "ui.permission.doomLoop.rule": "Continuar chamadas de {{tool}}",
   "ui.permission.rule.addToAllowed": "Adicionar à lista de permitidos",
   "ui.permission.rule.removeFromAllowed": "Remover da lista de permitidos",
   "ui.permission.rule.addToDenied": "Adicionar à lista de negados",
@@ -819,6 +833,9 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "Conectado a partir das suas variáveis de ambiente",
   "settings.providers.action.signInChatGPT": "Entrar com ChatGPT",
   "settings.providers.custom.description": "Adicione um provedor compatível com OpenAI pela URL base.",
+  "settings.providers.subagentModel.title": "Modelo de Subagente",
+  "settings.providers.subagentModel.description":
+    "Modelo padrão e esforço de raciocínio para subagentes do task-tool. Deixe em branco para herdar o modelo do agente chamador.",
   "settings.providers.modeModels": "Modelo por Modo",
   "settings.providers.custom.note": "Adicione um provedor compatível com OpenAI por URL base.",
   "settings.providers.modeModels.description":
@@ -983,6 +1000,8 @@ export const dict = {
   "session.delete.confirm": 'Excluir sessão "{{name}}"?',
   "session.delete.button": "Excluir sessão",
   "session.untitled": "Sem título",
+  "session.current": "Sessão atual",
+  "session.history.sources": "Fonte do histórico",
   "session.recent": "Recentes",
   "session.showHistory": "Mostrar Histórico",
   "session.search.placeholder": "Buscar sessões...",
@@ -997,6 +1016,32 @@ export const dict = {
   "feedback.dialog.github": "Reportar um problema no GitHub",
   "feedback.dialog.discord": "Entrar na nossa comunidade Discord",
   "feedback.dialog.support": "Suporte ao cliente",
+  "workStyle.onboarding.welcome": "Boas-vindas ao Kilo",
+  "workStyle.onboarding.title": "Escolha como você quer trabalhar",
+  "workStyle.onboarding.settingsNote": "Você pode alterar essas opções a qualquer momento em",
+  "workStyle.onboarding.settings": "Configurações.",
+  "workStyle.onboarding.description":
+    "Define os padrões iniciais de permissões, blocos de raciocínio, saída do terminal e linha do tempo do contexto. É aplicado apenas uma vez e ignora configurações que você já personalizou.",
+  "workStyle.onboarding.skip": "Pular por enquanto",
+  "workStyle.toast.saved.title": "Modo salvo com sucesso",
+  "workStyle.toast.saved.description": "Atualize suas preferências a qualquer momento nas Configurações.",
+  "workStyle.toast.saved.action": "Ir para Configurações",
+  "workStyle.choice.permissions": "Permissões",
+  "workStyle.choice.bash": "Bash",
+  "workStyle.choice.visibility": "Visibilidade",
+  "workStyle.choice.human-in-the-loop.eyebrow": "Supervisão humana",
+  "workStyle.choice.human-in-the-loop.title": "Revisar primeiro",
+  "workStyle.choice.human-in-the-loop.description": "O Kilo pausa e mostra o plano enquanto trabalha.",
+  "workStyle.choice.human-in-the-loop.permissions": "Pede permissão antes de editar arquivos ou executar comandos.",
+  "workStyle.choice.human-in-the-loop.bash": "Pede permissão para executar qualquer comando no terminal.",
+  "workStyle.choice.human-in-the-loop.visibility": "Exibe todos os detalhes da conversa, incluindo o raciocínio.",
+  "workStyle.choice.autonomous.eyebrow": "Menos interrupções",
+  "workStyle.choice.autonomous.title": "Alta autonomia",
+  "workStyle.choice.autonomous.description": "Menos interrupções e uma interface simplificada.",
+  "workStyle.choice.autonomous.permissions":
+    "Edita arquivos e executa comandos no espaço de trabalho sem pedir permissão.",
+  "workStyle.choice.autonomous.bash": "Pode executar comandos do terminal no espaço de trabalho sem aprovação.",
+  "workStyle.choice.autonomous.visibility": "Os detalhes permanecem recolhidos até você expandi-los.",
   "session.cloud.import.title": "Importar da nuvem",
   "session.cloud.import.placeholder": "ID da sessão, URL ou comando kilo import",
   "session.cloud.import.button": "Importar",
@@ -1123,6 +1168,14 @@ export const dict = {
   "session.status.retrying": "Tentando novamente (tentativa {{ attempt }})… {{ message }}",
   "session.status.working": "Trabalhando…",
   "session.status.offline": "Rede desconectada — reconectando...",
+  "session.outcome.incomplete": "Turno encerrado com {{count}} tarefas restantes",
+  "session.outcome.limit": "Limite de resposta atingido antes da conclusão",
+  "session.outcome.unknown": "Turno encerrado sem um motivo de conclusão do modelo",
+  "session.outcome.filtered": "O provedor interrompeu esta resposta devido a um filtro de conteúdo.",
+  "session.outcome.unexpected": "A resposta terminou inesperadamente e pode estar incompleta.",
+  "session.outcome.interrupted": "Turno interrompido",
+  "session.outcome.error": "Turno falhou",
+  "session.outcome.finish": "Motivo da conclusão: {{reason}}",
 
   "ui.sessionTurn.cancel": "Cancelar",
   "ui.sessionTurn.status.thinking": "Pensando...",
@@ -1188,7 +1241,6 @@ export const dict = {
     'A telemetria é controlada pela configuração de telemetria integrada do VS Code. Para desativá-la, vá para Configurações > Telemetria > Nível de Telemetria e defina como "off". Reinicie o VS Code para aplicar a alteração.',
   "settings.aboutKiloCode.telemetry.openSettings": "Abrir Configurações de Telemetria",
 
-  "settings.agentBehaviour.subtab.modes": "Modos",
   "settings.agentBehaviour.subtab.agents": "Agentes",
   "settings.agentBehaviour.subtab.mcpServers": "Servidores MCP",
   "settings.agentBehaviour.subtab.rules": "Regras",
@@ -1246,24 +1298,16 @@ export const dict = {
   "settings.experimental.formatter.description": "Ativar formatador automático de código",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Ativar integração do protocolo de servidor de linguagem",
-  "settings.experimental.pasteSummary.title": "Desativar resumo de colagem",
-  "settings.experimental.pasteSummary.description": "Não resumir conteúdo colado grande",
   "settings.experimental.batch.title": "Ferramenta em lote",
   "settings.experimental.batch.description": "Ativar processamento em lote de chamadas de ferramentas",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Pesquisa de código",
   "settings.experimental.codebaseSearch.description":
     "Ativar pesquisa por linguagem natural com IA em toda a base de código",
-  "settings.experimental.agentManagerTool.title": "Ferramenta Agent Manager",
-  "settings.experimental.agentManagerTool.description":
-    "Permitir que agentes iniciem sessões locais e sessões worktree do Agent Manager a partir de uma chamada de ferramenta",
   "settings.experimental.speechToText.title": "Fala para texto",
   "settings.experimental.speechToText.description":
     "Ative a entrada de voz nos campos de prompt usando sua conta do Kilo por meio do Kilo Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Ative e faça login no Kilo provider para usar a entrada de voz nos campos de prompt.",
+    "Ative e faça login no provedor Kilo para usar o Speech to Text. Atualmente, o Speech to Text é compatível apenas com o Kilo Gateway.",
   "settings.experimental.speechToTextModel.title": "Modelo de fala para texto",
   "settings.experimental.speechToTextModel.description":
     "Escolha o modelo de transcrição do Kilo Gateway para entrada de voz.",
@@ -1288,6 +1332,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Selecionar um agente para configurar…",
   "settings.agentBehaviour.modelOverride.title": "Substituição de modelo",
   "settings.agentBehaviour.modelOverride.description": "Substituir o modelo padrão para este agente",
+  "settings.agentBehaviour.variantOverride.title": "Substituição de variante",
+  "settings.agentBehaviour.variantOverride.description": "Substituir a variante do modelo para este agente",
   "settings.agentBehaviour.prompt.title": "Prompt personalizado",
   "settings.agentBehaviour.prompt.description": "Prompt de sistema adicional para este agente",
   "settings.agentBehaviour.temperature.title": "Temperatura",
@@ -1308,7 +1354,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Nenhuma habilidade encontrada. Adicione caminhos de pastas ou URLs abaixo para disponibilizar habilidades.",
   "settings.agentBehaviour.availableModes": "Modos personalizados disponíveis",
-  "settings.agentBehaviour.noModesFound": "Nenhum modo encontrado.",
+  "settings.agentBehaviour.noAgentsFound": "Nenhum agente encontrado.",
   "settings.agentBehaviour.createMode": "Criar Novo Modo",
   "settings.agentBehaviour.createMode.name": "Nome",
   "settings.agentBehaviour.createMode.name.placeholder": "ex: reviewer",
@@ -1352,10 +1398,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Copiar permissões como JSON",
   "settings.agentBehaviour.permissions.hint":
     "As regras são avaliadas em ordem — a última regra correspondente vence. Este é o conjunto de regras resolvido do backend da CLI.",
-  "settings.agentBehaviour.removeMode.title": "Remover modo",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Remover o modo "{{name}}"? Isso desativará o modo atualizando sua configuração.',
-  "settings.agentBehaviour.removeMode.button": "Remover",
+  "settings.agentBehaviour.removeAgent.title": "Remover agente",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Remover agente "{{name}}"? Isso irá desativá-lo atualizando sua configuração.',
+  "settings.agentBehaviour.removeAgent.button": "Remover",
   "settings.agentBehaviour.removeMcp.title": "Remover servidor MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'Remover o servidor MCP "{{name}}"? Isso o removerá da sua configuração.',
@@ -1436,8 +1482,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Gerenciar lista de tarefas. Permite ler e atualizar a lista de tarefas interna.",
   "settings.autoApprove.tool.webfetch": "Buscar uma URL. Permite recuperar o conteúdo de uma URL específica.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Pesquisar na web ou no código. Permite realizar pesquisas externas na web ou no código.",
+  "settings.autoApprove.tool.websearch": "Pesquisar na web. Permite realizar pesquisas externas na web.",
   "settings.autoApprove.tool.external_directory":
     "Acessar arquivos fora do workspace. Acionado ao acessar arquivos fora do diretório do projeto atual.",
   "settings.autoApprove.tool.doom_loop":

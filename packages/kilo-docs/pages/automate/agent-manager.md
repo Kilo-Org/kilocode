@@ -138,9 +138,9 @@ Imported work stays associated with its branch or worktree and can be continued 
 
 ## Starting Sessions From Chat
 
-Kilo can start Agent Manager sessions from chat with the experimental `agent_manager` tool. Enable it in **Settings > Experimental > Agent Manager Tool**, or set `experimental.agent_manager_tool` to `true` in `kilo.jsonc`.
+Kilo can start Agent Manager sessions from chat with the `agent_manager` tool. It is available by default only in the VS Code extension because Agent Manager is an extension feature.
 
-The tool is available only in the VS Code extension because Agent Manager is an extension feature. It supports two modes:
+The tool supports two modes:
 
 | Mode | Behavior |
 |---|---|

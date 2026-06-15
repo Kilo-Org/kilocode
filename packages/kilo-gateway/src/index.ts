@@ -39,8 +39,19 @@ export {
   fetchKiloEmbeddingModelCatalog,
   type KiloEmbeddingModel,
   type KiloEmbeddingModelCatalog,
+  type KiloEmbeddingModelCatalogIssue,
 } from "./api/embedding-models.js"
 export { resolveKiloGatewayBaseUrl, resolveKiloOpenRouterBaseUrl } from "./api/url.js"
+export {
+  AUTOCOMPLETE_MODELS,
+  DEFAULT_AUTOCOMPLETE_MODEL,
+  getAutocompleteModel,
+  getAutocompleteModelById,
+  validAutocompleteModel,
+  validAutocompleteProvider,
+  type AutocompleteModelDef,
+  type AutocompleteProviderID,
+} from "./autocomplete.js"
 export {
   fetchOrganizationModes,
   clearModesCache,

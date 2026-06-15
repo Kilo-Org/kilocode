@@ -106,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Рекомендовано",
   "dialog.provider.opencode.note": "Добірка моделей включаючи Claude, GPT, Gemini та інші",
   "dialog.provider.anthropic.note": "Прямий доступ до моделей Claude включаючи Pro та Max",
+  "dialog.provider.deepseek.note": "Моделі DeepSeek для завдань міркування та програмування",
   "dialog.provider.copilot.note": "Моделі Claude для допомоги з кодуванням",
   "dialog.provider.openai.note": "Моделі GPT для швидких і потужних загальних завдань ШІ",
   "dialog.provider.google.note": "Моделі Gemini для швидких і структурованих відповідей",
@@ -135,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "Авторизація не вдалася: {{error}}",
   "provider.connect.apiKey.description":
     "Введіть свій API-ключ {{provider}}, щоб підключити акаунт {{provider}} і використовувати моделі {{provider}} в Kilo.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "API-ключ {{provider}}",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API-ключ",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API-ключ обов'язковий",
   "provider.connect.prompt.required": "{{field}} є обов'язковим",
   "provider.connect.azure.endpointType.label": "Виберіть конфігурацію кінцевої точки Azure",
@@ -175,6 +182,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "Моделі {{provider}} більше недоступні.",
 
   "model.tag.free": "Безкоштовно",
+  "model.tag.dataCollected": "Дані можуть використовуватися для навчання",
   "model.tag.latest": "Остання",
   "model.group.recommended": "Рекомендовані",
   "model.group.favorites": "Обране",
@@ -202,6 +210,9 @@ export const dict = {
   "model.preview.label.cached": "Кешовані",
   "model.preview.label.average": "Орієнт. сер. вартість",
   "model.preview.label.context": "Контекст",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Виконання",
+  "model.preview.label.costAttempt": "Вартість / спроба",
   "model.preview.value.notSupported": "Не підтримується",
   "model.preview.tooltip.average":
     "Орієнтовна середня вартість базується на типовому співвідношенні вхідних, вихідних токенів та читання кешу.",
@@ -286,7 +297,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Кнопка 'Покращити запит' допомагає вдосконалити ваш запит, надаючи додатковий контекст, уточнення або перефразування. Введіть запит тут і натисніть кнопку ще раз, щоб побачити, як це працює.",
 
-  "speechToText.tooltip.start": "Почати голосове введення",
+  "speechToText.tooltip.start": "Почати голосове введення з Kilo Gateway",
   "speechToText.tooltip.stop": "Зупинити захоплення звуку",
   "speechToText.tooltip.transcribing": "Транскрибування... Натисніть, щоб скасувати.",
   "speechToText.tooltip.error": "Помилка голосового введення. Натисніть, щоб очистити.",
@@ -455,6 +466,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Не вдалося закрити доступ до сесії",
   "toast.session.unshare.failed.description": "Під час закриття доступу до сесії сталася помилка",
 
+  "toast.session.rename.invalid.title": "Некоректна назва сесії",
   "toast.session.listFailed.title": "Не вдалося завантажити сесії для {{project}}",
 
   "toast.update.title": "Доступне оновлення",
@@ -519,6 +531,9 @@ export const dict = {
   "notification.permission.titleSubagent": "Потрібен дозвіл (підагент)",
   "notification.permission.description": "{{sessionTitle}} у {{projectName}} потребує дозволу",
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
+  "ui.permission.doomLoop.prompt":
+    "Виявлено потенційний цикл під час роботи інструмента {{tool}}. Продовжити виконання?",
+  "ui.permission.doomLoop.rule": "Продовжувати виклики {{tool}}",
   "ui.permission.rule.addToAllowed": "Додати до дозволених",
   "ui.permission.rule.removeFromAllowed": "Видалити з дозволених",
   "ui.permission.rule.addToDenied": "Додати до заблокованих",
@@ -982,6 +997,8 @@ export const dict = {
   "session.delete.confirm": 'Видалити сесію "{{name}}"?',
   "session.delete.button": "Видалити сесію",
   "session.untitled": "Без назви",
+  "session.current": "Поточна сесія",
+  "session.history.sources": "Джерело історії",
   "session.recent": "Останні",
   "session.showHistory": "Показати історію",
   "session.search.placeholder": "Пошук сесій...",
@@ -995,6 +1012,31 @@ export const dict = {
   "feedback.dialog.github": "Повідомити про проблему на GitHub",
   "feedback.dialog.discord": "Приєднатися до нашої спільноти Discord",
   "feedback.dialog.support": "Служба підтримки клієнтів",
+  "workStyle.onboarding.welcome": "Ласкаво просимо до Kilo",
+  "workStyle.onboarding.title": "Виберіть, як ви хочете працювати",
+  "workStyle.onboarding.description":
+    "Встановлює початкові значення дозволів, блоків міркувань, виводу термінала та часової шкали контексту. Застосовується лише один раз і не змінює вже налаштовані вами параметри.",
+  "workStyle.onboarding.skip": "Поки пропустити",
+  "workStyle.onboarding.settingsNote": "Ці параметри можна будь-коли змінити в розділі",
+  "workStyle.onboarding.settings": "«Налаштування».",
+  "workStyle.toast.saved.title": "Режим успішно збережено",
+  "workStyle.toast.saved.description": "Змінити їх можна будь-коли в налаштуваннях.",
+  "workStyle.toast.saved.action": "Перейти до налаштувань",
+  "workStyle.choice.permissions": "Дозволи",
+  "workStyle.choice.bash": "Bash",
+  "workStyle.choice.visibility": "Видимість",
+  "workStyle.choice.human-in-the-loop.eyebrow": "Людина контролює процес",
+  "workStyle.choice.human-in-the-loop.title": "Спочатку перевірка",
+  "workStyle.choice.human-in-the-loop.description": "Kilo призупиняється та показує свій план у процесі роботи.",
+  "workStyle.choice.human-in-the-loop.permissions": "Запитує дозвіл перед редагуванням файлів або виконанням команд.",
+  "workStyle.choice.human-in-the-loop.bash": "Запитує дозвіл на кожну команду термінала.",
+  "workStyle.choice.human-in-the-loop.visibility": "Показує всі деталі розмови, зокрема хід міркувань.",
+  "workStyle.choice.autonomous.eyebrow": "Менше переривань",
+  "workStyle.choice.autonomous.title": "Висока автономність",
+  "workStyle.choice.autonomous.description": "Менше переривань, спрощений інтерфейс.",
+  "workStyle.choice.autonomous.permissions": "Редагує файли та виконує команди в робочому просторі без дозволу.",
+  "workStyle.choice.autonomous.bash": "Може виконувати команди термінала в робочому просторі без схвалення.",
+  "workStyle.choice.autonomous.visibility": "Деталі залишаються згорнутими, доки ви їх не розгорнете.",
   "session.cloud.import.title": "Імпортувати з хмари",
   "session.cloud.import.placeholder": "Ідентифікатор сесії, URL або команда kilo import",
   "session.cloud.import.button": "Імпортувати",
@@ -1116,6 +1158,14 @@ export const dict = {
   "session.status.retrying": "Повторна спроба (спроба {{ attempt }})… {{ message }}",
   "session.status.working": "Працює...",
   "session.status.offline": "Мережу відключено — перепідключення...",
+  "session.outcome.incomplete": "Хід завершився з {{count}} невиконаними завданнями",
+  "session.outcome.limit": "Ліміт відповідей досягнуто до завершення",
+  "session.outcome.unknown": "Хід завершився без причини завершення моделі",
+  "session.outcome.filtered": "Провайдер зупинив цю відповідь через фільтр вмісту.",
+  "session.outcome.unexpected": "Відповідь завершилася несподівано і може бути неповною.",
+  "session.outcome.interrupted": "Хід перервано",
+  "session.outcome.error": "Хід не вдався",
+  "session.outcome.finish": "Причина завершення: {{reason}}",
 
   "ui.sessionTurn.cancel": "Скасувати",
   "ui.sessionTurn.status.thinking": "Думаю...",
@@ -1179,7 +1229,6 @@ export const dict = {
     'Телеметрія керується вбудованим налаштуванням телеметрії VS Code. Щоб вимкнути її, перейдіть до Налаштування > Телеметрія > Рівень телеметрії та встановіть значення "off". Перезапустіть VS Code, щоб застосувати зміну.',
   "settings.aboutKiloCode.telemetry.openSettings": "Відкрити налаштування телеметрії",
 
-  "settings.agentBehaviour.subtab.modes": "Режими",
   "settings.agentBehaviour.subtab.agents": "Агенти",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-сервери",
   "settings.agentBehaviour.subtab.rules": "Правила",
@@ -1238,24 +1287,16 @@ export const dict = {
   "settings.experimental.formatter.description": "Увімкнути автоматичне форматування коду",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Увімкнути інтеграцію з мовним сервером",
-  "settings.experimental.pasteSummary.title": "Вимкнути підсумовування вставки",
-  "settings.experimental.pasteSummary.description": "Підсумовувати великий вставлений вміст",
   "settings.experimental.batch.title": "Пакетний інструмент",
   "settings.experimental.batch.description": "Увімкнути пакетну обробку кількох викликів інструментів",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Пошук по кодовій базі",
   "settings.experimental.codebaseSearch.description":
     "Увімкнути пошук природною мовою на основі ШІ по всій кодовій базі",
-  "settings.experimental.agentManagerTool.title": "Інструмент Agent Manager",
-  "settings.experimental.agentManagerTool.description":
-    "Дозволити агентам запускати локальні сесії Agent Manager і сесії worktree через виклик інструмента",
   "settings.experimental.speechToText.title": "Мовлення в текст",
   "settings.experimental.speechToText.description":
     "Увімкніть голосове введення в полях запитів, використовуючи ваш обліковий запис Kilo через Kilo Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Увімкніть Kilo provider і увійдіть, щоб використовувати голосове введення в полях запитів.",
+    "Увімкніть провайдер Kilo та виконайте вхід, щоб використовувати Speech to Text. Наразі Speech to Text підтримується лише з Kilo Gateway.",
   "settings.experimental.speechToTextModel.title": "Модель мовлення в текст",
   "settings.experimental.speechToTextModel.description":
     "Виберіть модель транскрипції Kilo Gateway для голосового введення.",
@@ -1281,6 +1322,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Виберіть агента для налаштування…",
   "settings.agentBehaviour.modelOverride.title": "Перевизначення моделі",
   "settings.agentBehaviour.modelOverride.description": "Перевизначити стандартну модель для цього агента",
+  "settings.agentBehaviour.variantOverride.title": "Перевизначення варіанту",
+  "settings.agentBehaviour.variantOverride.description": "Перевизначити варіант моделі для цього агента",
   "settings.agentBehaviour.prompt.title": "Власний запит",
   "settings.agentBehaviour.prompt.description": "Додатковий системний запит для цього агента",
   "settings.agentBehaviour.temperature.title": "Температура",
@@ -1300,7 +1343,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Навичок не виявлено. Додайте шляхи до папок навичок або URL нижче, щоб зробити їх доступними.",
   "settings.agentBehaviour.availableModes": "Доступні власні режими",
-  "settings.agentBehaviour.noModesFound": "Режимів не знайдено.",
+  "settings.agentBehaviour.noAgentsFound": "Агентів не знайдено.",
   "settings.agentBehaviour.importMode": "Імпортувати",
   "settings.agentBehaviour.importMode.invalidName":
     "Назва режиму у файлі недійсна. Назва має починатися з малої літери і містити лише малі літери, цифри та дефіси.",
@@ -1309,10 +1352,10 @@ export const dict = {
     "Недійсний файл JSON. Будь ласка, виберіть дійсний файл визначення агента.",
   "settings.agentBehaviour.importMode.tooLarge": "Файл занадто великий. Визначення агентів мають бути менше 1 МБ.",
   "settings.agentBehaviour.exportMode": "Експортувати визначення агента",
-  "settings.agentBehaviour.removeMode.title": "Видалити режим",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Видалити режим "{{name}}"? Це оновить вашу конфігурацію, щоб вимкнути режим.',
-  "settings.agentBehaviour.removeMode.button": "Видалити",
+  "settings.agentBehaviour.removeAgent.title": "Видалити агент",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Видалити агент "{{name}}"? Це вимкне агент шляхом оновлення конфігурації.',
+  "settings.agentBehaviour.removeAgent.button": "Видалити",
   "settings.agentBehaviour.skillPaths": "Шляхи до папок навичок",
   "settings.agentBehaviour.skillUrls": "URL навичок",
   "settings.agentBehaviour.removeSkill.title": "Видалити навичку",
@@ -1389,8 +1432,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Керувати списком завдань. Дозволяє читання та оновлення внутрішнього списку завдань.",
   "settings.autoApprove.tool.webfetch": "Отримати URL. Дозволяє отримання вмісту з вказаного URL.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Шукати в мережі або коді. Дозволяє зовнішній веб-пошук або пошук коду.",
+  "settings.autoApprove.tool.websearch": "Шукати в інтернеті. Дозволяє зовнішній веб-пошук.",
   "settings.autoApprove.tool.doom_loop":
     "Запобігати повторюваним діям. Спрацьовує, коли той самий виклик інструменту повторюється з однаковими вхідними даними.",
 
@@ -1439,6 +1481,9 @@ export const dict = {
   "settings.providers.smallModel.title": "Мала модель",
   "settings.providers.smallModel.description":
     "Легка модель для генерації заголовків, повідомлень комітів, покращення запитів та інших швидких завдань",
+  "settings.providers.subagentModel.title": "Модель субагента",
+  "settings.providers.subagentModel.description":
+    "Модель за замовчуванням та рівень міркування для субагентів task-tool. Залиште порожнім, щоб успадкувати модель агента, що викликає.",
   "settings.providers.modeModels": "Модель для кожного режиму",
   "settings.providers.modeModels.description":
     "Перевизначити стандартну модель для певних режимів. Якщо не встановлено, використовується загальна стандартна модель.",
