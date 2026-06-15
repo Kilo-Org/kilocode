@@ -1504,6 +1504,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Subagent Model",
   "settings.providers.subagentModel.description":
     "Default model and reasoning effort for task-tool subagents. Leave unset to inherit the calling agent's model.",
+  "settings.models.hidePromptTraining.title": "Hide Prompt-Training Models",
+  "settings.models.hidePromptTraining.description":
+    "Hide Kilo Gateway models whose providers may use your prompts for training.",
   "settings.providers.modeModels": "Model per Mode",
   "settings.providers.modeModels.description":
     "Override the default model for specific modes. If not set, the global default model is used.",

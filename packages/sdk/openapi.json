@@ -18575,6 +18575,9 @@
             "type": "string",
             "enum": ["expanded", "collapsed"]
           },
+          "hide_prompt_training_models": {
+            "type": "boolean"
+          },
           "model": {
             "type": "string"
           },

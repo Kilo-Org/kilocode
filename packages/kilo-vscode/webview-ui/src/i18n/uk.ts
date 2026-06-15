@@ -1484,6 +1484,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Модель субагента",
   "settings.providers.subagentModel.description":
     "Модель за замовчуванням та рівень міркування для субагентів task-tool. Залиште порожнім, щоб успадкувати модель агента, що викликає.",
+  "settings.models.hidePromptTraining.title": "Приховувати моделі, що навчаються на запитах",
+  "settings.models.hidePromptTraining.description":
+    "Приховувати моделі Kilo Gateway, постачальники яких можуть використовувати ваші запити для навчання.",
   "settings.providers.modeModels": "Модель для кожного режиму",
   "settings.providers.modeModels.description":
     "Перевизначити стандартну модель для певних режимів. Якщо не встановлено, використовується загальна стандартна модель.",

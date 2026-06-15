@@ -130,6 +130,7 @@ export interface Config {
   snapshot?: boolean
   remote_control?: boolean
   terminal_command_display?: TerminalCommandDisplay
+  hide_prompt_training_models?: boolean
   share?: "manual" | "auto" | "disabled"
   username?: string
   watcher?: WatcherConfig

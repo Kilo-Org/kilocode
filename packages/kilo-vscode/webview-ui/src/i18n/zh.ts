@@ -850,6 +850,8 @@ export const dict = {
   "settings.providers.custom.description": "通过基础 URL 添加 OpenAI 兼容的提供商。",
   "settings.providers.subagentModel.title": "子代理模型",
   "settings.providers.subagentModel.description": "task-tool 子代理的默认模型和推理工作量。留空以继承调用代理的模型。",
+  "settings.models.hidePromptTraining.title": "隐藏使用提示词训练的模型",
+  "settings.models.hidePromptTraining.description": "隐藏提供商可能会使用您的提示词进行训练的 Kilo Gateway 模型。",
   "settings.providers.modeModels": "按模式选择模型",
   "settings.providers.custom.note": "通过 Base URL 添加 OpenAI 兼容提供商。",
   "settings.providers.modeModels.description": "为特定模式覆盖默认模型。如果未设置，将使用全局默认模型。",
