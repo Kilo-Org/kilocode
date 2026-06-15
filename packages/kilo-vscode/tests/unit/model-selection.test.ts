@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { resolveModelSelection } from "../../webview-ui/src/context/model-selection"
+import { orgDefaultModelID, resolveModelSelection } from "../../webview-ui/src/context/model-selection"
 import { KILO_AUTO, parseModelString } from "../../src/shared/provider-model"
 import type { Provider } from "../../webview-ui/src/types/messages"
 
@@ -35,6 +35,31 @@ describe("parseModelString", () => {
   it("returns null for invalid values", () => {
     expect(parseModelString(undefined)).toBeNull()
     expect(parseModelString("claude-sonnet-4")).toBeNull()
+  })
+})
+
+describe("orgDefaultModelID", () => {
+  it("uses a legacy build default for code when no canonical code default exists", () => {
+    expect(
+      orgDefaultModelID(
+        {
+          build: { options: { orgDefaultModel: "kilo-auto/free" } },
+        },
+        "code",
+      ),
+    ).toBe("kilo-auto/free")
+  })
+
+  it("prefers the canonical code default over a legacy build default", () => {
+    expect(
+      orgDefaultModelID(
+        {
+          build: { options: { orgDefaultModel: "kilo-auto/free" } },
+          code: { options: { orgDefaultModel: "openai/gpt-4o:free" } },
+        },
+        "code",
+      ),
+    ).toBe("openai/gpt-4o:free")
   })
 })
 

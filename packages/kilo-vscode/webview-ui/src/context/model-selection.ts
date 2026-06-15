@@ -1,4 +1,4 @@
-import type { ModelSelection, Provider } from "../types/messages"
+import type { AgentConfig, ModelSelection, Provider } from "../types/messages"
 import { isModelValid } from "./provider-utils"
 
 function validate(
@@ -21,6 +21,13 @@ function recent(
     if (selection) return selection
   }
   return null
+}
+
+export function orgDefaultModelID(agents: Record<string, AgentConfig | undefined> | undefined, agentName: string) {
+  const model =
+    agents?.[agentName]?.options?.orgDefaultModel ??
+    (agentName === "code" ? agents?.build?.options?.orgDefaultModel : undefined)
+  return typeof model === "string" && model.length > 0 ? model : undefined
 }
 
 export function resolveModelSelection(input: {

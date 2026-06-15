@@ -62,7 +62,7 @@ import {
   upsertSessionToolPart,
 } from "./session-utils"
 import { Identifier } from "../utils/id"
-import { resolveModelSelection } from "./model-selection"
+import { orgDefaultModelID, resolveModelSelection } from "./model-selection"
 import { resolveMessagePrefs } from "./session-preferences"
 import { errorIDs } from "./session-errors"
 import { PartStash } from "./part-stash"
@@ -518,10 +518,10 @@ export const SessionProvider: ParentComponent = (props) => {
     return parseModelString(config().agent?.[agentName]?.model)
   }
 
-  /** Organization mode default from config (config.agent.code.options.orgDefaultModel). */
+  /** Organization mode default from config, including legacy build -> code fallback. */
   function getOrgDefaultModel(agentName: string): ModelSelection | null {
-    const model = config().agent?.[agentName]?.options?.orgDefaultModel
-    if (typeof model !== "string" || model.length === 0) return null
+    const model = orgDefaultModelID(config().agent, agentName)
+    if (!model) return null
     return { providerID: KILO_PROVIDER_ID, modelID: model }
   }
 
