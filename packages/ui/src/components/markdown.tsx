@@ -294,13 +294,15 @@ export function Markdown(
             }
           }
 
-          // kilocode_change start: flush KaTeX slots before yielding so concurrent
-          // blocks in this Promise.all don't contaminate each other's math.
-          // marked.parse() is synchronous for the JS parser path, so slots are
-          // fully populated before the first await below.
+          // kilocode_change start: flush KaTeX slots at the right time for each parser path.
+          // JS parser (default): marked.parse() is synchronous — flush immediately before the
+          // first await so concurrent Promise.all blocks don't contaminate each other's slots.
+          // Native parser (no current callers): marked.parse() returns a Promise — slots are
+          // populated inside the async resolve, so flush after awaiting.
           const raw = marked.parse(block.src)
-          const slots = flushKatexSlots()
+          const syncSlots = raw instanceof Promise ? null : flushKatexSlots()
           const next = await Promise.resolve(raw)
+          const slots = syncSlots ?? flushKatexSlots()
           // kilocode_change end
           const sanitized = sanitize(next) // kilocode_change
           const safe = resolveMath(sanitized, slots) // kilocode_change: inject pre-sanitized KaTeX
