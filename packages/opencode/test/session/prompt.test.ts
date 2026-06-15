@@ -1015,7 +1015,7 @@ it.live(
 // Cancel semantics
 
 it.live(
-    "cancel interrupts loop and resolves with an assistant message",
+  "cancel interrupts loop and resolves with an assistant message",
   () =>
     provideTmpdirServer(
       Effect.fnUntraced(function* ({ llm }) {
@@ -1039,7 +1039,7 @@ it.live(
       }),
       { git: true, config: providerCfg },
     ),
-  10_000, // kilocode_change: 3_000 was too tight for Windows CI runners
+  10_000, // kilocode_change: 3_000 was too tight for Windows CI
 )
 
 unix(
@@ -1221,7 +1221,7 @@ it.live(
 )
 
 it.live(
-    "cancel with queued callers resolves all cleanly",
+  "cancel with queued callers resolves all cleanly",
   () =>
     provideTmpdirServer(
       Effect.fnUntraced(function* ({ llm }) {
@@ -1246,7 +1246,7 @@ it.live(
       }),
       { git: true, config: providerCfg },
     ),
-  10_000, // kilocode_change: 3_000 was too tight for Windows CI runners
+  10_000, // kilocode_change: 3_000 was too tight for Windows CI
 )
 
 // Queue semantics
