@@ -278,6 +278,7 @@ const TIPS: Tip[] = [
   "Use {highlight}/connect{/highlight} with Kilo Gateway for curated, tested models", // kilocode_change
   "Commit your project's {highlight}AGENTS.md{/highlight} file to Git for team sharing",
   "Use {highlight}/review{/highlight} to review uncommitted changes, branches, or PRs",
+  "{highlight}Try Kilo Console (Beta){/highlight} — Manage git worktrees, sessions, and all CLI settings from a browser-based UI. How to install: {highlight}https://blog.kilo.ai/p/kilo-console-beta-is-live?utm_source=kilo-cli&utm_medium=notifications&utm_campaign=cli-tips{/highlight}", // kilocode_change
   (shortcuts) => `Use ${commandText("/help", shortcuts.helpShow())} to show the help dialog`,
   "Use {highlight}/rename{/highlight} to rename the current session",
   ...(process.platform === "win32"
