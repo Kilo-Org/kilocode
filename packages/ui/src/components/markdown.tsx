@@ -1,5 +1,5 @@
 import { useMarked } from "../context/marked"
-import { deferredHighlight, fnv1a } from "../context/marked" // kilocode_change
+import { deferredHighlight, fnv1a, flushKatexSlots } from "../context/marked" // kilocode_change
 import { useI18n } from "../context/i18n"
 import DOMPurify from "dompurify"
 import morphdom from "morphdom"
@@ -41,8 +41,20 @@ const config = {
   FORBID_TAGS: ["style"],
   FORBID_CONTENTS: ["style", "script"],
   ADD_TAGS: ["svg", "path"],
-  ADD_ATTR: ["d", "viewBox", "preserveAspectRatio", "xmlns"],
+  ADD_ATTR: ["d", "viewBox", "preserveAspectRatio", "xmlns", "data-kilo-math"], // kilocode_change: preserve KaTeX placeholders
 }
+
+// kilocode_change start: replace KaTeX placeholders inserted by renderKatex() in marked.tsx
+// with the pre-sanitized KaTeX HTML that was stored during marked.parse().
+// This runs after the main restrictive DOMPurify pass, so user content never
+// passes through a permissive sanitizer — only KaTeX-generated output does.
+const MATH_RE = /<span\s[^>]*data-kilo-math="(\d+)"[^>]*><\/span>/g
+
+function resolveMath(html: string, slots: string[]): string {
+  if (slots.length === 0) return html
+  return html.replace(MATH_RE, (_, i) => slots[parseInt(i)] ?? "")
+}
+// kilocode_change end
 
 const iconPaths = {
   copy: '<path d="M6.2513 6.24935V2.91602H17.0846V13.7493H13.7513M13.7513 6.24935V17.0827H2.91797V6.24935H13.7513Z" stroke="currentColor" stroke-linecap="round"/>',
@@ -282,8 +294,16 @@ export function Markdown(
             }
           }
 
-          const next = await Promise.resolve(marked.parse(block.src))
-          const safe = sanitize(next)
+          // kilocode_change start: flush KaTeX slots before yielding so concurrent
+          // blocks in this Promise.all don't contaminate each other's math.
+          // marked.parse() is synchronous for the JS parser path, so slots are
+          // fully populated before the first await below.
+          const raw = marked.parse(block.src)
+          const slots = flushKatexSlots()
+          const next = await Promise.resolve(raw)
+          // kilocode_change end
+          const sanitized = sanitize(next) // kilocode_change
+          const safe = resolveMath(sanitized, slots) // kilocode_change: inject pre-sanitized KaTeX
           if (key && hash) touch(key, { hash, html: safe })
           return { key: `${base}:${index}`, hash, html: safe, mode: block.mode } // kilocode_change
         }),

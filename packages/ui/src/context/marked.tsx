@@ -9,6 +9,7 @@ import katex from "katex"
 // kilocode_change start: import types for double-dollar math extension
 import type { MarkedExtension, TokenizerAndRendererExtension } from "marked"
 // kilocode_change end
+import DOMPurify from "dompurify" // kilocode_change: pre-sanitize KaTeX output before main DOMPurify pass
 import { bundledLanguages, type BundledLanguage } from "shiki"
 import { parseFilePath } from "../file-path" // kilocode_change
 import { createSimpleContext } from "./helper"
@@ -29,17 +30,54 @@ const BLOCK = /^\$\$\n((?:\\[^]|[^\\])+?)\n\$\$(?:\n|$)/
 const INLINE = /^\$\$(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n$]))\$\$/
 // kilocode_change end
 
+// kilocode_change start: pre-sanitized KaTeX slot system.
+//
+// KaTeX output contains SVG elements (for √ and other glyphs) and inline style
+// attributes (for precise layout positioning). We pre-sanitize KaTeX output with
+// a dedicated permissive DOMPurify config immediately after rendering, store the
+// result indexed in katexSlots, and return a placeholder span that the main
+// restrictive DOMPurify pass can safely pass through. After the main sanitize
+// in markdown.tsx, the placeholder is replaced with the pre-sanitized KaTeX HTML.
+//
+// This keeps user-controlled content and KaTeX content fully separated through
+// the sanitization pipeline: user HTML never passes through a permissive
+// sanitizer, and KaTeX HTML is never exposed to the restrictive one.
+
+const katexSanitizeConfig = {
+  USE_PROFILES: { html: true, mathMl: true, svg: true },
+  ADD_ATTR: ["style", "d", "viewBox", "preserveAspectRatio", "xmlns"],
+  FORBID_TAGS: ["script"],
+  FORBID_CONTENTS: ["script"],
+}
+
+// Populated synchronously during marked.parse() (which is synchronous for the
+// JS parser path). Always call flushKatexSlots() before the first await after
+// marked.parse() to avoid cross-block contamination under Promise.all.
+const katexSlots: string[] = []
+
+function renderKatex(text: string, display: boolean): string {
+  const raw = katex.renderToString(text, { displayMode: display, throwOnError: false })
+  const safe =
+    typeof window !== "undefined" && DOMPurify.isSupported ? DOMPurify.sanitize(raw, katexSanitizeConfig) : raw
+  const idx = katexSlots.length
+  katexSlots.push(safe)
+  return `<span data-kilo-math="${idx}"></span>`
+}
+
+/** Drain and return all KaTeX slots collected during the most recent marked.parse() call. */
+export function flushKatexSlots(): string[] {
+  return katexSlots.splice(0)
+}
+// kilocode_change end
+
 function renderMathInText(text: string): string {
   let result = text
 
   // Display math: $$...$$
   const displayMathRegex = /\$\$([\s\S]*?)\$\$/g
-  result = result.replace(displayMathRegex, (_, math) => {
+  result = result.replace(displayMathRegex, (_, math) => { // kilocode_change
     try {
-      return katex.renderToString(math, {
-        displayMode: true,
-        throwOnError: false,
-      })
+      return renderKatex(math, true) // kilocode_change
     } catch {
       return `$$${math}$$`
     }
@@ -333,7 +371,7 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
               }
             },
             renderer(token) {
-              return `${katex.renderToString(token.text, { displayMode: true, throwOnError: false })}\n`
+              return `${renderKatex(token.text, true)}\n` // kilocode_change
             },
           } satisfies TokenizerAndRendererExtension,
           {
@@ -355,7 +393,7 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
               }
             },
             renderer(token) {
-              return katex.renderToString(token.text, { displayMode: true, throwOnError: false })
+              return renderKatex(token.text, true) // kilocode_change
             },
           } satisfies TokenizerAndRendererExtension,
         ],
