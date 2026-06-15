@@ -243,7 +243,7 @@ describe("saveCustomProvider", () => {
     expect(payload.myprovider.models["model-gone"]).toBeNull()
   })
 
-  it("emits null sentinels for variants removed from a model that still exists", async () => {
+  it("emits null sentinels when reasoning and variants are removed from a model", async () => {
     const existing = {
       disabled_providers: [],
       provider: {
@@ -270,11 +270,7 @@ describe("saveCustomProvider", () => {
       name: "My Provider",
       options: { baseURL: "https://example.com/v1" },
       models: {
-        "model-1": {
-          name: "Model One",
-          reasoning: true,
-          variants: { high: { reasoningEffort: "high" } },
-        },
+        "model-1": { name: "Model One" },
       },
     }
     await saveCustomProvider(ctx, "req", "myprovider", next, undefined, false, null, setCachedConfig)
@@ -283,11 +279,11 @@ describe("saveCustomProvider", () => {
     const model = (
       calls.config[0].config.provider as Record<
         string,
-        { models: Record<string, { variants?: Record<string, unknown> }> }
+        { models: Record<string, { reasoning?: boolean | null; variants?: Record<string, unknown> }> }
       >
     ).myprovider.models["model-1"]
-    expect(model.variants).toBeDefined()
-    expect(model.variants?.high).toBeDefined()
+    expect(model.reasoning).toBeNull()
+    expect(model.variants?.high).toBeNull()
     expect(model.variants?.low).toBeNull()
   })
 
