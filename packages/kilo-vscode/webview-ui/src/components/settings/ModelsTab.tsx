@@ -25,14 +25,36 @@ const ModelsTab: Component = () => {
     return typeof v === "string" ? v : undefined
   }
 
-  function handleModelSelect(configKey: "model" | "small_model") {
-    return (providerID: string, modelID: string) => {
-      if (!providerID || !modelID) {
-        updateConfig({ [configKey]: null })
-        return
-      }
-      updateConfig({ [configKey]: `${providerID}/${modelID}` })
+  function handleModelSelect(providerID: string, modelID: string) {
+    if (!providerID || !modelID) {
+      updateConfig({ model: null })
+      return
     }
+    updateConfig({ model: `${providerID}/${modelID}` })
+  }
+
+  const smallModel = createMemo(() => parseModelString(config().small_model ?? undefined))
+  const smallKey = createMemo(() => config().small_model ?? undefined)
+  const smallVariants = createMemo(() => Object.keys(provider.findModel(smallModel())?.variants ?? {}))
+  const smallVariant = createMemo(() => {
+    const key = smallKey()
+    if (!key) return undefined
+    const value = config().small_model_variant_overrides?.[key]
+    return value && smallVariants().includes(value) ? value : undefined
+  })
+
+  function handleSmallModelSelect(providerID: string, modelID: string) {
+    if (!providerID || !modelID) {
+      updateConfig({ small_model: null })
+      return
+    }
+    updateConfig({ small_model: `${providerID}/${modelID}` })
+  }
+
+  function updateSmallVariant(value: string | null) {
+    const key = smallKey()
+    if (!key) return
+    updateConfig({ small_model_variant_overrides: { [key]: value } })
   }
 
   const subagentModel = createMemo(() => parseModelString(config().subagent_model ?? undefined))
@@ -100,7 +122,7 @@ const ModelsTab: Component = () => {
         >
           <ModelSelectorBase
             value={parseModelString(config().model ?? undefined)}
-            onSelect={handleModelSelect("model")}
+            onSelect={handleModelSelect}
             placement="bottom-start"
             allowClear
             clearLabel={language.t("settings.providers.notSet")}
@@ -112,16 +134,30 @@ const ModelsTab: Component = () => {
           title={language.t("settings.providers.smallModel.title")}
           description={language.t("settings.providers.smallModel.description")}
         >
-          <ModelSelectorBase
-            value={parseModelString(config().small_model ?? undefined)}
-            onSelect={handleModelSelect("small_model")}
-            placement="bottom-start"
-            allowClear
-            clearLabel={language.t("settings.providers.notSet")}
-            includeAutoSmall
-            label={language.t("settings.providers.smallModel.title")}
-            description={language.t("settings.providers.smallModel.description")}
-          />
+          <div style={{ display: "flex", "flex-direction": "column", "align-items": "flex-end", gap: "8px" }}>
+            <ModelSelectorBase
+              value={smallModel()}
+              onSelect={handleSmallModelSelect}
+              placement="bottom-start"
+              allowClear
+              clearLabel={language.t("settings.providers.notSet")}
+              includeAutoSmall
+              label={language.t("settings.providers.smallModel.title")}
+              description={language.t("settings.providers.smallModel.description")}
+            />
+            <Show when={smallVariants().length > 0}>
+              <ThinkingSelectorBase
+                variants={smallVariants()}
+                value={smallVariant()}
+                onSelect={(value) => updateSmallVariant(value)}
+                onClear={() => updateSmallVariant(null)}
+                allowClear
+                clearLabel={language.t("settings.providers.notSet")}
+                placement="bottom-start"
+                globalTrigger={false}
+              />
+            </Show>
+          </div>
         </SettingsRow>
         <SettingsRow
           title={language.t("settings.providers.subagentModel.title")}

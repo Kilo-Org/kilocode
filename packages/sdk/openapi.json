@@ -18581,6 +18581,12 @@
           "small_model": {
             "type": "string"
           },
+          "small_model_variant_overrides": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
           "subagent_model": {
             "type": "string"
           },

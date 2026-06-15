@@ -76,6 +76,7 @@ export namespace KilocodeConfigOverlay {
   const fieldPaths = [
     ["model"],
     ["small_model"],
+    ["small_model_variant_overrides"],
     ["default_agent"],
     ["snapshot"],
     ["share"],

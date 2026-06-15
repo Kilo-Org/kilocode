@@ -1,10 +1,11 @@
 import { generateText } from "ai"
-import { mergeDeep } from "remeda"
 import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
+import { Config } from "@/config/config"
 import { AppRuntime } from "@/effect/app-runtime"
 import { Effect } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
+import { KiloSmallModel } from "@/kilocode/provider/small-model"
 
 const log = Log.create({ service: "enhance-prompt" })
 
@@ -31,14 +32,15 @@ export async function enhancePrompt(text: string): Promise<string> {
   log.info("enhancing", { length: text.length })
 
   const resolved = await AppRuntime.runPromise(
-    Provider.Service.use((svc) =>
-      Effect.gen(function* () {
-        const ref = yield* svc.defaultModel()
-        const model = (yield* svc.getSmallModel(ref.providerID)) ?? (yield* svc.getModel(ref.providerID, ref.modelID))
-        const language = yield* svc.getLanguage(model)
-        return { model, language }
-      }),
-    ),
+    Effect.gen(function* () {
+      const svc = yield* Provider.Service
+      const config = yield* Config.Service
+      const ref = yield* svc.defaultModel()
+      const model = (yield* svc.getSmallModel(ref.providerID)) ?? (yield* svc.getModel(ref.providerID, ref.modelID))
+      const language = yield* svc.getLanguage(model)
+      const cfg = yield* config.get()
+      return { model, language, cfg }
+    }),
   )
 
   const result = await generateText({
@@ -46,7 +48,7 @@ export async function enhancePrompt(text: string): Promise<string> {
     temperature: resolved.model.capabilities.temperature ? 0.7 : undefined,
     providerOptions: ProviderTransform.providerOptions(
       resolved.model,
-      mergeDeep(ProviderTransform.smallOptions(resolved.model), resolved.model.options),
+      KiloSmallModel.options(resolved.model, resolved.cfg, resolved.model.options),
     ),
     maxRetries: 3,
     system: INSTRUCTION,

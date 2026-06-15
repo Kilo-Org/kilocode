@@ -265,6 +265,7 @@ Skills are markdown files at `skills/<name>/SKILL.md` (or `skill/<name>/SKILL.md
 |---|---|---|
 | `model` | `"provider/model"` | Default model |
 | `small_model` | `"provider/model"` | Model for titles/summaries |
+| `small_model_variant_overrides` | `Record<string, string>` | Model-specific reasoning variants for small-model tasks |
 | `default_agent` | `string` | Default primary agent (fallback: `code`) |
 | `instructions` | `string[]` | Glob patterns for additional instruction files |
 | `plugin` | `string[]` | Plugin specifiers (npm packages or `file://` paths) |

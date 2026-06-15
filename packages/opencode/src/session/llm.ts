@@ -43,6 +43,7 @@ import { KiloLLM } from "@/kilocode/session/llm"
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { SessionExport } from "@/kilocode/session-export"
 import { getActiveOrg } from "@/kilocode/session-export/eligibility"
+import { KiloSmallModel } from "@/kilocode/provider/small-model"
 // kilocode_change end
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { EffectBridge } from "@/effect/bridge"
@@ -161,12 +162,13 @@ const live: Layer.Layer<
         system.push(header, rest.join("\n"))
       }
 
-      const variant =
-        !input.small && input.model.variants && input.user.model.variant
+      const variant = input.small
+        ? KiloSmallModel.variant(input.model, cfg) // kilocode_change
+        : input.model.variants && input.user.model.variant
           ? input.model.variants[input.user.model.variant]
           : {}
       const base = input.small
-        ? ProviderTransform.smallOptions(input.model)
+        ? KiloSmallModel.base(input.model, cfg) // kilocode_change
         : ProviderTransform.options({
             model: input.model,
             sessionID: input.sessionID,

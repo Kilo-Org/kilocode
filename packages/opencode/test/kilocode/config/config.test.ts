@@ -326,6 +326,43 @@ describe("subagent variant overrides", () => {
   })
 })
 
+describe("small model variant overrides", () => {
+  test("removes one model override without removing sibling models", () => {
+    const patch = decode({
+      small_model_variant_overrides: {
+        "cohere/command-a-reasoning": null,
+      },
+    })
+    const merged = KilocodeConfig.mergeConfig(
+      {
+        small_model_variant_overrides: {
+          "cohere/command-a-reasoning": "high",
+          "openai/gpt-5": "xhigh",
+        },
+      },
+      patch,
+    )
+
+    expect(patch.small_model_variant_overrides?.["cohere/command-a-reasoning"]).toBeNull()
+    expect(merged.small_model_variant_overrides).toEqual({ "openai/gpt-5": "xhigh" })
+  })
+
+  test("accepts a delete sentinel for the complete override map", () => {
+    const patch = decode({ small_model_variant_overrides: null })
+    const merged = KilocodeConfig.mergeConfig(
+      {
+        small_model_variant_overrides: {
+          "cohere/command-a-reasoning": "high",
+        },
+      },
+      patch,
+    )
+
+    expect(patch.small_model_variant_overrides).toBeNull()
+    expect(merged.small_model_variant_overrides).toBeUndefined()
+  })
+})
+
 describe("agent config", () => {
   test("accepts delete sentinels for agent model and variant overrides", () => {
     const patch = decode({ agent: { explore: { model: null, variant: null } } })

@@ -229,6 +229,11 @@ export const Info = Schema.Struct({
   small_model: Schema.optional(Schema.NullOr(ConfigModelID)).annotate({
     description: "Small model to use for tasks like title generation in the format of provider/model",
   }),
+  small_model_variant_overrides: Schema.optional(
+    Schema.NullOr(Schema.Record(Schema.String, Schema.NullOr(Schema.String))),
+  ).annotate({
+    description: "Model-specific variant overrides for small-model tasks, keyed by provider/model.",
+  }),
   subagent_model: Schema.optional(Schema.NullOr(ConfigModelID)).annotate({
     description:
       "Default model for task-tool subagents in the format of provider/model. If unset or unavailable, subagents inherit the calling agent model.",

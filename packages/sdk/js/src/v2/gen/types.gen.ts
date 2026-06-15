@@ -1398,6 +1398,9 @@ export type Config = {
   terminal_command_display?: "expanded" | "collapsed"
   model?: string
   small_model?: string
+  small_model_variant_overrides?: {
+    [key: string]: string
+  }
   subagent_model?: string
   subagent_variant?: string
   subagent_variant_overrides?: {

@@ -70,6 +70,7 @@ describe("buildExport", () => {
     const cfg: Config = {
       model: "test-model",
       small_model: "test-small",
+      small_model_variant_overrides: { "test/test-small": "high" },
       default_agent: "coder",
       agent: { coder: { mode: "primary", prompt: "Code stuff" } },
       permission: { read: "allow" },
@@ -80,6 +81,7 @@ describe("buildExport", () => {
     const result = buildExport(cfg)
     expect(result.model).toBe("test-model")
     expect(result.small_model).toBe("test-small")
+    expect(result.small_model_variant_overrides).toEqual({ "test/test-small": "high" })
     expect(result.default_agent).toBe("coder")
     expect(result.agent).toEqual({ coder: { mode: "primary", prompt: "Code stuff" } })
     expect(result.permission).toEqual({ read: "allow" })
@@ -184,6 +186,23 @@ describe("parseImport", () => {
       expect(result.config.subagent_variant_overrides).toEqual({
         "anthropic/claude-sonnet-4": "max",
         "openai/gpt-5": "xhigh",
+      })
+    }
+  })
+
+  it("preserves small model variant settings", () => {
+    const json = JSON.stringify({
+      small_model: "cohere/command-a-reasoning",
+      small_model_variant_overrides: {
+        "cohere/command-a-reasoning": "high",
+      },
+    })
+    const result = parseImport(json)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.config.small_model).toBe("cohere/command-a-reasoning")
+      expect(result.config.small_model_variant_overrides).toEqual({
+        "cohere/command-a-reasoning": "high",
       })
     }
   })
