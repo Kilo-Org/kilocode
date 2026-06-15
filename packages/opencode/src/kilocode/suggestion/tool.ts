@@ -61,57 +61,59 @@ export function resolvePrompt(prompt: string, commands: Command.Interface) {
   })
 }
 
-export const SuggestTool = Tool.define<typeof Params, Meta, Command.Service, "suggest">(
+export const SuggestTool = Tool.define<typeof Params, Meta, Command.Service | SessionStatus.Service, "suggest">(
   "suggest",
   Effect.gen(function* () {
     const commands = yield* Command.Service
+    const status = yield* SessionStatus.Service
     return {
       description: DESCRIPTION,
       parameters: Params,
       execute: (params, ctx) =>
         Effect.gen(function* () {
-          const action = yield* Effect.promise(async () => {
-            const promise = Suggestion.show({
-              sessionID: ctx.sessionID,
-              text: params.suggest,
-              actions: params.actions.map((a) => ({ ...a })),
-              blocking: false, // render above an active input; VS Code does the same
-              tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
+          const promise = Suggestion.show({
+            sessionID: ctx.sessionID,
+            text: params.suggest,
+            actions: params.actions.map((a) => ({ ...a })),
+            blocking: false, // render above an active input; VS Code does the same
+            tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
+          })
+
+          const listener = () =>
+            Suggestion.list().then((items: Suggestion.Request[]) => {
+              const match = items.find((item: Suggestion.Request) => item.tool?.callID === ctx.callID)
+              if (match) return Suggestion.dismiss(match.id)
             })
+          ctx.abort.addEventListener("abort", listener, { once: true })
 
-            const listener = () =>
-              Suggestion.list().then((items: Suggestion.Request[]) => {
-                const match = items.find((item: Suggestion.Request) => item.tool?.callID === ctx.callID)
-                if (match) return Suggestion.dismiss(match.id)
-              })
-            ctx.abort.addEventListener("abort", listener, { once: true })
+          // Mark the session as idle while waiting for user interaction so the
+          // session doesn't appear stuck/busy. The loop will set it back to busy
+          // when the suggestion resolves and processing continues.
+          yield* status
+            .set(SessionID.make(ctx.sessionID), { type: "idle" })
+            .pipe(Effect.catchCause((cause) => Effect.sync(() => log.warn("failed to set idle status", { cause }))))
 
-            // Mark the session as idle while waiting for user interaction so the
-            // session doesn't appear stuck/busy. The loop will set it back to busy
-            // when the suggestion resolves and processing continues.
-            await SessionStatus.set(SessionID.make(ctx.sessionID), { type: "idle" }).catch((err) => {
-              log.warn("failed to set idle status", { err })
-            })
-
-            const action = await promise
+          const action = yield* Effect.promise(() =>
+            promise
               .catch((error) => {
                 if (error instanceof Suggestion.DismissedError) return undefined
                 throw error
               })
               .finally(() => {
                 ctx.abort.removeEventListener("abort", listener)
-              })
+              }),
+          )
 
-            // Restore busy immediately on accept so the session doesn't flash idle
-            // while the follow-up response is being generated. The next runLoop
-            // iteration sets busy too, but not until after the stream finalizes.
-            if (action) {
-              await SessionStatus.set(SessionID.make(ctx.sessionID), { type: "busy" }).catch((err) => {
-                log.warn("failed to restore busy status", { err })
-              })
-            }
-            return action
-          })
+          // Restore busy immediately on accept so the session doesn't flash idle
+          // while the follow-up response is being generated. The next runLoop
+          // iteration sets busy too, but not until after the stream finalizes.
+          if (action) {
+            yield* status
+              .set(SessionID.make(ctx.sessionID), { type: "busy" })
+              .pipe(
+                Effect.catchCause((cause) => Effect.sync(() => log.warn("failed to restore busy status", { cause }))),
+              )
+          }
 
           if (!action) {
             const metadata: Meta = {

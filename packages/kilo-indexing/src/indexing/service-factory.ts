@@ -23,6 +23,7 @@ import type { CacheManager } from "./cache-manager"
 import type { IndexingTelemetryMeta, IndexingTelemetryReporter } from "./interfaces/telemetry"
 import {
   BATCH_SEGMENT_THRESHOLD,
+  DEFAULT_VECTOR_STORE,
   OLLAMA_EMBEDDER_REQUEST_TIMEOUT_MS,
   REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS,
 } from "./constants"
@@ -55,7 +56,7 @@ export class CodeIndexServiceFactory {
     const cfg = this.configManager.getConfig()
     return {
       provider: cfg.embedderProvider,
-      vectorStore: cfg.vectorStoreProvider ?? "qdrant",
+      vectorStore: cfg.vectorStoreProvider ?? DEFAULT_VECTOR_STORE,
       modelId: cfg.modelId,
     }
   }

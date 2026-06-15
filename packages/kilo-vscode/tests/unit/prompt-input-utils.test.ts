@@ -171,30 +171,34 @@ describe("isPromptBlocked", () => {
 
 describe("isPromptBusy", () => {
   it("returns true when busy and neither suggesting nor questioning", () => {
-    expect(isPromptBusy("busy", false, false)).toBe(true)
+    expect(isPromptBusy("busy", false, false, false)).toBe(true)
+  })
+
+  it("returns true while submitting before the backend reports busy", () => {
+    expect(isPromptBusy("idle", false, false, true)).toBe(true)
   })
 
   it("returns false when idle regardless of suggesting/questioning", () => {
-    expect(isPromptBusy("idle", false, false)).toBe(false)
-    expect(isPromptBusy("idle", true, false)).toBe(false)
-    expect(isPromptBusy("idle", false, true)).toBe(false)
-    expect(isPromptBusy("idle", true, true)).toBe(false)
+    expect(isPromptBusy("idle", false, false, false)).toBe(false)
+    expect(isPromptBusy("idle", true, false, false)).toBe(false)
+    expect(isPromptBusy("idle", false, true, false)).toBe(false)
+    expect(isPromptBusy("idle", true, true, false)).toBe(false)
   })
 
   it("returns false when busy but suggesting is true (suggestion decoupling)", () => {
-    expect(isPromptBusy("busy", true, false)).toBe(false)
+    expect(isPromptBusy("busy", true, false, false)).toBe(false)
   })
 
   it("returns false when busy but questioning is true (question decoupling)", () => {
-    expect(isPromptBusy("busy", false, true)).toBe(false)
+    expect(isPromptBusy("busy", false, true, false)).toBe(false)
   })
 
   it("returns false when busy and both suggesting and questioning", () => {
-    expect(isPromptBusy("busy", true, true)).toBe(false)
+    expect(isPromptBusy("busy", true, true, false)).toBe(false)
   })
 
   it("returns true for non-idle non-busy status when not suggesting/questioning", () => {
-    expect(isPromptBusy("retry", false, false)).toBe(true)
+    expect(isPromptBusy("retry", false, false, false)).toBe(true)
   })
 })
 

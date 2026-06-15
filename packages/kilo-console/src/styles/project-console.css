@@ -1,0 +1,619 @@
+.kilo-console .project-console {
+  display: grid;
+  grid-template-columns:
+    13.75rem minmax(24rem, 1fr)
+    clamp(250px, var(--project-info-width, 300px), min(800px, calc(100vw - 37.75rem)));
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--background);
+}
+
+.kilo-console .project-console-sidebar,
+.kilo-console .project-console-info,
+.kilo-console .project-console-main {
+  min-width: 0;
+  min-height: 0;
+}
+
+.kilo-console .project-console-sidebar {
+  --project-action-rail: 5rem;
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+  background: var(--background);
+}
+
+.kilo-console .project-console-title {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.25rem;
+  min-height: 4.25rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  padding: 0.75rem 0.5rem;
+}
+
+.kilo-console .project-console-heading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.kilo-console .project-console-scope {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  gap: 0.375rem;
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.kilo-console .project-console-name,
+.kilo-console .project-console-title small {
+  flex: 1 1 auto;
+  overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kilo-console .project-title-settings {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--radius-sm);
+  color: var(--muted-foreground);
+  text-decoration: none;
+}
+
+.kilo-console .project-title-settings:hover,
+.kilo-console .project-title-settings:focus-visible {
+  background: var(--muted);
+  color: var(--foreground);
+  outline: 0;
+}
+
+.kilo-console .project-console-title small {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+}
+
+.kilo-console .project-console-dot {
+  flex: 0 0 auto;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+.kilo-console .project-console-scroll {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow: auto;
+  min-height: 0;
+  padding: 1rem 0.5rem;
+}
+
+.kilo-console .project-sidebar-group {
+  display: grid;
+  gap: 0;
+}
+
+.kilo-console .project-console-actions,
+.kilo-console .project-contexts {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.kilo-console .project-worktree-block {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.kilo-console .project-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 1.25rem;
+  color: var(--text-weaker);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0.5rem;
+  text-transform: uppercase;
+}
+
+.kilo-console .project-panel-heading-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--project-action-rail);
+  gap: 0.25rem;
+  padding-right: 0;
+}
+
+.kilo-console .project-panel-heading-row .project-heading-action {
+  justify-self: end;
+}
+
+.kilo-console .project-console-sidebar button,
+.kilo-console .project-settings-link {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 1.75rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0 0.5rem;
+  text-align: left;
+  text-decoration: none;
+}
+
+.kilo-console .project-console-sidebar button:hover,
+.kilo-console .project-console-sidebar button:focus-visible,
+.kilo-console .project-console-sidebar button.active,
+.kilo-console .project-settings-link:hover,
+.kilo-console .project-settings-link:focus-visible {
+  background: var(--muted);
+  color: var(--foreground);
+  outline: 0;
+}
+
+.kilo-console .project-console-sidebar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.kilo-console .project-console-sidebar .project-heading-action,
+.kilo-console .project-console-sidebar .project-inline-action,
+.kilo-console .project-console-sidebar .project-terminal-close {
+  justify-content: center;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 1.35rem;
+  min-height: 1.35rem;
+  padding: 0 0.35rem;
+  color: var(--text-weaker);
+  font-size: 0.625rem;
+}
+
+.kilo-console .project-console-sidebar .project-inline-action {
+  max-width: 3.5rem;
+}
+
+.kilo-console .project-console-sidebar .project-inline-action [data-component="icon"] {
+  color: currentColor;
+}
+
+.kilo-console .project-console-sidebar .project-inline-action.danger:hover,
+.kilo-console .project-console-sidebar .project-inline-action.danger:focus-visible {
+  color: var(--destructive, #ef4444);
+}
+
+.kilo-console .project-context-row,
+.kilo-console .project-terminal-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: var(--radius-sm);
+}
+
+.kilo-console .project-context-row:hover,
+.kilo-console .project-context-row:focus-within,
+.kilo-console .project-context-row.active,
+.kilo-console .project-terminal-item:hover,
+.kilo-console .project-terminal-item:focus-within,
+.kilo-console .project-terminal-item.active {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.kilo-console .project-context-row .project-context:hover,
+.kilo-console .project-context-row .project-context:focus-visible,
+.kilo-console .project-context-row .project-context.active,
+.kilo-console .project-context-row .project-inline-action:hover,
+.kilo-console .project-context-row .project-inline-action:focus-visible,
+.kilo-console .project-terminal-item .project-terminal-row:hover,
+.kilo-console .project-terminal-item .project-terminal-row:focus-visible,
+.kilo-console .project-terminal-item .project-terminal-row.active,
+.kilo-console .project-terminal-item .project-terminal-close:hover,
+.kilo-console .project-terminal-item .project-terminal-close:focus-visible {
+  background: transparent;
+}
+
+.kilo-console .project-context-row:hover .project-context,
+.kilo-console .project-context-row:focus-within .project-context,
+.kilo-console .project-context-row.active .project-context {
+  color: var(--foreground);
+}
+
+.kilo-console .project-terminal-item:hover .project-terminal-row,
+.kilo-console .project-terminal-item:focus-within .project-terminal-row,
+.kilo-console .project-terminal-item.active .project-terminal-row {
+  color: var(--foreground) !important;
+}
+
+.kilo-console .project-context-row .project-context {
+  min-width: 0;
+}
+
+.kilo-console .project-row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.125rem;
+  width: var(--project-action-rail);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.kilo-console .project-context-row:hover .project-row-actions,
+.kilo-console .project-context-row:focus-within .project-row-actions,
+.kilo-console .project-terminal-item:hover .project-terminal-close,
+.kilo-console .project-terminal-item:focus-within .project-terminal-close {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.kilo-console .project-context span,
+.kilo-console .project-terminal-row span,
+.kilo-console .project-settings-link span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kilo-console .project-context small,
+.kilo-console .project-settings-link small {
+  display: none;
+}
+
+.kilo-console .project-terminal-list {
+  display: grid;
+  gap: 0;
+  margin: 0 0 0.25rem 0.75rem;
+  border-left: 1px solid var(--border);
+  padding-left: 0.375rem;
+}
+
+.kilo-console .project-terminal-row {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.375rem;
+  min-height: 1.5rem !important;
+  color: var(--muted-foreground) !important;
+  font-size: 0.6875rem !important;
+  font-weight: 400 !important;
+}
+
+.kilo-console .project-terminal-close {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.kilo-console .project-terminal-row .project-console-dot-idle {
+  background: var(--muted-foreground);
+  opacity: 0.6;
+}
+
+.kilo-console .project-terminal-row .project-console-dot-busy {
+  background: var(--primary);
+  box-shadow: 0 0 0 0.1875rem color-mix(in oklab, var(--primary) 18%, transparent);
+}
+
+.kilo-console .project-terminal-row .project-console-dot-attention {
+  background: #f97316;
+  box-shadow: 0 0 0 0.1875rem color-mix(in oklab, #f97316 18%, transparent);
+}
+
+.kilo-console .project-terminal-row .project-console-dot-unread {
+  background: #22c55e;
+  box-shadow: 0 0 0 0.1875rem color-mix(in oklab, #22c55e 18%, transparent);
+}
+
+.kilo-console .project-terminal-row.active {
+  color: var(--foreground) !important;
+}
+
+.kilo-console .project-sidebar-bottom {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--border);
+  padding: 0.5rem;
+}
+
+.kilo-console .project-console-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  background: var(--background-base, #0f1015);
+}
+
+.kilo-console .project-terminal-frame {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.kilo-console .project-terminal-frame.active {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.kilo-console .project-terminal {
+  --project-terminal-background: var(--background-base, #0f1015);
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--project-terminal-background);
+}
+
+.kilo-console .project-terminal-host {
+  flex: 1 1 auto;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  min-height: 0;
+  background: var(--project-terminal-background);
+  opacity: 0;
+}
+
+.kilo-console .project-terminal.shown .project-terminal-host {
+  opacity: 1;
+}
+
+.kilo-console .project-terminal-host textarea {
+  left: -1px !important;
+}
+
+.kilo-console .project-terminal-host canvas {
+  background: var(--project-terminal-background);
+  display: block;
+}
+
+.kilo-console .project-terminal-error {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  border: 1px solid color-mix(in oklab, var(--destructive, #ef4444) 55%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--card) 92%, black);
+  color: var(--foreground);
+  font-size: 0.75rem;
+  padding: 0.75rem;
+}
+
+.kilo-console .project-terminal-empty {
+  display: grid;
+  place-content: center;
+  flex: 1 1 auto;
+  gap: 0.375rem;
+  min-height: 0;
+  background: var(--background-base, #0f1015);
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.kilo-console .project-terminal-empty strong {
+  color: var(--foreground);
+  font-size: 0.875rem;
+}
+
+.kilo-console .project-terminal-empty span {
+  font-size: 0.75rem;
+}
+
+.kilo-console .project-console-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  position: relative;
+  overflow: hidden;
+  border-left: 1px solid var(--border);
+  background: var(--background);
+  padding: 0.875rem;
+}
+
+.kilo-console .project-console-info > [data-component="resize-handle"]::after {
+  background: var(--ring);
+}
+
+.kilo-console .project-info-card {
+  display: grid;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  padding: 0.75rem;
+}
+
+.kilo-console .project-info-context-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.kilo-console .project-info-context-head .project-panel-heading {
+  min-height: 0;
+  padding: 0;
+}
+
+.kilo-console .project-info-title {
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kilo-console .project-info-path {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.6875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kilo-console .project-info-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.125rem;
+}
+
+.kilo-console .project-info-actions [data-component="button"] {
+  width: 100%;
+}
+
+/* Rich review panel — fills remaining height; SessionReview scrolls internally. */
+.kilo-console .project-info-review {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+}
+
+.kilo-console .project-info-review [data-component="session-review"] {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.kilo-console .project-info-review [data-slot="session-review-header"] {
+  box-sizing: border-box;
+  height: auto;
+  min-height: 2.5rem;
+  padding: 0.75rem;
+}
+
+.kilo-console .project-info-review [data-slot="session-review-title"] {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 1.25rem;
+  color: var(--text-weaker);
+  font-family: var(--font-family-sans);
+  font-size: 0.625rem;
+  font-weight: 500;
+  line-height: normal;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kilo-console .project-info-review [data-slot="session-review-actions"] > [data-component="button"] {
+  width: auto;
+  min-width: 0;
+  height: 1.5rem;
+  gap: 0.25rem;
+  padding: 0 0.375rem;
+  font-size: 0.6875rem;
+}
+
+.kilo-console .project-review-state,
+.kilo-console .project-review-empty {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 0;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  text-align: center;
+  padding: 1rem;
+}
+
+.kilo-console .project-review-state-error {
+  color: var(--destructive, #ef4444);
+}
+
+@media (max-width: 1180px) {
+  .kilo-console .project-console {
+    grid-template-columns: 13.75rem minmax(0, 1fr);
+  }
+
+  .kilo-console .project-console-info {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .kilo-console .project-console {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(30rem, 1fr);
+    height: auto;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .kilo-console .project-console-sidebar {
+    height: auto;
+    max-height: 18rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .kilo-console .project-console-main {
+    padding: 1rem;
+  }
+
+  .kilo-console .project-terminal {
+    min-height: 30rem;
+  }
+}

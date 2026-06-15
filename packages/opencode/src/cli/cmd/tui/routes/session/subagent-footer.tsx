@@ -3,17 +3,34 @@ import { useRouteData } from "@tui/context/route"
 import { useSync } from "@tui/context/sync"
 import { useTheme } from "@tui/context/theme"
 import { SplitBorder } from "@tui/component/border"
+import { Spinner } from "@tui/component/spinner" // kilocode_change
+import { useLocal } from "@tui/context/local" // kilocode_change
 import type { AssistantMessage } from "@kilocode/sdk/v2"
-import { useCommandDialog } from "@tui/component/dialog-command"
-import { useKeybind } from "../../context/keybind"
 import { Locale } from "@/util/locale"
 import { useTerminalDimensions } from "@opentui/solid"
+import { useCommandPalette } from "../../context/command-palette"
+import { useCommandShortcut } from "../../keymap"
 
 export function SubagentFooter() {
   const route = useRouteData("session")
   const sync = useSync()
+  const local = useLocal() // kilocode_change
   const messages = createMemo(() => sync.data.message[route.sessionID] ?? [])
   const session = createMemo(() => sync.session.get(route.sessionID))
+
+  // kilocode_change start
+  const lastAssistant = createMemo(() => messages().findLast((m) => m.role === "assistant"))
+
+  const isRunning = createMemo(() => {
+    const status = sync.data.session_status?.[route.sessionID]
+    if (status?.type === "busy") return true
+    const last = lastAssistant()
+    if (last && !last.time.completed) return true
+    return false
+  })
+
+  const agentColor = createMemo(() => local.agent.color(lastAssistant()?.agent ?? ""))
+  // kilocode_change end
 
   const subagentInfo = createMemo(() => {
     const s = session()
@@ -42,7 +59,7 @@ export function SubagentFooter() {
 
     const model = sync.data.provider.find((item) => item.id === last.providerID)?.models[last.modelID]
     const pct = model?.limit.context ? `${Math.round((tokens / model.limit.context) * 100)}%` : undefined
-    const cost = msg.reduce((sum, item) => sum + (item.role === "assistant" ? item.cost : 0), 0)
+    const cost = session()?.cost ?? 0
 
     const money = new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -56,8 +73,10 @@ export function SubagentFooter() {
   })
 
   const { theme } = useTheme()
-  const keybind = useKeybind()
-  const command = useCommandDialog()
+  const command = useCommandPalette()
+  const parentShortcut = useCommandShortcut("session.parent")
+  const previousShortcut = useCommandShortcut("session.child.previous")
+  const nextShortcut = useCommandShortcut("session.child.next")
   const [hover, setHover] = createSignal<"parent" | "prev" | "next" | null>(null)
   useTerminalDimensions()
 
@@ -84,6 +103,11 @@ export function SubagentFooter() {
                 ({subagentInfo().index} of {subagentInfo().total})
               </text>
             </Show>
+            {/* kilocode_change start */}
+            <Show when={isRunning()}>
+              <Spinner color={agentColor()} />
+            </Show>
+            {/* kilocode_change end */}
             <Show when={usage()}>
               {(item) => (
                 <text fg={theme.textMuted} wrapMode="none">
@@ -96,31 +120,31 @@ export function SubagentFooter() {
             <box
               onMouseOver={() => setHover("parent")}
               onMouseOut={() => setHover(null)}
-              onMouseUp={() => command.trigger("session.parent")}
+              onMouseUp={() => command.run("session.parent")}
               backgroundColor={hover() === "parent" ? theme.backgroundElement : theme.backgroundPanel}
             >
               <text fg={theme.text}>
-                Parent <span style={{ fg: theme.textMuted }}>{keybind.print("session_parent")}</span>
+                Parent <span style={{ fg: theme.textMuted }}>{parentShortcut()}</span>
               </text>
             </box>
             <box
               onMouseOver={() => setHover("prev")}
               onMouseOut={() => setHover(null)}
-              onMouseUp={() => command.trigger("session.child.previous")}
+              onMouseUp={() => command.run("session.child.previous")}
               backgroundColor={hover() === "prev" ? theme.backgroundElement : theme.backgroundPanel}
             >
               <text fg={theme.text}>
-                Prev <span style={{ fg: theme.textMuted }}>{keybind.print("session_child_cycle_reverse")}</span>
+                Prev <span style={{ fg: theme.textMuted }}>{previousShortcut()}</span>
               </text>
             </box>
             <box
               onMouseOver={() => setHover("next")}
               onMouseOut={() => setHover(null)}
-              onMouseUp={() => command.trigger("session.child.next")}
+              onMouseUp={() => command.run("session.child.next")}
               backgroundColor={hover() === "next" ? theme.backgroundElement : theme.backgroundPanel}
             >
               <text fg={theme.text}>
-                Next <span style={{ fg: theme.textMuted }}>{keybind.print("session_child_cycle")}</span>
+                Next <span style={{ fg: theme.textMuted }}>{nextShortcut()}</span>
               </text>
             </box>
           </box>

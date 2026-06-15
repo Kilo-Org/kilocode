@@ -109,6 +109,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Anbefalt",
   "dialog.provider.opencode.note": "Utvalgte modeller inkludert Claude, GPT, Gemini og flere",
   "dialog.provider.anthropic.note": "Koble til med Claude Pro/Max eller API-nøkkel",
+  "dialog.provider.deepseek.note": "DeepSeek-modeller for resonnering og kodeoppgaver",
   "dialog.provider.openai.note": "Koble til med ChatGPT Pro/Plus eller API-nøkkel",
   "dialog.provider.google.note": "Gemini-modeller for raske, strukturerte svar",
   "dialog.provider.openrouter.note": "Tilgang til alle støttede modeller fra én leverandør",
@@ -138,8 +139,14 @@ export const dict = {
   "provider.connect.status.failed": "Autorisering mislyktes: {{error}}",
   "provider.connect.apiKey.description":
     "Skriv inn din {{provider}} API-nøkkel for å koble til kontoen din og bruke {{provider}}-modeller i Kilo.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "{{provider}} API-nøkkel",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API-nøkkel",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API-nøkkel er påkrevd",
   "provider.connect.prompt.required": "{{field}} er påkrevd",
   "provider.connect.azure.endpointType.label": "Velg Azure-endepunktskonfigurasjon",
@@ -177,6 +184,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.title": "{{provider}} frakoblet",
   "provider.disconnect.toast.disconnected.description": "Modeller fra {{provider}} er ikke lenger tilgjengelige.",
   "model.tag.free": "Gratis",
+  "model.tag.dataCollected": "Data kan brukes til trening",
   "model.tag.latest": "Nyeste",
   "model.group.recommended": "Anbefalt",
   "model.group.favorites": "Favoritter",
@@ -204,6 +212,9 @@ export const dict = {
   "model.preview.label.cached": "Bufret",
   "model.preview.label.average": "Est. snittkostnad",
   "model.preview.label.context": "Kontekst",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Fullføring",
+  "model.preview.label.costAttempt": "Kostnad / forsøk",
   "model.preview.value.notSupported": "Ikke støttet",
   "model.preview.tooltip.average":
     "Den estimerte snittkostnaden er basert på et typisk forhold mellom inndata-, utdata- og leste buffer-tokens.",
@@ -454,6 +465,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Kunne ikke stoppe deling av sesjon",
   "toast.session.unshare.failed.description": "Det oppstod en feil da delingen av sesjonen skulle stoppes",
 
+  "toast.session.rename.invalid.title": "Ugyldig sesjonstittel",
   "toast.session.listFailed.title": "Kunne ikke laste sesjoner for {{project}}",
 
   "toast.update.title": "Oppdatering tilgjengelig",
@@ -519,6 +531,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Tillatelse påkrevd (underagent)",
   "notification.permission.description": "{{sessionTitle}} i {{projectName}} trenger tillatelse",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkjenning",
+  "ui.permission.doomLoop.prompt": "Mulig løkke oppdaget for verktøyet {{tool}}. Fortsette kjøringen?",
+  "ui.permission.doomLoop.rule": "Fortsett {{tool}}-kall",
   "ui.permission.rule.addToAllowed": "Legg til i tillatt-listen",
   "ui.permission.rule.removeFromAllowed": "Fjern fra tillatt-listen",
   "ui.permission.rule.addToDenied": "Legg til i blokkert-listen",
@@ -824,6 +838,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Underagentmodell",
   "settings.providers.subagentModel.description":
     "Standardmodell og resonneringsinnsats for task-tool-underagenter. La stå tom for å arve den kallende agentens modell.",
+  "settings.models.hidePromptTraining.title": "Skjul modeller som trener på ledetekster",
+  "settings.models.hidePromptTraining.description":
+    "Skjul Kilo Gateway-modeller der leverandørene kan bruke ledetekstene dine til trening.",
   "settings.providers.modeModels": "Modell per modus",
   "settings.providers.custom.note": "Legg til en OpenAI-kompatibel leverandør via basis-URL.",
   "settings.providers.modeModels.description":
@@ -987,6 +1004,8 @@ export const dict = {
   "session.delete.confirm": 'Slette sesjonen "{{name}}"?',
   "session.delete.button": "Slett sesjon",
   "session.untitled": "Uten tittel",
+  "session.current": "Gjeldende økt",
+  "session.history.sources": "Historikkilde",
   "session.recent": "Nylige",
   "session.showHistory": "Vis historikk",
   "session.search.placeholder": "Søk i sesjoner...",
@@ -1000,6 +1019,31 @@ export const dict = {
   "feedback.dialog.github": "Rapporter et problem på GitHub",
   "feedback.dialog.discord": "Bli med i Discord-fellesskapet vårt",
   "feedback.dialog.support": "Kundestøtte",
+  "workStyle.onboarding.welcome": "Velkommen til Kilo",
+  "workStyle.onboarding.title": "Velg hvordan du vil arbeide",
+  "workStyle.onboarding.description":
+    "Dette angir startinnstillingene for tillatelser, resonneringsblokker, terminalutdata og konteksttidslinjen. Det brukes bare én gang og hopper over innstillinger du allerede har tilpasset.",
+  "workStyle.onboarding.settingsNote": "Du kan endre disse alternativene når som helst under",
+  "workStyle.onboarding.settings": "Innstillinger.",
+  "workStyle.onboarding.skip": "Hopp over inntil videre",
+  "workStyle.toast.saved.title": "Modusen er lagret",
+  "workStyle.toast.saved.description": "Oppdater innstillingene når som helst under Innstillinger.",
+  "workStyle.toast.saved.action": "Gå til Innstillinger",
+  "workStyle.choice.permissions": "Tillatelser",
+  "workStyle.choice.bash": "Bash",
+  "workStyle.choice.visibility": "Synlighet",
+  "workStyle.choice.human-in-the-loop.eyebrow": "Menneskelig kontroll",
+  "workStyle.choice.human-in-the-loop.title": "Gjennomgå først",
+  "workStyle.choice.human-in-the-loop.description": "Kilo tar pause og viser deg planen sin mens den arbeider.",
+  "workStyle.choice.human-in-the-loop.permissions": "Ber om tillatelse før filer redigeres eller kommandoer kjøres.",
+  "workStyle.choice.human-in-the-loop.bash": "Ber om tillatelse til alle terminalkommandoer.",
+  "workStyle.choice.human-in-the-loop.visibility": "Viser alle samtaledetaljer, inkludert resonnering.",
+  "workStyle.choice.autonomous.eyebrow": "Færre avbrudd",
+  "workStyle.choice.autonomous.title": "Høy autonomi",
+  "workStyle.choice.autonomous.description": "Færre avbrudd og et strømlinjeformet grensesnitt.",
+  "workStyle.choice.autonomous.permissions": "Redigerer filer og kjører kommandoer i arbeidsområdet uten å spørre.",
+  "workStyle.choice.autonomous.bash": "Kan kjøre terminalkommandoer i arbeidsområdet uten godkjenning.",
+  "workStyle.choice.autonomous.visibility": "Detaljene forblir skjult til du utvider dem.",
   "session.cloud.import.title": "Importer fra skyen",
   "session.cloud.import.placeholder": "Økt-ID, URL eller kilo import-kommando",
   "session.cloud.import.button": "Importer",
@@ -1091,6 +1135,14 @@ export const dict = {
   "session.status.retrying": "Prøver på nytt (forsøk {{ attempt }})… {{ message }}",
   "session.status.working": "Arbeider…",
   "session.status.offline": "Nettverk frakoblet — kobler til på nytt...",
+  "session.outcome.incomplete": "Runden ble avsluttet med {{count}} oppgaver igjen",
+  "session.outcome.limit": "Svarsgrensen ble nådd før fullføring",
+  "session.outcome.unknown": "Runden ble avsluttet uten avslutningsårsak fra modellen",
+  "session.outcome.filtered": "Leverandøren stoppet denne responsen på grunn av et innholdsfilter.",
+  "session.outcome.unexpected": "Responsen ble avsluttet uventet og kan være ufullstendig.",
+  "session.outcome.interrupted": "Runde avbrutt",
+  "session.outcome.error": "Runden feilet",
+  "session.outcome.finish": "Avslutningsårsak: {{reason}}",
 
   "ui.sessionTurn.cancel": "Avbryt",
   "ui.sessionTurn.status.thinking": "Tenker...",
@@ -1153,7 +1205,6 @@ export const dict = {
     'Telemetri styres av den innebygde telemetri-innstillingen i VS Code. For å deaktivere den, gå til Innstillinger > Telemetry > Telemetry Level og sett den til "off". Start VS Code på nytt for å ta i bruk endringen.',
   "settings.aboutKiloCode.telemetry.openSettings": "Åpne innstillinger for telemetri",
 
-  "settings.agentBehaviour.subtab.modes": "Moduser",
   "settings.agentBehaviour.subtab.agents": "Agenter",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-servere",
   "settings.agentBehaviour.subtab.rules": "Regler",
@@ -1209,18 +1260,10 @@ export const dict = {
   "settings.experimental.formatter.description": "Aktiver automatisk kodeformatering",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Aktiver språkserverprotokoll-integrasjon",
-  "settings.experimental.pasteSummary.title": "Deaktiver lim-sammendrag",
-  "settings.experimental.pasteSummary.description": "Ikke oppsummer stort limt innhold",
   "settings.experimental.batch.title": "Batchverktøy",
   "settings.experimental.batch.description": "Aktiver batchbehandling av verktøykall",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Kodesøk",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig språksøk på tvers av kodebasen",
-  "settings.experimental.agentManagerTool.title": "Agent Manager-verktøy",
-  "settings.experimental.agentManagerTool.description":
-    "Tillat agenter å starte lokale Agent Manager-økter og worktree-økter fra et verktøykall",
   "settings.experimental.speechToText.title": "Tale til tekst",
   "settings.experimental.speechToText.description":
     "Aktiver taleinndata i prompt-felt ved å bruke din Kilo-konto gjennom Kilo Gateway.",
@@ -1304,7 +1347,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Ingen ferdigheter funnet. Legg til ferdighetsmappestier eller URLer nedenfor for å gjøre ferdigheter tilgjengelige.",
   "settings.agentBehaviour.availableModes": "Tilgjengelige egendefinerte moduser",
-  "settings.agentBehaviour.noModesFound": "Ingen moduser funnet.",
+  "settings.agentBehaviour.noAgentsFound": "Ingen agenter funnet.",
   "settings.agentBehaviour.createMode": "Opprett ny modus",
   "settings.agentBehaviour.createMode.name": "Navn",
   "settings.agentBehaviour.createMode.name.placeholder": "f.eks. reviewer",
@@ -1347,10 +1390,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Kopier tillatelser som JSON",
   "settings.agentBehaviour.permissions.hint":
     "Reglene evalueres i rekkefølge — siste matchende regel vinner. Dette er det gjeldende regelsettet fra CLI-backenden.",
-  "settings.agentBehaviour.removeMode.title": "Fjern modus",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Vil du fjerne modusen "{{name}}"? Dette vil deaktivere modusen ved å oppdatere konfigurasjonen din.',
-  "settings.agentBehaviour.removeMode.button": "Fjern",
+  "settings.agentBehaviour.removeAgent.title": "Fjern agent",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Fjern agent "{{name}}"? Dette deaktiverer agenten ved å oppdatere konfigurasjonen din.',
+  "settings.agentBehaviour.removeAgent.button": "Fjern",
   "settings.agentBehaviour.removeMcp.title": "Fjern MCP-server",
   "settings.agentBehaviour.removeMcp.confirm":
     'Vil du fjerne MCP-serveren "{{name}}"? Dette vil fjerne den fra konfigurasjonen din.',
@@ -1425,8 +1468,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Administrer oppgaveliste. Tillater lesing og oppdatering av den interne oppgavelisten.",
   "settings.autoApprove.tool.webfetch": "Hent en URL. Tillater henting av innhold fra en spesifikk URL.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Søk på nettet eller i kode. Tillater å utføre eksterne nett- eller kodesøk.",
+  "settings.autoApprove.tool.websearch": "Søk på nettet. Tillater å utføre eksterne nettsøk.",
   "settings.autoApprove.tool.external_directory":
     "Få tilgang til filer utenfor arbeidsområdet. Utløses ved tilgang til filer utenfor gjeldende prosjektkatalog.",
   "settings.autoApprove.tool.doom_loop":

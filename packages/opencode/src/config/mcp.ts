@@ -1,8 +1,10 @@
 import { Schema, SchemaGetter } from "effect" // kilocode_change
-import { zod } from "@/util/effect-zod"
-import { PositiveInt, withStatics } from "@/util/schema"
+import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
+import { PositiveInt } from "@opencode-ai/core/schema"
+import { withStatics } from "@opencode-ai/core/schema" // kilocode_change
 
-const LocalCanonical = Schema.Struct({ // kilocode_change
+const LocalCanonical = Schema.Struct({
+  // kilocode_change
   type: Schema.Literal("local").annotate({ description: "Type of MCP server connection" }),
   command: Schema.mutable(Schema.Array(Schema.String)).annotate({
     description: "Command and arguments to run the MCP server",
@@ -31,8 +33,14 @@ const LocalInput = Schema.Struct({
 })
 
 const normalizeLocal = (input: Schema.Schema.Type<typeof LocalInput>): Schema.Schema.Type<typeof LocalCanonical> => {
-  const { env, environment, ...rest } = input
-  return { ...rest, environment: environment ?? env }
+  const env = input.environment ?? input.env
+  return {
+    type: input.type,
+    command: input.command,
+    ...(env === undefined ? {} : { environment: env }),
+    ...("enabled" in input ? { enabled: input.enabled } : {}),
+    ...("timeout" in input ? { timeout: input.timeout } : {}),
+  }
 }
 
 export const Local = LocalInput.pipe(
@@ -57,9 +65,7 @@ export const OAuth = Schema.Struct({
   redirectUri: Schema.optional(Schema.String).annotate({
     description: "OAuth redirect URI (default: http://127.0.0.1:19876/mcp/oauth/callback).",
   }),
-})
-  .annotate({ identifier: "McpOAuthConfig" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "McpOAuthConfig" })
 export type OAuth = Schema.Schema.Type<typeof OAuth>
 
 export const Remote = Schema.Struct({
@@ -77,14 +83,10 @@ export const Remote = Schema.Struct({
   timeout: Schema.optional(PositiveInt).annotate({
     description: "Timeout in ms for MCP server requests. Defaults to 5000 (5 seconds) if not specified.",
   }),
-})
-  .annotate({ identifier: "McpRemoteConfig" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "McpRemoteConfig" })
 export type Remote = Schema.Schema.Type<typeof Remote>
 
-export const Info = Schema.Union([Local, Remote])
-  .annotate({ discriminator: "type" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export const Info = Schema.Union([Local, Remote]).annotate({ discriminator: "type" })
 export type Info = Schema.Schema.Type<typeof Info>
 
 export * as ConfigMCP from "./mcp"

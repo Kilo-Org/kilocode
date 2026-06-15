@@ -15,7 +15,7 @@ import { Bus } from "../../src/bus"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { EditTool } from "../../src/tool/edit"
 import { Format } from "../../src/format"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/kilocode/instance"
 import { Instruction } from "../../src/session/instruction"
 import { LSP } from "../../src/lsp/lsp"
 import { MessageID, SessionID } from "../../src/session/schema"
@@ -28,7 +28,7 @@ import { testEffect } from "../lib/effect"
 
 const ctx = {
   sessionID: SessionID.make("ses_test-encoding"),
-  messageID: MessageID.make(""),
+  messageID: MessageID.make("msg_test-encoding"),
   callID: "",
   agent: "build",
   abort: AbortSignal.any([]),

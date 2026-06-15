@@ -49,7 +49,21 @@ data class AgentConfigDto(
 @Serializable
 data class ConfigDto(
     val model: String? = null,
+    val smallModel: String? = null,
+    val subagentModel: String? = null,
+    val subagentVariant: String? = null,
     val agent: Map<String, AgentConfigDto> = emptyMap(),
+)
+
+@Serializable
+data class ConfigPatchDto(
+    val values: Map<String, String?> = emptyMap(),
+    val agents: Map<String, AgentConfigPatchDto> = emptyMap(),
+)
+
+@Serializable
+data class AgentConfigPatchDto(
+    val model: String? = null,
 )
 
 @Serializable

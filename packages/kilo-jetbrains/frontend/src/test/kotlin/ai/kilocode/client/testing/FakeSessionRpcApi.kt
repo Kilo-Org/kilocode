@@ -77,6 +77,10 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     // --- Call tracking ---
 
+    val enhancements = mutableListOf<Pair<String, String>>()
+    var enhanced = "Enhanced prompt"
+    var enhanceGate: CompletableDeferred<Unit>? = null
+    var enhanceThrows: Exception? = null
     val prompts = mutableListOf<Triple<String, String, PromptDto>>()
     val aborts = mutableListOf<Pair<String, String>>()
     val compacts = mutableListOf<Triple<String, String, ModelSelectionDto>>()
@@ -171,6 +175,14 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun getDirectory(id: String, fallback: String): String {
         assertNotEdt("getDirectory")
         return fallback
+    }
+
+    override suspend fun enhancePrompt(directory: String, text: String): String {
+        assertNotEdt("enhancePrompt")
+        enhancements.add(directory to text)
+        enhanceGate?.await()
+        enhanceThrows?.let { throw it }
+        return enhanced
     }
 
     override suspend fun prompt(id: String, directory: String, prompt: PromptDto) {

@@ -2,12 +2,15 @@ import { afterEach, describe, expect } from "bun:test"
 import { ConfigProvider, Effect, Layer } from "effect"
 import type * as Scope from "effect/Scope"
 import { HttpRouter } from "effect/unstable/http"
+import { ChildProcessSpawner } from "effect/unstable/process"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { createKiloClient } from "@kilocode/sdk/v2"
 import { validateSession } from "../../src/cli/cmd/tui/validate-session"
-import { Instance } from "../../src/project/instance"
-import { WithInstance } from "../../src/project/with-instance"
-import { ExperimentalHttpApiServer } from "../../src/server/routes/instance/httpapi/server"
+import { InstanceBootstrap } from "../../src/project/bootstrap-service"
+import { InstanceStore } from "../../src/project/instance-store"
+import { HttpApiApp } from "../../src/server/routes/instance/httpapi/server"
 import { Server } from "../../src/server/server"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -18,30 +21,39 @@ import { errorMessage } from "../../src/util/error"
 import { TestLLMServer } from "../lib/llm-server"
 import path from "path"
 import { resetDatabase } from "../fixture/db"
-import { disposeAllInstances, tmpdir } from "../fixture/fixture"
-import { it } from "../lib/effect"
+import { disposeAllInstances, TestInstance, tmpdirScoped } from "../fixture/fixture"
+import { testEffect } from "../lib/effect"
+
+const noopBootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
+const it = testEffect(
+  Layer.mergeAll(
+    AppFileSystem.defaultLayer,
+    CrossSpawnSpawner.defaultLayer,
+    InstanceStore.defaultLayer.pipe(Layer.provide(noopBootstrap)),
+  ),
+)
 
 const original = {
-  KILO_EXPERIMENTAL_HTTPAPI: Flag.KILO_EXPERIMENTAL_HTTPAPI,
   KILO_SERVER_PASSWORD: Flag.KILO_SERVER_PASSWORD,
   KILO_SERVER_USERNAME: Flag.KILO_SERVER_USERNAME,
 }
 
-type Backend = "legacy" | "httpapi"
+type ServerPath = "default" | "raw"
 type Sdk = ReturnType<typeof createKiloClient>
 type SdkResult = { response: Response; data?: unknown; error?: unknown }
 type Captured = { status: number; data?: unknown; error?: unknown }
 type ProjectFixture = { sdk: Sdk; directory: string }
 type LlmProjectFixture = ProjectFixture & { llm: TestLLMServer["Service"] }
+type TestServices = AppFileSystem.Service | ChildProcessSpawner.ChildProcessSpawner | InstanceStore.Service
+type TestScope = Scope.Scope | TestServices
 
-function app(backend: Backend, input?: { password?: string; username?: string }) {
-  Flag.KILO_EXPERIMENTAL_HTTPAPI = backend === "httpapi"
+function app(serverPath: ServerPath, input?: { password?: string; username?: string }) {
   Flag.KILO_SERVER_PASSWORD = input?.password
   Flag.KILO_SERVER_USERNAME = input?.username
-  if (backend === "legacy") return Server.Legacy().app
+  if (serverPath === "default") return Server.Default().app
 
   const handler = HttpRouter.toWebHandler(
-    ExperimentalHttpApiServer.routes.pipe(
+    HttpApiApp.routes.pipe(
       Layer.provide(
         ConfigProvider.layer(
           ConfigProvider.fromUnknown({
@@ -54,7 +66,7 @@ function app(backend: Backend, input?: { password?: string; username?: string })
     { disableLogger: true },
   ).handler
   return {
-    fetch: (request: Request) => handler(request, ExperimentalHttpApiServer.context),
+    fetch: (request: Request) => handler(request, HttpApiApp.context),
     request(input: string | URL | Request, init?: RequestInit) {
       return this.fetch(input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init))
     },
@@ -62,7 +74,7 @@ function app(backend: Backend, input?: { password?: string; username?: string })
 }
 
 function client(
-  backend: Backend,
+  serverPath: ServerPath,
   directory?: string,
   input?: { password?: string; username?: string; headers?: Record<string, string> },
 ) {
@@ -70,12 +82,12 @@ function client(
     baseUrl: "http://localhost",
     directory,
     headers: input?.headers,
-    fetch: serverFetch(backend, input),
+    fetch: serverFetch(serverPath, input),
   })
 }
 
-function serverFetch(backend: Backend, input?: { password?: string; username?: string }) {
-  const serverApp = app(backend, input)
+function serverFetch(serverPath: ServerPath, input?: { password?: string; username?: string }) {
+  const serverApp = app(serverPath, input)
   return Object.assign(
     async (request: RequestInfo | URL, init?: RequestInit) =>
       await serverApp.fetch(request instanceof Request ? request : new Request(request, init)),
@@ -151,12 +163,27 @@ function expectStatus(request: () => Promise<{ response: Response }>, status: nu
   )
 }
 
-function firstEvent(open: () => Promise<{ stream: AsyncIterator<unknown> }>) {
-  return Effect.acquireRelease(call(open), (events) =>
-    call(async () => void (await events.stream.return?.(undefined))).pipe(Effect.ignore),
+function firstEvent(open: (signal: AbortSignal) => Promise<{ stream: AsyncIterator<unknown> }>) {
+  return Effect.acquireRelease(
+    Effect.sync(() => new AbortController()),
+    (controller) => Effect.sync(() => controller.abort()),
   ).pipe(
-    Effect.flatMap((events) => call(() => events.stream.next())),
-    Effect.map((result) => result.value),
+    Effect.flatMap((controller) =>
+      Effect.acquireRelease(
+        call(() => open(controller.signal)),
+        (events) => call(async () => void (await events.stream.return?.(undefined))).pipe(Effect.ignore),
+      ).pipe(
+        Effect.flatMap((events) =>
+          call(() => events.stream.next()).pipe(
+            Effect.timeoutOrElse({
+              duration: "1 second",
+              orElse: () => Effect.fail(new Error("timed out waiting for SDK event")),
+            }),
+          ),
+        ),
+        Effect.map((result) => result.value),
+      ),
+    ),
   )
 }
 
@@ -190,105 +217,149 @@ function resetState() {
   })
 }
 
-function httpapi<A, E>(name: string, effect: Effect.Effect<A, E, Scope.Scope>) {
+function httpapi<A, E>(name: string, effect: Effect.Effect<A, E, TestScope>) {
   it.live(name, effect)
 }
-// kilocode_change start - skip variant for Kilo-overlaid routes not yet wired into the HttpApi bridge
-httpapi.skip = <A, E>(name: string, effect: Effect.Effect<A, E, Scope.Scope>) => it.live.skip(name, effect)
-// kilocode_change end
 
-function parity<A, E>(name: string, scenario: (backend: Backend) => Effect.Effect<A, E, Scope.Scope>) {
+function httpapiInstance<A, E>(
+  name: string,
+  options: {
+    serverPath: ServerPath
+    git?: boolean
+    config?: Partial<Config.Info>
+    setup?: (dir: string) => Effect.Effect<void, E, TestServices>
+  },
+  run: (input: ProjectFixture) => Effect.Effect<A, E, TestScope>,
+) {
+  it.instance(
+    name,
+    Effect.gen(function* () {
+      const instance = yield* TestInstance
+      yield* options.setup?.(instance.directory) ?? Effect.void
+      return yield* run({ sdk: client(options.serverPath, instance.directory), directory: instance.directory })
+    }),
+    { git: options.git ?? true, config: { formatter: false, lsp: false, ...options.config } },
+  )
+}
+
+function serverPathParity<A, E>(name: string, scenario: (serverPath: ServerPath) => Effect.Effect<A, E, TestScope>) {
   it.live(
     name,
     Effect.gen(function* () {
-      const legacy = yield* scenario("legacy")
+      const standard = yield* scenario("default")
       yield* resetState()
-      const httpapi = yield* scenario("httpapi")
-      expect(httpapi).toEqual(legacy)
+      const raw = yield* scenario("raw")
+      expect(raw).toEqual(standard)
     }),
   )
 }
-// kilocode_change start - skip variant for Kilo-overlaid routes not yet wired into the HttpApi bridge
-parity.skip = <A, E>(name: string, scenario: (backend: Backend) => Effect.Effect<A, E, Scope.Scope>) =>
-  it.live.skip(
-    name,
-    Effect.gen(function* () {
-      const legacy = yield* scenario("legacy")
-      yield* resetState()
-      const httpapi = yield* scenario("httpapi")
-      expect(httpapi).toEqual(legacy)
-    }),
-  )
-// kilocode_change end
 
-function withProject<A, E, R>(
-  backend: Backend,
-  options: { git?: boolean; config?: Partial<Config.Info>; setup?: (dir: string) => Effect.Effect<void> },
-  run: (input: ProjectFixture) => Effect.Effect<A, E, R>,
+function withProject<A, E, E2 = never>(
+  serverPath: ServerPath,
+  options: {
+    git?: boolean
+    config?: Partial<Config.Info>
+    setup?: (dir: string) => Effect.Effect<void, E2, TestServices>
+  },
+  run: (input: ProjectFixture) => Effect.Effect<A, E, TestScope>,
 ) {
-  return Effect.acquireRelease(
-    call(() => tmpdir({ git: options.git ?? true, config: { formatter: false, lsp: false, ...options.config } })),
-    (tmp) => call(() => tmp[Symbol.asyncDispose]()).pipe(Effect.ignore),
-  ).pipe(
-    Effect.tap((tmp) => options.setup?.(tmp.path) ?? Effect.void),
-    Effect.flatMap((tmp) => run({ sdk: client(backend, tmp.path), directory: tmp.path })),
-  )
+  return Effect.gen(function* () {
+    const directory = yield* tmpdirScoped({
+      git: options.git ?? true,
+      config: { formatter: false, lsp: false, ...options.config },
+    })
+    yield* options.setup?.(directory) ?? Effect.void
+    return yield* run({ sdk: client(serverPath, directory), directory })
+  })
 }
 
-function withStandardProject<A, E, R>(backend: Backend, run: (input: ProjectFixture) => Effect.Effect<A, E, R>) {
-  return withProject(backend, { setup: writeStandardFiles }, run)
+function withStandardProject<A, E>(
+  serverPath: ServerPath,
+  run: (input: ProjectFixture) => Effect.Effect<A, E, TestScope>,
+) {
+  return withProject(serverPath, { setup: writeStandardFiles }, run)
 }
 
-function withFakeLlm<A, E, R>(backend: Backend, run: (input: LlmProjectFixture) => Effect.Effect<A, E, R>) {
+function withFakeLlm<A, E>(serverPath: ServerPath, run: (input: LlmProjectFixture) => Effect.Effect<A, E, TestScope>) {
   return Effect.gen(function* () {
     const llm = yield* TestLLMServer
-    return yield* withProject(backend, { config: providerConfig(llm.url) }, (input) => run({ ...input, llm }))
+    return yield* withProject(serverPath, { config: providerConfig(llm.url) }, (input) => run({ ...input, llm }))
+  }).pipe(Effect.provide(TestLLMServer.layer))
+}
+
+function withFakeLlmProject<A, E>(
+  serverPath: ServerPath,
+  options: { setup?: (dir: string) => Effect.Effect<void, E, TestServices> },
+  run: (input: LlmProjectFixture) => Effect.Effect<A, E, TestScope>,
+) {
+  return Effect.gen(function* () {
+    const llm = yield* TestLLMServer
+    return yield* withProject(
+      serverPath,
+      {
+        config: providerConfig(llm.url),
+        setup: options.setup,
+      },
+      (input) => run({ ...input, llm }),
+    )
   }).pipe(Effect.provide(TestLLMServer.layer))
 }
 
 function writeStandardFiles(dir: string) {
-  return Effect.all([
-    call(() => Bun.write(path.join(dir, "hello.txt"), "hello")),
-    call(() => Bun.write(path.join(dir, "needle.ts"), "export const needle = 'sdk-parity'\n")),
-  ]).pipe(Effect.asVoid)
+  return AppFileSystem.Service.use((fs) =>
+    Effect.all([
+      fs.writeWithDirs(path.join(dir, "hello.txt"), "hello"),
+      fs.writeWithDirs(path.join(dir, "needle.ts"), "export const needle = 'sdk-parity'\n"),
+    ]).pipe(Effect.asVoid),
+  )
+}
+
+function writeProjectSkill(dir: string) {
+  return AppFileSystem.Service.use((fs) =>
+    fs.writeWithDirs(
+      path.join(dir, ".opencode", "skills", "project-rest-skill", "SKILL.md"),
+      `---
+name: project-rest-skill
+description: A project skill visible to REST API prompts.
+---
+
+# Project REST Skill
+`,
+    ),
+  )
 }
 
 function seedMessage(directory: string, sessionID: string) {
   const id = SessionID.make(sessionID)
-  return call(
-    async () =>
-      await WithInstance.provide({
-        directory,
-        fn: () =>
-          Effect.runPromise(
-            SessionNs.Service.use((svc) =>
-              Effect.gen(function* () {
-                const message = yield* svc.updateMessage({
-                  id: MessageID.ascending(),
-                  sessionID: id,
-                  role: "user",
-                  time: { created: Date.now() },
-                  agent: "test",
-                  model: { providerID: ProviderID.make("test"), modelID: ModelID.make("test") },
-                  tools: {},
-                } satisfies MessageV2.User)
-                const part = yield* svc.updatePart({
-                  id: PartID.ascending(),
-                  sessionID: id,
-                  messageID: message.id,
-                  type: "text",
-                  text: "seeded message",
-                })
-                return { message, part }
-              }),
-            ).pipe(Effect.provide(SessionNs.defaultLayer)),
-          ),
-      }),
+  return InstanceStore.Service.use((store) =>
+    store.provide(
+      { directory },
+      SessionNs.Service.use((svc) =>
+        Effect.gen(function* () {
+          const message = yield* svc.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: id,
+            role: "user",
+            time: { created: Date.now() },
+            agent: "test",
+            model: { providerID: ProviderID.make("test"), modelID: ModelID.make("test") },
+            tools: {},
+          } satisfies MessageV2.User)
+          const part = yield* svc.updatePart({
+            id: PartID.ascending(),
+            sessionID: id,
+            messageID: message.id,
+            type: "text",
+            text: "seeded message",
+          })
+          return { message, part }
+        }),
+      ).pipe(Effect.provide(SessionNs.defaultLayer)),
+    ),
   )
 }
 
 afterEach(async () => {
-  Flag.KILO_EXPERIMENTAL_HTTPAPI = original.KILO_EXPERIMENTAL_HTTPAPI
   Flag.KILO_SERVER_PASSWORD = original.KILO_SERVER_PASSWORD
   Flag.KILO_SERVER_USERNAME = original.KILO_SERVER_USERNAME
   await disposeAllInstances()
@@ -299,13 +370,13 @@ describe("HttpApi SDK", () => {
   httpapi(
     "uses the generated SDK for global and control routes",
     Effect.gen(function* () {
-      const sdk = client("httpapi")
+      const sdk = client("raw")
       const health = yield* call(() => sdk.global.health())
       const log = yield* call(() => sdk.app.log({ service: "httpapi-sdk-test", level: "info", message: "hello" }))
 
       expect(health.response.status).toBe(200)
       expect(health.data).toMatchObject({ healthy: true })
-      expect(yield* firstEvent(() => sdk.global.event({ signal: AbortSignal.timeout(1_000) }))).toMatchObject({
+      expect(yield* firstEvent((signal) => sdk.global.event({ signal }))).toMatchObject({
         payload: { type: "server.connected" },
       })
       expect(log.response.status).toBe(200)
@@ -314,10 +385,10 @@ describe("HttpApi SDK", () => {
     }),
   )
 
-  // kilocode_change start - /config/providers and /agent 500 on HttpApi backend; Kilo overlays not yet migrated onto the bridge
-  httpapi.skip(
+  httpapiInstance(
     "uses the generated SDK for safe instance routes",
-    withProject("httpapi", { git: false, setup: writeStandardFiles }, ({ sdk }) =>
+    { serverPath: "raw", git: false, setup: writeStandardFiles },
+    ({ sdk }) =>
       Effect.gen(function* () {
         const file = yield* call(() => sdk.file.read({ path: "hello.txt" }))
         const session = yield* call(() => sdk.session.create({ title: "sdk" }))
@@ -337,13 +408,11 @@ describe("HttpApi SDK", () => {
           expectStatus(() => sdk.find.files({ query: "hello", limit: 10 }), 200),
         ])
       }),
-    ),
   )
-  // kilocode_change end
 
-  parity("matches generated SDK global and control behavior across backends", (backend) =>
+  serverPathParity("matches generated SDK global and control behavior", (serverPath) =>
     Effect.gen(function* () {
-      const sdk = client(backend)
+      const sdk = client(serverPath)
       const health = yield* capture(() => sdk.global.health())
       const log = yield* capture(() => sdk.app.log({ service: "sdk-parity", level: "info", message: "hello" }))
       const invalidAuth = yield* capture(() => sdk.auth.set({ providerID: "test" }))
@@ -356,22 +425,22 @@ describe("HttpApi SDK", () => {
     }),
   )
 
-  parity("matches generated SDK global event stream across backends", (backend) =>
-    firstEvent(() => client(backend).global.event({ signal: AbortSignal.timeout(1_000) })).pipe(
+  serverPathParity("matches generated SDK global event stream", (serverPath) =>
+    firstEvent((signal) => client(serverPath).global.event({ signal })).pipe(
       Effect.map((event) => ({ type: record(record(event).payload).type })),
     ),
   )
 
-  parity("matches generated SDK instance event stream across backends", (backend) =>
-    withStandardProject(backend, ({ sdk }) =>
-      firstEvent(() => sdk.event.subscribe(undefined, { signal: AbortSignal.timeout(1_000) })).pipe(
+  serverPathParity("matches generated SDK instance event stream", (serverPath) =>
+    withStandardProject(serverPath, ({ sdk }) =>
+      firstEvent((signal) => sdk.event.subscribe(undefined, { signal })).pipe(
         Effect.map((event) => ({ type: record(record(event).payload).type })),
       ),
     ),
   )
 
-  parity("matches generated SDK missing session errors across backends", (backend) =>
-    withStandardProject(backend, ({ sdk }) =>
+  serverPathParity("matches generated SDK missing session errors", (serverPath) =>
+    withStandardProject(serverPath, ({ sdk }) =>
       Effect.gen(function* () {
         const sessionID = "ses_missing"
         const expected = {
@@ -381,8 +450,16 @@ describe("HttpApi SDK", () => {
         const missing = yield* capture(() => sdk.session.get({ sessionID }))
         const thrown = yield* captureThrown(() => sdk.session.get({ sessionID }, { throwOnError: true }))
 
+        // Result-tuple path: error body is preserved as-is so existing
+        // consumers reading `result.error.name` / `JSON.stringify(error)`
+        // keep working byte-for-byte.
         expect(missing.error).toEqual(expected)
-        expect(thrown).toEqual(expected)
+        // throwOnError path: SDK wraps the body in a real Error with the
+        // server's message, with the original parsed body preserved under
+        // `.cause.body`.
+        expect(thrown).toBeInstanceOf(Error)
+        expect((thrown as Error).message).toBe(expected.data.message)
+        expect(((thrown as Error).cause as { body: unknown }).body).toEqual(expected)
         return {
           status: missing.status,
           error: missing.error,
@@ -392,8 +469,8 @@ describe("HttpApi SDK", () => {
     ),
   )
 
-  parity("formats missing session validation errors for -s", (backend) =>
-    withStandardProject(backend, ({ directory }) =>
+  serverPathParity("formats missing session validation errors for -s", (serverPath) =>
+    withStandardProject(serverPath, ({ directory }) =>
       Effect.gen(function* () {
         const sessionID = "ses_206f84f18ffeZ6hhD7pFYAiW5T"
         const thrown = yield* captureThrown(() =>
@@ -401,7 +478,7 @@ describe("HttpApi SDK", () => {
             url: "http://localhost",
             directory,
             sessionID,
-            fetch: serverFetch(backend),
+            fetch: serverFetch(serverPath),
           }),
         )
         expect(errorMessage(thrown)).toBe(`Session not found: ${sessionID}`)
@@ -410,21 +487,23 @@ describe("HttpApi SDK", () => {
     ),
   )
 
-  parity("matches generated SDK basic auth behavior across backends", (backend) =>
-    withStandardProject(backend, ({ directory }) =>
+  httpapiInstance(
+    "uses generated SDK basic auth behavior",
+    { serverPath: "raw", setup: writeStandardFiles },
+    ({ directory }) =>
       Effect.gen(function* () {
         const missing = yield* capture(() =>
-          client(backend, directory, { password: "secret" }).file.read({ path: "hello.txt" }),
+          client("raw", directory, { password: "secret" }).file.read({ path: "hello.txt" }),
         )
         // kilocode_change start - match Hono AuthMiddleware username default ("kilo")
         const bad = yield* capture(() =>
-          client(backend, directory, {
+          client("raw", directory, {
             password: "secret",
             headers: { authorization: authorization("kilo", "wrong") },
           }).file.read({ path: "hello.txt" }),
         )
         const good = yield* capture(() =>
-          client(backend, directory, {
+          client("raw", directory, {
             password: "secret",
             headers: { authorization: authorization("kilo", "secret") },
           }).file.read({ path: "hello.txt" }),
@@ -436,12 +515,10 @@ describe("HttpApi SDK", () => {
           content: record(good.data).content,
         }
       }),
-    ),
   )
 
-  // kilocode_change start - /config/providers and /agent 500 on HttpApi backend; Kilo overlays not yet migrated onto the bridge
-  parity.skip("matches generated SDK instance read routes across backends", (backend) =>
-    withStandardProject(backend, ({ sdk, directory }) =>
+  serverPathParity("matches generated SDK instance read routes", (serverPath) =>
+    withStandardProject(serverPath, ({ sdk, directory }) =>
       Effect.gen(function* () {
         const project = yield* capture(() => sdk.project.current())
         const projects = yield* capture(() => sdk.project.list())
@@ -490,10 +567,9 @@ describe("HttpApi SDK", () => {
       }),
     ),
   )
-  // kilocode_change end
 
-  parity("matches generated SDK session lifecycle routes across backends", (backend) =>
-    withStandardProject(backend, ({ sdk }) =>
+  serverPathParity("matches generated SDK session lifecycle routes", (serverPath) =>
+    withStandardProject(serverPath, ({ sdk }) =>
       Effect.gen(function* () {
         const parent = yield* capture(() => sdk.session.create({ title: "parent" }))
         const parentID = String(record(parent.data).id)
@@ -545,8 +621,8 @@ describe("HttpApi SDK", () => {
     ),
   )
 
-  parity("matches generated SDK session message and part routes across backends", (backend) =>
-    withStandardProject(backend, ({ sdk, directory }) =>
+  serverPathParity("matches generated SDK session message and part routes", (serverPath) =>
+    withStandardProject(serverPath, ({ sdk, directory }) =>
       Effect.gen(function* () {
         const session = yield* capture(() => sdk.session.create({ title: "messages" }))
         const sessionID = String(record(session.data).id)
@@ -597,8 +673,8 @@ describe("HttpApi SDK", () => {
     ),
   )
 
-  parity("matches generated SDK prompt no-reply routes across backends", (backend) =>
-    withStandardProject(backend, ({ sdk }) =>
+  serverPathParity("matches generated SDK prompt no-reply routes", (serverPath) =>
+    withStandardProject(serverPath, ({ sdk }) =>
       Effect.gen(function* () {
         const session = yield* capture(() => sdk.session.create({ title: "prompt" }))
         const sessionID = String(record(session.data).id)
@@ -634,8 +710,74 @@ describe("HttpApi SDK", () => {
     ),
   )
 
-  parity("matches generated SDK prompt streaming through fake LLM across backends", (backend) =>
-    withFakeLlm(backend, ({ sdk, llm }) =>
+  // kilocode_change start - verify invalid user images fail at the real SDK boundary
+  serverPathParity("rejects malformed user image data before persistence", (serverPath) =>
+    withStandardProject(serverPath, ({ sdk }) =>
+      Effect.gen(function* () {
+        const session = yield* capture(() => sdk.session.create({ title: "invalid image" }))
+        const sessionID = String(record(session.data).id)
+        const prompt = yield* capture(() =>
+          sdk.session.prompt({
+            sessionID,
+            agent: "build",
+            noReply: true,
+            parts: [
+              {
+                type: "file",
+                mime: "image/png",
+                filename: "not-an-image.png",
+                url: "data:image/png;base64,bm90LWltYWdl",
+              },
+            ],
+          }),
+        )
+        const messages = yield* capture(() => sdk.session.messages({ sessionID }))
+
+        expect(prompt.status).toBe(400)
+        expect(JSON.stringify(messages.data)).not.toContain("not-an-image.png")
+
+        return {
+          promptStatus: prompt.status,
+          persisted: JSON.stringify(messages.data).includes("not-an-image.png"),
+        }
+      }),
+    ),
+  )
+  serverPathParity("rejects oversized user image files before persistence", (serverPath) =>
+    withProject(serverPath, { config: { attachment: { image: { max_base64_bytes: 4 } } } }, ({ sdk, directory }) =>
+      Effect.gen(function* () {
+        const filepath = path.join(directory, "oversized.png")
+        yield* call(() => Bun.write(filepath, Buffer.alloc(1024, 1)))
+        const session = yield* capture(() => sdk.session.create({ title: "oversized image" }))
+        const sessionID = String(record(session.data).id)
+        const prompt = yield* capture(() =>
+          sdk.session.prompt({
+            sessionID,
+            agent: "build",
+            noReply: true,
+            parts: [
+              {
+                type: "file",
+                mime: "image/png",
+                filename: "oversized.png",
+                url: `file://${filepath}`,
+              },
+            ],
+          }),
+        )
+        const messages = yield* capture(() => sdk.session.messages({ sessionID }))
+
+        expect(prompt.status).toBe(400)
+        expect(JSON.stringify(messages.data)).not.toContain("oversized.png")
+
+        return { promptStatus: prompt.status, persisted: JSON.stringify(messages.data).includes("oversized.png") }
+      }),
+    ),
+  )
+  // kilocode_change end
+
+  serverPathParity("matches generated SDK prompt streaming through fake LLM", (serverPath) =>
+    withFakeLlm(serverPath, ({ sdk, llm }) =>
       Effect.gen(function* () {
         yield* llm.text("fake world", { usage: { input: 11, output: 7 } })
         const session = yield* capture(() =>
@@ -668,8 +810,93 @@ describe("HttpApi SDK", () => {
     ),
   )
 
-  parity("matches generated SDK TUI validation and command routes across backends", (backend) =>
-    withStandardProject(backend, ({ sdk }) =>
+  // kilocode_change start - verify provider errors remain in successful assistant messages
+  serverPathParity("preserves provider errors through the generated SDK", (serverPath) =>
+    withFakeLlm(serverPath, ({ sdk, llm }) =>
+      Effect.gen(function* () {
+        const gateway = { error: { code: "PAID_MODEL_AUTH_REQUIRED", message: "Authentication required" } }
+        const create = () =>
+          capture(() =>
+            sdk.session.create({
+              title: "provider error",
+              permission: [{ permission: "*", pattern: "*", action: "allow" }],
+            }),
+          )
+        const prompt = (sessionID: string) => ({
+          sessionID,
+          agent: "build",
+          model: { providerID: "test", modelID: "test-model" },
+          parts: [{ type: "text" as const, text: "trigger provider error" }],
+        })
+
+        yield* llm.error(401, gateway)
+        const tupleSession = yield* create()
+        const tuple = yield* capture(() => sdk.session.prompt(prompt(String(record(tupleSession.data).id))))
+
+        yield* llm.error(401, gateway)
+        const strictSession = yield* create()
+        const strict = yield* call(() =>
+          sdk.session.prompt(prompt(String(record(strictSession.data).id)), { throwOnError: true }),
+        )
+
+        const tupleError = record(record(tuple.data).info).error
+        const tupleData = record(record(tupleError).data)
+        const strictError = record(record(record(strict).data).info).error
+        const strictData = record(record(strictError).data)
+
+        expect(tuple.status).toBe(200)
+        expect(record(tupleError).name).toBe("APIError")
+        expect(tupleData.statusCode).toBe(401)
+        expect(JSON.parse(String(tupleData.responseBody))).toEqual(gateway)
+        expect(record(strictError).name).toBe("APIError")
+        expect(strictData.statusCode).toBe(401)
+        expect(JSON.parse(String(strictData.responseBody))).toEqual(gateway)
+
+        return {
+          tupleStatus: tuple.status,
+          tupleName: record(tupleError).name,
+          providerStatus: tupleData.statusCode,
+          providerBody: tupleData.responseBody,
+          strictName: record(strictError).name,
+          strictStatus: strictData.statusCode,
+          strictBody: strictData.responseBody,
+        }
+      }),
+    ),
+  )
+  // kilocode_change end
+
+  httpapi(
+    "includes project skills in REST API prompt context",
+    withFakeLlmProject("default", { setup: writeProjectSkill }, ({ sdk, llm }) =>
+      Effect.gen(function* () {
+        yield* llm.text("skill context ok", { usage: { input: 11, output: 7 } })
+        const session = yield* capture(() =>
+          sdk.session.create({
+            title: "project skill prompt",
+            permission: [{ permission: "*", pattern: "*", action: "allow" }],
+          }),
+        )
+        const sessionID = String(record(session.data).id)
+        const prompt = yield* capture(() =>
+          sdk.session.prompt({
+            sessionID,
+            agent: "build",
+            model: { providerID: "test", modelID: "test-model" },
+            parts: [{ type: "text", text: "hello skill context" }],
+          }),
+        )
+        const inputs = yield* llm.inputs
+
+        expect(session.status).toBe(200)
+        expect(prompt.status).toBe(200)
+        expect(JSON.stringify(inputs[0])).toContain("project-rest-skill")
+      }),
+    ),
+  )
+
+  serverPathParity("matches generated SDK TUI validation and command routes", (serverPath) =>
+    withStandardProject(serverPath, ({ sdk }) =>
       Effect.gen(function* () {
         const session = yield* capture(() => sdk.session.create({ title: "tui" }))
         const sessionID = String(record(session.data).id)
@@ -719,8 +946,8 @@ describe("HttpApi SDK", () => {
     ),
   )
 
-  parity("matches generated SDK project git initialization across backends", (backend) =>
-    withProject(backend, { git: false }, ({ sdk, directory }) =>
+  serverPathParity("matches generated SDK project git initialization", (serverPath) =>
+    withProject(serverPath, { git: false }, ({ sdk, directory }) =>
       Effect.gen(function* () {
         const before = yield* capture(() => sdk.project.current())
         const init = yield* capture(() => sdk.project.initGit())

@@ -5,7 +5,7 @@
  * Main chat container that combines all chat components
  */
 
-import { type Component, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount } from "solid-js"
+import { type Component, type JSX, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
@@ -28,11 +28,13 @@ interface ChatViewProps {
   onSelectSession?: (id: string) => void
   onShowHistory?: () => void
   onForkMessage?: (sessionId: string, messageId: string) => void
+  onForkSession?: (sessionId: string) => void
   readonly?: boolean
   /** When true, show the "Continue in Worktree" button. Defaults to true in the sidebar. */
   continueInWorktree?: boolean
   promptBoxId?: string
   pendingSessionID?: string
+  emptyState?: () => JSX.Element
 }
 
 export const ChatView: Component<ChatViewProps> = (props) => {
@@ -78,21 +80,10 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const questioning = () => isQuestioning(blocked(), familyQuestions().length)
   const dock = () => !props.readonly || !!permissionRequest()
 
-  // When a bottom-dock permission disappears while the session is busy,
-  // the scroll container grows taller. Dispatch a custom event so MessageList can
-  // resume auto-scroll.
-  createEffect(
-    on(blocked, (isBlocked, wasBlocked) => {
-      if (wasBlocked && !isBlocked && !idle()) {
-        window.dispatchEvent(new CustomEvent("resumeAutoScroll"))
-      }
-    }),
-  )
-
   onMount(() => {
     if (props.readonly) return
     const handler = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || session.status() === "idle" || e.defaultPrevented) return
+      if (e.key !== "Escape" || (!session.submitting() && session.status() === "idle") || e.defaultPrevented) return
       e.preventDefault()
       session.abort()
     }
@@ -139,6 +130,12 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   }
 
   const startSession = () => window.dispatchEvent(new CustomEvent("newTaskRequest"))
+
+  const fork = () => {
+    const sid = id()
+    if (!sid) return
+    props.onForkSession?.(sid)
+  }
 
   const startWorktree = () => vscode.postMessage({ type: "agentManager.createWorktree" })
 
@@ -192,11 +189,14 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
   const canStartSession = (hasChat: boolean) => hasChat
 
+  const canFork = (hasChat: boolean) => hasChat && !isSidebar() && session.status() === "idle" && !!props.onForkSession
+
   const canStartWorktree = () => isSidebar() && server.gitInstalled()
 
   const canMoveToWorktree = (hasChat: boolean) => hasChat && canContinueInWorktree() && server.gitInstalled()
 
-  const hasActions = (hasChat: boolean) => canStartSession(hasChat) || canStartWorktree() || canMoveToWorktree(hasChat)
+  const hasActions = (hasChat: boolean) =>
+    canStartSession(hasChat) || canFork(hasChat) || canStartWorktree() || canMoveToWorktree(hasChat)
 
   const renderActions = (hasChat: boolean) => (
     <Show when={hasActions(hasChat)}>
@@ -212,6 +212,19 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 aria-label={language.t("sidebar.session.newSession")}
               >
                 {language.t("sidebar.session.newSession")}
+              </Button>
+            </Tooltip>
+          </Show>
+          <Show when={canFork(hasChat)}>
+            <Tooltip value={language.t("agentManager.tab.forkSession")} placement="top">
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={fork}
+                aria-label={language.t("agentManager.tab.forkSession")}
+              >
+                <Icon name="fork" size="small" />
+                {language.t("agentManager.tab.forkSession")}
               </Button>
             </Tooltip>
           </Show>
@@ -318,6 +331,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             questions={standaloneQuestions}
             suggestions={standaloneSuggestions}
             readonly={props.readonly}
+            emptyState={props.emptyState}
           />
         </div>
       </div>

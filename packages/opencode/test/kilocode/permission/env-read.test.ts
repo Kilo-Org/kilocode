@@ -14,7 +14,11 @@ import { provideTmpdirInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
 const bus = Bus.layer
-const env = Layer.mergeAll(Permission.layer.pipe(Layer.provide(bus)), bus, CrossSpawnSpawner.defaultLayer)
+const env = Layer.mergeAll(
+  Permission.layer.pipe(Layer.provide(bus), Layer.provide(Config.defaultLayer)),
+  bus,
+  CrossSpawnSpawner.defaultLayer,
+)
 const it = testEffect(env)
 
 afterAll(async () => {
@@ -22,7 +26,9 @@ afterAll(async () => {
   for (const file of ["kilo.jsonc", "kilo.json", "config.json", "opencode.json", "opencode.jsonc"]) {
     await fs.rm(path.join(dir, file), { force: true }).catch(() => {})
   }
-  await Config.invalidate()
+  await Effect.runPromise(
+    Config.Service.use((svc) => svc.invalidate()).pipe(Effect.scoped, Effect.provide(Config.defaultLayer)),
+  )
   await InstanceRuntime.disposeAllInstances()
 })
 
@@ -138,7 +144,7 @@ describe("env read permissions", () => {
         }).pipe(Effect.forkScoped)
 
         yield* waitForPending(1)
-        yield* allow({ enable: true, requestID: "per_env_everything" })
+        yield* allow({ enable: true, requestID: PermissionID.make("per_env_everything") })
 
         const items = yield* waitForPending(1)
         expect(items[0].id).toBe(PermissionID.make("per_env_everything"))

@@ -4,12 +4,12 @@ import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionFileDiff
 import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.PermissionRequestState
+import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.BaseQuestionView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.PermissionReplyDto
-import com.intellij.icons.AllIcons
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
@@ -410,7 +410,7 @@ class PermissionViewTest : BasePlatformTestCase() {
         val labels = findAll<JBLabel>(view)
         assertTrue(
             "Expected permission warning icon in header",
-            labels.any { it.icon == AllIcons.General.Warning },
+            labels.any { it.icon == SessionViewIcons.warning },
         )
     }
 
@@ -434,13 +434,13 @@ class PermissionViewTest : BasePlatformTestCase() {
     fun `test session question buttons use question surface background`() {
         view.show(permission())
 
-        assertEquals(SessionUiStyle.View.surface(), view.runButtonForTest().background)
-        assertEquals(SessionUiStyle.View.surface(), view.denyButtonForTest().background)
+        assertEquals(SessionUiStyle.View.Surface.bgColor(), view.runButtonForTest().background)
+        assertEquals(SessionUiStyle.View.Surface.bgColor(), view.denyButtonForTest().background)
     }
 
-    // ------ code labels use editor style ------
+    // ------ code labels use transcript style ------
 
-    fun `test code label uses editor font family after applyStyle`() {
+    fun `test code label uses ui font family after applyStyle`() {
         view.show(
             Permission(
                 id = "perm_codefont",
@@ -456,7 +456,8 @@ class PermissionViewTest : BasePlatformTestCase() {
 
         val labels = view.codeLabelsForTest()
         assertNotNull("Should have at least one code label for command", labels.firstOrNull())
-        assertEquals("Code label font family should use editor family", "Courier New", labels[0].font.name)
+        assertEquals("Code label font family should use transcript family", style.transcriptFont.name, labels[0].font.name)
+        assertEquals(style.transcriptFont.size, labels[0].font.size)
     }
 
     fun `test permission header uses headerFont not editor font family`() {
@@ -493,7 +494,7 @@ class PermissionViewTest : BasePlatformTestCase() {
 
         val labels = view.codeLabelsForTest()
         assertFalse("Expected code labels", labels.isEmpty())
-        assertEquals(SessionUiStyle.View.headerHover(), labels[0].background)
+        assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor(), labels[0].background)
     }
 
     private fun permission() = Permission(

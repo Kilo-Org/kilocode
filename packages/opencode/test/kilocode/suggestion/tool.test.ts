@@ -22,7 +22,16 @@ const command = Layer.succeed(
     list: () => Effect.succeed(Object.values(cmds)),
   }),
 )
-const it = testEffect(Layer.mergeAll(Truncate.defaultLayer, Agent.defaultLayer, command))
+const statuses: Array<[string, SessionStatus.Info]> = []
+const status = Layer.succeed(
+  SessionStatus.Service,
+  SessionStatus.Service.of({
+    get: () => Effect.succeed({ type: "idle" }),
+    list: () => Effect.succeed(new Map()),
+    set: (sessionID, value) => Effect.sync(() => statuses.push([sessionID, value])),
+  }),
+)
+const it = testEffect(Layer.mergeAll(Truncate.defaultLayer, Agent.defaultLayer, command, status))
 
 const init = Effect.fn("SuggestToolTest.init")(function* () {
   const info = yield* SuggestTool
@@ -54,18 +63,16 @@ const ctx = {
 
 describe("tool.suggest", () => {
   let show: ReturnType<typeof spyOn>
-  let statusSet: ReturnType<typeof spyOn>
 
   beforeEach(() => {
     show = spyOn(Suggestion, "show")
-    statusSet = spyOn(SessionStatus, "set").mockResolvedValue(undefined as any)
     names.length = 0
+    statuses.length = 0
     for (const name of Object.keys(cmds)) delete cmds[name]
   })
 
   afterEach(() => {
     show.mockRestore()
-    statusSet.mockRestore()
   })
 
   it.live("returns dismissal result when suggestion is dismissed", () =>
@@ -250,8 +257,8 @@ describe("tool.suggest", () => {
       // idle status call has been issued.
       yield* Effect.sleep("10 millis")
 
-      expect(statusSet).toHaveBeenCalledWith(ctx.sessionID, { type: "idle" })
-      expect(statusSet).not.toHaveBeenCalledWith(ctx.sessionID, { type: "busy" })
+      expect(statuses).toContainEqual([ctx.sessionID, { type: "idle" }])
+      expect(statuses).not.toContainEqual([ctx.sessionID, { type: "busy" }])
 
       resolveShow({ label: "Start", prompt: "do it" })
       yield* Fiber.join(pending)
@@ -275,10 +282,7 @@ describe("tool.suggest", () => {
         ctx as any,
       )
 
-      const statuses = statusSet.mock.calls
-        .filter((call: unknown[]) => call[0] === ctx.sessionID)
-        .map((call: unknown[]) => (call[1] as { type: string }).type)
-      expect(statuses).toEqual(["idle", "busy"])
+      expect(statuses.map(([, value]) => value.type)).toEqual(["idle", "busy"])
     }),
   )
 
@@ -299,10 +303,7 @@ describe("tool.suggest", () => {
         ctx as any,
       )
 
-      const statuses = statusSet.mock.calls
-        .filter((call: unknown[]) => call[0] === ctx.sessionID)
-        .map((call: unknown[]) => (call[1] as { type: string }).type)
-      expect(statuses).toEqual(["idle"])
+      expect(statuses.map(([, value]) => value.type)).toEqual(["idle"])
     }),
   )
 })

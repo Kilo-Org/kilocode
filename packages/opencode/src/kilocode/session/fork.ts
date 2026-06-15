@@ -1,66 +1,125 @@
-import { Session } from "@/session/session"
 import { MessageV2 } from "@/session/message-v2"
-import { SessionID, PartID } from "@/session/schema"
-import * as Log from "@opencode-ai/core/util/log"
+import { SessionID } from "@/session/schema"
+import { Database } from "@/storage/db"
+import { SyncEvent } from "@/sync"
+import { Effect } from "effect"
 
-const log = Log.create({ service: "session.fork" })
+const task = "task"
+const stale = /^[ \t]*task_id:[^\r\n]*(?:(?:\r?\n){1,2}|$)/m
 
-/**
- * Extracts the child session ID from a task tool part.
- */
-function childID(part: MessageV2.Part): string | undefined {
-  if (part.type !== "tool" || part.tool !== "task") return undefined
-  return (part.state as { metadata?: { sessionId?: string } }).metadata?.sessionId
+type Item = { type: "message"; info: MessageV2.Info } | { type: "part"; part: MessageV2.Part; time: number }
+
+export function writer(sessionID: SessionID, sync: SyncEvent.Interface) {
+  const items: Item[] = []
+  return {
+    message<T extends MessageV2.Info>(info: T) {
+      items.push({ type: "message", info })
+      return info
+    },
+    part(part: MessageV2.Part) {
+      items.push({ type: "part", part: structuredClone(detachPart(part)), time: Date.now() })
+    },
+    commit() {
+      return Effect.sync(() =>
+        Database.transaction(
+          () => {
+            // sync.run stays synchronous with publishing disabled, and its nested transaction reuses this active transaction.
+            for (const item of items) {
+              if (item.type === "message") {
+                Effect.runSync(sync.run(MessageV2.Event.Updated, { sessionID, info: item.info }, { publish: false }))
+                continue
+              }
+              Effect.runSync(
+                sync.run(
+                  MessageV2.Event.PartUpdated,
+                  { sessionID, part: item.part, time: item.time },
+                  { publish: false },
+                ),
+              )
+            }
+          },
+          { behavior: "immediate" },
+        ),
+      )
+    },
+  }
+}
+
+function metadata(value: Record<string, unknown> | undefined) {
+  if (!value) return value
+  const copy = { ...value }
+  delete copy.sessionId
+  delete copy.sessionID
+  return copy
+}
+
+function input(value: Record<string, unknown>) {
+  const copy = { ...value }
+  delete copy.task_id
+  return copy
 }
 
 /**
- * Recursively fork all child (subagent) sessions referenced by task tool parts
- * in the given session, then update the parts to point at the forked copies.
+ * Turns copied task calls into detached historical results.
  *
- * This prevents subagent state from leaking between forked sessions in the
- * same worktree: without remapping, two forked sessions would share the same
- * child session references, causing SSE events and permission prompts to bleed
- * across sessions.
+ * Child sessions are execution state, not conversation context. Their final
+ * result is already embedded in the parent task part, so a fork keeps that
+ * result while dropping references that could resume, stream, or route prompts
+ * to a child owned by the source session.
  */
-export async function remapChildren(sid: SessionID): Promise<void> {
-  const msgs = await Session.messages({ sessionID: sid })
-  const refs: { part: MessageV2.ToolPart; child: string }[] = []
-  for (const msg of msgs) {
-    for (const part of msg.parts) {
-      const child = childID(part)
-      if (child) refs.push({ part: part as MessageV2.ToolPart, child })
+function detachPart(part: MessageV2.Part): MessageV2.Part {
+  if (part.type !== "tool" || part.tool !== task) return part
+
+  const top = metadata(part.metadata)
+  const state = part.state
+  if (state.status === "pending") {
+    const now = Date.now()
+    return {
+      ...part,
+      metadata: top,
+      state: {
+        status: "error",
+        input: input(state.input),
+        error: "Task was still pending when this session was forked.",
+        time: { start: now, end: now },
+      },
     }
   }
-  if (refs.length === 0) return
 
-  const remapped = new Map<string, SessionID>()
-  for (const ref of refs) {
-    if (remapped.has(ref.child)) continue
-    const exists = await Session.get(SessionID.make(ref.child)).catch(() => undefined)
-    if (!exists) continue
-    // Session.fork() already calls remapChildren on the forked child,
-    // so nested subagents are handled recursively without an explicit call here.
-    const forked = await Session.fork({ sessionID: SessionID.make(ref.child) })
-    remapped.set(ref.child, forked.id)
-  }
-
-  if (remapped.size === 0) return
-
-  for (const ref of refs) {
-    const replacement = remapped.get(ref.child)
-    if (!replacement) continue
-    const meta = (ref.part.state as { metadata?: Record<string, unknown> }).metadata
-    if (!meta) continue
-    await Session.updatePart({
-      ...ref.part,
-      id: PartID.make(ref.part.id),
-      sessionID: SessionID.make(ref.part.sessionID),
+  if (state.status === "running") {
+    return {
+      ...part,
+      metadata: top,
       state: {
-        ...ref.part.state,
-        metadata: { ...meta, sessionId: replacement },
+        status: "error",
+        input: input(state.input),
+        error: "Task was still running when this session was forked.",
+        metadata: metadata(state.metadata),
+        time: { start: state.time.start, end: Date.now() },
       },
-    } as MessageV2.ToolPart)
+    }
   }
 
-  log.info("remapped child sessions", { session: sid, count: remapped.size })
+  if (state.status === "error") {
+    return {
+      ...part,
+      metadata: top,
+      state: {
+        ...state,
+        input: input(state.input),
+        metadata: metadata(state.metadata),
+      },
+    }
+  }
+
+  return {
+    ...part,
+    metadata: top,
+    state: {
+      ...state,
+      input: input(state.input),
+      output: state.output.replace(stale, ""),
+      metadata: metadata(state.metadata) ?? {},
+    },
+  }
 }

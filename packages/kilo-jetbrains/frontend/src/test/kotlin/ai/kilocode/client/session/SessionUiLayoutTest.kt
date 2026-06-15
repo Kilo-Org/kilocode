@@ -8,7 +8,7 @@ import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.ConnectionPanel
-import ai.kilocode.client.session.ui.EmptySessionPanel
+import ai.kilocode.client.session.ui.empty.EmptySessionPanel
 import ai.kilocode.client.session.ui.LoadingPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay

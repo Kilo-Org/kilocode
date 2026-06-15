@@ -16,10 +16,12 @@ import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TodoViewDto
 import ai.kilocode.rpc.dto.TokensDto
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
-import com.intellij.testFramework.UsefulTestCase
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
-class SessionModelTest : UsefulTestCase() {
+@Suppress("UnstableApiUsage")
+class SessionModelTest : BasePlatformTestCase() {
 
     private lateinit var model: SessionModel
     private lateinit var parent: Disposable
@@ -48,6 +50,15 @@ class SessionModelTest : UsefulTestCase() {
         assertEquals(KiloWorkspaceStatusDto.PENDING, model.workspace.status)
         assertFalse(model.isReady())
         assertEquals(SessionState.Idle, model.state)
+    }
+
+    fun `test model mutation works through EDT`() {
+        // The test fixture does not consistently throw for @RequiresEdt when called
+        // from a pooled thread, so keep this as a behavioral EDT contract check.
+        edt { model.addMessage(msg("on_edt", "assistant")) }
+
+        assertNotNull(edt { model.message("on_edt") })
+        assertTrue(events.any { it is SessionModelEvent.MessageAdded && it.info.info.id == "on_edt" })
     }
 
     fun `test isReady requires app and workspace readiness`() {
@@ -509,16 +520,27 @@ class SessionModelTest : UsefulTestCase() {
         assertEquals("snapshot", (entry.parts["p2"] as Generic).type)
     }
 
-    fun `test loadHistory drops step-start and preserves step-finish parts`() {
+    fun `test loadHistory drops silent parts and preserves step-finish parts`() {
         val text = PartDto(id = "p1", sessionID = "s1", messageID = "m1", type = "text", text = "visible")
         val stepStart = PartDto(id = "p2", sessionID = "s1", messageID = "m1", type = "step-start")
         val stepFinish = PartDto(id = "p3", sessionID = "s1", messageID = "m1", type = "step-finish")
+        val patch = PartDto(id = "p4", sessionID = "s1", messageID = "m1", type = "patch")
 
-        model.loadHistory(listOf(MessageWithPartsDto(msg("m1", "assistant"), listOf(text, stepStart, stepFinish))))
+        model.loadHistory(listOf(MessageWithPartsDto(msg("m1", "assistant"), listOf(text, stepStart, stepFinish, patch))))
 
         val entry = model.message("m1")!!
         assertEquals(listOf("p1", "p3"), entry.parts.keys.toList())
         assertTrue(entry.parts["p3"] is StepFinish)
+    }
+
+    fun `test updateContent drops patch parts`() {
+        model.addMessage(msg("m1", "assistant"))
+        events.clear()
+
+        model.updateContent("m1", PartDto(id = "p1", sessionID = "s1", messageID = "m1", type = "patch"))
+
+        assertFalse(model.message("m1")!!.parts.containsKey("p1"))
+        assertTrue(events.isEmpty())
     }
 
     fun `test upsertMessage adds new message and returns true`() {
@@ -871,5 +893,12 @@ class SessionModelTest : UsefulTestCase() {
 
     private fun assertModel(expected: String) {
         assertEquals(expected.trimIndent().trim(), model.toString().trim())
+    }
+
+    private fun <T> edt(block: () -> T): T {
+        var result: T? = null
+        ApplicationManager.getApplication().invokeAndWait { result = block() }
+        @Suppress("UNCHECKED_CAST")
+        return result as T
     }
 }

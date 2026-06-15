@@ -5,6 +5,7 @@ node_modules
 .worktrees
 .sst
 .env
+.env.local
 .idea/*
 !.idea/gradle.xml
 !.idea/.run

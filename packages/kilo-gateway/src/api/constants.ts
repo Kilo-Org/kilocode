@@ -100,4 +100,11 @@ export const PROMPTS = [
   "gpt55",
 ] as const
 
-export const AI_SDK_PROVIDERS = ["alibaba", "anthropic", "openai", "openai-compatible", "openrouter"] as const
+export const AI_SDK_PROVIDERS = [
+  "alibaba",
+  "anthropic",
+  "mistral",
+  "openai",
+  "openai-compatible",
+  "openrouter",
+] as const

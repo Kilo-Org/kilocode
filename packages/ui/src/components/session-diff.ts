@@ -1,4 +1,4 @@
-import { parseDiffFromFile, type FileDiffMetadata } from "@pierre/diffs"
+import { parseDiffFromFile, parsePatchFiles, type FileDiffMetadata } from "@pierre/diffs"
 import { formatPatch, parsePatch, structuredPatch } from "diff"
 import type { SnapshotFileDiff, VcsFileDiff } from "@kilocode/sdk/v2"
 
@@ -12,13 +12,15 @@ type LegacyDiff = {
   status?: "added" | "deleted" | "modified"
 }
 
-type ReviewDiff = SnapshotFileDiff | VcsFileDiff | LegacyDiff
+type SnapshotDiff = SnapshotFileDiff & { file: string }
+type ReviewDiff = SnapshotDiff | VcsFileDiff | LegacyDiff
 
 // kilocode_change start - expose patch text extraction without building FileDiffMetadata on the UI thread
 export type DiffText = {
   before: string
   after: string
   patch: string
+  patchIsPartial: boolean
 }
 
 export type ViewDiff = {
@@ -41,6 +43,8 @@ export function contents(diff: ReviewDiff): DiffText {
       const beforeLines: Array<{ text: string; newline: boolean }> = []
       const afterLines: Array<{ text: string; newline: boolean }> = []
       let previous: "-" | "+" | " " | undefined
+
+      const patchIsPartial = patch.hunks.every((h) => h.oldStart > 1)
 
       for (const hunk of patch.hunks) {
         for (const line of hunk.lines) {
@@ -75,9 +79,10 @@ export function contents(diff: ReviewDiff): DiffText {
         before: beforeLines.map((line) => line.text + (line.newline ? "\n" : "")).join(""),
         after: afterLines.map((line) => line.text + (line.newline ? "\n" : "")).join(""),
         patch: diff.patch,
+        patchIsPartial,
       }
     } catch {
-      return { before: "", after: "", patch: diff.patch }
+      return { before: "", after: "", patch: diff.patch, patchIsPartial: false }
     }
   }
   return {
@@ -94,21 +99,26 @@ export function contents(diff: ReviewDiff): DiffText {
         { context: Number.MAX_SAFE_INTEGER },
       ),
     ),
+    patchIsPartial: false,
   }
 }
 // kilocode_change end
 
-function file(file: string, patch: string, before: string, after: string) {
+function file(file: string, patch: string, before: string, after: string, partial = false) {
   const hit = cache.get(patch)
   if (hit) return hit
 
-  const value = parseDiffFromFile({ name: file, contents: before }, { name: file, contents: after })
+  let value: FileDiffMetadata | undefined
+  if (partial) value = parsePatchFiles(patch)[0]?.files[0]
+  if (value === undefined) value = parseDiffFromFile({ name: file, contents: before }, { name: file, contents: after })
+
   cache.set(patch, value)
   return value
 }
 
 export function normalize(diff: ReviewDiff): ViewDiff {
   const next = contents(diff) // kilocode_change
+  const fileDiff = file(diff.file, next.patch, next.before, next.after, next.patchIsPartial)
   return {
     file: diff.file, // kilocode_change
     patch: next.patch, // kilocode_change
@@ -117,7 +127,7 @@ export function normalize(diff: ReviewDiff): ViewDiff {
     additions: diff.additions,
     deletions: diff.deletions,
     status: diff.status,
-    fileDiff: file(diff.file, next.patch, next.before, next.after),
+    fileDiff,
   }
 }
 

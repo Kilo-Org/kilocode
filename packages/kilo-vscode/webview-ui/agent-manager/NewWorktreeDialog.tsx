@@ -85,7 +85,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const cached = vscode.getState<Record<string, unknown>>()
   const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
   const [versions, setVersions] = createSignal<VersionCount>(1)
-  const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(session.selected())
+  const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(session.configModel())
   const [compareMode, setCompareMode] = createSignal(false)
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
   const [agent, setAgent] = createSignal(session.selectedAgent())
@@ -121,7 +121,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   // True when the user has changed the model from the session/config default
   const overridden = createMemo(() => {
     const sel = model()
-    const cfg = session.selected()
+    const cfg = session.configModel()
     if (!sel || !cfg) return false
     return sel.providerID !== cfg.providerID || sel.modelID !== cfg.modelID
   })
@@ -396,7 +396,6 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                 <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
                   <textarea
                     ref={textareaRef}
-                    autofocus
                     class="prompt-input am-prompt-input"
                     placeholder={t(
                       isMac
@@ -441,7 +440,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                         <Button
                           variant="ghost"
                           size="small"
-                          onClick={() => setModel(session.selected())}
+                          onClick={() => setModel(session.configModel())}
                           aria-label={t("prompt.action.resetModel")}
                         >
                           <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">

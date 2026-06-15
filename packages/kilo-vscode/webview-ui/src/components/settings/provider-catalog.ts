@@ -34,6 +34,7 @@ export function providerNoteKey(providerID: string) {
   if (providerID === "kilo") return "dialog.provider.kilo.note"
   if (providerID === "opencode") return "dialog.provider.opencode.note"
   if (providerID === "anthropic") return "dialog.provider.anthropic.note"
+  if (providerID === "deepseek") return "dialog.provider.deepseek.note"
   if (providerID.startsWith("github-copilot")) return "dialog.provider.copilot.note"
   if (providerID === "openai") return "dialog.provider.openai.note"
   if (providerID === "google") return "dialog.provider.google.note"

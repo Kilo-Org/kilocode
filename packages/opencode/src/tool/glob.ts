@@ -7,6 +7,7 @@ import { Ripgrep } from "../file/ripgrep"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import DESCRIPTION from "./glob.txt"
 import * as Tool from "./tool"
+import { Reference } from "@/reference/reference"
 
 // kilocode_change start — support absolute glob patterns (e.g. ~/.config/kilo/command/*.md)
 function normalize(p: string) {
@@ -38,6 +39,7 @@ export const GlobTool = Tool.define(
   Effect.gen(function* () {
     const rg = yield* Ripgrep.Service
     const fs = yield* AppFileSystem.Service
+    const reference = yield* Reference.Service
 
     return {
       description: DESCRIPTION,
@@ -56,18 +58,25 @@ export const GlobTool = Tool.define(
             },
           })
 
-          const base = absolute?.dir ?? params.path ?? ins.directory // kilocode_change
+          // kilocode_change start
+          const base = absolute?.dir ?? params.path ?? ins.directory
           const search = path.isAbsolute(base) ? base : path.resolve(ins.directory, base)
+          // kilocode_change end
+          yield* reference.ensure(search)
           const info = yield* fs.stat(search).pipe(Effect.catch(() => Effect.succeed(undefined)))
           if (info?.type === "File") {
             throw new Error(`glob path must be a directory: ${search}`)
           }
-          yield* assertExternalDirectoryEffect(ctx, search, { kind: "directory" })
+          yield* assertExternalDirectoryEffect(ctx, search, {
+            bypass: yield* reference.contains(search),
+            kind: "directory",
+          })
 
           const limit = 100
           let truncated = false
+          // kilocode_change start
           const files = yield* rg
-            .files({ cwd: search, glob: [absolute?.pattern ?? params.pattern], signal: ctx.abort }) // kilocode_change
+            .files({ cwd: search, glob: [absolute?.pattern ?? params.pattern], signal: ctx.abort })
             .pipe(
               Stream.mapEffect((file) =>
                 Effect.gen(function* () {
@@ -85,6 +94,7 @@ export const GlobTool = Tool.define(
               Stream.runCollect,
               Effect.map((chunk) => [...chunk]),
             )
+          // kilocode_change end
 
           if (files.length > limit) {
             truncated = true

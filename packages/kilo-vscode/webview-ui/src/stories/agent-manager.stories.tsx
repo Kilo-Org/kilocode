@@ -6,17 +6,18 @@
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { StoryProviders } from "./StoryProviders"
-import { FileTree } from "../../agent-manager/FileTree"
+import { FileTree } from "../../diff-viewer/FileTree"
 import { DiffPanel } from "../../agent-manager/DiffPanel"
-import { FullScreenDiffView } from "../../agent-manager/FullScreenDiffView"
+import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
-import type { JSX } from "solid-js"
+import { createSignal, type JSX } from "solid-js"
 import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats, PRStatus } from "../types/messages"
+import type { ReviewComment } from "../../diff-viewer/review-comments"
 import "../../agent-manager/agent-manager.css"
 import "../../agent-manager/agent-manager-review.css"
 
@@ -50,6 +51,60 @@ const mockDiffs: WorktreeFileDiff[] = [
     after: `/** @jsxImportSource solid-js */\nimport type { Meta } from "storybook-solidjs-vite"\nconst meta: Meta = { title: "Chat" }\nexport default meta\n`,
   },
 ]
+
+const context = Array.from({ length: 36 }, (_, i) => `  const item${i} = values[${i}]\n`).join("")
+const foldedDiffs: WorktreeFileDiff[] = [
+  {
+    file: "src/components/chat/LongReview.ts",
+    status: "modified",
+    additions: 2,
+    deletions: 2,
+    before: `export function review(values: string[]) {\n  const title = "Draft"\n${context}  return title\n}\n`,
+    after: `export function review(values: string[]) {\n  const title = "Ready"\n${context}  return title.toUpperCase()\n}\n`,
+  },
+]
+
+const ROWS = 140
+function edited(seed: string): WorktreeFileDiff {
+  const before = Array.from({ length: ROWS }, (_, i) => `const row${i} = "${seed}-old-${i}"\n`).join("")
+  const after = Array.from({ length: ROWS }, (_, i) => `const row${i} = "${seed}-new-${i}"\n`).join("")
+  const patch = [
+    "diff --git a/src/agent-edit.ts b/src/agent-edit.ts",
+    "--- a/src/agent-edit.ts",
+    "+++ b/src/agent-edit.ts",
+    `@@ -1,${ROWS} +1,${ROWS} @@`,
+    ...before
+      .trimEnd()
+      .split("\n")
+      .map((line) => `-${line}`),
+    ...after
+      .trimEnd()
+      .split("\n")
+      .map((line) => `+${line}`),
+    "",
+  ].join("\n")
+
+  return {
+    file: "src/agent-edit.ts",
+    status: "modified",
+    additions: ROWS,
+    deletions: ROWS,
+    before,
+    after,
+    patch,
+  }
+}
+
+const tail: WorktreeFileDiff = {
+  file: "src/target.ts",
+  status: "modified",
+  additions: 1,
+  deletions: 1,
+  before: "const target = 'before'\n",
+  after: "const target = 'after'\n",
+  patch:
+    "diff --git a/src/target.ts b/src/target.ts\n--- a/src/target.ts\n+++ b/src/target.ts\n@@ -1 +1 @@\n-const target = 'before'\n+const target = 'after'\n",
+}
 
 // ---------------------------------------------------------------------------
 // Meta
@@ -202,6 +257,71 @@ export const FullScreenDiffWithChanges: Story = {
       </div>
     </StoryProviders>
   ),
+}
+
+export const FullScreenDiffWithCollapsedContext: Story = {
+  name: "FullScreenDiffView - collapsed unchanged context",
+  render: () => (
+    <StoryProviders>
+      <div style={{ width: "420px", height: "700px", display: "flex" }}>
+        <FullScreenDiffView
+          diffs={foldedDiffs}
+          loading={false}
+          diffStyle="unified"
+          onDiffStyleChange={() => {}}
+          comments={[]}
+          onCommentsChange={() => {}}
+          onClose={() => {}}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const FullScreenDiffAgentEditScroll: Story = {
+  name: "FullScreenDiffView - preserve scroll during agent edit",
+  render: () => {
+    const [diffs, setDiffs] = createSignal([edited("before"), tail])
+    const [version, setVersion] = createSignal("before")
+    const [key, setKey] = createSignal("agent-edit-scroll")
+    const [comments, setComments] = createSignal<ReviewComment[]>([])
+    const update = () => {
+      setDiffs([edited("after"), tail])
+      setVersion("after")
+    }
+    const change = () => {
+      setDiffs([edited("context"), tail])
+      setKey("changed-context")
+    }
+    return (
+      <StoryProviders noPadding>
+        <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
+          <div style={{ display: "flex", gap: "8px", padding: "4px", "align-items": "center" }}>
+            <Button size="small" onClick={update}>
+              Apply agent edit
+            </Button>
+            <Button size="small" onClick={change}>
+              Switch review context
+            </Button>
+            <span data-testid="agent-edit-version">{version()}</span>
+            <span data-testid="review-context">{key()}</span>
+          </div>
+          <div style={{ display: "flex", "min-height": "0", flex: "1" }}>
+            <FullScreenDiffView
+              diffs={diffs()}
+              loading={false}
+              sessionKey={key()}
+              diffStyle="unified"
+              onDiffStyleChange={() => {}}
+              comments={comments()}
+              onCommentsChange={setComments}
+              onClose={() => {}}
+            />
+          </div>
+        </div>
+      </StoryProviders>
+    )
+  },
 }
 
 // ---------------------------------------------------------------------------

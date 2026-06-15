@@ -2,7 +2,10 @@ import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/middleware/instance-context"
-import { WorkspaceRoutingMiddleware } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
+import {
+  WorkspaceRoutingMiddleware,
+  WorkspaceRoutingQuery,
+} from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 
 const root = "/remote"
@@ -23,6 +26,7 @@ export const RemoteApi = HttpApi.make("remote")
     HttpApiGroup.make("remote")
       .add(
         HttpApiEndpoint.post("enable", RemotePaths.enable, {
+          query: WorkspaceRoutingQuery,
           success: described(RemoteStatus, "Remote connection enabled"),
           error: HttpApiError.Unauthorized,
         }).annotateMerge(
@@ -33,6 +37,7 @@ export const RemoteApi = HttpApi.make("remote")
           }),
         ),
         HttpApiEndpoint.post("disable", RemotePaths.disable, {
+          query: WorkspaceRoutingQuery,
           success: described(RemoteStatus, "Remote connection disabled"),
         }).annotateMerge(
           OpenApi.annotations({
@@ -42,6 +47,7 @@ export const RemoteApi = HttpApi.make("remote")
           }),
         ),
         HttpApiEndpoint.get("status", RemotePaths.status, {
+          query: WorkspaceRoutingQuery,
           success: described(RemoteStatus, "Remote connection status"),
         }).annotateMerge(
           OpenApi.annotations({

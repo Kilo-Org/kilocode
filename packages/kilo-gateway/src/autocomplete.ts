@@ -4,7 +4,7 @@ export type DirectAutocompleteProviderID = Exclude<AutocompleteProviderID, "kilo
 export interface AutocompleteModelDef {
   /** Stable combined value for internal comparisons. */
   readonly id: string
-  /** Model value stored in settings and sent to the FIM API. */
+  /** Model value stored in settings and sent to the autocomplete API. */
   readonly modelID: string
   /** Human-readable label shown in settings. */
   readonly label: string
@@ -12,12 +12,18 @@ export interface AutocompleteModelDef {
   readonly providerID: AutocompleteProviderID
   /** Provider display name for status bar / telemetry. */
   readonly provider: string
-  /** Full model ID sent upstream by the FIM route. */
+  /** Full model ID sent upstream by the autocomplete route. */
   readonly requestModel: string
-  /** Provider key to use for direct BYOK FIM. Empty means Kilo Gateway. */
+  /** Provider key to use for direct BYOK. Empty means Kilo Gateway. */
   readonly directProvider?: DirectAutocompleteProviderID
-  /** FIM request temperature. */
+  /** Request temperature. */
   readonly temperature: number
+  /**
+   * Which gateway endpoint this model targets. Defaults to "fim" if omitted
+   * (back-compat with existing entries). Models with `kind: "edit"` route
+   * through `/kilo/edit` and use Mercury's Next Edit pipeline.
+   */
+  readonly kind?: "fim" | "edit"
 }
 
 const models: AutocompleteModelDef[] = [
@@ -33,11 +39,24 @@ const models: AutocompleteModelDef[] = [
   {
     id: "kilo/inception/mercury-edit-2",
     modelID: "inception/mercury-edit-2",
-    label: "Mercury Edit 2",
+    label: "Mercury Edit 2 (FIM)",
     providerID: "kilo",
     provider: "Kilo Gateway",
     requestModel: "inception/mercury-edit-2",
     temperature: 0,
+  },
+  {
+    // Same wire-level model as `kilo/inception/mercury-edit-2`, but routed
+    // through the Kilo Gateway's Next Edit endpoint instead of FIM. Picked by
+    // users who want multi-line next-edit predictions with the jump-to-edit UX.
+    id: "kilo/inception/mercury-next-edit",
+    modelID: "inception/mercury-next-edit",
+    label: "Mercury Edit 2 (Next Edit)",
+    providerID: "kilo",
+    provider: "Kilo Gateway",
+    requestModel: "inception/mercury-edit-2",
+    temperature: 0,
+    kind: "edit",
   },
   {
     id: "mistral/codestral-2508",
@@ -52,18 +71,45 @@ const models: AutocompleteModelDef[] = [
   {
     id: "inception/mercury-edit-2",
     modelID: "mercury-edit-2",
-    label: "Mercury Edit 2",
+    label: "Mercury Edit 2 (FIM)",
     providerID: "inception",
     provider: "Inception",
     requestModel: "mercury-edit-2",
     directProvider: "inception",
     temperature: 0,
   },
+  {
+    // Same wire-level model as `mercury-edit-2`, but routed through the
+    // Mercury Edit 2 (Next Edit) endpoint instead of FIM. Picked by users who want
+    // multi-line next-edit predictions with the jump-to-edit UX.
+    id: "inception/mercury-next-edit",
+    modelID: "mercury-next-edit",
+    label: "Mercury Edit 2 (Next Edit)",
+    providerID: "inception",
+    provider: "Inception",
+    requestModel: "mercury-edit-2",
+    directProvider: "inception",
+    temperature: 0,
+    kind: "edit",
+  },
 ]
 
 export const AUTOCOMPLETE_MODELS: readonly AutocompleteModelDef[] = models
 
-export const DEFAULT_AUTOCOMPLETE_MODEL: AutocompleteModelDef = models[0]!
+export const DEFAULT_AUTOCOMPLETE_PROVIDER_ID: AutocompleteProviderID = "kilo"
+export const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/codestral-2508"
+
+export const DEFAULT_AUTOCOMPLETE_MODEL: AutocompleteModelDef = (() => {
+  const found = models.find(
+    (m) => m.providerID === DEFAULT_AUTOCOMPLETE_PROVIDER_ID && m.modelID === DEFAULT_AUTOCOMPLETE_MODEL_ID,
+  )
+  if (!found) {
+    throw new Error(
+      `DEFAULT_AUTOCOMPLETE_MODEL not found: provider=${DEFAULT_AUTOCOMPLETE_PROVIDER_ID} model=${DEFAULT_AUTOCOMPLETE_MODEL_ID}`,
+    )
+  }
+  return found
+})()
 
 const aliases: Record<string, string> = {
   "inception/mercury-edit": "inception/mercury-edit-2",

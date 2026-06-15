@@ -5,7 +5,7 @@ import { Session as SessionNs } from "@/session/session"
 import { AppRuntime } from "../../../src/effect/app-runtime"
 import { Bus } from "../../../src/bus"
 import { KiloSession } from "../../../src/kilocode/session"
-import { WithInstance } from "../../../src/project/with-instance"
+import { provideTestInstance } from "../../fixture/fixture"
 import { MessageV2 } from "../../../src/session/message-v2"
 import { MessageID, PartID, type SessionID } from "../../../src/session/schema"
 
@@ -30,7 +30,7 @@ function updatePart<T extends MessageV2.Part>(part: T) {
 
 describe("session platform attribution", () => {
   test("child sessions inherit the root platform override", async () => {
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: projectRoot,
       fn: async () => {
         const root = await create({ platform: "agent-manager" })
@@ -47,13 +47,31 @@ describe("session platform attribution", () => {
       },
     })
   })
+
+  test("child sessions expose parent and root lineage", async () => {
+    await provideTestInstance({
+      directory: projectRoot,
+      fn: async () => {
+        const root = await create({})
+        const child = await create({ parentID: root.id, title: "child" })
+        const leaf = await create({ parentID: child.id, title: "leaf" })
+
+        expect(KiloSession.resolveParent(root.id)).toBeUndefined()
+        expect(KiloSession.resolveParent(child.id)).toBe(root.id)
+        expect(KiloSession.resolveParent(leaf.id)).toBe(child.id)
+        expect(KiloSession.resolveRoot(leaf.id)).toBe(root.id)
+
+        await remove(root.id)
+      },
+    })
+  })
 })
 
 describe("step-finish token propagation via Bus event", () => {
   test(
     "non-zero tokens propagate through PartUpdated event",
     async () => {
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: projectRoot,
         fn: async () => {
           const info = await create({})

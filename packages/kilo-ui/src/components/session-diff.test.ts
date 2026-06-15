@@ -35,6 +35,14 @@ describe("session diff", () => {
     expect(text(view, "additions")).toBe("two\n")
   })
 
+  test("handles legacy snapshots without a file path", () => {
+    const view = normalize({ additions: 0, deletions: 0 })
+
+    expect(view.file).toBe("")
+    expect(text(view, "deletions")).toBe("")
+    expect(text(view, "additions")).toBe("")
+  })
+
   test("preserves real line numbers from hunk headers without padding", () => {
     const diff = {
       file: "a.ts",

@@ -11,7 +11,7 @@ describe("indexing label", () => {
         totalFiles: 50,
         percent: 42,
       }),
-    ).toBe("IDX 42% 21/50")
+    ).toBe("42% (21/50 files)")
   })
 
   test("formats indeterminate in-progress status without 0/0 counts", () => {
@@ -23,7 +23,19 @@ describe("indexing label", () => {
         totalFiles: 0,
         percent: 0,
       }),
-    ).toBe("IDX In Progress")
+    ).toBe("In progress")
+  })
+
+  test("formats progress percentage without counts", () => {
+    expect(
+      formatIndexingLabel({
+        state: "In Progress",
+        message: "",
+        processedFiles: 0,
+        totalFiles: 0,
+        percent: 42,
+      }),
+    ).toBe("42%")
   })
 
   test("formats error status with backend message", () => {
@@ -35,7 +47,7 @@ describe("indexing label", () => {
         totalFiles: 0,
         percent: 0,
       }),
-    ).toBe("IDX Indexing failed.")
+    ).toBe("Indexing failed.")
   })
 
   test("formats stable states", () => {
@@ -47,7 +59,7 @@ describe("indexing label", () => {
         totalFiles: 1,
         percent: 100,
       }),
-    ).toBe("IDX Complete")
+    ).toBe("Complete")
     expect(
       formatIndexingLabel({
         state: "Disabled",
@@ -56,7 +68,7 @@ describe("indexing label", () => {
         totalFiles: 0,
         percent: 0,
       }),
-    ).toBe("IDX Disabled")
+    ).toBe("Disabled")
     expect(
       formatIndexingLabel({
         state: "Standby",
@@ -65,6 +77,6 @@ describe("indexing label", () => {
         totalFiles: 0,
         percent: 0,
       }),
-    ).toBe("IDX Standby")
+    ).toBe("Standby")
   })
 })

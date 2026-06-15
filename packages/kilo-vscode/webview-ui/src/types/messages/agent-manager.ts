@@ -1,5 +1,10 @@
 export type WorktreeErrorCode = "git_not_found" | "not_git_repo" | "lfs_missing"
 
+export interface TerminalFont {
+  fontFamily: string
+  fontSize: number
+}
+
 // Agent Manager worktree state types (mirrored from WorktreeStateManager)
 export interface WorktreeState {
   id: string
@@ -123,6 +128,8 @@ export interface WorktreeFileDiff {
   file: string
   before: string
   after: string
+  /** Hunk-bounded unified patch used by Pierre to avoid re-diffing full files. */
+  patch?: string
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
@@ -159,14 +166,7 @@ export interface LocalGitStats {
   behind: number
 }
 
-export interface ReviewComment {
-  id: string
-  file: string
-  side: "additions" | "deletions"
-  line: number
-  comment: string
-  selectedText: string
-}
+export type { ReviewCommentData as ReviewComment } from "../../../../src/shared/review-comments"
 
 /**
  * Maximum number of parallel worktree versions for multi-version mode.

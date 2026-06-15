@@ -1,0 +1,158 @@
+.kilo-console .overview-heading {
+  display: inline-flex;
+  gap: 0.625rem;
+  align-items: center;
+}
+
+.kilo-console .server-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  padding: 0.625rem 0.875rem;
+}
+
+.kilo-console .server-strip-info {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.kilo-console .server-strip strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kilo-console .server-strip-separator {
+  flex: 0 0 auto;
+  width: 0.1875rem;
+  height: 0.1875rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--muted-foreground) 50%, transparent);
+}
+
+.kilo-console .server-strip-state {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  line-height: 1rem;
+}
+
+.kilo-console .metrics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.kilo-console .metric,
+.kilo-console .panel {
+  border-color: var(--border);
+  background: var(--card);
+}
+
+.kilo-console .metric {
+  gap: 0;
+  min-height: 4.5rem;
+}
+
+.kilo-console .metric span,
+.kilo-console .facts dt {
+  color: var(--muted-foreground);
+}
+
+.kilo-console .metric strong {
+  min-width: 0;
+  margin-top: 0.375rem;
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kilo-console .metric span {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+}
+
+.kilo-console .overview-details {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.kilo-console .title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--border);
+  padding: 0.625rem 0.875rem;
+}
+
+.kilo-console .title h2 {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.kilo-console .title p {
+  margin: 0.125rem 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  line-height: 1.45;
+}
+
+.kilo-console .facts {
+  display: grid;
+  margin: 0;
+  padding: 0.25rem;
+}
+
+.kilo-console .facts div {
+  display: grid;
+  grid-template-columns: 11.25rem minmax(0, 1fr);
+  gap: 1rem;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+}
+
+.kilo-console .facts dt {
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.kilo-console .facts dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kilo-console .overview-banner {
+  margin-top: 0.25rem;
+}

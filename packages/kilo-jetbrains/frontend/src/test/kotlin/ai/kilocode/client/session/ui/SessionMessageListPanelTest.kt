@@ -9,13 +9,14 @@ import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.PlanExitView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionResultView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.views.TextView
-import ai.kilocode.client.session.views.ToolView
+import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.session.views.todo.TodoWriteView
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
@@ -25,7 +26,13 @@ import ai.kilocode.rpc.dto.TodoDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.Color
+import java.awt.Component
 import java.awt.Container
+import java.awt.event.MouseEvent
+import java.awt.image.BufferedImage
+import javax.swing.JPanel
+import javax.swing.border.Border
 
 /**
  * Tests for [SessionMessageListPanel] — structural and index integrity.
@@ -165,6 +172,18 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertTrue(mv.part("p1") is TextView)
     }
 
+    fun `test text markdown link uses panel url opener`() {
+        val urls = mutableListOf<String>()
+        val item = SessionMessageListPanel(model, parent, openFile = openFile, openUrl = { urls.add(it) })
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p1", "a1", "text", text = "[docs](https://kilocode.ai/docs)"))
+
+        val view = item.findMessage("a1")!!.part("p1") as TextView
+        view.md.simulateLink("https://kilocode.ai/docs")
+
+        assertEquals(listOf("https://kilocode.ai/docs"), urls)
+    }
+
     fun `test ContentDelta appends text to TextView`() {
         model.upsertMessage(msg("a1", "assistant"))
         model.updateContent("a1", part("p1", "a1", "text", text = "hello "))
@@ -172,6 +191,31 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
         val tv = panel.findMessage("a1")!!.part("p1") as TextView
         assertEquals("hello world", tv.markdown())
+    }
+
+    fun `test ContentDelta preserves TextView and markdown component`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p1", "a1", "text", text = "first\n\nsecond"))
+        val mv = panel.findMessage("a1")!!
+        val tv = mv.part("p1") as TextView
+        val comp = tv.md.component
+        val first = (comp as JPanel).components.first()
+
+        model.appendDelta("a1", "p1", " more")
+
+        assertSame(tv, mv.part("p1"))
+        assertSame(comp, tv.md.component)
+        assertSame(first, comp.components.first())
+        assertEquals("first\n\nsecond more", tv.markdown())
+    }
+
+    fun `test created ContentDelta is not double applied`() {
+        model.upsertMessage(msg("a1", "assistant"))
+
+        model.appendDelta("a1", "p1", "hello")
+
+        val tv = panel.findMessage("a1")!!.part("p1") as TextView
+        assertEquals("hello", tv.markdown())
     }
 
     fun `test ContentRemoved removes PartView from MessageView`() {
@@ -258,6 +302,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertSame(message, panel.findMessage("a1"))
         assertSame(text, panel.findMessage("a1")!!.part("p1"))
         assertSame(comp, text.md.component)
+        assertTrue(text.md.overrideSheet().contains(style.transcriptFont.name))
         assertTrue(text.md.overrideSheet().contains("Courier New"))
         assertTrue(text.md.overrideSheet().contains("24pt"))
     }
@@ -270,6 +315,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         model.updateContent("a1", part("p1", "a1", "text", text = "hello"))
 
         val text = panel.findMessage("a1")!!.part("p1") as TextView
+        assertTrue(text.md.overrideSheet().contains(style.transcriptFont.name))
         assertTrue(text.md.overrideSheet().contains("Courier New"))
         assertTrue(text.md.overrideSheet().contains("25pt"))
     }
@@ -497,6 +543,44 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertEquals(listOf(".kilo/plans/x.md"), opened)
     }
 
+    fun `test entering a second hoverable part clears stale first hover`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent(
+            "a1",
+            toolPart(
+                "tp1", "a1", "question", "call1", state = "completed",
+                input = mapOf("questions" to """[{"question":"First?"}]"""),
+                metadata = mapOf("answers" to """[["Yes"]]"""),
+            ),
+        )
+        model.updateContent(
+            "a1",
+            toolPart(
+                "tp2", "a1", "question", "call2", state = "completed",
+                input = mapOf("questions" to """[{"question":"Second?"}]"""),
+                metadata = mapOf("answers" to """[["No"]]"""),
+            ),
+        )
+        val first = panel.findMessage("a1")!!.part("tp1") as QuestionResultView
+        val second = panel.findMessage("a1")!!.part("tp2") as QuestionResultView
+        val firstRoot = root(first)
+        val secondRoot = root(second)
+
+        first.toggle()
+        second.toggle()
+
+        enter(header(first))
+        assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, header(first).background.rgb)
+        assertLine(firstRoot.border)
+
+        enter(header(second))
+
+        assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, header(first).background.rgb)
+        assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, header(second).background.rgb)
+        assertLine(firstRoot.border)
+        assertLine(secondRoot.border)
+    }
+
     // ------ helpers ------
 
     private fun panelWithPrompts(): SessionMessageListPanel {
@@ -570,4 +654,34 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         id = id, sessionID = "ses", messageID = mid, type = "tool", tool = tool, callID = callId, state = state,
         input = input, metadata = metadata, todos = todos,
     )
+
+    private fun root(view: QuestionResultView) = view.components[0] as JPanel
+
+    private fun header(view: QuestionResultView) = root(view).components[0] as JPanel
+
+    private fun enter(component: Component) {
+        component.dispatchEvent(MouseEvent(
+            component,
+            MouseEvent.MOUSE_ENTERED,
+            System.currentTimeMillis(),
+            0,
+            1,
+            1,
+            0,
+            false,
+        ))
+    }
+
+    private fun assertLine(border: Border) {
+        val image = BufferedImage(5, 5, BufferedImage.TYPE_INT_ARGB)
+        val item = JPanel()
+        val graphics = image.createGraphics()
+        border.paintBorder(item, graphics, 0, 0, image.width, image.height)
+        graphics.dispose()
+        val rgb = SessionUiStyle.View.Outline.brightColor().rgb
+        assertEquals(rgb, Color(image.getRGB(2, 0), true).rgb)
+        assertEquals(rgb, Color(image.getRGB(0, 2), true).rgb)
+        assertEquals(rgb, Color(image.getRGB(4, 2), true).rgb)
+        assertEquals(rgb, Color(image.getRGB(2, 4), true).rgb)
+    }
 }

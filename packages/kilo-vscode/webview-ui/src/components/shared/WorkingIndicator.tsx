@@ -97,25 +97,27 @@ export const WorkingIndicator: Component = () => {
   }
 
   return (
-    <Show when={session.status() !== "idle" && !blocked()}>
-      <div class="working-indicator">
-        <Spinner />
-        <span class="working-text">{statusText()}</span>
-        <Show when={elapsed() > 0}>
-          <span class="working-elapsed">{formatElapsed()}</span>
-        </Show>
-        <Show when={isRetrying()}>
-          <Button
-            variant="secondary"
-            size="small"
-            onClick={handleCancelRetry}
-            class="working-cancel"
-            style={{ "font-weight": "600", color: "var(--vscode-errorForeground, #f85149)" }}
-          >
-            {language.t("ui.sessionTurn.cancel") || "Cancel"}
-          </Button>
-        </Show>
-      </div>
-    </Show>
+    <div class="working-indicator-slot">
+      <Show when={session.submitting() || (session.status() !== "idle" && !blocked())}>
+        <div class="working-indicator">
+          <Spinner />
+          <span class="working-text">{statusText()}</span>
+          <Show when={elapsed() > 0}>
+            <span class="working-elapsed">{formatElapsed()}</span>
+          </Show>
+          <Show when={isRetrying()}>
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={handleCancelRetry}
+              class="working-cancel"
+              style={{ "font-weight": "600", color: "var(--vscode-errorForeground, #f85149)" }}
+            >
+              {language.t("ui.sessionTurn.cancel") || "Cancel"}
+            </Button>
+          </Show>
+        </div>
+      </Show>
+    </div>
   )
 }

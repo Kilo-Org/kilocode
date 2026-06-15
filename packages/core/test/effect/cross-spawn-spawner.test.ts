@@ -111,7 +111,13 @@ describe("cross-spawn spawner", () => {
             ChildProcess.make(process.execPath, ["-e", "process.stdout.write(process.cwd())"], { cwd: tmp.path }),
           ),
         )
-        expect(out).toBe(tmp.path)
+        const cwd = yield* Effect.promise(() => fs.realpath(tmp.path))
+        const actual = yield* Effect.promise(() => fs.realpath(out))
+        const normalize = (value: string) => {
+          const normalized = path.normalize(value)
+          return process.platform === "win32" ? normalized.toLowerCase() : normalized
+        }
+        expect(normalize(actual)).toBe(normalize(cwd))
       }),
     )
 

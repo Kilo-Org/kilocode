@@ -106,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Zalecane",
   "dialog.provider.opencode.note": "Wybrane modele, w tym Claude, GPT, Gemini i więcej",
   "dialog.provider.anthropic.note": "Połącz z Claude Pro/Max lub kluczem API",
+  "dialog.provider.deepseek.note": "Modele DeepSeek do zadań wymagających rozumowania i kodowania",
   "dialog.provider.openai.note": "Połącz z ChatGPT Pro/Plus lub kluczem API",
   "dialog.provider.google.note": "Modele Gemini do szybkich, strukturalnych odpowiedzi",
   "dialog.provider.openrouter.note": "Dostęp do wszystkich obsługiwanych modeli od jednego dostawcy",
@@ -135,8 +136,14 @@ export const dict = {
   "provider.connect.status.failed": "Autoryzacja nie powiodła się: {{error}}",
   "provider.connect.apiKey.description":
     "Wprowadź swój klucz API {{provider}}, aby połączyć konto i używać modeli {{provider}} w Kilo.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "Klucz API {{provider}}",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "Klucz API",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "Klucz API jest wymagany",
   "provider.connect.prompt.required": "{{field}} jest wymagane",
   "provider.connect.azure.endpointType.label": "Wybierz konfigurację punktu końcowego Azure",
@@ -174,6 +181,7 @@ export const dict = {
   "provider.disconnect.toast.disconnected.title": "Rozłączono {{provider}}",
   "provider.disconnect.toast.disconnected.description": "Modele {{provider}} nie są już dostępne.",
   "model.tag.free": "Darmowy",
+  "model.tag.dataCollected": "Dane mogą być wykorzystywane do trenowania",
   "model.tag.latest": "Najnowszy",
   "model.group.recommended": "Zalecane",
   "model.group.favorites": "Ulubione",
@@ -201,6 +209,9 @@ export const dict = {
   "model.preview.label.cached": "W pamięci podręcznej",
   "model.preview.label.average": "Szac. średni koszt",
   "model.preview.label.context": "Kontekst",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Ukończenie",
+  "model.preview.label.costAttempt": "Koszt / próbę",
   "model.preview.value.notSupported": "Nieobsługiwane",
   "model.preview.tooltip.average":
     "Szacowany średni koszt opiera się na typowym stosunku tokenów wejściowych, wyjściowych i pobranych z pamięci podręcznej.",
@@ -452,6 +463,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Nie udało się zatrzymać udostępniania sesji",
   "toast.session.unshare.failed.description": "Wystąpił błąd podczas zatrzymywania udostępniania sesji",
 
+  "toast.session.rename.invalid.title": "Nieprawidłowy tytuł sesji",
   "toast.session.listFailed.title": "Nie udało się załadować sesji dla {{project}}",
 
   "toast.update.title": "Dostępna aktualizacja",
@@ -517,6 +529,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Wymagane uprawnienie (podagent)",
   "notification.permission.description": "{{sessionTitle}} w {{projectName}} potrzebuje uprawnienia",
   "ui.permission.manageAutoApprove": "Zarządzaj regułami automatycznego zatwierdzania",
+  "ui.permission.doomLoop.prompt": "Wykryto potencjalną pętlę dla narzędzia {{tool}}. Kontynuować działanie?",
+  "ui.permission.doomLoop.rule": "Kontynuuj wywołania {{tool}}",
   "ui.permission.rule.addToAllowed": "Dodaj do listy dozwolonych",
   "ui.permission.rule.removeFromAllowed": "Usuń z listy dozwolonych",
   "ui.permission.rule.addToDenied": "Dodaj do listy zablokowanych",
@@ -822,6 +836,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Model podagenta",
   "settings.providers.subagentModel.description":
     "Domyślny model i wysiłek wnioskowania dla podagentów task-tool. Pozostaw puste, aby odziedziczyć model agenta wywołującego.",
+  "settings.models.hidePromptTraining.title": "Ukryj modele trenujące na promptach",
+  "settings.models.hidePromptTraining.description":
+    "Ukryj modele Kilo Gateway, których dostawcy mogą używać Twoich promptów do trenowania.",
   "settings.providers.modeModels": "Model na tryb",
   "settings.providers.custom.note": "Dodaj dostawcę kompatybilnego z OpenAI przez bazowy URL.",
   "settings.providers.modeModels.description":
@@ -986,6 +1003,8 @@ export const dict = {
   "session.delete.confirm": 'Usunąć sesję "{{name}}"?',
   "session.delete.button": "Usuń sesję",
   "session.untitled": "Bez tytułu",
+  "session.current": "Bieżąca sesja",
+  "session.history.sources": "Źródło historii",
   "session.recent": "Ostatnie",
   "session.showHistory": "Pokaż historię",
   "session.search.placeholder": "Szukaj sesji...",
@@ -999,6 +1018,32 @@ export const dict = {
   "feedback.dialog.github": "Zgłoś problem na GitHubie",
   "feedback.dialog.discord": "Dołącz do naszej społeczności Discord",
   "feedback.dialog.support": "Wsparcie klienta",
+  "workStyle.onboarding.welcome": "Witamy w Kilo",
+  "workStyle.onboarding.title": "Wybierz sposób pracy",
+  "workStyle.onboarding.description":
+    "Ustawia początkowe wartości domyślne uprawnień, bloków rozumowania, danych wyjściowych terminala i osi czasu kontekstu. Jest stosowane tylko raz i pomija ustawienia, które zostały już przez Ciebie zmienione.",
+  "workStyle.onboarding.settingsNote": "Te opcje możesz zmienić w dowolnym momencie w",
+  "workStyle.onboarding.settings": "Ustawieniach.",
+  "workStyle.onboarding.skip": "Pomiń na razie",
+  "workStyle.toast.saved.title": "Tryb został pomyślnie zapisany",
+  "workStyle.toast.saved.description": "Możesz je zmienić w dowolnym momencie w Ustawieniach.",
+  "workStyle.toast.saved.action": "Przejdź do Ustawień",
+  "workStyle.choice.permissions": "Uprawnienia",
+  "workStyle.choice.bash": "Bash",
+  "workStyle.choice.visibility": "Widoczność",
+  "workStyle.choice.human-in-the-loop.eyebrow": "Człowiek w pętli",
+  "workStyle.choice.human-in-the-loop.title": "Najpierw przejrzyj",
+  "workStyle.choice.human-in-the-loop.description": "Kilo wstrzymuje pracę i pokazuje swój plan w trakcie działania.",
+  "workStyle.choice.human-in-the-loop.permissions": "Prosi o zgodę przed edycją plików lub uruchomieniem poleceń.",
+  "workStyle.choice.human-in-the-loop.bash": "Prosi o pozwolenie na każde polecenie terminala.",
+  "workStyle.choice.human-in-the-loop.visibility": "Wyświetla wszystkie szczegóły rozmowy, w tym tok rozumowania.",
+  "workStyle.choice.autonomous.eyebrow": "Mniej przerw",
+  "workStyle.choice.autonomous.title": "Wysoka autonomia",
+  "workStyle.choice.autonomous.description": "Mniej przerw i uproszczony interfejs.",
+  "workStyle.choice.autonomous.permissions":
+    "Edytuje pliki i uruchamia polecenia w przestrzeni roboczej bez pytania o zgodę.",
+  "workStyle.choice.autonomous.bash": "Może uruchamiać polecenia terminala w przestrzeni roboczej bez zatwierdzenia.",
+  "workStyle.choice.autonomous.visibility": "Szczegóły pozostają zwinięte, dopóki ich nie rozwiniesz.",
   "session.cloud.import.title": "Importuj z chmury",
   "session.cloud.import.placeholder": "ID sesji, URL lub polecenie kilo import",
   "session.cloud.import.button": "Importuj",
@@ -1090,6 +1135,14 @@ export const dict = {
   "session.status.retrying": "Ponawiam próbę ({{ attempt }})… {{ message }}",
   "session.status.working": "Pracuję…",
   "session.status.offline": "Odłączono od sieci — ponowne łączenie...",
+  "session.outcome.incomplete": "Tura zakończona, pozostało {{count}} to-dos",
+  "session.outcome.limit": "Osiągnięto limit odpowiedzi przed ukończeniem",
+  "session.outcome.unknown": "Tura zakończona bez powodu zakończenia od modelu",
+  "session.outcome.filtered": "Dostawca zatrzymał tę odpowiedź z powodu filtru treści.",
+  "session.outcome.unexpected": "Odpowiedź zakończyła się nieoczekiwanie i może być niekompletna.",
+  "session.outcome.interrupted": "Tura przerwana",
+  "session.outcome.error": "Tura nie powiodła się",
+  "session.outcome.finish": "Powód zakończenia: {{reason}}",
 
   "ui.sessionTurn.cancel": "Anuluj",
   "ui.sessionTurn.status.thinking": "Myślę...",
@@ -1153,7 +1206,6 @@ export const dict = {
     'Telemetria jest kontrolowana przez wbudowane ustawienie telemetrii VS Code. Aby ją wyłączyć, przejdź do Ustawienia > Telemetria > Poziom telemetrii i ustaw na "off". Uruchom ponownie VS Code, aby zastosować zmianę.',
   "settings.aboutKiloCode.telemetry.openSettings": "Otwórz ustawienia telemetrii",
 
-  "settings.agentBehaviour.subtab.modes": "Tryby",
   "settings.agentBehaviour.subtab.agents": "Agenci",
   "settings.agentBehaviour.subtab.mcpServers": "Serwery MCP",
   "settings.agentBehaviour.subtab.rules": "Reguły",
@@ -1208,18 +1260,10 @@ export const dict = {
   "settings.experimental.formatter.description": "Włącz automatyczny formater kodu",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Włącz integrację protokołu serwera języka",
-  "settings.experimental.pasteSummary.title": "Wyłącz podsumowanie wklejania",
-  "settings.experimental.pasteSummary.description": "Nie podsumowuj dużego wklejonego tekstu",
   "settings.experimental.batch.title": "Narzędzie wsadowe",
   "settings.experimental.batch.description": "Włącz przetwarzanie wsadowe wywołań narzędzi",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Wyszukiwanie kodu",
   "settings.experimental.codebaseSearch.description": "Włącz wyszukiwanie w języku naturalnym z AI w całej bazie kodu",
-  "settings.experimental.agentManagerTool.title": "Narzędzie Agent Manager",
-  "settings.experimental.agentManagerTool.description":
-    "Zezwól agentom na uruchamianie lokalnych sesji Agent Manager i sesji worktree z wywołania narzędzia",
   "settings.experimental.speechToText.title": "Mowa na tekst",
   "settings.experimental.speechToText.description":
     "Włącz wprowadzanie głosowe w polach promptów przy użyciu konta Kilo za pośrednictwem Kilo Gateway.",
@@ -1305,7 +1349,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Nie znaleziono umiejętności. Dodaj ścieżki folderów lub adresy URL poniżej, aby udostępnić umiejętności.",
   "settings.agentBehaviour.availableModes": "Dostępne tryby niestandardowe",
-  "settings.agentBehaviour.noModesFound": "Nie znaleziono trybów.",
+  "settings.agentBehaviour.noAgentsFound": "Nie znaleziono agentów.",
   "settings.agentBehaviour.createMode": "Utwórz nowy tryb",
   "settings.agentBehaviour.createMode.name": "Nazwa",
   "settings.agentBehaviour.createMode.name.placeholder": "np. reviewer",
@@ -1350,10 +1394,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Kopiuj uprawnienia jako JSON",
   "settings.agentBehaviour.permissions.hint":
     "Reguły są sprawdzane po kolei — ostatnia pasująca reguła wygrywa. To jest wynikowy zestaw reguł z backendu CLI.",
-  "settings.agentBehaviour.removeMode.title": "Usuń tryb",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Usunąć tryb "{{name}}"? Spowoduje to wyłączenie trybu poprzez aktualizację konfiguracji.',
-  "settings.agentBehaviour.removeMode.button": "Usuń",
+  "settings.agentBehaviour.removeAgent.title": "Usuń agenta",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Usunąć agenta "{{name}}"? Spowoduje to jego wyłączenie przez aktualizację konfiguracji.',
+  "settings.agentBehaviour.removeAgent.button": "Usuń",
   "settings.agentBehaviour.removeMcp.title": "Usuń serwer MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'Usunąć serwer MCP "{{name}}"? Spowoduje to usunięcie go z konfiguracji.',
@@ -1433,8 +1477,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Zarządzaj listą zadań. Pozwala na odczytywanie i aktualizowanie wewnętrznej listy zadań.",
   "settings.autoApprove.tool.webfetch": "Pobieranie URL. Pozwala na pobieranie zawartości z określonego adresu URL.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Przeszukuj sieć lub kod. Pozwala na wykonywanie zewnętrznych wyszukiwań w sieci lub kodzie.",
+  "settings.autoApprove.tool.websearch":
+    "Przeszukiwanie sieci. Pozwala na wykonywanie zewnętrznych wyszukiwań w sieci.",
   "settings.autoApprove.tool.external_directory":
     "Dostęp do plików poza obszarem roboczym. Uruchamiane przy dostępie do plików poza bieżącym katalogiem projektu.",
   "settings.autoApprove.tool.doom_loop":
