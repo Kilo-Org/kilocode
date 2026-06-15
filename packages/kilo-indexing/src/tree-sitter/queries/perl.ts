@@ -1,9 +1,9 @@
 /*
-Perl Tree-Sitter Query Patterns
+Perl Tree-Sitter Query Patterns (v1.1.2 grammar)
 Covers:
 - subroutine/method declarations (including signatures and attributes)
 - package and class declarations
-- variable declarations (my/our/local/state)
+- variable declarations (my/our/state/field)
 - use/require/import statements
 - labels
 - control flow (if/elsif/unless/else, while/until/for/foreach)
@@ -21,27 +21,27 @@ export default `
 
 ; Package declarations
 (package_statement
-  package: (package_name) @name.definition.package) @definition.package
+  name: (package) @name.definition.package) @definition.package
 
 ; Class declarations
 (class_statement
-  package: (package_name) @name.definition.class) @definition.class
+  name: (package) @name.definition.class) @definition.class
 
 ; Role declarations
 (role_statement
-  package: (package_name) @name.definition.role) @definition.role
+  name: (package) @name.definition.role) @definition.role
 
 ; Use statements (modules, pragmas)
 (use_statement
-  package: (package_name) @name.definition.import) @definition.import
+  module: (package) @name.definition.import) @definition.import
 
 ; Require statements
 (require_expression
   (bareword) @name.definition.import) @definition.import
 
-; Variable declarations (my/our/state/field)
+; Variable declarations (my/our/state)
 (variable_declaration
-  (varname) @name.definition.variable) @definition.variable
+  [(scalar) (array) (hash)] @name.definition.variable) @definition.variable
 
 ; Statement labels
 (statement_label
@@ -52,19 +52,20 @@ export default `
 
 ; While/until loops
 (loop_statement
-  body: (_)) @definition.loop
+  block: (_)) @definition.loop
 
 ; For/foreach loops
 (for_statement) @definition.loop
-(foreach_statement) @definition.loop
 
 ; Try/catch/finally
-(try_block) @definition.try_block
-(catch_block) @definition.catch_block
-(finally_block) @definition.finally_block
+(try_statement) @definition.try_block
+(try_statement
+  catch_block: (block)) @definition.catch_block
+(try_statement
+  finally_block: (block)) @definition.finally_block
 
 ; Return statements
-(return_statement) @definition.return
+(return_expression) @definition.return
 
 ; Function calls
 (function_call_expression

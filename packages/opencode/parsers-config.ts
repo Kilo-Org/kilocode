@@ -1,5 +1,3 @@
-import { PERL_WASM_URL } from "@kilocode/plugin/parser-url"
-
 export default {
   // NOTE: FOR markdown, javascript and typescript, we use the opentui built-in parsers
   // Warn: when taking queries from the nvim-treesitter repo, make sure to include the query dependencies as well
@@ -301,7 +299,7 @@ export default {
     {
       filetype: "perl",
       aliases: ["perl6"],
-      wasm: PERL_WASM_URL,
+      wasm: "https://github.com/tree-sitter-perl/tree-sitter-perl/releases/download/v1.1.2/tree-sitter-perl.wasm",
       queries: {
         highlights: [
           "https://raw.githubusercontent.com/tree-sitter-perl/tree-sitter-perl/master/queries/highlights.scm",

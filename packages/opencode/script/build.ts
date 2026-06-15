@@ -19,7 +19,6 @@ process.chdir(dir)
 import { Script } from "@opencode-ai/script"
 import pkg from "../package.json"
 import { LanceDBRuntime } from "../src/kilocode/lancedb" // kilocode_change
-import { PERL_WASM_URL } from "@kilocode/plugin/parser-url" // kilocode_change
 
 // Load migrations from migration directories
 const migrationDirs = (
@@ -59,11 +58,13 @@ const plugin = createSolidTransformPlugin()
 // kilocode_change - packages/app was removed; the web UI embed step is no longer applicable
 
 // kilocode_change start - codebase indexing
-async function downloadTreeSitterWasm(url: string, targetPath: string) {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`Failed to download ${url}: ${res.status} ${res.statusText}`)
-  const buffer = Buffer.from(await res.arrayBuffer())
-  await fs.promises.writeFile(targetPath, buffer)
+const PERL_WASM_SHA256 = "09BC63F5612514D96CDD218F518BAFF408BFFD655F6F280BDACE50B7EF82AC0B"
+
+function verifySha256(filePath: string, expected: string): void {
+  const hash = require("crypto").createHash("sha256").update(fs.readFileSync(filePath)).digest("hex")
+  if (hash.toLowerCase() !== expected.toLowerCase()) {
+    throw new Error(`tree-sitter-perl.wasm SHA256 mismatch: expected ${expected}, got ${hash}`)
+  }
 }
 
 async function copyTreeSitterWasms(outputDir: string) {
@@ -81,19 +82,16 @@ async function copyTreeSitterWasms(outputDir: string) {
     languageWasmFiles.map((file) => fs.promises.copyFile(path.join(languageWasmDir, file), path.join(targetDir, file))),
   )
 
-  // Perl WASM is not in tree-sitter-wasms package; download from GitHub release
-  const perlWasmUrl = PERL_WASM_URL
-  const perlWasmTarget = path.join(targetDir, "tree-sitter-perl.wasm")
-  let perlCount = 0
-  try {
-    await downloadTreeSitterWasm(perlWasmUrl, perlWasmTarget)
-    perlCount = 1
-    console.log("downloaded tree-sitter-perl.wasm")
-  } catch (err) {
-    console.warn(`Failed to download tree-sitter-perl.wasm: ${err}`)
+  // Perl WASM is bundled as a checksum-verified resource (not in tree-sitter-wasms)
+  const bundledPerlWasm = path.resolve(dir, "resources", "tree-sitter", "tree-sitter-perl.wasm")
+  if (!fs.existsSync(bundledPerlWasm)) {
+    throw new Error("Missing bundled tree-sitter-perl.wasm in resources/tree-sitter/")
   }
+  verifySha256(bundledPerlWasm, PERL_WASM_SHA256)
+  await fs.promises.copyFile(bundledPerlWasm, path.join(targetDir, "tree-sitter-perl.wasm"))
+  console.log("bundled tree-sitter-perl.wasm (SHA256 verified)")
 
-  console.log(`copied ${languageWasmFiles.length + 1 + perlCount} tree-sitter wasm files to ${targetDir}`)
+  console.log(`copied ${languageWasmFiles.length + 2} tree-sitter wasm files to ${targetDir}`)
 }
 // kilocode_change end
 

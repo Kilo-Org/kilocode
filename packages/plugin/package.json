@@ -10,7 +10,6 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./parser-url": "./src/parser-url.ts",
     "./tool": "./src/tool.ts",
     "./tui": "./src/tui.ts"
   },
