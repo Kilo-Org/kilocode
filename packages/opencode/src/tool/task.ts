@@ -212,6 +212,7 @@ export const TaskTool = Tool.define(
           modelID: msg.info.modelID,
           providerID: msg.info.providerID,
         },
+        variant: msg.info.variant,
         provider,
       })
       const model = selected.model

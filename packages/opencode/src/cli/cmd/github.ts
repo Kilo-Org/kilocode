@@ -34,6 +34,7 @@ import { setTimeout as sleep } from "node:timers/promises"
 import { Process } from "@/util/process"
 import { parseGitHubRemote } from "@/util/repository"
 import { Effect } from "effect"
+import { GitHubSecurity } from "@/kilocode/security/github" // kilocode_change
 
 type GitHubAuthor = {
   login: string
@@ -842,7 +843,10 @@ export const GithubRunCommand = effectCmd({
         let offset = 0
         for (const m of matches) {
           const tag = m[0]
-          const url = m[1]
+          // kilocode_change start - only fetch canonical GitHub attachment routes
+          const url = GitHubSecurity.attachment(m[1])
+          if (!url) continue
+          // kilocode_change end
           const start = m.index
           const filename = path.basename(url)
 

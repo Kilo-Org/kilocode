@@ -180,6 +180,7 @@ export function mockSessionValue(overrides?: {
     setCurrentSessionID: noop,
     sessions: () => [],
     status: () => status,
+    submitting: () => false,
     statusInfo: () => ({ type: status }),
     closeReason: () => overrides?.closeReason,
     statusText: () => (status === "idle" ? undefined : "Thinking…"),

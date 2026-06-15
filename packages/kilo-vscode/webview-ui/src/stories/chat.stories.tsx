@@ -16,11 +16,14 @@ import { TaskHeader } from "../components/chat/TaskHeader"
 import { QuestionDock } from "../components/chat/QuestionDock"
 import { SuggestBar } from "../components/chat/SuggestBar"
 import { MessageList } from "../components/chat/MessageList"
+import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
 import { TurnOutcome } from "../components/shared/TurnOutcome"
 import { SessionContext } from "../context/session"
 import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
-import type { Message, Part, QuestionRequest, SuggestionRequest, TodoItem } from "../types/messages"
+import type { Message, Part, QuestionRequest, ReviewComment, SuggestionRequest, TodoItem } from "../types/messages"
+import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
+import { reviewMetadata } from "../../../src/shared/review-comments"
 
 const SESSION_ID = "story-session-chat-001"
 
@@ -169,6 +172,58 @@ export const ChatViewAgentManagerCompleted: Story = {
             </WorktreeModeProvider>
           </SessionContext.Provider>
         </ServerContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const UserMessageReviewComments: Story = {
+  name: "User message — interactive review comments",
+  render: () => {
+    const comments: ReviewComment[] = [
+      {
+        id: "review-1",
+        file: "src/components/chat/KiloBackendChatManager.kt",
+        side: "additions",
+        line: 114,
+        comment: "Keep this state synchronized when the active session changes.",
+        selectedText: "private val activeSession = MutableStateFlow<String?>(null)",
+      },
+      {
+        id: "review-2",
+        file: "resources/messages/KiloBundle_bs.properties",
+        side: "deletions",
+        line: 235,
+        comment: "Translate the modified setting description.",
+        selectedText: "settings.models.smallModel.description=The lightweight model used for quick tasks.",
+      },
+    ]
+    const prefix = formatReviewCommentsMarkdown(comments)
+    const text = `${prefix}\n\nPlease address these review comments.`
+    const review = { version: 1 as const, comments }
+    const message: Message = {
+      id: "review-user-message",
+      sessionID: SESSION_ID,
+      role: "user",
+      createdAt: new Date(0).toISOString(),
+      time: { created: 0 },
+    }
+    const parts: Part[] = [
+      {
+        id: "review-user-part",
+        sessionID: SESSION_ID,
+        messageID: message.id,
+        type: "text",
+        text,
+        metadata: reviewMetadata(review),
+      },
+    ]
+
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle">
+        <div style={{ "max-height": "400px", padding: "12px" }}>
+          <VscodeUserMessage message={message} parts={parts} />
+        </div>
       </StoryProviders>
     )
   },

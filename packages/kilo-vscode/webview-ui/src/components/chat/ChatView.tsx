@@ -5,7 +5,7 @@
  * Main chat container that combines all chat components
  */
 
-import { type Component, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
+import { type Component, type JSX, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
@@ -35,6 +35,7 @@ interface ChatViewProps {
   continueInWorktree?: boolean
   promptBoxId?: string
   pendingSessionID?: string
+  emptyState?: () => JSX.Element
 }
 
 export const ChatView: Component<ChatViewProps> = (props) => {
@@ -84,7 +85,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   onMount(() => {
     if (props.readonly) return
     const handler = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || session.status() === "idle" || e.defaultPrevented) return
+      if (e.key !== "Escape" || (!session.submitting() && session.status() === "idle") || e.defaultPrevented) return
       e.preventDefault()
       session.abort()
     }
@@ -333,6 +334,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             questions={standaloneQuestions}
             suggestions={standaloneSuggestions}
             readonly={props.readonly}
+            emptyState={props.emptyState}
           />
         </div>
       </div>
