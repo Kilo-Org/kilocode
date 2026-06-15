@@ -14,6 +14,7 @@ import { KiloConnectionService } from "./services/cli-backend"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
+import { AttentionService } from "./services/attention"
 import { BrowserAutomationService } from "./services/browser-automation"
 import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
@@ -48,6 +49,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(context)
+  const attention = new AttentionService(connectionService)
   let restore = context.workspaceState.get<RestoreState>(RESTORE_KEY) ?? {}
   const remember = (patch: RestoreState) => {
     const next = { ...restore, ...patch }
@@ -525,6 +527,7 @@ export function activate(context: vscode.ExtensionContext) {
     dispose: () => {
       shuttingDown = true
       unsubscribeStateChange()
+      attention.dispose()
       browserAutomationService.dispose()
       provider.dispose()
       connectionService.dispose()

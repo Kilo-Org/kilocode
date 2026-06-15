@@ -1262,6 +1262,10 @@ export const dict = {
   "settings.notifications.errors.title": "ข้อผิดพลาด",
   "settings.notifications.errors.description": "แสดงการแจ้งเตือนเมื่อเกิดข้อผิดพลาด",
   "settings.notifications.sounds": "เสียง",
+  "settings.notifications.enable.title": "เปิดใช้การแจ้งเตือนด้วยเสียง",
+  "settings.notifications.enable.description":
+    "เล่นเสียงเมื่อเซสชันเสร็จสิ้น เกิดข้อผิดพลาด หรือต้องการให้คุณป้อนข้อมูล",
+  "settings.notifications.testSound": "ทดสอบ",
   "settings.notifications.agentSound.title": "เสียงเอเจนต์เสร็จสิ้น",
   "settings.notifications.agentSound.description": "เสียงเมื่อเอเจนต์ทำงานเสร็จ",
   "settings.notifications.permSound.title": "เสียงคำขออนุญาต",
@@ -1269,6 +1273,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "เสียงข้อผิดพลาด",
   "settings.notifications.errorSound.description": "เสียงเมื่อเกิดข้อผิดพลาด",
   "settings.notifications.sound.default": "ค่าเริ่มต้น",
+  "settings.notifications.sound.system": "ระบบ",
+  "settings.notifications.sound.description":
+    "ค่าเริ่มต้นจะใช้เสียงที่แตกต่างกันสำหรับการเสร็จสิ้น การป้อนข้อมูล และข้อผิดพลาด ส่วนตัวเลือกอื่นจะใช้เสียงเดียวสำหรับทุกเหตุการณ์",
   "settings.notifications.sound.none": "ไม่มี",
   "settings.experimental.share.title": "โหมดแชร์",
   "settings.experimental.share.description": "พฤติกรรมการแชร์เซสชัน",

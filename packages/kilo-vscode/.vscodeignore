@@ -25,3 +25,6 @@ AGENTS.md
 
 # Include bin/ directory for CLI binary (production)
 !bin/**
+
+# Include WAV assets used by extension-host notification playback
+!audio-wav/**

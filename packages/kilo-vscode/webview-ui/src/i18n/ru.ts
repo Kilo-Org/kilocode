@@ -1283,6 +1283,10 @@ export const dict = {
   "settings.notifications.errors.title": "Ошибки",
   "settings.notifications.errors.description": "Показать уведомление при ошибках",
   "settings.notifications.sounds": "Звуки",
+  "settings.notifications.enable.title": "Включить звуковые уведомления",
+  "settings.notifications.enable.description":
+    "Воспроизводить звуки при завершении сеансов, возникновении ошибки или необходимости вашего участия",
+  "settings.notifications.testSound": "Тест",
   "settings.notifications.agentSound.title": "Звук завершения агента",
   "settings.notifications.agentSound.description": "Звук при завершении агента",
   "settings.notifications.permSound.title": "Звук запроса разрешений",
@@ -1290,6 +1294,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Звук ошибки",
   "settings.notifications.errorSound.description": "Звук при ошибках",
   "settings.notifications.sound.default": "По умолчанию",
+  "settings.notifications.sound.system": "Системный",
+  "settings.notifications.sound.description":
+    "По умолчанию для завершения, запроса вашего участия и ошибок используются разные звуки. В остальных вариантах для всех событий используется один и тот же звук.",
   "settings.notifications.sound.none": "Нет",
   "settings.experimental.share.title": "Режим обмена",
   "settings.experimental.share.description": "Поведение обмена сессиями",

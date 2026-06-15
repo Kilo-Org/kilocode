@@ -1278,6 +1278,10 @@ export const dict = {
   "settings.notifications.errors.title": "Fejl",
   "settings.notifications.errors.description": "Vis notifikation ved fejl",
   "settings.notifications.sounds": "Lyde",
+  "settings.notifications.enable.title": "Aktivér lydnotifikationer",
+  "settings.notifications.enable.description":
+    "Afspil lyde, når sessioner fuldføres, der opstår en fejl, eller der er brug for input fra dig",
+  "settings.notifications.testSound": "Test",
   "settings.notifications.agentSound.title": "Agentafslutningslyd",
   "settings.notifications.agentSound.description": "Lyd ved agentafslutning",
   "settings.notifications.permSound.title": "Tilladelsesanmodningslyd",
@@ -1285,6 +1289,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Fejllyd",
   "settings.notifications.errorSound.description": "Lyd ved fejl",
   "settings.notifications.sound.default": "Standard",
+  "settings.notifications.sound.system": "System",
+  "settings.notifications.sound.description":
+    "Standardindstillingen bruger forskellige lyde til afslutning, input og fejl. Andre valg bruger én lyd til alle hændelser.",
   "settings.notifications.sound.none": "Ingen",
   "settings.experimental.share.title": "Delingstilstand",
   "settings.experimental.share.description": "Adfærd for sessionsdeling",

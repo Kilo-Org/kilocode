@@ -57,6 +57,7 @@ class ModelPicker : PickerButton() {
         val recommendedIndex: Double? = null,
         val free: Boolean = false,
         val variants: List<String> = emptyList(),
+        val attachment: Boolean = false,
     ) {
         val key: String get() = "$provider/$id"
 

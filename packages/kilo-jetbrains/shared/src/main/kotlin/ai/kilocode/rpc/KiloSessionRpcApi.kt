@@ -8,6 +8,7 @@ import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
@@ -85,6 +86,9 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
 
     /** Load message history for a session. */
     suspend fun messages(id: String, directory: String): List<MessageWithPartsDto>
+
+    /** Load one attachment part from a session without returning full history to the frontend. */
+    suspend fun attachmentPart(id: String, directory: String, messageId: String, partId: String, attachmentKey: String?): PartDto?
 
     /** Subscribe to streaming chat events for a specific session. */
     suspend fun events(id: String, directory: String): Flow<ChatEventDto>
