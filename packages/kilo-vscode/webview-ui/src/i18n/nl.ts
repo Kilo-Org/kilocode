@@ -530,6 +530,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Toestemming vereist (subagent)",
   "notification.permission.description": "{{sessionTitle}} in {{projectName}} heeft toestemming nodig",
   "ui.permission.manageAutoApprove": "Beheer automatisch goedkeuren regels",
+  "ui.permission.doomLoop.prompt": "Mogelijke lus gedetecteerd voor het hulpmiddel {{tool}}. Doorgaan met uitvoeren?",
+  "ui.permission.doomLoop.rule": "Doorgaan met {{tool}}-aanroepen",
   "ui.permission.rule.addToAllowed": "Toevoegen aan toegestane lijst",
   "ui.permission.rule.removeFromAllowed": "Verwijderen van toegestane lijst",
   "ui.permission.rule.addToDenied": "Toevoegen aan geweigerde lijst",
@@ -1494,6 +1496,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Subagentmodel",
   "settings.providers.subagentModel.description":
     "Standaardmodel en redeneerinspanning voor task-tool subagenten. Laat leeg om het model van de aanroepende agent over te nemen.",
+  "settings.models.hidePromptTraining.title": "Modellen die prompts voor training gebruiken verbergen",
+  "settings.models.hidePromptTraining.description":
+    "Verberg Kilo Gateway-modellen waarvan providers je prompts mogelijk voor training gebruiken.",
   "settings.providers.modeModels": "Model per Modus",
   "settings.providers.modeModels.description":
     "Overschrijf het standaard model voor specifieke modi. Indien niet ingesteld, wordt het globale standaard model gebruikt.",

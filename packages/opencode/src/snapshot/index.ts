@@ -1,4 +1,5 @@
-import { Cause, Duration, Effect, Layer, Schedule, Schema, Semaphore, Struct, Context } from "effect" // kilocode_change
+import { Cause, Duration, Effect, Layer, Schedule, Schema, Semaphore, Context } from "effect"
+import { Struct } from "effect" // kilocode_change
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { formatPatch, structuredPatch } from "diff"
 import path from "path"

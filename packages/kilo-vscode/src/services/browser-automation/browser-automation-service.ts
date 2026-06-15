@@ -1,13 +1,12 @@
 import * as vscode from "vscode"
-import type { KiloClient, McpStatus } from "@kilocode/sdk/v2/client"
+import type { KiloClient } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../cli-backend"
 
-export type BrowserAutomationState = "disabled" | "registering" | "connected" | "failed" | "disconnected"
+type BrowserAutomationState = "disabled" | "registering" | "connected" | "failed" | "disconnected"
 
 export class BrowserAutomationService implements vscode.Disposable {
   private state: BrowserAutomationState = "disabled"
   private disposables: vscode.Disposable[] = []
-  private stateListeners: Array<(state: BrowserAutomationState) => void> = []
 
   // MCP server name used when registering with the CLI backend
   private static readonly MCP_SERVER_NAME = "kilo-playwright"
@@ -21,22 +20,6 @@ export class BrowserAutomationService implements vscode.Disposable {
         }
       }),
     )
-  }
-
-  /** Current state */
-  getState(): BrowserAutomationState {
-    return this.state
-  }
-
-  /** Subscribe to state changes */
-  onStateChange(listener: (state: BrowserAutomationState) => void): () => void {
-    this.stateListeners.push(listener)
-    return () => {
-      const idx = this.stateListeners.indexOf(listener)
-      if (idx >= 0) {
-        this.stateListeners.splice(idx, 1)
-      }
-    }
   }
 
   /**
@@ -150,24 +133,6 @@ export class BrowserAutomationService implements vscode.Disposable {
     this.setState("disabled")
   }
 
-  /**
-   * Get the current MCP server status from the CLI backend.
-   */
-  async getServerStatus(): Promise<McpStatus | null> {
-    const client = this.getClient()
-    if (!client) {
-      return null
-    }
-
-    try {
-      const directory = this.getWorkspaceDirectory()
-      const { data: allStatus } = await client.mcp.status({ directory }, { throwOnError: true })
-      return allStatus[BrowserAutomationService.MCP_SERVER_NAME] ?? null
-    } catch {
-      return null
-    }
-  }
-
   private getClient(): KiloClient | null {
     try {
       return this.connectionService.getClient()
@@ -190,9 +155,6 @@ export class BrowserAutomationService implements vscode.Disposable {
     }
     console.log(`[Kilo New] BrowserAutomationService: State ${this.state} → ${state}`)
     this.state = state
-    for (const listener of this.stateListeners) {
-      listener(state)
-    }
   }
 
   dispose(): void {
@@ -200,6 +162,5 @@ export class BrowserAutomationService implements vscode.Disposable {
       d.dispose()
     }
     this.disposables = []
-    this.stateListeners = []
   }
 }

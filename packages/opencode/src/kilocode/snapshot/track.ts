@@ -556,7 +556,7 @@ export namespace KiloSnapshotTrack {
    * tests that bypass the runtime).
    */
   async function currentDirectory(): Promise<{ directory: string; worktree?: string } | undefined> {
-    const { Instance } = await import("@/project/instance")
+    const { Instance } = await import("@/kilocode/instance")
     try {
       return { directory: Instance.directory, worktree: Instance.worktree }
     } catch {

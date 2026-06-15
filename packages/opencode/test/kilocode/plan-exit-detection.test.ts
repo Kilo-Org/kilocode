@@ -6,8 +6,8 @@ import path from "path"
 import { Identifier } from "../../src/id/id"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ModelID, ProviderID } from "../../src/provider/schema"
-import { Instance } from "../../src/project/instance"
-import { WithInstance } from "../../src/project/with-instance"
+import { Instance } from "../../src/kilocode/instance"
+import { provideTestInstance } from "../fixture/fixture"
 import { PlanFollowup } from "../../src/kilocode/plan-followup"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
 import { makeRuntime } from "../../src/effect/run-service"
@@ -56,7 +56,7 @@ const model = {
 
 async function withInstance(fn: () => Promise<void>) {
   await using tmp = await tmpdir({ git: true })
-  await WithInstance.provide({ directory: tmp.path, fn })
+  await provideTestInstance({ directory: tmp.path, fn })
 }
 
 async function seed(input: {

@@ -529,6 +529,8 @@ export const dict = {
   "notification.permission.titleSubagent": "İzin gerekli (alt ajan)",
   "notification.permission.description": "{{projectName}} içindeki {{sessionTitle}} izin gerektiriyor",
   "ui.permission.manageAutoApprove": "Otomatik Onay Kurallarını Yönet",
+  "ui.permission.doomLoop.prompt": "{{tool}} aracında olası bir döngü algılandı. Çalıştırmaya devam edilsin mi?",
+  "ui.permission.doomLoop.rule": "{{tool}} çağrılarına devam et",
   "ui.permission.rule.addToAllowed": "İzin listesine ekle",
   "ui.permission.rule.removeFromAllowed": "İzin listesinden kaldır",
   "ui.permission.rule.addToDenied": "Engel listesine ekle",
@@ -1483,6 +1485,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Alt Aracı Modeli",
   "settings.providers.subagentModel.description":
     "task-tool alt aracıları için varsayılan model ve akıl yürütme çabası. Çağıran aracının modelini devralmak için boş bırakın.",
+  "settings.models.hidePromptTraining.title": "İstemlerle eğitilen modelleri gizle",
+  "settings.models.hidePromptTraining.description":
+    "Sağlayıcıları istemlerinizi eğitim için kullanabilecek Kilo Gateway modellerini gizleyin.",
   "settings.providers.modeModels": "Mod Başına Model",
   "settings.providers.modeModels.description":
     "Belirli modlar için varsayılan modeli geçersiz kılın. Ayarlanmadıysa genel varsayılan model kullanılır.",

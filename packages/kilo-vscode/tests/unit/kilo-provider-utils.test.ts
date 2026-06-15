@@ -158,6 +158,12 @@ describe("sessionToWebview", () => {
     expect(() => new Date(result.createdAt)).not.toThrow()
     expect(new Date(result.createdAt).getTime()).toBe(1700000000000)
   })
+
+  it("clears optional state omitted from a full session snapshot", () => {
+    const result = sessionToWebview(makeSession())
+    expect(result.revert).toBeNull()
+    expect(result.summary).toBeNull()
+  })
 })
 
 describe("applySessionPatch", () => {

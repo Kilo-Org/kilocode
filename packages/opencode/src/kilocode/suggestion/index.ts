@@ -8,6 +8,7 @@ import { Telemetry } from "@kilocode/kilo-telemetry"
 import z from "zod"
 import { Schema } from "effect"
 import { KiloSessionPromptQueue } from "../session/prompt-queue"
+import { Instance } from "../instance"
 import { parseReviewCommand } from "../review/command"
 
 export namespace Suggestion {
@@ -167,7 +168,7 @@ export namespace Suggestion {
           actionCount: info.actions.length,
         })
       })
-      Bus.publish(Event.Shown, { ...info, sessionID: SessionID.make(info.sessionID) })
+      Bus.publish(Instance.current, Event.Shown, { ...info, sessionID: SessionID.make(info.sessionID) })
     })
   }
 
@@ -203,7 +204,7 @@ export namespace Suggestion {
       })
     }
 
-    Bus.publish(Event.Accepted, {
+    Bus.publish(Instance.current, Event.Accepted, {
       sessionID: SessionID.make(existing.info.sessionID),
       requestID: existing.info.id,
       index: input.index,
@@ -225,7 +226,7 @@ export namespace Suggestion {
 
     log.info("dismissed", { requestID })
 
-    Bus.publish(Event.Dismissed, {
+    Bus.publish(Instance.current, Event.Dismissed, {
       sessionID: SessionID.make(existing.info.sessionID),
       requestID: existing.info.id,
     })
@@ -246,7 +247,7 @@ export namespace Suggestion {
       if (entry.info.sessionID !== sessionID) continue
       delete s.pending[id]
       log.info("dismissed", { requestID: id })
-      Bus.publish(Event.Dismissed, {
+      Bus.publish(Instance.current, Event.Dismissed, {
         sessionID: SessionID.make(entry.info.sessionID),
         requestID: entry.info.id,
       })

@@ -529,6 +529,9 @@ export const dict = {
   "notification.permission.titleSubagent": "Требуется разрешение (субагент)",
   "notification.permission.description": "{{sessionTitle}} в {{projectName}} требуется разрешение",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
+  "ui.permission.doomLoop.prompt":
+    "Обнаружен потенциальный цикл при работе инструмента {{tool}}. Продолжить выполнение?",
+  "ui.permission.doomLoop.rule": "Продолжать вызовы {{tool}}",
   "ui.permission.rule.addToAllowed": "Добавить в список разрешённых",
   "ui.permission.rule.removeFromAllowed": "Убрать из списка разрешённых",
   "ui.permission.rule.addToDenied": "Добавить в список запрещённых",
@@ -872,6 +875,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Модель субагента",
   "settings.providers.subagentModel.description":
     "Модель по умолчанию и уровень рассуждения для субагентов task-tool. Оставьте пустым, чтобы унаследовать модель вызывающего агента.",
+  "settings.models.hidePromptTraining.title": "Скрывать модели, обучающиеся на запросах",
+  "settings.models.hidePromptTraining.description":
+    "Скрывать модели Kilo Gateway, поставщики которых могут использовать ваши запросы для обучения.",
   "settings.providers.modeModels": "Модель для режима",
   "settings.providers.custom.note": "Добавьте OpenAI-совместимого провайдера по базовому URL.",
   "settings.providers.modeModels.description":

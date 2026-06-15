@@ -7,7 +7,7 @@ import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
 import { Agent } from "@/agent/agent"
-import { Instance } from "@/project/instance"
+import { Instance } from "@/kilocode/instance"
 import type { SessionStatus } from "@/session/status"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { PlanFollowup } from "@/kilocode/plan-followup"
@@ -67,18 +67,18 @@ export namespace KiloSessionPrompt {
     question: Pick<Question.Interface, "ask" | "list" | "reject">
   }): Promise<"continue" | "break"> {
     if (!shouldAskPlanFollowup({ messages: input.messages, abort: input.abort })) return "break"
-    const ask = InstanceState.bind(PlanFollowup.ask)
+    const ask = Instance.bind(PlanFollowup.ask)
     const action = await ask({
       sessionID: input.sessionID,
       messages: input.messages,
       abort: input.abort,
       // Keep the request in the listener-local Question service so HTTP replies can resolve it.
       question: {
-        ask: InstanceState.bind((request: Parameters<Question.Interface["ask"]>[0]) =>
+        ask: Instance.bind((request: Parameters<Question.Interface["ask"]>[0]) =>
           Effect.runPromise(input.question.ask(request)),
         ),
-        list: InstanceState.bind(() => Effect.runPromise(input.question.list())),
-        reject: InstanceState.bind((requestID: Parameters<Question.Interface["reject"]>[0]) =>
+        list: Instance.bind(() => Effect.runPromise(input.question.list())),
+        reject: Instance.bind((requestID: Parameters<Question.Interface["reject"]>[0]) =>
           Effect.runPromise(input.question.reject(requestID)),
         ),
       },
@@ -279,7 +279,7 @@ export namespace KiloSessionPrompt {
       })
 
     // keep bind(): inside Effect.promise the project context is lost, so Instance.current throws without it
-    const ctx = InstanceState.bind(() => Instance.current)()
+    const ctx = Instance.bind(() => Instance.current)()
     const plan = Session.plan(input.session, ctx)
 
     if (mode(input.agent.name) === "plan") {

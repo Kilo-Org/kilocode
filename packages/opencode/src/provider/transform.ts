@@ -4,7 +4,6 @@ import type { JSONSchema7 } from "@ai-sdk/provider"
 import type * as Provider from "./provider"
 import type * as ModelsDev from "@opencode-ai/core/models"
 import { iife } from "@/util/iife"
-import { Flag } from "@opencode-ai/core/flag/flag"
 import { kiloProviderOptions } from "@/kilocode/provider-options"
 import { isLing } from "@/kilocode/model-match" // kilocode_change
 
@@ -18,7 +17,7 @@ function mimeToModality(mime: string): Modality | undefined {
   return undefined
 }
 
-export const OUTPUT_TOKEN_MAX = Flag.KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX || 32_000
+export const OUTPUT_TOKEN_MAX = 32_000
 
 export function sanitizeSurrogates(content: string) {
   return content.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "\uFFFD")
@@ -1330,8 +1329,8 @@ export function providerOptions(model: Provider.Model, options: { [x: string]: a
   return { [key]: options }
 }
 
-export function maxOutputTokens(model: Provider.Model): number {
-  return Math.min(model.limit.output, OUTPUT_TOKEN_MAX) || OUTPUT_TOKEN_MAX
+export function maxOutputTokens(model: Provider.Model, outputTokenMax = OUTPUT_TOKEN_MAX): number {
+  return Math.min(model.limit.output, outputTokenMax) || outputTokenMax
 }
 
 export function schema(model: Provider.Model, schema: JSONSchema7): JSONSchema7 {

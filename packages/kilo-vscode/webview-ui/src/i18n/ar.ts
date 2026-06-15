@@ -522,6 +522,8 @@ export const dict = {
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
   "notification.permission.description": "{{sessionTitle}} في {{projectName}} يحتاج إلى إذن",
   "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
+  "ui.permission.doomLoop.prompt": "تم اكتشاف حلقة محتملة في أداة {{tool}}. هل تريد متابعة التشغيل؟",
+  "ui.permission.doomLoop.rule": "متابعة استدعاءات {{tool}}",
   "ui.permission.rule.addToAllowed": "أضف إلى قائمة المسموح",
   "ui.permission.rule.removeFromAllowed": "أزل من قائمة المسموح",
   "ui.permission.rule.addToDenied": "أضف إلى قائمة المرفوض",
@@ -822,6 +824,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "نموذج الوكيل الفرعي",
   "settings.providers.subagentModel.description":
     "النموذج الافتراضي وجهد التفكير للوكلاء الفرعيين لـ task-tool. اتركه فارغًا ليرث نموذج الوكيل المستدعي.",
+  "settings.models.hidePromptTraining.title": "إخفاء النماذج التي تدرّب على المطالبات",
+  "settings.models.hidePromptTraining.description":
+    "إخفاء نماذج Kilo Gateway التي قد يستخدم مزودوها مطالباتك لأغراض التدريب.",
   "settings.providers.modeModels": "نموذج لكل وضع",
   "settings.providers.custom.note": "أضف موفرًا متوافقًا مع OpenAI عبر عنوان URL الأساسي.",
   "settings.providers.modeModels.description":

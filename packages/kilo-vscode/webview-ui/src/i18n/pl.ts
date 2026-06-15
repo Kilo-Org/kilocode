@@ -529,6 +529,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Wymagane uprawnienie (podagent)",
   "notification.permission.description": "{{sessionTitle}} w {{projectName}} potrzebuje uprawnienia",
   "ui.permission.manageAutoApprove": "Zarządzaj regułami automatycznego zatwierdzania",
+  "ui.permission.doomLoop.prompt": "Wykryto potencjalną pętlę dla narzędzia {{tool}}. Kontynuować działanie?",
+  "ui.permission.doomLoop.rule": "Kontynuuj wywołania {{tool}}",
   "ui.permission.rule.addToAllowed": "Dodaj do listy dozwolonych",
   "ui.permission.rule.removeFromAllowed": "Usuń z listy dozwolonych",
   "ui.permission.rule.addToDenied": "Dodaj do listy zablokowanych",
@@ -834,6 +836,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Model podagenta",
   "settings.providers.subagentModel.description":
     "Domyślny model i wysiłek wnioskowania dla podagentów task-tool. Pozostaw puste, aby odziedziczyć model agenta wywołującego.",
+  "settings.models.hidePromptTraining.title": "Ukryj modele trenujące na promptach",
+  "settings.models.hidePromptTraining.description":
+    "Ukryj modele Kilo Gateway, których dostawcy mogą używać Twoich promptów do trenowania.",
   "settings.providers.modeModels": "Model na tryb",
   "settings.providers.custom.note": "Dodaj dostawcę kompatybilnego z OpenAI przez bazowy URL.",
   "settings.providers.modeModels.description":
