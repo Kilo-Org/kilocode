@@ -77,6 +77,9 @@ const OpenAICompatItem = Schema.Struct({
   ),
   top_provider: Schema.optional(Schema.Struct({ max_completion_tokens: Schema.optional(Schema.Number) })),
   supported_parameters: Schema.optional(Schema.Array(Schema.String)),
+  // Per-model reasoning effort tiers (LLMAPI/OpenRouter-shaped). [] means
+  // thinking with no discrete tiers; absent on minimal endpoints (e.g. apertis).
+  reasoning_levels: Schema.optional(Schema.Array(Schema.String)),
 })
 const OpenAICompatModels = Schema.Struct({ data: Schema.optional(Schema.Array(OpenAICompatItem)) })
 type OpenAICompatItem = Schema.Schema.Type<typeof OpenAICompatItem>
@@ -121,6 +124,7 @@ export const layer: Layer.Layer<
 
     const toModel = (item: OpenAICompatItem): Models[string] => {
       const supported = item.supported_parameters
+      const reasoningLevels = item.reasoning_levels
       const inputMods = mapModalities(item.architecture?.input_modalities)
       const outputMods = mapModalities(item.architecture?.output_modalities)
       const inputPrice = parseApiPrice(item.pricing?.prompt)
@@ -141,7 +145,9 @@ export const layer: Layer.Layer<
         // When the endpoint advertises modalities/capabilities, derive from them;
         // otherwise fall back to the permissive defaults a bare endpoint implies.
         attachment: item.architecture?.input_modalities ? inputMods.includes("image") : true,
-        reasoning: supported ? supported.includes("reasoning") : false,
+        // Advertised tiers imply reasoning support even if `supported_parameters`
+        // omits "reasoning" (the two can drift in the upstream catalog).
+        reasoning: (reasoningLevels?.length ?? 0) > 0 || (supported ? supported.includes("reasoning") : false),
         temperature: supported ? supported.includes("temperature") : true,
         tool_call: supported ? supported.includes("tools") : true,
         cost:
@@ -158,6 +164,9 @@ export const layer: Layer.Layer<
           inputMods.length > 0 || outputMods.length > 0
             ? { input: inputMods, output: outputMods }
             : { input: ["text", "image"], output: ["text"] },
+        // Preserve the gateway's per-model effort tiers so the variant builder
+        // can offer exactly the supported set instead of guessing from the id.
+        ...(reasoningLevels !== undefined ? { reasoningLevels } : {}),
       }
     }
 
