@@ -341,7 +341,7 @@ export const ReadTool = Tool.define(
       // kilocode_change end
 
       let output = [`<path>${filepath}</path>`, `<type>file</type>`, "<content>\n"].join("\n")
-      output += file.raw.map((line, i) => `${i + file.offset}: ${line}`).join("\n")
+      output += file.raw.join("\n") // kilocode_change - omit repeated line prefixes from model context
 
       const last = file.offset + file.raw.length - 1
       const next = last + 1

@@ -434,14 +434,15 @@ describe("tool.read truncation", () => {
       yield* put(path.join(dir, "offset.txt"), lines)
 
       const result = yield* exec(dir, { filePath: path.join(dir, "offset.txt"), offset: 10, limit: 5 })
-      expect(result.output).toContain("10: line10")
-      expect(result.output).toContain("14: line14")
-      expect(result.output).not.toContain("9: line10")
-      expect(result.output).not.toContain("15: line15")
+      // kilocode_change start
+      expect(result.output).not.toContain("10: line10")
+      expect(result.output).not.toContain("14: line14")
+      // kilocode_change end
       expect(result.output).toContain("line10")
       expect(result.output).toContain("line14")
       expect(result.output).not.toContain("line0")
       expect(result.output).not.toContain("line15")
+      expect(result.output).toContain("Showing lines 10-14 of 20") // kilocode_change - preserve bounded-read range
     }),
   )
 
