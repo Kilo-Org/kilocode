@@ -33,6 +33,20 @@ object UiStyle {
         fun component() = com.intellij.util.ui.JBValue.UIInteger("Component.arc", 8).get()
     }
 
+    /** Platform balloon styling used by lightweight contextual overlays. */
+    object Balloon {
+        fun bg(): Color = UIUtil.getPanelBackground()
+
+        fun border(): Color = JBUI.CurrentTheme.Popup.borderColor(true)
+
+        /** New UI parameter-info balloon insets: symmetric vertical padding with wider sides. */
+        fun insets() = JBUI.insets(6, 12, 6, 12)
+
+        fun pointer() = JBUI.size(16, 8)
+
+        fun arc() = JBUI.scale(8)
+    }
+
     /** Theme-aware colors and color math used by multiple UI surfaces. */
     object Colors {
         fun bg(): Color = UIUtil.getPanelBackground()
@@ -45,11 +59,10 @@ object UiStyle {
         fun editorBackground(): Color = JBColor.lazy { EditorColorsManager.getInstance().globalScheme.defaultBackground }
 
         /**
-         * Card surface background: follows the active theme's text-field/input surface.
-         * Uses [UIUtil.getTextFieldBackground] as the semantic platform surface color for
-         * contained panels. Falls back to the panel background when unavailable.
+         * Contained panel background: follows the active theme's text-field/input surface.
+         * Falls back to the panel background when unavailable.
          */
-        fun cardBg(): Color = JBColor.lazy {
+        fun contentBackground(): Color = JBColor.lazy {
             UIManager.getColor("TextField.background") ?: UIUtil.getPanelBackground()
         }
 
@@ -64,14 +77,34 @@ object UiStyle {
         fun badgeBg(): Color = JBColor.lazy {
             UIManager.getColor("Badge.background")
                 ?: UIManager.getColor("Label.infoBackground")
-                ?: blend(cardBg(), fg(), 0.16f)
+                ?: blend(contentBackground(), fg(), 0.16f)
         }
 
         /** Filled badge text color paired with [badgeBg]. */
         fun badgeFg(): Color = JBColor(Color.BLACK, UIUtil.getLabelForeground())
 
-        /** Card border color shared across profile cards. */
-        fun cardBorder(): Color = JBColor.namedColor("Component.borderColor", JBColor.border())
+        fun runningBadgeBg(): Color = JBColor.namedColor(
+            "Kilo.History.runningBadgeBackground",
+            JBColor(0xF5C542, 0x7A5A00),
+        )
+
+        fun runningBadgeFg(): Color = JBColor.namedColor(
+            "Kilo.History.runningBadgeForeground",
+            JBColor(Color.BLACK, Color.WHITE),
+        )
+
+        fun activityBadgeBg(): Color = JBColor.namedColor(
+            "Kilo.History.activityBadgeBackground",
+            JBUI.CurrentTheme.Link.Foreground.ENABLED,
+        )
+
+        fun activityBadgeFg(): Color = JBColor.namedColor(
+            "Kilo.History.activityBadgeForeground",
+            Color.WHITE,
+        )
+
+        /** Border color shared across contained panels. */
+        fun contentBorder(): Color = JBColor.namedColor("Component.borderColor", JBColor.border())
 
         /**
          * Floating panel background: white in light themes, black in dark themes.
@@ -90,6 +123,18 @@ object UiStyle {
                 ?: UIManager.getColor("Label.warningForeground")
                 ?: UIUtil.getContextHelpForeground()
         }
+
+        fun infoOverlayBackground(): Color = JBUI.CurrentTheme.NotificationInfo.backgroundColor()
+
+        fun infoOverlayForeground(): Color = JBUI.CurrentTheme.NotificationInfo.foregroundColor()
+
+        fun infoOverlayBorder(): Color = JBUI.CurrentTheme.NotificationInfo.borderColor()
+
+        fun errorOverlayBackground(): Color = JBUI.CurrentTheme.NotificationError.backgroundColor()
+
+        fun errorOverlayForeground(): Color = JBUI.CurrentTheme.NotificationError.foregroundColor()
+
+        fun errorOverlayBorder(): Color = JBUI.CurrentTheme.NotificationError.borderColor()
 
         internal fun contrast(base: Color, delta: Int): Color {
             val step = if (bright(base)) -delta else delta

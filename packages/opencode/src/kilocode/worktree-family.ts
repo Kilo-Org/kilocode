@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { Effect } from "effect"
 import { InstanceState } from "../effect/instance-state"
 import { Project } from "../project/project"
@@ -28,11 +27,19 @@ export namespace WorktreeFamily {
         })
 
       if (dirs.length > 0) {
+        // In a git submodule, `git worktree list --porcelain` reports the
+        // gitdir (`<repo>/.git/modules/<sub>`) instead of the actual working
+        // tree, so the parsed list never contains the directory sessions are
+        // recorded under. Including the context worktree keeps submodule sessions
+        // in scope without affecting normal repos (already present) or linked
+        // worktrees (also already present).
+        dirs.push(Filesystem.resolve(ctx.worktree))
         return [...new Set(dirs)]
       }
     }
 
-    const dirs = [ctx.worktree, ...(yield* Effect.promise(() => Project.sandboxes(ctx.project.id)))]
+    const project = yield* Project.Service
+    const dirs = [ctx.worktree, ...(yield* project.sandboxes(ctx.project.id))]
     return [...new Set(dirs.map((dir) => Filesystem.resolve(dir)))]
   })
 }

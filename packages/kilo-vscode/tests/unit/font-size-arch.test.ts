@@ -18,6 +18,7 @@ const TARGETS = [
   path.join(ROOT, "webview-ui/src"),
   path.join(ROOT, "webview-ui/agent-manager"),
   path.join(ROOT, "webview-ui/kiloclaw"),
+  path.join(ROOT, "webview-ui/marketplace"),
   path.join(ROOT, "webview-ui/diff-viewer"),
   path.join(ROOT, "webview-ui/diff-virtual"),
   path.join(REPO, "packages/kilo-ui/src/components"),
@@ -28,6 +29,7 @@ const WATCHED_PROVIDERS = [
   path.join(ROOT, "src/diff/DiffViewerProvider.ts"),
   path.join(ROOT, "src/DiffVirtualProvider.ts"),
   path.join(ROOT, "src/kiloclaw/KiloClawProvider.ts"),
+  path.join(ROOT, "src/MarketplacePanelProvider.ts"),
 ]
 
 const ALLOWED_DIRS = new Set(["stories"])

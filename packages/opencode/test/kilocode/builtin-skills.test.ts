@@ -1,21 +1,21 @@
-import { afterEach, test, expect } from "bun:test"
+import { expect } from "bun:test"
+import { Effect, Layer } from "effect"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import path from "path"
 import { Skill } from "../../src/skill"
-import { WithInstance } from "../../src/project/with-instance"
+import * as KiloSkill from "../../src/kilocode/skill-remove"
 import { BUILTIN_SKILLS } from "../../src/kilocode/skills/builtin"
-import { disposeAllInstances, tmpdir } from "../fixture/fixture"
+import { TestInstance } from "../fixture/fixture"
+import { testEffect } from "../lib/effect"
 
-afterEach(async () => {
-  await disposeAllInstances()
-})
+const it = testEffect(Layer.mergeAll(Skill.defaultLayer, CrossSpawnSpawner.defaultLayer))
 
-test("built-in skills are present in empty project", async () => {
-  await using tmp = await tmpdir({ git: true })
-
-  await WithInstance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const skills = await Skill.all()
+it.instance(
+  "built-in skills are present in empty project",
+  () =>
+    Effect.gen(function* () {
+      const skill = yield* Skill.Service
+      const skills = yield* skill.all()
       for (const builtin of BUILTIN_SKILLS) {
         const found = skills.find((s) => s.name === builtin.name)
         expect(found).toBeDefined()
@@ -23,33 +23,46 @@ test("built-in skills are present in empty project", async () => {
         expect(found!.description).toBe(builtin.description)
         expect(found!.content.length).toBeGreaterThan(0)
       }
-    },
-  })
-})
+    }),
+  { git: true },
+)
 
-test("built-in skill has correct metadata", async () => {
-  await using tmp = await tmpdir({ git: true })
+it.instance(
+  "built-in skill has correct metadata",
+  () =>
+    Effect.gen(function* () {
+      const skill = yield* Skill.Service
+      const item = yield* skill.get("kilo-config")
+      expect(item).toBeDefined()
+      expect(item!.name).toBe("kilo-config")
+      expect(item!.location).toBe(Skill.BUILTIN_LOCATION)
+      expect(item!.content).toContain("kilo")
+    }),
+  { git: true },
+)
 
-  await WithInstance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const skill = await Skill.get("kilo-config")
-      expect(skill).toBeDefined()
-      expect(skill!.name).toBe("kilo-config")
-      expect(skill!.location).toBe(Skill.BUILTIN_LOCATION)
-      expect(skill!.content).toContain("kilo")
-    },
-  })
-})
+it.instance(
+  "kilo-config is protected from removal",
+  () =>
+    Effect.gen(function* () {
+      const skill = yield* Skill.Service
+      const item = yield* skill.get("kilo-config")
+      expect(item).toBeDefined()
+      expect(KiloSkill.builtin(item!.location)).toBe(true)
+    }),
+  { git: true },
+)
 
-test("user skill overrides built-in with same name", async () => {
-  await using tmp = await tmpdir({
-    git: true,
-    init: async (dir) => {
-      const skillDir = path.join(dir, ".kilo", "skill", "kilo-config")
-      await Bun.write(
-        path.join(skillDir, "SKILL.md"),
-        `---
+it.instance(
+  "user skill overrides built-in with same name",
+  () =>
+    Effect.gen(function* () {
+      const instance = yield* TestInstance
+      const dir = path.join(instance.directory, ".kilo", "skill", "kilo-config")
+      yield* Effect.promise(() =>
+        Bun.write(
+          path.join(dir, "SKILL.md"),
+          `---
 name: kilo-config
 description: User override of kilo-config.
 ---
@@ -58,18 +71,15 @@ description: User override of kilo-config.
 
 User-provided content.
 `,
+        ),
       )
-    },
-  })
 
-  await WithInstance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const skill = await Skill.get("kilo-config")
-      expect(skill).toBeDefined()
-      expect(skill!.description).toBe("User override of kilo-config.")
-      expect(skill!.location).not.toBe(Skill.BUILTIN_LOCATION)
-      expect(skill!.location).toContain(path.join("skill", "kilo-config", "SKILL.md"))
-    },
-  })
-})
+      const skill = yield* Skill.Service
+      const item = yield* skill.get("kilo-config")
+      expect(item).toBeDefined()
+      expect(item!.description).toBe("User override of kilo-config.")
+      expect(item!.location).not.toBe(Skill.BUILTIN_LOCATION)
+      expect(item!.location).toContain(path.join("skill", "kilo-config", "SKILL.md"))
+    }),
+  { git: true },
+)

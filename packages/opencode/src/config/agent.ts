@@ -1,12 +1,9 @@
 export * as ConfigAgent from "./agent"
 
 import path from "path" // kilocode_change
-import { Exit, Schema, SchemaGetter } from "effect"
-import { Bus } from "@/bus"
-import { zod } from "@/util/effect-zod"
-import { PositiveInt, withStatics } from "@/util/schema"
+import { Schema, SchemaGetter } from "effect"
+import { PositiveInt } from "@opencode-ai/core/schema"
 import * as Log from "@opencode-ai/core/util/log"
-import { NamedError } from "@opencode-ai/core/util/error"
 import { Glob } from "@opencode-ai/core/util/glob"
 import { configEntryNameFromPath } from "./entry-name"
 import { ConfigError } from "./error"
@@ -16,6 +13,8 @@ import { ConfigParse } from "./parse"
 import { ConfigPermission } from "./permission"
 import { ConfigVariable } from "./variable" // kilocode_change
 // kilocode_change start
+import { Bus } from "@/bus"
+import { NamedError } from "@opencode-ai/core/util/error"
 import { KilocodeConfig } from "@/kilocode/config/config"
 import type { Warning } from "./config"
 // kilocode_change end
@@ -30,9 +29,11 @@ const Color = Schema.Union([
 const AgentSchema = Schema.StructWithRest(
   Schema.Struct({
     model: Schema.optional(Schema.NullOr(ConfigModelID)), // kilocode_change - nullable for delete sentinel
-    variant: Schema.optional(Schema.String).annotate({
+    // kilocode_change start - nullable for delete sentinel
+    variant: Schema.optional(Schema.NullOr(Schema.String)).annotate({
       description: "Default model variant for this agent (applies only when using the agent's configured model).",
     }),
+    // kilocode_change end
     temperature: Schema.optional(Schema.NullOr(Schema.Finite)), // kilocode_change - nullable for delete sentinel
     top_p: Schema.optional(Schema.NullOr(Schema.Finite)), // kilocode_change - nullable for delete sentinel
     prompt: Schema.optional(Schema.NullOr(Schema.String)), // kilocode_change - nullable for delete sentinel
@@ -117,9 +118,7 @@ export const Info = AgentSchema.pipe(
     decode: SchemaGetter.transform(normalize),
     encode: SchemaGetter.passthrough({ strict: false }),
   }),
-)
-  .annotate({ identifier: "AgentConfig" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+).annotate({ identifier: "AgentConfig" })
 export type Info = Schema.Schema.Type<typeof Info>
 
 // kilocode_change start
@@ -139,14 +138,18 @@ export async function load(dir: string, warnings?: Warning[]) {
       // kilocode_change start
       if (warnings) warnings.push({ path: item, message })
       try {
-        const { Session } = await import("@/session/session")
-        Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
-      } catch (e) {
-        log.warn("could not publish session error", { message, err: e })
+        const { capture } = await import("@/kilocode/instance")
+        const ctx = capture()
+        if (ctx) {
+          const { Session } = await import("@/session/session")
+          await Bus.publish(ctx, Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        }
+      } catch (error) {
+        log.warn("could not publish session error", { message, err: error })
       }
+      // kilocode_change end
       log.error("failed to load agent", { agent: item, err })
       return undefined
-      // kilocode_change end
     })
     if (!md) continue
 
@@ -181,7 +184,7 @@ export async function load(dir: string, warnings?: Warning[]) {
     // kilocode_change end
     // kilocode_change start - use Effect schema (propertyOrder: original) + non-fatal handleInvalid
     try {
-      result[config.name] = ConfigParse.effectSchema(Info, config, item) as Info
+      result[config.name] = ConfigParse.schema(Info, config, item) as Info
     } catch (err) {
       if (ConfigError.InvalidError.isInstance(err)) {
         await KilocodeConfig.handleInvalid("agent", item, err.data.issues ?? [], err, warnings)
@@ -211,14 +214,18 @@ export async function loadMode(dir: string, warnings?: Warning[]) {
       // kilocode_change start
       if (warnings) warnings.push({ path: item, message })
       try {
-        const { Session } = await import("@/session/session")
-        Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
-      } catch (e) {
-        log.warn("could not publish session error", { message, err: e })
+        const { capture } = await import("@/kilocode/instance")
+        const ctx = capture()
+        if (ctx) {
+          const { Session } = await import("@/session/session")
+          await Bus.publish(ctx, Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        }
+      } catch (error) {
+        log.warn("could not publish session error", { message, err: error })
       }
+      // kilocode_change end
       log.error("failed to load mode", { mode: item, err })
       return undefined
-      // kilocode_change end
     })
     if (!md) continue
 
@@ -230,7 +237,7 @@ export async function loadMode(dir: string, warnings?: Warning[]) {
     // kilocode_change start - use Effect schema (propertyOrder: original) + non-fatal handleInvalid
     try {
       result[config.name] = {
-        ...(ConfigParse.effectSchema(Info, config, item) as Info),
+        ...(ConfigParse.schema(Info, config, item) as Info),
         mode: "primary" as const,
       }
     } catch (err) {

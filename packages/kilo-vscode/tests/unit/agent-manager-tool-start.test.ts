@@ -87,6 +87,7 @@ describe("agent manager tool start", () => {
         sessionID: "s-local",
         directory: "/repo",
         parts: [{ type: "text", text: "Do work" }],
+        snapshotInitialization: "wait",
       }),
       { throwOnError: true },
     )
@@ -103,6 +104,97 @@ describe("agent manager tool start", () => {
     expect(c.createSessionInWorktree).toHaveBeenCalled()
     expect(c.registerWorktreeSession).toHaveBeenCalledWith("s-wt", "/repo/.kilo/worktrees/wt-1")
     expect(c.notifyReady).toHaveBeenCalled()
+  })
+
+  it("deduplicates repeated delivery of the same exact request", async () => {
+    const requests = new Set<string>()
+    const c = deps({
+      claimRequest: mock((id: string) => {
+        if (requests.has(id)) return false
+        requests.add(id)
+        return true
+      }),
+    })
+    const req: ToolRequest = {
+      requestID: "am-duplicate",
+      mode: "worktree",
+      tasks: [
+        {
+          branchName: "echo-hello-world",
+          name: "Echo hello world",
+          prompt: 'Use the bash tool to run: echo "hello world". Report back the output.',
+        },
+      ],
+    }
+
+    await startFromTool(c, req)
+    await startFromTool(c, req)
+
+    expect(c.createWorktree).toHaveBeenCalledTimes(1)
+    expect(c.createSessionInWorktree).toHaveBeenCalledTimes(1)
+  })
+
+  it("starts each task from separate tool calls even when their branch seeds match", async () => {
+    const requests = new Set<string>()
+    const c = deps({
+      claimRequest: mock((id: string) => {
+        if (requests.has(id)) return false
+        requests.add(id)
+        return true
+      }),
+    })
+    const req: ToolRequest = {
+      requestID: "am-first",
+      mode: "worktree",
+      tasks: [
+        {
+          branchName: "echo-hello-world",
+          name: "Echo hello world",
+          prompt: 'Use the bash tool to run: echo "hello world". Report back the output.',
+        },
+      ],
+    }
+
+    await startFromTool(c, req)
+    await startFromTool(c, { ...req, requestID: "am-second" })
+
+    expect(c.createWorktree).toHaveBeenCalledTimes(2)
+    expect(c.createSessionInWorktree).toHaveBeenCalledTimes(2)
+    expect(c.createWorktree).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ branchName: "echo-hello-world", name: "echo-hello-world" }),
+    )
+  })
+
+  it("deduplicates concurrent delivery of the same request", async () => {
+    const requests = new Set<string>()
+    const pending = Promise.withResolvers<void>()
+    const resume = Promise.withResolvers<void>()
+    const c = deps({
+      claimRequest: mock((id: string) => {
+        if (requests.has(id)) return false
+        requests.add(id)
+        return true
+      }),
+      createWorktree: mock(async () => {
+        pending.resolve()
+        await resume.promise
+        return { worktree: { id: "wt-1" }, result: result("/repo/.kilo/worktrees/wt-1") }
+      }),
+    })
+    const req: ToolRequest = {
+      requestID: "am-concurrent",
+      mode: "worktree",
+      tasks: [{ prompt: "Fix", branchName: "fix/concurrent" }],
+    }
+
+    const first = startFromTool(c, req)
+    await pending.promise
+    await startFromTool(c, req)
+    resume.resolve()
+    await first
+
+    expect(c.createWorktree).toHaveBeenCalledTimes(1)
   })
 
   it("only applies version suffixes when versions is true", async () => {

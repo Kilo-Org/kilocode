@@ -17,6 +17,8 @@ export interface DiffFile {
   file: string
   before: string
   after: string
+  /** Hunk-bounded unified patch used by Pierre to avoid re-diffing full files. */
+  patch?: string
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"

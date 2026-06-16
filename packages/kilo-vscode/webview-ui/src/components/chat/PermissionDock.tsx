@@ -17,7 +17,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useConfig } from "../../context/config"
-import { describePatterns, resolveLabel, savedRuleStates, type RuleDecision } from "./permission-dock-utils"
+import { describePatterns, describeRule, savedRuleStates, type RuleDecision } from "./permission-dock-utils"
 import { PermissionCommand } from "./PermissionCommand"
 import { PermissionDiff } from "./PermissionDiff"
 import { permissionDiffs } from "./permission-diff-utils"
@@ -46,6 +46,10 @@ export const PermissionDock: Component<{
     if (typeof cmd !== "string") return undefined
     // Normalize IDN/Unicode hostnames to punycode ASCII to prevent homograph attacks.
     return normalizeUrls(cmd)
+  }
+  const cmdDescription = () => {
+    const val = props.request.args?.description
+    return typeof val === "string" && val.length > 0 ? val : undefined
   }
   const description = createMemo(() =>
     command() ? null : describePatterns(props.request.toolName, props.request.patterns, language.t),
@@ -245,11 +249,7 @@ export const PermissionDock: Component<{
                             </Tooltip>
                           </div>
                           <code data-slot="permission-rule">
-                            {command()
-                              ? label(rule)
-                              : rule === "*"
-                                ? resolveLabel(props.request.toolName, language.t)
-                                : `${resolveLabel(props.request.toolName, language.t)} ${rule}`}
+                            {command() ? label(rule) : describeRule(props.request.toolName, rule, language.t)}
                           </code>
                         </div>
                       )}
@@ -261,6 +261,7 @@ export const PermissionDock: Component<{
           </Show>
         }
       >
+        <Show when={cmdDescription()}>{(desc) => <div data-slot="permission-hint">{desc()}</div>}</Show>
         <Show when={command()}>{(cmd) => <PermissionCommand command={cmd()} />}</Show>
 
         {(() => {

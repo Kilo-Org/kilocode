@@ -8,7 +8,7 @@ description: "Using Kilo Code on iOS and Android"
 Use Kilo Code from your phone to keep coding sessions moving while you are away from your desk. The mobile app connects to Cloud Agents, KiloClaw, and remote sessions from your local CLI or editor extensions.
 
 {% callout type="info" title="Android app available now" %}
-Install Kilo Code for Android from [Google Play](https://kilocode.onelink.me/ZzZZ/r10ni4zy).
+Install Kilo Code for Android from [Google Play](https://play.google.com/store/apps/details?id=com.kilocode.kiloapp).
 {% /callout %}
 
 ## What you can do
@@ -20,6 +20,10 @@ The mobile app lets you:
 - Spawn Cloud Agents and code directly from the app.
 - Monitor and view all non-remote sessions in one place.
 - Create, onboard, and manage KiloClaw instances.
+
+## Kilo Pass and Billing
+
+For Kilo Pass pricing, billing, and account management details, use the [Kilo Pass pricing page](https://kilo.ai/pricing/kilo-pass).
 
 {% imageGallery columns="3" width="220px" %}
 {% image src="/docs/img/mobile-apps/home.webp" alt="Kilo Code mobile home screen showing KiloClaw and active agent sessions" caption="Start coding tasks, open KiloClaw, and resume active sessions from the mobile home screen." /%}
@@ -39,7 +43,7 @@ The mobile app lets you:
 
 The Android app is available now on Google Play.
 
-[Install the Android app →](https://kilocode.onelink.me/ZzZZ/r10ni4zy)
+[Install the Android app →](https://play.google.com/store/apps/details?id=com.kilocode.kiloapp)
 
 ## iOS App
 

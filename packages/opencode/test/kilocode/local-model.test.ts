@@ -93,6 +93,7 @@ mock.module("@tui/context/sync", () => ({
       provider_default: { anthropic: "claude-sonnet" },
       agent: mockAgents,
       config: mockConfig,
+      session: [],
       mcp: {},
     },
   }),
@@ -126,6 +127,9 @@ mock.module("@tui/context/sdk", () => ({
         disconnect: async () => {},
         connect: async () => {},
       },
+    },
+    event: {
+      on: () => () => {},
     },
   }),
 }))

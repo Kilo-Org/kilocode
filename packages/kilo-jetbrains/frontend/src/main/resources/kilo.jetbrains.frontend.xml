@@ -9,11 +9,19 @@
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="ai.kilocode.client.migration.KiloMigrationService"/>
         <applicationService serviceImplementation="ai.kilocode.client.autocomplete.KiloAutocompleteSettingsService"/>
+        <customPasteProvider implementation="ai.kilocode.client.session.ui.prompt.PromptAttachmentPasteProvider"/>
+
+        <notificationGroup id="Kilo Code"
+                           displayType="BALLOON"
+                           bundle="messages.KiloBundle"
+                           key="notification.group.kilo"/>
 
         <toolWindow id="Kilo Code"
                     anchor="left"
                     icon="/icons/kilo.svg"
                     factoryClass="ai.kilocode.client.KiloToolWindowFactory"/>
+
+        <fileEditorProvider id="KiloVfsEditor" implementation="ai.kilocode.client.vfs.KiloFileEditorProvider"/>
 
         <applicationConfigurable
                 parentId="tools"
@@ -25,9 +33,18 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.profile"
+                groupWeight="2"
                 instance="ai.kilocode.client.settings.profile.UserProfileConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.profile.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.models"
+                groupWeight="1"
+                instance="ai.kilocode.client.settings.models.ModelsConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.models.displayName"/>
 
         <registryKey key="kilo.session.condense"
                      description="Enable event condensing in the session update queue (merges redundant snapshots before model delivery)."
@@ -39,7 +56,17 @@
                      defaultValue="150"
                      restartRequired="false"
                      overrides="false"/>
+        <registryKey key="kilo.session.inactive.disposeTimeoutMs"
+                     description="Milliseconds before hidden session UI is disposed after switching away."
+                     defaultValue="180000"
+                     restartRequired="false"
+                     overrides="false"/>
     </extensions>
+
+    <applicationListeners>
+        <listener class="ai.kilocode.client.plugin.KiloFrontendDynamicPluginListener"
+                  topic="com.intellij.ide.plugins.DynamicPluginListener"/>
+    </applicationListeners>
 
     <actions>
         <action id="Kilo.Restart"
@@ -48,9 +75,31 @@
         <action id="Kilo.Reinstall"
                 class="ai.kilocode.client.actions.ReinstallKiloAction"/>
 
-        <group id="Kilo.SettingsGroup">
+        <action id="Kilo.OpenSettings"
+                class="ai.kilocode.client.actions.OpenSettingsAction"/>
+
+        <action id="Kilo.OpenLocalConfig"
+                class="ai.kilocode.client.actions.OpenLocalConfigAction"/>
+
+        <action id="Kilo.OpenGlobalConfig"
+                class="ai.kilocode.client.actions.OpenGlobalConfigAction"/>
+
+        <group id="Kilo.CliGroup" text="CLI" popup="true">
             <reference ref="Kilo.Restart"/>
             <reference ref="Kilo.Reinstall"/>
+        </group>
+
+        <group id="Kilo.OpenConfigGroup" text="Config Files" popup="true">
+            <reference ref="Kilo.OpenLocalConfig"/>
+            <reference ref="Kilo.OpenGlobalConfig"/>
+        </group>
+
+        <group id="Kilo.SettingsGroup">
+            <reference ref="Kilo.OpenSettings"/>
+            <separator/>
+            <reference ref="Kilo.OpenConfigGroup"/>
+            <separator/>
+            <reference ref="Kilo.CliGroup"/>
         </group>
 
         <action id="Kilo.Settings"
@@ -63,14 +112,10 @@
         <action id="Kilo.History"
                 class="ai.kilocode.client.actions.HistoryAction"/>
 
-        <action id="Kilo.ShowProfile"
-                class="ai.kilocode.client.actions.ShowProfileAction"/>
-
         <!-- Declarative toolbar group for the Kilo tool window title bar -->
         <group id="Kilo.ToolWindowToolbar">
             <reference ref="Kilo.NewSession"/>
             <reference ref="Kilo.History"/>
-            <reference ref="Kilo.ShowProfile"/>
             <reference ref="Kilo.Settings"/>
         </group>
 
@@ -80,6 +125,10 @@
                 description="Send the current Kilo prompt">
             <keyboard-shortcut keymap="$default"
                                first-keystroke="ENTER"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+"
+                               first-keystroke="meta ENTER"/>
+            <keyboard-shortcut keymap="$default"
+                               first-keystroke="control ENTER"/>
         </action>
 
         <action id="Kilo.StopSession"

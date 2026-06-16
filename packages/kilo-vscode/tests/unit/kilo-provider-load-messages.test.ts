@@ -1,4 +1,5 @@
 import { describe, it, expect } from "bun:test"
+import type { PartUpdate } from "../../src/shared/stream-messages"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider } = await import("../../src/KiloProvider")
@@ -98,6 +99,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
     registerDirectoryProvider: () => () => undefined,
     getServerInfo: () => ({ port: 12345 }),
     getConnectionState: () => "connected" as const,
+    getConnectionError: () => null,
     resolveEventSessionId: () => undefined,
     recordMessageSessionId: () => undefined,
     notifyNotificationDismissed: () => undefined,
@@ -114,7 +116,9 @@ type ProviderInternals = {
   contextSessionID: string | undefined
   sessionDirectories: Map<string, string>
   trackedSessionIds: Set<string>
+  streams: { push: (msg: PartUpdate) => void }
   stopCurrentSessionProcesses: (next?: string) => void
+  handleEvent: (event: unknown) => void
   handleLoadMessages: (sid: string, opts?: { mode?: string; before?: string; limit?: number }) => Promise<void>
   handleDeleteSession: (sid: string) => Promise<void>
 }
@@ -301,30 +305,132 @@ describe("KiloProvider.handleDeleteSession / background processes", () => {
   })
 })
 
-describe("KiloProvider.loadMessages / sub-agent viewer full history", () => {
-  it("loads all messages without the MESSAGE_PAGE_LIMIT cap (sub-agent viewer needs full turn history)", async () => {
-    // Regression: SubAgentViewerProvider used to call client.session.messages
-    // with no limit, loading every turn. After switching to provider.loadMessages
-    // it inherited the 80-message page cap and sub-agents with more than 80
-    // turns would open truncated with no visible indicator. loadMessages() is
-    // the sub-agent viewer's single entry point — it must request the full
-    // transcript.
-    const big = Array.from({ length: 200 }, (_, i) => mkMessage(`m${i}`, i % 2 === 0 ? "user" : "assistant", i))
-    const client = createClient({ messagesData: big })
+describe("KiloProvider.handleLoadMessages / slim payload", () => {
+  it("strips transcript-only metadata before posting messages to the webview", async () => {
+    const user = mkMessage("m1", "user", 1)
+    const assistant = mkMessage("m2", "assistant", 2)
+    const client = createClient({
+      messagesData: [
+        {
+          ...user,
+          info: {
+            ...user.info,
+            summary: { diffs: [{ file: "a.ts", patch: "full patch", additions: 2, deletions: 1 }] },
+          },
+        },
+        {
+          ...assistant,
+          parts: [
+            {
+              type: "reasoning",
+              id: "r1",
+              text: "Considering options",
+              metadata: { openai: { reasoningEncryptedContent: "encrypted", itemId: "item-1" } },
+            },
+          ],
+        },
+      ],
+    })
     const { provider, sent } = makeProvider(client)
 
     await provider.loadMessages("s1")
 
     const loaded = sent.find(
       (msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "messagesLoaded",
-    ) as { messages: unknown[] } | undefined
-    expect(loaded).toBeDefined()
-    expect(loaded!.messages).toHaveLength(200)
+    ) as
+      | {
+          messages: Array<{
+            summary?: { diffs?: Array<Record<string, unknown>> }
+            parts: Array<{ metadata?: { openai?: Record<string, unknown> } }>
+          }>
+        }
+      | undefined
+    expect(loaded?.messages[0]?.summary?.diffs?.[0]).toEqual({ file: "a.ts", additions: 2, deletions: 1 })
+    expect(loaded?.messages[1]?.parts[0]?.metadata?.openai).toEqual({ itemId: "item-1" })
+  })
 
-    // Server contract: limit: 0 (or undefined) returns everything.
-    expect(client.calls).toHaveLength(1)
-    const limit = client.calls[0]?.limit
-    expect(limit === undefined || limit === 0).toBe(true)
+  it("strips summary patches from live message updates", () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+
+    internal.handleEvent({
+      type: "message.updated",
+      properties: {
+        info: {
+          id: "m1",
+          sessionID: "s1",
+          role: "user",
+          time: { created: 1 },
+          summary: { diffs: [{ file: "a.ts", patch: "full patch", additions: 2, deletions: 1 }] },
+        },
+      },
+    })
+
+    const created = sent.find(
+      (msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "messageCreated",
+    ) as { message?: { summary?: { diffs?: Array<Record<string, unknown>> } } } | undefined
+    expect(created?.message?.summary?.diffs?.[0]).toEqual({ file: "a.ts", additions: 2, deletions: 1 })
+  })
+})
+
+describe("KiloProvider.loadMessages / sub-agent viewer", () => {
+  it("uses the same paginated initial load as normal sessions", async () => {
+    const page = Array.from({ length: 80 }, (_, i) => mkMessage(`m${i}`, i % 2 === 0 ? "user" : "assistant", i))
+    const client = createClient({ messagesData: page })
+    const { provider, sent } = makeProvider(client)
+
+    await provider.loadMessages("s1")
+
+    const loaded = sent.find(
+      (msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "messagesLoaded",
+    ) as { messages: unknown[]; hasMore: boolean } | undefined
+    expect(loaded?.messages).toHaveLength(80)
+    expect(loaded?.hasMore).toBe(true)
+    expect(client.calls).toEqual([{ before: undefined, limit: 80 }])
+  })
+
+  it("delivers reasoning updates received during the initial snapshot after messagesLoaded", async () => {
+    const pending = defer<{ data: unknown[]; response: { headers: Headers } }>()
+    const client = createClient({ messagesDeferred: pending })
+    const { provider, internal, sent } = makeProvider(client)
+    const load = provider.loadMessages("s1")
+
+    internal.streams.push({
+      type: "partUpdated",
+      sessionID: "s1",
+      messageID: "m2",
+      part: {
+        id: "r1",
+        sessionID: "s1",
+        messageID: "m2",
+        type: "reasoning",
+        text: "Complete reasoning",
+      },
+    })
+    pending.resolve(
+      mkResult([
+        mkMessage("m1", "user", 1),
+        {
+          ...mkMessage("m2", "assistant", 2),
+          parts: [
+            {
+              id: "r1",
+              sessionID: "s1",
+              messageID: "m2",
+              type: "reasoning",
+              text: "",
+            },
+          ],
+        },
+      ]),
+    )
+    await load
+
+    const types = sent.map((msg) => (typeof msg === "object" && msg ? (msg as { type?: string }).type : undefined))
+    const snapshot = types.indexOf("messagesLoaded")
+    const update = types.findIndex((type) => type === "partUpdated" || type === "partsUpdated")
+    expect(snapshot).toBeGreaterThanOrEqual(0)
+    expect(update).toBeGreaterThan(snapshot)
   })
 })
 

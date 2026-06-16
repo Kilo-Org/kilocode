@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { afterEach, describe, expect, mock, test } from "bun:test"
 
 type Event = {
@@ -157,6 +156,9 @@ describe("cli run network retries", () => {
         },
       },
       session: {
+        get: async (input: { sessionID: string }) => ({
+          data: { id: input.sessionID, directory: "/tmp/project" },
+        }),
         prompt: async () => {
           q.push(asked(1))
           await gate.promise
@@ -209,6 +211,9 @@ describe("cli run network retries", () => {
         },
       },
       session: {
+        get: async (input: { sessionID: string }) => ({
+          data: { id: input.sessionID, directory: "/tmp/project" },
+        }),
         prompt: async () => {
           q.push(asked(1))
           await gate.promise

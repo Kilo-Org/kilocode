@@ -16,7 +16,7 @@ This document will help you set up your development environment and understand h
 Before you begin, make sure you have the following installed:
 
 1. **Git** - For version control
-2. **Bun 1.3.13+** - Required for installing dependencies and running scripts
+2. **Bun 1.3.14+** - Required for installing dependencies and running scripts
 3. **Visual Studio Code** - Our recommended IDE for development
 4. **Java 21** - Required only when running JetBrains plugin checks or repo-level checks that include `@kilocode/kilo-jetbrains`
 

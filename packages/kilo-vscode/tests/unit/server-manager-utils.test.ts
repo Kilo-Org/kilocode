@@ -1,6 +1,11 @@
 import { describe, it, expect } from "bun:test"
 import { parseServerPort } from "../../src/services/cli-backend/server-utils"
-import { resolveServerCwd, resolveIndexingEnv, toErrorMessage } from "../../src/services/cli-backend/server-manager"
+import {
+  resolveServerCwd,
+  resolveIndexingEnv,
+  resolveManagedServerEnv,
+  toErrorMessage,
+} from "../../src/services/cli-backend/server-manager"
 import {
   copyTreeSitterResources,
   resolveTreeSitterEnv,
@@ -176,5 +181,12 @@ describe("server workspace helpers", () => {
     expect(resolveIndexingEnv(undefined)).toEqual({ KILO_DISABLE_CODEBASE_INDEXING: "vscode-no-workspace" })
     expect(resolveIndexingEnv([])).toEqual({ KILO_DISABLE_CODEBASE_INDEXING: "vscode-no-workspace" })
     expect(resolveIndexingEnv([{ uri: { fsPath: "/repo" } }])).toEqual({})
+  })
+
+  it("uses the shared database for the managed backend while preserving the environment", () => {
+    expect(resolveManagedServerEnv({ PATH: "/usr/bin", KILO_DISABLE_CHANNEL_DB: "false" })).toEqual({
+      PATH: "/usr/bin",
+      KILO_DISABLE_CHANNEL_DB: "true",
+    })
   })
 })

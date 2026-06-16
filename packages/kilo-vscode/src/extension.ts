@@ -7,12 +7,14 @@ import { DiffViewerProvider } from "./diff/DiffViewerProvider"
 import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
+import { MarketplacePanelProvider } from "./MarketplacePanelProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
+import { AttentionService } from "./services/attention"
 import { BrowserAutomationService } from "./services/browser-automation"
 import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
@@ -28,7 +30,6 @@ let shuttingDown = false
 const RESTORE_KEY = "kilo.workbench.restore"
 
 type RestoreState = {
-  sidebar?: boolean
   agentManager?: boolean
 }
 
@@ -36,9 +37,9 @@ const panelTitleHandler = (panel: vscode.WebviewPanel) => (title: string) => {
   panel.title = title || EXTENSION_DISPLAY_NAME
 }
 
-// Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
-// autocomplete, commit-message generation, and URI deep links all work immediately — without
-// requiring the user to open a Kilo sidebar or panel first. The CLI backend is NOT spawned here;
+// Activated via "onStartupFinished" and "onUri" (package.json) so that commands, code actions,
+// keybindings, autocomplete, commit-message generation, and URI deep links all work immediately —
+// without requiring the user to open a Kilo sidebar or panel first. The CLI backend is NOT spawned here;
 // it starts lazily when a webview connects or when ensureBackendForAutocomplete() triggers it.
 export function activate(context: vscode.ExtensionContext) {
   console.log("Kilo Code extension is now active")
@@ -48,11 +49,10 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(context)
+  const attention = new AttentionService(connectionService)
   let restore = context.workspaceState.get<RestoreState>(RESTORE_KEY) ?? {}
-  const closeSidebar = restore.sidebar === false
   const remember = (patch: RestoreState) => {
     const next = { ...restore, ...patch }
-    if (shuttingDown && patch.sidebar === false) next.sidebar = restore.sidebar
     if (shuttingDown && patch.agentManager === false) next.agentManager = restore.agentManager
     restore = next
     void context.workspaceState.update(RESTORE_KEY, restore)
@@ -123,9 +123,7 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   // Create the provider with shared service
-  const provider = new KiloProvider(context.extensionUri, connectionService, context, {
-    onSidebarVisibilityChange: (visible) => remember({ sidebar: visible }),
-  })
+  const provider = new KiloProvider(context.extensionUri, connectionService, context)
   provider.setRemoteService(remoteService)
 
   // Register the webview view provider for the sidebar.
@@ -135,7 +133,6 @@ export function activate(context: vscode.ExtensionContext) {
       webviewOptions: { retainContextWhenHidden: true },
     }),
   )
-  if (closeSidebar) void vscode.commands.executeCommand("workbench.action.closeSidebar")
 
   // Ensure Agent Manager navigation keybindings work when a VS Code terminal has focus.
   // The terminal intercepts all keystrokes unless the command is listed in
@@ -263,17 +260,18 @@ export function activate(context: vscode.ExtensionContext) {
   agentManagerHost.setDiffVirtualProvider(diffVirtualProvider)
   context.subscriptions.push(diffVirtualProvider)
 
-  // Create settings/profile editor provider (opens in editor area, not sidebar)
+  // Create standalone editor providers (open in editor area, not sidebar)
   const settingsEditorProvider = new SettingsEditorProvider(context.extensionUri, connectionService, context)
   settingsEditorProvider.setRemoteService(remoteService)
-  context.subscriptions.push(settingsEditorProvider)
+  const marketplacePanelProvider = new MarketplacePanelProvider(context.extensionUri, connectionService, context)
+  context.subscriptions.push(settingsEditorProvider, marketplacePanelProvider)
 
   // Create sub-agent viewer provider (read-only editor panel for sub-agent sessions)
   const subAgentViewerProvider = new SubAgentViewerProvider(context.extensionUri, connectionService, context)
   context.subscriptions.push(subAgentViewerProvider)
 
-  // Register serializers so settings/diff/sub-agent panels restore on restart
-  const settingsViews = ["settingsPanel", "profilePanel", "marketplacePanel"] as const
+  // Register serializers so standalone panels restore on restart
+  const settingsViews = ["settingsPanel", "profilePanel"] as const
   for (const suffix of settingsViews) {
     context.subscriptions.push(
       vscode.window.registerWebviewPanelSerializer(`kilo-code.new.${suffix}`, {
@@ -284,6 +282,15 @@ export function activate(context: vscode.ExtensionContext) {
       }),
     )
   }
+
+  context.subscriptions.push(
+    vscode.window.registerWebviewPanelSerializer(MarketplacePanelProvider.viewType, {
+      deserializeWebviewPanel(panel: vscode.WebviewPanel) {
+        marketplacePanelProvider.deserializePanel(panel)
+        return Promise.resolve()
+      },
+    }),
+  )
 
   context.subscriptions.push(
     vscode.window.registerWebviewPanelSerializer(DiffViewerProvider.viewType, {
@@ -346,8 +353,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManagerOpen", () => {
       agentManagerProvider.openPanel()
     }),
-    vscode.commands.registerCommand("kilo-code.new.marketplaceButtonClicked", (directory?: string) => {
-      settingsEditorProvider.openPanel("marketplace", undefined, directory)
+    vscode.commands.registerCommand("kilo-code.new.marketplaceButtonClicked", (directory?: string | null) => {
+      marketplacePanelProvider.openPanel(directory)
     }),
     vscode.commands.registerCommand("kilo-code.new.kiloClawOpen", () => {
       kiloClawProvider.openPanel()
@@ -471,23 +478,31 @@ export function activate(context: vscode.ExtensionContext) {
     ),
   )
 
-  // Register URI handler for session imports (vscode://kilocode.kilo-code/kilocode/s/{sessionId})
+  // Register URI handler for extension deep links (vscode://kilocode.kilo-code/kilocode/...)
   context.subscriptions.push(
     vscode.window.registerUriHandler({
       async handleUri(uri: vscode.Uri) {
-        const match = uri.path.match(/^\/kilocode\/s\/([a-zA-Z0-9_-]+)$/)
-        if (!match) return
-        const sessionId = match[1]
-        if (!sessionId) return
-        console.log("[Kilo New] URI handler: opening cloud session:", sessionId)
+        const sessionMatch = uri.path.match(/^\/kilocode\/s\/([a-zA-Z0-9_-]+)$/)
+        const sessionId = sessionMatch?.[1]
+        if (sessionId) {
+          console.log("[Kilo New] URI handler: opening cloud session:", sessionId)
+          await vscode.commands.executeCommand(`${KiloProvider.viewType}.focus`)
+          provider.openCloudSession(sessionId)
+          return
+        }
+
+        if (uri.path !== "/kilocode/model") return
+        const modelID = new URLSearchParams(uri.query).get("model")
+        if (!modelID) return
+        console.log("[Kilo New] URI handler: selecting linked Kilo model:", modelID)
         await vscode.commands.executeCommand(`${KiloProvider.viewType}.focus`)
-        provider.openCloudSession(sessionId)
+        provider.selectKiloModel(modelID)
       },
     }),
   )
 
   // Register autocomplete provider
-  registerAutocompleteProvider(context, connectionService)
+  void registerAutocompleteProvider(context, connectionService)
 
   // Register commit message generation
   registerCommitMessageService(context, connectionService)
@@ -512,6 +527,7 @@ export function activate(context: vscode.ExtensionContext) {
     dispose: () => {
       shuttingDown = true
       unsubscribeStateChange()
+      attention.dispose()
       browserAutomationService.dispose()
       provider.dispose()
       connectionService.dispose()

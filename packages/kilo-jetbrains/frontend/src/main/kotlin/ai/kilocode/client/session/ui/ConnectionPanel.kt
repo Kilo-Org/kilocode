@@ -94,7 +94,7 @@ class ConnectionPanel(
         // Keep the banner solid so expanded details cover transcript content beneath it.
         isOpaque = true
         background = UiStyle.Colors.bg()
-        border = JBUI.Borders.customLine(SessionUiStyle.View.line(), 1, 0, 0, 0)
+        border = JBUI.Borders.customLine(SessionUiStyle.View.Outline.color(), SessionUiStyle.View.Outline.width(), 0, 0, 0)
         left.add(toggle, BorderLayout.WEST)
         left.add(label, BorderLayout.CENTER)
         header.add(left, BorderLayout.CENTER)

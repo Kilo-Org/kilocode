@@ -4,124 +4,152 @@
 //   2. ModelCache.getFailure() returns the typed error for a failed provider.
 //   3. Clear removes failure state.
 
-import { beforeEach, test, expect, mock } from "bun:test"
-import { Effect } from "effect"
-import path from "path"
+import { beforeEach, expect } from "bun:test"
+import { Effect, Layer } from "effect"
+import { FetchHttpClient } from "effect/unstable/http"
+import type { ModelsDev } from "@opencode-ai/core/models"
 import * as Log from "@opencode-ai/core/util/log"
 
 Log.init({ print: false })
 
-// Stub fetchKiloModels to return controlled typed results.
-let stubbedResult: { models: Record<string, any>; error?: { kind: string; status?: number } } = { models: {} }
-let stubbedError: Error | undefined
-
-mock.module("@kilocode/kilo-gateway", () => ({
-  fetchKiloModels: async () => {
-    if (stubbedError) throw stubbedError
-    return stubbedResult
-  },
-  KILO_OPENROUTER_BASE: "https://api.kilo.ai/api/openrouter",
-}))
-
-mock.module("opencode-copilot-auth", () => ({ default: () => ({}) }))
-mock.module("opencode-anthropic-auth", () => ({ default: () => ({}) }))
-mock.module("@gitlab/opencode-gitlab-auth", () => ({ default: () => ({}) }))
-
-import { tmpdir } from "../fixture/fixture"
-import { WithInstance } from "../../src/project/with-instance"
+import { Auth } from "../../src/auth"
 import { ModelCache } from "../../src/provider/model-cache"
-import { AppRuntime } from "../../src/effect/app-runtime"
+import { TestConfig } from "../fixture/config"
+import { testEffect } from "../lib/effect"
 
-const clear = (id: string) => AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.clear(id)))
-const fetch = (id: string) => AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.fetch(id)))
-const failed = () => AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.failedProviders()))
-const failure = (id: string) => AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.getFailure(id)))
+type Failure = { kind: "unauthorized" | "network" | "schema" | "http"; status?: number }
+type Result = { models: ModelsDev.Provider["models"]; error?: Failure }
 
-const CONFIG = JSON.stringify({ $schema: "https://app.kilo.ai/config.json" })
+let result: Result = { models: {} }
+let error: Error | undefined
 
-async function withInstance<T>(fn: () => Promise<T>): Promise<T> {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Bun.write(path.join(dir, "kilo.json"), CONFIG)
-    },
-  })
-  return WithInstance.provide({ directory: tmp.path, fn })
+const auth = Layer.mock(Auth.Service)({
+  get: () => Effect.succeed(undefined),
+})
+
+function layer() {
+  const models = Layer.succeed(
+    ModelCache.KiloModelsService,
+    ModelCache.KiloModelsService.of({
+      fetch: () => (error ? Effect.fail(error) : Effect.succeed(result)),
+    }),
+  )
+  return Layer.fresh(ModelCache.layer).pipe(
+    Layer.provide(FetchHttpClient.layer),
+    Layer.provide(TestConfig.layer()),
+    Layer.provide(auth),
+    Layer.provide(models),
+  )
 }
 
+const it = testEffect(Layer.empty)
+
 beforeEach(() => {
-  stubbedError = undefined
+  result = { models: {} }
+  error = undefined
 })
 
-test("failedProviders returns empty array when no fetch has occurred", async () => {
-  await clear("kilo")
-  expect(await failed()).not.toContain("kilo")
-})
+it.live("failedProviders returns empty array when no fetch has occurred", () =>
+  ModelCache.Service.use((cache) =>
+    Effect.gen(function* () {
+      expect(yield* cache.failedProviders()).not.toContain("kilo")
+    }),
+  ).pipe(Effect.provide(layer())),
+)
 
-test("getFailure returns undefined when fetch succeeds", async () => {
-  stubbedResult = {
-    models: {
-      "test/model": {
-        id: "test/model",
-        name: "Test",
-        cost: { input: 1, output: 2 },
-        limit: { context: 128000, output: 4096 },
+it.live("getFailure returns undefined when fetch succeeds", () =>
+  Effect.gen(function* () {
+    result = {
+      models: {
+        "test/model": {
+          id: "test/model",
+          name: "Test",
+          attachment: false,
+          reasoning: false,
+          release_date: "",
+          temperature: true,
+          tool_call: true,
+          cost: { input: 1, output: 2 },
+          limit: { context: 128000, output: 4096 },
+        },
       },
-    },
-  }
-  await clear("kilo")
-  await withInstance(() => fetch("kilo"))
-  expect(await failure("kilo")).toBeUndefined()
-  expect(await failed()).not.toContain("kilo")
-})
+    }
+    yield* ModelCache.Service.use((cache) =>
+      Effect.gen(function* () {
+        yield* cache.fetch("kilo")
+        expect(yield* cache.getFailure("kilo")).toBeUndefined()
+        expect(yield* cache.failedProviders()).not.toContain("kilo")
+      }),
+    ).pipe(Effect.provide(layer()))
+  }),
+)
 
-test("failedProviders includes provider after auth error", async () => {
-  stubbedResult = { models: {}, error: { kind: "unauthorized", status: 401 } }
-  await clear("kilo")
-  await withInstance(() => fetch("kilo"))
-  expect(await failed()).toContain("kilo")
-  expect(await failure("kilo")).toMatchObject({ kind: "unauthorized", status: 401 })
-})
+it.live("failedProviders includes provider after auth error", () =>
+  Effect.gen(function* () {
+    result = { models: {}, error: { kind: "unauthorized", status: 401 } }
+    yield* ModelCache.Service.use((cache) =>
+      Effect.gen(function* () {
+        yield* cache.fetch("kilo")
+        expect(yield* cache.failedProviders()).toContain("kilo")
+        expect(yield* cache.getFailure("kilo")).toMatchObject({ kind: "unauthorized", status: 401 })
+      }),
+    ).pipe(Effect.provide(layer()))
+  }),
+)
 
-test("gateway rejection remains recoverable through the Effect error channel", async () => {
-  stubbedError = new Error("gateway failed")
-  await clear("kilo")
-  const models = await withInstance(() =>
-    AppRuntime.runPromise(
-      ModelCache.Service.use((cache) => cache.fetch("kilo").pipe(Effect.catch(() => Effect.succeed({})))),
-    ),
-  )
-  expect(models).toEqual({})
-})
+it.live("gateway rejection remains recoverable through the Effect error channel", () =>
+  Effect.gen(function* () {
+    error = new Error("gateway failed")
+    yield* ModelCache.Service.use((cache) =>
+      Effect.gen(function* () {
+        const models = yield* cache.fetch("kilo").pipe(Effect.catch(() => Effect.succeed({})))
+        expect(models).toEqual({})
+      }),
+    ).pipe(Effect.provide(layer()))
+  }),
+)
 
-test("clear removes failure state", async () => {
-  stubbedResult = { models: {}, error: { kind: "network" } }
-  await clear("kilo")
-  await withInstance(() => fetch("kilo"))
-  expect(await failed()).toContain("kilo")
+it.live("clear removes failure state", () =>
+  Effect.gen(function* () {
+    result = { models: {}, error: { kind: "network" } }
+    yield* ModelCache.Service.use((cache) =>
+      Effect.gen(function* () {
+        yield* cache.fetch("kilo")
+        expect(yield* cache.failedProviders()).toContain("kilo")
+        yield* cache.clear("kilo")
+        expect(yield* cache.failedProviders()).not.toContain("kilo")
+        expect(yield* cache.getFailure("kilo")).toBeUndefined()
+      }),
+    ).pipe(Effect.provide(layer()))
+  }),
+)
 
-  await clear("kilo")
-  expect(await failed()).not.toContain("kilo")
-  expect(await failure("kilo")).toBeUndefined()
-})
-
-test("failure state is cleared when subsequent fetch succeeds", async () => {
-  stubbedResult = { models: {}, error: { kind: "unauthorized", status: 401 } }
-  await clear("kilo")
-  await withInstance(() => fetch("kilo"))
-  expect(await failed()).toContain("kilo")
-
-  stubbedResult = {
-    models: {
-      "test/model": {
-        id: "test/model",
-        name: "Test",
-        cost: { input: 1, output: 2 },
-        limit: { context: 128000, output: 4096 },
-      },
-    },
-  }
-  await clear("kilo")
-  await withInstance(() => fetch("kilo"))
-  expect(await failed()).not.toContain("kilo")
-  expect(await failure("kilo")).toBeUndefined()
-})
+it.live("failure state is cleared when subsequent refresh succeeds", () =>
+  Effect.gen(function* () {
+    result = { models: {}, error: { kind: "unauthorized", status: 401 } }
+    yield* ModelCache.Service.use((cache) =>
+      Effect.gen(function* () {
+        yield* cache.fetch("kilo")
+        expect(yield* cache.failedProviders()).toContain("kilo")
+        result = {
+          models: {
+            "test/model": {
+              id: "test/model",
+              name: "Test",
+              attachment: false,
+              reasoning: false,
+              release_date: "",
+              temperature: true,
+              tool_call: true,
+              cost: { input: 1, output: 2 },
+              limit: { context: 128000, output: 4096 },
+            },
+          },
+        }
+        yield* cache.refresh("kilo")
+        expect(yield* cache.failedProviders()).not.toContain("kilo")
+        expect(yield* cache.getFailure("kilo")).toBeUndefined()
+      }),
+    ).pipe(Effect.provide(layer()))
+  }),
+)

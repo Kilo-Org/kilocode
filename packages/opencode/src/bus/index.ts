@@ -1,4 +1,4 @@
-import { Effect, Exit, Layer, PubSub, Scope, Context, Stream, Schema } from "effect"
+import { Effect, Exit, Fiber, Layer, PubSub, Scope, Context, Stream, Schema } from "effect" // kilocode_change
 import { EffectBridge } from "@/effect/bridge"
 import * as Log from "@opencode-ai/core/util/log"
 import { BusEvent } from "./bus-event"
@@ -6,6 +6,9 @@ import { GlobalBus } from "./global"
 import { InstanceState } from "@/effect/instance-state"
 import { makeRuntime } from "@/effect/run-service"
 import { Identifier } from "@/id/id"
+import { context as instanceContext, type InstanceContext } from "@/project/instance-context" // kilocode_change
+import { InstanceRef } from "@/effect/instance-ref"
+import { LocalContext } from "@/util/local-context" // kilocode_change
 
 const log = Log.create({ service: "bus" })
 
@@ -185,19 +188,45 @@ export function createID() {
 }
 
 export async function publish<D extends BusEvent.Definition>(
+  ctx: InstanceContext,
   def: D,
   properties: BusProperties<D>,
   options?: { id?: string },
 ) {
-  return runPromise((svc) => svc.publish(def, properties, options))
+  return runPromise((svc) => svc.publish(def, properties, options).pipe(Effect.provideService(InstanceRef, ctx)))
+}
+
+// kilocode_change start - legacy callback facade inherits the active instance context
+function active() {
+  const fiber = Fiber.getCurrent()
+  const current = fiber ? Context.getReferenceUnsafe(fiber.context, InstanceRef) : undefined
+  if (current) return current
+  try {
+    return instanceContext.use()
+  } catch (err) {
+    if (!(err instanceof LocalContext.NotFound)) throw err
+  }
 }
 
 export function subscribe<D extends BusEvent.Definition>(def: D, callback: (event: Payload<D>) => unknown) {
-  return runSync((svc) => svc.subscribeCallback(def, callback))
+  const ctx = active()
+  if (!ctx) throw new Error("Instance context not available")
+  return runSync((svc) =>
+    svc
+      .subscribeCallback(def, (event) => instanceContext.provide(ctx, () => callback(event)))
+      .pipe(Effect.provideService(InstanceRef, ctx)),
+  )
 }
 
 export function subscribeAll(callback: (event: any) => unknown) {
-  return runSync((svc) => svc.subscribeAllCallback(callback))
+  const ctx = active()
+  if (!ctx) throw new Error("Instance context not available")
+  return runSync((svc) =>
+    svc
+      .subscribeAllCallback((event) => instanceContext.provide(ctx, () => callback(event)))
+      .pipe(Effect.provideService(InstanceRef, ctx)),
+  )
 }
+// kilocode_change end
 
 export * as Bus from "."

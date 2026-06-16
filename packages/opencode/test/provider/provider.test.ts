@@ -1,63 +1,101 @@
-import { test, expect } from "bun:test"
+import { afterEach, test, expect } from "bun:test"
 import { mkdir, unlink } from "fs/promises"
 import path from "path"
 
-import { tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir, withTestInstance } from "../fixture/fixture"
 import { Global } from "@opencode-ai/core/global"
-import { Instance } from "../../src/project/instance"
-import { InstanceRuntime } from "../../src/project/instance-runtime"
-import { WithInstance } from "../../src/project/with-instance"
+import type { InstanceContext } from "../../src/project/instance-context"
 import { Plugin } from "../../src/plugin/index"
-import { ModelsDev } from "@/provider/models"
+import { ModelsDev } from "@opencode-ai/core/models"
 import { Provider } from "@/provider/provider"
 import { ProviderID, ModelID } from "../../src/provider/schema"
 import { Filesystem } from "@/util/filesystem"
 import { Env } from "../../src/env"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { AppRuntime } from "../../src/effect/app-runtime"
+import { InstanceRef } from "../../src/effect/instance-ref"
 import { makeRuntime } from "../../src/effect/run-service"
+import { testEffect } from "../lib/effect"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { Config } from "@/config/config"
+import { Auth } from "@/auth"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 
 const env = makeRuntime(Env.Service, Env.defaultLayer)
-const set = (k: string, v: string) => env.runSync((svc) => svc.set(k, v))
+const originalEnv = new Map<string, string | undefined>()
 
-async function run<A, E>(fn: (provider: Provider.Interface) => Effect.Effect<A, E, never>) {
+function rememberEnv(k: string) {
+  if (!originalEnv.has(k)) originalEnv.set(k, process.env[k])
+}
+
+const set = (ctx: InstanceContext, k: string, v: string) => {
+  rememberEnv(k)
+  process.env[k] = v
+  return env.runSync((svc) => svc.set(k, v).pipe(Effect.provideService(InstanceRef, ctx)))
+}
+const remove = (ctx: InstanceContext, k: string) => {
+  rememberEnv(k)
+  delete process.env[k]
+  return env.runSync((svc) => svc.remove(k).pipe(Effect.provideService(InstanceRef, ctx)))
+}
+
+afterEach(async () => {
+  for (const [key, value] of originalEnv) {
+    if (value === undefined) delete process.env[key]
+    else process.env[key] = value
+  }
+  originalEnv.clear()
+  await disposeAllInstances()
+})
+
+const providerLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
+  Provider.layer.pipe(
+    Layer.provide(AppFileSystem.defaultLayer),
+    Layer.provide(Env.defaultLayer),
+    Layer.provide(Config.defaultLayer),
+    Layer.provide(Auth.defaultLayer),
+    Layer.provide(Plugin.defaultLayer),
+    Layer.provide(ModelsDev.defaultLayer),
+    Layer.provide(RuntimeFlags.layer(flags)),
+  )
+
+async function run<A, E>(ctx: InstanceContext, fn: (provider: Provider.Interface) => Effect.Effect<A, E, never>) {
   return AppRuntime.runPromise(
     Effect.gen(function* () {
       const provider = yield* Provider.Service
       return yield* fn(provider)
-    }),
+    }).pipe(Effect.provideService(InstanceRef, ctx)),
   )
 }
 
-async function list() {
-  return run((provider) => provider.list())
+async function list(ctx: InstanceContext) {
+  return run(ctx, (provider) => provider.list())
 }
 
-async function getProvider(providerID: ProviderID) {
-  return run((provider) => provider.getProvider(providerID))
+async function getProvider(providerID: ProviderID, ctx: InstanceContext) {
+  return run(ctx, (provider) => provider.getProvider(providerID))
 }
 
-async function getModel(providerID: ProviderID, modelID: ModelID) {
-  return run((provider) => provider.getModel(providerID, modelID))
+async function getModel(providerID: ProviderID, modelID: ModelID, ctx: InstanceContext) {
+  return run(ctx, (provider) => provider.getModel(providerID, modelID))
 }
 
-async function getLanguage(model: Provider.Model) {
-  return run((provider) => provider.getLanguage(model))
+async function getLanguage(model: Provider.Model, ctx: InstanceContext) {
+  return run(ctx, (provider) => provider.getLanguage(model))
 }
 
-async function closest(providerID: ProviderID, query: string[]) {
-  return run((provider) => provider.closest(providerID, query))
+async function closest(providerID: ProviderID, query: string[], ctx: InstanceContext) {
+  return run(ctx, (provider) => provider.closest(providerID, query))
 }
 
-async function getSmallModel(providerID: ProviderID) {
-  return run((provider) => provider.getSmallModel(providerID))
+async function getSmallModel(providerID: ProviderID, ctx: InstanceContext) {
+  return run(ctx, (provider) => provider.getSmallModel(providerID))
 }
 
-async function defaultModel() {
-  return run((provider) => provider.defaultModel())
+async function defaultModel(ctx: InstanceContext) {
+  return run(ctx, (provider) => provider.defaultModel())
 }
 
-// kilocode_change start - upstream #24416 fixture adapted for @kilocode/plugin
 async function markPluginDependenciesReady(dir: string) {
   await mkdir(path.join(dir, "node_modules"), { recursive: true })
   await Bun.write(
@@ -65,12 +103,36 @@ async function markPluginDependenciesReady(dir: string) {
     JSON.stringify({ packages: { "": { dependencies: { "@kilocode/plugin": "0.0.0" } } } }),
   )
 }
-// kilocode_change end
 
 function paid(providers: Awaited<ReturnType<typeof list>>) {
   const item = providers[ProviderID.make("opencode")]
   if (!item) return 0 // kilocode_change - Kilo drops opencode provider without apiKey/auth
   return Object.values(item.models).filter((model) => model.cost.input > 0).length
+}
+
+const it = testEffect(Provider.defaultLayer)
+const experimentalModels = testEffect(providerLayer({ enableExperimentalModels: true }))
+
+const alphaProviderConfig = {
+  provider: {
+    "custom-provider": {
+      name: "Custom Provider",
+      npm: "@ai-sdk/openai-compatible",
+      api: "https://api.custom.com/v1",
+      models: {
+        "active-model": {
+          name: "Active Model",
+        },
+        "alpha-model": {
+          name: "Alpha Model",
+          status: "alpha" as const,
+        },
+      },
+      options: {
+        apiKey: "custom-key",
+      },
+    },
+  },
 }
 
 test("provider loaded from env variable", async () => {
@@ -79,16 +141,16 @@ test("provider loaded from env variable", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       expect(providers[ProviderID.anthropic]).toBeDefined()
       // Provider should retain its connection source even if custom loaders
       // merge additional options.
@@ -98,67 +160,13 @@ test("provider loaded from env variable", async () => {
   })
 })
 
-// kilocode_change start
-test("provider OAuth auth overrides inherited env variable", async () => {
-  const authPath = path.join(Global.Path.data, "auth.json")
-  const prev = await Filesystem.readText(authPath).catch(() => undefined)
-
-  try {
-    await Filesystem.write(
-      authPath,
-      JSON.stringify({
-        openai: {
-          type: "oauth",
-          refresh: "test-refresh-token",
-          access: "test-access-token",
-          expires: Date.now() + 60_000,
-        },
-      }),
-    )
-
-    await using tmp = await tmpdir({
-      init: async (dir) => {
-        await Bun.write(
-          path.join(dir, "opencode.json"),
-          JSON.stringify({
-            $schema: "https://app.kilo.ai/config.json",
-          }),
-        )
-      },
-    })
-    await WithInstance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        set("OPENAI_API_KEY", "test-openai-key")
-        const providers = await list()
-        const provider = providers[ProviderID.openai]
-        expect(provider).toBeDefined()
-        if (!provider) throw new Error("Expected OpenAI provider")
-        expect(provider.source).toBe("custom")
-        expect(provider.key).toBeUndefined()
-        expect(Object.values(provider.models).every((model) => model.cost.input === 0 && model.cost.output === 0)).toBe(
-          true,
-        )
-      },
-    })
-  } finally {
-    if (prev !== undefined) {
-      await Filesystem.write(authPath, prev)
-    }
-    if (prev === undefined) {
-      await unlink(authPath).catch(() => undefined)
-    }
-  }
-})
-// kilocode_change end
-
 test("provider loaded from config with apiKey option", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             anthropic: {
               options: {
@@ -170,10 +178,10 @@ test("provider loaded from config with apiKey option", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      const providers = await list()
+    fn: async (ctx) => {
+      const providers = await list(ctx)
       expect(providers[ProviderID.anthropic]).toBeDefined()
     },
   })
@@ -185,17 +193,17 @@ test("disabled_providers excludes provider", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           disabled_providers: ["anthropic"],
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       expect(providers[ProviderID.anthropic]).toBeUndefined()
     },
   })
@@ -207,18 +215,18 @@ test("enabled_providers restricts to only listed providers", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           enabled_providers: ["anthropic"],
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      set("OPENAI_API_KEY", "test-openai-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      set(ctx, "OPENAI_API_KEY", "test-openai-key")
+      const providers = await list(ctx)
       expect(providers[ProviderID.anthropic]).toBeDefined()
       expect(providers[ProviderID.openai]).toBeUndefined()
     },
@@ -231,7 +239,7 @@ test("model whitelist filters models for provider", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             anthropic: {
               whitelist: ["claude-sonnet-4-20250514"],
@@ -241,11 +249,11 @@ test("model whitelist filters models for provider", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       expect(providers[ProviderID.anthropic]).toBeDefined()
       const models = Object.keys(providers[ProviderID.anthropic].models)
       expect(models).toContain("claude-sonnet-4-20250514")
@@ -260,7 +268,7 @@ test("model blacklist excludes specific models", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             anthropic: {
               blacklist: ["claude-sonnet-4-20250514"],
@@ -270,11 +278,11 @@ test("model blacklist excludes specific models", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       expect(providers[ProviderID.anthropic]).toBeDefined()
       const models = Object.keys(providers[ProviderID.anthropic].models)
       expect(models).not.toContain("claude-sonnet-4-20250514")
@@ -288,7 +296,7 @@ test("custom model alias via config", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             anthropic: {
               models: {
@@ -303,11 +311,11 @@ test("custom model alias via config", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       expect(providers[ProviderID.anthropic]).toBeDefined()
       expect(providers[ProviderID.anthropic].models["my-alias"]).toBeDefined()
       expect(providers[ProviderID.anthropic].models["my-alias"].name).toBe("My Custom Alias")
@@ -321,7 +329,7 @@ test("custom provider with npm package", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             "custom-provider": {
               name: "Custom Provider",
@@ -347,16 +355,36 @@ test("custom provider with npm package", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      const providers = await list()
+    fn: async (ctx) => {
+      const providers = await list(ctx)
       expect(providers[ProviderID.make("custom-provider")]).toBeDefined()
       expect(providers[ProviderID.make("custom-provider")].name).toBe("Custom Provider")
       expect(providers[ProviderID.make("custom-provider")].models["custom-model"]).toBeDefined()
     },
   })
 })
+
+it.instance(
+  "filters alpha provider models by default",
+  Effect.gen(function* () {
+    const providers = yield* Provider.Service.use((provider) => provider.list())
+    expect(providers[ProviderID.make("custom-provider")].models["active-model"]).toBeDefined()
+    expect(providers[ProviderID.make("custom-provider")].models["alpha-model"]).toBeUndefined()
+  }),
+  { config: alphaProviderConfig },
+)
+
+experimentalModels.instance(
+  "includes alpha provider models when experimental models are enabled",
+  Effect.gen(function* () {
+    const providers = yield* Provider.Service.use((provider) => provider.list())
+    expect(providers[ProviderID.make("custom-provider")].models["active-model"]).toBeDefined()
+    expect(providers[ProviderID.make("custom-provider")].models["alpha-model"]).toBeDefined()
+  }),
+  { config: alphaProviderConfig },
+)
 
 test("custom DeepSeek openai-compatible model defaults interleaved reasoning field", async () => {
   await using tmp = await tmpdir({
@@ -404,10 +432,10 @@ test("custom DeepSeek openai-compatible model defaults interleaved reasoning fie
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      const providers = await list()
+    fn: async (ctx) => {
+      const providers = await list(ctx)
       const provider = providers[ProviderID.make("custom-provider")]
       expect(provider.models["deepseek-r1"].capabilities.interleaved).toEqual({ field: "reasoning_content" })
       expect(provider.models["deepseek-details"].capabilities.interleaved).toEqual({ field: "reasoning_details" })
@@ -425,7 +453,7 @@ test("env variable takes precedence, config merges options", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             anthropic: {
               options: {
@@ -438,11 +466,11 @@ test("env variable takes precedence, config merges options", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "env-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "env-api-key")
+      const providers = await list(ctx)
       expect(providers[ProviderID.anthropic]).toBeDefined()
       // Config options should be merged
       expect(providers[ProviderID.anthropic].options.timeout).toBe(60000)
@@ -457,20 +485,20 @@ test("getModel returns model for valid provider/model", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const model = await getModel(ProviderID.anthropic, ModelID.make("claude-sonnet-4-20250514"))
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const model = await getModel(ProviderID.anthropic, ModelID.make("claude-sonnet-4-20250514"), ctx)
       expect(model).toBeDefined()
       expect(String(model.providerID)).toBe("anthropic")
       expect(String(model.id)).toBe("claude-sonnet-4-20250514")
-      const language = await getLanguage(model)
+      const language = await getLanguage(model, ctx)
       expect(language).toBeDefined()
     },
   })
@@ -482,16 +510,16 @@ test("getModel throws ModelNotFoundError for invalid model", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      expect(getModel(ProviderID.anthropic, ModelID.make("nonexistent-model"))).rejects.toThrow()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      expect(getModel(ProviderID.anthropic, ModelID.make("nonexistent-model"), ctx)).rejects.toThrow()
     },
   })
 })
@@ -502,15 +530,15 @@ test("getModel throws ModelNotFoundError for invalid provider", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      expect(getModel(ProviderID.make("nonexistent-provider"), ModelID.make("some-model"))).rejects.toThrow()
+    fn: async (ctx) => {
+      expect(getModel(ProviderID.make("nonexistent-provider"), ModelID.make("some-model"), ctx)).rejects.toThrow()
     },
   })
 })
@@ -533,16 +561,16 @@ test("defaultModel returns first available model when no config set", async () =
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const model = await defaultModel()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const model = await defaultModel(ctx)
       expect(model.providerID).toBeDefined()
       expect(model.modelID).toBeDefined()
     },
@@ -555,161 +583,133 @@ test("defaultModel respects config model setting", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           model: "anthropic/claude-sonnet-4-20250514",
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const model = await defaultModel()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const model = await defaultModel(ctx)
       expect(String(model.providerID)).toBe("anthropic")
       expect(String(model.modelID)).toBe("claude-sonnet-4-20250514")
     },
   })
 })
 
-test("provider with baseURL from config", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Bun.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          provider: {
-            "custom-openai": {
-              name: "Custom OpenAI",
-              npm: "@ai-sdk/openai-compatible",
-              env: [],
-              models: {
-                "gpt-4": {
-                  name: "GPT-4",
-                  tool_call: true,
-                  limit: { context: 128000, output: 4096 },
-                },
-              },
+it.instance(
+  "provider with baseURL from config",
+  Effect.gen(function* () {
+    const providers = yield* Provider.Service.use((provider) => provider.list())
+    expect(providers[ProviderID.make("custom-openai")]).toBeDefined()
+    expect(providers[ProviderID.make("custom-openai")].options.baseURL).toBe("https://custom.openai.com/v1")
+  }),
+  {
+    config: {
+      provider: {
+        "custom-openai": {
+          name: "Custom OpenAI",
+          npm: "@ai-sdk/openai-compatible",
+          env: [],
+          models: {
+            "gpt-4": {
+              name: "GPT-4",
+              tool_call: true,
+              limit: { context: 128000, output: 4096 },
+            },
+          },
+          options: {
+            apiKey: "test-key",
+            baseURL: "https://custom.openai.com/v1",
+          },
+        },
+      },
+    },
+  },
+)
+
+it.instance(
+  "model cost defaults to zero when not specified",
+  Effect.gen(function* () {
+    const providers = yield* Provider.Service.use((provider) => provider.list())
+    const model = providers[ProviderID.make("test-provider")].models["test-model"]
+    expect(model.cost.input).toBe(0)
+    expect(model.cost.output).toBe(0)
+    expect(model.cost.cache.read).toBe(0)
+    expect(model.cost.cache.write).toBe(0)
+  }),
+  {
+    config: {
+      provider: {
+        "test-provider": {
+          name: "Test Provider",
+          npm: "@ai-sdk/openai-compatible",
+          env: [],
+          models: {
+            "test-model": {
+              name: "Test Model",
+              tool_call: true,
+              limit: { context: 128000, output: 4096 },
+            },
+          },
+          options: {
+            apiKey: "test-key",
+          },
+        },
+      },
+    },
+  },
+)
+
+it.instance(
+  "model options are merged from existing model",
+  Effect.gen(function* () {
+    const providers = yield* Provider.Service.use((provider) => provider.list())
+    const model = providers[ProviderID.anthropic].models["claude-sonnet-4-20250514"]
+    expect(model.options.customOption).toBe("custom-value")
+  }),
+  {
+    config: {
+      provider: {
+        anthropic: {
+          options: {
+            apiKey: "test-api-key",
+          },
+          models: {
+            "claude-sonnet-4-20250514": {
               options: {
-                apiKey: "test-key",
-                baseURL: "https://custom.openai.com/v1",
+                customOption: "custom-value",
               },
             },
           },
-        }),
-      )
+        },
+      },
     },
-  })
-  await WithInstance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const providers = await list()
-      expect(providers[ProviderID.make("custom-openai")]).toBeDefined()
-      expect(providers[ProviderID.make("custom-openai")].options.baseURL).toBe("https://custom.openai.com/v1")
-    },
-  })
-})
+  },
+)
 
-test("model cost defaults to zero when not specified", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Bun.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          provider: {
-            "test-provider": {
-              name: "Test Provider",
-              npm: "@ai-sdk/openai-compatible",
-              env: [],
-              models: {
-                "test-model": {
-                  name: "Test Model",
-                  tool_call: true,
-                  limit: { context: 128000, output: 4096 },
-                },
-              },
-              options: {
-                apiKey: "test-key",
-              },
-            },
+it.instance(
+  "provider removed when all models filtered out",
+  Effect.gen(function* () {
+    const providers = yield* Provider.Service.use((provider) => provider.list())
+    expect(providers[ProviderID.anthropic]).toBeUndefined()
+  }),
+  {
+    config: {
+      provider: {
+        anthropic: {
+          options: {
+            apiKey: "test-api-key",
           },
-        }),
-      )
+          whitelist: ["nonexistent-model"],
+        },
+      },
     },
-  })
-  await WithInstance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const providers = await list()
-      const model = providers[ProviderID.make("test-provider")].models["test-model"]
-      expect(model.cost.input).toBe(0)
-      expect(model.cost.output).toBe(0)
-      expect(model.cost.cache.read).toBe(0)
-      expect(model.cost.cache.write).toBe(0)
-    },
-  })
-})
-
-test("model options are merged from existing model", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Bun.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          provider: {
-            anthropic: {
-              models: {
-                "claude-sonnet-4-20250514": {
-                  options: {
-                    customOption: "custom-value",
-                  },
-                },
-              },
-            },
-          },
-        }),
-      )
-    },
-  })
-  await WithInstance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
-      const model = providers[ProviderID.anthropic].models["claude-sonnet-4-20250514"]
-      expect(model.options.customOption).toBe("custom-value")
-    },
-  })
-})
-
-test("provider removed when all models filtered out", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Bun.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          provider: {
-            anthropic: {
-              whitelist: ["nonexistent-model"],
-            },
-          },
-        }),
-      )
-    },
-  })
-  await WithInstance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
-      expect(providers[ProviderID.anthropic]).toBeUndefined()
-    },
-  })
-})
+  },
+)
 
 test("closest finds model by partial match", async () => {
   await using tmp = await tmpdir({
@@ -717,16 +717,16 @@ test("closest finds model by partial match", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const result = await closest(ProviderID.anthropic, ["sonnet-4"])
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const result = await closest(ProviderID.anthropic, ["sonnet-4"], ctx)
       expect(result).toBeDefined()
       expect(String(result?.providerID)).toBe("anthropic")
       expect(String(result?.modelID)).toContain("sonnet-4")
@@ -740,15 +740,15 @@ test("closest returns undefined for nonexistent provider", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      const result = await closest(ProviderID.make("nonexistent"), ["model"])
+    fn: async (ctx) => {
+      const result = await closest(ProviderID.make("nonexistent"), ["model"], ctx)
       expect(result).toBeUndefined()
     },
   })
@@ -760,7 +760,7 @@ test("getModel uses realIdByKey for aliased models", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             anthropic: {
               models: {
@@ -775,14 +775,14 @@ test("getModel uses realIdByKey for aliased models", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       expect(providers[ProviderID.anthropic].models["my-sonnet"]).toBeDefined()
 
-      const model = await getModel(ProviderID.anthropic, ModelID.make("my-sonnet"))
+      const model = await getModel(ProviderID.anthropic, ModelID.make("my-sonnet"), ctx)
       expect(model).toBeDefined()
       expect(String(model.id)).toBe("my-sonnet")
       expect(model.name).toBe("My Sonnet Alias")
@@ -796,7 +796,7 @@ test("provider api field sets model api.url", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             "custom-api": {
               name: "Custom API",
@@ -819,10 +819,10 @@ test("provider api field sets model api.url", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      const providers = await list()
+    fn: async (ctx) => {
+      const providers = await list(ctx)
       // api field is stored on model.api.url, used by getSDK to set baseURL
       expect(providers[ProviderID.make("custom-api")].models["model-1"].api.url).toBe("https://api.example.com/v1")
     },
@@ -835,7 +835,7 @@ test("explicit baseURL overrides api field", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             "custom-api": {
               name: "Custom API",
@@ -859,10 +859,10 @@ test("explicit baseURL overrides api field", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      const providers = await list()
+    fn: async (ctx) => {
+      const providers = await list(ctx)
       expect(providers[ProviderID.make("custom-api")].options.baseURL).toBe("https://custom.override.com/v1")
     },
   })
@@ -874,7 +874,7 @@ test("model inherits properties from existing database model", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             anthropic: {
               models: {
@@ -888,11 +888,11 @@ test("model inherits properties from existing database model", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       const model = providers[ProviderID.anthropic].models["claude-sonnet-4-20250514"]
       expect(model.name).toBe("Custom Name for Sonnet")
       expect(model.capabilities.toolcall).toBe(true)
@@ -908,17 +908,17 @@ test("disabled_providers prevents loading even with env var", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           disabled_providers: ["openai"],
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("OPENAI_API_KEY", "test-openai-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "OPENAI_API_KEY", "test-openai-key")
+      const providers = await list(ctx)
       expect(providers[ProviderID.openai]).toBeUndefined()
     },
   })
@@ -930,18 +930,18 @@ test("enabled_providers with empty array allows no providers", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           enabled_providers: [],
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      set("OPENAI_API_KEY", "test-openai-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      set(ctx, "OPENAI_API_KEY", "test-openai-key")
+      const providers = await list(ctx)
       expect(Object.keys(providers).length).toBe(0)
     },
   })
@@ -953,7 +953,7 @@ test("whitelist and blacklist can be combined", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             anthropic: {
               whitelist: ["claude-sonnet-4-20250514", "claude-opus-4-20250514"],
@@ -964,11 +964,11 @@ test("whitelist and blacklist can be combined", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       expect(providers[ProviderID.anthropic]).toBeDefined()
       const models = Object.keys(providers[ProviderID.anthropic].models)
       expect(models).toContain("claude-sonnet-4-20250514")
@@ -984,7 +984,7 @@ test("model modalities default correctly", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             "test-provider": {
               name: "Test",
@@ -1004,10 +1004,10 @@ test("model modalities default correctly", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      const providers = await list()
+    fn: async (ctx) => {
+      const providers = await list(ctx)
       const model = providers[ProviderID.make("test-provider")].models["test-model"]
       expect(model.capabilities.input.text).toBe(true)
       expect(model.capabilities.output.text).toBe(true)
@@ -1021,7 +1021,7 @@ test("model with custom cost values", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             "test-provider": {
               name: "Test",
@@ -1047,10 +1047,10 @@ test("model with custom cost values", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      const providers = await list()
+    fn: async (ctx) => {
+      const providers = await list(ctx)
       const model = providers[ProviderID.make("test-provider")].models["test-model"]
       expect(model.cost.input).toBe(5)
       expect(model.cost.output).toBe(15)
@@ -1066,16 +1066,16 @@ test("getSmallModel returns appropriate small model", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const model = await getSmallModel(ProviderID.anthropic)
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const model = await getSmallModel(ProviderID.anthropic, ctx)
       expect(model).toBeDefined()
       expect(model?.id).toContain("haiku")
     },
@@ -1088,20 +1088,41 @@ test("getSmallModel respects config small_model override", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           small_model: "anthropic/claude-sonnet-4-20250514",
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const model = await getSmallModel(ProviderID.anthropic)
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const model = await getSmallModel(ProviderID.anthropic, ctx)
       expect(model).toBeDefined()
       expect(String(model?.providerID)).toBe("anthropic")
       expect(String(model?.id)).toBe("claude-sonnet-4-20250514")
+    },
+  })
+})
+
+test("getSmallModel ignores invalid config small_model", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          small_model: "anthropic/not-a-real-model",
+        }),
+      )
+    },
+  })
+  await withTestInstance({
+    directory: tmp.path,
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      expect(await getSmallModel(ProviderID.anthropic, ctx)).toBeUndefined()
     },
   })
 })
@@ -1127,7 +1148,7 @@ test("multiple providers can be configured simultaneously", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             anthropic: {
               options: { timeout: 30000 },
@@ -1140,12 +1161,12 @@ test("multiple providers can be configured simultaneously", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-anthropic-key")
-      set("OPENAI_API_KEY", "test-openai-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-anthropic-key")
+      set(ctx, "OPENAI_API_KEY", "test-openai-key")
+      const providers = await list(ctx)
       expect(providers[ProviderID.anthropic]).toBeDefined()
       expect(providers[ProviderID.openai]).toBeDefined()
       expect(providers[ProviderID.anthropic].options.timeout).toBe(30000)
@@ -1160,7 +1181,7 @@ test("provider with custom npm package", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             "local-llm": {
               name: "Local LLM",
@@ -1183,10 +1204,10 @@ test("provider with custom npm package", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      const providers = await list()
+    fn: async (ctx) => {
+      const providers = await list(ctx)
       expect(providers[ProviderID.make("local-llm")]).toBeDefined()
       expect(providers[ProviderID.make("local-llm")].models["llama-3"].api.npm).toBe("@ai-sdk/openai-compatible")
       expect(providers[ProviderID.make("local-llm")].options.baseURL).toBe("http://localhost:11434/v1")
@@ -1202,7 +1223,7 @@ test("model alias name defaults to alias key when id differs", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             anthropic: {
               models: {
@@ -1217,11 +1238,11 @@ test("model alias name defaults to alias key when id differs", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       expect(providers[ProviderID.anthropic].models["sonnet"].name).toBe("sonnet")
     },
   })
@@ -1233,7 +1254,7 @@ test("provider with multiple env var options only includes apiKey when single en
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             "multi-env": {
               name: "Multi Env Provider",
@@ -1255,11 +1276,11 @@ test("provider with multiple env var options only includes apiKey when single en
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("MULTI_ENV_KEY_1", "test-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "MULTI_ENV_KEY_1", "test-key")
+      const providers = await list(ctx)
       expect(providers[ProviderID.make("multi-env")]).toBeDefined()
       // When multiple env options exist, key should NOT be auto-set
       expect(providers[ProviderID.make("multi-env")].key).toBeUndefined()
@@ -1273,7 +1294,7 @@ test("provider with single env var includes apiKey automatically", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             "single-env": {
               name: "Single Env Provider",
@@ -1295,11 +1316,11 @@ test("provider with single env var includes apiKey automatically", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("SINGLE_ENV_KEY", "my-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "SINGLE_ENV_KEY", "my-api-key")
+      const providers = await list(ctx)
       expect(providers[ProviderID.make("single-env")]).toBeDefined()
       // Single env option should auto-set key
       expect(providers[ProviderID.make("single-env")].key).toBe("my-api-key")
@@ -1313,7 +1334,7 @@ test("model cost overrides existing cost values", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             anthropic: {
               models: {
@@ -1330,11 +1351,11 @@ test("model cost overrides existing cost values", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       const model = providers[ProviderID.anthropic].models["claude-sonnet-4-20250514"]
       expect(model.cost.input).toBe(999)
       expect(model.cost.output).toBe(888)
@@ -1348,7 +1369,7 @@ test("completely new provider not in database can be configured", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             "brand-new-provider": {
               name: "Brand New",
@@ -1378,10 +1399,10 @@ test("completely new provider not in database can be configured", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      const providers = await list()
+    fn: async (ctx) => {
+      const providers = await list(ctx)
       expect(providers[ProviderID.make("brand-new-provider")]).toBeDefined()
       expect(providers[ProviderID.make("brand-new-provider")].name).toBe("Brand New")
       const model = providers[ProviderID.make("brand-new-provider")].models["new-model"]
@@ -1398,7 +1419,7 @@ test("disabled_providers and enabled_providers interaction", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           // enabled_providers takes precedence - only these are considered
           enabled_providers: ["anthropic", "openai"],
           // Then disabled_providers filters from the enabled set
@@ -1407,13 +1428,13 @@ test("disabled_providers and enabled_providers interaction", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-anthropic")
-      set("OPENAI_API_KEY", "test-openai")
-      set("GOOGLE_GENERATIVE_AI_API_KEY", "test-google")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-anthropic")
+      set(ctx, "OPENAI_API_KEY", "test-openai")
+      set(ctx, "GOOGLE_GENERATIVE_AI_API_KEY", "test-google")
+      const providers = await list(ctx)
       // anthropic: in enabled, not in disabled = allowed
       expect(providers[ProviderID.anthropic]).toBeDefined()
       // openai: in enabled, but also in disabled = NOT allowed
@@ -1430,7 +1451,7 @@ test("model with tool_call false", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             "no-tools": {
               name: "No Tools Provider",
@@ -1450,10 +1471,10 @@ test("model with tool_call false", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      const providers = await list()
+    fn: async (ctx) => {
+      const providers = await list(ctx)
       expect(providers[ProviderID.make("no-tools")].models["basic-model"].capabilities.toolcall).toBe(false)
     },
   })
@@ -1465,7 +1486,7 @@ test("model defaults tool_call to true when not specified", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             "default-tools": {
               name: "Default Tools Provider",
@@ -1485,10 +1506,10 @@ test("model defaults tool_call to true when not specified", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      const providers = await list()
+    fn: async (ctx) => {
+      const providers = await list(ctx)
       expect(providers[ProviderID.make("default-tools")].models["model"].capabilities.toolcall).toBe(true)
     },
   })
@@ -1500,7 +1521,7 @@ test("model headers are preserved", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             "headers-provider": {
               name: "Headers Provider",
@@ -1524,10 +1545,10 @@ test("model headers are preserved", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      const providers = await list()
+    fn: async (ctx) => {
+      const providers = await list(ctx)
       const model = providers[ProviderID.make("headers-provider")].models["model"]
       expect(model.headers).toEqual({
         "X-Custom-Header": "custom-value",
@@ -1543,7 +1564,7 @@ test("provider env fallback - second env var used if first missing", async () =>
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             "fallback-env": {
               name: "Fallback Env Provider",
@@ -1563,12 +1584,12 @@ test("provider env fallback - second env var used if first missing", async () =>
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
+    fn: async (ctx) => {
       // Only set fallback, not primary
-      set("FALLBACK_KEY", "fallback-api-key")
-      const providers = await list()
+      set(ctx, "FALLBACK_KEY", "fallback-api-key")
+      const providers = await list(ctx)
       // Provider should load because fallback env var is set
       expect(providers[ProviderID.make("fallback-env")]).toBeDefined()
     },
@@ -1581,17 +1602,17 @@ test("getModel returns consistent results", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const model1 = await getModel(ProviderID.anthropic, ModelID.make("claude-sonnet-4-20250514"))
-      const model2 = await getModel(ProviderID.anthropic, ModelID.make("claude-sonnet-4-20250514"))
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const model1 = await getModel(ProviderID.anthropic, ModelID.make("claude-sonnet-4-20250514"), ctx)
+      const model2 = await getModel(ProviderID.anthropic, ModelID.make("claude-sonnet-4-20250514"), ctx)
       expect(model1.providerID).toEqual(model2.providerID)
       expect(model1.id).toEqual(model2.id)
       expect(model1).toEqual(model2)
@@ -1605,7 +1626,7 @@ test("provider name defaults to id when not in database", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             "my-custom-id": {
               // no name specified
@@ -1625,10 +1646,10 @@ test("provider name defaults to id when not in database", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      const providers = await list()
+    fn: async (ctx) => {
+      const providers = await list(ctx)
       expect(providers[ProviderID.make("my-custom-id")].name).toBe("my-custom-id")
     },
   })
@@ -1640,21 +1661,21 @@ test("ModelNotFoundError includes suggestions for typos", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
       try {
-        await getModel(ProviderID.anthropic, ModelID.make("claude-sonet-4")) // typo: sonet instead of sonnet
+        await getModel(ProviderID.anthropic, ModelID.make("claude-sonet-4"), ctx) // typo: sonet instead of sonnet
         expect(true).toBe(false) // Should not reach here
       } catch (e: any) {
-        expect(e.data.suggestions).toBeDefined()
-        expect(e.data.suggestions.length).toBeGreaterThan(0)
+        expect(e.suggestions).toBeDefined()
+        expect(e.suggestions.length).toBeGreaterThan(0)
       }
     },
   })
@@ -1666,21 +1687,47 @@ test("ModelNotFoundError for provider includes suggestions", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
       try {
-        await getModel(ProviderID.make("antropic"), ModelID.make("claude-sonnet-4")) // typo: antropic
+        await getModel(ProviderID.make("antropic"), ModelID.make("claude-sonnet-4"), ctx) // typo: antropic
         expect(true).toBe(false) // Should not reach here
       } catch (e: any) {
-        expect(e.data.suggestions).toBeDefined()
-        expect(e.data.suggestions).toContain("anthropic")
+        expect(e.suggestions).toBeDefined()
+        expect(e.suggestions).toContain("anthropic")
+      }
+    },
+  })
+})
+
+test("ModelNotFoundError suggests catalog models for unloaded providers", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+        }),
+      )
+    },
+  })
+  await withTestInstance({
+    directory: tmp.path,
+    fn: async (ctx) => {
+      remove(ctx, "OPENCODE_API_KEY")
+      try {
+        await getModel(ProviderID.opencode, ModelID.make("claude-haiku-fake-model"), ctx)
+        throw new Error("expected model lookup to fail")
+      } catch (e) {
+        if (!Provider.ModelNotFoundError.isInstance(e)) throw e
+        expect(e.suggestions).toContain("claude-haiku-4-5")
       }
     },
   })
@@ -1692,15 +1739,15 @@ test("getProvider returns undefined for nonexistent provider", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      const provider = await getProvider(ProviderID.make("nonexistent"))
+    fn: async (ctx) => {
+      const provider = await getProvider(ProviderID.make("nonexistent"), ctx)
       expect(provider).toBeUndefined()
     },
   })
@@ -1712,16 +1759,16 @@ test("getProvider returns provider info", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const provider = await getProvider(ProviderID.anthropic)
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const provider = await getProvider(ProviderID.anthropic, ctx)
       expect(provider).toBeDefined()
       expect(String(provider?.id)).toBe("anthropic")
     },
@@ -1734,16 +1781,16 @@ test("closest returns undefined when no partial match found", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const result = await closest(ProviderID.anthropic, ["nonexistent-xyz-model"])
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const result = await closest(ProviderID.anthropic, ["nonexistent-xyz-model"], ctx)
       expect(result).toBeUndefined()
     },
   })
@@ -1755,17 +1802,17 @@ test("closest checks multiple query terms in order", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
       // First term won't match, second will
-      const result = await closest(ProviderID.anthropic, ["nonexistent", "haiku"])
+      const result = await closest(ProviderID.anthropic, ["nonexistent", "haiku"], ctx)
       expect(result).toBeDefined()
       expect(result?.modelID).toContain("haiku")
     },
@@ -1778,7 +1825,7 @@ test("model limit defaults to zero when not specified", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             "no-limit": {
               name: "No Limit Provider",
@@ -1798,10 +1845,10 @@ test("model limit defaults to zero when not specified", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      const providers = await list()
+    fn: async (ctx) => {
+      const providers = await list(ctx)
       const model = providers[ProviderID.make("no-limit")].models["model"]
       expect(model.limit.context).toBe(0)
       expect(model.limit.output).toBe(0)
@@ -1815,7 +1862,7 @@ test("provider options are deeply merged", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             anthropic: {
               options: {
@@ -1830,16 +1877,110 @@ test("provider options are deeply merged", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       // Custom options should be merged
       expect(providers[ProviderID.anthropic].options.timeout).toBe(30000)
       expect(providers[ProviderID.anthropic].options.headers["X-Custom"]).toBe("custom-value")
       // anthropic custom loader adds its own headers, they should coexist
       expect(providers[ProviderID.anthropic].options.headers["anthropic-beta"]).toBeDefined()
+    },
+  })
+})
+
+test("hosted nvidia provider adds billing origin header", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          provider: {
+            nvidia: {
+              options: {
+                apiKey: "test-api-key",
+              },
+            },
+          },
+        }),
+      )
+    },
+  })
+  await withTestInstance({
+    directory: tmp.path,
+    fn: async (ctx) => {
+      const providers = await list(ctx)
+      expect(providers[ProviderID.make("nvidia")].options.headers).toEqual({
+        "HTTP-Referer": "https://kilo.ai/",
+        "X-Title": "Kilo Code",
+        "X-BILLING-INVOKE-ORIGIN": "KiloCode",
+      })
+    },
+  })
+})
+
+test("custom nvidia baseURL adds billing origin header", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          provider: {
+            nvidia: {
+              options: {
+                apiKey: "test-api-key",
+                baseURL: "http://localhost:8000/v1",
+              },
+            },
+          },
+        }),
+      )
+    },
+  })
+  await withTestInstance({
+    directory: tmp.path,
+    fn: async (ctx) => {
+      const providers = await list(ctx)
+      expect(providers[ProviderID.make("nvidia")].options.headers).toEqual({
+        "HTTP-Referer": "https://kilo.ai/",
+        "X-Title": "Kilo Code",
+        "X-BILLING-INVOKE-ORIGIN": "KiloCode",
+      })
+    },
+  })
+})
+
+test("explicit nvidia billing origin header is preserved", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          provider: {
+            nvidia: {
+              options: {
+                apiKey: "test-api-key",
+                baseURL: "http://localhost:8000/v1",
+                headers: {
+                  "X-BILLING-INVOKE-ORIGIN": "CustomOrigin",
+                },
+              },
+            },
+          },
+        }),
+      )
+    },
+  })
+  await withTestInstance({
+    directory: tmp.path,
+    fn: async (ctx) => {
+      const providers = await list(ctx)
+      expect(providers[ProviderID.make("nvidia")].options.headers["X-BILLING-INVOKE-ORIGIN"]).toBe("CustomOrigin")
     },
   })
 })
@@ -1850,7 +1991,7 @@ test("custom model inherits npm package from models.dev provider config", async 
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             openai: {
               models: {
@@ -1866,11 +2007,11 @@ test("custom model inherits npm package from models.dev provider config", async 
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("OPENAI_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "OPENAI_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       const model = providers[ProviderID.openai].models["my-custom-model"]
       expect(model).toBeDefined()
       expect(model.api.npm).toBe("@ai-sdk/openai")
@@ -1884,7 +2025,7 @@ test("custom model inherits api.url from models.dev provider", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             openrouter: {
               models: {
@@ -1899,11 +2040,11 @@ test("custom model inherits api.url from models.dev provider", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("OPENROUTER_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "OPENROUTER_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       expect(providers[ProviderID.openrouter]).toBeDefined()
 
       // New model not in database should inherit api.url from provider
@@ -2025,16 +2166,16 @@ test("model variants are generated for reasoning models", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
         }),
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       // Claude sonnet 4 has reasoning capability
       const model = providers[ProviderID.anthropic].models["claude-sonnet-4-20250514"]
       expect(model.capabilities.reasoning).toBe(true)
@@ -2050,7 +2191,7 @@ test("model variants can be disabled via config", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             anthropic: {
               models: {
@@ -2066,11 +2207,11 @@ test("model variants can be disabled via config", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       const model = providers[ProviderID.anthropic].models["claude-sonnet-4-20250514"]
       expect(model.variants).toBeDefined()
       expect(model.variants!["high"]).toBeUndefined()
@@ -2086,7 +2227,7 @@ test("model variants can be customized via config", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             anthropic: {
               models: {
@@ -2107,11 +2248,11 @@ test("model variants can be customized via config", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       const model = providers[ProviderID.anthropic].models["claude-sonnet-4-20250514"]
       expect(model.variants!["high"]).toBeDefined()
       expect(model.variants!["high"].thinking.budgetTokens).toBe(20000)
@@ -2125,7 +2266,7 @@ test("disabled key is stripped from variant config", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             anthropic: {
               models: {
@@ -2144,11 +2285,11 @@ test("disabled key is stripped from variant config", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       const model = providers[ProviderID.anthropic].models["claude-sonnet-4-20250514"]
       expect(model.variants!["max"]).toBeDefined()
       expect(model.variants!["max"].disabled).toBeUndefined()
@@ -2163,7 +2304,7 @@ test("all variants can be disabled via config", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             anthropic: {
               models: {
@@ -2180,11 +2321,11 @@ test("all variants can be disabled via config", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       const model = providers[ProviderID.anthropic].models["claude-sonnet-4-20250514"]
       expect(model.variants).toBeDefined()
       expect(Object.keys(model.variants!).length).toBe(0)
@@ -2198,7 +2339,7 @@ test("variant config merges with generated variants", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             anthropic: {
               models: {
@@ -2216,11 +2357,11 @@ test("variant config merges with generated variants", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       const model = providers[ProviderID.anthropic].models["claude-sonnet-4-20250514"]
       expect(model.variants!["high"]).toBeDefined()
       // Should have both the generated thinking config and the custom option
@@ -2236,7 +2377,7 @@ test("variants filtered in second pass for database models", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             openai: {
               models: {
@@ -2252,11 +2393,11 @@ test("variants filtered in second pass for database models", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("OPENAI_API_KEY", "test-api-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "OPENAI_API_KEY", "test-api-key")
+      const providers = await list(ctx)
       const model = providers[ProviderID.openai].models["gpt-5"]
       expect(model.variants).toBeDefined()
       expect(model.variants!["high"]).toBeUndefined()
@@ -2272,7 +2413,7 @@ test("custom model with variants enabled and disabled", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://opencode.ai/config.json",
           provider: {
             "custom-reasoning": {
               name: "Custom Reasoning Provider",
@@ -2299,10 +2440,10 @@ test("custom model with variants enabled and disabled", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      const providers = await list()
+    fn: async (ctx) => {
+      const providers = await list(ctx)
       const model = providers[ProviderID.make("custom-reasoning")].models["reasoning-model"]
       expect(model.variants).toBeDefined()
       // Enabled variants should exist
@@ -2354,11 +2495,11 @@ test("Google Vertex: retains baseURL for custom proxy", async () => {
     },
   })
 
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("GOOGLE_APPLICATION_CREDENTIALS", "test-creds")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "GOOGLE_APPLICATION_CREDENTIALS", "test-creds")
+      const providers = await list(ctx)
       expect(providers[ProviderID.make("vertex-proxy")]).toBeDefined()
       expect(providers[ProviderID.make("vertex-proxy")].options.baseURL).toBe("https://my-proxy.com/v1")
     },
@@ -2397,11 +2538,11 @@ test("Google Vertex: supports OpenAI compatible models", async () => {
     },
   })
 
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("GOOGLE_APPLICATION_CREDENTIALS", "test-creds")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "GOOGLE_APPLICATION_CREDENTIALS", "test-creds")
+      const providers = await list(ctx)
       const model = providers[ProviderID.make("vertex-openai")].models["gpt-4"]
 
       expect(model).toBeDefined()
@@ -2421,13 +2562,13 @@ test("cloudflare-ai-gateway loads with env variables", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("CLOUDFLARE_ACCOUNT_ID", "test-account")
-      set("CLOUDFLARE_GATEWAY_ID", "test-gateway")
-      set("CLOUDFLARE_API_TOKEN", "test-token")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "CLOUDFLARE_ACCOUNT_ID", "test-account")
+      set(ctx, "CLOUDFLARE_GATEWAY_ID", "test-gateway")
+      set(ctx, "CLOUDFLARE_API_TOKEN", "test-token")
+      const providers = await list(ctx)
       expect(providers[ProviderID.make("cloudflare-ai-gateway")]).toBeDefined()
     },
   })
@@ -2451,13 +2592,13 @@ test("cloudflare-ai-gateway forwards config metadata options", async () => {
       )
     },
   })
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("CLOUDFLARE_ACCOUNT_ID", "test-account")
-      set("CLOUDFLARE_GATEWAY_ID", "test-gateway")
-      set("CLOUDFLARE_API_TOKEN", "test-token")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "CLOUDFLARE_ACCOUNT_ID", "test-account")
+      set(ctx, "CLOUDFLARE_GATEWAY_ID", "test-gateway")
+      set(ctx, "CLOUDFLARE_API_TOKEN", "test-token")
+      const providers = await list(ctx)
       expect(providers[ProviderID.make("cloudflare-ai-gateway")]).toBeDefined()
       expect(providers[ProviderID.make("cloudflare-ai-gateway")].options.metadata).toEqual({
         invoked_by: "test",
@@ -2470,13 +2611,11 @@ test("cloudflare-ai-gateway forwards config metadata options", async () => {
 test("plugin config providers persist after instance dispose", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
-      // kilocode_change start - upstream #24416 avoids real plugin dependency installs
       const configDir = path.join(dir, ".opencode")
       const root = path.join(configDir, "plugin")
       await mkdir(root, { recursive: true })
       await markPluginDependenciesReady(configDir)
       await markPluginDependenciesReady(Global.Path.config)
-      // kilocode_change end
       await Bun.write(
         path.join(root, "demo-provider.ts"),
         [
@@ -2506,41 +2645,38 @@ test("plugin config providers persist after instance dispose", async () => {
     },
   })
 
-  const first = await WithInstance.provide({
+  const first = await withTestInstance({
     directory: tmp.path,
-    fn: async () =>
+    fn: async (ctx) =>
       AppRuntime.runPromise(
         Effect.gen(function* () {
           const plugin = yield* Plugin.Service
           const provider = yield* Provider.Service
           yield* plugin.init()
           return yield* provider.list()
-        }),
+        }).pipe(Effect.provideService(InstanceRef, ctx)),
       ),
   })
   expect(first[ProviderID.make("demo")]).toBeDefined()
   expect(first[ProviderID.make("demo")].models[ModelID.make("chat")]).toBeDefined()
 
-  // kilocode_change start
-  await WithInstance.provide({
-    directory: tmp.path,
-    fn: () => InstanceRuntime.disposeInstance(Instance.current),
-  })
-  // kilocode_change end
+  await disposeAllInstances()
 
-  const second = await WithInstance.provide({
+  const second = await withTestInstance({
     directory: tmp.path,
-    fn: async () => list(),
+    fn: async (ctx) => list(ctx),
   })
   expect(second[ProviderID.make("demo")]).toBeDefined()
   expect(second[ProviderID.make("demo")].models[ModelID.make("chat")]).toBeDefined()
-})
+}, 60_000)
 
 test("plugin config enabled and disabled providers are honored", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       const root = path.join(dir, ".opencode", "plugin")
       await mkdir(root, { recursive: true })
+      await markPluginDependenciesReady(path.dirname(root)) // kilocode_change
+      await markPluginDependenciesReady(Global.Path.config) // kilocode_change
       await Bun.write(
         path.join(root, "provider-filter.ts"),
         [
@@ -2559,12 +2695,12 @@ test("plugin config enabled and disabled providers are honored", async () => {
     },
   })
 
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
-    fn: async () => {
-      set("ANTHROPIC_API_KEY", "test-anthropic-key")
-      set("OPENAI_API_KEY", "test-openai-key")
-      const providers = await list()
+    fn: async (ctx) => {
+      set(ctx, "ANTHROPIC_API_KEY", "test-anthropic-key")
+      set(ctx, "OPENAI_API_KEY", "test-openai-key")
+      const providers = await list(ctx)
       expect(providers[ProviderID.anthropic]).toBeDefined()
       expect(providers[ProviderID.openai]).toBeUndefined()
     },
@@ -2583,9 +2719,9 @@ test("opencode loader keeps paid models when config apiKey is present", async ()
     },
   })
 
-  const none = await WithInstance.provide({
+  const none = await withTestInstance({
     directory: base.path,
-    fn: async () => paid(await list()),
+    fn: async (ctx) => paid(await list(ctx)),
   })
 
   await using keyed = await tmpdir({
@@ -2606,9 +2742,9 @@ test("opencode loader keeps paid models when config apiKey is present", async ()
     },
   })
 
-  const keyedCount = await WithInstance.provide({
+  const keyedCount = await withTestInstance({
     directory: keyed.path,
-    fn: async () => paid(await list()),
+    fn: async (ctx) => paid(await list(ctx)),
   })
 
   expect(none).toBe(0)
@@ -2627,9 +2763,9 @@ test("opencode loader keeps paid models when auth exists", async () => {
     },
   })
 
-  const none = await WithInstance.provide({
+  const none = await withTestInstance({
     directory: base.path,
-    fn: async () => paid(await list()),
+    fn: async (ctx) => paid(await list(ctx)),
   })
 
   await using keyed = await tmpdir({
@@ -2661,9 +2797,9 @@ test("opencode loader keeps paid models when auth exists", async () => {
       }),
     )
 
-    const keyedCount = await WithInstance.provide({
+    const keyedCount = await withTestInstance({
       directory: keyed.path,
-      fn: async () => paid(await list()),
+      fn: async (ctx) => paid(await list(ctx)),
     })
 
     expect(none).toBe(0)

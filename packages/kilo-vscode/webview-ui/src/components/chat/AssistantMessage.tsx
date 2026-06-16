@@ -32,6 +32,13 @@ import { SuggestBar } from "./SuggestBar"
 // We render these ourselves via ToolRegistry when they complete,
 // so the user can see what the AI set up.
 export const UPSTREAM_SUPPRESSED_TOOLS = new Set(["todowrite", "todoread"])
+const EDIT_TOOLS = new Set(["edit", "write", "apply_patch"])
+
+function editOpen(part: SDKPart, open: boolean) {
+  if (part.type !== "tool") return undefined
+  const tool = (part as unknown as ToolPart).tool
+  return EDIT_TOOLS.has(tool) ? open : undefined
+}
 
 /** Extract plan path from a completed plan_exit tool part. */
 function planExitInfo(part: SDKPart): { plan: string } | undefined {
@@ -110,6 +117,7 @@ function matchToolRequest<T extends { tool?: { callID: string; messageID: string
 
 interface AssistantMessageProps {
   message: SDKAssistantMessage
+  parts?: SDKPart[]
   showAssistantCopyPartID?: string | null
   feedback?: MessageFeedbackControls
 }
@@ -175,9 +183,10 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const display = useDisplay()
   const { config } = useConfig()
   const open = createMemo(() => config().terminal_command_display !== "collapsed")
+  const edit = createMemo(() => config().code_edit_display === "expanded")
 
   const parts = createMemo(() => {
-    const stored = data.store.part?.[props.message.id]
+    const stored = props.parts ?? data.store.part?.[props.message.id]
     if (!stored) return []
     return (stored as SDKPart[]).filter((part) => isRenderable(part))
   })
@@ -242,6 +251,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                       part={part}
                                       message={props.message as SDKMessage}
                                       showAssistantCopyPartID={props.showAssistantCopyPartID}
+                                      defaultOpen={editOpen(part, edit())}
                                       reasoningAutoCollapse={display.reasoningAutoCollapse()}
                                       feedback={props.feedback}
                                       animate={

@@ -15,6 +15,8 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js"
 import {
   CallToolResultSchema,
+  ListToolsResultSchema,
+  ToolSchema,
   type Tool as MCPToolDef,
   ToolListChangedNotificationSchema,
 } from "@modelcontextprotocol/sdk/types.js"
@@ -22,7 +24,6 @@ import { Config } from "@/config/config"
 import { ConfigMCP } from "../config/mcp"
 import * as Log from "@opencode-ai/core/util/log"
 import { NamedError } from "@opencode-ai/core/util/error"
-import z from "zod/v4"
 import { Installation } from "../installation"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { withTimeout } from "@/util/timeout"
@@ -39,13 +40,11 @@ import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { zod as effectZod } from "@/util/effect-zod"
-import { withStatics } from "@/util/schema"
 
 const log = Log.create({ service: "mcp" })
 const DEFAULT_TIMEOUT = 30_000
 
-// kilocode_change start — inject --rm for Docker containers to prevent stopped container accumulation
+// kilocode_change start - inject --rm for Docker containers to prevent stopped container accumulation
 export function ensureDockerRm(cmd: string, args: string[]): string[] {
   const isDocker = cmd === "docker" || cmd === "podman"
   if (!isDocker) return args
@@ -59,15 +58,17 @@ export function ensureDockerRm(cmd: string, args: string[]): string[] {
 }
 // kilocode_change end
 
+const TolerantListToolsResultSchema = ListToolsResultSchema.extend({
+  tools: ToolSchema.omit({ outputSchema: true }).array(),
+})
+
 export const Resource = Schema.Struct({
   name: Schema.String,
   uri: Schema.String,
   description: Schema.optional(Schema.String),
   mimeType: Schema.optional(Schema.String),
   client: Schema.String,
-})
-  .annotate({ identifier: "McpResource" })
-  .pipe(withStatics((s) => ({ zod: effectZod(s) })))
+}).annotate({ identifier: "McpResource" })
 export type Resource = Schema.Schema.Type<typeof Resource>
 
 export const ToolsChanged = BusEvent.define(
@@ -85,12 +86,9 @@ export const BrowserOpenFailed = BusEvent.define(
   }),
 )
 
-export const Failed = NamedError.create(
-  "MCPFailed",
-  z.object({
-    name: z.string(),
-  }),
-)
+export const Failed = NamedError.create("MCPFailed", {
+  name: Schema.String,
+})
 
 type MCPClient = Client
 
@@ -117,9 +115,7 @@ export const Status = Schema.Union([
   StatusFailed,
   StatusNeedsAuth,
   StatusNeedsClientRegistration,
-])
-  .annotate({ identifier: "MCPStatus", discriminator: "status" })
-  .pipe(withStatics((s) => ({ zod: effectZod(s) })))
+]).annotate({ identifier: "MCPStatus", discriminator: "status" })
 export type Status = Schema.Schema.Type<typeof Status>
 
 // Store transports for OAuth servers to allow finishing auth
@@ -140,6 +136,41 @@ const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, "_")
 function remoteURL(key: string, value: string) {
   if (URL.canParse(value)) return new URL(value)
   log.warn("invalid remote mcp url", { key })
+}
+
+function isOutputSchemaValidationError(error: Error) {
+  return /can't resolve reference|resolves to more than one schema|outputSchema|schema.*reference|reference.*schema/i.test(
+    error.message,
+  )
+}
+
+function listTools(key: string, client: MCPClient, timeout: number) {
+  return Effect.tryPromise({
+    try: () => client.listTools(undefined, { timeout }),
+    catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+  }).pipe(
+    Effect.map((result) => result.tools),
+    Effect.catch((error) => {
+      if (!isOutputSchemaValidationError(error)) return Effect.fail(error)
+
+      log.warn("failed to validate MCP tool output schemas, retrying without output schema validation", { key, error })
+      return Effect.tryPromise({
+        try: () =>
+          client.request({ method: "tools/list" }, TolerantListToolsResultSchema, {
+            timeout,
+          }),
+        catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+      }).pipe(
+        Effect.map((result) =>
+          result.tools.map((tool) => ({
+            name: tool.name,
+            description: tool.description,
+            inputSchema: tool.inputSchema,
+          })),
+        ),
+      )
+    }),
+  )
 }
 
 // Convert MCP tool definition to AI SDK Tool type
@@ -174,11 +205,7 @@ function convertMcpTool(mcpTool: MCPToolDef, client: MCPClient, timeout?: number
 }
 
 function defs(key: string, client: MCPClient, timeout?: number) {
-  return Effect.tryPromise({
-    try: () => withTimeout(client.listTools(), timeout ?? DEFAULT_TIMEOUT),
-    catch: (err) => (err instanceof Error ? err : new Error(String(err))),
-  }).pipe(
-    Effect.map((result) => result.tools),
+  return listTools(key, client, timeout ?? DEFAULT_TIMEOUT).pipe(
     Effect.catch((err) => {
       log.error("failed to get tools from client", { key, error: err })
       return Effect.succeed(undefined)

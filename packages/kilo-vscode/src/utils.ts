@@ -37,6 +37,7 @@ export function buildWebviewHtml(
     scriptUri: vscode.Uri
     styleUri: vscode.Uri
     iconsBaseUri: vscode.Uri
+    workerUri: vscode.Uri
     title: string
     port?: number
     extraStyles?: string
@@ -81,7 +82,7 @@ export function buildWebviewHtml(
 </head>
 <body>
   <div id="root"></div>
-  <script nonce="${nonce}">window.ICONS_BASE_URI = "${opts.iconsBaseUri}";</script>
+  <script nonce="${nonce}">window.ICONS_BASE_URI = "${opts.iconsBaseUri}"; window.KILO_SHIKI_WORKER_URI = "${opts.workerUri}";</script>
   <script nonce="${nonce}" src="${opts.scriptUri}"></script>
 </body>
 </html>`

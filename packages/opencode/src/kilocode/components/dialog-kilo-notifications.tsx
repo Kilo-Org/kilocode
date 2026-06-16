@@ -86,6 +86,11 @@ export function DialogKiloNotifications(props: DialogKiloNotificationsProps) {
           </For>
         </box>
       </scrollbox>
+      <box flexDirection="row" justifyContent="flex-end" paddingBottom={1}>
+        <box paddingLeft={3} paddingRight={3} backgroundColor={theme.primary} onMouseUp={() => dialog.clear()}>
+          <text fg={theme.selectedListItemText}>close</text>
+        </box>
+      </box>
     </box>
   )
 }

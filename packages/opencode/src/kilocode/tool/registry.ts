@@ -12,6 +12,10 @@ import * as Truncate from "@/tool/truncate"
 
 const log = Log.create({ service: "kilocode-tool-registry" })
 type Deps = { agent: Agent.Interface; truncate: Truncate.Interface }
+type Loaders = {
+  indexing?: () => Promise<{ KiloIndexing: { ready: () => boolean } }>
+  semantic?: () => Promise<Pick<typeof import("@/kilocode/tool/semantic-search"), "SemanticSearchTool">>
+}
 
 export namespace KiloToolRegistry {
   const hint =
@@ -34,6 +38,7 @@ export namespace KiloToolRegistry {
   export function build(
     tools: { codebase: Tool.Info; recall: Tool.Info; manager: Tool.Info; process: Tool.Info },
     deps: Deps,
+    loaders: Loaders = {},
   ) {
     return Effect.gen(function* () {
       const base = yield* Effect.all({
@@ -42,16 +47,15 @@ export namespace KiloToolRegistry {
         manager: Tool.init(tools.manager),
         process: Tool.init(tools.process),
       })
-      const semantic = yield* semanticTool(deps)
+      const semantic = yield* semanticTool(deps, loaders)
       return { ...base, semantic }
     })
   }
 
-  function semanticTool(deps: Deps) {
+  function semanticTool(deps: Deps, loaders: Loaders) {
     return Effect.gen(function* () {
-      const ready = yield* Effect.tryPromise(() =>
-        import("@/kilocode/indexing").then((mod) => mod.KiloIndexing.ready()),
-      ).pipe(
+      const indexing = loaders.indexing ?? (() => import("@/kilocode/indexing"))
+      const ready = yield* Effect.tryPromise(() => indexing().then((mod) => mod.KiloIndexing.ready())).pipe(
         Effect.catch((err) =>
           Effect.sync(() => {
             log.warn("semantic search unavailable", { err })
@@ -61,7 +65,8 @@ export namespace KiloToolRegistry {
       )
       if (!ready) return undefined
 
-      const mod = yield* Effect.tryPromise(() => import("@/kilocode/tool/semantic-search")).pipe(
+      const semantic = loaders.semantic ?? (() => import("@/kilocode/tool/semantic-search"))
+      const mod = yield* Effect.tryPromise(() => semantic()).pipe(
         Effect.catch((err) =>
           Effect.sync(() => {
             log.warn("semantic search tool unavailable", { err })

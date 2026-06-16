@@ -1,4 +1,3 @@
-// kilocode_change - new file
 /**
  * Kilo-specific TUI app customizations.
  *
@@ -10,7 +9,8 @@ import { createEffect, on } from "solid-js"
 import { useKeyboard } from "@opentui/solid"
 import { TextAttributes } from "@opentui/core"
 import * as Clipboard from "@tui/util/clipboard"
-import { useCommandDialog } from "@tui/component/dialog-command"
+import { useCommandPalette } from "@tui/context/command-palette"
+import { useBindings } from "@tui/keymap"
 import { useSDK } from "@tui/context/sdk"
 import { useSync } from "@tui/context/sync"
 import { useDialog } from "@tui/ui/dialog"
@@ -23,9 +23,14 @@ import { isKiloError, showKiloErrorToast } from "@/kilocode/kilo-errors"
 import { registerKiloCommands } from "@/kilocode/kilo-commands"
 import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui"
 import { DialogProcessList } from "@/kilocode/cli/cmd/tui/component/dialog-process-list"
+import { useIndexingWarnings } from "@/kilocode/cli/cmd/tui/indexing-warning"
 
 // Re-export so upstream can render the route without importing directly
 export { KiloClawView } from "@/kilocode/claw/view"
+
+// Hot reload TUI-local settings (keybinds/theme/ui) when changed from the Kilo Console.
+// Called from the App body (below SDKProvider and the TuiConfig provider).
+export { useTuiConfigHotReload } from "@/kilocode/cli/cmd/tui/context/tui-config-hot-reload"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -68,10 +73,27 @@ export function useSessionEffects(deps: {
   sdk: ReturnType<typeof useSDK>
   sync: ReturnType<typeof useSync>
 }) {
+  const pty = process.env.KILO_PTY_ID
+  const state = { prev: "" }
+
   // Notify server which session the user is viewing
   createEffect(() => {
     const sessionID = deps.route.data.type === "session" ? deps.route.data.sessionID : undefined
     deps.sdk.client.session.viewed({ focused: sessionID ? [sessionID] : [] }).catch(() => {})
+
+    if (!pty) return
+    const session = sessionID ? deps.sync.session.get(sessionID) : undefined
+    const key = [sessionID ?? "", session?.title ?? ""].join("\n")
+    if (key === state.prev) return
+    state.prev = key
+
+    deps.sdk.client.pty
+      .update({
+        ptyID: pty,
+        sessionID: sessionID ?? null,
+        ...(session?.title ? { title: session.title } : {}),
+      })
+      .catch(() => {})
   })
 
   // Evict per-session data from store when navigating away
@@ -129,15 +151,16 @@ export function handleSessionError(error: unknown, toast: ReturnType<typeof useT
  * - Registers the auto-approve toggle command
  */
 export function init() {
-  const command = useCommandDialog()
   const sync = useSync()
   const sdk = useSDK()
   const toast = useToast()
   const dialog = useDialog()
 
+  useIndexingWarnings()
+
   // Inject TUI dependencies for kilo-gateway
   initializeTUIDependencies({
-    useCommandDialog,
+    useCommandPalette,
     useSync,
     useDialog,
     useToast,
@@ -155,35 +178,42 @@ export function init() {
   registerKiloCommands(useSDK)
 
   // Register auto-approve toggle
-  command.register(() => [
-    {
-      title: "Background processes",
-      description: "List and manage tracked background processes",
-      value: "background_process.list",
-      category: "Kilo",
-      slash: { name: "process", aliases: ["processes"] },
-      onSelect: () => {
-        dialog.replace(() => <DialogProcessList />)
+  useBindings(() => ({
+    commands: [
+      {
+        namespace: "palette",
+        name: "background_process.list",
+        title: "Background processes",
+        desc: "List and manage tracked background processes",
+        category: "Kilo",
+        slashName: "process",
+        slashAliases: ["processes"],
+        run: () => {
+          dialog.replace(() => <DialogProcessList />)
+        },
       },
-    },
-    {
-      get title() {
-        return isAllowEverything(sync.data.config.permission) ? "Disable auto-approve mode" : "Enable auto-approve mode"
+      {
+        namespace: "palette",
+        name: "permission.allow_everything",
+        get title() {
+          return isAllowEverything(sync.data.config.permission)
+            ? "Disable auto-approve mode"
+            : "Enable auto-approve mode"
+        },
+        category: "System",
+        run: async () => {
+          const enabled = isAllowEverything(sync.data.config.permission)
+          const result = await sdk.client.permission.allowEverything({ enable: !enabled })
+          if (result.error) {
+            toast.show({
+              variant: "error",
+              message: `Failed to ${!enabled ? "enable" : "disable"} auto-approve mode`,
+            })
+            return
+          }
+          dialog.clear()
+        },
       },
-      value: "permission.allow_everything",
-      category: "System",
-      onSelect: async (dialog) => {
-        const enabled = isAllowEverything(sync.data.config.permission)
-        const result = await sdk.client.permission.allowEverything({ enable: !enabled })
-        if (result.error) {
-          toast.show({
-            variant: "error",
-            message: `Failed to ${!enabled ? "enable" : "disable"} auto-approve mode`,
-          })
-          return
-        }
-        dialog.clear()
-      },
-    },
-  ])
+    ],
+  }))
 }

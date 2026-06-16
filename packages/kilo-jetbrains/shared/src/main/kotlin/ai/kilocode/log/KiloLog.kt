@@ -1,5 +1,7 @@
 package ai.kilocode.log
 
+import ai.kilocode.KiloPlugin
+import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.diagnostic.Logger
 import java.io.PrintWriter
@@ -22,9 +24,8 @@ import java.util.logging.LogRecord
  * which writes to the standard IDE log file.
  *
  * In sandbox mode (i.e. when running via `./gradlew runIde`, detected via the `idea.plugin.in.sandbox.mode`
- * system property), output is additionally written to a `kilo-dev.log` file inside the sandbox log directory.
- * This makes it easy to tail frontend and backend logs side-by-side during development without opening the
- * IDE's own log viewer.
+ * system property), output is written only to a `kilo-dev.log` file inside the IDE log directory. RC plugin builds
+ * write to both IntelliJ's log and `kilo-dev.log`.
  *
  * Usage:
  * ```kotlin
@@ -46,12 +47,31 @@ interface KiloLog {
     fun error(msg: String, t: Throwable? = null)
 
     companion object {
-        private val sandbox = System.getProperty("idea.plugin.in.sandbox.mode", "false").toBoolean()
-
         fun create(cls: Class<*>): KiloLog {
+            if (sandbox()) return FileLog(cls)
             val intellij = IntellijLog(cls)
-            if (!sandbox) return intellij
+            if (!runCatching { KiloPlugin.isRc() }.getOrDefault(false)) return intellij
             return CompositeLog(intellij, FileLog(cls))
+        }
+
+        fun sandbox(): Boolean = System.getProperty("idea.plugin.in.sandbox.mode", "false").toBoolean()
+
+        fun payload(log: KiloLog? = null): Map<String, String> = buildMap {
+            put("platform", "jetbrains")
+            put("client", "jetbrains")
+            put("feature", "jetbrains-plugin")
+            runCatching {
+                val info = ApplicationInfo.getInstance()
+                put("editorName", info.fullApplicationName)
+                put("jetbrainsBuild", info.build.asString())
+            }.onFailure { log?.info("Could not read ApplicationInfo for environment payload: ${it.message}") }
+            runCatching {
+                val version = KiloPlugin.version()
+                if (version != null) {
+                    put("pluginVersion", version)
+                    put("appVersion", version)
+                }
+            }.onFailure { log?.info("Could not read plugin version for environment payload: ${it.message}") }
         }
     }
 }
@@ -80,9 +100,11 @@ internal class FileLog(cls: Class<*>) : KiloLog {
 
         private val root: java.util.logging.Logger by lazy {
             val logger = java.util.logging.Logger.getLogger("ai.kilocode")
+            val payload = KiloLog.payload().entries.joinToString(" ") { "${it.key}=${it.value}" }
             logger.addHandler(handler)
             logger.useParentHandlers = false
             logger.level = level
+            logger.log(Level.INFO, "environment payload: $payload")
             logger
         }
 

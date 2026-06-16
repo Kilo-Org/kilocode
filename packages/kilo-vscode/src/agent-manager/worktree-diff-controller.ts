@@ -5,6 +5,7 @@ import type { DiffFile } from "../diff/types"
 import type { DiffSource, DiffSourceDescriptor, DiffSourceFetch } from "../diff/sources/types"
 import type { ApplyConflict, GitOps } from "./GitOps"
 import { shouldStopDiffPolling } from "./delete-worktree"
+import { Semaphore } from "./semaphore"
 import { remoteRef, type ManagedSession, type WorktreeStateManager } from "./WorktreeStateManager"
 import type { AgentManagerOutMessage, WorktreeDiffEntry } from "./types"
 
@@ -33,6 +34,7 @@ export interface WorktreeDiffControllerContext {
 
 export class WorktreeDiffController {
   private readonly controller: SourceController
+  private readonly details = new Semaphore(3)
   private target: Target | undefined
   private applying: string | undefined
 
@@ -251,15 +253,17 @@ export class WorktreeDiffController {
 
   private async fetchFile(sessionId: string, file: string): Promise<DiffFile | null> {
     await this.ready("stateReady rejected, continuing diff detail resolve:")
-    const target = await this.ensureTarget(sessionId)
-    if (!target) return null
+    return this.details.run(async () => {
+      const target = await this.ensureTarget(sessionId)
+      if (!target) return null
 
-    try {
-      return (await this.ctx.localDiffFile(target.directory, target.baseBranch, file)) as AgentManagerDiffFile | null
-    } catch (error) {
-      this.ctx.log("Failed to fetch worktree diff file:", error)
-      return null
-    }
+      try {
+        return (await this.ctx.localDiffFile(target.directory, target.baseBranch, file)) as AgentManagerDiffFile | null
+      } catch (error) {
+        this.ctx.log("Failed to fetch worktree diff file:", error)
+        return null
+      }
+    })
   }
 
   private async revertFile(sessionId: string, file: string): Promise<{ ok: boolean; message: string }> {

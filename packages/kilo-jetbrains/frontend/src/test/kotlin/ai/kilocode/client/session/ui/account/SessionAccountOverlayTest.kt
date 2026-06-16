@@ -3,8 +3,8 @@ package ai.kilocode.client.session.ui.account
 import ai.kilocode.client.session.controller.SessionControllerEvent
 import ai.kilocode.client.session.controller.SessionControllerEvent.AccountOverlaySnapshot
 import ai.kilocode.client.session.controller.SessionControllerTestBase
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.FilledBadgeIcon
-import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileBalanceDto
 import ai.kilocode.rpc.dto.ProfileDto
@@ -201,12 +201,12 @@ class SessionAccountOverlayTest : SessionControllerTestBase() {
         }
     }
 
-    fun `test account switcher uses card background and border`() {
+    fun `test account switcher uses session view background and border`() {
         val prof = profile(email = "user@example.com")
         show(snap(prof))
         edt {
-            assertEquals(UiStyle.Colors.cardBg(), panel.panelBackground())
-            assertEquals(UiStyle.Colors.cardBorder(), panel.panelBorderColor())
+            assertEquals(SessionUiStyle.AccountPopup.bgColor(), panel.panelBackground())
+            assertEquals(SessionUiStyle.AccountPopup.outlineColor(), panel.panelBorderColor())
         }
     }
 

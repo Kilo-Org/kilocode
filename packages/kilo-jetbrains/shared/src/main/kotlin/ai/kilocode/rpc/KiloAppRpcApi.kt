@@ -1,6 +1,7 @@
 package ai.kilocode.rpc
 
 import ai.kilocode.rpc.dto.DeviceAuthDto
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
@@ -8,6 +9,7 @@ import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import com.intellij.platform.rpc.RemoteApiProviderService
 import fleet.rpc.RemoteApi
 import fleet.rpc.Rpc
@@ -61,6 +63,9 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
     /** Persist a per-model reasoning variant selection. */
     suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto
 
+    /** Patch global CLI config values. */
+    suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto
+
     /** Refresh the user profile and return the latest data, or null if not logged in. */
     suspend fun refreshProfile(): ProfileDto?
 
@@ -85,4 +90,7 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
      * Returns the updated profile, or null if not logged in.
      */
     suspend fun setOrganization(organizationId: String?): ProfileDto?
+
+    /** Fire-and-forget behavior telemetry routed through the CLI server. */
+    suspend fun captureTelemetry(capture: TelemetryCaptureDto)
 }

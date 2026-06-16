@@ -2,7 +2,10 @@ import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/middleware/instance-context"
-import { WorkspaceRoutingMiddleware } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
+import {
+  WorkspaceRoutingMiddleware,
+  WorkspaceRoutingQuery,
+} from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 
 const root = "/telemetry"
@@ -28,6 +31,7 @@ export const TelemetryApi = HttpApi.make("telemetry")
     HttpApiGroup.make("telemetry")
       .add(
         HttpApiEndpoint.post("capture", TelemetryPaths.capture, {
+          query: WorkspaceRoutingQuery,
           payload: TelemetryCapturePayload,
           success: described(Schema.Boolean, "Event captured"),
           error: HttpApiError.BadRequest,
@@ -39,6 +43,7 @@ export const TelemetryApi = HttpApi.make("telemetry")
           }),
         ),
         HttpApiEndpoint.post("setEnabled", TelemetryPaths.setEnabled, {
+          query: WorkspaceRoutingQuery,
           payload: TelemetrySetEnabledPayload,
           success: described(Schema.Boolean, "State updated"),
           error: HttpApiError.BadRequest,
