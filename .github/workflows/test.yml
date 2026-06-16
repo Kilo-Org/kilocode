@@ -108,6 +108,8 @@ jobs:
   jetbrains:
     name: jetbrains
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    container:
+      image: ghcr.io/kilo-org/build/jetbrains:24.04
     defaults:
       run:
         shell: bash
@@ -116,20 +118,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Bun
-        uses: ./.github/actions/setup-bun
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Run JetBrains unit tests
         run: bun script/test-ci.ts
