@@ -12,6 +12,7 @@ import { Bus } from "../../src/bus"
 import { Command } from "../../src/command"
 import { Config } from "../../src/config/config"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
+import { EventV2Bridge } from "../../src/event-v2-bridge"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Env } from "../../src/env"
 import { Ripgrep } from "../../src/file/ripgrep"
@@ -43,6 +44,7 @@ import { SessionSummary } from "../../src/session/summary"
 import { Todo } from "../../src/session/todo"
 import { Skill } from "../../src/skill"
 import { Snapshot } from "../../src/snapshot"
+import { Storage } from "../../src/storage/storage"
 import { SyncEvent } from "../../src/sync"
 import { ToolRegistry } from "../../src/tool/registry"
 import { Truncate } from "../../src/tool/truncate"
@@ -139,6 +141,7 @@ function makeHttp() {
     AppFileSystem.defaultLayer,
     Reference.defaultLayer,
     SyncEvent.defaultLayer,
+    EventV2Bridge.defaultLayer,
     status,
   ).pipe(Layer.provideMerge(infra))
   const question = Question.layer.pipe(Layer.provideMerge(deps))
@@ -179,7 +182,19 @@ function makeHttp() {
       Layer.provideMerge(deps),
     ),
   ).pipe(
-    Layer.provide(Layer.mergeAll(summary, deps, Config.defaultLayer, RuntimeFlags.layer(), BackgroundJob.defaultLayer)),
+    Layer.provide(
+      Layer.mergeAll(
+        summary,
+        deps,
+        Config.defaultLayer,
+        RuntimeFlags.layer(),
+        BackgroundJob.defaultLayer,
+        Bus.layer,
+        infra,
+        Storage.defaultLayer,
+        Reference.defaultLayer,
+      ),
+    ),
   )
 }
 

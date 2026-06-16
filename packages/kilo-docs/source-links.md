@@ -27,6 +27,8 @@
   <!-- packages/kilo-vscode/src/services/autocomplete/AutocompleteServiceManager.ts -->
 - <https://app.kilo.ai/profile>
   <!-- packages/kilo-vscode/webview-ui/src/components/profile/ProfileView.tsx -->
+- <https://app.kilo.ai/tui.json>
+  <!-- packages/opencode/src/cli/cmd/tui/config/tui-migrate.ts -->
 - <https://app.kilo.ai/usage>
   <!-- packages/opencode/src/kilocode/components/dialog-kilo-profile.tsx -->
 - <https://auth.x.ai>
@@ -116,15 +118,25 @@
 - <https://kilo.ai/docs>
   <!-- packages/kilo-vscode/webview-ui/src/hooks/useSlashCommand.ts -->
   <!-- packages/opencode/src/kilocode/cli/cmd/tui/app.tsx -->
+- <https://kilo.ai/docs/ai-providers/cloudflare>
+  <!-- packages/opencode/src/cli/cmd/providers.ts -->
 - <https://kilo.ai/docs/ai-providers#custom-provider>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderDialog.tsx -->
 - <https://kilo.ai/docs/code-with-ai/platforms/vscode/whats-new>
   <!-- packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx -->
+- <https://kilo.ai/docs/customize/custom-subagents>
+  <!-- packages/opencode/src/config/config.ts -->
+- <https://kilo.ai/docs/customize/workflows>
+  <!-- packages/opencode/src/config/config.ts -->
 - <https://kilo.ai/gateway>
   <!-- packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx -->
+- <https://kilo.ai/install>
+  <!-- packages/opencode/src/kilocode/installation/index.ts -->
 - <https://kilo.ai/kiloclaw>
   <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/SetupView.tsx -->
   <!-- packages/opencode/src/kilocode/components/dialog-claw-setup.tsx -->
+- <https://kilo.ai/pricing>
+  <!-- packages/opencode/src/cli/cmd/tui/component/dialog-retry-action.tsx -->
 - <https://kilo.ai/support>
   <!-- packages/kilo-vscode/webview-ui/src/components/chat/FeedbackDialog.tsx -->
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
@@ -133,20 +145,6 @@
 - <https://opencode.ai/>
   <!-- packages/opencode/src/cli/cmd/generate.ts -->
   <!-- packages/opencode/src/kilocode/server/httpapi/public.ts -->
-- <https://opencode.ai/auth>
-  <!-- packages/opencode/src/cli/cmd/providers.ts -->
-- <https://opencode.ai/docs/agents>
-  <!-- packages/opencode/src/config/config.ts -->
-- <https://opencode.ai/docs/commands>
-  <!-- packages/opencode/src/config/config.ts -->
-- <https://opencode.ai/docs/providers/#cloudflare-ai-gateway>
-  <!-- packages/opencode/src/cli/cmd/providers.ts -->
-- <https://opencode.ai/go>
-  <!-- packages/opencode/src/cli/cmd/tui/component/dialog-retry-action.tsx -->
-- <https://opencode.ai/install>
-  <!-- packages/opencode/src/installation/index.ts -->
-- <https://opencode.ai/tui.json>
-  <!-- packages/opencode/src/cli/cmd/tui/config/tui-migrate.ts -->
 - <https://opencode.ai/zen>
   <!-- packages/kilo-vscode/webview-ui/src/i18n/en.ts -->
 - <https://openrouter.ai/docs/cookbook/administration/usage-accounting>

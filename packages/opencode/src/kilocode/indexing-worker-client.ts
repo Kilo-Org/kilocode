@@ -120,12 +120,7 @@ export namespace IndexingWorker {
           type: "request",
           id: id++,
           method: "init",
-          input: {
-            directory,
-            root,
-            config,
-            lancedbPath: process.env.KILO_LANCEDB_PATH,
-          },
+          input: { directory, root, config, lancedbPath: process.env.KILO_LANCEDB_PATH },
         }
         return call(request, (message) => {
           if (message.ok && message.method === "init") return message.value

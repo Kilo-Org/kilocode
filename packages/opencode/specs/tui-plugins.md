@@ -18,7 +18,7 @@ Example:
 
 ```json
 {
-  "$schema": "https://opencode.ai/tui.json",
+  "$schema": "https://app.kilo.ai/tui.json",
   "theme": "smoke-theme",
   "leader_timeout": 2000,
   "keybinds": {
@@ -35,7 +35,7 @@ Example:
     "notifications": true,
     "sound": true,
     "volume": 0.4,
-    "sound_pack": "opencode.default",
+    "sound_pack": "kilo.default",
     "sounds": {
       "error": "/Users/me/sounds/error.mp3"
     }
@@ -184,15 +184,15 @@ npm plugins can declare a version compatibility range in `package.json` using th
 }
 ```
 
-- The value is a semver range checked against the running OpenCode version.
+- The value is a semver range checked against the running Kilo version.
 - If the range is not satisfied, the plugin is skipped with a warning and a session error.
 - If `engines.opencode` is absent, no check is performed (backward compatible).
 - File plugins are never checked; only npm package plugins are validated.
 
 - Install flow is shared by CLI and TUI in `src/plugin/install.ts`.
 - Shared helpers are `installPlugin`, `readPluginManifest`, and `patchPluginConfig`.
-- `opencode plugin <module>` and TUI install both run install → manifest read → config patch.
-- Alias: `opencode plug <module>`.
+- `kilo plugin <module>` and TUI install both run install → manifest read → config patch.
+- Alias: `kilo plug <module>`.
 - `-g` / `--global` writes into the global config dir.
 - Local installs resolve target dir inside `patchPluginConfig`.
 - For local scope, path is `<worktree>/.opencode` only when VCS is git and `worktree !== "/"`; otherwise `<directory>/.opencode`.
@@ -213,7 +213,7 @@ npm plugins can declare a version compatibility range in `package.json` using th
 - There is no uninstall, list, or update CLI command for external plugins.
 - Local file plugins are configured directly in `tui.json`.
 
-When `plugin` entries exist in a writable `.opencode` dir or `KILO_CONFIG_DIR`, OpenCode installs `@kilocode/plugin` into that dir and writes:
+When `plugin` entries exist in a writable `.opencode` dir or `KILO_CONFIG_DIR`, Kilo installs `@kilocode/plugin` into that dir and writes:
 
 - `package.json`
 - `bun.lock`
@@ -246,7 +246,7 @@ Top-level API groups exposed to `tui(api, options, meta)`:
 ### Keymap
 
 - `api.keymap` exposes the raw `Keymap<Renderable, KeyEvent>` instance from the host.
-- The host already installs the default OpenTUI bundle (`default keys`, metadata fields, and enabled fields) plus OpenCode's comma bindings, leader token, base layout fallback, pending-sequence helpers, and managed textarea layer.
+- The host already installs the default OpenTUI bundle (`default keys`, metadata fields, and enabled fields) plus Kilo's comma bindings, leader token, base layout fallback, pending-sequence helpers, and managed textarea layer.
 - Register commands with `api.keymap.registerLayer({ commands: [...] })`.
 - Register key bindings with `bindings: [{ key, cmd, desc }]` in the same layer or a separate layer.
 - Use `api.keymap.acquireResource(...)` for shared plugin addon setup that should ref-count against the host keymap.
@@ -275,7 +275,7 @@ Top-level API groups exposed to `tui(api, options, meta)`:
 - `api.attention.soundboard.registerPack({ id, name?, sounds })` registers a sound pack and returns a disposer. Relative paths resolve from the plugin root and are cleaned up on plugin deactivation.
 - `api.attention.soundboard.activate(id, { persist })` selects the active pack. `persist: true` writes the selected pack id to TUI KV state, not `tui.json`.
 - `api.attention.soundboard.current()` and `list()` expose the active/registered packs for plugin UX.
-- Config `attention.sounds` overrides active-pack sounds by slot. Failed loads fall back to the active pack and then `opencode.default`.
+- Config `attention.sounds` overrides active-pack sounds by slot. Failed loads fall back to the active pack and then `kilo.default`.
 - The host strips ANSI/control characters and collapses newlines before sending text to the terminal notification API.
 - Terminal and OS settings decide whether a requested notification is visibly displayed.
 - Prefer privacy-safe messages such as `"A question needs your input"`; avoid full commands, paths, prompts, errors, secrets, or file contents unless the plugin intentionally exposes them.

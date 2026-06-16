@@ -15,11 +15,11 @@ import z from "zod"
 import { zodObject } from "@opencode-ai/core/effect-zod"
 import { Effect } from "effect"
 
-type Provide = typeof import("@/project/with-instance").provide
+type Provide = typeof import("@/kilocode/instance").provide
 
 async function provide<R>(input: { directory: string; fn: () => R }): Promise<R> {
-  const { WithInstance } = await import("@/project/with-instance")
-  return WithInstance.provide(input)
+  const { provide } = await import("@/kilocode/instance")
+  return provide(input)
 }
 
 const QuestionData = z.object({

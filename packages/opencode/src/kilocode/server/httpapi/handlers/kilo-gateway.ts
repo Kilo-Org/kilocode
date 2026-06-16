@@ -32,7 +32,7 @@ import { Auth } from "@/auth"
 import { EffectBridge } from "@/effect/bridge"
 import { Bus } from "@/bus"
 import { Identifier } from "@/id/id"
-import { Instance } from "@/project/instance"
+import { Instance } from "@/kilocode/instance"
 import { InstanceStore } from "@/project/instance-store"
 import { ModelCache } from "@/provider/model-cache"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
@@ -471,7 +471,10 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
                   MessageTable,
                   PartTable,
                   SessionToRow: Session.toRow,
-                  Bus,
+                  Bus: {
+                    publish: (_event, payload) =>
+                      Bus.publish(Instance.current, Session.Event.Created, payload as never),
+                  },
                   SessionCreatedEvent: Session.Event.Created,
                   Identifier,
                 }),

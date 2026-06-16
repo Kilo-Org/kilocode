@@ -34,6 +34,13 @@ import { SuggestBar } from "./SuggestBar"
 // We render these ourselves via ToolRegistry when they complete,
 // so the user can see what the AI set up.
 export const UPSTREAM_SUPPRESSED_TOOLS = new Set(["todowrite", "todoread"])
+const EDIT_TOOLS = new Set(["edit", "write", "apply_patch"])
+
+function editOpen(part: SDKPart, open: boolean) {
+  if (part.type !== "tool") return undefined
+  const tool = (part as unknown as ToolPart).tool
+  return EDIT_TOOLS.has(tool) ? open : undefined
+}
 
 /** Extract plan path from a completed plan_exit tool part. */
 function planExitInfo(part: SDKPart): { plan: string } | undefined {
@@ -179,6 +186,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const display = useDisplay()
   const { config } = useConfig()
   const open = createMemo(() => config().terminal_command_display !== "collapsed")
+  const edit = createMemo(() => config().code_edit_display === "expanded")
   const rates = createMemo(() =>
     props.showTokenThroughput ? messageRates(props.message, session.allParts()) : undefined,
   )
@@ -279,6 +287,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                       part={part}
                                       message={props.message as SDKMessage}
                                       showAssistantCopyPartID={props.showAssistantCopyPartID}
+                                      defaultOpen={editOpen(part, edit())}
                                       reasoningAutoCollapse={display.reasoningAutoCollapse()}
                                       feedback={props.feedback}
                                       animate={

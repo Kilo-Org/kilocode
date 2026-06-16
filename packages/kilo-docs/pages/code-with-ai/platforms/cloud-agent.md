@@ -147,6 +147,12 @@ Triggers allow you to initiate cloud agent sessions automatically, either via HT
 Triggers are currently in beta and subject to change.
 {% /callout %}
 
+Webhook triggers and scheduled triggers use the same trigger concepts across Cloud
+Agent and KiloClaw, but target different agents. Use Cloud Agent triggers when an
+HTTP event or schedule should start a Cloud Agent session against a repository.
+Use KiloClaw triggers when the event should deliver a chat message to a KiloClaw
+instance.
+
 ### Accessing Triggers
 
 Triggers are accessible from the main sidebar under **Webhooks / Triggers** and link to [https://app.kilo.ai/cloud/triggers](https://app.kilo.ai/cloud/triggers) for personal accounts. Organization-level trigger configurations are available through your organization's sidebar.
@@ -185,6 +191,15 @@ Additional limits:
 - **In-flight cap**: at most **20 requests per trigger** can be in `captured` or `inprogress` at once (returns `429`)
 
 The trigger endpoint will return rate limit responses when the number of queued or processing requests exceeds system capacity.
+
+### Request History
+
+Open a trigger's request history to inspect recent invocations. History entries
+show the source (webhook or scheduled), status such as captured, in progress,
+success, or failed, request metadata, payload details when available, and links
+or sharing actions for the resulting session. Use this view to debug webhook
+payloads, scheduled runs, and organization handoff without changing the trigger
+configuration.
 
 ### Prompt Template Variables
 

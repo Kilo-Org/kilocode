@@ -1,4 +1,5 @@
-import { Cause, Duration, Effect, Layer, Schedule, Schema, Semaphore, Struct, Context } from "effect" // kilocode_change
+import { Cause, Duration, Effect, Layer, Schedule, Schema, Semaphore, Context } from "effect"
+import { Struct } from "effect" // kilocode_change
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { formatPatch, structuredPatch } from "diff"
 import path from "path"
@@ -184,7 +185,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             files: string[],
             opts?: { env?: Record<string, string>; root?: boolean },
           ) {
-          // kilocode_change end
+            // kilocode_change end
             if (!files.length) return
             // kilocode_change start
             // A new root snapshot covers the full worktree, so a single pathspec avoids
@@ -244,7 +245,8 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             yield* fs.writeFileString(target, text ? `${text}\n` : "").pipe(Effect.orDie)
           })
 
-          const add = Effect.fnUntraced(function* (opts?: { env?: Record<string, string>; root?: boolean }) { // kilocode_change
+          const add = Effect.fnUntraced(function* (opts?: { env?: Record<string, string>; root?: boolean }) {
+            // kilocode_change
             yield* sync()
             const [diff, other] = yield* Effect.all(
               [
@@ -347,7 +349,8 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             )
           })
 
-          const track = Effect.fnUntraced(function* (opts?: Parameters<Interface["track"]>[0]) { // kilocode_change
+          const track = Effect.fnUntraced(function* (opts?: Parameters<Interface["track"]>[0]) {
+            // kilocode_change
             return yield* locked(
               Effect.gen(function* () {
                 if (!(yield* enabled())) return

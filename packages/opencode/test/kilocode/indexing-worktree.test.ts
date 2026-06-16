@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { mkdir } from "node:fs/promises"
 import type { Config } from "../../src/config/config"
 import { KiloIndexing } from "../../src/kilocode/indexing"
-import { WithInstance } from "../../src/project/with-instance"
+import { provideTestInstance } from "../fixture/fixture"
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 const cfg: Partial<Config.Info> = {
@@ -32,7 +32,7 @@ describe("indexing worktree disable", () => {
     const dir = `${tmp.path}/.kilo/worktrees/feature`
     await mkdir(dir, { recursive: true })
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: dir,
       fn: async () => {
         const status = await KiloIndexing.current()
@@ -52,7 +52,7 @@ describe("indexing worktree disable", () => {
     const dir = `${tmp.path}/.kilocode/worktrees/feature`
     await mkdir(dir, { recursive: true })
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: dir,
       fn: async () => {
         const status = await KiloIndexing.current()

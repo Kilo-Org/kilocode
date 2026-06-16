@@ -47,6 +47,7 @@ import { SessionSummary } from "@/session/summary"
 import { Todo } from "@/session/todo"
 import { SessionShare } from "@/share/session"
 import { ShareNext } from "@/share/share-next"
+import { EventV2Bridge } from "@/event-v2-bridge"
 import { Skill } from "@/skill"
 import { Snapshot } from "@/snapshot"
 import { Storage } from "@/storage/storage" // kilocode_change
@@ -112,6 +113,7 @@ const authOnlyRouterLayer = authorizationRouterMiddleware.layer.pipe(Layer.provi
 const httpApiAuthLayer = authorizationLayer.pipe(Layer.provide(ServerAuth.Config.defaultLayer))
 const rootApiRoutes = HttpApiBuilder.layer(RootHttpApi).pipe(
   Layer.provide([controlHandlers, globalHandlers]),
+  Layer.provide(schemaErrorLayer),
   Layer.provide(httpApiAuthLayer),
 )
 const instanceRouterLayer = authorizationRouterMiddleware
@@ -149,6 +151,7 @@ const instanceRoutes = Layer.mergeAll(rawInstanceRoutes, instanceApiRoutes).pipe
     httpApiAuthLayer,
     workspaceRoutingLayer.pipe(Layer.provide(Socket.layerWebSocketConstructorGlobal)),
     instanceContextLayer,
+    schemaErrorLayer,
   ]),
 )
 
@@ -185,7 +188,6 @@ export function createRoutes(
   corsOptions?: CorsOptions,
 ): Layer.Layer<never, EffectConfig.ConfigError, RouteRequirements> {
   return Layer.mergeAll(rootApiRoutes, eventApiRoutes, instanceRoutes, docRoute, uiRoute).pipe(
-    Layer.provide(schemaErrorLayer), // kilocode_change
     Layer.provide([
       errorLayer,
       compressionLayer,
@@ -228,6 +230,7 @@ export function createRoutes(
       Snapshot.defaultLayer,
       Storage.defaultLayer, // kilocode_change
       SyncEvent.defaultLayer,
+      EventV2Bridge.defaultLayer,
       Skill.defaultLayer,
       Todo.defaultLayer,
       ToolRegistry.defaultLayer,

@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/theme/resolve"
+export * from "@opencode-ai/ui/theme/resolve"

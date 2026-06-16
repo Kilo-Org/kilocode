@@ -34,9 +34,10 @@ export const KNOWN_KEYS: ReadonlyArray<string> = [
   "compaction",
   "commit_message",
   "tools",
-  "layout",
   "auto_collapse_reasoning",
   "terminal_command_display",
+  "code_edit_display",
+  "hide_prompt_training_models",
   "indexing",
   "experimental",
 ]

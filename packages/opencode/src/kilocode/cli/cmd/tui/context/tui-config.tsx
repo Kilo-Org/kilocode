@@ -30,7 +30,7 @@ export namespace KiloTuiConfig {
           notifications: next.attention?.notifications ?? true,
           sound: next.attention?.sound ?? true,
           volume: next.attention?.volume ?? 0.4,
-          sound_pack: next.attention?.sound_pack ?? "opencode.default",
+          sound_pack: next.attention?.sound_pack ?? "kilo.default",
           sounds: next.attention?.sounds ?? {},
         },
         keybinds: createBindingLookup(TuiKeybind.toBindingConfig(keybinds), {

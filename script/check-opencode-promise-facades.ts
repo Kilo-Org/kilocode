@@ -26,11 +26,10 @@ const allow: Record<string, string> = {
   "cli/cmd/run/variant.shared.ts": "direct run variant persistence runtime boundary with test filesystem injection",
   "cli/cmd/tui/config/tui.ts": "separately tracked TUI config facade",
   "installation/index.ts": "existing installation facade outside #10655",
-  "session/compaction.ts": "existing compaction facade outside #10655",
 }
 
 const testAllow: Record<string, { count: number; reason: string }> = {
-  "control-plane/workspace.test.ts": { count: 3, reason: "existing runtime integration test" },
+  "control-plane/workspace.test.ts": { count: 5, reason: "existing runtime integration test" },
   "kilocode/config-resilience.test.ts": { count: 4, reason: "existing runtime integration test" },
   "kilocode/config-validation.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/plan-followup.test.ts": { count: 4, reason: "existing runtime integration test" },
@@ -39,8 +38,10 @@ const testAllow: Record<string, { count: number; reason: string }> = {
   "kilocode/session/session.test.ts": { count: 5, reason: "existing runtime integration test" },
   "provider/amazon-bedrock.test.ts": { count: 2, reason: "existing runtime integration test" },
   "provider/provider.test.ts": { count: 3, reason: "existing runtime integration test" },
+  "server/experimental-session-list.test.ts": { count: 2, reason: "Kilo session list integration test" },
+  "server/httpapi-event.test.ts": { count: 6, reason: "event stream integration test" },
   "session/llm.test.ts": { count: 2, reason: "existing runtime integration test" },
-  "tool/recall.test.ts": { count: 10, reason: "existing runtime integration test" },
+  "tool/recall.test.ts": { count: 11, reason: "existing runtime integration test" },
 }
 
 const owned = (file: string) => file.startsWith("kilocode/") || file.startsWith("kilo-sessions/")

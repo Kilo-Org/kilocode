@@ -2,7 +2,7 @@ import { test, expect } from "bun:test"
 import { $ } from "bun"
 import { Effect } from "effect"
 import { Snapshot } from "../../src/snapshot"
-import { WithInstance } from "../../src/project/with-instance"
+import { provideTestInstance } from "../fixture/fixture"
 import { Filesystem } from "../../src/util/filesystem"
 import * as Log from "@opencode-ai/core/util/log"
 import { tmpdir } from "../fixture/fixture"
@@ -27,7 +27,7 @@ function run<A>(body: (snapshot: Snapshot.Interface) => Effect.Effect<A>) {
 
 test("diffFull returns cached result for same hash pair", async () => {
   await using tmp = await bootstrap()
-  await WithInstance.provide({
+  await provideTestInstance({
     directory: tmp.path,
     fn: () =>
       run((snapshot) =>
@@ -53,7 +53,7 @@ test("diffFull returns cached result for same hash pair", async () => {
 
 test("diffFull returns empty array when from === to", async () => {
   await using tmp = await bootstrap()
-  await WithInstance.provide({
+  await provideTestInstance({
     directory: tmp.path,
     fn: () =>
       run((snapshot) =>
@@ -70,7 +70,7 @@ test("diffFull returns empty array when from === to", async () => {
 
 test("diffFull concurrent calls for same pair share one result", async () => {
   await using tmp = await bootstrap()
-  await WithInstance.provide({
+  await provideTestInstance({
     directory: tmp.path,
     fn: () =>
       run((snapshot) =>

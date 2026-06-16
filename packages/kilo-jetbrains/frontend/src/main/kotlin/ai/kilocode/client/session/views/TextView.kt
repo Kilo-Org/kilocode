@@ -4,7 +4,6 @@ import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
-import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.ui.md.MdView
 import ai.kilocode.client.ui.md.MdViewFactory
@@ -18,7 +17,7 @@ import java.awt.BorderLayout
  */
 open class TextView(
     text: Text,
-    transparent: Boolean = false,
+    transparent: Boolean = true,
     openUrl: (String) -> Unit = {},
     selection: SessionSelection? = null,
 ) : PartView() {
@@ -73,7 +72,7 @@ open class TextView(
 
     protected open fun styleFont(style: SessionEditorStyle) = style.transcriptFont
 
-    protected open fun styleBackground(style: SessionEditorStyle) = SessionUiStyle.Transcript.bgColor()
+    protected open fun styleBackground(style: SessionEditorStyle) = style.editorBackground
 
     private fun refresh() {
         revalidate()

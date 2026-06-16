@@ -8,7 +8,7 @@ import * as LSPServer from "../../src/lsp/server"
 import { TsClient } from "../../src/kilocode/ts-client"
 import { TsCheck } from "../../src/kilocode/ts-check"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import { Instance, type InstanceContext } from "../../src/project/instance"
+import { Instance, type InstanceContext } from "../../src/kilocode/instance"
 import { disposeAllInstances } from "../fixture/fixture"
 import type { RuntimeFlags } from "../../src/effect/runtime-flags"
 

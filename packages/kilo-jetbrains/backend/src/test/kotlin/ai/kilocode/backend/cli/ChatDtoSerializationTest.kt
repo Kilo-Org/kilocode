@@ -217,9 +217,29 @@ class ChatDtoSerializationTest {
     }
 
     @Test
+    fun `PartDto file fields are preserved in round-trip`() {
+        val part = PartDto(
+            id = "p1", sessionID = "s1", messageID = "m1",
+            type = "file", mime = "image/png", url = "file:///tmp/a.png", filename = "a.png",
+        )
+        val encoded = json.encodeToString(PartDto.serializer(), part)
+        assertTrue(encoded.contains(""""mime":"image/png""""))
+        assertTrue(encoded.contains(""""url":"file:///tmp/a.png""""))
+        assertTrue(encoded.contains(""""filename":"a.png""""))
+
+        val decoded = json.decodeFromString(PartDto.serializer(), encoded)
+        assertEquals("image/png", decoded.mime)
+        assertEquals("file:///tmp/a.png", decoded.url)
+        assertEquals("a.png", decoded.filename)
+    }
+
+    @Test
     fun `PromptDto variant is preserved in round-trip`() {
         val prompt = PromptDto(
-            parts = listOf(PromptPartDto("text", "hello")),
+            parts = listOf(
+                PromptPartDto("text", "hello"),
+                PromptPartDto(type = "file", mime = "image/png", url = "file:///tmp/a.png", filename = "a.png"),
+            ),
             providerID = "kilo",
             modelID = "gpt-5",
             agent = "code",
@@ -228,7 +248,12 @@ class ChatDtoSerializationTest {
         val encoded = json.encodeToString(PromptDto.serializer(), prompt)
 
         assertTrue(encoded.contains(""""variant":"medium""""))
-        assertEquals("medium", json.decodeFromString(PromptDto.serializer(), encoded).variant)
+        val decoded = json.decodeFromString(PromptDto.serializer(), encoded)
+        assertEquals("medium", decoded.variant)
+        assertEquals("file", decoded.parts[1].type)
+        assertEquals("image/png", decoded.parts[1].mime)
+        assertEquals("file:///tmp/a.png", decoded.parts[1].url)
+        assertEquals("a.png", decoded.parts[1].filename)
     }
 
     // ------ helpers ------

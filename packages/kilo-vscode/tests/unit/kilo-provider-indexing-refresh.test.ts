@@ -109,6 +109,21 @@ describe("KiloProvider indexing refresh", () => {
     expect(indexing).toBe(0)
   })
 
+  it("refreshes providers when prompt-training model visibility changes", async () => {
+    const conn = createConnection()
+    const provider = new KiloProvider({} as never, conn.service as never)
+    const internal = provider as unknown as Internals
+    let calls = 0
+    internal.connectionState = "connected"
+    internal.fetchAndSendProviders = async () => {
+      calls += 1
+    }
+
+    await internal.handleUpdateConfig({ hide_prompt_training_models: true })
+
+    expect(calls).toBe(1)
+  })
+
   it("passes scoped unset paths to the config overlay endpoint", async () => {
     const conn = createConnection()
     const provider = new KiloProvider({} as never, conn.service as never)
