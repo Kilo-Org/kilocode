@@ -1514,10 +1514,6 @@ export const dict = {
 
   "settings.display.username.title": "ユーザー名",
   "settings.display.username.description": "会話に表示されるカスタムユーザー名",
-  "settings.display.layout.title": "レイアウト",
-  "settings.display.layout.description": "チャットインターフェースのレイアウトモード",
-  "settings.display.layout.auto": "自動",
-  "settings.display.layout.stretch": "ストレッチ",
   "settings.display.fontSize.title": "フォントサイズ",
   "settings.display.fontSize.description": "VS Code とは独立して Kilo webview UI のフォントサイズを調整します。",
   "settings.display.reasoningAutoCollapse.title": "推論を自動で折りたたむ",

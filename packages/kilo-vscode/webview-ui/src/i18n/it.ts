@@ -1350,10 +1350,6 @@ export const dict = {
     "es. Genera messaggi di commit in spagnolo seguendo il formato conventional commits. Restituisci SOLO il messaggio di commit.",
   "settings.display.username.title": "Nome utente",
   "settings.display.username.description": "Nome utente personalizzato mostrato nelle conversazioni",
-  "settings.display.layout.title": "Layout",
-  "settings.display.layout.description": "Modalità layout per l'interfaccia chat",
-  "settings.display.layout.auto": "Auto",
-  "settings.display.layout.stretch": "Esteso",
   "settings.display.fontSize.title": "Dimensione font",
   "settings.display.fontSize.description":
     "Regola la dimensione del font della webview Kilo indipendentemente da VS Code.",

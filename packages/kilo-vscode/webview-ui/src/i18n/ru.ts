@@ -1528,10 +1528,6 @@ export const dict = {
 
   "settings.display.username.title": "Имя пользователя",
   "settings.display.username.description": "Пользовательское имя в разговорах",
-  "settings.display.layout.title": "Макет",
-  "settings.display.layout.description": "Режим макета для интерфейса чата",
-  "settings.display.layout.auto": "Авто",
-  "settings.display.layout.stretch": "Растянуть",
   "settings.display.fontSize.title": "Размер шрифта",
   "settings.display.fontSize.description": "Настройте размер шрифта webview UI для Kilo независимо от VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Автоматически сворачивать рассуждение",
