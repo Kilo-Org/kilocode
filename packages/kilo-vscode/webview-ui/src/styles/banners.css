@@ -249,3 +249,52 @@
   margin: 0;
   line-height: 1.4;
 }
+
+/* ============================================
+   Kilo Pass Promo Banner
+   ============================================ */
+
+.promo-banner {
+  margin: 8px 12px;
+  padding: 12px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--vscode-button-background, #0e639c) 12%, var(--surface-inset-base, var(--vscode-editorWidget-background, #252526)));
+  border: 1px solid color-mix(in srgb, var(--vscode-button-background, #0e639c) 40%, var(--border-weaker-base, var(--vscode-editorWidget-border, #454545)));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.promo-banner-headline {
+  font-weight: 700;
+  font-size: var(--kilo-font-size-13);
+  color: var(--text-strong, var(--vscode-foreground));
+}
+
+.promo-banner-subheadline {
+  font-size: var(--kilo-font-size-12);
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  line-height: 1.4;
+  margin: 0;
+}
+
+.promo-banner-cta {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 5px 12px;
+  border-radius: 2px;
+  background: var(--vscode-button-background, #0e639c);
+  color: var(--vscode-button-foreground, #ffffff);
+  font-size: var(--kilo-font-size-12);
+  font-weight: 500;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.promo-banner-cta:hover {
+  background: var(--vscode-button-hoverBackground, #1177bb);
+  color: var(--vscode-button-foreground, #ffffff);
+  text-decoration: none;
+}
