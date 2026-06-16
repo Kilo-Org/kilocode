@@ -1027,6 +1027,7 @@ export function* listGlobal(input?: {
   projectID?: string
   directory?: string
   directories?: string[]
+  currentDirectory?: string
   roots?: boolean
   start?: number
   cursor?: number

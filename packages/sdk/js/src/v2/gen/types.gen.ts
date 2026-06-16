@@ -1396,6 +1396,7 @@ export type Config = {
     diff_style?: "unified" | "split"
   }
   terminal_command_display?: "expanded" | "collapsed"
+  code_edit_display?: "expanded" | "collapsed"
   hide_prompt_training_models?: boolean
   model?: string
   small_model?: string
@@ -1638,6 +1639,11 @@ export type ToolListItem = {
 export type ToolList = Array<ToolListItem>
 
 export type ToolIds = Array<string>
+
+export type WorktreeListItem = {
+  directory: string
+  managed: boolean
+}
 
 export type WorktreeError = {
   name:
@@ -4776,9 +4782,9 @@ export type WorktreeListError = WorktreeListErrors[keyof WorktreeListErrors]
 
 export type WorktreeListResponses = {
   /**
-   * List of worktree directories
+   * List of worktrees
    */
-  200: Array<string>
+  200: Array<WorktreeListItem>
 }
 
 export type WorktreeListResponse = WorktreeListResponses[keyof WorktreeListResponses]
@@ -4935,6 +4941,7 @@ export type ExperimentalSessionListData = {
     workspace?: string
     projectID?: string
     worktrees?: boolean
+    current?: "true" | "false"
     roots?: boolean | "true" | "false"
     start?: number
     cursor?: number

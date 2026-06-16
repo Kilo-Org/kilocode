@@ -75,6 +75,7 @@ interface DiffPanelProps {
   onCommentsChange: (comments: ReviewComment[]) => void
   composer?: ReviewComposer
   onSendAll?: () => void
+  onSendClick?: () => void
   onClose: () => void
   onExpand?: () => void
   onRequestDiff?: (file: string) => void
@@ -439,6 +440,11 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     props.onSendAll?.()
   }
 
+  const sendAllClick = () => {
+    props.onSendClick?.()
+    sendAllToChat()
+  }
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key !== "Enter") return
     if (!(e.metaKey || e.ctrlKey)) return
@@ -731,7 +737,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
               {comments().length} comment{comments().length !== 1 ? "s" : ""}
             </span>
             <TooltipKeybind title={t("agentManager.review.sendAllToChat")} keybind={sendAllKeybind()} placement="top">
-              <Button variant="primary" size="small" onClick={sendAllToChat}>
+              <Button variant="primary" size="small" onClick={sendAllClick}>
                 {t("agentManager.review.sendAllToChat")}
               </Button>
             </TooltipKeybind>

@@ -110,6 +110,7 @@ class KiloBackendAppService private constructor(
     private var watcher: Job? = null
     private var eventWatcher: Job? = null
     private var loader: Job? = null
+    private var closed = false
     private val loadLock = Any()
 
     private val _appState = MutableStateFlow<KiloAppState>(KiloAppState.Disconnected)
@@ -156,6 +157,12 @@ class KiloBackendAppService private constructor(
         mutex.withLock {
             clear()
             connection.reinstall()
+        }
+    }
+
+    suspend fun shutdownForUnload() {
+        mutex.withLock {
+            shutdown()
         }
     }
 
@@ -806,6 +813,12 @@ class KiloBackendAppService private constructor(
     }
 
     override fun dispose() {
+        shutdown()
+    }
+
+    private fun shutdown() {
+        if (closed) return
+        closed = true
         watcher?.cancel()
         watcher = null
         clear()

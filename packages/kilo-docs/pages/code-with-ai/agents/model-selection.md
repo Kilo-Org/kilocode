@@ -142,6 +142,49 @@ The model selection is remembered per mode across sessions.
 
 For details on configuring subagent models, see [Custom Subagents](/docs/customize/custom-subagents).
 
+## Selecting a Model via a Link (VS Code)
+
+The VS Code extension supports a `vscode://` protocol handler that lets you open VS Code and automatically select a specific model — no manual picker interaction required. This is useful for sharing model recommendations, launching a specific model tier from a web page, or switching quickly to a newly announced model.
+
+### URL Format
+
+```
+vscode://kilocode.kilo-code/kilocode/model?model=<modelID>
+```
+
+Replace `<modelID>` with the Kilo Gateway model ID you want to select (e.g. `kilo-auto/free`). Only models available in the Kilo Gateway catalog are accepted; the link is silently ignored if the model ID is not found.
+
+### Example: Auto Free
+
+To open Kilo Code and switch to the [Auto Free](/docs/code-with-ai/agents/auto-model) tier (`kilo-auto/free`), use:
+
+```
+vscode://kilocode.kilo-code/kilocode/model?model=kilo-auto%2Ffree
+```
+
+{% callout type="tip" %}
+URL-encode the `/` in model IDs as `%2F` when embedding this URL in HTML links or other contexts where bare slashes may be misinterpreted.
+{% /callout %}
+
+### How It Works
+
+- **VS Code open**: the Kilo sidebar is focused and the model is selected in the active session immediately.
+- **VS Code closed**: VS Code launches, then applies the model selection once the extension is ready.
+- The model is validated against the current Kilo Gateway model catalog before being applied. If the model ID is not found in the catalog, the deep link is silently ignored.
+- Model selection via deep link follows the same precedence as using the model picker: it applies as a session override for the active session (or sets the next-session model when no session is active), and updates your model recents list. It does **not** change your configured default model in settings.
+
+### Sharing and Embedding
+
+You can embed these links in a web page:
+
+```html
+<a href="vscode://kilocode.kilo-code/kilocode/model?model=kilo-auto%2Ffree">
+  Open Kilo Code with Auto Free
+</a>
+```
+
+Or share as a plain URL that users can paste into their browser's address bar.
+
 ## Stay Current
 
 The AI model space moves fast. Bookmark [kilo.ai/models](https://kilo.ai/models) and check back when you're evaluating options. What's best today might not be best next month — and that's actually exciting.

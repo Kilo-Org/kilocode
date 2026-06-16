@@ -2,11 +2,13 @@ package ai.kilocode.client.session.views.base
 
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.SessionViewIcons
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.awt.Color
 import java.awt.Component
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
+import javax.swing.Icon
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.border.Border
@@ -41,6 +43,22 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         assertNull(content.parent)
         view.toggle()
         assertSame(view, content.parent)
+    }
+
+    fun `test toggle uses right and down chevron icons`() {
+        val view = TestView(content = JLabel("body"))
+
+        assertSame(SessionViewIcons.chevronCollapsed, view.arrowIcon())
+        assertSame(SessionViewIcons.chevronRight, view.arrowIcon())
+        val closed = view.arrowIcon()
+
+        view.toggle()
+
+        assertSame(SessionViewIcons.chevronExpanded, view.arrowIcon())
+        assertSame(SessionViewIcons.chevronDown, view.arrowIcon())
+        assertNotSame(closed, view.arrowIcon())
+        assertEquals(closed.iconWidth, view.arrowIcon().iconWidth)
+        assertEquals(closed.iconHeight, view.arrowIcon().iconHeight)
     }
 
     fun `test non expandable hides content`() {
@@ -96,6 +114,7 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         override val contentId = "test"
         override fun update(content: Content) {}
         fun arrowVisible() = arrow.isVisible
+        fun arrowIcon(): Icon = arrow.icon
     }
 
     private fun TestView.component(index: Int): Component = components[index]

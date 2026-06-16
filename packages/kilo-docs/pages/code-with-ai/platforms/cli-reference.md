@@ -650,7 +650,7 @@ Positionals:
 Options:
       --help     Show help  [boolean]
       --version  Show version number  [boolean]
-  -m, --method   installation method to use  [string] [choices: "curl", "npm", "pnpm", "bun", "brew", "choco", "scoop"]
+  -m, --method   installation method to use  [string] [choices: "curl", "npm", "yarn", "pnpm", "bun", "brew", "choco", "scoop"]
 ```
 
 ## kilo uninstall

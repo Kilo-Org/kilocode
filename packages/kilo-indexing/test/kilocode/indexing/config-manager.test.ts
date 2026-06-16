@@ -26,6 +26,34 @@ describe("CodeIndexConfigManager", () => {
     expect(cfg.getConfig().ollamaOptions?.baseUrl).toBe("http://localhost:11434")
   })
 
+  test("configures an OpenAI-compatible endpoint without an API key", () => {
+    const cfg = new CodeIndexConfigManager(
+      createInput({
+        embedderProvider: "openai-compatible",
+        openAiKey: undefined,
+        openAiCompatibleBaseUrl: "http://localhost:1234/v1",
+      }),
+    )
+
+    expect(cfg.isFeatureConfigured).toBe(true)
+    expect(cfg.getConfig().openAiCompatibleOptions).toEqual({
+      baseUrl: "http://localhost:1234/v1",
+      apiKey: undefined,
+    })
+  })
+
+  test("requires a base URL for an OpenAI-compatible endpoint", () => {
+    const cfg = new CodeIndexConfigManager(
+      createInput({
+        embedderProvider: "openai-compatible",
+        openAiKey: undefined,
+        openAiCompatibleApiKey: "sk-test",
+      }),
+    )
+
+    expect(cfg.isFeatureConfigured).toBe(false)
+  })
+
   test("defaults vector store to LanceDB when omitted", () => {
     const cfg = new CodeIndexConfigManager(createInput({ vectorStoreProvider: undefined }))
 
@@ -140,6 +168,19 @@ describe("CodeIndexConfigManager", () => {
       )
 
       expect(result.requiresRestart).toBe(true)
+    })
+
+    test("requires restart when OpenAI-compatible auth is added or removed", () => {
+      const input = createInput({
+        embedderProvider: "openai-compatible",
+        openAiKey: undefined,
+        openAiCompatibleBaseUrl: "http://localhost:1234/v1",
+      })
+      const cfg = new CodeIndexConfigManager(input)
+
+      expect(cfg.loadConfiguration({ ...input, openAiCompatibleApiKey: "sk-test" }).requiresRestart).toBe(true)
+      expect(cfg.loadConfiguration(input).requiresRestart).toBe(true)
+      expect(cfg.loadConfiguration(input).requiresRestart).toBe(false)
     })
 
     test("requires restart when Kilo auth changes", () => {

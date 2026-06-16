@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/tooltip"
+export * from "@opencode-ai/ui/tooltip"
