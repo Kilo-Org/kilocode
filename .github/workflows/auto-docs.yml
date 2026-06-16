@@ -28,15 +28,15 @@ jobs:
   call-valtown:
     # kilocode_change start
     if: >
-      github.repository == 'Kilo-Org/kilocode' &&
-      (github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'workflow_dispatch' ||
       (
+        github.repository == 'Kilo-Org/kilocode' &&
         github.event.pull_request.merged == true &&
         (
           startsWith(github.event.pull_request.title, 'feat:') ||
           startsWith(github.event.pull_request.title, 'feat(')
         )
-      ))
+      )
     # kilocode_change end
 
     runs-on: ubuntu-latest

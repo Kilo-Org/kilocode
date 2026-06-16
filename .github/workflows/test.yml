@@ -69,8 +69,7 @@ jobs:
   unit:
     name: ${{ !matrix.settings.run && 'unit (unchanged)' || matrix.settings.total > 1 && format('unit ({0}, {1}/{2})', matrix.settings.os, matrix.settings.index, matrix.settings.total) || format('unit ({0})', matrix.settings.os) }}
     needs: changes
-    if: github.repository == 'Kilo-Org/kilocode' # kilocode_change
-    strategy:
+    strategy: # kilocode_change
       fail-fast: false
       matrix:
         settings: ${{ fromJSON(needs.changes.outputs.settings) }}
@@ -207,12 +206,12 @@ jobs:
   # kilocode_change start
   jetbrains:
     name: jetbrains
-    if: github.repository == 'Kilo-Org/kilocode' # kilocode_change
     permissions:
       contents: read
       checks: write
       pull-requests: read
     uses: ./.github/workflows/test-jetbrains.yml
+  # kilocode_change end
 
   # kilocode_change start
   unit-required:
@@ -235,9 +234,9 @@ jobs:
       - unit
       - httpapi
       - jetbrains
-    if: github.repository == 'Kilo-Org/kilocode' && always() # kilocode_change
+    if: always()
     steps:
-      - name: Verify upstream test jobs passed
+      - name: Verify upstream test jobs passed # kilocode_change
         run: |
           echo "unit=${{ needs.unit.result }}"
           echo "httpapi=${{ needs.httpapi.result }}"
