@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/font"
+export * from "@opencode-ai/ui/font"

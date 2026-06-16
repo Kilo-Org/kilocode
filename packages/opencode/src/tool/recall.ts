@@ -3,7 +3,7 @@ import { Effect, Schema } from "effect"
 import { EffectBridge } from "../effect/bridge"
 import * as Tool from "./tool"
 import { Git } from "../git"
-import { Instance } from "../project/instance"
+import { Instance } from "../kilocode/instance"
 import { Locale } from "../util/locale"
 import { Filesystem } from "../util/filesystem" // kilocode_change
 import { WorktreeFamily } from "../kilocode/worktree-family" // kilocode_change

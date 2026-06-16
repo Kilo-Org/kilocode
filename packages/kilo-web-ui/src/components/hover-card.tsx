@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/hover-card"
+export * from "@opencode-ai/ui/hover-card"

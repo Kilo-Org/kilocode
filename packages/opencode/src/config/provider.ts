@@ -12,7 +12,7 @@ export const Model = Schema.Struct({
   ai_sdk_provider: Schema.optional(Schema.Literals(AI_SDK_PROVIDERS)), // kilocode_change
   release_date: Schema.optional(Schema.String),
   attachment: Schema.optional(Schema.Boolean),
-  reasoning: Schema.optional(Schema.Boolean),
+  reasoning: Schema.optional(Schema.NullOr(Schema.Boolean)), // kilocode_change - allow null so reasoning can be removed via stripNulls on save
   temperature: Schema.optional(Schema.Boolean),
   tool_call: Schema.optional(Schema.Boolean),
   interleaved: Schema.optional(

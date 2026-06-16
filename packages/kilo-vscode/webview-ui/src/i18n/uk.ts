@@ -531,6 +531,9 @@ export const dict = {
   "notification.permission.titleSubagent": "Потрібен дозвіл (підагент)",
   "notification.permission.description": "{{sessionTitle}} у {{projectName}} потребує дозволу",
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
+  "ui.permission.doomLoop.prompt":
+    "Виявлено потенційний цикл під час роботи інструмента {{tool}}. Продовжити виконання?",
+  "ui.permission.doomLoop.rule": "Продовжувати виклики {{tool}}",
   "ui.permission.rule.addToAllowed": "Додати до дозволених",
   "ui.permission.rule.removeFromAllowed": "Видалити з дозволених",
   "ui.permission.rule.addToDenied": "Додати до заблокованих",
@@ -842,6 +845,7 @@ export const dict = {
   "provider.custom.field.providerID.description": "Малі літери, цифри, дефіс або підкреслення",
   "provider.custom.field.name.label": "Відображувана назва",
   "provider.custom.field.name.placeholder": "Мій ШІ-провайдер",
+  "provider.custom.field.package.label": "Provider API",
   "provider.custom.field.baseURL.label": "Базовий URL",
   "provider.custom.field.baseURL.placeholder": "https://api.miy-provyder.com/v1",
   "provider.custom.field.apiKey.label": "API-ключ",
@@ -868,6 +872,11 @@ export const dict = {
   "provider.custom.models.variants.thinking.placeholder": "thinking",
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.thinking.adaptive": "adaptive",
+  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
+  "provider.custom.models.variants.splitReasoning.true": "true",
+  "provider.custom.models.variants.splitReasoning.false": "false",
   "provider.custom.models.variants.chatTemplateArgs.label":
     "Увімкнути мислення через аргументи шаблону чату (напр. Hugging Face)",
   "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
@@ -881,6 +890,13 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.placeholder": "effort",
+  "provider.custom.models.variants.outputEffort.low": "low",
+  "provider.custom.models.variants.outputEffort.medium": "medium",
+  "provider.custom.models.variants.outputEffort.high": "high",
+  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.max": "max",
   "provider.custom.models.remove": "Видалити модель",
   "provider.custom.models.add": "Додати модель",
   "provider.custom.models.fetch": "Отримати моделі",
@@ -1266,6 +1282,10 @@ export const dict = {
   "settings.notifications.errors.title": "Помилки",
   "settings.notifications.errors.description": "Показувати сповіщення при виникненні помилок",
   "settings.notifications.sounds": "Звуки",
+  "settings.notifications.enable.title": "Увімкнути звукові сповіщення",
+  "settings.notifications.enable.description":
+    "Відтворювати звуки, коли сеанси завершуються, виникає помилка або потрібна ваша відповідь",
+  "settings.notifications.testSound": "Тест",
   "settings.notifications.agentSound.title": "Звук завершення агента",
   "settings.notifications.agentSound.description": "Звук, що відтворюється після завершення агента",
   "settings.notifications.permSound.title": "Звук запиту дозволу",
@@ -1273,6 +1293,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Звук помилки",
   "settings.notifications.errorSound.description": "Звук, що відтворюється при виникненні помилок",
   "settings.notifications.sound.default": "За замовчуванням",
+  "settings.notifications.sound.system": "Системний",
+  "settings.notifications.sound.description":
+    "За замовчуванням для завершення, запиту на введення та помилок використовуються різні звуки. В інших варіантах для всіх подій використовується один і той самий звук.",
   "settings.notifications.sound.none": "Немає",
 
   "settings.experimental.share.title": "Режим публікації",
@@ -1459,10 +1482,6 @@ export const dict = {
 
   "settings.display.username.title": "Ім'я користувача",
   "settings.display.username.description": "Власне ім'я користувача, що відображається в чатах",
-  "settings.display.layout.title": "Макет",
-  "settings.display.layout.description": "Режим макету для інтерфейсу чату",
-  "settings.display.layout.auto": "Автоматично",
-  "settings.display.layout.stretch": "Розтягнути",
   "settings.display.fontSize.title": "Розмір шрифту",
   "settings.display.fontSize.description": "Налаштуйте розмір шрифту webview UI для Kilo незалежно від VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Автоматично згортати міркування",
@@ -1472,6 +1491,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "Блоки редагування коду",
+  "settings.display.codeEdit.description":
+    "Виберіть, чи будуть блоки редагування коду та відмінностей спочатку розгорнутими чи згорнутими.",
+  "settings.display.codeEdit.expanded": "Розгорнуті",
+  "settings.display.codeEdit.collapsed": "Згорнуті",
 
   "settings.providers.defaultModel.title": "Модель за замовчуванням",
   "settings.providers.defaultModel.description": "Основна модель для чатів",
@@ -1481,6 +1505,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Модель субагента",
   "settings.providers.subagentModel.description":
     "Модель за замовчуванням та рівень міркування для субагентів task-tool. Залиште порожнім, щоб успадкувати модель агента, що викликає.",
+  "settings.models.hidePromptTraining.title": "Приховувати моделі, що навчаються на запитах",
+  "settings.models.hidePromptTraining.description":
+    "Приховувати моделі Kilo Gateway, постачальники яких можуть використовувати ваші запити для навчання.",
   "settings.providers.modeModels": "Модель для кожного режиму",
   "settings.providers.modeModels.description":
     "Перевизначити стандартну модель для певних режимів. Якщо не встановлено, використовується загальна стандартна модель.",

@@ -5,7 +5,7 @@ import { TuiEvent } from "@/cli/cmd/tui/event"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
 import { Identifier } from "@/id/id"
-import { Instance } from "@/project/instance"
+import { Instance } from "@/kilocode/instance"
 import { Provider } from "@/provider/provider"
 import { ProviderID, ModelID } from "@/provider/schema"
 import { Question } from "@/question"
@@ -54,9 +54,8 @@ export const PlanFollowupRuntime = {
     return AppRuntime.runPromise(Session.Service.use(run))
   },
   async loop(sessionID: SessionID) {
-    const item = await import("@/session/prompt")
-    const prompt = makeRuntime(item.SessionPrompt.Service, item.SessionPrompt.defaultLayer)
-    return prompt.runPromise((svc) => svc.loop({ sessionID }))
+    const [item, app] = await Promise.all([import("@/session/prompt"), import("@/effect/app-runtime")])
+    return app.AppRuntime.runPromise(item.SessionPrompt.Service.use((svc) => svc.loop({ sessionID })))
   },
 }
 
@@ -181,7 +180,10 @@ export namespace PlanFollowup {
       model: z
         .record(
           z.string(),
-          z.object({ providerID: z.custom<ProviderID>(Schema.is(ProviderID)), modelID: z.custom<ModelID>(Schema.is(ModelID)) }),
+          z.object({
+            providerID: z.custom<ProviderID>(Schema.is(ProviderID)),
+            modelID: z.custom<ModelID>(Schema.is(ModelID)),
+          }),
         )
         .optional(),
       variant: z.record(z.string(), z.string().optional()).optional(),
@@ -356,9 +358,9 @@ export namespace PlanFollowup {
       model: input.model,
     })
     const session = await PlanFollowupRuntime.session((svc) => svc.get(input.sessionID))
-    const { WithInstance } = await import("@/project/with-instance")
+    const { provide } = await import("@/kilocode/instance")
 
-    await WithInstance.provide({
+    await provide({
       directory: session.directory,
       fn: async () => {
         // Create the session FIRST so session.created fires immediately while the
@@ -370,7 +372,7 @@ export namespace PlanFollowup {
         pending.set(next.id, ctl)
         const { AppRuntime } = await import("@/effect/app-runtime")
         await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "busy" })))
-        await Bus.publish(TuiEvent.SessionSelect, { sessionID: next.id })
+        await Bus.publish(Instance.current, TuiEvent.SessionSelect, { sessionID: next.id })
 
         const idle = () =>
           AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "idle" }))).catch((err) => {
@@ -451,7 +453,7 @@ export namespace PlanFollowup {
             return
           }
 
-          const queue = WithInstance.provide({
+          const queue = provide({
             directory: next.directory,
             fn: async () => {
               if (ctl.signal.aborted) {

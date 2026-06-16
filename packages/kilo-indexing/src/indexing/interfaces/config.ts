@@ -17,7 +17,7 @@ export interface CodeIndexConfig {
   kiloOptions?: { apiKey: string; baseUrl?: string; organizationId?: string }
   openAiOptions?: { apiKey: string }
   ollamaOptions?: { baseUrl: string; modelId?: string }
-  openAiCompatibleOptions?: { baseUrl: string; apiKey: string }
+  openAiCompatibleOptions?: { baseUrl: string; apiKey?: string }
   geminiOptions?: { apiKey: string }
   mistralOptions?: { apiKey: string }
   vercelAiGatewayOptions?: { apiKey: string }

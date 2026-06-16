@@ -1,4 +1,5 @@
-import { useMarked, deferredHighlight, fnv1a } from "../context/marked"
+import { useMarked } from "../context/marked"
+import { deferredHighlight, fnv1a } from "../context/marked" // kilocode_change
 import { useI18n } from "../context/i18n"
 import DOMPurify from "dompurify"
 import morphdom from "morphdom"
@@ -263,7 +264,8 @@ export function Markdown(
       key: local.cacheKey,
       streaming: local.streaming ?? false,
     }),
-    async (src): Promise<Rendered> => { // kilocode_change
+    async (src): Promise<Rendered> => {
+      // kilocode_change
       if (isServer) return { content: fallback(src.text), blocks: [] } // kilocode_change
       if (!src.text) return { content: "", blocks: [] } // kilocode_change
 

@@ -42,7 +42,13 @@ import {
   stableMessageTurns,
   type MessageTurn,
 } from "../../context/session-queue"
-import { partitionRows, transcriptRows, type TranscriptRow } from "../../context/transcript-rows"
+import {
+  partitionRows,
+  retainTurn,
+  transcriptRows,
+  type TranscriptHold,
+  type TranscriptRow,
+} from "../../context/transcript-rows"
 import type { QuestionRequest, SuggestionRequest } from "../../types/messages"
 
 interface MessageListProps {
@@ -113,21 +119,12 @@ export const MessageList: Component<MessageListProps> = (props) => {
       prev,
     )
   })
-  const [held, setHeld] = createSignal<{ sid: string; turn: string }>()
+  const [held, setHeld] = createSignal<TranscriptHold>()
   createEffect(() => {
     const id = activeUserID()
     const sid = session.currentSessionID()
     const paused = autoScroll.userScrolled()
-    if (!sid || (!id && !paused)) {
-      setHeld(undefined)
-      return
-    }
-    if (!id) return
-    if (!paused) {
-      setHeld({ sid, turn: id })
-      return
-    }
-    setHeld((prev) => (prev?.sid === sid ? prev : { sid, turn: id }))
+    setHeld((prev) => retainTurn(prev, sid, id, paused))
   })
   const direct = createMemo(() => {
     const item = held()
@@ -140,6 +137,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
   // Virtua continues to own completed history and stable live chunks, but not
   // the growing assistant suffix whose measurements would produce visible jumps.
   const partition = createMemo(() => partitionRows(rows(), direct()))
+  const tail = createMemo(() => partition().direct.map((row) => row.key))
+  const lookup = createMemo(() => new Map(partition().direct.map((row) => [row.key, row])))
   const keys = createMemo(() => partition().virtual.map((row) => row.key))
   const fingerprint = createMemo(() => rowFingerprint(keys()))
   const measurement = createMemo(() => {
@@ -322,8 +321,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     )}
                   </Virtualizer>
                 </Show>
-                <For each={partition().direct}>
-                  {(row) => <TranscriptRowView row={row} onForkMessage={props.onForkMessage} />}
+                <For each={tail()}>
+                  {(key) => <TranscriptRowView row={lookup().get(key)!} onForkMessage={props.onForkMessage} />}
                 </For>
               </div>
             </Show>

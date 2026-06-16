@@ -8,8 +8,7 @@
  */
 import { describe, expect, test } from "bun:test"
 import { Global } from "@opencode-ai/core/global"
-import { WithInstance } from "../../../../src/project/with-instance" // kilocode_change
-import { disposeAllInstances, tmpdir } from "../../../fixture/fixture"
+import { disposeAllInstances, provideTestInstance, tmpdir } from "../../../fixture/fixture"
 import { directory, json, mount } from "./sync-fixture"
 
 const sessionID = "ses_undef"
@@ -29,7 +28,8 @@ describe("tui sync (#26560)", () => {
       directory,
       project_id: "proj_test",
     }
-    const { app, sync } = await WithInstance.provide({
+    // kilocode_change start
+    const { app, sync } = await provideTestInstance({
       directory: tmp.path,
       fn: () =>
         mount((url) => {
@@ -40,7 +40,8 @@ describe("tui sync (#26560)", () => {
           if (url.pathname === "/session") return json([sessionPayload])
           return undefined
         }),
-    }) // kilocode_change
+    })
+    // kilocode_change end
 
     try {
       await expect(sync.session.sync(sessionID)).resolves.toBeUndefined()

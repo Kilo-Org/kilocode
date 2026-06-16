@@ -6,7 +6,7 @@ import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
 import { IndexingStatus, disabledIndexingStatus } from "@kilocode/kilo-indexing/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
-import { Instance } from "@/project/instance"
+import { Instance } from "@/kilocode/instance"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import { AppRuntime } from "@/effect/app-runtime"
@@ -221,7 +221,7 @@ export namespace KiloIndexing {
 
   const inert = async (current: () => Status): Promise<Entry> => {
     const publish = async () => {
-      await Bus.publish(Event, { status: current() })
+      await Bus.publish(Instance.current, Event, { status: current() })
     }
 
     return {
@@ -283,7 +283,7 @@ export namespace KiloIndexing {
       delivery.task = delivery.task
         .then(async () => {
           if (disposed || same(delivery.last, next)) return
-          await Bus.publish(Event, { status: next })
+          await Bus.publish(Instance.current, Event, { status: next })
           delivery.last = next
         })
         .catch((err) => {
@@ -335,7 +335,10 @@ export namespace KiloIndexing {
       warnings.set(key, item)
       void Promise.all(
         [...workspaces].map((workspaceID) =>
-          WorkspaceContext.provide({ workspaceID, fn: () => Bus.publish(Warning, item) }),
+          WorkspaceContext.provide({
+            workspaceID,
+            fn: () => Bus.publish(Instance.current, Warning, item),
+          }),
         ),
       ).catch((err) => {
         log.error("failed to publish indexing warning", { err, workspacePath: dir })

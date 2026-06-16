@@ -32,6 +32,17 @@
 
 ## [Unreleased]
 
+## [7.0.1-rc.9] - 2026-06-15
+
+### Added
+
+- Add prompt enhancement support.
+- Support prompt and transcript attachments, including paste, drop, preview, and editor tab opening flows.
+
+### Fixed
+
+- Improve shell and markdown rendering, including code block spacing, terminal block retention, shell command highlighting, and session layout polish.
+
 ## [7.0.1-rc.8] - 2026-06-09
 
 ### Added

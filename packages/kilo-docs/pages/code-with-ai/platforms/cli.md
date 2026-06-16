@@ -90,7 +90,8 @@ For detailed help on every command and subcommand, see the [CLI Command Referenc
 | `/compact` | `/summarize` | Compact/summarize session |
 | `/undo` | - | Undo previous message |
 | `/redo` | - | Redo message |
-| `/copy` | - | Copy session transcript |
+| `/copy` | - | Copy latest agent response |
+| `/copy-session` | - | Copy session transcript |
 | `/export` | - | Export session transcript |
 | `/timestamps` | `/toggle-timestamps` | Show/hide timestamps |
 | `/thinking` | `/toggle-thinking` | Show/hide thinking blocks |

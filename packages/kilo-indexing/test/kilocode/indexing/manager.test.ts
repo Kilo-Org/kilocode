@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test"
+import { mkdtemp, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { CodeIndexManager } from "../../../src/indexing/manager"
 import type { IndexingConfigInput } from "../../../src/indexing/config-manager"
 import type { IndexingTelemetryEvent, IndexingTelemetryTrigger } from "../../../src/indexing/interfaces/telemetry"
@@ -98,6 +101,73 @@ describe("CodeIndexManager", () => {
     expect(mgr.isFeatureConfigured).toBe(false)
     expect(mgr.getCurrentStatus().systemStatus).toBe("Standby")
     expect(mgr.getCurrentStatus().message).toContain("not configured")
+  })
+
+  test("initializes an unauthenticated OpenAI-compatible endpoint without auth headers", async () => {
+    const root = await mkdtemp(join(tmpdir(), "kilo-keyless-indexing-"))
+    const workspace = join(root, "workspace")
+    const cache = join(root, "cache")
+    const requests: Array<{ authorization: string | null; apiKey: string | null }> = []
+    await Bun.write(join(workspace, ".gitkeep"), "")
+    const server = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch(req) {
+        requests.push({
+          authorization: req.headers.get("authorization"),
+          apiKey: req.headers.get("api-key"),
+        })
+        return Response.json({
+          object: "list",
+          data: [{ object: "embedding", index: 0, embedding: [0.1, 0.2, 0.3] }],
+          model: "fixture-model",
+          usage: { prompt_tokens: 1, total_tokens: 1 },
+        })
+      },
+    })
+
+    try {
+      const script = `
+        import { CodeIndexManager } from "./src/indexing/manager.ts"
+        import { normalizeIndexingStatus } from "./src/status.ts"
+        const mgr = new CodeIndexManager(${JSON.stringify(workspace)}, ${JSON.stringify(cache)})
+        try {
+          await mgr.initialize({
+            enabled: true,
+            embedderProvider: "openai-compatible",
+            vectorStoreProvider: "lancedb",
+            modelId: "fixture-model",
+            modelDimension: 3,
+            openAiCompatibleBaseUrl: ${JSON.stringify(`http://127.0.0.1:${server.port}/v1`)},
+          })
+          if (!mgr.isInitialized) throw new Error("Manager did not initialize")
+          if (normalizeIndexingStatus(mgr).state === "Disabled") throw new Error("Indexing remained disabled")
+        } finally {
+          await mgr.dispose()
+        }
+      `
+      const child = Bun.spawn([process.execPath, "-e", script], {
+        cwd: join(import.meta.dir, "../../.."),
+        stdout: "pipe",
+        stderr: "pipe",
+        windowsHide: true,
+      })
+      const gate = Promise.withResolvers<never>()
+      const timeout = setTimeout(() => {
+        child.kill()
+        gate.reject(new Error("Indexing subprocess timed out"))
+      }, 10_000)
+      const [exit, stderr] = await Promise.race([
+        Promise.all([child.exited, new Response(child.stderr).text()]),
+        gate.promise,
+      ]).finally(() => clearTimeout(timeout))
+      if (exit !== 0) throw new Error(stderr)
+
+      expect(requests).toEqual([{ authorization: null, apiKey: null }])
+    } finally {
+      server.stop(true)
+      await rm(root, { recursive: true, force: true })
+    }
   })
 
   test("cancels active indexing when configuration is removed", async () => {

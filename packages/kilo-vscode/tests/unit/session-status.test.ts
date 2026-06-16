@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { seedSessionStatuses, getBusySessionCount } from "../../src/session-status"
+import { seedSessionStatuses } from "../../src/session-status"
 import type { SessionStatus } from "@kilocode/sdk/v2/client"
 
 /**
@@ -194,25 +194,5 @@ describe("seedSessionStatuses", () => {
     // confirmed: updated to busy from server
     expect(map.get("confirmed")).toBe("busy")
     expect(msgs).toEqual([{ type: "sessionStatus", sessionID: "confirmed", status: "busy" }])
-  })
-})
-
-// ---------------------------------------------------------------------------
-// getBusySessionCount
-// ---------------------------------------------------------------------------
-
-describe("getBusySessionCount", () => {
-  it("returns 0 for empty map", () => {
-    expect(getBusySessionCount(new Map())).toBe(0)
-  })
-
-  it("counts only busy entries, not idle or retry", () => {
-    const map = new Map<string, SessionStatus["type"]>([
-      ["a", "busy"],
-      ["b", "idle"],
-      ["c", "retry"],
-      ["d", "busy"],
-    ])
-    expect(getBusySessionCount(map)).toBe(2)
   })
 })

@@ -271,7 +271,7 @@ describe("experimental HttpApi", () => {
           Effect.gen(function* () {
             const listed = yield* request(ExperimentalPaths.worktree, tmp.directory)
             expect(listed.status).toBe(200)
-            expect(yield* json(listed)).toContain(info.directory)
+            expect(yield* json(listed)).toContainEqual({ directory: info.directory, managed: true }) // kilocode_change
 
             const reset = yield* request(ExperimentalPaths.worktreeReset, tmp.directory, {
               method: "POST",

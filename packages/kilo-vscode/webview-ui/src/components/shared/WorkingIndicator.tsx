@@ -10,6 +10,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
+import { tracksElapsed } from "./working-indicator-utils"
 
 export const WorkingIndicator: Component = () => {
   const session = useSession()
@@ -23,7 +24,7 @@ export const WorkingIndicator: Component = () => {
     const since = session.busySince()
     const status = session.status()
 
-    if (status === "idle" || !since) {
+    if (!tracksElapsed(status, session.submitting(), since)) {
       setElapsed(0)
       return
     }

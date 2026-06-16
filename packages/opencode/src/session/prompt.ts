@@ -56,15 +56,16 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Truncate } from "@/tool/truncate"
 import { Image } from "@/image/image"
 import { decodeDataUrl } from "@/util/data-url"
-import { Cause, Effect, Exit, Latch, Layer, Option, Scope, Context, Schema, Types } from "effect" // kilocode_change - Process moved to the timeout helper
+import { Cause, Effect, Exit, Latch, Layer, Option, Scope, Context, Schema, Types } from "effect"
 import * as EffectLogger from "@opencode-ai/core/effect/logger"
 import { InstanceState } from "@/effect/instance-state"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
 import { SessionRunState } from "./run-state"
 import { EffectBridge } from "@/effect/bridge"
-import { SyncEvent } from "@/sync" // kilocode_change - preserve Kilo v2 event dual-write wiring
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { SessionEvent } from "@/v2/session-event"
+import { EventV2 } from "@opencode-ai/core/event"
+import { EventV2Bridge } from "@/event-v2-bridge"
+import { SessionEvent } from "@opencode-ai/core/session-event"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { AgentAttachment, FileAttachment, ReferenceAttachment, Source } from "@opencode-ai/core/session-prompt"
@@ -223,7 +224,7 @@ export const layer = Layer.effect(
     const sys = yield* SystemPrompt.Service
     const llm = yield* LLM.Service
     const references = yield* Reference.Service
-    const sync = yield* SyncEvent.Service // kilocode_change - preserve Kilo v2 event dual-write wiring
+    const events = yield* EventV2Bridge.Service
     const flags = yield* RuntimeFlags.Service
     const runner = Effect.fn("SessionPrompt.runner")(function* () {
       return yield* EffectBridge.make()
@@ -410,17 +411,19 @@ export const layer = Layer.effect(
       const userMessage = input.messages.findLast((msg) => msg.info.role === "user")
       if (!userMessage) return input.messages
 
+      // kilocode_change start - shared planning reminder path
+      // No-op unless the active agent is plan-like.
+      yield* Effect.promise(() =>
+        KiloSessionPrompt.insertPlanReminders({
+          agent: input.agent,
+          session: input.session,
+          userMessage,
+          messages: input.messages,
+        }),
+      )
+      // kilocode_change end
+
       if (!flags.experimentalPlanMode) {
-        // kilocode_change start - inject plan file path so agent writes to .kilo/plans/
-        yield* Effect.promise(() =>
-          KiloSessionPrompt.insertPlanReminders({
-            agent: input.agent,
-            session: input.session,
-            userMessage,
-            messages: input.messages,
-          }),
-        )
-        // kilocode_change end
         const wasPlan = input.messages.some((msg) => msg.info.role === "assistant" && msg.info.agent === "plan")
         if (wasPlan && input.agent.name === "code") {
           // kilocode_change - renamed from "build" to "code"
@@ -453,91 +456,9 @@ export const layer = Layer.effect(
         return input.messages
       }
 
-      if (input.agent.name !== "plan" || assistantMessage?.info.agent === "plan") return input.messages
-
-      const ctx = yield* InstanceState.context
-      const plan = Session.plan(input.session, ctx)
-      const exists = yield* fsys.existsSafe(plan)
-      if (!exists) yield* fsys.ensureDir(path.dirname(plan)).pipe(Effect.catch(Effect.die))
-      const part = yield* sessions.updatePart({
-        id: PartID.ascending(),
-        messageID: userMessage.info.id,
-        sessionID: userMessage.info.sessionID,
-        type: "text",
-        text: `<system-reminder>
-Plan mode is active. The user indicated that they do not want you to execute yet -- you MUST NOT make any edits (with the exception of the plan file mentioned below), run any non-readonly tools (including changing configs or making commits), or otherwise make any changes to the system. This supersedes any other instructions you have received.
-
-## Plan File Info:
-${exists ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.` : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`}
-You should build your plan incrementally by writing to or editing this file. NOTE that this is the only file you are allowed to edit - other than this you are only allowed to take READ-ONLY actions.
-
-## Plan Workflow
-
-### Phase 1: Initial Understanding
-Goal: Gain a comprehensive understanding of the user's request by reading through code and asking them questions. Critical: In this phase you should only use the explore subagent type.
-
-1. Focus on understanding the user's request and the code associated with their request
-
-2. **Launch up to 3 explore agents IN PARALLEL** (single message, multiple tool calls) to efficiently explore the codebase.
- - Use 1 agent when the task is isolated to known files, the user provided specific file paths, or you're making a small targeted change.
- - Use multiple agents when: the scope is uncertain, multiple areas of the codebase are involved, or you need to understand existing patterns before planning.
- - Quality over quantity - 3 agents maximum, but you should try to use the minimum number of agents necessary (usually just 1)
- - If using multiple agents: Provide each agent with a specific search focus or area to explore. Example: One agent searches for existing implementations, another explores related components, a third investigates testing patterns
-
-3. After exploring the code, use the question tool to clarify ambiguities in the user request up front.
-
-### Phase 2: Design
-Goal: Design an implementation approach.
-
-Launch general agent(s) to design the implementation based on the user's intent and your exploration results from Phase 1.
-
-You can launch up to 1 agent(s) in parallel.
-
-**Guidelines:**
-- **Default**: Launch at least 1 Plan agent for most tasks - it helps validate your understanding and consider alternatives
-- **Skip agents**: Only for truly trivial tasks (typo fixes, single-line changes, simple renames)
-
-Examples of when to use multiple agents:
-- The task touches multiple parts of the codebase
-- It's a large refactor or architectural change
-- There are many edge cases to consider
-- You'd benefit from exploring different approaches
-
-Example perspectives by task type:
-- New feature: simplicity vs performance vs maintainability
-- Bug fix: root cause vs workaround vs prevention
-- Refactoring: minimal change vs clean architecture
-
-In the agent prompt:
-- Provide comprehensive background context from Phase 1 exploration including filenames and code path traces
-- Describe requirements and constraints
-- Request a detailed implementation plan
-
-### Phase 3: Review
-Goal: Review the plan(s) from Phase 2 and ensure alignment with the user's intentions.
-1. Read the critical files identified by agents to deepen your understanding
-2. Ensure that the plans align with the user's original request
-3. Use question tool to clarify any remaining questions with the user
-
-### Phase 4: Final Plan
-Goal: Write your final plan to the plan file (the only file you can edit).
-- Include only your recommended approach, not all alternatives
-- Ensure that the plan file is concise enough to scan quickly, but detailed enough to execute effectively
-- Include the paths of critical files to be modified
-- Include a verification section describing how to test the changes end-to-end (run the code, use MCP tools, run tests)
-
-### Phase 5: Call plan_exit tool
-At the very end of your turn, once you have asked the user questions and are happy with your final plan file - you should always call plan_exit to indicate to the user that you are done planning.
-This is critical - your turn should only end with either asking the user a question or calling plan_exit. Do not stop unless it's for these 2 reasons.
-
-**Important:** Use question tool to clarify requirements/approach, use plan_exit to request plan approval. Do NOT use question tool to ask "Is this plan okay?" - that's what plan_exit does.
-
-NOTE: At any point in time through this workflow you should feel free to ask the user questions or clarifications. Don't make large assumptions about user intent. The goal is to present a well researched plan to the user, and tie any loose ends before implementation begins.
-</system-reminder>`,
-        synthetic: true,
-      })
-      userMessage.parts.push(part)
+      // kilocode_change start - replace native Plan's separate prompt with the shared reminder above
       return input.messages
+      // kilocode_change end
     })
 
     const resolveTools = Effect.fn("SessionPrompt.resolveTools")(function* (input: {
@@ -962,7 +883,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
               throw error
             }
-            const model = input.model ?? agent.model ?? (yield* currentModel(input.sessionID)) // kilocode_change
+            const model = input.model ?? agent.model ?? (yield* currentModel(input.sessionID))
             const userMsg: MessageV2.User = {
               id: input.messageID ?? MessageID.ascending(),
               sessionID: input.sessionID,
@@ -1013,16 +934,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               },
             }
             yield* sessions.updatePart(part)
-            // kilocode_change start - preserve Kilo v2 shell event dual-write
             if (flags.experimentalEventSystem) {
-              yield* sync.run(SessionEvent.Shell.Started.Sync, {
+              yield* events.publish(SessionEvent.Shell.Started, {
                 sessionID: input.sessionID,
                 timestamp: DateTime.makeUnsafe(started),
-                callID,
+                callID: part.callID,
                 command: input.command,
               })
             }
-            // kilocode_change end
             return { msg, part, cwd: ctx.directory }
           }).pipe(Effect.ensuring(markReady))
 
@@ -1040,16 +959,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               }
               if (timeout) output += "\n\n" + ["<metadata>", timeout, "</metadata>"].join("\n") // kilocode_change
               const completed = Date.now()
-              // kilocode_change start - preserve Kilo v2 shell event dual-write
               if (flags.experimentalEventSystem) {
-                yield* sync.run(SessionEvent.Shell.Ended.Sync, {
+                yield* events.publish(SessionEvent.Shell.Ended, {
                   sessionID: input.sessionID,
                   timestamp: DateTime.makeUnsafe(completed),
                   callID: part.callID,
                   output,
                 })
               }
-              // kilocode_change end
               if (!msg.time.completed) {
                 msg.time.completed = completed
                 yield* sessions.updateMessage(msg)
@@ -1136,7 +1053,6 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       return yield* Effect.die(err)
     })
 
-    // kilocode_change start - preserve persisted per-session model selection
     const currentModel = Effect.fnUntraced(function* (sessionID: SessionID) {
       const current = Database.use((db) =>
         db.select({ model: SessionTable.model }).from(SessionTable).where(eq(SessionTable.id, sessionID)).get(),
@@ -1154,7 +1070,6 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       if (Option.isSome(match) && match.value.info.role === "user") return match.value.info.model
       return yield* provider.defaultModel()
     })
-    // kilocode_change end
 
     const createUserMessage = Effect.fn("SessionPrompt.createUserMessage")(function* (input: PromptInput) {
       const agentName = input.agent
@@ -1174,7 +1089,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           .where(eq(SessionTable.id, input.sessionID))
           .get(),
       )
-      const model = input.model ?? ag.model ?? (yield* currentModel(input.sessionID)) // kilocode_change
+      const model = input.model ?? ag.model ?? (yield* currentModel(input.sessionID))
       const same = ag.model && model.providerID === ag.model.providerID && model.modelID === ag.model.modelID
       const full =
         !input.variant && ag.variant && same
@@ -1202,7 +1117,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       }
 
       if (current?.agent !== info.agent) {
-        yield* sync.run(SessionEvent.AgentSwitched.Sync, {
+        yield* events.publish(SessionEvent.AgentSwitched, {
           sessionID: input.sessionID,
           timestamp: DateTime.makeUnsafe(info.time.created),
           agent: info.agent,
@@ -1213,7 +1128,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         current.model.id !== info.model.modelID ||
         (current.model.variant === "default" ? undefined : current.model.variant) !== info.model.variant
       ) {
-        yield* sync.run(SessionEvent.ModelSwitched.Sync, {
+        yield* events.publish(SessionEvent.ModelSwitched, {
           sessionID: input.sessionID,
           timestamp: DateTime.makeUnsafe(info.time.created),
           model: {
@@ -1678,10 +1593,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           synthetic: [] as string[],
         },
       )
-      // kilocode_change start - preserve Kilo v2 prompt event dual-write
       // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
       if (flags.experimentalEventSystem) {
-        yield* sync.run(SessionEvent.Prompted.Sync, {
+        yield* events.publish(SessionEvent.Prompted, {
           sessionID: input.sessionID,
           timestamp: DateTime.makeUnsafe(info.time.created),
           prompt: {
@@ -1695,14 +1609,13 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       for (const text of nextPrompt.synthetic) {
         // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
         if (flags.experimentalEventSystem) {
-          yield* sync.run(SessionEvent.Synthetic.Sync, {
+          yield* events.publish(SessionEvent.Synthetic, {
             sessionID: input.sessionID,
             timestamp: DateTime.makeUnsafe(info.time.created),
             text,
           })
         }
       }
-      // kilocode_change end
 
       return { info, parts }
     }, Effect.scoped)
@@ -1751,7 +1664,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           input.sessionID,
           message.info.id,
           bridge.run(
-            loop({ sessionID: input.sessionID, snapshotInitialization: input.snapshotInitialization }).pipe(Effect.orDie),
+            loop({ sessionID: input.sessionID, snapshotInitialization: input.snapshotInitialization }).pipe(
+              Effect.orDie,
+            ),
           ), // kilocode_change
           bridge.run(lastAssistant(input.sessionID)),
         )
@@ -1779,9 +1694,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     // kilocode_change start - retain request-scoped snapshot initialization policy
     const runLoop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts, NotFoundError> = Effect.fn(
       "SessionPrompt.run",
-    )(function* (
-      input: LoopInput,
-    ) {
+    )(function* (input: LoopInput) {
       const sessionID = input.sessionID
       // kilocode_change end
       // kilocode_change — cache environment details per turn (prompt caching)
@@ -2168,9 +2081,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
     const loop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts, NotFoundError> = Effect.fn(
       "SessionPrompt.loop",
-    )(function* (
-      input: LoopInput,
-    ) {
+    )(function* (input: LoopInput) {
       // kilocode_change start
       yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
       yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
@@ -2266,7 +2177,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           if (cmdAgent?.model) return cmdAgent.model
         }
         if (input.model) return Provider.parseModel(input.model)
-        return yield* currentModel(input.sessionID) // kilocode_change
+        return yield* currentModel(input.sessionID)
       })
 
       yield* getModel(taskModel.providerID, taskModel.modelID, input.sessionID)
@@ -2300,7 +2211,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       const userModel = isSubtask
         ? input.model
           ? Provider.parseModel(input.model)
-          : yield* currentModel(input.sessionID) // kilocode_change
+          : yield* currentModel(input.sessionID)
         : taskModel
 
       yield* plugin.trigger(
@@ -2354,7 +2265,6 @@ export const defaultLayer = Layer.suspend(() =>
       Layer.provide(Truncate.defaultLayer),
     )
     .pipe(
-      Layer.provide(Image.defaultLayer), // kilocode_change - provide user image normalization service
       Layer.provide(Provider.defaultLayer),
       Layer.provide(Config.defaultLayer),
       Layer.provide(Instruction.defaultLayer),
@@ -2363,15 +2273,16 @@ export const defaultLayer = Layer.suspend(() =>
       Layer.provide(Session.defaultLayer),
       Layer.provide(SessionRevert.defaultLayer),
       Layer.provide(SessionSummary.defaultLayer),
+      Layer.provide(Image.defaultLayer), // kilocode_change - provide user image normalization service
       Layer.provide(
         Layer.mergeAll(
+          EventV2Bridge.defaultLayer,
           Agent.defaultLayer,
           SystemPrompt.defaultLayer,
           LLM.defaultLayer,
           Reference.defaultLayer,
           Bus.layer,
           CrossSpawnSpawner.defaultLayer,
-          SyncEvent.defaultLayer, // kilocode_change - provide Kilo v2 event dual-write service
           RuntimeFlags.defaultLayer,
         ),
       ),

@@ -396,6 +396,13 @@ const spacingParts = {
   ],
   [toolAssistantID]: [
     {
+      id: "part-text-spacing-001",
+      sessionID: SESSION_ID,
+      messageID: toolAssistantID,
+      type: "text",
+      text: "The conversation stays in one centered reading lane so longer explanations remain easy to scan. Tool output, prose, and the composer share the same left and right edges in a wide editor tab.",
+    },
+    {
       id: "part-bash-spacing-001",
       sessionID: SESSION_ID,
       messageID: toolAssistantID,
@@ -435,6 +442,41 @@ const spacingData = {
   ...defaultMockData,
   message: { [SESSION_ID]: spacingMessages },
   part: spacingParts,
+}
+const readableMessages = [spacingMessages[0], spacingMessages[3]]
+const readableData = {
+  ...defaultMockData,
+  message: { [SESSION_ID]: readableMessages },
+  part: spacingParts,
+}
+
+function renderReadableChat(status: "idle" | "busy" = "idle") {
+  const session = {
+    ...mockSessionValue({ id: SESSION_ID, status, closeReason: status === "idle" ? "completed" : undefined }),
+    messages: () => readableMessages,
+    visibleMessages: () => readableMessages,
+    userMessages: () => readableMessages.filter((message) => message?.role === "user"),
+    getParts: (id: string) => spacingParts[id as keyof typeof spacingParts] ?? [],
+  }
+  return (
+    <StoryProviders data={readableData} sessionID={SESSION_ID} status={status} noPadding>
+      <SessionContext.Provider value={session as any}>
+        <div style={{ height: "100vh", display: "flex", "flex-direction": "column" }}>
+          <ChatView />
+        </div>
+      </SessionContext.Provider>
+    </StoryProviders>
+  )
+}
+
+export const ChatViewReadable1280: Story = {
+  name: "ChatView - readable editor tab",
+  render: renderReadableChat,
+}
+
+export const ChatViewReadable420: Story = {
+  name: "ChatView - readable busy sidebar",
+  render: () => renderReadableChat("busy"),
 }
 
 export const MessageListToolToQueuedUserSpacing: Story = {

@@ -85,8 +85,7 @@ export class CodeIndexServiceFactory {
       return new CodeIndexOllamaEmbedder(config.ollamaOptions.baseUrl, config.modelId, config.modelDimension)
     }
     if (provider === "openai-compatible") {
-      if (!config.openAiCompatibleOptions?.baseUrl || !config.openAiCompatibleOptions?.apiKey)
-        throw new Error("OpenAI-compatible base URL and API key are required.")
+      if (!config.openAiCompatibleOptions?.baseUrl) throw new Error("OpenAI-compatible base URL is required.")
       return new OpenAICompatibleEmbedder(
         config.openAiCompatibleOptions.baseUrl,
         config.openAiCompatibleOptions.apiKey,

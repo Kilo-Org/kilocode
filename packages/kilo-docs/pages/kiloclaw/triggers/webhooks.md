@@ -7,6 +7,10 @@ description: "Trigger your KiloClaw agent from external events using webhooks"
 
 KiloClaw supports inbound webhooks so external events can trigger your agent automatically. Form submissions, alerts, calendar updates, ecommerce orders, IoT sensor data; anything that can send an HTTP request can kick off a conversation with your agent. When a webhook fires, the payload is rendered through a prompt template and delivered as a chat message to your KiloClaw instance. The agent processes and responds as if you typed it yourself.
 
+Webhook triggers are one trigger mode shared by KiloClaw and Cloud Agent. In
+KiloClaw, the rendered prompt is delivered to the KiloClaw instance on this page;
+in Cloud Agent, the same trigger concept starts a Cloud Agent repository session.
+
 ## Setup
 
 1. Go to **Settings** under the KiloClaw section in the sidebar

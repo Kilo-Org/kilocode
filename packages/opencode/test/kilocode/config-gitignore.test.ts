@@ -18,7 +18,7 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Env } from "../../src/env"
 import { Auth } from "../../src/auth"
 import { Account } from "../../src/account/account"
-import { WithInstance } from "../../src/project/with-instance"
+import { provideTestInstance } from "../fixture/fixture"
 import { Filesystem } from "../../src/util/filesystem"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { tmpdir } from "../fixture/fixture"
@@ -58,7 +58,7 @@ test(".gitignore in .kilo config dir includes pnpm and yarn lockfile patterns", 
   const kilo = path.join(dir, ".kilo")
   await fs.mkdir(kilo, { recursive: true })
 
-  await WithInstance.provide({
+  await provideTestInstance({
     directory: dir,
     fn: async () => {
       await Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(testLayer)))
