@@ -3,7 +3,7 @@ import path from "path"
 import { Session as SessionNs } from "@/session/session"
 import { Bus } from "../../../src/bus"
 import * as Log from "@opencode-ai/core/util/log"
-import { WithInstance } from "../../../src/project/with-instance"
+import { provideTestInstance } from "../../fixture/fixture"
 import { AppRuntime } from "../../../src/effect/app-runtime"
 import { RuntimeFlags } from "../../../src/effect/runtime-flags"
 import { Effect } from "effect"
@@ -27,7 +27,7 @@ function remove(id: SessionID) {
 
 describe("session.created event", () => {
   test("should emit session.created event when session is created", async () => {
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: projectRoot,
       fn: async () => {
         let eventReceived = false
@@ -62,7 +62,7 @@ describe("session.created event", () => {
     const previous = process.env.KILO_EXPERIMENTAL_WORKSPACES
     delete process.env.KILO_EXPERIMENTAL_WORKSPACES
     try {
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: projectRoot,
         fn: async () => {
           const flags = AppRuntime.runSync(Effect.service(RuntimeFlags.Service))
@@ -103,7 +103,7 @@ describe("Session", () => {
   test("remove works without an instance", async () => {
     await using tmp = await tmpdir({ git: true })
 
-    const info = await WithInstance.provide({
+    const info = await provideTestInstance({
       directory: tmp.path,
       fn: () => create({ title: "remove-without-instance" }),
     })

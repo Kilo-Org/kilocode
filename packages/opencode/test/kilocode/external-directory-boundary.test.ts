@@ -2,9 +2,9 @@ import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import path from "path"
 import type { Permission } from "../../src/permission"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/kilocode/instance"
 import { InstanceRuntime } from "../../src/project/instance-runtime"
-import { WithInstance } from "../../src/project/with-instance"
+import { provideTestInstance } from "../fixture/fixture"
 import { SessionID, MessageID } from "../../src/session/schema"
 import { assertExternalDirectory } from "../../src/tool/external-directory"
 import type { Tool } from "../../src/tool/tool"
@@ -44,7 +44,7 @@ describe("kilocode external directory boundaries", () => {
     const file = path.join(outer.path, "outside.txt")
     const { items, ctx } = asks()
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: repo.path,
       fn: async () => {
         try {
@@ -68,7 +68,7 @@ describe("kilocode external directory boundaries", () => {
     const file = path.join(outer.path, "outside-root.txt")
     const { items, ctx } = asks()
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: root,
       fn: async () => {
         try {

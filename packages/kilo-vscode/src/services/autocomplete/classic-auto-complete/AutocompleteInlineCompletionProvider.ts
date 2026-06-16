@@ -233,10 +233,6 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     this.contextProvider.modelId = modelId
   }
 
-  public getModelId(): string {
-    return this.contextProvider.modelId
-  }
-
   private processSuggestion(
     suggestionText: string,
     prefix: string,

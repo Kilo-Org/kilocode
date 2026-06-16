@@ -10,6 +10,8 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Container
+import javax.swing.Icon
+import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 
@@ -177,6 +179,14 @@ class ReasoningViewTest : BasePlatformTestCase() {
         assertTrue(font.size < style.editorSize)
     }
 
+    fun `test reasoning header uses brain icon`() {
+        val view = ReasoningView(reasoning("p1", done = true, text = "one"))
+        val icons = icons(view)
+
+        assertTrue(icons.contains(SessionViewIcons.brain))
+        assertFalse(icons.contains(SessionViewIcons.eye))
+    }
+
     fun `test applyStyle updates reasoning in place`() {
         val view = ReasoningView(reasoning("p1", done = true, text = "one\ntwo\nthree\nfour"))
         val component = view.md.component
@@ -284,5 +294,16 @@ class ReasoningViewTest : BasePlatformTestCase() {
             }
         }
         error("scroll not found")
+    }
+
+    private fun icons(component: Component): List<Icon> {
+        val found = mutableListOf<Icon>()
+        collect(component, found)
+        return found
+    }
+
+    private fun collect(component: Component, found: MutableList<Icon>) {
+        if (component is JLabel) component.icon?.let(found::add)
+        if (component is Container) component.components.forEach { collect(it, found) }
     }
 }

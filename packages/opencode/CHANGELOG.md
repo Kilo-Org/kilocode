@@ -1,5 +1,19 @@
 # @kilocode/cli
 
+## 7.3.46
+
+### Patch Changes
+
+- [#11184](https://github.com/Kilo-Org/kilocode/pull/11184) [`adf03a9`](https://github.com/Kilo-Org/kilocode/commit/adf03a98245e8877c580cb1f77a7e0ea4f0af61d) - Support model-specific reasoning overrides for task subagents, including custom subagents with their own model and variant settings.
+
+- [#11178](https://github.com/Kilo-Org/kilocode/pull/11178) [`f63e771`](https://github.com/Kilo-Org/kilocode/commit/f63e77153cde1d9f1c3bf62e5aa543c07bf5f506) - Accelerate initial snapshots for regular Git sessions while preserving existing changes and asynchronously storing snapshots independently from the source repository.
+
+- Restore Kilo branding, fork-specific CLI commands, and CLI lifecycle initialization after upstream merges.
+
+- [#11240](https://github.com/Kilo-Org/kilocode/pull/11240) [`f820e57`](https://github.com/Kilo-Org/kilocode/commit/f820e57bab6c1ddd26f73964160bee7134488b96) - Prevent skill removal from recursively deleting working directories.
+
+- [#11179](https://github.com/Kilo-Org/kilocode/pull/11179) [`96a1610`](https://github.com/Kilo-Org/kilocode/commit/96a16102b2a6c22f0860641d7f78c076835c0c99) - Validate GitHub attachments and language server release paths before downloading or executing them.
+
 ## 7.3.45
 
 ### Patch Changes

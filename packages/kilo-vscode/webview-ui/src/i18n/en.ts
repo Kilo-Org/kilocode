@@ -527,6 +527,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Permission required (subagent)",
   "notification.permission.description": "{{sessionTitle}} in {{projectName}} needs permission",
   "ui.permission.manageAutoApprove": "Manage Auto-Approve Rules",
+  "ui.permission.doomLoop.prompt": "Potential loop detected for the {{tool}} tool. Continue running?",
+  "ui.permission.doomLoop.rule": "Continue {{tool}} calls",
   "ui.permission.rule.addToAllowed": "Add to allowed list",
   "ui.permission.rule.removeFromAllowed": "Remove from allowed list",
   "ui.permission.rule.addToDenied": "Add to denied list",
@@ -1258,6 +1260,10 @@ export const dict = {
   "settings.notifications.errors.title": "Errors",
   "settings.notifications.errors.description": "Show notification on errors",
   "settings.notifications.sounds": "Sounds",
+  "settings.notifications.enable.title": "Enable Sound Notifications",
+  "settings.notifications.enable.description":
+    "Play sounds when sessions complete, encounter an error, or need your input",
+  "settings.notifications.testSound": "Test",
   "settings.notifications.agentSound.title": "Agent Completion Sound",
   "settings.notifications.agentSound.description": "Sound to play when agent completes",
   "settings.notifications.permSound.title": "Permission Request Sound",
@@ -1265,6 +1271,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Error Sound",
   "settings.notifications.errorSound.description": "Sound to play on errors",
   "settings.notifications.sound.default": "Default",
+  "settings.notifications.sound.system": "System",
+  "settings.notifications.sound.description":
+    "Default uses different sounds for completion, input, and errors. Other choices use one sound for every event.",
   "settings.notifications.sound.none": "None",
 
   "settings.experimental.share.title": "Share Mode",
@@ -1502,6 +1511,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Subagent Model",
   "settings.providers.subagentModel.description":
     "Default model and reasoning effort for task-tool subagents. Leave unset to inherit the calling agent's model.",
+  "settings.models.hidePromptTraining.title": "Hide Prompt-Training Models",
+  "settings.models.hidePromptTraining.description":
+    "Hide Kilo Gateway models whose providers may use your prompts for training.",
   "settings.providers.modeModels": "Model per Mode",
   "settings.providers.modeModels.description":
     "Override the default model for specific modes. If not set, the global default model is used.",

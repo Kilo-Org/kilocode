@@ -7,7 +7,7 @@ import * as Config from "../../../src/config/config"
 import { AllowEverythingPermission } from "../../../src/kilocode/permission/allow-everything"
 import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
-import { WithInstance } from "../../../src/project/with-instance"
+import { provideTestInstance } from "../../fixture/fixture"
 import { Server } from "../../../src/server/server"
 import { Session } from "../../../src/session/session"
 import { provideTmpdirInstance, tmpdir } from "../../fixture/fixture"
@@ -48,7 +48,7 @@ const wait = () =>
 describe("AllowEverythingPermission", () => {
   test("handles disable requests through the HTTP endpoint", async () => {
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const enable = await Server.Default().app.request("/permission/allow-everything", {

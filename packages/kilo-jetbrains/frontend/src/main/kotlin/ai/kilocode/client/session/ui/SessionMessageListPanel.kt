@@ -3,6 +3,7 @@ package ai.kilocode.client.session.ui
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
@@ -53,15 +54,16 @@ class SessionMessageListPanel(
     private val openFile: (String) -> Unit,
     private val openUrl: (String) -> Unit = {},
     private val selection: SessionSelection? = null,
+    private val openAttachment: (String, FileAttachment) -> Unit = { _, item -> ai.kilocode.client.session.views.AttachmentView.openDefault(item, openFile, openUrl) },
     private val repo: String? = null,
     private val resize: ((JComponent, () -> Unit) -> Unit)? = null,
 ) : SessionLayoutPanel(
     JBUI.scale(SessionUiStyle.SessionLayout.GAP),
     JBUI.insets(
-        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
-        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
-        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
-        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING + SessionUiStyle.SessionLayout.TRANSCRIPT_SCROLLBAR_PADDING,
+        SessionUiStyle.SessionLayout.InnerInsets.top,
+        SessionUiStyle.SessionLayout.InnerInsets.left,
+        SessionUiStyle.SessionLayout.InnerInsets.bottom,
+        SessionUiStyle.SessionLayout.InnerInsets.right + SessionUiStyle.SessionLayout.TRANSCRIPT_SCROLLBAR_PADDING,
     ),
 ), Disposable, SessionEditorStyleTarget {
 
@@ -182,7 +184,7 @@ class SessionMessageListPanel(
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id, openFile, style, openUrl, selection, resize, repo, ::hover)
+        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover)
         turnViews[turn.id] = tv
         for (msgId in turn.messageIds) {
             val msg = model.message(msgId) ?: continue
@@ -239,7 +241,7 @@ class SessionMessageListPanel(
         removeAll()
 
         for (turn in model.turns()) {
-            val tv = TurnView(turn.id, openFile, style, openUrl, selection, resize, repo, ::hover)
+            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover)
             turnViews[turn.id] = tv
             for (msgId in turn.messageIds) {
                 val msg = model.message(msgId) ?: continue

@@ -55,7 +55,11 @@ export const ToolListQuery = Schema.Struct({
   model: ModelID,
 })
 
-const WorktreeList = Schema.Array(Schema.String)
+// kilocode_change start
+const WorktreeList = Schema.Array(
+  Schema.Struct({ directory: Schema.String, managed: Schema.Boolean }).annotate({ identifier: "WorktreeListItem" }),
+)
+// kilocode_change end
 const WorktreeErrorName = Schema.Union([
   Schema.Literal("WorktreeNotGitError"),
   Schema.Literal("WorktreeNameGenerationFailedError"),
@@ -77,6 +81,7 @@ export const SessionListQuery = Schema.Struct({
   // kilocode_change start
   projectID: Schema.optional(Schema.String),
   worktrees: Schema.optional(QueryBoolean),
+  current: Schema.optional(QueryBoolean),
   // kilocode_change end
   roots: Schema.optional(QueryBoolean),
   start: Schema.optional(Schema.NumberFromString),
@@ -147,7 +152,7 @@ export const ExperimentalApi = HttpApi.make("experimental")
           OpenApi.annotations({
             identifier: "experimental.console.switchOrg",
             summary: "Switch active Console org",
-            description: "Persist a new active Console account/org selection for the current local OpenCode state.",
+            description: "Persist a new active Console account/org selection for the current local Kilo state.", // kilocode_change
           }),
         ),
         HttpApiEndpoint.get("tool", ExperimentalPaths.tool, {
@@ -176,13 +181,13 @@ export const ExperimentalApi = HttpApi.make("experimental")
         ),
         HttpApiEndpoint.get("worktree", ExperimentalPaths.worktree, {
           query: WorkspaceRoutingQuery,
-          success: described(WorktreeList, "List of worktree directories"),
+          success: described(WorktreeList, "List of worktrees"), // kilocode_change
           error: WorktreeApiError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "worktree.list",
             summary: "List worktrees",
-            description: "List all sandbox worktrees for the current project.",
+            description: "List all git worktrees for the current project and whether Kilo manages them.", // kilocode_change
           }),
         ),
         HttpApiEndpoint.post("worktreeCreate", ExperimentalPaths.worktree, {
@@ -265,7 +270,7 @@ export const ExperimentalApi = HttpApi.make("experimental")
             identifier: "experimental.session.list",
             summary: "List sessions",
             description:
-              "Get a list of all OpenCode sessions across projects, sorted by most recently updated. Archived sessions are excluded by default.",
+              "Get a list of all Kilo sessions across projects, sorted by most recently updated. Archived sessions are excluded by default.", // kilocode_change
           }),
         ),
         HttpApiEndpoint.get("resource", ExperimentalPaths.resource, {

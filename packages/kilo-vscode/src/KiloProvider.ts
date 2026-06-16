@@ -11,6 +11,7 @@ import type {
   Config,
 } from "@kilocode/sdk/v2/client"
 import { type KiloConnectionService, ServerStartupError } from "./services/cli-backend"
+import { previewSound } from "./services/attention"
 import type { EditorContext, IndexingStatus } from "./services/cli-backend/types"
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { ChatTextAreaAutocomplete } from "./services/autocomplete/chat-autocomplete/ChatTextAreaAutocomplete"
@@ -53,7 +54,7 @@ import { getWorkspaceRoot } from "./review-utils"
 import { createMarketplaceRemover, removeAgent, removeMcp } from "./kilo-provider/remove-config-item"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 import { resolveProjectDirectory } from "./project-directory"
-import { getBusySessionCount, seedSessionStatuses } from "./session-status"
+import { seedSessionStatuses } from "./session-status"
 import { normalizeEnhancePromptErrorMessage } from "./enhance-prompt-error"
 import { retry } from "./services/cli-backend/retry"
 import { slimInfo, slimPart, slimParts } from "./kilo-provider/slim-metadata"
@@ -139,7 +140,9 @@ import {
   completeProviderOAuth as completeOAuthAction,
   disconnectProvider as disconnectProviderAction,
   saveCustomProvider as saveCustomProviderAction,
+  resolveStoredKey,
 } from "./provider-actions"
+import type { StoredProviderKey } from "./provider-actions"
 import { fetchOpenAIModels, FetchModelsError } from "./shared/fetch-models"
 import type { Agent } from "@kilocode/sdk/v2/client"
 import { configFeatures } from "./features"
@@ -196,6 +199,7 @@ type LegacySyncEvent =
       properties: Extract<SyncPayload, { name: "session.created.1" }>["data"]
     }
   | {
+      source: "sync"
       id: string
       type: "session.updated"
       properties: Extract<SyncPayload, { name: "session.updated.1" }>["data"]
@@ -206,18 +210,28 @@ type LegacySyncEvent =
       properties: Extract<SyncPayload, { name: "session.deleted.1" }>["data"]
     }
 
-type ProviderEvent = Event | LegacySyncEvent
+type FullSessionUpdatedEvent = {
+  id: string
+  type: "session.updated"
+  properties: { sessionID: string; info: Session }
+}
+
+type ProviderEvent = Event | LegacySyncEvent | FullSessionUpdatedEvent
 
 function isLegacySyncEvent(event: ProviderEvent): event is LegacySyncEvent {
+  if (event.type === "session.updated") return "source" in event && event.source === "sync"
   return (
     event.type === "message.updated" ||
     event.type === "message.removed" ||
     event.type === "message.part.updated" ||
     event.type === "message.part.removed" ||
     event.type === "session.created" ||
-    event.type === "session.updated" ||
     event.type === "session.deleted"
   )
+}
+
+function isFullSessionUpdatedEvent(event: ProviderEvent): event is FullSessionUpdatedEvent {
+  return event.type === "session.updated" && !isLegacySyncEvent(event)
 }
 
 function unwrapSyncEvent(event: GlobalEvent["payload"]): ProviderEvent | undefined {
@@ -235,7 +249,7 @@ function unwrapSyncEvent(event: GlobalEvent["payload"]): ProviderEvent | undefin
     case "session.created.1":
       return { id: event.id, type: "session.created", properties: event.data }
     case "session.updated.1":
-      return { id: event.id, type: "session.updated", properties: event.data }
+      return { source: "sync", id: event.id, type: "session.updated", properties: event.data }
     case "session.deleted.1":
       return { id: event.id, type: "session.deleted", properties: event.data }
     default:
@@ -257,6 +271,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private readonly extensionVersion =
     vscode.extensions.getExtension("kilocode.kilo-code")?.packageJSON?.version ?? "unknown"
   private cachedProvidersMessage: unknown = null
+  /**
+   * Provider API keys retained extension-side for authenticated model
+   * fetches (#10139). Keys are stripped before provider data reaches the
+   * webview, so fetch requests for an existing provider carry a providerID
+   * and the key is resolved here. Refreshed on every provider fetch.
+   */
+  private storedProviderKeys: Record<string, StoredProviderKey> = {}
   /** Coalesce provider refreshes — at most one follow-up rerun when a request lands mid-flight. */
   private providersRefresh: Promise<void> | null = null
   private providersQueued = false
@@ -1093,6 +1114,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestNotificationSettings":
           this.sendNotificationSettings()
           break
+        case "testNotification":
+          previewSound(message.sound)
+          break
         case "requestTimelineSetting":
           this.sendTimelineSetting()
           break
@@ -1808,12 +1832,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           return
         }
         try {
-          const { response, authMethods, authStates } = await fetchProviderData(client, this.getWorkspaceDirectory())
+          const { response, authMethods, authStates, storedKeys } = await fetchProviderData(
+            client,
+            this.getWorkspaceDirectory(),
+          )
           if (generation !== this.providersGeneration || client !== this.client) {
             if (!this.providersQueued) return
             generation = this.providersGeneration
             continue
           }
+          this.storedProviderKeys = storedKeys
           const settings = vscode.workspace.getConfiguration("kilo-code.new.model")
           const message = {
             type: "providersLoaded",
@@ -1900,7 +1928,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const rid = typeof msg.requestId === "string" ? msg.requestId : ""
     const url = typeof msg.baseURL === "string" ? msg.baseURL : ""
     if (!rid || !url) return
-    const key = typeof msg.apiKey === "string" ? msg.apiKey : undefined
+    const key =
+      typeof msg.apiKey === "string" ? msg.apiKey : resolveStoredKey(this.storedProviderKeys, msg.providerID, url)
     const headers = msg.headers && typeof msg.headers === "object" ? (msg.headers as Record<string, string>) : undefined
     try {
       const models = await fetchOpenAIModels({ baseURL: url, apiKey: key, headers })
@@ -2327,21 +2356,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.connectionService.notifyNotificationDismissed(notificationId)
   }
 
-  /**
-   * Read notification/sound settings from VS Code config and push to webview.
-   */
+  /** Read attention settings from VS Code config and push to webview. */
   private sendNotificationSettings(): void {
-    const notifications = vscode.workspace.getConfiguration("kilo-code.new.notifications")
-    const sounds = vscode.workspace.getConfiguration("kilo-code.new.sounds")
+    const attention = vscode.workspace.getConfiguration("kilo-code.new.attention")
     this.postMessage({
       type: "notificationSettingsLoaded",
       settings: {
-        notifyAgent: notifications.get<boolean>("agent", true),
-        notifyPermissions: notifications.get<boolean>("permissions", true),
-        notifyErrors: notifications.get<boolean>("errors", true),
-        soundAgent: sounds.get<string>("agent", "default"),
-        soundPermissions: sounds.get<string>("permissions", "default"),
-        soundErrors: sounds.get<string>("errors", "default"),
+        attentionEnabled: attention.get<boolean>("enabled", false),
+        attentionSound: attention.get<string>("sound", "default"),
       },
     })
   }
@@ -2358,11 +2380,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage(getWorkStylePayload())
   }
 
-  /** Returns the number of sessions currently in "busy" state. */
-  private getBusySessionCount(): number {
-    return getBusySessionCount(this.sessionStatusMap)
-  }
-
   private async handleUpdateConfig(
     partial: Partial<Config>,
     project: Partial<Config> = {},
@@ -2377,7 +2394,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const refreshProviders =
       partial.provider !== undefined ||
       partial.disabled_providers !== undefined ||
-      partial.enabled_providers !== undefined
+      partial.enabled_providers !== undefined ||
+      partial.hide_prompt_training_models !== undefined
     const refreshAgents =
       partial.default_agent !== undefined ||
       partial.agent !== undefined ||
@@ -3102,7 +3120,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Drop session events from other projects before any tracking logic.
     // This must come first: the trackedSessionIds guard below would otherwise
     // let a foreign session through if it was accidentally tracked.
-    if (!isLegacySyncEvent(event) && isEventFromForeignProject(event, this.projectID)) return
+    if (
+      !isLegacySyncEvent(event) &&
+      !isFullSessionUpdatedEvent(event) &&
+      isEventFromForeignProject(event, this.projectID)
+    )
+      return
     if (
       this.projectID &&
       (event.type === "session.created" || event.type === "session.updated") &&
@@ -3183,7 +3206,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.trackedSessionIds.add(event.properties.info.id)
     }
     if (event.type === "session.updated" && this.currentSession?.id === event.properties.sessionID) {
-      this.setCurrentSession(applySessionPatch(this.currentSession, event.properties.info))
+      const session = isLegacySyncEvent(event)
+        ? applySessionPatch(this.currentSession, event.properties.info)
+        : event.properties.info
+      this.setCurrentSession(session)
       this.contextSessionID = event.properties.sessionID
     }
 
@@ -3226,7 +3252,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     const msg = isLegacySyncEvent(event)
       ? this.mapSyncEventToWebviewMessage(event)
-      : mapSSEEventToWebviewMessage(event, sessionID)
+      : isFullSessionUpdatedEvent(event)
+        ? { type: "sessionUpdated" as const, session: this.sessionToWebview(event.properties.info) }
+        : mapSSEEventToWebviewMessage(event, sessionID)
     if (!msg) return
     if (msg.type === "partUpdated") {
       this.streams.push({ ...msg, part: this.slimPart(msg.part) })

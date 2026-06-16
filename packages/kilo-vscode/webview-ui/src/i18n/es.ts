@@ -531,6 +531,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Permiso requerido (subagente)",
   "notification.permission.description": "{{sessionTitle}} en {{projectName}} necesita permiso",
   "ui.permission.manageAutoApprove": "Gestionar reglas de aprobación automática",
+  "ui.permission.doomLoop.prompt": "Se detectó un posible bucle en la herramienta {{tool}}. ¿Continuar ejecutando?",
+  "ui.permission.doomLoop.rule": "Continuar llamadas a {{tool}}",
   "ui.permission.rule.addToAllowed": "Añadir a la lista de permitidos",
   "ui.permission.rule.removeFromAllowed": "Quitar de la lista de permitidos",
   "ui.permission.rule.addToDenied": "Añadir a la lista de denegados",
@@ -877,6 +879,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Modelo de subagente",
   "settings.providers.subagentModel.description":
     "Modelo predeterminado y esfuerzo de razonamiento para los subagentes de task-tool. Déjelo sin configurar para heredar el modelo del agente invocador.",
+  "settings.models.hidePromptTraining.title": "Ocultar modelos que entrenan con prompts",
+  "settings.models.hidePromptTraining.description":
+    "Oculta los modelos de Kilo Gateway cuyos proveedores pueden usar tus prompts para entrenamiento.",
   "settings.providers.modeModels": "Modelo por modo",
   "settings.providers.custom.note": "Agrega un proveedor compatible con OpenAI mediante URL base.",
   "settings.providers.modeModels.description":
@@ -1287,6 +1292,10 @@ export const dict = {
   "settings.notifications.errors.title": "Errores",
   "settings.notifications.errors.description": "Mostrar notificación en errores",
   "settings.notifications.sounds": "Sonidos",
+  "settings.notifications.enable.title": "Activar las notificaciones sonoras",
+  "settings.notifications.enable.description":
+    "Reproducir sonidos cuando las sesiones finalicen, se produzca un error o se requiera tu intervención",
+  "settings.notifications.testSound": "Probar",
   "settings.notifications.agentSound.title": "Sonido de finalización del agente",
   "settings.notifications.agentSound.description": "Sonido a reproducir cuando el agente finaliza",
   "settings.notifications.permSound.title": "Sonido de solicitud de permiso",
@@ -1294,6 +1303,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Sonido de error",
   "settings.notifications.errorSound.description": "Sonido a reproducir en errores",
   "settings.notifications.sound.default": "Predeterminado",
+  "settings.notifications.sound.system": "Sistema",
+  "settings.notifications.sound.description":
+    "La opción predeterminada utiliza sonidos diferentes para la finalización, la intervención y los errores. Las demás opciones utilizan un solo sonido para todos los eventos.",
   "settings.notifications.sound.none": "Ninguno",
   "settings.experimental.share.title": "Modo de compartir",
   "settings.experimental.share.description": "Comportamiento de compartir sesión",

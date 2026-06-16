@@ -54,7 +54,7 @@ describe("agent builder routes", () => {
   test("previews and saves project agent markdown", async () => {
     await using tmp = await tmpdir()
     const body = {
-      id: "reviewer",
+      id: "custom-reviewer",
       scope: "project",
       description: "Review code",
       mode: "subagent",
@@ -75,7 +75,7 @@ describe("agent builder routes", () => {
     expect(draft.markdown).toContain('mode: "subagent"')
     expect(draft.markdown).toContain('permission: {"read":"allow","grep":"allow"}')
 
-    const saved = await req(tmp.path, "/agent-builder/reviewer", {
+    const saved = await req(tmp.path, "/agent-builder/custom-reviewer", {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
@@ -83,11 +83,11 @@ describe("agent builder routes", () => {
 
     expect(saved.status).toBe(200)
     const output = (await saved.json()) as Output
-    expect(output.path).toBe(path.join(tmp.path, ".kilo", "agent", "reviewer.md"))
+    expect(output.path).toBe(path.join(tmp.path, ".kilo", "agent", "custom-reviewer.md"))
     expect(await Bun.file(output.path).text()).toBe(output.markdown)
 
     const agents = (await (await req(tmp.path, "/agent")).json()) as Agent[]
-    expect(agents.find((item) => item.name === "reviewer")).toMatchObject({
+    expect(agents.find((item) => item.name === "custom-reviewer")).toMatchObject({
       mode: "subagent",
       prompt: "Review the current diff and report risks.",
     })

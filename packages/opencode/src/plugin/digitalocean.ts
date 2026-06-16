@@ -14,7 +14,7 @@ const OAUTH_PORT = 1456
 const OAUTH_REDIRECT_PATH = "/auth/callback"
 const OAUTH_TOKEN_PATH = "/auth/token"
 const ROUTER_REFRESH_INTERVAL_MS = 5 * 60 * 1000
-const MAK_NAME_PREFIX = "opencode-oauth"
+const MAK_NAME_PREFIX = "kilo-oauth" // kilocode_change
 
 interface ImplicitTokenPayload {
   access_token: string
@@ -65,11 +65,12 @@ function buildAuthorizeUrl(state: string): string {
   return `${DO_AUTHORIZE_URL}?${params.toString()}`
 }
 
+// kilocode_change start - Kilo branding for the DigitalOcean OAuth callback page
 const HTML_CALLBACK = `<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>OpenCode - DigitalOcean Authorization</title>
+    <title>Kilo - DigitalOcean Authorization</title>
     <style>
       body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #0b1220; color: #e8eef9; }
       .container { text-align: center; padding: 2rem; max-width: 32rem; }
@@ -107,7 +108,7 @@ const HTML_CALLBACK = `<!doctype html>
             return
           }
           titleEl.textContent = "Authorization Successful"
-          msgEl.textContent = "You can close this window and return to OpenCode."
+          msgEl.textContent = "You can close this window and return to Kilo."
           setTimeout(function () { window.close() }, 2000)
         } catch (e) {
           titleEl.textContent = "Authorization Failed"
@@ -118,6 +119,7 @@ const HTML_CALLBACK = `<!doctype html>
     </script>
   </body>
 </html>`
+// kilocode_change end
 
 async function startOAuthServer(): Promise<void> {
   if (oauthServer) return
@@ -365,7 +367,7 @@ export async function DigitalOceanAuthPlugin(input: PluginInput): Promise<Hooks>
             return {
               url: buildAuthorizeUrl(state),
               instructions:
-                "Sign in to DigitalOcean in your browser. OpenCode will create a Model Access Key named opencode-oauth-* and load your Inference Routers. Re-run /connect to refresh routers later.",
+                "Sign in to DigitalOcean in your browser. Kilo will create a Model Access Key named kilo-oauth-* and load your Inference Routers. Re-run /connect to refresh routers later.", // kilocode_change
               method: "auto" as const,
               async callback() {
                 try {

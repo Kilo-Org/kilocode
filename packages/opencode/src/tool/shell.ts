@@ -312,7 +312,8 @@ const ask = Effect.fn("ShellTool.ask")(function* (
 
 function cmd(shell: string, command: string, cwd: string, env: NodeJS.ProcessEnv) {
   if (process.platform === "win32" && Shell.ps(shell)) {
-    return ChildProcess.make(shell, Shell.args(shell, command, cwd), { // kilocode_change - encoded PowerShell args
+    return ChildProcess.make(shell, Shell.args(shell, command, cwd), {
+      // kilocode_change - encoded PowerShell args
       cwd,
       env,
       stdin: "ignore",
@@ -648,10 +649,10 @@ export const ShellTool = Tool.define(
           parameters: prompt.parameters,
           execute: (params: Parameters, ctx: Tool.Context) =>
             Effect.gen(function* () {
-              const executeInstance = yield* InstanceState.context
+              const instanceCtx = yield* InstanceState.context
               const cwd = params.workdir
-                ? yield* resolvePath(params.workdir, executeInstance.directory, shell)
-                : executeInstance.directory
+                ? yield* resolvePath(params.workdir, instanceCtx.directory, shell)
+                : instanceCtx.directory
               if (params.timeout !== undefined && params.timeout < 0) {
                 throw new Error(`Invalid timeout value: ${params.timeout}. Timeout must be a positive number.`)
               }
@@ -662,9 +663,9 @@ export const ShellTool = Tool.define(
                   const tree = yield* Effect.acquireRelease(parse(params.command, ps), (tree) =>
                     Effect.sync(() => tree.delete()),
                   )
-                  const scan = yield* collect(tree.rootNode, cwd, ps, shell, executeInstance)
+                  const scan = yield* collect(tree.rootNode, cwd, ps, shell, instanceCtx)
                   // kilocode_change start
-                  if (!containsPath(cwd, executeInstance)) {
+                  if (!containsPath(cwd, instanceCtx)) {
                     scan.dirs.add(cwd)
                     scan.access = "unknown"
                   }

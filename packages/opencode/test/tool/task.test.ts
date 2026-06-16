@@ -441,7 +441,7 @@ describe("tool.task", () => {
           {
             description: "inspect bug",
             prompt: "look into the cache key path",
-            subagent_type: "reviewer",
+            subagent_type: "reviewer-subagent", // kilocode_change - avoid reserved hidden reviewer agent
           },
           {
             sessionID: chat.id,
@@ -494,7 +494,7 @@ describe("tool.task", () => {
     {
       config: {
         agent: {
-          reviewer: {
+          "reviewer-subagent": { // kilocode_change - avoid reserved hidden reviewer agent
             mode: "subagent",
             permission: {
               task: "allow",

@@ -166,11 +166,12 @@ describe("withCustomProviderDeletions", () => {
     expect(models.gone).toBeNull()
   })
 
-  it("emits null for variants removed from a surviving model", () => {
+  it("emits null for reasoning and variants removed from a surviving model", () => {
     const existing = {
       models: {
         keep: {
           name: "Keep",
+          reasoning: true,
           variants: { high: { reasoningEffort: "high" }, low: { reasoningEffort: "low" } },
         },
       },
@@ -182,9 +183,11 @@ describe("withCustomProviderDeletions", () => {
       },
     } as typeof baseNext
     const result = withCustomProviderDeletions(existing, next)
-    const model = (result.models as Record<string, { variants: Record<string, unknown> }>).keep
-    expect(model.variants.high).toEqual({ reasoningEffort: "high" })
-    expect(model.variants.low).toBeNull()
+    const model = (result.models as Record<string, { reasoning?: boolean | null; variants?: Record<string, unknown> }>)
+      .keep
+    expect(model.reasoning).toBeNull()
+    expect(model.variants?.high).toEqual({ reasoningEffort: "high" })
+    expect(model.variants?.low).toBeNull()
   })
 
   it("does not touch variants on a model that is being deleted", () => {

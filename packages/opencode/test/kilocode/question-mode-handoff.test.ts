@@ -2,13 +2,13 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { describe, expect } from "bun:test"
 import { Effect, Fiber, Layer } from "effect"
 import { Agent } from "../../src/agent/agent"
+import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Question } from "../../src/question"
 import { MessageV2 } from "../../src/session/message-v2"
 import { Session } from "../../src/session/session"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
-import { SyncEvent } from "../../src/sync"
 import { QuestionTool } from "../../src/tool/question"
 import { Truncate } from "../../src/tool/truncate"
 import { testEffect } from "../lib/effect"
@@ -20,7 +20,7 @@ const it = testEffect(
     Truncate.defaultLayer,
     Agent.defaultLayer,
     Session.defaultLayer,
-    SyncEvent.defaultLayer,
+    EventV2Bridge.defaultLayer,
   ),
 )
 
@@ -82,7 +82,7 @@ describe("question mode handoff", () => {
     Effect.gen(function* () {
       const sessions = yield* Session.Service
       const agents = yield* Agent.Service
-      const sync = yield* SyncEvent.Service
+      const events = yield* EventV2Bridge.Service
       const chat = yield* sessions.create({ title: "Question mode handoff" })
       const user = yield* sessions.updateMessage({
         id: MessageID.ascending(),
@@ -126,7 +126,7 @@ describe("question mode handoff", () => {
         },
       } satisfies MessageV2.ToolPart)
 
-      yield* KiloSessionPrompt.applyQuestionMode({ messageID: msg.id, lastUser: user, sessions, agents, sync })
+      yield* KiloSessionPrompt.applyQuestionMode({ messageID: msg.id, lastUser: user, sessions, agents, events })
 
       const session = yield* sessions.get(chat.id)
       expect(session.agent).toBe("code")

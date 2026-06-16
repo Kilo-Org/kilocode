@@ -1,5 +1,21 @@
 # kilo-code
 
+## 7.3.46
+
+### Patch Changes
+
+- [#11184](https://github.com/Kilo-Org/kilocode/pull/11184) [`adf03a9`](https://github.com/Kilo-Org/kilocode/commit/adf03a98245e8877c580cb1f77a7e0ea4f0af61d) - Support model-specific reasoning overrides for task subagents, including custom subagents with their own model and variant settings.
+
+- [#11238](https://github.com/Kilo-Org/kilocode/pull/11238) [`fb2db2e`](https://github.com/Kilo-Org/kilocode/commit/fb2db2e0182b637d92d3158da9dbea953974cf71) - Allow reasoning to be removed from custom provider models after it has been enabled.
+
+- [#11232](https://github.com/Kilo-Org/kilocode/pull/11232) [`f326be4`](https://github.com/Kilo-Org/kilocode/commit/f326be4b6c9d5af9d944c8e5e7f9c524c173052f) - Clarify potential loop permission prompts and auto-approval rules with localized tool names.
+
+- [#11183](https://github.com/Kilo-Org/kilocode/pull/11183) [`1fd0960`](https://github.com/Kilo-Org/kilocode/commit/1fd0960cbcc82cb78a17c62332c08c5a7ba7d7c4) - Restore reverted sessions on the first Redo click.
+
+- [#11169](https://github.com/Kilo-Org/kilocode/pull/11169) [`e2939c7`](https://github.com/Kilo-Org/kilocode/commit/e2939c7557a08e2377c2dbbc0433f4817f4a121f) - Route question responses to the worktree where the question was created.
+
+- [#11240](https://github.com/Kilo-Org/kilocode/pull/11240) [`f820e57`](https://github.com/Kilo-Org/kilocode/commit/f820e57bab6c1ddd26f73964160bee7134488b96) - Prevent skill removal from recursively deleting working directories.
+
 ## 7.3.45
 
 ### Minor Changes

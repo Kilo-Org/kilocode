@@ -221,7 +221,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         manager.openSession(session("ses_1"))
         val first = active(manager)
         manager.openSession(session("ses_2"))
-        settle()
+        settle { first !in ui }
 
         assertFalse(ui.contains(first))
         assertEquals(listOf("/test" to "ses_1", "/test" to "ses_2"), created)
@@ -234,7 +234,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         manager.openSession(session("ses_1"))
         val first = active(manager)
         manager.openSession(session("ses_2"))
-        settle()
+        settle { first !in ui }
         manager.openSession(session("ses_1"))
 
         assertNotSame(first, active(manager))
@@ -255,7 +255,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
             flow.emit(ChatEventDto.MessageUpdated("ses_1", msg("msg_hidden", "ses_1", "assistant")))
             flow.emit(ChatEventDto.PartDelta("ses_1", "msg_hidden", "txt_hidden", "text", "stale"))
         }
-        settle()
+        settle { first !in ui }
         manager.openSession(session("ses_1"))
         val second = active(manager)
         settle()
@@ -588,7 +588,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
             first.controller().model.setState(SessionState.AwaitingPermission(permission("ses_1")))
         }
         manager.openSession(session("ses_2"))
-        settle()
+        settle { first !in ui }
 
         assertFalse(ui.contains(first))
         assertEquals(emptyMap<String, SessionActivityKind>(), manager.activity())
@@ -603,7 +603,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
             first.controller().model.setState(SessionState.Busy("running"))
         }
         manager.openSession(session("ses_2"))
-        settle()
+        settle { first !in ui }
 
         assertFalse(ui.contains(first))
     }
@@ -614,7 +614,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         manager.openSession(session("ses_1"))
         val first = active(manager)
         manager.openSession(session("ses_2"))
-        settle()
+        settle { first !in ui }
 
         assertFalse(ui.contains(first))
         assertEquals(emptyMap<String, SessionActivityKind>(), manager.activity())
@@ -701,7 +701,19 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
     private fun settle() = kotlinx.coroutines.runBlocking {
         repeat(5) {
             kotlinx.coroutines.delay(100)
-            com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
+            com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
+                com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
+            }
+        }
+    }
+
+    private fun settle(done: () -> Boolean) = kotlinx.coroutines.runBlocking {
+        repeat(50) {
+            if (done()) return@runBlocking
+            kotlinx.coroutines.delay(20)
+            com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
+                com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
+            }
         }
     }
 

@@ -13,6 +13,7 @@ import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.ToolRefDto
 import ai.kilocode.client.session.ui.prompt.PromptPanel
+import ai.kilocode.client.session.views.tool.ShellToolView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.plugin.KiloBundle
 import com.intellij.ui.EditorTextField
@@ -330,14 +331,14 @@ class SessionScrollTest : SessionUiTestBase() {
         setBottom(bar)
         drainScroll()
         val view = toolView(mid, pid)
-        assertFalse(view.bodyVisible())
+        assertFalse(bodyVisible(view))
         val y = visibleY(view)
         val value = bar.value
 
-        view.toggle()
+        toggle(view)
         drainScroll()
 
-        assertTrue(view.bodyVisible())
+        assertTrue(bodyVisible(view))
         assertEquals(y, visibleY(view))
         assertEquals(value, bar.value)
     }
@@ -356,10 +357,10 @@ class SessionScrollTest : SessionUiTestBase() {
         drainScroll()
         val y = visibleY(view)
 
-        view.toggle()
+        toggle(view)
         drainScroll()
 
-        assertTrue(view.bodyVisible())
+        assertTrue(bodyVisible(view))
         assertEquals(y, visibleY(view))
         assertTrue(jumpButton().isVisible)
     }
@@ -1067,10 +1068,27 @@ class SessionScrollTest : SessionUiTestBase() {
     private inline fun <reified T> option(label: String): T where T : AbstractButton =
         findAll<T>(ui).first { it.actionCommand == label }
 
-    private fun toolView(mid: String, pid: String): ToolView {
+    private fun toolView(mid: String, pid: String): JComponent {
         val messages = find<SessionMessageListPanel>(ui)
-        return messages.findMessage(mid)?.part(pid) as? ToolView
+        val view = messages.findMessage(mid)?.part(pid)
+        return when (view) {
+            is ShellToolView -> view
+            is ToolView -> view
+            else -> null
+        }
             ?: error("missing tool $mid/$pid\n${messages.dumpDetailed()}")
+    }
+
+    private fun bodyVisible(view: JComponent): Boolean = when (view) {
+        is ShellToolView -> view.bodyVisible()
+        is ToolView -> view.bodyVisible()
+        else -> false
+    }
+
+    private fun toggle(view: JComponent) = when (view) {
+        is ShellToolView -> view.toggle()
+        is ToolView -> view.toggle()
+        else -> Unit
     }
 
     private fun visibleY(component: JComponent): Int =

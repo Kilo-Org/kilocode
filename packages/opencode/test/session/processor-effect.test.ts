@@ -27,6 +27,7 @@ import { testEffect } from "../lib/effect"
 import { raw, reply, TestLLMServer } from "../lib/llm-server"
 import { SyncEvent } from "@/sync"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { EventV2Bridge } from "@/event-v2-bridge"
 
 void Log.init({ print: false })
 
@@ -181,6 +182,7 @@ const deps = Layer.mergeAll(
   Provider.defaultLayer,
   status,
   SyncEvent.defaultLayer,
+  EventV2Bridge.defaultLayer,
 ).pipe(Layer.provideMerge(infra))
 const env = Layer.mergeAll(
   TestLLMServer.layer,
@@ -193,6 +195,19 @@ const env = Layer.mergeAll(
 )
 
 const it = testEffect(env)
+// kilocode_change start - exercise non-default output token ceilings in the processor
+const capped = testEffect(
+  Layer.mergeAll(
+    TestLLMServer.layer,
+    SessionProcessor.layer.pipe(
+      Layer.provide(summary),
+      Layer.provide(Image.defaultLayer),
+      Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true, outputTokenMax: 8_000 })),
+      Layer.provideMerge(deps),
+    ),
+  ),
+)
+// kilocode_change end
 
 const boot = Effect.fn("test.boot")(function* () {
   const processors = yield* SessionProcessor.Service
@@ -379,6 +394,48 @@ it.live("session.processor effect tests stop after token overflow requests compa
     { git: true, config: (url) => providerCfg(url) },
   ),
 )
+
+// kilocode_change start - configured output ceiling must reach finish-step overflow accounting
+capped.live("session.processor respects the configured output token ceiling", () =>
+  provideTmpdirServer(
+    ({ dir, llm }) =>
+      Effect.gen(function* () {
+        const { processors, session, provider } = yield* boot()
+        yield* llm.text("within capacity", { usage: { input: 91_000, output: 0 } })
+
+        const chat = yield* session.create({})
+        const parent = yield* user(chat.id, "stay within the configured capacity")
+        const msg = yield* assistant(chat.id, parent.id, path.resolve(dir))
+        const mdl = yield* provider.getModel(ref.providerID, ref.modelID)
+        const handle = yield* processors.create({
+          assistantMessage: msg,
+          sessionID: chat.id,
+          model: mdl,
+        })
+
+        const value = yield* handle.process({
+          user: {
+            id: parent.id,
+            sessionID: chat.id,
+            role: "user",
+            time: parent.time,
+            agent: parent.agent,
+            model: { providerID: ref.providerID, modelID: ref.modelID },
+          } satisfies MessageV2.User,
+          sessionID: chat.id,
+          model: mdl,
+          agent: agent(),
+          system: [],
+          messages: [{ role: "user", content: "stay within the configured capacity" }],
+          tools: {},
+        })
+
+        expect(value).toBe("continue")
+      }),
+    { git: true, config: (url) => providerCfg(url) },
+  ),
+)
+// kilocode_change end
 
 it.live("session.processor effect tests capture reasoning from http mock", () =>
   provideTmpdirServer(

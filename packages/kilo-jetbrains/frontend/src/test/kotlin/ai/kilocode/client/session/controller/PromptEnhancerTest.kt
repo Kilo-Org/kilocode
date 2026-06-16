@@ -24,6 +24,18 @@ class PromptEnhancerTest : SessionControllerTestBase() {
         assertEquals("Use a focused implementation plan", result!!.getOrThrow())
     }
 
+    fun `test enhance prompt records telemetry`() {
+        val controller = controller()
+
+        edt { controller.enhancePrompt("make a plan") {} }
+        flush()
+
+        val click = appRpc.telemetry.single { it.event == "Prompt Enhance Clicked" }
+        assertEquals("short", click.properties["textLength"])
+        val done = appRpc.telemetry.single { it.event == "Prompt Enhanced" }
+        assertEquals("short", done.properties["textLength"])
+    }
+
     fun `test enhance prompt reports failure without changing session state`() {
         val controller = controller()
         rpc.enhanceThrows = IllegalStateException("provider unavailable")

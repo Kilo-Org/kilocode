@@ -58,6 +58,7 @@ type Context = {
   dir: string
   label: string
   kind: "local" | "worktree"
+  managed: boolean
 }
 
 type Editor = { kind: "create"; value: string } | { kind: "rename"; item: Context; value: string }
@@ -135,6 +136,7 @@ function refreshEvent(event: ProjectConsoleEvent) {
   if (type.startsWith("permission.")) return true
   if (type.startsWith("question.")) return true
   if (type.startsWith("message.")) return true
+  if (type === "global.config.updated") return true
   return false
 }
 
@@ -179,8 +181,14 @@ export function ProjectConsoleRoute() {
     const data = snap()
     if (!data) return []
     return [
-      { id: "local", dir: data.project.worktree, label: "Local", kind: "local" },
-      ...data.worktrees.map((dir) => ({ id: dir, dir, label: title(dir), kind: "worktree" as const })),
+      { id: "local", dir: data.project.worktree, label: "Local", kind: "local", managed: false },
+      ...data.worktrees.map((item) => ({
+        id: item.directory,
+        dir: item.directory,
+        label: title(item.directory),
+        kind: "worktree" as const,
+        managed: item.managed,
+      })),
     ]
   })
   const terminals = createMemo(() => {
@@ -499,8 +507,12 @@ export function ProjectConsoleRoute() {
     setEditor({ kind: "rename", item, value: displayLabel(item) })
   }
 
+  function canManage(item: Context | undefined) {
+    return item?.kind === "worktree" && item.managed
+  }
+
   function removeWorktree(item: Context) {
-    if (!projectInput() || item.kind === "local") return
+    if (!projectInput() || !canManage(item)) return
     setPending({ kind: "delete", item })
   }
 
@@ -512,7 +524,7 @@ export function ProjectConsoleRoute() {
 
   function resetSelected() {
     const item = current()
-    if (!projectInput() || !item || item.kind === "local") return
+    if (!projectInput() || !canManage(item)) return
     setPending({ kind: "reset", item })
   }
 
@@ -653,11 +665,14 @@ export function ProjectConsoleRoute() {
     const base = query()
     const data = snap()
     if (!base || !data) return
-    const dirs = new Set([data.project.worktree, ...data.worktrees])
+    const dirs = new Set([data.project.worktree, ...data.worktrees.map((item) => item.directory)])
     const stop = subscribeProjectEvents({ url: base.url, dir: data.project.worktree }, (event) => {
       if (event.directory !== "global" && !dirs.has(event.directory)) return
       const id = eventSession(event)
       if (id && messageEvent(event)) markUnread(id)
+      // Terminal fitting emits pty.updated for every width change. Ignore those refreshes while
+      // dragging so the controlled review accordion keeps its expanded files mounted.
+      if (resize.pending && eventType(event) === "pty.updated") return
       if (refreshEvent(event)) scheduleRefetch()
     })
     onCleanup(stop)
@@ -765,19 +780,21 @@ export function ProjectConsoleRoute() {
                           >
                             <Icon name="edit" size="small" />
                           </button>
-                          <button
-                            type="button"
-                            class="project-inline-action danger"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              removeWorktree(item)
-                            }}
-                            disabled={!!saving()}
-                            title={`Delete ${displayLabel(item)}`}
-                            aria-label={`Delete ${displayLabel(item)}`}
-                          >
-                            <Icon name="trash" size="small" />
-                          </button>
+                          <Show when={item.managed}>
+                            <button
+                              type="button"
+                              class="project-inline-action danger"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                removeWorktree(item)
+                              }}
+                              disabled={!!saving()}
+                              title={`Delete ${displayLabel(item)}`}
+                              aria-label={`Delete ${displayLabel(item)}`}
+                            >
+                              <Icon name="trash" size="small" />
+                            </button>
+                          </Show>
                         </Show>
                       </div>
                     </div>
@@ -913,7 +930,7 @@ export function ProjectConsoleRoute() {
           <code class="project-info-path" title={current()?.dir}>
             {current()?.dir ?? snap()?.project.worktree ?? project()}
           </code>
-          <Show when={current()?.kind === "worktree"}>
+          <Show when={canManage(current())}>
             <div class="project-info-actions">
               <Button variant="secondary" size="small" onClick={resetSelected} disabled={!!saving()}>
                 Reset

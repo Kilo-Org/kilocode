@@ -55,9 +55,7 @@ vi.mock("../../continuedev/core/autocomplete/snippets/getAllSnippets", () => ({
     rootPathSnippets: [],
     recentlyEditedRangeSnippets: [],
     recentlyVisitedRangesSnippets: [],
-    diffSnippets: [],
     clipboardSnippets: [],
-    ideSnippets: [],
     staticSnippet: [],
   }),
 }))
@@ -133,9 +131,7 @@ describe("AutocompleteContextProvider", () => {
         rootPathSnippets: [],
         recentlyEditedRangeSnippets: [],
         recentlyVisitedRangesSnippets: [],
-        diffSnippets: [],
         clipboardSnippets: [],
-        ideSnippets: [],
         staticSnippet: [],
       })
 
@@ -178,9 +174,7 @@ describe("AutocompleteContextProvider", () => {
         rootPathSnippets: [],
         recentlyEditedRangeSnippets: [],
         recentlyVisitedRangesSnippets: [],
-        diffSnippets: [],
         clipboardSnippets: [],
-        ideSnippets: [],
         staticSnippet: [],
       })
 
@@ -275,9 +269,7 @@ describe("AutocompleteContextProvider", () => {
         rootPathSnippets: [],
         recentlyEditedRangeSnippets: [],
         recentlyVisitedRangesSnippets: [],
-        diffSnippets: [],
         clipboardSnippets: [],
-        ideSnippets: [],
         staticSnippet: [],
       })
 
@@ -318,12 +310,6 @@ describe("AutocompleteContextProvider", () => {
         rootPathSnippets: [],
         recentlyEditedRangeSnippets: [],
         recentlyVisitedRangesSnippets: [],
-        diffSnippets: [
-          {
-            content: "diff content",
-            type: AutocompleteSnippetType.Diff,
-          },
-        ],
         clipboardSnippets: [
           {
             content: "clipboard content",
@@ -331,14 +317,12 @@ describe("AutocompleteContextProvider", () => {
             copiedAt: "2024-01-01",
           },
         ],
-        ideSnippets: [],
         staticSnippet: [],
       })
 
       const { getSnippets } = await import("../../continuedev/core/autocomplete/templating/filtering")
       ;(getSnippets as any).mockImplementation((_helper: any, payload: any) => [
         ...payload.recentlyOpenedFileSnippets,
-        ...payload.diffSnippets,
         ...payload.clipboardSnippets,
       ])
 
@@ -357,11 +341,9 @@ describe("AutocompleteContextProvider", () => {
         result.snippetsWithUris.some((s) => "filepath" in s && s.filepath && s.filepath.includes("blocked.ts")),
       ).toBe(false)
       // But should contain snippets without file paths
-      expect(result.snippetsWithUris).toHaveLength(2)
-      expect(result.snippetsWithUris[0].content).toBe("diff content")
-      expect(result.snippetsWithUris[0].type).toBe(AutocompleteSnippetType.Diff)
-      expect(result.snippetsWithUris[1].content).toBe("clipboard content")
-      expect(result.snippetsWithUris[1].type).toBe(AutocompleteSnippetType.Clipboard)
+      expect(result.snippetsWithUris).toHaveLength(1)
+      expect(result.snippetsWithUris[0].content).toBe("clipboard content")
+      expect(result.snippetsWithUris[0].type).toBe(AutocompleteSnippetType.Clipboard)
     })
 
     it("should allow all files when no ignore controller is provided", async () => {
@@ -389,9 +371,7 @@ describe("AutocompleteContextProvider", () => {
         rootPathSnippets: [],
         recentlyEditedRangeSnippets: [],
         recentlyVisitedRangesSnippets: [],
-        diffSnippets: [],
         clipboardSnippets: [],
-        ideSnippets: [],
         staticSnippet: [],
       })
 

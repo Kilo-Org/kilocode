@@ -72,6 +72,9 @@ data class PartDto(
     val reason: String? = null,
     val cost: Double? = null,
     val tokens: TokensDto? = null,
+    val mime: String? = null,
+    val url: String? = null,
+    val filename: String? = null,
 )
 
 @Serializable
@@ -96,7 +99,10 @@ data class PromptDto(
 @Serializable
 data class PromptPartDto(
     val type: String,
-    val text: String,
+    val text: String? = null,
+    val mime: String? = null,
+    val url: String? = null,
+    val filename: String? = null,
 )
 
 // --- Streaming Events ---

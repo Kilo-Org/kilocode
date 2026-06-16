@@ -2,6 +2,7 @@ import { Effect } from "effect"
 import type { Agent } from "@/agent/agent"
 import type { Config } from "@/config/config"
 import type { Provider } from "@/provider/provider"
+import { ProviderTransform } from "@/provider/transform"
 import type { LLM } from "@/session/llm"
 import { MessageV2 } from "@/session/message-v2"
 import { usable } from "@/session/overflow"
@@ -47,6 +48,7 @@ export namespace KiloCompactionChunks {
     messages: MessageV2.WithParts[]
     prompt: string
     target: MessageV2.Assistant
+    outputTokenMax?: number
     updateMessage: UpdateMessage
     updatePart: Update
   }
@@ -61,12 +63,13 @@ export namespace KiloCompactionChunks {
     return input.result === "stop" && input.error?.name === "ContextOverflowError"
   }
 
-  export function needed(input: { cfg: Config.Info; model: Provider.Model; tokens: number }) {
+  export function needed(input: { cfg: Config.Info; model: Provider.Model; tokens: number; outputTokenMax?: number }) {
+    const mdl = model(input.model, input.outputTokenMax)
     // Apply 1.3x multiplier to token estimate to compensate for Token.estimate
     // under-counting actual provider tokenizer counts by ~15-30%.
     return (
-      Math.ceil(input.tokens * 1.3) + model(input.model).limit.output >
-      usable({ cfg: input.cfg, model: model(input.model) })
+      Math.ceil(input.tokens * 1.3) + mdl.limit.output >
+      usable({ cfg: input.cfg, model: mdl, outputTokenMax: input.outputTokenMax })
     )
   }
 
@@ -76,7 +79,7 @@ export namespace KiloCompactionChunks {
         index: 0,
         messages: [{ info: input.replay.info, parts: input.replay.parts }],
       }
-      const size = budget({ cfg: input.cfg, model: input.model })
+      const size = budget({ cfg: input.cfg, model: input.model, outputTokenMax: input.outputTokenMax })
       if (!(yield* large({ messages: chunk.messages, model: input.model, size }))) return input.replay
       const result = yield* summarize({ ...input, chunk, total: 1 })
       if (result.result !== "continue" || !result.output) return input.replay
@@ -100,16 +103,21 @@ export namespace KiloCompactionChunks {
     })
   }
 
-  function budget(input: { cfg: Config.Info; model: Provider.Model }) {
-    return Math.max(1_000, Math.floor(usable({ cfg: input.cfg, model: model(input.model) }) * RATIO))
+  export function budget(input: { cfg: Config.Info; model: Provider.Model; outputTokenMax?: number }) {
+    const mdl = model(input.model, input.outputTokenMax)
+    return Math.max(
+      1_000,
+      Math.floor(usable({ cfg: input.cfg, model: mdl, outputTokenMax: input.outputTokenMax }) * RATIO),
+    )
   }
 
-  function model(input: Provider.Model) {
+  function model(input: Provider.Model, outputTokenMax?: number) {
+    const cap = Math.min(OUTPUT, outputTokenMax ?? OUTPUT)
     return {
       ...input,
       limit: {
         ...input.limit,
-        output: Math.min(input.limit.output, OUTPUT),
+        output: ProviderTransform.maxOutputTokens(input, cap),
       },
     } satisfies Provider.Model
   }
@@ -239,14 +247,17 @@ export namespace KiloCompactionChunks {
   function run(input: Input & { data: LLM.StreamInput["messages"]; text: string }) {
     return Effect.gen(function* () {
       const msg = yield* input.session.updateMessage(assistant({ base: input.target, sessionID: input.sessionID }))
-      const mdl = model(input.model)
+      const mdl = model(input.model, input.outputTokenMax)
       const worker = yield* input.processors.create({ assistantMessage: msg, sessionID: input.sessionID, model: mdl })
       const opts = input.agent.options
       const agent = {
         ...input.agent,
         options: {
           ...opts,
-          maxOutputTokens: Math.min(OUTPUT, typeof opts?.maxOutputTokens === "number" ? opts.maxOutputTokens : OUTPUT),
+          maxOutputTokens: Math.min(
+            mdl.limit.output,
+            typeof opts?.maxOutputTokens === "number" ? opts.maxOutputTokens : mdl.limit.output,
+          ),
         },
       }
       const out = yield* Effect.gen(function* () {
@@ -276,7 +287,7 @@ export namespace KiloCompactionChunks {
 
   function summarize(input: Input & { chunk: Chunk; total: number }) {
     return Effect.gen(function* () {
-      const size = budget({ cfg: input.cfg, model: input.model })
+      const size = budget({ cfg: input.cfg, model: input.model, outputTokenMax: input.outputTokenMax })
       const data = (yield* large({ messages: input.chunk.messages, model: input.model, size }))
         ? [
             {
@@ -325,7 +336,7 @@ export namespace KiloCompactionChunks {
 
   export function process(input: Input) {
     return Effect.gen(function* () {
-      const size = budget({ cfg: input.cfg, model: input.model })
+      const size = budget({ cfg: input.cfg, model: input.model, outputTokenMax: input.outputTokenMax })
       const chunks = yield* split({ messages: input.messages, model: input.model, size })
       log.info("fallback", { chunks: chunks.length, concurrency: CONCURRENCY })
 

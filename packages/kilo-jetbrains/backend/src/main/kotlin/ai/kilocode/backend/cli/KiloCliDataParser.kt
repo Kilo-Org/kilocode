@@ -24,6 +24,7 @@ import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.PromptDto
+import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
@@ -68,6 +69,8 @@ object KiloCliDataParser {
     private val json = Json { ignoreUnknownKeys = true }
     private val pretty = Json { ignoreUnknownKeys = true; prettyPrint = true }
     private val TYPE_REGEX = Regex(""""type"\s*:\s*"([^"]+)"""")
+    private val READ_TOOL_LINE = Regex("^\\s*Called\\s+the\\s+Read\\s+tool\\s+with\\s+the\\s+following\\s+input:", RegexOption.IGNORE_CASE)
+    private val READ_TOOL_PATH = Regex("\"(?:filePath|path)\"\\s*:")
     private val FIELD_RE = ConcurrentHashMap<String, Regex>()
 
     // ================================================================
@@ -233,6 +236,88 @@ object KiloCliDataParser {
         }
     }
 
+    class ChatEventNormalizer {
+        private val roles = mutableMapOf<String, String>()
+        private val raw = mutableMapOf<Key, String>()
+        private val text = mutableMapOf<Key, String>()
+
+        fun parse(type: String, data: String): List<ChatEventDto>? {
+            val event = parseChatEvent(type, data) ?: return null
+            return when (event) {
+                is ChatEventDto.MessageUpdated -> {
+                    roles[event.info.id] = event.info.role
+                    listOf(event)
+                }
+
+                is ChatEventDto.MessageRemoved -> {
+                    roles.remove(event.messageID)
+                    clear(event.messageID)
+                    listOf(event)
+                }
+
+                is ChatEventDto.PartUpdated -> listOf(update(event))
+
+                is ChatEventDto.PartDelta -> delta(event)
+
+                is ChatEventDto.PartRemoved -> {
+                    val key = Key(event.messageID, event.partID)
+                    raw.remove(key)
+                    text.remove(key)
+                    listOf(event)
+                }
+
+                else -> listOf(event)
+            }
+        }
+
+        private fun update(event: ChatEventDto.PartUpdated): ChatEventDto {
+            val part = event.part
+            val key = Key(part.messageID, part.id)
+            if (roles[part.messageID] != "user" || part.type != "text") {
+                raw.remove(key)
+                text.remove(key)
+                return event
+            }
+
+            val value = part.text.orEmpty()
+            val clean = sanitizeUserPromptText(value)
+            raw[key] = value
+            text[key] = clean
+            return event.copy(part = part.copy(text = clean))
+        }
+
+        private fun delta(event: ChatEventDto.PartDelta): List<ChatEventDto> {
+            if (event.field != "text" || roles[event.messageID] != "user") return listOf(event)
+
+            val key = Key(event.messageID, event.partID)
+            val prev = text[key].orEmpty()
+            val next = raw[key].orEmpty() + event.delta
+            val clean = sanitizeUserPromptText(next)
+            raw[key] = next
+            text[key] = clean
+
+            if (clean == prev) return emptyList()
+            if (clean.startsWith(prev)) return listOf(event.copy(delta = clean.removePrefix(prev)))
+            return listOf(ChatEventDto.PartUpdated(
+                sessionID = event.sessionID,
+                part = PartDto(
+                    id = event.partID,
+                    sessionID = event.sessionID,
+                    messageID = event.messageID,
+                    type = "text",
+                    text = clean,
+                ),
+            ))
+        }
+
+        private fun clear(id: String) {
+            raw.keys.filter { it.messageID == id }.forEach(raw::remove)
+            text.keys.filter { it.messageID == id }.forEach(text::remove)
+        }
+
+        private data class Key(val messageID: String, val partID: String)
+    }
+
     /**
      * Parse an SSE `session.status` event into a (sessionID, [SessionStatusDto]) pair.
      * Returns null if the required fields are missing.
@@ -267,12 +352,34 @@ object KiloCliDataParser {
         return arr.mapNotNull { elem ->
             val obj = elem.jsonObject
             val info = obj["info"]?.jsonObject ?: return@mapNotNull null
+            val msg = parseMessage(info)
             val parts = obj["parts"]?.jsonArray ?: JsonArray(emptyList())
             MessageWithPartsDto(
-                info = parseMessage(info),
-                parts = parts.map { parsePart(it.jsonObject) },
+                info = msg,
+                parts = parts.map { sanitizePart(parsePart(it.jsonObject), msg.role) },
             )
         }
+    }
+
+    internal fun sanitizeUserPromptText(text: String): String {
+        val lines = text.lines()
+        if (lines.none(::readPayload)) return text
+
+        val out = mutableListOf<String>()
+        var gap = false
+        for (line in lines) {
+            if (readPayload(line)) {
+                gap = true
+                continue
+            }
+            if (line.isBlank() && out.lastOrNull()?.isBlank() == true && gap) {
+                gap = false
+                continue
+            }
+            out.add(line)
+            if (line.isNotBlank()) gap = false
+        }
+        return out.joinToString("\n")
     }
 
     fun parseCloudSessions(raw: String): CloudSessionListDto {
@@ -377,7 +484,7 @@ object KiloCliDataParser {
      */
     fun buildPromptJson(prompt: PromptDto): String {
         val parts = prompt.parts.joinToString(",") { part ->
-            """{"type":"${part.type}","text":${escape(part.text)}}"""
+            buildPromptPartJson(part)
         }
         val sb = StringBuilder()
         sb.append("""{"parts":[$parts]""")
@@ -404,6 +511,18 @@ object KiloCliDataParser {
         }
         sb.append("}")
         return sb.toString()
+    }
+
+    private fun buildPromptPartJson(part: PromptPartDto): String {
+        val fields = mutableListOf("\"type\":${escape(part.type)}")
+        if (part.type == "file") {
+            part.mime?.let { fields += "\"mime\":${escape(it)}" }
+            part.url?.let { fields += "\"url\":${escape(it)}" }
+            part.filename?.let { fields += "\"filename\":${escape(it)}" }
+            return "{${fields.joinToString(",")}}"
+        }
+        fields += "\"text\":${escape(part.text.orEmpty())}"
+        return "{${fields.joinToString(",")}}"
     }
 
     /**
@@ -509,6 +628,9 @@ object KiloCliDataParser {
             messageID = obj.str("messageID") ?: "",
             type = obj.str("type") ?: "unknown",
             text = obj.str("text"),
+            mime = obj.str("mime"),
+            url = obj.str("url"),
+            filename = obj.str("filename"),
             tool = obj.str("tool"),
             callID = obj.str("callID"),
             state = state?.str("status"),
@@ -524,6 +646,16 @@ object KiloCliDataParser {
             cost = obj.num("cost"),
             tokens = tokens?.let(::parseTokens),
         )
+    }
+
+    private fun sanitizePart(part: PartDto, role: String): PartDto {
+        if (role != "user" || part.type != "text") return part
+        return part.copy(text = part.text?.let(::sanitizeUserPromptText))
+    }
+
+    private fun readPayload(line: String): Boolean {
+        if (!READ_TOOL_LINE.containsMatchIn(line)) return false
+        return READ_TOOL_PATH.containsMatchIn(line)
     }
 
     internal fun parseTodos(raw: JsonElement?): List<TodoDto> {

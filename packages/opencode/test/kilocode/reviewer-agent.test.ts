@@ -2,8 +2,7 @@ import { afterEach, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { Agent } from "../../src/agent/agent"
 import { Permission } from "../../src/permission"
-import { WithInstance } from "../../src/project/with-instance"
-import { disposeAllInstances, provideInstance, tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, provideInstance, tmpdir, withTestInstance } from "../fixture/fixture"
 
 function perm(agent: Agent.Info | undefined, name: string): Permission.Action | undefined {
   if (!agent) return undefined
@@ -25,7 +24,7 @@ afterEach(async () => {
 
 test("registers reviewer as a hidden read-only primary agent", async () => {
   await using tmp = await tmpdir()
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
     fn: async () => {
       const reviewer = await load(tmp.path, (svc) => svc.get("reviewer"))
@@ -57,7 +56,7 @@ test("keeps reviewer available when config disables reviewer", async () => {
     },
   })
 
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
     fn: async () => {
       const reviewer = await load(tmp.path, (svc) => svc.get("reviewer"))
@@ -89,7 +88,7 @@ test("ignores reviewer config that would change prompt or permissions", async ()
     },
   })
 
-  await WithInstance.provide({
+  await withTestInstance({
     directory: tmp.path,
     fn: async () => {
       const reviewer = await load(tmp.path, (svc) => svc.get("reviewer"))
