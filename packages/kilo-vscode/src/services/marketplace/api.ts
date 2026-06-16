@@ -136,10 +136,6 @@ export class MarketplaceApiClient {
     }
   }
 
-  clearCache(): void {
-    this.cache.clear()
-  }
-
   dispose(): void {
     this.cache.clear()
   }

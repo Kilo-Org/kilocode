@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/message-nav"
+export * from "@opencode-ai/ui/message-nav"

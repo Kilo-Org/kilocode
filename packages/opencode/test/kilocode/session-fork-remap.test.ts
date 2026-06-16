@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { createKiloClient } from "@kilocode/sdk/v2/client"
-import { WithInstance } from "../../src/project/with-instance"
+import { provideTestInstance } from "../fixture/fixture"
 import { Server } from "../../src/server/server"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -98,7 +98,7 @@ describe("Session.fork cost accounting", () => {
     "forked sessions start with zero cost",
     async () => {
       await using tmp = await tmpdir({ git: true })
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
         fn: async () => {
           const original = await sessions.create({ title: "original" })
@@ -140,7 +140,7 @@ describe("Session.fork task detachment", () => {
     "keeps completed task outcomes without cloning child sessions",
     async () => {
       await using tmp = await tmpdir({ git: true })
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
         fn: async () => {
           const parent = await sessions.create({ title: "parent" })
@@ -199,7 +199,7 @@ describe("Session.fork task detachment", () => {
     "turns copied running tasks into terminal historical errors",
     async () => {
       await using tmp = await tmpdir({ git: true })
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
         fn: async () => {
           const parent = await sessions.create({ title: "parent" })
@@ -241,7 +241,7 @@ describe("Session.fork task detachment", () => {
     "detaches pending and errored task references",
     async () => {
       await using tmp = await tmpdir({ git: true })
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
         fn: async () => {
           const parent = await sessions.create({ title: "parent" })
@@ -310,7 +310,7 @@ describe("Session.fork task detachment", () => {
       Flag.KILO_EXPERIMENTAL_WORKSPACES = true
       try {
         await using tmp = await tmpdir({ git: true })
-        await WithInstance.provide({
+        await provideTestInstance({
           directory: tmp.path,
           fn: async () => {
             const parent = await sessions.create({ title: "parent" })
@@ -359,7 +359,7 @@ describe("Session.fork task detachment", () => {
     "does not alter non-task parts",
     async () => {
       await using tmp = await tmpdir({ git: true })
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
         fn: async () => {
           const parent = await sessions.create({ title: "parent" })

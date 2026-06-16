@@ -27,6 +27,7 @@ import { errorMessage } from "@/util/error"
 import { PluginLoader } from "./loader"
 import { parsePluginSpecifier, readPluginId, readV1Plugin, resolvePluginId } from "./shared"
 import { KiloAuthPlugin } from "@kilocode/kilo-gateway" // kilocode_change
+import { AtomicChatPlugin } from "@kilocode/plugin-atomic-chat" // kilocode_change
 import { registerAdapter } from "@/control-plane/adapters"
 import type { WorkspaceAdapter } from "@/control-plane/types"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -62,6 +63,7 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/Pl
 // kilocode_change start
 const INTERNAL_PLUGINS: PluginInstance[] = [
   KiloAuthPlugin,
+  AtomicChatPlugin,
   CodexAuthPlugin,
   CopilotAuthPlugin,
   // kilocode_change - external auth plugins ship against @opencode-ai/plugin; bridge to our @kilocode/plugin types

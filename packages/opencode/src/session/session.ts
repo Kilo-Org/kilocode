@@ -17,9 +17,9 @@ import { PartTable, SessionTable } from "./session.sql"
 import { Storage } from "@/storage/storage"
 import * as Log from "@opencode-ai/core/util/log"
 import { MessageV2 } from "./message-v2"
-import type { InstanceContext } from "../project/instance"
+import type { InstanceContext } from "../project/instance-context"
 import { InstanceState } from "@/effect/instance-state"
-import { Instance } from "@/project/instance" // kilocode_change - children() uses Instance.current to scope by project_id
+import { capture } from "@/kilocode/instance" // kilocode_change - children() scopes by current project when available
 import { Snapshot } from "@/snapshot"
 import { ProjectID } from "../project/schema"
 import { WorkspaceID } from "../control-plane/schema"
@@ -608,9 +608,9 @@ export const layer: Layer.Layer<
 
     // kilocode_change start - scope by project_id when instance context is available
     const children = Effect.fn("Session.children")(function* (parentID: SessionID) {
-      const ctx = yield* Effect.try({ try: () => Instance.current, catch: () => undefined }).pipe(Effect.option)
+      const ctx = capture()
       const conditions = [eq(SessionTable.parent_id, parentID)]
-      if (Option.isSome(ctx)) conditions.push(eq(SessionTable.project_id, ctx.value.project.id))
+      if (ctx) conditions.push(eq(SessionTable.project_id, ctx.project.id))
       const rows = yield* db((d) =>
         d
           .select()
@@ -648,7 +648,7 @@ export const layer: Layer.Layer<
           )
         }
         // kilocode_change end
-        yield* sync.run(Event.Deleted, { sessionID, info: session }, { publish: hasInstance }) // kilocode_change
+        yield* sync.run(Event.Deleted, { sessionID, info: session }, { publish: hasInstance })
         // kilocode_change - capture final session-export workspace delta on close/delete
         const workspaceKey = hasInstance ? yield* InstanceState.directory : undefined // kilocode_change
         yield* Effect.promise(() => SessionExport.onSessionClose(sessionID, workspaceKey)) // kilocode_change
@@ -661,10 +661,11 @@ export const layer: Layer.Layer<
     const updateMessage = <T extends MessageV2.Info>(msg: T): Effect.Effect<T> =>
       Effect.gen(function* () {
         // kilocode_change start - ignore FK errors when session was deleted while processor was still running
-        yield* KiloSession.runSyncSafe(
-          sync.run(MessageV2.Event.Updated, { sessionID: msg.sessionID, info: msg }),
-          { type: "message update", id: msg.id, sessionID: msg.sessionID },
-        )
+        yield* KiloSession.runSyncSafe(sync.run(MessageV2.Event.Updated, { sessionID: msg.sessionID, info: msg }), {
+          type: "message update",
+          id: msg.id,
+          sessionID: msg.sessionID,
+        })
         // kilocode_change end
         return msg
       }).pipe(Effect.withSpan("Session.updateMessage"))
@@ -727,7 +728,7 @@ export const layer: Layer.Layer<
         model: input?.model,
         permission: input?.permission,
         platform: input?.platform, // kilocode_change
-        workspaceID: input?.workspaceID ?? workspace, // kilocode_change - allow explicit override
+        workspaceID: input?.workspaceID ?? workspace,
       })
       return session
     })
@@ -1026,6 +1027,7 @@ export function* listGlobal(input?: {
   projectID?: string
   directory?: string
   directories?: string[]
+  currentDirectory?: string
   roots?: boolean
   start?: number
   cursor?: number

@@ -39,9 +39,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
+import java.awt.event.ActionEvent
 import javax.swing.JLabel
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.Timer
 
 @Suppress("UnstableApiUsage")
 class SessionSidePanelManagerTest : BasePlatformTestCase() {
@@ -221,7 +223,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         manager.openSession(session("ses_1"))
         val first = active(manager)
         manager.openSession(session("ses_2"))
-        settle()
+        expire(manager, first)
 
         assertFalse(ui.contains(first))
         assertEquals(listOf("/test" to "ses_1", "/test" to "ses_2"), created)
@@ -234,7 +236,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         manager.openSession(session("ses_1"))
         val first = active(manager)
         manager.openSession(session("ses_2"))
-        settle()
+        expire(manager, first)
         manager.openSession(session("ses_1"))
 
         assertNotSame(first, active(manager))
@@ -255,7 +257,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
             flow.emit(ChatEventDto.MessageUpdated("ses_1", msg("msg_hidden", "ses_1", "assistant")))
             flow.emit(ChatEventDto.PartDelta("ses_1", "msg_hidden", "txt_hidden", "text", "stale"))
         }
-        settle()
+        expire(manager, first)
         manager.openSession(session("ses_1"))
         val second = active(manager)
         settle()
@@ -588,7 +590,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
             first.controller().model.setState(SessionState.AwaitingPermission(permission("ses_1")))
         }
         manager.openSession(session("ses_2"))
-        settle()
+        expire(manager, first)
 
         assertFalse(ui.contains(first))
         assertEquals(emptyMap<String, SessionActivityKind>(), manager.activity())
@@ -603,7 +605,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
             first.controller().model.setState(SessionState.Busy("running"))
         }
         manager.openSession(session("ses_2"))
-        settle()
+        expire(manager, first)
 
         assertFalse(ui.contains(first))
     }
@@ -614,7 +616,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         manager.openSession(session("ses_1"))
         val first = active(manager)
         manager.openSession(session("ses_2"))
-        settle()
+        expire(manager, first)
 
         assertFalse(ui.contains(first))
         assertEquals(emptyMap<String, SessionActivityKind>(), manager.activity())
@@ -698,10 +700,22 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         method.invoke(manager)
     }
 
+    private fun expire(manager: SessionSidePanelManager, ui: JPanel) {
+        val field = SessionSidePanelManager::class.java.getDeclaredField("timers")
+        field.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val timers = field.get(manager) as Map<JPanel, Timer>
+        val timer = requireNotNull(timers[ui]) { "Expected an inactive session disposal timer" }
+        timer.stop()
+        timer.actionListeners.single().actionPerformed(ActionEvent(timer, ActionEvent.ACTION_PERFORMED, "expire"))
+    }
+
     private fun settle() = kotlinx.coroutines.runBlocking {
         repeat(5) {
             kotlinx.coroutines.delay(100)
-            com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
+            com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
+                com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
+            }
         }
     }
 

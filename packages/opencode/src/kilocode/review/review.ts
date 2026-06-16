@@ -1,6 +1,6 @@
 import { $ } from "bun"
 import * as Log from "@opencode-ai/core/util/log"
-import { Instance } from "@/project/instance"
+import { Instance } from "@/kilocode/instance"
 
 const log = Log.create({ service: "review" })
 

@@ -50,14 +50,23 @@ object ChatLogSummary {
 
     fun prompt(prompt: PromptDto): String {
         val out = mutableListOf<String>()
-        val text = prompt.parts.joinToString("\n") { it.text }
+        val text = prompt.parts.mapNotNull { it.text }.joinToString("\n")
+        val files = prompt.parts.filter { it.type == "file" }
         out += "kind=prompt"
         out += "parts=${prompt.parts.size}"
         out += "chars=${text.length}"
+        if (files.isNotEmpty()) out += "attachments=${files.size}"
+        files.count { it.mime?.startsWith("image/") == true || it.mime == "application/pdf" }
+            .takeIf { it > 0 }
+            ?.let { out += "media=$it" }
         prompt.parts.map { it.type }
             .distinct()
             .takeIf { it.isNotEmpty() }
             ?.let { out += "types=${it.joinToString(",")}" }
+        files.mapNotNull { it.mime ?: it.type }
+            .distinct()
+            .takeIf { it.isNotEmpty() }
+            ?.let { out += "attachmentTypes=${it.joinToString(",")}" }
         prompt.agent?.takeIf { it.isNotBlank() }?.let { out += "agent=$it" }
         model(prompt.providerID, prompt.modelID)?.let { out += "model=$it" }
         prompt.variant?.takeIf { it.isNotBlank() }?.let { out += "variant=$it" }

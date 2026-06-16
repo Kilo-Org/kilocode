@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/animated-number"
+export * from "@opencode-ai/ui/animated-number"

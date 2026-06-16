@@ -1872,7 +1872,7 @@ body.am-wt-dragging-active * {
   --sticky-accordion-top: 0px;
 }
 
-/* Ensure accordion headers always span full panel width */
+/* Ensure virtualized accordion rows span the panel without per-row rounded corners. */
 .am-diff-content [data-component="accordion"],
 .am-review-diff-content [data-component="accordion"] {
   width: 100% !important;
@@ -1887,6 +1887,13 @@ body.am-wt-dragging-active * {
 .am-review-diff-content [data-slot="accordion-trigger"] {
   width: 100% !important;
   align-self: stretch !important;
+}
+
+.am-diff-content [data-slot="accordion-trigger"],
+.am-review-diff-content [data-slot="accordion-trigger"],
+.am-diff-content [data-slot="accordion-content"],
+.am-review-diff-content [data-slot="accordion-content"] {
+  border-radius: 0 !important;
 }
 
 .am-diff-content [data-slot="accordion-item"][data-file-path],

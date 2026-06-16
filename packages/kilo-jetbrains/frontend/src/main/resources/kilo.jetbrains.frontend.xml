@@ -9,6 +9,7 @@
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="ai.kilocode.client.migration.KiloMigrationService"/>
         <applicationService serviceImplementation="ai.kilocode.client.autocomplete.KiloAutocompleteSettingsService"/>
+        <customPasteProvider implementation="ai.kilocode.client.session.ui.prompt.PromptAttachmentPasteProvider"/>
 
         <notificationGroup id="Kilo Code"
                            displayType="BALLOON"
@@ -19,6 +20,8 @@
                     anchor="left"
                     icon="/icons/kilo.svg"
                     factoryClass="ai.kilocode.client.KiloToolWindowFactory"/>
+
+        <fileEditorProvider id="KiloVfsEditor" implementation="ai.kilocode.client.vfs.KiloFileEditorProvider"/>
 
         <applicationConfigurable
                 parentId="tools"
@@ -59,6 +62,11 @@
                      restartRequired="false"
                      overrides="false"/>
     </extensions>
+
+    <applicationListeners>
+        <listener class="ai.kilocode.client.plugin.KiloFrontendDynamicPluginListener"
+                  topic="com.intellij.ide.plugins.DynamicPluginListener"/>
+    </applicationListeners>
 
     <actions>
         <action id="Kilo.Restart"

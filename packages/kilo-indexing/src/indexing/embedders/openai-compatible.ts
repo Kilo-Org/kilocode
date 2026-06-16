@@ -42,7 +42,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
   private embeddingsClient: OpenAI
   private readonly defaultModelId: string
   private readonly baseUrl: string
-  private readonly apiKey: string
+  private readonly apiKey?: string
   private readonly isFullUrl: boolean
   private readonly maxItemTokens: number
   private readonly headers: Record<string, string>
@@ -61,13 +61,13 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
   /**
    * Creates a new OpenAI Compatible embedder
    * @param baseUrl The base URL for the OpenAI-compatible API endpoint
-   * @param apiKey The API key for authentication
+   * @param apiKey Optional API key for authentication
    * @param modelId Optional model identifier (defaults to "text-embedding-3-small")
    * @param maxItemTokens Optional maximum tokens per item (defaults to MAX_ITEM_TOKENS)
    */
   constructor(
     baseUrl: string,
-    apiKey: string,
+    apiKey?: string,
     modelId?: string,
     maxItemTokens?: number,
     options: OpenAICompatibleOptions = {},
@@ -75,22 +75,24 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
     if (!baseUrl) {
       throw new Error("Base URL is required for OpenAI-compatible embedder")
     }
-    if (!apiKey) {
-      throw new Error("API key is required for OpenAI-compatible embedder")
-    }
 
     this.baseUrl = baseUrl
-    this.apiKey = apiKey
+    this.apiKey = apiKey?.trim() || undefined
 
-    try {
-      this.embeddingsClient = new OpenAI({
-        baseURL: baseUrl,
-        apiKey: apiKey,
-        defaultHeaders: options.headers,
-      })
-    } catch (error) {
-      throw error instanceof Error ? error : new Error(String(error))
-    }
+    const defaults = new Headers(options.headers)
+    this.embeddingsClient = new OpenAI({
+      baseURL: baseUrl,
+      apiKey: this.apiKey ?? "EMPTY",
+      defaultHeaders: options.headers,
+      fetch: this.apiKey
+        ? undefined
+        : async (input, init) => {
+            const headers = new Headers(init?.headers)
+            if (!defaults.has("authorization")) headers.delete("authorization")
+            if (!defaults.has("api-key")) headers.delete("api-key")
+            return globalThis.fetch(input, { ...init, headers: Object.fromEntries(headers) })
+          },
+    })
 
     this.defaultModelId = modelId || getDefaultModelId("openai-compatible")
     // Cache the URL type check for performance
@@ -213,10 +215,12 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
       headers: {
         "Content-Type": "application/json",
         ...this.headers,
-        // Azure OpenAI uses 'api-key' header, while OpenAI uses 'Authorization'
-        // We'll try 'api-key' first for Azure compatibility
-        "api-key": this.apiKey,
-        Authorization: `Bearer ${this.apiKey}`,
+        ...(this.apiKey
+          ? {
+              "api-key": this.apiKey,
+              Authorization: `Bearer ${this.apiKey}`,
+            }
+          : {}),
       },
       body: JSON.stringify({
         input: batchTexts,

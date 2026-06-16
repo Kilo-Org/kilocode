@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/context/marked"
+export * from "@opencode-ai/ui/context/marked"

@@ -67,6 +67,7 @@ export enum TelemetryEventName {
   // Kilo-specific
   COMMIT_MSG_GENERATED = "Commit Message Generated",
   AGENT_MANAGER_OPENED = "Agent Manager Opened",
+  AGENT_MANAGER_BUTTON_CLICKED = "Agent Manager Button Clicked",
   AGENT_MANAGER_SESSION_STARTED = "Agent Manager Session Started",
   AGENT_MANAGER_SESSION_COMPLETED = "Agent Manager Session Completed",
   AGENT_MANAGER_SESSION_STOPPED = "Agent Manager Session Stopped",

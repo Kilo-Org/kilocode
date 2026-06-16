@@ -9,7 +9,7 @@ import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Suggestion } from "../../src/kilocode/suggestion"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { InstanceStore } from "../../src/project/instance-store"
-import { WithInstance } from "../../src/project/with-instance"
+import { provideTestInstance } from "../fixture/fixture"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionCompaction } from "../../src/session/compaction"
@@ -275,7 +275,7 @@ describe("session prompt queue", () => {
     // scope() hides that marker, runLoop never processes the compaction task and
     // instead retries the same oversized request until compaction is exhausted.
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const session = await sessions.create({ title: "Queued compaction regression" })
@@ -444,7 +444,7 @@ describe("session prompt queue", () => {
         },
       })
 
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
         fn: async () =>
           scoped(tmp.path, async (prompt) => {
@@ -656,7 +656,7 @@ describe("session prompt queue", () => {
         },
       })
 
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
         fn: async () =>
           scoped(tmp.path, async (prompt) => {
@@ -722,7 +722,7 @@ describe("session prompt queue", () => {
     const dismissed = Promise.withResolvers<void>()
     await using tmp = await tmpdir({ git: true })
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () =>
         scoped(tmp.path, async (prompt) => {
@@ -771,7 +771,7 @@ describe("session prompt queue", () => {
     // hasFollowup=true and reject synchronously, before any pending entry or
     // Shown event is published.
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const sessionID = SessionID.make("ses_auto_suggestion")

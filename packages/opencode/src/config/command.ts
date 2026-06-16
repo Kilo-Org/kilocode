@@ -2,13 +2,13 @@ export * as ConfigCommand from "./command"
 
 import * as Log from "@opencode-ai/core/util/log"
 import { Cause, Exit, Schema, SchemaIssue } from "effect"
-import { NamedError } from "@opencode-ai/core/util/error"
 import { Glob } from "@opencode-ai/core/util/glob"
-import { Bus } from "@/bus"
 import { configEntryNameFromPath } from "./entry-name"
 import * as ConfigMarkdown from "./markdown"
 import { ConfigModelID } from "./model-id"
 // kilocode_change start
+import { Bus } from "@/bus"
+import { NamedError } from "@opencode-ai/core/util/error"
 import { KilocodeConfig } from "@/kilocode/config/config"
 import type { Warning } from "./config"
 // kilocode_change end
@@ -44,14 +44,18 @@ export async function load(dir: string, warnings?: Warning[]) {
       // kilocode_change start
       if (warnings) warnings.push({ path: item, message })
       try {
-        const { Session } = await import("@/session/session")
-        Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
-      } catch (e) {
-        log.warn("could not publish session error", { message, err: e })
+        const { capture } = await import("@/kilocode/instance")
+        const ctx = capture()
+        if (ctx) {
+          const { Session } = await import("@/session/session")
+          await Bus.publish(ctx, Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        }
+      } catch (error) {
+        log.warn("could not publish session error", { message, err: error })
       }
+      // kilocode_change end
       log.error("failed to load command", { command: item, err })
       return undefined
-      // kilocode_change end
     })
     if (!md) continue
 

@@ -14,6 +14,7 @@ import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
+import ai.kilocode.cli.KiloCliParser
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.EditorFactory
@@ -209,10 +210,10 @@ class ToolBody private constructor(
             val disposable = Disposer.newDisposable("Tool body")
             val body = runCatching {
                 val field = ToolField(preview(tool), SessionEditorStyle.current()).also { ed ->
-                    ed.setDisposedWith(disposable)
                     Disposer.register(disposable) {
                         ed.getEditor(false)?.let(EditorFactory.getInstance()::releaseEditor)
                     }
+                    ed.setDisposedWith(disposable)
                 }
                 ToolBody(null, field, pane(field, true), disposable)
             }.getOrElse { err ->
@@ -328,7 +329,7 @@ internal fun toolParts(
         add(link, LINK_CARD)
     }
     val state = JBLabel().apply { foreground = UiStyle.Colors.weak() }
-    val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply { isOpaque = false }
+    val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply { isOpaque = false }
     val controls = Stack.horizontal()
     val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
         isOpaque = false
@@ -364,7 +365,7 @@ internal fun searchParts(count: Int): ToolParts {
     val state = JBLabel().apply { foreground = UiStyle.Colors.weak() }
     val stack = Stack.fitHorizontal(UiStyle.Gap.md()).apply { targets.forEach { next(it) } }
     val target = stack.align(HAlign.TRACK, VAlign.CENTER)
-    val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
+    val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         isOpaque = false
         minimumSize = JBUI.size(0, minimumSize.height)
         add(title, BorderLayout.WEST)
@@ -539,18 +540,10 @@ internal data class Target(
 internal fun target(tool: Tool): Target? {
     val out = output(tool)
     if (out.isBlank()) return null
-    val path = tag(out, "path") ?: return null
-    val type = tag(out, "type") ?: return null
+    val path = KiloCliParser.tag(out, "path") ?: return null
+    val type = KiloCliParser.tag(out, "type") ?: return null
     return Target(path, type.lowercase())
 }
-
-private fun tag(text: String, name: String): String? =
-    Regex("<$name>\\s*([\\s\\S]*?)\\s*</$name>")
-        .find(text)
-        ?.groupValues
-        ?.getOrNull(1)
-        ?.trim()
-        ?.takeIf { it.isNotBlank() }
 
 private fun shellTitle(tool: Tool): String =
     tool.input["description"]?.takeIf { it.isNotBlank() }

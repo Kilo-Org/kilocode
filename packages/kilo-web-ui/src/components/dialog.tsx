@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/dialog"
+export * from "@opencode-ai/ui/dialog"

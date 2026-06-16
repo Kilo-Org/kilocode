@@ -74,7 +74,7 @@ describe("cli.error", () => {
       "Model not found: anthropic/claude-sonet-4",
       "Did you mean: claude-sonnet-4",
       "Try: `kilo models` to list available models",
-      "Or check your config (opencode.json) provider/model names",
+      "Or check your kilo.json provider/model names", // kilocode_change
     ].join("\n")
 
     expect(FormatError({ name: "ProviderModelNotFoundError", data })).toBe(expected)

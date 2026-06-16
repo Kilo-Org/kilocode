@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Nested
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -160,6 +161,107 @@ class KiloCliDataParserTest {
             assertEquals("part_1", result.part.id)
             assertEquals("text", result.part.type)
             assertEquals("Hello", result.part.text)
+        }
+
+        @Test
+        fun `parseChatEvent - file part preserves metadata`() {
+            val data = globalEvent("""
+                "type": "message.part.updated",
+                "properties": {
+                    "sessionID": "ses_1",
+                    "part": {
+                        "id": "file_1",
+                        "sessionID": "ses_1",
+                        "messageID": "msg_1",
+                        "type": "file",
+                        "mime": "image/png",
+                        "url": "file:///tmp/a.png",
+                        "filename": "a.png"
+                    }
+                }
+            """)
+
+            val result = KiloCliDataParser.parseChatEvent("message.part.updated", data)
+            assertNotNull(result)
+            assertTrue(result is ChatEventDto.PartUpdated)
+            assertEquals("file", result.part.type)
+            assertEquals("image/png", result.part.mime)
+            assertEquals("file:///tmp/a.png", result.part.url)
+            assertEquals("a.png", result.part.filename)
+        }
+
+        @Test
+        fun `ChatEventNormalizer - user part updated sanitizes text`() {
+            val norm = KiloCliDataParser.ChatEventNormalizer()
+            norm.parse("message.updated", messageUpdated("m1", "user"))
+
+            val events = norm.parse("message.part.updated", partUpdated(
+                "m1",
+                "p1",
+                "text",
+                "before\nCalled the Read tool with the following input: {\"filePath\":\"/tmp/a.kt\"}\nafter",
+            ))
+
+            val event = events!!.single() as ChatEventDto.PartUpdated
+            assertEquals("before\nafter", event.part.text)
+        }
+
+        @Test
+        fun `ChatEventNormalizer - assistant part updated preserves text`() {
+            val norm = KiloCliDataParser.ChatEventNormalizer()
+            norm.parse("message.updated", messageUpdated("m1", "assistant"))
+            val payload = "Called the Read tool with the following input: {\"filePath\":\"/tmp/a.kt\"}"
+
+            val events = norm.parse("message.part.updated", partUpdated("m1", "p1", "text", payload))
+
+            val event = events!!.single() as ChatEventDto.PartUpdated
+            assertEquals(payload, event.part.text)
+        }
+
+        @Test
+        fun `ChatEventNormalizer - user text deltas append normally`() {
+            val norm = KiloCliDataParser.ChatEventNormalizer()
+            norm.parse("message.updated", messageUpdated("m1", "user"))
+
+            val first = norm.parse("message.part.delta", partDelta("m1", "p1", "hello"))
+            val second = norm.parse("message.part.delta", partDelta("m1", "p1", " world"))
+
+            assertEquals("hello", (first!!.single() as ChatEventDto.PartDelta).delta)
+            assertEquals(" world", (second!!.single() as ChatEventDto.PartDelta).delta)
+        }
+
+        @Test
+        fun `ChatEventNormalizer - split generated payload delta is suppressed`() {
+            val norm = KiloCliDataParser.ChatEventNormalizer()
+            norm.parse("message.updated", messageUpdated("m1", "user"))
+
+            val first = norm.parse("message.part.delta", partDelta("m1", "p1", "hello\n"))
+            val second = norm.parse(
+                "message.part.delta",
+                partDelta("m1", "p1", "Called the Read tool with the following input: {\"filePath\":\"/tmp/a.kt\"}"),
+            )
+
+            assertEquals("hello\n", (first!!.single() as ChatEventDto.PartDelta).delta)
+            val event = second!!.single() as ChatEventDto.PartUpdated
+            assertEquals("hello", event.part.text)
+            assertFalse(event.part.text!!.contains("Read tool"))
+            assertFalse(event.part.text!!.contains("/tmp/a.kt"))
+        }
+
+        @Test
+        fun `ChatEventNormalizer - partial noisy line is replaced when identified`() {
+            val norm = KiloCliDataParser.ChatEventNormalizer()
+            norm.parse("message.updated", messageUpdated("m1", "user"))
+
+            val first = norm.parse("message.part.delta", partDelta("m1", "p1", "before\nCalled the Read"))
+            val second = norm.parse(
+                "message.part.delta",
+                partDelta("m1", "p1", " tool with the following input: {\"path\":\"/tmp/a.kt\"}\nafter"),
+            )
+
+            assertEquals("before\nCalled the Read", (first!!.single() as ChatEventDto.PartDelta).delta)
+            val event = second!!.single() as ChatEventDto.PartUpdated
+            assertEquals("before\nafter", event.part.text)
         }
 
         @Test
@@ -983,6 +1085,34 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseMessages - sanitizes user text read payloads only`() {
+            val raw = """[
+                {
+                    "info": { "id": "m1", "sessionID": "s1", "role": "user", "time": { "created": 1.0 } },
+                    "parts": [
+                        { "id": "p1", "sessionID": "s1", "messageID": "m1", "type": "text", "text": "before\nCalled the Read tool with the following input: {\"filePath\":\"/tmp/user.kt\"}\nafter" },
+                        { "id": "f1", "sessionID": "s1", "messageID": "m1", "type": "file", "filename": "a.png", "url": "file:///tmp/a.png" },
+                        { "id": "t1", "sessionID": "s1", "messageID": "m1", "type": "tool", "tool": "read", "state": { "input": { "filePath": "/tmp/tool.kt" } } }
+                    ]
+                },
+                {
+                    "info": { "id": "m2", "sessionID": "s1", "role": "assistant", "time": { "created": 2.0 } },
+                    "parts": [{ "id": "p2", "sessionID": "s1", "messageID": "m2", "type": "text", "text": "Called the Read tool with the following input: {\"filePath\":\"/tmp/assistant.kt\"}" }]
+                }
+            ]"""
+
+            val result = KiloCliDataParser.parseMessages(raw)
+
+            assertEquals("before\nafter", result[0].parts[0].text)
+            assertEquals("a.png", result[0].parts[1].filename)
+            assertEquals("/tmp/tool.kt", result[0].parts[2].input["filePath"])
+            assertEquals(
+                "Called the Read tool with the following input: {\"filePath\":\"/tmp/assistant.kt\"}",
+                result[1].parts[0].text,
+            )
+        }
+
+        @Test
         fun `parseMessages - message with tool parts`() {
             val raw = """[{
                 "info": { "id": "m1", "sessionID": "s1", "role": "assistant", "time": { "created": 1.0 } },
@@ -1370,6 +1500,48 @@ class KiloCliDataParserTest {
             assertTrue(result.contains("""line1\nline2\t\"quoted\""""))
         }
 
+        @Test
+        fun `buildPromptJson - mixed text and file parts`() {
+            val prompt = PromptDto(
+                parts = listOf(
+                    PromptPartDto(type = "text", text = "see this"),
+                    PromptPartDto(type = "file", mime = "image/png", url = "file:///tmp/a.png", filename = "a.png"),
+                )
+            )
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"text","text":"see this"},{"type":"file","mime":"image/png","url":"file:///tmp/a.png","filename":"a.png"}]}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildPromptJson - file only omits optional filename`() {
+            val prompt = PromptDto(
+                parts = listOf(PromptPartDto(type = "file", mime = "application/pdf", url = "file:///tmp/a.pdf"))
+            )
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"file","mime":"application/pdf","url":"file:///tmp/a.pdf"}]}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildPromptJson - escapes file metadata`() {
+            val prompt = PromptDto(
+                parts = listOf(PromptPartDto(type = "file", mime = "text/plain", url = "file:///tmp/a%20b.txt", filename = "a \"b\".txt"))
+            )
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertTrue(result.contains(""""filename":"a \"b\".txt""""), result)
+        }
+
         // ---- buildSummarizeJson ----
 
         @Test
@@ -1716,6 +1888,34 @@ class KiloCliDataParserTest {
         assertNull(result[0].message)
     }
 
+    @Test
+    fun `sanitizeUserPromptText - removes read payload lines`() {
+        val text = "before\nCalled the Read tool with the following input: {\"filePath\":\"/tmp/a.kt\"}\nafter"
+
+        assertEquals("before\nafter", KiloCliDataParser.sanitizeUserPromptText(text))
+    }
+
+    @Test
+    fun `sanitizeUserPromptText - handles read case variants and path key`() {
+        val text = "before\nCalled the READ tool with the following input: {\"path\":\"/tmp/a.kt\"}\nafter"
+
+        assertEquals("before\nafter", KiloCliDataParser.sanitizeUserPromptText(text))
+    }
+
+    @Test
+    fun `sanitizeUserPromptText - preserves ordinary prose without path key`() {
+        val text = "Called the Read tool with the following input: please inspect the file"
+
+        assertEquals(text, KiloCliDataParser.sanitizeUserPromptText(text))
+    }
+
+    @Test
+    fun `sanitizeUserPromptText - collapses only blanks introduced by payload removal`() {
+        val text = "before\n\nCalled the Read tool with the following input: {\"filePath\":\"/tmp/a.kt\"}\n\nafter\n\n\nkeep"
+
+        assertEquals("before\n\nafter\n\n\nkeep", KiloCliDataParser.sanitizeUserPromptText(text))
+    }
+
     // ================================================================
     // Helpers
     // ================================================================
@@ -1723,4 +1923,44 @@ class KiloCliDataParserTest {
     /** Wrap payload content in a GlobalEvent structure. */
     private fun globalEvent(payload: String): String =
         """{"directory":"/tmp","payload":{$payload}}"""
+
+    private fun messageUpdated(id: String, role: String): String = globalEvent("""
+        "type": "message.updated",
+        "properties": {
+            "sessionID": "s1",
+            "info": { "id": "$id", "sessionID": "s1", "role": "$role", "time": { "created": 1.0 } }
+        }
+    """)
+
+    private fun partUpdated(mid: String, pid: String, type: String, text: String): String = globalEvent("""
+        "type": "message.part.updated",
+        "properties": {
+            "sessionID": "s1",
+            "part": { "id": "$pid", "sessionID": "s1", "messageID": "$mid", "type": "$type", "text": ${escape(text)} }
+        }
+    """)
+
+    private fun partDelta(mid: String, pid: String, delta: String): String = globalEvent("""
+        "type": "message.part.delta",
+        "properties": {
+            "sessionID": "s1",
+            "messageID": "$mid",
+            "partID": "$pid",
+            "field": "text",
+            "delta": ${escape(delta)}
+        }
+    """)
+
+    private fun escape(text: String) = buildString {
+        append('"')
+        for (ch in text) {
+            when (ch) {
+                '\\' -> append("\\\\")
+                '"' -> append("\\\"")
+                '\n' -> append("\\n")
+                else -> append(ch)
+            }
+        }
+        append('"')
+    }
 }

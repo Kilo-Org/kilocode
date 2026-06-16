@@ -1,6 +1,15 @@
 package ai.kilocode.client.ui.md
 
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.ui.UiStyle
+import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
+import com.intellij.openapi.editor.HighlighterColors
+import com.intellij.openapi.editor.colors.CodeInsightColors
+import com.intellij.openapi.editor.colors.ColorKey
+import com.intellij.openapi.editor.colors.EditorColors
+import com.intellij.openapi.editor.colors.TextAttributesKey
+import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import java.awt.Color
 
 internal object MdCommon {
@@ -33,32 +42,66 @@ internal object MdCommon {
         if (!opts.opaque) body.add("background: transparent")
         if (body.isNotEmpty()) rules.append("body { ${body.joinToString("; ")} } ")
 
+        rules.append("h1, h2, h3, h4, h5, h6 { color: ${hex(opts.headingFg)} } ")
+        rules.append("strong, b { color: ${hex(opts.strongFg)} } ")
+        rules.append("em, i { color: ${hex(opts.emphasisFg)} } ")
         rules.append("a { color: ${hex(opts.linkColor)} } ")
+        rules.append("ul, ol { color: ${hex(opts.listMarkerFg)} } ")
+        rules.append("li { color: ${hex(opts.foreground)} } ")
         rules.append("tt, code, samp, pre { font-family: '${css(opts.codeFont)}', monospace } ")
-        rules.append("pre { background: ${hex(opts.preBg)} } ")
-        rules.append("pre { color: ${hex(opts.preFg)} } ")
-        rules.append("code { background: ${hex(opts.codeBg)} } ")
-        rules.append("blockquote { border-left-color: ${hex(opts.quoteBorder)} } ")
-        rules.append("blockquote { color: ${hex(opts.quoteFg)} } ")
+        rules.append("code { background: ${hex(opts.codeBg)}; color: ${hex(opts.inlineCodeFg)} } ")
+        rules.append("pre { background: ${hex(opts.preBg)}; color: ${hex(opts.preFg)}; border-color: ${hex(opts.codeBorder)} } ")
+        rules.append("pre code { background: ${hex(opts.preBg)}; color: ${hex(opts.preFg)} } ")
+        rules.append("blockquote { border-left-color: ${hex(opts.quoteBorder)}; color: ${hex(opts.quoteFg)} } ")
+        rules.append("blockquote p { color: ${hex(opts.quoteFg)} } ")
         rules.append("th, td { border-color: ${hex(opts.tableBorder)} } ")
+        rules.append("th { color: ${hex(opts.tableHeaderFg)} } ")
+        rules.append("hr { border-color: ${hex(opts.hrColor)} } ")
 
         return rules.toString().trim()
     }
 
-    fun defaults(style: SessionEditorStyle) = MdStyle(
-        font = style.transcriptFont,
-        foreground = com.intellij.util.ui.UIUtil.getLabelForeground(),
-        background = style.editorScheme.defaultBackground,
-        linkColor = com.intellij.util.ui.JBUI.CurrentTheme.Link.Foreground.ENABLED,
-        codeBg = style.editorScheme.defaultBackground,
-        preBg = style.editorScheme.defaultBackground,
-        preFg = style.editorScheme.defaultForeground,
-        codeFont = style.editorFamily,
-        quoteBorder = com.intellij.ui.JBColor.border(),
-        quoteFg = com.intellij.util.ui.UIUtil.getContextHelpForeground(),
-        tableBorder = com.intellij.ui.JBColor.border(),
-        opaque = true,
-    )
+    fun defaults(style: SessionEditorStyle): MdStyle {
+        val weak = fg(style, DefaultLanguageHighlighterColors.DOC_COMMENT)
+            ?: fg(style, DefaultLanguageHighlighterColors.LINE_COMMENT)
+            ?: UIUtil.getContextHelpForeground()
+        val border = color(style, EditorColors.PREVIEW_BORDER_COLOR) ?: UiStyle.Colors.contentBorder()
+        val blockBg = bg(style, DefaultLanguageHighlighterColors.DOC_CODE_BLOCK) ?: style.editorBackground
+        return MdStyle(
+            font = style.transcriptFont,
+            foreground = style.editorForeground,
+            background = style.editorBackground,
+            linkColor = fg(style, CodeInsightColors.HYPERLINK_ATTRIBUTES) ?: JBUI.CurrentTheme.Link.Foreground.ENABLED,
+            codeBg = bg(style, DefaultLanguageHighlighterColors.DOC_CODE_INLINE)
+                ?: bg(style, DefaultLanguageHighlighterColors.STRING)
+                ?: style.editorBackground,
+            preBg = blockBg,
+            preFg = fg(style, DefaultLanguageHighlighterColors.DOC_CODE_BLOCK) ?: style.editorForeground,
+            codeFont = style.editorFamily,
+            quoteBorder = border,
+            quoteFg = weak,
+            tableBorder = border,
+            headingFg = fg(style, CodeInsightColors.HYPERLINK_ATTRIBUTES) ?: style.editorForeground,
+            strongFg = fg(style, HighlighterColors.TEXT) ?: style.editorForeground,
+            emphasisFg = weak,
+            inlineCodeFg = fg(style, DefaultLanguageHighlighterColors.DOC_CODE_INLINE)
+                ?: fg(style, DefaultLanguageHighlighterColors.STRING)
+                ?: style.editorForeground,
+            listMarkerFg = weak,
+            hrColor = border,
+            tableHeaderFg = fg(style, HighlighterColors.TEXT) ?: style.editorForeground,
+            codeBorder = border,
+            opaque = true,
+        )
+    }
+
+    private fun fg(style: SessionEditorStyle, key: TextAttributesKey): Color? =
+        style.editorScheme.getAttributes(key)?.foregroundColor
+
+    private fun bg(style: SessionEditorStyle, key: TextAttributesKey): Color? =
+        style.editorScheme.getAttributes(key)?.backgroundColor
+
+    private fun color(style: SessionEditorStyle, key: ColorKey): Color? = style.editorScheme.getColor(key)
 }
 
 internal data class MdStyle(
@@ -73,5 +116,13 @@ internal data class MdStyle(
     val quoteBorder: Color,
     val quoteFg: Color,
     val tableBorder: Color,
+    val headingFg: Color,
+    val strongFg: Color,
+    val emphasisFg: Color,
+    val inlineCodeFg: Color,
+    val listMarkerFg: Color,
+    val hrColor: Color,
+    val tableHeaderFg: Color,
+    val codeBorder: Color,
     val opaque: Boolean,
 )

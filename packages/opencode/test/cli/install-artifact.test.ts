@@ -36,17 +36,26 @@ describe("npm install artifact behavior", () => {
       await fs.mkdir(path.join(bin, "console", "assets"), { recursive: true })
       await fs.copyFile(postinstall, path.join(pkg, "postinstall.mjs"))
       await Bun.write(
+        path.join(pkg, "package.json"),
+        JSON.stringify({
+          optionalDependencies: {
+            [`@kilocode/cli-${process.platform}-${process.arch}`]: "1.0.0",
+          },
+        }),
+      )
+      await Bun.write(
         path.join(native, "package.json"),
         JSON.stringify({ name: `@kilocode/cli-${process.platform}-${process.arch}` }),
       )
-      await Bun.write(path.join(bin, "kilo"), "binary")
+      const binary = "#!/bin/sh\n# binary\nexit 0\n"
+      await Bun.write(path.join(bin, "kilo"), binary)
       await Bun.write(path.join(bin, "tree-sitter", "tree-sitter.wasm"), "wasm")
       await Bun.write(path.join(bin, "console", "index.html"), "console")
       await Bun.write(path.join(bin, "console", "assets", "app.js"), "asset")
 
       const proc = Bun.spawn([node, path.join(pkg, "postinstall.mjs")], { cwd: pkg })
       expect(await proc.exited).toBe(0)
-      expect(await Bun.file(path.join(pkg, "bin", ".kilo")).text()).toBe("binary")
+      expect(await Bun.file(path.join(pkg, "bin", ".kilo")).text()).toBe(binary)
       expect(await Bun.file(path.join(pkg, "bin", "tree-sitter", "tree-sitter.wasm")).text()).toBe("wasm")
       expect(await Bun.file(path.join(pkg, "bin", "console", "index.html")).text()).toBe("console")
       expect(await Bun.file(path.join(pkg, "bin", "console", "assets", "app.js")).text()).toBe("asset")
