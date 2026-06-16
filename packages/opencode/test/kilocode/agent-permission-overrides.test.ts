@@ -99,7 +99,7 @@ test("system utility agents ignore per-agent permission allows", async () => {
     },
   })
 
-  await WithInstance.provide({
+  await provideTestInstance({
     directory: tmp.path,
     fn: async () => {
       const title = await load(tmp.path, (svc) => svc.get("title"))
@@ -131,7 +131,7 @@ test("system utility agents deny tools after configured name override", async ()
     },
   })
 
-  await WithInstance.provide({
+  await provideTestInstance({
     directory: tmp.path,
     fn: async () => {
       const title = await load(tmp.path, (svc) => svc.get("title"))
