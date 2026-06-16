@@ -182,13 +182,24 @@ export function init() {
     TuiAutoApprove.boot(route.data.sessionID)
   })
 
+  const reply = async (sid: string, rid: string) => {
+    if (!TuiAutoApprove.mark(sid, rid)) return
+    if (!TuiAutoApprove.enabled(sid)) return
+    const result = await sdk.client.permission.reply({ requestID: rid, reply: "once" })
+    if (result.error) TuiAutoApprove.clear(sid)
+  }
+
+  createEffect(() => {
+    const active = new Set(sync.data.session.map((item) => item.id))
+    if (route.data.type === "session") active.add(route.data.sessionID)
+    TuiAutoApprove.prune(active)
+  })
+
   createEffect(() => {
     if (route.data.type !== "session") return
-    const req = sync.data.permission[route.data.sessionID]?.[0]
-    if (!req) return
-    if (!TuiAutoApprove.shouldReply(route.data.sessionID, req.id)) return
-    TuiAutoApprove.mark(route.data.sessionID, req.id)
-    void sdk.client.permission.reply({ requestID: req.id, reply: "once" })
+    for (const req of sync.data.permission[route.data.sessionID] ?? []) {
+      void reply(route.data.sessionID, req.id)
+    }
   })
 
   // Register auto-approve toggle
@@ -221,18 +232,15 @@ export function init() {
           const next = !enabled()
           TuiAutoApprove.set(sessionID, next)
           if (next) {
-            const req = sync.data.permission[sessionID]?.[0]
-            if (req && TuiAutoApprove.shouldReply(sessionID, req.id)) {
-              TuiAutoApprove.mark(sessionID, req.id)
-              const result = await sdk.client.permission.reply({ requestID: req.id, reply: "once" })
-              if (result.error) {
-                TuiAutoApprove.set(sessionID, false)
-                toast.show({
-                  variant: "error",
-                  message: "Failed to enable auto-approve mode",
-                })
-                return
-              }
+            for (const req of sync.data.permission[sessionID] ?? []) {
+              await reply(sessionID, req.id)
+            }
+            if (!TuiAutoApprove.enabled(sessionID)) {
+              toast.show({
+                variant: "error",
+                message: "Failed to enable auto-approve mode",
+              })
+              return
             }
           }
           dialog.clear()

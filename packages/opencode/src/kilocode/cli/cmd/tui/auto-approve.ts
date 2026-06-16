@@ -1,7 +1,6 @@
 // kilocode_change - new file
 const sessions = new Set<string>()
-const replies = new Map<string, string>()
-let startup = false
+const replies = new Map<string, Set<string>>()
 
 export namespace TuiAutoApprove {
   export function enabled(sessionID?: string) {
@@ -14,14 +13,11 @@ export namespace TuiAutoApprove {
       sessions.add(sessionID)
       return
     }
-    sessions.delete(sessionID)
-    replies.delete(sessionID)
+    clear(sessionID)
   }
 
   export function boot(sessionID?: string) {
     if (!sessionID) return false
-    if (startup) return false
-    startup = true
     sessions.add(sessionID)
     return true
   }
@@ -29,10 +25,27 @@ export namespace TuiAutoApprove {
   export function shouldReply(sessionID?: string, requestID?: string) {
     if (!sessionID || !requestID) return false
     if (!sessions.has(sessionID)) return false
-    return replies.get(sessionID) !== requestID
+    return !replies.get(sessionID)?.has(requestID)
   }
 
   export function mark(sessionID: string, requestID: string) {
-    replies.set(sessionID, requestID)
+    if (!sessions.has(sessionID)) return false
+    const seen = replies.get(sessionID) ?? new Set<string>()
+    if (seen.has(requestID)) return false
+    seen.add(requestID)
+    replies.set(sessionID, seen)
+    return true
+  }
+
+  export function clear(sessionID: string) {
+    sessions.delete(sessionID)
+    replies.delete(sessionID)
+  }
+
+  export function prune(active: Set<string>) {
+    for (const sessionID of sessions) {
+      if (active.has(sessionID)) continue
+      clear(sessionID)
+    }
   }
 }
