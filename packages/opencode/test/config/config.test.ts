@@ -913,6 +913,37 @@ Test agent prompt`,
   })
 })
 
+// kilocode_change start - keep markdown filenames as stable agent identifiers
+test("agent markdown name does not replace filename identity", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      const agentDir = path.join(dir, ".kilo", "agent")
+      await fs.mkdir(agentDir, { recursive: true })
+      await Filesystem.write(
+        path.join(agentDir, "jarvis.md"),
+        `---
+name: Jarvis
+mode: subagent
+---
+Jarvis agent prompt`,
+      )
+    },
+  })
+  await withTestInstance({
+    directory: tmp.path,
+    fn: async (ctx) => {
+      const config = await load(ctx)
+      expect(config.agent?.jarvis).toMatchObject({
+        name: "Jarvis",
+        mode: "subagent",
+        prompt: "Jarvis agent prompt",
+      })
+      expect(config.agent?.Jarvis).toBeUndefined()
+    },
+  })
+})
+// kilocode_change end
+
 test("agent markdown permission config preserves user key order", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {

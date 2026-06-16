@@ -256,12 +256,19 @@ export function preprocessConfig<T>(agentConfig: Record<string, T>): Record<stri
   return result
 }
 
-// Set displayName and deprecated from options after config item is processed.
-export function processConfigItem(item: {
-  options: Record<string, unknown>
-  displayName?: string
-  deprecated?: boolean
-}) {
+// Keep the config key as the stable agent identifier and treat a configured name as a display label.
+export function processConfigItem(
+  item: {
+    name: string
+    options: Record<string, unknown>
+    displayName?: string
+    deprecated?: boolean
+  },
+  key: string,
+  name?: unknown,
+) {
+  item.name = key
+  if (typeof name === "string" && name !== key) item.displayName = name
   if (item.options?.displayName && typeof item.options.displayName === "string") {
     item.displayName = item.options.displayName
   }
