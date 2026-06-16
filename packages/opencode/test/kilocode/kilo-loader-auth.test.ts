@@ -165,6 +165,13 @@ it.effect("enables a paid catalog when config apiKey is present", () =>
   }),
 )
 
+it.effect("denies data collection when prompt-training models are hidden", () =>
+  Effect.gen(function* () {
+    const result = yield* load({ config: { hide_prompt_training_models: true } })
+    expect(result.options).toEqual({ apiKey: "anonymous", denyDataCollection: true })
+  }),
+)
+
 it.effect("enables a paid catalog when auth exists", () =>
   Effect.gen(function* () {
     const result = yield* load({ auth: { type: "api", key: "test-key" } })

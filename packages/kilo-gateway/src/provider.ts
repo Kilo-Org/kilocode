@@ -19,6 +19,29 @@ export function buildRequestHeaders(defaultHeaders: Record<string, string>, requ
   return headers
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value)
+}
+
+export function denyOpenRouterDataCollection(body: BodyInit | null | undefined) {
+  if (typeof body !== "string") return body
+  try {
+    const value: unknown = JSON.parse(body)
+    if (!isRecord(value)) return body
+    const data = value
+    const provider = isRecord(data.provider) ? data.provider : {}
+    return JSON.stringify({
+      ...data,
+      provider: {
+        ...provider,
+        data_collection: "deny",
+      },
+    })
+  } catch {
+    return body
+  }
+}
+
 /**
  * Create a KiloCode provider instance
  *
@@ -75,8 +98,16 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
     headers: customHeaders,
     fetch: wrappedFetch as typeof fetch,
   }
+  const openRouterFetch = options.denyDataCollection
+    ? async (input: string | URL | Request, init?: RequestInit) =>
+        wrappedFetch(input, {
+          ...init,
+          body: denyOpenRouterDataCollection(init?.body),
+        })
+    : wrappedFetch
 
-  const openrouter = createOpenRouter(sdkOptions)
+  const openrouter = createOpenRouter({ ...sdkOptions, fetch: openRouterFetch as typeof fetch })
+  const openrouterMedia = options.denyDataCollection ? createOpenRouter(sdkOptions) : openrouter
   const alibaba = createAlibaba(sdkOptions)
   const anthropic = createAnthropic(sdkOptions)
   const openai = createOpenAI(sdkOptions)
@@ -88,13 +119,13 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
       return openrouter(modelId)
     },
     embeddingModel(modelId: string) {
-      return openrouter.textEmbeddingModel(modelId)
+      return openrouterMedia.textEmbeddingModel(modelId)
     },
     rerankingModel(modelId: string): never {
       throw new Error(`Reranking model not supported: ${modelId}`)
     },
     imageModel(modelId) {
-      return openrouter.imageModel(modelId)
+      return openrouterMedia.imageModel(modelId)
     },
     alibaba(modelId) {
       return alibaba(modelId)

@@ -129,19 +129,23 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
 
     kilo: Effect.fnUntraced(function* (input: any) {
       const env = yield* dep.env()
+      const config = yield* dep.config()
       const hasKey = yield* Effect.gen(function* () {
         if (input.env.some((item: string) => env[item])) return true
         if (yield* dep.auth(input.id)) return true
-        if ((yield* dep.config()).provider?.["kilo"]?.options?.apiKey) return true
+        if (config.provider?.["kilo"]?.options?.apiKey) return true
         return false
       })
 
-      const options: Record<string, string> = {}
+      const options: Record<string, string | boolean> = {}
       if (env.KILO_ORG_ID) {
         options.kilocodeOrganizationId = env.KILO_ORG_ID
       }
       if (!hasKey) {
         options.apiKey = "anonymous"
+      }
+      if (config.hide_prompt_training_models === true) {
+        options.denyDataCollection = true
       }
 
       return {

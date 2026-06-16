@@ -96,6 +96,11 @@ export interface KiloProviderOptions {
   name?: string
 
   /**
+   * Deny prompt data collection for OpenRouter-backed language models
+   */
+  denyDataCollection?: boolean
+
+  /**
    * Custom fetch function
    */
   fetch?: typeof fetch
