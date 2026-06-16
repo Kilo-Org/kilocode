@@ -40,6 +40,7 @@ import {
   REQUEST_TIMEOUT_MS,
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
+import { enforceOpenRouterDataCollection } from "@/kilocode/provider-options"
 // kilocode_change end
 
 const log = Log.create({ service: "provider" })
@@ -1037,6 +1038,7 @@ interface State {
   sdk: Map<string, BundledSDK>
   modelLoaders: Record<string, CustomModelLoader>
   varsLoaders: Record<string, CustomVarsLoader>
+  bridge: EffectBridge.Shape // kilocode_change
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Provider") {}
@@ -1553,6 +1555,7 @@ export const layer = Layer.effect(
           sdk,
           modelLoaders,
           varsLoaders,
+          bridge, // kilocode_change
         }
       }),
     )
@@ -1609,6 +1612,7 @@ export const layer = Layer.effect(
           JSON.stringify({
             providerID: model.providerID,
             npm: model.api.npm,
+            aiSDKProvider: model.ai_sdk_provider, // kilocode_change
             options,
           }),
         )
@@ -1652,6 +1656,16 @@ export const layer = Layer.effect(
               opts.body = JSON.stringify(body)
             }
           }
+
+          // kilocode_change start
+          const privacy = await s.bridge.promise(config.get())
+          opts.body = enforceOpenRouterDataCollection({
+            model,
+            body: opts.body,
+            method: opts.method,
+            deny: privacy.hide_prompt_training_models === true,
+          })
+          // kilocode_change end
 
           // kilocode_change start - clear connection-phase timeout once headers arrive
           try {
