@@ -6,6 +6,8 @@
     "webview-ui/diff-viewer/index.tsx",
     "webview-ui/diff-virtual/index.tsx",
     "webview-ui/kiloclaw/index.tsx",
+    "webview-ui/marketplace/index.tsx",
+    "webview-ui/pierre-worker.ts",
     "webview-ui/src/index.tsx",
     "src/**/__tests__/**/*.{ts,spec.ts}",
     "src/**/*.test.ts",

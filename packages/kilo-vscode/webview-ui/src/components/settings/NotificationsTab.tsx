@@ -1,4 +1,5 @@
 import { Component, createSignal, onCleanup } from "solid-js"
+import { Button } from "@kilocode/kilo-ui/button"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Card } from "@kilocode/kilo-ui/card"
@@ -12,158 +13,96 @@ interface SoundOption {
   labelKey: string
 }
 
+const groups = [
+  { value: "alert", key: "alert", count: 10 },
+  { value: "bip-bop", key: "bipbop", count: 10 },
+  { value: "staplebops", key: "staplebops", count: 7 },
+  { value: "nope", key: "nope", count: 12 },
+  { value: "yup", key: "yup", count: 6 },
+]
+
 const SOUND_OPTIONS: SoundOption[] = [
   { value: "default", labelKey: "settings.notifications.sound.default" },
-  { value: "none", labelKey: "settings.notifications.sound.none" },
+  { value: "system", labelKey: "settings.notifications.sound.system" },
+  ...groups.flatMap((group) =>
+    Array.from({ length: group.count }, (_, index) => {
+      const suffix = String(index + 1).padStart(2, "0")
+      return {
+        value: `${group.value}-${suffix}`,
+        labelKey: `sound.option.${group.key}${suffix}`,
+      }
+    }),
+  ),
 ]
 
 const NotificationsTab: Component = () => {
   const vscode = useVSCode()
   const language = useLanguage()
-
-  const [agentNotify, setAgentNotify] = createSignal(true)
-  const [permNotify, setPermNotify] = createSignal(true)
-  const [errorNotify, setErrorNotify] = createSignal(true)
-  const [agentSound, setAgentSound] = createSignal("default")
-  const [permSound, setPermSound] = createSignal("default")
-  const [errorSound, setErrorSound] = createSignal("default")
+  const [enabled, setEnabled] = createSignal(false)
+  const [sound, setSound] = createSignal("default")
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type !== "notificationSettingsLoaded") {
-      return
-    }
-    const s = message.settings
-    setAgentNotify(s.notifyAgent)
-    setPermNotify(s.notifyPermissions)
-    setErrorNotify(s.notifyErrors)
-    setAgentSound(s.soundAgent)
-    setPermSound(s.soundPermissions)
-    setErrorSound(s.soundErrors)
+    if (message.type !== "notificationSettingsLoaded") return
+    setEnabled(message.settings.attentionEnabled)
+    setSound(
+      SOUND_OPTIONS.some((option) => option.value === message.settings.attentionSound)
+        ? message.settings.attentionSound
+        : "default",
+    )
   })
 
   onCleanup(unsubscribe)
   vscode.postMessage({ type: "requestNotificationSettings" })
 
-  const save = (key: string, value: unknown) => {
-    vscode.postMessage({ type: "updateSetting", key, value })
-  }
-
   return (
-    <div>
-      <Card>
-        <SettingsRow
-          title={language.t("settings.notifications.agent.title")}
-          description={language.t("settings.notifications.agent.description")}
+    <Card>
+      <SettingsRow
+        title={language.t("settings.notifications.enable.title")}
+        description={language.t("settings.notifications.enable.description")}
+      >
+        <Switch
+          checked={enabled()}
+          onChange={(checked) => {
+            setEnabled(checked)
+            vscode.postMessage({ type: "updateSetting", key: "attention.enabled", value: checked })
+          }}
+          hideLabel
         >
-          <Switch
-            checked={agentNotify()}
-            onChange={(checked) => {
-              setAgentNotify(checked)
-              save("notifications.agent", checked)
-            }}
-            hideLabel
-          >
-            {language.t("settings.notifications.agent.title")}
-          </Switch>
-        </SettingsRow>
-        <SettingsRow
-          title={language.t("settings.notifications.permissions.title")}
-          description={language.t("settings.notifications.permissions.description")}
-        >
-          <Switch
-            checked={permNotify()}
-            onChange={(checked) => {
-              setPermNotify(checked)
-              save("notifications.permissions", checked)
-            }}
-            hideLabel
-          >
-            {language.t("settings.notifications.permissions.title")}
-          </Switch>
-        </SettingsRow>
-        <SettingsRow
-          title={language.t("settings.notifications.errors.title")}
-          description={language.t("settings.notifications.errors.description")}
-          last
-        >
-          <Switch
-            checked={errorNotify()}
-            onChange={(checked) => {
-              setErrorNotify(checked)
-              save("notifications.errors", checked)
-            }}
-            hideLabel
-          >
-            {language.t("settings.notifications.errors.title")}
-          </Switch>
-        </SettingsRow>
-      </Card>
-
-      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>{language.t("settings.notifications.sounds")}</h4>
-      <Card>
-        <SettingsRow
-          title={language.t("settings.notifications.agentSound.title")}
-          description={language.t("settings.notifications.agentSound.description")}
-        >
+          {language.t("settings.notifications.enable.title")}
+        </Switch>
+      </SettingsRow>
+      <SettingsRow
+        title={language.t("settings.notifications.sounds")}
+        description={language.t("settings.notifications.sound.description")}
+        last
+      >
+        <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
           <Select
             options={SOUND_OPTIONS}
-            current={SOUND_OPTIONS.find((o) => o.value === agentSound())}
-            value={(o) => o.value}
-            label={(o) => language.t(o.labelKey)}
-            onSelect={(o) => {
-              if (o) {
-                setAgentSound(o.value)
-                save("sounds.agent", o.value)
-              }
+            current={SOUND_OPTIONS.find((option) => option.value === sound())}
+            value={(option) => option.value}
+            label={(option) => language.t(option.labelKey)}
+            onSelect={(option) => {
+              if (!option) return
+              setSound(option.value)
+              vscode.postMessage({ type: "updateSetting", key: "attention.sound", value: option.value })
             }}
+            disabled={!enabled()}
             variant="secondary"
             size="small"
             triggerVariant="settings"
           />
-        </SettingsRow>
-        <SettingsRow
-          title={language.t("settings.notifications.permSound.title")}
-          description={language.t("settings.notifications.permSound.description")}
-        >
-          <Select
-            options={SOUND_OPTIONS}
-            current={SOUND_OPTIONS.find((o) => o.value === permSound())}
-            value={(o) => o.value}
-            label={(o) => language.t(o.labelKey)}
-            onSelect={(o) => {
-              if (o) {
-                setPermSound(o.value)
-                save("sounds.permissions", o.value)
-              }
-            }}
-            variant="secondary"
+          <Button
+            variant="ghost"
             size="small"
-            triggerVariant="settings"
-          />
-        </SettingsRow>
-        <SettingsRow
-          title={language.t("settings.notifications.errorSound.title")}
-          description={language.t("settings.notifications.errorSound.description")}
-          last
-        >
-          <Select
-            options={SOUND_OPTIONS}
-            current={SOUND_OPTIONS.find((o) => o.value === errorSound())}
-            value={(o) => o.value}
-            label={(o) => language.t(o.labelKey)}
-            onSelect={(o) => {
-              if (o) {
-                setErrorSound(o.value)
-                save("sounds.errors", o.value)
-              }
-            }}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
-        </SettingsRow>
-      </Card>
-    </div>
+            disabled={!enabled()}
+            onClick={() => vscode.postMessage({ type: "testNotification", sound: sound() })}
+          >
+            {language.t("settings.notifications.testSound")}
+          </Button>
+        </div>
+      </SettingsRow>
+    </Card>
   )
 }
 

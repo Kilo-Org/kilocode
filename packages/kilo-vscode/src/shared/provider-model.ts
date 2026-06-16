@@ -1,17 +1,23 @@
 export const KILO_PROVIDER_ID = "kilo"
 export const KILO_AUTO = { providerID: KILO_PROVIDER_ID, modelID: "kilo-auto/free" } as const
-export const CUSTOM_PROVIDER_PACKAGE = "@ai-sdk/openai-compatible"
+export const CUSTOM_PROVIDER_PACKAGES = ["@ai-sdk/openai-compatible", "@ai-sdk/openai", "@ai-sdk/anthropic"] as const
+export type CustomProviderPackage = (typeof CUSTOM_PROVIDER_PACKAGES)[number]
+export const CUSTOM_PROVIDER_PACKAGE: CustomProviderPackage = "@ai-sdk/openai-compatible"
 export const PROVIDER_ID_PATTERN = /^[a-z0-9][a-z0-9-_]*$/
 
 export const PROVIDER_PRIORITY = [
   KILO_PROVIDER_ID,
   "anthropic",
-  "github-copilot",
+  "deepseek",
   "openai",
   "google",
   "openrouter",
   "vercel",
 ] as const
+
+export function isCustomProviderPackage(value: unknown): value is CustomProviderPackage {
+  return CUSTOM_PROVIDER_PACKAGES.includes(value as CustomProviderPackage)
+}
 
 export function parseModelString(raw: string | undefined | null) {
   if (!raw) return null

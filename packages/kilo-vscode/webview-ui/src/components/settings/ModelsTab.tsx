@@ -1,11 +1,11 @@
-import { Component, For, createMemo } from "solid-js"
+import { Component, For, Show, createMemo } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
+import { Switch } from "@kilocode/kilo-ui/switch"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import { useSession } from "../../context/session"
 import { parseModelString } from "../../../../src/shared/provider-model"
-import { DEFAULT_AUTOCOMPLETE_MODEL } from "../../../../src/shared/autocomplete-models"
 import { ModelSelectorBase } from "../shared/ModelSelector"
 import { ThinkingSelectorBase } from "../shared/ThinkingSelector"
 import SettingsRow from "./SettingsRow"
@@ -17,9 +17,14 @@ const ModelsTab: Component = () => {
   const provider = useProvider()
   const session = useSession()
 
-  const autocompleteProvider = () =>
-    String(settings()["autocomplete.provider"] ?? DEFAULT_AUTOCOMPLETE_MODEL.providerID)
-  const autocompleteModel = () => String(settings()["autocomplete.model"] ?? DEFAULT_AUTOCOMPLETE_MODEL.modelID)
+  const autocompleteProvider = () => {
+    const v = settings()["autocomplete.provider"]
+    return typeof v === "string" ? v : undefined
+  }
+  const autocompleteModel = () => {
+    const v = settings()["autocomplete.model"]
+    return typeof v === "string" ? v : undefined
+  }
 
   function handleModelSelect(configKey: "model" | "small_model") {
     return (providerID: string, modelID: string) => {
@@ -32,15 +37,14 @@ const ModelsTab: Component = () => {
   }
 
   const subagentModel = createMemo(() => parseModelString(config().subagent_model ?? undefined))
-  const subagentVariants = createMemo(() => {
-    const model = provider.findModel(subagentModel())
-    return model?.variants ? Object.keys(model.variants) : []
-  })
+  const variantKey = createMemo(() => config().subagent_model ?? undefined)
+  const subagentVariants = createMemo(() => Object.keys(provider.findModel(subagentModel())?.variants ?? {}))
   const subagentVariant = createMemo(() => {
-    const list = subagentVariants()
-    if (list.length === 0) return undefined
-    const value = config().subagent_variant ?? undefined
-    return value && list.includes(value) ? value : undefined
+    const key = variantKey()
+    if (!key) return undefined
+    const value = config().subagent_variant_overrides?.[key]
+    if (value) return value
+    return config().subagent_model === key ? (config().subagent_variant ?? undefined) : undefined
   })
 
   function handleSubagentModelSelect(providerID: string, modelID: string) {
@@ -48,16 +52,20 @@ const ModelsTab: Component = () => {
       updateConfig({ subagent_model: null, subagent_variant: null })
       return
     }
-    const model = { providerID, modelID }
-    const variants = provider.findModel(model)?.variants
-    const list = variants ? Object.keys(variants) : []
-    const value = config().subagent_model === `${providerID}/${modelID}` ? config().subagent_variant : undefined
-    const variant = value && list.includes(value) ? value : list[0]
-    updateConfig({ subagent_model: `${providerID}/${modelID}`, subagent_variant: variant ?? null })
+    const value = `${providerID}/${modelID}`
+    updateConfig({
+      subagent_model: value,
+      ...(config().subagent_model === value ? {} : { subagent_variant: null }),
+    })
   }
 
-  function handleSubagentVariantSelect(value: string) {
-    updateConfig({ subagent_variant: value })
+  function updateSubagentVariant(value: string | null) {
+    const key = variantKey()
+    if (!key) return
+    updateConfig({
+      subagent_variant_overrides: { [key]: value },
+      ...(config().subagent_model === key ? { subagent_variant: null } : {}),
+    })
   }
 
   const allAgents = createMemo(() => session.agents())
@@ -73,7 +81,13 @@ const ModelsTab: Component = () => {
   }
 
   function handleAutocompleteModelSelect(providerID: string, modelID: string) {
-    if (!providerID || !modelID) return
+    if (!providerID || !modelID) {
+      // Clearing both keys reverts to the resolved server-side default. Users
+      // who pick "Not set" follow future default changes automatically.
+      updateSetting("autocomplete.provider", null)
+      updateSetting("autocomplete.model", null)
+      return
+    }
     updateSetting("autocomplete.provider", providerID)
     updateSetting("autocomplete.model", modelID)
   }
@@ -91,6 +105,8 @@ const ModelsTab: Component = () => {
             placement="bottom-start"
             allowClear
             clearLabel={language.t("settings.providers.notSet")}
+            label={language.t("settings.providers.defaultModel.title")}
+            description={language.t("settings.providers.defaultModel.description")}
           />
         </SettingsRow>
         <SettingsRow
@@ -104,32 +120,41 @@ const ModelsTab: Component = () => {
             allowClear
             clearLabel={language.t("settings.providers.notSet")}
             includeAutoSmall
+            label={language.t("settings.providers.smallModel.title")}
+            description={language.t("settings.providers.smallModel.description")}
           />
         </SettingsRow>
         <SettingsRow
           title={language.t("settings.providers.subagentModel.title")}
           description={language.t("settings.providers.subagentModel.description")}
         >
-          <div style={{ display: "flex", "align-items": "center", gap: "8px", "flex-wrap": "wrap" }}>
+          <div style={{ display: "flex", "flex-direction": "column", "align-items": "flex-end", gap: "8px" }}>
             <ModelSelectorBase
               value={subagentModel()}
               onSelect={handleSubagentModelSelect}
               placement="bottom-start"
               allowClear
               clearLabel={language.t("settings.providers.notSet")}
+              label={language.t("settings.providers.subagentModel.title")}
+              description={language.t("settings.providers.subagentModel.description")}
             />
-            <ThinkingSelectorBase
-              variants={subagentVariants()}
-              value={subagentVariant()}
-              onSelect={handleSubagentVariantSelect}
-              placement="bottom-start"
-            />
+            <Show when={subagentVariants().length > 0}>
+              <ThinkingSelectorBase
+                variants={subagentVariants()}
+                value={subagentVariant()}
+                onSelect={(value) => updateSubagentVariant(value)}
+                onClear={() => updateSubagentVariant(null)}
+                allowClear
+                clearLabel={language.t("settings.providers.notSet")}
+                placement="bottom-start"
+                globalTrigger={false}
+              />
+            </Show>
           </div>
         </SettingsRow>
         <SettingsRow
           title={language.t("settings.autocomplete.model.title")}
           description={language.t("settings.autocomplete.model.description")}
-          last
         >
           <ModelSelectorBase
             value={getAutocompleteSelection(autocompleteProvider(), autocompleteModel())}
@@ -137,7 +162,24 @@ const ModelsTab: Component = () => {
             placement="bottom-start"
             models={AUTOCOMPLETE_SELECTOR_MODELS}
             favorites={false}
+            allowClear
+            clearLabel={language.t("settings.providers.notSet")}
+            label={language.t("settings.autocomplete.model.title")}
+            description={language.t("settings.autocomplete.model.description")}
           />
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.models.hidePromptTraining.title")}
+          description={language.t("settings.models.hidePromptTraining.description")}
+          last
+        >
+          <Switch
+            checked={config().hide_prompt_training_models === true}
+            onChange={(checked: boolean) => updateConfig({ hide_prompt_training_models: checked })}
+            hideLabel
+          >
+            {language.t("settings.models.hidePromptTraining.title")}
+          </Switch>
         </SettingsRow>
       </Card>
 
@@ -155,6 +197,8 @@ const ModelsTab: Component = () => {
                 placement="bottom-start"
                 allowClear
                 clearLabel={language.t("settings.providers.notSet")}
+                label={`${language.t("settings.providers.modeModels")}: ${agent.name}`}
+                description={language.t("settings.providers.modeModels.description")}
               />
             </SettingsRow>
           )}

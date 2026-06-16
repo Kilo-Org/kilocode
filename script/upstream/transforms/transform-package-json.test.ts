@@ -1,5 +1,13 @@
 import { expect, test } from "bun:test"
-import { fixCatalog, fixScripts, mergeWithNewestVersions } from "./transform-package-json"
+import {
+  assertBunPackageManager,
+  fixCatalog,
+  fixMetadata,
+  fixPackageManager,
+  fixScripts,
+  mergeWithNewestVersions,
+  selectBunPackageManager,
+} from "./transform-package-json"
 
 test("fixScripts preserves Kilo-only root scripts from base", () => {
   const ours = {
@@ -85,6 +93,17 @@ test("fixCatalog is a no-op when catalog is absent", () => {
   expect(changes.length).toBe(0)
 })
 
+test("fixMetadata preserves opencode publish metadata from base", () => {
+  const ours = { keywords: ["cli", "kilo", "opencode"], private: false }
+  const pkg: Record<string, unknown> = { keywords: ["opencode"], private: true }
+  const changes: string[] = []
+  fixMetadata(pkg, "packages/opencode/package.json", ours, changes)
+  expect(pkg.keywords).toEqual(ours.keywords)
+  expect(pkg.private).toBe(false)
+  expect(changes).toContain("keywords: preserved from base")
+  expect(changes).toContain("private: preserved from base")
+})
+
 test("mergeWithNewestVersions preserves ours' key order so kilo-only deps don't relocate", () => {
   // Regression: when ours has a kilo-only dep in the middle (e.g. rotating-file-stream
   // alphabetically between npm-package-arg and semver) and theirs lacks it, the merge
@@ -113,4 +132,63 @@ test("mergeWithNewestVersions appends theirs-only keys at the end", () => {
   const changes: string[] = []
   const result = mergeWithNewestVersions(ours, theirs, changes, "dependencies")
   expect(Object.keys(result)).toEqual(["a", "b", "c"])
+})
+
+test("selectBunPackageManager keeps the newer Bun version and prefers Kilo on ties", () => {
+  expect(selectBunPackageManager("bun@1.3.14", "bun@1.3.13")).toBe("bun@1.3.14")
+  expect(selectBunPackageManager("bun@1.3.14", "bun@1.3.15")).toBe("bun@1.3.15")
+  expect(selectBunPackageManager("bun@1.3.14+kilo", "bun@1.3.14+upstream")).toBe("bun@1.3.14+kilo")
+})
+
+test("selectBunPackageManager preserves valid versions over malformed values", () => {
+  expect(selectBunPackageManager("bun@1.3.14", "bun@latest")).toBe("bun@1.3.14")
+  expect(selectBunPackageManager("bun@latest", "bun@1.3.15")).toBe("bun@1.3.15")
+  expect(selectBunPackageManager("bun@latest", "npm@11.0.0")).toBeUndefined()
+})
+
+test("fixPackageManager prevents root Bun downgrades", () => {
+  const pkg: Record<string, unknown> = { packageManager: "bun@1.3.13" }
+  const ours = { packageManager: "bun@1.3.14" }
+  const changes: string[] = []
+  fixPackageManager(pkg, "package.json", ours, changes)
+  expect(pkg.packageManager).toBe("bun@1.3.14")
+  expect(changes).toEqual(["packageManager: bun@1.3.13 -> bun@1.3.14 (preserved Kilo pin)"])
+})
+
+test("fixPackageManager restores a valid Kilo pin over malformed upstream", () => {
+  const pkg: Record<string, unknown> = { packageManager: "bun@latest" }
+  const changes: string[] = []
+  fixPackageManager(pkg, "package.json", { packageManager: "bun@1.3.14" }, changes)
+  expect(pkg.packageManager).toBe("bun@1.3.14")
+  expect(changes).toEqual(["packageManager: bun@latest -> bun@1.3.14 (preserved Kilo pin)"])
+})
+
+test("fixPackageManager accepts upstream Bun upgrades", () => {
+  const pkg: Record<string, unknown> = { packageManager: "bun@1.3.15" }
+  const changes: string[] = []
+  fixPackageManager(pkg, "package.json", { packageManager: "bun@1.3.14" }, changes)
+  expect(pkg.packageManager).toBe("bun@1.3.15")
+  expect(changes).toEqual([])
+})
+
+test("fixPackageManager ignores nested package.json files", () => {
+  const pkg: Record<string, unknown> = { packageManager: "bun@1.3.13" }
+  const changes: string[] = []
+  fixPackageManager(pkg, "packages/opencode/package.json", { packageManager: "bun@1.3.14" }, changes)
+  expect(pkg.packageManager).toBe("bun@1.3.13")
+  expect(changes).toEqual([])
+})
+
+test("assertBunPackageManager rejects merged downgrades and invalid values", () => {
+  expect(() => assertBunPackageManager("bun@1.3.13", "bun@1.3.14", "bun@1.3.12")).toThrow(
+    "Bun packageManager downgrade detected",
+  )
+  expect(() => assertBunPackageManager("bun@latest", "bun@1.3.14", "bun@1.3.15")).toThrow(
+    "Bun packageManager validation failed",
+  )
+})
+
+test("assertBunPackageManager accepts the newest input or a newer result", () => {
+  expect(() => assertBunPackageManager("bun@1.3.15", "bun@1.3.14", "bun@1.3.15")).not.toThrow()
+  expect(() => assertBunPackageManager("bun@1.3.16", "bun@1.3.14", "bun@1.3.15")).not.toThrow()
 })

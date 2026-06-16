@@ -12,13 +12,14 @@ import { Language, type Node } from "web-tree-sitter"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { fileURLToPath } from "url"
 import { Config } from "@/config/config"
-import { Flag } from "@opencode-ai/core/flag/flag"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Shell } from "@/shell/shell"
 import { ShellID } from "./shell/id"
 
 import * as Truncate from "./truncate"
 import { Plugin } from "@/plugin"
 import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
+import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { ShellPrompt, type Parameters } from "./shell/prompt"
@@ -27,7 +28,6 @@ import { BashArity } from "@/permission/arity"
 export { Parameters } from "./shell/prompt"
 
 const MAX_METADATA_LENGTH = 30_000
-const DEFAULT_TIMEOUT = Flag.KILO_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS || 2 * 60 * 1000
 const CWD = new Set(["cd", "chdir", "popd", "pushd", "push-location", "set-location"])
 const FILES = new Set([
   ...CWD,
@@ -281,7 +281,12 @@ const parse = Effect.fn("ShellTool.parse")(function* (command: string, ps: boole
   return tree
 })
 
-const ask = Effect.fn("ShellTool.ask")(function* (ctx: Tool.Context, scan: Scan, command: string) {
+const ask = Effect.fn("ShellTool.ask")(function* (
+  ctx: Tool.Context,
+  scan: Scan,
+  command: string,
+  description?: string, // kilocode_change
+) {
   // kilocode_change
   if (scan.dirs.size > 0) {
     const globs = Array.from(scan.dirs).map((dir) => {
@@ -292,7 +297,7 @@ const ask = Effect.fn("ShellTool.ask")(function* (ctx: Tool.Context, scan: Scan,
       permission: "external_directory",
       patterns: globs,
       always: globs,
-      metadata: scan.access === "read" ? { command, access: "read" } : {}, // kilocode_change
+      metadata: scan.access === "read" ? { command, access: "read", ...(description ? { description } : {}) } : {}, // kilocode_change
     })
   }
 
@@ -301,13 +306,14 @@ const ask = Effect.fn("ShellTool.ask")(function* (ctx: Tool.Context, scan: Scan,
     permission: ShellID.ToolID,
     patterns: Array.from(scan.patterns),
     always: Array.from(scan.always),
-    metadata: { command: normalizeUrls(command) }, // kilocode_change
+    metadata: { command: normalizeUrls(command), ...(description ? { description } : {}) }, // kilocode_change
   })
 })
 
 function cmd(shell: string, command: string, cwd: string, env: NodeJS.ProcessEnv) {
   if (process.platform === "win32" && Shell.ps(shell)) {
-    return ChildProcess.make(shell, ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command], {
+    return ChildProcess.make(shell, Shell.args(shell, command, cwd), {
+      // kilocode_change - encoded PowerShell args
       cwd,
       env,
       stdin: "ignore",
@@ -358,6 +364,8 @@ export const ShellTool = Tool.define(
     const fs = yield* AppFileSystem.Service
     const trunc = yield* Truncate.Service
     const plugin = yield* Plugin.Service
+    const flags = yield* RuntimeFlags.Service
+    const defaultTimeout = flags.bashDefaultTimeoutMs ?? 2 * 60 * 1000
 
     const cygpath = Effect.fn("ShellTool.cygpath")(function* (shell: string, text: string) {
       const lines = yield* spawner
@@ -473,6 +481,31 @@ export const ShellTool = Tool.define(
       let expired = false
       let aborted = false
 
+      const closeSink = Effect.fnUntraced(function* () {
+        const stream = sink
+        if (!stream) return
+        sink = undefined
+        if (stream.destroyed || stream.closed) return
+        yield* Effect.promise(
+          () =>
+            new Promise<void>((resolve) => {
+              let settled = false
+              const done = () => {
+                if (settled) return
+                settled = true
+                stream.off("close", done)
+                stream.off("error", done)
+                stream.off("finish", done)
+                resolve()
+              }
+              stream.once("close", done)
+              stream.once("error", done)
+              stream.once("finish", done)
+              stream.end(done)
+            }),
+        ).pipe(Effect.catch(() => Effect.void))
+      })
+
       yield* ctx.metadata({
         metadata: {
           output: "",
@@ -482,6 +515,7 @@ export const ShellTool = Tool.define(
 
       const code: number | null = yield* Effect.scoped(
         Effect.gen(function* () {
+          yield* Effect.addFinalizer(closeSink)
           const handle = yield* spawner.spawn(cmd(input.shell, input.command, input.cwd, input.env))
 
           yield* Effect.forkScoped(
@@ -540,7 +574,7 @@ export const ShellTool = Tool.define(
             return Effect.sync(() => ctx.abort.removeEventListener("abort", handler))
           })
 
-          const timeout = Effect.sleep(`${input.timeout + 100} millis`)
+          const timeout = Effect.sleep(`${CommandTimeout.duration(input.timeout)} millis`) // kilocode_change
 
           const exit = yield* Effect.raceAll([
             handle.exitCode.pipe(Effect.map((code) => ({ kind: "exit" as const, code }))),
@@ -563,9 +597,12 @@ export const ShellTool = Tool.define(
 
       const meta: string[] = []
       if (expired) {
+        // kilocode_change start
         meta.push(
-          `shell tool terminated command after exceeding timeout ${input.timeout} ms. If this command is expected to take longer and is not waiting for interactive input, retry with a larger timeout value in milliseconds.`,
+          CommandTimeout.message(input.timeout, "shell tool terminated command") ??
+            `shell tool terminated command after exceeding timeout ${input.timeout} ms. If this command is expected to take longer and is not waiting for interactive input, retry with a larger timeout value in milliseconds.`,
         )
+        // kilocode_change end
       }
       if (aborted) meta.push("User aborted the command")
       const raw = list.map((item) => item.text).join("")
@@ -585,17 +622,6 @@ export const ShellTool = Tool.define(
       if (meta.length > 0) {
         output += "\n\n<shell_metadata>\n" + meta.join("\n") + "\n</shell_metadata>"
       }
-      if (sink) {
-        const stream = sink
-        yield* Effect.promise(
-          () =>
-            new Promise<void>((resolve) => {
-              stream.end(() => resolve())
-              stream.on("error", () => resolve())
-            }),
-        )
-      }
-
       return {
         title: input.description,
         metadata: {
@@ -623,28 +649,28 @@ export const ShellTool = Tool.define(
           parameters: prompt.parameters,
           execute: (params: Parameters, ctx: Tool.Context) =>
             Effect.gen(function* () {
-              const executeInstance = yield* InstanceState.context
+              const instanceCtx = yield* InstanceState.context
               const cwd = params.workdir
-                ? yield* resolvePath(params.workdir, executeInstance.directory, shell)
-                : executeInstance.directory
+                ? yield* resolvePath(params.workdir, instanceCtx.directory, shell)
+                : instanceCtx.directory
               if (params.timeout !== undefined && params.timeout < 0) {
                 throw new Error(`Invalid timeout value: ${params.timeout}. Timeout must be a positive number.`)
               }
-              const timeout = params.timeout ?? DEFAULT_TIMEOUT
+              const timeout = CommandTimeout.clamp(params.timeout ?? defaultTimeout).timeout // kilocode_change
               const ps = Shell.ps(shell)
               yield* Effect.scoped(
                 Effect.gen(function* () {
                   const tree = yield* Effect.acquireRelease(parse(params.command, ps), (tree) =>
                     Effect.sync(() => tree.delete()),
                   )
-                  const scan = yield* collect(tree.rootNode, cwd, ps, shell, executeInstance)
+                  const scan = yield* collect(tree.rootNode, cwd, ps, shell, instanceCtx)
                   // kilocode_change start
-                  if (!containsPath(cwd, executeInstance)) {
+                  if (!containsPath(cwd, instanceCtx)) {
                     scan.dirs.add(cwd)
                     scan.access = "unknown"
                   }
                   // kilocode_change end
-                  yield* ask(ctx, scan, params.command) // kilocode_change
+                  yield* ask(ctx, scan, params.command, params.description) // kilocode_change
                 }),
               )
 

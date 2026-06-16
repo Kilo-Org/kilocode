@@ -50,10 +50,14 @@ await Bun.file(`./dist/${pkg.name}/package.json`).write(
         // kilocode_change end
       },
       scripts: {
-        postinstall: "bun ./postinstall.mjs || node ./postinstall.mjs",
+        postinstall: "node ./postinstall.mjs",
       },
       version: version,
       license: pkg.license,
+      keywords: pkg.keywords, // kilocode_change
+      private: pkg.private, // kilocode_change
+      os: ["darwin", "linux", "win32"],
+      cpu: ["arm64", "x64"],
       optionalDependencies: binaries,
       // kilocode_change start
       repository: {

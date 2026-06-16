@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { slimPart } from "../../src/kilo-provider/slim-metadata"
+import { slimInfo, slimPart } from "../../src/kilo-provider/slim-metadata"
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -35,6 +35,28 @@ const DIAG = [
 // Tests
 // ---------------------------------------------------------------------------
 
+describe("slimInfo", () => {
+  it("drops summary patches while keeping visible diff fields", () => {
+    const info = {
+      role: "user",
+      summary: {
+        title: "Updated files",
+        diffs: [{ file: "a.ts", patch: BIG, additions: 3, deletions: 1, status: "modified" }],
+      },
+    }
+
+    const slim = slimInfo(info)
+    expect(slim.summary.title).toBe("Updated files")
+    expect(slim.summary.diffs).toEqual([{ file: "a.ts", additions: 3, deletions: 1, status: "modified" }])
+    expect(info.summary.diffs[0]?.patch).toBe(BIG)
+  })
+
+  it("passes through summaries without patches unchanged", () => {
+    const info = { role: "user", summary: { diffs: [{ file: "a.ts", additions: 1, deletions: 0 }] } }
+    expect(slimInfo(info)).toBe(info)
+  })
+})
+
 describe("slimPart", () => {
   it("passes through non-tool parts unchanged", () => {
     const text = { type: "text", id: "t1", content: "hello" }
@@ -44,6 +66,22 @@ describe("slimPart", () => {
   it("passes through unknown tool types unchanged", () => {
     const p = part("some_new_tool", { status: "completed", metadata: { big: BIG } })
     expect(slimPart(p)).toBe(p)
+  })
+
+  it("drops encrypted OpenAI reasoning metadata while keeping other provider fields", () => {
+    const reasoning = {
+      type: "reasoning",
+      id: "r1",
+      text: "Considering options",
+      metadata: {
+        openai: { reasoningEncryptedContent: BIG, itemId: "item-1" },
+        anthropic: { signature: "sig-1" },
+      },
+    }
+
+    const slim = slimPart(reasoning)
+    expect(slim.metadata).toEqual({ openai: { itemId: "item-1" }, anthropic: { signature: "sig-1" } })
+    expect(reasoning.metadata.openai.reasoningEncryptedContent).toBe(BIG)
   })
 
   // -----------------------------------------------------------------------

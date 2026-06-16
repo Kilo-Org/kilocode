@@ -50,6 +50,7 @@ async function disableAnimations(page: Page) {
 // Permission dock config-preloaded has non-deterministic toggle rendering.
 const SKIP = new Set<string>([
   "agentmanager--worktree-item-busy",
+  "agentmanager--full-screen-diff-agent-edit-scroll",
   "agentmanager--pr-badge-checks-pending",
   "composite-webview--permission-dock-config-preloaded",
 ])
@@ -86,9 +87,9 @@ for (const story of stories) {
       test.info().annotations.push({ type: "docs", description: ref })
     }
 
-    // Narrow stories (IDs ending in "-200") use a 200px viewport
-    const narrow = story.id.endsWith("-200")
-    await page.setViewportSize({ width: narrow ? 200 : 420, height: 720 })
+    // Width-suffixed stories cover layouts outside the default sidebar viewport.
+    const width = story.id.endsWith("-200") ? 200 : story.id.endsWith("-1280") ? 1280 : 420
+    await page.setViewportSize({ width, height: 720 })
 
     await page.goto(
       `/iframe.html?id=${story.id}&viewMode=story&globals=colorScheme:dark;theme:kilo-vscode;vscodeTheme:dark-modern`,

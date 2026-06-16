@@ -18,6 +18,11 @@ export interface ProviderModel {
   options?: { description?: string }
   recommendedIndex?: number
   isFree?: boolean
+  mayTrainOnYourPrompts?: boolean
+  terminalBench?: {
+    overallScore: number
+    avgAttemptCostUsd: number
+  }
   cost?: {
     input: number
     output: number

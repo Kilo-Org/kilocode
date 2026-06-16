@@ -16,6 +16,7 @@ import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
@@ -100,6 +101,9 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
 
     // ------ chat ------
 
+    override suspend fun enhancePrompt(directory: String, text: String): String =
+        ready { chat.enhancePrompt(directory, text) }
+
     override suspend fun prompt(id: String, directory: String, prompt: PromptDto) {
         app.requireReady()
         LOG.info("prompt RPC: session=$id, dir=$directory, parts=${prompt.parts.size}")
@@ -114,6 +118,9 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
 
     override suspend fun messages(id: String, directory: String): List<MessageWithPartsDto> =
         ready { chat.messages(id, directory) }
+
+    override suspend fun attachmentPart(id: String, directory: String, messageId: String, partId: String, attachmentKey: String?): PartDto? =
+        ready { chat.attachmentPart(id, directory, messageId, partId, attachmentKey) }
 
     override suspend fun events(id: String, directory: String): Flow<ChatEventDto> =
         chat.events.filter { event ->

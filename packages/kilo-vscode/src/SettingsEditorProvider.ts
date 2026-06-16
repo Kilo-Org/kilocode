@@ -4,17 +4,16 @@ import { resolvePanelProjectDirectory } from "./project-directory"
 import type { KiloConnectionService } from "./services/cli-backend"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 
-type PanelView = "settings" | "profile" | "marketplace" | "indexing"
+type PanelView = "settings" | "profile" | "indexing"
 
 const PANEL_TITLES: Record<PanelView, string> = {
   settings: "Kilo Settings",
   profile: "Kilo Profile",
-  marketplace: "Kilo Marketplace",
   indexing: "Codebase Indexing",
 }
 
 /**
- * Opens Settings, Profile, or Marketplace as an editor-area WebviewPanel,
+ * Opens Settings or Profile as an editor-area WebviewPanel,
  * keeping the sidebar chat undisturbed.
  *
  * Each view type is a singleton panel — calling openPanel() again
@@ -54,10 +53,10 @@ export class SettingsEditorProvider implements vscode.Disposable {
     return view
   }
 
-  openPanel(view: PanelView, tab?: string, directory?: string | null): void {
+  openPanel(view: PanelView, tab?: string): void {
     if (tab) this.tabs.set(view, tab)
 
-    const projectDirectory = directory ?? this.getProjectDirectory()
+    const projectDirectory = this.getProjectDirectory()
     const existing = this.panels.get(view)
     if (existing) {
       this.providers.get(view)?.setProjectDirectory(projectDirectory)

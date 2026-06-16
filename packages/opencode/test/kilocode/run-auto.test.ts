@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { afterEach, describe, expect, mock, test } from "bun:test"
 
 type Event = {
@@ -158,6 +157,9 @@ describe("cli run auto permissions", () => {
         },
       },
       session: {
+        get: async (input: { sessionID: string }) => ({
+          data: { id: input.sessionID, directory: "/tmp/project" },
+        }),
         prompt: async () => {
           q.push(task("ses_child"))
           q.push(permission("perm_other", "ses_other"))

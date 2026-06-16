@@ -10,7 +10,9 @@ import { remove as cleanup } from "./kilocode/cleanup" // kilocode_change
 const dir = path.join(os.tmpdir(), "opencode-test-data-" + process.pid)
 await fs.mkdir(dir, { recursive: true })
 afterAll(async () => {
+  const { SessionExport } = await import("../src/kilocode/session-export") // kilocode_change
   const { Database } = await import("../src/storage/db")
+  await SessionExport.shutdown() // kilocode_change
   Database.close()
   await cleanup(dir) // kilocode_change
 })
@@ -21,6 +23,7 @@ process.env["XDG_CONFIG_HOME"] = path.join(dir, "config")
 process.env["XDG_STATE_HOME"] = path.join(dir, "state")
 process.env["KILO_MODELS_PATH"] = path.join(import.meta.dir, "tool", "fixtures", "models-api.json")
 process.env["KILO_EXPERIMENTAL_EVENT_SYSTEM"] = "true"
+process.env["KILO_EXPERIMENTAL_WORKSPACES"] = "true"
 
 // Set test home directory to isolate tests from user's actual home directory
 // This prevents tests from picking up real user configs/skills from ~/.claude/skills
@@ -31,7 +34,6 @@ process.env["KILO_TEST_HOME"] = testHome
 // Set test managed config directory to isolate tests from system managed settings
 const testManagedConfigDir = path.join(dir, "managed")
 process.env["KILO_TEST_MANAGED_CONFIG_DIR"] = testManagedConfigDir
-process.env["KILO_DISABLE_DEFAULT_PLUGINS"] = "true"
 
 // Write the cache version file to prevent global/index.ts from clearing the cache
 const cacheDir = path.join(dir, "cache", "kilo")

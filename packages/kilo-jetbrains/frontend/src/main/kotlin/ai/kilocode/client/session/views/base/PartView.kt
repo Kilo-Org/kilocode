@@ -3,6 +3,8 @@ package ai.kilocode.client.session.views.base
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import com.intellij.openapi.Disposable
+import javax.swing.JComponent
 import javax.swing.JPanel
 
 /**
@@ -14,10 +16,14 @@ import javax.swing.JPanel
  *
  * All methods must be called on the EDT.
  */
-abstract class PartView : JPanel(), SessionEditorStyleTarget {
+abstract class PartView : JPanel(), Disposable, SessionEditorStyleTarget {
 
     /** Stable [Content.id] this renderer was created for. */
     abstract val contentId: String
+
+    var resize: ((JComponent, () -> Unit) -> Unit)? = null
+
+    var hover: ((PartView, Boolean) -> Unit)? = null
 
     /**
      * Apply a full content update — replace, not append.
@@ -32,7 +38,11 @@ abstract class PartView : JPanel(), SessionEditorStyleTarget {
      */
     open fun appendDelta(delta: String) {}
 
+    open fun setHovered(value: Boolean) {}
+
     override fun applyStyle(style: SessionEditorStyle) {}
+
+    override fun dispose() {}
 
     /** Readable name for test dumps. */
     open fun dumpLabel(): String = javaClass.simpleName

@@ -1,6 +1,8 @@
 /**
  * Codebase Index Constants
  */
+export const DEFAULT_VECTOR_STORE = "lancedb" as const
+
 export const CODEBASE_INDEX_DEFAULTS = {
   MIN_SEARCH_RESULTS: 10,
   MAX_SEARCH_RESULTS: 200,

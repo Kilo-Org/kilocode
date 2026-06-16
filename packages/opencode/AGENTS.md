@@ -1,4 +1,4 @@
-# opencode agent guidelines
+# Kilo CLI package guidelines
 
 ## Build/Test
 
@@ -32,6 +32,8 @@ const state = Instance.state(async () => {
 })
 // later: (await state()).someValue
 ```
+
+**Service-closure state vs. directory state** -- A value created in a service-layer closure, outside `InstanceState`, is shared by that service instance rather than keyed by request directory. The shared VS Code session paths use one active Snapshot service for the sidebar, Kilo tabs, and Agent Manager local worktree requests, so Snapshot `trackState` and its slow-track `asked` guard span those directories. Choosing **Continue with snapshots** resets the guard only when continued tracking returns a snapshot hash.
 
 **`fn(schema, callback)`** -- Wraps functions with Zod input validation. Used for most exported functions:
 

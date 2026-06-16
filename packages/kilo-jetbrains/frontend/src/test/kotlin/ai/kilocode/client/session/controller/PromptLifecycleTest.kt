@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.controller
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.PermissionFileDiff
 import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.SessionState
@@ -18,9 +19,31 @@ import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.ToolRefDto
-import com.intellij.ide.util.PropertiesComponent
+import java.util.concurrent.CopyOnWriteArrayList
 
 class PromptLifecycleTest : SessionControllerTestBase() {
+
+    override fun setUp() {
+        super.setUp()
+        edt { KiloPluginSettings.unsetAutoApprove() }
+    }
+
+    override fun tearDown() {
+        try {
+            edt { KiloPluginSettings.unsetAutoApprove() }
+        } finally {
+            super.tearDown()
+        }
+    }
+
+    fun `test prompt records send intent telemetry`() {
+        prompted()
+
+        val event = appRpc.telemetry.single { it.event == "Conversation Send Clicked" }
+        assertEquals("user", event.properties["source"])
+        assertEquals("false", event.properties["hasExistingSession"])
+        assertEquals("short", event.properties["textLength"])
+    }
 
     fun `test PermissionAsked moves state to AwaitingPermission`() {
         val (m, _, _) = prompted()
@@ -115,6 +138,103 @@ class PromptLifecycleTest : SessionControllerTestBase() {
 
         // State must remain AwaitingPermission
         assertTrue(m.model.state is SessionState.AwaitingPermission)
+    }
+
+    fun `test auto approve replies once to permission request`() {
+        val (m, _, _) = prompted()
+
+        edt { m.setAutoApprove(true) }
+        emit(ChatEventDto.PermissionAsked("ses_test", permission("perm1")))
+
+        assertEquals(1, rpc.permissionReplies.size)
+        assertEquals("perm1", rpc.permissionReplies[0].first)
+        assertEquals("once", rpc.permissionReplies[0].third.reply)
+        assertSession(
+            """
+            [code] [kilo/gpt-5] [busy] [considering next steps]
+            """,
+            m,
+        )
+    }
+
+    fun `test disabling auto approve before reply restores awaiting permission`() {
+        val (m, _, _) = prompted()
+
+        edt { m.setAutoApprove(true) }
+        emit(ChatEventDto.PermissionAsked("ses_test", permission("perm1")), flush = false)
+        edt { m.setAutoApprove(false) }
+        flush()
+
+        assertTrue(rpc.permissionReplies.isEmpty())
+        assertSession(
+            """
+            permission#perm1
+            tool: msg1/call1
+            name: edit
+            patterns: *.kt
+            always: <none>
+            file: src/A.kt
+            state: RESPONDING
+            metadata: kind=edit
+
+            [code] [kilo/gpt-5] [awaiting-permission]
+            """,
+            m,
+        )
+    }
+
+    fun `test enabling auto approve drains current permission`() {
+        val (m, _, _) = prompted()
+        emit(ChatEventDto.PermissionAsked("ses_test", permission("perm1")))
+
+        edt { m.setAutoApprove(true) }
+        flush()
+
+        assertEquals(1, rpc.permissionReplies.size)
+        assertEquals("perm1", rpc.permissionReplies[0].first)
+        assertEquals("once", rpc.permissionReplies[0].third.reply)
+        assertSession(
+            """
+            [code] [kilo/gpt-5] [busy] [considering next steps]
+            """,
+            m,
+        )
+    }
+
+    fun `test enabling auto approve drains pending permissions`() {
+        val (m, _, _) = prompted()
+        rpc.pendingPermissionList.add(permission("perm_pending"))
+
+        edt { m.setAutoApprove(true) }
+        flush()
+
+        assertEquals(1, rpc.permissionReplies.size)
+        assertEquals("perm_pending", rpc.permissionReplies[0].first)
+        assertEquals("once", rpc.permissionReplies[0].third.reply)
+    }
+
+    fun `test auto approve drains pending permissions during recovery`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        rpc.pendingPermissionList.add(permission("perm_pending"))
+        edt { KiloPluginSettings.setAutoApprove(true) }
+
+        val m = controller("ses_test")
+        flush()
+
+        assertEquals(1, rpc.permissionReplies.size)
+        assertEquals("perm_pending", rpc.permissionReplies[0].first)
+        assertFalse(m.model.state is SessionState.AwaitingPermission)
+    }
+
+    fun `test auto approve persists in properties`() {
+        val (m, _, _) = prompted()
+
+        assertFalse(KiloPluginSettings.getAutoApprove())
+        edt { m.setAutoApprove(true) }
+
+        assertTrue(KiloPluginSettings.getAutoApprove())
+        assertTrue(m.autoApprove)
     }
 
     fun `test QuestionReplied with wrong requestID is ignored`() {
@@ -375,6 +495,20 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         val perm = (m.model.state as SessionState.AwaitingPermission).permission
         assertEquals("child_perm1", perm.id)
         assertEquals("ses_child", perm.sessionId)
+    }
+
+    fun `test repeated task part subscribes to child once`() {
+        val calls = CopyOnWriteArrayList<String>()
+        rpc.eventFlow = { id, _ ->
+            calls.add(id)
+            rpc.events
+        }
+        prompted()
+
+        emit(taskPart("ses_child"), flush = false)
+        emit(taskPart("ses_child"))
+
+        assertEquals(1, calls.count { it == "ses_child" })
     }
 
     fun `test child PermissionAsked moves root model to AwaitingPermission`() {

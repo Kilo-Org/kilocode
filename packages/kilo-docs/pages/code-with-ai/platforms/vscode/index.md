@@ -41,6 +41,29 @@ Key features include:
 
 Settings apply across extension surfaces, including the sidebar and Agent Manager. The standalone CLI uses the same `~/.config/kilo/kilo.jsonc` (global) and `./kilo.jsonc` (project) files when used directly.
 
+## Proxy and Certificate Troubleshooting
+
+Kilo Code for VS Code starts its embedded runtime from the extension and applies the relevant VS Code network settings to that runtime. On managed networks, configure proxy and certificate trust in VS Code settings rather than in a separate CLI install.
+
+Use these settings when your organization requires a proxy or inspects HTTPS traffic:
+
+- Set `http.proxy` to your organization proxy URL.
+- Use `http.noProxy` for hosts that should bypass the proxy.
+- Leave `http.proxySupport` enabled unless you intentionally want VS Code and Kilo Code to ignore proxy settings.
+- Install your organization's root certificate authority in the operating system trust store when HTTPS inspection is in use.
+- If the operating system trust store is not enough, set `kilo-code.new.extraCaCerts` to the absolute path of a PEM file that contains the additional certificate authority certificates.
+- Keep `http.proxyStrictSSL` enabled whenever possible. Disable it only as a temporary troubleshooting step or when your administrator explicitly requires it, because it disables TLS certificate verification for this path.
+
+Example user or workspace settings:
+
+```json
+{
+  "http.proxy": "http://proxy.example.com:8080",
+  "http.noProxy": ["localhost", "127.0.0.1", ".example.internal"],
+  "kilo-code.new.extraCaCerts": "/absolute/path/to/corporate-ca.pem"
+}
+```
+
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 

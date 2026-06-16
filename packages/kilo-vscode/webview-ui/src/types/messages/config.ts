@@ -38,9 +38,7 @@ export interface WatcherConfig {
 }
 
 export interface ExperimentalConfig {
-  disable_paste_summary?: boolean
   batch_tool?: boolean
-  semantic_indexing?: boolean
   codebase_search?: boolean
   speech_to_text_model?: string
   primary_tools?: string[]
@@ -67,8 +65,8 @@ export type IndexingProvider =
 export interface IndexingConfig {
   enabled?: boolean
   provider?: IndexingProvider
-  model?: string
-  dimension?: number
+  model?: string | null
+  dimension?: number | null
   vectorStore?: "lancedb" | "qdrant"
   kilo?: { apiKey?: string; baseUrl?: string; organizationId?: string }
   openai?: { apiKey?: string }
@@ -111,6 +109,7 @@ export interface BrowserSettings {
 }
 
 export type TerminalCommandDisplay = "expanded" | "collapsed"
+export type CodeEditDisplay = "expanded" | "collapsed"
 
 export interface Config {
   permission?: PermissionConfig
@@ -118,6 +117,7 @@ export interface Config {
   small_model?: string | null
   subagent_model?: string | null
   subagent_variant?: string | null
+  subagent_variant_overrides?: Record<string, string | null> | null
   default_agent?: string | null
   agent?: Record<string, AgentConfig>
   provider?: Record<string, ProviderConfig>
@@ -130,6 +130,8 @@ export interface Config {
   snapshot?: boolean
   remote_control?: boolean
   terminal_command_display?: TerminalCommandDisplay
+  code_edit_display?: CodeEditDisplay
+  hide_prompt_training_models?: boolean
   share?: "manual" | "auto" | "disabled"
   username?: string
   watcher?: WatcherConfig
@@ -138,7 +140,6 @@ export interface Config {
   compaction?: CompactionConfig
   commit_message?: CommitMessageConfig
   tools?: Record<string, boolean>
-  layout?: "auto" | "stretch"
   auto_collapse_reasoning?: boolean
   experimental?: ExperimentalConfig
   indexing?: IndexingConfig

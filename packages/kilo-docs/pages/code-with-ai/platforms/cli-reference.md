@@ -179,15 +179,17 @@ Options:
       --format                        format: default (formatted) or json (raw JSON events)  [string] [choices: "default", "json"] [default: "default"]
   -f, --file                          file(s) to attach to message  [array]
       --title                         title for the session (uses truncated prompt if no value provided)  [string]
-      --attach                        attach to a running opencode server (e.g., http://localhost:4096)  [string]
+      --attach                        attach to a running kilo server (e.g., http://localhost:4096)  [string]
   -p, --password                      basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
   -u, --username                      basic auth username (defaults to KILO_SERVER_USERNAME or 'kilo')  [string]
       --dir                           directory to run in, path on remote server if attaching  [string]
       --port                          port for the local server (defaults to random port if no value provided)  [number]
       --variant                       model variant (provider-specific reasoning effort, e.g., high, max, minimal)  [string]
-      --thinking                      show thinking blocks  [boolean] [default: false]
+      --thinking                      show thinking blocks  [boolean]
+  -i, --interactive                   run in direct interactive split-footer mode  [boolean] [default: false]
       --dangerously-skip-permissions  auto-approve permissions that are not explicitly denied (dangerous!)  [boolean] [default: false]
       --auto                          auto-approve all permissions (for autonomous/pipeline usage)  [boolean] [default: false]
+      --demo                          enable direct interactive demo slash commands; pass one as the message to run it immediately  [boolean] [default: false]
 ```
 
 ## kilo debug
@@ -205,6 +207,7 @@ Commands:
   kilo debug snapshot      snapshot debugging utilities
   kilo debug startup       print startup timing
   kilo debug agent <name>  show agent configuration details
+  kilo debug v2            debug v2 catalog and built-in plugins
   kilo debug info          show debug information
   kilo debug paths         show global paths (data, config, cache, state)
   kilo debug wait          wait indefinitely (for debugging)
@@ -507,6 +510,16 @@ Options:
   --params   Tool params as JSON or a JS object literal  [string]
 ```
 
+### kilo debug v2
+
+```
+debug v2 catalog and built-in plugins
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
 ### kilo debug info
 
 ```
@@ -637,7 +650,7 @@ Positionals:
 Options:
       --help     Show help  [boolean]
       --version  Show version number  [boolean]
-  -m, --method   installation method to use  [string] [choices: "curl", "npm", "pnpm", "bun", "brew", "choco", "scoop"]
+  -m, --method   installation method to use  [string] [choices: "curl", "npm", "yarn", "pnpm", "bun", "brew", "choco", "scoop"]
 ```
 
 ## kilo uninstall
@@ -658,6 +671,21 @@ Options:
 
 ```
 starts a headless kilo server
+
+Options:
+  --help         Show help  [boolean]
+  --version      Show version number  [boolean]
+  --port         port to listen on  [number] [default: 0]
+  --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
+  --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
+  --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
+  --cors         additional domains to allow for CORS  [array] [default: []]
+```
+
+## kilo web
+
+```
+start kilo server and open web interface
 
 Options:
   --help         Show help  [boolean]
@@ -703,6 +731,17 @@ Options:
   --output    Output format (table, json, or md)  [string] [choices: "table", "json", "md"] [default: "table"]
 ```
 
+## kilo profile
+
+```
+show Kilo account profile
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --json     output profile as JSON  [boolean] [default: false]
+```
+
 ## kilo stats
 
 ```
@@ -742,6 +781,42 @@ Positionals:
 Options:
   --help     Show help  [boolean]
   --version  Show version number  [boolean]
+```
+
+## kilo github
+
+```
+manage GitHub agent
+
+Commands:
+  kilo github install  install the GitHub agent
+  kilo github run      run the GitHub agent
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo github install
+
+```
+install the GitHub agent
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo github run
+
+```
+run the GitHub agent
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --event    GitHub mock event to run the agent for  [string]
+  --token    GitHub personal access token (github_pat_********)  [string]
 ```
 
 ## kilo pr
@@ -806,6 +881,91 @@ enable remote connection for real-time session relay
 Options:
   --help     Show help  [boolean]
   --version  Show version number  [boolean]
+```
+
+## kilo daemon
+
+```
+manage the local kilo daemon
+
+Commands:
+  kilo daemon start    start the local kilo daemon
+  kilo daemon status   show local kilo daemon status
+  kilo daemon stop     stop the local kilo daemon
+  kilo daemon restart  restart the local kilo daemon
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo daemon start
+
+```
+start the local kilo daemon
+
+Options:
+  --help         Show help  [boolean]
+  --version      Show version number  [boolean]
+  --port         port to listen on  [number] [default: 0]
+  --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
+  --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
+  --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
+  --cors         additional domains to allow for CORS  [array] [default: []]
+  --json         print daemon details as JSON  [boolean]
+```
+
+### kilo daemon status
+
+```
+show local kilo daemon status
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --json     print daemon details as JSON  [boolean]
+```
+
+### kilo daemon stop
+
+```
+stop the local kilo daemon
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --json     print daemon details as JSON  [boolean]
+```
+
+### kilo daemon restart
+
+```
+restart the local kilo daemon
+
+Options:
+  --help         Show help  [boolean]
+  --version      Show version number  [boolean]
+  --port         port to listen on  [number] [default: 0]
+  --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
+  --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
+  --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
+  --cors         additional domains to allow for CORS  [array] [default: []]
+  --json         print daemon details as JSON  [boolean]
+```
+
+## kilo console
+
+```
+open the local Kilo Console
+
+Options:
+  --help         Show help  [boolean]
+  --version      Show version number  [boolean]
+  --port         port to listen on  [number] [default: 0]
+  --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
+  --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
+  --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
+  --cors         additional domains to allow for CORS  [array] [default: []]
 ```
 
 ## kilo db

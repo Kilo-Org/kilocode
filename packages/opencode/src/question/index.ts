@@ -3,11 +3,8 @@ import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
 import { InstanceState } from "@/effect/instance-state"
 import { SessionID, MessageID } from "@/session/schema"
-import { zod } from "@/util/effect-zod"
 import * as Log from "@opencode-ai/core/util/log"
-import { withStatics } from "@/util/schema"
 import { QuestionID } from "./schema"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { KiloQuestion } from "@/kilocode/question" // kilocode_change
 
 const log = Log.create({ service: "question" })
@@ -36,9 +33,7 @@ export class Option extends Schema.Class<Option>("QuestionOption")({
     description: "Optional agent/mode name to pre-select in the UI when this option is picked",
   }),
   // kilocode_change end
-}) {
-  static readonly zod = zod(this)
-}
+}) {}
 
 const base = {
   question: Schema.String.annotate({
@@ -68,20 +63,14 @@ export class Info extends Schema.Class<Info>("QuestionInfo")({
   custom: Schema.optional(Schema.Boolean).annotate({
     description: "Allow typing a custom answer (default: true)",
   }),
-}) {
-  static readonly zod = zod(this)
-}
+}) {}
 
-export class Prompt extends Schema.Class<Prompt>("QuestionPrompt")(base) {
-  static readonly zod = zod(this)
-}
+export class Prompt extends Schema.Class<Prompt>("QuestionPrompt")(base) {}
 
 export class Tool extends Schema.Class<Tool>("QuestionTool")({
   messageID: MessageID,
   callID: Schema.String,
-}) {
-  static readonly zod = zod(this)
-}
+}) {}
 
 export class Request extends Schema.Class<Request>("QuestionRequest")({
   id: QuestionID,
@@ -94,22 +83,16 @@ export class Request extends Schema.Class<Request>("QuestionRequest")({
     description: "Whether this question blocks prompt input (default: true)",
   }),
   tool: Schema.optional(Tool),
-}) {
-  static readonly zod = zod(this)
-}
+}) {}
 
-export const Answer = Schema.Array(Schema.String)
-  .annotate({ identifier: "QuestionAnswer" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export const Answer = Schema.Array(Schema.String).annotate({ identifier: "QuestionAnswer" })
 export type Answer = Schema.Schema.Type<typeof Answer>
 
 export class Reply extends Schema.Class<Reply>("QuestionReply")({
   answers: Schema.Array(Answer).annotate({
     description: "User answers in order of questions (each answer is an array of selected labels)",
   }),
-}) {
-  static readonly zod = zod(this)
-}
+}) {}
 
 class Replied extends Schema.Class<Replied>("QuestionReplied")({
   sessionID: SessionID,
@@ -134,6 +117,10 @@ export class RejectedError extends Schema.TaggedErrorClass<RejectedError>()("Que
   }
 }
 
+export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()("Question.NotFoundError", {
+  requestID: QuestionID,
+}) {}
+
 interface PendingEntry {
   info: Request
   deferred: Deferred.Deferred<ReadonlyArray<Answer>, RejectedError>
@@ -152,8 +139,11 @@ export interface Interface {
     blocking?: boolean // kilocode_change
     tool?: Tool
   }) => Effect.Effect<ReadonlyArray<Answer>, RejectedError>
-  readonly reply: (input: { requestID: QuestionID; answers: ReadonlyArray<Answer> }) => Effect.Effect<void>
-  readonly reject: (requestID: QuestionID) => Effect.Effect<void>
+  readonly reply: (input: {
+    requestID: QuestionID
+    answers: ReadonlyArray<Answer>
+  }) => Effect.Effect<void, NotFoundError>
+  readonly reject: (requestID: QuestionID) => Effect.Effect<void, NotFoundError>
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
   readonly dismissAll: (sessionID: SessionID) => Effect.Effect<void> // kilocode_change
 }
@@ -225,7 +215,7 @@ export const layer = Layer.effect(
       const existing = pending.get(input.requestID)
       if (!existing) {
         log.warn("reply for unknown request", { requestID: input.requestID })
-        return
+        return yield* new NotFoundError({ requestID: input.requestID })
       }
       pending.delete(input.requestID)
       log.info("replied", { requestID: input.requestID, answers: input.answers })
@@ -242,7 +232,7 @@ export const layer = Layer.effect(
       const existing = pending.get(requestID)
       if (!existing) {
         log.warn("reject for unknown request", { requestID })
-        return
+        return yield* new NotFoundError({ requestID })
       }
       pending.delete(requestID)
       log.info("rejected", { requestID })
@@ -272,14 +262,5 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer.pipe(Layer.provide(Bus.layer))
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const list = () => runPromise((svc) => svc.list())
-export const ask = (input: Parameters<Interface["ask"]>[0]) => runPromise((svc) => svc.ask(input))
-export const reply = (input: Parameters<Interface["reply"]>[0]) => runPromise((svc) => svc.reply(input))
-export const reject = (requestID: QuestionID) => runPromise((svc) => svc.reject(requestID))
-export const dismissAll = (sessionID: string) => runPromise((svc) => svc.dismissAll(SessionID.make(sessionID)))
-// kilocode_change end
 
 export * as Question from "."

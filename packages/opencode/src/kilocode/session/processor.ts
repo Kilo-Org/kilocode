@@ -9,6 +9,7 @@ import { isReviewCommand, parseReviewCommand } from "@/kilocode/review/command"
 import * as Log from "@opencode-ai/core/util/log"
 import { Effect } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { EffectBridge } from "@/effect/bridge"
 
 export type ReviewTelemetry = {
   mode: "review"
@@ -127,7 +128,7 @@ export namespace KiloSessionProcessor {
     return Effect.gen(function* () {
       const msg = SessionNetwork.message(input.error)
 
-      const { id, promise } = yield* Effect.promise(() =>
+      const { id, promise } = yield* EffectBridge.fromPromise(() =>
         SessionNetwork.ask({
           sessionID: input.sessionID,
           message: msg,

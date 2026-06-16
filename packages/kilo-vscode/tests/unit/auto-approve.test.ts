@@ -79,26 +79,27 @@ function context() {
   return { subscriptions: [] as Array<{ dispose(): void }> } as vscode.ExtensionContext
 }
 
-function connection(client: KiloClient | null) {
-  const listeners: Array<(event: Event) => void> = []
+function connection(client: KiloClient | null, dirs = new Map<string, string>()) {
+  const listeners: Array<(event: Event, directory?: string) => void> = []
   const svc = {
     getClient: () => {
       if (!client) throw new Error("not connected")
       return client
     },
-    onEvent: (listener: (event: Event) => void) => {
+    onEvent: (listener: (event: Event, directory?: string) => void) => {
       listeners.push(listener)
       return () => {
         const index = listeners.indexOf(listener)
         if (index >= 0) listeners.splice(index, 1)
       }
     },
+    getPermissionDirectory: (id: string) => dirs.get(id),
   } as unknown as KiloConnectionService
 
   return {
     svc,
-    emit(event: Event) {
-      for (const listener of listeners) listener(event)
+    emit(event: Event, directory?: string) {
+      for (const listener of listeners) listener(event, directory)
     },
   }
 }
@@ -150,6 +151,47 @@ describe("registerToggleAutoApprove", () => {
     expect(changes).toEqual([false, true])
     expect(env.updates).toEqual([{ key: "enabled", value: true, target: vscode.ConfigurationTarget.Workspace }])
     expect(env.messages).toContain("Auto-approve enabled")
+  })
+
+  it("uses the SSE directory for worktree permissions before session mappings are available", () => {
+    config(true)
+    const replies: unknown[] = []
+    const conn = connection(client({ reply: async (args) => replies.push(args) }))
+    registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    conn.emit(asked("perm_worktree", "ses_worktree"), "/workspace/.kilo/worktrees/feature")
+    conn.emit(asked("perm_child", "ses_child"), "/workspace/.kilo/worktrees/feature")
+
+    expect(replies).toEqual([
+      { requestID: "perm_worktree", directory: "/workspace/.kilo/worktrees/feature", reply: "once" },
+      { requestID: "perm_child", directory: "/workspace/.kilo/worktrees/feature", reply: "once" },
+    ])
+  })
+
+  it("uses the shared permission directory before falling back to session mappings", () => {
+    config(true)
+    const replies: unknown[] = []
+    const conn = connection(
+      client({ reply: async (args) => replies.push(args) }),
+      new Map([["perm_shared", "/workspace/.kilo/worktrees/shared"]]),
+    )
+    registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    conn.emit(asked("perm_shared", "ses_child"))
+
+    expect(replies).toEqual([
+      { requestID: "perm_shared", directory: "/workspace/.kilo/worktrees/shared", reply: "once" },
+    ])
   })
 
   it("cancels pending permission drains when disabled during an enable generation", async () => {

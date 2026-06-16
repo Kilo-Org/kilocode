@@ -1,8 +1,14 @@
 import { Config } from "@/config/config"
+// kilocode_change start - preserve Kilo API default model overlay
+import { fetchDefaultModel } from "@kilocode/kilo-gateway"
+import { Auth } from "@/auth"
+import { ModelID, ProviderID } from "@/provider/schema"
+import { filterPromptTrainingModels, nonEmptyProviders } from "@/kilocode/provider/model-filter"
+// kilocode_change end
 import { Provider } from "@/provider/provider"
 import * as InstanceState from "@/effect/instance-state"
 import { Effect } from "effect"
-import { HttpApiBuilder } from "effect/unstable/httpapi"
+import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi" // kilocode_change
 import { InstanceHttpApi } from "../api"
 import { markInstanceForDisposal } from "../lifecycle"
 
@@ -28,10 +34,29 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
     // kilocode_change end
 
     const providers = Effect.fn("ConfigHttpApi.providers")(function* () {
-      const providers = yield* providerSvc.list()
+      // kilocode_change start
+      const config = yield* configSvc.get()
+      const providers = filterPromptTrainingModels(
+        yield* providerSvc.list(),
+        config.hide_prompt_training_models === true,
+      )
+      const defaults = Provider.defaultModelIDs(nonEmptyProviders(providers))
+      // kilocode_change end
+
+      // kilocode_change start - Fetch default model from Kilo API when the kilo provider is available.
+      if (providers[ProviderID.kilo]) {
+        const auth = yield* Auth.Service
+        const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({}))) // kilocode_change
+        const token = info?.type === "oauth" ? info.access : info?.key
+        const organizationId = info?.type === "oauth" ? info.accountId : undefined
+        const model = yield* Effect.promise(() => fetchDefaultModel(token, organizationId))
+        if (model && providers[ProviderID.kilo]?.models[model]) defaults[ProviderID.kilo] = ModelID.make(model)
+      }
+      // kilocode_change end
+
       return {
-        providers: Object.values(providers),
-        default: Provider.defaultModelIDs(providers),
+        providers: Object.values(providers).map(Provider.toPublicInfo),
+        default: defaults,
       }
     })
 

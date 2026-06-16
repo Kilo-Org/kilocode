@@ -11,6 +11,7 @@ import { KILO_API_BASE, HEADER_FEATURE, HEADER_ORGANIZATIONID } from "../api/con
 import { buildKiloHeaders } from "../headers.js"
 import type { ImportDeps, DrizzleDb } from "../cloud-sessions.js"
 import { fetchCloudSession, fetchCloudSessionForImport, importSessionToDb } from "../cloud-sessions.js"
+import { createEditHandler } from "./edit.js"
 import { createFimHandler } from "./fim.js"
 import {
   GatewayError,
@@ -110,6 +111,16 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
     profile: Profile,
     balance: Balance.nullable(),
     currentOrgId: z.string().nullable(),
+  })
+
+  const EditCompletionResponse = z.object({
+    content: z.string(),
+    usage: z
+      .object({
+        prompt_tokens: z.number().optional(),
+        completion_tokens: z.number().optional(),
+      })
+      .optional(),
   })
 
   const FimStreamChunk = z.object({
@@ -324,6 +335,44 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         }),
       ),
       createFimHandler(Auth),
+    )
+    .post(
+      "/edit",
+      describeRoute({
+        summary: "Next Edit completion",
+        description:
+          "Proxy a Mercury-style Next Edit request. The client supplies structured editor " +
+          "context; the gateway assembles the sentinel-tagged prompt and forwards to the upstream edit endpoint.",
+        operationId: "kilo.edit",
+        responses: {
+          200: {
+            description: "Next Edit completion",
+            content: {
+              "application/json": {
+                schema: resolver(EditCompletionResponse),
+              },
+            },
+          },
+          ...errors(400, 401),
+        },
+      }),
+      validator(
+        "json",
+        z.object({
+          provider: z.string().optional(),
+          model: z.string().optional(),
+          maxTokens: z.number().optional(),
+          currentFilePath: z.string(),
+          currentFileContent: z.string(),
+          cursorLine: z.number(),
+          cursorCharacter: z.number(),
+          editableRegionStartLine: z.number(),
+          editableRegionEndLine: z.number(),
+          recentlyViewedSnippets: z.array(z.object({ filepath: z.string(), content: z.string() })),
+          editDiffHistory: z.array(z.string()),
+        }),
+      ),
+      createEditHandler(Auth),
     )
     .post(
       "/audio/transcriptions",

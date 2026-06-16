@@ -1872,7 +1872,7 @@ body.am-wt-dragging-active * {
   --sticky-accordion-top: 0px;
 }
 
-/* Ensure accordion headers always span full panel width */
+/* Ensure virtualized accordion rows span the panel without per-row rounded corners. */
 .am-diff-content [data-component="accordion"],
 .am-review-diff-content [data-component="accordion"] {
   width: 100% !important;
@@ -1887,6 +1887,13 @@ body.am-wt-dragging-active * {
 .am-review-diff-content [data-slot="accordion-trigger"] {
   width: 100% !important;
   align-self: stretch !important;
+}
+
+.am-diff-content [data-slot="accordion-trigger"],
+.am-review-diff-content [data-slot="accordion-trigger"],
+.am-diff-content [data-slot="accordion-content"],
+.am-review-diff-content [data-slot="accordion-content"] {
+  border-radius: 0 !important;
 }
 
 .am-diff-content [data-slot="accordion-item"][data-file-path],
@@ -2799,6 +2806,34 @@ body.am-wt-dragging-active * {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.am-mm-free-data {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  max-width: 132px;
+  white-space: nowrap;
+}
+
+.am-mm-free-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  background: var(--vscode-testing-iconPassed, #4caf50);
+  font-size: var(--kilo-font-size-10);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.am-mm-free-data-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--vscode-inputValidation-warningForeground, var(--vscode-descriptionForeground));
+  flex-shrink: 0;
 }
 
 .am-mm-count-select {

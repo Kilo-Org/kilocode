@@ -1,5 +1,17 @@
 import { describe, expect, test } from "bun:test"
-import { localReviewCommand, localReviewUncommittedCommand, parseReviewCommand } from "../../src/kilocode/review/command"
+import {
+  localReviewCommand,
+  localReviewUncommittedCommand,
+  parseReviewCommand,
+} from "../../src/kilocode/review/command"
+
+function expectReviewFixContract(text: string) {
+  expect(text).toContain("During the initial review phase")
+  expect(text).toContain("DO NOT modify any files")
+  expect(text).toContain("After the user chooses a fix option")
+  expect(text).toContain("you may switch from review to implementation behavior")
+  expect(text).toContain("Use editing tools to modify code only for findings in the completed review")
+}
 
 describe("review command parsing", () => {
   test("parses review slash commands", () => {
@@ -65,9 +77,9 @@ describe("local-review command", () => {
     expect(text).toContain("do not follow the link")
   })
 
-  test("template tells the model not to edit files", () => {
+  test("template scopes no-edit behavior to review phase", () => {
     const text = cmd.template as string
-    expect(text).toContain("DO NOT modify any files")
+    expectReviewFixContract(text)
   })
 
   test("template applies the review-pr high-signal review focus", () => {
@@ -133,9 +145,9 @@ describe("local-review-uncommitted command", () => {
     expect(text).toContain("do not follow the link")
   })
 
-  test("template tells the model not to edit files", () => {
+  test("template scopes no-edit behavior to review phase", () => {
     const text = cmd.template as string
-    expect(text).toContain("DO NOT modify any files")
+    expectReviewFixContract(text)
   })
 
   test("template applies the review-pr high-signal review focus", () => {

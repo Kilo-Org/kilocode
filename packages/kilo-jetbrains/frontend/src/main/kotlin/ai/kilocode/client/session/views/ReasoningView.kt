@@ -6,234 +6,196 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
-import ai.kilocode.client.session.views.base.PartView
+import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.md.MdView
-import com.intellij.icons.AllIcons
+import ai.kilocode.client.ui.md.MdViewFactory
+import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
-import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Font
 import java.awt.Rectangle
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 import javax.swing.Scrollable
 import javax.swing.SwingUtilities
 
-/** Renders reasoning as a VS Code-style collapsible block. */
-class ReasoningView(reasoning: Reasoning) : PartView() {
+/** Renders reasoning as a secondary collapsible block. */
+class ReasoningView(
+    reasoning: Reasoning,
+    private val openUrl: (String) -> Unit = {},
+    private val selection: SessionSelection? = null,
+    private val parts: ReasoningParts = reasoningParts(selection),
+) :
+    SecondarySessionPartView(
+        parts.header,
+        { parts.scroll(openUrl) },
+        expanded = reasoning.content.isNotBlank() && !reasoning.done,
+    ) {
 
     override val contentId: String = reasoning.id
 
-    val md: MdView = MdView.html()
-
-    private val arrow = JBLabel()
-    private val body = TrackPanel().apply {
-        isOpaque = true
-        background = SessionUiStyle.View.surface()
-        border = JBUI.Borders.empty(
-            JBUI.scale(SessionUiStyle.View.CARD_VERTICAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.CARD_HORIZONTAL_PADDING),
-        )
-    }
-    private val scroll = JBScrollPane(body).apply {
-        border = SessionUiStyle.View.cardTop()
-        isOpaque = true
-        background = SessionUiStyle.View.surface()
-        viewport.background = SessionUiStyle.View.surface()
-        horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-        verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
-    }
-    private val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP), 0)).apply {
-        isOpaque = true
-        background = SessionUiStyle.View.header()
-        border = JBUI.Borders.empty(
-            JBUI.scale(SessionUiStyle.View.CARD_VERTICAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.CARD_HORIZONTAL_PADDING),
-        )
-    }
-    private val title = JBLabel(KiloBundle.message("session.part.reasoning")).apply {
-        foreground = UiStyle.Colors.weak()
-    }
-    private val icon = JBLabel(AllIcons.General.InspectionsEye).apply {
-        foreground = UiStyle.Colors.weak()
-    }
+    /** Lazily creates, registers, populates, and styles the editor-backed body on first access. */
+    val md: MdView
+        @RequiresEdt
+        get() {
+            val fresh = !parts.bodyCreated()
+            val view = parts.md(openUrl)
+            if (!fresh) return view
+            registerBody(view)
+            view.set(source)
+            view.applyStyle(style)
+            apply(view)
+            return view
+        }
 
     private var style = SessionEditorStyle.current()
     private var source = reasoning.content.toString()
-
-    private val click = object : MouseAdapter() {
-        override fun mouseClicked(e: MouseEvent) {
-            if (!canExpand()) return
-            toggle()
-        }
-    }
-
-    private val mouse = object : MouseAdapter() {
-        override fun mouseEntered(e: MouseEvent) {
-            setHover(true)
-        }
-
-        override fun mouseExited(e: MouseEvent) {
-            if (inside(e)) return
-            setHover(false)
-        }
-    }
+    private var done = reasoning.done
+    private var registered = false
+    private var following = false
 
     init {
-        layout = BorderLayout()
-        isOpaque = false
-        border = SessionUiStyle.View.card()
-
-        val left = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP), 0)).apply {
-            isOpaque = false
-            add(icon, BorderLayout.WEST)
-            add(title, BorderLayout.CENTER)
-        }
-
-        header.add(left, BorderLayout.CENTER)
-        header.add(arrow, BorderLayout.EAST)
-        listOf(header, left, title, icon, arrow).forEach {
-            it.addMouseListener(click)
-            it.addMouseListener(mouse)
-        }
-
-        applyStyle(SessionEditorStyle.current())
-        md.opaque = false
-        md.set(source)
-        body.add(md.component, BorderLayout.CENTER)
-
-        add(header, BorderLayout.NORTH)
+        row.border = JBUI.Borders.empty(
+            JBUI.scale(SessionUiStyle.View.Reasoning.HEADER_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
+        )
+        bindHeader(parts.title, parts.icon)
+        applyStyle(style)
+        if (bodyVisible()) syncBody()
+        syncBorder()
         sync()
     }
 
+    @RequiresEdt
+    override fun expand(): Boolean {
+        val changed = super.expand()
+        if (!changed) return false
+        syncBorder()
+        syncBody()
+        applyBodyStyle()
+        return true
+    }
+
+    @RequiresEdt
+    override fun collapse(): Boolean {
+        val changed = super.collapse()
+        if (!changed) return false
+        syncBorder()
+        return true
+    }
+
+    @RequiresEdt
     override fun update(content: Content) {
         if (content !is Reasoning) return
         var changed = false
         val next = content.content.toString()
+        val follow = tailVisible()
+        if (done != content.done) {
+            done = content.done
+            changed = true
+        }
         if (source != next) {
             source = next
-            md.set(source)
+            if (parts.bodyCreated()) {
+                md.set(source)
+                followTail(follow)
+            }
             changed = true
         }
         changed = sync() || changed
         if (changed) refresh()
     }
 
+    @RequiresEdt
     override fun appendDelta(delta: String) {
         if (delta.isEmpty()) return
+        val follow = tailVisible()
         source += delta
-        md.append(delta)
+        if (parts.bodyCreated()) {
+            md.append(delta)
+            followTail(follow)
+        }
         val changed = sync()
         if (changed || bodyVisible()) refresh()
     }
 
+    @RequiresEdt
     fun markdown(): String = source
-
-    fun isExpanded(): Boolean = bodyVisible()
-
+    @RequiresEdt
     fun hasToggle(): Boolean = arrow.isVisible
-
-    fun headerText(): String = title.text
-
-    internal fun headerFont() = title.font
-
-    internal fun bodyVisible() = scroll.parent === this
-
-    internal fun horizontalPolicy() = scroll.horizontalScrollBarPolicy
-
+    @RequiresEdt
+    fun headerText(): String = parts.title.text
+    @RequiresEdt
+    internal fun headerFont() = parts.title.font
+    @RequiresEdt
+    internal fun bodyVisible() = parts.scrollOrNull?.parent === this
+    @RequiresEdt
+    internal fun horizontalPolicy() = parts.scrollOrNull?.horizontalScrollBarPolicy ?: ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+    @RequiresEdt
     internal fun bodyMaxRows() = SessionUiStyle.View.Reasoning.BODY_LINES
+    @RequiresEdt
+    internal fun bodyCreated() = parts.bodyCreated()
+    @RequiresEdt
+    internal fun bodyScrollValue() = parts.scrollOrNull?.verticalScrollBar?.value ?: 0
+    @RequiresEdt
+    internal fun bodyScrollBottom() = parts.scrollOrNull?.verticalScrollBar?.let { it.maximum - it.visibleAmount } ?: 0
 
-    internal fun bodyCreated() = true
-
+    @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         var changed = false
-        if (title.font != style.smallEditorFont) {
-            title.font = style.smallEditorFont
+        if (parts.title.font != style.smallEditorFont) {
+            parts.title.font = style.smallEditorFont
             changed = true
         }
-        changed = apply(md) || changed
+        changed = applyBodyStyle() || changed
         if (changed) refresh()
     }
 
-    fun toggle() {
-        if (!canExpand()) return
-        var changed = if (bodyVisible()) collapse() else expand()
-        changed = sync() || changed
-        if (changed) refresh()
-    }
-
+    @RequiresEdt
     override fun getPreferredSize(): Dimension {
         val size = super.getPreferredSize()
         if (!bodyVisible()) return size
-        val height = header.preferredSize.height + bodyMaxHeight()
+        val height = row.preferredSize.height + bodyMaxHeight()
         return Dimension(size.width, minOf(size.height, height))
-    }
-
-    private fun setHover(value: Boolean) {
-        val color = if (value) SessionUiStyle.View.headerHover() else SessionUiStyle.View.header()
-        if (header.background?.rgb == color.rgb) return
-        header.background = color
-        header.repaint()
-    }
-
-    private fun inside(e: MouseEvent): Boolean {
-        val point = SwingUtilities.convertPoint(e.component, e.point, header)
-        return header.contains(point)
     }
 
     private fun canExpand(): Boolean = source.isNotBlank()
 
     private fun sync(): Boolean {
-        val expand = canExpand()
-        if (!expand) collapse()
         var changed = false
-        changed = setVisible(arrow, expand) || changed
-        changed = syncArrow() || changed
-        val cursor = if (expand) Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) else Cursor.getDefaultCursor()
-        listOf(header, title, icon, arrow).forEach {
-            if (it.cursor?.type != cursor.type) {
-                it.cursor = cursor
-                changed = true
-            }
+        val visible = source.isNotBlank()
+        if (isVisible != visible) {
+            isVisible = visible
+            changed = true
+        }
+        changed = syncExpandable(canExpand()) || changed
+        if (visible && !done && !parts.bodyCreated()) {
+            changed = expand() || changed
+            changed = syncExpandable(canExpand()) || changed
         }
         return changed
     }
 
-    private fun setVisible(component: JBLabel, visible: Boolean): Boolean {
-        if (component.isVisible == visible) return false
-        component.isVisible = visible
-        return true
-    }
-
-    private fun setIcon(label: JBLabel, icon: javax.swing.Icon): Boolean {
-        if (label.icon === icon) return false
-        label.icon = icon
-        return true
-    }
-
-    private fun syncArrow(): Boolean {
-        val icon = if (bodyVisible()) AllIcons.General.ArrowDown else AllIcons.General.ArrowRight
-        return setIcon(arrow, icon)
-    }
-
-    private fun expand(): Boolean {
-        if (bodyVisible()) return false
-        add(scroll, BorderLayout.CENTER)
-        return true
-    }
-
-    private fun collapse(): Boolean {
-        val attached = scroll.parent === this
-        if (attached) remove(scroll)
-        return attached
+    private fun syncBorder() {
+        if (isExpanded()) {
+            border = JBUI.Borders.customLine(
+                SessionUiStyle.View.Outline.color(),
+                0,
+                SessionUiStyle.View.Outline.width(),
+                0,
+                0,
+            )
+            return
+        }
+        border = JBUI.Borders.empty(0, 1, 0, 0)
     }
 
     private fun apply(md: MdView): Boolean {
@@ -248,13 +210,55 @@ class ReasoningView(reasoning: Reasoning) : PartView() {
         return changed
     }
 
-    private fun refresh() {
-        revalidate()
-        repaint()
+    @RequiresEdt
+    private fun syncBody() {
+        val md = md
+        registerBody(md)
+        md.set(source)
+        followTail(true)
     }
 
-    private fun bodyMaxHeight(): Int = md.component.getFontMetrics(md.font).height * bodyMaxRows() +
-        JBUI.scale(SessionUiStyle.View.CARD_BODY_EXTRA_HEIGHT)
+    private fun applyBodyStyle(): Boolean {
+        if (!parts.bodyCreated()) return false
+        val md = md
+        registerBody(md)
+        md.applyStyle(style)
+        return apply(md)
+    }
+
+    private fun registerBody(md: MdView) {
+        if (registered) return
+        registered = true
+        Disposer.register(this, md)
+    }
+
+    private fun bodyMaxHeight(): Int {
+        if (!parts.bodyCreated()) return 0
+        val md = md
+        return md.component.getFontMetrics(md.font).height * bodyMaxRows() +
+            JBUI.scale(SessionUiStyle.View.Layout.BODY_EXTRA_HEIGHT)
+    }
+
+    @RequiresEdt
+    private fun tailVisible(): Boolean {
+        if (!bodyVisible()) return false
+        val scroll = parts.scrollOrNull ?: return false
+        val bar = scroll.verticalScrollBar
+        return bar.value >= bar.maximum - bar.visibleAmount
+    }
+
+    @RequiresEdt
+    private fun followTail(follow: Boolean) {
+        if (!follow || !bodyVisible() || following) return
+        val scroll = parts.scrollOrNull ?: return
+        following = true
+        SwingUtilities.invokeLater {
+            following = false
+            if (!bodyVisible()) return@invokeLater
+            val bar = scroll.verticalScrollBar
+            bar.value = bar.maximum - bar.visibleAmount
+        }
+    }
 
     override fun dumpLabel(): String {
         val state = if (bodyVisible()) "open" else "closed"
@@ -262,7 +266,67 @@ class ReasoningView(reasoning: Reasoning) : PartView() {
     }
 }
 
-private class TrackPanel : JPanel(BorderLayout()), Scrollable {
+class ReasoningParts(
+    val header: JPanel,
+    val title: JBLabel,
+    val icon: JBLabel,
+    private val selection: SessionSelection?,
+) {
+    private var body: ReasoningBody? = null
+    val scrollOrNull: JBScrollPane? get() = body?.scroll
+
+    fun bodyCreated() = body != null
+
+    fun md(openUrl: (String) -> Unit): MdView = body(openUrl).md
+
+    fun scroll(openUrl: (String) -> Unit): JBScrollPane = body(openUrl).scroll
+
+    private fun body(openUrl: (String) -> Unit): ReasoningBody {
+        val item = body
+        if (item != null) return item
+        val md = MdViewFactory.create(SessionEditorStyle.current(), selection).apply {
+            opaque = false
+            addLinkListener { openUrl(it.href) }
+        }
+        val panel = TrackPanel().apply {
+            isOpaque = true
+            background = SessionUiStyle.View.Surface.bgColor()
+            border = JBUI.Borders.empty(
+                JBUI.scale(SessionUiStyle.View.Reasoning.BODY_VERTICAL_PADDING),
+                JBUI.scale(SessionUiStyle.View.Reasoning.BODY_HORIZONTAL_PADDING),
+            )
+            add(md.component, BorderLayout.CENTER)
+        }
+        val scroll = JBScrollPane(panel).apply {
+            border = JBUI.Borders.empty()
+            isOpaque = true
+            background = SessionUiStyle.View.Surface.bgColor()
+            viewport.background = SessionUiStyle.View.Surface.bgColor()
+            horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+            verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
+        }
+        return ReasoningBody(md, panel, scroll).also { body = it }
+    }
+}
+
+class ReasoningBody(
+    val md: MdView,
+    val panel: TrackPanel,
+    val scroll: JBScrollPane,
+)
+
+private fun reasoningParts(selection: SessionSelection? = null): ReasoningParts {
+    val title = JBLabel(KiloBundle.message("session.part.reasoning")).apply { foreground = UiStyle.Colors.weak() }
+    val icon = JBLabel(SessionViewIcons.brain).apply { foreground = UiStyle.Colors.weak() }
+    val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
+        isOpaque = false
+        add(icon, BorderLayout.WEST)
+        add(title, BorderLayout.CENTER)
+    }
+    return ReasoningParts(header, title, icon, selection)
+}
+
+class TrackPanel : JPanel(BorderLayout()), Scrollable {
     override fun getScrollableTracksViewportWidth() = true
     override fun getScrollableTracksViewportHeight() = false
     override fun getPreferredScrollableViewportSize(): Dimension = preferredSize

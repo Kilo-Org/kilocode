@@ -9,7 +9,7 @@ import { KiloToolRegistry } from "../../src/kilocode/tool/registry"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { ToolRegistry } from "../../src/tool/registry"
 import type * as Tool from "../../src/tool/tool"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/kilocode/instance"
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { testEffect } from "../lib/effect"
@@ -39,6 +39,7 @@ describe("kilocode tool registry indexing", () => {
             const ids = yield* registry.ids()
 
             expect(ids).not.toContain("semantic_search")
+            expect(ids).not.toContain("codesearch")
             expect(ids).toContain("question")
             expect(ids).toContain("read")
             expect(ids).toContain("suggest")

@@ -10,6 +10,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
+import { tracksElapsed } from "./working-indicator-utils"
 
 export const WorkingIndicator: Component = () => {
   const session = useSession()
@@ -23,7 +24,7 @@ export const WorkingIndicator: Component = () => {
     const since = session.busySince()
     const status = session.status()
 
-    if (status === "idle" || !since) {
+    if (!tracksElapsed(status, session.submitting(), since)) {
       setElapsed(0)
       return
     }
@@ -97,25 +98,27 @@ export const WorkingIndicator: Component = () => {
   }
 
   return (
-    <Show when={session.status() !== "idle" && !blocked()}>
-      <div class="working-indicator">
-        <Spinner />
-        <span class="working-text">{statusText()}</span>
-        <Show when={elapsed() > 0}>
-          <span class="working-elapsed">{formatElapsed()}</span>
-        </Show>
-        <Show when={isRetrying()}>
-          <Button
-            variant="secondary"
-            size="small"
-            onClick={handleCancelRetry}
-            class="working-cancel"
-            style={{ "font-weight": "600", color: "var(--vscode-errorForeground, #f85149)" }}
-          >
-            {language.t("ui.sessionTurn.cancel") || "Cancel"}
-          </Button>
-        </Show>
-      </div>
-    </Show>
+    <div class="working-indicator-slot">
+      <Show when={session.submitting() || (session.status() !== "idle" && !blocked())}>
+        <div class="working-indicator">
+          <Spinner />
+          <span class="working-text">{statusText()}</span>
+          <Show when={elapsed() > 0}>
+            <span class="working-elapsed">{formatElapsed()}</span>
+          </Show>
+          <Show when={isRetrying()}>
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={handleCancelRetry}
+              class="working-cancel"
+              style={{ "font-weight": "600", color: "var(--vscode-errorForeground, #f85149)" }}
+            >
+              {language.t("ui.sessionTurn.cancel") || "Cancel"}
+            </Button>
+          </Show>
+        </div>
+      </Show>
+    </div>
   )
 }

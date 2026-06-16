@@ -63,7 +63,7 @@ class LoginRequiredViewTest : BasePlatformTestCase() {
             val view = LoginRequiredView(openProfile = {}, dismiss = {})
             view.show("Sign in required.")
             val btn = view.openProfileButton()
-            assertEquals(SessionUiStyle.View.surface(), btn.background)
+            assertEquals(SessionUiStyle.View.Surface.bgColor(), btn.background)
         }
     }
 
