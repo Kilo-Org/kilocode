@@ -104,3 +104,28 @@ test("ignores reviewer config that would change prompt or permissions", async ()
     },
   })
 })
+
+test("keeps reviewer read-only when global config allows every tool", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      permission: {
+        "*": "allow",
+      },
+    },
+  })
+
+  await withTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const reviewer = await load(tmp.path, (svc) => svc.get("reviewer"))
+
+      expect(reviewer).toBeDefined()
+      expect(perm(reviewer, "edit")).toBe("deny")
+      expect(perm(reviewer, "todowrite")).toBe("deny")
+      expect(perm(reviewer, "suggest")).toBe("deny")
+      expect(perm(reviewer, "webfetch")).toBe("allow")
+      expect(bash(reviewer, "touch file")).toBe("deny")
+      expect(bash(reviewer, "git status")).toBe("allow")
+    },
+  })
+})

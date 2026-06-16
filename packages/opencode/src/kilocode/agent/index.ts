@@ -483,9 +483,8 @@ export function patchAgents(
     options: {},
     permission: Permission.merge(
       defaults,
-      reviewGuard(kilo.mcpRules),
       user,
-      Permission.fromConfig({ edit: "deny", bash: readOnlyBash }),
+      reviewGuard(kilo.mcpRules),
       denies(user),
     ),
     mode: "primary",

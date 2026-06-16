@@ -110,8 +110,10 @@ Dead-code rules:
 1. **Start from the diff**: Read full file context only when needed for a real candidate issue; diffs alone can be misleading, as code that looks wrong in isolation may be correct given surrounding logic.
 
 2. **Tools usage**: Use these git commands as needed:
-   - View all uncommitted changes: `git diff && git diff --cached`
-   - View a specific file's changes: `git diff -- <file> && git diff --cached -- <file>`
+   - View unstaged changes: `git diff`
+   - View staged changes: `git diff --cached`
+   - View a specific file's unstaged changes: `git diff -- <file>`
+   - View a specific file's staged changes: `git diff --cached -- <file>`
    - View recent commit history for context: `git log --oneline -20`
    - View file history: `git blame <file>`
 
