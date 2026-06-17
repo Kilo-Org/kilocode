@@ -128,7 +128,6 @@ export class CodeIndexOrchestrator {
           this.emitError("orchestrator:watcher", summary.batchError, "watcher")
         }),
       ]
-      log.info("file watcher initialized", { workspacePath: this.workspacePath })
     } catch (err) {
       log.error("failed to start file watcher, continuing without watcher", { err })
       this.stateManager.setSystemState("Indexing", "File watcher unavailable. Scanning available files...")

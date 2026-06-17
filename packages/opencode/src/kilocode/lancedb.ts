@@ -39,7 +39,9 @@ export namespace LanceDBRuntime {
         process.env[env] = resolved
         return
       }
-    } catch {}
+    } catch {
+      // Expected when LanceDB is not installed yet — Npm.add handles it below
+    }
 
     box.ready = (async () => {
       const result = await Npm.add(`${pkg}@${version}`)
