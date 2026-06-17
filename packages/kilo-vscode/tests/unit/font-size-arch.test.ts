@@ -102,6 +102,22 @@ describe("webview font-size architecture", () => {
     ).toEqual([])
   })
 
+  it("uses scalable line heights in polished tool previews", () => {
+    const files = [
+      path.join(REPO, "packages/kilo-ui/src/components/basic-tool.css"),
+      path.join(REPO, "packages/kilo-ui/src/components/message-part.css"),
+    ]
+    const violations = files.flatMap((file) => {
+      const src = stripComments(fs.readFileSync(file, "utf-8"))
+      return Array.from(
+        src.matchAll(/line-height\s*:\s*\d+(?:\.\d+)?px\b/g),
+        (match) => `${rel(file)}:${line(src, match.index ?? 0)}`,
+      )
+    })
+
+    expect(violations).toEqual([])
+  })
+
   it("injects and live-broadcasts the webview font-size setting to all webview providers", () => {
     const util = fs.readFileSync(path.join(ROOT, "src/utils.ts"), "utf-8")
     expect(util, "buildWebviewHtml must seed webview font tokens before app code runs").toContain("getWebviewFontSize")

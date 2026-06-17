@@ -19333,6 +19333,9 @@
           "name": {
             "type": "string"
           },
+          "description": {
+            "type": "string"
+          },
           "source": {
             "type": "string",
             "enum": ["env", "config", "custom", "api"]
@@ -19345,6 +19348,21 @@
           },
           "key": {
             "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "noteKey": {
+                "type": "string"
+              },
+              "icon": {
+                "type": "string"
+              },
+              "priority": {
+                "type": "integer"
+              }
+            },
+            "additionalProperties": false
           },
           "options": {
             "type": "object"

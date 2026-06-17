@@ -28,6 +28,8 @@ import ai.kilocode.client.session.ui.attachment.attachmentParams
 import ai.kilocode.client.session.ui.attachment.ensureAttachmentEditorKind
 import ai.kilocode.client.session.ui.attachment.isEmbeddedAttachment
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
+import ai.kilocode.client.session.ui.selection.SessionContextMenu
+import ai.kilocode.client.session.ui.selection.SessionHoverCopyOverlay
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
@@ -142,6 +144,7 @@ class SessionUi(
     private lateinit var root: SessionRootPanel
     private lateinit var account: SessionAccountOverlay
     private lateinit var drop: SessionDropOverlay
+    private lateinit var overlay: SessionHoverCopyOverlay
     private val hide = timers.timer(HIDE_MS, repeats = false) {
         if (disposed || !this::drop.isInitialized) return@timer
         drop.setActive(false)
@@ -171,7 +174,7 @@ class SessionUi(
     private var modalFocus: (() -> JComponent)? = null
     private var style = SessionEditorStyle.current()
     private val selection = SessionSelection()
-    private val copy = object : TextCopyProvider() {
+    private val provider = object : TextCopyProvider() {
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
 
         override fun getTextLinesToCopy(): Collection<String>? {
@@ -216,7 +219,7 @@ class SessionUi(
     internal fun currentStyle() = style
 
     override fun uiDataSnapshot(sink: DataSink) {
-        sink[PlatformDataKeys.COPY_PROVIDER] = copy
+        sink[PlatformDataKeys.COPY_PROVIDER] = provider
     }
 
     @RequiresEdt
@@ -253,6 +256,7 @@ class SessionUi(
 
     private fun buildUi() {
         root = SessionRootPanel()
+        SessionContextMenu.install(root, this)
 
         migrationOverlay = MigrationOverlayPanel().apply {
             onSkip = { migration.skip() }
@@ -281,6 +285,11 @@ class SessionUi(
                 size.width,
                 size.height,
             )
+        }
+
+        overlay = SessionHoverCopyOverlay(root, this)
+        root.addOverlay(overlay) { pane, child ->
+            overlay.bounds(pane, child)
         }
 
         sessionContent = JPanel(BorderLayout())
@@ -324,10 +333,12 @@ class SessionUi(
         header = SessionHeaderPanel(controller, this)
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
+        scroll.onScroll = overlay::clear
         connection = ConnectionPanel(this, controller)
 
         prompt = PromptPanel(
             project = project,
+            selection = selection,
             onSend = { text, files -> sendPrompt(text, files) },
             onAbort = { controller.abort() },
             onEnhance = controller::enhancePrompt,

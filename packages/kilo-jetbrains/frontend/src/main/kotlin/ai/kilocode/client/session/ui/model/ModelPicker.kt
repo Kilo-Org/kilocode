@@ -126,7 +126,7 @@ class ModelPicker : PickerButton() {
             return
         }
         val item = selected ?: if (allowEmpty) null else items.firstOrNull()
-        text = if (item == null && allowEmpty) "$emptyText ▾" else "${ModelText.sanitize(item?.display ?: items.first().display)} ▾"
+        text = if (item == null && allowEmpty) "$emptyText ▾" else "${ModelText.buttonLabel(item ?: items.first())} ▾"
         icon = if (item?.let(ModelText::collectsData) == true) ModelPickerRenderer.DATA_COLLECTED else null
         horizontalTextPosition = SwingConstants.LEFT
         iconTextGap = JBUI.CurrentTheme.ActionsList.elementIconGap()
@@ -450,6 +450,14 @@ internal object ModelText {
             if (model.isNotEmpty()) return Parts(text.substring(0, prefix.length), model)
         }
         return Parts(null, text)
+    }
+
+    fun buttonLabel(item: ModelPicker.Item): String {
+        val part = parts(item).model
+        if (item.provider == "kilo") return part
+        val provider = item.providerName.trim()
+        if (provider.isEmpty()) return part
+        return "$provider / $part"
     }
 
     fun small(item: ModelPicker.Item): Boolean = item.provider == "kilo" && item.id in small

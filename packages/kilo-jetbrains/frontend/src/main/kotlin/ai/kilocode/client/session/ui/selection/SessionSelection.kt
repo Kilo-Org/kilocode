@@ -1,7 +1,11 @@
 package ai.kilocode.client.session.ui.selection
 
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import com.intellij.ide.TextCopyProvider
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.editor.colors.EditorColors
 import com.intellij.openapi.editor.event.SelectionEvent
 import com.intellij.openapi.editor.event.SelectionListener
@@ -23,6 +27,7 @@ class SessionSelection : Disposable {
     private var style: SessionEditorStyle? = null
     private var clearing = false
     private var disposed = false
+    private val copy = provider { selectedText() }
 
     @RequiresEdt
     fun selectedText(): String? {
@@ -35,6 +40,24 @@ class SessionSelection : Disposable {
         active = item
         clearExcept(item)
         return item.selectedText()?.takeIf { it.isNotEmpty() }
+    }
+
+    @RequiresEdt
+    fun provideCopy(sink: DataSink, content: (() -> String?)? = null) {
+        if (content == null) {
+            sink.set(PlatformDataKeys.COPY_PROVIDER, copy)
+            return
+        }
+        sink.set(PlatformDataKeys.COPY_PROVIDER, provider { selectedText() ?: content() })
+    }
+
+    private fun provider(text: () -> String?) = object : TextCopyProvider() {
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+
+        override fun getTextLinesToCopy(): Collection<String>? {
+            val item = text()?.takeIf { it.isNotEmpty() } ?: return null
+            return listOf(item)
+        }
     }
 
     @RequiresEdt

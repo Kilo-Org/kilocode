@@ -101,17 +101,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "Buscar provedores",
   "dialog.provider.empty": "Nenhum provedor encontrado",
-  "dialog.provider.group.popular": "Popular",
   "dialog.provider.group.other": "Outro",
   "dialog.provider.tag.recommended": "Recomendado",
-  "dialog.provider.opencode.note": "Modelos selecionados incluindo Claude, GPT, Gemini e mais",
-  "dialog.provider.anthropic.note": "Conectar com Claude Pro/Max ou chave de API",
-  "dialog.provider.deepseek.note": "Modelos DeepSeek para tarefas de raciocínio e programação",
-  "dialog.provider.openai.note": "Conectar com ChatGPT Pro/Plus ou chave de API",
-  "dialog.provider.google.note": "Modelos Gemini para respostas rápidas e estruturadas",
-  "dialog.provider.openrouter.note": "Acesse todos os modelos suportados a partir de um único provedor",
-  "dialog.provider.vercel.note": "Acesso unificado a modelos de IA com roteamento inteligente",
-  "dialog.provider.copilot.note": "Conectar com Copilot ou chave de API",
 
   "dialog.model.select.title": "Selecionar modelo",
   "dialog.model.search.placeholder": "Buscar modelos",

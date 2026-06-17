@@ -4,7 +4,7 @@ import path from "path"
 const root = path.join(__dirname, "..", "..")
 
 const files = [
-  "src/cli/cmd/tui/feature-plugins/home/tips-view.tsx",
+  "src/kilocode/cli/cmd/tui/feature-plugins/home/tips.ts",
   "src/cli/cmd/run.ts",
   "src/config/config.ts",
   "src/server/routes/instance/httpapi/public.ts",

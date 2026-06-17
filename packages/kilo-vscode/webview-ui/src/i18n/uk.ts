@@ -101,17 +101,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "Пошук провайдера",
   "dialog.provider.empty": "Провайдерів не знайдено",
-  "dialog.provider.group.popular": "Популярні",
   "dialog.provider.group.other": "Інші",
   "dialog.provider.tag.recommended": "Рекомендовано",
-  "dialog.provider.opencode.note": "Добірка моделей включаючи Claude, GPT, Gemini та інші",
-  "dialog.provider.anthropic.note": "Прямий доступ до моделей Claude включаючи Pro та Max",
-  "dialog.provider.deepseek.note": "Моделі DeepSeek для завдань міркування та програмування",
-  "dialog.provider.copilot.note": "Моделі Claude для допомоги з кодуванням",
-  "dialog.provider.openai.note": "Моделі GPT для швидких і потужних загальних завдань ШІ",
-  "dialog.provider.google.note": "Моделі Gemini для швидких і структурованих відповідей",
-  "dialog.provider.openrouter.note": "Доступ до всіх підтримуваних моделей від одного провайдера",
-  "dialog.provider.vercel.note": "Уніфікований доступ до моделей ШІ з інтелектуальною маршрутизацією",
 
   "dialog.model.select.title": "Вибір моделі",
   "dialog.model.search.placeholder": "Пошук моделі",

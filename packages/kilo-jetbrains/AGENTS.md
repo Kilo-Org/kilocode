@@ -189,6 +189,12 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 - **Run split backend**: `./gradlew runIdeBackend` — if it exits shortly after startup, check for an orphaned Java process from a previous backend run and kill it before restarting.
 - **Test split mode**: `./gradlew generateSplitModeRunConfigurations` creates a "Run IDE (Split Mode)" config that starts both frontend and backend processes locally. Emulate latency via the Split Mode widget (requires internal mode: `-Didea.is.internal=true`).
 
+### CLI/SDK Change Awareness
+
+- JetBrains runtime behavior depends on the bundled CLI artifact under `backend/build/generated/cli/`; Gradle-only tasks and sandbox runs do not rebuild it.
+- If there are relevant changes outside `packages/kilo-jetbrains/` in the CLI (`packages/opencode/`) or SDK/API generation paths (`packages/sdk/js/`, server endpoints, OpenAPI outputs), warn the user that the JetBrains run may be using stale generated CLI or SDK artifacts.
+- Do not regenerate or rebuild those artifacts automatically just because such changes exist. Ask the user whether to refresh them first, typically with `bun run build --prepare-cli` from `packages/kilo-jetbrains/` for CLI artifacts and `./script/generate.ts` from the repo root for server/API SDK changes.
+
 ## UI Guidelines
 
 ### Technology Choices
