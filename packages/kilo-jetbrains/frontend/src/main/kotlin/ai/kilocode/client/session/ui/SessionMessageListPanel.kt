@@ -60,10 +60,10 @@ class SessionMessageListPanel(
 ) : SessionLayoutPanel(
     JBUI.scale(SessionUiStyle.SessionLayout.GAP),
     JBUI.insets(
-        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
-        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
-        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
-        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING + SessionUiStyle.SessionLayout.TRANSCRIPT_SCROLLBAR_PADDING,
+        SessionUiStyle.SessionLayout.InnerInsets.top,
+        SessionUiStyle.SessionLayout.InnerInsets.left,
+        SessionUiStyle.SessionLayout.InnerInsets.bottom,
+        SessionUiStyle.SessionLayout.InnerInsets.right + SessionUiStyle.SessionLayout.TRANSCRIPT_SCROLLBAR_PADDING,
     ),
 ), Disposable, SessionEditorStyleTarget {
 

@@ -6,28 +6,25 @@ on:
 
 jobs:
   check-duplicates:
-    if: false # kilocode_change - disabled: not needed in kilocode repo
+    if: github.event.action == 'opened'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
       issues: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6 # kilocode_change
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 1
 
       - uses: ./.github/actions/setup-bun
 
-      # kilocode_change start
-      - name: Setup Kilo
-        uses: ./.github/actions/setup-kilo
-      # kilocode_change end
+      - name: Install opencode
+        run: curl -fsSL https://kilo.ai/install | bash
 
       - name: Check duplicates and compliance
         env:
-          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
-          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KILO_PERMISSION: |
             {
@@ -38,7 +35,7 @@ jobs:
               "webfetch": "deny"
             }
         run: |
-          kilo run -m "kilo/anthropic/claude-haiku-4.5" "A new issue has been created:
+          opencode run -m opencode/claude-sonnet-4-6 "A new issue has been created:
 
           Issue number: ${{ github.event.issue.number }}
 
@@ -128,23 +125,18 @@ jobs:
       issues: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6 # kilocode_change
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 1
 
       - uses: ./.github/actions/setup-bun
 
-      # kilocode_change start
-      - name: Setup Kilo
-        uses: ./.github/actions/setup-kilo
-      # kilocode_change end
+      - name: Install opencode
+        run: curl -fsSL https://kilo.ai/install | bash
 
       - name: Recheck compliance
         env:
-          # kilocode_change start
-          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
-          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
-          # kilocode_change end
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KILO_PERMISSION: |
             {
@@ -155,7 +147,7 @@ jobs:
               "webfetch": "deny"
             }
         run: |
-          kilo run -m "kilo/anthropic/claude-haiku-4.5" "Issue #${{ github.event.issue.number }} was previously flagged as non-compliant and has been edited.
+          opencode run -m opencode/claude-sonnet-4-6 "Issue #${{ github.event.issue.number }} was previously flagged as non-compliant and has been edited.
 
           Lookup this issue with gh issue view ${{ github.event.issue.number }}.
 

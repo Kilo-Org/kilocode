@@ -74,6 +74,7 @@ export function renderTab(id: string, deps: TabRenderDeps): JSX.Element {
       onSelect: deps.activateTerminal,
       onMiddleClick: deps.terminalMiddleClick,
       onClose: deps.closeTerminal,
+      onCloseOthers: (target) => closeOthers(target, deps),
     })
   }
   if (id === deps.REVIEW_TAB_ID) return renderReviewTab(deps)
@@ -141,9 +142,30 @@ function renderSessionTab(s: SessionInfo, deps: TabRenderDeps): JSX.Element {
       }}
       onMiddleClick={(e: MouseEvent) => deps.sessionMiddleClick(s.id, e)}
       onClose={() => deps.sessionClose(s.id)}
+      onCloseOthers={() => closeOthers(s.id, deps)}
       onFork={pending ? undefined : () => deps.sessionFork(s.id)}
     />
   )
+}
+
+function closeOthers(target: string, deps: TabRenderDeps) {
+  for (const id of deps.tabIds()) {
+    if (id === target) continue
+    if (isTerminalTabId(id)) {
+      deps.closeTerminal(id)
+      continue
+    }
+    if (id === deps.REVIEW_TAB_ID) {
+      deps.closeReview()
+      continue
+    }
+    deps.sessionClose(id)
+  }
+  if (isTerminalTabId(target)) {
+    deps.activateTerminal(target)
+    return
+  }
+  deps.selectSessionTab(target, deps.isPending(target))
 }
 
 // Terminal-specific renderers (layer + add button) live in `./terminal/render.tsx`

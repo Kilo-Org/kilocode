@@ -46,6 +46,7 @@ export const dict = {
   "agentManager.session.readonly": "읽기 전용 세션",
   "agentManager.session.noSessions": "열린 세션 없음",
   "agentManager.tab.close": "닫기",
+  "agentManager.tab.closeOthers": "다른 탭 닫기",
   "agentManager.tab.closeTab": "탭 닫기",
   "agentManager.tab.forkSession": "세션 포크",
   "agentManager.tab.terminal": "터미널",

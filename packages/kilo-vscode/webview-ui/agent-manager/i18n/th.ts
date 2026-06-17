@@ -46,6 +46,7 @@ export const dict = {
   "agentManager.session.readonly": "เซสชันอ่านอย่างเดียว",
   "agentManager.session.noSessions": "ไม่มีเซสชันที่เปิดอยู่",
   "agentManager.tab.close": "ปิด",
+  "agentManager.tab.closeOthers": "ปิดแท็บอื่น",
   "agentManager.tab.closeTab": "ปิดแท็บ",
   "agentManager.tab.forkSession": "แยกเซสชัน",
   "agentManager.tab.terminal": "เทอร์มินัล",

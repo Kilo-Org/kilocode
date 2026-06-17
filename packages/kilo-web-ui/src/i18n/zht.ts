@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/i18n/zht"
+export * from "@opencode-ai/ui/i18n/zht"

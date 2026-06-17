@@ -46,6 +46,7 @@ export const dict = {
   "agentManager.session.readonly": "Schreibgeschützte Sitzung",
   "agentManager.session.noSessions": "Keine Sitzungen geöffnet",
   "agentManager.tab.close": "Schließen",
+  "agentManager.tab.closeOthers": "Andere schließen",
   "agentManager.tab.closeTab": "Tab schließen",
   "agentManager.tab.forkSession": "Sitzung verzweigen",
   "agentManager.tab.terminal": "Terminal",

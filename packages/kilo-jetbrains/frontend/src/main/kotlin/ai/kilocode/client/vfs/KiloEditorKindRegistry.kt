@@ -18,5 +18,9 @@ class KiloEditorKindRegistry {
         service<KiloVirtualFileKindRegistry>().unregister(id)
     }
 
+    fun clear() {
+        kinds.keys.forEach { id -> unregister(id) }
+    }
+
     fun get(id: String): KiloEditorKind? = kinds[id]
 }

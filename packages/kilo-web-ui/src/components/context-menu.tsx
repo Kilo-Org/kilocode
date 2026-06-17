@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/context-menu"
+export * from "@opencode-ai/ui/context-menu"

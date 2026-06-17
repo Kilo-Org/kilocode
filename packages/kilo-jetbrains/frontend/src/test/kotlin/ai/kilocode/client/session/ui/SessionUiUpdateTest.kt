@@ -9,6 +9,8 @@ import ai.kilocode.client.session.views.PromptAttachmentView
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.TextView
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.views.tool.ShellToolView
+import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
@@ -88,14 +90,19 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
 
     // ------ tool lifecycle ------
 
-    fun `test tool state transitions are reflected in ToolView`() {
+    fun `test tool state transitions are reflected in tool view`() {
         model.upsertMessage(msg("a1", "assistant"))
         model.updateContent("a1", toolPart("t1", "a1", "bash", "pending"))
         model.updateContent("a1", toolPart("t1", "a1", "bash", "running"))
         model.updateContent("a1", toolPart("t1", "a1", "bash", "completed"))
 
-        val tv = panel.findMessage("a1")!!.part("t1") as ai.kilocode.client.session.views.tool.ToolView
-        assertFalse(tv.labelText().contains("Running"))
+        val view = panel.findMessage("a1")!!.part("t1")
+        val label = when (view) {
+            is ShellToolView -> view.labelText()
+            is ToolView -> view.labelText()
+            else -> error("unexpected tool view ${view?.javaClass?.name}")
+        }
+        assertFalse(label.contains("Running"))
     }
 
     fun `test read tool renders as ReadToolView`() {

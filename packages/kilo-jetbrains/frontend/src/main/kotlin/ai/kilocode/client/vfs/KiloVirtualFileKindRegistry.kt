@@ -15,5 +15,9 @@ class KiloVirtualFileKindRegistry {
         kinds.remove(id)
     }
 
+    fun clear() {
+        kinds.clear()
+    }
+
     fun get(id: String): KiloVirtualFileKind? = kinds[id]
 }

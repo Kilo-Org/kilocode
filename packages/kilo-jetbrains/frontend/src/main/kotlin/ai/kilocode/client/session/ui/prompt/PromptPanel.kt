@@ -5,6 +5,7 @@ import ai.kilocode.client.actions.SendPromptAction
 import ai.kilocode.client.actions.StopSessionAction
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.ReasoningPicker
+import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.model.PromptAttachment
 import ai.kilocode.client.session.model.PromptAttachmentExtractor
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -13,7 +14,6 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
 import ai.kilocode.client.ui.HoverIcon
-import ai.kilocode.client.ui.RoundedContentPanel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
 import ai.kilocode.log.ChatLogSummary
@@ -41,9 +41,9 @@ import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.AnimatedIcon
+import com.intellij.ui.JBColor
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.xml.util.XmlStringUtil
-import com.intellij.util.ui.JBValue
 import com.intellij.util.ui.JBDimension
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -59,6 +59,8 @@ import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.util.concurrent.Future
@@ -68,10 +70,11 @@ import javax.swing.Icon
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.ScrollPaneConstants
+import javax.swing.SwingUtilities
 
 /**
- * Prompt input panel with borderless IntelliJ editor text field and
- * mode/model controls grouped inside one rounded editor-background shell.
+ * Prompt input panel with a borderless IntelliJ editor text field and
+ * mode/model controls in the full bottom session area.
  */
 class PromptPanel(
     private val project: Project,
@@ -99,13 +102,27 @@ class PromptPanel(
     var onAutoApproveToggle: (Boolean) -> Unit = {}
     var onFileDrag: (Boolean) -> Unit = {}
     private var style = SessionEditorStyle.current()
-    private val shell = PromptShell()
+    private val shell = BorderLayoutPanel().apply {
+        isOpaque = true
+        border = JBUI.Borders.empty(
+            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
+        )
+    }
     private val attachments = mutableListOf<PromptAttachment>()
     private val strip = PromptAttachmentStrip(project) { removeAttachment(it) }
     private var bus: MessageBusConnection? = null
     private var autoApprove = false
     private var attachment = true
     private var submitting = false
+    private var root: SessionRootPanel? = null
+    private val resize = object : ComponentAdapter() {
+        override fun componentResized(e: ComponentEvent) {
+            syncEditorHeight()
+        }
+    }
 
     private val editor = PromptEditorTextField(project, this).apply {
         border = JBUI.Borders.empty()
@@ -122,19 +139,22 @@ class PromptPanel(
             ed.scrollPane.background = style.editorScheme.defaultBackground
             ed.scrollPane.viewport.background = style.editorScheme.defaultBackground
             ed.settings.isUseSoftWraps = true
+            ed.settings.isPaintSoftWraps = false
             ed.settings.isAdditionalPageAtBottom = false
             ed.putUserData(PROMPT_ATTACHMENT_PASTE_HANDLER_KEY, PromptAttachmentPasteHandler { processPaste(it) })
+            ed.scrollPane.verticalScrollBarPolicy =
+                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
             ed.scrollPane.horizontalScrollBarPolicy =
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
             installFileDrop(ed.contentComponent, "editor")
             installFileDrop(ed.scrollPane, "scroll")
             ed.contentComponent.addFocusListener(object : FocusAdapter() {
                 override fun focusGained(e: FocusEvent) {
-                    shell.repaint()
+                    repaint()
                 }
 
                 override fun focusLost(e: FocusEvent) {
-                    shell.repaint()
+                    repaint()
                 }
             })
         }
@@ -189,16 +209,6 @@ class PromptPanel(
         get() = busy
 
     init {
-        border = JBUI.Borders.compound(
-            JBUI.Borders.customLineTop(JBUI.CurrentTheme.ToolWindow.borderColor()),
-            JBUI.Borders.empty(
-                JBUI.scale(SessionUiStyle.View.Prompt.PANEL_VERTICAL_PADDING),
-                JBUI.scale(SessionUiStyle.View.Prompt.PANEL_HORIZONTAL_PADDING),
-                JBUI.scale(SessionUiStyle.View.Prompt.PANEL_VERTICAL_PADDING),
-                JBUI.scale(SessionUiStyle.View.Prompt.PANEL_HORIZONTAL_PADDING),
-            ),
-        )
-
         applyStyle(style)
         editor.text = ""
         editor.addDocumentListener(object : DocumentListener {
@@ -231,10 +241,19 @@ class PromptPanel(
         bar.add(button)
         shell.add(bar, BorderLayout.SOUTH)
         add(shell, BorderLayout.CENTER)
+        addComponentListener(resize)
         installFileDrop(shell, "shell")
         syncTooltip()
         syncAutoApprove()
         syncEnhance()
+    }
+
+    override fun updateUI() {
+        super.updateUI()
+        border = JBUI.Borders.compound(
+            JBUI.Borders.customLineTop(separator()),
+            JBUI.Borders.empty(),
+        )
     }
 
     @RequiresEdt
@@ -301,6 +320,8 @@ class PromptPanel(
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
+        background = style.editorScheme.defaultBackground
+        shell.background = style.editorScheme.defaultBackground
         editor.font = style.editorFont
         editor.getEditor(false)?.let(style::applyToEditor)
         editor.background = style.editorScheme.defaultBackground
@@ -330,10 +351,13 @@ class PromptPanel(
 
     override fun addNotify() {
         super.addNotify()
+        bindRoot()
         bindKeymap()
     }
 
     override fun removeNotify() {
+        root?.removeComponentListener(resize)
+        root = null
         bus?.disconnect()
         bus = null
         super.removeNotify()
@@ -345,6 +369,7 @@ class PromptPanel(
         val source = editor.text
         if (source.isBlank()) {
             editor.text = KiloBundle.message("prompt.action.enhance.description")
+            syncEditorHeight()
             focus()
             return
         }
@@ -361,6 +386,7 @@ class PromptPanel(
         syncEnhance()
         result.onSuccess {
             editor.text = it
+            syncEditorHeight()
             focus()
         }.onFailure {
             if (it is CancellationException) return@onFailure
@@ -430,6 +456,7 @@ class PromptPanel(
         attachments += item
         strip.add(item)
         LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} count=${attachments.size}" }
+        syncEditorHeight()
         onChange()
     }
 
@@ -437,6 +464,7 @@ class PromptPanel(
     private fun removeAttachment(item: PromptAttachment) {
         if (!attachments.removeIf { it.id == item.id }) return
         strip.remove(item)
+        syncEditorHeight()
         onChange()
     }
 
@@ -592,19 +620,54 @@ class PromptPanel(
         return KiloBundle.message("prompt.placeholder")
     }
 
+    private fun separator() = JBColor.namedColor("EditorTabs.underTabsBorderColor", JBUI.CurrentTheme.EditorTabs.borderColor())
+
     @RequiresEdt
     private fun syncEditorHeight() {
-        val count = ApplicationManager.getApplication().runReadAction<Int> { editor.document.lineCount }
-        val lines = (count + SessionUiStyle.View.Prompt.EDITOR_SPARE_LINES).coerceIn(
-            SessionUiStyle.View.Prompt.EDITOR_LINES,
-            SessionUiStyle.View.Prompt.EDITOR_MAX_LINES,
-        )
-        val height = style.editorFont.size * lines + JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
-        if (editor.preferredSize.height == height && editor.minimumSize.height == height) return
+        val before = editor.preferredSize.height
+        val lower = editor.minimumSize.height
+        editor.setPreferredSize(null)
+        editor.setMinimumSize(null)
+        editor.getEditor(false)?.let {
+            it.contentComponent.invalidate()
+            it.component.invalidate()
+            it.scrollPane.invalidate()
+        }
+        editor.invalidate()
+        editor.ensureWillComputePreferredSize()
+        val view = editor.getEditor(false)
+        val line = view?.lineHeight ?: editor.getFontMetrics(editor.font).height
+        val min = line * SessionUiStyle.View.Prompt.EDITOR_LINES + JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
+        val content = editor.preferredSize.height
+        val sessionCap = rootCap(min)
+        val height = minOf(content, sessionCap ?: content).coerceAtLeast(min)
+        if (before == height && lower == height) {
+            editor.preferredSize = JBDimension(0, height)
+            editor.minimumSize = JBDimension(0, height)
+            return
+        }
         editor.preferredSize = JBDimension(0, height)
         editor.minimumSize = JBDimension(0, height)
         revalidate()
         repaint()
+    }
+
+    @RequiresEdt
+    private fun rootCap(min: Int): Int? {
+        val root = root ?: return null
+        if (root.height <= 0) return null
+        val chrome = (shell.preferredSize.height - editor.preferredSize.height).coerceAtLeast(0)
+        return (root.height / 3 - chrome).coerceAtLeast(min)
+    }
+
+    @RequiresEdt
+    private fun bindRoot() {
+        val next = SwingUtilities.getAncestorOfClass(SessionRootPanel::class.java, this) as? SessionRootPanel
+        if (root === next) return
+        root?.removeComponentListener(resize)
+        root = next
+        root?.addComponentListener(resize)
+        syncEditorHeight()
     }
 
     private inner class SendButton : JButton(), UiDataProvider {
@@ -709,22 +772,4 @@ class PromptPanel(
         }
     }
 
-    private inner class PromptShell : RoundedContentPanel(
-        JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
-        JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
-    ) {
-        private val focus = JBValue.UIInteger("Component.focusWidth", SessionUiStyle.View.Prompt.FOCUS_WIDTH)
-
-        override fun contentColor() = style.editorScheme.defaultBackground
-
-        override fun outlineColor() = if (UIUtil.isFocusAncestor(editor)) {
-            JBUI.CurrentTheme.Focus.focusColor()
-        } else {
-            SessionUiStyle.View.Outline.brightColor()
-        }
-
-        override fun outlineWidth() = if (UIUtil.isFocusAncestor(editor)) focus.get() else SessionUiStyle.View.Outline.width()
-
-        override fun cornerArc() = JBUI.scale(JBUI.getInt("Button.arc", SessionUiStyle.View.Prompt.CORNER_ARC))
-    }
 }

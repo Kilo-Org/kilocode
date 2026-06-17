@@ -6,6 +6,7 @@ import ai.kilocode.client.session.views.question.QuestionResultView
 import ai.kilocode.client.session.views.tool.GlobToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.SearchToolView
+import ai.kilocode.client.session.views.tool.ShellToolView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.model.Compaction
@@ -47,6 +48,7 @@ object ViewFactory {
             TodoWriteView.canRender(content) -> TodoWriteView(content)
             PlanExitView.canRender(content) -> PlanExitView(content, openFile, selection)
             QuestionResultView.canRender(content) -> QuestionResultView(content, selection)
+            ShellToolView.canRender(content) -> ShellToolView(content, selection = selection)
             GlobToolView.canRender(content) -> GlobToolView(content, selection = selection, repo = repo)
             SearchToolView.canRender(content) -> SearchToolView(content, selection = selection, repo = repo)
             ReadToolView.canRender(content) -> ReadToolView(content, openFile, selection = selection)
@@ -86,6 +88,8 @@ object ViewFactory {
         if (view is PlanExitView) return !PlanExitView.canRender(content)
         if (view !is PlanExitView && PlanExitView.canRender(content)) return true
         if (view is QuestionResultView) return !QuestionResultView.canRender(content)
+        if (view is ShellToolView) return !ShellToolView.canRender(content) || QuestionResultView.canRender(content)
+        if (view !is ShellToolView && ShellToolView.canRender(content)) return true
         if (view is GlobToolView) return !GlobToolView.canRender(content) || QuestionResultView.canRender(content)
         if (view !is GlobToolView && GlobToolView.canRender(content)) return true
         if (view is SearchToolView) return !SearchToolView.canRender(content) || QuestionResultView.canRender(content)

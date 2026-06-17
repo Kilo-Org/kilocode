@@ -324,7 +324,7 @@ class MessageView(
             val arc = JBUI.scale(JBUI.getInt("Button.arc", SessionUiStyle.View.Prompt.CORNER_ARC))
             g2.color = style.editorScheme.defaultBackground
             g2.fillRoundRect(0, 0, width, height, arc, arc)
-            g2.color = SessionUiStyle.View.Outline.brightColor()
+            g2.color = SessionUiStyle.View.Outline.color()
             val w = width - 1
             val h = height - 1
             if (w > 0 && h > 0) g2.drawRoundRect(0, 0, w, h, arc, arc)

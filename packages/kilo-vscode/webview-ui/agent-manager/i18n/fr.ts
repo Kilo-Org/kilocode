@@ -46,6 +46,7 @@ export const dict = {
   "agentManager.session.readonly": "Session en lecture seule",
   "agentManager.session.noSessions": "Aucune session ouverte",
   "agentManager.tab.close": "Fermer",
+  "agentManager.tab.closeOthers": "Fermer les autres",
   "agentManager.tab.closeTab": "Fermer l'onglet",
   "agentManager.tab.forkSession": "Dupliquer la session",
   "agentManager.tab.terminal": "Terminal",

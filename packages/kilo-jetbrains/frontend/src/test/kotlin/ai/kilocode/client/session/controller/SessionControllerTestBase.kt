@@ -8,6 +8,7 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
+import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.SessionRef
@@ -95,6 +96,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
     protected lateinit var app: KiloAppService
     protected lateinit var workspaces: KiloWorkspaceService
     protected lateinit var workspace: Workspace
+    protected lateinit var timers: TestUiTimers
 
     protected lateinit var scope: CoroutineScope
     protected lateinit var parent: Disposable
@@ -104,6 +106,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         rpc = FakeSessionRpcApi()
         appRpc = FakeAppRpcApi()
         projectRpc = FakeWorkspaceRpcApi()
+        timers = TestUiTimers()
 
         scope = CoroutineScope(SupervisorJob())
         parent = Disposer.newDisposable("test")
@@ -169,6 +172,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
             beforeUpdate = beforeUpdate,
             afterUpdate = afterUpdate,
             telemetry = { event, props -> appRpc.telemetry.add(TelemetryCaptureDto(event, props)) },
+            timers = timers,
         )
         controllers.add(m)
         roots[m] = root
@@ -242,9 +246,14 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
     }
 
     protected fun pause(ms: Long) = runBlocking {
-        val tick = 10L
-        repeat((ms / tick).coerceAtLeast(1).toInt()) {
-            delay(tick)
+        settleFast()
+        timers.advanceBy(ms)
+        settleFast()
+    }
+
+    private suspend fun settleFast() {
+        repeat(3) {
+            delay(1)
             edt { UIUtil.dispatchAllInvocationEvents() }
         }
     }

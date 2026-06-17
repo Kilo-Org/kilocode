@@ -34,6 +34,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CancellationException
 import java.awt.Container
+import java.awt.BorderLayout
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
 import java.awt.datatransfer.Transferable
@@ -44,11 +45,23 @@ import java.io.File
 import java.util.Base64
 import javax.imageio.ImageIO
 import javax.swing.JButton
+import javax.swing.JPanel
 import javax.swing.ImageIcon
+import javax.swing.ScrollPaneConstants
 import javax.swing.SwingUtilities
 
 @Suppress("UnstableApiUsage")
 class PromptPanelTest : BasePlatformTestCase() {
+    private val roots = mutableListOf<SessionRootPanel>()
+
+    override fun tearDown() {
+        try {
+            roots.asReversed().forEach { it.removeNotify() }
+            roots.clear()
+        } finally {
+            super.tearDown()
+        }
+    }
 
     fun `test prompt input uses editor font settings`() {
         val style = SessionEditorStyle.current()
@@ -82,16 +95,114 @@ class PromptPanelTest : BasePlatformTestCase() {
         val editor = panel.defaultFocusedComponent as EditorTextField
         val min = editor.preferredSize.height
 
+        realize(panel, 260, 400)
         editor.text = "one\ntwo\nthree\nfour\nfive"
 
         assertTrue(editor.preferredSize.height > min)
     }
 
-    fun `test prompt editor shrinks when lines are removed`() {
+    fun `test prompt editor keeps three line minimum`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val editor = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        val view = editor.getEditor(false)!!
+        val min = view.lineHeight * SessionUiStyle.View.Prompt.EDITOR_LINES +
+            JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
+
+        assertEquals(min, editor.preferredSize.height)
+    }
+
+    fun `test prompt editor grows when single line wraps`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val editor = panel.defaultFocusedComponent as EditorTextField
         val min = editor.preferredSize.height
 
+        realize(panel, 180, 400)
+        editor.text = List(80) { "wrapped" }.joinToString(" ")
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertTrue(editor.preferredSize.height > min)
+    }
+
+    fun `test enhanced prompt result resizes wrapped input`() {
+        var complete: ((Result<String>) -> Unit)? = null
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, done -> complete = done })
+        val editor = panel.defaultFocusedComponent as EditorTextField
+        val min = editor.preferredSize.height
+        panel.setReady(true)
+        realize(panel, 180, 400)
+        editor.text = "draft"
+
+        enhanceButton(panel).doClick()
+        complete!!(Result.success(List(80) { "enhanced" }.joinToString(" ")))
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertTrue(editor.preferredSize.height > min)
+    }
+
+    fun `test empty enhance explanation resizes wrapped input`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val editor = panel.defaultFocusedComponent as EditorTextField
+        val min = editor.preferredSize.height
+        panel.setReady(true)
+        realize(panel, 80, 400)
+
+        enhanceButton(panel).doClick()
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertTrue(editor.preferredSize.height > min)
+        assertEquals(KiloBundle.message("prompt.action.enhance.description"), editor.text)
+    }
+
+    fun `test prompt shell height is capped by session root`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val editor = panel.defaultFocusedComponent as EditorTextField
+        val root = realize(panel, 260, 600)
+
+        editor.text = (1..40).joinToString("\n") { "line $it" }
+        root.doLayout()
+        panel.doLayout()
+        UIUtil.dispatchAllInvocationEvents()
+
+        val chrome = (panel.preferredSize.height - editor.preferredSize.height).coerceAtLeast(0)
+        assertTrue(editor.preferredSize.height <= root.height / 3 - chrome + 1)
+    }
+
+    fun `test attachment strip is included in session root cap`() {
+        val plain = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val attached = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        realize(plain, 260, 600)
+        realize(attached, 260, 600)
+        val plainEditor = plain.defaultFocusedComponent as EditorTextField
+        val attachedEditor = attached.defaultFocusedComponent as EditorTextField
+
+        plainEditor.text = (1..40).joinToString("\n") { "line $it" }
+        attached.addAttachmentForTest(PromptAttachment("a", "a.txt", "text/plain", "file:///tmp/a.txt"))
+        attachedEditor.text = (1..40).joinToString("\n") { "line $it" }
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertTrue(attachedEditor.preferredSize.height < plainEditor.preferredSize.height)
+    }
+
+    fun `test prompt editor scroll policy keeps horizontal disabled`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        realize(panel, 180, 400)
+
+        val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
+
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, editor.scrollPane.verticalScrollBarPolicy)
+        assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, editor.scrollPane.horizontalScrollBarPolicy)
+        assertTrue(editor.settings.isUseSoftWraps)
+        assertFalse(editor.settings.isPaintSoftWraps)
+    }
+
+    fun `test prompt editor shrinks when lines are removed`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val editor = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        val min = editor.preferredSize.height
         editor.text = "one\ntwo\nthree\nfour\nfive"
         assertTrue(editor.preferredSize.height > min)
 
@@ -103,8 +214,9 @@ class PromptPanelTest : BasePlatformTestCase() {
     fun `test prompt editor shrinks after clear`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val editor = panel.defaultFocusedComponent as EditorTextField
-        val min = editor.preferredSize.height
 
+        realize(panel, 260, 400)
+        val min = editor.preferredSize.height
         editor.text = "one\ntwo\nthree\nfour\nfive"
         assertTrue(editor.preferredSize.height > min)
 
@@ -606,6 +718,18 @@ class PromptPanelTest : BasePlatformTestCase() {
         }
         visit(root)
         return out
+    }
+
+    private fun realize(panel: PromptPanel, width: Int, height: Int): SessionRootPanel {
+        val root = SessionRootPanel()
+        root.setSize(width, height)
+        root.content.add(JPanel(BorderLayout()).apply { add(panel, BorderLayout.SOUTH) }, BorderLayout.CENTER)
+        root.addNotify()
+        root.doLayout()
+        panel.doLayout()
+        UIUtil.dispatchAllInvocationEvents()
+        roots.add(root)
+        return root
     }
 
     private fun createEditor(): Editor {

@@ -12,7 +12,13 @@ import semver from "semver"
 import { InstallationChannel, InstallationVersion } from "@opencode-ai/core/installation/version"
 import { NpmConfig } from "@opencode-ai/core/npm-config"
 // kilocode_change start
-import { Brew as KiloBrew, Choco as KiloChoco, Npm as KiloNpm, Release as KiloRelease, Scoop as KiloScoop } from "@/kilocode/installation"
+import {
+  Brew as KiloBrew,
+  Choco as KiloChoco,
+  Npm as KiloNpm,
+  Release as KiloRelease,
+  Scoop as KiloScoop,
+} from "@/kilocode/installation"
 // kilocode_change end
 
 const log = Log.create({ service: "installation" })
@@ -224,7 +230,13 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProce
           return data.versions.stable
         }
 
-        if (detectedMethod === "npm" || detectedMethod === "yarn" || detectedMethod === "bun" || detectedMethod === "pnpm") { // kilocode_change
+        if (
+          detectedMethod === "npm" ||
+          detectedMethod === "yarn" ||
+          detectedMethod === "bun" ||
+          detectedMethod === "pnpm"
+        ) {
+          // kilocode_change
           const response = yield* httpOk.execute(
             HttpClientRequest.get(
               `${yield* NpmConfig.registry(process.cwd())}/${KiloNpm.path}/${InstallationChannel}`, // kilocode_change

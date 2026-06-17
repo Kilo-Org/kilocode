@@ -40,6 +40,7 @@ class PlanExitView(tool: Tool, openFile: (String) -> Unit, selection: SessionSel
     }
 
     override fun applyStyle(style: SessionEditorStyle) {
+        md.applyStyle(style)
         md.font = style.transcriptFont
         md.codeFont = style.editorFamily
         md.foreground = style.editorForeground
