@@ -1,5 +1,6 @@
 import type { Ignore } from "ignore"
-import { stat, readFile, glob as fsGlob } from "fs/promises"
+import { stat, readFile } from "fs/promises"
+import { fdir } from "fdir"
 import path from "path"
 import {
   generateNormalizedAbsolutePath,
@@ -141,12 +142,16 @@ export class DirectoryScanner implements IDirectoryScanner {
     const scanWorkspace = directoryPath
     log.info("starting directory scan", { workspacePath: scanWorkspace })
 
-    // Get all files recursively
-    const result = await fsGlob("**/*", { cwd: directoryPath })
-    const allPaths: string[] = []
-    for await (const file of result) {
-      allPaths.push(path.resolve(directoryPath, file))
-    }
+    // Get all files recursively via fdir with built-in symlink cycle detection
+    const allPaths = await new fdir()
+      .withFullPaths()
+      .withSymlinks({ resolvePaths: true })
+      .exclude((_dirName: string, dirPath: string) => {
+        const rel = path.relative(directoryPath, dirPath)
+        return FileIgnore.match(rel)
+      })
+      .crawl(directoryPath)
+      .withPromise()
 
     // Filter by supported extensions, ignore patterns, and excluded directories
     const supportedPaths = allPaths.filter((filePath) => {

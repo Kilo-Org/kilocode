@@ -211,6 +211,7 @@
         "async-mutex": "0.5.0",
         "chokidar": "4.0.3",
         "effect": "catalog:",
+        "fdir": "^6.5.0",
         "glob": "13.0.6",
         "hono": "catalog:",
         "hono-openapi": "catalog:",
