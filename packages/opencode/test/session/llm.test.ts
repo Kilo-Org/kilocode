@@ -17,6 +17,7 @@ import type { Agent } from "../../src/agent/agent"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionID, MessageID } from "../../src/session/schema"
 import { AppRuntime } from "../../src/effect/app-runtime"
+import { USER_AGENT } from "../../src/installation" // kilocode_change
 
 async function getModel(providerID: ProviderID, modelID: ModelID, ctx: InstanceContext) {
   const effect = Effect.gen(function* () {
@@ -1159,8 +1160,10 @@ describe("session.llm.stream", () => {
 
         const capture = await request
         const body = capture.body
+        const headers = capture.headers // kilocode_change
 
         expect(capture.url.pathname.endsWith("/messages")).toBe(true)
+        expect(headers.get("User-Agent")?.split(" ")[0]).toBe(USER_AGENT) // kilocode_change
         expect(body.messages).toStrictEqual([
           {
             role: "user",

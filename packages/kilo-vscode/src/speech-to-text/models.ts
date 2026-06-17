@@ -7,6 +7,11 @@ export interface SpeechToTextModelDef {
 
 const models: SpeechToTextModelDef[] = [
   {
+    id: "openai/whisper-large-v3-turbo",
+    label: "Whisper Large V3 Turbo",
+    provider: "OpenAI-compatible",
+  },
+  {
     id: "openai/gpt-4o-mini-transcribe",
     label: "GPT-4o Mini Transcribe",
     provider: "OpenAI",
@@ -22,11 +27,6 @@ const models: SpeechToTextModelDef[] = [
     id: "openai/whisper-1",
     label: "Whisper 1",
     provider: "OpenAI",
-  },
-  {
-    id: "openai/whisper-large-v3-turbo",
-    label: "Whisper Large V3 Turbo",
-    provider: "OpenAI-compatible",
   },
   {
     id: "openai/whisper-large-v3",

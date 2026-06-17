@@ -1,5 +1,11 @@
 module.exports = [
   {
+    source: "/docs/kiloclaw/tools",
+    destination: "/docs/kiloclaw/development-tools",
+    basePath: false,
+    permanent: true,
+  },
+  {
     source: "/docs/contributing/cline-to-kilo-migration",
     destination: "/docs/contributing",
     basePath: false,

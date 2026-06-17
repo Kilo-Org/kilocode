@@ -13,6 +13,7 @@ const STORIES = [
   { id: "settings--providers-configure", name: "Settings / providers empty state" },
   { id: "marketplace--skills-tab-empty", name: "Marketplace / skills empty state" },
   { id: "marketplace--agents-tab-empty", name: "Marketplace / agents empty state" },
+  { id: "agentmanager--sidebar-search-open", name: "Agent Manager / sidebar search" },
 ]
 
 function url(id: string) {
@@ -60,5 +61,62 @@ test.describe("webview accessibility ratchet", () => {
     })
     await page.keyboard.press("Enter")
     await expect(login).toHaveAttribute("data-keyboard-activated", "true")
+  })
+
+  test("Agent Manager sidebar search filters and selects with the keyboard", async ({ page }) => {
+    await open(page, "agentmanager--sidebar-search-open")
+
+    const trigger = page.getByRole("button", { name: "Search worktrees and sessions" })
+    const input = page.getByPlaceholder("Search worktrees and sessions", { exact: true })
+    const prompt = page.getByRole("textbox", { name: "Story prompt" })
+    await expect(input).toBeFocused()
+    await expect(page.locator('[data-slot="list-header"]')).toHaveText(["SESSIONS", "LOCAL & WORKTREES"])
+
+    await input.fill("Render")
+    await expect(page.locator('[data-slot="sidebar-search-result"]').first()).toContainText(
+      "Render images in diff viewer",
+    )
+    await input.fill("rndr img")
+    await expect(page.locator('[data-slot="sidebar-search-result"]').first()).toContainText(
+      "Render images in diff viewer",
+    )
+
+    await input.fill("main")
+    await expect(page.locator('[data-slot="sidebar-search-result"]').first()).toContainText("local")
+    await page.keyboard.press("Enter")
+    await expect(page.locator('[data-slot="sidebar-search-selection"]')).toHaveText("local")
+    await expect(prompt).toBeFocused()
+
+    await trigger.click()
+    await input.fill("Build grouped")
+    await expect(page.getByText("Build grouped worktree search", { exact: true })).toBeVisible()
+
+    await page.keyboard.press("Enter")
+    await expect(page.locator('[data-slot="sidebar-search-selection"]')).toHaveText("session:session-build")
+    await expect(input).toBeHidden()
+    await expect(prompt).toBeFocused()
+
+    await trigger.click()
+    await input.fill("local indexing")
+    await expect(page.getByText("Investigate local indexing", { exact: true })).toBeVisible()
+    await page.keyboard.press("Enter")
+    await expect(page.locator('[data-slot="sidebar-search-selection"]')).toHaveText("session:session-local")
+
+    await trigger.click()
+    await input.fill("does not exist")
+    await expect(page.locator('[data-slot="list-empty-state"]')).toBeVisible()
+    await page.keyboard.press("Escape")
+    await expect(prompt).toBeFocused()
+
+    await trigger.click()
+    await expect(input).toBeFocused()
+    await page.locator(".am-section-label").click()
+    await expect(prompt).toBeFocused()
+
+    await trigger.hover()
+    await expect(
+      page.getByText("Searches the local workspace, local sessions, worktrees, and their sessions", { exact: true }),
+    ).toBeVisible()
+    await expect(page.getByText("⌘F", { exact: true })).toBeVisible()
   })
 })

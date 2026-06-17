@@ -48,6 +48,12 @@ export interface ExecResult {
   stderr: string
 }
 
+export interface ExecBufferResult {
+  code: number
+  stdout: Buffer
+  stderr: string
+}
+
 /**
  * Fixed SSH command injected by {@link nonInteractiveEnv} when the user has
  * not already configured their own. Exported so callers can check whether a
@@ -532,12 +538,21 @@ export class GitOps {
     return this.exec(args, cwd, options)
   }
 
-  private exec(args: string[], cwd: string, options?: ExecOptions): Promise<ExecResult> {
+  execGitBuffer(args: string[], cwd: string): Promise<ExecBufferResult> {
+    return this.execBuffer(args, cwd)
+  }
+
+  private async exec(args: string[], cwd: string, options?: ExecOptions): Promise<ExecResult> {
+    const result = await this.execBuffer(args, cwd, options)
+    return { code: result.code, stdout: result.stdout.toString("utf8"), stderr: result.stderr }
+  }
+
+  private execBuffer(args: string[], cwd: string, options?: ExecOptions): Promise<ExecBufferResult> {
     if (this.controller.signal.aborted) {
-      return Promise.resolve({ code: 1, stdout: "", stderr: "GitOps disposed" })
+      return Promise.resolve({ code: 1, stdout: Buffer.alloc(0), stderr: "GitOps disposed" })
     }
     const invoke = () =>
-      new Promise<ExecResult>((resolve) => {
+      new Promise<ExecBufferResult>((resolve) => {
         const child = spawn("git", args, {
           cwd,
           env: options?.env,
@@ -547,7 +562,7 @@ export class GitOps {
 
         if (options?.stdin !== undefined) {
           if (!child.stdin) {
-            resolve({ code: 1, stdout: "", stderr: "stdin not available for git process" })
+            resolve({ code: 1, stdout: Buffer.alloc(0), stderr: "stdin not available for git process" })
             return
           }
           child.stdin.end(options.stdin)
@@ -559,12 +574,12 @@ export class GitOps {
         child.stderr?.on("data", (chunk: Buffer) => err.push(chunk))
 
         child.on("error", (error) => {
-          resolve({ code: 1, stdout: "", stderr: error.message })
+          resolve({ code: 1, stdout: Buffer.alloc(0), stderr: error.message })
         })
         child.on("close", (code) => {
           resolve({
             code: code ?? 1,
-            stdout: Buffer.concat(out).toString("utf8"),
+            stdout: Buffer.concat(out),
             stderr: Buffer.concat(err).toString("utf8"),
           })
         })

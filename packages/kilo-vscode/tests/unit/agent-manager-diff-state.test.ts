@@ -41,6 +41,20 @@ describe("agent manager diff state", () => {
     expect(result.stale.size).toBe(0)
   })
 
+  it("preserves loaded image data when summary metadata is unchanged", () => {
+    const image = {
+      before: { mime: "image/png", bytes: 3, data: "b2xk" },
+      after: { mime: "image/png", bytes: 3, data: "bmV3" },
+    }
+    const prev = [diff({ file: "asset.png", kind: "image", summarized: false, image })]
+    const next = [diff({ file: "asset.png", kind: "image", summarized: true })]
+    const result = mergeWorktreeDiffs(prev, next)
+
+    expect(result.diffs[0]).toBe(prev[0])
+    expect(result.diffs[0]?.image).toBe(image)
+    expect(result.stale.size).toBe(0)
+  })
+
   it("replaces detailed content when patch anchors change", () => {
     const prev = [diff({ summarized: false, before: "old\n", after: "new\n", patch: "@@ -1 +1 @@\n-old\n+new\n" })]
     const next = [diff({ summarized: false, before: "old\n", after: "new\n", patch: "@@ -100 +100 @@\n-old\n+new\n" })]
@@ -74,6 +88,7 @@ describe("agent manager diff state", () => {
         diff({ file: "src/app.ts", generatedLike: false, additions: 3 }),
         diff({ file: "node_modules/pkg/index.js", generatedLike: true, additions: 3 }),
         diff({ file: "audio/notification.wav", summarized: false, additions: 0 }),
+        diff({ file: "assets/banner.png", kind: "image", summarized: true, additions: 0 }),
         diff({ file: "src/huge.ts", additions: EXTREME_DIFF_CHANGED_LINES + 1 }),
       ]),
     ).toEqual(["src/app.ts", "node_modules/pkg/index.js", "src/huge.ts"])
@@ -121,13 +136,18 @@ describe("agent manager diff state", () => {
     expect(toggleOpenFiles(diffs, files)).toEqual([])
   })
 
-  it("prevents non-text diffs from entering open state", () => {
+  it("opens images while preventing other non-text diffs from entering open state", () => {
     const audio = diff({ file: "audio/alert.wav", summarized: false, additions: 0 })
+    const image = diff({ file: "assets/banner.png", kind: "image", summarized: true, additions: 0 })
     const text = diff({ file: "src/app.ts" })
 
     expect(isDiffExpandable(audio)).toBe(false)
+    expect(isDiffExpandable(image)).toBe(true)
     expect(isDiffExpandable(text)).toBe(true)
-    expect(sanitizeOpenFiles([audio, text], [audio.file, text.file])).toEqual([text.file])
+    expect(sanitizeOpenFiles([audio, image, text], [audio.file, image.file, text.file])).toEqual([
+      image.file,
+      text.file,
+    ])
   })
 })
 

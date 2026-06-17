@@ -10,6 +10,8 @@ import { createDefaultOptions as defaults, styleVariables } from "@opencode-ai/u
 
 export { styleVariables }
 
+export const LINE_DIFF_TYPE = "char" as const
+
 // Pierre 1.1 treats its changed-line override properties as tint targets. Apply
 // Kilo semantic surfaces at the computed row level so host diff colors stay final.
 const css = `
@@ -35,6 +37,7 @@ export function createDefaultOptions<T>(style: FileDiffOptions<T>["diffStyle"]) 
   const opts = defaults<T>(style)
   return {
     ...opts,
+    lineDiffType: LINE_DIFF_TYPE,
     unsafeCSS: `${opts.unsafeCSS}\n${css}`,
   }
 }

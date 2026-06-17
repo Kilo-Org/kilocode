@@ -23,6 +23,8 @@ import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.util.UiTimerSource
+import ai.kilocode.client.util.UiTimers
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigWarningDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
@@ -89,6 +91,7 @@ class SessionController(
   private val loaded: (Boolean) -> Unit = {},
   private val openProfileAction: () -> Unit = {},
   private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
+  private val timers: UiTimerSource = UiTimers,
 ) : Disposable {
 
     private data class OrganizationTarget(val org: String?)
@@ -138,7 +141,7 @@ class SessionController(
     private var viewState: SessionControllerEvent.ViewChanged? = null
     private var connectionState: SessionControllerEvent.ConnectionChanged? = null
     private var connectionTargetState: SessionControllerEvent.ConnectionChanged? = null
-    private val connectionDelay = DelayedState(displayMs)
+    private val connectionDelay = DelayedState(displayMs, timers)
     private var acctState: SessionControllerEvent.AccountOverlayChanged =
         SessionControllerEvent.AccountOverlayChanged.Hide
     private var acctAllowed = false

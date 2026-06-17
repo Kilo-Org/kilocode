@@ -24,9 +24,13 @@ import { registerKiloCommands } from "@/kilocode/kilo-commands"
 import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui"
 import { DialogProcessList } from "@/kilocode/cli/cmd/tui/component/dialog-process-list"
 import { useIndexingWarnings } from "@/kilocode/cli/cmd/tui/indexing-warning"
+import { KiloTerminalTitle } from "./terminal-title"
+import type { KiloTitleIcon } from "./title-icon"
+import { Session as SessionApi } from "@/session/session"
 
 // Re-export so upstream can render the route without importing directly
 export { KiloClawView } from "@/kilocode/claw/view"
+export { KiloTerminalTitle } from "./terminal-title"
 
 // Hot reload TUI-local settings (keybinds/theme/ui) when changed from the Kilo Console.
 // Called from the App body (below SDKProvider and the TuiConfig provider).
@@ -112,15 +116,59 @@ export function useSessionEffects(deps: {
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the terminal title for kiloclaw routes.
- * Returns undefined for other routes (caller should handle them).
+ * Returns the terminal title for supported TUI routes.
  */
-export function getTerminalTitle(
-  route: ReturnType<typeof import("@tui/context/route").useRoute>,
-  base: string,
-): string | undefined {
-  if (route.data.type === "kiloclaw") return `${base} | KiloClaw`
-  return undefined
+export function getTerminalTitle(input: {
+  route: ReturnType<typeof import("@tui/context/route").useRoute>
+  base: string
+  sync: ReturnType<typeof useSync>
+  done: Record<string, true>
+  icon?: KiloTitleIcon.Value
+}): KiloTerminalTitle.Result | undefined {
+  if (input.route.data.type === "home") {
+    return {
+      title: KiloTerminalTitle.format({ base: input.base, indicator: "none", icon: input.icon }),
+      active: false,
+      indicator: "none",
+    }
+  }
+
+  if (input.route.data.type === "session") {
+    const state = KiloTerminalTitle.session({
+      base: input.base,
+      id: input.route.data.sessionID,
+      data: input.sync.data,
+      done: input.done,
+      icon: input.icon,
+    })
+    const session = input.sync.session.get(input.route.data.sessionID)
+    const title = !session || SessionApi.isDefaultTitle(session.title) ? undefined : session.title
+    return {
+      ...state,
+      title: KiloTerminalTitle.format({ base: input.base, title, indicator: state.indicator, icon: input.icon }),
+    }
+  }
+
+  if (input.route.data.type === "plugin") {
+    return {
+      title: KiloTerminalTitle.format({
+        base: input.base,
+        title: input.route.data.id,
+        indicator: "none",
+        icon: input.icon,
+      }),
+      active: false,
+      indicator: "none",
+    }
+  }
+
+  if (input.route.data.type === "kiloclaw") {
+    return {
+      title: KiloTerminalTitle.format({ base: input.base, title: "KiloClaw", indicator: "none", icon: input.icon }),
+      active: false,
+      indicator: "none",
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@
 import { Show, createMemo, createSignal } from "solid-js"
 import { useClaw } from "../context/claw"
 import { useKiloClawLanguage } from "../context/language"
+import { isEnterKeyCommitNotIme } from "../../src/utils/ime-enter"
 
 function dot(status: string | null | undefined): string {
   if (!status) return "kiloclaw-dot-offline"
@@ -77,7 +78,7 @@ export function StatusSidebar() {
   }
 
   const onTitleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Enter") {
+    if (isEnterKeyCommitNotIme(e)) {
       e.preventDefault()
       commitTitleRename()
     } else if (e.key === "Escape") {
