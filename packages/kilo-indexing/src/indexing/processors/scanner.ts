@@ -191,7 +191,6 @@ export class DirectoryScanner implements IDirectoryScanner {
     let currentBatchBlocks: CodeBlock[] = []
     let currentBatchTexts: string[] = []
     let currentBatchFileInfos: { filePath: string; fileHash: string; isNew: boolean }[] = []
-    let failed = false
     const activeBatches = new Set<Promise<void>>()
 
     // Initialize block counter
@@ -216,9 +215,6 @@ export class DirectoryScanner implements IDirectoryScanner {
           mode,
           onError,
           onFilesIndexed,
-          () => {
-            failed = true
-          },
         )
         .finally(() => activeBatches.delete(p))
       activeBatches.add(p)
