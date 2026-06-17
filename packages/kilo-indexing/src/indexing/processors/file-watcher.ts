@@ -3,7 +3,7 @@ declare const KILO_LIBC: string | undefined
 // @ts-ignore
 import { createWrapper } from "@parcel/watcher/wrapper"
 // @ts-ignore
-import type { AsyncSubscription, Event as ParcelEvent, SubscribeCallback } from "@parcel/watcher"
+import type { AsyncSubscription, SubscribeCallback } from "@parcel/watcher"
 import { stat, readFile } from "fs/promises"
 import { createHash } from "crypto"
 import path from "path"
@@ -193,11 +193,13 @@ export class FileWatcher implements IFileWatcher {
           backend,
         })
         .then((sub) => {
+          clearTimeout(timeout)
           this.subscription = sub
           log.info("file watcher ready", { workspacePath: this.workspacePath })
           resolve()
         })
         .catch((err) => {
+          clearTimeout(timeout)
           log.error("file watcher subscribe failed", {
             error: err instanceof Error ? err.message : String(err),
             workspacePath: this.workspacePath,
@@ -205,7 +207,7 @@ export class FileWatcher implements IFileWatcher {
           reject(err)
         })
 
-      void setTimeout(
+      const timeout = setTimeout(
         () =>
           reject(
             new Error(`File watcher initialization timed out after ${FILE_WATCHER_INIT_TIMEOUT_MS}ms`),
