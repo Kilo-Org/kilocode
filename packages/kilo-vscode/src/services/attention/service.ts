@@ -8,6 +8,7 @@ type Sync = Extract<SSEPayload, { type: "sync" }>
 type Question = Extract<SSEPayload, { type: "question.asked" | "question.replied" | "question.rejected" }>
 type Permission = Extract<SSEPayload, { type: "permission.asked" | "permission.replied" }>
 type Status = Extract<SSEPayload, { type: "session.status" }>
+type Close = Extract<SSEPayload, { type: "session.turn.close" }>
 type Error = Extract<SSEPayload, { type: "session.error" }>
 
 export function previewSound(value: string) {
@@ -44,6 +45,7 @@ export class AttentionService implements vscode.Disposable {
     }
     if (event.type === "permission.asked" || event.type === "permission.replied") return this.permission(event)
     if (event.type === "session.status") return this.status(event)
+    if (event.type === "session.turn.close") return this.close(event)
     if (event.type === "session.error") return this.error(event)
   }
 
@@ -86,15 +88,16 @@ export class AttentionService implements vscode.Disposable {
 
   private status(event: Status) {
     const sessionID = event.properties.sessionID
-    if (event.properties.status.type === "busy" || event.properties.status.type === "retry") {
-      this.active.add(sessionID)
-      this.errored.delete(sessionID)
-      return
-    }
-    if (event.properties.status.type !== "idle") return
-    if (!this.active.has(sessionID)) return
-    this.active.delete(sessionID)
+    if (event.properties.status.type !== "busy" && event.properties.status.type !== "retry") return
+    this.active.add(sessionID)
+    this.errored.delete(sessionID)
+  }
+
+  private close(event: Close) {
+    const sessionID = event.properties.sessionID
+    if (!this.active.delete(sessionID)) return
     if (this.errored.delete(sessionID)) return
+    if (event.properties.reason !== "completed") return
     this.notify(this.parents.get(sessionID) ? "subagent_done" : "done")
   }
 
@@ -102,6 +105,7 @@ export class AttentionService implements vscode.Disposable {
     const sessionID = event.properties.sessionID
     if (!sessionID || !this.active.has(sessionID)) return
     this.errored.add(sessionID)
+    if (event.properties.error?.name === "MessageAbortedError") return
     this.notify("error")
   }
 

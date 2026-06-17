@@ -2,6 +2,7 @@ package ai.kilocode.client.session.ui.editor
 
 import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.ui.prompt.SendPromptContext
+import ai.kilocode.client.session.ui.selection.SessionSelection
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.Project
@@ -24,9 +25,11 @@ import com.intellij.ui.EditorTextField
 internal open class SessionEditorTextField(
     project: Project,
     private val ctx: SendPromptContext? = null,
+    private val selection: SessionSelection? = null,
 ) : EditorTextField(project, PlainTextFileType.INSTANCE) {
     override fun uiDataSnapshot(sink: DataSink) {
         super.uiDataSnapshot(sink)
+        selection?.provideCopy(sink) { text }
         ctx?.let { sink.set(PromptDataKeys.SEND, it) }
     }
 }

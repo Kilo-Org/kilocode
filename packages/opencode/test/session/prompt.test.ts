@@ -2006,7 +2006,10 @@ unix(
               .shell({ sessionID: chat.id, agent: "build", command: "sleep 30" })
               .pipe(Effect.forkChild)
             // kilocode_change start - wait for shell to actually be running before exercising the busy guard
-            yield* waitFor("shell busy", status.get(chat.id).pipe(Effect.map((s) => (s.type === "busy" ? s : undefined))))
+            yield* waitFor(
+              "shell busy",
+              status.get(chat.id).pipe(Effect.map((s) => (s.type === "busy" ? s : undefined))),
+            )
             // kilocode_change end
 
             const exit = yield* prompt

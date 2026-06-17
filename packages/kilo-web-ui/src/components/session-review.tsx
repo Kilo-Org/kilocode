@@ -168,7 +168,8 @@ export function SessionReview(props: SessionReviewProps) {
                     const expanded = () => open().includes(diff.file)
                     const expandable = () => diff.additions !== 0 || diff.deletions !== 0
                     const added = () => diff.status === "added" || (diff.before.length === 0 && diff.after.length > 0)
-                    const deleted = () => diff.status === "deleted" || (diff.after.length === 0 && diff.before.length > 0)
+                    const deleted = () =>
+                      diff.status === "deleted" || (diff.after.length === 0 && diff.before.length > 0)
 
                     return (
                       <Accordion.Item

@@ -9,7 +9,7 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.JButton
 
-class HoverIcon : JButton() {
+class HoverIcon(private val fill: Boolean = false) : JButton() {
     private var over = false
 
     init {
@@ -32,7 +32,7 @@ class HoverIcon : JButton() {
     override fun getMaximumSize(): Dimension = preferredSize
 
     override fun paintComponent(g: Graphics) {
-        if (isEnabled && over) paintHover(g)
+        if (isEnabled && (over || fill)) paintHover(g)
         super.paintComponent(g)
     }
 
@@ -40,9 +40,19 @@ class HoverIcon : JButton() {
         val g2 = g.create() as Graphics2D
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            g2.color = JBUI.CurrentTheme.ActionButton.hoverBackground()
+            val base = UiStyle.Colors.bg()
+            val hover = UiStyle.Colors.actionHoverBackground()
+            g2.color = when {
+                over && fill -> UiStyle.Colors.blend(base, hover, hover.alpha / 255f)
+                over -> hover
+                else -> base
+            }
             val arc = JBUI.scale(JBUI.getInt("Button.arc", 6))
             g2.fillRoundRect(0, 0, width, height, arc, arc)
+            if (fill) {
+                g2.color = UiStyle.Colors.contentBorder()
+                g2.drawRoundRect(0, 0, width - 1, height - 1, arc, arc)
+            }
         } finally {
             g2.dispose()
         }

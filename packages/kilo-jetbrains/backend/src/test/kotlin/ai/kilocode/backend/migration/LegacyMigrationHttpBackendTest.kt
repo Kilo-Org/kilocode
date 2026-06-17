@@ -2,7 +2,6 @@ package ai.kilocode.backend.migration
 
 import ai.kilocode.backend.cli.KiloBackendHttpClients
 import ai.kilocode.backend.testing.MockCliServer
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlin.test.Test
@@ -36,20 +35,13 @@ class LegacyMigrationHttpBackendTest {
     @Test
     fun `setAuth sends PUT to auth endpoint with provider ID`() {
         withServer { server, backend ->
-            // Register a handler for PUT /auth/anthropic
-            server.configStatus = 200
-            // MockCliServer doesn't handle PUT /auth/:id by default; we check it returns 404
-            // and our backend throws. Let's add a workaround: track via request count mechanism
-            // by checking the path was called. Since MockCliServer returns 404 for unknown paths,
-            // we wrap the call and verify the exception message contains the path.
             val auth = buildJsonObject {
                 put("type", "api")
                 put("key", "sk-ant-test")
             }
-            val ex = runCatching { backend.setAuth("anthropic", auth) }.exceptionOrNull()
-            // MockCliServer returns 404 for /auth/anthropic — backend should throw
-            assertNotNull(ex)
-            assertTrue(ex!!.message?.contains("setAuth failed") == true || ex.message?.contains("404") == true)
+            backend.setAuth("anthropic", auth)
+            assertEquals(1, server.requestCount("/auth/anthropic"))
+            assertEquals(auth.toString(), server.lastAuthPutBody)
         }
     }
 

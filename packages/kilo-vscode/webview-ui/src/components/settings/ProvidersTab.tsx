@@ -53,10 +53,7 @@ const ProvidersTab: Component = () => {
     return sortProviders(
       all.filter(
         (item) =>
-          item.id !== KILO_PROVIDER_ID &&
-          isPopularProvider(item.id) &&
-          !connected.has(item.id) &&
-          !disabled.has(item.id),
+          item.id !== KILO_PROVIDER_ID && isPopularProvider(item) && !connected.has(item.id) && !disabled.has(item.id),
       ),
     )
   })
@@ -174,7 +171,7 @@ const ProvidersTab: Component = () => {
               padding: "12px 0",
             }}
           >
-            <ProviderIcon id="synthetic" width={20} height={20} />
+            <ProviderIcon id={providerIcon(KILO_PROVIDER_ID)} width={20} height={20} />
             <span
               style={{
                 "font-size": "var(--kilo-font-size-14)",
@@ -232,7 +229,7 @@ const ProvidersTab: Component = () => {
                 }}
               >
                 <div style={{ display: "flex", "align-items": "center", gap: "12px", "min-width": 0 }}>
-                  <ProviderIcon id={providerIcon(item.id)} width={20} height={20} />
+                  <ProviderIcon id={providerIcon(item)} width={20} height={20} />
                   <span
                     style={{
                       "font-size": "var(--kilo-font-size-14)",
@@ -288,7 +285,7 @@ const ProvidersTab: Component = () => {
       <Card>
         <For each={popularProviders()}>
           {(item) => {
-            const noteKey = providerNoteKey(item.id)
+            const noteKey = providerNoteKey(item)
             return (
               <div
                 style={{
@@ -304,7 +301,7 @@ const ProvidersTab: Component = () => {
               >
                 <div style={{ display: "flex", "flex-direction": "column", "min-width": 0 }}>
                   <div style={{ display: "flex", "align-items": "center", gap: "12px" }}>
-                    <ProviderIcon id={providerIcon(item.id)} width={20} height={20} />
+                    <ProviderIcon id={providerIcon(item)} width={20} height={20} />
                     <span
                       style={{
                         "font-size": "var(--kilo-font-size-14)",
