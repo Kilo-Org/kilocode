@@ -2,6 +2,6 @@
 "kilo-code": patch
 ---
 
-Fixed 6 codebase indexing bugs: memory leak (3.5-5 GB → <500 MB), progress visibility (total count now shown before scan starts), resumable indexing (partial progress persisted per-batch), queue contention with >5k files (removed per-block mutex), clear error messages for unreachable LAN Ollama hosts, and worker dispose timeouts.
+Fixed 8 codebase indexing bugs: peak memory reduced 85-90%, total file count shown before scan starts, partial progress persisted per-batch for crash recovery, per-block mutex contention eliminated, clear error messages for unreachable LAN Ollama hosts, worker dispose timeout increased, ENAMETOOLONG crash from recursive symlinks fixed, and tree-sitter WASM heap exhaustion after 4K+ files resolved.
 
-Also optimized file discovery with Bun native fs.glob (30x faster), tree-sitter queue iteration (O(n²) → O(n)), event broadcasting (infinite promise chain → tail-drop drain), and config loading (bypassed Effect schema validation for indexing boot).
+Optimized file discovery with fdir (symlink-safe), replaced chokidar with @parcel/watcher for native OS filesystem events, improved tree-sitter queue iteration and fallback chunking, switched event broadcasting to tail-drop drain, and reduced boot time 55% via LanceDB runtime skip, fire-and-forget file watcher, and watcher init timeout with graceful fallback.

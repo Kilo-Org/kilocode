@@ -257,7 +257,6 @@ export class DirectoryScanner implements IDirectoryScanner {
             const blocks = await this.codeParser.parseFile(filePath, { content, fileHash: currentFileHash })
             if (this._cancelled) return
 
-            const fileBlockCount = blocks.length
             onFileParsed?.()
             processedCount++
 
@@ -276,7 +275,7 @@ export class DirectoryScanner implements IDirectoryScanner {
 
               if (fileBlocks.length > 0) {
                 const info = { filePath, fileHash: currentFileHash, isNew: true }
-                totalBlockCount += fileBlockCount
+                totalBlockCount += fileBlocks.length
                 currentBatchBlocks.push(...fileBlocks)
                 currentBatchTexts.push(...fileTexts)
                 currentBatchFileInfos.push(info)
