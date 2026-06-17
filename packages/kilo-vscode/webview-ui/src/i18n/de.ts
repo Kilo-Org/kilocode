@@ -214,6 +214,9 @@ export const dict = {
   "model.preview.label.cached": "Zwischengespeichert",
   "model.preview.label.average": "Geschätzte Ø-Kosten",
   "model.preview.label.context": "Kontext",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Abschluss",
+  "model.preview.label.costAttempt": "Kosten / Versuch",
   "model.preview.value.notSupported": "Nicht unterstützt",
   "model.preview.tooltip.average":
     "Die geschätzten Durchschnittskosten basieren auf einem typischen Verhältnis von Eingabe-, Ausgabe- und Cache-Lese-Token.",
@@ -531,6 +534,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Berechtigung erforderlich (Subagent)",
   "notification.permission.description": "{{sessionTitle}} in {{projectName}} benötigt Berechtigung",
   "ui.permission.manageAutoApprove": "Regeln für automatische Genehmigung verwalten",
+  "ui.permission.doomLoop.prompt": "Potenzielle Schleife beim Tool {{tool}} erkannt. Weiter ausführen?",
+  "ui.permission.doomLoop.rule": "{{tool}}-Aufrufe fortsetzen",
   "ui.permission.rule.addToAllowed": "Zur Erlaubt-Liste hinzufügen",
   "ui.permission.rule.removeFromAllowed": "Aus der Erlaubt-Liste entfernen",
   "ui.permission.rule.addToDenied": "Zur Verweigert-Liste hinzufügen",
@@ -878,6 +883,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Subagenten-Modell",
   "settings.providers.subagentModel.description":
     "Standardmodell und Aufwand für Schlussfolgerungen für task-tool-Subagenten. Leer lassen, um das Modell des aufrufenden Agenten zu übernehmen.",
+  "settings.models.hidePromptTraining.title": "Modelle mit Prompt-Training ausblenden",
+  "settings.models.hidePromptTraining.description":
+    "Blendet Kilo-Gateway-Modelle aus, deren Anbieter Ihre Prompts möglicherweise zum Training verwenden.",
   "settings.providers.modeModels": "Modell pro Modus",
   "settings.providers.custom.note": "Fügen Sie einen OpenAI-kompatiblen Anbieter per Basis-URL hinzu.",
   "settings.providers.modeModels.description":
@@ -891,6 +899,7 @@ export const dict = {
   "provider.custom.field.providerID.description": "Kleinbuchstaben, Zahlen, Bindestriche oder Unterstriche",
   "provider.custom.field.name.label": "Anzeigename",
   "provider.custom.field.name.placeholder": "Mein KI-Anbieter",
+  "provider.custom.field.package.label": "Provider API",
   "provider.custom.field.baseURL.label": "Basis-URL",
   "provider.custom.field.baseURL.placeholder": "https://api.myprovider.com/v1",
   "provider.custom.field.apiKey.label": "API-Schlüssel",
@@ -917,6 +926,11 @@ export const dict = {
   "provider.custom.models.variants.thinking.placeholder": "thinking",
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.thinking.adaptive": "adaptive",
+  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
+  "provider.custom.models.variants.splitReasoning.true": "true",
+  "provider.custom.models.variants.splitReasoning.false": "false",
   "provider.custom.models.variants.chatTemplateArgs.label":
     "Nachdenken über Chat-Vorlagenargumente aktivieren (z.B. Hugging Face)",
   "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
@@ -930,6 +944,13 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.placeholder": "effort",
+  "provider.custom.models.variants.outputEffort.low": "low",
+  "provider.custom.models.variants.outputEffort.medium": "medium",
+  "provider.custom.models.variants.outputEffort.high": "high",
+  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.max": "max",
   "provider.custom.models.remove": "Modell entfernen",
   "provider.custom.models.add": "Modell hinzufügen",
   "provider.custom.models.fetch": "Modelle abrufen",
@@ -1059,6 +1080,33 @@ export const dict = {
   "feedback.dialog.github": "Ein Problem auf GitHub melden",
   "feedback.dialog.discord": "Unserer Discord-Community beitreten",
   "feedback.dialog.support": "Kundensupport",
+  "workStyle.onboarding.welcome": "Willkommen bei Kilo",
+  "workStyle.onboarding.title": "Wähle, wie du arbeiten möchtest",
+  "workStyle.onboarding.settingsNote": "Du kannst diese Optionen jederzeit ändern unter",
+  "workStyle.onboarding.settings": "Einstellungen.",
+  "workStyle.onboarding.description":
+    "Hiermit werden die anfänglichen Standardeinstellungen für Berechtigungen, Denkblöcke, Terminalausgabe und Kontextzeitleiste festgelegt. Dies gilt nur einmal und überspringt Einstellungen, die Sie bereits angepasst haben.",
+  "workStyle.onboarding.skip": "Vorerst überspringen",
+  "workStyle.toast.saved.title": "Modus erfolgreich gespeichert",
+  "workStyle.toast.saved.description": "Du kannst deine Einstellungen jederzeit in den Einstellungen ändern.",
+  "workStyle.toast.saved.action": "Zu den Einstellungen",
+  "workStyle.choice.permissions": "Berechtigungen",
+  "workStyle.choice.bash": "Bash",
+  "workStyle.choice.visibility": "Sichtbarkeit",
+  "workStyle.choice.human-in-the-loop.eyebrow": "Menschliche Kontrolle",
+  "workStyle.choice.human-in-the-loop.title": "Zuerst überprüfen",
+  "workStyle.choice.human-in-the-loop.description": "Kilo pausiert und zeigt dir während der Arbeit seinen Plan.",
+  "workStyle.choice.human-in-the-loop.permissions":
+    "Fragt vor dem Bearbeiten von Dateien oder Ausführen von Befehlen nach.",
+  "workStyle.choice.human-in-the-loop.bash": "Der Agent fragt bei allen Terminalbefehlen um Erlaubnis.",
+  "workStyle.choice.human-in-the-loop.visibility": "Zeigt alle Gesprächsdetails einschließlich der Überlegungen.",
+  "workStyle.choice.autonomous.eyebrow": "Weniger Unterbrechungen",
+  "workStyle.choice.autonomous.title": "Hohe Autonomie",
+  "workStyle.choice.autonomous.description": "Weniger Unterbrechungen und eine optimierte Benutzeroberfläche.",
+  "workStyle.choice.autonomous.permissions":
+    "Bearbeitet Dateien und führt Befehle im Arbeitsbereich ohne Nachfrage aus.",
+  "workStyle.choice.autonomous.bash": "Kann Terminalbefehle im Arbeitsbereich ohne Genehmigung ausführen.",
+  "workStyle.choice.autonomous.visibility": "Details bleiben eingeklappt, bis du sie aufklappst.",
   "session.cloud.import.title": "Aus der Cloud importieren",
   "session.cloud.import.placeholder": "Sitzungs-ID, URL oder kilo import-Befehl",
   "session.cloud.import.button": "Importieren",
@@ -1265,6 +1313,10 @@ export const dict = {
   "settings.notifications.errors.title": "Fehler",
   "settings.notifications.errors.description": "Benachrichtigung bei Fehlern anzeigen",
   "settings.notifications.sounds": "Töne",
+  "settings.notifications.enable.title": "Tonbenachrichtigungen aktivieren",
+  "settings.notifications.enable.description":
+    "Töne wiedergeben, wenn Sitzungen abgeschlossen werden, ein Fehler auftritt oder Ihre Eingabe erforderlich ist",
+  "settings.notifications.testSound": "Testen",
   "settings.notifications.agentSound.title": "Agent-Abschlusston",
   "settings.notifications.agentSound.description": "Ton bei Agent-Abschluss abspielen",
   "settings.notifications.permSound.title": "Berechtigungsanfrageton",
@@ -1272,6 +1324,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Fehlerton",
   "settings.notifications.errorSound.description": "Ton bei Fehlern abspielen",
   "settings.notifications.sound.default": "Standard",
+  "settings.notifications.sound.system": "System",
+  "settings.notifications.sound.description":
+    "Die Standardeinstellung verwendet unterschiedliche Töne für Abschluss, Eingabe und Fehler. Bei anderen Optionen wird für alle Ereignisse derselbe Ton verwendet.",
   "settings.notifications.sound.none": "Kein",
   "settings.experimental.share.title": "Freigabemodus",
   "settings.experimental.share.description": "Verhalten der Sitzungsfreigabe",
@@ -1282,8 +1337,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Automatischen Code-Formatierer aktivieren",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Language-Server-Protokoll-Integration aktivieren",
-  "settings.experimental.pasteSummary.title": "Einfüge-Zusammenfassung deaktivieren",
-  "settings.experimental.pasteSummary.description": "Große eingefügte Inhalte nicht zusammenfassen",
   "settings.experimental.batch.title": "Batch-Werkzeug",
   "settings.experimental.batch.description": "Bündelung mehrerer Werkzeugaufrufe aktivieren",
   "settings.experimental.codebaseSearch.title": "Codebase-Suche",
@@ -1292,10 +1345,10 @@ export const dict = {
   "settings.experimental.speechToText.title": "Sprache zu Text",
   "settings.experimental.speechToText.description":
     "Aktivieren Sie die Spracheingabe in Prompt-Feldern mit Ihrem Kilo-Konto über Kilo Gateway.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Aktivieren Sie den Kilo-Anbieter und melden Sie sich an, um Speech to Text zu verwenden. Speech to Text wird derzeit nur mit Kilo Gateway unterstützt.",
-  "settings.experimental.speechToTextModel.title": "Sprache-zu-Text-Modell",
-  "settings.experimental.speechToTextModel.description":
+  "settings.models.speechToTextModel.title": "Sprache-zu-Text-Modell",
+  "settings.models.speechToTextModel.description":
     "Wählen Sie das Kilo Gateway-Transkriptionsmodell für die Spracheingabe.",
   "settings.experimental.continueOnDeny.title": "Bei Ablehnung fortfahren",
   "settings.experimental.continueOnDeny.description":
@@ -1467,8 +1520,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Aufgabenliste verwalten. Ermöglicht das Lesen und Aktualisieren der internen Aufgabenliste.",
   "settings.autoApprove.tool.webfetch": "URL abrufen. Erlaubt das Abrufen von Inhalten einer bestimmten URL.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Web oder Code durchsuchen. Ermöglicht die Durchführung externer Web- oder Code-Suchen.",
+  "settings.autoApprove.tool.websearch": "Das Web durchsuchen. Ermöglicht die Durchführung externer Web-Suchen.",
   "settings.autoApprove.tool.external_directory":
     "Zugriff auf Dateien außerhalb des Arbeitsbereichs. Wird ausgelöst, wenn auf Dateien außerhalb des aktuellen Projektverzeichnisses zugegriffen wird.",
   "settings.autoApprove.tool.doom_loop":
@@ -1498,10 +1550,6 @@ export const dict = {
 
   "settings.display.username.title": "Benutzername",
   "settings.display.username.description": "Benutzerdefinierter Benutzername in Gesprächen",
-  "settings.display.layout.title": "Layout",
-  "settings.display.layout.description": "Layout-Modus für die Chat-Oberfläche",
-  "settings.display.layout.auto": "Automatisch",
-  "settings.display.layout.stretch": "Gestreckt",
   "settings.display.fontSize.title": "Schriftgröße",
   "settings.display.fontSize.description": "Passen Sie die Schriftgröße der Kilo webview UI unabhängig von VS Code an.",
   "settings.display.reasoningAutoCollapse.title": "Reasoning automatisch einklappen",
@@ -1511,6 +1559,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "Blöcke für Codebearbeitungen",
+  "settings.display.codeEdit.description":
+    "Wählen Sie, ob Blöcke mit Codebearbeitungen und Unterschieden anfangs aus- oder eingeklappt sind.",
+  "settings.display.codeEdit.expanded": "Ausgeklappt",
+  "settings.display.codeEdit.collapsed": "Eingeklappt",
   "settings.providers.defaultModel.title": "Standardmodell",
   "settings.providers.defaultModel.description": "Primäres Modell für Gespräche",
   "settings.providers.smallModel.title": "Kleines Modell",

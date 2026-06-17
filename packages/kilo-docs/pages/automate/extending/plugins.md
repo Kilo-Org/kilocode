@@ -452,26 +452,11 @@ For tools that don't need the full plugin context, drop them in a `tool/` or `to
 
 ## Examples
 
-### Send a notification when a session finishes
+### Configure CLI completion notifications
 
-```ts
-// .kilo/plugin/notify.ts
-import type { Plugin } from "@kilocode/plugin"
+The CLI has built-in attention alerts for session completion, errors, and prompts that need input. You do not need a plugin or platform-specific notification command.
 
-const Notify: Plugin = async ({ $ }) => ({
-  event: async ({ event }) => {
-    if (event.type === "session.idle") {
-      await $`osascript -e 'display notification "Session complete!" with title "Kilo"'`
-    }
-  },
-})
-
-export default { id: "notify", server: Notify }
-```
-
-{% callout type="tip" %}
-The VS Code extension already emits system notifications when a session finishes or errors — this plugin is for the raw CLI / TUI.
-{% /callout %}
+Enable notifications and sounds in `kilo console` under **Settings > CLI > Notifications**, or configure the `attention` section of `tui.json`. See [CLI Notifications and Sounds](/docs/code-with-ai/platforms/cli#cli-notifications-and-sounds) for configuration and custom sound overrides.
 
 ### Block reads of `.env` files
 

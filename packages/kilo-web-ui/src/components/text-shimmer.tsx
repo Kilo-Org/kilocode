@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/text-shimmer"
+export * from "@opencode-ai/ui/text-shimmer"

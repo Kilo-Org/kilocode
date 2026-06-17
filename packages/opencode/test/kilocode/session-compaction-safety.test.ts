@@ -48,7 +48,7 @@ function assistantInfo(
   } as unknown as MessageV2.Assistant
 }
 
-function textPart(messageID: string, text: string, partID = "p_" + messageID): MessageV2.TextPart {
+function textPart(messageID: string, text: string, partID = "prt_" + messageID): MessageV2.TextPart {
   return {
     id: PartID.make(partID),
     sessionID,
@@ -58,7 +58,7 @@ function textPart(messageID: string, text: string, partID = "p_" + messageID): M
   }
 }
 
-function syntheticTextPart(messageID: string, text: string, partID = "p_syn_" + messageID): MessageV2.TextPart {
+function syntheticTextPart(messageID: string, text: string, partID = "prt_syn_" + messageID): MessageV2.TextPart {
   return {
     id: PartID.make(partID),
     sessionID,
@@ -71,7 +71,7 @@ function syntheticTextPart(messageID: string, text: string, partID = "p_syn_" + 
 
 function compactionPart(messageID: string, tailStartID: string): MessageV2.CompactionPart {
   return {
-    id: PartID.make("p_compact_" + messageID),
+    id: PartID.make("prt_compact_" + messageID),
     sessionID,
     messageID: MessageID.make(messageID),
     type: "compaction",
@@ -82,7 +82,7 @@ function compactionPart(messageID: string, tailStartID: string): MessageV2.Compa
 
 function subtaskPart(messageID: string): MessageV2.SubtaskPart {
   return {
-    id: PartID.make("p_subtask_" + messageID),
+    id: PartID.make("prt_subtask_" + messageID),
     sessionID,
     messageID: MessageID.make(messageID),
     type: "subtask",
@@ -96,7 +96,7 @@ function filePart(
   messageID: string,
   mime: string,
   filename: string | undefined,
-  partID = "p_file_" + messageID,
+  partID = "prt_file_" + messageID,
 ): MessageV2.FilePart {
   return {
     id: PartID.make(partID),
@@ -113,7 +113,7 @@ function toolPart(
   messageID: string,
   status: "completed" | "error" | "pending" | "running",
   attachments?: MessageV2.FilePart[],
-  partID = "p_tool_" + messageID,
+  partID = "prt_tool_" + messageID,
 ): MessageV2.ToolPart {
   const state = (() => {
     if (status === "completed") {
@@ -411,8 +411,8 @@ describe("KiloSessionPrompt.stripHistoricalMedia", () => {
   })
 
   test("does NOT touch text/plain or directory file parts", () => {
-    const textFile = filePart("msg_hist", "text/plain", "notes.txt", "p_txt")
-    const dirFile = filePart("msg_hist", "application/x-directory", "src/", "p_dir")
+    const textFile = filePart("msg_hist", "text/plain", "notes.txt", "prt_txt")
+    const dirFile = filePart("msg_hist", "application/x-directory", "src/", "prt_dir")
     const msgs = [user("msg_hist", [textFile, dirFile]), user("msg_last", [textPart("msg_last", "follow-up")])]
     const result = KiloSessionPrompt.stripHistoricalMedia(msgs)
     expect(result[0].parts[0]).toBe(textFile)
@@ -420,9 +420,9 @@ describe("KiloSessionPrompt.stripHistoricalMedia", () => {
   })
 
   test("filters media attachments out of completed tool parts, keeps non-media", () => {
-    const imageAtt = filePart("msg_tool", "image/png", "shot.png", "p_att_img")
-    const textAtt = filePart("msg_tool", "text/plain", "data.txt", "p_att_txt")
-    const pdfAtt = filePart("msg_tool", "application/pdf", "doc.pdf", "p_att_pdf")
+    const imageAtt = filePart("msg_tool", "image/png", "shot.png", "prt_att_img")
+    const textAtt = filePart("msg_tool", "text/plain", "data.txt", "prt_att_txt")
+    const pdfAtt = filePart("msg_tool", "application/pdf", "doc.pdf", "prt_att_pdf")
     const tool = toolPart("msg_tool", "completed", [imageAtt, textAtt, pdfAtt])
     const msgs = [
       user("msg_u1", [textPart("msg_u1", "question")]),
@@ -526,7 +526,7 @@ describe("KiloSessionPrompt.stripHistoricalMedia", () => {
       user("msg_current", [textPart("msg_current", "check this"), currentImage]),
       user("msg_syn", [
         syntheticTextPart("msg_syn", "Summarize the task tool output above and continue with your task."),
-        syntheticTextPart("msg_syn", "<environment_details>\nCurrent time: now\n</environment_details>", "p_env"),
+        syntheticTextPart("msg_syn", "<environment_details>\nCurrent time: now\n</environment_details>", "prt_env"),
       ]),
     ]
     const result = KiloSessionPrompt.stripHistoricalMedia(msgs)

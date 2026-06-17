@@ -1,12 +1,11 @@
 import path from "path"
 import { Effect, Layer, Record, Result, Schema, Context } from "effect"
-import { zod } from "@opencode-ai/core/effect-zod"
 import { NonNegativeInt } from "@opencode-ai/core/schema"
 import { Global } from "@opencode-ai/core/global"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
 
-export const OAUTH_DUMMY_KEY = "opencode-oauth-dummy-key"
+export const OAUTH_DUMMY_KEY = "kilo-oauth-dummy-key" // kilocode_change
 
 const file = path.join(Global.Path.data, "auth.json")
 
@@ -33,9 +32,8 @@ export class WellKnown extends Schema.Class<WellKnown>("WellKnownAuth")({
   token: Schema.String,
 }) {}
 
-const _Info = Schema.Union([Oauth, Api, WellKnown]).annotate({ discriminator: "type", identifier: "Auth" })
-export const Info = Object.assign(_Info, { zod: zod(_Info) })
-export type Info = Schema.Schema.Type<typeof _Info>
+export const Info = Schema.Union([Oauth, Api, WellKnown]).annotate({ discriminator: "type", identifier: "Auth" })
+export type Info = Schema.Schema.Type<typeof Info>
 
 export class AuthError extends Schema.TaggedErrorClass<AuthError>()("AuthError", {
   message: Schema.String,

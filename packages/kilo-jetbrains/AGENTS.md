@@ -268,6 +268,22 @@ Tests for retained Swing components should assert:
 - `update(model)` changes existing labels/body text without duplicating components.
 - Updates while collapsed do not eagerly create lazy bodies.
 - No-op updates, empty deltas, repeated hover values, and toggling non-expandable cards do not repaint/revalidate the whole view.
+- Streaming/rebuilding surfaces additionally require stress + leak tests (see below).
+
+### Stress and Leak Tests for Streaming UI
+
+Session/transcript UI that streams updates or rebuilds its component tree (markdown
+views, code blocks, transcript parts, collapsible cards) must ship stress + leak tests in
+addition to behavior tests. These tests must:
+
+- Drive many updates (hundreds of streamed deltas or `set` cycles) through the public API.
+- Assert that retained component instances stay identical across updates (`assertSame`).
+- Assert the component count stays bounded — no growth per update.
+- Assert disposable-backed resources return to baseline after churn + clear/dispose.
+  For code editors, compare `EditorFactory.getInstance().allEditors.size` against a
+  baseline captured before the loop.
+
+See `MdViewHybridStressTest` for the reference pattern.
 
 ### Platform Components and Utilities
 

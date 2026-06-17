@@ -1,5 +1,7 @@
 import * as fs from "fs/promises"
-import * as path from "path"
+import { binaryFile } from "../diff/shared/binary"
+import { imageMime, loadImage, readImageFile } from "../diff/shared/image"
+import { resolveInside } from "../diff/shared/path"
 import type { GitOps } from "./GitOps"
 import type { WorktreeDiffEntry } from "./types"
 
@@ -12,6 +14,7 @@ type Meta = {
   status: Status
   tracked: boolean
   generatedLike: boolean
+  binary: boolean
   stamp: string
 }
 
@@ -118,7 +121,7 @@ async function numstat(git: GitOps, dir: string, base: string, file?: string) {
   const args = ["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", base]
   if (file) args.push("--", file)
   const result = await git.execGit(args, dir)
-  const map = new Map<string, { additions: number; deletions: number }>()
+  const map = new Map<string, { additions: number; deletions: number; binary: boolean }>()
   if (result.code !== 0) return map
   for (const line of result.stdout.trim().split("\n")) {
     if (!line) continue
@@ -130,22 +133,27 @@ async function numstat(git: GitOps, dir: string, base: string, file?: string) {
     map.set(name, {
       additions: add === "-" ? 0 : parseInt(add || "0", 10) || 0,
       deletions: del === "-" ? 0 : parseInt(del || "0", 10) || 0,
+      binary: add === "-" || del === "-",
     })
   }
   return map
 }
 
 async function statStamp(dir: string, file: string): Promise<string> {
-  const stat = await fs.stat(path.join(dir, file)).catch(() => undefined)
+  const full = resolveInside(dir, file)
+  if (!full) return `missing:${file}`
+  const stat = await fs.lstat(full).catch(() => undefined)
   if (!stat) return `missing:${file}`
   return `${stat.size}:${stat.mtimeMs}`
 }
 
 async function lineCount(file: string): Promise<number> {
-  const stat = await fs.stat(file).catch(() => undefined)
+  const stat = await fs.lstat(file).catch(() => undefined)
   if (!stat || stat.size === 0) return 0
   if (stat.size > MAX_UNTRACKED_BYTES) return 0
-  const content = await fs.readFile(file, "utf-8").catch(() => "")
+  const content = stat.isSymbolicLink()
+    ? await fs.readlink(file).catch(() => "")
+    : await fs.readFile(file, "utf-8").catch(() => "")
   if (!content) return 0
   if (content.endsWith("\n")) return content.split("\n").length - 1
   return content.split("\n").length
@@ -179,7 +187,7 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<M
     if (!file || !code) continue
     seen.add(file)
     const status = statusFromCode(code)
-    const stat = counts.get(file) ?? { additions: 0, deletions: 0 }
+    const stat = counts.get(file) ?? { additions: 0, deletions: 0, binary: false }
     result.push({
       file,
       additions: stat.additions,
@@ -187,7 +195,9 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<M
       status,
       tracked: true,
       generatedLike: generatedLike(file),
-      stamp: status === "deleted" ? `deleted:${anc}` : await statStamp(dir, file),
+      binary: stat.binary,
+      stamp:
+        status === "deleted" ? `deleted:${anc}` : `${imageMime(file) ? `${anc}:` : ""}${await statStamp(dir, file)}`,
     })
   }
 
@@ -202,16 +212,19 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<M
 
   for (const file of files.split("\n")) {
     if (!file || seen.has(file)) continue
-    const full = path.join(dir, file)
-    const exists = await fs.stat(full).catch(() => undefined)
+    const full = resolveInside(dir, file)
+    if (!full) continue
+    const exists = await fs.lstat(full).catch(() => undefined)
     if (!exists) continue
+    const binary = await binaryFile(full)
     result.push({
       file,
-      additions: await lineCount(full),
+      additions: binary ? 0 : await lineCount(full),
       deletions: 0,
       status: "added",
       tracked: false,
       generatedLike: generatedLike(file),
+      binary,
       stamp: await statStamp(dir, file),
     })
   }
@@ -220,6 +233,7 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<M
 }
 
 function summarize(meta: Meta): WorktreeDiffEntry {
+  const image = imageMime(meta.file) !== undefined
   return {
     file: meta.file,
     patch: "",
@@ -230,8 +244,9 @@ function summarize(meta: Meta): WorktreeDiffEntry {
     status: meta.status,
     tracked: meta.tracked,
     generatedLike: meta.generatedLike,
-    summarized: true,
+    summarized: image || !meta.binary,
     stamp: meta.stamp,
+    kind: image ? "image" : undefined,
   }
 }
 
@@ -248,19 +263,52 @@ export async function diffSummary(git: GitOps, dir: string, base: string, log?: 
   return items.map(summarize)
 }
 
+export function createLocalDiff(git: GitOps, log?: Log) {
+  const states = new Map<string, { anc: string; metas: Map<string, Meta> }>()
+
+  return {
+    summary: async (dir: string, base: string): Promise<WorktreeDiffEntry[]> => {
+      const id = `${dir}\0${base}`
+      const anc = await ancestor(git, dir, base, log)
+      if (!anc) {
+        states.delete(id)
+        return []
+      }
+
+      const items = await list(git, dir, anc, log)
+      states.delete(id)
+      states.set(id, { anc, metas: new Map(items.map((item) => [item.file, item])) })
+      if (states.size > 8) states.delete(states.keys().next().value!)
+      return items.map(summarize)
+    },
+    file: async (dir: string, base: string, file: string): Promise<WorktreeDiffEntry | null> => {
+      const state = states.get(`${dir}\0${base}`)
+      if (!state) return diffFile(git, dir, base, file, log)
+      const meta = state.metas.get(file)
+      if (!meta) return null
+      return materialize(git, dir, state.anc, meta, log)
+    },
+  }
+}
+
 async function detailMeta(git: GitOps, dir: string, anc: string, file: string): Promise<Meta | undefined> {
+  const full = resolveInside(dir, file)
+  if (!full) return undefined
   const tracked = await git.execGit(["ls-files", "--error-unmatch", "--", file], dir)
   if (tracked.code !== 0) {
-    const full = path.join(dir, file)
-    const exists = await fs.stat(full).catch(() => undefined)
+    const untracked = await git.execGit(["ls-files", "--others", "--exclude-standard", "--", file], dir)
+    if (untracked.code !== 0 || !untracked.stdout.split("\n").includes(file)) return undefined
+    const exists = await fs.lstat(full).catch(() => undefined)
     if (!exists) return undefined
+    const binary = await binaryFile(full)
     return {
       file,
-      additions: await lineCount(full),
+      additions: binary ? 0 : await lineCount(full),
       deletions: 0,
       status: "added",
       tracked: false,
       generatedLike: generatedLike(file),
+      binary,
       stamp: await statStamp(dir, file),
     }
   }
@@ -278,7 +326,7 @@ async function detailMeta(git: GitOps, dir: string, anc: string, file: string): 
   if (!code) return undefined
 
   const counts = await numstat(git, dir, anc, file)
-  const stat = counts.get(file) ?? counts.get(pathPart) ?? { additions: 0, deletions: 0 }
+  const stat = counts.get(file) ?? counts.get(pathPart) ?? { additions: 0, deletions: 0, binary: false }
   const status = statusFromCode(code)
   return {
     file: pathPart,
@@ -287,7 +335,11 @@ async function detailMeta(git: GitOps, dir: string, anc: string, file: string): 
     status,
     tracked: true,
     generatedLike: generatedLike(pathPart),
-    stamp: status === "deleted" ? `deleted:${anc}` : await statStamp(dir, pathPart),
+    binary: stat.binary,
+    stamp:
+      status === "deleted"
+        ? `deleted:${anc}`
+        : `${imageMime(pathPart) ? `${anc}:` : ""}${await statStamp(dir, pathPart)}`,
   }
 }
 
@@ -298,8 +350,23 @@ async function blobSize(git: GitOps, dir: string, anc: string, file: string): Pr
 }
 
 async function fileSize(dir: string, file: string): Promise<number> {
-  const stat = await fs.stat(path.join(dir, file)).catch(() => undefined)
+  const full = resolveInside(dir, file)
+  if (!full) return 0
+  const stat = await fs.lstat(full).catch(() => undefined)
   return stat?.size ?? 0
+}
+
+async function readBlob(git: GitOps, dir: string, ref: string, file: string): Promise<Buffer | undefined> {
+  const result = await git.execGitBuffer(["show", `${ref}:${file}`], dir)
+  return result.code === 0 ? result.stdout : undefined
+}
+
+async function readFile(dir: string, file: string): Promise<Buffer | undefined> {
+  const full = resolveInside(dir, file)
+  if (!full) return undefined
+  const stat = await fs.lstat(full).catch(() => undefined)
+  if (!stat?.isFile()) return undefined
+  return readImageFile(full)
 }
 
 async function readBefore(git: GitOps, dir: string, anc: string, file: string, status: Status): Promise<string> {
@@ -310,9 +377,12 @@ async function readBefore(git: GitOps, dir: string, anc: string, file: string, s
 
 async function readAfter(dir: string, file: string, status: Status): Promise<string> {
   if (status === "deleted") return ""
-  const full = path.join(dir, file)
-  const exists = await fs.stat(full).catch(() => undefined)
-  if (!exists) return ""
+  const full = resolveInside(dir, file)
+  if (!full) return ""
+  const stat = await fs.lstat(full).catch(() => undefined)
+  if (!stat) return ""
+  if (stat.isSymbolicLink()) return fs.readlink(full).catch(() => "")
+  if (!stat.isFile()) return ""
   return fs.readFile(full, "utf-8").catch(() => "")
 }
 
@@ -345,12 +415,25 @@ export async function diffFile(
   if (!anc) return null
   const meta = await detailMeta(git, dir, anc, file)
   if (!meta) return null
+  return materialize(git, dir, anc, meta, log)
+}
 
+async function materialize(git: GitOps, dir: string, anc: string, meta: Meta, log?: Log): Promise<WorktreeDiffEntry> {
+  const mime = imageMime(meta.file)
+  if (meta.binary && !mime) return summarize(meta)
+  const beforeBytes = meta.status === "added" ? 0 : await blobSize(git, dir, anc, meta.file)
+  const afterBytes = meta.status === "deleted" ? 0 : await fileSize(dir, meta.file)
+  if (mime) {
+    const image = await loadImage(
+      meta.file,
+      meta.status === "added" ? undefined : { bytes: beforeBytes, read: () => readBlob(git, dir, anc, meta.file) },
+      meta.status === "deleted" ? undefined : { bytes: afterBytes, read: () => readFile(dir, meta.file) },
+    )
+    return { ...summarize(meta), summarized: false, image }
+  }
   // Cheap size probe before materializing content — protects the extension
   // host from OOM on huge tracked files. `git cat-file -s` returns the blob
   // size without streaming its contents, and `fs.stat` is a plain syscall.
-  const beforeBytes = meta.status === "added" ? 0 : await blobSize(git, dir, anc, meta.file)
-  const afterBytes = meta.status === "deleted" ? 0 : await fileSize(dir, meta.file)
   if (beforeBytes > MAX_DETAIL_BYTES || afterBytes > MAX_DETAIL_BYTES) {
     log?.("diffFile: file too large for detail view, returning summarized entry", {
       file: meta.file,

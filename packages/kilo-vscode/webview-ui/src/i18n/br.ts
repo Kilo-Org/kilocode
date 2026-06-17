@@ -209,6 +209,9 @@ export const dict = {
   "model.preview.label.cached": "Em cache",
   "model.preview.label.average": "Custo Médio Est.",
   "model.preview.label.context": "Contexto",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Conclusão",
+  "model.preview.label.costAttempt": "Custo / tentativa",
   "model.preview.value.notSupported": "Não suportado",
   "model.preview.tooltip.average":
     "O custo médio estimado é baseado em uma proporção típica de tokens de entrada, saída e leitura de cache.",
@@ -524,6 +527,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Permissão necessária (subagente)",
   "notification.permission.description": "{{sessionTitle}} em {{projectName}} precisa de permissão",
   "ui.permission.manageAutoApprove": "Gerenciar regras de aprovação automática",
+  "ui.permission.doomLoop.prompt": "Possível loop detectado na ferramenta {{tool}}. Continuar executando?",
+  "ui.permission.doomLoop.rule": "Continuar chamadas de {{tool}}",
   "ui.permission.rule.addToAllowed": "Adicionar à lista de permitidos",
   "ui.permission.rule.removeFromAllowed": "Remover da lista de permitidos",
   "ui.permission.rule.addToDenied": "Adicionar à lista de negados",
@@ -831,6 +836,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Modelo de Subagente",
   "settings.providers.subagentModel.description":
     "Modelo padrão e esforço de raciocínio para subagentes do task-tool. Deixe em branco para herdar o modelo do agente chamador.",
+  "settings.models.hidePromptTraining.title": "Ocultar modelos que treinam com prompts",
+  "settings.models.hidePromptTraining.description":
+    "Oculte os modelos do Kilo Gateway cujos provedores podem usar seus prompts para treinamento.",
   "settings.providers.modeModels": "Modelo por Modo",
   "settings.providers.custom.note": "Adicione um provedor compatível com OpenAI por URL base.",
   "settings.providers.modeModels.description":
@@ -844,6 +852,7 @@ export const dict = {
   "provider.custom.field.providerID.description": "Letras minúsculas, números, hifens ou underscores",
   "provider.custom.field.name.label": "Nome de exibição",
   "provider.custom.field.name.placeholder": "Meu Provedor de IA",
+  "provider.custom.field.package.label": "Provider API",
   "provider.custom.field.baseURL.label": "URL base",
   "provider.custom.field.baseURL.placeholder": "https://api.myprovider.com/v1",
   "provider.custom.field.apiKey.label": "Chave de API",
@@ -869,6 +878,11 @@ export const dict = {
   "provider.custom.models.variants.thinking.placeholder": "thinking",
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.thinking.adaptive": "adaptive",
+  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
+  "provider.custom.models.variants.splitReasoning.true": "true",
+  "provider.custom.models.variants.splitReasoning.false": "false",
   "provider.custom.models.variants.chatTemplateArgs.label":
     "Ativar pensamento via args do template de chat (ex. Hugging Face)",
   "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
@@ -882,6 +896,13 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.placeholder": "effort",
+  "provider.custom.models.variants.outputEffort.low": "low",
+  "provider.custom.models.variants.outputEffort.medium": "medium",
+  "provider.custom.models.variants.outputEffort.high": "high",
+  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.max": "max",
   "provider.custom.models.remove": "Remover modelo",
   "provider.custom.models.add": "Adicionar modelo",
   "provider.custom.models.fetch": "Buscar modelos",
@@ -1011,6 +1032,32 @@ export const dict = {
   "feedback.dialog.github": "Reportar um problema no GitHub",
   "feedback.dialog.discord": "Entrar na nossa comunidade Discord",
   "feedback.dialog.support": "Suporte ao cliente",
+  "workStyle.onboarding.welcome": "Boas-vindas ao Kilo",
+  "workStyle.onboarding.title": "Escolha como você quer trabalhar",
+  "workStyle.onboarding.settingsNote": "Você pode alterar essas opções a qualquer momento em",
+  "workStyle.onboarding.settings": "Configurações.",
+  "workStyle.onboarding.description":
+    "Define os padrões iniciais de permissões, blocos de raciocínio, saída do terminal e linha do tempo do contexto. É aplicado apenas uma vez e ignora configurações que você já personalizou.",
+  "workStyle.onboarding.skip": "Pular por enquanto",
+  "workStyle.toast.saved.title": "Modo salvo com sucesso",
+  "workStyle.toast.saved.description": "Atualize suas preferências a qualquer momento nas Configurações.",
+  "workStyle.toast.saved.action": "Ir para Configurações",
+  "workStyle.choice.permissions": "Permissões",
+  "workStyle.choice.bash": "Bash",
+  "workStyle.choice.visibility": "Visibilidade",
+  "workStyle.choice.human-in-the-loop.eyebrow": "Supervisão humana",
+  "workStyle.choice.human-in-the-loop.title": "Revisar primeiro",
+  "workStyle.choice.human-in-the-loop.description": "O Kilo pausa e mostra o plano enquanto trabalha.",
+  "workStyle.choice.human-in-the-loop.permissions": "Pede permissão antes de editar arquivos ou executar comandos.",
+  "workStyle.choice.human-in-the-loop.bash": "Pede permissão para executar qualquer comando no terminal.",
+  "workStyle.choice.human-in-the-loop.visibility": "Exibe todos os detalhes da conversa, incluindo o raciocínio.",
+  "workStyle.choice.autonomous.eyebrow": "Menos interrupções",
+  "workStyle.choice.autonomous.title": "Alta autonomia",
+  "workStyle.choice.autonomous.description": "Menos interrupções e uma interface simplificada.",
+  "workStyle.choice.autonomous.permissions":
+    "Edita arquivos e executa comandos no espaço de trabalho sem pedir permissão.",
+  "workStyle.choice.autonomous.bash": "Pode executar comandos do terminal no espaço de trabalho sem aprovação.",
+  "workStyle.choice.autonomous.visibility": "Os detalhes permanecem recolhidos até você expandi-los.",
   "session.cloud.import.title": "Importar da nuvem",
   "session.cloud.import.placeholder": "ID da sessão, URL ou comando kilo import",
   "session.cloud.import.button": "Importar",
@@ -1250,6 +1297,10 @@ export const dict = {
   "settings.notifications.errors.title": "Erros",
   "settings.notifications.errors.description": "Mostrar notificação em erros",
   "settings.notifications.sounds": "Sons",
+  "settings.notifications.enable.title": "Ativar notificações sonoras",
+  "settings.notifications.enable.description":
+    "Reproduzir sons quando as sessões forem concluídas, ocorrer um erro ou sua interação for necessária",
+  "settings.notifications.testSound": "Testar",
   "settings.notifications.agentSound.title": "Som de conclusão do agente",
   "settings.notifications.agentSound.description": "Som ao concluir o agente",
   "settings.notifications.permSound.title": "Som de solicitação de permissão",
@@ -1257,6 +1308,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Som de erro",
   "settings.notifications.errorSound.description": "Som em erros",
   "settings.notifications.sound.default": "Padrão",
+  "settings.notifications.sound.system": "Sistema",
+  "settings.notifications.sound.description":
+    "A opção padrão usa sons diferentes para conclusão, interação e erros. As outras opções usam um único som para todos os eventos.",
   "settings.notifications.sound.none": "Nenhum",
   "settings.experimental.share.title": "Modo de compartilhamento",
   "settings.experimental.share.description": "Comportamento do compartilhamento de sessão",
@@ -1267,8 +1321,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Ativar formatador automático de código",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Ativar integração do protocolo de servidor de linguagem",
-  "settings.experimental.pasteSummary.title": "Desativar resumo de colagem",
-  "settings.experimental.pasteSummary.description": "Não resumir conteúdo colado grande",
   "settings.experimental.batch.title": "Ferramenta em lote",
   "settings.experimental.batch.description": "Ativar processamento em lote de chamadas de ferramentas",
   "settings.experimental.codebaseSearch.title": "Pesquisa de código",
@@ -1277,10 +1329,10 @@ export const dict = {
   "settings.experimental.speechToText.title": "Fala para texto",
   "settings.experimental.speechToText.description":
     "Ative a entrada de voz nos campos de prompt usando sua conta do Kilo por meio do Kilo Gateway.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Ative e faça login no provedor Kilo para usar o Speech to Text. Atualmente, o Speech to Text é compatível apenas com o Kilo Gateway.",
-  "settings.experimental.speechToTextModel.title": "Modelo de fala para texto",
-  "settings.experimental.speechToTextModel.description":
+  "settings.models.speechToTextModel.title": "Modelo de fala para texto",
+  "settings.models.speechToTextModel.description":
     "Escolha o modelo de transcrição do Kilo Gateway para entrada de voz.",
   "settings.experimental.continueOnDeny.title": "Continuar ao negar",
   "settings.experimental.continueOnDeny.description": "Continuar o loop do agente quando uma permissão é negada",
@@ -1453,8 +1505,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Gerenciar lista de tarefas. Permite ler e atualizar a lista de tarefas interna.",
   "settings.autoApprove.tool.webfetch": "Buscar uma URL. Permite recuperar o conteúdo de uma URL específica.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Pesquisar na web ou no código. Permite realizar pesquisas externas na web ou no código.",
+  "settings.autoApprove.tool.websearch": "Pesquisar na web. Permite realizar pesquisas externas na web.",
   "settings.autoApprove.tool.external_directory":
     "Acessar arquivos fora do workspace. Acionado ao acessar arquivos fora do diretório do projeto atual.",
   "settings.autoApprove.tool.doom_loop":
@@ -1483,10 +1534,6 @@ export const dict = {
 
   "settings.display.username.title": "Nome de usuário",
   "settings.display.username.description": "Nome de usuário personalizado nas conversas",
-  "settings.display.layout.title": "Layout",
-  "settings.display.layout.description": "Modo de layout para a interface de chat",
-  "settings.display.layout.auto": "Automático",
-  "settings.display.layout.stretch": "Esticar",
   "settings.display.fontSize.title": "Tamanho da fonte",
   "settings.display.fontSize.description":
     "Ajuste o tamanho da fonte da webview UI do Kilo independentemente do VS Code.",
@@ -1497,6 +1544,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "Blocos de edição de código",
+  "settings.display.codeEdit.description":
+    "Escolha se os blocos que exibem edições de código e diferenças começam expandidos ou recolhidos.",
+  "settings.display.codeEdit.expanded": "Expandidos",
+  "settings.display.codeEdit.collapsed": "Recolhidos",
   "settings.providers.defaultModel.title": "Modelo padrão",
   "settings.providers.defaultModel.description": "Modelo principal para conversas",
   "settings.providers.smallModel.title": "Modelo pequeno",

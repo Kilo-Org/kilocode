@@ -1,7 +1,7 @@
 package ai.kilocode.client.session.views.base
 
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import com.intellij.icons.AllIcons
+import ai.kilocode.client.session.views.SessionViewIcons
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
@@ -29,7 +29,7 @@ abstract class AbstractSessionPartView(
     ) : this(header, { body }, expanded, expandable)
 
     protected val arrow = JBLabel()
-    protected val row = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.SESSION_VIEW_GAP), 0))
+    protected val row = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0))
     private val bound = linkedSetOf<Component>()
     private var body: JComponent? = null
 
@@ -41,12 +41,12 @@ abstract class AbstractSessionPartView(
     }
     private val mouse = object : MouseAdapter() {
         override fun mouseEntered(e: MouseEvent) {
-            setHover(true)
+            setHovered(true)
         }
 
         override fun mouseExited(e: MouseEvent) {
             if (inside(e)) return
-            setHover(false)
+            setHovered(false)
         }
     }
 
@@ -65,7 +65,7 @@ abstract class AbstractSessionPartView(
 
     fun toggle() {
         if (!expandable || !arrow.isVisible) return
-        val changed = if (isExpanded()) collapse() else expand()
+        val changed = toggleLocal()
         if (!changed) return
         syncArrow()
         refresh()
@@ -78,7 +78,7 @@ abstract class AbstractSessionPartView(
         return true
     }
 
-    fun collapse(): Boolean {
+    open fun collapse(): Boolean {
         val item = body ?: return false
         if (item.parent !== this) return false
         remove(item)
@@ -88,6 +88,15 @@ abstract class AbstractSessionPartView(
     protected fun hasBody(): Boolean = body != null
 
     protected fun bodyComponent(): JComponent = body()
+
+    private fun toggleLocal(): Boolean {
+        val fn = resize ?: return toggleBody()
+        val expanded = isExpanded()
+        fn(this) { toggleBody() }
+        return expanded != isExpanded()
+    }
+
+    private fun toggleBody(): Boolean = if (isExpanded()) collapse() else expand()
 
     fun syncExpandable(expandable: Boolean): Boolean {
         val active = this.expandable && expandable
@@ -110,13 +119,11 @@ abstract class AbstractSessionPartView(
 
     protected open fun hoverColor(value: Boolean): Color? = null
 
-    protected open fun applyHover(value: Boolean, color: Color) {}
-
-    private fun setHover(value: Boolean) {
+    override fun setHovered(value: Boolean) {
+        hover?.invoke(this, value)
         val color = hoverColor(value) ?: return
         if (row.background?.rgb == color.rgb) return
         row.background = color
-        applyHover(value, color)
         row.repaint()
     }
 
@@ -150,7 +157,7 @@ abstract class AbstractSessionPartView(
     }
 
     private fun syncArrow(): Boolean {
-        val icon = if (isExpanded()) AllIcons.General.ArrowDown else AllIcons.General.ArrowRight
+        val icon = if (isExpanded()) SessionViewIcons.chevronExpanded else SessionViewIcons.chevronCollapsed
         if (arrow.icon === icon) return false
         arrow.icon = icon
         return true

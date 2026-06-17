@@ -103,6 +103,17 @@ describe("Extension — package.json command sync", () => {
       `Commands without "kilo-code.new." prefix — use the namespaced form:\n` + bad.map((b) => `  - ${b}`).join("\n"),
     ).toEqual([])
   })
+
+  it("scopes Agent Manager search to the panel and leaves the integrated terminal alone", () => {
+    const binding = pkg.contributes?.keybindings?.find(
+      (item: { command: string }) => item.command === "kilo-code.new.agentManager.search",
+    )
+    expect(binding).toMatchObject({
+      key: "ctrl+f",
+      mac: "cmd+f",
+      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !terminalFocus",
+    })
+  })
 })
 
 // ---------------------------------------------------------------------------

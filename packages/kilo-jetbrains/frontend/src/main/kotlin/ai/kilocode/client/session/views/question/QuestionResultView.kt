@@ -6,10 +6,10 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.PartView
-import ai.kilocode.client.session.views.ToolView
+import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.ui.UiStyle
-import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
@@ -41,26 +41,26 @@ class QuestionResultView(tool: Tool, private val selection: SessionSelection? = 
         override fun updateUI() {
             super.updateUI()
             isOpaque = true
-            background = SessionUiStyle.View.surface()
-            border = SessionUiStyle.View.sessionView()
+            background = SessionUiStyle.View.Surface.bgColor()
+            border = JBUI.Borders.empty(1)
         }
     }
-    private val header = object : JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.SESSION_VIEW_GAP), 0)) {
+    private val header = object : JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)) {
         override fun updateUI() {
             super.updateUI()
             isOpaque = true
-            background = SessionUiStyle.View.header()
+            background = SessionUiStyle.View.Surface.headerBgColor()
             border = JBUI.Borders.empty(
-                JBUI.scale(SessionUiStyle.View.SESSION_VIEW_VERTICAL_PADDING),
-                JBUI.scale(SessionUiStyle.View.SESSION_VIEW_HORIZONTAL_PADDING),
+                JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
+                JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
             )
         }
     }
-    private val glyph = JBLabel(AllIcons.General.Balloon)
+    private val glyph = JBLabel(SessionViewIcons.bubble)
     private val title = JBLabel()
     private val sub = JBLabel().apply { foreground = UiStyle.Colors.weak() }
     private val arrow = JBLabel()
-    private val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.SESSION_VIEW_GAP), 0)).apply {
+    private val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
         isOpaque = false
     }
     private var pane: JPanel? = null
@@ -70,10 +70,10 @@ class QuestionResultView(tool: Tool, private val selection: SessionSelection? = 
     }
 
     private val mouse = object : MouseAdapter() {
-        override fun mouseEntered(e: MouseEvent) { setHover(true) }
+        override fun mouseEntered(e: MouseEvent) { setHovered(true) }
         override fun mouseExited(e: MouseEvent) {
             if (inside(e)) return
-            setHover(false)
+            setHovered(false)
         }
     }
 
@@ -99,6 +99,7 @@ class QuestionResultView(tool: Tool, private val selection: SessionSelection? = 
         add(root, BorderLayout.CENTER)
         syncLabels()
         syncArrow()
+        syncBorder()
     }
 
     override fun update(content: Content) {
@@ -122,13 +123,18 @@ class QuestionResultView(tool: Tool, private val selection: SessionSelection? = 
     }
 
     fun toggle() {
+        resize?.invoke(this) { toggleBody() } ?: toggleBody()
+        syncArrow()
+        refresh()
+    }
+
+    private fun toggleBody() {
         if (isExpanded()) {
             pane?.let { root.remove(it) }
         } else {
             root.add(body(), BorderLayout.CENTER)
         }
-        syncArrow()
-        refresh()
+        syncBorder()
     }
 
     fun isExpanded(): Boolean = pane?.parent === root
@@ -164,10 +170,19 @@ class QuestionResultView(tool: Tool, private val selection: SessionSelection? = 
             override fun updateUI() {
                 super.updateUI()
                 isOpaque = true
-                background = SessionUiStyle.View.surface()
-                border = JBUI.Borders.empty(
-                    JBUI.scale(SessionUiStyle.View.SESSION_VIEW_VERTICAL_PADDING),
-                    JBUI.scale(SessionUiStyle.View.SESSION_VIEW_HORIZONTAL_PADDING),
+                background = SessionUiStyle.View.Surface.bgColor()
+                border = JBUI.Borders.compound(
+                    JBUI.Borders.customLine(
+                        SessionUiStyle.View.Outline.brightColor(),
+                        SessionUiStyle.View.Outline.width(),
+                        0,
+                        0,
+                        0,
+                    ),
+                    JBUI.Borders.empty(
+                        JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
+                        JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
+                    ),
                 )
             }
         }.apply {
@@ -270,16 +285,28 @@ class QuestionResultView(tool: Tool, private val selection: SessionSelection? = 
     }
 
     private fun syncArrow() {
-        arrow.icon = if (isExpanded()) AllIcons.General.ArrowDown else AllIcons.General.ArrowRight
+        arrow.icon = if (isExpanded()) SessionViewIcons.chevronExpanded else SessionViewIcons.chevronCollapsed
     }
 
-    private fun setHover(value: Boolean) {
-        val color = if (value) SessionUiStyle.View.headerHover() else SessionUiStyle.View.header()
-        if (header.background?.rgb == color.rgb) return
-        header.background = color
-        root.border = if (value) SessionUiStyle.View.sessionView(SessionUiStyle.View.hoverLine()) else SessionUiStyle.View.sessionView()
-        header.repaint()
-        root.repaint()
+    override fun setHovered(value: Boolean) {
+        hover?.invoke(this, value)
+        val color =
+            if (value) SessionUiStyle.View.Surface.headerHoverBgColor() else SessionUiStyle.View.Surface.headerBgColor()
+        if (header.background?.rgb != color.rgb) {
+            header.background = color
+            header.repaint()
+        }
+    }
+
+    private fun syncBorder() {
+        if (isExpanded()) {
+            root.border = JBUI.Borders.customLine(
+                SessionUiStyle.View.Outline.brightColor(),
+                SessionUiStyle.View.Outline.width(),
+            )
+            return
+        }
+        root.border = JBUI.Borders.empty(1)
     }
 
     private fun inside(e: MouseEvent): Boolean {

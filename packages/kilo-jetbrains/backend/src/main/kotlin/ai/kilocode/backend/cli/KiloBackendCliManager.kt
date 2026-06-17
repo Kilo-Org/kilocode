@@ -40,7 +40,10 @@ class KiloBackendCliManager(
 
     @Volatile
     private var process: Process? = null
+    @Volatile
+    private var closing: Process? = null
     private var hook: Thread? = null
+    private var stderr: Thread? = null
 
     @Volatile
     override var forceExtract = false
@@ -59,8 +62,7 @@ class KiloBackendCliManager(
             process?.let { proc ->
                 log.info("Cleaning up orphaned CLI process (pid=${proc.pid()})")
                 process = null
-                uninstall()
-                kill(proc, "startup failure cleanup")
+                cleanup(proc, "startup failure cleanup")
             }
             CliServer.State.Error(
                 message = e.message ?: "Unknown error",
@@ -73,39 +75,48 @@ class KiloBackendCliManager(
         if (process != proc) return
         process = null
         uninstall()
+        stderr = null
     }
 
     override fun stop() {
         val proc = process ?: return
         process = null
-        uninstall()
-        kill(proc, "stop()")
+        cleanup(proc, "stop()")
     }
 
     private fun extractCli(): File {
         val platform = platform()
         val exe = if (SystemInfo.isWindows) "kilo.exe" else "kilo"
-        val resource = "cli/$platform/$exe"
-        val loader = javaClass.classLoader
-
         val target = File(PathManager.getSystemPath(), "kilo/bin/$exe")
+        val snapshot = File(target.parentFile, "models-snapshot.json")
 
-        if (forceExtract && target.exists()) {
-            log.info("Force re-extracting CLI binary — deleting ${target.absolutePath}")
-            target.delete()
+        if (forceExtract) {
+            log.info("Force re-extracting CLI resources under ${target.parentFile.absolutePath}")
+            if (target.exists()) target.delete()
+            if (snapshot.exists()) snapshot.delete()
             forceExtract = false
         }
 
+        extractResource("cli/$platform/$exe", target, executable = true)
+        extractResource("cli/$platform/models-snapshot.json", snapshot, executable = false)
+        return target
+    }
+
+    private fun extractResource(resource: String, target: File, executable: Boolean) {
+        val loader = javaClass.classLoader
         val url = loader.getResource(resource)
-            ?: throw IllegalStateException("CLI binary not found in JAR resources at $resource")
+            ?: throw IllegalStateException("CLI resource not found in JAR resources at $resource")
 
         val size = url.openConnection().contentLengthLong
         if (size >= 0 && target.exists() && target.length() == size) {
-            log.info("CLI binary up-to-date at ${target.absolutePath}")
-            return target
+            log.info("CLI resource up-to-date at ${target.absolutePath}")
+            if (executable && !SystemInfo.isWindows) {
+                target.setExecutable(true)
+            }
+            return
         }
 
-        log.info("Extracting CLI binary to ${target.absolutePath}")
+        log.info("Extracting CLI resource to ${target.absolutePath}")
         target.parentFile.mkdirs()
 
         url.openStream().use { input ->
@@ -114,11 +125,9 @@ class KiloBackendCliManager(
             }
         }
 
-        if (!SystemInfo.isWindows) {
+        if (executable && !SystemInfo.isWindows) {
             target.setExecutable(true)
         }
-
-        return target
     }
 
     // Must be called from a background thread — devStorageEnv() performs blocking I/O (mkdirs).
@@ -151,14 +160,19 @@ class KiloBackendCliManager(
 
             val stderr = StringBuilder()
 
-            Thread({
-                BufferedReader(InputStreamReader(proc.errorStream)).use { reader ->
-                    reader.lineSequence().forEach { line ->
-                        log.warn("CLI stderr: $line")
-                        synchronized(stderr) { stderr.appendLine(line) }
+            val err = Thread({
+                runCatching {
+                    BufferedReader(InputStreamReader(proc.errorStream)).use { reader ->
+                        reader.lineSequence().forEach { line ->
+                            log.warn("CLI stderr: $line")
+                            synchronized(stderr) { stderr.appendLine(line) }
+                        }
                     }
+                }.onFailure { err ->
+                    if (proc.isAlive && closing !== proc) log.warn("CLI stderr reader failed", err)
                 }
             }, "kilo-cli-stderr").apply { isDaemon = true; start() }
+            this@KiloBackendCliManager.stderr = err
 
             BufferedReader(InputStreamReader(proc.inputStream)).use { reader ->
                 for (line in reader.lineSequence()) {
@@ -178,6 +192,7 @@ class KiloBackendCliManager(
             val details = synchronized(stderr) { stderr.toString().trim() }
             process = null
             uninstall()
+            this@KiloBackendCliManager.stderr = null
             log.warn("CLI process exited with code $code before announcing a port: $details")
             CliServer.State.Error(
                 message = "CLI process exited with code $code before announcing a port",
@@ -188,8 +203,23 @@ class KiloBackendCliManager(
     override fun dispose() {
         val proc = process ?: return
         process = null
-        uninstall()
-        kill(proc, "Disposing")
+        cleanup(proc, "Disposing")
+    }
+
+    private fun cleanup(proc: Process, source: String) {
+        closing = proc
+        try {
+            uninstall()
+            close(proc)
+            kill(proc, source)
+            val thread = stderr
+            stderr = null
+            if (thread != null && thread != Thread.currentThread()) {
+                thread.join(TimeUnit.SECONDS.toMillis(1))
+            }
+        } finally {
+            closing = null
+        }
     }
 
     private fun install(proc: Process) {
@@ -229,6 +259,12 @@ class KiloBackendCliManager(
 
     private fun children(proc: Process): List<ProcessHandle> =
         proc.toHandle().descendants().toList().asReversed()
+
+    private fun close(proc: Process) {
+        runCatching { proc.errorStream.close() }.onFailure { log.info("CLI stderr stream close skipped: ${it.message}") }
+        runCatching { proc.inputStream.close() }.onFailure { log.info("CLI stdout stream close skipped: ${it.message}") }
+        runCatching { proc.outputStream.close() }.onFailure { log.info("CLI stdin stream close skipped: ${it.message}") }
+    }
 
     private fun platform(): String {
         val os = when {

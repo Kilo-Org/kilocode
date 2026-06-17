@@ -1,11 +1,9 @@
 import type { ModelMessage, ToolResultPart } from "ai"
 import { mergeDeep, unique } from "remeda"
 import type { JSONSchema7 } from "@ai-sdk/provider"
-import type { JSONSchema } from "zod/v4/core"
 import type * as Provider from "./provider"
-import type * as ModelsDev from "./models"
+import type * as ModelsDev from "@opencode-ai/core/models"
 import { iife } from "@/util/iife"
-import { Flag } from "@opencode-ai/core/flag/flag"
 import { kiloProviderOptions } from "@/kilocode/provider-options"
 import { isLing } from "@/kilocode/model-match" // kilocode_change
 
@@ -19,7 +17,7 @@ function mimeToModality(mime: string): Modality | undefined {
   return undefined
 }
 
-export const OUTPUT_TOKEN_MAX = Flag.KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX || 32_000
+export const OUTPUT_TOKEN_MAX = 32_000
 
 export function sanitizeSurrogates(content: string) {
   return content.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "\uFFFD")
@@ -630,14 +628,6 @@ function googleThinkingBudgetMax(apiId: string) {
   return 24_576
 }
 
-function googleSmallThinkingConfig(apiId: string) {
-  const levels = googleThinkingLevelEfforts(apiId)
-  if (apiId.toLowerCase().includes("gemini-3")) {
-    return { thinkingLevel: levels.includes("minimal") ? "minimal" : levels.includes("low") ? "low" : "high" }
-  }
-  return { thinkingBudget: googleThinkingBudgetMax(apiId) === 32_768 ? 128 : 0 }
-}
-
 export function variants(model: Provider.Model): Record<string, Record<string, any>> {
   // kilocode_change start
   if (
@@ -659,7 +649,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     id.includes("deepseek-reasoner") ||
     id.includes("deepseek-r1") ||
     id.includes("deepseek-v3") ||
-    id.includes("minimax") ||
+    // id.includes("minimax") || // kilocode_change
     // id.includes("glm") || // kilocode_change
     // id.includes("kimi") || // kilocode_change
     // TODO: Remove this after models.dev data is fixed to use "kimi-k2.5" instead of "k2p5"
@@ -689,7 +679,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     case "@kilocode/kilo-gateway": // kilocode_change
     case "@openrouter/ai-sdk-provider":
       // kilocode_change start
-      if (id.includes("glm") || id.includes("kimi") || id.includes("qwen")) {
+      if (id.includes("glm") || id.includes("kimi") || id.includes("qwen") || id.includes("minimax")) {
         return {
           instant: { reasoning: { enabled: false } },
           thinking: { reasoning: { enabled: true } },
@@ -865,6 +855,14 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     // https://v5.ai-sdk.dev/providers/ai-sdk-providers/anthropic
     case "@ai-sdk/google-vertex/anthropic":
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/google-vertex#anthropic-provider
+      // kilocode_change start - MiniMax M-series toggles thinking on/off rather than exposing effort levels
+      if (id.includes("minimax")) {
+        return {
+          instant: { thinking: { type: "disabled" } },
+          thinking: { thinking: { type: "adaptive" } },
+        }
+      }
+      // kilocode_change end
       if (adaptiveEfforts) {
         let efforts = [...adaptiveEfforts]
         if (model.providerID === "github-copilot") {
@@ -1191,6 +1189,11 @@ export function options(input: {
     result["enable_thinking"] = true
   }
 
+  if (input.model.api.npm === "@ai-sdk/azure" && input.model.api.id.includes("gpt-5.5")) {
+    result["reasoningSummary"] = "auto"
+    return result
+  }
+
   if (input.model.api.id.includes("gpt-5") && !input.model.api.id.includes("gpt-5-chat")) {
     if (!input.model.api.id.includes("gpt-5-pro")) {
       result["reasoningEffort"] = "medium"
@@ -1245,44 +1248,30 @@ export function options(input: {
 }
 
 export function smallOptions(model: Provider.Model) {
+  const small = Object.values(model.variants ?? {})[0] ?? {}
   if (
     model.providerID === "openai" ||
     model.api.npm === "@ai-sdk/openai" ||
     model.api.npm === "@ai-sdk/github-copilot"
   ) {
-    if (model.api.id.includes("gpt-5")) {
-      if (model.api.id.includes("-chat")) {
-        if (gpt5Version(model.api.id) === undefined) return { store: false }
-        return { store: false, reasoningEffort: "medium" }
-      }
-      if (model.api.id.includes("search-api")) return { store: false }
-      if (model.api.id.includes("5.") || model.api.id.includes("5-mini")) {
-        return { store: false, reasoningEffort: "low" }
-      }
-      return { store: false, reasoningEffort: "minimal" }
-    }
-    return { store: false }
-  }
-  if (model.providerID === "google") {
-    // gemini-3 uses thinkingLevel, gemini-2.5 uses thinkingBudget
-    return { thinkingConfig: googleSmallThinkingConfig(model.api.id) }
+    const base = { store: false }
+    return mergeDeep(base, small)
   }
   if (
     model.providerID === "openrouter" ||
     model.providerID === "llmgateway" ||
     model.api.npm === "@kilocode/kilo-gateway" // kilocode_change
   ) {
-    if (model.api.id.includes("google")) {
-      return { reasoning: { enabled: false } }
-    }
-    return { reasoningEffort: "minimal" }
+    if (!model.capabilities.reasoning) return {} // kilocode_change - omit unsupported reasoning options
+    return { reasoning: { enabled: true } } // kilocode_change - use the model's supported default effort
   }
 
   if (model.providerID === "venice") {
+    if (Object.keys(small).length > 0) return small
     return { veniceParameters: { disableThinking: true } }
   }
 
-  return {}
+  return small
 }
 
 // Maps model ID prefix to provider slug used in providerOptions.
@@ -1348,11 +1337,11 @@ export function providerOptions(model: Provider.Model, options: { [x: string]: a
   return { [key]: options }
 }
 
-export function maxOutputTokens(model: Provider.Model): number {
-  return Math.min(model.limit.output, OUTPUT_TOKEN_MAX) || OUTPUT_TOKEN_MAX
+export function maxOutputTokens(model: Provider.Model, outputTokenMax = OUTPUT_TOKEN_MAX): number {
+  return Math.min(model.limit.output, outputTokenMax) || outputTokenMax
 }
 
-export function schema(model: Provider.Model, schema: JSONSchema.BaseSchema | JSONSchema7): JSONSchema7 {
+export function schema(model: Provider.Model, schema: JSONSchema7): JSONSchema7 {
   /*
   if (["openai", "azure"].includes(providerID)) {
     if (schema.type === "object" && schema.properties) {
@@ -1383,7 +1372,10 @@ export function schema(model: Provider.Model, schema: JSONSchema.BaseSchema | JS
       return result
     }
 
-    schema = sanitizeMoonshot(schema) as JSONSchema.BaseSchema | JSONSchema7
+    const sanitized = sanitizeMoonshot(schema)
+    if (typeof sanitized === "object" && sanitized !== null && !Array.isArray(sanitized)) {
+      schema = sanitized
+    }
   }
 
   // Convert integer enums to string enums for Google/Gemini
@@ -1465,7 +1457,7 @@ export function schema(model: Provider.Model, schema: JSONSchema.BaseSchema | JS
     schema = sanitizeGemini(schema)
   }
 
-  return schema as JSONSchema7
+  return schema
 }
 
 export * as ProviderTransform from "./transform"

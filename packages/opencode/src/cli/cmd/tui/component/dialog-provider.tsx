@@ -48,12 +48,7 @@ export function providerOptions(list: { id: string; name: string }[]): ProviderO
         title: provider.name,
         value: provider.id,
         providerID: provider.id,
-        description: {
-          opencode: "(Recommended)",
-          anthropic: "(API key)",
-          openai: "(ChatGPT Plus/Pro or API key)",
-          "opencode-go": "Low cost subscription for everyone",
-        }[provider.id],
+        description: KiloProvider.PROVIDER_DESCRIPTIONS[provider.id], // kilocode_change
         category: provider.id in PROVIDER_PRIORITY ? "Popular" : "Providers",
       })),
     ),

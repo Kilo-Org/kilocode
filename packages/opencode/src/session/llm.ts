@@ -18,9 +18,9 @@ import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
 import type { Agent } from "@/agent/agent"
 import type { MessageV2 } from "./message-v2"
+import { usable } from "./overflow" // kilocode_change
 import { Plugin } from "@/plugin"
 import { SystemPrompt } from "./system"
-import { Flag } from "@opencode-ai/core/flag/flag"
 import { Permission } from "@/permission"
 import { PermissionID } from "@/permission/schema"
 import { Bus } from "@/bus"
@@ -40,12 +40,13 @@ import {
 import { Identity } from "@kilocode/kilo-telemetry"
 import { KiloSession } from "@/kilocode/session"
 import { KiloLLM } from "@/kilocode/session/llm"
+import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { SessionExport } from "@/kilocode/session-export"
 import { getActiveOrg } from "@/kilocode/session-export/eligibility"
 // kilocode_change end
-import { Installation } from "@/installation"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { EffectBridge } from "@/effect/bridge"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 import * as Option from "effect/Option"
 import * as OtelTracer from "@effect/opentelemetry/Tracer"
 
@@ -71,6 +72,7 @@ export type StreamInput = {
   tools: Record<string, Tool>
   retries?: number
   toolChoice?: "auto" | "required" | "none"
+  preflight?: boolean // kilocode_change - enable proactive threshold compaction for normal session turns
 }
 
 export type StreamRequest = StreamInput & {
@@ -88,7 +90,7 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/LL
 const live: Layer.Layer<
   Service,
   never,
-  Auth.Service | Config.Service | Provider.Service | Plugin.Service | Permission.Service
+  Auth.Service | Config.Service | Provider.Service | Plugin.Service | Permission.Service | RuntimeFlags.Service
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -97,6 +99,7 @@ const live: Layer.Layer<
     const provider = yield* Provider.Service
     const plugin = yield* Plugin.Service
     const perm = yield* Permission.Service
+    const flags = yield* RuntimeFlags.Service
 
     const run = Effect.fn("LLM.run")(function* (input: StreamRequest) {
       const l = log
@@ -212,7 +215,7 @@ const live: Layer.Layer<
           maxOutputTokens:
             input.model.api.npm === "@ai-sdk/openai-compatible" && input.model.api.id.toLowerCase().includes("gpt-5")
               ? undefined
-              : ProviderTransform.maxOutputTokens(input.model),
+              : ProviderTransform.maxOutputTokens(input.model, flags.outputTokenMax),
           // kilocode_change end
           options,
         },
@@ -243,32 +246,12 @@ const live: Layer.Layer<
       // kilocode_change end
 
       const tools = resolveTools(input)
-      // kilocode_change start - cap maxOutputTokens to fit within context after estimating real input size
-      params.maxOutputTokens = KiloLLM.capOutputTokens({
-        model: input.model,
-        messages,
-        tools,
-        configured: params.maxOutputTokens,
-      })
-      // kilocode_change end
 
-      // LiteLLM and some Anthropic proxies require the tools parameter to be present
-      // when message history contains tool calls, even if no tools are being used.
-      // Add a dummy tool that is never called to satisfy this validation.
-      // This is enabled for:
-      // 1. Providers with "litellm" in their ID or API ID (auto-detected)
-      // 2. Providers with explicit "litellmProxy: true" option (opt-in for custom gateways)
-      const isLiteLLMProxy =
-        item.options?.["litellmProxy"] === true ||
-        input.model.providerID.toLowerCase().includes("litellm") ||
-        input.model.api.id.toLowerCase().includes("litellm")
-
-      // LiteLLM/Bedrock rejects requests where the message history contains tool
-      // calls but no tools param is present. When there are no active tools (e.g.
-      // during compaction), inject a stub tool to satisfy the validation requirement.
-      // The stub description explicitly tells the model not to call it.
+      // GitHub Copilot may require the tools parameter when message history contains
+      // tool calls but no tools are active (e.g. compaction). Inject a stub tool that
+      // is never meant to be invoked. LiteLLM-backed providers are excluded.
       if (
-        (isLiteLLMProxy || input.model.providerID.includes("github-copilot")) &&
+        input.model.providerID.includes("github-copilot") &&
         Object.keys(tools).length === 0 &&
         hasToolCalls(input.messages)
       ) {
@@ -284,6 +267,43 @@ const live: Layer.Layer<
         })
       }
       const sortedTools = Object.fromEntries(Object.entries(tools).toSorted(([a], [b]) => a.localeCompare(b)))
+
+      // kilocode_change start - compact at the configured threshold before contacting the provider
+      const estimated: ModelMessage[] =
+        isOpenaiOauth || isWorkflow
+          ? [
+              {
+                role: "system",
+                content: isOpenaiOauth ? String(options.instructions ?? "") : system.join("\n"),
+              },
+              ...messages,
+            ]
+          : messages
+      const preflight = input.preflight === true && KiloSessionOverflow.enabled({ cfg, model: input.model })
+      const cap = KiloLLM.needsEstimate({ model: input.model, configured: params.maxOutputTokens })
+      const usage =
+        cap || preflight ? KiloSessionOverflow.measure({ messages: estimated, tools: sortedTools }) : undefined
+      params.maxOutputTokens = KiloLLM.capOutputTokens({
+        model: input.model,
+        messages: estimated,
+        tools: sortedTools,
+        configured: params.maxOutputTokens,
+        tokens: usage?.raw,
+      })
+      if (
+        preflight &&
+        usage &&
+        KiloSessionOverflow.shouldCompact({
+          cfg,
+          model: input.model,
+          usable: usable({ cfg, model: input.model, outputTokenMax: flags.outputTokenMax }), // kilocode_change
+          tokens: usage.normalized,
+          continuation: usage.continuation,
+        })
+      ) {
+        return yield* Effect.fail(new KiloSessionOverflow.PreflightError())
+      }
+      // kilocode_change end
 
       // Wire up toolExecutor for DWS workflow models so that tool calls
       // from the workflow service are executed via opencode's tool system
@@ -326,7 +346,7 @@ const live: Layer.Layer<
 
         const bridge = yield* EffectBridge.make()
         const approvedToolsForSession = new Set<string>()
-        workflowModel.approvalHandler = InstanceState.bind(async (approvalTools) => {
+        workflowModel.approvalHandler = bridge.bind(async (approvalTools) => {
           const uniqueNames = [...new Set(approvalTools.map((t: { name: string }) => t.name))] as string[]
           // Auto-approve tools that were already approved in this session
           // (prevents infinite approval loops for server-side MCP tools)
@@ -470,7 +490,8 @@ const live: Layer.Layer<
                 "x-kilo-project": opencodeProjectID,
                 "x-kilo-session": input.sessionID,
                 "x-kilo-request": input.user.id,
-                "x-kilo-client": Flag.KILO_CLIENT,
+                "x-kilo-client": flags.client,
+                "User-Agent": `opencode/${InstallationVersion}`,
               }
             : {
                 "x-session-affinity": input.sessionID,
@@ -554,6 +575,7 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(Config.defaultLayer),
     Layer.provide(Provider.defaultLayer),
     Layer.provide(Plugin.defaultLayer),
+    Layer.provide(RuntimeFlags.defaultLayer),
   ),
 )
 
@@ -682,7 +704,7 @@ function resolveTools(input: Pick<StreamInput, "tools" | "agent" | "permission" 
 }
 
 // Check if messages contain any tool-call content
-// Used to determine if a dummy tool should be added for LiteLLM proxy compatibility
+// Used to determine if a dummy tool should be added (GitHub Copilot only; see stream()).
 export function hasToolCalls(messages: ModelMessage[]): boolean {
   for (const msg of messages) {
     if (!Array.isArray(msg.content)) continue

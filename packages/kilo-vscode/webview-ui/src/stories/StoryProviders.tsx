@@ -180,6 +180,7 @@ export function mockSessionValue(overrides?: {
     setCurrentSessionID: noop,
     sessions: () => [],
     status: () => status,
+    submitting: () => false,
     statusInfo: () => ({ type: status }),
     closeReason: () => overrides?.closeReason,
     statusText: () => (status === "idle" ? undefined : "Thinking…"),
@@ -274,16 +275,30 @@ interface StoryProvidersProps {
   sessionID?: string
   /** When provided, injects a mock ConfigContext with this config instead of the real ConfigProvider. */
   config?: Config
+  globalConfig?: Config
+  projectConfig?: Config
   onConfigChange?: (config: Config) => void
+  onGlobalConfigChange?: (config: Config) => void
+  onProjectConfigChange?: (config: Config) => void
   kiloAuth?: boolean
   /** When true, renders children without the default 12px padding wrapper */
   noPadding?: boolean
 }
 
 /** Wraps children with either a mock ConfigContext (when config prop is given) or the real ConfigProvider. */
-const ConfigWrapper: ParentComponent<{ config?: Config; onConfigChange?: (config: Config) => void }> = (props) => {
+const ConfigWrapper: ParentComponent<{
+  config?: Config
+  globalConfig?: Config
+  projectConfig?: Config
+  onConfigChange?: (config: Config) => void
+  onGlobalConfigChange?: (config: Config) => void
+  onProjectConfigChange?: (config: Config) => void
+}> = (props) => {
   if (props.config) {
+    const scoped = props.globalConfig !== undefined || props.projectConfig !== undefined
     const [cfg, setCfg] = createSignal(props.config)
+    const [global, setGlobal] = createSignal(props.globalConfig ?? props.config)
+    const [project, setProject] = createSignal(props.projectConfig ?? props.config)
     const [settings, setSettings] = createSignal<Record<string, unknown>>({})
     const [dirty, setDirty] = createSignal(false)
     const features = createMemo(() => {
@@ -298,7 +313,8 @@ const ConfigWrapper: ParentComponent<{ config?: Config; onConfigChange?: (config
 
     const value = {
       config: createMemo(() => cfg()),
-      globalConfig: createMemo(() => cfg()),
+      globalConfig: createMemo(() => (scoped ? global() : cfg())),
+      projectConfig: createMemo(() => (scoped ? project() : cfg())),
       settings,
       features,
       loading: () => false,
@@ -314,11 +330,25 @@ const ConfigWrapper: ParentComponent<{ config?: Config; onConfigChange?: (config
         setDirty(true)
       },
       updateGlobalConfig: (partial: Partial<Config>) => {
-        setCfg((prev) => {
+        const update = (prev: Config) => {
           const next = merge(prev as Record<string, unknown>, partial as Record<string, unknown>) as Config
+          props.onGlobalConfigChange?.(next)
           props.onConfigChange?.(next)
           return next
-        })
+        }
+        if (scoped) setGlobal(update)
+        if (!scoped) setCfg(update)
+        setDirty(true)
+      },
+      updateProjectConfig: (partial: Partial<Config>) => {
+        const update = (prev: Config) => {
+          const next = merge(prev as Record<string, unknown>, partial as Record<string, unknown>) as Config
+          props.onProjectConfigChange?.(next)
+          props.onConfigChange?.(next)
+          return next
+        }
+        if (scoped) setProject(update)
+        if (!scoped) setCfg(update)
         setDirty(true)
       },
       updateSetting: (key: string, value: unknown) => {
@@ -349,7 +379,14 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
     <VSCodeProvider>
       <ServerProvider>
         <FeedbackProvider>
-          <ConfigWrapper config={props.config} onConfigChange={props.onConfigChange}>
+          <ConfigWrapper
+            config={props.config}
+            globalConfig={props.globalConfig}
+            projectConfig={props.projectConfig}
+            onConfigChange={props.onConfigChange}
+            onGlobalConfigChange={props.onGlobalConfigChange}
+            onProjectConfigChange={props.onProjectConfigChange}
+          >
             <DisplayProvider>
               <MockProviderProvider kiloAuth={props.kiloAuth}>
                 <DialogProvider>

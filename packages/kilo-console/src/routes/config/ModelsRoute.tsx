@@ -1,11 +1,11 @@
 import { For, Show } from "solid-js"
 import { Button } from "@kilocode/kilo-web-ui/button"
+import { Card } from "@kilocode/kilo-web-ui/card"
 import { IconButton } from "@kilocode/kilo-web-ui/icon-button"
-import { Tag } from "@kilocode/kilo-web-ui/tag"
 import type { Model } from "@kilocode/sdk/v2/client"
 import { SearchField } from "../../components/SearchField"
 import { text } from "../../shared/utils"
-import { ConfigPage, SourceBadge } from "./ConfigPage"
+import { ConfigPage, ConfigTag as Tag, SourceBadge } from "./ConfigPage"
 import { type Capability, type ModelField, useModelSettings } from "./state/models"
 
 function money(n: number) {
@@ -137,6 +137,8 @@ export function ModelsRoute() {
 
 export function ModelsDefaultRoute() {
   const state = useModelSettings()
+  const privacy = () => state.snap()?.overlay.fields.hide_prompt_training_models
+  const hidden = () => privacy()?.value === true
 
   return (
     <Show when={state.snap()}>
@@ -192,6 +194,48 @@ export function ModelsDefaultRoute() {
             }}
           </For>
         </div>
+
+        <Card class="ui-card" padding={0}>
+          <header class="ui-card-header">
+            <div>
+              <h2>Model visibility</h2>
+              <p>Control which Kilo Gateway models appear in model lists.</p>
+            </div>
+            <Show when={state.ctx.query()?.scope === "project" && privacy()?.overridden}>
+              <Button
+                variant="secondary"
+                disabled={Boolean(state.ctx.saving())}
+                onClick={() => state.ctx.unset([["hide_prompt_training_models"]])}
+              >
+                Revert
+              </Button>
+            </Show>
+          </header>
+          <div class="ui-form">
+            <button
+              class="ui-toggle"
+              classList={{ selected: hidden() }}
+              type="button"
+              aria-pressed={hidden()}
+              disabled={Boolean(state.ctx.saving()) || privacy()?.editable === false}
+              onClick={() => state.ctx.save({ hide_prompt_training_models: !hidden() })}
+            >
+              <span>
+                <strong>Hide prompt-training models</strong>
+                <small>Hide Kilo Gateway models whose providers may use your prompts for training.</small>
+                <Show when={privacy()?.reason}>{(reason) => <small>{reason()}</small>}</Show>
+              </span>
+              <span class="tags">
+                <SourceBadge
+                  source={privacy()?.source}
+                  inherited={privacy()?.inherited}
+                  overridden={privacy()?.overridden}
+                />
+                <Tag tone={hidden() ? "success" : "neutral"}>{hidden() ? "On" : "Off"}</Tag>
+              </span>
+            </button>
+          </div>
+        </Card>
 
         <Show when={state.mode() !== "closed"}>
           <div class="drawer-scrim" onClick={state.close} />

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import path from "path"
 import { Config } from "../../src/config/config"
 import { AppRuntime } from "../../src/effect/app-runtime"
-import { WithInstance } from "../../src/project/with-instance"
+import { provideTestInstance } from "../fixture/fixture"
 import { Filesystem } from "../../src/util/filesystem"
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
@@ -35,7 +35,7 @@ Valid agent prompt`,
       },
     })
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const cfg = await load()
@@ -63,7 +63,7 @@ Broken agent prompt`,
       },
     })
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         await load()
@@ -94,7 +94,7 @@ Valid command template`,
       },
     })
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const cfg = await load()
@@ -121,7 +121,7 @@ Broken command template`,
       },
     })
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         await load()
@@ -145,7 +145,7 @@ Broken agent`,
       },
     })
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         await load()
@@ -169,7 +169,7 @@ Broken command`,
       },
     })
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         await load()
@@ -187,7 +187,7 @@ Broken command`,
       },
     })
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const cfg = await load()
@@ -208,7 +208,7 @@ Broken command`,
       },
     })
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const cfg = await load()
@@ -225,7 +225,7 @@ Broken command`,
       config: { model: "test/model" },
     })
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         await load()

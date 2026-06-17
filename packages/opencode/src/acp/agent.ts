@@ -39,10 +39,9 @@ import { Filesystem } from "@/util/filesystem"
 import { Hash } from "@opencode-ai/core/util/hash"
 import { ACPSessionManager } from "./session"
 import type { ACPConfig } from "./types"
+import { ACPRuntime } from "./runtime"
 import { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "../provider/schema"
-import { Agent as AgentModule } from "../agent/agent"
-import { AppRuntime } from "@/effect/app-runtime"
 import { Installation } from "@/installation"
 import { MessageV2 } from "@/session/message-v2"
 import { Config } from "@/config/config"
@@ -50,7 +49,15 @@ import { ConfigMCP } from "@/config/mcp"
 import { Todo } from "@/session/todo"
 import { Result, Schema } from "effect"
 import { LoadAPIKeyError } from "ai"
-import type { AssistantMessage, Event, KiloClient, SessionMessageResponse, ToolPart } from "@kilocode/sdk/v2"
+import type {
+  AssistantMessage,
+  Event,
+  GlobalEvent,
+  KiloClient,
+  SessionMessageResponse,
+  SyncEventMessagePartUpdated,
+  ToolPart,
+} from "@kilocode/sdk/v2"
 import { applyPatch } from "diff"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 
@@ -59,6 +66,12 @@ import { ShellID } from "@/tool/shell/id"
 
 type ModeOption = { id: string; name: string; description?: string }
 type ModelOption = { modelId: string; name: string }
+type MessagePartUpdated = {
+  id: string
+  type: "message.part.updated"
+  properties: SyncEventMessagePartUpdated["data"]
+}
+type AgentEvent = Event | MessagePartUpdated
 const decodeTodos = Schema.decodeUnknownResult(Schema.fromJsonString(Schema.Array(Todo.Info)))
 
 const DEFAULT_VARIANT_VALUE = "default"
@@ -185,14 +198,21 @@ export class Agent implements ACPAgent {
         if (this.eventAbort.signal.aborted) return
         const payload = event?.payload
         if (!payload) continue
-        await this.handleEvent(payload as Event).catch((error) => {
+        await this.handleEvent(payload).catch((error) => {
           log.error("failed to handle event", { error, type: payload.type })
         })
       }
     }
   }
 
-  private async handleEvent(event: Event) {
+  private async handleEvent(payload: GlobalEvent["payload"]) {
+    const event: AgentEvent | undefined = (() => {
+      if (payload.type !== "sync") return payload
+      if (payload.name !== "message.part.updated.1") return undefined
+      return { id: payload.id, type: "message.part.updated", properties: payload.data }
+    })()
+    if (!event) return
+
     switch (event.type) {
       case "permission.asked": {
         const permission = event.properties
@@ -524,7 +544,7 @@ export class Agent implements ACPAgent {
         "terminal-auth": {
           command: "opencode",
           args: ["auth", "login"],
-          label: "Kilo Login", // kilocode_change
+          label: "Kilo Login",
         },
       }
     }
@@ -550,7 +570,7 @@ export class Agent implements ACPAgent {
       },
       authMethods: [authMethod],
       agentInfo: {
-        name: "Kilo", // kilocode_change
+        name: "Kilo",
         version: InstallationVersion,
       },
     }
@@ -1098,8 +1118,8 @@ export class Agent implements ACPAgent {
 
     const currentModeId = await (async () => {
       if (!availableModes.length) return undefined
-      const defaultAgentName = await AppRuntime.runPromise(AgentModule.Service.use((svc) => svc.defaultAgent()))
-      const resolvedModeId = availableModes.find((mode) => mode.name === defaultAgentName)?.id ?? availableModes[0].id
+      const defaultAgent = await ACPRuntime.defaultAgentInfo(directory)
+      const resolvedModeId = availableModes.find((mode) => mode.name === defaultAgent.name)?.id ?? availableModes[0].id
       this.sessionManager.setMode(sessionId, resolvedModeId)
       return resolvedModeId
     })()
@@ -1332,7 +1352,7 @@ export class Agent implements ACPAgent {
     if (!current) {
       this.sessionManager.setModel(session.id, model)
     }
-    const agent = session.modeId ?? (await AppRuntime.runPromise(AgentModule.Service.use((svc) => svc.defaultAgent())))
+    const agent = session.modeId ?? (await ACPRuntime.defaultAgentInfo(directory)).name
 
     const parts: Array<
       | { type: "text"; text: string; synthetic?: boolean; ignored?: boolean }

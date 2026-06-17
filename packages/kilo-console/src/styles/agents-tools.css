@@ -180,8 +180,8 @@
   min-width: 0;
 }
 
-.kilo-console .agent-builder-field-head span,
-.kilo-console .agent-builder-field > span {
+.kilo-console .agent-builder-field-head span:not([data-component="tag"]),
+.kilo-console .agent-builder-field > span:not([data-component="tag"]) {
   color: var(--foreground);
   font-size: 0.75rem;
   font-weight: 500;

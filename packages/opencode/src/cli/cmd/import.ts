@@ -6,7 +6,7 @@ import { Database } from "@/storage/db"
 import { SessionTable, MessageTable, PartTable } from "../../session/session.sql"
 import { InstanceRef } from "@/effect/instance-ref"
 import { EOL } from "os"
-import { Filesystem } from "@/util/filesystem"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Effect, Schema } from "effect"
 import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 
@@ -136,6 +136,8 @@ export const ImportCommand = effectCmd({
 })
 
 const runImport = Effect.fn("Cli.import.body")(function* (file: string, projectID: string) {
+  const fs = yield* AppFileSystem.Service
+
   let exportData: ExportData | undefined
 
   const isUrl = file.startsWith("http://") || file.startsWith("https://")
@@ -178,9 +180,9 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, projectI
     exportData = data
     // kilocode_change end
   } else {
-    exportData = yield* Effect.promise(() =>
-      Filesystem.readJson<NonNullable<typeof exportData>>(file).catch(() => undefined),
-    )
+    exportData = (yield* fs.readJson(file).pipe(Effect.orElseSucceed(() => undefined))) as
+      | NonNullable<typeof exportData>
+      | undefined
     if (!exportData) {
       process.stdout.write(`File not found: ${file}`)
       process.stdout.write(EOL)

@@ -1062,21 +1062,31 @@
         ],
         "responses": {
           "200": {
-            "description": "List of worktree directories",
+            "description": "List of worktrees",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "$ref": "#/components/schemas/WorktreeListItem"
                   },
-                  "description": "List of worktree directories"
+                  "description": "List of worktrees"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "WorktreeError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorktreeError"
                 }
               }
             }
           }
         },
-        "description": "List all sandbox worktrees for the current project.",
+        "description": "List all git worktrees for the current project and whether Kilo manages them.",
         "summary": "List worktrees",
         "x-codeSamples": [
           {
@@ -1118,11 +1128,11 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "WorktreeError",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
+                  "$ref": "#/components/schemas/WorktreeError"
                 }
               }
             }
@@ -1180,11 +1190,11 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "WorktreeError",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
+                  "$ref": "#/components/schemas/WorktreeError"
                 }
               }
             }
@@ -1244,11 +1254,11 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "WorktreeError",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
+                  "$ref": "#/components/schemas/WorktreeError"
                 }
               }
             }
@@ -1509,6 +1519,15 @@
             "in": "query",
             "schema": {
               "type": "boolean"
+            },
+            "required": false
+          },
+          {
+            "name": "current",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
             },
             "required": false
           },
@@ -3795,7 +3814,8 @@
                   "sessionID": {
                     "anyOf": [
                       {
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^ses"
                       },
                       {
                         "type": "null"
@@ -4677,11 +4697,11 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "ProviderAuthError",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
+                  "$ref": "#/components/schemas/ProviderAuthError1"
                 }
               }
             }
@@ -4763,11 +4783,11 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "ProviderAuthError",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
+                  "$ref": "#/components/schemas/ProviderAuthError1"
                 }
               }
             }
@@ -4959,7 +4979,8 @@
                 "type": "object",
                 "properties": {
                   "parentID": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^ses"
                   },
                   "title": {
                     "type": "string"
@@ -4990,7 +5011,8 @@
                     "type": "string"
                   },
                   "workspaceID": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^wrk"
                   }
                 },
                 "additionalProperties": false
@@ -5364,7 +5386,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -5441,7 +5463,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -5496,7 +5518,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "pattern": "^msg.*"
+              "pattern": "^msg"
             },
             "required": false
           }
@@ -5698,7 +5720,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -5717,7 +5739,8 @@
                 "type": "object",
                 "properties": {
                   "messageID": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^msg"
                   },
                   "model": {
                     "type": "object",
@@ -5972,7 +5995,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -6064,7 +6087,8 @@
                 "type": "object",
                 "properties": {
                   "messageID": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^msg"
                   }
                 },
                 "additionalProperties": false
@@ -6129,16 +6153,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundError"
                 }
               }
             }
@@ -6208,7 +6222,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -6233,7 +6247,8 @@
                     "type": "string"
                   },
                   "messageID": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^msg"
                   }
                 },
                 "required": ["modelID", "providerID", "messageID"],
@@ -6536,7 +6551,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -6555,7 +6570,8 @@
                 "type": "object",
                 "properties": {
                   "messageID": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^msg"
                   },
                   "model": {
                     "type": "object",
@@ -6718,7 +6734,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -6737,7 +6753,8 @@
                 "type": "object",
                 "properties": {
                   "messageID": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^msg"
                   },
                   "agent": {
                     "type": "string"
@@ -6764,7 +6781,8 @@
                       "type": "object",
                       "properties": {
                         "id": {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^prt"
                         },
                         "type": {
                           "type": "string",
@@ -6869,7 +6887,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -6888,7 +6906,8 @@
                 "type": "object",
                 "properties": {
                   "messageID": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^msg"
                   },
                   "agent": {
                     "type": "string"
@@ -6977,7 +6996,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -6996,10 +7015,12 @@
                 "type": "object",
                 "properties": {
                   "messageID": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^msg"
                   },
                   "partID": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^prt"
                   }
                 },
                 "required": ["messageID"],
@@ -7069,7 +7090,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -7152,7 +7173,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -7262,7 +7283,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -7350,7 +7371,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "NotFoundError",
             "content": {
               "application/json": {
                 "schema": {
@@ -7628,7 +7649,8 @@
                   "type": "object",
                   "properties": {
                     "sessionID": {
-                      "type": "string"
+                      "type": "string",
+                      "pattern": "^ses"
                     }
                   },
                   "required": ["sessionID"],
@@ -7658,7 +7680,8 @@
                 "type": "object",
                 "properties": {
                   "sessionID": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^ses"
                   }
                 },
                 "required": ["sessionID"],
@@ -8191,6 +8214,171 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.v2.session.messages({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/api/model": {
+      "get": {
+        "tags": ["v2 models"],
+        "operationId": "v2.model.list",
+        "parameters": [
+          {
+            "name": "location",
+            "in": "query",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "directory": {
+                  "type": "string"
+                },
+                "workspace": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "required": false,
+            "style": "deepObject",
+            "explode": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ModelV2Info"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieve available v2 models ordered by release date.",
+        "summary": "List v2 models",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.v2.model.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/api/provider": {
+      "get": {
+        "tags": ["v2 providers"],
+        "operationId": "v2.provider.list",
+        "parameters": [
+          {
+            "name": "location",
+            "in": "query",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "directory": {
+                  "type": "string"
+                },
+                "workspace": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "required": false,
+            "style": "deepObject",
+            "explode": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProviderV2Info"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieve active v2 AI providers so clients can show provider availability and configuration.",
+        "summary": "List v2 providers",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.v2.provider.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/api/provider/{providerID}": {
+      "get": {
+        "tags": ["v2 providers"],
+        "operationId": "v2.provider.get",
+        "parameters": [
+          {
+            "name": "providerID",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "name": "location",
+            "in": "query",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "directory": {
+                  "type": "string"
+                },
+                "workspace": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "required": false,
+            "style": "deepObject",
+            "explode": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ProviderV2.Info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderV2Info"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieve a single v2 AI provider so clients can inspect its availability and endpoint settings.",
+        "summary": "Get v2 provider",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.v2.provider.get({\n  ...\n})"
           }
         ]
       }
@@ -8821,6 +9009,7 @@
                 "properties": {
                   "sessionID": {
                     "type": "string",
+                    "pattern": "^ses",
                     "description": "Session ID to navigate to"
                   }
                 },
@@ -9103,7 +9292,8 @@
                 "type": "object",
                 "properties": {
                   "id": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^wrk"
                   },
                   "type": {
                     "type": "string"
@@ -9127,7 +9317,7 @@
                     ]
                   }
                 },
-                "required": ["type", "branch"],
+                "required": ["type"],
                 "additionalProperties": false
               }
             }
@@ -9211,7 +9401,8 @@
                     "type": "object",
                     "properties": {
                       "workspaceID": {
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^wrk"
                       },
                       "status": {
                         "type": "string",
@@ -9355,7 +9546,8 @@
                   "id": {
                     "anyOf": [
                       {
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^wrk"
                       },
                       {
                         "type": "null"
@@ -9363,7 +9555,8 @@
                     ]
                   },
                   "sessionID": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^ses"
                   },
                   "copyChanges": {
                     "type": "boolean"
@@ -10979,6 +11172,98 @@
         ]
       }
     },
+    "/indexing/warnings": {
+      "get": {
+        "tags": ["indexing"],
+        "operationId": "indexing.warnings",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Indexing warnings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IndexingWarning"
+                  },
+                  "description": "Indexing warnings"
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieve code indexing warnings for the active project.",
+        "summary": "Get indexing warnings",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.indexing.warnings({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/indexing/models": {
+      "get": {
+        "tags": ["indexing"],
+        "operationId": "indexing.models",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Kilo embedding model catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KiloEmbeddingModelCatalog"
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieve the embedding models available through the active Kilo account.",
+        "summary": "List Kilo embedding models",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.indexing.models({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilo/profile": {
       "get": {
         "tags": ["kilo"],
@@ -11093,6 +11378,72 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.profile({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilo/auth-status": {
+      "get": {
+        "tags": ["kilo"],
+        "operationId": "kilo.authStatus",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Kilo authentication status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "authenticated": {
+                      "type": "boolean"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": ["api", "oauth"]
+                    }
+                  },
+                  "required": ["authenticated"],
+                  "additionalProperties": false,
+                  "description": "Kilo authentication status"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Check whether a locally stored Kilo credential can authenticate Gateway requests",
+        "summary": "Get Kilo authentication status",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.authStatus({\n  ...\n})"
           }
         ]
       }
@@ -12480,7 +12831,7 @@
             }
           }
         },
-        "description": "Remove a skill by deleting its directory from disk and clearing it from cache.",
+        "description": "Remove a skill by deleting its manifest from disk and clearing it from cache.",
         "summary": "Remove a skill",
         "requestBody": {
           "content": {
@@ -14161,9 +14512,6 @@
       "Event": {
         "anyOf": [
           {
-            "$ref": "#/components/schemas/EventServerInstanceDisposed"
-          },
-          {
             "$ref": "#/components/schemas/EventServerConnected"
           },
           {
@@ -14171,6 +14519,30 @@
           },
           {
             "$ref": "#/components/schemas/EventGlobalConfigUpdated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.tui.prompt.append"
+          },
+          {
+            "$ref": "#/components/schemas/Event.tui.command.execute"
+          },
+          {
+            "$ref": "#/components/schemas/EventTuiToastShow1"
+          },
+          {
+            "$ref": "#/components/schemas/Event.tui.session.select"
+          },
+          {
+            "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
+          },
+          {
+            "$ref": "#/components/schemas/EventIndexingStatus"
+          },
+          {
+            "$ref": "#/components/schemas/EventIndexingWarning"
+          },
+          {
+            "$ref": "#/components/schemas/EventServerInstanceDisposed"
           },
           {
             "$ref": "#/components/schemas/EventFileEdited"
@@ -14192,18 +14564,6 @@
           },
           {
             "$ref": "#/components/schemas/EventLspUpdated"
-          },
-          {
-            "$ref": "#/components/schemas/Event.tui.prompt.append"
-          },
-          {
-            "$ref": "#/components/schemas/Event.tui.command.execute"
-          },
-          {
-            "$ref": "#/components/schemas/EventTuiToastShow1"
-          },
-          {
-            "$ref": "#/components/schemas/Event.tui.session.select"
           },
           {
             "$ref": "#/components/schemas/EventMcpToolsChanged"
@@ -14251,12 +14611,6 @@
             "$ref": "#/components/schemas/EventSessionError"
           },
           {
-            "$ref": "#/components/schemas/EventInstallationUpdated"
-          },
-          {
-            "$ref": "#/components/schemas/EventInstallationUpdate-available"
-          },
-          {
             "$ref": "#/components/schemas/EventTodoUpdated"
           },
           {
@@ -14275,16 +14629,13 @@
             "$ref": "#/components/schemas/EventSuggestionDismissed"
           },
           {
-            "$ref": "#/components/schemas/EventSessionCompacted"
-          },
-          {
             "$ref": "#/components/schemas/EventCommandExecuted"
           },
           {
             "$ref": "#/components/schemas/EventProjectUpdated"
           },
           {
-            "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
+            "$ref": "#/components/schemas/EventSessionCompacted"
           },
           {
             "$ref": "#/components/schemas/EventVcsBranchUpdated"
@@ -14318,6 +14669,12 @@
           },
           {
             "$ref": "#/components/schemas/EventPtyDeleted"
+          },
+          {
+            "$ref": "#/components/schemas/EventInstallationUpdated"
+          },
+          {
+            "$ref": "#/components/schemas/EventInstallationUpdate-available"
           },
           {
             "$ref": "#/components/schemas/EventMessageUpdated"
@@ -14419,7 +14776,85 @@
             "$ref": "#/components/schemas/EventSessionNextCompactionEnded"
           },
           {
-            "$ref": "#/components/schemas/EventIndexingStatus"
+            "$ref": "#/components/schemas/EventCatalogModelUpdated"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextAgentSwitched"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextModelSwitched"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextPrompted"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextSynthetic"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextShellStarted"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextShellEnded"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextStepStarted"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextStepEnded"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextStepFailed"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextTextStarted"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextTextDelta"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextTextEnded"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextReasoningStarted"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextReasoningDelta"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextReasoningEnded"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextToolInputStarted"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextToolInputDelta"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextToolInputEnded"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextToolCalled"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextToolProgress"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextToolSuccess"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextToolFailed"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextRetried"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextCompactionStarted"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextCompactionDelta"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionNextCompactionEnded"
           }
         ]
       },
@@ -14499,144 +14934,6 @@
             "$ref": "#/components/schemas/WellKnownAuth"
           }
         ]
-      },
-      "QuestionOption": {
-        "type": "object",
-        "properties": {
-          "label": {
-            "type": "string",
-            "description": "Display text (1-5 words, concise)"
-          },
-          "description": {
-            "type": "string",
-            "description": "Explanation of choice"
-          },
-          "labelKey": {
-            "type": "string"
-          },
-          "descriptionKey": {
-            "type": "string"
-          },
-          "mode": {
-            "type": "string"
-          }
-        },
-        "required": ["label", "description"],
-        "additionalProperties": false
-      },
-      "QuestionInfo": {
-        "type": "object",
-        "properties": {
-          "question": {
-            "type": "string",
-            "description": "Complete question"
-          },
-          "header": {
-            "type": "string",
-            "description": "Very short label (max 30 chars)"
-          },
-          "options": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/QuestionOption"
-            },
-            "description": "Available choices"
-          },
-          "multiple": {
-            "type": "boolean"
-          },
-          "questionKey": {
-            "type": "string"
-          },
-          "headerKey": {
-            "type": "string"
-          },
-          "custom": {
-            "type": "boolean"
-          }
-        },
-        "required": ["question", "header", "options"],
-        "additionalProperties": false
-      },
-      "QuestionTool": {
-        "type": "object",
-        "properties": {
-          "messageID": {
-            "type": "string"
-          },
-          "callID": {
-            "type": "string"
-          }
-        },
-        "required": ["messageID", "callID"],
-        "additionalProperties": false
-      },
-      "QuestionRequest": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^que"
-          },
-          "sessionID": {
-            "type": "string"
-          },
-          "questions": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/QuestionInfo"
-            },
-            "description": "Questions to ask"
-          },
-          "blocking": {
-            "type": "boolean"
-          },
-          "tool": {
-            "$ref": "#/components/schemas/QuestionTool"
-          }
-        },
-        "required": ["id", "sessionID", "questions"],
-        "additionalProperties": false
-      },
-      "QuestionAnswer": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
-      },
-      "QuestionReplied": {
-        "type": "object",
-        "properties": {
-          "sessionID": {
-            "type": "string"
-          },
-          "requestID": {
-            "type": "string",
-            "pattern": "^que"
-          },
-          "answers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/QuestionAnswer"
-            }
-          }
-        },
-        "required": ["sessionID", "requestID", "answers"],
-        "additionalProperties": false
-      },
-      "QuestionRejected": {
-        "type": "object",
-        "properties": {
-          "sessionID": {
-            "type": "string"
-          },
-          "requestID": {
-            "type": "string",
-            "pattern": "^que"
-          }
-        },
-        "required": ["sessionID", "requestID"],
-        "additionalProperties": false
       },
       "Event.tui.prompt.append": {
         "type": "object",
@@ -14761,6 +15058,7 @@
             "properties": {
               "sessionID": {
                 "type": "string",
+                "pattern": "^ses",
                 "description": "Session ID to navigate to"
               }
             },
@@ -14771,6 +15069,192 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "IndexingStatusState": {
+        "type": "string",
+        "enum": ["Disabled", "In Progress", "Complete", "Error", "Standby"]
+      },
+      "IndexingStatus": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/IndexingStatusState"
+          },
+          "message": {
+            "type": "string"
+          },
+          "processedFiles": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalFiles": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "percent": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": ["state", "message", "processedFiles", "totalFiles", "percent"],
+        "additionalProperties": false
+      },
+      "IndexingWarning": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": ["qdrant.version-incompatible", "qdrant.version-unavailable"]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["code", "message"],
+        "additionalProperties": false
+      },
+      "QuestionOption": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Display text (1-5 words, concise)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Explanation of choice"
+          },
+          "labelKey": {
+            "type": "string"
+          },
+          "descriptionKey": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          }
+        },
+        "required": ["label", "description"],
+        "additionalProperties": false
+      },
+      "QuestionInfo": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string",
+            "description": "Complete question"
+          },
+          "header": {
+            "type": "string",
+            "description": "Very short label (max 30 chars)"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionOption"
+            },
+            "description": "Available choices"
+          },
+          "multiple": {
+            "type": "boolean"
+          },
+          "questionKey": {
+            "type": "string"
+          },
+          "headerKey": {
+            "type": "string"
+          },
+          "custom": {
+            "type": "boolean"
+          }
+        },
+        "required": ["question", "header", "options"],
+        "additionalProperties": false
+      },
+      "QuestionTool": {
+        "type": "object",
+        "properties": {
+          "messageID": {
+            "type": "string",
+            "pattern": "^msg"
+          },
+          "callID": {
+            "type": "string"
+          }
+        },
+        "required": ["messageID", "callID"],
+        "additionalProperties": false
+      },
+      "QuestionRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^que"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionInfo"
+            },
+            "description": "Questions to ask"
+          },
+          "blocking": {
+            "type": "boolean"
+          },
+          "tool": {
+            "$ref": "#/components/schemas/QuestionTool"
+          }
+        },
+        "required": ["id", "sessionID", "questions"],
+        "additionalProperties": false
+      },
+      "QuestionAnswer": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "QuestionReplied": {
+        "type": "object",
+        "properties": {
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "requestID": {
+            "type": "string",
+            "pattern": "^que"
+          },
+          "answers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionAnswer"
+            }
+          }
+        },
+        "required": ["sessionID", "requestID", "answers"],
+        "additionalProperties": false
+      },
+      "QuestionRejected": {
+        "type": "object",
+        "properties": {
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "requestID": {
+            "type": "string",
+            "pattern": "^que"
+          }
+        },
+        "required": ["sessionID", "requestID"],
+        "additionalProperties": false
+      },
       "SessionNetworkWait": {
         "type": "object",
         "properties": {
@@ -14779,7 +15263,8 @@
             "pattern": "^que"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "message": {
             "type": "string"
@@ -14812,7 +15297,8 @@
             "pattern": "^per"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "permission": {
             "type": "string"
@@ -14836,7 +15322,8 @@
             "type": "object",
             "properties": {
               "messageID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^msg"
               },
               "callID": {
                 "type": "string"
@@ -14856,7 +15343,8 @@
             "type": "string"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "pid": {
             "type": "integer",
@@ -15228,10 +15716,12 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^sug"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "text": {
             "type": "string"
@@ -15353,7 +15843,8 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^pty"
           },
           "title": {
             "type": "string"
@@ -15381,7 +15872,8 @@
           "sessionID": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               {
                 "type": "null"
@@ -15438,10 +15930,12 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^msg"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "role": {
             "type": "string",
@@ -15540,10 +16034,12 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^msg"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "role": {
             "type": "string",
@@ -15590,7 +16086,8 @@
             ]
           },
           "parentID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^msg"
           },
           "modelID": {
             "type": "string"
@@ -15693,13 +16190,16 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^prt"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "messageID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^msg"
           },
           "type": {
             "type": "string",
@@ -15740,13 +16240,16 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^prt"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "messageID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^msg"
           },
           "type": {
             "type": "string",
@@ -15785,13 +16288,16 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^prt"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "messageID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^msg"
           },
           "type": {
             "type": "string",
@@ -15956,13 +16462,16 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^prt"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "messageID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^msg"
           },
           "type": {
             "type": "string",
@@ -16135,13 +16644,16 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^prt"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "messageID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^msg"
           },
           "type": {
             "type": "string",
@@ -16167,13 +16679,16 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^prt"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "messageID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^msg"
           },
           "type": {
             "type": "string",
@@ -16190,13 +16705,16 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^prt"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "messageID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^msg"
           },
           "type": {
             "type": "string",
@@ -16251,13 +16769,16 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^prt"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "messageID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^msg"
           },
           "type": {
             "type": "string",
@@ -16274,13 +16795,16 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^prt"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "messageID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^msg"
           },
           "type": {
             "type": "string",
@@ -16303,13 +16827,16 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^prt"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "messageID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^msg"
           },
           "type": {
             "type": "string",
@@ -16344,13 +16871,16 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^prt"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "messageID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^msg"
           },
           "type": {
             "type": "string",
@@ -16382,13 +16912,16 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^prt"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "messageID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^msg"
           },
           "type": {
             "type": "string",
@@ -16401,7 +16934,8 @@
             "type": "boolean"
           },
           "tail_start_id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^msg"
           }
         },
         "required": ["id", "sessionID", "messageID", "type", "auto"],
@@ -16497,7 +17031,8 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "slug": {
             "type": "string"
@@ -16506,7 +17041,8 @@
             "type": "string"
           },
           "workspaceID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^wrk"
           },
           "directory": {
             "type": "string"
@@ -16515,7 +17051,8 @@
             "type": "string"
           },
           "parentID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "summary": {
             "type": "object",
@@ -16537,6 +17074,38 @@
               }
             },
             "required": ["additions", "deletions", "files"],
+            "additionalProperties": false
+          },
+          "cost": {
+            "type": "number"
+          },
+          "tokens": {
+            "type": "object",
+            "properties": {
+              "input": {
+                "type": "number"
+              },
+              "output": {
+                "type": "number"
+              },
+              "reasoning": {
+                "type": "number"
+              },
+              "cache": {
+                "type": "object",
+                "properties": {
+                  "read": {
+                    "type": "number"
+                  },
+                  "write": {
+                    "type": "number"
+                  }
+                },
+                "required": ["read", "write"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["input", "output", "reasoning", "cache"],
             "additionalProperties": false
           },
           "share": {
@@ -16603,10 +17172,12 @@
             "type": "object",
             "properties": {
               "messageID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^msg"
               },
               "partID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^prt"
               },
               "snapshot": {
                 "type": "string"
@@ -16639,39 +17210,15 @@
             "items": {
               "$ref": "#/components/schemas/PromptAgentAttachment"
             }
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromptReferenceAttachment"
+            }
           }
         },
         "required": ["text"],
-        "additionalProperties": false
-      },
-      "IndexingStatusState": {
-        "type": "string",
-        "enum": ["Disabled", "In Progress", "Complete", "Error", "Standby"]
-      },
-      "IndexingStatus": {
-        "type": "object",
-        "properties": {
-          "state": {
-            "$ref": "#/components/schemas/IndexingStatusState"
-          },
-          "message": {
-            "type": "string"
-          },
-          "processedFiles": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "totalFiles": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "percent": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 100
-          }
-        },
-        "required": ["state", "message", "processedFiles", "totalFiles", "percent"],
         "additionalProperties": false
       },
       "GlobalEvent": {
@@ -16689,9 +17236,6 @@
           "payload": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/EventServerInstanceDisposed"
-              },
-              {
                 "$ref": "#/components/schemas/EventServerConnected"
               },
               {
@@ -16699,6 +17243,30 @@
               },
               {
                 "$ref": "#/components/schemas/EventGlobalConfigUpdated"
+              },
+              {
+                "$ref": "#/components/schemas/Event.tui.prompt.append"
+              },
+              {
+                "$ref": "#/components/schemas/Event.tui.command.execute"
+              },
+              {
+                "$ref": "#/components/schemas/Event.tui.toast.show"
+              },
+              {
+                "$ref": "#/components/schemas/Event.tui.session.select"
+              },
+              {
+                "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
+              },
+              {
+                "$ref": "#/components/schemas/EventIndexingStatus"
+              },
+              {
+                "$ref": "#/components/schemas/EventIndexingWarning"
+              },
+              {
+                "$ref": "#/components/schemas/EventServerInstanceDisposed"
               },
               {
                 "$ref": "#/components/schemas/EventFileEdited"
@@ -16720,18 +17288,6 @@
               },
               {
                 "$ref": "#/components/schemas/EventLspUpdated"
-              },
-              {
-                "$ref": "#/components/schemas/Event.tui.prompt.append"
-              },
-              {
-                "$ref": "#/components/schemas/Event.tui.command.execute"
-              },
-              {
-                "$ref": "#/components/schemas/Event.tui.toast.show"
-              },
-              {
-                "$ref": "#/components/schemas/Event.tui.session.select"
               },
               {
                 "$ref": "#/components/schemas/EventMcpToolsChanged"
@@ -16779,12 +17335,6 @@
                 "$ref": "#/components/schemas/EventSessionError"
               },
               {
-                "$ref": "#/components/schemas/EventInstallationUpdated"
-              },
-              {
-                "$ref": "#/components/schemas/EventInstallationUpdate-available"
-              },
-              {
                 "$ref": "#/components/schemas/EventTodoUpdated"
               },
               {
@@ -16803,16 +17353,13 @@
                 "$ref": "#/components/schemas/EventSuggestionDismissed"
               },
               {
-                "$ref": "#/components/schemas/EventSessionCompacted"
-              },
-              {
                 "$ref": "#/components/schemas/EventCommandExecuted"
               },
               {
                 "$ref": "#/components/schemas/EventProjectUpdated"
               },
               {
-                "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
+                "$ref": "#/components/schemas/EventSessionCompacted"
               },
               {
                 "$ref": "#/components/schemas/EventVcsBranchUpdated"
@@ -16846,6 +17393,12 @@
               },
               {
                 "$ref": "#/components/schemas/EventPtyDeleted"
+              },
+              {
+                "$ref": "#/components/schemas/EventInstallationUpdated"
+              },
+              {
+                "$ref": "#/components/schemas/EventInstallationUpdate-available"
               },
               {
                 "$ref": "#/components/schemas/EventMessageUpdated"
@@ -16947,7 +17500,85 @@
                 "$ref": "#/components/schemas/EventSessionNextCompactionEnded"
               },
               {
-                "$ref": "#/components/schemas/EventIndexingStatus"
+                "$ref": "#/components/schemas/EventCatalogModelUpdated"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextAgentSwitched"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextModelSwitched"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextPrompted"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextSynthetic"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextShellStarted"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextShellEnded"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextStepStarted"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextStepEnded"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextStepFailed"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextTextStarted"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextTextDelta"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextTextEnded"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextReasoningStarted"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextReasoningDelta"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextReasoningEnded"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextToolInputStarted"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextToolInputDelta"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextToolInputEnded"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextToolCalled"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextToolProgress"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextToolSuccess"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextToolFailed"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextRetried"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextCompactionStarted"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextCompactionDelta"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionNextCompactionEnded"
               },
               {
                 "$ref": "#/components/schemas/SyncEventMessageUpdated"
@@ -17377,9 +18008,6 @@
                 "$ref": "#/components/schemas/PermissionActionConfig"
               },
               "websearch": {
-                "$ref": "#/components/schemas/PermissionActionConfig"
-              },
-              "codesearch": {
                 "$ref": "#/components/schemas/PermissionActionConfig"
               },
               "repo_clone": {
@@ -17833,6 +18461,36 @@
         "enum": ["auto", "stretch"],
         "description": "@deprecated Always uses stretch layout."
       },
+      "ImageAttachmentConfig": {
+        "type": "object",
+        "properties": {
+          "auto_resize": {
+            "type": "boolean"
+          },
+          "max_width": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "max_height": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "max_base64_bytes": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "AttachmentConfig": {
+        "type": "object",
+        "properties": {
+          "image": {
+            "$ref": "#/components/schemas/ImageAttachmentConfig"
+          }
+        },
+        "additionalProperties": false
+      },
       "Config": {
         "type": "object",
         "properties": {
@@ -17972,9 +18630,32 @@
           "indexing": {
             "$ref": "#/components/schemas/IndexingConfig"
           },
+          "console": {
+            "type": "object",
+            "properties": {
+              "context_sidebar_width": {
+                "type": "integer",
+                "minimum": 250,
+                "maximum": 800,
+                "description": "Width of the Kilo Console project context sidebar in pixels"
+              },
+              "diff_style": {
+                "type": "string",
+                "enum": ["unified", "split"]
+              }
+            },
+            "additionalProperties": false
+          },
           "terminal_command_display": {
             "type": "string",
             "enum": ["expanded", "collapsed"]
+          },
+          "code_edit_display": {
+            "type": "string",
+            "enum": ["expanded", "collapsed"]
+          },
+          "hide_prompt_training_models": {
+            "type": "boolean"
           },
           "model": {
             "type": "string"
@@ -17987,6 +18668,12 @@
           },
           "subagent_variant": {
             "type": "string"
+          },
+          "subagent_variant_overrides": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
           },
           "default_agent": {
             "type": "string"
@@ -18197,6 +18884,9 @@
             "additionalProperties": {
               "type": "boolean"
             }
+          },
+          "attachment": {
+            "$ref": "#/components/schemas/AttachmentConfig"
           },
           "enterprise": {
             "type": "object",
@@ -18449,6 +19139,49 @@
                 "required": ["read", "write"],
                 "additionalProperties": false
               },
+              "tiers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "input": {
+                      "type": "number"
+                    },
+                    "output": {
+                      "type": "number"
+                    },
+                    "cache": {
+                      "type": "object",
+                      "properties": {
+                        "read": {
+                          "type": "number"
+                        },
+                        "write": {
+                          "type": "number"
+                        }
+                      },
+                      "required": ["read", "write"],
+                      "additionalProperties": false
+                    },
+                    "tier": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["context"]
+                        },
+                        "size": {
+                          "type": "number"
+                        }
+                      },
+                      "required": ["type", "size"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["input", "output", "cache", "tier"],
+                  "additionalProperties": false
+                }
+              },
               "experimentalOver200K": {
                 "type": "object",
                 "properties": {
@@ -18526,6 +19259,22 @@
           },
           "isFree": {
             "type": "boolean"
+          },
+          "mayTrainOnYourPrompts": {
+            "type": "boolean"
+          },
+          "terminalBench": {
+            "type": "object",
+            "properties": {
+              "overallScore": {
+                "type": "number"
+              },
+              "avgAttemptCostUsd": {
+                "type": "number"
+              }
+            },
+            "required": ["overallScore", "avgAttemptCostUsd"],
+            "additionalProperties": false
           },
           "ai_sdk_provider": {
             "type": "string",
@@ -18639,6 +19388,48 @@
           "type": "string"
         }
       },
+      "WorktreeListItem": {
+        "type": "object",
+        "properties": {
+          "directory": {
+            "type": "string"
+          },
+          "managed": {
+            "type": "boolean"
+          }
+        },
+        "required": ["directory", "managed"],
+        "additionalProperties": false
+      },
+      "WorktreeError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "WorktreeNotGitError",
+              "WorktreeNameGenerationFailedError",
+              "WorktreeCreateFailedError",
+              "WorktreeStartCommandFailedError",
+              "WorktreeRemoveFailedError",
+              "WorktreeResetFailedError",
+              "WorktreeListFailedError"
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["name", "data"],
+        "additionalProperties": false
+      },
       "WorktreeCreateInput": {
         "type": "object",
         "properties": {
@@ -18665,7 +19456,7 @@
             "type": "string"
           }
         },
-        "required": ["name", "branch", "directory"],
+        "required": ["name", "directory"],
         "additionalProperties": false
       },
       "WorktreeRemoveInput": {
@@ -18749,7 +19540,8 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "slug": {
             "type": "string"
@@ -18758,7 +19550,8 @@
             "type": "string"
           },
           "workspaceID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^wrk"
           },
           "directory": {
             "type": "string"
@@ -18767,7 +19560,8 @@
             "type": "string"
           },
           "parentID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "summary": {
             "type": "object",
@@ -18789,6 +19583,38 @@
               }
             },
             "required": ["additions", "deletions", "files"],
+            "additionalProperties": false
+          },
+          "cost": {
+            "type": "number"
+          },
+          "tokens": {
+            "type": "object",
+            "properties": {
+              "input": {
+                "type": "number"
+              },
+              "output": {
+                "type": "number"
+              },
+              "reasoning": {
+                "type": "number"
+              },
+              "cache": {
+                "type": "object",
+                "properties": {
+                  "read": {
+                    "type": "number"
+                  },
+                  "write": {
+                    "type": "number"
+                  }
+                },
+                "required": ["read", "write"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["input", "output", "reasoning", "cache"],
             "additionalProperties": false
           },
           "share": {
@@ -18855,10 +19681,12 @@
             "type": "object",
             "properties": {
               "messageID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^msg"
               },
               "partID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^prt"
               },
               "snapshot": {
                 "type": "string"
@@ -19549,11 +20377,47 @@
         "required": ["url", "method", "instructions"],
         "additionalProperties": false
       },
+      "ProviderAuthError1": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "BadRequest",
+              "ProviderAuthOauthMissing",
+              "ProviderAuthOauthCodeMissing",
+              "ProviderAuthOauthCallbackFailed",
+              "ProviderAuthValidationFailed"
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "providerID": {
+                "type": "string"
+              },
+              "field": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": ["name", "data"],
+        "additionalProperties": false
+      },
       "TextPartInput": {
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^prt"
           },
           "type": {
             "type": "string",
@@ -19594,7 +20458,8 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^prt"
           },
           "type": {
             "type": "string",
@@ -19620,7 +20485,8 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^prt"
           },
           "type": {
             "type": "string",
@@ -19655,7 +20521,8 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^prt"
           },
           "type": {
             "type": "string",
@@ -19851,6 +20718,7 @@
             "properties": {
               "sessionID": {
                 "type": "string",
+                "pattern": "^ses",
                 "description": "Session ID to navigate to"
               }
             },
@@ -19865,7 +20733,8 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^wrk"
           },
           "type": {
             "type": "string"
@@ -19928,7 +20797,7 @@
             ]
           }
         },
-        "required": ["id", "type", "name", "branch", "directory", "extra", "projectID", "timeUsed"],
+        "required": ["id", "type", "name", "projectID", "timeUsed"],
         "additionalProperties": false
       },
       "WorkspaceWarpError": {
@@ -19959,7 +20828,8 @@
             "type": "string"
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "output": {
             "type": "string"
@@ -20463,6 +21333,50 @@
         "required": ["keybinds"],
         "additionalProperties": false
       },
+      "KiloEmbeddingModelCatalog": {
+        "type": "object",
+        "properties": {
+          "defaultModel": {
+            "type": "string"
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "dimension": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "scoreThreshold": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "note": {
+                  "type": "string"
+                }
+              },
+              "required": ["id", "name", "dimension", "scoreThreshold"],
+              "additionalProperties": false
+            }
+          },
+          "aliases": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["defaultModel", "models", "aliases"],
+        "additionalProperties": false
+      },
       "effect_HttpApiError_Unauthorized": {
         "type": "object",
         "properties": {
@@ -20526,7 +21440,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "info": {
                 "$ref": "#/components/schemas/Message"
@@ -20564,10 +21479,12 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "messageID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^msg"
               }
             },
             "required": ["sessionID", "messageID"],
@@ -20602,7 +21519,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "part": {
                 "$ref": "#/components/schemas/Part"
@@ -20644,13 +21562,16 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "messageID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^msg"
               },
               "partID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^prt"
               }
             },
             "required": ["sessionID", "messageID", "partID"],
@@ -20685,7 +21606,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "info": {
                 "$ref": "#/components/schemas/Session"
@@ -20723,7 +21645,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "info": {
                 "type": "object",
@@ -20731,7 +21654,8 @@
                   "id": {
                     "anyOf": [
                       {
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^ses"
                       },
                       {
                         "type": "null"
@@ -20761,7 +21685,8 @@
                   "workspaceID": {
                     "anyOf": [
                       {
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^wrk"
                       },
                       {
                         "type": "null"
@@ -20791,7 +21716,8 @@
                   "parentID": {
                     "anyOf": [
                       {
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^ses"
                       },
                       {
                         "type": "null"
@@ -20820,6 +21746,52 @@
                           }
                         },
                         "required": ["additions", "deletions", "files"],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "cost": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "tokens": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "input": {
+                            "type": "number"
+                          },
+                          "output": {
+                            "type": "number"
+                          },
+                          "reasoning": {
+                            "type": "number"
+                          },
+                          "cache": {
+                            "type": "object",
+                            "properties": {
+                              "read": {
+                                "type": "number"
+                              },
+                              "write": {
+                                "type": "number"
+                              }
+                            },
+                            "required": ["read", "write"],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": ["input", "output", "reasoning", "cache"],
                         "additionalProperties": false
                       },
                       {
@@ -20961,10 +21933,12 @@
                         "type": "object",
                         "properties": {
                           "messageID": {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^msg"
                           },
                           "partID": {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^prt"
                           },
                           "snapshot": {
                             "type": "string"
@@ -21017,7 +21991,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "info": {
                 "$ref": "#/components/schemas/Session"
@@ -21058,7 +22033,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "agent": {
                 "type": "string"
@@ -21099,7 +22075,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "model": {
                 "type": "object",
@@ -21153,7 +22130,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "prompt": {
                 "$ref": "#/components/schemas/Prompt"
@@ -21194,7 +22172,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "text": {
                 "type": "string"
@@ -21235,7 +22214,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "callID": {
                 "type": "string"
@@ -21279,7 +22259,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "callID": {
                 "type": "string"
@@ -21323,7 +22304,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "agent": {
                 "type": "string"
@@ -21383,7 +22365,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "finish": {
                 "type": "string"
@@ -21459,7 +22442,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "error": {
                 "$ref": "#/components/schemas/SessionErrorUnknown"
@@ -21500,7 +22484,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               }
             },
             "required": ["timestamp", "sessionID"],
@@ -21538,7 +22523,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "delta": {
                 "type": "string"
@@ -21579,7 +22565,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "text": {
                 "type": "string"
@@ -21620,7 +22607,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "reasoningID": {
                 "type": "string"
@@ -21661,7 +22649,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "reasoningID": {
                 "type": "string"
@@ -21705,7 +22694,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "reasoningID": {
                 "type": "string"
@@ -21749,7 +22739,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "callID": {
                 "type": "string"
@@ -21793,7 +22784,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "callID": {
                 "type": "string"
@@ -21837,7 +22829,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "callID": {
                 "type": "string"
@@ -21881,7 +22874,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "callID": {
                 "type": "string"
@@ -21941,7 +22935,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "callID": {
                 "type": "string"
@@ -21998,7 +22993,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "callID": {
                 "type": "string"
@@ -22068,7 +23064,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "callID": {
                 "type": "string"
@@ -22125,7 +23122,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "attempt": {
                 "type": "number"
@@ -22169,7 +23167,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "reason": {
                 "type": "string",
@@ -22211,7 +23210,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "text": {
                 "type": "string"
@@ -22252,7 +23252,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "text": {
                 "type": "string"
@@ -22266,30 +23267,6 @@
           }
         },
         "required": ["type", "name", "id", "seq", "aggregateID", "data"],
-        "additionalProperties": false
-      },
-      "EventServerInstanceDisposed": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["server.instance.disposed"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "directory": {
-                "type": "string"
-              }
-            },
-            "required": ["directory"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
       "EventServerConnected": {
@@ -22341,6 +23318,126 @@
           "properties": {
             "type": "object",
             "properties": {}
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventKilocodeAgent_managerStart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["kilocode.agent_manager.start"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "requestID": {
+                "type": "string"
+              },
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "mode": {
+                "type": "string",
+                "enum": ["worktree", "local"]
+              },
+              "versions": {
+                "type": "boolean"
+              },
+              "tasks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "prompt": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "branchName": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "minItems": 1,
+                "maxItems": 20
+              }
+            },
+            "required": ["requestID", "sessionID", "mode", "tasks"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventIndexingStatus": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["indexing.status"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "$ref": "#/components/schemas/IndexingStatus"
+              }
+            },
+            "required": ["status"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventIndexingWarning": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["indexing.warning"]
+          },
+          "properties": {
+            "$ref": "#/components/schemas/IndexingWarning"
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventServerInstanceDisposed": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["server.instance.disposed"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "directory": {
+                "type": "string"
+              }
+            },
+            "required": ["directory"],
+            "additionalProperties": false
           }
         },
         "required": ["id", "type", "properties"],
@@ -22576,7 +23673,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "requestID": {
                 "type": "string",
@@ -22604,7 +23702,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "requestID": {
                 "type": "string",
@@ -22632,7 +23731,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "requestID": {
                 "type": "string",
@@ -22663,13 +23763,16 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "messageID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^msg"
               },
               "partID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^prt"
               },
               "field": {
                 "type": "string"
@@ -22716,7 +23819,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "requestID": {
                 "type": "string",
@@ -22772,7 +23876,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "processID": {
                 "type": "string"
@@ -22799,7 +23904,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               }
             },
             "required": ["sessionID"],
@@ -22823,7 +23929,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "reason": {
                 "type": "string",
@@ -22851,7 +23958,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "diff": {
                 "type": "array",
@@ -22881,7 +23989,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "error": {
                 "anyOf": [
@@ -22915,54 +24024,6 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
-      "EventInstallationUpdated": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["installation.updated"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "version": {
-                "type": "string"
-              }
-            },
-            "required": ["version"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventInstallationUpdate-available": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["installation.update-available"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "version": {
-                "type": "string"
-              }
-            },
-            "required": ["version"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
       "EventTodoUpdated": {
         "type": "object",
         "properties": {
@@ -22977,7 +24038,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "todos": {
                 "type": "array",
@@ -23007,7 +24069,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "status": {
                 "$ref": "#/components/schemas/SessionStatus"
@@ -23034,7 +24097,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               }
             },
             "required": ["sessionID"],
@@ -23075,10 +24139,12 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "requestID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^sug"
               },
               "index": {
                 "type": "integer",
@@ -23124,37 +24190,15 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "requestID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^sug"
               }
             },
             "required": ["sessionID", "requestID"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventSessionCompacted": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["session.compacted"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "sessionID": {
-                "type": "string"
-              }
-            },
-            "required": ["sessionID"],
             "additionalProperties": false
           }
         },
@@ -23178,13 +24222,15 @@
                 "type": "string"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "arguments": {
                 "type": "string"
               },
               "messageID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^msg"
               }
             },
             "required": ["name", "sessionID", "arguments", "messageID"],
@@ -23211,7 +24257,7 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
-      "EventKilocodeAgent_managerStart": {
+      "EventSessionCompacted": {
         "type": "object",
         "properties": {
           "id": {
@@ -23219,46 +24265,17 @@
           },
           "type": {
             "type": "string",
-            "enum": ["kilocode.agent_manager.start"]
+            "enum": ["session.compacted"]
           },
           "properties": {
             "type": "object",
             "properties": {
-              "requestID": {
-                "type": "string"
-              },
               "sessionID": {
-                "type": "string"
-              },
-              "mode": {
                 "type": "string",
-                "enum": ["worktree", "local"]
-              },
-              "versions": {
-                "type": "boolean"
-              },
-              "tasks": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "prompt": {
-                      "type": "string"
-                    },
-                    "name": {
-                      "type": "string"
-                    },
-                    "branchName": {
-                      "type": "string"
-                    }
-                  },
-                  "additionalProperties": false
-                },
-                "minItems": 1,
-                "maxItems": 20
+                "pattern": "^ses"
               }
             },
-            "required": ["requestID", "sessionID", "mode", "tasks"],
+            "required": ["sessionID"],
             "additionalProperties": false
           }
         },
@@ -23377,7 +24394,8 @@
             "type": "object",
             "properties": {
               "workspaceID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^wrk"
               },
               "status": {
                 "type": "string",
@@ -23411,7 +24429,7 @@
                 "type": "string"
               }
             },
-            "required": ["name", "branch"],
+            "required": ["name"],
             "additionalProperties": false
           }
         },
@@ -23504,7 +24522,8 @@
             "type": "object",
             "properties": {
               "id": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^pty"
               },
               "exitCode": {
                 "type": "integer",
@@ -23532,10 +24551,59 @@
             "type": "object",
             "properties": {
               "id": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^pty"
               }
             },
             "required": ["id"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventInstallationUpdated": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["installation.updated"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": ["version"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventInstallationUpdate-available": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["installation.update-available"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": ["version"],
             "additionalProperties": false
           }
         },
@@ -23556,7 +24624,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "info": {
                 "$ref": "#/components/schemas/Message"
@@ -23583,10 +24652,12 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "messageID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^msg"
               }
             },
             "required": ["sessionID", "messageID"],
@@ -23610,7 +24681,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "part": {
                 "$ref": "#/components/schemas/Part"
@@ -23641,13 +24713,16 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "messageID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^msg"
               },
               "partID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^prt"
               }
             },
             "required": ["sessionID", "messageID", "partID"],
@@ -23671,7 +24746,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "info": {
                 "$ref": "#/components/schemas/Session"
@@ -23698,7 +24774,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "info": {
                 "$ref": "#/components/schemas/Session"
@@ -23725,7 +24802,8 @@
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "info": {
                 "$ref": "#/components/schemas/Session"
@@ -23755,7 +24833,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "agent": {
                 "type": "string"
@@ -23785,7 +24864,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "model": {
                 "type": "object",
@@ -23862,6 +24942,41 @@
         "required": ["name"],
         "additionalProperties": false
       },
+      "PromptReferenceAttachment": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["local", "git", "invalid"]
+          },
+          "uri": {
+            "type": "string"
+          },
+          "repository": {
+            "type": "string"
+          },
+          "branch": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "targetUri": {
+            "type": "string"
+          },
+          "problem": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/PromptSource"
+          }
+        },
+        "required": ["name", "kind"],
+        "additionalProperties": false
+      },
       "EventSessionNextPrompted": {
         "type": "object",
         "properties": {
@@ -23879,7 +24994,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "prompt": {
                 "$ref": "#/components/schemas/Prompt"
@@ -23909,7 +25025,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "text": {
                 "type": "string"
@@ -23939,7 +25056,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "callID": {
                 "type": "string"
@@ -23972,7 +25090,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "callID": {
                 "type": "string"
@@ -24005,7 +25124,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "agent": {
                 "type": "string"
@@ -24054,7 +25174,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "finish": {
                 "type": "string"
@@ -24133,7 +25254,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "error": {
                 "$ref": "#/components/schemas/SessionErrorUnknown"
@@ -24163,7 +25285,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               }
             },
             "required": ["timestamp", "sessionID"],
@@ -24190,7 +25313,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "delta": {
                 "type": "string"
@@ -24220,7 +25344,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "text": {
                 "type": "string"
@@ -24250,7 +25375,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "reasoningID": {
                 "type": "string"
@@ -24280,7 +25406,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "reasoningID": {
                 "type": "string"
@@ -24313,7 +25440,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "reasoningID": {
                 "type": "string"
@@ -24346,7 +25474,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "callID": {
                 "type": "string"
@@ -24379,7 +25508,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "callID": {
                 "type": "string"
@@ -24412,7 +25542,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "callID": {
                 "type": "string"
@@ -24445,7 +25576,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "callID": {
                 "type": "string"
@@ -24528,7 +25660,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "callID": {
                 "type": "string"
@@ -24574,7 +25707,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "callID": {
                 "type": "string"
@@ -24633,7 +25767,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "callID": {
                 "type": "string"
@@ -24710,7 +25845,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "attempt": {
                 "type": "number"
@@ -24743,7 +25879,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "reason": {
                 "type": "string",
@@ -24774,7 +25911,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "text": {
                 "type": "string"
@@ -24804,7 +25942,8 @@
                 "type": "number"
               },
               "sessionID": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^ses"
               },
               "text": {
                 "type": "string"
@@ -24820,7 +25959,331 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
-      "EventIndexingStatus": {
+      "ModelV2Info": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "apiID": {
+            "type": "string"
+          },
+          "providerID": {
+            "type": "string"
+          },
+          "family": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "endpoint": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["unknown"]
+                  }
+                },
+                "required": ["type"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["openai/responses"]
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "websocket": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["type", "url"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["openai/completions"]
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "reasoning": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": ["reasoning_content"]
+                          }
+                        },
+                        "required": ["type"],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": ["reasoning_details"]
+                          }
+                        },
+                        "required": ["type"],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "required": ["type", "url"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["anthropic/messages"]
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "required": ["type", "url"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["aisdk"]
+                  },
+                  "package": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "required": ["type", "package"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "tools": {
+                "type": "boolean"
+              },
+              "input": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "output": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["tools", "input", "output"],
+            "additionalProperties": false
+          },
+          "options": {
+            "type": "object",
+            "properties": {
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "body": {
+                "type": "object"
+              },
+              "aisdk": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "object"
+                  },
+                  "request": {
+                    "type": "object"
+                  }
+                },
+                "required": ["provider", "request"],
+                "additionalProperties": false
+              },
+              "variant": {
+                "type": "string"
+              }
+            },
+            "required": ["headers", "body", "aisdk"],
+            "additionalProperties": false
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "headers": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "body": {
+                  "type": "object"
+                },
+                "aisdk": {
+                  "type": "object",
+                  "properties": {
+                    "provider": {
+                      "type": "object"
+                    },
+                    "request": {
+                      "type": "object"
+                    }
+                  },
+                  "required": ["provider", "request"],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["id", "headers", "body", "aisdk"],
+              "additionalProperties": false
+            }
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "released": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["NaN"]
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["Infinity"]
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["-Infinity"]
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["Infinity", "-Infinity", "NaN"]
+                  }
+                ]
+              }
+            },
+            "required": ["released"],
+            "additionalProperties": false
+          },
+          "cost": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "tier": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["context"]
+                    },
+                    "size": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["type", "size"],
+                  "additionalProperties": false
+                },
+                "input": {
+                  "type": "number"
+                },
+                "output": {
+                  "type": "number"
+                },
+                "cache": {
+                  "type": "object",
+                  "properties": {
+                    "read": {
+                      "type": "number"
+                    },
+                    "write": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["read", "write"],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["input", "output", "cache"],
+              "additionalProperties": false
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": ["alpha", "beta", "deprecated", "active"]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": "object",
+            "properties": {
+              "context": {
+                "type": "integer"
+              },
+              "input": {
+                "type": "integer"
+              },
+              "output": {
+                "type": "integer"
+              }
+            },
+            "required": ["context", "output"],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "apiID",
+          "providerID",
+          "name",
+          "endpoint",
+          "capabilities",
+          "options",
+          "variants",
+          "time",
+          "cost",
+          "status",
+          "enabled",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "EventCatalogModelUpdated": {
         "type": "object",
         "properties": {
           "id": {
@@ -24828,16 +26291,16 @@
           },
           "type": {
             "type": "string",
-            "enum": ["indexing.status"]
+            "enum": ["catalog.model.updated"]
           },
           "properties": {
             "type": "object",
             "properties": {
-              "status": {
-                "$ref": "#/components/schemas/IndexingStatus"
+              "model": {
+                "$ref": "#/components/schemas/ModelV2Info"
               }
             },
-            "required": ["status"],
+            "required": ["model"],
             "additionalProperties": false
           }
         },
@@ -24848,16 +26311,19 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "parentID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "projectID": {
             "type": "string"
           },
           "workspaceID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^wrk"
           },
           "path": {
             "type": "string"
@@ -24881,6 +26347,38 @@
             "required": ["id", "providerID", "variant"],
             "additionalProperties": false
           },
+          "cost": {
+            "type": "number"
+          },
+          "tokens": {
+            "type": "object",
+            "properties": {
+              "input": {
+                "type": "number"
+              },
+              "output": {
+                "type": "number"
+              },
+              "reasoning": {
+                "type": "number"
+              },
+              "cache": {
+                "type": "object",
+                "properties": {
+                  "read": {
+                    "type": "number"
+                  },
+                  "write": {
+                    "type": "number"
+                  }
+                },
+                "required": ["read", "write"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["input", "output", "reasoning", "cache"],
+            "additionalProperties": false
+          },
           "time": {
             "type": "object",
             "properties": {
@@ -24901,7 +26399,7 @@
             "type": "string"
           }
         },
-        "required": ["id", "projectID", "time", "title"],
+        "required": ["id", "projectID", "cost", "tokens", "time", "title"],
         "additionalProperties": false
       },
       "SessionDelivery": {
@@ -25015,6 +26513,12 @@
               "$ref": "#/components/schemas/PromptAgentAttachment"
             }
           },
+          "references": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromptReferenceAttachment"
+            }
+          },
           "type": {
             "type": "string",
             "enum": ["user"]
@@ -25043,7 +26547,8 @@
             "additionalProperties": false
           },
           "sessionID": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^ses"
           },
           "text": {
             "type": "string"
@@ -25481,6 +26986,207 @@
           }
         ]
       },
+      "ProviderV2Info": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean",
+                "enum": [false]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "via": {
+                    "type": "string",
+                    "enum": ["env"]
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": ["via", "name"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "via": {
+                    "type": "string",
+                    "enum": ["auth"]
+                  },
+                  "service": {
+                    "type": "string"
+                  }
+                },
+                "required": ["via", "service"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "via": {
+                    "type": "string",
+                    "enum": ["custom"]
+                  },
+                  "data": {
+                    "type": "object"
+                  }
+                },
+                "required": ["via", "data"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "env": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "endpoint": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["unknown"]
+                  }
+                },
+                "required": ["type"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["openai/responses"]
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "websocket": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["type", "url"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["openai/completions"]
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "reasoning": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": ["reasoning_content"]
+                          }
+                        },
+                        "required": ["type"],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": ["reasoning_details"]
+                          }
+                        },
+                        "required": ["type"],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "required": ["type", "url"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["anthropic/messages"]
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "required": ["type", "url"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["aisdk"]
+                  },
+                  "package": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "required": ["type", "package"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "options": {
+            "type": "object",
+            "properties": {
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "body": {
+                "type": "object"
+              },
+              "aisdk": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "object"
+                  },
+                  "request": {
+                    "type": "object"
+                  }
+                },
+                "required": ["provider", "request"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["headers", "body", "aisdk"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "name", "enabled", "env", "endpoint", "options"],
+        "additionalProperties": false
+      },
       "EventTuiToastShow1": {
         "type": "object",
         "properties": {
@@ -25516,21 +27222,346 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
-      "BadRequestError": {
+      "ModelV2Info1": {
         "type": "object",
-        "required": ["data", "errors", "success"],
         "properties": {
-          "data": {},
-          "errors": {
+          "id": {
+            "type": "string"
+          },
+          "apiID": {
+            "type": "string"
+          },
+          "providerID": {
+            "type": "string"
+          },
+          "family": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "endpoint": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["unknown"]
+                  }
+                },
+                "required": ["type"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["openai/responses"]
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "websocket": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["type", "url"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["openai/completions"]
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "reasoning": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": ["reasoning_content"]
+                          }
+                        },
+                        "required": ["type"],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": ["reasoning_details"]
+                          }
+                        },
+                        "required": ["type"],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "required": ["type", "url"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["anthropic/messages"]
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "required": ["type", "url"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["aisdk"]
+                  },
+                  "package": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "required": ["type", "package"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "tools": {
+                "type": "boolean"
+              },
+              "input": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "output": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["tools", "input", "output"],
+            "additionalProperties": false
+          },
+          "options": {
+            "type": "object",
+            "properties": {
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "body": {
+                "type": "object"
+              },
+              "aisdk": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "object"
+                  },
+                  "request": {
+                    "type": "object"
+                  }
+                },
+                "required": ["provider", "request"],
+                "additionalProperties": false
+              },
+              "variant": {
+                "type": "string"
+              }
+            },
+            "required": ["headers", "body", "aisdk"],
+            "additionalProperties": false
+          },
+          "variants": {
             "type": "array",
             "items": {
               "type": "object",
-              "additionalProperties": {}
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "headers": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "body": {
+                  "type": "object"
+                },
+                "aisdk": {
+                  "type": "object",
+                  "properties": {
+                    "provider": {
+                      "type": "object"
+                    },
+                    "request": {
+                      "type": "object"
+                    }
+                  },
+                  "required": ["provider", "request"],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["id", "headers", "body", "aisdk"],
+              "additionalProperties": false
             }
           },
-          "success": {
-            "type": "boolean",
-            "enum": [false]
+          "time": {
+            "type": "object",
+            "properties": {
+              "released": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["NaN"]
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["Infinity"]
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["-Infinity"]
+                  }
+                ]
+              }
+            },
+            "required": ["released"],
+            "additionalProperties": false
+          },
+          "cost": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "tier": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["context"]
+                    },
+                    "size": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["type", "size"],
+                  "additionalProperties": false
+                },
+                "input": {
+                  "type": "number"
+                },
+                "output": {
+                  "type": "number"
+                },
+                "cache": {
+                  "type": "object",
+                  "properties": {
+                    "read": {
+                      "type": "number"
+                    },
+                    "write": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["read", "write"],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["input", "output", "cache"],
+              "additionalProperties": false
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": ["alpha", "beta", "deprecated", "active"]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": "object",
+            "properties": {
+              "context": {
+                "type": "integer"
+              },
+              "input": {
+                "type": "integer"
+              },
+              "output": {
+                "type": "integer"
+              }
+            },
+            "required": ["context", "output"],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "apiID",
+          "providerID",
+          "name",
+          "endpoint",
+          "capabilities",
+          "options",
+          "variants",
+          "time",
+          "cost",
+          "status",
+          "enabled",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "BadRequestError": {
+        "type": "object",
+        "required": ["name", "data"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["BadRequest"]
+          },
+          "data": {
+            "type": "object",
+            "required": ["message"],
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": ["Params", "Headers", "Query", "Body", "Payload"]
+              }
+            }
           }
         }
       }
@@ -25605,6 +27636,14 @@
     {
       "name": "v2 messages",
       "description": "Experimental v2 message routes."
+    },
+    {
+      "name": "v2 models",
+      "description": "Experimental v2 model routes."
+    },
+    {
+      "name": "v2 providers",
+      "description": "Experimental v2 provider routes."
     },
     {
       "name": "tui",

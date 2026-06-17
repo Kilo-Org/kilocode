@@ -1,5 +1,8 @@
-import { Component, For, createMemo } from "solid-js"
+import { Component, For, Show, createMemo } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
+import { Select } from "@kilocode/kilo-ui/select"
+import { Switch } from "@kilocode/kilo-ui/switch"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
@@ -8,6 +11,9 @@ import { parseModelString } from "../../../../src/shared/provider-model"
 import { ModelSelectorBase } from "../shared/ModelSelector"
 import { ThinkingSelectorBase } from "../shared/ThinkingSelector"
 import SettingsRow from "./SettingsRow"
+import { DEFAULT_SPEECH_TO_TEXT_MODEL } from "../../../../src/speech-to-text/models"
+import { hasSpeechToTextAccess, selectedSpeechToTextModel } from "../speech-to-text/availability"
+import { SPEECH_TO_TEXT_MODEL_OPTIONS } from "../speech-to-text/model-selector"
 import { AUTOCOMPLETE_SELECTOR_MODELS, getAutocompleteSelection } from "./autocomplete-model-selector"
 
 const ModelsTab: Component = () => {
@@ -36,15 +42,17 @@ const ModelsTab: Component = () => {
   }
 
   const subagentModel = createMemo(() => parseModelString(config().subagent_model ?? undefined))
-  const subagentVariants = createMemo(() => {
-    const model = provider.findModel(subagentModel())
-    return model?.variants ? Object.keys(model.variants) : []
-  })
+  const speechModel = createMemo(() => selectedSpeechToTextModel(config()))
+  const speechOption = createMemo(() => SPEECH_TO_TEXT_MODEL_OPTIONS.find((item) => item.value === speechModel()))
+  const kiloReady = createMemo(() => hasSpeechToTextAccess(config(), provider.authStates()))
+  const variantKey = createMemo(() => config().subagent_model ?? undefined)
+  const subagentVariants = createMemo(() => Object.keys(provider.findModel(subagentModel())?.variants ?? {}))
   const subagentVariant = createMemo(() => {
-    const list = subagentVariants()
-    if (list.length === 0) return undefined
-    const value = config().subagent_variant ?? undefined
-    return value && list.includes(value) ? value : undefined
+    const key = variantKey()
+    if (!key) return undefined
+    const value = config().subagent_variant_overrides?.[key]
+    if (value) return value
+    return config().subagent_model === key ? (config().subagent_variant ?? undefined) : undefined
   })
 
   function handleSubagentModelSelect(providerID: string, modelID: string) {
@@ -52,16 +60,20 @@ const ModelsTab: Component = () => {
       updateConfig({ subagent_model: null, subagent_variant: null })
       return
     }
-    const model = { providerID, modelID }
-    const variants = provider.findModel(model)?.variants
-    const list = variants ? Object.keys(variants) : []
-    const value = config().subagent_model === `${providerID}/${modelID}` ? config().subagent_variant : undefined
-    const variant = value && list.includes(value) ? value : list[0]
-    updateConfig({ subagent_model: `${providerID}/${modelID}`, subagent_variant: variant ?? null })
+    const value = `${providerID}/${modelID}`
+    updateConfig({
+      subagent_model: value,
+      ...(config().subagent_model === value ? {} : { subagent_variant: null }),
+    })
   }
 
-  function handleSubagentVariantSelect(value: string) {
-    updateConfig({ subagent_variant: value })
+  function updateSubagentVariant(value: string | null) {
+    const key = variantKey()
+    if (!key) return
+    updateConfig({
+      subagent_variant_overrides: { [key]: value },
+      ...(config().subagent_model === key ? { subagent_variant: null } : {}),
+    })
   }
 
   const allAgents = createMemo(() => session.agents())
@@ -124,7 +136,7 @@ const ModelsTab: Component = () => {
           title={language.t("settings.providers.subagentModel.title")}
           description={language.t("settings.providers.subagentModel.description")}
         >
-          <div style={{ display: "flex", "align-items": "center", gap: "8px", "flex-wrap": "wrap" }}>
+          <div style={{ display: "flex", "flex-direction": "column", "align-items": "flex-end", gap: "8px" }}>
             <ModelSelectorBase
               value={subagentModel()}
               onSelect={handleSubagentModelSelect}
@@ -134,18 +146,23 @@ const ModelsTab: Component = () => {
               label={language.t("settings.providers.subagentModel.title")}
               description={language.t("settings.providers.subagentModel.description")}
             />
-            <ThinkingSelectorBase
-              variants={subagentVariants()}
-              value={subagentVariant()}
-              onSelect={handleSubagentVariantSelect}
-              placement="bottom-start"
-            />
+            <Show when={subagentVariants().length > 0}>
+              <ThinkingSelectorBase
+                variants={subagentVariants()}
+                value={subagentVariant()}
+                onSelect={(value) => updateSubagentVariant(value)}
+                onClear={() => updateSubagentVariant(null)}
+                allowClear
+                clearLabel={language.t("settings.providers.notSet")}
+                placement="bottom-start"
+                globalTrigger={false}
+              />
+            </Show>
           </div>
         </SettingsRow>
         <SettingsRow
           title={language.t("settings.autocomplete.model.title")}
           description={language.t("settings.autocomplete.model.description")}
-          last
         >
           <ModelSelectorBase
             value={getAutocompleteSelection(autocompleteProvider(), autocompleteModel())}
@@ -158,6 +175,56 @@ const ModelsTab: Component = () => {
             label={language.t("settings.autocomplete.model.title")}
             description={language.t("settings.autocomplete.model.description")}
           />
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.models.speechToTextModel.title")}
+          description={
+            kiloReady()
+              ? language.t("settings.models.speechToTextModel.description")
+              : language.t("settings.models.speechToText.disabledDescription")
+          }
+        >
+          <Tooltip
+            value={language.t("settings.models.speechToText.disabledDescription")}
+            placement="top"
+            inactive={kiloReady()}
+          >
+            <Select
+              options={SPEECH_TO_TEXT_MODEL_OPTIONS}
+              current={speechOption()}
+              value={(item) => item.value}
+              label={(item) => `${item.label} (${item.provider})`}
+              onSelect={(item) =>
+                updateConfig({
+                  experimental: {
+                    ...config().experimental,
+                    speech_to_text_model: item?.value ?? DEFAULT_SPEECH_TO_TEXT_MODEL.id,
+                  },
+                })
+              }
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+              triggerProps={{
+                "aria-label": `${language.t("settings.models.speechToTextModel.title")}: ${speechOption()?.label}`,
+              }}
+              disabled={!kiloReady()}
+              placeholder={DEFAULT_SPEECH_TO_TEXT_MODEL.label}
+            />
+          </Tooltip>
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.models.hidePromptTraining.title")}
+          description={language.t("settings.models.hidePromptTraining.description")}
+          last
+        >
+          <Switch
+            checked={config().hide_prompt_training_models === true}
+            onChange={(checked: boolean) => updateConfig({ hide_prompt_training_models: checked })}
+            hideLabel
+          >
+            {language.t("settings.models.hidePromptTraining.title")}
+          </Switch>
         </SettingsRow>
       </Card>
 

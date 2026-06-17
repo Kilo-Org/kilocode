@@ -71,6 +71,36 @@ describe("SdkSSEAdapter", () => {
     adapter.disconnect()
   })
 
+  it("does not log each streamed event", async () => {
+    const log = console.log
+    const logs: unknown[][] = []
+    console.log = (...args: unknown[]) => logs.push(args)
+    let count = 0
+    let finish = () => {}
+    const received = new Promise<void>((resolve) => {
+      finish = resolve
+    })
+    const adapter = new SdkSSEAdapter(
+      client(async function* (opts) {
+        for (let i = 0; i < 100; i++) yield event()
+        await aborted(opts.signal)
+      }),
+    )
+    adapter.onEvent(() => {
+      count += 1
+      if (count === 100) finish()
+    })
+
+    try {
+      adapter.connect()
+      await received
+      expect(logs.some((args) => args.some((value) => String(value).includes("Event:")))).toBe(false)
+    } finally {
+      adapter.disconnect()
+      console.log = log
+    }
+  })
+
   it("backs off reconnects when an SSE fetch fails before opening", async () => {
     const timer = globalThis.setTimeout
     const delays: number[] = []

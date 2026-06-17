@@ -16,6 +16,7 @@ export function buildShortcutCategories(
     {
       title: t("agentManager.shortcuts.category.quickSwitch"),
       shortcuts: [
+        { label: t("agentManager.sidebarSearch.label"), binding: bindings.search ?? "" },
         {
           label: t("agentManager.shortcuts.jumpToItem"),
           binding: (() => {

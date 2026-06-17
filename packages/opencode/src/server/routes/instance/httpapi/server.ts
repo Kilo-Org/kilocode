@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from "effect"
+import { Config as EffectConfig, Context, Effect, Layer } from "effect"
 import { HttpApiBuilder, OpenApi } from "effect/unstable/httpapi"
 import {
   FetchHttpClient,
@@ -22,6 +22,7 @@ import { FileWatcher } from "@/file/watcher"
 import { Ripgrep } from "@/file/ripgrep"
 import { Format } from "@/format"
 import { Git } from "@/git" // kilocode_change
+import { RuntimeFlags } from "@/effect/runtime-flags"
 import { LSP } from "@/lsp/lsp"
 import { MCP } from "@/mcp"
 import { Permission } from "@/permission"
@@ -30,7 +31,7 @@ import { InstanceLayer } from "@/project/instance-layer"
 import { Plugin } from "@/plugin"
 import { Project } from "@/project/project"
 import { ProviderAuth } from "@/provider/auth"
-import { ModelsDev } from "@/provider/models"
+import { ModelsDev } from "@opencode-ai/core/models"
 import { ModelCache } from "@/provider/model-cache" // kilocode_change
 import { Provider } from "@/provider/provider"
 import { Pty } from "@/pty"
@@ -46,8 +47,10 @@ import { SessionSummary } from "@/session/summary"
 import { Todo } from "@/session/todo"
 import { SessionShare } from "@/share/session"
 import { ShareNext } from "@/share/share-next"
+import { EventV2Bridge } from "@/event-v2-bridge"
 import { Skill } from "@/skill"
 import { Snapshot } from "@/snapshot"
+import { Storage } from "@/storage/storage" // kilocode_change
 import { SyncEvent } from "@/sync"
 import { ToolRegistry } from "@/tool/registry"
 import { lazy } from "@/util/lazy"
@@ -60,7 +63,8 @@ import { ServerAuth } from "@/server/auth"
 import { InstanceHttpApi, RootHttpApi } from "./api"
 import { PublicApi } from "./public"
 import { authorizationLayer, authorizationRouterMiddleware } from "./middleware/authorization"
-import { EventApi, eventHandlers } from "./event"
+import { EventApi } from "./groups/event"
+import { eventHandlers } from "./handlers/event"
 import { configHandlers } from "./handlers/config"
 import { controlHandlers } from "./handlers/control"
 import { experimentalHandlers } from "./handlers/experimental"
@@ -87,17 +91,9 @@ import { compressionLayer } from "./middleware/compression"
 import { corsVaryFix } from "./middleware/cors-vary"
 import { errorLayer } from "./middleware/error"
 import { fenceLayer } from "./middleware/fence"
+import { schemaErrorLayer } from "./middleware/schema-error"
 
 export const context = Context.makeUnsafe<unknown>(new Map())
-
-const runtime = HttpRouter.middleware()(
-  Effect.succeed((effect) =>
-    Effect.gen(function* () {
-      yield* Effect.annotateCurrentSpan({ "opencode.server.backend": "effect-httpapi" })
-      return yield* effect
-    }),
-  ),
-).layer
 
 const cors = (corsOptions?: CorsOptions) =>
   HttpRouter.middleware(
@@ -117,6 +113,7 @@ const authOnlyRouterLayer = authorizationRouterMiddleware.layer.pipe(Layer.provi
 const httpApiAuthLayer = authorizationLayer.pipe(Layer.provide(ServerAuth.Config.defaultLayer))
 const rootApiRoutes = HttpApiBuilder.layer(RootHttpApi).pipe(
   Layer.provide([controlHandlers, globalHandlers]),
+  Layer.provide(schemaErrorLayer),
   Layer.provide(httpApiAuthLayer),
 )
 const instanceRouterLayer = authorizationRouterMiddleware
@@ -154,6 +151,7 @@ const instanceRoutes = Layer.mergeAll(rawInstanceRoutes, instanceApiRoutes).pipe
     httpApiAuthLayer,
     workspaceRoutingLayer.pipe(Layer.provide(Socket.layerWebSocketConstructorGlobal)),
     instanceContextLayer,
+    schemaErrorLayer,
   ]),
 )
 
@@ -172,11 +170,23 @@ const uiRoute = HttpRouter.use((router) =>
   Effect.gen(function* () {
     const fs = yield* AppFileSystem.Service
     const client = yield* HttpClient.HttpClient
-    yield* router.add("*", "/*", (request) => serveUIEffect(request, { fs, client }))
+    const flags = yield* RuntimeFlags.Service
+    yield* router.add("*", "/*", (request) =>
+      serveUIEffect(request, { fs, client, disableEmbeddedWebUi: flags.disableEmbeddedWebUi }),
+    )
   }),
 ).pipe(Layer.provide(authOnlyRouterLayer))
 
-export function createRoutes(corsOptions?: CorsOptions) {
+type RouteRequirements =
+  | HttpRouter.HttpRouter
+  | HttpRouter.Request<"Error", unknown>
+  | HttpRouter.Request<"GlobalError", unknown>
+  | HttpRouter.Request<"Requires", unknown>
+  | HttpRouter.Request<"GlobalRequires", never>
+
+export function createRoutes(
+  corsOptions?: CorsOptions,
+): Layer.Layer<never, EffectConfig.ConfigError, RouteRequirements> {
   return Layer.mergeAll(rootApiRoutes, eventApiRoutes, instanceRoutes, docRoute, uiRoute).pipe(
     Layer.provide([
       errorLayer,
@@ -184,7 +194,6 @@ export function createRoutes(corsOptions?: CorsOptions) {
       corsVaryFix,
       fenceLayer,
       cors(corsOptions),
-      runtime,
       Account.defaultLayer,
       Agent.defaultLayer,
       Auth.defaultLayer,
@@ -208,6 +217,7 @@ export function createRoutes(corsOptions?: CorsOptions) {
       PtyTicket.defaultLayer,
       Question.defaultLayer,
       Ripgrep.defaultLayer,
+      RuntimeFlags.defaultLayer,
       Session.defaultLayer,
       SessionCompaction.defaultLayer,
       SessionPrompt.defaultLayer,
@@ -218,7 +228,9 @@ export function createRoutes(corsOptions?: CorsOptions) {
       SessionSummary.defaultLayer,
       ShareNext.defaultLayer,
       Snapshot.defaultLayer,
+      Storage.defaultLayer, // kilocode_change
       SyncEvent.defaultLayer,
+      EventV2Bridge.defaultLayer,
       Skill.defaultLayer,
       Todo.defaultLayer,
       ToolRegistry.defaultLayer,
@@ -230,28 +242,20 @@ export function createRoutes(corsOptions?: CorsOptions) {
       FetchHttpClient.layer,
       HttpServer.layerServices,
     ]),
-    Layer.provideMerge(Layer.succeed(CorsConfig)(corsOptions)),
-    Layer.provideMerge(InstanceLayer.layer),
-    Layer.provideMerge(Observability.layer),
+    Layer.provide(Layer.succeed(CorsConfig)(corsOptions)),
+    Layer.provide(InstanceLayer.layer),
+    Layer.provide(Observability.layer),
   )
 }
 
 export const routes = createRoutes()
 
-const defaultWebHandler = lazy(() =>
+export const webHandler = lazy(() =>
   HttpRouter.toWebHandler(routes, {
+    disableLogger: true,
     memoMap,
     middleware: disposeMiddleware,
   }),
 )
 
-export function webHandler(corsOptions?: CorsOptions) {
-  if (!corsOptions?.cors?.length) return defaultWebHandler()
-  return HttpRouter.toWebHandler(createRoutes(corsOptions), {
-    // Server-level CORS options are dynamic; don't reuse the default route layer memoized without them.
-    memoMap: Layer.makeMemoMapUnsafe(),
-    middleware: disposeMiddleware,
-  })
-}
-
-export * as ExperimentalHttpApiServer from "./server"
+export * as HttpApiApp from "./server"

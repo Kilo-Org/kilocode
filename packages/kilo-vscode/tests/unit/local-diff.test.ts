@@ -2,7 +2,14 @@ import { describe, it, expect } from "bun:test"
 import * as fs from "fs/promises"
 import * as os from "os"
 import * as path from "path"
-import { diffSummary, diffFile, generatedLike, resolveBase, MAX_DETAIL_BYTES } from "../../src/agent-manager/local-diff"
+import {
+  createLocalDiff,
+  diffSummary,
+  diffFile,
+  generatedLike,
+  resolveBase,
+  MAX_DETAIL_BYTES,
+} from "../../src/agent-manager/local-diff"
 import { GitOps } from "../../src/agent-manager/GitOps"
 import { WorktreeDiffReverter } from "../../src/diff/shared/reverter"
 import { resolveLocalDiffTarget } from "../../src/diff/shared/target"
@@ -182,6 +189,21 @@ describe("diffSummary", () => {
     })
   })
 
+  it("classifies untracked files from content rather than their extension", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "tone.wav"), Buffer.from([0x52, 0x49, 0x46, 0x46, 0x00, 0x01, 0x02, 0x03]))
+      await fs.writeFile(path.join(dir, "notes.bin"), "plain text\n")
+
+      const result = await diffSummary(git(), dir, base)
+      expect(result.find((entry) => entry.file === "tone.wav")?.additions).toBe(0)
+      expect(result.find((entry) => entry.file === "notes.bin")?.additions).toBe(1)
+
+      const detail = await diffFile(git(), dir, base, "tone.wav")
+      expect(detail?.summarized).toBe(false)
+      expect(detail?.patch).toBe("")
+    })
+  })
+
   it("all entries are summarized with empty before/after/patch", async () => {
     await withRepo(async (dir, base) => {
       await fs.writeFile(path.join(dir, "untracked.txt"), "x\n")
@@ -197,6 +219,43 @@ describe("diffSummary", () => {
         expect(entry.patch).toBe("")
         expect(typeof entry.stamp).toBe("string")
       }
+    })
+  })
+
+  it("uses git numstat metadata for tracked binary files", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "tone.wav"), Buffer.from([0x52, 0x49, 0x46, 0x46, 0x00, 0x01, 0x02, 0x03]))
+      runSync(dir, ["add", "tone.wav"])
+      runSync(dir, ["commit", "-m", "add audio"])
+
+      const summary = await diffSummary(git(), dir, base)
+      expect(summary.find((entry) => entry.file === "tone.wav")?.additions).toBe(0)
+
+      const detail = await diffFile(git(), dir, base, "tone.wav")
+      expect(detail?.summarized).toBe(false)
+      expect(detail?.patch).toBe("")
+    })
+  })
+
+  it("loads binary-safe before and after data for image diffs", async () => {
+    await withRepo(async (dir, base) => {
+      const before = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x01])
+      const after = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0xff])
+      await fs.writeFile(path.join(dir, "banner.png"), before)
+      runSync(dir, ["add", "banner.png"])
+      runSync(dir, ["commit", "-m", "add banner"])
+      runSync(dir, ["branch", "-f", base])
+      await fs.writeFile(path.join(dir, "banner.png"), after)
+
+      const local = createLocalDiff(git())
+      const summary = (await local.summary(dir, base)).find((entry) => entry.file === "banner.png")
+      const detail = await local.file(dir, base, "banner.png")
+
+      expect(summary?.kind).toBe("image")
+      expect(summary?.summarized).toBe(true)
+      expect(detail?.summarized).toBe(false)
+      expect(detail?.image?.before?.data).toBe(before.toString("base64"))
+      expect(detail?.image?.after?.data).toBe(after.toString("base64"))
     })
   })
 
@@ -229,6 +288,20 @@ describe("diffFile", () => {
     })
   })
 
+  it("rejects image detail paths outside the repository", async () => {
+    await withRepo(async (dir, base) => {
+      const name = `${path.basename(dir)}-secret.png`
+      const secret = path.join(path.dirname(dir), name)
+      await fs.writeFile(secret, Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00]))
+      try {
+        expect(await diffFile(git(), dir, base, `../${name}`)).toBeNull()
+        expect(await diffFile(git(), dir, base, secret)).toBeNull()
+      } finally {
+        await fs.rm(secret, { force: true })
+      }
+    })
+  })
+
   it("returns before/after/patch for a modified tracked file", async () => {
     await withRepo(async (dir, base) => {
       await fs.writeFile(path.join(dir, "seed.txt"), "seed\nmore\n")
@@ -257,6 +330,56 @@ describe("diffFile", () => {
       expect(result?.patch).toContain("new file mode")
       expect(result?.patch).toContain("+one")
       expect(result?.patch).toContain("+two")
+    })
+  })
+
+  it("loads full detail from the latest summary snapshot", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\ncached\n")
+      const local = createLocalDiff(git())
+      const summary = await local.summary(dir, base)
+      const entry = summary.find((item) => item.file === "seed.txt")
+      const result = await local.file(dir, base, "seed.txt")
+
+      expect(entry?.summarized).toBe(true)
+      expect(result?.summarized).toBe(false)
+      expect(result?.additions).toBe(entry?.additions)
+      expect(result?.deletions).toBe(entry?.deletions)
+      expect(result?.stamp).toBe(entry?.stamp)
+      expect(result?.before).toBe("seed\n")
+      expect(result?.after).toBe("seed\ncached\n")
+      expect(result?.patch).toContain("+cached")
+    })
+  })
+
+  it("does not materialize binary detail from a cached summary", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "tone.wav"), Buffer.from([0x52, 0x49, 0x46, 0x46, 0x00, 0x01, 0x02, 0x03]))
+      const local = createLocalDiff(git())
+
+      await local.summary(dir, base)
+      const result = await local.file(dir, base, "tone.wav")
+
+      expect(result?.summarized).toBe(false)
+      expect(result?.patch).toBe("")
+      expect(result?.before).toBe("")
+      expect(result?.after).toBe("")
+    })
+  })
+
+  it("keeps summary snapshots isolated by worktree", async () => {
+    await withRepo(async (first, firstBase) => {
+      await withRepo(async (second, secondBase) => {
+        await fs.writeFile(path.join(first, "seed.txt"), "seed\nfirst\n")
+        await fs.writeFile(path.join(second, "seed.txt"), "seed\nsecond\n")
+        const local = createLocalDiff(git())
+
+        await local.summary(first, firstBase)
+        await local.summary(second, secondBase)
+
+        expect((await local.file(first, firstBase, "seed.txt"))?.after).toBe("seed\nfirst\n")
+        expect((await local.file(second, secondBase, "seed.txt"))?.after).toBe("seed\nsecond\n")
+      })
     })
   })
 

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { Effect, Layer, Option } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import path from "path"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
 import { Account } from "../../../src/account/account"
 import { Auth } from "../../../src/auth"
@@ -14,7 +15,7 @@ import { Env } from "../../../src/env"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { Filesystem } from "../../../src/util/filesystem"
-import { WithInstance } from "../../../src/project/with-instance"
+import { provideTestInstance } from "../../fixture/fixture"
 import { Npm } from "@opencode-ai/core/npm"
 import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
 
@@ -44,12 +45,8 @@ const layer = Config.layer.pipe(
 )
 
 const load = () => Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(layer)))
-const clear = () =>
-  Effect.runPromise(Config.Service.use((svc) => svc.invalidate()).pipe(Effect.scoped, Effect.provide(layer)))
-
 describe("kilocode default indexing plugin", () => {
   afterEach(async () => {
-    await clear()
     await disposeAllInstances()
   })
 
@@ -76,8 +73,8 @@ describe("kilocode default indexing plugin", () => {
   })
 
   test("does not hard-enable indexing plugin when default plugins are disabled", async () => {
-    const prev = process.env["KILO_DISABLE_DEFAULT_PLUGINS"]
-    process.env["KILO_DISABLE_DEFAULT_PLUGINS"] = "true"
+    const original = Flag.KILO_DISABLE_DEFAULT_PLUGINS
+    Flag.KILO_DISABLE_DEFAULT_PLUGINS = true
 
     try {
       await using tmp = await tmpdir({
@@ -92,7 +89,7 @@ describe("kilocode default indexing plugin", () => {
         },
       })
 
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
         fn: async () => {
           const config = await load()
@@ -100,8 +97,7 @@ describe("kilocode default indexing plugin", () => {
         },
       })
     } finally {
-      if (prev === undefined) delete process.env["KILO_DISABLE_DEFAULT_PLUGINS"]
-      else process.env["KILO_DISABLE_DEFAULT_PLUGINS"] = prev
+      Flag.KILO_DISABLE_DEFAULT_PLUGINS = original
     }
   })
 })

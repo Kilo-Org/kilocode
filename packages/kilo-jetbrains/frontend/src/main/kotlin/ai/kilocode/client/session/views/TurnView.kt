@@ -1,14 +1,17 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.ui.SessionLayoutPanel
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.base.PartView
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.ui.JBUI
+import javax.swing.JComponent
 
 /**
  * Top-level transcript item representing one conversational turn.
@@ -25,6 +28,10 @@ class TurnView(
     private var style: SessionEditorStyle = SessionEditorStyle.current(),
     private val openUrl: (String) -> Unit = {},
     private val selection: SessionSelection? = null,
+    private val openAttachment: (String, FileAttachment) -> Unit = { _, item -> AttachmentView.openDefault(item, openFile, openUrl) },
+    private val resize: ((JComponent, () -> Unit) -> Unit)? = null,
+    private val repo: String? = null,
+    private val hover: ((PartView, Boolean) -> Unit)? = null,
 ) : SessionLayoutPanel(JBUI.scale(SessionUiStyle.SessionLayout.GAP)), Disposable, SessionEditorStyleTarget {
 
     constructor(id: String, openFile: (String) -> Unit) : this(id, openFile, SessionEditorStyle.current())
@@ -37,7 +44,7 @@ class TurnView(
 
     /** Add a new [MessageView] for [msg] at the end of this turn. */
     fun addMessage(msg: Message): MessageView {
-        val view = MessageView(msg, openFile, style, openUrl, selection)
+        val view = MessageView(msg, openFile, style, openUrl, selection, openAttachment, resize, repo, hover)
         messages[msg.info.id] = view
         add(view)
         revalidate()

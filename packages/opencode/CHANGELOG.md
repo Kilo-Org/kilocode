@@ -1,5 +1,150 @@
 # @kilocode/cli
 
+## 7.3.46
+
+### Patch Changes
+
+- [#11184](https://github.com/Kilo-Org/kilocode/pull/11184) [`adf03a9`](https://github.com/Kilo-Org/kilocode/commit/adf03a98245e8877c580cb1f77a7e0ea4f0af61d) - Support model-specific reasoning overrides for task subagents, including custom subagents with their own model and variant settings.
+
+- [#11178](https://github.com/Kilo-Org/kilocode/pull/11178) [`f63e771`](https://github.com/Kilo-Org/kilocode/commit/f63e77153cde1d9f1c3bf62e5aa543c07bf5f506) - Accelerate initial snapshots for regular Git sessions while preserving existing changes and asynchronously storing snapshots independently from the source repository.
+
+- Restore Kilo branding, fork-specific CLI commands, and CLI lifecycle initialization after upstream merges.
+
+- [#11240](https://github.com/Kilo-Org/kilocode/pull/11240) [`f820e57`](https://github.com/Kilo-Org/kilocode/commit/f820e57bab6c1ddd26f73964160bee7134488b96) - Prevent skill removal from recursively deleting working directories.
+
+- [#11179](https://github.com/Kilo-Org/kilocode/pull/11179) [`96a1610`](https://github.com/Kilo-Org/kilocode/commit/96a16102b2a6c22f0860641d7f78c076835c0c99) - Validate GitHub attachments and language server release paths before downloading or executing them.
+
+## 7.3.45
+
+### Patch Changes
+
+- [#11152](https://github.com/Kilo-Org/kilocode/pull/11152) [`b23d3df`](https://github.com/Kilo-Org/kilocode/commit/b23d3dfd756461ae02e2ed2872aded09d65dc1af) - Allow Escape to stop Agent Manager prompts while their sessions are still starting.
+
+- [#11138](https://github.com/Kilo-Org/kilocode/pull/11138) [`e354305`](https://github.com/Kilo-Org/kilocode/commit/e35430580be89361304c4b599ccd7eeb62fce7c1) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Restart the daemon when `kilo console` or `kilo daemon start` receives explicit network options that don't match the running daemon, instead of silently ignoring the requested settings.
+
+## 7.3.44
+
+### Minor Changes
+
+- [#11082](https://github.com/Kilo-Org/kilocode/pull/11082) [`a16e82a`](https://github.com/Kilo-Org/kilocode/commit/a16e82a77abf883c2c07c11464d50e08a518acd7) - Use embedded LanceDB as the default semantic search vector store so indexing works without a separate Qdrant server. Existing Qdrant users and Intel Mac users can select `qdrant` with `indexing.vectorStore`.
+
+### Patch Changes
+
+- [#10922](https://github.com/Kilo-Org/kilocode/pull/10922) [`bc3af9a`](https://github.com/Kilo-Org/kilocode/commit/bc3af9a145c8bd5f90fa0c9b22a48cceb095f8b4) - Prevent unnecessary repeat auto-compactions when providers report inconsistent token totals.
+
+- [#11160](https://github.com/Kilo-Org/kilocode/pull/11160) [`78d83c0`](https://github.com/Kilo-Org/kilocode/commit/78d83c0651d5343c0f9f877265dc5136cd7761f0) - Preserve the calling model's reasoning effort when task subagents inherit that model.
+
+- [#10478](https://github.com/Kilo-Org/kilocode/pull/10478) [`5bc8df8`](https://github.com/Kilo-Org/kilocode/commit/5bc8df843a2492d2eee01963b5a2c1a55beab56c) - Allow hosted runtimes to cap shell command duration and explain environment-enforced timeouts.
+
+- [#11085](https://github.com/Kilo-Org/kilocode/pull/11085) [`2a6596b`](https://github.com/Kilo-Org/kilocode/commit/2a6596b0c578b20ea803fa69a8427fc3e4c2e823) - Indicate when no models are available in model-not-found errors.
+
+- [#11072](https://github.com/Kilo-Org/kilocode/pull/11072) [`6920f37`](https://github.com/Kilo-Org/kilocode/commit/6920f37b77f820d9f8542d352cf60e061670933b) - Speed up the first Agent Manager prompt in new worktrees by seeding snapshots from the checkout's Git index.
+
+- [#11075](https://github.com/Kilo-Org/kilocode/pull/11075) [`e17ce0c`](https://github.com/Kilo-Org/kilocode/commit/e17ce0c9ecaf4cc4cad3e0fd99b28bef561705fc) - Speed up large session forks by retaining final task outcomes instead of duplicating resumable subagent histories, and load completed task details only when expanded.
+
+- [#11143](https://github.com/Kilo-Org/kilocode/pull/11143) [`12144cf`](https://github.com/Kilo-Org/kilocode/commit/12144cf8275200a7dd8e29cf478c39504da59b04) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Warn when `kilo console` or `kilo daemon` is invoked with an explicit `--port` outside the discovery range (4097–4116).
+
+- [#11006](https://github.com/Kilo-Org/kilocode/pull/11006) [`69a0b38`](https://github.com/Kilo-Org/kilocode/commit/69a0b384e6c61d190241087f88f2be4312e7517e) - Refresh connected provider model lists when the models catalog updates.
+
+- [#11081](https://github.com/Kilo-Org/kilocode/pull/11081) [`9c279a1`](https://github.com/Kilo-Org/kilocode/commit/9c279a16b4a14fc117f34d7aa19e771149031931) - Show model free and prompt-training indicators only when their explicit catalog metadata is enabled.
+
+- [#11101](https://github.com/Kilo-Org/kilocode/pull/11101) [`294c532`](https://github.com/Kilo-Org/kilocode/commit/294c532f6a355b78ed86d2188891883b07e90cc8) - Prevent task subagents from asking questions that users cannot answer from the parent session.
+
+- [#11102](https://github.com/Kilo-Org/kilocode/pull/11102) [`8a72708`](https://github.com/Kilo-Org/kilocode/commit/8a727084ae0327fbf195149660c19d2215fb558a) - Prevent duplicate CLI attention alerts and route Kilo prompts through the configurable notification system.
+
+- [#10866](https://github.com/Kilo-Org/kilocode/pull/10866) [`d5112ed`](https://github.com/Kilo-Org/kilocode/commit/d5112edf90d33333d1064c7ab885cf0a4d92d892) - Stabilize code indexing workers, retry Kilo model catalog downloads, reduce progress log noise, and show indexing failures as TUI notifications instead of writing over the terminal interface.
+
+- [#11147](https://github.com/Kilo-Org/kilocode/pull/11147) [`9a187d5`](https://github.com/Kilo-Org/kilocode/commit/9a187d5aad5c3bf90a6dac589a0b26069057c3b0) - Configure the project context sidebar width and default diff layout from Global Settings.
+
+- [#11091](https://github.com/Kilo-Org/kilocode/pull/11091) [`57bef8a`](https://github.com/Kilo-Org/kilocode/commit/57bef8ae68793c9b627ba0400b596bf932311e17) - Prevent streamed tool calls from executing twice and leaving answered questions disabled in VS Code.
+
+- [#11139](https://github.com/Kilo-Org/kilocode/pull/11139) [`7226635`](https://github.com/Kilo-Org/kilocode/commit/72266359d497f407f951c1b468a50d3093ec9dc3) - Restore Kilo branding, fork-specific CLI commands, and CLI lifecycle initialization after upstream merges.
+
+- [#11031](https://github.com/Kilo-Org/kilocode/pull/11031) [`bbfd59b`](https://github.com/Kilo-Org/kilocode/commit/bbfd59b85c383277fd8db77fcfd0ec56ea1a25d8) - Remove the unsupported code search tool.
+
+- [#11117](https://github.com/Kilo-Org/kilocode/pull/11117) [`b75af0d`](https://github.com/Kilo-Org/kilocode/commit/b75af0de8865234a745f71eac03bf2bdea2271b4) - Update the Vercel AI SDK providers for Cerebras, xAI, and OpenAI-compatible endpoints.
+
+- [#10866](https://github.com/Kilo-Org/kilocode/pull/10866) [`d5112ed`](https://github.com/Kilo-Org/kilocode/commit/d5112edf90d33333d1064c7ab885cf0a4d92d892) - Support configuring code indexing separately for global and project settings in Kilo Console, the CLI TUI, and VS Code.
+
+- [#11031](https://github.com/Kilo-Org/kilocode/pull/11031) [`28a26b1`](https://github.com/Kilo-Org/kilocode/commit/28a26b11c133686a4656af8be21af619c919301a) - Restore streamed responses in the CLI TUI and move code indexing status into the session sidebar.
+
+- Updated dependencies [[`a16e82a`](https://github.com/Kilo-Org/kilocode/commit/a16e82a77abf883c2c07c11464d50e08a518acd7), [`9c279a1`](https://github.com/Kilo-Org/kilocode/commit/9c279a16b4a14fc117f34d7aa19e771149031931), [`57bef8a`](https://github.com/Kilo-Org/kilocode/commit/57bef8ae68793c9b627ba0400b596bf932311e17), [`b75af0d`](https://github.com/Kilo-Org/kilocode/commit/b75af0de8865234a745f71eac03bf2bdea2271b4)]:
+  - @kilocode/kilo-indexing@7.4.0
+  - @kilocode/kilo-gateway@7.3.43
+  - @kilocode/kilo-telemetry@7.3.43
+  - @opencode-ai/ui@7.3.43
+
+## 7.3.42
+
+### Patch Changes
+
+- [#11064](https://github.com/Kilo-Org/kilocode/pull/11064) [`db7707d`](https://github.com/Kilo-Org/kilocode/commit/db7707d49c4bb3d3cb6f0a44a62787d9d05e88f6) - Allow local review follow-up fix prompts to modify code after explicit user approval.
+
+- [#11050](https://github.com/Kilo-Org/kilocode/pull/11050) [`8535d3d`](https://github.com/Kilo-Org/kilocode/commit/8535d3d51bef513c0034085e4422355f5be72bf3) - Keep new Kilo Console terminals open in the TUI on macOS.
+
+- [#11011](https://github.com/Kilo-Org/kilocode/pull/11011) [`9f072b0`](https://github.com/Kilo-Org/kilocode/commit/9f072b05d49554648adbaca251a1ec5800b7b0fc) - Re-enable free-model session and Git workspace data export.
+
+- [#10751](https://github.com/Kilo-Org/kilocode/pull/10751) [`6e8d6f7`](https://github.com/Kilo-Org/kilocode/commit/6e8d6f7d5354d5380c165482c6af87baceca07bd) - Sync CLI sessions to Kilo session history when authenticated with `KILO_API_KEY` when no stored Kilo auth is present.
+
+## 7.3.41
+
+### Minor Changes
+
+- [#10761](https://github.com/Kilo-Org/kilocode/pull/10761) [`82b22f7`](https://github.com/Kilo-Org/kilocode/commit/82b22f78580fb5dafee55960135edfb1066d1520) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Support reading .ods (OpenDocument Spreadsheet) files in the read tool
+
+- [#10879](https://github.com/Kilo-Org/kilocode/pull/10879) [`b0a4f03`](https://github.com/Kilo-Org/kilocode/commit/b0a4f0391106a837b78200e6de52621a6872b890) - Show Terminal Bench completion scores and per-attempt costs in supported model details.
+
+- [#10948](https://github.com/Kilo-Org/kilocode/pull/10948) [`6ee090b`](https://github.com/Kilo-Org/kilocode/commit/6ee090b5a404924f00c1f4771b09c1f4a1e352ca) - Restore cloud session filesystem changes from synced session diffs when importing sessions, including inherited changes across imported session forks.
+
+### Patch Changes
+
+- [#10996](https://github.com/Kilo-Org/kilocode/pull/10996) [`cc03ffc`](https://github.com/Kilo-Org/kilocode/commit/cc03ffc58100cddbf4e0ab1ce9ccee89afe5726c) - Preserve image attachments when Photon is unavailable, enforce attachment limits for user images, and correlate shell lifecycle events correctly.
+
+- [#10998](https://github.com/Kilo-Org/kilocode/pull/10998) [`a59b255`](https://github.com/Kilo-Org/kilocode/commit/a59b255b3110411b8e05a09215bb9908f8dc6462) - Restore automatic session titles for models that require reasoning without assuming a supported effort level.
+
+- [#11004](https://github.com/Kilo-Org/kilocode/pull/11004) [`16e334f`](https://github.com/Kilo-Org/kilocode/commit/16e334ff8ca5305b7da379710a41056a6a6752fc) - Discover project-installed skills in Agent Manager worktree sessions.
+
+- [#11000](https://github.com/Kilo-Org/kilocode/pull/11000) [`741b00f`](https://github.com/Kilo-Org/kilocode/commit/741b00f2e0a6a94574c506a276688fc6ca033df5) - Keep subagent sessions isolated when forking sessions through editor clients.
+
+- [#10991](https://github.com/Kilo-Org/kilocode/pull/10991) [`ece8453`](https://github.com/Kilo-Org/kilocode/commit/ece8453ad0e8decc39f3c2a3d05893fd70b0985b) Thanks [@shssoichiro](https://github.com/shssoichiro)! - Avoid copying visible planning chat into new sessions started from the plan follow-up prompt.
+
+- [#11034](https://github.com/Kilo-Org/kilocode/pull/11034) [`0d76fa6`](https://github.com/Kilo-Org/kilocode/commit/0d76fa627349061d69fd4f5d6f486640d8d7834e) - Start forked sessions at zero cost instead of carrying over the source session's spend.
+
+- [#10109](https://github.com/Kilo-Org/kilocode/pull/10109) [`df30123`](https://github.com/Kilo-Org/kilocode/commit/df30123e5474cdbd2ad3b56d59c6eb5d06b89189) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Prevent memory leak in KiloSessionPromptQueue.cancel for sessions without active tails
+
+- [#11010](https://github.com/Kilo-Org/kilocode/pull/11010) [`a130641`](https://github.com/Kilo-Org/kilocode/commit/a13064167df50862e9a4a8622e092ac518110281) - Compact sessions at the configured context percentage before sending an oversized provider request.
+
+- Updated dependencies [[`b0a4f03`](https://github.com/Kilo-Org/kilocode/commit/b0a4f0391106a837b78200e6de52621a6872b890)]:
+  - @kilocode/kilo-gateway@7.4.0
+  - @kilocode/kilo-indexing@7.3.41
+  - @kilocode/kilo-telemetry@7.3.41
+
+## 7.3.40
+
+### Patch Changes
+
+- [#10925](https://github.com/Kilo-Org/kilocode/pull/10925) [`881a451`](https://github.com/Kilo-Org/kilocode/commit/881a451f8ac198c9d199616c1eef20e94ff25b57) Thanks [@evanjacobson](https://github.com/evanjacobson)! - Display skills in CLI slash command autocomplete options
+
+- [#10952](https://github.com/Kilo-Org/kilocode/pull/10952) [`be5f42f`](https://github.com/Kilo-Org/kilocode/commit/be5f42f158ee88777cc37160cb94dd58b74c6247) Thanks [@johnnyeric](https://github.com/johnnyeric)! - Support custom plan file paths when exiting planning.
+
+## 7.3.39
+
+### Patch Changes
+
+- [#10901](https://github.com/Kilo-Org/kilocode/pull/10901) [`a8a8dd8`](https://github.com/Kilo-Org/kilocode/commit/a8a8dd87247a700e83d8b9cbedc7a4a26cdea602) - Prevent icon images fetched from the web from causing provider request errors.
+
+- [#10933](https://github.com/Kilo-Org/kilocode/pull/10933) [`a0eb3b7`](https://github.com/Kilo-Org/kilocode/commit/a0eb3b7cb6e06a6d9d625169eaefaffb4b4f7095) - Write strict JSON when adding MCP servers to `kilo.json` configuration files.
+
+- [#10924](https://github.com/Kilo-Org/kilocode/pull/10924) [`189f251`](https://github.com/Kilo-Org/kilocode/commit/189f251866fb9e2971384377d1494b03e6d8889d) - Temporarily disable free-model session and Git workspace data export.
+
+- [#10949](https://github.com/Kilo-Org/kilocode/pull/10949) [`78117d1`](https://github.com/Kilo-Org/kilocode/commit/78117d1a25cc7fe408a5933c117bf76062a7aaf2) - Fail publication builds when the bundled models snapshot cannot be downloaded or validated, and load the snapshot as JSON data in compiled binaries.
+
+## 7.3.33
+
+### Patch Changes
+
+- [#10935](https://github.com/Kilo-Org/kilocode/pull/10935) [`6cab5f1`](https://github.com/Kilo-Org/kilocode/commit/6cab5f18e76b5ab0f738c2e20e93f12f3679b5dc) - Prevent the macOS Apple Silicon CLI from failing to start because of malformed bundled exports.
+
 ## 7.3.30
 
 ### Patch Changes

@@ -23,6 +23,7 @@ import { isKiloError, showKiloErrorToast } from "@/kilocode/kilo-errors"
 import { registerKiloCommands } from "@/kilocode/kilo-commands"
 import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui"
 import { DialogProcessList } from "@/kilocode/cli/cmd/tui/component/dialog-process-list"
+import { useIndexingWarnings } from "@/kilocode/cli/cmd/tui/indexing-warning"
 
 // Re-export so upstream can render the route without importing directly
 export { KiloClawView } from "@/kilocode/claw/view"
@@ -154,6 +155,8 @@ export function init() {
   const sdk = useSDK()
   const toast = useToast()
   const dialog = useDialog()
+
+  useIndexingWarnings()
 
   // Inject TUI dependencies for kilo-gateway
   initializeTUIDependencies({

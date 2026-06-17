@@ -46,16 +46,19 @@ export const dict = {
   "agentManager.session.readonly": "Skrivebeskyttet session",
   "agentManager.session.noSessions": "Ingen åbne sessioner",
   "agentManager.tab.close": "Luk",
+  "agentManager.tab.closeOthers": "Luk andre",
   "agentManager.tab.closeTab": "Luk fane",
   "agentManager.tab.forkSession": "Forgren session",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Åbn Terminal",
   "agentManager.tab.newOptions": "Flere nye faneindstillinger",
-  "agentManager.tabsMenu.label": "Søg i åbne faner",
-  "agentManager.tabsMenu.search": "Søg faner...",
-  "agentManager.tabsMenu.empty": "Ingen matchende faner",
+
   "agentManager.tabsMenu.status.waiting": "Venter",
   "agentManager.tabsMenu.status.retry": "Igen",
+  "agentManager.sidebarSearch.label": "Søg i Worktrees og sessioner",
+  "agentManager.sidebarSearch.scope":
+    "Søger i det lokale arbejdsområde, lokale sessioner, Worktrees og deres sessioner",
+  "agentManager.sidebarSearch.contexts": "LOKAL & WORKTREES",
 
   "agentManager.terminal.new": "Ny terminalfane",
   "agentManager.terminal.ended": "terminal afsluttet — luk fanen for at fjerne",
@@ -182,6 +185,13 @@ export const dict = {
   "agentManager.review.collapsedOnly": "{{count}} foldet sammen",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} foldet sammen, {{large}} store",
   "agentManager.review.largeFileCollapsed": "Stor fil (sammenklappet)",
+  "agentManager.review.image": "Billede",
+  "agentManager.review.imageBefore": "Før",
+  "agentManager.review.imageAfter": "Efter",
+  "agentManager.review.imageTooLarge": "Billedet er for stort til at kunne forhåndsvises ({{size}}).",
+  "agentManager.review.imageUnreadable": "Dette billede kunne ikke gengives.",
+  "agentManager.review.imageUnavailable":
+    "Forhåndsvisning af billedet er ikke tilgængelig for dette snapshot af sessionen.",
   "agentManager.review.endOfLongDiff": "Du nåede slutningen!",
 
   "agentManager.import.pullRequest": "Pull Request",

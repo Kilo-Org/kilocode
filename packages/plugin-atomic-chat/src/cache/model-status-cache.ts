@@ -1,5 +1,5 @@
-import type { CacheStats } from '../types'
-import { LOG_PREFIX } from '../constants'
+import type { CacheStats } from "../types"
+import { LOG_PREFIX } from "../constants"
 
 export class ModelStatusCache {
   private cache = new Map<
@@ -91,9 +91,7 @@ export class ModelStatusCache {
       return
     }
 
-    const sorted = Array.from(this.cache.entries()).sort(
-      (a, b) => a[1].timestamp - b[1].timestamp
-    )
+    const sorted = Array.from(this.cache.entries()).sort((a, b) => a[1].timestamp - b[1].timestamp)
     const excess = this.cache.size - this.MAX_CACHE_SIZE
     for (let i = 0; i < excess; i++) {
       this.cache.delete(sorted[i]![0])

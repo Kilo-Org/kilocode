@@ -2,11 +2,13 @@ package ai.kilocode.client.session.views.base
 
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.SessionViewIcons
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.awt.Color
 import java.awt.Component
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
+import javax.swing.Icon
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.border.Border
@@ -43,6 +45,22 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         assertSame(view, content.parent)
     }
 
+    fun `test toggle uses right and down chevron icons`() {
+        val view = TestView(content = JLabel("body"))
+
+        assertSame(SessionViewIcons.chevronCollapsed, view.arrowIcon())
+        assertSame(SessionViewIcons.chevronRight, view.arrowIcon())
+        val closed = view.arrowIcon()
+
+        view.toggle()
+
+        assertSame(SessionViewIcons.chevronExpanded, view.arrowIcon())
+        assertSame(SessionViewIcons.chevronDown, view.arrowIcon())
+        assertNotSame(closed, view.arrowIcon())
+        assertEquals(closed.iconWidth, view.arrowIcon().iconWidth)
+        assertEquals(closed.iconHeight, view.arrowIcon().iconHeight)
+    }
+
     fun `test non expandable hides content`() {
         val content = JLabel("body")
         val view = TestView(content = content, expanded = true)
@@ -69,21 +87,25 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         assertNull(content.parent)
     }
 
-    fun `test header hover is subtler than hover outline`() {
-        assertNotSameColor(SessionUiStyle.View.headerHover(), SessionUiStyle.View.hoverLine())
-        assertNotSameColor(SessionUiStyle.View.headerHover(), SessionUiStyle.View.line())
+    fun `test header hover fill differs from outline colors`() {
+        assertNotSameColor(SessionUiStyle.View.Surface.headerHoverBgColor(), SessionUiStyle.View.Outline.hoverColor())
+        assertNotSameColor(SessionUiStyle.View.Surface.headerHoverBgColor(), SessionUiStyle.View.Outline.brightColor())
     }
 
-    fun `test primary card border follows hover color`() {
+    fun `test primary card hover only changes header background`() {
         val view = TestView(content = JLabel("body"))
-        val row = view.component(0)
+        val row = view.component(0) as JPanel
 
-        enter(row)
+        assertEquals(0, paint(view.border).alpha)
+        view.expand()
 
-        assertEquals(SessionUiStyle.View.hoverLine().rgb, paint(view.border).rgb)
-        assertNotSameColor(SessionUiStyle.View.headerHover(), paint(view.border))
-        exit(row)
-        assertEquals(SessionUiStyle.View.line().rgb, paint(view.border).rgb)
+        view.setHovered(true)
+
+        assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, row.background.rgb)
+        assertLine(view.border)
+        view.setHovered(false)
+        assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, row.background.rgb)
+        assertLine(view.border)
     }
 
     private class TestView(content: JLabel, expanded: Boolean = false, expandable: Boolean = true) :
@@ -92,6 +114,7 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         override val contentId = "test"
         override fun update(content: Content) {}
         fun arrowVisible() = arrow.isVisible
+        fun arrowIcon(): Icon = arrow.icon
     }
 
     private fun TestView.component(index: Int): Component = components[index]
@@ -120,6 +143,19 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         border.paintBorder(panel, graphics, 0, 0, image.width, image.height)
         graphics.dispose()
         return Color(image.getRGB(0, 0), true)
+    }
+
+    private fun assertLine(border: Border) {
+        val image = BufferedImage(5, 5, BufferedImage.TYPE_INT_ARGB)
+        val panel = JPanel()
+        val graphics = image.createGraphics()
+        border.paintBorder(panel, graphics, 0, 0, image.width, image.height)
+        graphics.dispose()
+        val rgb = SessionUiStyle.View.Outline.color().rgb
+        assertEquals(rgb, Color(image.getRGB(2, 0), true).rgb)
+        assertEquals(rgb, Color(image.getRGB(0, 2), true).rgb)
+        assertEquals(rgb, Color(image.getRGB(4, 2), true).rgb)
+        assertEquals(rgb, Color(image.getRGB(2, 4), true).rgb)
     }
 
     private fun assertNotSameColor(left: Color, right: Color) {

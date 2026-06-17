@@ -39,7 +39,7 @@ This enables natural language queries like "user authentication logic" or "datab
 1. Open Kilo Code **Settings** → **Indexing**, or click the indexing indicator at the bottom of the prompt input panel.
 2. Turn on **Global Enable** to index every workspace, or turn on **Enable for This Project** to index only the current workspace. Both toggles are off until explicitly enabled.
 3. Pick an **Embedding Provider** and fill in its required fields.
-4. Pick a **Vector Store** (`Qdrant` or `LanceDB`) and configure it.
+4. Pick a **Vector Store** (`LanceDB` or `Qdrant`) and configure it.
 5. Optionally adjust **Tuning Parameters** (search score, batch size, retries, max results).
 6. Save to start the initial scan.
 
@@ -64,7 +64,7 @@ You can also edit the `indexing` section in `kilo.jsonc` directly:
 |---|---|---|
 | **OpenAI** | API key | Default model: `text-embedding-3-small`. `text-embedding-3-large` for higher accuracy. |
 | **Ollama** | Local base URL | No API costs. Runs fully offline. |
-| **OpenAI-Compatible** | Base URL + API key | For self-hosted or third-party OpenAI-compatible endpoints. |
+| **OpenAI-Compatible** | Base URL + optional API key | For self-hosted or third-party OpenAI-compatible endpoints, including unauthenticated local servers. |
 | **Gemini** | Google AI API key | Supports `gemini-embedding-001` and other Gemini embedding models. |
 | **Mistral** | API key from [La Plateforme](https://console.mistral.ai/api-keys/) | Use a standard Mistral API key. The Codestral-specific keys from the [Mistral autocomplete setup guide](/docs/code-with-ai/features/autocomplete/mistral-setup) are **not** interchangeable — those only work for completion. |
 | **Vercel AI Gateway** | API key | Routes requests through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). |
@@ -74,8 +74,12 @@ You can also edit the `indexing` section in `kilo.jsonc` directly:
 
 ### Vector stores
 
-- **Qdrant** (default) — external server. Recommended for team deployments and larger codebases. See [Setting Up Qdrant](#setting-up-qdrant).
-- **LanceDB** — embedded, file-based. No server to run. Stores data under your Kilo data directory by default.
+- **LanceDB** (default). Embedded and file-based, with no server to run. Stores data under your Kilo data directory by default.
+- **Qdrant**. External server recommended for team deployments and larger codebases. See [Setting Up Qdrant](#setting-up-qdrant).
+
+{% callout type="warning" title="Intel Macs" %}
+LanceDB does not support Intel Macs. Select **Qdrant** and configure a Qdrant server instead.
+{% /callout %}
 
 {% callout type="tip" %}
 For a fully local, zero-cost setup, combine **Ollama** (embeddings) with **LanceDB** (vector store — no separate server needed).
@@ -106,7 +110,7 @@ This opens an interactive configuration dialog where you can:
 - Choose an **Embedding Provider** and fill in provider settings (API key, base URL, AWS region, etc.)
 - Set the **Embedding Model** (blank = provider default)
 - Set the **Vector Dimension** (blank = auto-detect from the model)
-- Choose a **Vector Store** (`Qdrant` or `LanceDB`) and configure its connection
+- Choose a **Vector Store** (`LanceDB` or `Qdrant`) and configure its connection
 - Adjust **Tuning Parameters** (search threshold, batch size, retries, max results)
 
 All changes are written to your `kilo.jsonc` config and take effect immediately.
@@ -120,14 +124,11 @@ You can also edit the `indexing` section directly. This is the full shape of the
     "provider": "voyage",
     "model": "voyage-code-3",
     "dimension": 1024,
-    "vectorStore": "qdrant",
+    "vectorStore": "lancedb",
     "voyage": {
       "apiKey": "pa-..."
     },
-    "qdrant": {
-      "url": "http://localhost:6333",
-      "apiKey": ""
-    },
+    "lancedb": {},
     "searchMinScore": 0.4,
     "searchMaxResults": 50,
     "embeddingBatchSize": 60,
@@ -142,7 +143,7 @@ You can also edit the `indexing` section directly. This is the full shape of the
 |---|---|---|---|
 | **OpenAI** | `openai` | `{ apiKey }` | Default: `text-embedding-3-small`. |
 | **Ollama** | `ollama` | `{ baseUrl }` | No API costs. Runs fully offline. |
-| **OpenAI-Compatible** | `openai-compatible` | `{ baseUrl, apiKey }` | For self-hosted or third-party endpoints. |
+| **OpenAI-Compatible** | `openai-compatible` | `{ baseUrl, apiKey? }` | For self-hosted or third-party endpoints, including unauthenticated local servers. |
 | **Gemini** | `gemini` | `{ apiKey }` | Supports `gemini-embedding-001`. |
 | **Mistral** | `mistral` | `{ apiKey }` | Use a [La Plateforme](https://console.mistral.ai/api-keys/) key — the Codestral-specific keys from the [autocomplete setup guide](/docs/code-with-ai/features/autocomplete/mistral-setup) don't work for embeddings. |
 | **Vercel AI Gateway** | `vercel-ai-gateway` | `{ apiKey }` | Routes through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). |
@@ -152,8 +153,8 @@ You can also edit the `indexing` section directly. This is the full shape of the
 
 ### Vector stores
 
-- `qdrant` — `{ url?, apiKey? }` (default). See [Setting Up Qdrant](#setting-up-qdrant).
-- `lancedb` — `{ directory? }` — embedded, file-based. No server to run. Uses a default Kilo data directory when omitted.
+- `lancedb` uses `{ directory? }` and is the default. It is embedded and file-based, with no server to run. Kilo uses its data directory when `directory` is omitted.
+- `qdrant` uses `{ url?, apiKey? }`. See [Setting Up Qdrant](#setting-up-qdrant).
 
 {% callout type="tip" %}
 For a fully local, zero-cost setup, combine **Ollama** (embeddings) with **LanceDB** (vector store — no separate server needed).

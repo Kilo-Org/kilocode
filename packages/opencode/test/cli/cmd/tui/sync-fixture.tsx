@@ -4,10 +4,11 @@ import { onMount } from "solid-js"
 import { ArgsProvider } from "../../../../src/cli/cmd/tui/context/args"
 import { ExitProvider } from "../../../../src/cli/cmd/tui/context/exit"
 import { KVProvider, useKV } from "../../../../src/cli/cmd/tui/context/kv"
-import { ProjectProvider } from "../../../../src/cli/cmd/tui/context/project"
+import { ProjectProvider, useProject } from "../../../../src/cli/cmd/tui/context/project"
 import { SDKProvider, type EventSource } from "../../../../src/cli/cmd/tui/context/sdk"
 import { SyncProvider, useSync } from "../../../../src/cli/cmd/tui/context/sync"
 import { ToastProvider } from "../../../../src/cli/cmd/tui/ui/toast" // kilocode_change
+import type { GlobalEvent } from "@kilocode/sdk/v2"
 
 export const worktree = "/tmp/opencode"
 export const directory = `${worktree}/packages/opencode`
@@ -31,6 +32,25 @@ export function eventSource(): EventSource {
   return { subscribe: async () => () => {} }
 }
 
+export function createEventSource() {
+  let fn: ((event: GlobalEvent) => void) | undefined
+
+  return {
+    source: {
+      subscribe: async (handler: (event: GlobalEvent) => void) => {
+        fn = handler
+        return () => {
+          if (fn === handler) fn = undefined
+        }
+      },
+    } satisfies EventSource,
+    emit(event: GlobalEvent) {
+      if (!fn) throw new Error("event source not ready")
+      fn(event)
+    },
+  }
+}
+
 type FetchHandler = (url: URL) => Response | Promise<Response> | undefined
 
 export function createFetch(override?: FetchHandler) {
@@ -45,8 +65,6 @@ export function createFetch(override?: FetchHandler) {
     switch (url.pathname) {
       case "/agent":
       case "/command":
-      case "/experimental/workspace":
-      case "/experimental/workspace/status":
       case "/formatter":
       case "/lsp":
       case "/network": // kilocode_change
@@ -69,6 +87,15 @@ export function createFetch(override?: FetchHandler) {
         return json({ id: "proj_test" })
       case "/provider":
         return json({ all: [], default: {}, connected: [] })
+      case "/experimental/workspace":
+        return json([
+          { id: "ws_a", type: "local", branch: "a", name: "a", directory: "/tmp/a", projectID: "proj_test" },
+          { id: "ws_b", type: "local", branch: "b", name: "b", directory: "/tmp/b", projectID: "proj_test" },
+        ])
+      case "/experimental/workspace/status":
+        return json([])
+      case "/indexing/status": // kilocode_change
+        return json({ state: "Disabled", message: "Indexing disabled.", processedFiles: 0, totalFiles: 0, percent: 0 })
       case "/session":
         return json([])
       case "/vcs":
@@ -81,11 +108,13 @@ export function createFetch(override?: FetchHandler) {
   return { fetch, session }
 }
 
-type Ctx = { kv: ReturnType<typeof useKV>; sync: ReturnType<typeof useSync> }
+type Ctx = { kv: ReturnType<typeof useKV>; project: ReturnType<typeof useProject>; sync: ReturnType<typeof useSync> }
 
 export async function mount(override?: FetchHandler) {
   const calls = createFetch(override)
+  const events = createEventSource()
   let sync!: ReturnType<typeof useSync>
+  let project!: ReturnType<typeof useProject>
   let kv!: ReturnType<typeof useKV>
   let done!: () => void
   const ready = new Promise<void>((resolve) => {
@@ -93,9 +122,10 @@ export async function mount(override?: FetchHandler) {
   })
 
   function Probe() {
-    const ctx: Ctx = { kv: useKV(), sync: useSync() }
+    const ctx: Ctx = { kv: useKV(), project: useProject(), sync: useSync() }
     onMount(() => {
       sync = ctx.sync
+      project = ctx.project
       kv = ctx.kv
       done()
     })
@@ -109,7 +139,7 @@ export async function mount(override?: FetchHandler) {
           {/* kilocode_change start */}
           <ToastProvider>
             {/* kilocode_change end */}
-            <SDKProvider url="http://test" directory={directory} fetch={calls.fetch} events={eventSource()}>
+            <SDKProvider url="http://test" directory={directory} fetch={calls.fetch} events={events.source}>
               <ProjectProvider>
                 <SyncProvider>
                   <Probe />
@@ -126,5 +156,5 @@ export async function mount(override?: FetchHandler) {
 
   await ready
   await wait(() => sync.status === "complete")
-  return { app, kv, sync, session: calls.session }
+  return { app, emit: events.emit, kv, project, sync, session: calls.session }
 }

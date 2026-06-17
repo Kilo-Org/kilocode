@@ -3,9 +3,10 @@ import { Effect } from "effect"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Command } from "../../../src/command"
 import { localReviewUncommittedCommand } from "../../../src/kilocode/review/command"
-import { WithInstance } from "../../../src/project/with-instance"
+import { provideTestInstance } from "../../fixture/fixture"
 import { Suggestion } from "../../../src/kilocode/suggestion"
 import { resolvePrompt } from "../../../src/kilocode/suggestion/tool"
+import { SessionID } from "../../../src/session/schema"
 import { tmpdir } from "../../fixture/fixture"
 
 afterEach(() => {
@@ -26,7 +27,7 @@ describe("suggestion", () => {
 
   test("show adds pending request with blocking flag", async () => {
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const pending = Suggestion.show({
@@ -49,7 +50,7 @@ describe("suggestion", () => {
 
   test("accept resolves selected action and removes pending request", async () => {
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const ask = Suggestion.show({
@@ -76,7 +77,7 @@ describe("suggestion", () => {
 
   test("accept tracks suggestion telemetry with parsed slash command", async () => {
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const track = spyOn(Telemetry, "trackSuggestionAccepted")
@@ -105,7 +106,7 @@ describe("suggestion", () => {
 
   test("show tracks review suggestion telemetry with parsed slash command", async () => {
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const track = spyOn(Telemetry, "trackSuggestionShown")
@@ -135,7 +136,7 @@ describe("suggestion", () => {
 
   test("show and accept parse local review arguments as local-review", async () => {
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const shown = spyOn(Telemetry, "trackSuggestionShown")
@@ -179,7 +180,7 @@ describe("suggestion", () => {
 
   test("non-review commands do not track suggestion telemetry", async () => {
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const shown = spyOn(Telemetry, "trackSuggestionShown")
@@ -202,7 +203,7 @@ describe("suggestion", () => {
 
   test("dismiss does not track accepted suggestion telemetry", async () => {
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const shown = spyOn(Telemetry, "trackSuggestionShown")
@@ -225,7 +226,7 @@ describe("suggestion", () => {
 
   test("invalid action index does not track accepted suggestion telemetry", async () => {
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const shown = spyOn(Telemetry, "trackSuggestionShown")
@@ -248,7 +249,7 @@ describe("suggestion", () => {
 
   test("dismiss rejects pending request and removes it", async () => {
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const ask = Suggestion.show({
@@ -268,7 +269,7 @@ describe("suggestion", () => {
 
   test("dismissAll clears all pending suggestions for the target session", async () => {
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         // Two suggestions for session A
@@ -314,7 +315,7 @@ describe("suggestion", () => {
         // Only B's suggestion remains
         const remaining = await Suggestion.list()
         expect(remaining).toHaveLength(1)
-        expect(remaining[0]?.sessionID).toBe("ses_b")
+        expect(remaining[0]?.sessionID).toBe(SessionID.make("ses_b"))
 
         // Clean up B
         await Suggestion.dismiss(remaining[0]!.id)
@@ -325,11 +326,11 @@ describe("suggestion", () => {
 
   test("dismissAll is a no-op when no suggestions exist", async () => {
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         // Should not throw
-        await Suggestion.dismissAll("ses_nonexistent")
+        await Suggestion.dismissAll(SessionID.make("ses_nonexistent"))
         expect(await Suggestion.list()).toEqual([])
       },
     })

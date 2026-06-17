@@ -129,7 +129,14 @@ export const kiloScenarios: Scenario[] = [
     }))
     .json(200, (body) => check(body === null, "missing worktree diff detail should return null")),
   http.protected.get("/indexing/status", "indexing.status").json(200, object),
+  http.protected.get("/indexing/models", "indexing.models").json(200, object),
+  http.protected.get("/indexing/warnings", "indexing.warnings").json(200, array),
   http.protected.get("/kilo/profile", "kilo.profile").probe({ path: "/path" }).status(401),
+  http.protected.get("/kilo/auth-status", "kilo.authStatus").json(200, (body) => {
+    object(body)
+    check(body.authenticated === false, "Kilo auth status should report signed out")
+    check(body.type === undefined, "Kilo auth status should not expose a credential type while signed out")
+  }),
   http.protected.get("/kilo/modes", "kilo.modes").json(200, (body) => {
     object(body)
     array(body.modes)
@@ -234,12 +241,33 @@ export const kiloScenarios: Scenario[] = [
     .post("/kilocode/skill/remove", "kilocode.removeSkill")
     .mutating()
     .preserveDatabase()
-    .seeded((ctx) => file(ctx, ".opencode/skill/httpapi-remove/SKILL.md", "# HTTP API remove\n"))
-    .at((ctx) => ({ path: "/kilocode/skill/remove", headers: ctx.headers(), body: { location: ctx.state } }))
+    .seeded((ctx) =>
+      Effect.gen(function* () {
+        const location = yield* file(
+          ctx,
+          ".opencode/skill/httpapi-remove/SKILL.md",
+          "---\nname: httpapi-remove\ndescription: HTTP API removal fixture.\n---\n# HTTP API remove\n",
+        )
+        const sentinel = yield* file(ctx, ".opencode/skill/httpapi-remove/KEEP.txt", "synthetic sentinel\n")
+        return { location, sentinel }
+      }),
+    )
+    .at((ctx) => ({
+      path: "/kilocode/skill/remove",
+      headers: ctx.headers(),
+      body: { location: ctx.state.location },
+    }))
     .jsonEffect(200, (body, ctx) =>
       Effect.gen(function* () {
         check(body === true, "skill removal should return true")
-        check(!(yield* Effect.promise(() => Bun.file(ctx.state).exists())), "removed skill should not remain on disk")
+        check(
+          !(yield* Effect.promise(() => Bun.file(ctx.state.location).exists())),
+          "removed skill should not remain on disk",
+        )
+        check(
+          yield* Effect.promise(() => Bun.file(ctx.state.sentinel).exists()),
+          "skill removal should preserve sibling files",
+        )
       }),
     ),
   http.protected

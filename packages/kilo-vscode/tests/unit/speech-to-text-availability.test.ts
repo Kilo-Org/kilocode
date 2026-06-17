@@ -6,17 +6,20 @@ import {
 import { DEFAULT_SPEECH_TO_TEXT_MODEL } from "../../src/speech-to-text/models"
 
 describe("speech-to-text availability", () => {
-  const providers = ["kilo"]
-  const profile = {}
-
-  it("shows speech input by default when Kilo access exists", () => {
-    expect(canUseSpeechToText({}, providers, profile)).toBe(true)
+  it("shows speech input for stored Kilo credentials", () => {
+    expect(canUseSpeechToText({}, { kilo: "oauth" })).toBe(true)
+    expect(canUseSpeechToText({}, { kilo: "api" })).toBe(true)
   })
 
-  it("hides speech input without a signed-in, enabled Kilo provider", () => {
-    expect(canUseSpeechToText({}, [], profile)).toBe(false)
-    expect(canUseSpeechToText({}, providers, null)).toBe(false)
-    expect(canUseSpeechToText({ disabled_providers: ["kilo"] }, providers, profile)).toBe(false)
+  it("hides speech input without usable Kilo credentials", () => {
+    expect(canUseSpeechToText({}, {})).toBe(false)
+    expect(canUseSpeechToText({}, { kilo: "wellknown" })).toBe(false)
+  })
+
+  it("honors enabled and disabled provider configuration", () => {
+    expect(canUseSpeechToText({ disabled_providers: ["kilo"] }, { kilo: "oauth" })).toBe(false)
+    expect(canUseSpeechToText({ enabled_providers: ["openai"] }, { kilo: "oauth" })).toBe(false)
+    expect(canUseSpeechToText({ enabled_providers: ["kilo"] }, { kilo: "oauth" })).toBe(true)
   })
 
   it("normalizes configured and unknown transcription models", () => {

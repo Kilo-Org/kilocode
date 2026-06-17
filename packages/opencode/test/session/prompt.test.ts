@@ -1,10 +1,12 @@
 import { NodeFileSystem } from "@effect/platform-node"
 import { FetchHttpClient } from "effect/unstable/http"
-import { afterEach, expect, mock, spyOn } from "bun:test" // kilocode_change - spy on review telemetry
-import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change - assert review command telemetry
+// kilocode_change start
+import { afterEach, expect, mock, spyOn } from "bun:test"
+import { Telemetry } from "@kilocode/kilo-telemetry"
+// kilocode_change end
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
 import path from "path"
-import { fileURLToPath } from "url"
+import { fileURLToPath, pathToFileURL } from "url"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
@@ -17,6 +19,7 @@ import { Plugin } from "../../src/plugin"
 import { Provider as ProviderSvc } from "@/provider/provider"
 import { Env } from "../../src/env"
 import { Git } from "../../src/git"
+import { Image } from "../../src/image/image"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Question } from "../../src/question"
 import { Todo } from "../../src/session/todo"
@@ -45,11 +48,17 @@ import { Truncate } from "@/tool/truncate"
 import * as Log from "@opencode-ai/core/util/log"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import * as Database from "../../src/storage/db"
+import { Storage } from "../../src/storage/storage"
 import { Ripgrep } from "../../src/file/ripgrep"
 import { Format } from "../../src/format"
+import { Reference } from "../../src/reference/reference"
 import { provideTmpdirInstance, provideTmpdirServer } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
+import { SyncEvent } from "@/sync"
+import { RuntimeFlags } from "@/effect/runtime-flags"
+import { BackgroundJob } from "@/background/job"
+import { EventV2Bridge } from "@/event-v2-bridge"
 
 void Log.init({ print: false })
 const summary = Layer.succeed(
@@ -173,6 +182,7 @@ const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLaye
 function makeHttp() {
   const deps = Layer.mergeAll(
     Session.defaultLayer,
+    BackgroundJob.defaultLayer,
     Snapshot.defaultLayer,
     LLM.defaultLayer,
     Env.defaultLayer,
@@ -186,7 +196,9 @@ function makeHttp() {
     mcp,
     AppFileSystem.defaultLayer,
     status,
-  ).pipe(Layer.provideMerge(infra))
+    SyncEvent.defaultLayer,
+    EventV2Bridge.defaultLayer,
+  ).pipe(Layer.provideMerge(infra), Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })))
   const question = Question.layer.pipe(Layer.provideMerge(deps))
   const todo = Todo.layer.pipe(Layer.provideMerge(deps))
   const registry = ToolRegistry.layer.pipe(
@@ -194,6 +206,7 @@ function makeHttp() {
     Layer.provide(FetchHttpClient.layer),
     Layer.provide(CrossSpawnSpawner.defaultLayer),
     Layer.provide(Git.defaultLayer),
+    Layer.provide(Reference.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Format.defaultLayer),
     Layer.provideMerge(todo),
@@ -201,12 +214,18 @@ function makeHttp() {
     Layer.provideMerge(deps),
   )
   const trunc = Truncate.layer.pipe(Layer.provideMerge(deps))
-  const proc = SessionProcessor.layer.pipe(Layer.provide(summary), Layer.provideMerge(deps))
+  const proc = SessionProcessor.layer.pipe(
+    Layer.provide(summary),
+    Layer.provide(Image.defaultLayer),
+    Layer.provideMerge(deps),
+  )
   const compact = SessionCompaction.layer.pipe(Layer.provideMerge(proc), Layer.provideMerge(deps))
   return Layer.mergeAll(
     TestLLMServer.layer,
+    BackgroundJob.defaultLayer,
     SessionPrompt.layer.pipe(
       Layer.provide(SessionRevert.defaultLayer),
+      Layer.provide(Image.defaultLayer),
       Layer.provide(summary),
       Layer.provideMerge(run),
       Layer.provideMerge(compact),
@@ -218,7 +237,21 @@ function makeHttp() {
       Layer.provide(SystemPrompt.defaultLayer),
       Layer.provideMerge(deps),
     ),
-  ).pipe(Layer.provide(summary))
+  ).pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        summary,
+        deps,
+        Config.defaultLayer,
+        RuntimeFlags.layer({ experimentalEventSystem: true }),
+        BackgroundJob.defaultLayer,
+        Bus.layer,
+        infra,
+        Storage.defaultLayer,
+        Reference.defaultLayer,
+      ),
+    ),
+  )
 }
 
 const it = testEffect(makeHttp())
@@ -442,6 +475,113 @@ it.live("new prompt dismisses a pending question", () =>
 )
 // kilocode_change end
 
+// kilocode_change start - cover user image normalization before persistence
+it.live("normalizes user data images before persistence", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* () {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "User image" })
+      const url = "data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA"
+
+      const result = yield* prompt.prompt({
+        sessionID: chat.id,
+        agent: "build",
+        noReply: true,
+        parts: [{ type: "file", mime: "image/webp", filename: "pixel.webp", url }],
+      })
+
+      expect(result.parts).toEqual(
+        expect.arrayContaining([expect.objectContaining({ type: "file", mime: "image/webp", url })]),
+      )
+      const saved = yield* sessions.messages({ sessionID: chat.id })
+      expect(saved.flatMap((message) => message.parts)).toEqual(
+        expect.arrayContaining([expect.objectContaining({ type: "file", mime: "image/webp", url })]),
+      )
+    }),
+    { git: true, config: providerCfg },
+  ),
+)
+
+it.live("rejects malformed user data images before persistence", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* () {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "Invalid user image" })
+      const exit = yield* prompt
+        .prompt({
+          sessionID: chat.id,
+          agent: "build",
+          noReply: true,
+          parts: [
+            {
+              type: "file",
+              mime: "image/png",
+              filename: "invalid.png",
+              url: `data:image/png;base64,${Buffer.from("not an image").toString("base64")}`,
+            },
+          ],
+        })
+        .pipe(Effect.exit)
+
+      expect(Exit.isFailure(exit)).toBe(true)
+      const saved = yield* sessions.messages({ sessionID: chat.id })
+      expect(saved.flatMap((message) => message.parts).some((part) => part.type === "file")).toBe(false)
+    }),
+    { git: true, config: providerCfg },
+  ),
+)
+
+it.live("normalizes user image file URLs after reading them", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* ({ dir }) {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "User image file" })
+      const data = "UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA"
+      const filepath = path.join(dir, "pixel.webp")
+      yield* Effect.promise(() => Bun.write(filepath, Buffer.from(data, "base64")))
+
+      const result = yield* prompt.prompt({
+        sessionID: chat.id,
+        agent: "build",
+        noReply: true,
+        parts: [{ type: "file", mime: "image/webp", filename: "pixel.webp", url: pathToFileURL(filepath).href }],
+      })
+
+      expect(result.parts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: "file", mime: "image/webp", url: `data:image/webp;base64,${data}` }),
+        ]),
+      )
+    }),
+    { git: true, config: providerCfg },
+  ),
+)
+
+it.live("leaves non-image data parts untouched", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* () {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "User data" })
+      const url = "data:application/octet-stream;base64,bm90IGFuIGltYWdl"
+
+      const result = yield* prompt.prompt({
+        sessionID: chat.id,
+        agent: "build",
+        noReply: true,
+        parts: [{ type: "file", mime: "application/octet-stream", filename: "data.bin", url }],
+      })
+
+      expect(result.parts).toEqual(expect.arrayContaining([expect.objectContaining({ type: "file", url })]))
+    }),
+    { git: true, config: providerCfg },
+  ),
+)
+// kilocode_change end
+
 it.live("prompt emits v2 prompted and synthetic events", () =>
   provideTmpdirServer(
     Effect.fnUntraced(function* () {
@@ -585,8 +725,8 @@ it.live("loop continues when finish is tool-calls", () =>
   ),
 )
 
-// kilocode_change - skipped: tracked in #9958
 it.live.skip("glob tool keeps instance context during prompt runs", () =>
+  // kilocode_change
   provideTmpdirServer(
     ({ dir, llm }) =>
       Effect.gen(function* () {
@@ -791,7 +931,7 @@ it.live(
       }),
       { git: true, config: providerCfg },
     ),
-  10_000, // kilocode_change
+  10_000,
 )
 
 // kilocode_change start - child task failures stay tool errors so the parent can recover
@@ -899,11 +1039,11 @@ it.live(
       }),
       { git: true, config: providerCfg },
     ),
-  3_000,
+  10_000, // kilocode_change - Windows CI can take longer to cancel the live loop
 )
 
 unix(
-  // kilocode_change - skip flaky cancel test on Windows CI
+  // kilocode_change
   "cancel records MessageAbortedError on interrupted process",
   () =>
     provideTmpdirServer(
@@ -1013,9 +1153,13 @@ it.live(
             yield* sessions.updateMessage(childAssistant)
             yield* ctx.metadata({
               title: "done",
-              metadata: { sessionId: child.id, model: ref, variant: undefined },
+              metadata: { parentSessionId: ctx.sessionID, sessionId: child.id, model: ref, variant: undefined },
             })
-            return { title: "done", metadata: { sessionId: child.id, model: ref, variant: undefined }, output: "done" }
+            return {
+              title: "done",
+              metadata: { parentSessionId: ctx.sessionID, sessionId: child.id, model: ref, variant: undefined },
+              output: "done",
+            }
           })
         yield* Effect.addFinalizer(() => Effect.sync(() => void (task.execute = original)))
 
@@ -1090,7 +1234,7 @@ it.live(
         const a = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
         yield* llm.wait(1)
         const b = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-        yield* Effect.sleep(50)
+        yield* Effect.yieldNow // kilocode_change - let the queued caller join without a wall-clock race
 
         yield* prompt.cancel(chat.id)
         const [exitA, exitB] = yield* Effect.all([Fiber.await(a), Fiber.await(b)])
@@ -1102,7 +1246,7 @@ it.live(
       }),
       { git: true, config: providerCfg },
     ),
-  3_000,
+  10_000, // kilocode_change - Windows CI can take longer to cancel queued live loops
 )
 
 // Queue semantics
@@ -1143,7 +1287,7 @@ it.live(
         const a = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
         yield* llm.wait(1)
         const b = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-        yield* Effect.sleep(50) // kilocode_change - let b attach to a's done deferred before gate resolves
+        yield* Effect.yieldNow // kilocode_change - let the queued caller join without a wall-clock race
         gate.resolve()
 
         const [ea, eb] = yield* Effect.all([Fiber.await(a), Fiber.await(b)])
@@ -1264,7 +1408,7 @@ it.live(
       }),
       { git: true, config: providerCfg },
     ),
-  3_000,
+  10_000, // kilocode_change - Windows CI can take longer to enter and cancel the live loop
 )
 
 it.live("assertNotBusy succeeds when idle", () =>
@@ -1309,7 +1453,7 @@ it.live(
       }),
       { git: true, config: providerCfg },
     ),
-  3_000,
+  10_000, // kilocode_change - Windows CI can take longer to enter and cancel the live loop
 )
 
 unix("shell captures stdout and stderr in completed tool output", () =>
@@ -1410,6 +1554,38 @@ unix("shell commands can change directory after startup", () =>
     { git: true, config: cfg },
   ),
 )
+
+// kilocode_change start - verify shell v2 events correlate with the persisted tool part
+unix("shell correlates the persisted tool part with its completed v2 record", () =>
+  provideTmpdirInstance(
+    (_dir) =>
+      Effect.gen(function* () {
+        const { prompt, chat } = yield* boot()
+        const result = yield* prompt.shell({
+          sessionID: chat.id,
+          agent: "build",
+          command: "printf correlated",
+        })
+        const tool = completedTool(result.parts)
+        if (!tool) return
+
+        const messages = yield* SessionV2.Service.use((session) => session.messages({ sessionID: chat.id })).pipe(
+          Effect.provide(SessionV2.layer),
+        )
+        const shell = messages.find((message) => message.type === "shell")
+
+        expect(shell).toMatchObject({
+          type: "shell",
+          callID: tool.callID,
+          command: "printf correlated",
+          output: "correlated",
+          time: { completed: expect.anything() },
+        })
+      }),
+    { git: true, config: cfg },
+  ),
+)
+// kilocode_change end
 
 unix("shell lists files from the project directory", () =>
   provideTmpdirInstance(
@@ -1516,7 +1692,7 @@ it.live(
         // kilocode_change end
 
         const loop = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-        yield* Effect.sleep(50)
+        yield* Effect.yieldNow // kilocode_change - give the queued loop a scheduler turn instead of a wall-clock window
 
         expect(yield* llm.calls).toBe(0)
 
@@ -1558,7 +1734,7 @@ it.live(
 
         const a = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
         const b = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-        yield* Effect.sleep(50)
+        yield* Effect.yieldNow // kilocode_change - give the queued loops a scheduler turn instead of a wall-clock window
 
         expect(yield* llm.calls).toBe(0)
 
@@ -1788,14 +1964,17 @@ unix(
       (_dir) =>
         Effect.gen(function* () {
           const { prompt, chat } = yield* boot()
+          const status = yield* SessionStatus.Service // kilocode_change
 
           const sh = yield* prompt
             .shell({ sessionID: chat.id, agent: "build", command: "sleep 30" })
             .pipe(Effect.forkChild)
-          yield* Effect.sleep(50)
+          // kilocode_change start - wait for shell to actually be running before forking the queued loop
+          yield* waitFor("shell busy", status.get(chat.id).pipe(Effect.map((s) => (s.type === "busy" ? s : undefined))))
+          // kilocode_change end
 
           const loop = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-          yield* Effect.sleep(50)
+          yield* Effect.yieldNow // kilocode_change - give the queued loop a scheduler turn before cancelling
 
           yield* prompt.cancel(chat.id)
 
@@ -1821,11 +2000,14 @@ unix(
         (_dir) =>
           Effect.gen(function* () {
             const { prompt, chat } = yield* boot()
+            const status = yield* SessionStatus.Service // kilocode_change
 
             const a = yield* prompt
               .shell({ sessionID: chat.id, agent: "build", command: "sleep 30" })
               .pipe(Effect.forkChild)
-            yield* Effect.sleep(50)
+            // kilocode_change start - wait for shell to actually be running before exercising the busy guard
+            yield* waitFor("shell busy", status.get(chat.id).pipe(Effect.map((s) => (s.type === "busy" ? s : undefined))))
+            // kilocode_change end
 
             const exit = yield* prompt
               .shell({ sessionID: chat.id, agent: "build", command: "echo hi" })
@@ -1900,7 +2082,7 @@ it.live(
               ),
             ]),
           )
-        }),
+        }).pipe(Effect.scoped), // kilocode_change - scope test finalizers explicitly
       { git: true, config: cfg },
     ),
   30_000,
@@ -1943,7 +2125,7 @@ it.live(
               ),
             ]),
           )
-        }),
+        }).pipe(Effect.scoped), // kilocode_change - scope test finalizers explicitly
       { git: true, config: cfg },
     ),
   30_000,
@@ -2013,7 +2195,7 @@ it.live("keeps stored part order stable when file resolution is async", () =>
 
         if (msg.info.role !== "user") throw new Error("expected user message")
 
-        const stored = MessageV2.get({
+        const stored = yield* MessageV2.get({
           sessionID: session.id,
           messageID: msg.info.id,
         })
@@ -2055,7 +2237,7 @@ it.live("handles filenames with # character", () =>
           parts,
           noReply: true,
         })
-        const stored = MessageV2.get({ sessionID: session.id, messageID: message.info.id })
+        const stored = yield* MessageV2.get({ sessionID: session.id, messageID: message.info.id })
         const textParts = stored.parts.filter((part) => part.type === "text")
         const hasContent = textParts.some((part) => part.text.includes("special content"))
         expect(hasContent).toBe(true)

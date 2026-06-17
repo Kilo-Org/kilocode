@@ -1,7 +1,8 @@
-import { render, TimeToFirstDraw, useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/solid"
+import { render, TimeToFirstDraw, useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/solid" // kilocode_change
 import { createDefaultOpenTuiKeymap } from "@opentui/keymap/opentui"
 import * as Clipboard from "@tui/util/clipboard"
 import * as Selection from "@tui/util/selection"
+import * as TuiAudio from "@tui/util/audio"
 import { createCliRenderer, MouseButton, TextAttributes, type CliRendererConfig } from "@opentui/core" // kilocode_change
 import { RouteProvider, useRoute } from "@tui/context/route"
 import {
@@ -52,8 +53,10 @@ import { DialogConfirm } from "./ui/dialog-confirm"
 import { ToastProvider, useToast } from "./ui/toast"
 import { ExitProvider, useExit } from "./context/exit"
 import { Session as SessionApi } from "@/session/session"
+// kilocode_change start
 import { DialogSelect } from "./ui/dialog-select"
 import { Link } from "./ui/link"
+// kilocode_change end
 import { TuiEvent } from "./event"
 import { KVProvider, useKV } from "./context/kv"
 import { Provider } from "@/provider/provider"
@@ -66,8 +69,10 @@ import { TuiConfig } from "@/cli/cmd/tui/config/tui"
 import { TuiPluginRuntime } from "@/cli/cmd/tui/plugin/runtime"
 import { createTuiApi } from "@/cli/cmd/tui/plugin/api"
 import type { RouteMap } from "@/cli/cmd/tui/plugin/api"
+import { createTuiAttention } from "@/cli/cmd/tui/attention"
 import { FormatError, FormatUnknownError } from "@/cli/error"
 import { kitty, resetTerminalState } from "@/kilocode/cli/cmd/tui/util/terminal" // kilocode_change
+import * as AppExit from "@/kilocode/tui/app-exit" // kilocode_change
 import { CommandPaletteProvider, useCommandPalette } from "./context/command-palette"
 import { OpencodeKeymapProvider, registerOpencodeKeymap, useBindings, useOpencodeKeymap } from "./keymap"
 
@@ -78,6 +83,15 @@ const appBindingCommands = [
   "command.palette.show",
   "session.list",
   "session.new",
+  "session.quick_switch.1",
+  "session.quick_switch.2",
+  "session.quick_switch.3",
+  "session.quick_switch.4",
+  "session.quick_switch.5",
+  "session.quick_switch.6",
+  "session.quick_switch.7",
+  "session.quick_switch.8",
+  "session.quick_switch.9",
   "model.list",
   "model.cycle_recent",
   "model.cycle_recent_reverse",
@@ -97,7 +111,6 @@ const appBindingCommands = [
   "theme.mode.lock",
   "help.show",
   "docs.open",
-  "app.exit",
   "app.debug",
   "app.console",
   "app.heap_snapshot",
@@ -171,13 +184,12 @@ export function tui(input: {
       unguard?.()
       resolve()
     }
-
     const onBeforeExit = async () => {
       offKeymap()
       await TuiPluginRuntime.dispose()
+      TuiAudio.dispose()
     }
 
-    // kilocode_change - safety net: ensure mouse tracking is disabled regardless of exit path
     process.on("exit", resetTerminalState) // kilocode_change
 
     const renderer = await createCliRenderer(rendererConfig(input.config))
@@ -191,11 +203,9 @@ export function tui(input: {
     await render(() => {
       return (
         <ErrorBoundary
-          // kilocode_change start
           fallback={(error, reset) => (
             <ErrorComponent error={error} reset={reset} onBeforeExit={onBeforeExit} onExit={onExit} mode={mode} />
           )}
-          // kilocode_change end
         >
           <OpencodeKeymapProvider keymap={keymap}>
             <ArgsProvider {...input.args}>
@@ -283,6 +293,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     routeRev()
     return routes.get(name)?.at(-1)?.render
   }
+  const attention = createTuiAttention({ renderer, config: tuiConfig, kv })
 
   const api = createTuiApi({
     tuiConfig,
@@ -298,11 +309,13 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     theme: themeState,
     toast,
     renderer,
+    attention,
   })
   const [ready, setReady] = createSignal(false)
   TuiPluginRuntime.init({
     api,
     config: tuiConfig,
+    dispose: () => attention.dispose(),
   })
     .catch((error) => {
       console.error("Failed to load TUI plugins", error)
@@ -320,7 +333,10 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     },
     { priority: 1 },
   )
-  onCleanup(offSelectionKeys)
+  onCleanup(() => {
+    offSelectionKeys()
+    attention.dispose()
+  })
 
   // Wire up console copy-to-clipboard via opentui's onCopySelection callback
   renderer.console.onCopySelection = async (text: string) => {
@@ -337,8 +353,10 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     kv.get("paste_summary_enabled", !sync.data.config.experimental?.disable_paste_summary),
   )
 
-  KiloApp.useSessionEffects({ route, sdk, sync }) // kilocode_change
-  KiloApp.useTuiConfigHotReload() // kilocode_change - hot reload TUI keybinds/theme/ui settings
+  // kilocode_change start
+  KiloApp.useSessionEffects({ route, sdk, sync })
+  KiloApp.useTuiConfigHotReload()
+  // kilocode_change end
 
   // Update terminal window title based on current route and session
   createEffect(() => {
@@ -347,24 +365,24 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     const titleDefault = KiloApp.APP_TITLE // kilocode_change
 
     if (route.data.type === "home") {
-      renderer.setTerminalTitle(titleDefault)
+      renderer.setTerminalTitle(titleDefault) // kilocode_change
       return
     }
 
     if (route.data.type === "session") {
       const session = sync.session.get(route.data.sessionID)
       if (!session || SessionApi.isDefaultTitle(session.title)) {
-        renderer.setTerminalTitle(titleDefault)
+        renderer.setTerminalTitle(titleDefault) // kilocode_change
         return
       }
 
       const title = session.title.length > 40 ? session.title.slice(0, 37) + "..." : session.title
-      renderer.setTerminalTitle(`${titleDefault} | ${title}`)
+      renderer.setTerminalTitle(`${titleDefault} | ${title}`) // kilocode_change
       return
     }
 
     if (route.data.type === "plugin") {
-      renderer.setTerminalTitle(`${titleDefault} | ${route.data.id}`)
+      renderer.setTerminalTitle(`${titleDefault} | ${route.data.id}`) // kilocode_change
     }
 
     // kilocode_change start
@@ -483,6 +501,15 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
           dialog.clear()
         },
       },
+      ...Array.from({ length: 9 }, (_, i) => ({
+        name: `session.quick_switch.${i + 1}`,
+        title: `Switch to session in quick slot ${i + 1}`,
+        category: "Session",
+        hidden: true,
+        run: () => {
+          local.session.quickSwitch(i + 1)
+        },
+      })),
       {
         name: "model.list",
         title: "Switch model",
@@ -663,19 +690,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         },
         category: "System",
       },
-      {
-        name: "app.exit",
-        title: "Exit the app",
-        slashName: "exit",
-        slashAliases: ["quit", "q"],
-        enabled: () => {
-          const current = promptRef.current
-          if (!current?.focused) return true
-          return current.current.input === ""
-        },
-        run: () => exit(),
-        category: "System",
-      },
+      AppExit.command(exit), // kilocode_change
       {
         name: "app.debug",
         title: "Toggle debug panel",
@@ -737,17 +752,6 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
           dialog.clear()
         },
       },
-      // kilocode_change start - expose the existing terminal notification preference in the command palette
-      {
-        name: "app.toggle.notifications",
-        title: kv.get("bell_enabled", true) ? "Disable notifications" : "Enable notifications",
-        category: "System",
-        run: () => {
-          kv.set("bell_enabled", !kv.get("bell_enabled", true))
-          dialog.clear()
-        },
-      },
-      // kilocode_change end
       {
         name: "app.toggle.animations",
         title: kv.get("animations_enabled", true) ? "Disable animations" : "Enable animations",
@@ -816,6 +820,11 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     bindings: tuiConfig.keybinds.gather("app", appBindingCommands),
   }))
 
+  useBindings(() => ({
+    enabled: () => AppExit.enabled(command.matcher.get(), promptRef.current), // kilocode_change
+    bindings: tuiConfig.keybinds.gather("app_exit", ["app.exit"]),
+  }))
+
   KiloApp.init() // kilocode_change
 
   event.on(TuiEvent.CommandExecute.type, (evt) => {
@@ -838,8 +847,8 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     })
   })
 
-  event.on("session.deleted", (evt) => {
-    if (route.data.type === "session" && route.data.sessionID === evt.properties.info.id) {
+  event.onSync("session.deleted.1", (evt) => {
+    if (route.data.type === "session" && route.data.sessionID === evt.data.sessionID) {
       route.navigate({ type: "home" })
       toast.show({
         variant: "info",
@@ -979,9 +988,7 @@ function tryUseTerminalDimensions() {
     return undefined
   }
 }
-// kilocode_change end
 
-// kilocode_change start — inlined ErrorComponent with safe renderer/keyboard guards
 function ErrorComponent(props: {
   error: Error
   reset: () => void
@@ -999,7 +1006,6 @@ function ErrorComponent(props: {
     renderer?.setTerminalTitle("")
     renderer?.destroy()
     win32FlushInputBuffer()
-    // kilocode_change - reset terminal state to disable mouse tracking on exit
     resetTerminalState()
     await props.onExit()
   }

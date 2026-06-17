@@ -21,6 +21,180 @@
 }
 
 /* ============================================
+   Work Style Picker
+   ============================================ */
+
+.message-list-empty.work-style-empty {
+  height: auto;
+  min-height: 100%;
+  box-sizing: border-box;
+  gap: 12px;
+  animation: work-style-enter 420ms ease-out 120ms both;
+}
+
+@keyframes work-style-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .message-list-empty.work-style-empty {
+    animation: none;
+  }
+}
+
+.work-style-welcome {
+  margin: 0 0 4px;
+  color: var(--vscode-foreground);
+  font-size: var(--kilo-font-size-20);
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+[data-component="card"].work-style-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 420px;
+  padding: 18px;
+  border: 1px solid var(--border-weak-base, var(--vscode-panel-border));
+  border-radius: 10px;
+  background: var(--vscode-editorWidget-background);
+  color: var(--vscode-foreground);
+  text-align: left;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 22%);
+}
+
+[data-slot="work-style-title"] {
+  margin: 0;
+  font-size: var(--kilo-font-size-14);
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+[data-slot="work-style-options"] {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 20px;
+  min-width: 0;
+}
+
+[data-component="button"].work-style-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 14px;
+  border: 1px solid var(--border-weak-base, var(--vscode-panel-border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--vscode-editor-background) 94%, var(--vscode-button-secondaryBackground));
+  color: var(--vscode-foreground);
+  text-align: left;
+  white-space: normal;
+}
+
+[data-component="button"].work-style-mode:hover {
+  border-color: var(--vscode-focusBorder, var(--vscode-textLink-foreground));
+  background: color-mix(in srgb, var(--vscode-list-hoverBackground) 70%, var(--vscode-editor-background));
+}
+
+[data-slot="work-style-mode-copy"] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+[data-slot="work-style-mode-title"] {
+  margin: 0;
+  color: var(--vscode-textLink-foreground);
+  font-size: var(--kilo-font-size-11);
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+[data-slot="work-style-mode-description"] {
+  margin: 0;
+  color: var(--text-weak-base, var(--vscode-descriptionForeground));
+  font-size: var(--kilo-font-size-12);
+  line-height: 1.45;
+}
+
+[data-slot="work-style-mode-details"] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--vscode-foreground);
+  list-style: disc;
+  font-size: var(--kilo-font-size-11);
+  line-height: 1.4;
+}
+
+[data-slot="work-style-settings-note"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  margin: 0;
+  color: var(--text-weak-base, var(--vscode-descriptionForeground));
+  font-size: var(--kilo-font-size-11);
+  line-height: 1.4;
+  text-align: left;
+}
+
+[data-slot="work-style-settings-note"] a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--vscode-textLink-foreground);
+  text-decoration: none;
+}
+
+[data-slot="work-style-settings-note"] a:hover {
+  color: var(--vscode-textLink-activeForeground);
+  text-decoration: underline;
+}
+
+@media (max-width: 320px) {
+  .message-list-empty.work-style-empty {
+    padding-inline: 8px;
+  }
+
+  .work-style-welcome {
+    font-size: var(--kilo-font-size-16);
+  }
+
+  [data-component="card"].work-style-picker {
+    gap: 16px;
+    padding: 12px;
+  }
+
+  [data-slot="work-style-options"] {
+    gap: 16px;
+  }
+
+  [data-component="button"].work-style-mode {
+    padding: 12px;
+  }
+}
+
+/* ============================================
    Feedback Button (empty state)
    ============================================ */
 

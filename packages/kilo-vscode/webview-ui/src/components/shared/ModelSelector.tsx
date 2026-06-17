@@ -31,6 +31,7 @@ import type { EnrichedModel } from "../../context/provider"
 import { useSession, SessionContext } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { ModelSelection } from "../../types/messages"
+import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import {
   KILO_GATEWAY_ID,
   isSmall,
@@ -549,7 +550,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       return
     }
 
-    if (e.key === "Enter") {
+    if (isEnterKeyCommitNotIme(e)) {
       e.preventDefault()
       const row = rowMap().get(selectedKey())
       if (row) selectRow(row)
@@ -828,11 +829,13 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                                           )
                                         })()}
                                       </span>
-                                      <Show when={isFree(model)}>
+                                      <Show when={isFree(model) || isDataCollectedModel(model)}>
                                         <span class="model-selector-free-data">
-                                          <span class="model-selector-data-badge">
-                                            <Tag data-variant="member">{freeLabel()}</Tag>
-                                          </span>
+                                          <Show when={isFree(model)}>
+                                            <span class="model-selector-data-badge">
+                                              <Tag data-variant="member">{freeLabel()}</Tag>
+                                            </span>
+                                          </Show>
                                           <Show when={isDataCollectedModel(model)}>
                                             <Tooltip value={dataLabel()} placement="top">
                                               <span class="model-selector-free-data-icon" aria-label={dataLabel()}>

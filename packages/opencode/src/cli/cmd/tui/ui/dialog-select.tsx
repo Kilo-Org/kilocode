@@ -31,16 +31,36 @@ export interface DialogSelectProps<T> {
   onSelect?: (option: DialogSelectOption<T>) => void
   skipFilter?: boolean
   renderFilter?: boolean
-  actions?: {
-    command: string
+  actions?: DialogSelectAction<T>[] // kilocode_change - supports actions without a selected option
+  footerHints?: {
     title: string
+    label: string
     side?: "left" | "right"
-    disabled?: boolean
-    onTrigger: (option: DialogSelectOption<T>) => void
   }[]
   bindings?: readonly Binding<Renderable, KeyEvent>[]
   current?: T
 }
+
+// kilocode_change start - support list-level actions when no option is selected
+type DialogSelectActionBase = {
+  command: string
+  title: string
+  side?: "left" | "right"
+  disabled?: boolean
+}
+
+type DialogSelectAction<T> = DialogSelectActionBase &
+  (
+    | {
+        requiresSelection?: true
+        onTrigger: (option: DialogSelectOption<T>) => void
+      }
+    | {
+        requiresSelection: false
+        onTrigger: () => void
+      }
+  )
+// kilocode_change end
 
 export interface DialogSelectOption<T = any> {
   title: string
@@ -298,6 +318,12 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
           category: "Dialog",
           run() {
             setStore("input", "keyboard")
+            // kilocode_change start - allow actions such as scope toggles on empty lists
+            if (item.requiresSelection === false) {
+              item.onTrigger()
+              return
+            }
+            // kilocode_change end
             const option = selected()
             if (!option) return
             item.onTrigger(option)
@@ -334,11 +360,12 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
   }
   props.ref?.(ref)
 
-  const visibleActions = createMemo(() =>
-    actions()
+  const visibleActions = createMemo(() => [
+    ...actions()
       .map((item) => ({ ...item, label: actionLabels().get(item.command) ?? "" }))
       .filter((item) => !item.disabled && item.label),
-  )
+    ...(props.footerHints ?? []),
+  ])
   const left = createMemo(() => visibleActions().filter((item) => item.side !== "right"))
   const right = createMemo(() => visibleActions().filter((item) => item.side === "right"))
 
