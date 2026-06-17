@@ -51,7 +51,7 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
         const aptURL = apt?.baseURL ?? "https://api.apertis.ai/v1"
         const aptOpts = apt?.baseURL ? { baseURL: apt.baseURL } : {}
 
-const addApertis = Effect.fnUntraced(function* () {
+        const addApertis = Effect.fnUntraced(function* () {
           if (providers.apertis) return
           const models = yield* cache.fetch("apertis", aptOpts).pipe(Effect.catch(() => Effect.succeed({})))
           providers.apertis = {
