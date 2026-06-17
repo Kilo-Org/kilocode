@@ -1,8 +1,14 @@
 import type { TuiPlugin, TuiPluginApi } from "@kilocode/plugin/tui"
 import type { InternalTuiPlugin } from "../../plugin/internal"
 import { createMemo, Show } from "solid-js"
-import { Tips } from "./tips-view"
 import { useBindings } from "../../keymap"
+// kilocode_change start - use Kilo-specific tips only, ignore upstream tips-view
+import { Tips as KiloTips } from "@/kilocode/components/tips"
+const NO_MODELS_TIP = "Run {highlight}/connect{/highlight} to add an AI provider and start coding"
+function Tips(props: { api: TuiPluginApi; connected?: boolean }) {
+  return <KiloTips tip={props.connected === false ? NO_MODELS_TIP : undefined} />
+}
+// kilocode_change end
 
 const id = "internal:home-tips"
 
