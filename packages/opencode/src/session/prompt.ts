@@ -5,9 +5,12 @@ import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
+import { KilocodeSystemPrompt } from "@/kilocode/system-prompt" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
+import { MemoryService } from "@/kilocode/memory/service" // kilocode_change
+import { MemoryTurn } from "@/kilocode/memory/turn" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
@@ -225,6 +228,7 @@ export const layer = Layer.effect(
     const references = yield* Reference.Service
     const sync = yield* SyncEvent.Service // kilocode_change - preserve Kilo v2 event dual-write wiring
     const flags = yield* RuntimeFlags.Service
+    const memory = yield* MemoryService.Service // kilocode_change
     const runner = Effect.fn("SessionPrompt.runner")(function* () {
       return yield* EffectBridge.make()
     })
@@ -548,11 +552,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       processor: Pick<SessionProcessor.Handle, "message" | "updateToolCall" | "completeToolCall">
       bypassAgentCheck: boolean
       messages: MessageV2.WithParts[]
+      memoryCache: KiloSessionPrompt.MemoryCache // kilocode_change
     }) {
       using _ = log.time("resolveTools")
       const tools: Record<string, AITool> = {}
       const run = yield* runner()
       const promptOps = yield* ops()
+      const ctx = yield* InstanceState.context // kilocode_change
+      const memory = yield* KiloSessionPrompt.memoryToolEnabled({ ctx }) // kilocode_change
 
       const context = (args: any, options: ToolExecutionOptions): Tool.Context => ({
         sessionID: input.session.id,
@@ -598,6 +605,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         providerID: input.model.providerID,
         agent: input.agent,
       })) {
+        if (item.id.startsWith("kilo_memory_") && !memory) continue // kilocode_change
         const schema = ProviderTransform.schema(input.model, ToolJsonSchema.fromTool(item))
         tools[item.id] = tool({
           description: item.description,
@@ -621,6 +629,10 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                     messageID: input.processor.message.id,
                   })),
                 }
+                // kilocode_change start - mark successful targeted memory recalls for the assistant badge
+                if (item.id === "kilo_memory_recall")
+                  KiloSessionPrompt.markRecallMemory({ result: output, cache: input.memoryCache })
+                // kilocode_change end
                 yield* plugin.trigger(
                   "tool.execute.after",
                   { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID, args },
@@ -1786,6 +1798,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       // kilocode_change end
       // kilocode_change — cache environment details per turn (prompt caching)
       const envCache: KiloSessionPrompt.EnvCache = {}
+      const memoryCache: KiloSessionPrompt.MemoryCache = {} // kilocode_change
       closeReasons.delete(sessionID) // kilocode_change
       let compactionAttempts = 0 // kilocode_change - cap compaction attempts per turn to avoid infinite loops
       const ctx = yield* InstanceState.context
@@ -1987,6 +2000,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             processor: handle,
             bypassAgentCheck,
             messages: msgs,
+            memoryCache, // kilocode_change
           })
 
           if (lastUser.format?.type === "json_schema") {
@@ -2033,11 +2047,20 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           // kilocode_change end
 
           // kilocode_change start - persistently prune stale tool outputs when payload is already large
+          const enabled = yield* KiloSessionPrompt.memoryToolEnabled({ ctx }) // kilocode_change
           const [skills, env, instructions] = yield* Effect.all([
             sys.skills(agent),
-            sys.environment(model, lastUser.editorContext), // kilocode_change
+            KilocodeSystemPrompt.environment({
+              ctx,
+              model,
+              editor: lastUser.editorContext,
+              sessionID,
+              record: step === 1,
+              memory: enabled,
+            }), // kilocode_change
             instruction.system().pipe(Effect.orDie),
           ])
+          KiloSessionPrompt.markStartupMemory({ env, cache: memoryCache }) // kilocode_change
           let modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model)
           const size = Buffer.byteLength(JSON.stringify(modelMsgs))
           if (size > REQUEST_PRUNE_BYTES) {
@@ -2071,6 +2094,11 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             model,
             toolChoice: format.type === "json_schema" ? "required" : undefined,
           })
+
+          // kilocode_change start - persist a lightweight marker when this assistant step had memory context
+          const memory = KiloSessionPrompt.memoryMarker({ sessionID, message: handle.message, cache: memoryCache })
+          if (memory) yield* sessions.updatePart(memory)
+          // kilocode_change end
 
           if (structured !== undefined) {
             handle.message.structured = structured
@@ -2174,6 +2202,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       // kilocode_change start
       yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
       yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
+      const ctx = yield* InstanceState.context // kilocode_change
+      MemoryTurn.open({ sessionID: input.sessionID })
       yield* bus.publish(KiloSession.Event.TurnOpen, { sessionID: input.sessionID })
       return yield* Effect.onExit(
         state.ensureRunning(
@@ -2182,14 +2212,28 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           runLoop(input).pipe(Effect.orDie),
         ), // kilocode_change
         Effect.fnUntraced(function* (exit) {
+          const reason = KiloSessionPrompt.resolveCloseReason({
+            sessionID: input.sessionID,
+            closeReasons,
+            exit,
+          })
           yield* bus.publish(KiloSession.Event.TurnClose, {
             sessionID: input.sessionID,
-            reason: KiloSessionPrompt.resolveCloseReason({
-              sessionID: input.sessionID,
-              closeReasons,
-              exit,
-            }),
+            reason,
           })
+          const enabled = yield* KiloSessionPrompt.memoryToolEnabled({ ctx })
+          if (enabled)
+            yield* MemoryTurn.close({
+              sessionID: input.sessionID,
+              reason,
+              sessions,
+              summary,
+              provider,
+            }).pipe(
+              Effect.provideService(MemoryService.Service, memory),
+              Effect.ignore,
+              Effect.forkIn(scope, { startImmediately: true }),
+            )
         }),
       )
       // kilocode_change end
@@ -2352,6 +2396,7 @@ export const defaultLayer = Layer.suspend(() =>
       Layer.provide(LSP.defaultLayer),
       Layer.provide(ToolRegistry.defaultLayer),
       Layer.provide(Truncate.defaultLayer),
+      Layer.provide(MemoryService.defaultLayer), // kilocode_change
     )
     .pipe(
       Layer.provide(Image.defaultLayer), // kilocode_change - provide user image normalization service

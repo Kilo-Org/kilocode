@@ -29,6 +29,7 @@ import { EnhancePromptApi } from "@/kilocode/server/httpapi/groups/enhance-promp
 import { IndexingApi } from "@/kilocode/server/httpapi/groups/indexing"
 import { KiloGatewayApi } from "@/kilocode/server/httpapi/groups/kilo-gateway"
 import { KilocodeApi } from "@/kilocode/server/httpapi/groups/kilocode"
+import { MemoryApi } from "@/kilocode/server/httpapi/groups/memory"
 import { NetworkApi } from "@/kilocode/server/httpapi/groups/network"
 import { RemoteApi } from "@/kilocode/server/httpapi/groups/remote"
 import { SessionImportApi } from "@/kilocode/server/httpapi/groups/session-import"
@@ -73,6 +74,7 @@ export const InstanceHttpApi = HttpApi.make("opencode-instance")
   .addHttpApi(IndexingApi)
   .addHttpApi(KiloGatewayApi)
   .addHttpApi(KilocodeApi)
+  .addHttpApi(MemoryApi)
   .addHttpApi(NetworkApi)
   .addHttpApi(RemoteApi)
   .addHttpApi(SessionImportApi)

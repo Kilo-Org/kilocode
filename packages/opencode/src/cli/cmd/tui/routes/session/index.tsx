@@ -98,6 +98,8 @@ import { session as banner } from "@/kilocode/cli/logo"
 
 import { formatMarkdownTables } from "../../util/markdown"
 import { submitFeedback } from "@/kilocode/cli/cmd/tui/feedback"
+import { MemoryTuiEvents } from "@/kilocode/cli/cmd/tui/memory-events"
+import { MemoryTuiMeta } from "@/kilocode/cli/cmd/tui/memory-meta"
 // kilocode_change end
 import { getScrollAcceleration } from "../../util/scroll"
 import { TuiPluginRuntime } from "@/cli/cmd/tui/plugin/runtime"
@@ -423,9 +425,11 @@ export function Session() {
     })
   })
 
+  // kilocode_change start
+  onCleanup(MemoryTuiEvents.attach({ event, toast, sessionID: route.sessionID }))
+
   const exit = useExit()
 
-  // kilocode_change start
   createEffect(() => {
     const title = Locale.truncate(session()?.title ?? "", 50)
     return exit.message.set(banner(title, session()?.id, UI.Style.TEXT_DIM, UI.Style.TEXT_NORMAL))
@@ -1614,6 +1618,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
         <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
           <box paddingLeft={3}>
             <text marginTop={1}>
+              {/* kilocode_change start - show per-turn memory usage in the assistant footer */}
               <span
                 style={{
                   fg:
@@ -1629,6 +1634,21 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
               <Show when={duration()}>
                 <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
               </Show>
+              <Show when={MemoryTuiMeta.fromParts(props.parts)}>
+                {(item) => {
+                  const label = () =>
+                    item().type === "startup"
+                      ? "Startup Context"
+                      : `${item().count} ${item().count === 1 ? "Item" : "Items"}`
+                  return (
+                    <span style={{ fg: theme.textMuted }}>
+                      {" "}
+                      · Memory · {label()} · {item().tokens.toLocaleString()} Tokens
+                    </span>
+                  )
+                }}
+              </Show>
+              {/* kilocode_change end */}
               <Show when={props.message.error?.name === "MessageAbortedError"}>
                 <span style={{ fg: theme.textMuted }}> · interrupted</span>
               </Show>

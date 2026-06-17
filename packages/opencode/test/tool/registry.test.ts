@@ -34,6 +34,7 @@ import { ToolJsonSchema } from "@/tool/json-schema"
 import { MessageID, SessionID } from "@/session/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Command } from "@/command"
+import { MemoryService } from "@/kilocode/memory/service" // kilocode_change
 
 const node = CrossSpawnSpawner.defaultLayer
 const configLayer = TestConfig.layer({
@@ -60,6 +61,7 @@ const registryLayer = (flags: Partial<RuntimeFlags.Info> = {}) => {
     Bus.layer,
     FetchHttpClient.layer,
     Format.defaultLayer,
+    MemoryService.defaultLayer, // kilocode_change
     node,
     Layer.mergeAll(Ripgrep.defaultLayer, Truncate.defaultLayer),
   )

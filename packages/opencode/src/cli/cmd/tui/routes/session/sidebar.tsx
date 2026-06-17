@@ -5,6 +5,7 @@ import { useTheme } from "../../context/theme"
 import { useTuiConfig } from "../../context/tui-config"
 import { InstallationChannel, InstallationVersion } from "@opencode-ai/core/installation/version"
 import { TuiPluginRuntime } from "@/cli/cmd/tui/plugin/runtime"
+import { MemorySidebar } from "@/kilocode/cli/cmd/tui/component/memory-sidebar" // kilocode_change
 
 import { getScrollAcceleration } from "../../util/scroll"
 import { WorkspaceLabel } from "../../component/workspace-label"
@@ -81,6 +82,9 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
                 </Show>
               </box>
             </TuiPluginRuntime.Slot>
+            {/* kilocode_change start - show memory status and prompt-token overhead */}
+            <MemorySidebar sessionID={props.sessionID} />
+            {/* kilocode_change end */}
             <TuiPluginRuntime.Slot name="sidebar_content" session_id={props.sessionID} />
           </box>
         </scrollbox>

@@ -405,6 +405,22 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
               }
             }
 
+            // kilocode_change start - show the proposed memory mutation before approval
+            if (permission === "kilo_memory_save") {
+              const action = String(props.request.metadata?.action ?? "save")
+              const value = String(props.request.metadata?.text ?? props.request.metadata?.query ?? "")
+              return {
+                icon: "◇",
+                title: `Memory ${action}`,
+                body: (
+                  <box paddingLeft={1} flexDirection="column">
+                    <text fg={theme.textMuted}>{value || "No memory content provided"}</text>
+                  </box>
+                ),
+              }
+            }
+            // kilocode_change end
+
             return {
               icon: "⚙",
               title: `Call tool ${permission}`,

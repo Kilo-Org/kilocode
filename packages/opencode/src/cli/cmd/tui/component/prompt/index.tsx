@@ -60,6 +60,8 @@ import { useArgs } from "@tui/context/args"
 // kilocode_change start
 import { KiloSessionTuiSync } from "@/kilocode/session/tui-sync"
 import { slashMatches } from "@/kilocode/cli/cmd/command-display"
+import { runMemoryCommand, MEMORY_USAGE } from "@/kilocode/cli/cmd/tui/memory-command"
+import { showMemoryDialog } from "@/kilocode/cli/cmd/tui/component/dialog-memory"
 // kilocode_change end
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { type WorkspaceStatus } from "../workspace-label"
@@ -1066,6 +1068,31 @@ export function Prompt(props: PromptProps) {
       void exit()
       return true
     }
+    // kilocode_change start - handle memory management as a harness action, not a chat prompt
+    const memory = await runMemoryCommand({
+      text: store.prompt.input,
+      client: sdk.client,
+      workspace: defaultWorkspaceID(),
+      toast,
+      show: () => showMemoryDialog(dialog),
+      usage: (message) => DialogAlert.show(dialog, "Memory", message || MEMORY_USAGE),
+    })
+    if (memory) {
+      history.append({
+        ...store.prompt,
+        mode: store.mode,
+      })
+      input.extmarks.clear()
+      setStore("prompt", {
+        input: "",
+        parts: [],
+      })
+      setStore("extmarkToPartIndex", new Map())
+      props.onSubmit?.()
+      input.clear()
+      return true
+    }
+    // kilocode_change end
     const selectedModel = local.model.current()
     if (!selectedModel) {
       void promptModelWarning()

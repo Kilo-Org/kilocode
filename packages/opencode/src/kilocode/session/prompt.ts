@@ -20,8 +20,10 @@ import { environmentDetails, type EditorContext } from "@/kilocode/editor-contex
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
 import { InstanceState } from "@/effect/instance-state"
+import { KiloMemory, MemoryPaths } from "@/kilocode/memory"
 import PROMPT_PLAN from "@/session/prompt/plan.txt"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
+import { Token } from "@/util/token"
 
 export namespace KiloSessionPrompt {
   const modes = ["ask", "plan", "architect"]
@@ -184,6 +186,95 @@ export namespace KiloSessionPrompt {
     user?: string
   }
 
+  export interface MemoryCache {
+    block?: string
+    user?: string
+    marker?: {
+      type: "recall" | "startup"
+      bytes: number
+      tokens: number
+      count: number
+      files: string[]
+    }
+    marked?: boolean
+  }
+
+  export function memoryMarker(input: { sessionID: SessionID; message: MessageV2.Assistant; cache: MemoryCache }) {
+    const marker = input.cache.marker
+    if (!marker || marker.count === 0) return
+    if (input.cache.marked) return
+    input.cache.marked = true
+    return {
+      id: PartID.make(Identifier.ascending("part")),
+      sessionID: input.sessionID,
+      messageID: input.message.id,
+      type: "text",
+      text: "",
+      synthetic: true,
+      ignored: true,
+      metadata: {
+        kiloMemory: {
+          type: marker.type,
+          bytes: marker.bytes,
+          tokens: marker.tokens,
+          count: marker.count,
+          files: marker.files,
+          sources: marker.files,
+        },
+      },
+    } satisfies MessageV2.TextPart
+  }
+
+  export function markStartupMemory(input: { env: string[]; cache: MemoryCache }) {
+    if (input.cache.marker) return
+    const text = input.env.join("\n")
+    const start = text.indexOf("```kilo-memory-v1 context_not_instruction")
+    if (start < 0) return
+    const rest = text.slice(start)
+    const end = rest.indexOf("\n```")
+    const raw = end >= 0 ? rest.slice(0, end + 4) : rest
+    const block = raw.endsWith("\n") ? raw : `${raw}\n`
+    const count = block.match(/^record /gm)?.length ?? 0
+    if (count === 0) return
+    const files = [
+      ...new Set(
+        [...block.matchAll(/\bsource=([^\s]+)/g)].map((match) => match[1]).filter((source) => source !== "metadata"),
+      ),
+    ]
+    input.cache.marker = {
+      type: "startup",
+      bytes: Buffer.byteLength(block),
+      tokens: Token.estimate(block),
+      count,
+      files,
+    }
+  }
+
+  export function markRecallMemory(input: {
+    result: { output?: string; metadata?: Record<string, unknown> }
+    cache: MemoryCache
+  }) {
+    const meta = input.result.metadata
+    const files = Array.isArray(meta?.files) ? meta.files.filter((file) => typeof file === "string") : []
+    if (files.length === 0) return
+    const text = input.result.output ?? ""
+    input.cache.marker = {
+      type: "recall",
+      bytes: Buffer.byteLength(text),
+      tokens: Token.estimate(text),
+      count: typeof meta?.count === "number" ? meta.count : files.length,
+      files: [...new Set(files)],
+    }
+    input.cache.marked = false
+  }
+
+  export function memoryToolEnabled(input: { ctx: MemoryPaths.Ctx }) {
+    return Effect.tryPromise({
+      try: () => KiloMemory.toolEnabled({ ctx: input.ctx }),
+      catch: (err) => err,
+    }).pipe(Effect.catch(() => Effect.succeed(false)))
+  }
+
   /**
    * Ephemerally injects dynamic editor context (visible files, open tabs, etc.)
    * into the last user message. Caches the result per user message ID so repeated
@@ -212,6 +303,10 @@ export namespace KiloSessionPrompt {
     if (!input.cache.block) return
     const idx = input.msgs.findLastIndex((m) => m.info.role === "user")
     if (idx === -1) return
+    const exists = input.msgs[idx].parts.some(
+      (part) => part.type === "text" && part.synthetic && part.text === input.cache.block,
+    )
+    if (exists) return
     input.msgs[idx] = {
       ...input.msgs[idx],
       parts: [
@@ -331,7 +426,7 @@ export namespace KiloSessionPrompt {
   export function resolveCloseReason(input: {
     sessionID: string
     closeReasons: Map<string, KiloSession.CloseReason>
-    exit: Exit.Exit<any, any>
+    exit: Exit.Exit<unknown, unknown>
   }): KiloSession.CloseReason {
     const explicit = input.closeReasons.get(input.sessionID)
     input.closeReasons.delete(input.sessionID)

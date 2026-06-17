@@ -59,6 +59,7 @@ import { SessionStatus } from "@/session/status" // kilocode_change
 import { Reference } from "@/reference/reference"
 import { BackgroundJob } from "@/background/job"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { MemoryService } from "@/kilocode/memory/service" // kilocode_change
 
 const log = Log.create({ service: "tool.registry" })
 
@@ -114,6 +115,7 @@ export const layer: Layer.Layer<
   | Truncate.Service
   // kilocode_change start
   | Command.Service
+  | MemoryService.Service
   // kilocode_change end
   | RuntimeFlags.Service
 > = Layer.effect(
@@ -336,7 +338,12 @@ export const layer: Layer.Layer<
     })
 
     const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {
+      // kilocode_change start
+      const ctx = yield* InstanceState.context
+      const memory = yield* KiloToolRegistry.memoryToolsEnabled({ ctx })
+      // kilocode_change end
       const filtered = (yield* all()).filter((tool) => {
+        if (tool.id.startsWith("kilo_memory_")) return memory // kilocode_change
         if (tool.id === WebSearchTool.id) {
           return webSearchEnabled(input.providerID, { exa: flags.enableExa, parallel: flags.enableParallel })
         }
@@ -420,7 +427,11 @@ export const defaultLayer = Layer.suspend(
         Layer.provide(Truncate.defaultLayer),
       )
       // kilocode_change start - provide Kilo-owned registry dependencies
-      .pipe(Layer.provide(Command.defaultLayer), Layer.provide(RuntimeFlags.defaultLayer)),
+      .pipe(
+        Layer.provide(Command.defaultLayer),
+        Layer.provide(RuntimeFlags.defaultLayer),
+        Layer.provide(MemoryService.defaultLayer),
+      ),
   // kilocode_change end
 )
 

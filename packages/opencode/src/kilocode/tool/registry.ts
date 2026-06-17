@@ -3,11 +3,15 @@ import { CodebaseSearchTool } from "../../tool/warpgrep"
 import { RecallTool } from "../../tool/recall"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
+import { MemoryRecallTool } from "./memory-recall"
+import { MemorySaveTool } from "./memory-save"
 import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Effect } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
+import type { Config } from "@/config/config"
 import { Agent } from "@/agent/agent"
+import { KiloMemory, type MemoryPaths } from "@/kilocode/memory"
 import * as Truncate from "@/tool/truncate"
 
 const log = Log.create({ service: "kilocode-tool-registry" })
@@ -21,22 +25,38 @@ export namespace KiloToolRegistry {
   const hint =
     "- When you are doing an open-ended search where you do not know the exact symbol name, use the `semantic_search` tool first to narrow down the search scope, then follow up with `Grep` and/or `Read`"
 
+  export function memoryToolsEnabled(input: { ctx: MemoryPaths.Ctx }) {
+    return Effect.tryPromise({
+      try: () => KiloMemory.toolEnabled({ ctx: input.ctx }),
+      catch: (err) => err,
+    }).pipe(Effect.catch(() => Effect.succeed(false)))
+  }
+
   /** Resolve Kilo-specific tool Infos outside any InstanceState, so their Truncate/Agent deps are
    * satisfied at the outer registry scope instead of leaking into InstanceState's Effect. */
   export function infos() {
     return Effect.gen(function* () {
       const codebase = yield* CodebaseSearchTool
       const recall = yield* RecallTool
+      const memory = yield* MemoryRecallTool
+      const save = yield* MemorySaveTool
       const manager = yield* AgentManagerTool
       const process = yield* BackgroundProcessTool
-      return { codebase, recall, manager, process }
+      return { codebase, recall, memory, save, manager, process }
     })
   }
 
   /** Finalize Kilo-specific tools into Tool.Defs. Call this inside the InstanceState state Effect —
    * it has no Service deps beyond what Tool.init itself needs. */
   export function build(
-    tools: { codebase: Tool.Info; recall: Tool.Info; manager: Tool.Info; process: Tool.Info },
+    tools: {
+      codebase: Tool.Info
+      recall: Tool.Info
+      memory: Tool.Info
+      save: Tool.Info
+      manager: Tool.Info
+      process: Tool.Info
+    },
     deps: Deps,
     loaders: Loaders = {},
   ) {
@@ -44,6 +64,8 @@ export namespace KiloToolRegistry {
       const base = yield* Effect.all({
         codebase: Tool.init(tools.codebase),
         recall: Tool.init(tools.recall),
+        memory: Tool.init(tools.memory),
+        save: Tool.init(tools.save),
         manager: Tool.init(tools.manager),
         process: Tool.init(tools.process),
       })
@@ -87,12 +109,22 @@ export namespace KiloToolRegistry {
 
   /** Kilo-specific tools to append to the builtin list */
   export function extra(
-    tools: { codebase: Tool.Def; semantic?: Tool.Def; recall: Tool.Def; manager: Tool.Def; process: Tool.Def },
-    cfg: { experimental?: { codebase_search?: boolean } },
+    tools: {
+      codebase: Tool.Def
+      semantic?: Tool.Def
+      recall: Tool.Def
+      memory: Tool.Def
+      save: Tool.Def
+      manager: Tool.Def
+      process: Tool.Def
+    },
+    cfg: Pick<Config.Info, "experimental">,
   ): Tool.Def[] {
     return [
       ...(cfg.experimental?.codebase_search === true ? [tools.codebase] : []),
       ...(tools.semantic ? [tools.semantic] : []),
+      tools.memory,
+      tools.save,
       tools.recall,
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
       // The extension is the only client that can consume the Agent Manager start event.

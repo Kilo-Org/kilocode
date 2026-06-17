@@ -5,6 +5,7 @@ import { Agent } from "../../src/agent/agent"
 import { KiloIndexing } from "../../src/kilocode/indexing"
 import { KilocodeBootstrap } from "../../src/kilocode/bootstrap"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
+import { KiloMemory } from "../../src/kilocode/memory"
 import { KiloToolRegistry } from "../../src/kilocode/tool/registry"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { ToolRegistry } from "../../src/tool/registry"
@@ -177,6 +178,30 @@ describe("kilocode tool registry indexing", () => {
     ),
   )
 
+  it.live("omits memory tools until project memory is enabled", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const agent = yield* Agent.Service
+          const build = yield* agent.get("build")
+          const registry = yield* ToolRegistry.Service
+          const disabled = yield* registry.tools({ ...ref, agent: build })
+
+          expect(disabled.map((tool) => tool.id)).not.toContain("kilo_memory_recall")
+          expect(disabled.map((tool) => tool.id)).not.toContain("kilo_memory_save")
+
+          yield* Effect.promise(() =>
+            KiloMemory.enable({ ctx: { directory: Instance.directory, worktree: Instance.worktree } }),
+          )
+          const enabled = yield* registry.tools({ ...ref, agent: build })
+
+          expect(enabled.map((tool) => tool.id)).toContain("kilo_memory_recall")
+          expect(enabled.map((tool) => tool.id)).toContain("kilo_memory_save")
+        }),
+      { git: true },
+    ),
+  )
+
   test("conditionally includes Kilo registry extras", () => {
     const prev = process.env["KILO_CLIENT"]
     const def = (id: string): Tool.Def => ({
@@ -189,6 +214,8 @@ describe("kilocode tool registry indexing", () => {
       codebase: def("codebase_search"),
       semantic: def("semantic_search"),
       recall: def("recall"),
+      memory: def("kilo_memory_recall"),
+      save: def("kilo_memory_save"),
       manager: def("agent_manager"),
       process: def("background_process"),
     }
@@ -197,25 +224,48 @@ describe("kilocode tool registry indexing", () => {
       process.env["KILO_CLIENT"] = "cli"
       expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual([
         "semantic_search",
+        "kilo_memory_recall",
+        "kilo_memory_save",
         "recall",
         "background_process",
       ])
       expect(KiloToolRegistry.extra(tools, { experimental: { codebase_search: true } }).map((tool) => tool.id)).toEqual(
-        ["codebase_search", "semantic_search", "recall", "background_process"],
+        [
+          "codebase_search",
+          "semantic_search",
+          "kilo_memory_recall",
+          "kilo_memory_save",
+          "recall",
+          "background_process",
+        ],
       )
-
       process.env["KILO_CLIENT"] = "vscode"
       expect(KiloToolRegistry.extra(tools, { experimental: { codebase_search: true } }).map((tool) => tool.id)).toEqual(
-        ["codebase_search", "semantic_search", "recall", "background_process", "agent_manager"],
+        [
+          "codebase_search",
+          "semantic_search",
+          "kilo_memory_recall",
+          "kilo_memory_save",
+          "recall",
+          "background_process",
+          "agent_manager",
+        ],
       )
       expect(KiloToolRegistry.extra({ ...tools, semantic: undefined }, {}).map((tool) => tool.id)).toEqual([
+        "kilo_memory_recall",
+        "kilo_memory_save",
         "recall",
         "background_process",
         "agent_manager",
       ])
 
       process.env["KILO_CLIENT"] = "desktop"
-      expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual(["semantic_search", "recall"])
+      expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual([
+        "semantic_search",
+        "kilo_memory_recall",
+        "kilo_memory_save",
+        "recall",
+      ])
     } finally {
       if (prev === undefined) delete process.env["KILO_CLIENT"]
       if (prev !== undefined) process.env["KILO_CLIENT"] = prev

@@ -64,6 +64,7 @@ import { ArgsProvider, useArgs, type Args } from "./context/args"
 import open from "open"
 import { PromptRefProvider, usePromptRef } from "./context/prompt"
 import * as KiloApp from "@/kilocode/cli/cmd/tui/app" // kilocode_change
+import { showMemoryDialog } from "@/kilocode/cli/cmd/tui/component/dialog-memory" // kilocode_change
 import { TuiConfigProvider, useTuiConfig } from "./context/tui-config"
 import { TuiConfig } from "@/cli/cmd/tui/config/tui"
 import { TuiPluginRuntime } from "@/cli/cmd/tui/plugin/runtime"
@@ -668,6 +669,18 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         },
         category: "System",
       },
+      // kilocode_change start - memory management opens inspectable memory state
+      {
+        name: "memory.show",
+        title: "Memory",
+        slashName: "memory",
+        slashAliases: ["mem"],
+        run: () => {
+          showMemoryDialog(dialog)
+        },
+        category: "System",
+      },
+      // kilocode_change end
       {
         name: "theme.switch",
         title: "Switch theme",

@@ -78,6 +78,20 @@ const cfg: Partial<Config.Info> = {
   },
 }
 
+describe("memory config", () => {
+  test("keeps memory project-state driven by default", () => {
+    const field = Config.Info.ast.propertySignatures.find((item) => String(item.name) === "experimental")
+    const type = field?.type
+    const shape = type?._tag === "Union" ? type.types.find((item) => item._tag === "Objects") : undefined
+    if (shape?._tag !== "Objects") throw new Error("experimental config schema shape changed")
+    const keys = shape.propertySignatures.map((item) => String(item.name))
+
+    expect(keys).not.toContain("memory")
+    expect(decode({}).experimental).toBeUndefined()
+    expect(decode({ experimental: { batch_tool: true } }).experimental?.batch_tool).toBe(true)
+  })
+})
+
 afterEach(async () => {
   delete process.env.KILO_MD_TEST
   await clear()
