@@ -112,6 +112,7 @@ export const dict = {
   "dialog.provider.google.note": "โมเดล Gemini สำหรับการตอบสนองที่รวดเร็วและมีโครงสร้าง",
   "dialog.provider.openrouter.note": "เข้าถึงโมเดลที่รองรับทั้งหมดจากผู้ให้บริการเดียว",
   "dialog.provider.vercel.note": "การเข้าถึงโมเดล AI แบบรวมด้วยการกำหนดเส้นทางอัจฉริยะ",
+  "dialog.provider.morph.note": "Auto Router เลือกโมเดลที่ดีที่สุดสำหรับแต่ละพรอมต์จากผู้ให้บริการที่คุณเชื่อมต่อไว้",
 
   "dialog.model.select.title": "เลือกโมเดล",
   "dialog.model.search.placeholder": "ค้นหาโมเดล",

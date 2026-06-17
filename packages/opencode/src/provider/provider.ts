@@ -40,6 +40,7 @@ import {
   REQUEST_TIMEOUT_MS,
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
+import { KiloMorphRouter } from "@/kilocode/provider/morph-router"
 // kilocode_change end
 
 const log = Log.create({ service: "provider" })
@@ -1150,6 +1151,15 @@ export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
       }
     }
   }
+  // kilocode_change start - Morph exposes only the Auto Router model. Its
+  // catalog v3 models are apply/edit-only (no tool calling) and not usable as
+  // chat/agent models, so they are replaced by the router pseudo-model.
+  const morphModels = KiloMorphRouter.catalogModels(provider)
+  if (provider.id === KiloMorphRouter.PROVIDER_ID) {
+    for (const key of Object.keys(models)) delete models[key]
+  }
+  Object.assign(models, morphModels)
+  // kilocode_change end
   return {
     id: ProviderID.make(provider.id),
     source: "custom",

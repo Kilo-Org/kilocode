@@ -115,6 +115,7 @@ export const dict = {
   "dialog.provider.google.note": "Gemini-Modelle für schnelle, strukturierte Antworten",
   "dialog.provider.openrouter.note": "Zugriff auf alle unterstützten Modelle über einen Anbieter",
   "dialog.provider.vercel.note": "Einheitlicher Zugriff auf KI-Modelle mit intelligentem Routing",
+  "dialog.provider.morph.note": "Auto Router wählt für jeden Prompt das beste Modell aus deinen verbundenen Anbietern",
   "dialog.provider.copilot.note": "Mit Copilot oder API-Schlüssel verbinden",
 
   "dialog.model.select.title": "Modell auswählen",

@@ -116,6 +116,7 @@ export const dict = {
   "dialog.provider.google.note": "使用 Google 账号或 API 密钥连接",
   "dialog.provider.openrouter.note": "使用 OpenRouter 账号或 API 密钥连接",
   "dialog.provider.vercel.note": "使用 Vercel 账号或 API 密钥连接",
+  "dialog.provider.morph.note": "Auto Router 会为每个提示词在你已连接的提供商中选择最佳模型",
 
   "dialog.model.select.title": "选择模型",
   "dialog.model.search.placeholder": "搜索模型",

@@ -112,6 +112,7 @@ export const dict = {
   "dialog.provider.google.note": "Gemini-modellen voor snelle, gestructureerde antwoorden",
   "dialog.provider.openrouter.note": "Toegang tot alle ondersteunde modellen via één provider",
   "dialog.provider.vercel.note": "Gecentraliseerde toegang tot AI-modellen met slimme routering",
+  "dialog.provider.morph.note": "Auto Router kiest voor elke prompt het beste model uit je verbonden providers",
 
   "dialog.model.select.title": "Model selecteren",
   "dialog.model.search.placeholder": "Modellen zoeken",
