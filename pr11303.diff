@@ -1,0 +1,2103 @@
+diff --git a/.changeset/roo-code-session-import.md b/.changeset/roo-code-session-import.md
+new file mode 100644
+index 00000000000..9fe1f78dd0a
+--- /dev/null
++++ b/.changeset/roo-code-session-import.md
+@@ -0,0 +1,5 @@
++---
++"kilo-code": minor
++---
++
++Add "Import Sessions from Roo Code" command that discovers and imports conversation history from an existing Roo Code installation, reusing the existing migration pipeline.
+diff --git a/packages/kilo-docs/public/img/screenshot-tests/kilo-vscode/visual-regression/migration/roo-wizard-selecting-chromium-linux.png b/packages/kilo-docs/public/img/screenshot-tests/kilo-vscode/visual-regression/migration/roo-wizard-selecting-chromium-linux.png
+new file mode 100644
+index 00000000000..5a1446777b1
+--- /dev/null
++++ b/packages/kilo-docs/public/img/screenshot-tests/kilo-vscode/visual-regression/migration/roo-wizard-selecting-chromium-linux.png
+@@ -0,0 +1,3 @@
++version https://git-lfs.github.com/spec/v1
++oid sha256:06c6cd2c2c63745d3cbaec756ae852db3ef0749c005926b75fe3eb03f06b0495
++size 22169
+diff --git a/packages/kilo-vscode/src/KiloProvider.ts b/packages/kilo-vscode/src/KiloProvider.ts
+index 0426e3c9de6..f9676873892 100644
+--- a/packages/kilo-vscode/src/KiloProvider.ts
++++ b/packages/kilo-vscode/src/KiloProvider.ts
+@@ -94,8 +94,8 @@ import { hasGit } from "./kilo-provider/git-status"
+ // legacy-migration start
+ import {
+   checkAndShowMigrationWizard,
+-  handleRequestLegacyMigrationData,
+-  handleStartLegacyMigration,
++  handleRequestMigrationData,
++  handleStartMigration,
+   handleFinalizeLegacyMigration,
+   handleSkipLegacyMigration,
+   handleClearLegacyData,
+@@ -319,8 +319,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
+   private readonly confirmations = new MessageConfirmation()
+   private unsubscribeEvent: (() => void) | null = null
+   private unsubscribeState: (() => void) | null = null
+-  /** Cached legacy migration data so migrate() doesn't re-read from disk/SecretStorage. */ // legacy-migration
+-  private cachedLegacyData: import("./legacy-migration/legacy-types").LegacyMigrationData | null = null // legacy-migration
++  /** Cached migration data so migration doesn't re-read from disk/SecretStorage. */ // legacy-migration
++  private migrationCache: MigrationContext["migrationCache"] = new Map()
+   /** Guard to prevent checkAndShowMigrationWizard running concurrently. */ // legacy-migration
+   private migrationCheckInFlight = false // legacy-migration
+   private unsubscribeNotificationDismiss: (() => void) | null = null
+@@ -1202,11 +1202,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
+           break
+         }
+         // legacy-migration start
+-        case "requestLegacyMigrationData":
+-          void handleRequestLegacyMigrationData(this.migrationCtx)
++        case "requestMigrationData":
++          void handleRequestMigrationData(this.migrationCtx, message.source, message.operationId)
+           break
+-        case "startLegacyMigration":
+-          void handleStartLegacyMigration(this.migrationCtx, message.selections)
++        case "startMigration":
++          void handleStartMigration(this.migrationCtx, message.source, message.operationId, message.selections)
+           break
+         case "skipLegacyMigration":
+           void handleSkipLegacyMigration(this.migrationCtx)
+@@ -1381,7 +1381,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
+       // legacy-migration start
+       // Subscribe to migration-complete broadcast from any KiloProvider instance
+       this.unsubscribeMigrationComplete = this.connectionService.onMigrationComplete(() => {
+-        this.postMessage({ type: "migrationState", needed: false })
++        this.postMessage({ type: "migrationState", needed: false, source: "legacy" })
+       })
+       // legacy-migration end
+ 
+@@ -3516,12 +3516,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
+       client: this.client,
+       extensionContext: this.extensionContext,
+       postMessage: (msg) => this.postMessage(msg),
+-      get cachedLegacyData() {
+-        return self.cachedLegacyData
+-      },
+-      set cachedLegacyData(data) {
+-        self.cachedLegacyData = data
+-      },
++      migrationCache: self.migrationCache,
+       get migrationCheckInFlight() {
+         return self.migrationCheckInFlight
+       },
+diff --git a/packages/kilo-vscode/src/extension.ts b/packages/kilo-vscode/src/extension.ts
+index 815124b225a..0aad4322eb1 100644
+--- a/packages/kilo-vscode/src/extension.ts
++++ b/packages/kilo-vscode/src/extension.ts
+@@ -387,7 +387,7 @@ export function activate(context: vscode.ExtensionContext) {
+     }),
+     // legacy-migration start
+     vscode.commands.registerCommand("kilo-code.new.openMigrationWizard", () => {
+-      provider.postMessage({ type: "migrationState", needed: true })
++      provider.postMessage({ type: "migrationState", needed: true, source: "legacy" })
+     }),
+     // legacy-migration end
+     vscode.commands.registerCommand("kilo-code.new.generateTerminalCommand", async () => {
+diff --git a/packages/kilo-vscode/src/kilo-provider/handlers/migration.ts b/packages/kilo-vscode/src/kilo-provider/handlers/migration.ts
+index a0a06c210c0..1c54ec5e36b 100644
+--- a/packages/kilo-vscode/src/kilo-provider/handlers/migration.ts
++++ b/packages/kilo-vscode/src/kilo-provider/handlers/migration.ts
+@@ -2,7 +2,7 @@
+  * Legacy migration handlers — extracted from KiloProvider.
+  *
+  * Manages the migration wizard for users upgrading from Kilo Code v5.x.
+- * No vscode dependency — all vscode access is injected via MigrationContext.
++ * VS Code access is limited to migration service helpers and injected context.
+  */
+ 
+ import type { KiloClient } from "@kilocode/sdk/v2/client"
+@@ -10,8 +10,13 @@ import type {
+   LegacyMigrationData,
+   MigrationSelections,
+   MigrationSessionProgress,
++  MigrationSessionSelection,
+ } from "../../legacy-migration/legacy-types"
+ import * as MigrationService from "../../legacy-migration/migration-service"
++import { runSessionBatch } from "../../legacy-migration/session-batch"
++import { migrate as migrateSession } from "../../legacy-migration/sessions/migrate"
++import { resolveSession } from "../../legacy-migration/task-store"
++import { detectRooCodeSessions, type RooImportSource } from "../../roo-import/service"
+ 
+ /** Subset of vscode.ExtensionContext needed by migration handlers. */
+ interface MigrationExtensionContext {
+@@ -28,21 +33,59 @@ interface MigrationExtensionContext {
+   globalStorageUri: { fsPath: string }
+ }
+ 
++export type MigrationSource = "legacy" | "roo"
++export type MigrationCacheEntry =
++  | { operationId: string; source: "legacy"; data: LegacyMigrationData }
++  | { operationId: string; source: "roo"; data: RooImportSource | null }
++export type MigrationCache = Map<string, MigrationCacheEntry>
++
++export function getMigrationCache(
++  cache: MigrationCache,
++  source: "legacy",
++  operationId: string,
++): Extract<MigrationCacheEntry, { source: "legacy" }> | undefined
++export function getMigrationCache(
++  cache: MigrationCache,
++  source: "roo",
++  operationId: string,
++): Extract<MigrationCacheEntry, { source: "roo" }> | undefined
++export function getMigrationCache(cache: MigrationCache, source: MigrationSource, operationId: string) {
++  const entry = cache.get(operationId)
++  return entry?.source === source ? entry : undefined
++}
++
+ export interface MigrationContext {
+   readonly client: KiloClient | null
+   readonly extensionContext: MigrationExtensionContext | undefined
+   postMessage(msg: unknown): void
+   refreshSessions(): void
+-  cachedLegacyData: LegacyMigrationData | null
++  migrationCache: MigrationCache
+   migrationCheckInFlight: boolean
+   lastMigrationHadErrors?: boolean
+   disposeGlobal(): Promise<void>
+   broadcastComplete(): void
+ }
+ 
+-function postSessionProgress(ctx: MigrationContext, progress: MigrationSessionProgress): void {
++function emptyData(sessions: LegacyMigrationData["sessions"] = []): LegacyMigrationData {
++  return {
++    hasData: sessions.length > 0,
++    providers: [],
++    mcpServers: [],
++    customModes: [],
++    sessions,
++  }
++}
++
++function postSessionProgress(
++  ctx: MigrationContext,
++  source: MigrationSource,
++  operationId: string,
++  progress: MigrationSessionProgress,
++): void {
+   ctx.postMessage({
+-    type: "legacyMigrationSessionProgress",
++    type: "migrationSessionProgress",
++    source,
++    operationId,
+     session: progress.session,
+     index: progress.index,
+     total: progress.total,
+@@ -75,13 +118,11 @@ export async function checkAndShowMigrationWizard(ctx: MigrationContext): Promis
+ 
+   if (!data.hasData) return
+ 
+-  // Cache so migrate() doesn't re-read from SecretStorage/disk
+-  ctx.cachedLegacyData = data
+-
+   console.log("[Kilo New] KiloProvider: 🔄 Legacy data detected, showing migration wizard")
+   ctx.postMessage({
+     type: "migrationState",
+     needed: true,
++    source: "legacy",
+     data: {
+       providers: data.providers,
+       mcpServers: data.mcpServers,
+@@ -93,15 +134,29 @@ export async function checkAndShowMigrationWizard(ctx: MigrationContext): Promis
+   })
+ }
+ 
+-/** Send the detected legacy data to the webview on explicit request. */
+-export async function handleRequestLegacyMigrationData(ctx: MigrationContext): Promise<void> {
++/** Send migration data for the requested source to the webview. */
++export async function handleRequestMigrationData(
++  ctx: MigrationContext,
++  source: MigrationSource,
++  operationId: string,
++): Promise<void> {
+   if (!ctx.extensionContext) return
+-  const data = await MigrationService.detectLegacyData(
+-    ctx.extensionContext as Parameters<typeof MigrationService.detectLegacyData>[0],
+-  )
+-  ctx.cachedLegacyData = data
++  const data = await (async () => {
++    if (source === "roo") {
++      const roo = await detectRooCodeSessions(ctx.extensionContext as Parameters<typeof detectRooCodeSessions>[0])
++      ctx.migrationCache.set(operationId, { operationId, source, data: roo })
++      return emptyData(roo?.sessions ?? [])
++    }
++    const legacy = await MigrationService.detectLegacyData(
++      ctx.extensionContext as Parameters<typeof MigrationService.detectLegacyData>[0],
++    )
++    ctx.migrationCache.set(operationId, { operationId, source, data: legacy })
++    return legacy
++  })()
+   ctx.postMessage({
+-    type: "legacyMigrationData",
++    type: "migrationData",
++    source,
++    operationId,
+     data: {
+       providers: data.providers,
+       mcpServers: data.mcpServers,
+@@ -113,34 +168,84 @@ export async function handleRequestLegacyMigrationData(ctx: MigrationContext): P
+   })
+ }
+ 
++async function startRooMigration(
++  ctx: MigrationContext,
++  operationId: string,
++  selections: { sessions?: MigrationSessionSelection[] },
++): Promise<void> {
++  if (!ctx.extensionContext || !ctx.client) return
++  const cached = getMigrationCache(ctx.migrationCache, "roo", operationId)
++  const source = cached
++    ? cached.data
++    : await detectRooCodeSessions(ctx.extensionContext as Parameters<typeof detectRooCodeSessions>[0])
++  if (!cached) ctx.migrationCache.set(operationId, { operationId, source: "roo", data: source })
++  if (!source) {
++    ctx.postMessage({
++      type: "migrationComplete",
++      source: "roo",
++      operationId,
++      results: [
++        { item: "Roo Code sessions", category: "session", status: "warning", message: "No Roo Code sessions found." },
++      ],
++    })
++    return
++  }
++
++  const results = await runSessionBatch({
++    selections: selections.sessions ?? [],
++    sessions: source.sessions,
++    resolve: (id) => resolveSession(source.catalog, id),
++    migrate: (selection, resolved, progress) =>
++      migrateSession(
++        selection,
++        ctx.extensionContext as Parameters<typeof migrateSession>[1],
++        ctx.client as KiloClient,
++        undefined,
++        progress,
++        resolved,
++      ),
++    onProgress: (item, status, message) => {
++      ctx.postMessage({ type: "migrationProgress", source: "roo", operationId, item, status, message })
++    },
++    onSessionProgress: (progress) => postSessionProgress(ctx, "roo", operationId, progress),
++  })
++
++  ctx.lastMigrationHadErrors = results.some((item) => item.status === "error")
++  ctx.postMessage({ type: "migrationComplete", source: "roo", operationId, results })
++}
++
+ /** Run the migration for the selected items. */
+-export async function handleStartLegacyMigration(
++async function startLegacyMigration(
+   ctx: MigrationContext,
++  operationId: string,
+   selections: MigrationSelections,
+ ): Promise<void> {
+   if (!ctx.extensionContext || !ctx.client) return
+   try {
++    const cached = getMigrationCache(ctx.migrationCache, "legacy", operationId)
+     const results = await MigrationService.migrate(
+       ctx.extensionContext as Parameters<typeof MigrationService.migrate>[0],
+       ctx.client,
+       selections,
+       (item, status, message) => {
+-        ctx.postMessage({ type: "legacyMigrationProgress", item, status, message })
++        ctx.postMessage({ type: "migrationProgress", source: "legacy", operationId, item, status, message })
+       },
+       (progress: MigrationSessionProgress) => {
+-        postSessionProgress(ctx, progress)
++        postSessionProgress(ctx, "legacy", operationId, progress)
+       },
+-      ctx.cachedLegacyData?.settings,
+-      ctx.cachedLegacyData?.sessions,
++      cached?.data.settings,
++      cached?.data.sessions,
+     )
+ 
+     ctx.lastMigrationHadErrors = results.some((item) => item.status === "error")
+-    ctx.postMessage({ type: "legacyMigrationComplete", results })
++    ctx.postMessage({ type: "migrationComplete", source: "legacy", operationId, results })
+   } catch (error) {
+     ctx.lastMigrationHadErrors = true
+     console.error("[Kilo New] KiloProvider: ❌ Migration failed", error)
+     ctx.postMessage({
+-      type: "legacyMigrationComplete",
++      type: "migrationComplete",
++      source: "legacy",
++      operationId,
+       results: [
+         {
+           item: "Migration",
+@@ -153,6 +258,19 @@ export async function handleStartLegacyMigration(
+   }
+ }
+ 
++export async function handleStartMigration(
++  ctx: MigrationContext,
++  source: MigrationSource,
++  operationId: string,
++  selections: MigrationSelections,
++): Promise<void> {
++  if (source === "roo") {
++    await startRooMigration(ctx, operationId, selections)
++    return
++  }
++  await startLegacyMigration(ctx, operationId, selections)
++}
++
+ export async function handleFinalizeLegacyMigration(ctx: MigrationContext): Promise<void> {
+   if (!ctx.extensionContext) return
+   await ctx.disposeGlobal()
+diff --git a/packages/kilo-vscode/src/legacy-migration/migration-service.ts b/packages/kilo-vscode/src/legacy-migration/migration-service.ts
+index 7a2bb2036b0..015c92a61dd 100644
+--- a/packages/kilo-vscode/src/legacy-migration/migration-service.ts
++++ b/packages/kilo-vscode/src/legacy-migration/migration-service.ts
+@@ -36,9 +36,11 @@ import type {
+   MigrationSessionInfo,
+   MigrationSessionProgress,
+ } from "./legacy-types"
+-import { buildSessionMeta, buildSessionProgress } from "./migration-session-progress"
+ import type { MigrationResultItem } from "./migration-types"
++import { runSessionBatch } from "./session-batch"
++import { listSessions, resolveSession, scanTaskStore } from "./task-store"
+ import { createSessionID } from "./sessions/lib/ids"
++import type { LegacyHistoryItem } from "./sessions/lib/legacy-types"
+ import { migrate as migrateSession } from "./sessions/migrate"
+ 
+ // ---------------------------------------------------------------------------
+@@ -77,7 +79,7 @@ export async function detectLegacyData(context: vscode.ExtensionContext): Promis
+   const customModes = await readLegacyCustomModes(context)
+   const prompts = readLegacyCustomModePrompts(context)
+   const settings = readLegacySettings(context)
+-  const sessions = await readSessionsInGlobalStorage(context)
++  const sessions = listSessions(await readSessionCatalog(context))
+ 
+   const oauthProviders = new Set<string>()
+   const codexRaw = await context.secrets.get(CODEX_OAUTH_SECRET_KEY)
+@@ -116,28 +118,10 @@ export async function detectLegacyData(context: vscode.ExtensionContext): Promis
+   }
+ }
+ 
+-async function readSessionsInGlobalStorage(context: vscode.ExtensionContext) {
+-  const items = context.globalState.get<{ id: string; task?: string; workspace?: string; ts?: number }[]>(
+-    "taskHistory",
+-    [],
+-  )
+-  const base = vscode.Uri.joinPath(context.globalStorageUri, "tasks")
+-  const sessions: MigrationSessionInfo[] = []
+-  for (const item of items) {
+-    const file = vscode.Uri.joinPath(base, item.id, "api_conversation_history.json")
+-    const exists = await vscode.workspace.fs.stat(file).then(
+-      () => true,
+-      () => false,
+-    )
+-    if (!exists) continue
+-    sessions.push({
+-      id: item.id,
+-      title: item.task?.trim() || item.id,
+-      directory: item.workspace?.trim() || "",
+-      time: item.ts ?? 0,
+-    })
+-  }
+-  return sessions
++async function readSessionCatalog(context: vscode.ExtensionContext) {
++  const items = context.globalState.get<LegacyHistoryItem[]>("taskHistory", [])
++  const dir = vscode.Uri.joinPath(context.globalStorageUri, "tasks").fsPath
++  return (await scanTaskStore(dir, items)).catalog
+ }
+ 
+ // ---------------------------------------------------------------------------
+@@ -152,9 +136,6 @@ export type ProgressCallback = (
+ 
+ export type SessionProgressCallback = (progress: MigrationSessionProgress) => void
+ 
+-const SESSION_DELAY = 300
+-const SESSION_SUMMARY_DELAY = 1000
+-
+ /**
+  * Executes migration for the selected items.
+  * Calls onProgress for each item with real-time status updates.
+@@ -176,7 +157,8 @@ export async function migrate(
+   const customModes = await readLegacyCustomModes(context)
+   const prompts = readLegacyCustomModePrompts(context)
+   const legacySettings = cachedSettings ?? readLegacySettings(context)
+-  const sessions = cachedSessions ?? (await readSessionsInGlobalStorage(context))
++  const catalog = await readSessionCatalog(context)
++  const sessions = cachedSessions ?? listSessions(catalog)
+ 
+   const results: MigrationResultItem[] = []
+ 
+@@ -277,36 +259,17 @@ export async function migrate(
+   }
+ 
+   if (selections.sessions?.length) {
+-    const list = selections.sessions
+-    for (const [index, item] of list.entries()) {
+-      onProgress(item.id, "migrating")
+-      const session = sessions.find((entry: MigrationSessionInfo) => entry.id === item.id)
+-      const meta = buildSessionMeta(session, index, list.length)
+-      const progress = buildSessionProgress(meta, onSessionProgress)
+-      const result = await migrateSession(item, context, client, meta, progress)
+-      const reason = result.ok ? "Session migrated" : result.message
+-      results.push({
+-        item: item.id,
+-        category: "session",
+-        status: result.ok ? "success" : "error",
+-        message: reason,
+-      })
+-      onProgress(item.id, result.ok ? "success" : "error", reason)
+-      if (index < list.length - 1) {
+-        await new Promise((resolve) => setTimeout(resolve, SESSION_DELAY))
+-      }
+-    }
+-    const last = list.at(-1)
+-    const session = last ? sessions.find((item: MigrationSessionInfo) => item.id === last.id) : undefined
+-    if (session && onSessionProgress) {
+-      onSessionProgress({
+-        session,
+-        index: list.length,
+-        total: list.length,
+-        phase: "summary",
+-      })
+-      await new Promise((resolve) => setTimeout(resolve, SESSION_SUMMARY_DELAY))
+-    }
++    results.push(
++      ...(await runSessionBatch({
++        selections: selections.sessions,
++        sessions,
++        resolve: (id) => resolveSession(catalog, id),
++        migrate: (selection, source, progress) =>
++          migrateSession(selection, context, client, undefined, progress, source),
++        onProgress,
++        onSessionProgress,
++      })),
++    )
+   }
+ 
+   // Migrate default model
+diff --git a/packages/kilo-vscode/src/legacy-migration/session-batch.ts b/packages/kilo-vscode/src/legacy-migration/session-batch.ts
+new file mode 100644
+index 00000000000..4fb009b4037
+--- /dev/null
++++ b/packages/kilo-vscode/src/legacy-migration/session-batch.ts
+@@ -0,0 +1,63 @@
++import type { MigrationSessionInfo, MigrationSessionProgress, MigrationSessionSelection } from "./legacy-types"
++import type { MigrationResultItem } from "./migration-types"
++import { buildSessionMeta, buildSessionProgress } from "./migration-session-progress"
++import type { SessionSource } from "./task-store"
++import type { migrate as migrateSession } from "./sessions/migrate"
++
++const DELAY = 300
++const SUMMARY_DELAY = 1000
++
++type Result = Awaited<ReturnType<typeof migrateSession>>
++
++interface BatchOptions {
++  selections: MigrationSessionSelection[]
++  sessions: MigrationSessionInfo[]
++  resolve(id: string): SessionSource | undefined
++  migrate(
++    selection: MigrationSessionSelection,
++    source: SessionSource,
++    progress: ReturnType<typeof buildSessionProgress>,
++  ): Promise<Result>
++  onProgress(item: string, status: "migrating" | "success" | "warning" | "error", message?: string): void
++  onSessionProgress?: (progress: MigrationSessionProgress) => void
++  delay?: (ms: number) => Promise<void>
++}
++
++export async function runSessionBatch(options: BatchOptions): Promise<MigrationResultItem[]> {
++  const results: MigrationResultItem[] = []
++  const wait = options.delay ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)))
++
++  for (const [index, selection] of options.selections.entries()) {
++    options.onProgress(selection.id, "migrating")
++    const session = options.sessions.find((entry) => entry.id === selection.id)
++    const source = options.resolve(selection.id)
++    if (!source) {
++      const message = "Session source not found"
++      results.push({ item: session?.title ?? selection.id, category: "session", status: "error", message })
++      options.onProgress(selection.id, "error", message)
++      continue
++    }
++
++    const meta = buildSessionMeta(session, index, options.selections.length)
++    const result = await options.migrate(selection, source, buildSessionProgress(meta, options.onSessionProgress))
++    const status = result.ok ? (result.skipped ? "warning" : "success") : "error"
++    const message = result.ok ? (result.skipped ? "Already imported." : undefined) : result.message
++    results.push({ item: session?.title ?? selection.id, category: "session", status, message })
++    options.onProgress(selection.id, status, message)
++    if (index < options.selections.length - 1) await wait(DELAY)
++  }
++
++  const last = options.selections.at(-1)
++  const session = last ? options.sessions.find((entry) => entry.id === last.id) : undefined
++  if (session && options.onSessionProgress) {
++    options.onSessionProgress({
++      session,
++      index: options.selections.length,
++      total: options.selections.length,
++      phase: "summary",
++    })
++    await wait(SUMMARY_DELAY)
++  }
++
++  return results
++}
+diff --git a/packages/kilo-vscode/src/legacy-migration/sessions/lib/session.ts b/packages/kilo-vscode/src/legacy-migration/sessions/lib/session.ts
+index 725aacf6059..123ae58cfff 100644
+--- a/packages/kilo-vscode/src/legacy-migration/sessions/lib/session.ts
++++ b/packages/kilo-vscode/src/legacy-migration/sessions/lib/session.ts
+@@ -7,10 +7,11 @@ export function createSession(
+   item: LegacyHistoryItem | undefined,
+   projectID: string,
+   dir: string,
++  key = id,
+ ): NonNullable<Session["body"]> {
+   const session = makeSession()
+ 
+-  session.id = createSessionID(id)
++  session.id = createSessionID(key)
+ 
+   session.projectID = projectID
+ 
+diff --git a/packages/kilo-vscode/src/legacy-migration/sessions/migrate.ts b/packages/kilo-vscode/src/legacy-migration/sessions/migrate.ts
+index a77ca130fa2..624b38bc9a1 100644
+--- a/packages/kilo-vscode/src/legacy-migration/sessions/migrate.ts
++++ b/packages/kilo-vscode/src/legacy-migration/sessions/migrate.ts
+@@ -3,6 +3,7 @@ import type { KiloClient } from "@kilocode/sdk/v2/client"
+ import { getMigrationErrorMessage } from "../errors/migration-error"
+ import type { MigrationSessionInfo, MigrationSessionProgress, MigrationSessionSelection } from "../legacy-types"
+ import { createSessionID } from "./lib/ids"
++import type { SessionSource } from "../task-store"
+ import type { LegacyHistoryItem } from "./lib/legacy-types"
+ import { parseSession } from "./parser"
+ 
+@@ -30,19 +31,24 @@ export async function migrate(
+   input: MigrationSessionSelection,
+   context: vscode.ExtensionContext,
+   client: KiloClient,
+-  meta?: {
++  _meta?: {
+     session: MigrationSessionInfo
+     index: number
+     total: number
+   },
+   onProgress?: ProgressCallback,
++  resolved?: SessionSource,
+ ): Promise<Result> {
+-  const dir = vscode.Uri.joinPath(context.globalStorageUri, "tasks").fsPath
+   const items = context.globalState.get<LegacyHistoryItem[]>("taskHistory", [])
+-  const item = items.find((item) => item.id === input.id)
++  const source = resolved ?? {
++    id: input.id,
++    dir: vscode.Uri.joinPath(context.globalStorageUri, "tasks").fsPath,
++    item: items.find((item) => item.id === input.id),
++  }
++  const key = source.namespace ? `${source.namespace}:${source.id}` : source.id
+ 
+   const progress = (next: Progress) => {
+-    if (!meta || !onProgress) return
++    if (!onProgress) return
+     onProgress(next)
+   }
+ 
+@@ -68,12 +74,12 @@ export async function migrate(
+ 
+   try {
+     if (!input.force) {
+-      const result = await client.session.get({ sessionID: createSessionID(input.id) })
++      const result = await client.session.get({ sessionID: createSessionID(key) })
+       if (result.data) return skip()
+     }
+ 
+     progress({ phase: "preparing" })
+-    const payload = await parseSession(input.id, dir, item)
++    const payload = await parseSession(source.id, source.dir, source.item, undefined, key)
+     progress({ phase: "storing" })
+     const project = await client.kilocode.sessionImport.project(payload.project, { throwOnError: true })
+     const projectID = project.data?.id ?? payload.project.id
+diff --git a/packages/kilo-vscode/src/legacy-migration/sessions/parser.ts b/packages/kilo-vscode/src/legacy-migration/sessions/parser.ts
+index 966ba46bf41..57683c6d119 100644
+--- a/packages/kilo-vscode/src/legacy-migration/sessions/parser.ts
++++ b/packages/kilo-vscode/src/legacy-migration/sessions/parser.ts
+@@ -1,4 +1,4 @@
+-import type { LegacyHistoryItem } from "./lib/legacy-types"
++import type { LegacyApiMessage, LegacyHistoryItem } from "./lib/legacy-types"
+ import type {
+   KilocodeSessionImportMessageData as Message,
+   KilocodeSessionImportPartData as Part,
+@@ -19,15 +19,20 @@ export interface NormalizedSession {
+   parts: Array<NonNullable<Part["body"]>>
+ }
+ 
+-export async function parseSession(id: string, dir: string, item?: LegacyHistoryItem): Promise<NormalizedSession> {
++export async function parseSession(
++  id: string,
++  dir: string,
++  item?: LegacyHistoryItem,
++  input?: LegacyApiMessage[],
++  key = id,
++): Promise<NormalizedSession> {
+   const root = await normalizeLegacyPath(item?.workspace)
+   const next = item ? { ...item, workspace: root } : undefined
+   const project = createProject(next)
+-  const session = createSession(id, next, project.id, root)
+-  const file = await getApiConversationHistory(id, dir)
+-  const conversation = parseFile(file)
+-  const messages = parseMessagesFromConversation(conversation, id, root, next)
+-  const parts = parsePartsFromConversation(conversation, id, item)
++  const session = createSession(id, next, project.id, root, key)
++  const conversation = input ?? parseFile(await getApiConversationHistory(id, dir))
++  const messages = parseMessagesFromConversation(conversation, key, root, next)
++  const parts = parsePartsFromConversation(conversation, key, item)
+ 
+   return {
+     project,
+diff --git a/packages/kilo-vscode/src/legacy-migration/task-store.ts b/packages/kilo-vscode/src/legacy-migration/task-store.ts
+new file mode 100644
+index 00000000000..8641157c8a9
+--- /dev/null
++++ b/packages/kilo-vscode/src/legacy-migration/task-store.ts
+@@ -0,0 +1,161 @@
++import * as path from "node:path"
++import * as vscode from "vscode"
++import type { MigrationSessionInfo } from "./legacy-types"
++import type { LegacyHistoryItem } from "./sessions/lib/legacy-types"
++
++const API_FILE = "api_conversation_history.json"
++const UI_FILE = "ui_messages.json"
++
++export interface SessionSource {
++  id: string
++  dir: string
++  item?: LegacyHistoryItem
++  namespace?: string
++}
++
++export interface SessionEntry {
++  id: string
++  session: MigrationSessionInfo
++  source: SessionSource
++}
++
++export type SessionCatalog = Map<string, SessionEntry>
++
++export interface ScanDiagnostic {
++  id: string
++  dir: string
++  reason: "ui-only" | "malformed"
++}
++
++export interface TaskScan {
++  catalog: SessionCatalog
++  diagnostics: ScanDiagnostic[]
++}
++
++export function listSessions(catalog: SessionCatalog) {
++  return [...catalog.values()].map((entry) => entry.session).sort((a, b) => b.time - a.time || a.id.localeCompare(b.id))
++}
++
++export function resolveSession(catalog: SessionCatalog, id: string) {
++  return catalog.get(id)?.source
++}
++
++export async function scanTaskStore(
++  dir: string,
++  items: LegacyHistoryItem[] = [],
++  namespace?: string,
++): Promise<TaskScan> {
++  const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dir)).then(
++    (value) => value,
++    () => [] as [string, vscode.FileType][],
++  )
++  const history = new Map(items.map((item) => [item.id, item]))
++  const catalog: SessionCatalog = new Map()
++  const diagnostics: ScanDiagnostic[] = []
++
++  for (const [id, type] of entries.sort(([a], [b]) => a.localeCompare(b))) {
++    if (type !== vscode.FileType.Directory) continue
++    const root = path.join(dir, id)
++    const api = path.join(root, API_FILE)
++    const valid = await readHistory(api)
++    if (!valid.exists) {
++      if (await exists(path.join(root, UI_FILE))) diagnostics.push({ id, dir, reason: "ui-only" })
++      continue
++    }
++    if (!valid.valid) {
++      diagnostics.push({ id, dir, reason: "malformed" })
++      continue
++    }
++
++    const item = history.get(id) ?? (await readHistoryItem(root, id, valid.data))
++    catalog.set(id, {
++      id,
++      session: {
++        id,
++        title: item.task?.trim() || fallbackTitle(id),
++        directory: item.workspace?.trim() || "",
++        time: item.ts ?? timestamp(id),
++      },
++      source: { id, dir, item, namespace },
++    })
++  }
++
++  return { catalog, diagnostics }
++}
++
++async function readHistory(file: string) {
++  return Promise.resolve(vscode.workspace.fs.readFile(vscode.Uri.file(file)))
++    .then((bytes) => {
++      const json = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown
++      return { exists: true as const, valid: Array.isArray(json), data: Array.isArray(json) ? json : [] }
++    })
++    .catch((error) => {
++      if (error instanceof SyntaxError) return { exists: true as const, valid: false, data: [] as unknown[] }
++      return { exists: false as const, valid: false, data: [] as unknown[] }
++    })
++}
++
++async function readHistoryItem(root: string, id: string, messages: unknown[]): Promise<LegacyHistoryItem> {
++  const file = path.join(root, "history_item.json")
++  const stored = await Promise.resolve(vscode.workspace.fs.readFile(vscode.Uri.file(file)))
++    .then((bytes) => parseItem(Buffer.from(bytes).toString("utf8"), id))
++    .catch(() => undefined)
++  if (stored) return stored
++
++  return {
++    id,
++    task: titleFromMessages(messages) || fallbackTitle(id),
++    workspace: "",
++    ts: timestamp(id),
++  }
++}
++
++function parseItem(input: string, id: string): LegacyHistoryItem | undefined {
++  const json = JSON.parse(input) as Record<string, unknown>
++  return {
++    id,
++    task: typeof json.task === "string" ? json.task.trim().slice(0, 120) : fallbackTitle(id),
++    workspace: typeof json.workspace === "string" ? json.workspace : "",
++    ts: typeof json.ts === "number" ? json.ts : timestamp(id),
++    mode: typeof json.mode === "string" ? json.mode : undefined,
++  }
++}
++
++function titleFromMessages(messages: unknown[]) {
++  for (const value of messages) {
++    if (!value || typeof value !== "object") continue
++    const msg = value as { role?: string; content?: unknown }
++    if (msg.role !== "user") continue
++    const text = textFromContent(msg.content)
++    if (text) return text.slice(0, 120).replace(/\n/g, " ").trim()
++  }
++  return ""
++}
++
++function textFromContent(content: unknown): string {
++  if (typeof content === "string") return content
++  if (!Array.isArray(content)) return ""
++  for (const value of content) {
++    if (!value || typeof value !== "object") continue
++    const block = value as { type?: string; text?: unknown }
++    if (block.type === "text" && typeof block.text === "string" && block.text.trim()) return block.text
++  }
++  return ""
++}
++
++function exists(file: string) {
++  return vscode.workspace.fs.stat(vscode.Uri.file(file)).then(
++    () => true,
++    () => false,
++  )
++}
++
++function timestamp(id: string) {
++  const value = Number(id)
++  return Number.isFinite(value) && value > 1_000_000_000_000 ? value : 0
++}
++
++function fallbackTitle(id: string) {
++  const time = timestamp(id)
++  return time ? new Date(time).toLocaleString() : id
++}
+diff --git a/packages/kilo-vscode/src/roo-import/service.ts b/packages/kilo-vscode/src/roo-import/service.ts
+new file mode 100644
+index 00000000000..7db9474f335
+--- /dev/null
++++ b/packages/kilo-vscode/src/roo-import/service.ts
+@@ -0,0 +1,40 @@
++import * as path from "node:path"
++import * as vscode from "vscode"
++import { listSessions, scanTaskStore, type ScanDiagnostic, type SessionCatalog } from "../legacy-migration/task-store"
++
++const ROOTS = [
++  "roovscode.roo-cline",
++  "roovscode.roo-code",
++  "rooveterinaryinc.roo-cline",
++  "rooveterinaryinc.roo-code",
++  "rooveterinaryinc.roo-code-nightly",
++]
++
++export interface RooImportSource {
++  catalog: SessionCatalog
++  sessions: ReturnType<typeof listSessions>
++  diagnostics: ScanDiagnostic[]
++}
++
++/** Scans every known Roo storage root and keeps the first deterministic copy of duplicate task IDs. */
++export async function detectRooCodeSessions(context: vscode.ExtensionContext): Promise<RooImportSource | null> {
++  const parent = path.dirname(context.globalStorageUri.fsPath)
++  const catalog: SessionCatalog = new Map()
++  const diagnostics: ScanDiagnostic[] = []
++
++  for (const root of ROOTS) {
++    const dir = path.join(parent, root, "tasks")
++    const scan = await scanTaskStore(dir, [], "roo")
++    diagnostics.push(...scan.diagnostics)
++    for (const [id, entry] of [...scan.catalog].sort(([a], [b]) => a.localeCompare(b))) {
++      if (!catalog.has(id)) catalog.set(id, entry)
++    }
++  }
++
++  for (const diagnostic of diagnostics) {
++    console.warn(`[Kilo New] Roo import skipped ${diagnostic.reason} task ${diagnostic.id} in ${diagnostic.dir}`)
++  }
++
++  const sessions = listSessions(catalog)
++  return sessions.length ? { catalog, sessions, diagnostics } : null
++}
+diff --git a/packages/kilo-vscode/tests/setup/vscode-mock.ts b/packages/kilo-vscode/tests/setup/vscode-mock.ts
+index 799f0bc4a24..ee234232d41 100644
+--- a/packages/kilo-vscode/tests/setup/vscode-mock.ts
++++ b/packages/kilo-vscode/tests/setup/vscode-mock.ts
+@@ -123,6 +123,12 @@ const mockVscode = {
+     Workspace: 2,
+     WorkspaceFolder: 3,
+   },
++  FileType: {
++    Unknown: 0,
++    File: 1,
++    Directory: 2,
++    SymbolicLink: 64,
++  },
+   TabInputText: class {
+     constructor(public uri: { scheme: string; fsPath: string }) {}
+   },
+diff --git a/packages/kilo-vscode/tests/unit/legacy-migration/migration-cache.test.ts b/packages/kilo-vscode/tests/unit/legacy-migration/migration-cache.test.ts
+new file mode 100644
+index 00000000000..c5e5e177749
+--- /dev/null
++++ b/packages/kilo-vscode/tests/unit/legacy-migration/migration-cache.test.ts
+@@ -0,0 +1,34 @@
++import { describe, expect, it } from "bun:test"
++import {
++  getMigrationCache,
++  type MigrationCache,
++  type MigrationCacheEntry,
++} from "../../../src/kilo-provider/handlers/migration"
++
++const legacy = {
++  hasData: false,
++  providers: [],
++  mcpServers: [],
++  customModes: [],
++}
++
++describe("migration cache", () => {
++  it("isolates entries by operation and source", () => {
++    const cache: MigrationCache = new Map()
++    const entry: MigrationCacheEntry = { operationId: "new", source: "legacy", data: legacy }
++    cache.set("new", entry)
++
++    expect(getMigrationCache(cache, "legacy", "new")).toBe(entry)
++    expect(getMigrationCache(cache, "roo", "new")).toBeUndefined()
++    expect(getMigrationCache(cache, "legacy", "stale")).toBeUndefined()
++  })
++
++  it("retains an empty Roo discovery for its operation", () => {
++    const cache: MigrationCache = new Map()
++    const entry: MigrationCacheEntry = { operationId: "empty", source: "roo", data: null }
++    cache.set("empty", entry)
++
++    expect(getMigrationCache(cache, "roo", "empty")).toBe(entry)
++    expect(getMigrationCache(cache, "roo", "empty")?.data).toBeNull()
++  })
++})
+diff --git a/packages/kilo-vscode/tests/unit/legacy-migration/session-batch.test.ts b/packages/kilo-vscode/tests/unit/legacy-migration/session-batch.test.ts
+new file mode 100644
+index 00000000000..dcec9a6eda8
+--- /dev/null
++++ b/packages/kilo-vscode/tests/unit/legacy-migration/session-batch.test.ts
+@@ -0,0 +1,36 @@
++import { describe, expect, it } from "bun:test"
++import { runSessionBatch } from "../../../src/legacy-migration/session-batch"
++
++const sessions = [
++  { id: "one", title: "One", directory: "/repo", time: 2 },
++  { id: "two", title: "Two", directory: "/repo", time: 1 },
++]
++
++describe("migration session batch", () => {
++  it("uses consistent progress, skipped, error, and summary semantics", async () => {
++    const progress: unknown[] = []
++    const phases: unknown[] = []
++    const results = await runSessionBatch({
++      selections: [{ id: "one" }, { id: "two" }],
++      sessions,
++      resolve: (id) => ({ id, dir: "/tasks" }),
++      migrate: async (selection) =>
++        selection.id === "one" ? { ok: true, skipped: true } : { ok: false, message: "broken" },
++      onProgress: (...args) => progress.push(args),
++      onSessionProgress: (value) => phases.push(value),
++      delay: async () => undefined,
++    })
++
++    expect(results).toEqual([
++      { item: "One", category: "session", status: "warning", message: "Already imported." },
++      { item: "Two", category: "session", status: "error", message: "broken" },
++    ])
++    expect(progress).toEqual([
++      ["one", "migrating"],
++      ["one", "warning", "Already imported."],
++      ["two", "migrating"],
++      ["two", "error", "broken"],
++    ])
++    expect(phases.at(-1)).toMatchObject({ session: sessions[1], index: 2, total: 2, phase: "summary" })
++  })
++})
+diff --git a/packages/kilo-vscode/tests/unit/roo-import.test.ts b/packages/kilo-vscode/tests/unit/roo-import.test.ts
+new file mode 100644
+index 00000000000..035a56c9a9f
+--- /dev/null
++++ b/packages/kilo-vscode/tests/unit/roo-import.test.ts
+@@ -0,0 +1,98 @@
++import { afterEach, beforeEach, describe, expect, it } from "bun:test"
++import * as vscode from "vscode"
++import { createSessionID } from "../../src/legacy-migration/sessions/lib/ids"
++import { parseSession } from "../../src/legacy-migration/sessions/parser"
++import { detectRooCodeSessions } from "../../src/roo-import/service"
++
++const enc = new TextEncoder()
++const first = "/storage/roovscode.roo-cline/tasks"
++const second = "/storage/rooveterinaryinc.roo-cline/tasks"
++const id = "1781613537275"
++const other = "1781613537276"
++const special = "__proto__"
++
++type Fs = typeof vscode.workspace.fs
++const fs = vscode.workspace.fs as Fs
++const original = { readDirectory: fs.readDirectory, readFile: fs.readFile, stat: fs.stat }
++
++describe("roo import", () => {
++  beforeEach(() => {
++    const files = new Map([
++      [`${first}/${id}/api_conversation_history.json`, JSON.stringify([{ role: "user", content: "First root" }])],
++      [`${first}/${special}/api_conversation_history.json`, JSON.stringify([{ role: "user", content: "Special" }])],
++      [
++        `${first}/${id}/history_item.json`,
++        JSON.stringify({ id, ts: Number(id), task: "First root", workspace: "/repo", mode: "architect" }),
++      ],
++      [`${second}/${id}/api_conversation_history.json`, JSON.stringify([{ role: "user", content: "Duplicate" }])],
++      [`${second}/${other}/ui_messages.json`, JSON.stringify([{ type: "say", text: "UI only" }])],
++      [`${second}/bad/api_conversation_history.json`, "not json"],
++    ])
++
++    fs.readDirectory = async (uri) => {
++      if (uri.fsPath === first) {
++        return [
++          [id, vscode.FileType.Directory],
++          [special, vscode.FileType.Directory],
++        ]
++      }
++      if (uri.fsPath === second) {
++        return [
++          [id, vscode.FileType.Directory],
++          [other, vscode.FileType.Directory],
++          ["bad", vscode.FileType.Directory],
++        ]
++      }
++      throw new Error(`missing dir ${uri.fsPath}`)
++    }
++    fs.stat = async (uri) => {
++      if (files.has(uri.fsPath)) return { type: vscode.FileType.File, ctime: 0, mtime: 0, size: 1 }
++      throw new Error(`missing file ${uri.fsPath}`)
++    }
++    fs.readFile = async (uri) => {
++      const value = files.get(uri.fsPath)
++      if (value) return enc.encode(value)
++      throw new Error(`missing file ${uri.fsPath}`)
++    }
++  })
++
++  afterEach(() => {
++    fs.readDirectory = original.readDirectory
++    fs.readFile = original.readFile
++    fs.stat = original.stat
++  })
++
++  it("merges all roots, deterministically deduplicates, and diagnoses skipped tasks", async () => {
++    const source = await detectRooCodeSessions({ globalStorageUri: { fsPath: "/storage/kilocode.kilo-code" } } as never)
++
++    expect(source?.sessions).toEqual([
++      { id, title: "First root", directory: "/repo", time: Number(id) },
++      { id: special, title: "Special", directory: "", time: 0 },
++    ])
++    expect(source?.catalog.get(id)?.source).toMatchObject({ id, dir: first, namespace: "roo" })
++    expect(source?.catalog.get(special)?.source).toMatchObject({ id: special, dir: first, namespace: "roo" })
++    expect(source?.catalog.get(id)?.source.item).toMatchObject({ mode: "architect" })
++    expect(source?.diagnostics.map((item) => [item.id, item.reason])).toEqual([
++      [other, "ui-only"],
++      ["bad", "malformed"],
++    ])
++  })
++
++  it("namespaces generated Roo IDs without changing the visible session slug", async () => {
++    const source = await detectRooCodeSessions({ globalStorageUri: { fsPath: "/storage/kilocode.kilo-code" } } as never)
++    const entry = source?.catalog.get(id)
++    expect(entry).toBeDefined()
++
++    const payload = await parseSession(
++      id,
++      entry!.source.dir,
++      entry!.source.item,
++      [{ role: "user", content: "Hi" }],
++      `roo:${id}`,
++    )
++
++    expect(payload.session.id).toBe(createSessionID(`roo:${id}`))
++    expect(payload.session.slug).toBe(id)
++    expect(payload.messages[0].sessionID).toBe(createSessionID(`roo:${id}`))
++  })
++})
+diff --git a/packages/kilo-vscode/webview-ui/src/App.tsx b/packages/kilo-vscode/webview-ui/src/App.tsx
+index 26f775a8bf5..c876b6b8895 100644
+--- a/packages/kilo-vscode/webview-ui/src/App.tsx
++++ b/packages/kilo-vscode/webview-ui/src/App.tsx
+@@ -201,6 +201,7 @@ const AppContent: Component = () => {
+   // legacy-migration: state-driven flag independent of currentView to avoid
+   // race conditions with SettingsEditorProvider's navigate messages.
+   const [migrationNeeded, setMigrationNeeded] = createSignal(false)
++  const [migrationSource, setMigrationSource] = createSignal<"legacy" | "roo">("legacy")
+   const session = useSession()
+   const server = useServer()
+   const vscode = useVSCode()
+@@ -278,6 +279,7 @@ const AppContent: Component = () => {
+       // legacy-migration: state-driven migration wizard
+       if (message?.type === "migrationState") {
+         console.log("[Kilo New] App: 🔄 migrationState:", message.needed)
++        setMigrationSource(message.source)
+         setMigrationNeeded(message.needed)
+       }
+     }
+@@ -338,9 +340,9 @@ const AppContent: Component = () => {
+               <Settings
+                 tab={settingsTab()}
+                 onTabChange={setSettingsTab}
+-                onMigrateClick={() => {
++                onMigrationClick={(source) => {
++                  setMigrationSource(source)
+                   setMigrationNeeded(true)
+-                  vscode.postMessage({ type: "requestLegacyMigrationData" })
+                 }}
+               />
+             </Match>
+@@ -350,7 +352,11 @@ const AppContent: Component = () => {
+           </Switch>
+         }
+       >
+-        <MigrationWizard onBack={() => setMigrationNeeded(false)} onComplete={() => setMigrationNeeded(false)} />
++        <MigrationWizard
++          source={migrationSource()}
++          onBack={() => setMigrationNeeded(false)}
++          onComplete={() => setMigrationNeeded(false)}
++        />
+       </Show>
+       {/* legacy-migration end */}
+     </div>
+diff --git a/packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx b/packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx
+index af0cea4e6e9..fb749c34d98 100644
+--- a/packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx
++++ b/packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx
+@@ -30,10 +30,11 @@ import type {
+   MigrationResultItem,
+   MigrationAutoApprovalSelections,
+   LegacySettings,
+-  LegacyMigrationDataMessage,
+-  LegacyMigrationProgressMessage,
+-  LegacyMigrationSessionProgressMessage,
+-  LegacyMigrationCompleteMessage,
++  MigrationDataMessage,
++  MigrationProgressMessage,
++  MigrationSessionProgressMessage,
++  MigrationCompleteMessage,
++  MigrationSource,
+ } from "../../types/messages"
+ import "./migration.css"
+ 
+@@ -182,16 +183,36 @@ interface ProgressEntry {
+ // ---------------------------------------------------------------------------
+ 
+ export interface MigrationWizardProps {
++  source?: MigrationSource
++  operationId?: string
+   onBack: () => void
+   onComplete: () => void
+ }
+ 
++const capabilities = {
++  legacy: {
++    intro: true,
++    persist: true,
++    cleanup: true,
++    categories: new Set(["providers", "mcpServers", "customModes", "sessions", "defaultModel", "settings"]),
++  },
++  roo: {
++    intro: false,
++    persist: false,
++    cleanup: false,
++    categories: new Set(["sessions"]),
++  },
++} satisfies Record<MigrationSource, { intro: boolean; persist: boolean; cleanup: boolean; categories: Set<string> }>
++
+ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
+   const vscode = useVSCode()
+   const dialog = useDialog()
+   const language = useLanguage()
++  const source = props.source ?? "legacy"
++  const config = capabilities[source]
++  const operationId = props.operationId ?? crypto.randomUUID()
+ 
+-  const [screen, setScreen] = createSignal<Screen>("whats-new")
++  const [screen, setScreen] = createSignal<Screen>(config.intro ? "whats-new" : "migrate")
+   const [phase, setPhase] = createSignal<MigratePhase>("selecting")
+ 
+   // Data from extension
+@@ -226,46 +247,49 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
+   // Message handling
+   // ---------------------------------------------------------------------------
+ 
++  const applyData = (data: MigrationDataMessage["data"]) => {
++    setProviders(config.categories.has("providers") ? data.providers : [])
++    setMcpServers(config.categories.has("mcpServers") ? data.mcpServers : [])
++    setCustomModes(config.categories.has("customModes") ? data.customModes : [])
++    setSessions(config.categories.has("sessions") ? (data.sessions ?? []) : [])
++    setDefaultModel(config.categories.has("defaultModel") ? data.defaultModel : undefined)
++    setLegacySettings(config.categories.has("settings") ? data.settings : undefined)
++    setMigrateProviders(
++      config.categories.has("providers") && data.providers.some((item) => item.supported && item.hasApiKey),
++    )
++    setMigrateMcpServers(config.categories.has("mcpServers") && data.mcpServers.length > 0)
++    setMigrateModes(config.categories.has("customModes") && data.customModes.length > 0)
++    setMigrateSessions(config.categories.has("sessions") && (data.sessions?.length ?? 0) > 0)
++    setMigrateDefaultModel(config.categories.has("defaultModel") && Boolean(data.defaultModel))
++
++    const settings = config.categories.has("settings") ? data.settings : undefined
++    if (!settings) return
++    setMigrateAutoApproval(
++      settings.autoApprovalEnabled !== undefined ||
++        Boolean(settings.allowedCommands?.length) ||
++        Boolean(settings.deniedCommands?.length) ||
++        settings.alwaysAllowReadOnly !== undefined ||
++        settings.alwaysAllowReadOnlyOutsideWorkspace !== undefined ||
++        settings.alwaysAllowWrite !== undefined ||
++        settings.alwaysAllowExecute !== undefined ||
++        settings.alwaysAllowMcp !== undefined ||
++        settings.alwaysAllowModeSwitch !== undefined ||
++        settings.alwaysAllowSubtasks !== undefined,
++    )
++    setMigrateLanguage(Boolean(settings.language))
++    setMigrateAutocomplete(Boolean(settings.autocomplete))
++  }
++
+   onMount(() => {
+     const handler = (event: MessageEvent) => {
+       const msg = event.data
+-      if (msg?.type === "legacyMigrationData") {
+-        const data = (msg as LegacyMigrationDataMessage).data
+-        setProviders(data.providers)
+-        setMcpServers(data.mcpServers)
+-        setCustomModes(data.customModes)
+-        setSessions(data.sessions ?? [])
+-        setDefaultModel(data.defaultModel)
+-        setLegacySettings(data.settings)
+-
+-        // Pre-select groups that have data
+-        setMigrateProviders(data.providers.some((p) => p.supported && p.hasApiKey))
+-        setMigrateMcpServers(data.mcpServers.length > 0)
+-        setMigrateModes(data.customModes.length > 0)
+-        setMigrateSessions((data.sessions?.length ?? 0) > 0)
+-        setMigrateDefaultModel(Boolean(data.defaultModel))
+-
+-        const s = data.settings
+-        if (s) {
+-          setMigrateAutoApproval(
+-            s.autoApprovalEnabled !== undefined ||
+-              Boolean(s.allowedCommands?.length) ||
+-              Boolean(s.deniedCommands?.length) ||
+-              s.alwaysAllowReadOnly !== undefined ||
+-              s.alwaysAllowReadOnlyOutsideWorkspace !== undefined ||
+-              s.alwaysAllowWrite !== undefined ||
+-              s.alwaysAllowExecute !== undefined ||
+-              s.alwaysAllowMcp !== undefined ||
+-              s.alwaysAllowModeSwitch !== undefined ||
+-              s.alwaysAllowSubtasks !== undefined,
+-          )
+-          setMigrateLanguage(Boolean(s.language))
+-          setMigrateAutocomplete(Boolean(s.autocomplete))
+-        }
++      if (msg?.source !== source || msg?.operationId !== operationId) return
++      if (msg.type === "migrationData") {
++        applyData((msg as MigrationDataMessage).data)
+       }
+ 
+-      if (msg?.type === "legacyMigrationProgress") {
+-        const update = msg as LegacyMigrationProgressMessage
++      if (msg.type === "migrationProgress") {
++        const update = msg as MigrationProgressMessage
+         setProgressEntries((prev) => {
+           const existing = prev.findIndex((e) => e.item === update.item)
+           const entry: ProgressEntry = {
+@@ -278,8 +302,8 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
+         })
+       }
+ 
+-      if (msg?.type === "legacyMigrationSessionProgress") {
+-        const update = msg as LegacyMigrationSessionProgressMessage
++      if (msg.type === "migrationSessionProgress") {
++        const update = msg as MigrationSessionProgressMessage
+         setSessionSummary((prev) =>
+           updateSessionSummary(prev, createSessionItem(update.session, update.error), update.phase),
+         )
+@@ -292,8 +316,8 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
+         })
+       }
+ 
+-      if (msg?.type === "legacyMigrationComplete") {
+-        const complete = msg as LegacyMigrationCompleteMessage
++      if (msg.type === "migrationComplete") {
++        const complete = msg as MigrationCompleteMessage
+         setResults(complete.results)
+         setRunning(false)
+         const hasErrors = complete.results.some((r) => r.status === "error")
+@@ -305,7 +329,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
+     }
+ 
+     window.addEventListener("message", handler)
+-    vscode.postMessage({ type: "requestLegacyMigrationData" })
++    vscode.postMessage({ type: "requestMigrationData", source, operationId })
+     onCleanup(() => window.removeEventListener("message", handler))
+   })
+ 
+@@ -314,105 +338,91 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
+   // ---------------------------------------------------------------------------
+ 
+   const handleSkip = () => {
++    if (!config.persist) {
++      props.onBack()
++      return
++    }
+     vscode.postMessage({ type: "skipLegacyMigration" })
+     props.onBack()
+   }
+ 
+-  const handleStartMigration = () => {
+-    const selectedProviderNames = migrateProviders()
++  const emptyAutoApproval = (): MigrationAutoApprovalSelections => ({
++    commandRules: false,
++    readPermission: false,
++    writePermission: false,
++    executePermission: false,
++    mcpPermission: false,
++    taskPermission: false,
++  })
++
++  const autoApprovalSelections = (): MigrationAutoApprovalSelections => {
++    if (!migrateAutoApproval()) return emptyAutoApproval()
++    const settings = legacySettings()
++    return {
++      commandRules:
++        settings?.autoApprovalEnabled !== undefined ||
++        Boolean(settings?.allowedCommands?.length) ||
++        Boolean(settings?.deniedCommands?.length),
++      readPermission:
++        settings?.alwaysAllowReadOnly !== undefined || settings?.alwaysAllowReadOnlyOutsideWorkspace !== undefined,
++      writePermission: settings?.alwaysAllowWrite !== undefined,
++      executePermission: settings?.alwaysAllowExecute !== undefined,
++      mcpPermission: settings?.alwaysAllowMcp !== undefined,
++      taskPermission: settings?.alwaysAllowModeSwitch !== undefined || settings?.alwaysAllowSubtasks !== undefined,
++    }
++  }
++
++  const selections = (sessions: { id: string; force?: boolean }[] = []) => ({
++    providers: migrateProviders()
+       ? providers()
+-          .filter((p) => p.supported && p.hasApiKey)
+-          .map((p) => p.profileName)
+-      : []
+-    const selectedMcpNames = migrateMcpServers() ? mcpServers().map((s) => s.name) : []
+-    const selectedModesSlugs = migrateModes() ? customModes().map((m) => m.slug) : []
+-
+-    const autoApproval: MigrationAutoApprovalSelections = migrateAutoApproval()
+-      ? {
+-          commandRules:
+-            legacySettings()?.autoApprovalEnabled !== undefined ||
+-            Boolean(legacySettings()?.allowedCommands?.length) ||
+-            Boolean(legacySettings()?.deniedCommands?.length),
+-          readPermission:
+-            legacySettings()?.alwaysAllowReadOnly !== undefined ||
+-            legacySettings()?.alwaysAllowReadOnlyOutsideWorkspace !== undefined,
+-          writePermission: legacySettings()?.alwaysAllowWrite !== undefined,
+-          executePermission: legacySettings()?.alwaysAllowExecute !== undefined,
+-          mcpPermission: legacySettings()?.alwaysAllowMcp !== undefined,
+-          taskPermission:
+-            legacySettings()?.alwaysAllowModeSwitch !== undefined ||
+-            legacySettings()?.alwaysAllowSubtasks !== undefined,
+-        }
+-      : {
+-          commandRules: false,
+-          readPermission: false,
+-          writePermission: false,
+-          executePermission: false,
+-          mcpPermission: false,
+-          taskPermission: false,
+-        }
++          .filter((provider) => provider.supported && provider.hasApiKey)
++          .map((provider) => provider.profileName)
++      : [],
++    mcpServers: migrateMcpServers() ? mcpServers().map((server) => server.name) : [],
++    customModes: migrateModes() ? customModes().map((mode) => mode.slug) : [],
++    sessions,
++    defaultModel: migrateDefaultModel(),
++    settings: {
++      autoApproval: autoApprovalSelections(),
++      language: migrateLanguage(),
++      autocomplete: migrateAutocomplete(),
++    },
++  })
+ 
+-    // Build progress entries
++  const handleStartMigration = () => {
++    const selected = selections(migrateSessions() ? sessions().map((session) => ({ id: session.id })) : [])
++    const approval = selected.settings.autoApproval
+     const entries: ProgressEntry[] = [
+-      ...selectedProviderNames.map((name) => ({ item: name, group: "providers", status: "pending" as const })),
+-      ...selectedMcpNames.map((name) => ({ item: name, group: "mcpServers", status: "pending" as const })),
+-      ...selectedModesSlugs.map((slug) => {
+-        const mode = customModes().find((m) => m.slug === slug)
+-        return { item: mode?.name ?? slug, group: "customModes", status: "pending" as const }
+-      }),
+-      ...(migrateSessions()
+-        ? sessions().map((session) => ({ item: session.id, group: "sessions", status: "pending" as const }))
+-        : []),
+-      ...(migrateDefaultModel() && defaultModel()
++      ...selected.providers.map((item) => ({ item, group: "providers", status: "pending" as const })),
++      ...selected.mcpServers.map((item) => ({ item, group: "mcpServers", status: "pending" as const })),
++      ...selected.customModes.map((item) => ({ item, group: "customModes", status: "pending" as const })),
++      ...selected.sessions.map((session) => ({ item: session.id, group: "sessions", status: "pending" as const })),
++      ...(selected.defaultModel && defaultModel()
+         ? [{ item: "Default model", group: "defaultModel", status: "pending" as const }]
+         : []),
+-      ...(autoApproval.commandRules
+-        ? [{ item: "Command rules", group: "autoApproval", status: "pending" as const }]
+-        : []),
+-      ...(autoApproval.readPermission
+-        ? [{ item: "Read permission", group: "autoApproval", status: "pending" as const }]
+-        : []),
+-      ...(autoApproval.writePermission
+-        ? [{ item: "Write permission", group: "autoApproval", status: "pending" as const }]
+-        : []),
+-      ...(autoApproval.executePermission
+-        ? [{ item: "Execute permission", group: "autoApproval", status: "pending" as const }]
+-        : []),
+-      ...(autoApproval.mcpPermission
+-        ? [{ item: "MCP permission", group: "autoApproval", status: "pending" as const }]
+-        : []),
+-      ...(autoApproval.taskPermission
+-        ? [{ item: "Task permission", group: "autoApproval", status: "pending" as const }]
+-        : []),
+-      ...(migrateLanguage() && legacySettings()?.language
++      ...(
++        [
++          [approval.commandRules, "Command rules"],
++          [approval.readPermission, "Read permission"],
++          [approval.writePermission, "Write permission"],
++          [approval.executePermission, "Execute permission"],
++          [approval.mcpPermission, "MCP permission"],
++          [approval.taskPermission, "Task permission"],
++        ] as const
++      ).flatMap(([enabled, item]) => (enabled ? [{ item, group: "autoApproval", status: "pending" as const }] : [])),
++      ...(selected.settings.language && legacySettings()?.language
+         ? [{ item: "Language preference", group: "language", status: "pending" as const }]
+         : []),
+-      ...(migrateAutocomplete() && legacySettings()?.autocomplete
++      ...(selected.settings.autocomplete && legacySettings()?.autocomplete
+         ? [{ item: "Autocomplete settings", group: "autocomplete", status: "pending" as const }]
+         : []),
+     ]
+-
+     setProgressEntries(entries)
+     setSessionSummary(createSessionSummary())
+     setSessionProgress(undefined)
+     setRunning(true)
+     setPhase("migrating")
+-
+-    vscode.postMessage({
+-      type: "startLegacyMigration",
+-      selections: {
+-        providers: selectedProviderNames,
+-        mcpServers: selectedMcpNames,
+-        customModes: selectedModesSlugs,
+-        sessions: migrateSessions() ? sessions().map((session) => ({ id: session.id })) : [],
+-        defaultModel: migrateDefaultModel(),
+-        settings: {
+-          autoApproval,
+-          language: migrateLanguage(),
+-          autocomplete: migrateAutocomplete(),
+-        },
+-      },
+-    })
++    vscode.postMessage({ type: "startMigration", source, operationId, selections: selected })
+   }
+ 
+   const handleForceReimport = (ids: string[]) => {
+@@ -424,13 +434,14 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
+           setPhase("migrating")
+           setSessionProgress(undefined)
+           setResults((prev) => prev.filter((item) => item.category !== "session"))
+-          setProgressEntries((prev) => {
+-            const keep = prev.filter((item) => item.group !== "sessions")
+-            const next = ids.map((id) => ({ item: id, group: "sessions", status: "pending" as const }))
+-            return [...keep, ...next]
+-          })
++          setProgressEntries((prev) => [
++            ...prev.filter((item) => item.group !== "sessions"),
++            ...ids.map((item) => ({ item, group: "sessions", status: "pending" as const })),
++          ])
+           vscode.postMessage({
+-            type: "startLegacyMigration",
++            type: "startMigration",
++            source,
++            operationId,
+             selections: {
+               providers: [],
+               mcpServers: [],
+@@ -438,14 +449,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
+               sessions: ids.map((id) => ({ id, force: true })),
+               defaultModel: false,
+               settings: {
+-                autoApproval: {
+-                  commandRules: false,
+-                  readPermission: false,
+-                  writePermission: false,
+-                  executePermission: false,
+-                  mcpPermission: false,
+-                  taskPermission: false,
+-                },
++                autoApproval: emptyAutoApproval(),
+                 language: false,
+                 autocomplete: false,
+               },
+@@ -458,12 +462,18 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
+   }
+ 
+   const handleDone = () => {
++    if (!config.persist) {
++      vscode.postMessage({ type: "loadSessions" })
++      props.onComplete()
++      return
++    }
++
+     if (running()) {
+       dialog.show(() => (
+         <RunningMigrationDialog
+           onConfirm={() => {
+             vscode.postMessage({ type: "finalizeLegacyMigration" })
+-            if (clearLegacyData()) {
++            if (config.cleanup && clearLegacyData()) {
+               vscode.postMessage({ type: "clearLegacyData" })
+             }
+             props.onComplete()
+@@ -473,7 +483,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
+       return
+     }
+     vscode.postMessage({ type: "finalizeLegacyMigration" })
+-    if (clearLegacyData()) {
++    if (config.cleanup && clearLegacyData()) {
+       vscode.postMessage({ type: "clearLegacyData" })
+     }
+     props.onComplete()
+@@ -916,7 +926,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
+                 <button
+                   type="button"
+                   class="migration-wizard__btn migration-wizard__btn--ghost"
+-                  onClick={() => setScreen("whats-new")}
++                  onClick={() => (config.intro ? setScreen("whats-new") : props.onBack())}
+                 >
+                   {language.t("common.goBack")}
+                 </button>
+diff --git a/packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx b/packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx
+index 60fa97e37e0..ea15459c9bc 100644
+--- a/packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx
++++ b/packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx
+@@ -5,14 +5,14 @@ import { showToast } from "@kilocode/kilo-ui/toast"
+ import { useLanguage } from "../../context/language"
+ import { useVSCode } from "../../context/vscode"
+ import { useConfig } from "../../context/config"
+-import type { Config, ConnectionState, ExtensionMessage } from "../../types/messages"
++import type { Config, ConnectionState, ExtensionMessage, MigrationSource } from "../../types/messages"
+ import { buildExport, parseImport, MAX_IMPORT_SIZE } from "./settings-io"
+ 
+ export interface AboutKiloCodeTabProps {
+   port: number | null
+   connectionState: ConnectionState
+   extensionVersion?: string
+-  onMigrateClick?: () => void // legacy-migration
++  onMigrationClick?: (source: MigrationSource) => void // legacy-migration
+ }
+ 
+ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
+@@ -328,21 +328,19 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
+         >
+           {language.t("settings.aboutKiloCode.legacyMigration.description")}
+         </p>
+-        <button
+-          type="button"
+-          onClick={() => props.onMigrateClick?.()}
+-          style={{
+-            background: "var(--vscode-button-background)",
+-            color: "var(--vscode-button-foreground)",
+-            border: "none",
+-            padding: "6px 14px",
+-            "border-radius": "2px",
+-            cursor: "pointer",
+-            "font-size": "var(--kilo-font-size-12)",
+-          }}
+-        >
+-          {language.t("settings.legacyMigration.link")}
+-        </button>
++        <div style={{ display: "flex", gap: "8px", "flex-wrap": "wrap" }}>
++          <Button variant="secondary" size="small" onClick={() => props.onMigrationClick?.("legacy")}>
++            {language.t("settings.legacyMigration.link")}
++          </Button>
++          <Button
++            variant="secondary"
++            size="small"
++            onClick={() => props.onMigrationClick?.("roo")}
++            title={language.t("settings.aboutKiloCode.rooImport.description")}
++          >
++            {language.t("settings.aboutKiloCode.rooImport.button")}
++          </Button>
++        </div>
+       </div>
+       {/* legacy-migration end */}
+ 
+diff --git a/packages/kilo-vscode/webview-ui/src/components/settings/Settings.tsx b/packages/kilo-vscode/webview-ui/src/components/settings/Settings.tsx
+index 59e8206bff3..d4c40274621 100644
+--- a/packages/kilo-vscode/webview-ui/src/components/settings/Settings.tsx
++++ b/packages/kilo-vscode/webview-ui/src/components/settings/Settings.tsx
+@@ -24,11 +24,12 @@ import LanguageTab from "./LanguageTab"
+ import AboutKiloCodeTab from "./AboutKiloCodeTab"
+ import IndexingTab from "./IndexingTab"
+ import { useServer } from "../../context/server"
++import type { MigrationSource } from "../../types/messages"
+ 
+ export interface SettingsProps {
+   tab?: string
+   onTabChange?: (tab: string) => void
+-  onMigrateClick?: () => void // legacy-migration
++  onMigrationClick?: (source: MigrationSource) => void // legacy-migration
+ }
+ 
+ const Settings: Component<SettingsProps> = (props) => {
+@@ -275,7 +276,7 @@ const Settings: Component<SettingsProps> = (props) => {
+             port={server.serverInfo()?.port ?? null}
+             connectionState={server.connectionState()}
+             extensionVersion={server.extensionVersion()}
+-            onMigrateClick={props.onMigrateClick}
++            onMigrationClick={props.onMigrationClick}
+           />
+         </Tabs.Content>
+       </Tabs>
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/ar.ts b/packages/kilo-vscode/webview-ui/src/i18n/ar.ts
+index ec9bc2163fc..4c92f27b3fd 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/ar.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/ar.ts
+@@ -1529,6 +1529,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "ترحيل الإصدار القديم",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "ترحيل الإعدادات من تثبيت سابق لـ Kilo Code، بما في ذلك مفاتيح API لمقدمي الخدمة والنموذج الافتراضي.",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "ما الجديد في Kilo Code",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/br.ts b/packages/kilo-vscode/webview-ui/src/i18n/br.ts
+index 8edcf75fa1c..c44c4d4ae97 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/br.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/br.ts
+@@ -1574,6 +1574,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "Migração Legada",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "Migre as configurações de uma instalação anterior do Kilo Code, incluindo chaves de API de provedor e modelo padrão.",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "O Que Há de Novo no Kilo Code",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/bs.ts b/packages/kilo-vscode/webview-ui/src/i18n/bs.ts
+index 95d3ecda3e2..cbeb8b46ef4 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/bs.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/bs.ts
+@@ -1568,6 +1568,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "Migracija sa prethodne verzije",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "Migrirajte postavke iz prethodne instalacije Kilo Code, uključujući API ključeve provajdera i podrazumijevani model.",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "Šta je novo u Kilo Code",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/da.ts b/packages/kilo-vscode/webview-ui/src/i18n/da.ts
+index 839e04a2a2a..faa1931bee5 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/da.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/da.ts
+@@ -1558,6 +1558,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "Legacy-migrering",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "Migrer indstillinger fra en tidligere installation af Kilo Code, herunder udbyder API-nøgler og standardmodel.",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "Nyheder i Kilo Code",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/de.ts b/packages/kilo-vscode/webview-ui/src/i18n/de.ts
+index 01bb3b4fd0c..2f7ad9d8b75 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/de.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/de.ts
+@@ -1589,6 +1589,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "Legacy-Migration",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "Migrieren Sie Einstellungen von einer früheren Installation von Kilo Code, einschließlich Anbieter-API-Schlüsseln und dem Standardmodell.",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "Neuigkeiten in Kilo Code",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/en.ts b/packages/kilo-vscode/webview-ui/src/i18n/en.ts
+index 0a1452f2404..0a3a7e0efe6 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/en.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/en.ts
+@@ -1555,6 +1555,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "Legacy Migration",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "Migrate settings from a previous installation of Kilo Code, including provider API keys and default model.",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "What's New in Kilo Code",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/es.ts b/packages/kilo-vscode/webview-ui/src/i18n/es.ts
+index 0b9066cb431..82bc6ecfa88 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/es.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/es.ts
+@@ -1581,6 +1581,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "Migración heredada",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "Migra la configuración de una instalación anterior de Kilo Code, incluyendo las claves API de proveedores y el modelo predeterminado.",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "Novedades en Kilo Code",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/fr.ts b/packages/kilo-vscode/webview-ui/src/i18n/fr.ts
+index 0178184abb7..d009b055f46 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/fr.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/fr.ts
+@@ -1601,6 +1601,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "Migration de l'ancienne version",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "Migrer les paramètres d'une précédente installation de Kilo Code, y compris les clés d'API des fournisseurs et le modèle par défaut.",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "Nouveautés de Kilo Code",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/it.ts b/packages/kilo-vscode/webview-ui/src/i18n/it.ts
+index fe8b6c53296..5d2607bec65 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/it.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/it.ts
+@@ -1392,6 +1392,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "Migrazione legacy",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "Migra le impostazioni da una precedente installazione di Kilo Code, incluse API key dei provider e modello predefinito.",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+   "migration.whatsNew.title": "Novità in Kilo Code",
+   "migration.whatsNew.subtitle": "Abbiamo ricostruito l'estensione su fondamenta più veloci ed efficienti.",
+   "migration.whatsNew.features.performance.title": "Prestazioni agente più rapide",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/ja.ts b/packages/kilo-vscode/webview-ui/src/i18n/ja.ts
+index 1fe4fa9f0ea..d0a5ad0b636 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/ja.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/ja.ts
+@@ -1552,6 +1552,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "レガシー移行",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "プロバイダーのAPIキーやデフォルトモデルなど、以前にインストールしたKilo Codeから設定を移行します。",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "Kilo Codeの新機能",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/ko.ts b/packages/kilo-vscode/webview-ui/src/i18n/ko.ts
+index a496d404a9a..ef14ca3808a 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/ko.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/ko.ts
+@@ -1536,6 +1536,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "레거시 마이그레이션",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "공급자 API 키 및 기본 모델을 포함하여 이전 Kilo Code 설치에서 설정을 마이그레이션합니다.",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "Kilo Code의 새로운 기능",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/nl.ts b/packages/kilo-vscode/webview-ui/src/i18n/nl.ts
+index 8c58026366a..5df0a869295 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/nl.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/nl.ts
+@@ -1549,6 +1549,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "Legacy Migratie",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "Migreer instellingen van een eerdere installatie van Kilo Code, inclusief provider API-sleutels en standaard model.",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "Wat is er Nieuw in Kilo Code",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/no.ts b/packages/kilo-vscode/webview-ui/src/i18n/no.ts
+index 8f38b194fb0..13ffce1e597 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/no.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/no.ts
+@@ -1555,6 +1555,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "Migrering fra eldre versjon",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "Migrer innstillinger fra en tidligere installasjon av Kilo Code, inkludert API-nøkler for leverandører og standardmodell.",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "Hva er nytt i Kilo Code",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/pl.ts b/packages/kilo-vscode/webview-ui/src/i18n/pl.ts
+index 438de45d3fe..0e4154344bd 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/pl.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/pl.ts
+@@ -1565,6 +1565,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "Migracja starszej wersji",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "Migruj ustawienia z poprzedniej instalacji Kilo Code, w tym klucze API dostawców i domyślny model.",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "Co nowego w Kilo Code",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/ru.ts b/packages/kilo-vscode/webview-ui/src/i18n/ru.ts
+index 2f9d93e8e1e..00ae7739d51 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/ru.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/ru.ts
+@@ -1565,6 +1565,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "Миграция с устаревшей версии",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "Перенос настроек из предыдущей установки Kilo Code, включая API-ключи провайдеров и модель по умолчанию.",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "Что нового в Kilo Code",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/th.ts b/packages/kilo-vscode/webview-ui/src/i18n/th.ts
+index 6689b8787a1..185a61d6ecd 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/th.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/th.ts
+@@ -1534,6 +1534,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "การย้ายข้อมูลจากเวอร์ชันดั้งเดิม",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "ย้ายการตั้งค่าจากการติดตั้ง Kilo Code ก่อนหน้านี้ รวมถึงคีย์ API ของผู้ให้บริการและโมเดลเริ่มต้น",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "มีอะไรใหม่ใน Kilo Code",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/tr.ts b/packages/kilo-vscode/webview-ui/src/i18n/tr.ts
+index 4d70bbfa83e..9106d33244e 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/tr.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/tr.ts
+@@ -1537,6 +1537,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "Eski Sürüm Taşıma",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "Sağlayıcı API anahtarları ve varsayılan model dahil olmak üzere Kilo Code'un önceki yüklemesinden ayarları taşıyın.",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "Kilo Code'daki Yenilikler",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/uk.ts b/packages/kilo-vscode/webview-ui/src/i18n/uk.ts
+index b1f6bf4fbf1..1f49bc9adaf 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/uk.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/uk.ts
+@@ -1534,6 +1534,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "Перенесення зі старої версії",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "Перенести налаштування з попередньої версії Kilo Code, включаючи API-ключі провайдерів та стандартну модель.",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "Що нового в Kilo Code",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/zh.ts b/packages/kilo-vscode/webview-ui/src/i18n/zh.ts
+index d7ee0ad0031..e42648d6ecc 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/zh.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/zh.ts
+@@ -1498,6 +1498,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "旧版迁移",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "从旧版 Kilo Code 安装迁移设置，包括提供商 API 密钥和默认模型。",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "Kilo Code 新功能",
+diff --git a/packages/kilo-vscode/webview-ui/src/i18n/zht.ts b/packages/kilo-vscode/webview-ui/src/i18n/zht.ts
+index c970524cc17..9cc364b94bd 100644
+--- a/packages/kilo-vscode/webview-ui/src/i18n/zht.ts
++++ b/packages/kilo-vscode/webview-ui/src/i18n/zht.ts
+@@ -1504,6 +1504,8 @@ export const dict = {
+   "settings.aboutKiloCode.legacyMigration.title": "舊版遷移",
+   "settings.aboutKiloCode.legacyMigration.description":
+     "從舊版 Kilo Code 安裝遷移設定，包括供應商 API 金鑰和預設模型。",
++  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
++  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
+ 
+   // Screen 1 — What's New
+   "migration.whatsNew.title": "Kilo Code 新功能",
+diff --git a/packages/kilo-vscode/webview-ui/src/stories/migration.stories.tsx b/packages/kilo-vscode/webview-ui/src/stories/migration.stories.tsx
+new file mode 100644
+index 00000000000..4b111e795be
+--- /dev/null
++++ b/packages/kilo-vscode/webview-ui/src/stories/migration.stories.tsx
+@@ -0,0 +1,62 @@
++/** @jsxImportSource solid-js */
++/**
++ * Stories for migration flows.
++ */
++
++import type { Meta, StoryObj } from "storybook-solidjs-vite"
++import { onMount, type Component } from "solid-js"
++import MigrationWizard from "../components/migration/MigrationWizard"
++import { StoryProviders } from "./StoryProviders"
++
++const meta: Meta = {
++  title: "Migration",
++  parameters: { layout: "fullscreen" },
++}
++export default meta
++type Story = StoryObj
++
++const operationId = "roo-migration-story"
++
++const RooWizard: Component = () => {
++  onMount(() => {
++    queueMicrotask(() => {
++      window.dispatchEvent(
++        new MessageEvent("message", {
++          data: {
++            type: "migrationData",
++            source: "roo",
++            operationId,
++            data: {
++              providers: [],
++              mcpServers: [],
++              customModes: [],
++              sessions: [
++                {
++                  id: "roo-1",
++                  title: "Refactor authentication flow",
++                  directory: "/workspace/app",
++                  time: 1760443200000,
++                },
++                { id: "roo-2", title: "Add billing dashboard", directory: "/workspace/app", time: 1760356800000 },
++                { id: "roo-3", title: "Investigate flaky tests", directory: "/workspace/app", time: 1760270400000 },
++              ],
++            },
++          },
++        }),
++      )
++    })
++  })
++
++  return <MigrationWizard source="roo" operationId={operationId} onBack={() => {}} onComplete={() => {}} />
++}
++
++export const RooWizardSelecting: Story = {
++  name: "Roo wizard — selecting sessions",
++  render: () => (
++    <StoryProviders>
++      <div style={{ "max-height": "720px", overflow: "auto" }}>
++        <RooWizard />
++      </div>
++    </StoryProviders>
++  ),
++}
+diff --git a/packages/kilo-vscode/webview-ui/src/types/messages/extension-messages.ts b/packages/kilo-vscode/webview-ui/src/types/messages/extension-messages.ts
+index 2a285e6b792..da18b09bdfd 100644
+--- a/packages/kilo-vscode/webview-ui/src/types/messages/extension-messages.ts
++++ b/packages/kilo-vscode/webview-ui/src/types/messages/extension-messages.ts
+@@ -39,10 +39,10 @@ import type {
+   WorktreeState,
+ } from "./agent-manager"
+ import type {
+-  LegacyMigrationCompleteMessage,
+-  LegacyMigrationDataMessage,
+-  LegacyMigrationProgressMessage,
+-  LegacyMigrationSessionProgressMessage,
++  MigrationCompleteMessage,
++  MigrationDataMessage,
++  MigrationProgressMessage,
++  MigrationSessionProgressMessage,
+   MigrationStateMessage,
+ } from "./migration"
+ 
+@@ -1068,10 +1068,10 @@ export type ExtensionMessage =
+   | AgentManagerTerminalErrorMessage
+   // legacy-migration start
+   | MigrationStateMessage
+-  | LegacyMigrationDataMessage
+-  | LegacyMigrationProgressMessage
+-  | LegacyMigrationSessionProgressMessage
+-  | LegacyMigrationCompleteMessage
++  | MigrationDataMessage
++  | MigrationProgressMessage
++  | MigrationSessionProgressMessage
++  | MigrationCompleteMessage
+   // legacy-migration end
+   | EnhancePromptResultMessage
+   | EnhancePromptErrorMessage
+diff --git a/packages/kilo-vscode/webview-ui/src/types/messages/migration.ts b/packages/kilo-vscode/webview-ui/src/types/messages/migration.ts
+index c9375de144b..4736cc771ab 100644
+--- a/packages/kilo-vscode/webview-ui/src/types/messages/migration.ts
++++ b/packages/kilo-vscode/webview-ui/src/types/messages/migration.ts
+@@ -54,9 +54,12 @@ export interface MigrationResultItem {
+   message?: string
+ }
+ 
++export type MigrationSource = "legacy" | "roo"
++
+ export interface MigrationStateMessage {
+   type: "migrationState"
+   needed: boolean
++  source: "legacy"
+   data?: {
+     providers: MigrationProviderInfo[]
+     mcpServers: MigrationMcpServerInfo[]
+@@ -67,8 +70,10 @@ export interface MigrationStateMessage {
+   }
+ }
+ 
+-export interface LegacyMigrationDataMessage {
+-  type: "legacyMigrationData"
++export interface MigrationDataMessage {
++  type: "migrationData"
++  source: MigrationSource
++  operationId: string
+   data: {
+     providers: MigrationProviderInfo[]
+     mcpServers: MigrationMcpServerInfo[]
+@@ -79,8 +84,10 @@ export interface LegacyMigrationDataMessage {
+   }
+ }
+ 
+-export interface LegacyMigrationProgressMessage {
+-  type: "legacyMigrationProgress"
++export interface MigrationProgressMessage {
++  type: "migrationProgress"
++  source: MigrationSource
++  operationId: string
+   item: string
+   status: "migrating" | "success" | "warning" | "error"
+   message?: string
+@@ -88,8 +95,10 @@ export interface LegacyMigrationProgressMessage {
+ 
+ export type LegacyMigrationSessionPhase = "preparing" | "storing" | "skipped" | "done" | "summary" | "error"
+ 
+-export interface LegacyMigrationSessionProgressMessage {
+-  type: "legacyMigrationSessionProgress"
++export interface MigrationSessionProgressMessage {
++  type: "migrationSessionProgress"
++  source: MigrationSource
++  operationId: string
+   session: MigrationSessionInfo
+   index: number
+   total: number
+@@ -97,13 +106,17 @@ export interface LegacyMigrationSessionProgressMessage {
+   error?: string
+ }
+ 
+-export interface LegacyMigrationCompleteMessage {
+-  type: "legacyMigrationComplete"
++export interface MigrationCompleteMessage {
++  type: "migrationComplete"
++  source: MigrationSource
++  operationId: string
+   results: MigrationResultItem[]
+ }
+ 
+-export interface RequestLegacyMigrationDataMessage {
+-  type: "requestLegacyMigrationData"
++export interface RequestMigrationDataMessage {
++  type: "requestMigrationData"
++  source: MigrationSource
++  operationId: string
+ }
+ 
+ export interface MigrationAutoApprovalSelections {
+@@ -120,8 +133,10 @@ export interface MigrationSessionSelection {
+   force?: boolean
+ }
+ 
+-export interface StartLegacyMigrationMessage {
+-  type: "startLegacyMigration"
++export interface StartMigrationMessage {
++  type: "startMigration"
++  source: MigrationSource
++  operationId: string
+   selections: {
+     providers: string[]
+     mcpServers: string[]
+diff --git a/packages/kilo-vscode/webview-ui/src/types/messages/webview-messages.ts b/packages/kilo-vscode/webview-ui/src/types/messages/webview-messages.ts
+index b47d1df7fee..3ad08555bc1 100644
+--- a/packages/kilo-vscode/webview-ui/src/types/messages/webview-messages.ts
++++ b/packages/kilo-vscode/webview-ui/src/types/messages/webview-messages.ts
+@@ -10,9 +10,9 @@ import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-styl
+ import type {
+   ClearLegacyDataMessage,
+   FinalizeLegacyMigrationMessage,
+-  RequestLegacyMigrationDataMessage,
++  RequestMigrationDataMessage,
+   SkipLegacyMigrationMessage,
+-  StartLegacyMigrationMessage,
++  StartMigrationMessage,
+ } from "./migration"
+ 
+ // ============================================
+@@ -1224,8 +1224,8 @@ export type WebviewMessage =
+   | RefreshPRMessage
+   | OpenPRMessage
+   // legacy-migration start
+-  | RequestLegacyMigrationDataMessage
+-  | StartLegacyMigrationMessage
++  | RequestMigrationDataMessage
++  | StartMigrationMessage
+   | SkipLegacyMigrationMessage
+   | ClearLegacyDataMessage
+   | FinalizeLegacyMigrationMessage
