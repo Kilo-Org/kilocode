@@ -145,6 +145,9 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Mark workspace as git-safe
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Run JetBrains unit tests
         run: bun script/test-ci.ts
         working-directory: packages/kilo-jetbrains
