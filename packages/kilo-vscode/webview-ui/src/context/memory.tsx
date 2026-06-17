@@ -1,0 +1,192 @@
+import { createContext, createEffect, createMemo, createSignal, onCleanup, useContext } from "solid-js"
+import type { Accessor, ParentComponent } from "solid-js"
+import { useServer } from "./server"
+import { useSession } from "./session"
+import { useVSCode } from "./vscode"
+import { showToast } from "@kilocode/kilo-ui/toast"
+import type { MemoryShowResponse, MemoryStatusResponse } from "@kilocode/sdk/v2"
+import type { ExtensionMessage } from "../types/messages"
+
+interface MemoryContextValue {
+  status: Accessor<MemoryStatusResponse | undefined>
+  show: Accessor<MemoryShowResponse | undefined>
+  loading: Accessor<boolean>
+  pending: Accessor<boolean>
+  error: Accessor<string | undefined>
+  enabled: Accessor<boolean>
+  active: Accessor<boolean>
+  sessionTokens: Accessor<number>
+  totalTokens: Accessor<number>
+  refresh: (includeSources?: boolean) => void
+  inspect: () => void
+  enable: () => void
+  disable: () => void
+  auto: (mode: "on" | "off") => void
+  rebuild: () => void
+  remember: () => void
+  forget: () => void
+}
+
+const MemoryContext = createContext<MemoryContextValue>()
+
+export const MemoryProvider: ParentComponent = (props) => {
+  const vscode = useVSCode()
+  const server = useServer()
+  const session = useSession()
+  const [status, setStatus] = createSignal<MemoryStatusResponse | undefined>()
+  const [show, setShow] = createSignal<MemoryShowResponse | undefined>()
+  const [loading, setLoading] = createSignal(false)
+  const [pending, setPending] = createSignal(false)
+  const [error, setError] = createSignal<string | undefined>()
+
+  const id = () => session.currentSessionID()
+  const current = (sid?: string) => {
+    const active = id()
+    return !sid || !active || sid === active
+  }
+  let last = ""
+
+  const refresh = (includeSources = false) => {
+    if (!server.isConnected()) return
+    setLoading(true)
+    setError(undefined)
+    vscode.postMessage({ type: "requestMemory", sessionID: id(), includeSources })
+  }
+
+  const operation = (op: "enable" | "disable" | "rebuild") => {
+    setPending(true)
+    setError(undefined)
+    vscode.postMessage({ type: "memoryOperation", operation: op, sessionID: id() })
+  }
+
+  const auto = (mode: "on" | "off") => {
+    setPending(true)
+    setError(undefined)
+    vscode.postMessage({ type: "memoryOperation", operation: "auto", mode, sessionID: id() })
+  }
+
+  const prompt = (op: "remember" | "forget") => {
+    setError(undefined)
+    vscode.postMessage({ type: "memoryPrompt", operation: op, sessionID: id() })
+  }
+
+  const inspect = () => {
+    setLoading(true)
+    setError(undefined)
+    vscode.postMessage({ type: "memoryInspect", sessionID: id() })
+  }
+
+  const event = (message: Extract<ExtensionMessage, { type: "memoryEvent" }>) => {
+    if (!current(message.sessionID)) return
+    if (message.detail.type === "skipped") return
+    if (!message.detail.message) return
+    const key = `${message.sessionID ?? ""}:${message.detail.type ?? ""}:${message.detail.message}`
+    if (key === last) return
+    last = key
+    showToast({
+      ...(message.detail.type === "saved"
+        ? { variant: "success" as const }
+        : message.detail.type === "error"
+          ? { variant: "error" as const }
+          : {}),
+      title: message.detail.message,
+    })
+  }
+
+  const loaded = (message: Extract<ExtensionMessage, { type: "memoryLoaded" }>) => {
+    if (!current(message.sessionID)) return
+    setLoading(false)
+    if (message.error) {
+      setError(message.error)
+      return
+    }
+    if (message.status) setStatus(message.status)
+    if (message.show) setShow(message.show)
+    setError(undefined)
+  }
+
+  const done = (message: Extract<ExtensionMessage, { type: "memoryOperationResult" }>) => {
+    if (!current(message.sessionID)) {
+      setPending(false)
+      return
+    }
+    setPending(false)
+    setLoading(false)
+    if (!message.ok) {
+      setError(message.error ?? "Memory operation failed")
+      showToast({ variant: "error", title: message.error ?? "Memory operation failed" })
+      return
+    }
+    if (message.status) setStatus(message.status)
+    if (message.show) setShow(message.show)
+    setError(undefined)
+  }
+
+  const receive = (message: ExtensionMessage) => {
+    if (message.type === "memoryEvent") {
+      event(message)
+      return
+    }
+    if (message.type === "memoryLoaded") {
+      loaded(message)
+      return
+    }
+    if (message.type === "memoryOperationResult") {
+      done(message)
+      return
+    }
+    if (message.type === "extensionDataReady" && server.isConnected() && !status()) refresh(false)
+  }
+
+  const unsubscribe = vscode.onMessage(receive)
+
+  onCleanup(unsubscribe)
+
+  createEffect(() => {
+    if (!server.isConnected()) return
+    id()
+    server.workspaceDirectory()
+    refresh(false)
+  })
+
+  const sessionTokens = (status?: MemoryStatusResponse) => {
+    const sid = id()
+    if (!status?.state.enabled) return 0
+    if (!sid || status?.state.stats.lastInjectedSessionID !== sid) return 0
+    return status.state.stats.lastInjectedTokens
+  }
+
+  const total = createMemo(() => status()?.index.estimatedTokens ?? 0)
+
+  const sessionTotal = createMemo(() => sessionTokens(status()))
+
+  const value: MemoryContextValue = {
+    status,
+    show,
+    loading,
+    pending,
+    error,
+    enabled: createMemo(() => status()?.state.enabled ?? false),
+    active: createMemo(() => Boolean(status()?.state.enabled)),
+    sessionTokens: sessionTotal,
+    totalTokens: total,
+    refresh,
+    inspect,
+    enable: () => operation("enable"),
+    disable: () => operation("disable"),
+    auto,
+    rebuild: () => operation("rebuild"),
+    remember: () => prompt("remember"),
+    forget: () => prompt("forget"),
+  }
+
+  return <MemoryContext.Provider value={value}>{props.children}</MemoryContext.Provider>
+}
+
+export function useMemory(): MemoryContextValue {
+  const context = useContext(MemoryContext)
+  if (!context) {
+    throw new Error("useMemory must be used within a MemoryProvider")
+  }
+  return context
+}

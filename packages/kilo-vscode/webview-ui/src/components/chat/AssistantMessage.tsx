@@ -122,6 +122,33 @@ type ToolStateProps = {
   status?: string
 }
 
+type MemoryMeta = {
+  type?: string
+  tokens?: number
+  count?: number
+  files?: string[]
+  sources?: string[]
+}
+
+function memoryMeta(parts: SDKPart[]) {
+  for (const part of parts) {
+    if (part.type !== "text") continue
+    const meta = (part as SDKPart & { metadata?: { kiloMemory?: unknown } }).metadata?.kiloMemory
+    if (!meta || typeof meta !== "object") continue
+    const item = meta as MemoryMeta
+    const files = Array.isArray(item.files)
+      ? item.files.filter((file) => typeof file === "string")
+      : Array.isArray(item.sources)
+        ? item.sources.filter((source) => typeof source === "string")
+        : []
+    const count = typeof item.count === "number" ? item.count : files.length
+    const tokens = typeof item.tokens === "number" ? item.tokens : 0
+    const type = item.type === "startup" ? "startup" : "recall"
+    return { type, count, tokens, files }
+  }
+  return undefined
+}
+
 function TodoToolCard(props: { part: ToolPart }) {
   const render = ToolRegistry.render(props.part.tool)
   const state = () => props.part.state as ToolStateProps
@@ -182,6 +209,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
     if (!stored) return []
     return (stored as SDKPart[]).filter((part) => isRenderable(part))
   })
+  const memory = createMemo(() => memoryMeta(((data.store.part?.[props.message.id] ?? []) as SDKPart[]) ?? []))
 
   return (
     <>
@@ -276,6 +304,18 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           )
         }}
       </For>
+      <Show when={memory()}>
+        {(item) => (
+          <div
+            data-component="assistant-memory-badge"
+            title={item().files.length ? `Memory files: ${item().files.join(", ")}` : undefined}
+          >
+            {item().type === "startup" ? "Memory injected" : "Memory recalled"} ·{" "}
+            {item().type === "startup" ? "startup ctx" : `${item().count} items`} · {item().tokens.toLocaleString()}{" "}
+            tokens
+          </div>
+        )}
+      </Show>
     </>
   )
 }

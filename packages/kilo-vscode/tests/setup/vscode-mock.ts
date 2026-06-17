@@ -49,6 +49,7 @@ const mockVscode = {
     textDocuments: [] as Array<unknown>,
     onDidOpenTextDocument: () => ({ dispose: noop }),
     onDidChangeTextDocument: () => ({ dispose: noop }),
+    onDidSaveTextDocument: () => ({ dispose: noop }),
     onDidCloseTextDocument: () => ({ dispose: noop }),
     getConfiguration: () => ({
       get: <T>(_key: string, value?: T) => value,

@@ -271,6 +271,50 @@
   gap: 2px;
 }
 
+[data-slot="task-header-memory-stat"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+}
+
+[data-slot="task-header-memory-stat"][data-enabled] {
+  color: var(--vscode-foreground);
+}
+
+.task-header-memory {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  font-size: var(--kilo-font-size-11);
+  color: var(--vscode-descriptionForeground);
+  min-width: 0;
+}
+
+.task-header-memory-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-header-memory-status[data-enabled] {
+  color: var(--vscode-foreground);
+}
+
+.task-header-memory-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
 /* Expand toggle */
 [data-slot="task-header-expand"] {
   all: unset;
