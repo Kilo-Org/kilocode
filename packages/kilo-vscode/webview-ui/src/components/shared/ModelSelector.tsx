@@ -116,6 +116,8 @@ export interface ModelSelectorBaseProps {
   label?: string
   /** Additional accessible context for this model setting. */
   description?: string
+  /** Prevent opening or changing the selection. */
+  disabled?: boolean
 }
 
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
@@ -201,7 +203,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   })
 
   const hasProviders = () => visibleModels().length > 0
-  const canOpen = () => hasProviders() || ((props.allowClear ?? false) && !!props.value)
+  const canOpen = () => !props.disabled && (hasProviders() || ((props.allowClear ?? false) && !!props.value))
 
   // Debounce search input to avoid re-filtering on every keystroke
   createEffect(() => {
@@ -427,8 +429,16 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     clearTimeout(previewTimer)
   })
 
+  createEffect(() => {
+    if (!props.disabled || !open()) return
+    setOpen(false)
+  })
+
   // Listen for slash command trigger
-  const onTrigger = () => setOpen(true)
+  const onTrigger = () => {
+    if (!canOpen()) return
+    setOpen(true)
+  }
   window.addEventListener("openModelPicker", onTrigger)
   onCleanup(() => {
     window.removeEventListener("openModelPicker", onTrigger)
@@ -447,12 +457,14 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   })
 
   function pick(model: EnrichedModel) {
+    if (props.disabled) return
     props.onSelect(model.providerID, model.id)
     setOpen(false)
     props.onPick?.()
   }
 
   function pickClear() {
+    if (props.disabled) return
     setSelectedKey(CLEAR_KEY)
     setPreActiveKey(CLEAR_KEY)
     setPreviewKey(CLEAR_KEY)
@@ -613,7 +625,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
         deferDismiss={props.deferDismiss}
         portal={props.portal}
         open={open()}
-        onOpenChange={setOpen}
+        onOpenChange={(next) => setOpen(next && canOpen())}
         triggerAs={Button}
         triggerProps={{
           variant: "secondary",
@@ -914,15 +926,23 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
 interface ModelSelectorProps {
   sessionID?: Accessor<string | undefined>
+  providerID?: string
 }
 
 export const ModelSelector: Component<ModelSelectorProps> = (props) => {
+  const provider = useProvider()
   const session = useSession()
   const id = () => props.sessionID?.()
+  const models = createMemo(() => {
+    if (!props.providerID) return undefined
+    return provider.models().filter((model) => model.providerID === props.providerID)
+  })
 
   return (
     <ModelSelectorBase
       value={session.selected(id())}
+      models={models()}
+      favorites={props.providerID ? false : undefined}
       onSelect={(providerID, modelID) => {
         session.selectModel(providerID, modelID, id())
       }}

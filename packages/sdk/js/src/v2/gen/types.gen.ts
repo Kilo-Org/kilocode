@@ -1505,6 +1505,7 @@ export type Config = {
   experimental?: {
     disable_paste_summary?: boolean
     batch_tool?: boolean
+    cloud_agent?: boolean
     codebase_search?: boolean
     speech_to_text_model?: string
     openTelemetry?: boolean
@@ -9192,6 +9193,28 @@ export type KiloClawChatCredentialsResponses = {
 }
 
 export type KiloClawChatCredentialsResponse = KiloClawChatCredentialsResponses[keyof KiloClawChatCredentialsResponses]
+
+export type KiloCloudAgentCredentialsData = {
+  body?: never
+  path?: never
+  query?: never
+  url: "/kilo/cloud-agent/credentials"
+}
+
+export type KiloCloudAgentCredentialsResponses = {
+  /**
+   * Cloud Agent credentials
+   */
+  200: {
+    token: string
+    expiresAt: string
+    kiloFacadeUrl: string
+    cloudAgentUrl: string
+  }
+}
+
+export type KiloCloudAgentCredentialsResponse =
+  KiloCloudAgentCredentialsResponses[keyof KiloCloudAgentCredentialsResponses]
 
 export type KiloCloudSessionsData = {
   body?: never

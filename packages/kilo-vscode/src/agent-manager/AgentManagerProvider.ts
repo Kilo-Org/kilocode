@@ -34,6 +34,7 @@ import { restoreWorktrees } from "./state-recovery"
 import { createLocalDiff, diffSummary as localDiffSummary } from "./local-diff"
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
 import { stopSessionProcesses } from "../kilo-provider/background-process"
+import { CloudAgentController } from "./cloud-agent/controller"
 
 import { startSession } from "./mcp-warmup"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
@@ -63,6 +64,7 @@ export class AgentManagerProvider implements Disposable {
   private importer: WorktreeImporter
   private terminalManager: SessionTerminalManager
   private terminalRouter: TerminalRouter
+  private cloud: CloudAgentController
   private run: RunController
   private stateReady: Promise<void> | undefined
   private statsPoller: GitStatsPoller
@@ -75,6 +77,8 @@ export class AgentManagerProvider implements Disposable {
   private cachedLocalStats: { type: "agentManager.localStats"; stats: LocalStats } | undefined
   private unsubTool: (() => void) | undefined
   private unsubFont: (() => void) | undefined
+  private unsubCloudState: (() => void) | undefined
+  private unsubCloudAuth: (() => void) | undefined
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
 
@@ -102,6 +106,14 @@ export class AgentManagerProvider implements Disposable {
     })
     this.unsubFont = watchTerminalFont((font) => {
       this.postToWebview({ type: "agentManager.terminal.fontChanged", font })
+    })
+    this.cloud = new CloudAgentController({
+      getLocalClient: () =>
+        this.connectionService.getConnectionState() === "connected" ? this.connectionService.getClient() : null,
+      getRoot: () => this.getRoot(),
+      remoteUrl: (cwd, remote) => this.gitOps.remoteUrl(cwd, remote),
+      post: (msg) => this.postToWebview(msg as AgentManagerOutMessage),
+      log: (...args) => this.log("[CloudAgent]", ...args),
     })
     this.run = new RunController({
       root: () => this.getRoot(),
@@ -172,6 +184,14 @@ export class AgentManagerProvider implements Disposable {
       (event) => (event as { type?: string }).type === "kilocode.agent_manager.start",
       (event, directory) => this.onToolEvent(event, directory),
     )
+    this.unsubCloudState = this.connectionService.onStateChange((state) => {
+      if (state === "connected") return this.cloud.recover()
+      this.cloud.localDisconnected()
+    })
+    this.unsubCloudAuth = this.connectionService.onEventFiltered(
+      (event) => event.type === "global.disposed",
+      () => this.cloud.authChanged(),
+    )
   }
 
   private log(...args: unknown[]) {
@@ -222,10 +242,12 @@ export class AgentManagerProvider implements Disposable {
   private attachPanel(ctx: PanelContext): void {
     if (this.panel) {
       this.log("Disposing previous panel before attaching new one")
+      this.cloud.detach()
       this.panel.dispose()
       this.panel = undefined
     }
     this.panel = ctx
+    this.cloud.attach()
 
     this.statsPoller.setVisible(ctx.visible)
     this.onVisibilityChange?.(ctx.visible)
@@ -246,6 +268,7 @@ export class AgentManagerProvider implements Disposable {
       // have already replaced us via attachPanel.
       if (this.panel === ctx) {
         this.log("Panel disposed")
+        this.cloud.detach()
         this.statsPoller.stop()
         this.prBridge.poller.stop()
         this.diffs.stop()
@@ -335,6 +358,7 @@ export class AgentManagerProvider implements Disposable {
 
   private async onMessage(msg: Record<string, unknown>): Promise<Record<string, unknown> | null> {
     if (this.prBridge.handleMessage(msg)) return null
+    if (this.cloud.handle(msg)) return null
     if (msg.type === "requestFileSearch" && typeof msg.sessionID !== "string" && this.activeSessionId) {
       return { ...msg, sessionID: this.activeSessionId }
     }
@@ -1799,8 +1823,11 @@ export class AgentManagerProvider implements Disposable {
     await this.state?.flush().catch((err) => this.log("dispose: state flush failed:", err))
     this.unsubTool?.()
     this.unsubFont?.()
+    this.unsubCloudState?.()
+    this.unsubCloudAuth?.()
     this.connectionService.unregisterFocused("agent-manager")
     this.connectionService.registerOpen("agent-manager", [])
+    this.cloud.dispose()
     this.diffs.stop()
     this.statsPoller.stop()
     this.gitOps.dispose()

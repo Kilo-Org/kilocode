@@ -26,6 +26,8 @@ const ROOT = path.resolve(import.meta.dir, "../..")
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/cloud-agent/CloudAgentSection.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/cloud-agent/NewCloudAgentDialog.tsx"),
 ]
 
 /**

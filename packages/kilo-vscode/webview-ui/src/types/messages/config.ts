@@ -39,6 +39,7 @@ export interface WatcherConfig {
 
 export interface ExperimentalConfig {
   batch_tool?: boolean
+  cloud_agent?: boolean
   codebase_search?: boolean
   speech_to_text_model?: string
   primary_tools?: string[]

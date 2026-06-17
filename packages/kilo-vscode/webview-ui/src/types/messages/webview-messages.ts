@@ -230,6 +230,8 @@ export interface RequestSkillsMessage {
 
 export interface RequestCommandsMessage {
   type: "requestCommands"
+  sessionID?: string
+  requestID?: number
 }
 
 export interface SendCommandRequest {
@@ -582,6 +584,35 @@ export interface RequestRepoInfoMessage {
 
 export interface RequestStateMessage {
   type: "agentManager.requestState"
+}
+
+export interface AgentManagerRequestCloudSessionsMessage {
+  type: "agentManager.requestCloudSessions"
+}
+
+export interface AgentManagerRetryCloudSessionsMessage {
+  type: "agentManager.retryCloudSessions"
+}
+
+export interface AgentManagerOpenCloudSessionMessage {
+  type: "agentManager.openCloudSession"
+  sessionId: string
+}
+
+export interface AgentManagerCloseCloudSessionMessage {
+  type: "agentManager.closeCloudSession"
+  sessionId: string
+}
+
+export interface AgentManagerRequestCloudCreateContextMessage {
+  type: "agentManager.requestCloudCreateContext"
+}
+
+export interface AgentManagerCreateCloudSessionMessage {
+  type: "agentManager.createCloudSession"
+  prompt: string
+  mode: string
+  model: string
 }
 
 // Configure worktree setup script
@@ -1175,6 +1206,12 @@ export type WebviewMessage =
   | CreateWorktreeSessionRequest
   | RequestNotificationsMessage
   | DismissNotificationMessage
+  | AgentManagerRequestCloudSessionsMessage
+  | AgentManagerRetryCloudSessionsMessage
+  | AgentManagerOpenCloudSessionMessage
+  | AgentManagerCloseCloudSessionMessage
+  | AgentManagerRequestCloudCreateContextMessage
+  | AgentManagerCreateCloudSessionMessage
   | CreateWorktreeRequest
   | DeleteWorktreeRequest
   | RemoveStaleWorktreeRequest

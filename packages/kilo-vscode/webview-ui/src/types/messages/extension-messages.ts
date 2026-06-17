@@ -23,6 +23,7 @@ import type { KilocodeNotification, ProfileData } from "./profile"
 import type {
   AgentManagerApplyWorktreeDiffConflict,
   AgentManagerApplyWorktreeDiffStatus,
+  AgentManagerCloudSessionSummary,
   BranchInfo,
   ContinueInWorktreeStatus,
   ExternalWorktreeInfo,
@@ -343,6 +344,8 @@ export interface SkillsLoadedMessage {
 
 export interface CommandsLoadedMessage {
   type: "commandsLoaded"
+  sessionID?: string
+  requestID?: number
   commands: SlashCommandInfo[]
 }
 
@@ -590,6 +593,74 @@ export interface AgentManagerStateMessage {
   runStatuses?: RunStatus[]
   runScriptConfigured?: boolean
   runScriptPath?: string
+}
+
+export interface AgentManagerCloudSessionsMessage {
+  type: "agentManager.cloudSessions"
+  status: "loading" | "ready" | "error" | "signed-out"
+  sessions: AgentManagerCloudSessionSummary[]
+  repository?: string
+  error?: string
+}
+
+export interface AgentManagerCloudSessionsPendingMessage {
+  type: "agentManager.cloudSessionsPending"
+  sessionIDs: string[]
+}
+
+export type AgentManagerCloudStatus = {
+  type: "preparing" | "ready" | "finalizing" | "error"
+  step?:
+    | "disk_check"
+    | "workspace_setup"
+    | "cloning"
+    | "branch"
+    | "devcontainer_setup"
+    | "setup_commands"
+    | "kilo_server"
+    | "kilo_session"
+    | "ready"
+    | "failed"
+}
+
+export interface AgentManagerCloudStatusMessage {
+  type: "agentManager.cloudStatus"
+  sessionID: string
+  cloudStatus: AgentManagerCloudStatus
+}
+
+export type AgentManagerCloudMessageFailure = {
+  messageID: string
+  status: "failed" | "interrupted"
+}
+
+export interface AgentManagerCloudMessageFailedMessage extends AgentManagerCloudMessageFailure {
+  type: "agentManager.cloudMessageFailed"
+  sessionID: string
+}
+
+export interface AgentManagerCloudSessionDeletedMessage {
+  type: "agentManager.cloudSessionDeleted"
+  sessionId: string
+}
+
+export interface AgentManagerCloudCreateContextMessage {
+  type: "agentManager.cloudCreateContext"
+  status: "loading" | "ready" | "unavailable" | "signed-out"
+  repository?: string
+  account?: string
+  error?: string
+}
+
+export interface AgentManagerCloudSessionCreatedMessage {
+  type: "agentManager.cloudSessionCreated"
+  session: AgentManagerCloudSessionSummary
+}
+
+export interface AgentManagerCloudSessionCreateFailedMessage {
+  type: "agentManager.cloudSessionCreateFailed"
+  kind: "rejected" | "indeterminate"
+  error: string
 }
 
 // ---------------------------------------------------------------------------
@@ -1034,6 +1105,14 @@ export type ExtensionMessage =
   | AgentManagerSessionAddedMessage
   | AgentManagerSessionForkedMessage
   | AgentManagerStateMessage
+  | AgentManagerCloudSessionsMessage
+  | AgentManagerCloudSessionsPendingMessage
+  | AgentManagerCloudStatusMessage
+  | AgentManagerCloudMessageFailedMessage
+  | AgentManagerCloudSessionDeletedMessage
+  | AgentManagerCloudCreateContextMessage
+  | AgentManagerCloudSessionCreatedMessage
+  | AgentManagerCloudSessionCreateFailedMessage
   | AgentManagerRunStatusMessage
   | AgentManagerKeybindingsMessage
   | AutoApproveStateMessage

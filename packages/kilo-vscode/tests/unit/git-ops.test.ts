@@ -58,6 +58,42 @@ describe("GitOps", () => {
     })
   })
 
+  describe("remoteUrl", () => {
+    it("returns the selected remote URL", async () => {
+      const git = ops(async (args, cwd) => {
+        expect(cwd).toBe("/repo")
+        expect(args).toEqual(["remote", "get-url", "upstream"])
+        return "https://github.com/Kilo-Org/kilocode.git"
+      })
+
+      expect(await git.remoteUrl("/repo", "upstream")).toBe("https://github.com/Kilo-Org/kilocode.git")
+    })
+
+    it("returns undefined when the selected remote has no URL output", async () => {
+      const git = ops(async () => "")
+
+      expect(await git.remoteUrl("/repo")).toBeUndefined()
+    })
+
+    for (const error of ["error: No such remote 'origin'", "fatal: not a git repository"]) {
+      it(`returns undefined for expected repository unavailability: ${error}`, async () => {
+        const git = ops(async () => {
+          throw new Error(error)
+        })
+
+        expect(await git.remoteUrl("/repo")).toBeUndefined()
+      })
+    }
+
+    it("propagates operational git execution failures", async () => {
+      const git = ops(async () => {
+        throw new Error("git unavailable")
+      })
+
+      await expect(git.remoteUrl("/repo")).rejects.toThrow("git unavailable")
+    })
+  })
+
   describe("resolveRemote", () => {
     it("uses upstream remote when upstream is configured", async () => {
       const git = ops(async (args) => {

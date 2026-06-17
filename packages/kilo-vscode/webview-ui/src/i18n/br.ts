@@ -1326,6 +1326,8 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Pesquisa de código",
   "settings.experimental.codebaseSearch.description":
     "Ativar pesquisa por linguagem natural com IA em toda a base de código",
+  "settings.experimental.cloudAgent.title": "Agentes na nuvem",
+  "settings.experimental.cloudAgent.description": "Ativar sessões experimentais de agentes na nuvem no Agent Manager",
   "settings.experimental.speechToText.title": "Fala para texto",
   "settings.experimental.speechToText.description":
     "Ative a entrada de voz nos campos de prompt usando sua conta do Kilo por meio do Kilo Gateway.",

@@ -40,6 +40,18 @@ describe("ConfigValidation.check", () => {
     expect(result).toContain("validated successfully")
   })
 
+  test("validates the Cloud Agent experimental flag", async () => {
+    await using tmp = await tmpdir({ git: true })
+    const filepath = path.join(tmp.path, "kilo.json")
+    await Filesystem.write(filepath, JSON.stringify({ experimental: { cloud_agent: true } }))
+
+    const result = await provideTestInstance({
+      directory: tmp.path,
+      fn: () => check(filepath),
+    })
+    expect(result).toContain("validated successfully")
+  })
+
   test("reports JSONC syntax errors", async () => {
     await using tmp = await tmpdir({ git: true })
     const filepath = path.join(tmp.path, "kilo.json")
