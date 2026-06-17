@@ -293,7 +293,7 @@ export const layer = Layer.effect(
         }
 
         // kilocode_change start - rename build→code, add debug/orchestrator/ask, patch plan/explore
-        KiloAgent.patchAgents(agents, defaults, user, cfg, kilo, ctx.worktree, whitelistedDirs)
+        KiloAgent.patchAgents(agents, defaults, user, cfg, kilo, ctx, whitelistedDirs)
 
         const agentConfigs = KiloAgent.preprocessConfig(cfg.agent ?? {})
         for (const [key, value] of Object.entries(agentConfigs)) {
@@ -323,8 +323,9 @@ export const layer = Layer.effect(
           item.name = value.name ?? item.name
           item.steps = value.steps ?? item.steps
           item.options = mergeDeep(item.options, value.options ?? {})
-          item.permission = Permission.merge(item.permission, Permission.fromConfig(value.permission ?? {}))
-          KiloAgent.processConfigItem(item) // kilocode_change - populate displayName from options
+          const rules = Permission.fromConfig(value.permission ?? {}) // kilocode_change
+          item.permission = Permission.merge(item.permission, rules)
+          KiloAgent.processConfigItem(key, item, ctx, rules) // kilocode_change - apply Kilo config hooks
         }
 
         function referencePrompt(reference: Reference.Resolved) {

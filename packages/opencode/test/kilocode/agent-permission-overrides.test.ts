@@ -1,6 +1,9 @@
 import { afterEach, expect, test } from "bun:test"
 import { Effect } from "effect"
+import path from "path"
+import { Global } from "@opencode-ai/core/global"
 import { Agent } from "../../src/agent/agent"
+import { processConfigItem } from "../../src/kilocode/agent"
 import { Permission } from "../../src/permission"
 import { provideTestInstance } from "../fixture/fixture"
 import { disposeAllInstances, provideInstance, tmpdir } from "../fixture/fixture"
@@ -74,6 +77,134 @@ test("plan agent still hard-denies non-plan edits after user edit allow", async 
       expect(Permission.evaluate("edit", ".plans/fix.md", plan!.permission).action).toBe("allow")
     },
   })
+})
+
+test("plan agent preserves plan file edits after per-agent edit deny", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        plan: {
+          permission: {
+            "*": "deny",
+            edit: { "*": "deny" },
+          },
+        },
+      },
+    },
+  })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const plan = await load(tmp.path, (svc) => svc.get("plan"))
+      expect(plan).toBeDefined()
+      expect(Permission.evaluate("plan_exit", "*", plan!.permission).action).toBe("allow")
+      expect(Permission.disabled(["write"], plan!.permission).has("write")).toBe(false)
+      expect(Permission.evaluate("edit", "src/output.log", plan!.permission).action).toBe("deny")
+      expect(Permission.evaluate("edit", ".kilo/plans/fix.md", plan!.permission).action).toBe("allow")
+      expect(Permission.evaluate("edit", "plans/fix.md", plan!.permission).action).toBe("allow")
+    },
+  })
+})
+
+test("architect agent receives plan file permissions", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        architect: {
+          mode: "primary",
+          permission: {
+            "*": "deny",
+            read: "allow",
+            edit: {
+              "*.md": "allow",
+              "*": "deny",
+            },
+          },
+        },
+      },
+    },
+  })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const agent = await load(tmp.path, (svc) => svc.get("architect"))
+      expect(agent).toBeDefined()
+      expect(Permission.evaluate("plan_exit", "*", agent!.permission).action).toBe("allow")
+      expect(Permission.disabled(["write"], agent!.permission).has("write")).toBe(false)
+      expect(Permission.evaluate("edit", "src/output.log", agent!.permission).action).toBe("deny")
+      expect(Permission.evaluate("edit", ".kilo/plans/fix.md", agent!.permission).action).toBe("allow")
+      expect(Permission.evaluate("edit", "plans/fix.md", agent!.permission).action).toBe("allow")
+    },
+  })
+})
+
+test("root workspace plan-like agent allows configured local and global plan paths", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        architect: {
+          mode: "primary",
+          permission: {
+            "*": "deny",
+            edit: {
+              "*": "deny",
+              "docs/*.md": "allow",
+            },
+          },
+        },
+      },
+    },
+  })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async (ctx) => {
+      const agent = await load(tmp.path, (svc) => svc.get("architect"))
+      const docs = path.relative(ctx.worktree, path.join(tmp.path, "docs", "test-session.md"))
+      const local = path.relative(ctx.worktree, path.join(tmp.path, ".kilo", "plans", "test-session.md"))
+      const global = path.join(Global.Path.data, "plans", "test-session.md")
+
+      expect(ctx.worktree).toBe("/")
+      expect(Permission.evaluate("edit", docs, agent!.permission).action).toBe("allow")
+      expect(Permission.evaluate("edit", local, agent!.permission).action).toBe("allow")
+      expect(Permission.evaluate("edit", path.relative(ctx.worktree, global), agent!.permission).action).toBe("allow")
+      expect(Permission.evaluate("edit", global, agent!.permission).action).toBe("allow")
+      expect(
+        Permission.evaluate(
+          "edit",
+          path.relative(ctx.worktree, path.join(tmp.path, "src", "main.ts")),
+          agent!.permission,
+        ).action,
+      ).toBe("deny")
+    },
+  })
+})
+
+test("root workspace scopes Windows drive paths", () => {
+  const dir = String.raw`C:\Users\developer\projects\EAM_SLA`
+  const global = String.raw`C:\Users\developer\.local\share\kilo\plans`
+  const rules = Permission.fromConfig({
+    "*": "deny",
+    edit: {
+      "*": "deny",
+      "docs/*.md": "allow",
+      [path.win32.join(global, "*.md")]: "allow",
+    },
+  })
+  const agent = { name: "architect", permission: rules, options: {} }
+
+  processConfigItem("architect", agent, { worktree: "/", directory: dir }, rules)
+
+  expect(Permission.evaluate("edit", path.win32.join(dir, "docs", "test-session.md"), agent.permission).action).toBe(
+    "allow",
+  )
+  expect(
+    Permission.evaluate("edit", path.win32.join(dir, ".kilo", "plans", "test-session.md"), agent.permission).action,
+  ).toBe("allow")
+  expect(Permission.evaluate("edit", path.win32.join(global, "test-session.md"), agent.permission).action).toBe("allow")
+  expect(Permission.evaluate("edit", path.win32.join(dir, "src", "main.ts"), agent.permission).action).toBe("deny")
 })
 
 test("system utility agents ignore per-agent permission allows", async () => {

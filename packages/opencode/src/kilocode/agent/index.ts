@@ -162,51 +162,91 @@ function askEditGuard() {
   return Permission.fromConfig({ edit: "deny" })
 }
 
+type Root = { worktree: string; directory: string }
+const dirs = [
+  path.join(".kilo", "plans", "*.md"),
+  path.join("plans", "*.md"),
+  path.join(".plans", "*.md"),
+  path.join(".opencode", "plans", "*.md"),
+]
+
+function flavor(root: Root) {
+  return path.win32.isAbsolute(root.directory) ? path.win32 : path
+}
+
+function scoped(root: Root, pattern: string) {
+  const paths = flavor(root)
+  const full = paths.isAbsolute(pattern) ? pattern : paths.join(root.directory, pattern)
+  return paths.relative(root.worktree, full)
+}
+
+function scopedRules(root: Root, rules: Permission.Ruleset) {
+  if (root.worktree !== "/") return []
+  return rules
+    .filter((rule) => rule.permission === "edit" && (path.isAbsolute(rule.pattern) || !rule.pattern.startsWith("..")))
+    .map((rule) => ({ ...rule, pattern: scoped(root, rule.pattern) }))
+}
+
 // Upstream v1.14.33 builds Agent state outside the Instance ALS, so reading
-// Instance.worktree here would crash. Thread worktree through from patchAgents
-// instead.
-function planEditRules(worktree: string) {
+// Instance.worktree here would crash. Thread the instance roots through instead.
+function planEditRules(root: Root) {
   return {
     "*": "deny" as const,
-    [path.join(".kilo", "plans", "*.md")]: "allow" as const,
-    [path.join("plans", "*.md")]: "allow" as const,
-    [path.join(".plans", "*.md")]: "allow" as const,
-    [path.join(".opencode", "plans", "*.md")]: "allow" as const,
-    [path.relative(worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow" as const,
+    ...planEditAllowRules(root),
   }
 }
 
-function planEditGuard(worktree: string) {
-  return Permission.fromConfig({ edit: planEditRules(worktree) })
+function planEditAllowRules(root: Root) {
+  const paths = flavor(root)
+  const global = paths.join(Global.Path.data, "plans", "*.md")
+  const rules = Object.fromEntries(dirs.map((dir) => [dir, "allow" as const]))
+  if (root.worktree === "/") {
+    for (const dir of dirs) rules[scoped(root, dir)] = "allow"
+  }
+  rules[paths.relative(root.worktree, global)] = "allow"
+  rules[global] = "allow"
+  return rules
 }
 
-function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
+function planEditGuard(root: Root) {
+  return Permission.fromConfig({ edit: planEditRules(root) })
+}
+
+function planGuard(root: Root, mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
+  return Permission.merge(
+    Permission.fromConfig({
+      "*": "deny",
+      bash: readOnlyBash,
+      read: {
+        "*": "allow",
+        "*.env": "ask",
+        "*.env.*": "ask",
+        "*.env.example": "allow",
+      },
+      grep: "allow",
+      glob: "allow",
+      list: "allow",
+      webfetch: "allow",
+      websearch: "allow",
+      codebase_search: "allow",
+      semantic_search: "allow",
+      external_directory: {
+        [Truncate.GLOB]: "allow",
+        [path.join(Global.Path.data, "plans", "*")]: "allow",
+      },
+      ...mcp,
+    }),
+    planCapabilities(root),
+  )
+}
+
+function planCapabilities(root: Root) {
   return Permission.fromConfig({
-    "*": "deny",
     question: "allow",
     suggest: "allow",
     skill: "allow",
     plan_exit: "allow",
-    bash: readOnlyBash,
-    read: {
-      "*": "allow",
-      "*.env": "ask",
-      "*.env.*": "ask",
-      "*.env.example": "allow",
-    },
-    grep: "allow",
-    glob: "allow",
-    list: "allow",
-    webfetch: "allow",
-    websearch: "allow",
-    codebase_search: "allow",
-    semantic_search: "allow",
-    external_directory: {
-      [Truncate.GLOB]: "allow",
-      [path.join(Global.Path.data, "plans", "*")]: "allow",
-    },
-    edit: planEditRules(worktree),
-    ...mcp,
+    edit: planEditAllowRules(root),
   })
 }
 
@@ -256,15 +296,36 @@ export function preprocessConfig<T>(agentConfig: Record<string, T>): Record<stri
   return result
 }
 
-// Set displayName and deprecated from options after config item is processed.
-export function processConfigItem(item: {
-  options: Record<string, unknown>
-  displayName?: string
-  deprecated?: boolean
-}) {
+// Apply Kilo config hooks after a config item is processed.
+export function processConfigItem(
+  key: string,
+  item: {
+    name: string
+    permission: Permission.Ruleset
+    options: Record<string, unknown>
+    displayName?: string
+    deprecated?: boolean
+  },
+  root: Root,
+  rules: Permission.Ruleset,
+) {
   if (item.options?.displayName && typeof item.options.displayName === "string") {
     item.displayName = item.options.displayName
   }
+  if (!isPlanAgent(key, item)) return
+  item.permission = Permission.merge(item.permission, scopedRules(root, rules), planCapabilities(root))
+}
+
+function isPlanAgent(
+  key: string,
+  item: {
+    name: string
+    options?: Record<string, unknown>
+  },
+) {
+  const name = item.name.toLowerCase()
+  const id = typeof item.options?.id === "string" ? item.options.id.toLowerCase() : undefined
+  return key === "plan" || key === "architect" || name === "plan" || name === "architect" || id === "architect"
 }
 
 const locked = new Set(["compaction", "title", "summary"])
@@ -331,7 +392,7 @@ export function patchAgents(
   user: Permission.Ruleset,
   cfg: Config.Info,
   kilo: KiloData,
-  worktree: string,
+  root: Root,
   whitelistedDirs: string[],
 ) {
   // Rename "build" → "code" for backward compatibility
@@ -354,13 +415,7 @@ export function patchAgents(
     agents.plan = {
       ...agents.plan,
       description: "Plan mode. Can only edit plan files; all other filesystem mutations are denied.",
-      permission: Permission.merge(
-        defaults,
-        planGuard(worktree, kilo.mcpRules),
-        user,
-        planEditGuard(worktree),
-        denies(user),
-      ),
+      permission: Permission.merge(defaults, planGuard(root, kilo.mcpRules), user, planEditGuard(root), denies(user)),
     }
   }
 
