@@ -122,6 +122,11 @@ export function createCloudSessionState(opts: CloudSessionStateOptions) {
   }
 
   const request = () => opts.postMessage({ type: "agentManager.requestCloudSessions" })
+  const toggle = () => {
+    const next = !collapsed()
+    setCollapsed(next)
+    if (!next) request()
+  }
 
   const disable = () => {
     setEnabled(false)
@@ -202,7 +207,7 @@ export function createCloudSessionState(opts: CloudSessionStateOptions) {
     repository,
     error,
     collapsed,
-    toggle: () => setCollapsed((value) => !value),
+    toggle,
     request,
     retry: () => opts.postMessage({ type: "agentManager.retryCloudSessions" }),
     context,

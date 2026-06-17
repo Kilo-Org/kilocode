@@ -141,7 +141,6 @@ interface StateMessage {
   runStatuses?: RunStatus[]
   runScriptConfigured?: boolean
   runScriptPath?: string
-  cloudAgentEnabled: boolean
 }
 
 export interface CloudSessionSummary {

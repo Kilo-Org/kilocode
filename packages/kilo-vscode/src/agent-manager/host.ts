@@ -99,12 +99,6 @@ export interface Host {
   /** Get the workspace/project root path. */
   workspacePath(): string | undefined
 
-  /** Whether experimental Cloud Agent sessions are visible in Agent Manager. */
-  cloudAgentEnabled(): boolean
-
-  /** Watch for changes to the experimental Cloud Agent setting. */
-  onCloudAgentConfigChanged(cb: () => void): Disposable
-
   /** Show an error notification. */
   showError(msg: string): void
 

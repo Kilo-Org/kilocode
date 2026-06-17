@@ -1284,6 +1284,8 @@ export const dict = {
   "settings.experimental.batch.description": "启用多个工具调用的批处理",
   "settings.experimental.codebaseSearch.title": "代码库搜索",
   "settings.experimental.codebaseSearch.description": "启用 AI 驱动的自然语言代码库搜索",
+  "settings.experimental.cloudAgent.title": "云端智能体",
+  "settings.experimental.cloudAgent.description": "在智能体管理器中启用实验性云端智能体会话",
   "settings.experimental.speechToText.title": "语音转文本",
   "settings.experimental.speechToText.description": "通过 Kilo Gateway 使用您的 Kilo 帐户在提示词字段中启用语音输入。",
   "settings.models.speechToText.disabledDescription":

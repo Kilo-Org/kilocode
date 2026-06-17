@@ -913,11 +913,6 @@
           "default": false,
           "description": "Enable chat textarea autocomplete"
         },
-        "kilo-code.new.experimental.cloudAgent.enabled": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable experimental Cloud Agent sessions in Agent Manager."
-        },
         "kilo-code.new.claudeCodeCompat": {
           "type": "boolean",
           "default": false,

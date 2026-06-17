@@ -75,7 +75,7 @@ import { Popover } from "@kilocode/kilo-ui/popover"
 import { VSCodeProvider, useVSCode } from "../src/context/vscode"
 import { ServerProvider } from "../src/context/server"
 import { ProviderProvider, useProvider } from "../src/context/provider"
-import { ConfigProvider } from "../src/context/config"
+import { ConfigProvider, useConfig } from "../src/context/config"
 import { DisplayProvider } from "../src/context/display"
 import { KiloEmbeddingModelsProvider } from "../src/context/kilo-embedding-models"
 import { NotificationsProvider } from "../src/context/notifications"
@@ -202,6 +202,7 @@ const AgentManagerContent: Component = () => {
   const { t } = useLanguage()
   const session = useSession()
   const provider = useProvider()
+  const cfg = useConfig()
   const vscode = useVSCode()
   const dialog = useDialog()
   let sidebarSearchMenu: SidebarSearchMenuRef | undefined
@@ -640,6 +641,7 @@ const AgentManagerContent: Component = () => {
     },
   })
   const cloudDialog = createCloudAgentDialog(dialog, { state: cloud, session, provider, t })
+  createEffect(() => cloud.enable(cfg.config().experimental?.cloud_agent === true, cloudDialog.close))
   // Invalidate local session IDs if they no longer exist (preserve pending tabs)
   createEffect(() => {
     if (!worktreesLoaded()) return
@@ -1280,7 +1282,6 @@ const AgentManagerContent: Component = () => {
         setWorktrees(state.worktrees)
         setManagedSessions(state.sessions)
         setStaleWorktreeIds(new Set(state.staleWorktreeIds ?? []))
-        cloud.enable(state.cloudAgentEnabled === true, cloudDialog.close)
         if (state.isGitRepo !== undefined) setIsGitRepo(state.isGitRepo)
         if (!worktreesLoaded()) setWorktreesLoaded(true)
         // Without a git repo, the Kilo server will not send sessionsLoaded.
@@ -2518,6 +2519,16 @@ const AgentManagerContent: Component = () => {
           class="am-session-sections"
           classList={{ "am-session-sections-collapsed": sessionsCollapsed() && cloud.collapsed() }}
         >
+          <Show when={cloud.enabled()}>
+            <CloudAgentSection
+              state={cloud}
+              current={session.currentSessionID}
+              selected={() => selection() === CLOUD}
+              onCreate={cloudDialog.show}
+              t={t}
+            />
+          </Show>
+
           <div class="am-section">
             <button
               class="am-section-header am-section-toggle"
@@ -2613,16 +2624,6 @@ const AgentManagerContent: Component = () => {
               </div>
             </Show>
           </div>
-
-          <Show when={cloud.enabled()}>
-            <CloudAgentSection
-              state={cloud}
-              current={session.currentSessionID}
-              selected={() => selection() === CLOUD}
-              onCreate={cloudDialog.show}
-              t={t}
-            />
-          </Show>
         </div>
       </div>
 

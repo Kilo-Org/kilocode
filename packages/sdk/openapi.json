@@ -19021,6 +19021,9 @@
               "batch_tool": {
                 "type": "boolean"
               },
+              "cloud_agent": {
+                "type": "boolean"
+              },
               "codebase_search": {
                 "type": "boolean"
               },

@@ -6,7 +6,7 @@
  */
 
 import * as vscode from "vscode"
-import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } from "./host"
+import type { Host, PanelContext, OutputHandle, SessionProvider } from "./host"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
 import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
@@ -15,8 +15,6 @@ import { buildWebviewHtml } from "../utils"
 import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
 import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
 import type { AutoApproveController } from "../commands/toggle-auto-approve"
-
-const CLOUD_SETTING = "kilo-code.new.experimental.cloudAgent.enabled"
 
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
@@ -164,16 +162,6 @@ export class VscodeHost implements Host {
 
   workspacePath(): string | undefined {
     return getWorkspaceRoot()
-  }
-
-  cloudAgentEnabled(): boolean {
-    return vscode.workspace.getConfiguration().get(CLOUD_SETTING, false)
-  }
-
-  onCloudAgentConfigChanged(cb: () => void): Disposable {
-    return vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration(CLOUD_SETTING)) cb()
-    })
   }
 
   showError(msg: string): void {

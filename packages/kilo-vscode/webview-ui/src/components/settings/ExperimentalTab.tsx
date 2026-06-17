@@ -155,6 +155,19 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.experimental.cloudAgent.title")}
+          description={language.t("settings.experimental.cloudAgent.description")}
+        >
+          <Switch
+            checked={experimental().cloud_agent ?? false}
+            onChange={(checked) => updateExperimental("cloud_agent", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.cloudAgent.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.continueOnDeny.title")}
           description={language.t("settings.experimental.continueOnDeny.description")}
         >

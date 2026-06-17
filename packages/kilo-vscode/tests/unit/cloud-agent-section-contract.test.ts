@@ -6,26 +6,37 @@ const ROOT = join(import.meta.dir, "../..")
 const source = readFileSync(join(ROOT, "webview-ui/agent-manager/cloud-agent/CloudAgentSection.tsx"), "utf8")
 const app = readFileSync(join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"), "utf8")
 const state = readFileSync(join(ROOT, "webview-ui/agent-manager/cloud-agent/session-state.ts"), "utf8")
-const provider = readFileSync(join(ROOT, "src/agent-manager/AgentManagerProvider.ts"), "utf8")
+const settings = readFileSync(join(ROOT, "webview-ui/src/components/settings/ExperimentalTab.tsx"), "utf8")
+const config = readFileSync(join(ROOT, "../opencode/src/config/config.ts"), "utf8")
 const css = readFileSync(join(ROOT, "webview-ui/agent-manager/agent-manager.css"), "utf8")
 const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"))
 
 describe("Cloud Agent discovery section contract", () => {
-  it("is disabled by default behind an experimental extension setting", () => {
-    const setting = pkg.contributes.configuration.properties["kilo-code.new.experimental.cloudAgent.enabled"]
-
-    expect(setting.type).toBe("boolean")
-    expect(setting.default).toBe(false)
-    expect(setting.description).toContain("experimental")
+  it("is disabled by default behind a Kilo experimental flag", () => {
+    expect(pkg.contributes.configuration.properties["kilo-code.new.experimental.cloudAgent.enabled"]).toBeUndefined()
+    expect(config).toContain("cloud_agent: Schema.optional(Schema.Boolean)")
+    expect(settings).toContain("checked={experimental().cloud_agent ?? false}")
+    expect(settings).toContain('updateExperimental("cloud_agent", checked)')
   })
 
-  it("transports the setting and gates Cloud Agent rendering and requests", () => {
-    expect(provider).toContain("cloudAgentEnabled: this.host.cloudAgentEnabled()")
-    expect(app).toContain("cloud.enable(state.cloudAgentEnabled === true, cloudDialog.close)")
+  it("gates Cloud Agent rendering and requests from the Kilo config", () => {
+    expect(app).toContain("cloud.enable(cfg.config().experimental?.cloud_agent === true, cloudDialog.close)")
     expect(state).toContain("if (value) return request()")
     expect(state).toContain("if (!enabled()) return")
     expect(app).toContain("<Show when={cloud.enabled()}>")
     expect(app).not.toContain("    cloud.request()\n")
+  })
+
+  it("places backend Cloud Agents above local session history", () => {
+    expect(app.indexOf("<CloudAgentSection")).toBeGreaterThan(-1)
+    expect(app.indexOf("<CloudAgentSection")).toBeLessThan(app.indexOf('{t("agentManager.section.sessions")}'))
+  })
+
+  it("keeps only ephemeral tab state and refreshes discovery when expanded", () => {
+    expect(state).toContain("const [ids, setIds] = createSignal<string[]>([])")
+    expect(state).toContain("if (!next) request()")
+    expect(state).not.toContain("localStorage")
+    expect(state).not.toContain("agent-manager.json")
   })
 
   it("renders visible discovery rows instead of retained sessions directly", () => {

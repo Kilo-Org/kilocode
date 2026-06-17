@@ -1529,6 +1529,9 @@ export const dict = {
   "session.outcome.finish": "Motivo tecnico di fine: {{reason}}",
 
   // Speech to Text
+  "settings.experimental.cloudAgent.title": "Agenti cloud",
+  "settings.experimental.cloudAgent.description":
+    "Abilita le sessioni sperimentali degli agenti cloud in Agent Manager",
   "settings.experimental.speechToText.title": "Da voce a testo",
   "settings.experimental.speechToText.description":
     "Abilita input vocale nei campi prompt usando il tuo account Kilo tramite Kilo Gateway.",

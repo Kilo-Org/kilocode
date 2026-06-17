@@ -592,7 +592,6 @@ export interface AgentManagerStateMessage {
   runStatuses?: RunStatus[]
   runScriptConfigured?: boolean
   runScriptPath?: string
-  cloudAgentEnabled: boolean
 }
 
 export interface AgentManagerCloudSessionsMessage {

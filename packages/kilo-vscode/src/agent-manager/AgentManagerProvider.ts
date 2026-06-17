@@ -79,7 +79,6 @@ export class AgentManagerProvider implements Disposable {
   private unsubFont: (() => void) | undefined
   private unsubCloudState: (() => void) | undefined
   private unsubCloudAuth: (() => void) | undefined
-  private config: Disposable
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
 
@@ -193,11 +192,6 @@ export class AgentManagerProvider implements Disposable {
       (event) => event.type === "global.disposed",
       () => this.cloud.authChanged(),
     )
-    this.config = this.host.onCloudAgentConfigChanged(() => {
-      if (!this.panel) return
-      if (this.state) return this.pushState()
-      this.pushEmptyState()
-    })
   }
 
   private log(...args: unknown[]) {
@@ -1602,7 +1596,6 @@ export class AgentManagerProvider implements Disposable {
       reviewMarkdownRender: getDiffMarkdownRender(),
       isGitRepo: true,
       defaultBaseBranch: state.getDefaultBaseBranch(),
-      cloudAgentEnabled: this.host.cloudAgentEnabled(),
       ...run,
     })
 
@@ -1626,7 +1619,6 @@ export class AgentManagerProvider implements Disposable {
       isGitRepo: false,
       runStatuses: [],
       runScriptConfigured: false,
-      cloudAgentEnabled: this.host.cloudAgentEnabled(),
     })
   }
 
@@ -1833,7 +1825,6 @@ export class AgentManagerProvider implements Disposable {
     this.unsubFont?.()
     this.unsubCloudState?.()
     this.unsubCloudAuth?.()
-    this.config.dispose()
     this.connectionService.unregisterFocused("agent-manager")
     this.connectionService.registerOpen("agent-manager", [])
     this.cloud.dispose()
