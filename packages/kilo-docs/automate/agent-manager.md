@@ -1,5 +1,3 @@
-### File 1: `packages/kilo-docs/automate/agent-manager.md`
+Add the following section to `packages/kilo-docs/automate/agent-manager.md` after the existing introduction and before the "Agent Manager Workflows" link:
 
-Add a new section after the existing content:
-
-```markdown
+---
