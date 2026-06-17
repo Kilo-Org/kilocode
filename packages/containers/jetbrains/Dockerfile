@@ -23,7 +23,14 @@ ENV GRADLE_USER_HOME=/gradle-home
 
 RUN set -euo pipefail; \
     url="https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip"; \
-    hash=$(echo -n "${url}" | md5sum | cut -d' ' -f1); \
+    hash=$(python3 -c '
+import hashlib, sys
+n = int.from_bytes(hashlib.md5(sys.argv[1].encode()).digest(), "big")
+c = "0123456789abcdefghijklmnopqrstuvwxyz"
+r = ""
+while n: r, n = c[n % 36] + r, n // 36
+print(r)
+' "${url}"); \
     dir="/gradle-home/wrapper/dists/gradle-${GRADLE_VERSION}-bin/${hash}"; \
     mkdir -p "${dir}"; \
     curl -fsSL "${url}" -o "${dir}/gradle-${GRADLE_VERSION}-bin.zip"; \
