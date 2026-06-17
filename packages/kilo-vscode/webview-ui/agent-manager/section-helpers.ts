@@ -8,35 +8,6 @@ export type TopLevelItem = { kind: "section"; section: SectionState } | { kind: 
 
 export type SidebarItem = { type: "local" | "wt" | "session"; id: string }
 
-/** Build a canonical sidebar order containing section IDs and every worktree ID. */
-export function completeSidebarOrder(secs: SectionState[], all: WorktreeState[], order: string[]): string[] {
-  const valid = new Set([...secs.map((sec) => sec.id), ...all.map((wt) => wt.id)])
-  const secIds = new Set(secs.map((sec) => sec.id))
-  const wtMap = new Map(all.map((wt) => [wt.id, wt]))
-  const result: string[] = []
-  const seen = new Set<string>()
-  const add = (id: string) => {
-    if (!valid.has(id) || seen.has(id)) return
-    result.push(id)
-    seen.add(id)
-  }
-  for (const id of order) add(id)
-  for (const sec of secs) add(sec.id)
-  for (const wt of all) add(wt.id)
-  if (secs.length === 0) return result
-  return [
-    ...result.filter((id) => {
-      const wt = wtMap.get(id)
-      return wt && !wt.sectionId
-    }),
-    ...result.filter((id) => secIds.has(id)),
-    ...result.filter((id) => {
-      const wt = wtMap.get(id)
-      return wt?.sectionId
-    }),
-  ]
-}
-
 /** Check if this worktree is part of a multi-version group. */
 export const isGrouped = (wt: WorktreeState) => !!wt.groupId
 

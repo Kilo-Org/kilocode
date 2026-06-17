@@ -67,11 +67,6 @@ export interface CreateWorktreeResult {
   startPointWarning?: string
 }
 
-export interface ExternalWorktreeItem {
-  path: string
-  branch: string
-}
-
 /**
  * Backward compat: split a possibly-prefixed branch like "origin/main" into
  * `{ branch: "main", remote: "origin" }`. If no slash is found, returns bare branch.
@@ -950,22 +945,6 @@ export class WorktreeManager {
         this.log(`Failed to get current branch: ${inner}`)
       }
       return result
-    }
-  }
-
-  async listExternalWorktrees(managedPaths: Set<string>): Promise<ExternalWorktreeItem[]> {
-    try {
-      const raw = await this.git.raw(["worktree", "list", "--porcelain"])
-      const normalizedRoot = normalizePath(this.root)
-      const normalizedManaged = new Set([...managedPaths].map(normalizePath))
-      return parseWorktreeList(raw)
-        .filter(
-          (e) => !e.bare && normalizePath(e.path) !== normalizedRoot && !normalizedManaged.has(normalizePath(e.path)),
-        )
-        .map((e) => ({ path: e.path, branch: e.branch }))
-    } catch (error) {
-      this.log(`Failed to list external worktrees: ${error}`)
-      return []
     }
   }
 
