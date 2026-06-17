@@ -5,6 +5,7 @@ import ai.kilocode.client.actions.SendPromptAction
 import ai.kilocode.client.actions.StopSessionAction
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.ReasoningPicker
+import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.model.PromptAttachment
 import ai.kilocode.client.session.model.PromptAttachmentExtractor
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -12,6 +13,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
+import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
@@ -58,6 +60,8 @@ import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.util.concurrent.Future
@@ -67,6 +71,7 @@ import javax.swing.Icon
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.ScrollPaneConstants
+import javax.swing.SwingUtilities
 
 /**
  * Prompt input panel with a borderless IntelliJ editor text field and
@@ -77,7 +82,8 @@ class PromptPanel(
     private val onSend: (String, List<PromptPartDto>) -> Unit,
     private val onAbort: () -> Unit,
     private val onEnhance: (String, (Result<String>) -> Unit) -> Unit,
-) : BorderLayoutPanel(), SessionEditorStyleTarget, SendPromptContext {
+    private val selection: SessionSelection? = null,
+) : BorderLayoutPanel(), SessionEditorStyleTarget, SendPromptContext, UiDataProvider {
 
     companion object {
         private val LOG = KiloLog.create(PromptPanel::class.java)
@@ -113,8 +119,14 @@ class PromptPanel(
     private var autoApprove = false
     private var attachment = true
     private var submitting = false
+    private var root: SessionRootPanel? = null
+    private val resize = object : ComponentAdapter() {
+        override fun componentResized(e: ComponentEvent) {
+            syncEditorHeight()
+        }
+    }
 
-    private val editor = PromptEditorTextField(project, this).apply {
+    private val editor = PromptEditorTextField(project, this, selection).apply {
         border = JBUI.Borders.empty()
         setFontInheritedFromLAF(false)
         setPlaceholder(placeholder())
@@ -129,8 +141,11 @@ class PromptPanel(
             ed.scrollPane.background = style.editorScheme.defaultBackground
             ed.scrollPane.viewport.background = style.editorScheme.defaultBackground
             ed.settings.isUseSoftWraps = true
+            ed.settings.isPaintSoftWraps = false
             ed.settings.isAdditionalPageAtBottom = false
             ed.putUserData(PROMPT_ATTACHMENT_PASTE_HANDLER_KEY, PromptAttachmentPasteHandler { processPaste(it) })
+            ed.scrollPane.verticalScrollBarPolicy =
+                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
             ed.scrollPane.horizontalScrollBarPolicy =
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
             installFileDrop(ed.contentComponent, "editor")
@@ -197,6 +212,7 @@ class PromptPanel(
 
     init {
         applyStyle(style)
+        selection?.register(editor)
         editor.text = ""
         editor.addDocumentListener(object : DocumentListener {
             override fun documentChanged(e: DocumentEvent) {
@@ -228,6 +244,7 @@ class PromptPanel(
         bar.add(button)
         shell.add(bar, BorderLayout.SOUTH)
         add(shell, BorderLayout.CENTER)
+        addComponentListener(resize)
         installFileDrop(shell, "shell")
         syncTooltip()
         syncAutoApprove()
@@ -303,6 +320,10 @@ class PromptPanel(
 
     internal val defaultFocusedComponent: JComponent get() = editor
 
+    override fun uiDataSnapshot(sink: DataSink) {
+        selection?.provideCopy(sink) { editor.text }
+    }
+
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
@@ -337,10 +358,13 @@ class PromptPanel(
 
     override fun addNotify() {
         super.addNotify()
+        bindRoot()
         bindKeymap()
     }
 
     override fun removeNotify() {
+        root?.removeComponentListener(resize)
+        root = null
         bus?.disconnect()
         bus = null
         super.removeNotify()
@@ -352,6 +376,7 @@ class PromptPanel(
         val source = editor.text
         if (source.isBlank()) {
             editor.text = KiloBundle.message("prompt.action.enhance.description")
+            syncEditorHeight()
             focus()
             return
         }
@@ -368,6 +393,7 @@ class PromptPanel(
         syncEnhance()
         result.onSuccess {
             editor.text = it
+            syncEditorHeight()
             focus()
         }.onFailure {
             if (it is CancellationException) return@onFailure
@@ -437,6 +463,7 @@ class PromptPanel(
         attachments += item
         strip.add(item)
         LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} count=${attachments.size}" }
+        syncEditorHeight()
         onChange()
     }
 
@@ -444,6 +471,7 @@ class PromptPanel(
     private fun removeAttachment(item: PromptAttachment) {
         if (!attachments.removeIf { it.id == item.id }) return
         strip.remove(item)
+        syncEditorHeight()
         onChange()
     }
 
@@ -603,17 +631,50 @@ class PromptPanel(
 
     @RequiresEdt
     private fun syncEditorHeight() {
-        val count = ApplicationManager.getApplication().runReadAction<Int> { editor.document.lineCount }
-        val lines = (count + SessionUiStyle.View.Prompt.EDITOR_SPARE_LINES).coerceIn(
-            SessionUiStyle.View.Prompt.EDITOR_LINES,
-            SessionUiStyle.View.Prompt.EDITOR_MAX_LINES,
-        )
-        val height = style.editorFont.size * lines + JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
-        if (editor.preferredSize.height == height && editor.minimumSize.height == height) return
+        val before = editor.preferredSize.height
+        val lower = editor.minimumSize.height
+        editor.setPreferredSize(null)
+        editor.setMinimumSize(null)
+        editor.getEditor(false)?.let {
+            it.contentComponent.invalidate()
+            it.component.invalidate()
+            it.scrollPane.invalidate()
+        }
+        editor.invalidate()
+        editor.ensureWillComputePreferredSize()
+        val view = editor.getEditor(false)
+        val line = view?.lineHeight ?: editor.getFontMetrics(editor.font).height
+        val min = line * SessionUiStyle.View.Prompt.EDITOR_LINES + JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
+        val content = editor.preferredSize.height
+        val sessionCap = rootCap(min)
+        val height = minOf(content, sessionCap ?: content).coerceAtLeast(min)
+        if (before == height && lower == height) {
+            editor.preferredSize = JBDimension(0, height)
+            editor.minimumSize = JBDimension(0, height)
+            return
+        }
         editor.preferredSize = JBDimension(0, height)
         editor.minimumSize = JBDimension(0, height)
         revalidate()
         repaint()
+    }
+
+    @RequiresEdt
+    private fun rootCap(min: Int): Int? {
+        val root = root ?: return null
+        if (root.height <= 0) return null
+        val chrome = (shell.preferredSize.height - editor.preferredSize.height).coerceAtLeast(0)
+        return (root.height / 3 - chrome).coerceAtLeast(min)
+    }
+
+    @RequiresEdt
+    private fun bindRoot() {
+        val next = SwingUtilities.getAncestorOfClass(SessionRootPanel::class.java, this) as? SessionRootPanel
+        if (root === next) return
+        root?.removeComponentListener(resize)
+        root = next
+        root?.addComponentListener(resize)
+        syncEditorHeight()
     }
 
     private inner class SendButton : JButton(), UiDataProvider {

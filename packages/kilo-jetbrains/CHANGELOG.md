@@ -32,6 +32,32 @@
 
 ## [Unreleased]
 
+## [7.0.1-rc.10] - 2026-06-17
+
+### Added
+
+- Provider settings management, including provider catalog sections, provider descriptions, provider settings actions, disconnect flows, provider auth handling, and provider/model picker improvements.
+- Session copy controls for chat messages.
+
+### Fixed
+
+- Cap JetBrains prompt input growth and hide soft wrap glyphs in the prompt field.
+- Keep JetBrains provider toolbars and authentication overlays fixed, and improve provider API key dialog sizing.
+- Clean up restartless unload behavior.
+- Silence interrupted session notifications across clients.
+- Always deny tool calls for system agents.
+
+## [7.0.1-rc.9] - 2026-06-15
+
+### Added
+
+- Add prompt enhancement support.
+- Support prompt and transcript attachments, including paste, drop, preview, and editor tab opening flows.
+
+### Fixed
+
+- Improve shell and markdown rendering, including code block spacing, terminal block retention, shell command highlighting, and session layout polish.
+
 ## [7.0.1-rc.8] - 2026-06-09
 
 ### Added

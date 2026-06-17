@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/dock-prompt"
+export * from "@opencode-ai/ui/dock-prompt"

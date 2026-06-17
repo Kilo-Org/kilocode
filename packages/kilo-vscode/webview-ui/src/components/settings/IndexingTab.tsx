@@ -70,7 +70,7 @@ function providerFields(provider: ProviderId | undefined): Array<{ key: string; 
   if (provider === "openai-compatible") {
     return [
       { key: "baseUrl", label: "Base URL", placeholder: "https://api.example.com/v1" },
-      { key: "apiKey", label: "API Key", placeholder: "sk-..." },
+      { key: "apiKey", label: "API Key (optional)", placeholder: "sk-..." },
     ]
   }
   if (provider === "gemini") return [{ key: "apiKey", label: "API Key", placeholder: "AI..." }]

@@ -649,7 +649,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     id.includes("deepseek-reasoner") ||
     id.includes("deepseek-r1") ||
     id.includes("deepseek-v3") ||
-    id.includes("minimax") ||
+    // id.includes("minimax") || // kilocode_change
     // id.includes("glm") || // kilocode_change
     // id.includes("kimi") || // kilocode_change
     // TODO: Remove this after models.dev data is fixed to use "kimi-k2.5" instead of "k2p5"
@@ -679,7 +679,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     case "@kilocode/kilo-gateway": // kilocode_change
     case "@openrouter/ai-sdk-provider":
       // kilocode_change start
-      if (id.includes("glm") || id.includes("kimi") || id.includes("qwen")) {
+      if (id.includes("glm") || id.includes("kimi") || id.includes("qwen") || id.includes("minimax")) {
         return {
           instant: { reasoning: { enabled: false } },
           thinking: { reasoning: { enabled: true } },
@@ -855,6 +855,14 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     // https://v5.ai-sdk.dev/providers/ai-sdk-providers/anthropic
     case "@ai-sdk/google-vertex/anthropic":
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/google-vertex#anthropic-provider
+      // kilocode_change start - MiniMax M-series toggles thinking on/off rather than exposing effort levels
+      if (id.includes("minimax")) {
+        return {
+          instant: { thinking: { type: "disabled" } },
+          thinking: { thinking: { type: "adaptive" } },
+        }
+      }
+      // kilocode_change end
       if (adaptiveEfforts) {
         let efforts = [...adaptiveEfforts]
         if (model.providerID === "github-copilot") {

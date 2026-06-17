@@ -28,6 +28,8 @@ import ai.kilocode.client.session.ui.attachment.attachmentParams
 import ai.kilocode.client.session.ui.attachment.ensureAttachmentEditorKind
 import ai.kilocode.client.session.ui.attachment.isEmbeddedAttachment
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
+import ai.kilocode.client.session.ui.selection.SessionContextMenu
+import ai.kilocode.client.session.ui.selection.SessionHoverCopyOverlay
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
@@ -41,6 +43,8 @@ import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.util.UiTimerSource
+import ai.kilocode.client.util.UiTimers
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.dto.PromptDto
@@ -77,7 +81,6 @@ import java.net.URI
 import java.nio.file.Path
 import javax.swing.JComponent
 import javax.swing.JPanel
-import javax.swing.Timer
 import javax.swing.UIManager
 
 /**
@@ -97,6 +100,7 @@ class SessionUi(
     private val manager: SessionManager? = null,
     private val workspaces: KiloWorkspaceService = service(),
     private val migration: MigrationUiController = service<KiloMigrationService>(),
+    private val timers: UiTimerSource = UiTimers,
 ) : JPanel(BorderLayout()), Disposable, SessionEditorStyleTarget, UiDataProvider {
 
     companion object {
@@ -133,17 +137,17 @@ class SessionUi(
         afterUpdate = { if (!opening) scroll.followBottom(it) },
         loaded = ::onSessionLoaded,
         openProfileAction = ::openProfileSettings,
+        timers = timers,
     )
 
 
     private lateinit var root: SessionRootPanel
     private lateinit var account: SessionAccountOverlay
     private lateinit var drop: SessionDropOverlay
-    private val hide = Timer(HIDE_MS) {
-        if (disposed || !this::drop.isInitialized) return@Timer
+    private lateinit var overlay: SessionHoverCopyOverlay
+    private val hide = timers.timer(HIDE_MS, repeats = false) {
+        if (disposed || !this::drop.isInitialized) return@timer
         drop.setActive(false)
-    }.apply {
-        isRepeats = false
     }
 
     private lateinit var sessionContent: JPanel
@@ -170,7 +174,7 @@ class SessionUi(
     private var modalFocus: (() -> JComponent)? = null
     private var style = SessionEditorStyle.current()
     private val selection = SessionSelection()
-    private val copy = object : TextCopyProvider() {
+    private val provider = object : TextCopyProvider() {
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
 
         override fun getTextLinesToCopy(): Collection<String>? {
@@ -215,7 +219,7 @@ class SessionUi(
     internal fun currentStyle() = style
 
     override fun uiDataSnapshot(sink: DataSink) {
-        sink[PlatformDataKeys.COPY_PROVIDER] = copy
+        sink[PlatformDataKeys.COPY_PROVIDER] = provider
     }
 
     @RequiresEdt
@@ -252,6 +256,7 @@ class SessionUi(
 
     private fun buildUi() {
         root = SessionRootPanel()
+        SessionContextMenu.install(root, this)
 
         migrationOverlay = MigrationOverlayPanel().apply {
             onSkip = { migration.skip() }
@@ -280,6 +285,11 @@ class SessionUi(
                 size.width,
                 size.height,
             )
+        }
+
+        overlay = SessionHoverCopyOverlay(root, this)
+        root.addOverlay(overlay) { pane, child ->
+            overlay.bounds(pane, child)
         }
 
         sessionContent = JPanel(BorderLayout())
@@ -323,10 +333,12 @@ class SessionUi(
         header = SessionHeaderPanel(controller, this)
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
+        scroll.onScroll = overlay::clear
         connection = ConnectionPanel(this, controller)
 
         prompt = PromptPanel(
             project = project,
+            selection = selection,
             onSend = { text, files -> sendPrompt(text, files) },
             onAbort = { controller.abort() },
             onEnhance = controller::enhancePrompt,
@@ -418,6 +430,7 @@ class SessionUi(
                         history = { manager?.showHistory() },
                         activity = { manager?.activity() ?: sessions.activity() },
                         titles = { manager?.titles().orEmpty() },
+                        timers = timers,
                     )
                     empty = panel
                     scroll.show(panel.view)

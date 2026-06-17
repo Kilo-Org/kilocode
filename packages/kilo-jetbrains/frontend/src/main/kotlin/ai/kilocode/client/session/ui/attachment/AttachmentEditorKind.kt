@@ -249,6 +249,10 @@ fun ensureAttachmentEditorKind() {
     service<KiloEditorKindRegistry>().register(AttachmentEditorKind)
 }
 
+internal fun unregisterAttachmentEditorKind() {
+    service<KiloEditorKindRegistry>().unregister(AttachmentEditorKind.ID)
+}
+
 internal fun attachmentParams(
     sessionId: String,
     messageId: String,

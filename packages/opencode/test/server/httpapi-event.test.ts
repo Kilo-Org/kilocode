@@ -230,8 +230,7 @@ describe("event HttpApi", () => {
       const sessionID = SessionID.make("ses_event_encoding")
       const session = readGlobalUntil(
         reader,
-        (event) =>
-          event.payload.type === SessionEvent.Text.Delta.type && properties(event).sessionID === sessionID,
+        (event) => event.payload.type === SessionEvent.Text.Delta.type && properties(event).sessionID === sessionID,
       )
       const sessionDomain = await AppRuntime.runPromise(
         EventV2.Service.use((events) =>

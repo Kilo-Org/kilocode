@@ -10,11 +10,16 @@ import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.CustomModelDto
+import ai.kilocode.rpc.dto.CustomProviderConfigDto
+import ai.kilocode.rpc.dto.CustomProviderSaveDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelDto
+import ai.kilocode.rpc.dto.ModelLimitDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.PartDto
@@ -22,6 +27,11 @@ import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionFileDiffDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.ProviderAuthMethodDto
+import ai.kilocode.rpc.dto.ProviderAuthOptionDto
+import ai.kilocode.rpc.dto.ProviderAuthPromptDto
+import ai.kilocode.rpc.dto.ProviderMetadataDto
+import ai.kilocode.rpc.dto.ProviderSettingsProviderDto
 import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
@@ -44,12 +54,15 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.put
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -415,6 +428,60 @@ object KiloCliDataParser {
         )
     }
 
+    fun parseProviderSettingsProviders(raw: String): Triple<List<ProviderSettingsProviderDto>, List<String>, Map<String, String>> {
+        val obj = json.parseToJsonElement(raw).jsonObject
+        val all = obj["all"]?.jsonArray?.map { elem ->
+            val item = elem.jsonObject
+            ProviderSettingsProviderDto(
+                id = item.str("id") ?: "",
+                name = item.str("name") ?: item.str("id") ?: "",
+                description = item.str("description"),
+                source = item.str("source"),
+                key = item.str("key"),
+                metadata = parseProviderMetadata(item["metadata"].obj()),
+                models = item["models"]?.jsonObject?.mapValues { (id, v) -> parseModelDto(id, v.jsonObject) } ?: emptyMap(),
+            )
+        } ?: emptyList()
+        val connected = obj["connected"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+        val defaults = obj["default"]?.jsonObject?.mapValues { (_, v) -> v.jsonPrimitive.content } ?: emptyMap()
+        return Triple(all, connected, defaults)
+    }
+
+    fun parseProviderAuth(raw: String): Map<String, List<ProviderAuthMethodDto>> {
+        val root = tryParseObject(raw) ?: return emptyMap()
+        return root.entries.associate { (id, elem) ->
+            val arr = runCatching { elem.jsonArray }.getOrNull()
+            val methods = arr?.mapNotNull { parseAuthMethod(runCatching { it.jsonObject }.getOrNull()) } ?: emptyList()
+            id to methods
+        }
+    }
+
+    fun parseProviderConfig(raw: String): Pair<Map<String, CustomProviderConfigDto>, Pair<List<String>, List<String>>> {
+        val obj = tryParseObject(raw) ?: return emptyMap<String, CustomProviderConfigDto>() to (emptyList<String>() to emptyList())
+        val cfg = obj["provider"]?.jsonObject?.entries?.mapNotNull { (id, elem) ->
+            val item = runCatching { elem.jsonObject }.getOrNull() ?: return@mapNotNull null
+            id to CustomProviderConfigDto(
+                id = id,
+                name = item.str("name"),
+                npm = item.str("npm"),
+                env = item["env"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
+                options = item["options"].obj()?.entries?.mapNotNull { (key, value) -> value.scalar()?.let { key to it } }?.toMap() ?: emptyMap(),
+                headers = item["headers"].obj()?.entries?.mapNotNull { (key, value) -> value.scalar()?.let { key to it } }?.toMap() ?: emptyMap(),
+                models = item["models"].obj()?.entries?.mapNotNull { (mid, value) ->
+                    val model = runCatching { value.jsonObject }.getOrNull() ?: return@mapNotNull null
+                    mid to CustomModelDto(
+                        id = model.str("id") ?: mid,
+                        name = model.str("name") ?: mid,
+                        reasoning = model["capabilities"].obj()?.bool("reasoning") ?: false,
+                    )
+                }?.toMap() ?: emptyMap(),
+            )
+        }?.toMap() ?: emptyMap()
+        val disabled = obj["disabled_providers"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+        val enabled = obj["enabled_providers"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+        return cfg to (disabled to enabled)
+    }
+
     /**
      * Parse a command list response (`GET /command`) into a list of [CommandInfo].
      * The `template` field is intentionally ignored — CLI commands can return lazy
@@ -579,6 +646,80 @@ object KiloCliDataParser {
 
         sb.append("}")
         return sb.toString()
+    }
+
+    fun buildProviderAuthJson(key: String, metadata: Map<String, String>): String {
+        val obj = buildJsonObject {
+            put("type", "api")
+            put("key", key)
+            if (metadata.isNotEmpty()) {
+                put("metadata", buildJsonObject { metadata.forEach { (k, v) -> put(k, v) } })
+            }
+        }
+        return json.encodeToString(JsonObject.serializer(), obj)
+    }
+
+    fun buildProviderOAuthJson(method: String, inputs: Map<String, String> = emptyMap(), code: String? = null): String {
+        val obj = buildJsonObject {
+            val index = method.toLongOrNull()
+            if (index != null) {
+                put("method", index)
+            } else {
+                put("method", method)
+            }
+            if (inputs.isNotEmpty()) put("inputs", buildJsonObject { inputs.forEach { (k, v) -> put(k, v) } })
+            if (code != null) put("code", code)
+        }
+        return json.encodeToString(JsonObject.serializer(), obj)
+    }
+
+    fun buildDisabledProviderPatch(ids: List<String>): String {
+        val arr = JsonArray(ids.distinct().sorted().map { JsonPrimitive(it) })
+        return json.encodeToString(JsonObject.serializer(), JsonObject(mapOf("disabled_providers" to arr)))
+    }
+
+    fun buildCustomProviderPatch(input: CustomProviderSaveDto): String {
+        val id = input.id.trim()
+        val env = input.envVar?.trim()?.takeIf { it.isNotBlank() }
+        val models = input.models.associate { model ->
+            model.id to buildJsonObject {
+                put("id", model.id)
+                put("name", model.name.ifBlank { model.id })
+                put("capabilities", buildJsonObject { put("reasoning", model.reasoning) })
+            }
+        }
+        val provider = buildJsonObject {
+            put("name", input.name.trim().ifBlank { id })
+            put("npm", "@ai-sdk/openai-compatible")
+            put("options", buildJsonObject { put("baseURL", input.baseUrl.trim()) })
+            if (env != null) put("env", buildJsonArray { add(JsonPrimitive(env)) })
+            if (input.headers.isNotEmpty()) put("headers", buildJsonObject { input.headers.forEach { (k, v) -> put(k, v) } })
+            if (models.isNotEmpty()) put("models", JsonObject(models))
+        }
+        val root = buildJsonObject {
+            put("provider", buildJsonObject { put(id, provider) })
+        }
+        return json.encodeToString(JsonObject.serializer(), root)
+    }
+
+    fun buildCustomProviderDeletePatch(id: String): String {
+        val root = buildJsonObject {
+            put("provider", buildJsonObject { put(id, JsonNull) })
+        }
+        return json.encodeToString(JsonObject.serializer(), root)
+    }
+
+    fun parseOAuthReady(raw: String): Triple<String?, String, String?> {
+        val obj = tryParseObject(raw) ?: return Triple(null, "auto", null)
+        return Triple(obj.str("url"), obj.str("method") ?: "auto", obj.str("instructions"))
+    }
+
+    fun parseModelIds(raw: String): List<String> {
+        val obj = tryParseObject(raw) ?: return emptyList()
+        return obj["data"]?.jsonArray?.mapNotNull { elem ->
+            val item = runCatching { elem.jsonObject }.getOrNull() ?: return@mapNotNull null
+            item.str("id")
+        }?.distinct()?.sorted() ?: emptyList()
     }
 
     // ================================================================
@@ -826,6 +967,34 @@ object KiloCliDataParser {
         models = obj["models"]?.jsonObject?.mapValues { (id, v) -> parseModel(id, v.jsonObject) } ?: emptyMap(),
     )
 
+    private fun parseProviderMetadata(obj: JsonObject?): ProviderMetadataDto? {
+        if (obj == null) return null
+        val dto = ProviderMetadataDto(
+            noteKey = obj.str("noteKey"),
+            icon = obj.str("icon"),
+            priority = obj.num("priority")?.toInt(),
+        )
+        if (dto.noteKey == null && dto.icon == null && dto.priority == null) return null
+        return dto
+    }
+
+    private fun parseModelDto(id: String, obj: JsonObject): ModelDto {
+        val model = parseModel(id, obj)
+        return ModelDto(
+            id = model.id,
+            name = model.name,
+            attachment = model.attachment,
+            reasoning = model.reasoning,
+            temperature = model.temperature,
+            toolCall = model.toolCall,
+            free = model.free,
+            status = model.status,
+            recommendedIndex = model.recommendedIndex,
+            variants = model.variants,
+            limit = model.limit?.let { ModelLimitDto(it.context, it.input, it.output) },
+        )
+    }
+
     private fun parseModel(id: String, obj: JsonObject): ModelInfo {
         val cap = obj["capabilities"]?.jsonObject
         val limit = obj["limit"]?.jsonObject
@@ -853,6 +1022,35 @@ object KiloCliDataParser {
     private fun parseVariants(obj: JsonObject): List<String> {
         val keys = obj["variants"]?.jsonObject?.keys?.toList() ?: return emptyList()
         return keys.sortedWith(compareBy<String> { EFFORT_ORDER[it] ?: Int.MAX_VALUE }.thenBy { it })
+    }
+
+    private fun parseAuthMethod(obj: JsonObject?): ProviderAuthMethodDto? {
+        if (obj == null) return null
+        val type = obj.str("type") ?: return null
+        val prompts = obj["prompts"]?.jsonArray?.mapNotNull { elem ->
+            val prompt = runCatching { elem.jsonObject }.getOrNull() ?: return@mapNotNull null
+            val cond = prompt["when"].obj()
+            ProviderAuthPromptDto(
+                key = prompt.str("key") ?: return@mapNotNull null,
+                label = prompt.str("message") ?: prompt.str("label") ?: prompt.str("key") ?: "",
+                type = prompt.str("type") ?: "text",
+                options = prompt["options"]?.jsonArray?.mapNotNull { parseAuthOption(it) } ?: emptyList(),
+                whenKey = cond?.str("key"),
+                whenOp = cond?.str("op"),
+                whenValue = cond?.str("value"),
+            )
+        } ?: emptyList()
+        return ProviderAuthMethodDto(type, obj.str("label") ?: type, prompts)
+    }
+
+    private fun parseAuthOption(elem: JsonElement): ProviderAuthOptionDto? {
+        val item = runCatching { elem.jsonObject }.getOrNull()
+        if (item != null) {
+            val label = item.str("label") ?: item.str("value") ?: return null
+            return ProviderAuthOptionDto(label = label, value = item.str("value") ?: label)
+        }
+        val text = runCatching { elem.jsonPrimitive.contentOrNull }.getOrNull() ?: return null
+        return ProviderAuthOptionDto(label = text, value = text)
     }
 
     private fun parseSessionObject(obj: JsonObject): SessionDto {

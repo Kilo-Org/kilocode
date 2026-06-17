@@ -3,8 +3,12 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.util.ui.JBUI
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.BorderLayout
+import java.awt.datatransfer.DataFlavor
+import java.awt.event.MouseEvent
 import javax.swing.JComponent
 import javax.swing.RepaintManager
 
@@ -99,6 +103,82 @@ class TextViewTest : BasePlatformTestCase() {
         assertNotNull(view.md.component)
     }
 
+    fun `test copy toolbar is retained below markdown component`() {
+        val view = TextView(Text("p1").also { it.content.append(" hello ") })
+
+        view.setCopyToolbar(true)
+
+        val layout = view.layout as BorderLayout
+        assertSame(view.md.component, layout.getLayoutComponent(BorderLayout.CENTER))
+        val bar = layout.getLayoutComponent(BorderLayout.SOUTH) as MessageToolbar
+        val buttons = bar.layout as BorderLayout
+        assertSame(view.copyButton(), buttons.getLayoutComponent(BorderLayout.LINE_START))
+        assertTrue(view.hasCopyToolbar())
+    }
+
+    fun `test assistant copy button copies current trimmed markdown`() {
+        val view = TextView(Text("p1").also { it.content.append(" hello ") })
+        view.setCopyToolbar(true)
+
+        view.copyButton().doClick()
+
+        assertEquals("hello", clipboard())
+    }
+
+    fun `test copy confirmation hides when mouse exits button`() {
+        val view = TextView(Text("p1").also { it.content.append("hello") })
+        view.setCopyToolbar(true)
+
+        view.copyButton().doClick()
+        view.copyButton().dispatchEvent(MouseEvent(
+            view.copyButton(),
+            MouseEvent.MOUSE_EXITED,
+            System.currentTimeMillis(),
+            0,
+            1,
+            1,
+            0,
+            false,
+        ))
+
+        assertEquals("hello", clipboard())
+    }
+
+    fun `test copy toolbar reflects update and delta without replacing components`() {
+        val view = TextView(Text("p1").also { it.content.append(" first ") })
+        view.setCopyToolbar(true)
+        val comp = view.md.component
+        val bar = (view.layout as BorderLayout).getLayoutComponent(BorderLayout.SOUTH)
+
+        view.update(Text("p1").also { it.content.append(" second ") })
+        view.appendDelta(" third ")
+        view.copyButton().doClick()
+
+        assertSame(comp, view.md.component)
+        assertSame(bar, (view.layout as BorderLayout).getLayoutComponent(BorderLayout.SOUTH))
+        assertEquals("second  third", clipboard())
+    }
+
+    fun `test text view can copy untrimmed markdown`() {
+        val view = PromptView(Text("p1").also { it.content.append(" hello ") })
+        view.setCopyToolbar(true, trim = false)
+
+        view.copyButton().doClick()
+
+        assertEquals(" hello ", clipboard())
+    }
+
+    fun `test blank copy toolbar is hidden until content appears`() {
+        val view = TextView(Text("p1"))
+        view.setCopyToolbar(true)
+
+        assertFalse(view.hasCopyToolbar())
+
+        view.appendDelta("hello")
+
+        assertTrue(view.hasCopyToolbar())
+    }
+
     fun `test markdown uses ui family with editor size`() {
         val style = SessionEditorStyle.current()
         val view = TextView(Text("p1"))
@@ -182,4 +262,8 @@ class TextViewTest : BasePlatformTestCase() {
             super.addInvalidComponent(invalidComponent)
         }
     }
+
+    private fun clipboard() = CopyPasteManager.getInstance()
+        .contents
+        ?.getTransferData(DataFlavor.stringFlavor) as String
 }

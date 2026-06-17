@@ -17,6 +17,7 @@ import {
   batch,
   Show,
   on,
+  untrack, // kilocode_change
 } from "solid-js"
 import { win32DisableProcessedInput, win32FlushInputBuffer, win32InstallCtrlCGuard } from "./win32" // kilocode_change
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -52,7 +53,6 @@ import { DialogAlert } from "./ui/dialog-alert"
 import { DialogConfirm } from "./ui/dialog-confirm"
 import { ToastProvider, useToast } from "./ui/toast"
 import { ExitProvider, useExit } from "./context/exit"
-import { Session as SessionApi } from "@/session/session"
 // kilocode_change start
 import { DialogSelect } from "./ui/dialog-select"
 import { Link } from "./ui/link"
@@ -349,6 +349,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     renderer.clearSelection()
   }
   const [terminalTitleEnabled, setTerminalTitleEnabled] = createSignal(kv.get("terminal_title_enabled", true))
+  const [done, setDone] = createSignal<Record<string, true>>({}) // kilocode_change
   const [pasteSummaryEnabled, setPasteSummaryEnabled] = createSignal(
     kv.get("paste_summary_enabled", !sync.data.config.experimental?.disable_paste_summary),
   )
@@ -364,30 +365,22 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
 
     const titleDefault = KiloApp.APP_TITLE // kilocode_change
 
-    if (route.data.type === "home") {
-      renderer.setTerminalTitle(titleDefault) // kilocode_change
-      return
-    }
-
-    if (route.data.type === "session") {
-      const session = sync.session.get(route.data.sessionID)
-      if (!session || SessionApi.isDefaultTitle(session.title)) {
-        renderer.setTerminalTitle(titleDefault) // kilocode_change
-        return
-      }
-
-      const title = session.title.length > 40 ? session.title.slice(0, 37) + "..." : session.title
-      renderer.setTerminalTitle(`${titleDefault} | ${title}`) // kilocode_change
-      return
-    }
-
-    if (route.data.type === "plugin") {
-      renderer.setTerminalTitle(`${titleDefault} | ${route.data.id}`) // kilocode_change
-    }
-
     // kilocode_change start
-    const kiloTitle = KiloApp.getTerminalTitle(route, titleDefault)
-    if (kiloTitle) renderer.setTerminalTitle(kiloTitle)
+    const kiloTitle = KiloApp.getTerminalTitle({
+      route,
+      base: titleDefault,
+      sync,
+      done: untrack(done),
+      icon: tuiConfig.title_icon,
+    })
+    if (kiloTitle) {
+      const id = kiloTitle.id
+      if (id && kiloTitle.active && untrack(() => done()[id]) !== true) {
+        setDone((prev) => ({ ...prev, [id]: true }))
+      }
+      renderer.setTerminalTitle(kiloTitle.title)
+      return
+    }
     // kilocode_change end
   })
 

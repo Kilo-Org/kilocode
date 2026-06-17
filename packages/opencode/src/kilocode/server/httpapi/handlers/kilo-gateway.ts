@@ -73,6 +73,13 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       return { profile, balance, currentOrgId }
     })
 
+    const authStatus = Effect.fn("KiloGatewayHttpApi.authStatus")(function* () {
+      const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
+      const type = getToken(info) && (info?.type === "api" || info?.type === "oauth") ? info.type : undefined
+      if (!type) return { authenticated: false }
+      return { authenticated: true, type }
+    })
+
     const proxyAuth = Effect.fn("KiloGatewayHttpApi.proxyAuth")(function* () {
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
       return {
@@ -504,6 +511,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
 
     return handlers
       .handle("profile", profile)
+      .handle("authStatus", authStatus)
       .handle("modes", modes)
       .handle("fim", fim)
       .handle("edit", edit)

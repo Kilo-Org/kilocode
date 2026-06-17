@@ -1,4 +1,5 @@
 import type { Argv } from "yargs"
+import * as Log from "@opencode-ai/core/util/log"
 import { Global } from "@opencode-ai/core/global"
 import { InstallationBuildKind, InstallationVersion } from "@opencode-ai/core/installation/version"
 import { Telemetry } from "@kilocode/kilo-telemetry"
@@ -16,6 +17,8 @@ import { DaemonCommand } from "@/kilocode/cli/cmd/daemon"
 import { DevSetupCommand, DevAliasCommand } from "@/kilocode/cli/dev-setup"
 import { RemoteCommand } from "@/cli/cmd/remote"
 import { ConfigCommand as ConfigCLICommand } from "@/cli/cmd/config"
+
+const log = Log.create({ service: "kilocode.cli" })
 
 // All Kilo-specific CLI customization lives here so the shared upstream entrypoint
 // (src/index.ts) only needs a handful of thin call-sites behind kilocode_change markers.
@@ -73,8 +76,18 @@ export namespace KiloCli {
   export async function shutdown(): Promise<void> {
     const code = typeof process.exitCode === "number" ? process.exitCode : undefined
     Telemetry.trackCliExit(code)
-    await SessionExport.shutdown()
-    await Telemetry.shutdown()
-    await InstanceRuntime.disposeAllInstances() // safety net (no-op if already disposed)
+    try {
+      await SessionExport.shutdown()
+      // Bound telemetry shutdown so an unreachable endpoint (offline, firewall,
+      // DNS adblock resolving the host to 0.0.0.0) cannot block process exit on
+      // short-lived commands like `kilo --help` / `kilo --version` (#9788).
+      try {
+        await Telemetry.shutdown(2000)
+      } catch (err) {
+        log.warn("telemetry shutdown failed", { err })
+      }
+    } finally {
+      await InstanceRuntime.disposeAllInstances() // safety net (no-op if already disposed)
+    }
   }
 }

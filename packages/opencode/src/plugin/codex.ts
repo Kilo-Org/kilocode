@@ -142,10 +142,13 @@ async function exchangeCodeForTokens(code: string, redirectUri: string, pkce: Pk
   return response.json()
 }
 
-async function refreshAccessToken(refreshToken: string): Promise<TokenResponse> {
+// kilocode_change start
+async function refreshAccessToken(refreshToken: string, signal?: AbortSignal): Promise<TokenResponse> {
   const response = await fetch(`${ISSUER}/oauth/token`, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    signal,
+    headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": `kilo/${InstallationVersion}` },
+    // kilocode_change end
     body: new URLSearchParams({
       grant_type: "refresh_token",
       refresh_token: refreshToken,

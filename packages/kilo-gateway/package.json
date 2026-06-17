@@ -33,7 +33,6 @@
   },
   "dependencies": {
     "@kilocode/plugin": "workspace:*",
-    "@kilocode/sdk": "workspace:*",
     "@ai-sdk/alibaba": "1.0.17",
     "@ai-sdk/anthropic": "3.0.71",
     "@ai-sdk/openai": "3.0.53",

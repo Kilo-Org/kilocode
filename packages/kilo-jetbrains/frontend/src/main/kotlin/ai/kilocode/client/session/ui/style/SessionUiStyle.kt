@@ -65,8 +65,6 @@ object SessionUiStyle {
         /** Prompt input dimensions and chrome inside the session view. */
         object Prompt {
             const val EDITOR_LINES = 3
-            const val EDITOR_MAX_LINES = 8
-            const val EDITOR_SPARE_LINES = 1
             const val EDITOR_CHROME = 16
             const val SEND_BUTTON_SIZE = 24
             const val CORNER_ARC = 6

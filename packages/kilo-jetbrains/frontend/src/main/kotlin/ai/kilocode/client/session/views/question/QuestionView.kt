@@ -488,7 +488,7 @@ class QuestionView(
      */
     @RequiresEdt
     private fun buildCustomEditor(): SessionEditorTextField {
-        val ed = SessionEditorTextField(project)
+        val ed = SessionEditorTextField(project, selection = selection)
         ed.border = JBUI.Borders.empty()
         ed.setFontInheritedFromLAF(false)
         ed.setPlaceholder(KiloBundle.message("session.question.custom.placeholder"))
@@ -506,6 +506,7 @@ class QuestionView(
             ex.settings.isAdditionalPageAtBottom = false
             ex.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
         }
+        selection?.register(ed)?.let(regs::add)
         ed.font = style.editorFont
         ed.background = style.editorScheme.defaultBackground
 

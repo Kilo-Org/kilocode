@@ -1,4 +1,4 @@
-# opencode agent guidelines
+# Kilo CLI package guidelines
 
 ## Build/Test
 

@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/typewriter"
+export * from "@opencode-ai/ui/typewriter"

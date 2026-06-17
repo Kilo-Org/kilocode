@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/theme/color"
+export * from "@opencode-ai/ui/theme/color"

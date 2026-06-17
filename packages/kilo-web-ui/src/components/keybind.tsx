@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/keybind"
+export * from "@opencode-ai/ui/keybind"
