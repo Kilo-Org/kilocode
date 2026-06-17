@@ -253,7 +253,9 @@ async function parseFile(filePath: string, languageParsers: LanguageParser): Pro
     const tree = parser.parse(fileContent)
     const captures = tree ? query.captures(tree.rootNode) : []
     const lines = fileContent.split("\n")
-    return processCaptures(captures, lines, extLang)
+    const result = processCaptures(captures, lines, extLang)
+    if (tree) tree.delete()
+    return result
   } catch (error) {
     log.error(`Error parsing file: ${filePath}`, {
       err: error instanceof Error ? error.message : String(error),
