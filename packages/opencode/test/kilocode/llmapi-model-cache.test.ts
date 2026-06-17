@@ -101,3 +101,36 @@ it.live("falls back to defaults for a minimal {id, owned_by} endpoint", () =>
     expect(m?.cost).toEqual({ input: 0, output: 0 })
   }),
 )
+
+it.live("carries gateway-advertised reasoning_levels onto the model", () =>
+  Effect.gen(function* () {
+    const hits = yield* Ref.make<Hit[]>([])
+    const body = {
+      data: [
+        // medium-only model: the gateway 400s low/high, so only "medium" is offered.
+        { id: "gpt-5.2-pro", supported_parameters: ["reasoning"], reasoning_levels: ["medium"] },
+        // reasoning supported via levels even though supported_parameters omits it.
+        { id: "gpt-5-codex", supported_parameters: ["tools"], reasoning_levels: ["none", "low", "medium", "high"] },
+        // thinking on/off, no discrete tiers -> empty list, still reasoning-capable.
+        { id: "gpt-5.2-chat", supported_parameters: ["reasoning"], reasoning_levels: [] },
+        // no reasoning info at all -> field absent, id heuristics apply downstream.
+        { id: "plain-model", owned_by: "acme" },
+      ],
+    }
+    const models = yield* ModelCache.Service.use((cache) =>
+      cache.fetch("llmapi", { apiKey: "sk-test", baseURL: "https://api.llmapi.test/v1" }),
+    ).pipe(Effect.provide(layer(hits, body)))
+
+    expect(models["gpt-5.2-pro"]?.reasoningLevels).toEqual(["medium"])
+    expect(models["gpt-5.2-pro"]?.reasoning).toBe(true)
+
+    expect(models["gpt-5-codex"]?.reasoningLevels).toEqual(["none", "low", "medium", "high"])
+    expect(models["gpt-5-codex"]?.reasoning).toBe(true)
+
+    expect(models["gpt-5.2-chat"]?.reasoningLevels).toEqual([])
+    expect(models["gpt-5.2-chat"]?.reasoning).toBe(true)
+
+    expect(models["plain-model"]?.reasoningLevels).toBeUndefined()
+    expect(models["plain-model"]?.reasoning).toBe(false)
+  }),
+)

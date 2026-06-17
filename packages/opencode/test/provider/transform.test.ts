@@ -2396,6 +2396,43 @@ describe("ProviderTransform.variants", () => {
     expect(result).toEqual({})
   })
 
+  test("llmapi gateway: advertised reasoning_levels are offered verbatim", () => {
+    const model = createMockModel({
+      id: "gpt-5.2-pro",
+      providerID: "llmapi",
+      api: { id: "gpt-5.2-pro", url: "https://api.llmapi.ai/v1", npm: "@ai-sdk/openai-compatible" },
+      capabilities: { reasoning: true },
+      reasoningLevels: ["medium"],
+    })
+    // The gateway only accepts "medium" for this model — the id-based gpt-5
+    // heuristic (which would add low/high/xhigh) must not win.
+    const result = ProviderTransform.variants(model)
+    expect(result).toEqual({ medium: { reasoningEffort: "medium" } })
+  })
+
+  test("llmapi gateway: empty advertised reasoning_levels yields no effort selector", () => {
+    const model = createMockModel({
+      id: "gpt-5.2-chat",
+      providerID: "llmapi",
+      api: { id: "gpt-5.2-chat", url: "https://api.llmapi.ai/v1", npm: "@ai-sdk/openai-compatible" },
+      capabilities: { reasoning: true },
+      reasoningLevels: [],
+    })
+    const result = ProviderTransform.variants(model)
+    expect(result).toEqual({})
+  })
+
+  test("openai-compatible without advertised reasoning_levels falls back to heuristics", () => {
+    const model = createMockModel({
+      id: "some-openai-compatible-model",
+      providerID: "custom",
+      api: { id: "some-openai-compatible-model", url: "https://example.com/v1", npm: "@ai-sdk/openai-compatible" },
+      capabilities: { reasoning: true },
+    })
+    const result = ProviderTransform.variants(model)
+    expect(Object.keys(result)).toEqual(["low", "medium", "high"])
+  })
+
   test("deepseek returns empty object", () => {
     const model = createMockModel({
       id: "deepseek/deepseek-chat",

@@ -76,6 +76,12 @@ export const Model = Schema.Struct({
   isFree: Schema.optional(Schema.Boolean),
   mayTrainOnYourPrompts: Schema.optional(Schema.Boolean),
   ai_sdk_provider: Schema.optional(Schema.String),
+  // Reasoning effort tiers the gateway advertises for this model (LLMAPI/apertis
+  // /v1/models `reasoning_levels`). Carries the server's per-model truth through
+  // to ProviderTransform.variants so the UI only offers supported efforts. An
+  // empty array means "thinking on/off, no discrete tiers"; undefined means the
+  // source didn't advertise it (fall back to id-based heuristics).
+  reasoningLevels: Schema.optional(Schema.Array(Schema.String)),
   // kilocode_change end
   experimental: Schema.optional(
     Schema.Struct({

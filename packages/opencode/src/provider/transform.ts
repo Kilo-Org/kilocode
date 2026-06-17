@@ -638,6 +638,17 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
   ) {
     return model.variants
   }
+
+  // LLMAPI/apertis gateways advertise the exact reasoning effort tiers each
+  // model accepts (`reasoning_levels` in /v1/models), and the gateway 400s any
+  // effort outside that set. Trust it as the source of truth instead of guessing
+  // from the model id. An empty list means the model exposes no discrete tiers,
+  // so no effort selector is shown. `undefined` means the source didn't advertise
+  // tiers — fall through to the id-based heuristics below.
+  const advertisedLevels = (model as { reasoningLevels?: readonly string[] }).reasoningLevels
+  if (advertisedLevels !== undefined) {
+    return Object.fromEntries(advertisedLevels.map((effort) => [effort, { reasoningEffort: effort }]))
+  }
   // kilocode_change end
 
   if (!model.capabilities.reasoning) return {}

@@ -43,6 +43,9 @@ export const KILO_MODEL_SCHEMA_EXTENSIONS = {
     }),
   ),
   ai_sdk_provider: Schema.optional(Schema.Literals(AI_SDK_PROVIDERS)),
+  // Gateway-advertised reasoning effort tiers (see core Model schema). Read by
+  // ProviderTransform.variants for openai-compatible gateways (LLMAPI/apertis).
+  reasoningLevels: Schema.optional(Schema.Array(Schema.String)),
 }
 
 // ---------------------------------------------------------------------------
@@ -58,6 +61,7 @@ export function patchModelsDevModel(providerID: string, source: any) {
     mayTrainOnYourPrompts: source.mayTrainOnYourPrompts,
     terminalBench: source.terminalBench,
     ai_sdk_provider: source.ai_sdk_provider,
+    reasoningLevels: source.reasoningLevels,
     options: source.options ?? {},
   }
 }
