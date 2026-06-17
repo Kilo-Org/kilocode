@@ -1337,10 +1337,10 @@ export const dict = {
   "settings.experimental.speechToText.title": "Voz a texto",
   "settings.experimental.speechToText.description":
     "Habilita la entrada de voz en los campos de prompt usando tu cuenta de Kilo a través de Kilo Gateway.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Habilita e inicia sesión en el proveedor Kilo para usar Speech to Text. Actualmente, Speech to Text solo es compatible con Kilo Gateway.",
-  "settings.experimental.speechToTextModel.title": "Modelo de voz a texto",
-  "settings.experimental.speechToTextModel.description":
+  "settings.models.speechToTextModel.title": "Modelo de voz a texto",
+  "settings.models.speechToTextModel.description":
     "Elige el modelo de transcripción de Kilo Gateway para la entrada de voz.",
   "settings.experimental.continueOnDeny.title": "Continuar al denegar",
   "settings.experimental.continueOnDeny.description": "Continuar el bucle del agente cuando se deniega un permiso",

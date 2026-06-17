@@ -230,7 +230,11 @@ export const layer: Layer.Layer<
           }
         }
 
-        const cfg = yield* config.get() // kilocode_change: capture for KiloToolRegistry.extra
+        // kilocode_change start
+        const cfg = yield* config.get()
+        const global = yield* config.getGlobal()
+        const indexing = KiloToolRegistry.indexing(cfg, global)
+        // kilocode_change end
         const questionEnabled = ["app", "cli", "desktop", "vscode"].includes(flags.client) || flags.enableQuestionTool // kilocode_change: add vscode client
 
         const tool = yield* Effect.all({
@@ -256,7 +260,13 @@ export const layer: Layer.Layer<
           suggest: Tool.init(suggesttool), // kilocode_change
         })
 
-        const kilo = yield* KiloToolRegistry.build(kiloToolInfos, { agent: agents, truncate }) // kilocode_change
+        // kilocode_change start
+        const kilo = yield* KiloToolRegistry.build(kiloToolInfos, {
+          agent: agents,
+          truncate,
+          indexing: indexing ?? false,
+        })
+        // kilocode_change end
 
         return {
           custom,

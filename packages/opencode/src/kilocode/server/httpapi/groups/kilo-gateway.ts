@@ -33,6 +33,11 @@ export const ProfileWithBalance = Schema.Struct({
   currentOrgId: Schema.NullOr(Schema.String),
 })
 
+export const AuthStatus = Schema.Struct({
+  authenticated: Schema.Boolean,
+  type: Schema.optional(Schema.Literals(["api", "oauth"])),
+})
+
 export const NotificationAction = Schema.Struct({
   actionText: Schema.String,
   actionURL: Schema.String,
@@ -241,6 +246,7 @@ export const CloudSessionData = Schema.Struct({
 export const KiloGatewayPaths = {
   modes: `${root}/modes`,
   profile: `${root}/profile`,
+  authStatus: `${root}/auth-status`,
   fim: `${root}/fim`,
   edit: `${root}/edit`,
   audioTranscriptions: `${root}/audio/transcriptions`,
@@ -266,6 +272,17 @@ export const KiloGatewayApi = HttpApi.make("kilo")
             identifier: "kilo.profile",
             summary: "Get Kilo Gateway profile",
             description: "Fetch user profile and organizations from Kilo Gateway",
+          }),
+        ),
+        HttpApiEndpoint.get("authStatus", KiloGatewayPaths.authStatus, {
+          query: WorkspaceRoutingQuery,
+          success: described(AuthStatus, "Kilo authentication status"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilo.authStatus",
+            summary: "Get Kilo authentication status",
+            description: "Check whether a locally stored Kilo credential can authenticate Gateway requests",
           }),
         ),
         HttpApiEndpoint.get("modes", KiloGatewayPaths.modes, {

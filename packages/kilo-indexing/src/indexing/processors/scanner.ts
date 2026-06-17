@@ -295,6 +295,10 @@ export class DirectoryScanner implements IDirectoryScanner {
           onFileParsed?.()
           processedCount++
 
+          if (!isNewFile && this.vectorStore) {
+            await this.vectorStore.deletePointsByMultipleFilePaths([filePath])
+          }
+
           // Process embeddings if configured
           if (this.embedder && this.vectorStore && blocks.length > 0) {
             // Add to batch accumulators
@@ -303,7 +307,7 @@ export class DirectoryScanner implements IDirectoryScanner {
             const info = {
               filePath,
               fileHash: currentFileHash,
-              isNew: isNewFile,
+              isNew: true,
             }
             for (const block of blocks) {
               if (this._cancelled) break
@@ -608,6 +612,7 @@ export class DirectoryScanner implements IDirectoryScanner {
             vector,
             payload: {
               filePath: generateRelativeFilePath(normalizedAbsolutePath, scanWorkspace),
+              fileHash: block.fileHash,
               codeChunk: block.content,
               startLine: block.start_line,
               endLine: block.end_line,

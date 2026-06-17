@@ -285,7 +285,7 @@ export namespace Telemetry {
     track(TelemetryEvent.FEEDBACK_SUBMITTED, props)
   }
 
-  export async function shutdown(): Promise<void> {
-    await Client.shutdown()
+  export async function shutdown(timeoutMs?: number): Promise<void> {
+    await Client.shutdown(timeoutMs)
   }
 }

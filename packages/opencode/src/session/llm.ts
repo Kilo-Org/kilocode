@@ -44,7 +44,7 @@ import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { SessionExport } from "@/kilocode/session-export"
 import { getActiveOrg } from "@/kilocode/session-export/eligibility"
 // kilocode_change end
-import { InstallationVersion } from "@opencode-ai/core/installation/version"
+import { USER_AGENT } from "@/installation" // kilocode_change
 import { EffectBridge } from "@/effect/bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import * as Option from "effect/Option"
@@ -491,12 +491,12 @@ const live: Layer.Layer<
                 "x-kilo-session": input.sessionID,
                 "x-kilo-request": input.user.id,
                 "x-kilo-client": flags.client,
-                "User-Agent": `opencode/${InstallationVersion}`,
+                "User-Agent": USER_AGENT, // kilocode_change
               }
             : {
                 "x-session-affinity": input.sessionID,
                 ...(input.parentSessionID ? { "x-parent-session-id": input.parentSessionID } : {}),
-                "User-Agent": `opencode/${InstallationVersion}`,
+                "User-Agent": USER_AGENT, // kilocode_change
                 ...(input.model.providerID !== "anthropic" ? DEFAULT_HEADERS : undefined), // kilocode_change
               }),
           // kilocode_change start - headers for kilo provider

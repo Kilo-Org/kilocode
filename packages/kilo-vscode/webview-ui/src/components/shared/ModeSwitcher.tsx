@@ -13,6 +13,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { AgentInfo } from "../../types/messages"
+import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 
 /** Format an agent for display. Uses displayName if available, otherwise title-cases the slug. */
 function formatAgentLabel(agent: AgentInfo): string {
@@ -87,7 +88,7 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
     } else if (e.key === "End") {
       e.preventDefault()
       focusItem(len - 1)
-    } else if (e.key === "Enter" || e.key === " ") {
+    } else if (e.key === " " || isEnterKeyCommitNotIme(e)) {
       e.preventDefault()
       if (cur >= 0 && cur < len) pick(props.agents[cur].name)
     }

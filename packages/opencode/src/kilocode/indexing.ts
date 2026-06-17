@@ -29,18 +29,18 @@ const missing = () => disabledIndexingStatus("Indexing plugin is not enabled for
 const noWorkspace = () =>
   disabledIndexingStatus("Codebase indexing is disabled because no workspace folder is open in VS Code.")
 
-function worktreeDisabled(): z.infer<typeof IndexingStatus> {
-  return {
-    state: "Disabled",
-    message: "Indexing is disabled in worktree sessions. Use the main workspace for indexing.",
-    processedFiles: 0,
-    totalFiles: 0,
-    percent: 0,
-  }
-}
+function baselineDirectory(dir: string): string | undefined {
+  if (Instance.project.vcs !== "git") return
+  const checkout = path.resolve(Instance.worktree)
+  const main = path.resolve(Instance.project.worktree)
+  if (checkout === main) return
 
-function isWorktreePath(dir: string): boolean {
-  return /(?:\/|\\)\.kilo(?:code)?(?:\/|\\)worktrees(?:\/|\\)/.test(dir)
+  const scope = path.relative(checkout, path.resolve(dir))
+  if (scope === ".." || scope.startsWith(`..${path.sep}`) || path.isAbsolute(scope)) return
+
+  const baseline = path.resolve(main, scope)
+  if (baseline === path.resolve(dir)) return
+  return baseline
 }
 
 function failed(err: unknown): z.infer<typeof IndexingStatus> {
@@ -242,6 +242,7 @@ export namespace KiloIndexing {
 
   const boot = async (hit: Cache): Promise<Entry> => {
     const dir = Instance.directory
+    const baseline = baselineDirectory(dir)
     const cfg = await AppRuntime.runPromise(Config.Service.use((svc) => svc.get()))
     if (process.env["KILO_DISABLE_CODEBASE_INDEXING"] === "vscode-no-workspace") {
       return track(hit, await inert(() => noWorkspace()))
@@ -250,11 +251,7 @@ export namespace KiloIndexing {
       return track(hit, await inert(() => missing()))
     }
 
-    if (isWorktreePath(dir)) {
-      return track(hit, await inert(() => worktreeDisabled()))
-    }
-
-    log.info("initializing project indexing", { workspacePath: dir })
+    log.info("initializing project indexing", { workspacePath: dir, baselineDirectory: baseline })
     const root = path.join(Global.Path.state, "indexing")
     const auth = await kiloAuth(cfg)
     const globalConfig = await AppRuntime.runPromise(Config.Service.use((svc) => svc.getGlobal()))
@@ -385,7 +382,7 @@ export namespace KiloIndexing {
         if (hit.disposed) return
         const engine = IndexingWorker.create(dir, root, { status, telemetry, warning, log: output, failure })
         base.engine = engine
-        box.status = await engine.init(cfgInput)
+        box.status = await engine.init(cfgInput, baseline)
         base.initialized = true
       })
       .then(
@@ -505,7 +502,7 @@ export namespace KiloIndexing {
   }
 
   export async function search(query: string, directoryPrefix?: string): Promise<VectorStoreSearchResult[]> {
-    const entry = await hit().ready
+    const entry = await hit().promise
     entry.scope(WorkspaceContext.workspaceID)
     if (!entry.initialized || entry.current().state === "Disabled" || !entry.engine) return []
     return entry.engine.search(query, directoryPrefix)

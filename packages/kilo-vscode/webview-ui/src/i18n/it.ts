@@ -1532,11 +1532,10 @@ export const dict = {
   "settings.experimental.speechToText.title": "Da voce a testo",
   "settings.experimental.speechToText.description":
     "Abilita input vocale nei campi prompt usando il tuo account Kilo tramite Kilo Gateway.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Abilita e accedi al provider Kilo per usare Da voce a testo. Da voce a testo è attualmente supportato solo tramite Kilo Gateway.",
-  "settings.experimental.speechToTextModel.title": "Modello Da voce a testo",
-  "settings.experimental.speechToTextModel.description":
-    "Scegli il modello di trascrizione Kilo Gateway per l'input vocale.",
+  "settings.models.speechToTextModel.title": "Modello Da voce a testo",
+  "settings.models.speechToTextModel.description": "Scegli il modello di trascrizione Kilo Gateway per l'input vocale.",
 
   // Compaction limit
   "settings.context.compactionLimit.title": "Limite compattazione automatica",

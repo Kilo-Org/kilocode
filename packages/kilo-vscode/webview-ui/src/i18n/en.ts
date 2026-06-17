@@ -1305,10 +1305,10 @@ export const dict = {
   "settings.experimental.speechToText.title": "Speech to Text",
   "settings.experimental.speechToText.description":
     "Enable voice input in prompt fields using your Kilo account through Kilo Gateway.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Enable and sign in to the Kilo provider to use Speech to Text. Speech to Text is currently only supported through Kilo Gateway.",
-  "settings.experimental.speechToTextModel.title": "Speech to Text Model",
-  "settings.experimental.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
+  "settings.models.speechToTextModel.title": "Speech to Text Model",
+  "settings.models.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
