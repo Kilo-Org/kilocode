@@ -1,4 +1,4 @@
-package ai.kilocode.client.settings.profile
+package ai.kilocode.client.settings.auth
 
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
@@ -8,17 +8,6 @@ import java.awt.image.BufferedImage
 import javax.swing.ImageIcon
 
 internal object QrCode {
-
-    /**
-     * Generate a QR code image for [text].
-     *
-     * Uses black modules on a white background regardless of IDE theme — this is
-     * intentional for scanning reliability (QR scanners expect high contrast B/W).
-     *
-     * @param text URL or text to encode; must not be blank.
-     * @param size pixel dimension for both width and height.
-     * @throws IllegalArgumentException if [text] is blank.
-     */
     fun image(text: String, size: Int = 160): BufferedImage {
         require(text.isNotBlank()) { "QR text must not be blank" }
         val hints = mapOf(EncodeHintType.MARGIN to 2)
@@ -32,11 +21,5 @@ internal object QrCode {
         return img
     }
 
-    /**
-     * Convenience wrapper that returns the QR code as an [ImageIcon].
-     *
-     * @param text URL or text to encode; must not be blank.
-     * @param size pixel dimension for both width and height.
-     */
     fun icon(text: String, size: Int = 160): ImageIcon = ImageIcon(image(text, size))
 }

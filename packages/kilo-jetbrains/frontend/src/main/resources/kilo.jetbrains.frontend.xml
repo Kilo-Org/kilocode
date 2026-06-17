@@ -46,6 +46,14 @@
                 bundle="messages.KiloBundle"
                 key="settings.models.displayName"/>
 
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.providers"
+                groupWeight="1"
+                instance="ai.kilocode.client.settings.providers.ProvidersConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.providers.displayName"/>
+
         <registryKey key="kilo.session.condense"
                      description="Enable event condensing in the session update queue (merges redundant snapshots before model delivery)."
                      defaultValue="true"
@@ -157,6 +165,10 @@
             <separator/>
             <reference ref="Kilo.Session.Rename"/>
             <reference ref="Kilo.Session.Delete"/>
+        </group>
+
+        <group id="Kilo.Session.ContextMenu">
+            <reference ref="$Copy"/>
         </group>
     </actions>
 </idea-plugin>

@@ -5,6 +5,7 @@ export type CustomProviderPackage = (typeof CUSTOM_PROVIDER_PACKAGES)[number]
 export const CUSTOM_PROVIDER_PACKAGE: CustomProviderPackage = "@ai-sdk/openai-compatible"
 export const PROVIDER_ID_PATTERN = /^[a-z0-9][a-z0-9-_]*$/
 
+// Legacy/static fallback for provider objects created before backend metadata is available.
 export const PROVIDER_PRIORITY = [
   KILO_PROVIDER_ID,
   "anthropic",
@@ -37,6 +38,11 @@ export function createKiloFallbackProvider() {
     name: "Kilo Gateway",
     source: "custom" as const,
     env: ["KILO_API_KEY"],
+    metadata: {
+      noteKey: "settings.providers.note.kilo",
+      icon: KILO_PROVIDER_ID,
+      priority: 0,
+    },
     models: {},
   }
 }

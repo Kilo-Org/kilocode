@@ -105,17 +105,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "공급자 검색",
   "dialog.provider.empty": "공급자 없음",
-  "dialog.provider.group.popular": "인기",
   "dialog.provider.group.other": "기타",
   "dialog.provider.tag.recommended": "추천",
-  "dialog.provider.opencode.note": "Claude, GPT, Gemini 등 엄선된 모델",
-  "dialog.provider.anthropic.note": "Claude Pro/Max 또는 API 키로 연결",
-  "dialog.provider.deepseek.note": "추론 및 코딩 작업을 위한 DeepSeek 모델",
-  "dialog.provider.openai.note": "ChatGPT Pro/Plus 또는 API 키로 연결",
-  "dialog.provider.google.note": "빠르고 구조화된 응답을 위한 Gemini 모델",
-  "dialog.provider.openrouter.note": "하나의 공급자에서 모든 지원 모델에 액세스",
-  "dialog.provider.vercel.note": "스마트 라우팅으로 AI 모델에 통합 액세스",
-  "dialog.provider.copilot.note": "Copilot 또는 API 키로 연결",
 
   "dialog.model.select.title": "모델 선택",
   "dialog.model.search.placeholder": "모델 검색",

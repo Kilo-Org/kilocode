@@ -105,17 +105,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "搜尋供應商",
   "dialog.provider.empty": "找不到供應商",
-  "dialog.provider.group.popular": "熱門",
   "dialog.provider.group.other": "其他",
   "dialog.provider.tag.recommended": "推薦",
-  "dialog.provider.opencode.note": "精選模型，包含 Claude、GPT、Gemini 等",
-  "dialog.provider.anthropic.note": "使用 Claude Pro/Max 或 API 金鑰連線",
-  "dialog.provider.deepseek.note": "用於推理和程式設計任務的 DeepSeek 模型",
-  "dialog.provider.openai.note": "使用 ChatGPT Pro/Plus 或 API 金鑰連線",
-  "dialog.provider.copilot.note": "使用 Copilot 或 API 金鑰連線",
-  "dialog.provider.google.note": "Gemini 模型，提供快速且結構化的回應",
-  "dialog.provider.openrouter.note": "透過單一供應商存取所有支援模型",
-  "dialog.provider.vercel.note": "透過智慧路由統一存取 AI 模型",
 
   "dialog.model.select.title": "選擇模型",
   "dialog.model.search.placeholder": "搜尋模型",

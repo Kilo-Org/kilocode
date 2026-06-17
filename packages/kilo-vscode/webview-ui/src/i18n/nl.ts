@@ -101,17 +101,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "Providers zoeken",
   "dialog.provider.empty": "Geen providers gevonden",
-  "dialog.provider.group.popular": "Populair",
   "dialog.provider.group.other": "Overige",
   "dialog.provider.tag.recommended": "Aanbevolen",
-  "dialog.provider.opencode.note": "Geselecteerde modellen waaronder Claude, GPT, Gemini en meer",
-  "dialog.provider.anthropic.note": "Directe toegang tot Claude-modellen, inclusief Pro en Max",
-  "dialog.provider.deepseek.note": "DeepSeek-modellen voor redeneer- en programmeertaken",
-  "dialog.provider.copilot.note": "Claude-modellen voor programmeerhulp",
-  "dialog.provider.openai.note": "GPT-modellen voor snelle, capabele algemene AI-taken",
-  "dialog.provider.google.note": "Gemini-modellen voor snelle, gestructureerde antwoorden",
-  "dialog.provider.openrouter.note": "Toegang tot alle ondersteunde modellen via één provider",
-  "dialog.provider.vercel.note": "Gecentraliseerde toegang tot AI-modellen met slimme routering",
 
   "dialog.model.select.title": "Model selecteren",
   "dialog.model.search.placeholder": "Modellen zoeken",

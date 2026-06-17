@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.serialization.json.JsonNull
@@ -92,6 +93,7 @@ class KiloBackendAppService private constructor(
         private const val MAX_RETRIES = 3
         private const val RETRY_DELAY_MS = 1000L
         private const val APP_LOAD_TIMEOUT_MS = 30_000L
+        private const val READY_TIMEOUT_MS = 5_000L
 
         /** Test factory — no IntelliJ deps needed. */
         internal fun create(
@@ -217,6 +219,25 @@ class KiloBackendAppService private constructor(
         when (_appState.value) {
             is KiloAppState.Ready -> return
             is KiloAppState.MigrationRequired -> throw IllegalStateException("Migration required")
+            else -> throw IllegalStateException("Kilo backend is not ready")
+        }
+    }
+
+    suspend fun awaitReady(timeoutMs: Long = READY_TIMEOUT_MS) {
+        when (_appState.value) {
+            is KiloAppState.Ready -> return
+            is KiloAppState.MigrationRequired -> throw IllegalStateException("Migration required")
+            is KiloAppState.Loading,
+            KiloAppState.Connecting -> {
+                val state = withTimeoutOrNull(timeoutMs) {
+                    appState.first { it !is KiloAppState.Loading && it !is KiloAppState.Connecting }
+                }
+                when (state) {
+                    is KiloAppState.Ready -> return
+                    is KiloAppState.MigrationRequired -> throw IllegalStateException("Migration required")
+                    else -> throw IllegalStateException("Kilo backend is not ready")
+                }
+            }
             else -> throw IllegalStateException("Kilo backend is not ready")
         }
     }

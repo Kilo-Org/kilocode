@@ -119,6 +119,8 @@ class SettingsRowsTest : BasePlatformTestCase() {
         assertFalse(text(panel.overlay).contains("Sign in to Kilo Code"))
         assertTrue(panel.overlay.components.any { it === panel.progress })
         assertTrue(text(panel.progress).contains("Loading models..."))
+        val scroll = components(panel.content).filterIsInstance<JScrollPane>().single()
+        assertFalse(components(scroll.viewport.view as JComponent).any { it === panel.progress })
     }
 
     fun `test settings panel tracks viewport width without horizontal scroll`() {
@@ -159,6 +161,47 @@ class SettingsRowsTest : BasePlatformTestCase() {
 
         panel.clearProgress()
         assertFalse(panel.progress.isVisible)
+    }
+
+    fun `test settings progress overlay retains cancel button across progress updates`() {
+        val panel = SettingsPanel()
+        var calls = 0
+
+        panel.showProgress("Starting", "Cancel") { calls++ }
+        val label = components(panel.progress).filterIsInstance<JBLabel>().single { it.text == "Starting" }
+        val button = components(panel.progress).filterIsInstance<JButton>().single { it.text == "Cancel" }
+
+        panel.updateProgress("Waiting")
+        button.doClick()
+
+        assertSame(label, components(panel.progress).filterIsInstance<JBLabel>().single { it.text == "Waiting" })
+        assertSame(button, components(panel.progress).filterIsInstance<JButton>().single { it.text == "Cancel" })
+        assertEquals(1, calls)
+    }
+
+    fun `test settings progress overlay clears cancel action for text only states`() {
+        val panel = SettingsPanel()
+        var calls = 0
+
+        panel.showProgress("Starting", "Cancel") { calls++ }
+        val button = components(panel.progress).filterIsInstance<JButton>().single { it.text == "Cancel" }
+        panel.showProgress("Loading")
+
+        assertFalse(button.isVisible)
+        button.doClick()
+        assertEquals(0, calls)
+
+        panel.showProgress("Starting", "Cancel") { calls++ }
+        panel.showError("Failed")
+        assertFalse(button.isVisible)
+        button.doClick()
+        assertEquals(0, calls)
+
+        panel.showProgress("Starting", "Cancel") { calls++ }
+        panel.clearProgress()
+        assertFalse(button.isVisible)
+        button.doClick()
+        assertEquals(0, calls)
     }
 
     fun `test settings progress overlay uses information colors`() {

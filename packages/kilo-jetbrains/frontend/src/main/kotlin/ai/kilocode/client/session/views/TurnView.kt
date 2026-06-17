@@ -10,6 +10,7 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.PartView
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import javax.swing.JComponent
 
@@ -47,6 +48,7 @@ class TurnView(
         val view = MessageView(msg, openFile, style, openUrl, selection, openAttachment, resize, repo, hover)
         messages[msg.info.id] = view
         add(view)
+        syncCopyToolbars()
         revalidate()
         return view
     }
@@ -56,7 +58,14 @@ class TurnView(
         val view = messages.remove(msgId) ?: return
         remove(view)
         Disposer.dispose(view)
+        syncCopyToolbars()
         revalidate()
+    }
+
+    @RequiresEdt
+    fun syncCopyToolbars() {
+        val id = messages.values.reversed().firstNotNullOfOrNull { it.latestAssistantCopyId() }
+        for (view in messages.values) view.syncCopyToolbar(id)
     }
 
     /** Look up a nested [MessageView] by message id. */
@@ -71,6 +80,7 @@ class TurnView(
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         for (view in messages.values) view.applyStyle(style)
+        syncCopyToolbars()
         revalidate()
         repaint()
     }

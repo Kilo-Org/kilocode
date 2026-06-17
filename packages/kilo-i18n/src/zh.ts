@@ -9,9 +9,17 @@ export const dict = {
   "provider.connect.kiloGateway.byok.link": "通过 Kilo's Gateway 进行 BYOK",
   "provider.connect.kiloGateway.byok.suffix": "。",
 
-  // Provider dialog translations
-  "dialog.provider.group.recommended": "推荐",
-  "dialog.provider.kilo.note": "访问 500+ AI 模型",
+  // Provider settings translations
+  "settings.providers.group.recommended": "推荐",
+  "settings.providers.note.kilo": "访问 500+ AI 模型",
+  "settings.providers.note.opencode": "精选模型，包括 Claude、GPT、Gemini 等",
+  "settings.providers.note.anthropic": "直接访问 Claude 模型，包括 Pro 和 Max",
+  "settings.providers.note.deepseek": "用于推理和编码任务的 DeepSeek 模型",
+  "settings.providers.note.copilot": "用于编码辅助的 Claude 模型",
+  "settings.providers.note.openai": "使用 API 密钥或 ChatGPT 登录访问 GPT 和 Codex 模型",
+  "settings.providers.note.google": "用于快速结构化响应的 Gemini 模型",
+  "settings.providers.note.openrouter": "通过一个提供商访问所有支持的模型",
+  "settings.providers.note.vercel": "通过智能路由统一访问 AI 模型",
 
   // Reasoning block label
   "ui.permission.run": "运行",

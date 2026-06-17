@@ -92,7 +92,6 @@ internal class ModelPickerRenderer(
     private val row = JPanel(BorderLayout()).apply {
         add(check, BorderLayout.WEST)
         add(head, BorderLayout.CENTER)
-        add(star, BorderLayout.EAST)
     }
     private val wrap = PickerRow()
 
@@ -106,7 +105,7 @@ internal class ModelPickerRenderer(
             UiStyle.Gap.md(),
             UiStyle.Gap.pad(),
         )
-        wrap.setContent(row)
+        wrap.setContent(row, star)
         add(top, BorderLayout.NORTH)
         add(wrap, BorderLayout.CENTER)
     }
