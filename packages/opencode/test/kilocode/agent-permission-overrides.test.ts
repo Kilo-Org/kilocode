@@ -171,6 +171,7 @@ test("root workspace plan-like agent allows configured local and global plan pat
       expect(Permission.evaluate("edit", local, agent!.permission).action).toBe("allow")
       expect(Permission.evaluate("edit", path.relative(ctx.worktree, global), agent!.permission).action).toBe("allow")
       expect(Permission.evaluate("edit", global, agent!.permission).action).toBe("allow")
+      expect(Permission.evaluate("external_directory", global, agent!.permission).action).toBe("allow")
       expect(
         Permission.evaluate(
           "edit",
@@ -194,17 +195,23 @@ test("root workspace scopes Windows drive paths", () => {
     },
   })
   const agent = { name: "architect", permission: rules, options: {} }
+  const request = (file: string) => (process.platform === "win32" ? path.win32.relative("/", file) : file)
 
   processConfigItem("architect", agent, { worktree: "/", directory: dir }, rules)
 
-  expect(Permission.evaluate("edit", path.win32.join(dir, "docs", "test-session.md"), agent.permission).action).toBe(
-    "allow",
-  )
   expect(
-    Permission.evaluate("edit", path.win32.join(dir, ".kilo", "plans", "test-session.md"), agent.permission).action,
+    Permission.evaluate("edit", request(path.win32.join(dir, "docs", "test-session.md")), agent.permission).action,
   ).toBe("allow")
-  expect(Permission.evaluate("edit", path.win32.join(global, "test-session.md"), agent.permission).action).toBe("allow")
-  expect(Permission.evaluate("edit", path.win32.join(dir, "src", "main.ts"), agent.permission).action).toBe("deny")
+  expect(
+    Permission.evaluate("edit", request(path.win32.join(dir, ".kilo", "plans", "test-session.md")), agent.permission)
+      .action,
+  ).toBe("allow")
+  expect(
+    Permission.evaluate("edit", request(path.win32.join(global, "test-session.md")), agent.permission).action,
+  ).toBe("allow")
+  expect(Permission.evaluate("edit", request(path.win32.join(dir, "src", "main.ts")), agent.permission).action).toBe(
+    "deny",
+  )
 })
 
 test("system utility agents ignore per-agent permission allows", async () => {

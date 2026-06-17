@@ -246,6 +246,9 @@ function planCapabilities(root: Root) {
     suggest: "allow",
     skill: "allow",
     plan_exit: "allow",
+    external_directory: {
+      [path.join(Global.Path.data, "plans", "*")]: "allow",
+    },
     edit: planEditAllowRules(root),
   })
 }
