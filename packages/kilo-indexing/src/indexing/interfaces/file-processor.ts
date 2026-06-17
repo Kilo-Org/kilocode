@@ -22,6 +22,7 @@ export interface IDirectoryScanner {
     onFilesIndexed?: (indexedCount: number) => void,
     onFileParsed?: () => void,
     mode?: IndexingTelemetryMode,
+    onDiscovered?: (total: number) => void,
   ): Promise<{
     stats: {
       processed: number

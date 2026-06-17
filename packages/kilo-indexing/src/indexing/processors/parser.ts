@@ -182,18 +182,19 @@ export class CodeParser implements ICodeParser {
 
     // Process captures if not empty
     const queue: Node[] = Array.from(captures).map((capture: any) => capture.node)
+    let head = 0
 
-    while (queue.length > 0) {
-      const currentNode = queue.shift()!
-      // const lineSpan = currentNode.endPosition.row - currentNode.startPosition.row + 1 // Removed as per lint error
+    while (head < queue.length) {
+      const currentNode = queue[head++]
 
       // Check if the node meets the minimum character requirement
       if (currentNode.text.length >= MIN_BLOCK_CHARS) {
         // If it also exceeds the maximum character limit, try to break it down
         if (currentNode.text.length > MAX_BLOCK_CHARS * MAX_CHARS_TOLERANCE_FACTOR) {
-          if (currentNode.children.filter((child) => child !== null).length > 0) {
+          const children = currentNode.children.filter((child) => child !== null)
+          if (children.length > 0) {
             // If it has children, process them instead
-            queue.push(...currentNode.children.filter((child) => child !== null))
+            queue.push(...children)
           } else {
             // If it's a leaf node, chunk it
             const chunkedBlocks = this._chunkLeafNodeByLines(currentNode, filePath, fileHash, seenSegmentHashes)
@@ -251,6 +252,8 @@ export class CodeParser implements ICodeParser {
     let currentChunkLength = 0
     let chunkStartLineIndex = 0 // 0-based index within the `lines` array
     const effectiveMaxChars = MAX_BLOCK_CHARS * MAX_CHARS_TOLERANCE_FACTOR
+    let totalRemainingChars = lines.reduce((acc, line, idx) =>
+      acc + line.length + (idx < lines.length - 1 ? 1 : 0), 0)
 
     const finalizeChunk = (endLineIndex: number) => {
       if (currentChunkLength >= MIN_BLOCK_CHARS && currentChunkLines.length > 0) {
@@ -307,6 +310,7 @@ export class CodeParser implements ICodeParser {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
       const lineLength = line.length + (i < lines.length - 1 ? 1 : 0) // +1 for newline, except last line
+      totalRemainingChars -= lineLength
       const originalLineNumber = baseStartLine + i
 
       // Handle oversized lines (longer than effectiveMaxChars)
@@ -334,10 +338,7 @@ export class CodeParser implements ICodeParser {
       if (currentChunkLength > 0 && currentChunkLength + lineLength > effectiveMaxChars) {
         // Re-balancing Logic
         let splitIndex = i - 1
-        let remainderLength = 0
-        for (let j = i; j < lines.length; j++) {
-          remainderLength += lines[j].length + (j < lines.length - 1 ? 1 : 0)
-        }
+        const remainderLength = totalRemainingChars
 
         if (
           currentChunkLength >= MIN_BLOCK_CHARS &&

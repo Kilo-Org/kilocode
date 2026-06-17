@@ -82,8 +82,7 @@ export class CodeIndexOrchestrator {
       throw new Error("Cannot start watcher: Service not configured.")
     }
 
-    log.info("starting file watcher", { workspacePath: this.workspacePath })
-    this.stateManager.setSystemState("Indexing", "Initializing file watcher...")
+    log.info("starting file watcher in background", { workspacePath: this.workspacePath })
 
     try {
       this.fileWatcher.setCollecting(false)
@@ -129,11 +128,11 @@ export class CodeIndexOrchestrator {
           this.emitError("orchestrator:watcher", summary.batchError, "watcher")
         }),
       ]
-      this.fileWatcher.setCollecting(false)
-      log.info("file watcher is initialized in drain-only mode", { workspacePath: this.workspacePath })
+      log.info("file watcher initialized", { workspacePath: this.workspacePath })
     } catch (err) {
-      log.error("failed to start file watcher", { err })
-      throw err
+      log.error("failed to start file watcher, continuing without watcher", { err })
+      this.stateManager.setSystemState("Indexing", "File watcher unavailable. Scanning available files...")
+      this._fileWatcherSubscriptions = []
     }
   }
 
@@ -186,7 +185,7 @@ export class CodeIndexOrchestrator {
 
     try {
       this.overlay?.prepare()
-      await this._startWatcher()
+      void this._startWatcher()
 
       if (this._cancelRequested) {
         this.stateManager.setSystemState("Standby", "Indexing cancelled.")
@@ -286,6 +285,11 @@ export class CodeIndexOrchestrator {
     let cumulativeFilesFound = 0
     const batchErrors: Error[] = []
 
+    const handleDiscovered = (total: number) => {
+      this.stateManager.setTotalFiles(total)
+      this.stateManager.reportFileProgress(cumulativeFilesIndexed, cumulativeFilesFound < total ? total : cumulativeFilesFound)
+    }
+
     const handleFileParsed = () => {
       cumulativeFilesFound += 1
       this.stateManager.reportFileProgress(cumulativeFilesIndexed, cumulativeFilesFound)
@@ -305,6 +309,7 @@ export class CodeIndexOrchestrator {
       handleFilesIndexed,
       handleFileParsed,
       mode,
+      handleDiscovered,
     )
 
     log.info("workspace scan completed", {

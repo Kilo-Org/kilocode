@@ -263,9 +263,10 @@ export namespace KiloIndexing {
     const warnings = new Map<string, IndexingWarning>()
     const delivery = {
       last: undefined as Status | undefined,
-      task: Promise.resolve(),
       timer: undefined as ReturnType<typeof setTimeout> | undefined,
       time: 0,
+      isPublishing: false,
+      pendingStatus: undefined as Status | undefined,
     }
     const current = () => box.status
     let disposed = false
@@ -276,23 +277,47 @@ export namespace KiloIndexing {
       left.processedFiles === right.processedFiles &&
       left.totalFiles === right.totalFiles &&
       left.percent === right.percent
+
+    // Tail-drop drain loop — only publish the latest status, never chain promises
+    const reportDrain = async () => {
+      if (delivery.isPublishing || disposed) return
+      delivery.isPublishing = true
+      try {
+        while (delivery.pendingStatus && !same(delivery.last, delivery.pendingStatus)) {
+          const nextToPublish = delivery.pendingStatus
+          delivery.pendingStatus = undefined
+          await Bus.publish(Instance.current, Event, { status: nextToPublish })
+          delivery.last = nextToPublish
+        }
+      } catch (err) {
+        log.error("failed to publish indexing status", { err })
+      } finally {
+        delivery.isPublishing = false
+        if (delivery.pendingStatus && !same(delivery.last, delivery.pendingStatus)) {
+          void reportDrain()
+        }
+      }
+    }
+
     const report = Instance.bind((next = current()) => {
-      delivery.task = delivery.task
-        .then(async () => {
-          if (disposed || same(delivery.last, next)) return
-          await Bus.publish(Instance.current, Event, { status: next })
-          delivery.last = next
-        })
-        .catch((err) => {
-          log.error("failed to publish indexing status", { err })
-        })
-      return delivery.task
+      if (disposed) return Promise.resolve()
+      delivery.pendingStatus = next
+      return reportDrain()
     })
+
     const clear = () => {
       if (!delivery.timer) return
       clearTimeout(delivery.timer)
       delivery.timer = undefined
     }
+
+    // Pre-bound timer closure — eliminate GC pressure from per-call Instance.bind
+    const onTimerTick = Instance.bind(() => {
+      delivery.timer = undefined
+      delivery.time = Date.now()
+      void report()
+    })
+
     const status = Instance.bind((next: Status) => {
       if (disposed) return
       const previous = current()
@@ -312,14 +337,7 @@ export namespace KiloIndexing {
         void report(next)
         return
       }
-      delivery.timer = setTimeout(
-        Instance.bind(() => {
-          delivery.timer = undefined
-          delivery.time = Date.now()
-          void report()
-        }),
-        delay,
-      )
+      delivery.timer = setTimeout(onTimerTick, delay)
     })
     const telemetry = Instance.bind((event: IndexingTelemetryEvent) => {
       if (disposed) return

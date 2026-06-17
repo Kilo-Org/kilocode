@@ -163,10 +163,16 @@ export function handleValidationError(
     if (
       errorMessage.includes("ENOTFOUND") ||
       errorMessage.includes("ECONNREFUSED") ||
+      errorMessage.includes("EHOSTUNREACH") ||
+      errorMessage.includes("ENETUNREACH") ||
+      errorMessage.includes("ECONNABORTED") ||
+      errorMessage.includes("EADDRNOTAVAIL") ||
       errorMessage.includes("ETIMEDOUT") ||
       errorMessage === "AbortError" ||
       errorMessage.includes("HTTP 0:") ||
-      errorMessage === "No response"
+      errorMessage === "No response" ||
+      errorMessage.includes("fetch failed") ||
+      errorMessage.includes("Was there a typo")
     ) {
       return { valid: false, error: "Connection failed. Please check the endpoint URL and network connectivity." }
     }

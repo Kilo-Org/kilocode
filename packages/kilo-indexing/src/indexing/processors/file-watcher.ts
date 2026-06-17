@@ -11,6 +11,7 @@ import {
   BATCH_SEGMENT_THRESHOLD,
   MAX_BATCH_RETRIES,
   INITIAL_RETRY_DELAY_MS,
+  FILE_WATCHER_INIT_TIMEOUT_MS,
 } from "../constants"
 import { scannerExtensions } from "../shared/supported-extensions"
 import {
@@ -140,6 +141,9 @@ export class FileWatcher implements IFileWatcher {
       },
       persistent: true,
       ignoreInitial: true,
+      followSymlinks: false,
+      alwaysStat: false,
+      awaitWriteFinish: false,
     })
 
     this.watcher.on("add", (filePath) => this.handleFileEvent(filePath, "create"))
@@ -148,6 +152,7 @@ export class FileWatcher implements IFileWatcher {
     this.ready = new Promise((resolve, reject) => {
       this.watcher?.once("ready", resolve)
       this.watcher?.once("error", reject)
+      setTimeout(() => reject(new Error(`File watcher initialization timed out after ${FILE_WATCHER_INIT_TIMEOUT_MS}ms`)), FILE_WATCHER_INIT_TIMEOUT_MS)
     })
     await this.ready
     log.info("file watcher ready", { workspacePath: this.workspacePath })

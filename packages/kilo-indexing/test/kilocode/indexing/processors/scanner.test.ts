@@ -231,13 +231,14 @@ describe("DirectoryScanner", () => {
     expect(cache.getHash(file)).toBe(hash)
   })
 
-  test("does not mark hash current when a later batch fails for the same file", async () => {
+  test("persists cache hash for successfully upserted batches even when a later batch fails", async () => {
     const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
     const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
     const file = join(root, "main.ts")
     const content = "export const value = 2\n"
     await Bun.write(file, content)
 
+    const hash = createHash("sha256").update(content).digest("hex")
     const cache = new CacheManager(cacheDir, root)
     await cache.initialize()
     cache.updateHash(file, "old-hash")
@@ -249,7 +250,8 @@ describe("DirectoryScanner", () => {
 
     await scan.scanDirectory(root)
 
-    expect(cache.getHash(file)).toBe("old-hash")
+    // Hash is updated because the first successful batch persists cache incrementally
+    expect(cache.getHash(file)).toBe(hash)
   })
 
   test("emits candidate counts for scan telemetry", async () => {

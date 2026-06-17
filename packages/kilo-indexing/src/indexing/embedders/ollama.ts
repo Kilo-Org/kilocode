@@ -1,6 +1,6 @@
 import type { EmbedderInfo, EmbeddingResponse, IEmbedder } from "../interfaces"
 import { getModelQueryPrefix } from "../model-registry"
-import { MAX_ITEM_TOKENS, OLLAMA_EMBEDDER_REQUEST_TIMEOUT_MS } from "../constants"
+import { MAX_ITEM_TOKENS, OLLAMA_EMBEDDER_PROBE_TIMEOUT_MS, OLLAMA_EMBEDDER_REQUEST_TIMEOUT_MS } from "../constants"
 import { withValidationErrorHandling, sanitizeErrorMessage } from "../shared/validation-helpers"
 import { Log } from "../../util/log"
 
@@ -142,8 +142,9 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
         const modelsUrl = `${this.baseUrl}/api/tags`
 
         // Add timeout to prevent indefinite hanging
+        // Use shorter timeout for the initial probe, longer for actual embedding
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), OLLAMA_EMBEDDER_REQUEST_TIMEOUT_MS)
+        const timeoutId = setTimeout(() => controller.abort(), OLLAMA_EMBEDDER_PROBE_TIMEOUT_MS)
 
         const modelsResponse = await fetch(modelsUrl, {
           method: "GET",
@@ -243,6 +244,23 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
             return {
               valid: false,
               error: `Ollama host not found at ${this.baseUrl}`,
+            }
+          } else if (
+            error?.code === "EHOSTUNREACH" ||
+            error?.message?.includes("EHOSTUNREACH") ||
+            error?.code === "ENETUNREACH" ||
+            error?.message?.includes("ENETUNREACH") ||
+            error?.code === "EADDRNOTAVAIL" ||
+            error?.message?.includes("EADDRNOTAVAIL") ||
+            error?.message?.includes("Was there a typo")
+          ) {
+            log.error("Ollama host not reachable", {
+              err: sanitizeErrorMessage(error instanceof Error ? error.message : String(error)),
+              location: "OllamaEmbedder:validateConfiguration:hostNotFound",
+            })
+            return {
+              valid: false,
+              error: `Ollama host not reachable at ${this.baseUrl}`,
             }
           } else if (error?.name === "AbortError") {
             log.error("Ollama connection timeout", {
