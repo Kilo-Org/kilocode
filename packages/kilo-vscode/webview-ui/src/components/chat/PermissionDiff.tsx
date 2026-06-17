@@ -76,7 +76,9 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
           when={view()}
           fallback={<div data-slot="permission-diff-empty">Diff preview unavailable for this file.</div>}
         >
-          {(v) => <Diff fileDiff={v().fileDiff} diffStyle="unified" hunkSeparators="simple" />}
+          {(v) => (
+            <Diff fileDiff={v().fileDiff} diffStyle="unified" hunkSeparators="simple" disableLineNumbers={false} />
+          )}
         </Show>
       </div>
     </div>

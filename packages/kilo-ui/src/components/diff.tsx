@@ -223,7 +223,7 @@ export function Diff<T>(props: DiffProps<T>) {
     }
 
     const perf = large() ? { ...base, ...largeOptions } : base
-    if (!mobile()) return perf
+    if (!mobile() || props.disableLineNumbers === false) return perf
 
     return {
       ...perf,

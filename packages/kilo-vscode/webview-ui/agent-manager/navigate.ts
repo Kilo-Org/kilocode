@@ -143,6 +143,19 @@ export function restoreLocalSessions(
   return changed ? merged : undefined
 }
 
+export function remoteSessions(
+  local: string[],
+  managed: { id: string; worktreeId: string | null }[],
+  pending: (id: string) => boolean,
+): string[] {
+  return [
+    ...new Set([
+      ...local.filter((id) => !pending(id)),
+      ...managed.filter((session) => session.worktreeId).map((session) => session.id),
+    ]),
+  ]
+}
+
 export function reconcileLocalSessions(
   current: string[],
   loaded: string[],

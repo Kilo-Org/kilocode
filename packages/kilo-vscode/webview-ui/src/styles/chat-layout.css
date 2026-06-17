@@ -18,7 +18,7 @@
   min-height: 0;
   overflow: hidden;
   container: chat / inline-size;
-  --chat-readable-width: 78ch;
+  --chat-readable-width: 88ch;
   --chat-gutter: clamp(16px, 4cqi, 48px);
   --chat-scrollbar-width: 10px;
 }
@@ -38,7 +38,6 @@
 
 .chat-input {
   flex-shrink: 0;
-  border-top: 1px solid var(--vscode-panel-border);
 }
 
 /* ============================================

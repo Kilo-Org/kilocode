@@ -19,6 +19,7 @@ import {
   toggleAnswer,
   tr,
 } from "./question-dock-utils"
+import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 
 export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
   const session = useSession()
@@ -288,7 +289,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       reject()
       return
     }
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    if (isEnterKeyCommitNotIme(e) && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
       e.stopPropagation()
       if (store.sending) return

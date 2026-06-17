@@ -243,10 +243,10 @@ const TIPS: Tip[] = [
   "Run {highlight}kilo upgrade{/highlight} to update to the latest version",
   "Run {highlight}kilo auth list{/highlight} to see all configured providers",
   "Run {highlight}kilo agent create{/highlight} for guided agent creation", // kilocode_change
-  "Use {highlight}/kilo{/highlight} in GitHub issues/PRs to trigger AI actions", // kilocode_change
+  // "Use {highlight}/kilo{/highlight} in GitHub issues/PRs to trigger AI actions", // kilocode_change - disabled, feature not offered
   "Run {highlight}kilo github install{/highlight} to set up the GitHub workflow", // kilocode_change
   "Comment {highlight}/kilo fix this{/highlight} on issues to auto-create PRs", // kilocode_change
-  "Comment {highlight}/oc{/highlight} on PR code lines for targeted code reviews",
+  // "Comment {highlight}/kilo{/highlight} on PR code lines for targeted code reviews", // kilocode_change - disabled, feature not offered
   'Use {highlight}"theme": "system"{/highlight} to match your terminal\'s colors',
   "Create JSON theme files in {highlight}.kilo/themes/{/highlight} directory", // kilocode_change
   "Themes support dark/light variants for both modes",

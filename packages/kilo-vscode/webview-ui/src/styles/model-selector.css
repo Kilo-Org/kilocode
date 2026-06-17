@@ -325,11 +325,13 @@
   font-family: inherit;
 }
 
-.model-selector-group-label:hover {
+.model-selector-group-label:hover,
+.model-selector-group-label.selected {
   color: var(--text-base, var(--vscode-foreground));
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
 }
 
-.model-selector-group-label:focus-visible {
+.model-selector-group-label.keyboard-focused {
   outline: 1px solid var(--vscode-focusBorder);
   outline-offset: -1px;
 }

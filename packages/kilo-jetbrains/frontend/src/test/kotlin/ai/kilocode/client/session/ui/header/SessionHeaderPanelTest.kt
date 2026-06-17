@@ -433,8 +433,9 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)
         repeat(12) { idx ->
-            emit(ChatEventDto.PartUpdated("ses_test", tool("tool_more_$idx", "bash", "running", "More $idx")))
+            emit(ChatEventDto.PartUpdated("ses_test", tool("tool_more_$idx", "bash", "running", "More $idx")), flush = false)
         }
+        flush()
         panel.timelineViewport().setSize(panel.timelineBarWidth() * 4, panel.timelineViewportPreferredSize().height)
         panel.timelineViewport().doLayout()
         panel.timelineViewport().viewPosition = Point(0, 0)
@@ -471,8 +472,9 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)
         repeat(12) { idx ->
-            emit(ChatEventDto.PartUpdated("ses_test", tool("tool_touch_$idx", "bash", "running", "Touch $idx")))
+            emit(ChatEventDto.PartUpdated("ses_test", tool("tool_touch_$idx", "bash", "running", "Touch $idx")), flush = false)
         }
+        flush()
         panel.timelineViewport().setSize(panel.timelineBarWidth() * 4, panel.timelineViewportPreferredSize().height)
         panel.timelineViewport().doLayout()
         panel.timelineViewport().viewPosition = Point(0, 0)
@@ -505,8 +507,9 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)
         repeat(12) { idx ->
-            emit(ChatEventDto.PartUpdated("ses_test", tool("tool_wheel_$idx", "bash", "running", "Wheel $idx")))
+            emit(ChatEventDto.PartUpdated("ses_test", tool("tool_wheel_$idx", "bash", "running", "Wheel $idx")), flush = false)
         }
+        flush()
         panel.timelineViewport().setSize(panel.timelineBarWidth() * 4, panel.timelineViewportPreferredSize().height)
         panel.timelineViewport().doLayout()
         panel.timelineViewport().viewPosition = Point(0, 0)
@@ -539,8 +542,9 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)
         repeat(12) { idx ->
-            emit(ChatEventDto.PartUpdated("ses_test", tool("tool_more_$idx", "bash", "running", "More $idx")))
+            emit(ChatEventDto.PartUpdated("ses_test", tool("tool_more_$idx", "bash", "running", "More $idx")), flush = false)
         }
+        flush()
         panel.timelineViewport().setSize(panel.timelineBarWidth() * 4, panel.timelineViewportPreferredSize().height)
         panel.timelineViewport().doLayout()
         panel.timelineViewport().viewPosition = Point(0, 0)
@@ -580,16 +584,17 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         edt { c.prompt("go") }
         flush()
 
-        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test", title = "Generated title")))
-        emit(ChatEventDto.MessageUpdated("ses_test", assistant()))
-        emit(ChatEventDto.PartUpdated("ses_test", reasoning(done = false, text = "Thinking")))
-        emit(ChatEventDto.PartUpdated("ses_test", tool("tool_1", "bash", "running", "Run tests", input = mapOf("cmd" to "test", "files" to "src"))))
-        emit(ChatEventDto.PartUpdated("ses_test", tool("tool_2", "edit", "error", "Edit file", input = mapOf("cmd" to "test", "files" to "src"))))
-        emit(ChatEventDto.PartUpdated("ses_test", stepFinish()))
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test", title = "Generated title")), flush = false)
+        emit(ChatEventDto.MessageUpdated("ses_test", assistant()), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", reasoning(done = false, text = "Thinking")), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", tool("tool_1", "bash", "running", "Run tests", input = mapOf("cmd" to "test", "files" to "src"))), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", tool("tool_2", "edit", "error", "Edit file", input = mapOf("cmd" to "test", "files" to "src"))), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", stepFinish()), flush = false)
         emit(ChatEventDto.TodoUpdated("ses_test", listOf(
             TodoDto("Write tests", "completed", "high"),
             TodoDto("Ship it", "pending", "medium"),
-        )))
+        )), flush = false)
+        flush()
         return c
     }
 

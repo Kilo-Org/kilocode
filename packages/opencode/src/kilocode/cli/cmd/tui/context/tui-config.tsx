@@ -11,6 +11,7 @@ import { TuiConfig } from "@/cli/cmd/tui/config/tui"
 import { TuiKeybind } from "@/cli/cmd/tui/config/keybind"
 import { KeymapLeaderTimeoutDefault } from "@/cli/cmd/tui/config/tui-schema"
 import { createBindingLookup } from "@opentui/keymap/extras"
+import { KiloTitleIcon } from "@/kilocode/cli/cmd/tui/title-icon"
 
 export type SetTuiConfig = (next: TuiConfig.Info) => void
 
@@ -25,6 +26,7 @@ export namespace KiloTuiConfig {
       const keybinds = TuiKeybind.parse(next.keybinds ?? {})
       const config: TuiConfig.Resolved = {
         ...next,
+        title_icon: next.title_icon ?? KiloTitleIcon.Default,
         attention: {
           enabled: next.attention?.enabled ?? false,
           notifications: next.attention?.notifications ?? true,

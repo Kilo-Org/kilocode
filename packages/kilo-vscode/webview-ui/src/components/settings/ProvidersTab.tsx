@@ -35,7 +35,7 @@ const ProvidersTab: Component = () => {
 
   onCleanup(action.dispose)
 
-  const kiloLoggedIn = createMemo(() => !!server.profileData())
+  const kiloLoggedIn = createMemo(() => !!provider.authStates()[KILO_PROVIDER_ID])
 
   const connectedProviders = createMemo(() => {
     const ids = visibleConnectedIds(provider.connected(), provider.authStates())

@@ -10912,6 +10912,11 @@
                       "type": "boolean"
                     }
                   },
+                  "title_icon": {
+                    "type": "string",
+                    "enum": ["none", "unicode", "emojis"],
+                    "description": "Status icon style shown in terminal titles"
+                  },
                   "scroll_speed": {
                     "anyOf": [
                       {
@@ -11378,6 +11383,72 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.profile({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilo/auth-status": {
+      "get": {
+        "tags": ["kilo"],
+        "operationId": "kilo.authStatus",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Kilo authentication status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "authenticated": {
+                      "type": "boolean"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": ["api", "oauth"]
+                    }
+                  },
+                  "required": ["authenticated"],
+                  "additionalProperties": false,
+                  "description": "Kilo authentication status"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Check whether a locally stored Kilo credential can authenticate Gateway requests",
+        "summary": "Get Kilo authentication status",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.authStatus({\n  ...\n})"
           }
         ]
       }
@@ -21150,6 +21221,11 @@
             "additionalProperties": {
               "type": "boolean"
             }
+          },
+          "title_icon": {
+            "type": "string",
+            "enum": ["none", "unicode", "emojis"],
+            "description": "Status icon style shown in terminal titles"
           },
           "scroll_speed": {
             "anyOf": [

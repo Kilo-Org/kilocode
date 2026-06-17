@@ -47,6 +47,18 @@ Use **Local Config** or **Global Config** in the Settings header to open the mat
 If you check config files into version control, make sure they do not contain API keys or other secrets (e.g., `provider.*.options.apiKey`). Use environment variables for credentials instead.
 {% /callout %}
 
+### Voice Transcription Model
+
+When the Kilo provider is enabled and you are signed in, choose the transcription model under **Models** > **Speech to Text Model**. This stores `experimental.speech_to_text_model` in your global Kilo CLI config:
+
+```json
+{
+  "experimental": {
+    "speech_to_text_model": "openai/whisper-large-v3-turbo"
+  }
+}
+```
+
 ### Reasoning Blocks
 
 Reasoning blocks stay expanded by default in the VS Code chat UI. Enable **Auto-Collapse Reasoning** in the Display tab, or set `auto_collapse_reasoning` in `kilo.jsonc`, to collapse them after the agent finishes writing them:
@@ -198,19 +210,8 @@ Available experimental settings include:
 - **Share mode** - `manual`, `auto`, or `disabled` session sharing
 - **LSP integration** - expose language server diagnostics to the agent
 - **Paste summary** - summarize large clipboard pastes before including them
-- **Speech to Text Model** - optionally select the transcription model
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
-
-Voice input appears automatically when the Kilo provider is enabled and you are signed in. Choosing **Speech to Text Model** stores `experimental.speech_to_text_model` in your global Kilo CLI config (`~/.config/kilo/kilo.jsonc`):
-
-```json
-{
-  "experimental": {
-    "speech_to_text_model": "openai/gpt-4o-mini-transcribe"
-  }
-}
-```
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
 

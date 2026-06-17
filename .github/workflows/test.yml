@@ -22,28 +22,6 @@ env:
 
 jobs:
   # kilocode_change start
-  changes:
-    name: detect JetBrains changes
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    permissions:
-      contents: read
-      pull-requests: read
-    outputs:
-      jetbrains: ${{ steps.filter.outputs.jetbrains }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Detect JetBrains changes
-        id: filter
-        uses: Kilo-Org/paths-filter@668c092af3649c4b664c54e4b704aa46782f6f7c # v3
-        with:
-          predicate-quantifier: every
-          filters: |
-            jetbrains:
-              - '**'
-              - '!packages/kilo-vscode/**'
-              - '!packages/kilo-docs/**'
   unit:
     name: unit (${{ matrix.settings.name }})
     strategy:
@@ -131,55 +109,11 @@ jobs:
   # kilocode_change start
   jetbrains:
     name: jetbrains
-    needs: changes
-    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.jetbrains == 'true'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Bun
-        uses: ./.github/actions/setup-bun
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
-
-      - name: Run JetBrains unit tests
-        run: bun script/test-ci.ts
-        working-directory: packages/kilo-jetbrains
-
-      - name: Publish JetBrains unit reports
-        if: always()
-        uses: mikepenz/action-junit-report@v6
-        with:
-          report_paths: packages/kilo-jetbrains/.artifacts/unit/junit.xml
-          check_name: "unit results (jetbrains)"
-          detailed_summary: true
-          include_time_in_summary: true
-          fail_on_failure: false
-
-      - name: Upload JetBrains unit artifacts
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: unit-jetbrains-${{ github.run_attempt }}
-          include-hidden-files: true
-          if-no-files-found: ignore
-          retention-days: 7
-          path: packages/kilo-jetbrains/.artifacts/unit/junit.xml
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: read
+    uses: ./.github/workflows/test-jetbrains.yml
   # kilocode_change end
 
   # kilocode_change start
@@ -187,22 +121,14 @@ jobs:
     name: test (linux)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     needs:
-      - changes
       - unit
       - jetbrains
     if: always()
     steps:
       - name: Verify upstream test jobs passed
         run: |
-          echo "changes=${{ needs.changes.result }}"
           echo "unit=${{ needs.unit.result }}"
           echo "jetbrains=${{ needs.jetbrains.result }}"
-          test "${{ needs.changes.result }}" = "success"
           test "${{ needs.unit.result }}" = "success"
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ needs.changes.outputs.jetbrains }}" = "true" ]; then
-            test "${{ needs.jetbrains.result }}" = "success"
-          else
-            test "${{ needs.changes.outputs.jetbrains }}" = "false"
-            test "${{ needs.jetbrains.result }}" = "skipped"
-          fi
+          test "${{ needs.jetbrains.result }}" = "success"
   # kilocode_change end

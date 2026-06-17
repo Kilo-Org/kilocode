@@ -145,66 +145,66 @@ const Settings: Component<SettingsProps> = (props) => {
         style={{ flex: 1, overflow: "hidden" }}
       >
         <Tabs.List>
-          <Tabs.Trigger value="models">
+          <Tabs.Trigger value="models" aria-label={language.t("settings.models.title")}>
             <Icon name="models" />
             <span class="label">{language.t("settings.models.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="providers">
+          <Tabs.Trigger value="providers" aria-label={language.t("settings.providers.title")}>
             <Icon name="providers" />
             <span class="label">{language.t("settings.providers.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="agentBehaviour">
+          <Tabs.Trigger value="agentBehaviour" aria-label={language.t("settings.agentBehaviour.title")}>
             <Icon name="brain" />
             <span class="label">{language.t("settings.agentBehaviour.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="autoApprove">
+          <Tabs.Trigger value="autoApprove" aria-label={language.t("settings.autoApprove.title")}>
             <Icon name="checklist" />
             <span class="label">{language.t("settings.autoApprove.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="browser">
+          <Tabs.Trigger value="browser" aria-label={language.t("settings.browser.title")}>
             <Icon name="window-cursor" />
             <span class="label">{language.t("settings.browser.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="checkpoints">
+          <Tabs.Trigger value="checkpoints" aria-label={language.t("settings.checkpoints.title")}>
             <Icon name="branch" />
             <span class="label">{language.t("settings.checkpoints.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="display">
+          <Tabs.Trigger value="display" aria-label={language.t("settings.display.title")}>
             <Icon name="eye" />
             <span class="label">{language.t("settings.display.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="autocomplete">
+          <Tabs.Trigger value="autocomplete" aria-label={language.t("settings.autocomplete.title")}>
             <Icon name="code-lines" />
             <span class="label">{language.t("settings.autocomplete.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="notifications">
+          <Tabs.Trigger value="notifications" aria-label={language.t("settings.notifications.title")}>
             <Icon name="circle-check" />
             <span class="label">{language.t("settings.notifications.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="context">
+          <Tabs.Trigger value="context" aria-label={language.t("settings.context.title")}>
             <Icon name="server" />
             <span class="label">{language.t("settings.context.title")}</span>
           </Tabs.Trigger>
 
-          <Tabs.Trigger value="commitMessage">
+          <Tabs.Trigger value="commitMessage" aria-label={language.t("settings.commitMessage.title")}>
             <Icon name="edit" />
             <span class="label">{language.t("settings.commitMessage.title")}</span>
           </Tabs.Trigger>
           <Show when={features().indexing}>
-            <Tabs.Trigger value="indexing">
+            <Tabs.Trigger value="indexing" aria-label={language.t("settings.indexing.title")}>
               <Icon name="server" />
               <span class="label">{language.t("settings.indexing.title")}</span>
             </Tabs.Trigger>
           </Show>
-          <Tabs.Trigger value="experimental">
+          <Tabs.Trigger value="experimental" aria-label={language.t("settings.experimental.title")}>
             <Icon name="settings-gear" />
             <span class="label">{language.t("settings.experimental.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="language">
+          <Tabs.Trigger value="language" aria-label={language.t("settings.language.title")}>
             <Icon name="speech-bubble" />
             <span class="label">{language.t("settings.language.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="aboutKiloCode">
+          <Tabs.Trigger value="aboutKiloCode" aria-label={language.t("settings.aboutKiloCode.title")}>
             <Icon name="help" />
             <span class="label">{language.t("settings.aboutKiloCode.title")}</span>
           </Tabs.Trigger>

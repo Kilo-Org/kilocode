@@ -84,6 +84,17 @@ function post(path: string, body: Record<string, unknown>) {
 }
 
 describe("Kilo gateway HttpApi statuses", () => {
+  it.live("reports locally stored API authentication without a Gateway request", () =>
+    Effect.gen(function* () {
+      yield* stub(() => Promise.reject(new Error("unexpected Gateway request")))
+
+      const response = yield* HttpClient.get(KiloGatewayPaths.authStatus)
+
+      expect(response.status).toBe(200)
+      expect(yield* response.json).toEqual({ authenticated: true, type: "api" })
+    }),
+  )
+
   it.live("preserves cloud session list rate limits", () =>
     Effect.gen(function* () {
       yield* stub(() => new Response("rate limited", { status: 429 }))

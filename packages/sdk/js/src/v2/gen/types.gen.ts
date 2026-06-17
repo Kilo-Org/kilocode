@@ -2243,6 +2243,10 @@ export type TuiConfigGetResponse = {
   plugin_enabled?: {
     [key: string]: boolean
   }
+  /**
+   * Status icon style shown in terminal titles
+   */
+  title_icon?: "none" | "unicode" | "emojis"
   scroll_speed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
   scroll_acceleration?: {
     enabled: boolean
@@ -8644,6 +8648,10 @@ export type TuiConfigUpdateData = {
     plugin_enabled?: {
       [key: string]: boolean
     }
+    /**
+     * Status icon style shown in terminal titles
+     */
+    title_icon?: "none" | "unicode" | "emojis"
     scroll_speed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
     scroll_acceleration?: {
       enabled: boolean
@@ -8836,6 +8844,37 @@ export type KiloProfileResponses = {
 }
 
 export type KiloProfileResponse = KiloProfileResponses[keyof KiloProfileResponses]
+
+export type KiloAuthStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/auth-status"
+}
+
+export type KiloAuthStatusErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KiloAuthStatusError = KiloAuthStatusErrors[keyof KiloAuthStatusErrors]
+
+export type KiloAuthStatusResponses = {
+  /**
+   * Kilo authentication status
+   */
+  200: {
+    authenticated: boolean
+    type?: "api" | "oauth"
+  }
+}
+
+export type KiloAuthStatusResponse = KiloAuthStatusResponses[keyof KiloAuthStatusResponses]
 
 export type KiloModesData = {
   body?: never
