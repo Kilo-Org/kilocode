@@ -250,7 +250,6 @@ interface SessionContextValue {
     draftID?: string,
     context?: string,
     review?: ReviewMessageData,
-    agent?: string,
   ) => void
   sendCommand: (
     command: string,
@@ -1350,6 +1349,14 @@ export const SessionProvider: ParentComponent = (props) => {
   ) {
     const mode = input.mode ?? "replace"
     const reset = mode === "prepend"
+    if (retainedCloud.has(sessionID)) {
+      setPendingCloud((prev) => {
+        if (!prev.has(sessionID)) return prev
+        const next = new Set(prev)
+        next.delete(sessionID)
+        return next
+      })
+    }
 
     // Reconcile fast-path: if the tail matches local state shape-wise, every
     // message+part-count already agrees with the server. Skip the reactive
@@ -1572,15 +1579,6 @@ export const SessionProvider: ParentComponent = (props) => {
           ? { type: "offline", message: message ?? "" }
           : { type: newStatus }
     setStatusMap(sessionID, info)
-    if (retainedCloud.has(sessionID)) {
-      if (pendingCloud().has(sessionID)) clearCloudStatus(sessionID)
-      setPendingCloud((prev) => {
-        if (!prev.has(sessionID)) return prev
-        const next = new Set(prev)
-        next.delete(sessionID)
-        return next
-      })
-    }
     // Track busy start time and discard the previous turn's terminal state.
     if (prev.type === "idle" && newStatus !== "idle") {
       clearClose(sessionID)
@@ -2245,7 +2243,6 @@ export const SessionProvider: ParentComponent = (props) => {
     draftID?: string,
     context?: string,
     review?: ReviewMessageData,
-    override?: string,
   ) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send message: not connected")
@@ -2290,7 +2287,8 @@ export const SessionProvider: ParentComponent = (props) => {
       startSubmission(scope, messageID)
       if (!sid) setDraftSessionID(scope)
     }
-    const agent = override ?? promptAgent(scope)
+    const cloud = isCloudSession(sid)
+    const agent = cloud ? undefined : promptAgent(scope)
 
     vscode.postMessage({
       type: "sendMessage",
@@ -2298,12 +2296,12 @@ export const SessionProvider: ParentComponent = (props) => {
       messageID,
       sessionID: sid,
       draftID,
-      providerID,
-      modelID,
+      providerID: cloud ? undefined : providerID,
+      modelID: cloud ? undefined : modelID,
       agent,
-      variant: currentVariant(scope),
-      files,
-      review,
+      variant: cloud ? undefined : currentVariant(scope),
+      files: cloud ? undefined : files,
+      review: cloud ? undefined : review,
       agentManagerContext: context,
     })
   }
@@ -2381,6 +2379,10 @@ export const SessionProvider: ParentComponent = (props) => {
     const scope = sessionID ?? draftSessionID()
     if (!scope) {
       console.warn("[Kilo New] Cannot abort: no current or pending session")
+      return
+    }
+    if (sessionID && isCloudSession(sessionID) && !isCloudSessionHydrated(sessionID)) {
+      vscode.postMessage({ type: "abort", sessionID })
       return
     }
     const messageID = [...pendingSubmissions].reverse().find(([, sid]) => sid === scope)?.[0]

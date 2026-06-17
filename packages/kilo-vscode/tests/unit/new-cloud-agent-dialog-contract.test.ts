@@ -20,21 +20,24 @@ describe("New Cloud Agent dialog contract", () => {
     expect(source).not.toMatch(/url\s*:/i)
   })
 
-  it("uses the regular chat pickers with Cloud Agent choices and isolated draft state", () => {
-    expect(source).toMatch(
-      /props\.session\.agents\(\)\.filter\(\(item\) => item\.native && item\.mode !== "subagent" && !item\.hidden\)/,
-    )
+  it("uses the fixed cloud mode allowlist and discovered Kilo models", () => {
+    expect(source).toContain("initial, modes as cloudModes, options")
+    expect(source).toContain("cloudModes(props.session.agents())")
     expect(source).toContain("options(props.provider.models())")
     expect(source).toContain("<ModeSwitcherBase")
     expect(source).toContain("agents={modes()}")
     expect(source).toContain("<ModelSelectorBase")
     expect(source).toContain("models={models()}")
-    expect(source).toContain("initial(items, props.session.selected())")
-    expect(source).toContain("const [picked, setPicked]")
-    expect(source).toContain("if (picked() && items.some")
-    expect(source).toContain("setPicked(true)")
     expect(source).toContain("favorites={false}")
     expect(source).not.toContain("<Select")
+  })
+
+  it("has no fallback model and disables submit when no discovered model is available", () => {
+    expect(source).toContain("const [model, setModel] = createSignal<string>()")
+    expect(source).toContain("setModel(initial(items, props.session.selected()))")
+    expect(source).toContain("if (!prompt().trim() || !mode() || !model()) return false")
+    expect(source).not.toContain("kilo-auto/free")
+    expect(source).not.toContain("Kilo Auto")
   })
 
   it("keeps context subtle without exposing the account", () => {

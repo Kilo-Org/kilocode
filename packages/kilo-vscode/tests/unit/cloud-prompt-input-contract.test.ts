@@ -8,84 +8,77 @@ const cloud = readFileSync(join(ROOT, "CloudPromptInput.tsx"), "utf8")
 const local = readFileSync(join(ROOT, "PromptInput.tsx"), "utf8")
 const chat = readFileSync(join(ROOT, "ChatView.tsx"), "utf8")
 const session = readFileSync(join(WEBVIEW, "context", "session.tsx"), "utf8")
-const status = session.slice(
-  session.indexOf("  function handleSessionStatus("),
-  session.indexOf("  function handlePermissionRequest("),
-)
-const sendCommand = session.slice(session.indexOf("  function sendCommand("), session.indexOf("  function abort("))
 const messages = readFileSync(join(WEBVIEW, "types", "messages", "extension-messages.ts"), "utf8")
 const styles = readFileSync(join(WEBVIEW, "styles", "prompt-input.css"), "utf8")
 
-describe("CloudPromptInput restricted composer contract", () => {
-  it("constrains model selection to Kilo", () => {
-    expect(cloud).toContain('<ModelSelector sessionID={sid} providerID="kilo" />')
+function section(source: string, start: string, end: string) {
+  return source.slice(source.indexOf(start), source.indexOf(end))
+}
+
+const loaded = section(session, "  function handleMessagesLoaded(", "  function handleMessageCreated(")
+const status = section(session, "  function handleSessionStatus(", "  function handlePermissionRequest(")
+const send = section(session, "  function sendMessage(", "  function sendCommand(")
+const abort = section(session, "  function abort(", "  function compact(")
+
+describe("CloudPromptInput walking-skeleton contract", () => {
+  it("is a plain-text composer with no slash, model, or mode controls", () => {
+    expect(cloud).toContain("session.sendMessage(message)")
+    for (const forbidden of [
+      "ModelSelector",
+      "ModeSwitcher",
+      "useSlashCommand",
+      "sendCommand",
+      "selectedAgent",
+      "providerID",
+      "modelID",
+    ]) {
+      expect(cloud).not.toContain(forbidden)
+    }
   })
 
-  it("sends plain text or discovered server commands with the selected Kilo model", () => {
-    expect(cloud).toContain("const agent = session.selectedAgent(sid())")
-    expect(cloud).toContain("useSlashCommand(vscode, undefined, { sessionID: sid })")
-    expect(cloud).toContain("slash.onInput(value, target.selectionStart ?? value.length)")
-    expect(cloud).toContain("slash.onKeyDown(event, textareaRef, setText, resize)")
-    expect(cloud).toContain("const resolved = slash.resolve(message)")
-    expect(cloud).toContain(
-      "session.sendCommand(resolved.command.name, resolved.arguments, sel.providerID, sel.modelID)",
-    )
-    expect(cloud).toContain(
-      "session.sendMessage(message, sel.providerID, sel.modelID, undefined, undefined, undefined, agent)",
-    )
-    expect(cloud).toContain('class="slash-command-dropdown"')
-    expect(sendCommand).not.toContain("if (isCloudSession()) return")
-  })
-
-  it("restores failed send text", () => {
+  it("restores rejected text and keeps drafts isolated by cloud tab", () => {
     expect(cloud).toContain('message.type !== "sendMessageFailed"')
+    expect(cloud).toContain("message.sessionID !== sid()")
     expect(cloud).toContain("setText(message.text)")
     expect(cloud).toContain("drafts.set(key(), message.text)")
   })
 
-  it("keeps pending cloud status visibly disabled until hydration", () => {
+  it("stays locked while pending and unlocks only after messagesLoaded", () => {
     expect(cloud).toContain("const pending = () => !session.isCloudSessionHydrated(sid())")
-    expect(cloud).toContain("!pending() &&")
     expect(cloud).toContain('classList={{ "prompt-input--disabled": !server.isConnected() || pending() }}')
     expect(cloud).toContain("disabled={pending()}")
-    expect(cloud).toContain(
-      '{pending() ? (\n            <Spinner class="chat-spinner-small" />\n          ) : busy() ? (',
-    )
-    expect(cloud).toContain('if (event.key === "Escape" && !pending() && busy()) {')
+    expect(loaded).toContain("if (retainedCloud.has(sessionID)) {")
+    expect(loaded).not.toContain("clearCloudStatus(sessionID)")
+    expect(loaded).toContain("next.delete(sessionID)")
+    expect(status).not.toContain("setPendingCloud")
   })
 
-  it("renders display-only localized cloud progress with polite live-region semantics", () => {
+  it("renders display-only localized cloud progress", () => {
     expect(cloud).toContain("session.cloudStatus(sid())")
     expect(cloud).toContain("cloudStatusKey")
     expect(cloud).toContain('role="status"')
     expect(cloud).toContain('aria-live="polite"')
     expect(cloud).toContain('<Spinner class="cloud-status-spinner" />')
-    expect(cloud).toContain('"cloud-status-strip--error": statusError()')
-    expect(cloud).toContain("<Show when={!statusError()}>")
     expect(styles).toContain(".cloud-status-strip")
     expect(styles).toContain(".cloud-status-strip--error")
   })
 
   it("does not import local-only prompt features", () => {
-    const forbidden = [
+    for (const name of [
       "useFileMention",
       "useImageAttachments",
       "useTerminalContext",
       "useGitChangesContext",
       "ThinkingSelector",
       "SpeechToText",
-    ]
-    for (const name of forbidden) expect(cloud).not.toContain(name)
+    ]) {
+      expect(cloud).not.toContain(name)
+    }
   })
 })
 
-describe("cloud session hydration contract", () => {
-  it("marks only newly attached cloud tabs pending", () => {
-    expect(session).toContain("if (!retainedCloud.has(session.id)) {")
-    expect(session).toContain("setPendingCloud((prev) => new Set(prev).add(session.id))")
-  })
-
-  it("relocks listed tabs after authenticated transport invalidation", () => {
+describe("cloud session transport contract", () => {
+  it("relocks retained tabs after transport invalidation", () => {
     expect(messages).toContain('type: "agentManager.cloudSessionsPending"')
     expect(messages).toContain("sessionIDs: string[]")
     expect(session).toContain('message.type === "agentManager.cloudSessionsPending"')
@@ -93,22 +86,20 @@ describe("cloud session hydration contract", () => {
     expect(session).toContain("if (retainedCloud.has(id)) next.add(id)")
   })
 
-  it("unlocks attached tabs only after authoritative status and clears detached state", () => {
-    expect(status).toContain("setStatusMap(sessionID, info)\n    if (retainedCloud.has(sessionID)) {")
-    expect(status).toContain("next.delete(sessionID)")
-    expect(session).toContain("retainedCloud.delete(sessionID)\n    setPendingCloud((prev) => {")
-    expect(session).toContain("return !sessionID || !pendingCloud().has(sessionID)")
-  })
-})
-
-describe("ChatView localhost recovery contract", () => {
-  it("does not suppress StartupErrorBanner for cloud tabs", () => {
-    expect(chat).toContain('<Show when={server.connectionState() === "error" && server.errorMessage()}>')
-    expect(chat).not.toContain('when={!props.cloud && server.connectionState() === "error"')
+  it("strips model, mode, files, and review overrides from cloud sends", () => {
+    expect(send).toContain("const cloud = isCloudSession(sid)")
+    expect(send).toContain("providerID: cloud ? undefined : providerID")
+    expect(send).toContain("modelID: cloud ? undefined : modelID")
+    expect(send).toContain("const agent = cloud ? undefined : promptAgent(scope)")
+    expect(send).toContain("variant: cloud ? undefined : currentVariant(scope)")
+    expect(send).toContain("files: cloud ? undefined : files")
+    expect(send).toContain("review: cloud ? undefined : review")
   })
 
-  it("does not abort a pending cloud tab from the parent Escape handler", () => {
+  it("routes pending cloud aborts directly while the parent Escape handler stays inert", () => {
     expect(chat).toContain("if (props.cloud && !session.isCloudSessionHydrated(id())) return")
+    expect(abort).toContain("isCloudSession(sessionID) && !isCloudSessionHydrated(sessionID)")
+    expect(abort).toContain('vscode.postMessage({ type: "abort", sessionID })')
   })
 })
 

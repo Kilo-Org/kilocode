@@ -1,81 +1,68 @@
 import { describe, expect, it } from "bun:test"
-import { isCloudAgentUnauthorized } from "../../src/agent-manager/cloud-agent/errors"
-import { CloudAgentSessionListError, listCloudAgentSessions } from "../../src/agent-manager/cloud-agent/list"
+import type { KiloClient } from "@kilocode/sdk/v2/client"
+import { listCloudAgentSessions } from "../../src/agent-manager/cloud-agent/list"
 
-const SESSION = {
-  id: "ses_cloud",
-  slug: "ses_cloud",
-  projectID: "cloud-agent",
-  directory: "/cloud-agent/sessions/ses_cloud",
+const ROW = {
+  session_id: "ses_cloud",
   title: "Cloud run",
-  version: "cloud-agent",
-  time: { created: 1_700_000_000_000, updated: 1_700_000_100_000 },
+  created_at: "2026-06-17T10:00:00.000Z",
+  updated_at: "2026-06-17T10:01:00.000Z",
+  version: 1,
+}
+
+function client(run: (params: unknown, options: unknown) => Promise<unknown>): KiloClient {
+  return { kilo: { cloudSessions: run } } as unknown as KiloClient
 }
 
 describe("listCloudAgentSessions", () => {
-  it("requests repository-filtered facade sessions without exposing credentials", async () => {
-    const calls: Array<{ url: string; init?: RequestInit }> = []
+  it("uses the local Kilo SDK with a repository filter and bounded result count", async () => {
+    const calls: Array<{ params: unknown; options: unknown }> = []
+    const sdk = client(async (params, options) => {
+      calls.push({ params, options })
+      return { data: { cliSessions: [ROW], nextCursor: null } }
+    })
+
     const sessions = await listCloudAgentSessions({
-      url: "https://cloud.example/kilo",
-      token: "secret",
-      gitUrl: "https://github.com/Kilo-Org/kilocode",
-      fetch: async (input, init) => {
-        calls.push({ url: String(input), init })
-        return Response.json([SESSION])
+      client: sdk,
+      gitUrl: "https://github.com/kilo-org/kilocode",
+    })
+
+    expect(calls).toEqual([
+      {
+        params: { gitUrl: "https://github.com/kilo-org/kilocode", limit: 100 },
+        options: { throwOnError: true },
       },
-    })
-
-    expect(sessions).toEqual([SESSION])
-    expect(calls).toHaveLength(1)
-    const url = new URL(calls[0]!.url)
-    expect(url.origin + url.pathname).toBe("https://cloud.example/kilo/session")
-    expect(url.searchParams.get("gitUrl")).toBe("https://github.com/Kilo-Org/kilocode")
-    expect(url.searchParams.get("limit")).toBe("100")
-    expect(calls[0]!.init).toMatchObject({
-      method: "GET",
-      headers: { Authorization: "Bearer secret" },
-      redirect: "error",
-    })
+    ])
+    expect(sessions).toEqual([
+      {
+        id: "ses_cloud",
+        title: "Cloud run",
+        createdAt: "2026-06-17T10:00:00.000Z",
+        updatedAt: "2026-06-17T10:01:00.000Z",
+      },
+    ])
   })
 
-  it("preserves unauthorized status without returning response details", async () => {
-    const error = await listCloudAgentSessions({
-      url: "https://cloud.example/kilo",
-      token: "secret",
-      gitUrl: "https://github.com/Kilo-Org/kilocode",
-      fetch: async () => new Response("raw secret", { status: 401 }),
-    }).catch((err) => err)
+  it("normalizes empty titles without exposing facade response fields", async () => {
+    const sdk = client(async () => ({
+      data: { cliSessions: [{ ...ROW, title: "   " }], nextCursor: "ignored" },
+    }))
 
-    expect(error).toBeInstanceOf(CloudAgentSessionListError)
-    expect(isCloudAgentUnauthorized(error)).toBe(true)
-    expect(error.message).not.toContain("raw secret")
+    await expect(listCloudAgentSessions({ client: sdk, gitUrl: "https://gitlab.com/kilo/project" })).resolves.toEqual([
+      {
+        id: "ses_cloud",
+        title: "Untitled Cloud Agent",
+        createdAt: ROW.created_at,
+        updatedAt: ROW.updated_at,
+      },
+    ])
   })
 
-  it("rejects malformed responses and unsafe facade URLs", async () => {
+  it("rejects a malformed SDK response", async () => {
+    const sdk = client(async () => ({ data: { sessions: [] } }))
+
     await expect(
-      listCloudAgentSessions({
-        url: "https://cloud.example/kilo",
-        token: "secret",
-        gitUrl: "https://github.com/Kilo-Org/kilocode",
-        fetch: async () => Response.json([{ ...SESSION, time: { created: "bad", updated: 1 } }]),
-      }),
+      listCloudAgentSessions({ client: sdk, gitUrl: "https://github.com/kilo-org/kilocode" }),
     ).rejects.toThrow("invalid response")
-
-    for (const url of [
-      "http://cloud.example/kilo",
-      "https://user:secret@cloud.example/kilo",
-      "https://cloud.example/kilo?token=secret",
-      "https://cloud.example/kilo#secret",
-    ]) {
-      await expect(
-        listCloudAgentSessions({
-          url,
-          token: "secret",
-          gitUrl: "https://github.com/Kilo-Org/kilocode",
-          fetch: async () => Response.json([]),
-        }),
-        url,
-      ).rejects.toThrow("secure origin")
-    }
   })
 })

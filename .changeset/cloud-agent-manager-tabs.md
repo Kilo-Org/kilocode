@@ -3,4 +3,4 @@
 "kilo-code": minor
 ---
 
-Allow users to opt into repository-scoped Cloud Agent sessions in Agent Manager through the `kilo-code.new.experimental.cloudAgent.enabled` setting, attach existing sessions, start new sessions from the current workspace, and run remote slash commands in VS Code.
+Support repository-scoped Cloud Agent tabs in Agent Manager, including starting sessions, streaming transcripts, sending text follow-ups, and stopping remote runs.

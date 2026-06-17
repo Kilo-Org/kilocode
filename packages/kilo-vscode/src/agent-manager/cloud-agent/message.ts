@@ -4,15 +4,6 @@ export type CloudMessageFailure = {
   status: "failed" | "interrupted"
 }
 
-export function parseCloudMessageAcceptance(input: unknown): string | undefined {
-  if (!object(input) || !object(input.properties)) return
-  const props = input.properties
-  if (typeof props.messageId !== "string" || !props.messageId) return
-  if (input.type === "cloud.message.queued" || input.type === "cloud.message.sent") return props.messageId
-  if ((input.type === "cloud.message.completed" || input.type === "cloud.message.failed") && props.accepted === true)
-    return props.messageId
-}
-
 export function parseCloudMessageFailure(input: unknown): CloudMessageFailure | undefined {
   if (!object(input) || input.type !== "cloud.message.failed" || !object(input.properties)) return
   const props = input.properties

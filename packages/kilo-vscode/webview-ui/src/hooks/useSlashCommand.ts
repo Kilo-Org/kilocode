@@ -1,4 +1,4 @@
-import { createEffect, createSignal, on, onCleanup } from "solid-js"
+import { createSignal, onCleanup } from "solid-js"
 import type { Accessor } from "solid-js"
 import type { SlashCommandInfo, WebviewMessage, ExtensionMessage } from "../types/messages"
 
@@ -18,7 +18,6 @@ export interface SlashCommand {
   index: Accessor<number>
   show: Accessor<boolean>
   commands: Accessor<SlashCommandEntry[]>
-  resolve: (text: string) => { command: SlashCommandEntry; arguments: string } | undefined
   onInput: (val: string, cursor: number) => void
   onKeyDown: (
     e: KeyboardEvent,
@@ -36,36 +35,11 @@ export interface SlashCommand {
   close: () => void
 }
 
-interface SlashCommandOptions {
-  sessionID?: Accessor<string | undefined>
-}
-
-export function useSlashCommand(
-  vscode: VSCodeContext,
-  exclude?: Set<string> | Accessor<Set<string>>,
-  opts?: SlashCommandOptions,
-): SlashCommand {
-  const [catalogs, setCatalogs] = createSignal(new Map<string, SlashCommandInfo[]>())
+export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string> | Accessor<Set<string>>): SlashCommand {
+  const [server, setServer] = createSignal<SlashCommandInfo[]>([])
   const [query, setQuery] = createSignal<string | null>(null)
   const [index, setIndex] = createSignal(0)
-  const requested = new Set<string>()
-  const ids = new Map<string, number>()
-  const scope = () => opts?.sessionID?.()
-  const key = (id?: string) => (id ? `session:${id}` : "local")
-  const server = () => catalogs().get(opts?.sessionID ? key(scope()) : "local") ?? []
-
-  if (opts?.sessionID) {
-    createEffect(
-      on(
-        scope,
-        () => {
-          requested.clear()
-          setQuery(null)
-        },
-        { defer: true },
-      ),
-    )
-  }
+  const [requested, setRequested] = createSignal(false)
 
   const all: SlashCommandEntry[] = [
     {
@@ -157,7 +131,6 @@ export function useSlashCommand(
   }
 
   const client = () => {
-    if (opts?.sessionID) return []
     const set = excluded()
     if (!set) return all
     return all.filter((c) => !set.has(c.name))
@@ -173,25 +146,10 @@ export function useSlashCommand(
 
   const show = () => query() !== null
 
-  const resolve = (text: string) => {
-    const match = text.match(/^\/(\S+)/)
-    const word = match?.[1]
-    if (!match || !word) return
-    const command =
-      commands().find((command) => command.name === word) ?? commands().find((command) => command.hints.includes(word))
-    if (!command) return
-    return { command, arguments: text.slice(match[0].length).trim() }
-  }
-
   const request = () => {
-    const id = scope()
-    if (opts?.sessionID && !id) return
-    const current = opts?.sessionID ? key(id) : "local"
-    if (requested.has(current)) return
-    requested.add(current)
-    const requestID = opts?.sessionID ? (ids.get(current) ?? 0) + 1 : undefined
-    if (requestID) ids.set(current, requestID)
-    vscode.postMessage({ type: "requestCommands", ...(id ? { sessionID: id, requestID } : {}) })
+    if (requested()) return
+    setRequested(true)
+    vscode.postMessage({ type: "requestCommands" })
   }
 
   const results = () => {
@@ -210,10 +168,7 @@ export function useSlashCommand(
 
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type !== "commandsLoaded") return
-    if (opts?.sessionID ? !message.sessionID : message.sessionID) return
-    const current = opts?.sessionID ? key(message.sessionID) : "local"
-    if (opts?.sessionID && message.requestID !== ids.get(current)) return
-    setCatalogs((catalogs) => new Map(catalogs).set(current, message.commands))
+    setServer(message.commands)
   })
 
   onCleanup(() => {
@@ -222,7 +177,6 @@ export function useSlashCommand(
 
   const close = () => {
     setQuery(null)
-    if (opts?.sessionID) requested.clear()
   }
 
   const onInput = (val: string, cursor: number) => {
@@ -304,7 +258,6 @@ export function useSlashCommand(
     index,
     show,
     commands,
-    resolve,
     onInput,
     onKeyDown,
     select,

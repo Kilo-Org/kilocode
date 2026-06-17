@@ -166,7 +166,8 @@ export function createCloudSessionState(opts: CloudSessionStateOptions) {
         value: toCloudSummary(current[index]),
         source: "list" as const,
       }
-      const next: CloudSummaryVersion = { value: toCloudSummary(msg.session), source: "event" }
+      const merged = { ...current[index], ...msg.session }
+      const next: CloudSummaryVersion = { value: toCloudSummary(merged), source: "event" }
       if (pickCloudSummary(previous, next) !== next) return
       observed.set(next.value.id, next)
       if (!equalCloudSummary(previous.value, next.value))

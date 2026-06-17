@@ -1,21 +1,13 @@
-import { createKiloClient, type Event, type GlobalEvent, type KiloClient, type Session } from "@kilocode/sdk/v2/client"
-import {
-  getErrorMessage,
-  mapSSEEventToWebviewMessage,
-  MessageConfirmation,
-  sessionToWebview,
-} from "../../kilo-provider-utils"
+import { createKiloClient, type Event, type GlobalEvent, type KiloClient } from "@kilocode/sdk/v2/client"
+import { getErrorMessage, mapSSEEventToWebviewMessage, sessionToWebview } from "../../kilo-provider-utils"
 import { slimInfo, slimPart, slimParts } from "../../kilo-provider/slim-metadata"
-import { sessionStatusToWebview } from "../../session-status"
-import { SNAPSHOT_INITIALIZATION } from "../constants"
 import { SSEHeartbeat } from "../../services/sse-heartbeat"
-import { parseCloudCommand } from "./command"
 import { CloudAgentDisconnectedError, CloudAgentSignedOutError, isCloudAgentUnauthorized } from "./errors"
 import { resolveCloudAgentProfile } from "./profile"
 import { listCloudAgentSessions } from "./list"
 import { CloudRepositoryUnavailableError, resolveCloudRepository } from "./repository"
 import { CloudAgentStartError, startCloudAgent, type CloudAgentStartInput } from "./start"
-import { parseCloudMessageAcceptance, parseCloudMessageFailure } from "./message"
+import { parseCloudMessageFailure } from "./message"
 import { parseCloudStatus } from "./status"
 import {
   equalCloudSummary,
@@ -34,6 +26,7 @@ const MAX_RECONNECT_MS = 5_000
 const MAX_METADATA = 100
 const MAX_BUFFER = 1_000
 const HEARTBEAT_MS = 15_000
+const MESSAGE_LIMIT = 100
 const INTERACTIVE = new Set(["permission.asked", "question.asked", "suggestion.shown"])
 const UNSUPPORTED = "Cloud Agent session stopped because interactive requests are not supported in VS Code yet."
 const AUTH_ERROR = "Cloud Agent authentication could not be refreshed. Retry after signing in again."
@@ -55,7 +48,6 @@ type Snapshot = {
   loadEpoch: number
   request: number
   event: number
-  status: unknown
   detail?: ReturnType<typeof sessionToWebview>
   transcript: unknown
 }
@@ -71,7 +63,6 @@ type Options = {
   startAgent?: typeof startCloudAgent
   wait?: (ms: number, signal: AbortSignal) => Promise<void>
   heartbeat?: number
-  confirmation?: number
 }
 
 export function cloudDirectory(sessionID: string): string {
@@ -83,8 +74,6 @@ export class CloudAgentController {
   private readonly create: typeof createKiloClient
   private readonly listSessions: typeof listCloudAgentSessions
   private readonly startAgent: typeof startCloudAgent
-  private readonly confirmations = new MessageConfirmation()
-  private readonly confirmation: number
   private readonly wait: (ms: number, signal: AbortSignal) => Promise<void>
   private readonly admitted = new Set<string>()
   private readonly openIDs = new Set<string>()
@@ -123,7 +112,6 @@ export class CloudAgentController {
     this.create = opts.createClient ?? createKiloClient
     this.listSessions = opts.listSessions ?? listCloudAgentSessions
     this.startAgent = opts.startAgent ?? startCloudAgent
-    this.confirmation = opts.confirmation ?? 1_500
     this.wait = opts.wait ?? delay
   }
 
@@ -275,7 +263,12 @@ export class CloudAgentController {
     const sessionID = this.sessionID(message)
     if (!sessionID || !this.owns(sessionID)) return false
     if (message.type === "requestCommands") {
-      void this.commands(sessionID, typeof message.requestID === "number" ? message.requestID : undefined)
+      this.opts.post({
+        type: "commandsLoaded",
+        sessionID,
+        ...(typeof message.requestID === "number" ? { requestID: message.requestID } : {}),
+        commands: [],
+      })
       return true
     }
     if (message.type === "loadMessages") {
@@ -292,7 +285,7 @@ export class CloudAgentController {
       return true
     }
     if (message.type === "sendCommand") {
-      void this.command(message)
+      this.reject(message, "Cloud Agent slash commands are not supported yet")
       return true
     }
     this.opts.post({
@@ -489,7 +482,7 @@ export class CloudAgentController {
       this.currentGeneration(generation) &&
       !this.suspended &&
       !this.pausedAuth &&
-      (Boolean(this.openIDs.size) || (this.wantedList && (this.resolving || this.scope !== null)))
+      Boolean(this.openIDs.size)
     )
   }
 
@@ -696,9 +689,10 @@ export class CloudAgentController {
     repository: Repository,
   ): Promise<void> {
     try {
-      const sessions = await this.rest(epoch, generation, (_client, token) =>
-        this.listSessions({ url: token.kiloFacadeUrl, token: token.token, gitUrl: repository.gitUrl }),
-      )
+      await this.getToken(epoch, generation)
+      const client = this.opts.getLocalClient()
+      if (!client) throw new CloudAgentDisconnectedError("Kilo backend not connected")
+      const sessions = await this.listSessions({ client, gitUrl: repository.gitUrl })
       if (!this.listing(epoch, generation, request, root)) return
       this.apply(sessions, repository.name)
     } catch (err) {
@@ -706,16 +700,21 @@ export class CloudAgentController {
       if (!this.listing(epoch, generation, request, root)) return
       this.admitting = false
       this.repair()
+      if (err instanceof CloudAgentSignedOutError || isCloudAgentUnauthorized(err)) {
+        this.pausedAuth = true
+        this.postList({ status: "signed-out", sessions: this.sessions })
+        return
+      }
       this.postList({
         status: "error",
         sessions: this.sessions,
-        error: this.pausedAuth ? AUTH_ERROR : message(err, "Failed to load Cloud Agent sessions"),
+        error: message(err, "Failed to load Cloud Agent sessions"),
       })
     }
   }
 
-  private apply(sessions: Session[], repository: string): void {
-    const incoming = sessions.map(toCloudSummary)
+  private apply(sessions: CloudAgentSessionSummary[], repository: string): void {
+    const incoming = sessions
     const allowed = new Set([...this.openIDs, ...incoming.map((session) => session.id)])
     for (const id of this.admitted) {
       if (!allowed.has(id)) this.admitted.delete(id)
@@ -763,31 +762,6 @@ export class CloudAgentController {
     this.opts.post({ type: "agentManager.cloudSessions", ...state })
   }
 
-  private async commands(sessionID: string, requestID?: number): Promise<void> {
-    const epoch = this.epoch
-    const generation = this.generation
-    try {
-      const res = await this.rest(epoch, generation, (client) =>
-        client.command.list({ directory: cloudDirectory(sessionID) }, { throwOnError: true }),
-      )
-      if (!this.owns(sessionID)) return
-      this.opts.post({
-        type: "commandsLoaded",
-        sessionID,
-        ...(requestID === undefined ? {} : { requestID }),
-        commands: res.data.map((command) => ({
-          name: command.name,
-          description: command.description,
-          source: command.source,
-          hints: command.hints,
-        })),
-      })
-    } catch (err) {
-      if (!this.owns(sessionID) || this.stale(epoch, generation, err)) return
-      this.opts.post({ type: "error", sessionID, message: message(err, "Failed to load Cloud Agent commands") })
-    }
-  }
-
   private async load(sessionID: string, signal?: AbortSignal): Promise<Snapshot | null> {
     const snapshot = await this.snapshot(sessionID, signal)
     if (
@@ -814,19 +788,15 @@ export class CloudAgentController {
     try {
       const directory = cloudDirectory(sessionID)
       const opts = { throwOnError: true as const, ...(signal ? { signal } : {}) }
-      const [detail, transcript, statuses] = await this.rest(epoch, generation, (client) =>
+      const [detail, transcript] = await this.rest(epoch, generation, (client) =>
         Promise.all([
           client.session.get({ sessionID, directory }, opts),
-          client.session.messages({ sessionID, directory }, opts),
-          client.session.status({ directory }, opts),
+          client.session.messages({ sessionID, directory, limit: MESSAGE_LIMIT }, opts),
         ]),
       )
       if (!this.current(sessionID, epoch, generation, loadEpoch, request)) return null
-      if (!statuses.data) throw new Error("Cloud Agent status response is missing data")
-      const status = statuses.data[sessionID]
       this.startups.delete(sessionID)
       const entries = transcript.data ?? []
-      for (const item of entries) this.confirmations.confirm(item.info.id)
       const messages = entries.map((item) => ({
         ...slimInfo(item.info),
         parts: slimParts(item.parts),
@@ -839,20 +809,19 @@ export class CloudAgentController {
         loadEpoch,
         request,
         event,
-        status: sessionStatusToWebview(sessionID, status ?? { type: "idle" }),
         ...(detail.data ? { detail: sessionToWebview(detail.data) } : {}),
         transcript: { type: "messagesLoaded", sessionID, messages, mode: "replace", hasMore: false },
       }
     } catch (err) {
       if (!this.current(sessionID, epoch, generation, loadEpoch, request) || err instanceof StaleError) return null
-      if (this.startups.has(sessionID)) return STARTUP_PENDING
+      if (this.startups.has(sessionID) && retryableSnapshot(err)) return STARTUP_PENDING
+      this.startups.delete(sessionID)
       this.opts.post({ type: "error", sessionID, message: message(err, "Failed to load Cloud Agent messages") })
       return SNAPSHOT_FAILED
     }
   }
 
   private publish(snapshot: Snapshot): void {
-    this.opts.post(snapshot.status)
     if (snapshot.detail) {
       const next = toCloudSummary(snapshot.detail)
       const current = this.observed.get(snapshot.sessionID)
@@ -881,16 +850,13 @@ export class CloudAgentController {
     const messageID = typeof input.messageID === "string" ? input.messageID : undefined
     const draftID = typeof input.draftID === "string" ? input.draftID : undefined
     const files = Array.isArray(input.files) ? input.files : undefined
-    const providerID = typeof input.providerID === "string" ? input.providerID : undefined
-    const modelID = typeof input.modelID === "string" ? input.modelID : undefined
-    const agent = typeof input.agent === "string" ? input.agent : undefined
     const blocked = this.sendBlocked()
     if (blocked) {
       this.reject(input, blocked)
       return
     }
-    if (!validSend(text, draftID, files, providerID, modelID, agent)) {
-      this.reject(input, "Cloud Agent follow-ups require plain text, a Kilo model, and an agent")
+    if (!validSend(text, draftID, files)) {
+      this.reject(input, "Cloud Agent follow-ups currently support plain text only")
       return
     }
     try {
@@ -901,8 +867,6 @@ export class CloudAgentController {
             directory: cloudDirectory(sessionID),
             messageID,
             parts: [{ type: "text", text }],
-            model: { providerID: "kilo", modelID: modelID! },
-            agent: agent!,
           },
           { throwOnError: true },
         ),
@@ -910,48 +874,6 @@ export class CloudAgentController {
     } catch (err) {
       if (!(err instanceof AuthRejectedError) && this.stale(epoch, generation, err)) return
       this.reject(input, message(err, "Failed to send Cloud Agent message"))
-    }
-  }
-
-  private async command(input: Message): Promise<void> {
-    const blocked = this.sendBlocked()
-    if (blocked) {
-      this.reject(input, blocked)
-      return
-    }
-    const parsed = parseCloudCommand(input, this.sessionID(input))
-    if (!parsed) {
-      this.reject(input, "Cloud Agent commands require a Kilo model and do not support attachments")
-      return
-    }
-    const epoch = this.epoch
-    const generation = this.generation
-    const release = this.confirmations.track(parsed.messageID)
-    try {
-      await this.rest(epoch, generation, (client) =>
-        client.session.command(
-          {
-            ...parsed,
-            directory: cloudDirectory(parsed.sessionID),
-            snapshotInitialization: SNAPSHOT_INITIALIZATION,
-          },
-          { throwOnError: true },
-        ),
-      )
-    } catch (err) {
-      if (err instanceof AuthRejectedError) {
-        this.reject(input, message(err, "Failed to send Cloud Agent command"))
-        return
-      }
-      if (this.stale(epoch, generation, err)) return
-      if (await this.confirmations.wait(parsed.messageID, this.confirmation)) {
-        this.opts.log("command request ended after Cloud Agent accepted it; ignoring transport error", err)
-        return
-      }
-      if (!this.owns(parsed.sessionID) || this.suspended || this.reconcile) return
-      this.reject(input, message(err, "Failed to send Cloud Agent command"))
-    } finally {
-      release()
     }
   }
 
@@ -1072,7 +994,6 @@ export class CloudAgentController {
           return usable
         frame()
         const event = item as GlobalEvent
-        this.confirm(event.payload as Event)
         const live = parseCloudStatus(event.payload) || parseCloudMessageFailure(event.payload)
         if (!hydrated && !INTERACTIVE.has((event.payload as Event).type) && !live) {
           if (buffer.length >= MAX_BUFFER) throw new Error("Cloud Agent reconnect event buffer exceeded limit")
@@ -1132,14 +1053,6 @@ export class CloudAgentController {
     throw new StaleError()
   }
 
-  private confirm(event: Event): void {
-    const sessionID = eventSessionID(event)
-    if (!sessionID || !this.openIDs.has(sessionID)) return
-    if (event.type === "message.updated") this.confirmations.confirm(event.properties.info.id)
-    const accepted = parseCloudMessageAcceptance(event)
-    if (accepted) this.confirmations.confirm(accepted)
-  }
-
   private event(item: GlobalEvent): void {
     const event = item.payload as Event
     const sessionID = eventSessionID(event)
@@ -1187,9 +1100,16 @@ export class CloudAgentController {
 
   private update(event: Event, sessionID: string): void {
     const output = mapSSEEventToWebviewMessage(event, sessionID)
-    if (!output || output.type !== "sessionUpdated" || output.session.id !== sessionID) return
-    const next: CloudSummaryVersion = { value: toCloudSummary(output.session), source: "event" }
+    if (!output) return
+    if (output.type !== "sessionUpdated" || output.session.id !== sessionID) return
     const open = this.openIDs.has(sessionID)
+    if (!open && !this.listed(sessionID) && !this.admitting) return
+    const current = this.observed.get(sessionID)?.value ?? this.sessions.find((session) => session.id === sessionID)
+    const next = summaryVersion(output.session, current)
+    if (!next) {
+      if (open) this.opts.post(output)
+      return
+    }
     if (this.admitting) {
       const item = this.bufferMetadata(next, output)
       if (!open) return
@@ -1199,7 +1119,6 @@ export class CloudAgentController {
       if (item.version === next) item.posted ||= changed
       return
     }
-    if (!open && !this.listed(sessionID)) return
     if (open) this.events.set(sessionID, (this.events.get(sessionID) ?? 0) + 1)
     if (this.acceptVersion(next)) this.opts.post(output)
   }
@@ -1253,15 +1172,33 @@ export class CloudAgentController {
 class StaleError extends Error {}
 class AuthRejectedError extends Error {}
 
-function validSend(
-  text: string,
-  draftID: string | undefined,
-  files: unknown[] | undefined,
-  providerID: string | undefined,
-  modelID: string | undefined,
-  agent: string | undefined,
-): boolean {
-  return Boolean(text.trim() && !draftID && !files?.length && providerID === "kilo" && modelID?.trim() && agent?.trim())
+function summaryVersion(
+  patch: { id: string; title?: string; createdAt?: string; updatedAt?: string },
+  current?: CloudAgentSessionSummary,
+): CloudSummaryVersion | undefined {
+  const createdAt = patch.createdAt ?? current?.createdAt
+  const updatedAt = patch.updatedAt ?? current?.updatedAt
+  if (!createdAt || !updatedAt) return
+  return {
+    value: { id: patch.id, title: patch.title ?? current?.title ?? "", createdAt, updatedAt },
+    source: "event",
+  }
+}
+
+function validSend(text: string, draftID: string | undefined, files: unknown[] | undefined): boolean {
+  return Boolean(text.trim() && !draftID && !files?.length)
+}
+
+function retryableSnapshot(err: unknown, seen = new Set<object>()): boolean {
+  if (typeof err === "string") return /KILO_SESSION_(SNAPSHOT_PENDING|READ_RETRYABLE)/.test(err)
+  if (!(err instanceof Object) || seen.has(err)) return false
+  seen.add(err)
+  const value = err as Record<string, unknown>
+  if (value.status === 404 || value.status === 503 || value.statusCode === 404 || value.statusCode === 503) return true
+  for (const key of ["code", "name", "message"] as const) {
+    if (typeof value[key] === "string" && retryableSnapshot(value[key], seen)) return true
+  }
+  return retryableSnapshot(value.error, seen) || retryableSnapshot(value.response, seen)
 }
 
 function eventSessionID(event: Event): string | undefined {

@@ -12,7 +12,7 @@ import type { useProvider } from "../../src/context/provider"
 import type { useSession } from "../../src/context/session"
 import { ModelSelectorBase } from "../../src/components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../../src/components/shared/ModeSwitcher"
-import { initial, options } from "./models"
+import { initial, modes as cloudModes, options } from "./models"
 import type { createCloudSessionState } from "./session-state"
 
 interface NewCloudAgentDialogProps {
@@ -45,9 +45,7 @@ export function createCloudAgentDialog(
 
 export const NewCloudAgentDialog: Component<NewCloudAgentDialogProps> = (props) => {
   const [prompt, setPrompt] = createSignal("")
-  const modes = createMemo(() =>
-    props.session.agents().filter((item) => item.native && item.mode !== "subagent" && !item.hidden),
-  )
+  const modes = createMemo(() => cloudModes(props.session.agents()))
   const models = createMemo(() => options(props.provider.models()))
   const [mode, setMode] = createSignal<string>()
   const [model, setModel] = createSignal<string>()

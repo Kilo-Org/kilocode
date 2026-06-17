@@ -1,4 +1,4 @@
-import { type Component, createEffect, createMemo, createSignal, For, on, onCleanup, Show } from "solid-js"
+import { type Component, createEffect, createMemo, createSignal, on, onCleanup, Show } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
@@ -6,9 +6,7 @@ import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
-import { useSlashCommand } from "../../hooks/useSlashCommand"
-import { ModelSelector } from "../shared/ModelSelector"
-import { ModeSwitcher } from "../shared/ModeSwitcher"
+import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { cloudStatusError, cloudStatusKey } from "./cloud-status-label"
 
 const drafts = new Map<string, string>()
@@ -23,22 +21,14 @@ export const CloudPromptInput: Component<CloudPromptInputProps> = (props) => {
   const language = useLanguage()
   const vscode = useVSCode()
   const sid = () => session.currentSessionID()
-  const slash = useSlashCommand(vscode, undefined, { sessionID: sid })
   const key = () => `${props.boxId ?? "prompt:cloud"}:${sid() ?? "new"}`
   const [text, setText] = createSignal("")
   let textareaRef: HTMLTextAreaElement | undefined
-  let slashRef: HTMLDivElement | undefined
 
   const resize = () => {
     if (!textareaRef) return
     textareaRef.style.height = "auto"
     textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
-  }
-
-  const scroll = () => {
-    const items = slashRef?.querySelectorAll(".slash-command-item")
-    const active = items?.[slash.index()] as HTMLElement | undefined
-    active?.scrollIntoView({ block: "nearest" })
   }
 
   createEffect(
@@ -50,45 +40,27 @@ export const CloudPromptInput: Component<CloudPromptInputProps> = (props) => {
       }
       const draft = drafts.get(next) ?? ""
       setText(draft)
-      slash.close()
       if (!textareaRef) return
       textareaRef.value = draft
       resize()
     }),
   )
 
-  const busy = () => session.status() === "busy"
+  const busy = () => session.submitting() || session.status() === "busy"
   const pending = () => !session.isCloudSessionHydrated(sid())
   const status = () => session.cloudStatus(sid())
+  const blocked = () => pending() || !!status()
+  const stoppable = () => blocked() || busy()
   const statusKey = createMemo(() => cloudStatusKey(status()))
   const statusError = createMemo(() => cloudStatusError(status()))
-  const canSend = () => {
-    const sel = session.selected(sid())
-    return (
-      !pending() &&
-      server.isConnected() &&
-      !!text().trim() &&
-      sel?.providerID === "kilo" &&
-      !!sel.modelID &&
-      !!session.selectedAgent(sid())
-    )
-  }
+  const canSend = () => !blocked() && server.isConnected() && !!text().trim()
 
   const send = () => {
     if (!canSend()) return
     const message = text().trim()
-    const resolved = slash.resolve(message)
-    const sel = session.selected(sid())!
-    if (resolved) {
-      session.sendCommand(resolved.command.name, resolved.arguments, sel.providerID, sel.modelID)
-    }
-    if (!resolved) {
-      const agent = session.selectedAgent(sid())
-      session.sendMessage(message, sel.providerID, sel.modelID, undefined, undefined, undefined, agent)
-    }
+    session.sendMessage(message)
     drafts.delete(key())
     setText("")
-    slash.close()
     if (textareaRef) textareaRef.style.height = "auto"
   }
 
@@ -102,24 +74,18 @@ export const CloudPromptInput: Component<CloudPromptInputProps> = (props) => {
 
   const input = (event: InputEvent) => {
     const target = event.target as HTMLTextAreaElement
-    const value = target.value
-    setText(value)
-    slash.onInput(value, target.selectionStart ?? value.length)
+    setText(target.value)
     resize()
   }
 
   const keydown = (event: KeyboardEvent) => {
-    if (slash.onKeyDown(event, textareaRef, setText, resize)) {
-      queueMicrotask(scroll)
-      return
-    }
-    if (event.key === "Escape" && !pending() && busy()) {
+    if (event.key === "Escape" && stoppable()) {
       event.preventDefault()
       event.stopPropagation()
       session.abort()
       return
     }
-    if (event.key !== "Enter" || event.shiftKey || event.isComposing) return
+    if (!isEnterKeyCommitNotIme(event) || event.shiftKey) return
     event.preventDefault()
     send()
   }
@@ -140,31 +106,6 @@ export const CloudPromptInput: Component<CloudPromptInputProps> = (props) => {
             <span>{language.t(key)}</span>
           </div>
         )}
-      </Show>
-      <Show when={slash.show()}>
-        <div class="slash-command-dropdown" ref={slashRef}>
-          <Show when={slash.results().length > 0} fallback={<div class="slash-command-empty">No commands found</div>}>
-            <div class="slash-command-group-label">Commands</div>
-            <For each={slash.results()}>
-              {(command, index) => (
-                <div
-                  class="slash-command-item"
-                  classList={{ "slash-command-item--active": index() === slash.index() }}
-                  onMouseDown={(event) => {
-                    event.preventDefault()
-                    if (textareaRef) slash.select(command, textareaRef, setText, resize)
-                  }}
-                  onMouseEnter={() => slash.setIndex(index())}
-                >
-                  <span class="slash-command-name">/{command.name}</span>
-                  <Show when={command.description}>
-                    <span class="slash-command-desc">{command.description}</span>
-                  </Show>
-                </div>
-              )}
-            </For>
-          </Show>
-        </div>
       </Show>
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
@@ -187,14 +128,26 @@ export const CloudPromptInput: Component<CloudPromptInputProps> = (props) => {
         </div>
       </div>
       <div class="prompt-input-hint">
-        <div class="prompt-input-hint-selectors">
-          <ModeSwitcher sessionID={sid} />
-          <ModelSelector sessionID={sid} providerID="kilo" />
-        </div>
+        <div />
         <div class="prompt-input-hint-actions">
-          {pending() ? (
-            <Spinner class="chat-spinner-small" />
-          ) : busy() ? (
+          <Show
+            when={stoppable()}
+            fallback={
+              <Tooltip value={language.t("prompt.action.send")} placement="top">
+                <Button
+                  variant="ghost"
+                  size="small"
+                  onClick={send}
+                  aria-disabled={!canSend()}
+                  aria-label={language.t("prompt.action.send")}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M1.5 1.5L14.5 8L1.5 14.5V9L10 8L1.5 7V1.5Z" />
+                  </svg>
+                </Button>
+              </Tooltip>
+            }
+          >
             <Tooltip value={language.t("prompt.action.stop")} placement="top">
               <Button
                 variant="ghost"
@@ -207,21 +160,7 @@ export const CloudPromptInput: Component<CloudPromptInputProps> = (props) => {
                 </svg>
               </Button>
             </Tooltip>
-          ) : (
-            <Tooltip value={language.t("prompt.action.send")} placement="top">
-              <Button
-                variant="ghost"
-                size="small"
-                onClick={send}
-                aria-disabled={!canSend()}
-                aria-label={language.t("prompt.action.send")}
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M1.5 1.5L14.5 8L1.5 14.5V9L10 8L1.5 7V1.5Z" />
-                </svg>
-              </Button>
-            </Tooltip>
-          )}
+          </Show>
         </div>
       </div>
     </div>

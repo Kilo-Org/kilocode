@@ -1,18 +1,17 @@
-import { KILO_AUTO, KILO_PROVIDER_ID } from "../../../src/shared/provider-model"
+import { KILO_PROVIDER_ID } from "../../../src/shared/provider-model"
 import type { EnrichedModel } from "../../src/context/provider-utils"
 import type { ModelSelection } from "../../src/types/messages"
 
-const fallback: EnrichedModel = {
-  id: KILO_AUTO.modelID,
-  name: "Kilo Auto",
-  providerID: KILO_PROVIDER_ID,
-  providerName: "Kilo Gateway",
+const supported = new Set(["code", "plan", "debug", "orchestrator", "ask"])
+
+export function modes<T extends { name: string; native?: boolean; mode?: string; hidden?: boolean }>(agents: T[]): T[] {
+  return agents.filter(
+    (agent) => agent.native && agent.mode !== "subagent" && !agent.hidden && supported.has(agent.name),
+  )
 }
 
 export function options(models: EnrichedModel[]) {
-  const result = models.filter((model) => model.providerID === KILO_PROVIDER_ID)
-  if (result.length) return result
-  return [fallback]
+  return models.filter((model) => model.providerID === KILO_PROVIDER_ID)
 }
 
 export function initial(models: EnrichedModel[], selected: ModelSelection | null) {
