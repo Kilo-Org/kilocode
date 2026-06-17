@@ -66,6 +66,18 @@ function started(): CloudAgentStartResult {
   }
 }
 
+function pendingError() {
+  return new Error("Cloud Agent Kilo session snapshot is not available yet", {
+    cause: {
+      status: 503,
+      body: {
+        error: "KILO_SESSION_SNAPSHOT_PENDING",
+        message: "Cloud Agent Kilo session snapshot is not available yet",
+      },
+    },
+  })
+}
+
 function deferred<T>() {
   let resolve!: (value: T) => void
   const promise = new Promise<T>((done) => {
@@ -376,6 +388,46 @@ describe("CloudAgentController MVP", () => {
         mode: "replace",
         hasMore: false,
       })
+    })
+
+    it("retries the generated SDK startup-pending error until the snapshot is available", async () => {
+      const retry = deferred<void>()
+      let reads = 0
+      const remote = facade({
+        get: async () => {
+          reads++
+          if (reads === 1) throw pendingError()
+          return { data: session("ses_created") }
+        },
+        event: async (options) => {
+          options.onSseEvent?.()
+          return { stream: hold(options.signal) }
+        },
+      })
+      const ctx = setup({
+        facade: remote,
+        startAgent: async () => started(),
+        wait: async () => retry.promise,
+      })
+
+      ctx.cloud.handle({
+        type: "agentManager.createCloudSession",
+        prompt: "Fix it",
+        mode: "code",
+        model: "kilo-auto",
+      })
+      await settle(8)
+
+      expect(reads).toBe(1)
+      expect(ctx.posts.map(type)).not.toContain("error")
+      expect(ctx.posts.map(type)).not.toContain("messagesLoaded")
+
+      retry.resolve(undefined)
+      await settle(8)
+
+      expect(reads).toBe(2)
+      expect(ctx.posts.map(type)).toContain("messagesLoaded")
+      expect(ctx.posts.map(type)).not.toContain("error")
     })
 
     it("sends plain text without model, mode, or agent overrides", async () => {

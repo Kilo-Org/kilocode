@@ -1198,7 +1198,10 @@ function retryableSnapshot(err: unknown, seen = new Set<object>()): boolean {
   for (const key of ["code", "name", "message"] as const) {
     if (typeof value[key] === "string" && retryableSnapshot(value[key], seen)) return true
   }
-  return retryableSnapshot(value.error, seen) || retryableSnapshot(value.response, seen)
+  for (const key of ["error", "response", "cause", "body"] as const) {
+    if (retryableSnapshot(value[key], seen)) return true
+  }
+  return false
 }
 
 function eventSessionID(event: Event): string | undefined {
