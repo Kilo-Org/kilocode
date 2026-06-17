@@ -75,8 +75,7 @@ export const InstanceApi = HttpApi.make("instance")
           OpenApi.annotations({
             identifier: "path.get",
             summary: "Get paths",
-            description:
-              "Retrieve the current working directory and related path information for the Kilo instance.", // kilocode_change
+            description: "Retrieve the current working directory and related path information for the Kilo instance.", // kilocode_change
           }),
         ),
         HttpApiEndpoint.get("vcs", InstancePaths.vcs, {

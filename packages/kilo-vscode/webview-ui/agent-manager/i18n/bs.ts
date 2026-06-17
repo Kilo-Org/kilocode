@@ -46,6 +46,7 @@ export const dict = {
   "agentManager.session.readonly": "Sesija samo za čitanje",
   "agentManager.session.noSessions": "Nema otvorenih sesija",
   "agentManager.tab.close": "Zatvori",
+  "agentManager.tab.closeOthers": "Zatvori ostale",
   "agentManager.tab.closeTab": "Zatvori karticu",
   "agentManager.tab.forkSession": "Razdvoji sesiju",
   "agentManager.tab.terminal": "Terminal",

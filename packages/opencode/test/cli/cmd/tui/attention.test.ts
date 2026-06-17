@@ -184,7 +184,8 @@ describe("createTuiAttention", () => {
     const attention = createTuiAttention({ renderer, config: config(), audio: new FakeAudioEngine() })
     renderer.emit("blur")
 
-    expect(await attention.notify({ title: "Kilo", message: "hello", sound: false })).toEqual({ // kilocode_change
+    expect(await attention.notify({ title: "Kilo", message: "hello", sound: false })).toEqual({
+      // kilocode_change
       ok: true,
       notification: true,
       sound: false,

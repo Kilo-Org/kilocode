@@ -63,6 +63,11 @@
                      overrides="false"/>
     </extensions>
 
+    <applicationListeners>
+        <listener class="ai.kilocode.client.plugin.KiloFrontendDynamicPluginListener"
+                  topic="com.intellij.ide.plugins.DynamicPluginListener"/>
+    </applicationListeners>
+
     <actions>
         <action id="Kilo.Restart"
                 class="ai.kilocode.client.actions.RestartKiloAction"/>

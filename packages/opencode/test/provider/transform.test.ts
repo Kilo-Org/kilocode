@@ -2410,19 +2410,41 @@ describe("ProviderTransform.variants", () => {
     expect(result).toEqual({})
   })
 
-  test("minimax returns empty object", () => {
+  // kilocode_change start: minimax
+  test("minimax direct anthropic provider returns instant/thinking toggle", () => {
     const model = createMockModel({
-      id: "minimax/minimax-model",
+      id: "minimax/MiniMax-M3",
       providerID: "minimax",
       api: {
-        id: "minimax-model",
-        url: "https://api.minimax.com",
-        npm: "@ai-sdk/openai-compatible",
+        id: "MiniMax-M3",
+        url: "https://api.minimax.io/anthropic/v1",
+        npm: "@ai-sdk/anthropic",
       },
     })
     const result = ProviderTransform.variants(model)
-    expect(result).toEqual({})
+    expect(result).toEqual({
+      instant: { thinking: { type: "disabled" } },
+      thinking: { thinking: { type: "adaptive" } },
+    })
   })
+
+  test("minimax via kilo gateway returns instant/thinking toggle", () => {
+    const model = createMockModel({
+      id: "kilo/minimax/minimax-m3",
+      providerID: "kilo",
+      api: {
+        id: "minimax/minimax-m3",
+        url: "https://gateway.kilo.ai",
+        npm: "@kilocode/kilo-gateway",
+      },
+    })
+    const result = ProviderTransform.variants(model)
+    expect(result).toEqual({
+      instant: { reasoning: { enabled: false } },
+      thinking: { reasoning: { enabled: true } },
+    })
+  })
+  // kilocode_change end
 
   test("glm returns empty object", () => {
     const model = createMockModel({

@@ -6,33 +6,31 @@ on:
 
 jobs:
   triage:
-    if: github.repository == 'Kilo-Org/kilocode'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
       issues: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6 # kilocode_change
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 1
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
-      - name: Setup Kilo
-        uses: ./.github/actions/setup-kilo
+      - name: Install opencode
+        run: curl -fsSL https://kilo.ai/install | bash
 
       - name: Triage issue
         env:
-          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
-          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          kilo run --agent triage "The following issue was just opened, triage it:
+          opencode run --agent triage "The following issue was just opened, triage it:
 
           Title: $ISSUE_TITLE
 

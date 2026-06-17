@@ -1234,7 +1234,7 @@ it.live(
         const a = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
         yield* llm.wait(1)
         const b = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-        yield* Effect.sleep(50)
+        yield* Effect.yieldNow // kilocode_change - let the queued caller join without a wall-clock race
 
         yield* prompt.cancel(chat.id)
         const [exitA, exitB] = yield* Effect.all([Fiber.await(a), Fiber.await(b)])
@@ -1287,7 +1287,7 @@ it.live(
         const a = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
         yield* llm.wait(1)
         const b = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-        yield* Effect.sleep(50)
+        yield* Effect.yieldNow // kilocode_change - let the queued caller join without a wall-clock race
         gate.resolve()
 
         const [ea, eb] = yield* Effect.all([Fiber.await(a), Fiber.await(b)])
@@ -1692,7 +1692,7 @@ it.live(
         // kilocode_change end
 
         const loop = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-        yield* Effect.sleep(50)
+        yield* Effect.yieldNow // kilocode_change - give the queued loop a scheduler turn instead of a wall-clock window
 
         expect(yield* llm.calls).toBe(0)
 
@@ -1734,7 +1734,7 @@ it.live(
 
         const a = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
         const b = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-        yield* Effect.sleep(50)
+        yield* Effect.yieldNow // kilocode_change - give the queued loops a scheduler turn instead of a wall-clock window
 
         expect(yield* llm.calls).toBe(0)
 
@@ -1964,14 +1964,17 @@ unix(
       (_dir) =>
         Effect.gen(function* () {
           const { prompt, chat } = yield* boot()
+          const status = yield* SessionStatus.Service // kilocode_change
 
           const sh = yield* prompt
             .shell({ sessionID: chat.id, agent: "build", command: "sleep 30" })
             .pipe(Effect.forkChild)
-          yield* Effect.sleep(50)
+          // kilocode_change start - wait for shell to actually be running before forking the queued loop
+          yield* waitFor("shell busy", status.get(chat.id).pipe(Effect.map((s) => (s.type === "busy" ? s : undefined))))
+          // kilocode_change end
 
           const loop = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-          yield* Effect.sleep(50)
+          yield* Effect.yieldNow // kilocode_change - give the queued loop a scheduler turn before cancelling
 
           yield* prompt.cancel(chat.id)
 
@@ -1997,11 +2000,14 @@ unix(
         (_dir) =>
           Effect.gen(function* () {
             const { prompt, chat } = yield* boot()
+            const status = yield* SessionStatus.Service // kilocode_change
 
             const a = yield* prompt
               .shell({ sessionID: chat.id, agent: "build", command: "sleep 30" })
               .pipe(Effect.forkChild)
-            yield* Effect.sleep(50)
+            // kilocode_change start - wait for shell to actually be running before exercising the busy guard
+            yield* waitFor("shell busy", status.get(chat.id).pipe(Effect.map((s) => (s.type === "busy" ? s : undefined))))
+            // kilocode_change end
 
             const exit = yield* prompt
               .shell({ sessionID: chat.id, agent: "build", command: "echo hi" })

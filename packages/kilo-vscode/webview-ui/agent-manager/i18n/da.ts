@@ -46,6 +46,7 @@ export const dict = {
   "agentManager.session.readonly": "Skrivebeskyttet session",
   "agentManager.session.noSessions": "Ingen åbne sessioner",
   "agentManager.tab.close": "Luk",
+  "agentManager.tab.closeOthers": "Luk andre",
   "agentManager.tab.closeTab": "Luk fane",
   "agentManager.tab.forkSession": "Forgren session",
   "agentManager.tab.terminal": "Terminal",

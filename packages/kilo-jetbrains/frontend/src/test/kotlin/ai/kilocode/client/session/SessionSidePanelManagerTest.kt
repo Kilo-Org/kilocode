@@ -16,6 +16,7 @@ import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
+import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
@@ -51,6 +52,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
     private lateinit var workspace: Workspace
     private lateinit var sessions: KiloSessionService
     private lateinit var app: KiloAppService
+    private lateinit var timers: TestUiTimers
     private val managers = mutableListOf<SessionSidePanelManager>()
     private val created = mutableListOf<Pair<String, String?>>()
     private val refs = mutableListOf<SessionRef?>()
@@ -58,6 +60,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
+        timers = TestUiTimers()
         scope = CoroutineScope(SupervisorJob())
         rpc = FakeSessionRpcApi()
         sessions = KiloSessionService(project, scope, rpc)
@@ -221,7 +224,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         manager.openSession(session("ses_1"))
         val first = active(manager)
         manager.openSession(session("ses_2"))
-        settle { first !in ui }
+        expire()
 
         assertFalse(ui.contains(first))
         assertEquals(listOf("/test" to "ses_1", "/test" to "ses_2"), created)
@@ -234,7 +237,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         manager.openSession(session("ses_1"))
         val first = active(manager)
         manager.openSession(session("ses_2"))
-        settle { first !in ui }
+        expire()
         manager.openSession(session("ses_1"))
 
         assertNotSame(first, active(manager))
@@ -255,7 +258,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
             flow.emit(ChatEventDto.MessageUpdated("ses_1", msg("msg_hidden", "ses_1", "assistant")))
             flow.emit(ChatEventDto.PartDelta("ses_1", "msg_hidden", "txt_hidden", "text", "stale"))
         }
-        settle { first !in ui }
+        expire()
         manager.openSession(session("ses_1"))
         val second = active(manager)
         settle()
@@ -588,7 +591,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
             first.controller().model.setState(SessionState.AwaitingPermission(permission("ses_1")))
         }
         manager.openSession(session("ses_2"))
-        settle { first !in ui }
+        expire()
 
         assertFalse(ui.contains(first))
         assertEquals(emptyMap<String, SessionActivityKind>(), manager.activity())
@@ -603,7 +606,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
             first.controller().model.setState(SessionState.Busy("running"))
         }
         manager.openSession(session("ses_2"))
-        settle { first !in ui }
+        expire()
 
         assertFalse(ui.contains(first))
     }
@@ -614,7 +617,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         manager.openSession(session("ses_1"))
         val first = active(manager)
         manager.openSession(session("ses_2"))
-        settle { first !in ui }
+        expire()
 
         assertFalse(ui.contains(first))
         assertEquals(emptyMap<String, SessionActivityKind>(), manager.activity())
@@ -626,7 +629,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         val manager = SessionSidePanelManager(
             project = project,
             root = workspace,
-            create = { project, workspace, owner, ref ->
+            create = { project, workspace, owner, ref, timers ->
                 val id = when (ref) {
                     is SessionRef.Local -> ref.id
                     is SessionRef.Cloud -> ref.key
@@ -634,7 +637,17 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
                 }
                 created.add(workspace.directory to id)
                 refs.add(ref)
-                SessionUi(project, workspace, sessions, app, scope, ref = ref, manager = owner, workspaces = workspaces).also {
+                SessionUi(
+                    project,
+                    workspace,
+                    sessions,
+                    app,
+                    scope,
+                    ref = ref,
+                    manager = owner,
+                    workspaces = workspaces,
+                    timers = timers,
+                ).also {
                     ui.add(it)
                     Disposer.register(it) { ui.remove(it) }
                 }
@@ -642,6 +655,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
             resolve = { workspaces.workspace(it) },
             status = { sessions.activity() },
             history = history,
+            timers = timers,
         )
         managers.add(manager)
         return manager
@@ -698,19 +712,13 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         method.invoke(manager)
     }
 
+    private fun expire() {
+        timers.advanceBy(10)
+    }
+
     private fun settle() = kotlinx.coroutines.runBlocking {
         repeat(5) {
             kotlinx.coroutines.delay(100)
-            com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
-                com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
-            }
-        }
-    }
-
-    private fun settle(done: () -> Boolean) = kotlinx.coroutines.runBlocking {
-        repeat(50) {
-            if (done()) return@runBlocking
-            kotlinx.coroutines.delay(20)
             com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
                 com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
             }

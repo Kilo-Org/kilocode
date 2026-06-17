@@ -317,12 +317,17 @@ describe("ShareNext", () => {
               },
             ], // kilocode_change
           })
-          const sync = yield* pollWithTimeout(Effect.sync(() => seen[0]), "share sync was not sent", "3 seconds") // kilocode_change
+          const sync = yield* pollWithTimeout(
+            Effect.sync(() => seen[0]),
+            "share sync was not sent",
+            "3 seconds",
+          ) // kilocode_change
 
           expect(seen).toHaveLength(1)
           expect(sync.url).toBe("https://legacy-share.example.com/api/share/shr_abc/sync") // kilocode_change
 
-          const body = JSON.parse(sync.body) as { // kilocode_change
+          const body = JSON.parse(sync.body) as {
+            // kilocode_change
             secret: string
             data: Array<{
               type: string

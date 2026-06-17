@@ -46,6 +46,7 @@ export const dict = {
   "agentManager.session.readonly": "読み取り専用セッション",
   "agentManager.session.noSessions": "開いているセッションがありません",
   "agentManager.tab.close": "閉じる",
+  "agentManager.tab.closeOthers": "他を閉じる",
   "agentManager.tab.closeTab": "タブを閉じる",
   "agentManager.tab.forkSession": "セッションをフォーク",
   "agentManager.tab.terminal": "ターミナル",

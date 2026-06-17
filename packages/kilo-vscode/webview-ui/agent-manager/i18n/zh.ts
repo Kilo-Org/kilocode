@@ -46,6 +46,7 @@ export const dict = {
   "agentManager.session.readonly": "只读会话",
   "agentManager.session.noSessions": "没有打开的会话",
   "agentManager.tab.close": "关闭",
+  "agentManager.tab.closeOthers": "关闭其他标签页",
   "agentManager.tab.closeTab": "关闭标签页",
   "agentManager.tab.forkSession": "复制会话",
   "agentManager.tab.terminal": "终端",

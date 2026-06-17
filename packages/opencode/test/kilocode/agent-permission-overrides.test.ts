@@ -75,3 +75,71 @@ test("plan agent still hard-denies non-plan edits after user edit allow", async 
     },
   })
 })
+
+test("system utility agents ignore per-agent permission allows", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        title: {
+          permission: {
+            bash: "allow",
+          },
+        },
+        summary: {
+          permission: {
+            read: "allow",
+          },
+        },
+        compaction: {
+          permission: {
+            skill: "allow",
+          },
+        },
+      },
+    },
+  })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const title = await load(tmp.path, (svc) => svc.get("title"))
+      const summary = await load(tmp.path, (svc) => svc.get("summary"))
+      const compaction = await load(tmp.path, (svc) => svc.get("compaction"))
+      expect(title).toBeDefined()
+      expect(summary).toBeDefined()
+      expect(compaction).toBeDefined()
+      expect(Permission.evaluate("bash", "*", title!.permission).action).toBe("deny")
+      expect(Permission.evaluate("read", "*", summary!.permission).action).toBe("deny")
+      expect(Permission.evaluate("skill", "using-superpowers", compaction!.permission).action).toBe("deny")
+    },
+  })
+})
+
+test("system utility agents deny tools after configured name override", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        title: {
+          name: "custom-title",
+          permission: {
+            bash: "allow",
+            read: "allow",
+            skill: "allow",
+          },
+        },
+      },
+    },
+  })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const title = await load(tmp.path, (svc) => svc.get("title"))
+      expect(title).toBeDefined()
+      expect(title?.name).toBe("custom-title")
+      expect(Permission.evaluate("bash", "*", title!.permission).action).toBe("deny")
+      expect(Permission.evaluate("read", "README.md", title!.permission).action).toBe("deny")
+      expect(Permission.evaluate("skill", "using-superpowers", title!.permission).action).toBe("deny")
+    },
+  })
+})

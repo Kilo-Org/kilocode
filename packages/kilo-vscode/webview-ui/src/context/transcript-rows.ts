@@ -54,6 +54,23 @@ export interface TranscriptPartition {
   queued: TranscriptRow[]
 }
 
+export interface TranscriptHold {
+  sid: string
+  turn: string
+}
+
+export function retainTurn(
+  prev: TranscriptHold | undefined,
+  sid: string | undefined,
+  turn: string | undefined,
+  paused: boolean,
+) {
+  if (!sid) return undefined
+  if (!turn || paused) return prev?.sid === sid ? prev : turn ? { sid, turn } : undefined
+  if (prev?.sid === sid && prev.turn === turn) return prev
+  return { sid, turn }
+}
+
 function same<T>(a: T[], b: T[]) {
   if (a.length !== b.length) return false
   for (let i = 0; i < a.length; i += 1) {

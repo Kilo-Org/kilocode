@@ -17,6 +17,7 @@ import type { Provider } from "@/provider/provider"
 import { zod as toZod } from "@opencode-ai/core/effect-zod"
 import { ENV_FEATURE } from "@kilocode/kilo-gateway"
 import { fn } from "@/kilocode/fn"
+import path from "path"
 
 export namespace KiloSession {
   const log = Log.create({ service: "session.kilo" })
@@ -316,6 +317,7 @@ export namespace KiloSession {
     projectID?: string
     directory?: string
     directories?: string[]
+    currentDirectory?: string
     roots?: boolean
     start?: number
     cursor?: number
@@ -360,6 +362,19 @@ export namespace KiloSession {
 
     const limit = input.limit ?? 100
     const dirs = [...new Set((input.directories ?? []).map((dir) => Filesystem.resolve(dir)))]
+    const sorted = [...dirs].sort((a, b) => b.length - a.length)
+    const worktree = (dir: string) => {
+      for (const root of sorted) {
+        if (!Filesystem.contains(root, dir)) continue
+        const rel = path.relative(root, dir)
+        const parts = rel.split(path.sep)
+        if ((parts[0] === ".kilo" || parts[0] === ".kilocode") && parts[1] === "worktrees" && parts[2]) {
+          return path.join(root, parts[0], parts[1], parts[2])
+        }
+        return root
+      }
+    }
+    const current = input.currentDirectory ? worktree(Filesystem.resolve(input.currentDirectory)) : undefined
 
     const rows = Database.use((db) => {
       const query =
@@ -377,7 +392,10 @@ export namespace KiloSession {
       dirs.length > 0
         ? rows.filter((row) => {
             const dir = Filesystem.resolve(row.directory)
-            return dirs.some((root) => Filesystem.contains(root, dir))
+            const root = worktree(dir)
+            if (!root) return false
+            if (input.currentDirectory) return root === current
+            return true
           })
         : rows
 

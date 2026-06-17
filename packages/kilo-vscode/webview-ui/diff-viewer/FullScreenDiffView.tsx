@@ -72,6 +72,7 @@ interface FullScreenDiffViewProps {
   onCommentsChange: (comments: ReviewComment[]) => void
   composer?: ReviewComposer
   onSendAll?: () => void
+  onSendClick?: () => void
   diffStyle: DiffStyle
   onDiffStyleChange: (style: DiffStyle) => void
   markdownRender?: boolean
@@ -443,6 +444,11 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     props.onSendAll?.()
   }
 
+  const sendAllClick = () => {
+    props.onSendClick?.()
+    sendAllToChat()
+  }
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key !== "Enter") return
     if (!(e.metaKey || e.ctrlKey)) return
@@ -573,7 +579,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
               keybind={sendAllKeybind()}
               placement="bottom"
             >
-              <Button variant="primary" size="small" onClick={sendAllToChat}>
+              <Button variant="primary" size="small" onClick={sendAllClick}>
                 {t("agentManager.review.sendAllToChatWithCount", { count: comments().length })}
               </Button>
             </TooltipKeybind>

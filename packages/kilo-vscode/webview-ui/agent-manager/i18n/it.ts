@@ -50,6 +50,7 @@ export const dict = {
   "agentManager.session.noSessions": "Nessuna sessione aperta",
 
   "agentManager.tab.close": "Chiudi",
+  "agentManager.tab.closeOthers": "Chiudi le altre",
   "agentManager.tab.closeTab": "Chiudi scheda",
   "agentManager.tab.forkSession": "Forka sessione",
   "agentManager.tab.terminal": "Terminale",

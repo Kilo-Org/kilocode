@@ -6,7 +6,9 @@ import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.vfs.KiloPath
+import ai.kilocode.client.vfs.KiloEditorKindRegistry
 import ai.kilocode.client.vfs.KiloVirtualFile
+import ai.kilocode.client.vfs.KiloVirtualFileKindRegistry
 import ai.kilocode.client.vfs.KiloVirtualFileSystem
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -103,6 +105,30 @@ class AttachmentEditorKindTest : BasePlatformTestCase() {
         )))
 
         assertNull(VirtualFileManager.getInstance().findFileByUrl(file.url))
+    }
+
+    fun testAttachmentEditorKindAndVirtualFilesCanBeCleared() {
+        ensureAttachmentEditorKind()
+        val fs = KiloVirtualFileSystem.getInstance()
+        val path = KiloPath(AttachmentEditorKind.ID, mapOf(
+            "directory" to "/repo",
+            "sessionId" to "ses1",
+            "messageId" to "msg1",
+            "partId" to "part1",
+            "filename" to "note.txt",
+        ))
+        val file = fs.findOrCreateFile(path)
+
+        assertNotNull(file)
+        assertNotNull(service<KiloEditorKindRegistry>().get(AttachmentEditorKind.ID))
+        assertNotNull(service<KiloVirtualFileKindRegistry>().get(AttachmentEditorKind.ID))
+
+        unregisterAttachmentEditorKind()
+        fs.clear()
+
+        assertNull(service<KiloEditorKindRegistry>().get(AttachmentEditorKind.ID))
+        assertNull(service<KiloVirtualFileKindRegistry>().get(AttachmentEditorKind.ID))
+        assertNull(fs.findOrCreateFile(path))
     }
 
     @Suppress("UnstableApiUsage")

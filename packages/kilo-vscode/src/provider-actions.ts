@@ -9,7 +9,7 @@ import {
   sanitizeCustomProviderConfig,
   withCustomProviderDeletions,
 } from "./shared/custom-provider"
-import { CUSTOM_PROVIDER_PACKAGE, KILO_AUTO, parseModelString } from "./shared/provider-model"
+import { isCustomProviderPackage, KILO_AUTO, parseModelString } from "./shared/provider-model"
 import { configFeatures } from "./features"
 
 /**
@@ -33,7 +33,7 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 
 function customProvider(config: unknown) {
-  return record(config) && config.npm === CUSTOM_PROVIDER_PACKAGE
+  return record(config) && isCustomProviderPackage(config.npm)
 }
 
 function same(a: unknown, b: unknown): boolean {

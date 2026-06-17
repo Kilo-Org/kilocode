@@ -29,6 +29,7 @@ import type {
   VcsInfo,
   Worktree,
   WorktreeDiffItem,
+  WorktreeListResponse,
 } from "@kilocode/sdk/v2/client"
 
 export type Scope = "global" | "project"
@@ -54,7 +55,7 @@ export type ProjectConsoleSnapshot = {
   project: ProjectItem
   config: EffectiveConfig
   vcs: VcsInfo
-  worktrees: string[]
+  worktrees: WorktreeListResponse
   terminals: ProjectTerminalItem[]
 }
 
@@ -445,14 +446,15 @@ export async function loadProjectConsole(input: ProjectConsoleQuery): Promise<Pr
     sdk.vcs.get({ directory: query.dir }),
     sdk.worktree.list({ directory: query.dir }),
   ])
+  const overlay = demand("Config", config)
   const dirs = demand("Worktrees", worktrees)
   const terminals = await Promise.all(
-    [query.dir, ...dirs].map((dir) => loadProjectTerminals({ url: input.url, dir }, dir)),
+    [query.dir, ...dirs.map((item) => item.directory)].map((dir) => loadProjectTerminals({ url: input.url, dir }, dir)),
   )
 
   return {
     project,
-    config: demand("Config", config).effective,
+    config: overlay.global,
     vcs: demand("VCS", vcs),
     worktrees: dirs,
     terminals: terminals.flat(),

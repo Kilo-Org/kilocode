@@ -50,6 +50,7 @@ export const dict = {
   "agentManager.session.noSessions": "Açık oturum yok",
 
   "agentManager.tab.close": "Kapat",
+  "agentManager.tab.closeOthers": "Diğerlerini kapat",
   "agentManager.tab.closeTab": "Sekmeyi kapat",
   "agentManager.tab.forkSession": "Oturumu Fork'la",
   "agentManager.tab.terminal": "Terminal",

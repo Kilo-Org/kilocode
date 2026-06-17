@@ -24,7 +24,7 @@ import type { Provider } from "@/provider/provider"
 import * as SessionProcessorModule from "../../src/session/processor"
 import { Snapshot } from "../../src/snapshot"
 import { ProviderTest } from "../fake/provider"
-import { awaitWithTimeout, testEffect } from "../lib/effect" // kilocode_change
+import { testEffect } from "../lib/effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { TestConfig } from "../fixture/config"
 import { SyncEvent } from "@/sync"
@@ -1296,15 +1296,9 @@ describe("session.compaction.process", () => {
           .pipe(Effect.forkChild)
 
         yield* Deferred.await(ready).pipe(Effect.timeout("1 second"))
-        // kilocode_change start - Windows CI can take longer than 250ms to schedule interrupt finalizers
-        const exit = yield* awaitWithTimeout(
-          Effect.gen(function* () {
-            yield* Fiber.interrupt(fiber)
-            return yield* Fiber.await(fiber)
-          }),
-          "compaction did not stop after retry-backoff interrupt",
-          "2 seconds",
-        )
+        // kilocode_change start - avoid a scheduler-sensitive inner deadline on loaded CI runners
+        yield* Fiber.interrupt(fiber)
+        const exit = yield* Fiber.await(fiber)
         // kilocode_change end
 
         expect(Exit.isFailure(exit)).toBe(true)
