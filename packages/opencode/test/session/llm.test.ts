@@ -122,6 +122,68 @@ describe("session.llm.hasToolCalls", () => {
   })
 })
 
+describe("session.llm.repairToolCall", () => {
+  test("repairs tool name with leading whitespace", () => {
+    const sortedTools = {
+      bash: tool({ description: "Run bash", inputSchema: z.object({}) }),
+    }
+
+    const result = LLM.repairToolCall(" bash", sortedTools)
+
+    expect(result).toBe("bash")
+  })
+
+  test("repairs tool name with trailing whitespace", () => {
+    const sortedTools = {
+      bash: tool({ description: "Run bash", inputSchema: z.object({}) }),
+    }
+
+    const result = LLM.repairToolCall("BASH ", sortedTools)
+
+    expect(result).toBe("bash")
+  })
+
+  test("returns undefined when name matches exactly (no repair needed)", () => {
+    const sortedTools = {
+      bash: tool({ description: "Run bash", inputSchema: z.object({}) }),
+    }
+
+    const result = LLM.repairToolCall("bash", sortedTools)
+
+    expect(result).toBeUndefined()
+  })
+
+  test("returns undefined when no match found", () => {
+    const sortedTools = {
+      bash: tool({ description: "Run bash", inputSchema: z.object({}) }),
+    }
+
+    const result = LLM.repairToolCall("nonexistent", sortedTools)
+
+    expect(result).toBeUndefined()
+  })
+
+  test("repairs tool name with both leading and trailing whitespace", () => {
+    const sortedTools = {
+      bash: tool({ description: "Run bash", inputSchema: z.object({}) }),
+    }
+
+    const result = LLM.repairToolCall("  BASH  ", sortedTools)
+
+    expect(result).toBe("bash")
+  })
+
+  test("repairs tool name with only whitespace difference", () => {
+    const sortedTools = {
+      glob: tool({ description: "Find files", inputSchema: z.object({}) }),
+    }
+
+    const result = LLM.repairToolCall(" glob ", sortedTools)
+
+    expect(result).toBe("glob")
+  })
+})
+
 type Capture = {
   url: URL
   headers: Headers
