@@ -413,6 +413,8 @@ export const layer = Layer.effect(
           )
         }
 
+        KiloAgent.hardenSystemAgents(agents) // kilocode_change - keep system utility agents deny-only after config merges
+
         const get = Effect.fnUntraced(function* (agent: string) {
           return agents[KiloAgent.resolveKey(agent)] // kilocode_change - treat "build" as "code"
         })

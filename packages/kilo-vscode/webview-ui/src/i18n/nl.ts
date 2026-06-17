@@ -1494,10 +1494,6 @@ export const dict = {
 
   "settings.display.username.title": "Gebruikersnaam",
   "settings.display.username.description": "Aangepaste gebruikersnaam weergegeven in gesprekken",
-  "settings.display.layout.title": "Lay-out",
-  "settings.display.layout.description": "Lay-outmodus voor de chatinterface",
-  "settings.display.layout.auto": "Auto",
-  "settings.display.layout.stretch": "Uitrekken",
   "settings.display.fontSize.title": "Lettergrootte",
   "settings.display.fontSize.description": "Pas de lettergrootte van de Kilo webview UI onafhankelijk van VS Code aan.",
   "settings.display.reasoningAutoCollapse.title": "Redenering automatisch inklappen",

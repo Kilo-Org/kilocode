@@ -6,8 +6,9 @@
 
 import { describe, expect, test } from "bun:test"
 import { Duration, Effect } from "effect"
-import type { MessageID, SessionID, PartID } from "../../src/session/schema"
+import type { MessageID, SessionID } from "../../src/session/schema"
 import { KiloSnapshotTrack } from "../../src/kilocode/snapshot/track"
+import { awaitWithTimeout } from "../lib/effect"
 
 const SESSION = "ses_test" as SessionID
 const MESSAGE = "msg_test" as MessageID
@@ -42,7 +43,6 @@ const makeHooks = (
   answer: KiloSnapshotTrack.Answer | Promise<KiloSnapshotTrack.Answer>,
 ): { hooks: KiloSnapshotTrack.Hooks; calls: Calls } => {
   const calls: Calls = { ask: 0, persist: 0, progress: [] }
-  let counter = 0
   const hooks: KiloSnapshotTrack.Hooks = {
     async ask() {
       calls.ask += 1
@@ -53,12 +53,6 @@ const makeHooks = (
     },
     async startProgress(input) {
       calls.progress.push({ kind: "start", text: input.text })
-      counter += 1
-      return {
-        sessionID: input.sessionID,
-        messageID: input.messageID,
-        partID: `prt_${counter}` as PartID,
-      }
     },
     async updateProgress(input) {
       calls.progress.push({ kind: "update", text: input.text })
@@ -161,6 +155,53 @@ describe("KiloSnapshotTrack.wrap", () => {
     expect(calls.persist).toBe(1)
     expect(state.disabledForSession).toBe(true)
     expect(state.asked).toBe(true)
+  })
+
+  test("disable starts snapshot cancellation before config persistence finishes", async () => {
+    const state = KiloSnapshotTrack.makeState()
+    const cancelled = Promise.withResolvers<void>()
+    const persisting = Promise.withResolvers<void>()
+    const persist = Promise.withResolvers<void>()
+    const { hooks: base } = makeHooks("disable")
+    const hooks: KiloSnapshotTrack.Hooks = {
+      ...base,
+      async persistDisable() {
+        await base.persistDisable()
+        persisting.resolve()
+        await persist.promise
+      },
+    }
+    const inner = Effect.never.pipe(
+      Effect.ensuring(
+        Effect.sync(() => {
+          cancelled.resolve()
+        }),
+      ),
+    )
+
+    const run = Effect.runPromise(
+      KiloSnapshotTrack.wrap({
+        inner,
+        state,
+        sessionID: SESSION,
+        messageID: MESSAGE,
+        hooks,
+        timeoutMs: 10,
+        progressDelayMs: 2,
+      }),
+    )
+
+    await persisting.promise
+    await Effect.runPromise(
+      awaitWithTimeout(
+        Effect.promise(() => cancelled.promise),
+        "snapshot cancellation did not start before config persistence finished",
+        Duration.millis(200),
+      ),
+    )
+    persist.resolve()
+
+    expect(await run).toBeUndefined()
   })
 
   test('timeout + "dismissed" interrupts and disables, but does NOT persist', async () => {
@@ -312,6 +353,82 @@ describe("KiloSnapshotTrack.wrap", () => {
     expect(state.disabledForSession).toBe(false)
   })
 
+  test("concurrent timeout does not override an active continue choice", async () => {
+    const state = KiloSnapshotTrack.makeState()
+    const answer = Promise.withResolvers<KiloSnapshotTrack.Answer>()
+    const asked = Promise.withResolvers<void>()
+    const { hooks, calls } = makeHooks(answer.promise)
+    const firstHooks: KiloSnapshotTrack.Hooks = {
+      ...hooks,
+      async ask(input) {
+        asked.resolve()
+        return hooks.ask(input)
+      },
+    }
+
+    const first = Effect.runPromise(
+      KiloSnapshotTrack.wrap({
+        inner: slowInner(80, "first-hash"),
+        state,
+        sessionID: SESSION,
+        messageID: MESSAGE,
+        hooks: firstHooks,
+        timeoutMs: 20,
+        progressDelayMs: 5,
+      }),
+    )
+    await asked.promise
+    answer.resolve("continue")
+
+    const second = await Effect.runPromise(
+      KiloSnapshotTrack.wrap({
+        inner: hangInner(),
+        state,
+        sessionID: SESSION,
+        messageID: MESSAGE,
+        hooks,
+        timeoutMs: 20,
+        progressDelayMs: 5,
+      }),
+    )
+
+    expect(second).toBeUndefined()
+    expect(await first).toBe("first-hash")
+    expect(calls.ask).toBe(1)
+    expect(state.disabledForSession).toBe(false)
+    expect(state.asked).toBe(false)
+    expect(state.owner).toBeUndefined()
+  })
+
+  test("cleanup does not clear a newer prompt owner", async () => {
+    const state = KiloSnapshotTrack.makeState()
+    const replacement = Symbol()
+    const { hooks: base } = makeHooks("continue")
+    const hooks: KiloSnapshotTrack.Hooks = {
+      ...base,
+      async endProgress(input) {
+        state.owner = replacement
+        await base.endProgress(input)
+      },
+    }
+
+    const result = await Effect.runPromise(
+      KiloSnapshotTrack.wrap({
+        inner: slowInner(80, "continued-hash"),
+        state,
+        sessionID: SESSION,
+        messageID: MESSAGE,
+        hooks,
+        timeoutMs: 20,
+        progressDelayMs: 2,
+      }),
+    )
+
+    expect(result).toBe("continued-hash")
+    expect(state.owner).toBe(replacement)
+    expect(state.asked).toBe(true)
+  })
+
   test("continue path keeps `asked` sticky when the fiber finished with no hash", async () => {
     const state = KiloSnapshotTrack.makeState()
     const { hooks, calls } = makeHooks("continue")
@@ -426,6 +543,36 @@ describe("KiloSnapshotTrack progress indicator", () => {
     }
   })
 
+  test("failed progress publication does not start update retries", async () => {
+    const state = KiloSnapshotTrack.makeState()
+    const { hooks: base } = makeHooks("continue")
+    let updates = 0
+    const hooks: KiloSnapshotTrack.Hooks = {
+      ...base,
+      async startProgress() {
+        throw new Error("session service unavailable")
+      },
+      async updateProgress() {
+        updates += 1
+      },
+    }
+
+    const result = await Effect.runPromise(
+      KiloSnapshotTrack.wrap({
+        inner: slowInner(300, "hash"),
+        state,
+        sessionID: SESSION,
+        messageID: MESSAGE,
+        hooks,
+        timeoutMs: 1_000,
+        progressDelayMs: 2,
+      }),
+    )
+
+    expect(result).toBe("hash")
+    expect(updates).toBe(0)
+  })
+
   test("timed-out path keeps the initializing label (no text escalation)", async () => {
     const state = KiloSnapshotTrack.makeState()
     const { hooks, calls } = makeHooks("continue")
@@ -471,6 +618,195 @@ describe("KiloSnapshotTrack progress indicator", () => {
         progressDelayMs: 5,
       }),
     )
+
+    expect(calls.progress.at(-1)).toEqual({ kind: "end" })
+  })
+
+  test.each(["disable", "dismissed"] as const)("%s path does not wait for snapshot cleanup", async (answer) => {
+    const state = KiloSnapshotTrack.makeState()
+    const { hooks, calls } = makeHooks(answer)
+    const cleaning = Promise.withResolvers<void>()
+    const cleanup = Promise.withResolvers<void>()
+    const inner = Effect.never.pipe(
+      Effect.ensuring(
+        Effect.promise(async () => {
+          cleaning.resolve()
+          await cleanup.promise
+        }),
+      ),
+    )
+
+    const run = Effect.runPromise(
+      KiloSnapshotTrack.wrap({
+        inner,
+        state,
+        sessionID: SESSION,
+        messageID: MESSAGE,
+        hooks,
+        timeoutMs: 20,
+        progressDelayMs: 2,
+      }),
+    )
+    const completed = await Effect.runPromise(
+      awaitWithTimeout(
+        Effect.promise(() => run),
+        "snapshot wrapper waited for cleanup",
+      ).pipe(
+        Effect.as(true),
+        Effect.catch(() => Effect.succeed(false)),
+      ),
+    )
+    const last = calls.progress.at(-1)
+
+    cleanup.resolve()
+    await run
+    await cleaning.promise
+
+    expect(completed).toBe(true)
+    expect(last).toEqual({ kind: "end" })
+  })
+
+  test("stalled progress removal does not block completion and is retried", async () => {
+    const state = KiloSnapshotTrack.makeState()
+    const { hooks: base, calls } = makeHooks("continue")
+    const started = Promise.withResolvers<void>()
+    const ended = Promise.withResolvers<void>()
+    const snapshot = Promise.withResolvers<string | undefined>()
+    let attempts = 0
+    const hooks: KiloSnapshotTrack.Hooks = {
+      ...base,
+      async startProgress(input) {
+        await base.startProgress(input)
+        started.resolve()
+      },
+      async endProgress(input, signal) {
+        attempts += 1
+        if (attempts === 3) {
+          await base.endProgress(input)
+          ended.resolve()
+          return
+        }
+        await new Promise<void>((_resolve, reject) => {
+          signal?.addEventListener("abort", () => reject(new Error("stalled removal")), { once: true })
+        })
+      },
+    }
+
+    const run = Effect.runPromise(
+      KiloSnapshotTrack.wrap({
+        inner: Effect.promise(() => snapshot.promise),
+        state,
+        sessionID: SESSION,
+        messageID: MESSAGE,
+        hooks,
+        timeoutMs: 1_000,
+        progressDelayMs: 2,
+        progressCleanupTimeoutMs: 5,
+      }),
+    )
+
+    await started.promise
+    snapshot.resolve("hash")
+    const result = await Effect.runPromise(
+      awaitWithTimeout(
+        Effect.promise(() => run),
+        "snapshot wrapper waited for progress removal",
+      ),
+    )
+    await Effect.runPromise(
+      awaitWithTimeout(
+        Effect.promise(() => ended.promise),
+        "snapshot progress removal was not retried",
+      ),
+    )
+
+    expect(result).toBe("hash")
+    expect(attempts).toBe(3)
+    expect(calls.progress.at(-1)).toEqual({ kind: "end" })
+  })
+
+  test("pending progress publication is removed after the snapshot finishes", async () => {
+    const state = KiloSnapshotTrack.makeState()
+    const { hooks: base, calls } = makeHooks("continue")
+    const started = Promise.withResolvers<void>()
+    const publish = Promise.withResolvers<void>()
+    const ended = Promise.withResolvers<void>()
+    const snapshot = Promise.withResolvers<string | undefined>()
+    let ends = 0
+    const hooks: KiloSnapshotTrack.Hooks = {
+      ...base,
+      async startProgress(input) {
+        calls.progress.push({ kind: "start", text: input.text })
+        started.resolve()
+        await publish.promise
+      },
+      async endProgress(input) {
+        await base.endProgress(input)
+        ends += 1
+        if (ends === 2) ended.resolve()
+      },
+    }
+
+    const run = Effect.runPromise(
+      KiloSnapshotTrack.wrap({
+        inner: Effect.promise(() => snapshot.promise),
+        state,
+        sessionID: SESSION,
+        messageID: MESSAGE,
+        hooks,
+        timeoutMs: 1_000,
+        progressDelayMs: 2,
+      }),
+    )
+
+    await started.promise
+    snapshot.resolve("hash")
+    expect(await run).toBe("hash")
+    publish.resolve()
+    await ended.promise
+
+    expect(calls.progress.at(-1)).toEqual({ kind: "end" })
+  })
+
+  test("in-flight progress updates cannot recreate a removed indicator", async () => {
+    const state = KiloSnapshotTrack.makeState()
+    const { hooks: base, calls } = makeHooks("continue")
+    const updating = Promise.withResolvers<void>()
+    const update = Promise.withResolvers<void>()
+    const ended = Promise.withResolvers<void>()
+    const snapshot = Promise.withResolvers<string | undefined>()
+    let ends = 0
+    const hooks: KiloSnapshotTrack.Hooks = {
+      ...base,
+      async updateProgress(input) {
+        updating.resolve()
+        await update.promise
+        calls.progress.push({ kind: "update", text: input.text })
+      },
+      async endProgress(input) {
+        await base.endProgress(input)
+        ends += 1
+        if (ends === 2) ended.resolve()
+      },
+    }
+
+    const run = Effect.runPromise(
+      KiloSnapshotTrack.wrap({
+        inner: Effect.promise(() => snapshot.promise),
+        state,
+        sessionID: SESSION,
+        messageID: MESSAGE,
+        hooks,
+        timeoutMs: 1_000,
+        progressDelayMs: 2,
+      }),
+    )
+
+    await updating.promise
+    snapshot.resolve("hash")
+    expect(await run).toBe("hash")
+    update.resolve()
+    await ended.promise
 
     expect(calls.progress.at(-1)).toEqual({ kind: "end" })
   })

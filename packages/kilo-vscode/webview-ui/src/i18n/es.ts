@@ -1542,10 +1542,6 @@ export const dict = {
 
   "settings.display.username.title": "Nombre de usuario",
   "settings.display.username.description": "Nombre de usuario personalizado en conversaciones",
-  "settings.display.layout.title": "Diseño",
-  "settings.display.layout.description": "Modo de diseño para la interfaz de chat",
-  "settings.display.layout.auto": "Automático",
-  "settings.display.layout.stretch": "Estirar",
   "settings.display.fontSize.title": "Tamaño de fuente",
   "settings.display.fontSize.description":
     "Ajusta el tamaño de fuente de la webview UI de Kilo de forma independiente a VS Code.",

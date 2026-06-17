@@ -1517,10 +1517,6 @@ export const dict = {
 
   "settings.display.username.title": "Brukernavn",
   "settings.display.username.description": "Egendefinert brukernavn i samtaler",
-  "settings.display.layout.title": "Layout",
-  "settings.display.layout.description": "Layoutmodus for chatgrensesnittet",
-  "settings.display.layout.auto": "Automatisk",
-  "settings.display.layout.stretch": "Strekk",
   "settings.display.fontSize.title": "Skriftstørrelse",
   "settings.display.fontSize.description": "Juster skriftstørrelsen for Kilo webview UI uavhengig av VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Skjul resonnement automatisk",

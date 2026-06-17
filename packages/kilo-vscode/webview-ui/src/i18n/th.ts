@@ -1498,10 +1498,6 @@ export const dict = {
 
   "settings.display.username.title": "ชื่อผู้ใช้",
   "settings.display.username.description": "ชื่อผู้ใช้กำหนดเองในบทสนทนา",
-  "settings.display.layout.title": "เค้าโครง",
-  "settings.display.layout.description": "โหมดเค้าโครงสำหรับอินเทอร์เฟซแชท",
-  "settings.display.layout.auto": "อัตโนมัติ",
-  "settings.display.layout.stretch": "ยืด",
   "settings.display.fontSize.title": "ขนาดฟอนต์",
   "settings.display.fontSize.description": "ปรับขนาดฟอนต์ webview UI ของ Kilo แยกเป็นอิสระจาก VS Code.",
   "settings.display.reasoningAutoCollapse.title": "ยุบเหตุผลอัตโนมัติ",

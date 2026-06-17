@@ -5,11 +5,16 @@
  */
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import { StoryProviders } from "./StoryProviders"
+import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { FileTree } from "../../diff-viewer/FileTree"
 import { DiffPanel } from "../../agent-manager/DiffPanel"
 import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
+import { ChatView } from "../components/chat/ChatView"
+import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
+import { SessionContext } from "../context/session"
+import { ServerContext } from "../context/server"
+import { WorktreeModeProvider } from "../context/worktree-mode"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -20,6 +25,8 @@ import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats, PRStatus } from
 import type { ReviewComment } from "../../diff-viewer/review-comments"
 import "../../agent-manager/agent-manager.css"
 import "../../agent-manager/agent-manager-review.css"
+
+registerVscodeToolOverrides()
 
 // ---------------------------------------------------------------------------
 // Shared mock data
@@ -116,6 +123,139 @@ const meta: Meta = {
 }
 export default meta
 type Story = StoryObj
+
+// ---------------------------------------------------------------------------
+// Wide chat layout
+// ---------------------------------------------------------------------------
+
+const chatSessionID = "story-agent-manager-chat"
+const chatUserID = "story-agent-manager-user"
+const chatAssistantID = "story-agent-manager-assistant"
+const chatTime = 1_718_000_000_000
+const chatDiff = {
+  file: "webview-ui/src/styles/chat-layout.css",
+  status: "modified" as const,
+  additions: 12,
+  deletions: 4,
+  before: ".chat-view {\n  display: flex;\n}\n",
+  after: ".chat-view {\n  display: flex;\n  container: chat / inline-size;\n}\n",
+}
+const chatMessages = [
+  {
+    id: chatUserID,
+    sessionID: chatSessionID,
+    role: "user",
+    createdAt: new Date(chatTime).toISOString(),
+    time: { created: chatTime },
+    summary: { diffs: [chatDiff] },
+  },
+  {
+    id: chatAssistantID,
+    sessionID: chatSessionID,
+    role: "assistant",
+    parentID: chatUserID,
+    createdAt: new Date(chatTime + 1000).toISOString(),
+    time: { created: chatTime + 1000, completed: chatTime + 5000 },
+    modelID: "anthropic/claude-sonnet-4-6",
+    providerID: "kilo",
+    mode: "default",
+    agent: "code",
+    path: { cwd: "/project", root: "/project" },
+  },
+]
+const chatParts = {
+  [chatUserID]: [
+    {
+      id: "story-agent-manager-user-text",
+      sessionID: chatSessionID,
+      messageID: chatUserID,
+      type: "text",
+      text: "Make the full-screen Agent Manager conversation easier to scan without squeezing tool output or diffs.",
+    },
+  ],
+  [chatAssistantID]: [
+    {
+      id: "story-agent-manager-assistant-text",
+      sessionID: chatSessionID,
+      messageID: chatAssistantID,
+      type: "text",
+      text: "The transcript now follows a centered 78 character reading lane. Long explanations share one consistent left edge, so the eye can move between turns without crossing the entire editor.\n\nTool output and the composer use the same lane, keeping every conversation element aligned.",
+    },
+    {
+      id: "story-agent-manager-bash",
+      sessionID: chatSessionID,
+      messageID: chatAssistantID,
+      type: "tool",
+      callID: "story-agent-manager-bash-call",
+      tool: "bash",
+      state: {
+        status: "completed",
+        input: { command: "bun run test:unit", description: "Run focused Agent Manager tests" },
+        output: "18 tests passed\n0 tests failed",
+        title: "Run focused Agent Manager tests",
+        metadata: {},
+        time: { start: chatTime + 2000, end: chatTime + 4000 },
+      },
+    },
+  ],
+}
+const chatData = {
+  ...defaultMockData,
+  message: { [chatSessionID]: chatMessages },
+  part: chatParts,
+}
+const chatServer = {
+  connectionState: () => "connected" as const,
+  serverInfo: () => undefined,
+  extensionVersion: () => "1.0.0",
+  errorMessage: () => undefined,
+  errorDetails: () => undefined,
+  isConnected: () => true,
+  profileData: () => null,
+  deviceAuth: () => ({ status: "idle" as const }),
+  startLogin: () => undefined,
+  goToLogin: () => undefined,
+  vscodeLanguage: () => "en",
+  languageOverride: () => undefined,
+  workspaceDirectory: () => "/project",
+  gitInstalled: () => true,
+}
+
+function renderChat() {
+  const session = {
+    ...mockSessionValue({ id: chatSessionID, status: "idle", closeReason: "completed" }),
+    messages: () => chatMessages,
+    visibleMessages: () => chatMessages,
+    userMessages: () => chatMessages.filter((message) => message.role === "user"),
+    getParts: (id: string) => chatParts[id as keyof typeof chatParts] ?? [],
+    worktreeStats: () => ({ files: 3, additions: 32, deletions: 8 }),
+  }
+  return (
+    <StoryProviders data={chatData} sessionID={chatSessionID} status="idle" noPadding>
+      <ServerContext.Provider value={chatServer}>
+        <SessionContext.Provider value={session as any}>
+          <WorktreeModeProvider>
+            <div class="am-chat-wrapper" style={{ height: "100vh" }}>
+              <ChatView onForkSession={() => undefined} />
+            </div>
+          </WorktreeModeProvider>
+        </SessionContext.Provider>
+      </ServerContext.Provider>
+    </StoryProviders>
+  )
+}
+
+export const ReadableChat1280: Story = {
+  name: "Chat - readable wide editor",
+  parameters: { layout: "fullscreen" },
+  render: renderChat,
+}
+
+export const ReadableChat420: Story = {
+  name: "Chat - constrained editor",
+  parameters: { layout: "fullscreen" },
+  render: renderChat,
+}
 
 // ---------------------------------------------------------------------------
 // FileTree

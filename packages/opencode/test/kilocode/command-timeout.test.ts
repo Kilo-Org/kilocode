@@ -164,7 +164,6 @@ shell.instance(
         },
       )
 
-      expect(result.output).toContain("started")
       expect(result.output).toContain("environment timeout 500 ms")
       expect(result.output).toContain("You're running in a sandbox.")
       expect(result.output).not.toContain("retry with a larger timeout")

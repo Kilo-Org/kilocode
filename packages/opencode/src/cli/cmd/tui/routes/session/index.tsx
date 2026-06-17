@@ -959,6 +959,11 @@ export function Session() {
       title: "Copy last assistant message",
       value: "messages.copy",
       category: "Session",
+      // kilocode_change start - /copy copies the latest assistant response
+      slash: {
+        name: "copy",
+      },
+      // kilocode_change end
       run: () => {
         const revertID = session()?.revert?.messageID
         const lastAssistantMessage = messages().findLast(
@@ -1016,7 +1021,7 @@ export function Session() {
       value: "session.copy",
       category: "Session",
       slash: {
-        name: "copy",
+        name: "copy-session", // kilocode_change - transcript copy moved off /copy
       },
       run: async () => {
         try {

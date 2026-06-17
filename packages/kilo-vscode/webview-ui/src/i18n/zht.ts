@@ -1432,10 +1432,6 @@ export const dict = {
 
   "settings.display.username.title": "使用者名稱",
   "settings.display.username.description": "對話中顯示的自訂使用者名稱",
-  "settings.display.layout.title": "佈局",
-  "settings.display.layout.description": "聊天介面的佈局模式",
-  "settings.display.layout.auto": "自動",
-  "settings.display.layout.stretch": "延伸",
   "settings.display.fontSize.title": "字體大小",
   "settings.display.fontSize.description": "獨立於 VS Code 調整 Kilo webview UI 的字體大小。",
   "settings.display.reasoningAutoCollapse.title": "自動收合推理",
