@@ -243,6 +243,18 @@ export class FileWatcher implements IFileWatcher {
   }
 
   /**
+   * Clears accumulated events without processing them.
+   *
+   * RATIONALE: @parcel/watcher fires create events for all existing files
+   * on subscribe (no ignoreInitial equivalent). After the initial scan
+   * completes, these stale events must be dropped before re-enabling
+   * collection to avoid duplicate processing.
+   */
+  clearAccumulatedEvents(): void {
+    this.accumulatedEvents.clear()
+  }
+
+  /**
    * Disposes the file watcher and cleans up resources.
    */
   async shutdown(): Promise<void> {

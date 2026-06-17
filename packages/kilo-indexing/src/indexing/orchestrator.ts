@@ -184,6 +184,7 @@ export class CodeIndexOrchestrator {
 
     try {
       this.overlay?.prepare()
+      this.fileWatcher.setCollecting(false)
       void this._startWatcher()
 
       if (this._cancelRequested) {
@@ -359,6 +360,7 @@ export class CodeIndexOrchestrator {
     await this.cacheManager.flush?.()
     await this.vectorStore.markIndexingComplete()
     await this.vectorStore.close?.()
+    this.fileWatcher.clearAccumulatedEvents()
     this.fileWatcher.setCollecting(true)
     this.stateManager.setSystemState("Indexed", "File watcher started. Index up-to-date.")
     log.info("workspace scan finalized", {
