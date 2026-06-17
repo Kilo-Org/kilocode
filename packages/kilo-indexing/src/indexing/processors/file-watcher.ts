@@ -1,4 +1,9 @@
-import { watch as chokidarWatch, type FSWatcher as ChokidarFSWatcher } from "chokidar"
+declare const KILO_LIBC: string | undefined
+
+// @ts-ignore
+import { createWrapper } from "@parcel/watcher/wrapper"
+// @ts-ignore
+import type { AsyncSubscription, Event as ParcelEvent, SubscribeCallback } from "@parcel/watcher"
 import { stat, readFile } from "fs/promises"
 import { createHash } from "crypto"
 import path from "path"
@@ -37,15 +42,39 @@ import { sanitizeErrorMessage } from "../shared/validation-helpers"
 
 const log = Log.create({ service: "file-watcher" })
 
+let nativeBinding: typeof import("@parcel/watcher") | undefined
+let bindingAttempted = false
+
+function getBinding(): typeof import("@parcel/watcher") | undefined {
+  if (bindingAttempted) return nativeBinding
+  bindingAttempted = true
+  try {
+    const native = require(
+      `@parcel/watcher-${process.platform}-${process.arch}${process.platform === "linux" ? `-${KILO_LIBC || "glibc"}` : ""}`,
+    )
+    nativeBinding = createWrapper(native) as typeof import("@parcel/watcher")
+    return nativeBinding
+  } catch (error) {
+    log.error("failed to load watcher binding", { error })
+    return
+  }
+}
+
+function getWatcherBackend() {
+  if (process.platform === "win32") return "windows"
+  if (process.platform === "darwin") return "fs-events"
+  if (process.platform === "linux") return "inotify"
+}
+
 /**
  * Implementation of the file watcher interface.
  *
- * RATIONALE: Uses chokidar instead of vscode.workspace.createFileSystemWatcher
- * so the watcher works outside VS Code (CLI, tests, headless).
+ * Uses @parcel/watcher for native filesystem events so it works outside
+ * VS Code (CLI, tests, headless).
  */
 export class FileWatcher implements IFileWatcher {
   private ignoreInstance?: Ignore
-  private watcher?: ChokidarFSWatcher
+  private subscription?: AsyncSubscription
   private accumulatedEvents: Map<string, { path: string; type: "create" | "change" | "delete" }> = new Map()
   private batchProcessDebounceTimer?: NodeJS.Timeout
   private readonly BATCH_DEBOUNCE_DELAY_MS = 500
@@ -54,6 +83,7 @@ export class FileWatcher implements IFileWatcher {
   private maxBatchRetries: number
   private collecting = false
   private draining = false
+  private initializing: Promise<void> | undefined
   private drainTask?: Promise<void>
   private ready?: Promise<void>
   private overlay?: WorktreeOverlay
@@ -119,43 +149,73 @@ export class FileWatcher implements IFileWatcher {
   }
 
   /**
-   * Initializes the file watcher using chokidar.
+   * Initializes the file watcher using @parcel/watcher.
    *
-   * RATIONALE: chokidar watches the filesystem directly using native OS events,
+   * RATIONALE: @parcel/watcher watches the filesystem directly using native OS events,
    * removing the dependency on VS Code's file system watcher API.
    */
   async initialize(): Promise<void> {
-    if (this.ready) {
-      await this.ready
+    if (this.initializing) {
+      await this.initializing
+      return
+    }
+
+    const binding = getBinding()
+    if (!binding) {
+      log.error("cannot initialize file watcher: native binding not available", { workspacePath: this.workspacePath })
       return
     }
 
     log.info("initializing file watcher", { workspacePath: this.workspacePath })
 
-    this.watcher = chokidarWatch(this.workspacePath, {
-      ignored: (filePath: string) => {
-        const relativeFilePath = generateRelativeIgnorePath(filePath, this.workspacePath)
-        if (!relativeFilePath) return false
-        if (FileIgnore.match(relativeFilePath)) return true
-        return this.ignoreInstance?.ignores(relativeFilePath) ?? false
-      },
-      persistent: true,
-      ignoreInitial: true,
-      followSymlinks: false,
-      alwaysStat: false,
-      awaitWriteFinish: false,
+    this.initializing = new Promise((resolve, reject) => {
+      const backend = getWatcherBackend()
+      const callback: SubscribeCallback = (err, events) => {
+      if (err) {
+        log.error("file watcher subscription error", {
+          error: sanitizeErrorMessage(err.message),
+          workspacePath: this.workspacePath,
+        })
+        return
+      }
+      for (const evt of events) {
+        if (evt.type === "create") this.handleFileEvent(evt.path, "create")
+        else if (evt.type === "update") this.handleFileEvent(evt.path, "change")
+        else if (evt.type === "delete") this.handleFileEvent(evt.path, "delete")
+      }
+    }
+
+      const ignorePatterns: string[] = [...FileIgnore.PATTERNS]
+      const actualIgnore: string[] = [...ignorePatterns]
+
+      binding
+        .subscribe(this.workspacePath, callback, {
+          ignore: ignorePatterns,
+          backend,
+        })
+        .then((sub) => {
+          this.subscription = sub
+          log.info("file watcher ready", { workspacePath: this.workspacePath })
+          resolve()
+        })
+        .catch((err) => {
+          log.error("file watcher subscribe failed", {
+            error: err instanceof Error ? err.message : String(err),
+            workspacePath: this.workspacePath,
+          })
+          reject(err)
+        })
+
+      void setTimeout(
+        () =>
+          reject(
+            new Error(`File watcher initialization timed out after ${FILE_WATCHER_INIT_TIMEOUT_MS}ms`),
+          ),
+        FILE_WATCHER_INIT_TIMEOUT_MS,
+      )
     })
 
-    this.watcher.on("add", (filePath) => this.handleFileEvent(filePath, "create"))
-    this.watcher.on("change", (filePath) => this.handleFileEvent(filePath, "change"))
-    this.watcher.on("unlink", (filePath) => this.handleFileEvent(filePath, "delete"))
-    this.ready = new Promise((resolve, reject) => {
-      this.watcher?.once("ready", resolve)
-      this.watcher?.once("error", reject)
-      setTimeout(() => reject(new Error(`File watcher initialization timed out after ${FILE_WATCHER_INIT_TIMEOUT_MS}ms`)), FILE_WATCHER_INIT_TIMEOUT_MS)
-    })
-    await this.ready
-    log.info("file watcher ready", { workspacePath: this.workspacePath })
+    await this.initializing
   }
 
   setOverlay(overlay?: WorktreeOverlay): void {
@@ -190,25 +250,28 @@ export class FileWatcher implements IFileWatcher {
     this.collecting = false
     if (this.batchProcessDebounceTimer) clearTimeout(this.batchProcessDebounceTimer)
     this.batchProcessDebounceTimer = undefined
-    await this.watcher?.close()
+    await this.subscription?.unsubscribe()
     await this.drainTask
     this.dispose()
   }
 
   dispose(): void {
     this.collecting = false
-    void this.watcher?.close()
-    if (this.batchProcessDebounceTimer) clearTimeout(this.batchProcessDebounceTimer)
-    this.batchProcessDebounceTimer = undefined
+    void this.subscription?.unsubscribe()
+    if (this.batchProcessDebounceTimer) {
+      clearTimeout(this.batchProcessDebounceTimer)
+      this.batchProcessDebounceTimer = undefined
+    }
     this.onDidStartBatchProcessing.dispose()
     this.onBatchProgressUpdate.dispose()
     this.onDidFinishBatchProcessing.dispose()
     this.accumulatedEvents.clear()
-    this.ready = undefined
+    this.initializing = undefined
+    this.subscription = undefined
   }
 
   /**
-   * Handles a file event from chokidar by accumulating it and scheduling batch processing.
+   * Handles a file event by accumulating it and scheduling batch processing.
    */
   private handleFileEvent(filePath: string, type: "create" | "change" | "delete"): void {
     if (!this.shouldIndex(filePath)) return
