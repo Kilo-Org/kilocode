@@ -186,7 +186,6 @@ export class FileWatcher implements IFileWatcher {
     }
 
       const ignorePatterns: string[] = [...FileIgnore.PATTERNS]
-      const actualIgnore: string[] = [...ignorePatterns]
 
       binding
         .subscribe(this.workspacePath, callback, {
