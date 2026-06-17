@@ -25,6 +25,16 @@ import { useBindings, useCommandShortcut } from "../../keymap"
 import { usePathFormatter } from "../../context/path-format"
 
 type PermissionStage = "permission" | "always" | "reject"
+// kilocode_change start - allow Kilo-owned permission renderers without per-permission shared branches
+export type PermissionInfo = { icon: string; title: string; body: JSX.Element }
+export type PermissionRenderer = (request: PermissionRequest) => PermissionInfo
+
+const renderers = new Map<string, PermissionRenderer>()
+
+export function registerPermissionRenderer(id: string, renderer: PermissionRenderer) {
+  renderers.set(id, renderer)
+}
+// kilocode_change end
 
 function filetype(input?: string) {
   if (!input) return "none"
@@ -404,6 +414,11 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
                 ),
               }
             }
+
+            // kilocode_change start
+            const custom = renderers.get(permission)
+            if (custom) return custom(props.request)
+            // kilocode_change end
 
             return {
               icon: "⚙",

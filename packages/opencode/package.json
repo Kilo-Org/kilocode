@@ -107,6 +107,7 @@
     "@hono/zod-validator": "catalog:",
     "@kilocode/kilo-gateway": "workspace:*",
     "@kilocode/kilo-indexing": "workspace:*",
+    "@kilocode/kilo-memory": "workspace:*",
     "@kilocode/kilo-telemetry": "workspace:*",
     "@kilocode/plugin": "workspace:*",
     "@kilocode/plugin-atomic-chat": "workspace:*",

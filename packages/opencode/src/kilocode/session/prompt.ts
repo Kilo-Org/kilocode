@@ -20,6 +20,8 @@ import { environmentDetails, type EditorContext } from "@/kilocode/editor-contex
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
 import { InstanceState } from "@/effect/instance-state"
+import { MemoryPaths } from "@/kilocode/memory"
+import { KiloToolRegistry } from "@/kilocode/tool/registry"
 import PROMPT_PLAN from "@/session/prompt/plan.txt"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
@@ -184,6 +186,10 @@ export namespace KiloSessionPrompt {
     user?: string
   }
 
+  export function memoryToolEnabled(input: { ctx: MemoryPaths.Ctx }) {
+    return KiloToolRegistry.memoryToolsEnabled({ ctx: input.ctx })
+  }
+
   /**
    * Ephemerally injects dynamic editor context (visible files, open tabs, etc.)
    * into the last user message. Caches the result per user message ID so repeated
@@ -212,6 +218,10 @@ export namespace KiloSessionPrompt {
     if (!input.cache.block) return
     const idx = input.msgs.findLastIndex((m) => m.info.role === "user")
     if (idx === -1) return
+    const exists = input.msgs[idx].parts.some(
+      (part) => part.type === "text" && part.synthetic && part.text === input.cache.block,
+    )
+    if (exists) return
     input.msgs[idx] = {
       ...input.msgs[idx],
       parts: [
@@ -331,7 +341,7 @@ export namespace KiloSessionPrompt {
   export function resolveCloseReason(input: {
     sessionID: string
     closeReasons: Map<string, KiloSession.CloseReason>
-    exit: Exit.Exit<any, any>
+    exit: Exit.Exit<unknown, unknown>
   }): KiloSession.CloseReason {
     const explicit = input.closeReasons.get(input.sessionID)
     input.closeReasons.delete(input.sessionID)

@@ -59,6 +59,7 @@ import { SessionStatus } from "@/session/status" // kilocode_change
 import { Reference } from "@/reference/reference"
 import { BackgroundJob } from "@/background/job"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { MemoryService } from "@/kilocode/memory/service" // kilocode_change
 
 const log = Log.create({ service: "tool.registry" })
 
@@ -146,10 +147,8 @@ export const layer: Layer.Layer<
     const patchtool = yield* ApplyPatchTool
     const skilltool = yield* SkillTool
     const agent = yield* Agent.Service
-    // kilocode_change start
-    const suggesttool = yield* SuggestTool
-    const kiloToolInfos = yield* KiloToolRegistry.infos()
-    // kilocode_change end
+    const suggesttool = yield* SuggestTool // kilocode_change
+    const kiloToolInfos = yield* KiloToolRegistry.infos().pipe(Effect.provide(MemoryService.defaultLayer)) // kilocode_change
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("ToolRegistry.state")(function* (ctx) {
@@ -351,9 +350,10 @@ export const layer: Layer.Layer<
 
         return true
       })
+      const kiloFiltered = yield* KiloToolRegistry.applyVisibility(filtered) // kilocode_change
 
       return yield* Effect.forEach(
-        filtered,
+        kiloFiltered, // kilocode_change
         Effect.fnUntraced(function* (tool: Tool.Def) {
           using _ = log.time(tool.id)
           const output = {
@@ -420,7 +420,11 @@ export const defaultLayer = Layer.suspend(
         Layer.provide(Truncate.defaultLayer),
       )
       // kilocode_change start - provide Kilo-owned registry dependencies
-      .pipe(Layer.provide(Command.defaultLayer), Layer.provide(RuntimeFlags.defaultLayer)),
+      .pipe(
+        Layer.provide(Command.defaultLayer),
+        Layer.provide(RuntimeFlags.defaultLayer),
+        Layer.provide(MemoryService.defaultLayer),
+      ),
   // kilocode_change end
 )
 

@@ -1181,6 +1181,48 @@ test("installs dependencies in writable KILO_CONFIG_DIR", async () => {
   }
 })
 
+// kilocode_change start
+test("does not install plugin dependencies for memory-only .kilo directory", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await fs.mkdir(path.join(dir, ".kilo", "memory"), { recursive: true })
+      await Filesystem.write(path.join(dir, ".kilo", "memory", "state.json"), "{}")
+    },
+  })
+
+  const installs: string[] = []
+  const npm = Layer.mock(Npm.Service)({
+    install: (dir) =>
+      Effect.sync(() => {
+        installs.push(dir)
+      }),
+    add: () => Effect.die("not implemented"),
+    which: () => Effect.succeed(Option.none()),
+  })
+  const testLayer = Config.layer.pipe(
+    Layer.provide(testFlock),
+    Layer.provide(AppFileSystem.defaultLayer),
+    Layer.provide(Env.defaultLayer),
+    Layer.provide(emptyAuth),
+    Layer.provide(emptyAccount),
+    Layer.provideMerge(infra),
+    Layer.provide(npm),
+  )
+
+  await WithInstance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      await Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(testLayer)))
+      await Effect.runPromise(
+        Config.Service.use((svc) => svc.waitForDependencies()).pipe(Effect.scoped, Effect.provide(testLayer)),
+      )
+    },
+  })
+
+  expect(installs).not.toContain(path.join(tmp.path, ".kilo"))
+})
+// kilocode_change end
+
 // Note: deduplication and serialization of npm installs is now handled by the
 // core Npm.Service (via EffectFlock). Those behaviors are tested in the core
 // package's npm tests, not here.

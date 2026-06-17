@@ -228,7 +228,7 @@ export interface KiloData {
 // Prepare kilo-specific data derived from config. Call once per state initialization.
 export function prepare(cfg: Config.Info): KiloData {
   const mcpRules = getMcpRules(cfg)
-  const defaultsPatch = Permission.fromConfig({ bash, recall: "ask" })
+  const defaultsPatch = Permission.fromConfig({ bash, recall: "ask", kilo_memory_recall: "ask", kilo_memory_save: "ask" })
   return { mcpRules, defaultsPatch }
 }
 

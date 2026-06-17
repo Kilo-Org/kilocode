@@ -41,6 +41,7 @@ import { SyncEvent } from "../../src/sync"
 import { Ripgrep } from "../../src/file/ripgrep"
 import { ToolRegistry } from "../../src/tool/registry"
 import { Truncate } from "../../src/tool/truncate"
+import { MemoryService } from "../../src/kilocode/memory/service"
 import { provideTmpdirServer } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
@@ -134,6 +135,7 @@ function makeHttp() {
     Reference.defaultLayer,
     SyncEvent.defaultLayer,
     status,
+    MemoryService.defaultLayer,
   ).pipe(Layer.provideMerge(infra))
   const question = Question.layer.pipe(Layer.provideMerge(deps))
   const todo = Todo.layer.pipe(Layer.provideMerge(deps))

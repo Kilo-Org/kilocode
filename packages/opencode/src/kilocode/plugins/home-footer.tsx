@@ -2,12 +2,12 @@
 /**
  * Kilo-specific home footer plugin.
  *
- * Replaces the upstream `home_footer` slot (order 101 > upstream 100)
- * to inject the RemoteIndicator alongside the standard directory, MCP,
- * and version information.
+ * Replaces the upstream `home_footer` slot with a lower-order single-winner
+ * entry (99 before upstream 100) so Kilo can show memory, remote, and indexing
+ * status alongside the standard directory, MCP, and version information.
  */
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@kilocode/plugin/tui"
-import { createMemo, createSignal, Match, onCleanup, onMount, Show, Switch } from "solid-js"
+import { createMemo, createResource, createSignal, Match, onCleanup, onMount, Show, Switch } from "solid-js"
 import { Global } from "@opencode-ai/core/global"
 
 const id = "internal:kilo-home-footer"
@@ -31,7 +31,9 @@ function RemoteIndicator(props: { api: TuiPluginApi; kilo: boolean }) {
       .then((res: { data?: Status }) => {
         if (res.data) setStatus(res.data)
       })
-      .catch(() => undefined)
+      .catch((_error: unknown) => {
+        setStatus(null)
+      })
     const off = props.api.event.on("kilo-sessions.remote-status-changed", (evt) => setStatus(evt.properties))
     onCleanup(off)
   })
@@ -89,6 +91,50 @@ function Mcp(props: { api: TuiPluginApi }) {
   )
 }
 
+function Memory(props: { api: TuiPluginApi }) {
+  const theme = () => props.api.theme.current
+  const [tick, setTick] = createSignal(0)
+  const [status] = createResource(tick, async () => {
+    const result = await props.api.client.memory.status()
+    if (result.error || !result.data) return
+    return result.data
+  })
+  const enabled = createMemo(() => status()?.state.enabled ?? false)
+  const tokens = createMemo(() => status()?.index.estimatedTokens ?? 0)
+  const active = createMemo(() => enabled())
+  const label = createMemo(() => {
+    if (!enabled()) return "Disabled"
+    return "Enabled"
+  })
+
+  onMount(() => {
+    const bump = () => setTick((value) => value + 1)
+    const unsubs = [
+      props.api.event.on("memory.status", bump),
+      props.api.event.on("memory.updated", bump),
+      props.api.event.on("memory.error", bump),
+    ]
+    const id = setInterval(bump, 15_000).unref()
+    onCleanup(() => {
+      for (const unsub of unsubs) unsub()
+      clearInterval(id)
+    })
+  })
+
+  return (
+    <Show when={status()}>
+      <box gap={1} flexDirection="row" flexShrink={0}>
+        <text fg={theme().text}>
+          <span style={{ fg: active() ? theme().success : theme().textMuted }}>⊙ </span>
+          Memory {label()}
+          <Show when={enabled()}> · {tokens().toLocaleString()} index</Show>
+        </text>
+        <text fg={theme().textMuted}>/memory</text>
+      </box>
+    </Show>
+  )
+}
+
 function Version(props: { api: TuiPluginApi }) {
   const theme = () => props.api.theme.current
 
@@ -121,6 +167,7 @@ function View(props: { api: TuiPluginApi }) {
       <box gap={1} flexDirection="row" flexShrink={0}>
         <RemoteIndicator api={props.api} kilo={kilo()} />
         <Mcp api={props.api} />
+        <Memory api={props.api} />
       </box>
       <box flexGrow={1} />
       <Version api={props.api} />

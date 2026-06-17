@@ -3,12 +3,17 @@ import { CodebaseSearchTool } from "../../tool/warpgrep"
 import { RecallTool } from "../../tool/recall"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
+import { MemoryRecallTool } from "./memory-recall"
+import { MemorySaveTool } from "./memory-save"
 import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Effect } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
+import type { Config } from "@/config/config"
 import { Agent } from "@/agent/agent"
 import * as Truncate from "@/tool/truncate"
+import { InstanceState } from "@/effect/instance-state"
+import { KiloMemory, MemoryPaths } from "@/kilocode/memory"
 
 const log = Log.create({ service: "kilocode-tool-registry" })
 type Deps = { agent: Agent.Interface; truncate: Truncate.Interface }
@@ -27,16 +32,25 @@ export namespace KiloToolRegistry {
     return Effect.gen(function* () {
       const codebase = yield* CodebaseSearchTool
       const recall = yield* RecallTool
+      const memory = yield* MemoryRecallTool
+      const save = yield* MemorySaveTool
       const manager = yield* AgentManagerTool
       const process = yield* BackgroundProcessTool
-      return { codebase, recall, manager, process }
+      return { codebase, recall, memory, save, manager, process }
     })
   }
 
   /** Finalize Kilo-specific tools into Tool.Defs. Call this inside the InstanceState state Effect —
    * it has no Service deps beyond what Tool.init itself needs. */
   export function build(
-    tools: { codebase: Tool.Info; recall: Tool.Info; manager: Tool.Info; process: Tool.Info },
+    tools: {
+      codebase: Tool.Info
+      recall: Tool.Info
+      memory: Tool.Info
+      save: Tool.Info
+      manager: Tool.Info
+      process: Tool.Info
+    },
     deps: Deps,
     loaders: Loaders = {},
   ) {
@@ -44,6 +58,8 @@ export namespace KiloToolRegistry {
       const base = yield* Effect.all({
         codebase: Tool.init(tools.codebase),
         recall: Tool.init(tools.recall),
+        memory: Tool.init(tools.memory),
+        save: Tool.init(tools.save),
         manager: Tool.init(tools.manager),
         process: Tool.init(tools.process),
       })
@@ -87,18 +103,66 @@ export namespace KiloToolRegistry {
 
   /** Kilo-specific tools to append to the builtin list */
   export function extra(
-    tools: { codebase: Tool.Def; semantic?: Tool.Def; recall: Tool.Def; manager: Tool.Def; process: Tool.Def },
-    cfg: { experimental?: { codebase_search?: boolean } },
+    tools: {
+      codebase: Tool.Def
+      semantic?: Tool.Def
+      recall: Tool.Def
+      memory: Tool.Def
+      save: Tool.Def
+      manager: Tool.Def
+      process: Tool.Def
+    },
+    cfg: Pick<Config.Info, "experimental">,
   ): Tool.Def[] {
     return [
       ...(cfg.experimental?.codebase_search === true ? [tools.codebase] : []),
       ...(tools.semantic ? [tools.semantic] : []),
+      tools.memory,
+      tools.save,
       tools.recall,
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
       // The extension is the only client that can consume the Agent Manager start event.
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.manager] : []),
     ]
   }
+
+  // kilocode_change start - re-keyed to root string so invalidate() works across ctx identities
+  const memoryEnabledCache = new Map<string, { enabled: boolean; deadline: number }>()
+  const MEMORY_ENABLED_TTL_MS = 5_000
+
+  /** Drop the cached enabled flag for a root so the next probe re-reads fresh state.
+   * Called by the MemoryEvents subscriber in bootstrap on every state mutation. */
+  export function invalidateMemoryEnabled(root: string) {
+    memoryEnabledCache.delete(root)
+  }
+
+  /** Per-turn cache of `KiloMemory.toolEnabled` keyed by root string, with a short TTL so the
+   * step-loop coalesces probes inside a single turn. Cache is invalidated immediately on enable /
+   * disable / purge / rebuild via the MemoryEvents bus (subscribed in kilocode/bootstrap.ts). */
+  export function memoryToolsEnabled(input: { ctx: MemoryPaths.Ctx }) {
+    return Effect.gen(function* () {
+      const root = MemoryPaths.root({ ctx: input.ctx })
+      const cached = memoryEnabledCache.get(root)
+      if (cached && cached.deadline > Date.now()) return cached.enabled
+      const enabled = yield* Effect.tryPromise({
+        try: () => KiloMemory.toolEnabled({ ctx: input.ctx }),
+        catch: (err) => err,
+      }).pipe(Effect.catch(() => Effect.succeed(false)))
+      memoryEnabledCache.set(root, { enabled, deadline: Date.now() + MEMORY_ENABLED_TTL_MS })
+      return enabled
+    })
+  }
+  // kilocode_change end
+
+  /** Hide Kilo memory tools from the model when project memory is disabled. */
+  export const applyVisibility = Effect.fn("KiloToolRegistry.applyVisibility")(function* (tools: Tool.Def[]) {
+    const ctx = yield* InstanceState.context
+    const memoryEnabled = yield* memoryToolsEnabled({ ctx })
+    return tools.filter((tool) => {
+      if (tool.id.startsWith("kilo_memory_")) return memoryEnabled
+      return true
+    })
+  })
 
   export function describe(tools: Tool.Def[], extra: { semantic?: Tool.Def }): Tool.Def[] {
     if (!extra.semantic) return tools

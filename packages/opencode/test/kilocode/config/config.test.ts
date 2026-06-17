@@ -3,6 +3,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { Effect, Layer, Option, Schema } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import path from "path"
+import fs from "fs/promises"
 import { Global } from "@opencode-ai/core/global"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
@@ -34,15 +35,17 @@ const noopNpm = Layer.mock(Npm.Service)({
   add: () => Effect.die("not implemented"),
   which: () => Effect.succeed(Option.none()),
 })
-const layer = Config.layer.pipe(
-  Layer.provide(EffectFlock.defaultLayer),
-  Layer.provide(AppFileSystem.defaultLayer),
-  Layer.provide(Env.defaultLayer),
-  Layer.provide(emptyAuth),
-  Layer.provide(emptyAccount),
-  Layer.provideMerge(infra),
-  Layer.provide(noopNpm),
-)
+const configLayer = (npm = noopNpm) =>
+  Config.layer.pipe(
+    Layer.provide(EffectFlock.defaultLayer),
+    Layer.provide(AppFileSystem.defaultLayer),
+    Layer.provide(Env.defaultLayer),
+    Layer.provide(emptyAuth),
+    Layer.provide(emptyAccount),
+    Layer.provideMerge(infra),
+    Layer.provide(npm),
+  )
+const layer = configLayer()
 
 const load = () => Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(layer)))
 const clear = () =>
@@ -77,6 +80,21 @@ const cfg: Partial<Config.Info> = {
     },
   },
 }
+
+describe("memory config", () => {
+  test("keeps memory project-state driven by default", () => {
+    const field = Config.Info.ast.propertySignatures.find((item) => String(item.name) === "experimental")
+    const type = field?.type
+    const shape = type?._tag === "Union" ? type.types.find((item) => item._tag === "Objects") : undefined
+    if (shape?._tag !== "Objects") throw new Error("experimental config schema shape changed")
+    const keys = shape.propertySignatures.map((item) => String(item.name))
+
+    expect(keys).not.toContain("memory")
+    expect(decode({}).experimental).toBeUndefined()
+    expect(decode({ experimental: { batch_tool: true } }).experimental?.batch_tool).toBe(true)
+  })
+
+})
 
 afterEach(async () => {
   delete process.env.KILO_MD_TEST
@@ -232,6 +250,69 @@ describe("kilocode indexing config", () => {
     expect(input.modelId).toBeUndefined()
     expect(input.modelDimension).toBeUndefined()
   })
+
+  test("skips dependency install only for memory-only project config dirs", async () => { // kilocode_change - extended cases
+    async function installed(entries: string[]) {
+      await using tmp = await tmpdir({ git: true })
+      await using global = await tmpdir()
+      await using home = await tmpdir()
+      const dir = path.join(tmp.path, ".kilo")
+      await fs.mkdir(dir, { recursive: true })
+      for (const entry of entries) {
+        const target = path.join(dir, entry)
+        if (entry.endsWith("/")) {
+          await fs.mkdir(target, { recursive: true })
+          continue
+        }
+        await Filesystem.write(target, "{}")
+      }
+      const calls: string[] = []
+      const npm = Layer.mock(Npm.Service)({
+        install: (item) =>
+          Effect.sync(() => {
+            calls.push(item)
+          }),
+        add: () => Effect.die("not implemented"),
+        which: () => Effect.succeed(Option.none()),
+      })
+      const prev = Global.Path.config
+      const prior = process.env.KILO_TEST_HOME
+      ;(Global.Path as { config: string }).config = global.path
+      process.env.KILO_TEST_HOME = home.path
+      await clear()
+      await disposeAllInstances()
+      try {
+        await WithInstance.provide({
+          directory: tmp.path,
+          fn: () =>
+            Effect.runPromise(
+              Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(configLayer(npm))),
+            ),
+        })
+        await Bun.sleep(10)
+        return calls.includes(dir)
+      } finally {
+        ;(Global.Path as { config: string }).config = prev
+        if (prior === undefined) delete process.env.KILO_TEST_HOME
+        if (prior !== undefined) process.env.KILO_TEST_HOME = prior
+        await clear()
+        await disposeAllInstances()
+      }
+    }
+
+    // memory-only dirs: skip install
+    expect(await installed(["memory/"])).toBe(false)
+    expect(await installed(["memory/", ".gitignore"])).toBe(false)
+    expect(await installed(["memory/", "package.json"])).toBe(false)
+    expect(await installed(["memory/", "bun.lock"])).toBe(false)
+    // dirs with plugin/tool/agent/command entries: install
+    expect(await installed(["memory/", "tool/"])).toBe(true)
+    expect(await installed(["memory/", "plugin/"])).toBe(true)
+    expect(await installed(["memory/", "node_modules/"])).toBe(true)
+    // no memory dir: always install
+    expect(await installed(["package.json"])).toBe(true)
+    expect(await installed([])).toBe(true)
+  }, 30_000) // kilocode_change - 9 cases each provision a fresh instance; raise the timeout
 })
 
 describe("subagent variant overrides", () => {
