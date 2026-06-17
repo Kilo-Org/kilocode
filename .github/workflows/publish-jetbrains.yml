@@ -7,9 +7,15 @@ on:
       - closed
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Merged release PR number to republish"
+        required: true
+        type: string
 
 concurrency:
-  group: publish-jetbrains-pr-${{ github.event.pull_request.number }}
+  group: publish-jetbrains-pr-${{ github.event.pull_request.number || inputs.pr_number }}
   cancel-in-progress: false
 
 permissions:
@@ -23,17 +29,33 @@ jobs:
   publish:
     if: >-
       github.repository == 'Kilo-Org/kilocode' &&
-      github.event.pull_request.merged == true &&
-      startsWith(github.event.pull_request.head.ref, 'jetbrains/release/') &&
-      contains(github.event.pull_request.labels.*.name, 'jetbrains-release') &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event.pull_request.merged == true &&
+          startsWith(github.event.pull_request.head.ref, 'jetbrains/release/') &&
+          contains(github.event.pull_request.labels.*.name, 'jetbrains-release') &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        )
+      )
     runs-on: blacksmith-8vcpu-ubuntu-2404
     steps:
+      - name: Resolve release PR
+        id: pr
+        run: |
+          pr="${{ github.event.pull_request.number || inputs.pr_number }}"
+          merge_sha=$(gh pr view "$pr" --json mergeCommit --jq '.mergeCommit.oid')
+          echo "number=$pr" >> "$GITHUB_OUTPUT"
+          echo "merge_sha=$merge_sha" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+
       - name: Checkout merged release PR
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          ref: ${{ steps.pr.outputs.merge_sha }}
 
       - name: Setup Bun for validation
         uses: ./.github/actions/setup-bun
@@ -44,7 +66,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
 
       - name: Save reviewed release metadata
         run: |
