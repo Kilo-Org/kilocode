@@ -60,6 +60,24 @@ jobs:
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+        with:
+          cache-namespace: bun-test
+          # Keep this allowlist aligned with test:ci workspaces and their build dependencies.
+          install-flags: >-
+            --filter='./'
+            --filter='@kilocode/cli'
+            --filter='@kilocode/kilo-gateway'
+            --filter='@kilocode/kilo-indexing'
+            --filter='@kilocode/kilo-telemetry'
+            --filter='@kilocode/plugin'
+            --filter='@kilocode/plugin-atomic-chat'
+            --filter='@kilocode/sdk'
+            --filter='@opencode-ai/core'
+            --filter='@opencode-ai/effect-drizzle-sqlite'
+            --filter='@opencode-ai/http-recorder'
+            --filter='@opencode-ai/llm'
+            --filter='@opencode-ai/script'
+            --filter='@opencode-ai/ui'
 
       - name: Configure git identity
         run: |
