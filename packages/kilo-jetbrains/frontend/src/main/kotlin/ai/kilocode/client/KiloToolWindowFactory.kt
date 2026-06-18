@@ -1,11 +1,12 @@
 package ai.kilocode.client
 
-import ai.kilocode.client.actions.NewSessionAction
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.SessionSidePanelManager
+import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
@@ -14,7 +15,6 @@ import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.content.ContentFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -27,15 +27,22 @@ import kotlinx.coroutines.withContext
  * completes.
  */
 class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
-
-    companion object {
-        private val LOG = KiloLog.create(KiloToolWindowFactory::class.java)
-    }
-
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
+        project.service<KiloToolWindowSetupService>().create(toolWindow)
+    }
+}
+
+private val LOG = KiloLog.create(KiloToolWindowFactory::class.java)
+
+@Service(Service.Level.PROJECT)
+internal class KiloToolWindowSetupService(
+    private val project: Project,
+    private val cs: CoroutineScope,
+) {
+    fun create(toolWindow: ToolWindow) {
+        val start = System.currentTimeMillis()
         try {
             val workspaces = service<KiloWorkspaceService>()
-            val cs = CoroutineScope(SupervisorJob())
             val hint = project.basePath ?: ""
 
             cs.launch {
@@ -44,8 +51,13 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
                 withContext(Dispatchers.Main) {
                     setup(project, toolWindow, workspace)
                 }
+                Telemetry.send("Tool Window Opened", mapOf(
+                    "projectResolved" to dir.isNotBlank().toString(),
+                    "durationMs" to (System.currentTimeMillis() - start).toString(),
+                ))
             }
         } catch (e: Exception) {
+            Telemetry.send("Tool Window Setup Failed", mapOf("stage" to "create", "errorClass" to e::class.java.name))
             LOG.error("Failed to create Kilo tool window content", e)
         }
     }
@@ -64,10 +76,14 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
             toolWindow.contentManager.setSelectedContent(content)
             manager.newSession()
 
-            ActionManager.getInstance().getAction("Kilo.Settings")?.let { settings ->
-                toolWindow.setTitleActions(listOf(NewSessionAction(), settings))
-            }
+            val actions = listOfNotNull(
+                ActionManager.getInstance().getAction("Kilo.NewSession"),
+                ActionManager.getInstance().getAction("Kilo.History"),
+                ActionManager.getInstance().getAction("Kilo.Settings"),
+            )
+            toolWindow.setTitleActions(actions)
         } catch (e: Exception) {
+            Telemetry.send("Tool Window Setup Failed", mapOf("stage" to "setup", "errorClass" to e::class.java.name))
             LOG.error("Failed to set up Kilo tool window content", e)
         }
     }

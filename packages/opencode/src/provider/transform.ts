@@ -1,11 +1,9 @@
-import type { ModelMessage } from "ai"
+import type { ModelMessage, ToolResultPart } from "ai"
 import { mergeDeep, unique } from "remeda"
 import type { JSONSchema7 } from "@ai-sdk/provider"
-import type { JSONSchema } from "zod/v4/core"
 import type * as Provider from "./provider"
-import type * as ModelsDev from "./models"
+import type * as ModelsDev from "@opencode-ai/core/models"
 import { iife } from "@/util/iife"
-import { Flag } from "@opencode-ai/core/flag/flag"
 import { kiloProviderOptions } from "@/kilocode/provider-options"
 import { isLing } from "@/kilocode/model-match" // kilocode_change
 
@@ -19,7 +17,11 @@ function mimeToModality(mime: string): Modality | undefined {
   return undefined
 }
 
-export const OUTPUT_TOKEN_MAX = Flag.KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX || 32_000
+export const OUTPUT_TOKEN_MAX = 32_000
+
+export function sanitizeSurrogates(content: string) {
+  return content.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "\uFFFD")
+}
 
 // Maps npm package to the key the AI SDK expects for providerOptions
 function sdkKey(npm: string): string | undefined {
@@ -45,15 +47,85 @@ function sdkKey(npm: string): string | undefined {
       return "openrouter"
     case "@kilocode/kilo-gateway": // kilocode_change
       return "openrouter"
+    case "ai-gateway-provider":
+      // ai-gateway-provider/unified wraps createOpenAICompatible({ name: "Unified" }),
+      // and @ai-sdk/openai-compatible parses compatibleOptions from one of
+      // "openai-compatible" / "openaiCompatible" / "Unified" / "unified". The
+      // "openai-compatible" key emits a deprecation warning at runtime, so we
+      // pick the camelCase form the SDK now treats as canonical.
+      return "openaiCompatible"
   }
   return undefined
 }
 
+// TODO: fix this stupid inefficient dogshit function
 function normalizeMessages(
   msgs: ModelMessage[],
   model: Provider.Model,
   _options: Record<string, unknown>,
 ): ModelMessage[] {
+  const sanitizeToolResultOutput = (content: ToolResultPart) => {
+    if (content.output.type === "text" || content.output.type === "error-text") {
+      content.output.value = sanitizeSurrogates(content.output.value)
+    }
+    if (content.output.type === "content") {
+      content.output.value = content.output.value.map((item) => {
+        if (item.type === "text") {
+          item.text = sanitizeSurrogates(item.text)
+        }
+        return item
+      })
+    }
+    return content
+  }
+
+  msgs = msgs.map((msg) => {
+    switch (msg.role) {
+      case "tool":
+        if (!Array.isArray(msg.content)) return msg
+        msg.content = msg.content.map((content) => {
+          if (content.type === "tool-result") {
+            return sanitizeToolResultOutput(content)
+          }
+          return content
+        })
+        return msg
+
+      case "system":
+        msg.content = sanitizeSurrogates(msg.content)
+        return msg
+
+      case "user":
+        if (typeof msg.content === "string") {
+          msg.content = sanitizeSurrogates(msg.content)
+        } else {
+          msg.content = msg.content.map((content) => {
+            if (content.type === "text") {
+              content.text = sanitizeSurrogates(content.text)
+            }
+            return content
+          })
+        }
+        return msg
+
+      case "assistant":
+        if (typeof msg.content === "string") {
+          msg.content = sanitizeSurrogates(msg.content)
+        } else {
+          msg.content = msg.content.map((content) => {
+            if (content.type === "text" || content.type === "reasoning") {
+              content.text = sanitizeSurrogates(content.text)
+            }
+            if (content.type === "tool-result") {
+              return sanitizeToolResultOutput(content)
+            }
+            return content
+          })
+        }
+        return msg
+    }
+  })
+
   // Anthropic rejects messages with empty content - filter out empty string messages
   // and remove empty text/reasoning parts from array content
   if (model.api.npm === "@ai-sdk/anthropic") {
@@ -65,8 +137,15 @@ function normalizeMessages(
         }
         if (!Array.isArray(msg.content)) return msg
         const filtered = msg.content.filter((part) => {
-          if (part.type === "text" || part.type === "reasoning") {
+          if (part.type === "text") {
             return part.text !== ""
+          }
+          if (part.type === "reasoning") {
+            return (
+              part.text.trim().length > 0 ||
+              part.providerOptions?.anthropic?.signature != null ||
+              part.providerOptions?.anthropic?.redactedData != null
+            )
           }
           return true
         })
@@ -89,8 +168,15 @@ function normalizeMessages(
         }
         if (!Array.isArray(msg.content)) return msg
         const filtered = msg.content.filter((part) => {
-          if (part.type === "text" || part.type === "reasoning") {
+          if (part.type === "text") {
             return part.text !== ""
+          }
+          if (part.type === "reasoning") {
+            return (
+              part.text.trim().length > 0 ||
+              part.providerOptions?.bedrock?.signature != null ||
+              part.providerOptions?.bedrock?.redactedData != null
+            )
           }
           return true
         })
@@ -436,15 +522,110 @@ export function topK(model: Provider.Model) {
 
 const WIDELY_SUPPORTED_EFFORTS = ["low", "medium", "high"]
 const OPENAI_EFFORTS = ["none", "minimal", ...WIDELY_SUPPORTED_EFFORTS, "xhigh"]
+const OPENAI_GPT5_1_EFFORTS = ["none", ...WIDELY_SUPPORTED_EFFORTS]
+const OPENAI_GPT5_2_PLUS_EFFORTS = [...OPENAI_GPT5_1_EFFORTS, "xhigh"]
+const OPENAI_GPT5_PRO_EFFORTS = ["high"]
+const OPENAI_GPT5_PRO_2_PLUS_EFFORTS = ["medium", "high", "xhigh"]
+const OPENAI_GPT5_CHAT_EFFORTS = ["medium"]
+const OPENAI_GPT5_CODEX_XHIGH_EFFORTS = [...WIDELY_SUPPORTED_EFFORTS, "xhigh"]
+const OPENAI_GPT5_CODEX_3_PLUS_EFFORTS = ["none", ...OPENAI_GPT5_CODEX_XHIGH_EFFORTS]
+
+// OpenAI rolled out the `none` reasoning_effort tier on this date (Responses API).
+// Models released before it 400 on `reasoning_effort: "none"`, so we only expose
+// it as a variant for models new enough to accept it.
+const OPENAI_NONE_EFFORT_RELEASE_DATE = "2025-11-13"
+
+// OpenAI rolled out the `xhigh` reasoning_effort tier on this date. Same reasoning.
+const OPENAI_XHIGH_EFFORT_RELEASE_DATE = "2025-12-04"
+
+// Matches members of the gpt-5 family across the id formats we encounter:
+//   "gpt-5", "gpt-5-nano", "gpt-5.4", "openai/gpt-5.4-codex".
+// Anchored to start-of-string or "/" so it doesn't false-match "gpt-50" or "gpt-5o".
+const GPT5_FAMILY_RE = /(?:^|\/)gpt-5(?:[.-]|$)/
+const GPT5_VERSION_RE = /(?:^|\/)gpt-5[.-](\d+)(?:[.-]|$)/
+const GPT5_PRO_RE = /(?:^|\/)gpt-5[.-]?pro(?:[.-]|$)/
+const GPT5_VERSIONED_PRO_RE = /(?:^|\/)gpt-5[.-]\d+[.-]pro(?:[.-]|$)/
+
+function gpt5Version(apiId: string) {
+  return Number(GPT5_VERSION_RE.exec(apiId)?.[1]) || undefined
+}
+
+function versionedGpt5ReasoningEfforts(apiId: string) {
+  if (GPT5_VERSIONED_PRO_RE.test(apiId)) return OPENAI_GPT5_PRO_2_PLUS_EFFORTS
+  const version = gpt5Version(apiId)
+  if (version === undefined) return undefined
+  if (version === 1) return OPENAI_GPT5_1_EFFORTS
+  return OPENAI_GPT5_2_PLUS_EFFORTS
+}
+
+function gpt5CodexReasoningEfforts(apiId: string) {
+  if (!GPT5_FAMILY_RE.test(apiId) || !apiId.includes("codex")) return undefined
+  const version = gpt5Version(apiId)
+  if (version !== undefined && version >= 3) return OPENAI_GPT5_CODEX_3_PLUS_EFFORTS
+  if (apiId.includes("codex-max") || (version !== undefined && version >= 2)) return OPENAI_GPT5_CODEX_XHIGH_EFFORTS
+  return WIDELY_SUPPORTED_EFFORTS
+}
+
+function gpt5ChatReasoningEfforts(apiId: string) {
+  if (!GPT5_FAMILY_RE.test(apiId) || !apiId.includes("-chat")) return undefined
+  return gpt5Version(apiId) === undefined ? [] : OPENAI_GPT5_CHAT_EFFORTS
+}
+
+// Computes the reasoning_effort tiers an OpenAI (or OpenAI-compatible upstream
+// routed through it, e.g. cf-ai-gateway) model exposes. Effort order: weakest
+// to strongest.
+function openaiReasoningEfforts(apiId: string, releaseDate: string) {
+  const id = apiId.toLowerCase()
+  if (id.includes("deep-research")) return ["medium"]
+  const chatEfforts = gpt5ChatReasoningEfforts(id)
+  if (chatEfforts) return chatEfforts
+  if (GPT5_PRO_RE.test(id)) return OPENAI_GPT5_PRO_EFFORTS
+  const codexEfforts = gpt5CodexReasoningEfforts(id)
+  if (codexEfforts) return codexEfforts
+  const versionedEfforts = versionedGpt5ReasoningEfforts(id)
+  // GPT-5.1 replaced GPT-5's `minimal` effort with `none`; GPT-5.2+
+  // additionally accepts `xhigh`. Model pages list the supported subset.
+  if (versionedEfforts) return versionedEfforts
+  const efforts = [...WIDELY_SUPPORTED_EFFORTS]
+  if (GPT5_FAMILY_RE.test(id)) efforts.unshift("minimal")
+  if (releaseDate >= OPENAI_NONE_EFFORT_RELEASE_DATE) efforts.unshift("none")
+  if (releaseDate >= OPENAI_XHIGH_EFFORT_RELEASE_DATE) efforts.push("xhigh")
+  return efforts
+}
+
+function openaiCompatibleReasoningEfforts(id: string) {
+  const apiId = id.toLowerCase()
+  const chatEfforts = gpt5ChatReasoningEfforts(apiId)
+  if (chatEfforts) return chatEfforts
+  if (GPT5_PRO_RE.test(apiId)) return OPENAI_GPT5_PRO_EFFORTS
+  return gpt5CodexReasoningEfforts(apiId) ?? versionedGpt5ReasoningEfforts(apiId) ?? OPENAI_EFFORTS
+}
 
 function anthropicAdaptiveEfforts(apiId: string): string[] | null {
-  if (["opus-4-7", "opus-4.7"].some((v) => apiId.includes(v))) {
+  // kilocode_change start - treat opus-4.8 like opus-4.7
+  if (["opus-4-7", "opus-4.7", "opus-4-8", "opus-4.8"].some((v) => apiId.includes(v))) {
     return ["low", "medium", "high", "xhigh", "max"]
   }
+  // kilocode_change end
   if (["opus-4-6", "opus-4.6", "sonnet-4-6", "sonnet-4.6"].some((v) => apiId.includes(v))) {
     return ["low", "medium", "high", "max"]
   }
   return null
+}
+
+function googleThinkingLevelEfforts(apiId: string) {
+  const id = apiId.toLowerCase()
+  if (!id.includes("gemini-3")) return ["low", "high"]
+  if (id.includes("flash-image")) return ["minimal", "high"]
+  if (id.includes("pro-image")) return ["high"]
+  if (id.includes("flash")) return ["minimal", "low", "medium", "high"]
+  return ["low", "medium", "high"]
+}
+
+function googleThinkingBudgetMax(apiId: string) {
+  const id = apiId.toLowerCase()
+  if (id.includes("2.5") && id.includes("pro") && !id.includes("flash")) return 32_768
+  return 24_576
 }
 
 export function variants(model: Provider.Model): Record<string, Record<string, any>> {
@@ -468,7 +649,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     id.includes("deepseek-reasoner") ||
     id.includes("deepseek-r1") ||
     id.includes("deepseek-v3") ||
-    id.includes("minimax") ||
+    // id.includes("minimax") || // kilocode_change
     // id.includes("glm") || // kilocode_change
     // id.includes("kimi") || // kilocode_change
     // TODO: Remove this after models.dev data is fixed to use "kimi-k2.5" instead of "k2p5"
@@ -498,7 +679,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     case "@kilocode/kilo-gateway": // kilocode_change
     case "@openrouter/ai-sdk-provider":
       // kilocode_change start
-      if (id.includes("glm") || id.includes("kimi") || id.includes("qwen")) {
+      if (id.includes("glm") || id.includes("kimi") || id.includes("qwen") || id.includes("minimax")) {
         return {
           instant: { reasoning: { enabled: false } },
           thinking: { reasoning: { enabled: true } },
@@ -506,13 +687,32 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       }
       // kilocode_change end
       if (
-        !model.id.includes("gpt") &&
-        !model.id.includes("gemini-3") &&
-        !model.id.includes("claude") &&
+        !id.includes("gpt") &&
+        !id.includes("gemini-3") &&
+        !id.includes("claude") &&
         !model.id.includes("mercury") // kilocode_change
       )
         return {}
-      return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
+      return Object.fromEntries(
+        (model.api.npm === "@kilocode/kilo-gateway" || !id.includes("gpt") // kilocode_change
+          ? OPENAI_EFFORTS
+          : openaiCompatibleReasoningEfforts(id)
+        ).map((effort) => [effort, { reasoning: { effort } }]),
+      )
+
+    case "ai-gateway-provider": {
+      // Cloudflare AI Gateway routes every upstream through its OpenAI-compatible
+      // /v1/compat endpoint, so the body is always OAI-shaped. The gateway
+      // translates `reasoning_effort` to the upstream provider's native control
+      // (e.g. Anthropic thinking budgets) when needed. Variants therefore stay
+      // OAI-style for all upstreams, with an extended effort set for OpenAI
+      // models that support it.
+      if (model.api.id.startsWith("openai/")) {
+        const efforts = openaiReasoningEfforts(model.api.id, model.release_date)
+        return Object.fromEntries(efforts.map((effort) => [effort, { reasoningEffort: effort }]))
+      }
+      return Object.fromEntries(WIDELY_SUPPORTED_EFFORTS.map((effort) => [effort, { reasoningEffort: effort }]))
+    }
 
     case "@ai-sdk/gateway":
       if (model.id.includes("anthropic")) {
@@ -571,7 +771,9 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
           ]),
         )
       }
-      return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoningEffort: effort }]))
+      return Object.fromEntries(
+        openaiCompatibleReasoningEfforts(model.api.id).map((effort) => [effort, { reasoningEffort: effort }]),
+      )
 
     case "@ai-sdk/github-copilot":
       if (model.id.includes("gemini")) {
@@ -619,47 +821,26 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     case "@ai-sdk/azure":
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/azure
       if (id === "o1-mini") return {}
-      const azureEfforts = ["low", "medium", "high"]
-      if (id.includes("gpt-5-") || id === "gpt-5") {
-        azureEfforts.unshift("minimal")
-      }
-      // kilocode_change start
-      if (model.release_date >= "2025-12-04") {
-        azureEfforts.push("xhigh")
-      }
-      // kilocode_change end
       return Object.fromEntries(
-        azureEfforts.map((effort) => [
-          effort,
-          {
-            reasoningEffort: effort,
-            reasoningSummary: "auto",
-            include: ["reasoning.encrypted_content"],
-          },
-        ]),
+        (GPT5_FAMILY_RE.test(id) && gpt5Version(id) === undefined
+          ? ["minimal", ...WIDELY_SUPPORTED_EFFORTS]
+          : WIDELY_SUPPORTED_EFFORTS
+        )
+          .concat(model.release_date >= OPENAI_XHIGH_EFFORT_RELEASE_DATE ? ["xhigh"] : []) // kilocode_change
+          .map((effort) => [
+            effort,
+            {
+              reasoningEffort: effort,
+              reasoningSummary: "auto",
+              include: ["reasoning.encrypted_content"],
+            },
+          ]),
       )
-    case "@ai-sdk/openai":
+    case "@ai-sdk/openai": {
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/openai
-      if (id === "gpt-5-pro") return {}
-      const openaiEfforts = iife(() => {
-        if (id.includes("codex")) {
-          if (id.includes("5.2") || id.includes("5.3")) return [...WIDELY_SUPPORTED_EFFORTS, "xhigh"]
-          return WIDELY_SUPPORTED_EFFORTS
-        }
-        const arr = [...WIDELY_SUPPORTED_EFFORTS]
-        if (id.includes("gpt-5-") || id === "gpt-5") {
-          arr.unshift("minimal")
-        }
-        if (model.release_date >= "2025-11-13") {
-          arr.unshift("none")
-        }
-        if (model.release_date >= "2025-12-04") {
-          arr.push("xhigh")
-        }
-        return arr
-      })
+      const efforts = openaiReasoningEfforts(model.api.id, model.release_date)
       return Object.fromEntries(
-        openaiEfforts.map((effort) => [
+        efforts.map((effort) => [
           effort,
           {
             reasoningEffort: effort,
@@ -668,17 +849,28 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
           },
         ]),
       )
+    }
 
     case "@ai-sdk/anthropic":
     // https://v5.ai-sdk.dev/providers/ai-sdk-providers/anthropic
     case "@ai-sdk/google-vertex/anthropic":
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/google-vertex#anthropic-provider
+      // kilocode_change start - MiniMax M-series toggles thinking on/off rather than exposing effort levels
+      if (id.includes("minimax")) {
+        return {
+          instant: { thinking: { type: "disabled" } },
+          thinking: { thinking: { type: "adaptive" } },
+        }
+      }
+      // kilocode_change end
       if (adaptiveEfforts) {
         let efforts = [...adaptiveEfforts]
         if (model.providerID === "github-copilot") {
-          if (model.api.id.includes("opus-4.7")) {
+          // kilocode_change start - treat opus-4.8 like opus-4.7
+          if (model.api.id.includes("opus-4.7") || model.api.id.includes("opus-4.8")) {
             efforts = ["medium"]
           }
+          // kilocode_change end
           // Efforts currently supported are: low, medium, high
           efforts = efforts.filter((v) => v !== "max" && v !== "xhigh")
         }
@@ -688,14 +880,20 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
             {
               thinking: {
                 type: "adaptive",
-                ...(model.api.id.includes("opus-4-7") || model.api.id.includes("opus-4.7")
+                // kilocode_change start - treat opus-4.8 like opus-4.7
+                ...(["opus-4-7", "opus-4.7", "opus-4-8", "opus-4.8"].some((v) => model.api.id.includes(v))
                   ? { display: "summarized" }
                   : {}),
+                // kilocode_change end
               },
               effort,
             },
           ]),
         )
+      }
+
+      if (["opus-4-5", "opus-4.5"].some((v) => model.api.id.includes(v))) {
+        return Object.fromEntries(WIDELY_SUPPORTED_EFFORTS.map((effort) => [effort, { effort }]))
       }
 
       return {
@@ -723,9 +921,11 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
               reasoningConfig: {
                 type: "adaptive",
                 maxReasoningEffort: effort,
-                ...(model.api.id.includes("opus-4-7") || model.api.id.includes("opus-4.7")
+                // kilocode_change start - treat opus-4.8 like opus-4.7
+                ...(["opus-4-7", "opus-4.7", "opus-4-8", "opus-4.8"].some((v) => model.api.id.includes(v))
                   ? { display: "summarized" }
                   : {}),
+                // kilocode_change end
               },
             },
           ]),
@@ -777,18 +977,14 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
           max: {
             thinkingConfig: {
               includeThoughts: true,
-              thinkingBudget: 24576,
+              thinkingBudget: googleThinkingBudgetMax(id),
             },
           },
         }
       }
-      let levels = ["low", "high"]
-      if (id.includes("3.1")) {
-        levels = ["low", "medium", "high"]
-      }
 
       return Object.fromEntries(
-        levels.map((effort) => [
+        googleThinkingLevelEfforts(id).map((effort) => [
           effort,
           {
             thinkingConfig: {
@@ -801,10 +997,19 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
 
     case "@ai-sdk/mistral":
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/mistral
-      // https://docs.mistral.ai/capabilities/reasoning/adjustable
+      // https://docs.mistral.ai/studio-api/conversations/reasoning // kilocode_change
       if (!model.capabilities.reasoning) return {}
       // Only Mistral Small 4 and Medium 3.5 support reasoning
-      const MISTRAL_REASONING_IDS = ["mistral-small-2603", "mistral-small-latest", "mistral-medium-3.5"]
+      const MISTRAL_REASONING_IDS = [
+        "mistral-small-2603",
+        "mistral-small-latest",
+        "mistral-medium-3.5",
+        // kilocode_change start
+        "mistral-medium-3-5",
+        "mistral-medium-latest",
+        // kilocode_change end
+        "mistral-medium-2604",
+      ]
       const mistralId = model.api.id.toLowerCase()
       if (!MISTRAL_REASONING_IDS.some((id) => mistralId.includes(id))) return {}
       return {
@@ -984,24 +1189,33 @@ export function options(input: {
     result["enable_thinking"] = true
   }
 
+  if (input.model.api.npm === "@ai-sdk/azure" && input.model.api.id.includes("gpt-5.5")) {
+    result["reasoningSummary"] = "auto"
+    return result
+  }
+
   if (input.model.api.id.includes("gpt-5") && !input.model.api.id.includes("gpt-5-chat")) {
     if (!input.model.api.id.includes("gpt-5-pro")) {
       result["reasoningEffort"] = "medium"
-      // Only inject reasoningSummary for providers that support it natively.
-      // @ai-sdk/openai-compatible proxies (e.g. LiteLLM) do not understand this
-      // parameter and return "Unknown parameter: 'reasoningSummary'".
       if (
         input.model.api.npm === "@ai-sdk/openai" ||
         input.model.api.npm === "@ai-sdk/azure" ||
-        input.model.api.npm === "@ai-sdk/github-copilot"
+        input.model.api.npm === "@ai-sdk/github-copilot" || // kilocode_change
+        input.model.api.npm === "@openrouter/ai-sdk-provider" || // kilocode_change
+        input.model.api.npm === "@kilocode/kilo-gateway" // kilocode_change
       ) {
         result["reasoningSummary"] = "auto"
       }
     }
 
-    // Only set textVerbosity for non-chat gpt-5.x models
-    // Chat models (e.g. gpt-5.2-chat-latest) only support "medium" verbosity
     if (
+      // kilocode_change start - gate textVerbosity to Responses-API providers
+      (input.model.api.npm === "@ai-sdk/openai" ||
+        input.model.api.npm === "@ai-sdk/azure" ||
+        input.model.api.npm === "@ai-sdk/github-copilot" ||
+        input.model.api.npm === "@openrouter/ai-sdk-provider" ||
+        input.model.api.npm === "@kilocode/kilo-gateway") &&
+      // kilocode_change end
       input.model.api.id.includes("gpt-5.") &&
       !input.model.api.id.includes("codex") &&
       !input.model.api.id.includes("-chat") &&
@@ -1034,42 +1248,30 @@ export function options(input: {
 }
 
 export function smallOptions(model: Provider.Model) {
+  const small = Object.values(model.variants ?? {})[0] ?? {}
   if (
     model.providerID === "openai" ||
     model.api.npm === "@ai-sdk/openai" ||
     model.api.npm === "@ai-sdk/github-copilot"
   ) {
-    if (model.api.id.includes("gpt-5")) {
-      if (model.api.id.includes("5.") || model.api.id.includes("5-mini")) {
-        return { store: false, reasoningEffort: "low" }
-      }
-      return { store: false, reasoningEffort: "minimal" }
-    }
-    return { store: false }
-  }
-  if (model.providerID === "google") {
-    // gemini-3 uses thinkingLevel, gemini-2.5 uses thinkingBudget
-    if (model.api.id.includes("gemini-3")) {
-      return { thinkingConfig: { thinkingLevel: "minimal" } }
-    }
-    return { thinkingConfig: { thinkingBudget: 0 } }
+    const base = { store: false }
+    return mergeDeep(base, small)
   }
   if (
     model.providerID === "openrouter" ||
     model.providerID === "llmgateway" ||
     model.api.npm === "@kilocode/kilo-gateway" // kilocode_change
   ) {
-    if (model.api.id.includes("google")) {
-      return { reasoning: { enabled: false } }
-    }
-    return { reasoningEffort: "minimal" }
+    if (!model.capabilities.reasoning) return {} // kilocode_change - omit unsupported reasoning options
+    return { reasoning: { enabled: true } } // kilocode_change - use the model's supported default effort
   }
 
   if (model.providerID === "venice") {
+    if (Object.keys(small).length > 0) return small
     return { veniceParameters: { disableThinking: true } }
   }
 
-  return {}
+  return small
 }
 
 // Maps model ID prefix to provider slug used in providerOptions.
@@ -1115,7 +1317,17 @@ export function providerOptions(model: Provider.Model, options: { [x: string]: a
   }
   // kilocode_change end
 
-  const key = sdkKey(model.api.npm) ?? model.providerID
+  // AI SDK packages that resolve providerOptionsName by splitting the
+  // provider name on "." (e.g. "wafer.ai" -> "wafer") need the same
+  // logic here so the key we write matches the key they read.
+  // Other SDKs (xai, mistral, groq, cohere, etc.) use hardcoded keys
+  // like "xai" or "cohere" - applying .split(".")[0] would break those.
+  const usesDotSplitOptions =
+    model.api.npm === "@ai-sdk/openai-compatible" ||
+    model.api.npm === "@ai-sdk/openai" ||
+    model.api.npm === "@ai-sdk/anthropic"
+
+  const key = sdkKey(model.api.npm) ?? (usesDotSplitOptions ? model.providerID.split(".")[0] : model.providerID)
   // @ai-sdk/azure delegates to OpenAIChatLanguageModel which reads from
   // providerOptions["openai"], but OpenAIResponsesLanguageModel checks
   // "azure" first. Pass both so model options work on either code path.
@@ -1125,11 +1337,11 @@ export function providerOptions(model: Provider.Model, options: { [x: string]: a
   return { [key]: options }
 }
 
-export function maxOutputTokens(model: Provider.Model): number {
-  return Math.min(model.limit.output, OUTPUT_TOKEN_MAX) || OUTPUT_TOKEN_MAX
+export function maxOutputTokens(model: Provider.Model, outputTokenMax = OUTPUT_TOKEN_MAX): number {
+  return Math.min(model.limit.output, outputTokenMax) || outputTokenMax
 }
 
-export function schema(model: Provider.Model, schema: JSONSchema.BaseSchema | JSONSchema7): JSONSchema7 {
+export function schema(model: Provider.Model, schema: JSONSchema7): JSONSchema7 {
   /*
   if (["openai", "azure"].includes(providerID)) {
     if (schema.type === "object" && schema.properties) {
@@ -1160,7 +1372,10 @@ export function schema(model: Provider.Model, schema: JSONSchema.BaseSchema | JS
       return result
     }
 
-    schema = sanitizeMoonshot(schema) as JSONSchema.BaseSchema | JSONSchema7
+    const sanitized = sanitizeMoonshot(schema)
+    if (typeof sanitized === "object" && sanitized !== null && !Array.isArray(sanitized)) {
+      schema = sanitized
+    }
   }
 
   // Convert integer enums to string enums for Google/Gemini
@@ -1242,7 +1457,7 @@ export function schema(model: Provider.Model, schema: JSONSchema.BaseSchema | JS
     schema = sanitizeGemini(schema)
   }
 
-  return schema as JSONSchema7
+  return schema
 }
 
 export * as ProviderTransform from "./transform"

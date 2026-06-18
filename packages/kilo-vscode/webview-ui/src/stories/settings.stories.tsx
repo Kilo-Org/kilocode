@@ -7,13 +7,17 @@ import { onMount, createSignal } from "solid-js"
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { StoryProviders, mockSessionValue } from "./StoryProviders"
 import { SessionContext } from "../context/session"
+import { KiloEmbeddingModelsContext } from "../context/kilo-embedding-models"
 import Settings from "../components/settings/Settings"
 import ProvidersTab from "../components/settings/ProvidersTab"
+import ModelsTab from "../components/settings/ModelsTab"
 import AgentBehaviourTab from "../components/settings/AgentBehaviourTab"
 import ModeEditView from "../components/settings/ModeEditView"
 import McpEditView from "../components/settings/McpEditView"
 import type { AgentConfig, CommandConfig, Config } from "../types/messages"
 import IndexingTab from "../components/settings/IndexingTab"
+import { SidebarEmptyState } from "../components/chat/SidebarEmptyState"
+import { WorkStyleContext, type WorkStyleContextValue } from "../context/work-style"
 
 const meta: Meta = {
   title: "Settings",
@@ -58,6 +62,83 @@ export const ProvidersConfigure: Story = {
   ),
 }
 
+export const ModelsAutocompleteOpen: Story = {
+  name: "ModelsTab — autocomplete model picker open",
+  render: () => (
+    <StoryProviders config={{} as any}>
+      <OpenModelPicker>
+        <ModelsTab />
+      </OpenModelPicker>
+    </StoryProviders>
+  ),
+}
+
+export const ModelsAccessibleLabels: Story = {
+  name: "ModelsTab — accessible model labels",
+  render: () => (
+    <StoryProviders config={{} as any}>
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
+        <ModelsTab />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const ModelsSpeechToText: Story = {
+  name: "ModelsTab — speech-to-text model",
+  render: () => (
+    <StoryProviders kiloAuth config={{ experimental: { speech_to_text_model: "google/chirp-3" } } as any}>
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
+        <ModelsTab />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+function OpenModelPicker(props: { children: any }) {
+  let ref: HTMLDivElement | undefined
+  onMount(() => {
+    requestAnimationFrame(() => {
+      ref?.querySelector<HTMLButtonElement>('button[title="mistralai/codestral-2508"]')?.click()
+    })
+  })
+  return (
+    <div ref={ref} style={{ "max-height": "700px", overflow: "auto" }}>
+      {props.children}
+    </div>
+  )
+}
+
+const work: WorkStyleContextValue = {
+  style: () => "unset",
+  loading: () => false,
+  applying: () => false,
+  shouldShowOnboarding: () => true,
+  apply: noop,
+}
+
+function WorkStyleOnboarding() {
+  return (
+    <StoryProviders noPadding>
+      <WorkStyleContext.Provider value={work}>
+        <div style={{ height: "700px", overflow: "auto" }}>
+          <SidebarEmptyState />
+        </div>
+      </WorkStyleContext.Provider>
+    </StoryProviders>
+  )
+}
+
+export const WorkStyleOnboardingDefault: Story = {
+  name: "Work style onboarding — default width",
+  render: () => <WorkStyleOnboarding />,
+}
+
+export const WorkStyleOnboarding200: Story = {
+  name: "Work style onboarding — narrow width",
+  render: () => <WorkStyleOnboarding />,
+}
+
 export const AgentBehaviourAgents: Story = {
   name: "AgentBehaviourTab — available agents list",
   render: () => {
@@ -65,7 +146,7 @@ export const AgentBehaviourAgents: Story = {
       ...mockSessionValue({ id: "agents-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
       allAgents: () => MOCK_AGENTS,
-      removeMode: noop,
+      removeAgent: noop,
       removeMcp: noop,
       skills: () => [],
       refreshSkills: noop,
@@ -90,7 +171,7 @@ export const AgentBehaviourEditCustomMode: Story = {
       ...mockSessionValue({ id: "edit-mode-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
       allAgents: () => MOCK_AGENTS,
-      removeMode: noop,
+      removeAgent: noop,
       removeMcp: noop,
       skills: () => [],
       refreshSkills: noop,
@@ -100,7 +181,8 @@ export const AgentBehaviourEditCustomMode: Story = {
       reviewer: {
         description: "Review code for quality and best practices",
         prompt: "You are a code reviewer. Focus on code quality, best practices, and potential bugs.",
-        model: "anthropic/claude-sonnet-4-20250514",
+        model: "kilo/anthropic/claude-sonnet-4-6",
+        variant: "high",
         temperature: 0.3,
         permission: {
           read: "allow",
@@ -191,7 +273,7 @@ export const AgentBehaviourWorkflows: Story = {
       ...mockSessionValue({ id: "workflows-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
       allAgents: () => MOCK_AGENTS,
-      removeMode: noop,
+      removeAgent: noop,
       removeMcp: noop,
       skills: () => [],
       refreshSkills: noop,
@@ -214,7 +296,7 @@ export const AgentBehaviourWorkflowsEmpty: Story = {
       ...mockSessionValue({ id: "workflows-empty-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
       allAgents: () => MOCK_AGENTS,
-      removeMode: noop,
+      removeAgent: noop,
       removeMcp: noop,
       skills: () => [],
       refreshSkills: noop,
@@ -312,7 +394,7 @@ export const ModeEditExport: Story = {
       ...mockSessionValue({ id: "export-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
       allAgents: () => MOCK_AGENTS,
-      removeMode: noop,
+      removeAgent: noop,
       removeMcp: noop,
       skills: () => [],
       refreshSkills: noop,
@@ -353,7 +435,7 @@ export const ModeEditPermissions: Story = {
       ...mockSessionValue({ id: "permissions-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
       allAgents: () => MOCK_AGENTS,
-      removeMode: noop,
+      removeAgent: noop,
       removeMcp: noop,
       skills: () => [],
       refreshSkills: noop,
@@ -380,11 +462,10 @@ export const IndexingProviderBlurRace: Story = {
   render: () => {
     const [saved, setSaved] = createSignal<Record<string, unknown>>({})
     const cfg: Config = {
-      experimental: {
-        semantic_indexing: true,
-      },
       indexing: {
         provider: "openai",
+        model: "text-embedding-3-large",
+        dimension: 3072,
         openai: { apiKey: "" },
         gemini: { apiKey: "" },
       },
@@ -400,6 +481,103 @@ export const IndexingProviderBlurRace: Story = {
           </div>
         </StoryProviders>
         <pre data-testid="indexing-provider-save">{JSON.stringify(saved(), null, 2)}</pre>
+      </>
+    )
+  },
+}
+
+export const IndexingScopeSwitch: Story = {
+  name: "IndexingTab - global and local scopes",
+  render: () => {
+    const [global, setGlobal] = createSignal<Record<string, unknown>>({})
+    const [project, setProject] = createSignal<Record<string, unknown>>({})
+    const globalConfig: Config = {
+      indexing: {
+        enabled: true,
+        provider: "openai",
+        model: "text-embedding-3-large",
+        dimension: 3072,
+        vectorStore: "qdrant",
+        openai: { apiKey: "global-secret" },
+        qdrant: { url: "http://global:6333", apiKey: "global-qdrant" },
+        searchMinScore: 0.4,
+      },
+    }
+    const projectConfig: Config = {
+      indexing: {
+        model: null,
+        qdrant: { apiKey: "project-qdrant" },
+      },
+    }
+    return (
+      <>
+        <StoryProviders
+          config={globalConfig}
+          globalConfig={globalConfig}
+          projectConfig={projectConfig}
+          onGlobalConfigChange={(next) => setGlobal((next.indexing ?? {}) as Record<string, unknown>)}
+          onProjectConfigChange={(next) => setProject((next.indexing ?? {}) as Record<string, unknown>)}
+        >
+          <div style={{ width: "420px", "max-height": "700px", overflow: "auto" }}>
+            <IndexingTab />
+          </div>
+        </StoryProviders>
+        <pre data-testid="indexing-global-save">{JSON.stringify(global(), null, 2)}</pre>
+        <pre data-testid="indexing-project-save">{JSON.stringify(project(), null, 2)}</pre>
+      </>
+    )
+  },
+}
+
+export const IndexingKiloModelPreset: Story = {
+  name: "IndexingTab - Kilo stale custom model fallback",
+  render: () => {
+    const cfg: Config = {
+      indexing: {
+        provider: "kilo",
+        model: "custom/model",
+        dimension: 2048,
+      },
+    }
+    const catalog = {
+      defaultModel: "provider/model",
+      models: [
+        { id: "provider/model", name: "Provider Model", dimension: 1024, scoreThreshold: 0.4 },
+        { id: "provider/compact", name: "Provider Compact", dimension: 512, scoreThreshold: 0.35 },
+      ],
+      aliases: {},
+    }
+    return (
+      <StoryProviders config={cfg}>
+        <KiloEmbeddingModelsContext.Provider value={{ catalog: () => catalog }}>
+          <div style={{ "max-height": "700px", overflow: "auto" }}>
+            <IndexingTab />
+          </div>
+        </KiloEmbeddingModelsContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const IndexingKiloCatalogLoading: Story = {
+  name: "IndexingTab - Kilo catalog loading",
+  render: () => {
+    const [saved, setSaved] = createSignal<Record<string, unknown>>({})
+    const cfg: Config = {
+      indexing: {},
+    }
+    return (
+      <>
+        <StoryProviders
+          config={cfg}
+          kiloAuth
+          onConfigChange={(next: Config) => setSaved((next.indexing ?? {}) as Record<string, unknown>)}
+        >
+          <div style={{ "max-height": "700px", overflow: "auto" }}>
+            <IndexingTab />
+          </div>
+        </StoryProviders>
+        <pre data-testid="indexing-kilo-loading-save">{JSON.stringify(saved(), null, 2)}</pre>
       </>
     )
   },

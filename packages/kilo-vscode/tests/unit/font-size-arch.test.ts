@@ -18,6 +18,7 @@ const TARGETS = [
   path.join(ROOT, "webview-ui/src"),
   path.join(ROOT, "webview-ui/agent-manager"),
   path.join(ROOT, "webview-ui/kiloclaw"),
+  path.join(ROOT, "webview-ui/marketplace"),
   path.join(ROOT, "webview-ui/diff-viewer"),
   path.join(ROOT, "webview-ui/diff-virtual"),
   path.join(REPO, "packages/kilo-ui/src/components"),
@@ -28,6 +29,7 @@ const WATCHED_PROVIDERS = [
   path.join(ROOT, "src/diff/DiffViewerProvider.ts"),
   path.join(ROOT, "src/DiffVirtualProvider.ts"),
   path.join(ROOT, "src/kiloclaw/KiloClawProvider.ts"),
+  path.join(ROOT, "src/MarketplacePanelProvider.ts"),
 ]
 
 const ALLOWED_DIRS = new Set(["stories"])
@@ -98,6 +100,22 @@ describe("webview font-size architecture", () => {
         `Preferred tokens: var(--font-size-base), var(--font-size-small), or var(--kilo-font-size-N).\n\n` +
         violations.map((v) => `  - ${v}`).join("\n"),
     ).toEqual([])
+  })
+
+  it("uses scalable line heights in polished tool previews", () => {
+    const files = [
+      path.join(REPO, "packages/kilo-ui/src/components/basic-tool.css"),
+      path.join(REPO, "packages/kilo-ui/src/components/message-part.css"),
+    ]
+    const violations = files.flatMap((file) => {
+      const src = stripComments(fs.readFileSync(file, "utf-8"))
+      return Array.from(
+        src.matchAll(/line-height\s*:\s*\d+(?:\.\d+)?px\b/g),
+        (match) => `${rel(file)}:${line(src, match.index ?? 0)}`,
+      )
+    })
+
+    expect(violations).toEqual([])
   })
 
   it("injects and live-broadcasts the webview font-size setting to all webview providers", () => {

@@ -5,14 +5,14 @@ import { InstanceState } from "@/effect/instance-state"
 import { EffectBridge } from "@/effect/bridge"
 import { lazy } from "@opencode-ai/core/util/lazy"
 import { Plugin } from "@/plugin"
-import { Instance } from "@/project/instance"
 import { Shell } from "@/shell/shell"
+import { KiloPtySelfCommand } from "@/kilocode/pty/self-command" // kilocode_change
 import type { Proc } from "#pty"
 import * as Log from "@opencode-ai/core/util/log"
 import { PtyID } from "./schema"
 import { Effect, Layer, Context, Schema, Types } from "effect"
-import { zod } from "@/util/effect-zod"
-import { NonNegativeInt, PositiveInt, withStatics } from "@/util/schema"
+import { NonNegativeInt, PositiveInt } from "@opencode-ai/core/schema"
+import { SessionID } from "@/session/schema" // kilocode_change
 
 const log = Log.create({ service: "pty" })
 
@@ -63,9 +63,8 @@ export const Info = Schema.Struct({
   cwd: Schema.String,
   status: Schema.Literals(["running", "exited"]),
   pid: PositiveInt,
-})
-  .annotate({ identifier: "Pty" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+  sessionID: Schema.optional(Schema.NullOr(SessionID)), // kilocode_change
+}).annotate({ identifier: "Pty" })
 
 export type Info = Types.DeepMutable<Schema.Schema.Type<typeof Info>>
 
@@ -75,19 +74,20 @@ export const CreateInput = Schema.Struct({
   cwd: Schema.optional(Schema.String),
   title: Schema.optional(Schema.String),
   env: Schema.optional(Schema.Record(Schema.String, Schema.String)),
-}).pipe(withStatics((s) => ({ zod: zod(s) })))
+})
 
 export type CreateInput = Types.DeepMutable<Schema.Schema.Type<typeof CreateInput>>
 
 export const UpdateInput = Schema.Struct({
   title: Schema.optional(Schema.String),
+  sessionID: Schema.optional(Schema.NullOr(SessionID)), // kilocode_change
   size: Schema.optional(
     Schema.Struct({
       rows: PositiveInt,
       cols: PositiveInt,
     }),
   ),
-}).pipe(withStatics((s) => ({ zod: zod(s) })))
+})
 
 export type UpdateInput = Types.DeepMutable<Schema.Schema.Type<typeof UpdateInput>>
 
@@ -179,13 +179,14 @@ export const layer = Layer.effect(
       const bridge = yield* EffectBridge.make()
       const cfg = yield* config.get()
       const id = PtyID.ascending()
-      const command = input.command || Shell.preferred(cfg.shell)
-      const args = input.args || []
+      const resolved = KiloPtySelfCommand.resolve(input) // kilocode_change
+      const command = resolved.command || Shell.preferred(cfg.shell) // kilocode_change
+      const args = resolved.args || [] // kilocode_change
       if (Shell.login(command)) {
         args.push("-l")
       }
 
-      const cwd = input.cwd || s.dir
+      const cwd = resolved.cwd || s.dir // kilocode_change
       const shell = yield* plugin.trigger("shell.env", { cwd }, { env: {} })
       const env = {
         ...process.env,
@@ -193,6 +194,7 @@ export const layer = Layer.effect(
         ...shell.env,
         TERM: "xterm-256color",
         KILO_TERMINAL: "1",
+        KILO_PTY_ID: id, // kilocode_change
       } as Record<string, string>
       // kilocode_change start
       // Don't leak the kilo server's auth credential into user shells.
@@ -239,42 +241,38 @@ export const layer = Layer.effect(
         subscribers: new Map(),
       }
       s.sessions.set(id, session)
-      proc.onData(
-        Instance.bind((chunk) => {
-          session.cursor += chunk.length
+      proc.onData((chunk) => {
+        session.cursor += chunk.length
 
-          for (const [key, ws] of session.subscribers.entries()) {
-            if (ws.readyState !== 1) {
-              session.subscribers.delete(key)
-              continue
-            }
-            if (sock(ws) !== key) {
-              session.subscribers.delete(key)
-              continue
-            }
-            try {
-              ws.send(chunk)
-            } catch {
-              session.subscribers.delete(key)
-            }
+        for (const [key, ws] of session.subscribers.entries()) {
+          if (ws.readyState !== 1) {
+            session.subscribers.delete(key)
+            continue
           }
+          if (sock(ws) !== key) {
+            session.subscribers.delete(key)
+            continue
+          }
+          try {
+            ws.send(chunk)
+          } catch {
+            session.subscribers.delete(key)
+          }
+        }
 
-          session.buffer += chunk
-          if (session.buffer.length <= BUFFER_LIMIT) return
-          const excess = session.buffer.length - BUFFER_LIMIT
-          session.buffer = session.buffer.slice(excess)
-          session.bufferCursor += excess
-        }),
-      )
-      proc.onExit(
-        Instance.bind(({ exitCode }) => {
-          if (session.info.status === "exited") return
-          log.info("session exited", { id, exitCode })
-          session.info.status = "exited"
-          bridge.fork(bus.publish(Event.Exited, { id, exitCode }))
-          bridge.fork(remove(id))
-        }),
-      )
+        session.buffer += chunk
+        if (session.buffer.length <= BUFFER_LIMIT) return
+        const excess = session.buffer.length - BUFFER_LIMIT
+        session.buffer = session.buffer.slice(excess)
+        session.bufferCursor += excess
+      })
+      proc.onExit(({ exitCode }) => {
+        if (session.info.status === "exited") return
+        log.info("session exited", { id, exitCode })
+        session.info.status = "exited"
+        bridge.fork(bus.publish(Event.Exited, { id, exitCode }))
+        bridge.fork(remove(id))
+      })
       yield* bus.publish(Event.Created, { info })
       return info
     })
@@ -286,6 +284,11 @@ export const layer = Layer.effect(
       if (input.title) {
         session.info.title = input.title
       }
+      // kilocode_change start
+      if ("sessionID" in input) {
+        session.info.sessionID = input.sessionID ?? undefined
+      }
+      // kilocode_change end
       if (input.size) {
         session.process.resize(input.size.cols, input.size.rows)
       }

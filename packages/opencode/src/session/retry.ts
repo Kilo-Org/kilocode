@@ -4,12 +4,23 @@ import { MessageV2 } from "./message-v2"
 import { isKiloError } from "@/kilocode/kilo-errors" // kilocode_change
 import { SessionNetwork } from "./network" // kilocode_change
 import { iife } from "@/util/iife"
+import { isRecord } from "@/util/record"
 
 export type Err = ReturnType<NamedError["toObject"]>
 
-// This exported message is shared with the TUI upsell detector. Matching on a
-// literal error string kind of sucks, but it is the simplest for now.
-export const GO_UPSELL_MESSAGE = "Free usage exceeded, subscribe to Go https://opencode.ai/go"
+export type RetryReason = string & {} // kilocode_change - Kilo does not support OpenCode Go upsell reasons
+
+export type Retryable = {
+  message: string
+  action?: {
+    reason: RetryReason
+    provider: string
+    title: string
+    message: string
+    label: string
+    link?: string
+  }
+}
 
 export const RETRY_INITIAL_DELAY = 2000
 export const RETRY_BACKOFF_FACTOR = 2
@@ -53,7 +64,8 @@ export function delay(attempt: number, error?: MessageV2.APIError) {
   return cap(Math.min(RETRY_INITIAL_DELAY * Math.pow(RETRY_BACKOFF_FACTOR, attempt - 1), RETRY_MAX_DELAY_NO_HEADERS))
 }
 
-export function retryable(error: Err) {
+// kilocode_change - Kilo does not emit OpenCode Go actions
+export function retryable(error: Err, _provider?: string): Retryable | undefined {
   // context overflow errors should not be retried
   if (MessageV2.ContextOverflowError.isInstance(error)) return undefined
   if (MessageV2.APIError.isInstance(error)) {
@@ -66,16 +78,16 @@ export function retryable(error: Err) {
     // even when the provider SDK doesn't explicitly mark them as retryable.
     if (!error.data.isRetryable && !(status !== undefined && status >= 500)) return undefined
 
-    // kilocode_change start - FreeUsageLimitError is not retryable: retrying the same
-    // capped model is futile and the backoff loop cannot be broken by switching
-    // models in the chat selector (the retry loop holds a stale model ref).
+    // kilocode_change start - Kilo does not support OpenCode Go upsells. FreeUsageLimitError is not retryable: retrying
+    // the same capped model is futile and the backoff loop cannot be broken by switching models in the chat selector
+    // because the retry loop holds a stale model ref.
     if (error.data.responseBody?.includes("FreeUsageLimitError")) return undefined
     // kilocode_change end
-    return error.data.message.includes("Overloaded") ? "Provider is overloaded" : error.data.message
+    return { message: error.data.message.includes("Overloaded") ? "Provider is overloaded" : error.data.message }
   }
 
   // Check for rate limit patterns in plain text error messages
-  const msg = error.data?.message
+  const msg = isRecord(error.data) ? error.data.message : undefined
   if (typeof msg === "string") {
     const lower = msg.toLowerCase()
     if (
@@ -83,40 +95,41 @@ export function retryable(error: Err) {
       lower.includes("rate limit") ||
       lower.includes("too many requests")
     ) {
-      return msg
+      return { message: msg }
     }
   }
 
-  const json = iife(() => {
-    try {
-      if (typeof error.data?.message === "string") {
-        const parsed = JSON.parse(error.data.message)
-        return parsed
-      }
-
-      return JSON.parse(error.data.message)
-    } catch {
-      return undefined
-    }
-  })
+  const json = parseJSON(msg)
   if (!json || typeof json !== "object") return undefined
   const code = typeof json.code === "string" ? json.code : ""
 
   if (json.type === "error" && json.error?.type === "too_many_requests") {
-    return "Too Many Requests"
+    return { message: "Too Many Requests" }
   }
   if (code.includes("exhausted") || code.includes("unavailable")) {
-    return "Provider is overloaded"
+    return { message: "Provider is overloaded" }
   }
   if (json.type === "error" && typeof json.error?.code === "string" && json.error.code.includes("rate_limit")) {
-    return "Rate Limited"
+    return { message: "Rate Limited" }
   }
   return undefined
 }
 
+function parseJSON(value: unknown) {
+  return iife(() => {
+    try {
+      if (typeof value !== "string") return undefined
+      return JSON.parse(value)
+    } catch {
+      return undefined
+    }
+  })
+}
+
 export function policy(opts: {
+  provider: string
   parse: (error: unknown) => Err
-  set: (input: { attempt: number; message: string; next: number }) => Effect.Effect<void>
+  set: (input: { attempt: number; message: string; action?: Retryable["action"]; next: number }) => Effect.Effect<void>
   // kilocode_change start
   limit?: number
   offline?: (input: { error: unknown; message: string }) => Effect.Effect<"retry" | "blocked" | "aborted">
@@ -131,8 +144,8 @@ export function policy(opts: {
       // kilocode_change end
 
       const error = opts.parse(meta.input)
-      const message = retryable(error)
-      if (!message) return Cause.done(meta.attempt)
+      const retry = retryable(error, opts.provider)
+      if (!retry) return Cause.done(meta.attempt)
       return Effect.gen(function* () {
         // kilocode_change start — handle network disconnect via offline handler
         if (opts.offline && SessionNetwork.disconnected(meta.input)) {
@@ -150,7 +163,12 @@ export function policy(opts: {
 
         const wait = delay(meta.attempt, MessageV2.APIError.isInstance(error) ? error : undefined)
         const now = yield* Clock.currentTimeMillis
-        yield* opts.set({ attempt: meta.attempt, message, next: now + wait })
+        yield* opts.set({
+          attempt: meta.attempt,
+          message: retry.message,
+          action: retry.action,
+          next: now + wait,
+        })
         return [meta.attempt, Duration.millis(wait)] as [number, Duration.Duration]
       })
     }),

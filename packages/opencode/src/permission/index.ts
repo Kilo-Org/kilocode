@@ -8,41 +8,34 @@ import { MessageID, SessionID } from "@/session/schema"
 import { PermissionTable } from "@/session/session.sql"
 import { Database } from "@/storage/db"
 import { eq } from "drizzle-orm"
-import { zod } from "@/util/effect-zod"
 import * as Log from "@opencode-ai/core/util/log"
-import { withStatics } from "@/util/schema"
 import { Wildcard } from "@/util/wildcard"
 import { Deferred, Effect, Layer, Schema, Context } from "effect"
 import os from "os"
 import z from "zod" // kilocode_change
+import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
 import { evaluate as evalRule } from "./evaluate"
 import { PermissionID } from "./schema"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
-import { ConfigProtection } from "@/kilocode/permission/config-paths" // kilocode_change
-import { Identifier } from "@/id/id" // kilocode_change
-import { drainCovered } from "@/kilocode/permission/drain" // kilocode_change
-import { ReadPermission } from "@/kilocode/permission/read" // kilocode_change
-import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory" // kilocode_change
+// kilocode_change start
+import { ConfigProtection } from "@/kilocode/permission/config-paths"
+import { drainCovered } from "@/kilocode/permission/drain"
+import { ReadPermission } from "@/kilocode/permission/read"
+import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
+// kilocode_change end
 
 const log = Log.create({ service: "permission" })
 
-export const Action = Schema.Literals(["allow", "deny", "ask"])
-  .annotate({ identifier: "PermissionAction" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export const Action = Schema.Literals(["allow", "deny", "ask"]).annotate({ identifier: "PermissionAction" })
 export type Action = Schema.Schema.Type<typeof Action>
 
 export const Rule = Schema.Struct({
   permission: Schema.String,
   pattern: Schema.String,
   action: Action,
-})
-  .annotate({ identifier: "PermissionRule" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "PermissionRule" })
 export type Rule = Schema.Schema.Type<typeof Rule>
 
-export const Ruleset = Schema.mutable(Schema.Array(Rule))
-  .annotate({ identifier: "PermissionRuleset" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export const Ruleset = Schema.mutable(Schema.Array(Rule)).annotate({ identifier: "PermissionRuleset" })
 export type Ruleset = Schema.Schema.Type<typeof Ruleset>
 
 export class Request extends Schema.Class<Request>("PermissionRequest")({
@@ -58,11 +51,9 @@ export class Request extends Schema.Class<Request>("PermissionRequest")({
       callID: Schema.String,
     }),
   ),
-}) {
-  static readonly zod = zod(this)
-}
+}) {}
 
-export const Reply = Schema.Literals(["once", "always", "reject"]).pipe(withStatics((s) => ({ zod: zod(s) })))
+export const Reply = Schema.Literals(["once", "always", "reject"])
 export type Reply = Schema.Schema.Type<typeof Reply>
 
 const reply = {
@@ -70,17 +61,13 @@ const reply = {
   message: Schema.optional(Schema.String),
 }
 
-export const ReplyBody = Schema.Struct(reply)
-  .annotate({ identifier: "PermissionReplyBody" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export const ReplyBody = Schema.Struct(reply).annotate({ identifier: "PermissionReplyBody" })
 export type ReplyBody = Schema.Schema.Type<typeof ReplyBody>
 
 export class Approval extends Schema.Class<Approval>("PermissionApproval")({
   projectID: ProjectID,
   patterns: Schema.Array(Schema.String),
-}) {
-  static readonly zod = zod(this)
-}
+}) {}
 
 export const Event = {
   Asked: BusEvent.define("permission.asked", Request),
@@ -123,30 +110,26 @@ export const AskInput = Schema.Struct({
   id: Schema.optional(PermissionID),
   ruleset: Ruleset,
   hardRuleset: Schema.optional(Ruleset), // kilocode_change
-})
-  .annotate({ identifier: "PermissionAskInput" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "PermissionAskInput" })
 export type AskInput = Schema.Schema.Type<typeof AskInput>
 
 export const ReplyInput = Schema.Struct({
   requestID: PermissionID,
   ...reply,
-})
-  .annotate({ identifier: "PermissionReplyInput" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "PermissionReplyInput" })
 export type ReplyInput = Schema.Schema.Type<typeof ReplyInput>
 
 // kilocode_change start
 export const SaveAlwaysRulesInput = z.object({
-  requestID: PermissionID.zod,
+  requestID: zod(PermissionID),
   approvedAlways: z.string().array().optional(),
   deniedAlways: z.string().array().optional(),
 })
 
 export const AllowEverythingInput = z.object({
   enable: z.boolean(),
-  requestID: Identifier.schema("permission").optional(),
-  sessionID: Identifier.schema("session").optional(),
+  requestID: zod(PermissionID).optional(),
+  sessionID: zod(SessionID).optional(),
 })
 // kilocode_change end
 
@@ -154,16 +137,20 @@ export interface Interface {
   readonly ask: (input: AskInput) => Effect.Effect<void, Error>
   readonly reply: (input: ReplyInput) => Effect.Effect<boolean> // kilocode_change
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
-  readonly saveAlwaysRules: (input: z.infer<typeof SaveAlwaysRulesInput>) => Effect.Effect<boolean> // kilocode_change
-  readonly allowEverything: (input: z.infer<typeof AllowEverythingInput>) => Effect.Effect<void> // kilocode_change
-  readonly pending: (id: string) => Effect.Effect<Request | undefined> // kilocode_change
+  // kilocode_change start
+  readonly saveAlwaysRules: (input: z.infer<typeof SaveAlwaysRulesInput>) => Effect.Effect<boolean>
+  readonly allowEverything: (input: z.infer<typeof AllowEverythingInput>) => Effect.Effect<void>
+  readonly pending: (id: string) => Effect.Effect<Request | undefined>
+  // kilocode_change end
 }
 
 interface PendingEntry {
   info: Request
-  ruleset: Ruleset // kilocode_change
-  hardRuleset?: Ruleset // kilocode_change
-  saved?: boolean // kilocode_change
+  // kilocode_change start
+  ruleset: Ruleset
+  hardRuleset?: Ruleset
+  saved?: boolean
+  // kilocode_change end
   deferred: Deferred.Deferred<void, RejectedError | CorrectedError>
 }
 
@@ -174,7 +161,6 @@ interface State {
 }
 
 export function evaluate(permission: string, pattern: string, ...rulesets: Ruleset[]): Rule {
-  log.info("evaluate", { permission, pattern, ruleset: rulesets.flat() })
   return evalRule(permission, pattern, ...rulesets)
 }
 
@@ -192,9 +178,7 @@ export function resolve(permission: string, pattern: string, ruleset: Ruleset, .
   if (saved.action === "allow") return saved
   return base
 }
-// kilocode_change end
 
-// kilocode_change start
 function veto(permission: string, pattern: string, ruleset?: Ruleset) {
   if (!ruleset) return false
   return ExternalDirectoryPermission.evaluate(permission, pattern, ruleset).action === "deny"
@@ -219,6 +203,7 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const bus = yield* Bus.Service
+    const config = yield* Config.Service // kilocode_change
     const state = yield* InstanceState.make<State>(
       Effect.fn("Permission.state")(function* (ctx) {
         const row = Database.use((db) =>
@@ -245,9 +230,11 @@ export const layer = Layer.effect(
 
     const ask = Effect.fn("Permission.ask")(function* (input: AskInput) {
       const { approved, pending } = yield* InstanceState.get(state)
-      const { ruleset, hardRuleset, ...request } = input // kilocode_change
-      const s = yield* InstanceState.get(state) // kilocode_change
-      const local = s.session[request.sessionID] ?? [] // kilocode_change
+      // kilocode_change start
+      const { ruleset, hardRuleset, ...request } = input
+      const s = yield* InstanceState.get(state)
+      const local = s.session[request.sessionID] ?? []
+      // kilocode_change end
       let needsAsk = false
 
       // kilocode_change start — force "ask" for config file edits
@@ -334,7 +321,7 @@ export const layer = Layer.effect(
       if (input.reply === "once") return true // kilocode_change
 
       // kilocode_change start — downgrade "always" to "once" for config file edits
-      if (ConfigProtection.isRequest(existing.info)) return true // kilocode_change
+      if (ConfigProtection.isRequest(existing.info)) return true
       // kilocode_change end
 
       for (const pattern of existing.info.always) {
@@ -346,14 +333,10 @@ export const layer = Layer.effect(
             action: "allow",
           })
         }
-        // kilocode_change end
       }
 
-      // kilocode_change start — drain covered permissions across sibling Agent Manager sessions
       yield* drainCovered(pending as unknown as Map<string, PendingEntry>, approved, DeniedError)
-      // kilocode_change end
 
-      // kilocode_change start — persist always-rules to global config
       if (!existing.saved) {
         const alwaysRules: Ruleset = existing.info.always.map((pattern) => ({
           permission: existing.info.permission,
@@ -361,11 +344,10 @@ export const layer = Layer.effect(
           action: "allow" as const,
         }))
         if (alwaysRules.length > 0) {
-          yield* Effect.promise(() => Config.updateGlobal({ permission: toConfig(alwaysRules) }, { dispose: false }))
+          yield* config.updateGlobal({ permission: toConfig(alwaysRules) }, { dispose: false })
         }
       }
-      // kilocode_change end
-      return true // kilocode_change
+      return true
     })
 
     const list = Effect.fn("Permission.list")(function* () {
@@ -373,15 +355,14 @@ export const layer = Layer.effect(
       return Array.from(pending.values(), (item) => item.info)
     })
 
-    // kilocode_change start
     const saveAlwaysRules = Effect.fn("Permission.saveAlwaysRules")(function* (
       input: z.infer<typeof SaveAlwaysRulesInput>,
     ) {
       const s = yield* InstanceState.get(state)
       const existing = s.pending.get(input.requestID)
-      if (!existing) return false // kilocode_change
+      if (!existing) return false
 
-      if (ConfigProtection.isRequest(existing.info)) return true // kilocode_change
+      if (ConfigProtection.isRequest(existing.info)) return true
 
       const validRules = new Set([
         ...((existing.info.metadata?.rules as string[] | undefined) ?? []),
@@ -397,10 +378,10 @@ export const layer = Layer.effect(
         if (deniedSet.has(pattern)) newRules.push({ permission, pattern, action: "deny" })
       }
       s.approved.push(...newRules)
-      existing.saved = true // kilocode_change
+      existing.saved = true
 
       if (newRules.length > 0) {
-        yield* Effect.promise(() => Config.updateGlobal({ permission: toConfig(newRules) }, { dispose: false }))
+        yield* config.updateGlobal({ permission: toConfig(newRules) }, { dispose: false })
       }
 
       yield* drainCovered(
@@ -432,10 +413,10 @@ export const layer = Layer.effect(
       else s.approved.push(rule)
 
       if (input.requestID) {
-        const entry = s.pending.get(PermissionID.make(input.requestID))
-        const ok = entry ? covered(entry, s.approved, s.session[entry.info.sessionID] ?? []) : false // kilocode_change
+        const entry = s.pending.get(input.requestID)
+        const ok = entry ? covered(entry, s.approved, s.session[entry.info.sessionID] ?? []) : false
         if (entry && ok && (!input.sessionID || entry.info.sessionID === input.sessionID)) {
-          s.pending.delete(PermissionID.make(input.requestID))
+          s.pending.delete(input.requestID)
           yield* bus.publish(Event.Replied, {
             sessionID: entry.info.sessionID,
             requestID: entry.info.id,
@@ -447,7 +428,7 @@ export const layer = Layer.effect(
 
       for (const [id, entry] of s.pending) {
         if (input.sessionID && entry.info.sessionID !== input.sessionID) continue
-        if (!covered(entry, s.approved, s.session[entry.info.sessionID] ?? [])) continue // kilocode_change
+        if (!covered(entry, s.approved, s.session[entry.info.sessionID] ?? [])) continue
         s.pending.delete(id)
         yield* bus.publish(Event.Replied, {
           sessionID: entry.info.sessionID,
@@ -464,7 +445,7 @@ export const layer = Layer.effect(
     })
     // kilocode_change end
 
-    return Service.of({ ask, reply, list, saveAlwaysRules, allowEverything, pending })
+    return Service.of({ ask, reply, list, saveAlwaysRules, allowEverything, pending }) // kilocode_change
   }),
 )
 
@@ -516,18 +497,10 @@ export function disabled(tools: string[], ruleset: Ruleset): Set<string> {
   return result
 }
 
-export const defaultLayer = layer.pipe(Layer.provide(Bus.layer))
+export const defaultLayer = layer.pipe(Layer.provide(Bus.layer), Layer.provide(Config.defaultLayer)) // kilocode_change
 
 // kilocode_change start — inverse of fromConfig: convert rules back to config format
-const SCALAR_ONLY_PERMISSIONS = new Set([
-  "todowrite",
-  "todoread",
-  "question",
-  "webfetch",
-  "websearch",
-  "codesearch",
-  "doom_loop",
-])
+const SCALAR_ONLY_PERMISSIONS = new Set(["todowrite", "todoread", "question", "webfetch", "websearch", "doom_loop"])
 
 export function toConfig(rules: Ruleset): ConfigPermission.Info {
   const result: ConfigPermission.Info = {}
@@ -551,18 +524,6 @@ export function toConfig(rules: Ruleset): ConfigPermission.Info {
   }
   return result
 }
-// kilocode_change end
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const list = () => runPromise((svc) => svc.list())
-export const ask = (input: AskInput) => runPromise((svc) => svc.ask(input))
-const replyPromise = (input: ReplyInput) => runPromise((svc) => svc.reply(input))
-export { replyPromise as reply }
-export const saveAlwaysRules = (input: z.infer<typeof SaveAlwaysRulesInput>) =>
-  runPromise((svc) => svc.saveAlwaysRules(input))
-export const allowEverything = (input: z.infer<typeof AllowEverythingInput>) =>
-  runPromise((svc) => svc.allowEverything(input))
 // kilocode_change end
 
 export * as Permission from "."

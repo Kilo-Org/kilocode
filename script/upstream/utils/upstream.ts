@@ -15,6 +15,12 @@ import { isAncestor } from "./git"
 const url = "https://github.com/anomalyco/opencode.git"
 const workflows = [".github/workflows/publish.yml", ".github/workflows/beta.yml"]
 
+/**
+ * Repo-relative path of the file that records the last merged upstream tag.
+ * Single line containing the upstream tag (e.g. `v1.14.33`).
+ */
+export const versionFile = ".opencode-version"
+
 export async function root() {
   return (await $`git rev-parse --show-toplevel`.text()).trim()
 }
@@ -39,6 +45,9 @@ export async function remote() {
 }
 
 export async function last(): Promise<VersionInfo> {
+  const recorded = await readVersionFile()
+  if (recorded) return recorded
+
   const source = await remote()
 
   info(`Fetching upstream tags from ${source}...`)
@@ -51,6 +60,59 @@ export async function last(): Promise<VersionInfo> {
   }
 
   throw new Error("Could not find a merged upstream tag in HEAD")
+}
+
+/**
+ * Read the recorded last-merged upstream tag from `.opencode-version`. Returns
+ * null if the file is missing/empty, or if the recorded tag cannot be resolved
+ * to a commit (e.g. tags have not been fetched yet). Falls back to the
+ * isAncestor-based discovery in `last()`.
+ */
+async function readVersionFile(): Promise<VersionInfo | null> {
+  const repo = await root()
+  const file = Bun.file(`${repo}/${versionFile}`)
+  if (!(await file.exists())) return null
+
+  const tag = (await file.text()).trim()
+  if (!tag) return null
+
+  const version = parseVersion(tag)
+  if (!version) {
+    warn(`${versionFile} contains '${tag}' which is not a valid version tag; ignoring`)
+    return null
+  }
+
+  const commit = await resolveTag(tag)
+  if (!commit) return null
+
+  return { version, tag, commit }
+}
+
+async function resolveTag(tag: string): Promise<string | null> {
+  const local = await $`git rev-parse --verify --quiet ${tag}^{commit}`.quiet().nothrow()
+  if (local.exitCode === 0) return local.stdout.toString().trim()
+
+  const source = await remote()
+  info(`Tag ${tag} not present locally; fetching from ${source}...`)
+  const fetch = await $`git fetch ${source} tag ${tag} --no-tags`.quiet().nothrow()
+  if (fetch.exitCode !== 0) {
+    warn(`Failed to fetch tag ${tag}: ${fetch.stderr.toString()}`)
+    return null
+  }
+
+  const after = await $`git rev-parse --verify --quiet ${tag}^{commit}`.quiet().nothrow()
+  return after.exitCode === 0 ? after.stdout.toString().trim() : null
+}
+
+/**
+ * Record the merged upstream tag in `.opencode-version` so subsequent runs of
+ * `last()` resolve instantly without an `ls-remote` walk.
+ */
+export async function writeVersion(tag: string): Promise<string> {
+  const repo = await root()
+  const dest = `${repo}/${versionFile}`
+  await Bun.write(dest, `${tag}\n`)
+  return dest
 }
 
 export async function versions(source: string): Promise<VersionInfo[]> {

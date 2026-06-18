@@ -28,6 +28,11 @@ interface OpenAIEmbeddingResponse {
   }
 }
 
+type OpenAICompatibleOptions = {
+  headers?: Record<string, string>
+  dimensions?: number
+}
+
 /**
  * OpenAI Compatible implementation of the embedder interface with batching and rate limiting.
  * This embedder allows using any OpenAI-compatible API endpoint by specifying a custom baseURL.
@@ -37,9 +42,11 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
   private embeddingsClient: OpenAI
   private readonly defaultModelId: string
   private readonly baseUrl: string
-  private readonly apiKey: string
+  private readonly apiKey?: string
   private readonly isFullUrl: boolean
   private readonly maxItemTokens: number
+  private readonly headers: Record<string, string>
+  private readonly dimensions?: number
 
   // Global rate limiting state shared across all instances
   private static globalRateLimitState = {
@@ -54,34 +61,45 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
   /**
    * Creates a new OpenAI Compatible embedder
    * @param baseUrl The base URL for the OpenAI-compatible API endpoint
-   * @param apiKey The API key for authentication
+   * @param apiKey Optional API key for authentication
    * @param modelId Optional model identifier (defaults to "text-embedding-3-small")
    * @param maxItemTokens Optional maximum tokens per item (defaults to MAX_ITEM_TOKENS)
    */
-  constructor(baseUrl: string, apiKey: string, modelId?: string, maxItemTokens?: number) {
+  constructor(
+    baseUrl: string,
+    apiKey?: string,
+    modelId?: string,
+    maxItemTokens?: number,
+    options: OpenAICompatibleOptions = {},
+  ) {
     if (!baseUrl) {
       throw new Error("Base URL is required for OpenAI-compatible embedder")
     }
-    if (!apiKey) {
-      throw new Error("API key is required for OpenAI-compatible embedder")
-    }
 
     this.baseUrl = baseUrl
-    this.apiKey = apiKey
+    this.apiKey = apiKey?.trim() || undefined
 
-    try {
-      this.embeddingsClient = new OpenAI({
-        baseURL: baseUrl,
-        apiKey: apiKey,
-      })
-    } catch (error) {
-      throw error instanceof Error ? error : new Error(String(error))
-    }
+    const defaults = new Headers(options.headers)
+    this.embeddingsClient = new OpenAI({
+      baseURL: baseUrl,
+      apiKey: this.apiKey ?? "EMPTY",
+      defaultHeaders: options.headers,
+      fetch: this.apiKey
+        ? undefined
+        : async (input, init) => {
+            const headers = new Headers(init?.headers)
+            if (!defaults.has("authorization")) headers.delete("authorization")
+            if (!defaults.has("api-key")) headers.delete("api-key")
+            return globalThis.fetch(input, { ...init, headers: Object.fromEntries(headers) })
+          },
+    })
 
     this.defaultModelId = modelId || getDefaultModelId("openai-compatible")
     // Cache the URL type check for performance
     this.isFullUrl = this.isFullEndpointUrl(baseUrl)
     this.maxItemTokens = maxItemTokens || MAX_ITEM_TOKENS
+    this.headers = options.headers ?? {}
+    this.dimensions = options.dimensions
   }
 
   /**
@@ -196,15 +214,19 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Azure OpenAI uses 'api-key' header, while OpenAI uses 'Authorization'
-        // We'll try 'api-key' first for Azure compatibility
-        "api-key": this.apiKey,
-        Authorization: `Bearer ${this.apiKey}`,
+        ...this.headers,
+        ...(this.apiKey
+          ? {
+              "api-key": this.apiKey,
+              Authorization: `Bearer ${this.apiKey}`,
+            }
+          : {}),
       },
       body: JSON.stringify({
         input: batchTexts,
         model: model,
         encoding_format: "base64",
+        ...(this.dimensions !== undefined ? { dimensions: this.dimensions } : {}),
       }),
       signal,
     })
@@ -268,6 +290,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
             // when processing numeric arrays, which breaks compatibility with models using larger dimensions.
             // By requesting base64 encoding, we bypass the package's parser and handle decoding ourselves.
             encoding_format: "base64",
+            ...(this.dimensions !== undefined ? { dimensions: this.dimensions } : {}),
           })) as OpenAIEmbeddingResponse
         }
 
@@ -363,6 +386,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
               input: testTexts,
               model: modelToUse,
               encoding_format: "base64",
+              ...(this.dimensions !== undefined ? { dimensions: this.dimensions } : {}),
             },
             {
               timeout: REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS,
@@ -370,6 +394,10 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
             },
           )) as OpenAIEmbeddingResponse
         }
+
+        const error = (response as { error?: string | { message?: string } }).error
+        const message = typeof error === "string" ? error : error?.message
+        if (message) return { valid: false, error: message }
 
         // Check if we got a valid response
         if (!response?.data || response.data.length === 0) {

@@ -3,6 +3,7 @@ package ai.kilocode.client.actions
 import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.ui.prompt.SendPromptContext
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -14,7 +15,7 @@ class SendPromptActionTest : BasePlatformTestCase() {
         val action = SendPromptAction()
         val event = event(action, ctx)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
         action.actionPerformed(event)
 
         assertTrue(event.presentation.isEnabled)
@@ -27,7 +28,7 @@ class SendPromptActionTest : BasePlatformTestCase() {
         val action = SendPromptAction()
         val event = event(action, null)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
 
         assertFalse(event.presentation.isEnabled)
     }
@@ -37,7 +38,7 @@ class SendPromptActionTest : BasePlatformTestCase() {
         val action = SendPromptAction()
         val event = event(action, ctx)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
         action.actionPerformed(event)
 
         assertFalse(event.presentation.isEnabled)
@@ -53,6 +54,19 @@ class SendPromptActionTest : BasePlatformTestCase() {
         assertEquals(listOf(action), action.promote(listOf(action), enabled))
         assertTrue(action.promote(listOf(action), disabled).isEmpty())
         assertTrue(action.promote(listOf(action), absent).isEmpty())
+    }
+
+    fun `test frontend descriptor registers send prompt shortcuts`() {
+        val xml = javaClass.classLoader.getResourceAsStream("kilo.jetbrains.frontend.xml")
+            ?.bufferedReader()
+            ?.use { it.readText() }
+            ?: error("missing frontend descriptor")
+
+        assertTrue(xml.contains("id=\"Kilo.SendPrompt\""))
+        assertTrue(xml.contains("first-keystroke=\"ENTER\""))
+        assertTrue(xml.contains("keymap=\"Mac OS X 10.5+\""))
+        assertTrue(xml.contains("first-keystroke=\"meta ENTER\""))
+        assertTrue(xml.contains("first-keystroke=\"control ENTER\""))
     }
 
     private fun event(action: SendPromptAction, ctx: SendPromptContext?): AnActionEvent {

@@ -1,43 +1,43 @@
-import { Effect, Encoding, Layer, Redacted, Schema } from "effect"
-import { HttpApiMiddleware, HttpApiSecurity } from "effect/unstable/httpapi"
-import { Flag } from "@opencode-ai/core/flag/flag"
+import { ServerAuth } from "@/server/auth"
+import { Effect, Encoding, Layer, Redacted } from "effect"
+import { HttpEffect, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
+import { HttpApiError, HttpApiMiddleware } from "effect/unstable/httpapi"
+import { hasPtyConnectTicketURL } from "@/server/shared/pty-ticket"
+import { isPublicUIPath } from "@/server/shared/public-ui"
 
-class Unauthorized extends Schema.TaggedErrorClass<Unauthorized>()(
-  "Unauthorized",
-  { message: Schema.String },
-  { httpApiStatus: 401 },
-) {}
+const AUTH_TOKEN_QUERY = "auth_token"
+const UNAUTHORIZED = 401
+const WWW_AUTHENTICATE = 'Basic realm="Secure Area"'
 
+// Avoid HttpApiSecurity alternatives here: Effect security middleware wraps the
+// full handler, so a downstream failure can make the next auth alternative run
+// and remap an authorized NotFound into Unauthorized.
 export class Authorization extends HttpApiMiddleware.Service<Authorization>()(
   "@opencode/ExperimentalHttpApiAuthorization",
   {
-    error: Unauthorized,
-    security: {
-      basic: HttpApiSecurity.basic,
-      authToken: HttpApiSecurity.apiKey({ in: "query", key: "auth_token" }),
-    },
+    error: HttpApiError.UnauthorizedNoContent,
   },
 ) {}
 
-const emptyCredential = {
-  username: "",
-  password: Redacted.make(""),
+function emptyCredential() {
+  return {
+    username: "",
+    password: Redacted.make(""),
+  }
 }
 
 function validateCredential<A, E, R>(
   effect: Effect.Effect<A, E, R>,
-  credential: { readonly username: string; readonly password: typeof emptyCredential.password },
+  credential: ServerAuth.DecodedCredentials,
+  config: ServerAuth.Info,
 ) {
   return Effect.gen(function* () {
-    if (!Flag.KILO_SERVER_PASSWORD) return yield* effect
-
-    // kilocode_change start - default to "kilo" to match Hono AuthMiddleware (middleware.ts:47)
-    if (credential.username !== (Flag.KILO_SERVER_USERNAME ?? "kilo")) {
-      return yield* new Unauthorized({ message: "Unauthorized" })
-    }
-    // kilocode_change end
-    if (Redacted.value(credential.password) !== Flag.KILO_SERVER_PASSWORD) {
-      return yield* new Unauthorized({ message: "Unauthorized" })
+    if (!ServerAuth.required(config)) return yield* effect
+    if (!ServerAuth.authorized(credential, config)) {
+      yield* HttpEffect.appendPreResponseHandler((_request, response) =>
+        Effect.succeed(HttpServerResponse.setHeader(response, "www-authenticate", WWW_AUTHENTICATE)),
+      )
+      return yield* new HttpApiError.Unauthorized({})
     }
     return yield* effect
   })
@@ -48,10 +48,10 @@ function decodeCredential(input: string) {
     .asEffect()
     .pipe(
       Effect.match({
-        onFailure: () => emptyCredential,
+        onFailure: emptyCredential,
         onSuccess: (header) => {
           const parts = header.split(":")
-          if (parts.length !== 2) return emptyCredential
+          if (parts.length !== 2) return emptyCredential()
           return {
             username: parts[0],
             password: Redacted.make(parts[1]),
@@ -61,13 +61,64 @@ function decodeCredential(input: string) {
     )
 }
 
-export const authorizationLayer = Layer.succeed(
-  Authorization,
-  Authorization.of({
-    basic: (effect, { credential }) => validateCredential(effect, credential),
-    authToken: (effect, { credential }) =>
-      Effect.gen(function* () {
-        return yield* validateCredential(effect, yield* decodeCredential(Redacted.value(credential)))
+function credentialFromRequest(request: HttpServerRequest.HttpServerRequest) {
+  return credentialFromURL(new URL(request.url, "http://localhost"), request)
+}
+
+function credentialFromURL(url: URL, request: HttpServerRequest.HttpServerRequest) {
+  const token = url.searchParams.get(AUTH_TOKEN_QUERY)
+  if (token) return decodeCredential(token)
+  const match = /^Basic\s+(.+)$/i.exec(request.headers.authorization ?? "")
+  if (match) return decodeCredential(match[1])
+  return Effect.succeed(emptyCredential())
+}
+
+function validateRawCredential<A, E, R>(
+  effect: Effect.Effect<A, E, R>,
+  credential: ServerAuth.DecodedCredentials,
+  config: ServerAuth.Info,
+) {
+  if (!ServerAuth.required(config)) return effect
+  if (!ServerAuth.authorized(credential, config))
+    return Effect.succeed(
+      HttpServerResponse.empty({
+        status: UNAUTHORIZED,
+        headers: { "www-authenticate": WWW_AUTHENTICATE },
       }),
+    )
+  return effect
+}
+
+export const authorizationRouterMiddleware = HttpRouter.middleware()(
+  Effect.gen(function* () {
+    const config = yield* ServerAuth.Config
+    if (!ServerAuth.required(config)) return (effect) => effect
+
+    return (effect) =>
+      Effect.gen(function* () {
+        const request = yield* HttpServerRequest.HttpServerRequest
+        const url = new URL(request.url, "http://localhost")
+        if (isPublicUIPath(request.method, url.pathname)) return yield* effect
+        if (hasPtyConnectTicketURL(url)) return yield* effect
+        return yield* credentialFromURL(url, request).pipe(
+          Effect.flatMap((credential) => validateRawCredential(effect, credential, config)),
+        )
+      })
+  }),
+)
+
+export const authorizationLayer = Layer.effect(
+  Authorization,
+  Effect.gen(function* () {
+    const config = yield* ServerAuth.Config
+    if (!ServerAuth.required(config)) return Authorization.of((effect) => effect)
+    return Authorization.of((effect) =>
+      Effect.gen(function* () {
+        const request = yield* HttpServerRequest.HttpServerRequest
+        return yield* credentialFromRequest(request).pipe(
+          Effect.flatMap((credential) => validateCredential(effect, credential, config)),
+        )
+      }),
+    )
   }),
 )

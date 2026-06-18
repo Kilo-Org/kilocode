@@ -8,14 +8,18 @@ import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
+import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.TodoDto
+import ai.kilocode.rpc.dto.TokensDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
+import com.intellij.util.concurrency.annotations.RequiresEdt
+import kotlin.math.roundToInt
 
 /**
  * Pure session model — single source of truth for session content and runtime state.
  *
- * **EDT-only access** — no synchronization. [ai.kilocode.client.session.update.SessionController] guarantees all
+ * **EDT-only access** — no synchronization. [ai.kilocode.client.session.controller.SessionController] guarantees all
  * reads and writes happen on the EDT.
  *
  * In addition to the flat message list, the model maintains a derived
@@ -32,7 +36,7 @@ class SessionModel {
 
     companion object {
         /** Part types that are internal server markers and must never be stored or rendered. */
-        val SILENT_PART_TYPES = setOf("step-start", "step-finish")
+        val SILENT_PART_TYPES = setOf("step-start", "patch")
     }
 
     private val entries = LinkedHashMap<String, Message>()
@@ -55,6 +59,12 @@ class SessionModel {
     var state: SessionState = SessionState.Idle
         private set
 
+    var session: SessionDto? = null
+        private set
+
+    var header: SessionHeaderSnapshot = emptyHeader()
+        private set
+
     var diff: List<DiffFileDto> = emptyList()
         private set
 
@@ -66,70 +76,92 @@ class SessionModel {
 
     private val listeners = mutableListOf<SessionModelEvent.Listener>()
 
+    @RequiresEdt
     fun addListener(parent: Disposable, listener: SessionModelEvent.Listener) {
         listeners.add(listener)
         Disposer.register(parent) { listeners.remove(listener) }
     }
 
+    @RequiresEdt
     fun messages(): Collection<Message> = entries.values
 
+    @RequiresEdt
     fun message(id: String): Message? = entries[id]
 
+    @RequiresEdt
     fun content(messageId: String, contentId: String): Content? = entries[messageId]?.parts?.get(contentId)
 
+    @RequiresEdt
     fun turns(): Collection<Turn> = turnEntries.values
 
+    @RequiresEdt
     fun turn(id: String): Turn? = turnEntries[id]
 
+    @RequiresEdt
     fun isEmpty(): Boolean = entries.isEmpty()
 
+    @RequiresEdt
     fun isReady(): Boolean = app.status == KiloAppStatusDto.READY && workspace.status == KiloWorkspaceStatusDto.READY
 
     /**
      * Add a message if it doesn't exist, or update its [MessageDto] info if it does.
      * Returns true when the message was newly added (caller can decide to show messages).
      */
+    @RequiresEdt
     fun upsertMessage(dto: MessageDto): Boolean {
         val existing = entries[dto.id]
         if (existing != null) {
             val updated = Message(dto).also { it.parts.putAll(existing.parts) }
             entries[dto.id] = updated
             fire(SessionModelEvent.MessageUpdated(updated))
+            updateHeader()
             return false
         }
         val msg = Message(dto)
         entries[dto.id] = msg
         fire(SessionModelEvent.MessageAdded(msg))
         regroup()
+        updateHeader()
         return true
     }
 
     /** @deprecated Use [upsertMessage] instead. Kept for incremental migration. */
+    @RequiresEdt
     fun addMessage(dto: MessageDto): Message? {
         if (entries.containsKey(dto.id)) return null
         val msg = Message(dto)
         entries[dto.id] = msg
         fire(SessionModelEvent.MessageAdded(msg))
         regroup()
+        updateHeader()
         return msg
     }
 
+    @RequiresEdt
     fun removeMessage(id: String) {
         if (entries.remove(id) == null) return
         fire(SessionModelEvent.MessageRemoved(id))
         regroup()
+        updateHeader()
     }
 
+    @RequiresEdt
     fun removeContent(messageId: String, contentId: String) {
         val msg = entries[messageId] ?: return
         if (msg.parts.remove(contentId) == null) return
         fire(SessionModelEvent.ContentRemoved(messageId, contentId))
+        updateHeader()
     }
 
+    @RequiresEdt
     fun updateContent(messageId: String, dto: PartDto) {
         if (dto.type in SILENT_PART_TYPES) return
         val msg = entries[messageId] ?: return
         val existing = msg.parts[dto.id]
+        if (empty(dto)) {
+            if (existing is Text) removeContent(messageId, dto.id)
+            return
+        }
         if (existing != null) {
             updateExisting(messageId, existing, dto)
             return
@@ -137,11 +169,14 @@ class SessionModel {
         val content = fromDto(dto)
         msg.parts[dto.id] = content
         fire(SessionModelEvent.ContentAdded(messageId, content))
+        updateHeader()
     }
 
+    @RequiresEdt
     fun appendDelta(messageId: String, contentId: String, delta: String) {
         val msg = entries[messageId] ?: return
         val existing = msg.parts[contentId]
+        val created = existing == null
         if (existing != null) {
             val buf = when (existing) {
                 is Text -> existing.content
@@ -155,31 +190,55 @@ class SessionModel {
             msg.parts[contentId] = content
             fire(SessionModelEvent.ContentAdded(messageId, content))
         }
-        fire(SessionModelEvent.ContentDelta(messageId, contentId, delta))
+        fire(SessionModelEvent.ContentDelta(messageId, contentId, delta, created))
+        updateHeader()
     }
 
+    @RequiresEdt
     fun setState(state: SessionState) {
+        if (this.state == state) return
         this.state = state
         fire(SessionModelEvent.StateChanged(state))
+        updateHeader()
     }
 
+    @RequiresEdt
+    fun setSession(session: SessionDto) {
+        if (this.session == session) return
+        this.session = session
+        fire(SessionModelEvent.SessionUpdated(session))
+        updateHeader()
+    }
+
+    @RequiresEdt
     fun setDiff(diff: List<DiffFileDto>) {
         this.diff = diff
         fire(SessionModelEvent.DiffUpdated(diff))
     }
 
+    @RequiresEdt
     fun setTodos(todos: List<TodoDto>) {
         this.todos = todos
         fire(SessionModelEvent.TodosUpdated(todos))
+        updateHeader()
     }
 
+    @RequiresEdt
     fun markCompacted() {
         compactionCount++
         fire(SessionModelEvent.Compacted(compactionCount))
+        updateHeader()
     }
 
+    @RequiresEdt
+    fun refreshHeader() {
+        updateHeader()
+    }
+
+    @RequiresEdt
     fun loadHistory(history: List<MessageWithPartsDto>) {
         entries.clear()
+        session = null
         state = SessionState.Idle
         diff = emptyList()
         todos = emptyList()
@@ -188,6 +247,7 @@ class SessionModel {
             val item = Message(msg.info)
             for (part in msg.parts) {
                 if (part.type in SILENT_PART_TYPES) continue
+                if (empty(part)) continue
                 val content = fromDto(part, part.text)
                 item.parts[content.id] = content
             }
@@ -195,16 +255,20 @@ class SessionModel {
         }
         rebuildTurnsSilently()
         fire(SessionModelEvent.HistoryLoaded)
+        updateHeader()
     }
 
+    @RequiresEdt
     fun clear() {
         entries.clear()
         turnEntries.clear()
+        session = null
         state = SessionState.Idle
         diff = emptyList()
         todos = emptyList()
         compactionCount = 0
         fire(SessionModelEvent.Cleared)
+        updateHeader()
     }
 
     // ------ turn grouping ------
@@ -314,20 +378,37 @@ class SessionModel {
                 existing.content.append(text)
                 existing.done = dto.time?.end != null || dto.time == null
             }
+            is FileAttachment -> {
+                existing.mime = dto.mime ?: "application/octet-stream"
+                existing.url = dto.url ?: ""
+                existing.filename = dto.filename
+            }
             is Tool -> {
+                existing.kind = toolKind(dto.tool)
                 existing.state = parseToolState(dto.state)
+                existing.callId = dto.callID
                 existing.title = dto.title
                 existing.input = dto.input
                 existing.metadata = dto.metadata
                 existing.output = dto.output
                 existing.error = dto.error
                 existing.time = dto.time
+                existing.todos = dto.todos
+                existing.todoView = dto.todoView
             }
             is Compaction -> return
+            is StepFinish -> {
+                existing.reason = dto.reason
+                existing.cost = dto.cost
+                existing.tokens = dto.tokens
+            }
             is Generic -> return
         }
         fire(SessionModelEvent.ContentUpdated(messageId, existing))
+        updateHeader()
     }
+
+    private fun empty(dto: PartDto) = dto.type == "text" && dto.text?.isNotBlank() != true
 
     private fun fromDto(dto: PartDto, text: CharSequence? = null): Content {
         val content = text ?: dto.text
@@ -339,16 +420,29 @@ class SessionModel {
                 if (content != null && content.isNotEmpty()) this.content.append(content)
                 done = dto.time?.end != null || dto.time == null
             }
-            "tool" -> Tool(dto.id, dto.tool ?: "unknown").apply {
+            "file" -> FileAttachment(dto.id).apply {
+                mime = dto.mime ?: "application/octet-stream"
+                url = dto.url ?: ""
+                filename = dto.filename
+            }
+            "tool" -> Tool(dto.id, dto.tool ?: "unknown", toolKind(dto.tool)).apply {
                 state = parseToolState(dto.state)
+                callId = dto.callID
                 title = dto.title
                 input = dto.input
                 metadata = dto.metadata
                 output = dto.output
                 error = dto.error
                 time = dto.time
+                todos = dto.todos
+                todoView = dto.todoView
             }
             "compaction" -> Compaction(dto.id)
+            "step-finish" -> StepFinish(dto.id).apply {
+                reason = dto.reason
+                cost = dto.cost
+                tokens = dto.tokens
+            }
             else -> Generic(dto.id, dto.type)
         }
     }
@@ -356,6 +450,61 @@ class SessionModel {
     private fun fire(event: SessionModelEvent) {
         for (l in listeners) l.onEvent(event)
     }
+
+    private fun updateHeader() {
+        val next = buildHeader()
+        if (next == header) return
+        header = next
+        fire(SessionModelEvent.HeaderUpdated(next))
+    }
+
+    private fun buildHeader(): SessionHeaderSnapshot {
+        val items = messages().toList()
+        if (items.isEmpty()) return emptyHeader()
+        val last = items.asReversed()
+            .firstOrNull { it.info.role == "assistant" && (it.info.tokens?.total()?.let { total -> total > 0 } == true) }
+        val tokens = last?.info?.tokens
+        val limit = model?.let(::item)?.limit
+        val total = tokens?.total() ?: 0
+        val context = if (tokens == null || total == 0L) null else ContextUsage(
+            tokens = total,
+            percentage = limit?.context?.takeIf { it > 0 }?.let { (total.toDouble() / it.toDouble() * 100).roundToInt() },
+            limit = limit?.context?.takeIf { it > 0 },
+            output = limit?.output?.takeIf { it > 0 },
+        )
+        val cost = items
+            .filter { it.info.role == "assistant" }
+            .sumOf { it.info.cost ?: 0.0 }
+            .takeIf { it > 0.0 }
+        val done = todos.count { it.status == "completed" }
+        return SessionHeaderSnapshot(
+            visible = items.isNotEmpty(),
+            title = session?.title?.takeIf { it.isNotBlank() } ?: "New Session",
+            cost = cost,
+            context = context,
+            tokens = tokens,
+            timeline = timeline(items),
+            todos = TodoSummary(todos.size, done, todos),
+            canCompact = !state.isBusy() && model?.let(::parseModelKey) != null,
+        )
+    }
+
+    private fun timeline(items: List<Message>): List<TimelineItem> = items
+        .filter { it.info.role == "assistant" }
+        .flatMap { msg ->
+            msg.parts.values.map { part ->
+                TimelineItem(
+                    id = "${msg.info.id}/${part.id}",
+                    part = part,
+                    title = part.timelineTitle(),
+                    weight = part.weight().coerceIn(1, 10),
+                    durationMs = (part as? Tool)?.time?.durationMs(),
+                    active = (part as? Tool)?.state == ToolExecState.RUNNING || part is Reasoning && !part.done,
+                )
+            }
+        }
+
+    private fun item(key: String): ModelItem? = models.firstOrNull { it.key == key }
 
     // ------ string representations ------
 
@@ -435,8 +584,88 @@ data class ModelItem(
     val recommendedIndex: Double?,
     val free: Boolean,
     val variants: List<String>,
+    val limit: ModelLimitItem?,
+    val attachment: Boolean = false,
 ) {
     val key: String get() = "$provider/$id"
+}
+
+private fun emptyHeader() = SessionHeaderSnapshot(
+    visible = false,
+    title = "New Session",
+    cost = null,
+    context = null,
+    tokens = null,
+    timeline = emptyList(),
+    todos = TodoSummary(0, 0, emptyList()),
+    canCompact = false,
+)
+
+private fun TokensDto.total(): Long = listOf(input, output, reasoning, cacheRead, cacheWrite).fold(0L) { sum, value ->
+    if (value <= 0) return@fold sum
+    if (Long.MAX_VALUE - sum < value) return@fold Long.MAX_VALUE
+    sum + value
+}
+
+private fun TokensDto.stepWeight(): Int = (input.coerceIn(0L, 10L) + output.coerceIn(0L, 10L) + reasoning.coerceIn(0L, 10L))
+    .coerceIn(1L, 10L)
+    .toInt()
+
+private fun parseModelKey(value: String): Pair<String, String>? {
+    val slash = value.indexOf('/')
+    if (slash <= 0 || slash >= value.length - 1) return null
+    return value.substring(0, slash) to value.substring(slash + 1)
+}
+
+private fun Content.timelineTitle(): String = when (this) {
+    is Text -> "Text"
+    is Reasoning -> "Reasoning"
+    is FileAttachment -> filename?.takeIf { it.isNotBlank() } ?: "File"
+    is Tool -> fileActionTitle() ?: title?.takeIf { it.isNotBlank() } ?: name
+    is Compaction -> "Compaction"
+    is StepFinish -> "Step finish"
+    is Generic -> type
+}
+
+private fun Tool.fileActionTitle(): String? {
+    val verb = when (kind) {
+        ToolKind.READ -> "Read"
+        ToolKind.WRITE -> "Write"
+        ToolKind.GENERIC -> return null
+    }
+    val path = listOf("filePath", "path", "file")
+        .asSequence()
+        .mapNotNull {
+            input[it]?.takeIf { value -> value.isNotBlank() }
+                ?: metadata[it]?.takeIf { value -> value.isNotBlank() }
+        }
+        .firstOrNull()
+        ?: return null
+    return "$verb ${tail(path).ifBlank { path }}"
+}
+
+private fun tail(path: String): String {
+    val value = path.trimEnd('/', '\\')
+    val index = maxOf(value.lastIndexOf('/'), value.lastIndexOf('\\'))
+    if (index < 0) return value
+    return value.substring(index + 1)
+}
+
+private fun Content.weight(): Int = when (this) {
+    is Text -> content.length / 200 + 1
+    is Reasoning -> content.length / 200 + 1
+    is FileAttachment -> 1
+    is Tool -> listOf(input.size, output?.length?.div(400) ?: 0, error?.length?.div(200) ?: 0).sum() + 1
+    is Compaction -> 2
+    is StepFinish -> tokens?.stepWeight() ?: 1
+    is Generic -> 1
+}
+
+private fun ai.kilocode.rpc.dto.PartTimeDto.durationMs(): Long? {
+    val start = start ?: return null
+    val end = end ?: return null
+    if (end < start) return null
+    return ((end - start) * 1000).toLong()
 }
 
 private fun renderMessage(msg: Message): List<String> {
@@ -452,8 +681,10 @@ private fun renderMessage(msg: Message): List<String> {
                 out.add("reasoning#${part.id} done=${part.done}:")
                 out.addAll(renderText(part.content))
             }
+            is FileAttachment -> out.add("file#${part.id} ${part.mime} ${part.filename ?: tail(part.url)}")
             is Tool -> out.add(renderTool(part))
             is Compaction -> out.add("compaction#${part.id}")
+            is StepFinish -> out.add("step-finish#${part.id}")
             is Generic -> out.add("${part.type}#${part.id}")
         }
     }

@@ -2,11 +2,15 @@ package ai.kilocode.client.testing
 
 import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.CloudSessionDto
+import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
@@ -43,11 +47,21 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     /** Message history returned by [messages]. */
     val history = mutableListOf<MessageWithPartsDto>()
     var historyGate: CompletableDeferred<Unit>? = null
+    var historyCalls = 0
+        private set
 
     /** Recent sessions returned by [recent]. */
     val recent = mutableListOf<SessionDto>()
     var recentFailures = 0
     var recentGate: CompletableDeferred<Unit>? = null
+
+    /** Local sessions returned by [list]. Accessed from concurrent coroutines in delete tests. */
+    val listed = java.util.concurrent.CopyOnWriteArrayList<SessionDto>()
+
+    /** Cloud sessions returned by [cloudSessions]. */
+    val cloud = mutableListOf<CloudSessionDto>()
+    var cloudCursor: String? = null
+    var importedCloudSession = session
 
     /** Push chat events here; tests collect from [events]. */
     val events = MutableSharedFlow<ChatEventDto>(extraBufferCapacity = 64, replay = 64)
@@ -66,16 +80,32 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     // --- Call tracking ---
 
+    val enhancements = mutableListOf<Pair<String, String>>()
+    var enhanced = "Enhanced prompt"
+    var enhanceGate: CompletableDeferred<Unit>? = null
+    var enhanceThrows: Exception? = null
     val prompts = mutableListOf<Triple<String, String, PromptDto>>()
+    val attachmentParts = mutableListOf<AttachmentCall>()
     val aborts = mutableListOf<Pair<String, String>>()
+    val compacts = mutableListOf<Triple<String, String, ModelSelectionDto>>()
     val configs = mutableListOf<Pair<String, ConfigUpdateDto>>()
     val permissionReplies = mutableListOf<Triple<String, String, PermissionReplyDto>>()
     val permissionRulesSaved = mutableListOf<Triple<String, String, PermissionAlwaysRulesDto>>()
     val questionReplies = mutableListOf<Triple<String, String, QuestionReplyDto>>()
     val questionRejects = mutableListOf<Pair<String, String>>()
+    val deletes = java.util.concurrent.CopyOnWriteArrayList<Pair<String, String>>()
+    var deleteGate: CompletableDeferred<Unit>? = null
+    val renames = mutableListOf<Triple<String, String, String>>()
+    var renameThrows: Exception? = null
+    val lists = mutableListOf<String>()
     val recentCalls = mutableListOf<Pair<String, Int>>()
+    val cloudCalls = mutableListOf<CloudCall>()
+    val imports = mutableListOf<Pair<String, String>>()
     var creates = 0
         private set
+
+    data class CloudCall(val directory: String, val cursor: String?, val limit: Int, val gitUrl: String?)
+    data class AttachmentCall(val id: String, val directory: String, val messageId: String, val partId: String, val attachmentKey: String?)
 
     // --- Implementation ---
 
@@ -87,7 +117,8 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     override suspend fun list(directory: String): SessionListDto {
         assertNotEdt("list")
-        return SessionListDto(emptyList(), emptyMap())
+        lists.add(directory)
+        return SessionListDto(listed.toList(), emptyMap())
     }
 
     override suspend fun recent(directory: String, limit: Int): SessionListDto {
@@ -108,6 +139,33 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     override suspend fun delete(id: String, directory: String) {
         assertNotEdt("delete")
+        deleteGate?.await()
+        deletes.add(id to directory)
+        listed.removeAll { it.id == id }
+    }
+
+    override suspend fun rename(id: String, directory: String, title: String): SessionDto {
+        assertNotEdt("rename")
+        renameThrows?.let { throw it }
+        renames.add(Triple(id, directory, title))
+        val updated = listed.indexOfFirst { it.id == id }
+        if (updated >= 0) {
+            listed[updated] = listed[updated].copy(title = title)
+            return listed[updated]
+        }
+        return session.copy(id = id, title = title)
+    }
+
+    override suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto {
+        assertNotEdt("cloudSessions")
+        cloudCalls.add(CloudCall(directory, cursor, limit, gitUrl))
+        return CloudSessionListDto(cloud.take(limit), cloudCursor)
+    }
+
+    override suspend fun importCloudSession(id: String, directory: String): SessionDto {
+        assertNotEdt("importCloudSession")
+        imports.add(id to directory)
+        return importedCloudSession
     }
 
     override suspend fun statuses(): Flow<Map<String, SessionStatusDto>> {
@@ -124,6 +182,14 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         return fallback
     }
 
+    override suspend fun enhancePrompt(directory: String, text: String): String {
+        assertNotEdt("enhancePrompt")
+        enhancements.add(directory to text)
+        enhanceGate?.await()
+        enhanceThrows?.let { throw it }
+        return enhanced
+    }
+
     override suspend fun prompt(id: String, directory: String, prompt: PromptDto) {
         assertNotEdt("prompt")
         prompts.add(Triple(id, directory, prompt))
@@ -134,10 +200,30 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         aborts.add(id to directory)
     }
 
+    override suspend fun compact(id: String, directory: String, model: ModelSelectionDto) {
+        assertNotEdt("compact")
+        compacts.add(Triple(id, directory, model))
+    }
+
     override suspend fun messages(id: String, directory: String): List<MessageWithPartsDto> {
         assertNotEdt("messages")
+        historyCalls++
         historyGate?.await()
         return history.toList()
+    }
+
+    override suspend fun attachmentPart(id: String, directory: String, messageId: String, partId: String, attachmentKey: String?): PartDto? {
+        assertNotEdt("attachmentPart")
+        attachmentParts.add(AttachmentCall(id, directory, messageId, partId, attachmentKey))
+        historyGate?.await()
+        return history
+            .firstOrNull { it.info.id == messageId }
+            ?.parts
+            ?.firstOrNull {
+                if (it.type != "file") return@firstOrNull false
+                if (!attachmentKey.isNullOrBlank()) key(it.id, it.filename.orEmpty(), it.url.orEmpty()) == attachmentKey
+                else it.id == partId
+            }
     }
 
     override suspend fun events(id: String, directory: String): Flow<ChatEventDto> {
@@ -178,5 +264,11 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun pendingQuestions(directory: String): List<QuestionRequestDto> {
         assertNotEdt("pendingQuestions")
         return pendingQuestionList.toList()
+    }
+
+    private fun key(part: String, name: String, url: String): String {
+        val value = listOf(part, name, url).joinToString("\u0000")
+        val bytes = java.security.MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
+        return bytes.take(16).joinToString("") { "%02x".format(it) }
     }
 }

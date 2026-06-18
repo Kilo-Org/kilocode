@@ -8,12 +8,16 @@
  */
 
 import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
+import type { DiffImage } from "../diff/types"
 import type { Worktree, ManagedSession, Section } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"
 import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
 import type { ExternalWorktreeItem } from "./WorktreeManager"
 import type { RunStatus } from "./run/manager"
+import type { TerminalFont } from "./terminal-font"
+
+export type { TerminalFont }
 
 // ---------------------------------------------------------------------------
 // Shared payload types
@@ -30,6 +34,8 @@ export type WorktreeDiffEntry = SnapshotFileDiff & {
   generatedLike?: boolean
   summarized?: boolean
   stamp?: string
+  kind?: "image"
+  image?: DiffImage
 }
 
 // ---------------------------------------------------------------------------
@@ -126,6 +132,7 @@ interface StateMessage {
   tabOrder?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
+  sidebarCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
   reviewMarkdownRender?: boolean
   isGitRepo?: boolean
@@ -146,6 +153,7 @@ interface TerminalCreatedMessage {
   terminalId: string
   title: string
   wsUrl: string
+  font: TerminalFont
 }
 
 interface TerminalClosedMessage {
@@ -157,6 +165,11 @@ interface TerminalErrorMessage {
   type: "agentManager.terminal.error"
   terminalId?: string
   message: string
+}
+
+interface TerminalFontChangedMessage {
+  type: "agentManager.terminal.fontChanged"
+  font: TerminalFont
 }
 
 interface ErrorOutMessage {
@@ -313,6 +326,7 @@ export type AgentManagerOutMessage =
   | TerminalCreatedMessage
   | TerminalClosedMessage
   | TerminalErrorMessage
+  | TerminalFontChangedMessage
 
 // ---------------------------------------------------------------------------
 // Webview → Extension messages (onMessage)
@@ -347,6 +361,7 @@ interface OpenLocallyIn {
 interface AddSessionToWorktreeIn {
   type: "agentManager.addSessionToWorktree"
   worktreeId: string
+  sessionId?: string
 }
 
 interface CloseSessionIn {
@@ -453,6 +468,11 @@ interface SetWorktreeOrderIn {
 
 interface SetSessionsCollapsedIn {
   type: "agentManager.setSessionsCollapsed"
+  collapsed: boolean
+}
+
+interface SetSidebarCollapsedIn {
+  type: "agentManager.setSidebarCollapsed"
   collapsed: boolean
 }
 
@@ -564,6 +584,12 @@ interface PreviewImageIn {
   filename: string
 }
 
+interface SaveImageIn {
+  type: "saveImage"
+  dataUrl: string
+  filename: string
+}
+
 interface LoadMessagesIn {
   type: "loadMessages"
   sessionID: string
@@ -594,6 +620,7 @@ interface SendMessageIn {
   variant?: string
   files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
   agentManagerContext?: string
+  contextDirectory?: string
 }
 
 interface SendCommandIn {
@@ -609,6 +636,7 @@ interface SendCommandIn {
   variant?: string
   files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
   agentManagerContext?: string
+  contextDirectory?: string
 }
 
 interface RequestTerminalContextIn {
@@ -730,6 +758,7 @@ export type AgentManagerInMessage =
   | SetTabOrderIn
   | SetWorktreeOrderIn
   | SetSessionsCollapsedIn
+  | SetSidebarCollapsedIn
   | SetReviewDiffStyleIn
   | SetReviewMarkdownRenderIn
   | SetDefaultBaseBranchIn
@@ -750,6 +779,7 @@ export type AgentManagerInMessage =
   | OpenFileIn
   | GenericOpenFileIn
   | PreviewImageIn
+  | SaveImageIn
   | LoadMessagesIn
   | SendMessageIn
   | SendCommandIn

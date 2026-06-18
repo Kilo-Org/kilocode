@@ -12,7 +12,7 @@ import { Auth } from "../../src/auth"
 import { Account } from "../../src/account/account"
 import { Env } from "../../src/env"
 import { Npm } from "@opencode-ai/core/npm"
-import { Instance } from "../../src/project/instance"
+import { provideTestInstance } from "../fixture/fixture"
 import { Filesystem } from "../../src/util/filesystem"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { tmpdir } from "../fixture/fixture"
@@ -54,14 +54,14 @@ async function writeConfig(dir: string, config: unknown) {
   await Filesystem.write(path.join(dir, "kilo.json"), JSON.stringify(config, null, 2))
 }
 
-test("project config update creates .kilo/kilo.json and reloads it", async () => {
+test("project config update creates .kilo/kilo.jsonc and reloads it", async () => {
   await using tmp = await tmpdir()
-  await Instance.provide({
+  await provideTestInstance({
     directory: tmp.path,
     fn: async () => {
       await save({ model: "updated/model" } as any)
 
-      const written = await Filesystem.readJson<{ model: string }>(path.join(tmp.path, ".kilo", "kilo.json"))
+      const written = await Filesystem.readJson<{ model: string }>(path.join(tmp.path, ".kilo", "kilo.jsonc"))
       expect(written.model).toBe("updated/model")
 
       const loaded = await load()
@@ -72,12 +72,12 @@ test("project config update creates .kilo/kilo.json and reloads it", async () =>
 
 test("project config update skips empty delete-only writes when no config exists", async () => {
   await using tmp = await tmpdir()
-  await Instance.provide({
+  await provideTestInstance({
     directory: tmp.path,
     fn: async () => {
       await save({ provider: { missing: null } } as any)
 
-      await expect(fs.access(path.join(tmp.path, ".kilo", "kilo.json"))).rejects.toThrow()
+      await expect(fs.access(path.join(tmp.path, ".kilo", "kilo.jsonc"))).rejects.toThrow()
     },
   })
 })
@@ -86,7 +86,7 @@ test("project config update prefers existing root kilo.json", async () => {
   await using tmp = await tmpdir()
   await writeConfig(tmp.path, { username: "alice" })
 
-  await Instance.provide({
+  await provideTestInstance({
     directory: tmp.path,
     fn: async () => {
       await save({ model: "updated/model" } as any)
@@ -105,7 +105,7 @@ test("project config update patches ancestor .kilo/kilo.json from nested directo
   await fs.mkdir(path.join(tmp.path, ".kilo"), { recursive: true })
   await writeConfig(path.join(tmp.path, ".kilo"), { username: "alice" })
 
-  await Instance.provide({
+  await provideTestInstance({
     directory: child,
     fn: async () => {
       await save({ model: "updated/model" } as any)

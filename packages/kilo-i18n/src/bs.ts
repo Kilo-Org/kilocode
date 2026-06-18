@@ -7,10 +7,21 @@ export const dict = {
   "provider.connect.kiloGateway.visit.prefix": "Posjetite ",
   "provider.connect.kiloGateway.visit.link": "kilo.ai",
   "provider.connect.kiloGateway.visit.suffix": " da preuzmete svoj API ključ.",
+  "provider.connect.kiloGateway.byok.prefix": "Za više statistika korištenja, koristite ",
+  "provider.connect.kiloGateway.byok.link": "BYOK putem Kilo's Gateway",
+  "provider.connect.kiloGateway.byok.suffix": ".",
 
-  // Provider dialog translations
-  "dialog.provider.group.recommended": "Preporučeno",
-  "dialog.provider.kilo.note": "Pristup za 500+ AI modela",
+  // Provider settings translations
+  "settings.providers.group.recommended": "Preporučeno",
+  "settings.providers.note.kilo": "Pristup za 500+ AI modela",
+  "settings.providers.note.opencode": "Odabrani modeli uključujući Claude, GPT, Gemini i još mnogo toga",
+  "settings.providers.note.anthropic": "Direktan pristup Claude modelima, uključujući Pro i Max",
+  "settings.providers.note.deepseek": "DeepSeek modeli za zadatke rezonovanja i programiranja",
+  "settings.providers.note.copilot": "Claude modeli za pomoć pri programiranju",
+  "settings.providers.note.openai": "GPT i Codex modeli uz API ključ ili ChatGPT prijavu",
+  "settings.providers.note.google": "Gemini modeli za brze, strukturirane odgovore",
+  "settings.providers.note.openrouter": "Pristup svim podržanim modelima od jednog provajdera",
+  "settings.providers.note.vercel": "Objedinjen pristup AI modelima s pametnim usmjeravanjem",
 
   // Desktop translations
   "desktop.menu.reloadWebview": "Ponovno učitavanje webview-a",
@@ -24,7 +35,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Vještine",
   "marketplace.tab.mcpServers": "MCP Serveri",
-  "marketplace.tab.modes": "Modovi",
   "marketplace.category.all": "Sve",
   "marketplace.placeholder": "Biće implementirano",
   "marketplace.card.installed": "Instalirano",
@@ -50,6 +60,7 @@ export const dict = {
   "marketplace.remove.cancel": "Otkaži",
   "marketplace.remove.confirm.button": "Ukloni",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "Agenti",
   "marketplace.search": "Pretraži...",
   "marketplace.filter.all": "Sve stavke",
   "marketplace.filter.notInstalled": "Nije instalirano",
@@ -65,7 +76,7 @@ export const dict = {
   "marketplace.scope.global": "globalno",
   "marketplace.remove.type.mcp": "MCP server",
   "marketplace.remove.type.skill": "vještina",
-  "marketplace.remove.type.mode": "režim",
+  "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Uklanjanje {{name}} nije uspjelo",
   "marketplace.install": "Instaliraj",
   "marketplace.filter.installed": "Instalirano",
@@ -74,8 +85,10 @@ export const dict = {
   "marketplace.warning.busyMany": "Nekoliko sesija je pokrenuto i bit će prekinuto",
   "marketplace.warning.installAnyway": "Instaliraj svejedno",
   "marketplace.warning.cancel": "Otkaži",
-  "marketplace.contribute.prompt": "Nedostaje vještina, način rada ili MCP server?",
+  "marketplace.contribute.prompt": "Nedostaje vještina, agent ili MCP server?",
   "marketplace.contribute.cta": "Doprinesi na GitHub-u",
+  "marketplace.migration.notice":
+    "Modovi su zamijenjeni agentima. Ako ste prethodno instalirali marketplace modove, uklonite ih i ponovo instalirajte kao agente da biste prešli na novi format.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "Implementiraj",
@@ -96,5 +109,14 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "Isključi Kilo snapshotove za ovaj projekat. Izgubićete poništi/vrati za izmjene koje napravi Kilo, ali git i dalje prati sve.",
 
+  // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "Otvori u pregledniku razlika",
+  "ui.messagePart.shell.command": "Naredba",
+  "ui.messagePart.shell.output": "Izlaz",
+  "ui.messagePart.openInEditor": "Otvori u editoru",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Ovo je bilo korisno",
+  "ui.message.feedback.notHelpful": "Ovo nije bilo korisno",
+  "ui.message.feedback.clearRating": "Obriši ocjenu",
 }

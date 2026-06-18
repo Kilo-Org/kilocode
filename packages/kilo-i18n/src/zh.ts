@@ -5,10 +5,21 @@ export const dict = {
   "provider.connect.kiloGateway.visit.prefix": "访问 ",
   "provider.connect.kiloGateway.visit.link": "kilo.ai",
   "provider.connect.kiloGateway.visit.suffix": " 获取您的 API 密钥。",
+  "provider.connect.kiloGateway.byok.prefix": "如需更多使用统计信息，请",
+  "provider.connect.kiloGateway.byok.link": "通过 Kilo's Gateway 进行 BYOK",
+  "provider.connect.kiloGateway.byok.suffix": "。",
 
-  // Provider dialog translations
-  "dialog.provider.group.recommended": "推荐",
-  "dialog.provider.kilo.note": "访问 500+ AI 模型",
+  // Provider settings translations
+  "settings.providers.group.recommended": "推荐",
+  "settings.providers.note.kilo": "访问 500+ AI 模型",
+  "settings.providers.note.opencode": "精选模型，包括 Claude、GPT、Gemini 等",
+  "settings.providers.note.anthropic": "直接访问 Claude 模型，包括 Pro 和 Max",
+  "settings.providers.note.deepseek": "用于推理和编码任务的 DeepSeek 模型",
+  "settings.providers.note.copilot": "用于编码辅助的 Claude 模型",
+  "settings.providers.note.openai": "使用 API 密钥或 ChatGPT 登录访问 GPT 和 Codex 模型",
+  "settings.providers.note.google": "用于快速结构化响应的 Gemini 模型",
+  "settings.providers.note.openrouter": "通过一个提供商访问所有支持的模型",
+  "settings.providers.note.vercel": "通过智能路由统一访问 AI 模型",
 
   // Reasoning block label
   "ui.permission.run": "运行",
@@ -17,7 +28,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "技能",
   "marketplace.tab.mcpServers": "MCP 服务器",
-  "marketplace.tab.modes": "模式",
   "marketplace.category.all": "全部",
   "marketplace.placeholder": "待实现",
   "marketplace.card.installed": "已安装",
@@ -42,6 +52,7 @@ export const dict = {
   "marketplace.remove.cancel": "取消",
   "marketplace.remove.confirm.button": "移除",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "智能体",
   "marketplace.search": "搜索...",
   "marketplace.filter.all": "所有项目",
   "marketplace.filter.notInstalled": "未安装",
@@ -57,7 +68,7 @@ export const dict = {
   "marketplace.scope.global": "全局",
   "marketplace.remove.type.mcp": "MCP 服务器",
   "marketplace.remove.type.skill": "技能",
-  "marketplace.remove.type.mode": "模式",
+  "marketplace.remove.type.agent": "智能体",
   "marketplace.remove.failed": "移除 {{name}} 失败",
   "marketplace.install": "安装",
   "marketplace.filter.installed": "已安装",
@@ -66,8 +77,10 @@ export const dict = {
   "marketplace.warning.busyMany": "多个会话正在运行，将被中断",
   "marketplace.warning.installAnyway": "仍然安装",
   "marketplace.warning.cancel": "取消",
-  "marketplace.contribute.prompt": "缺少技能、模式或 MCP 服务器？",
+  "marketplace.contribute.prompt": "缺少技能、智能体或 MCP 服务器？",
   "marketplace.contribute.cta": "在 GitHub 上贡献",
+  "marketplace.migration.notice":
+    "模式已被智能体取代。如果您之前安装了市场中的模式，请将其删除并重新安装为智能体，以迁移到新格式。",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "实现",
@@ -86,5 +99,14 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "关闭本项目的 Kilo 快照。你将失去对 Kilo 更改的撤销/重做，但 git 仍会追踪所有内容。",
 
+  // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "在差异查看器中打开",
+  "ui.messagePart.shell.command": "命令",
+  "ui.messagePart.shell.output": "输出",
+  "ui.messagePart.openInEditor": "在编辑器中打开",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "这有帮助",
+  "ui.message.feedback.notHelpful": "这没有帮助",
+  "ui.message.feedback.clearRating": "清除评分",
 }

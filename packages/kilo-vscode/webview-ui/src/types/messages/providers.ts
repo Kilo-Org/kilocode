@@ -18,6 +18,11 @@ export interface ProviderModel {
   options?: { description?: string }
   recommendedIndex?: number
   isFree?: boolean
+  mayTrainOnYourPrompts?: boolean
+  terminalBench?: {
+    overallScore: number
+    avgAttemptCostUsd: number
+  }
   cost?: {
     input: number
     output: number
@@ -34,6 +39,11 @@ export interface Provider {
   models: Record<string, ProviderModel>
   source?: "env" | "config" | "custom" | "api"
   env?: string[]
+  metadata?: {
+    noteKey?: string
+    icon?: string
+    priority?: number
+  }
 }
 
 export interface ModelSelection {

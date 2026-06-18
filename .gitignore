@@ -1,9 +1,11 @@
 .husky/_
 .DS_Store
+.secrets/
 node_modules
 .worktrees
 .sst
 .env
+.env.local
 .idea/*
 !.idea/gradle.xml
 !.idea/.run
@@ -33,9 +35,11 @@ a.out
 target
 .scripts
 .direnv/
+packages/kilo-jetbrains/build-tasks/.gradle/
 
 # Local dev files
 opencode-dev
+.kilo-dev/
 UPCOMING_CHANGELOG.md
 logs/
 *.bun-build
@@ -45,7 +49,21 @@ telemetry-id
 tsconfig.tsbuildinfo
 
 # Kilo
+.kilo/.gitignore
+.kilo/package.json
+.kilo/package-lock.json
+.kilo/pnpm-lock.yaml
+.kilo/bun.lock
+.kilo/yarn.lock
+.kilo/node_modules
 .kilo/plans/*upstream-merge-report-*.md
+.kilocode/.gitignore
+.kilocode/package.json
+.kilocode/package-lock.json
+.kilocode/pnpm-lock.yaml
+.kilocode/bun.lock
+.kilocode/yarn.lock
+.kilocode/node_modules
 
 # Test Artifacts
 packages/app/.artifacts/

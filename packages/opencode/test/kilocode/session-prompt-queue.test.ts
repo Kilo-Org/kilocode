@@ -2,20 +2,39 @@ import path from "path"
 import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { Bus } from "../../src/bus"
+import { AppRuntime } from "../../src/effect/app-runtime"
+import { InstanceRef } from "../../src/effect/instance-ref"
+import { KiloSessionCompaction } from "@/kilocode/session/compaction"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Suggestion } from "../../src/kilocode/suggestion"
-import { Question } from "../../src/question"
 import { ModelID, ProviderID } from "../../src/provider/schema"
-import { Instance } from "../../src/project/instance"
+import { InstanceStore } from "../../src/project/instance-store"
+import { provideTestInstance } from "../fixture/fixture"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionCompaction } from "../../src/session/compaction"
 import { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, SessionID } from "../../src/session/schema"
 import * as Log from "@opencode-ai/core/util/log"
-import { tmpdir } from "../fixture/fixture"
+import { provideInstance, tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
+
+const store = {
+  updateMessage: <T extends MessageV2.Info>(msg: T) => Effect.promise(() => sessions.updateMessage(msg)),
+  updatePart: <T extends MessageV2.Part>(part: T) => Effect.promise(() => sessions.updatePart(part)),
+}
+
+const sessions = {
+  create: (input?: Parameters<Session.Interface["create"]>[0]) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.create(input)).pipe(Effect.provide(Session.defaultLayer))),
+  messages: (input: Parameters<Session.Interface["messages"]>[0]) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.messages(input)).pipe(Effect.provide(Session.defaultLayer))),
+  updateMessage: <T extends MessageV2.Info>(msg: T) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.updateMessage(msg)).pipe(Effect.provide(Session.defaultLayer))),
+  updatePart: <T extends MessageV2.Part>(part: T) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.updatePart(part)).pipe(Effect.provide(Session.defaultLayer))),
+}
 
 function line(input: unknown) {
   return `data: ${JSON.stringify(input)}\n\n`
@@ -60,8 +79,18 @@ function reply(input: { text: string; ready?: () => void; wait?: Promise<unknown
   })
 }
 
-function hasText(msg: Awaited<ReturnType<typeof SessionPrompt.prompt>>, text: string) {
+function hasText(msg: MessageV2.WithParts, text: string) {
   return msg.parts.some((part) => part.type === "text" && part.text.includes(text))
+}
+
+function scoped<T>(dir: string, fn: (prompt: SessionPrompt.Interface) => Promise<T>) {
+  return Effect.runPromise(
+    SessionPrompt.Service.use((prompt) => Effect.promise(() => fn(prompt))).pipe(
+      Effect.provide(SessionPrompt.defaultLayer),
+      provideInstance(dir),
+      Effect.scoped,
+    ),
+  )
 }
 
 // Find the last non-system message in an OpenAI-compatible request body. Kept
@@ -117,10 +146,10 @@ function assistant(sessionID: SessionID, id: MessageID, parentID: MessageID): Me
 describe("session prompt queue", () => {
   test("scopes queued turns without moving prior assistant history", async () => {
     const sessionID = SessionID.make("session_scope")
-    const one = MessageID.make("message_01")
-    const ans = MessageID.make("message_02")
-    const two = MessageID.make("message_03")
-    const three = MessageID.make("message_04")
+    const one = MessageID.make("msg_01")
+    const ans = MessageID.make("msg_02")
+    const two = MessageID.make("msg_03")
+    const three = MessageID.make("msg_04")
     const messages = [
       user(sessionID, one),
       assistant(sessionID, ans, one),
@@ -147,13 +176,13 @@ describe("session prompt queue", () => {
     // in the middle of the prior turn's messages, ending the next model request
     // with an assistant message and tripping Anthropic's prefill rejection.
     const sessionID = SessionID.make("session_queue_mid_turn")
-    const m1 = MessageID.make("message_10")
-    const a1 = MessageID.make("message_20")
-    const m2 = MessageID.make("message_30")
-    const a2step1 = MessageID.make("message_40")
-    const m3 = MessageID.make("message_50") // queued mid-turn
-    const a2step2 = MessageID.make("message_60")
-    const a2final = MessageID.make("message_70")
+    const m1 = MessageID.make("msg_10")
+    const a1 = MessageID.make("msg_20")
+    const m2 = MessageID.make("msg_30")
+    const a2step1 = MessageID.make("msg_40")
+    const m3 = MessageID.make("msg_50") // queued mid-turn
+    const a2step2 = MessageID.make("msg_60")
+    const a2final = MessageID.make("msg_70")
     const messages = [
       user(sessionID, m1),
       assistant(sessionID, a1, m1),
@@ -182,11 +211,11 @@ describe("session prompt queue", () => {
     // subsequent scope() calls should keep the target user together with its
     // own turn's assistants (not interleaved with a prior turn's tail).
     const sessionID = SessionID.make("session_queue_step_two")
-    const m1 = MessageID.make("message_01a")
-    const a1 = MessageID.make("message_02a")
-    const m2 = MessageID.make("message_03a") // queued mid-turn
-    const a1tail = MessageID.make("message_04a")
-    const a2step1 = MessageID.make("message_05a")
+    const m1 = MessageID.make("msg_01a")
+    const a1 = MessageID.make("msg_02a")
+    const m2 = MessageID.make("msg_03a") // queued mid-turn
+    const a1tail = MessageID.make("msg_04a")
+    const a2step1 = MessageID.make("msg_05a")
     const messages = [
       user(sessionID, m1),
       assistant(sessionID, a1, m1),
@@ -212,10 +241,10 @@ describe("session prompt queue", () => {
     // which unhid any user prompts queued between the base and the injected
     // follow-up. Exempt the follow-up without reopening the boundary.
     const sessionID = SessionID.make("session_retarget_hide")
-    const base = MessageID.make("message_b1")
-    const ans = MessageID.make("message_b2")
-    const queued = MessageID.make("message_b3") // queued while base was running
-    const injected = MessageID.make("message_b4") // injected follow-up
+    const base = MessageID.make("msg_b1")
+    const ans = MessageID.make("msg_b2")
+    const queued = MessageID.make("msg_b3") // queued while base was running
+    const injected = MessageID.make("msg_b4") // injected follow-up
     const messages = [
       user(sessionID, base),
       assistant(sessionID, ans, base),
@@ -246,31 +275,34 @@ describe("session prompt queue", () => {
     // scope() hides that marker, runLoop never processes the compaction task and
     // instead retries the same oversized request until compaction is exhausted.
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
-        const session = await Session.create({ title: "Queued compaction regression" })
+        const session = await sessions.create({ title: "Queued compaction regression" })
         const first = MessageID.ascending()
         const ans = MessageID.ascending()
         const queued = MessageID.ascending()
 
-        await Session.updateMessage(user(session.id, first).info)
-        await Session.updateMessage(assistant(session.id, ans, first).info)
-        await Session.updateMessage(user(session.id, queued).info)
+        await sessions.updateMessage(user(session.id, first).info)
+        await sessions.updateMessage(assistant(session.id, ans, first).info)
+        await sessions.updateMessage(user(session.id, queued).info)
 
         const result = await Effect.runPromise(
           KiloSessionPromptQueue.enqueue(
             session.id,
             queued,
             Effect.promise(async () => {
-              await SessionCompaction.create({
-                sessionID: session.id,
-                agent: "code",
-                model: { providerID: ProviderID.make("test"), modelID: ModelID.make("model") },
-                auto: true,
-                overflow: true,
-              })
-              const messages = await Session.messages({ sessionID: session.id })
+              await Effect.runPromise(
+                KiloSessionCompaction.create({
+                  session: store,
+                  sessionID: session.id,
+                  agent: "code",
+                  model: { providerID: ProviderID.make("test"), modelID: ModelID.make("model") },
+                  auto: true,
+                  overflow: true,
+                }),
+              )
+              const messages = await sessions.messages({ sessionID: session.id })
               const compact = messages.find((msg) => msg.parts.some((part) => part.type === "compaction"))?.info.id
               return { compact, ids: KiloSessionPromptQueue.scope(session.id, messages).map((item) => item.info.id) }
             }),
@@ -296,7 +328,7 @@ describe("session prompt queue", () => {
     const first = Effect.runPromise(
       KiloSessionPromptQueue.enqueue(
         sessionID,
-        MessageID.make("message_followup_1"),
+        MessageID.make("msg_followup_1"),
         Effect.gen(function* () {
           observed.push({ where: "first:start", value: KiloSessionPromptQueue.hasFollowup(sessionID) })
           firstStarted.resolve()
@@ -315,7 +347,7 @@ describe("session prompt queue", () => {
     const second = Effect.runPromise(
       KiloSessionPromptQueue.enqueue(
         sessionID,
-        MessageID.make("message_followup_2"),
+        MessageID.make("msg_followup_2"),
         Effect.gen(function* () {
           observed.push({ where: "second:start", value: KiloSessionPromptQueue.hasFollowup(sessionID) })
           secondStarted.resolve()
@@ -334,7 +366,7 @@ describe("session prompt queue", () => {
     const third = Effect.runPromise(
       KiloSessionPromptQueue.enqueue(
         sessionID,
-        MessageID.make("message_followup_3"),
+        MessageID.make("msg_followup_3"),
         Effect.sync(() => {
           observed.push({ where: "third:start", value: KiloSessionPromptQueue.hasFollowup(sessionID) })
           return "third"
@@ -412,83 +444,178 @@ describe("session prompt queue", () => {
         },
       })
 
-      await Instance.provide({
+      await provideTestInstance({
         directory: tmp.path,
-        fn: async () => {
-          const session = await Session.create({ title: "Queued prompt regression" })
-          const first = SessionPrompt.prompt({
-            sessionID: session.id,
-            agent: "code",
-            parts: [{ type: "text", text: "first prompt" }],
-          })
+        fn: async () =>
+          scoped(tmp.path, async (prompt) => {
+            const session = await sessions.create({ title: "Queued prompt regression" })
+            const first = Effect.runPromise(
+              prompt.prompt({
+                sessionID: session.id,
+                agent: "code",
+                parts: [{ type: "text", text: "first prompt" }],
+              }),
+            )
 
-          await ready.promise
+            await ready.promise
 
-          const second = SessionPrompt.prompt({
-            sessionID: session.id,
-            agent: "code",
-            parts: [{ type: "text", text: "second prompt" }],
-          })
+            const second = Effect.runPromise(
+              prompt.prompt({
+                sessionID: session.id,
+                agent: "code",
+                parts: [{ type: "text", text: "second prompt" }],
+              }),
+            )
 
-          const one = await first
-          await injected.promise
-          const two = await second
+            const one = await first
+            await injected.promise
+            const two = await second
 
-          expect(calls).toHaveLength(2)
+            expect(calls).toHaveLength(2)
 
-          // The in-flight stream must complete; no aborted error on msg1's reply.
-          expect(one.info.role).toBe("assistant")
-          if (one.info.role === "assistant") expect(one.info.error).toBeUndefined()
-          expect(hasText(one, "first reply")).toBe(true)
-          expect(hasText(two, "second reply")).toBe(true)
+            // The in-flight stream must complete; no aborted error on msg1's reply.
+            expect(one.info.role).toBe("assistant")
+            if (one.info.role === "assistant") expect(one.info.error).toBeUndefined()
+            expect(hasText(one, "first reply")).toBe(true)
+            expect(hasText(two, "second reply")).toBe(true)
 
-          const msgs = await Session.messages({ sessionID: session.id })
-          const users = msgs.filter((msg) => msg.info.role === "user")
-          const assistants = msgs.filter((msg) => msg.info.role === "assistant")
-          const prompts = users.flatMap((msg) =>
-            msg.parts.filter((part) => part.type === "text").map((part) => part.text),
-          )
-          const text = assistants.flatMap((msg) =>
-            msg.parts.filter((part) => part.type === "text").map((part) => part.text),
-          )
-          expect(users).toHaveLength(2)
-          expect(assistants).toHaveLength(2)
-          expect(prompts).toContain("first prompt")
-          expect(prompts).toContain("second prompt")
-          expect(text).toContain("first reply")
-          expect(text).toContain("second reply")
+            const msgs = await sessions.messages({ sessionID: session.id })
+            const users = msgs.filter((msg) => msg.info.role === "user")
+            const assistants = msgs.filter((msg) => msg.info.role === "assistant")
+            const prompts = users.flatMap((msg) =>
+              msg.parts.filter((part) => part.type === "text").map((part) => part.text),
+            )
+            const text = assistants.flatMap((msg) =>
+              msg.parts.filter((part) => part.type === "text").map((part) => part.text),
+            )
+            expect(users).toHaveLength(2)
+            expect(assistants).toHaveLength(2)
+            expect(prompts).toContain("first prompt")
+            expect(prompts).toContain("second prompt")
+            expect(text).toContain("first reply")
+            expect(text).toContain("second reply")
 
-          const firstUser = users.find((msg) => hasText(msg, "first prompt"))
-          const secondUser = users.find((msg) => hasText(msg, "second prompt"))
-          const firstReply = assistants.find((msg) => hasText(msg, "first reply"))
-          const secondReply = assistants.find((msg) => hasText(msg, "second reply"))
-          if (
-            firstUser?.info.role !== "user" ||
-            secondUser?.info.role !== "user" ||
-            firstReply?.info.role !== "assistant" ||
-            secondReply?.info.role !== "assistant"
-          ) {
-            throw new Error("missing expected messages")
-          }
-          expect(firstReply.info.parentID).toBe(firstUser.info.id)
-          expect(secondReply.info.parentID).toBe(secondUser.info.id)
+            const firstUser = users.find((msg) => hasText(msg, "first prompt"))
+            const secondUser = users.find((msg) => hasText(msg, "second prompt"))
+            const firstReply = assistants.find((msg) => hasText(msg, "first reply"))
+            const secondReply = assistants.find((msg) => hasText(msg, "second reply"))
+            if (
+              firstUser?.info.role !== "user" ||
+              secondUser?.info.role !== "user" ||
+              firstReply?.info.role !== "assistant" ||
+              secondReply?.info.role !== "assistant"
+            ) {
+              throw new Error("missing expected messages")
+            }
+            expect(firstReply.info.parentID).toBe(firstUser.info.id)
+            expect(secondReply.info.parentID).toBe(secondUser.info.id)
 
-          // Regression for #9492: the second LLM request must end with the
-          // queued user prompt, not an assistant tail from the prior turn.
-          // Anthropic's API rejects requests whose final message is assistant
-          // (prefill), and scope() is supposed to partition the queued target
-          // turn to the end before the model request is built.
-          expect(bodies).toHaveLength(2)
-          const second2 = bodies[1]
-          expect(JSON.stringify(second2)).toContain("second prompt")
-          const tail = lastConversational(second2)
-          expect(tail?.role).toBe("user")
-          expect(JSON.stringify(tail?.content)).toContain("second prompt")
-        },
+            // Regression for #9492: the second LLM request must end with the
+            // queued user prompt, not an assistant tail from the prior turn.
+            // Anthropic's API rejects requests whose final message is assistant
+            // (prefill), and scope() is supposed to partition the queued target
+            // turn to the end before the model request is built.
+            expect(bodies).toHaveLength(2)
+            const second2 = bodies[1]
+            expect(JSON.stringify(second2)).toContain("second prompt")
+            const tail = lastConversational(second2)
+            expect(tail?.role).toBe("user")
+            expect(JSON.stringify(tail?.content)).toContain("second prompt")
+          }),
       })
     } finally {
       server.stop(true)
     }
+  })
+
+  test("bridges legacy instance context for prompts after a completed turn", async () => {
+    const calls: number[] = []
+    const server = Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) return new Response("not found", { status: 404 })
+
+        calls.push(Date.now())
+        const text = calls.length === 1 ? "first reply" : "second reply"
+        return new Response(reply({ text }), {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    try {
+      await using tmp = await tmpdir({
+        git: true,
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, "opencode.json"),
+            JSON.stringify({
+              $schema: "https://opencode.ai/config.json",
+              enabled_providers: ["alibaba"],
+              provider: {
+                alibaba: {
+                  options: { apiKey: "test-key", baseURL: `${server.url.origin}/v1` },
+                },
+              },
+              agent: { plan: { model: "alibaba/qwen-plus" } },
+            }),
+          )
+        },
+      })
+
+      const ctx = await AppRuntime.runPromise(InstanceStore.Service.use((store) => store.load({ directory: tmp.path })))
+      const session = await AppRuntime.runPromise(
+        Session.Service.use((svc) => svc.create({ title: "Sequential prompt context regression" })).pipe(
+          Effect.provideService(InstanceRef, ctx),
+        ),
+      )
+
+      const first = await AppRuntime.runPromise(
+        SessionPrompt.Service.use((prompt) =>
+          prompt.prompt({
+            sessionID: session.id,
+            agent: "plan",
+            parts: [{ type: "text", text: "first prompt" }],
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+      const second = await AppRuntime.runPromise(
+        SessionPrompt.Service.use((prompt) =>
+          prompt.prompt({
+            sessionID: session.id,
+            agent: "plan",
+            parts: [{ type: "text", text: "second prompt" }],
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      expect(calls).toHaveLength(2)
+      expect(hasText(first, "first reply")).toBe(true)
+      expect(hasText(second, "second reply")).toBe(true)
+    } finally {
+      server.stop(true)
+    }
+  })
+
+  test("cancel on a session with no active tail is a no-op and does not leak state", async () => {
+    const sessionID = SessionID.make("session_cancel_noop")
+
+    await Effect.runPromise(KiloSessionPromptQueue.cancel(sessionID))
+
+    expect(KiloSessionPromptQueue._hasInternalState(sessionID)).toBe(false)
+
+    const result = await Effect.runPromise(
+      KiloSessionPromptQueue.enqueue(
+        sessionID,
+        MessageID.make("msg_probe"),
+        Effect.succeed("work executed"),
+        Effect.succeed("cancelled returned"),
+      ),
+    )
+
+    expect(result).toBe("work executed")
   })
 
   test("cancel drops queued prompts and resets internal state", async () => {
@@ -529,54 +656,61 @@ describe("session prompt queue", () => {
         },
       })
 
-      await Instance.provide({
+      await provideTestInstance({
         directory: tmp.path,
-        fn: async () => {
-          const session = await Session.create({ title: "Queued cancel regression" })
-          const first = SessionPrompt.prompt({
-            sessionID: session.id,
-            agent: "code",
-            parts: [{ type: "text", text: "first prompt" }],
-          })
-          await ready.promise
+        fn: async () =>
+          scoped(tmp.path, async (prompt) => {
+            const session = await sessions.create({ title: "Queued cancel regression" })
+            const first = Effect.runPromise(
+              prompt.prompt({
+                sessionID: session.id,
+                agent: "code",
+                parts: [{ type: "text", text: "first prompt" }],
+              }),
+            )
+            await ready.promise
 
-          const second = SessionPrompt.prompt({
-            sessionID: session.id,
-            agent: "code",
-            parts: [{ type: "text", text: "second prompt" }],
-          })
-          const third = SessionPrompt.prompt({
-            sessionID: session.id,
-            agent: "code",
-            parts: [{ type: "text", text: "third prompt" }],
-          })
+            const second = Effect.runPromise(
+              prompt.prompt({
+                sessionID: session.id,
+                agent: "code",
+                parts: [{ type: "text", text: "second prompt" }],
+              }),
+            )
+            const third = Effect.runPromise(
+              prompt.prompt({
+                sessionID: session.id,
+                agent: "code",
+                parts: [{ type: "text", text: "third prompt" }],
+              }),
+            )
 
-          // Let msg2/msg3's enqueue capture the current version before cancel bumps it.
-          await Bun.sleep(20)
-          expect(calls).toHaveLength(1)
+            // Let msg2/msg3's enqueue capture the current version before cancel bumps it.
+            await Bun.sleep(20)
+            expect(calls).toHaveLength(1)
 
-          await SessionPrompt.cancel(session.id)
-          await Promise.all([first, second, third])
+            await Effect.runPromise(prompt.cancel(session.id))
+            await Promise.all([first, second, third])
 
-          // The queued prompts must never reach the LLM once cancel flushes the queue.
-          expect(calls).toHaveLength(1)
-          const msgs = await Session.messages({ sessionID: session.id })
-          const assistants = msgs.filter((msg) => msg.info.role === "assistant")
-          expect(assistants).toHaveLength(1)
-          expect(msgs.filter((msg) => msg.info.role === "user")).toHaveLength(3)
+            // The queued prompts must never reach the LLM once cancel flushes the queue.
+            expect(calls).toHaveLength(1)
+            const msgs = await sessions.messages({ sessionID: session.id })
+            const assistants = msgs.filter((msg) => msg.info.role === "assistant")
+            expect(assistants).toHaveLength(1)
+            expect(msgs.filter((msg) => msg.info.role === "user")).toHaveLength(3)
 
-          // Internal state should have no lingering tail/version/target entries after the last release.
-          const ids = await Effect.runPromise(
-            KiloSessionPromptQueue.enqueue(
-              session.id,
-              MessageID.make("message_probe"),
-              Effect.succeed(KiloSessionPromptQueue.scope(session.id, []).map((item) => item.info.id)),
-              Effect.succeed([]),
-            ),
-          )
-          expect(ids).toEqual([])
-          expect(KiloSessionPromptQueue.hasFollowup(session.id)).toBe(false)
-        },
+            // Internal state should have no lingering tail/version/target entries after the last release.
+            const ids = await Effect.runPromise(
+              KiloSessionPromptQueue.enqueue(
+                session.id,
+                MessageID.make("msg_probe"),
+                Effect.succeed(KiloSessionPromptQueue.scope(session.id, []).map((item) => item.info.id)),
+                Effect.succeed([]),
+              ),
+            )
+            expect(ids).toEqual([])
+            expect(KiloSessionPromptQueue.hasFollowup(session.id)).toBe(false)
+          }),
       })
     } finally {
       server.stop(true)
@@ -588,96 +722,46 @@ describe("session prompt queue", () => {
     const dismissed = Promise.withResolvers<void>()
     await using tmp = await tmpdir({ git: true })
 
-    await Instance.provide({
+    await provideTestInstance({
       directory: tmp.path,
-      fn: async () => {
-        const session = await Session.create({ title: "Suggestion unblock regression" })
-        const offShown = Bus.subscribe(Suggestion.Event.Shown, (event) => {
-          if (event.properties.sessionID === session.id) shown.resolve()
-        })
-        const offDismissed = Bus.subscribe(Suggestion.Event.Dismissed, (event) => {
-          if (event.properties.sessionID === session.id) dismissed.resolve()
-        })
-
-        try {
-          const base = Suggestion.show({
-            sessionID: session.id,
-            text: "Run review?",
-            actions: [{ label: "Review", prompt: "/local-review-uncommitted" }],
-          }).catch((err) => {
-            if (err instanceof Suggestion.DismissedError) return "dismissed"
-            throw err
+      fn: async () =>
+        scoped(tmp.path, async (prompt) => {
+          const session = await sessions.create({ title: "Suggestion unblock regression" })
+          const offShown = Bus.subscribe(Suggestion.Event.Shown, (event) => {
+            if (event.properties.sessionID === session.id) shown.resolve()
+          })
+          const offDismissed = Bus.subscribe(Suggestion.Event.Dismissed, (event) => {
+            if (event.properties.sessionID === session.id) dismissed.resolve()
           })
 
-          await shown.promise
-          await SessionPrompt.prompt({
-            sessionID: session.id,
-            agent: "code",
-            parts: [{ type: "text", text: "replacement prompt" }],
-            noReply: true,
-          })
-          await dismissed.promise
+          try {
+            const base = Suggestion.show({
+              sessionID: session.id,
+              text: "Run review?",
+              actions: [{ label: "Review", prompt: "/local-review-uncommitted" }],
+            }).catch((err) => {
+              if (err instanceof Suggestion.DismissedError) return "dismissed"
+              throw err
+            })
 
-          expect(await base).toBe("dismissed")
-          expect(await Suggestion.list()).toEqual([])
-        } finally {
-          offShown()
-          offDismissed()
-        }
-      },
-    })
-  })
+            await shown.promise
+            await Effect.runPromise(
+              prompt.prompt({
+                sessionID: session.id,
+                agent: "code",
+                parts: [{ type: "text", text: "replacement prompt" }],
+                noReply: true,
+              }),
+            )
+            await dismissed.promise
 
-  test("new prompt dismisses a pending question", async () => {
-    const asked = Promise.withResolvers<void>()
-    const rejected = Promise.withResolvers<void>()
-    await using tmp = await tmpdir({ git: true })
-
-    await Instance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        const session = await Session.create({ title: "Question unblock regression" })
-        const offAsked = Bus.subscribe(Question.Event.Asked, (event) => {
-          if (event.properties.sessionID === session.id) asked.resolve()
-        })
-        const offRejected = Bus.subscribe(Question.Event.Rejected, (event) => {
-          if (event.properties.sessionID === session.id) rejected.resolve()
-        })
-
-        try {
-          const pending = Question.ask({
-            sessionID: session.id,
-            questions: [
-              {
-                header: "Continue?",
-                question: "Should I continue?",
-                options: [
-                  { label: "Yes", description: "Go ahead" },
-                  { label: "No", description: "Stop" },
-                ],
-              },
-            ],
-          }).catch((err) => {
-            if (err instanceof Question.RejectedError) return "rejected"
-            throw err
-          })
-
-          await asked.promise
-          await SessionPrompt.prompt({
-            sessionID: session.id,
-            agent: "code",
-            parts: [{ type: "text", text: "replacement prompt" }],
-            noReply: true,
-          })
-          await rejected.promise
-
-          expect(await pending).toBe("rejected")
-          expect(await Question.list()).toEqual([])
-        } finally {
-          offAsked()
-          offRejected()
-        }
-      },
+            expect(await base).toBe("dismissed")
+            expect(await Suggestion.list()).toEqual([])
+          } finally {
+            offShown()
+            offDismissed()
+          }
+        }),
     })
   })
 
@@ -687,7 +771,7 @@ describe("session prompt queue", () => {
     // hasFollowup=true and reject synchronously, before any pending entry or
     // Shown event is published.
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const sessionID = SessionID.make("ses_auto_suggestion")
@@ -698,7 +782,7 @@ describe("session prompt queue", () => {
         const first = Effect.runPromise(
           KiloSessionPromptQueue.enqueue(
             sessionID,
-            MessageID.make("message_auto_sug_1"),
+            MessageID.make("msg_auto_sug_1"),
             Effect.gen(function* () {
               started.resolve()
               yield* Effect.promise(() => release.promise)
@@ -713,7 +797,7 @@ describe("session prompt queue", () => {
         const second = Effect.runPromise(
           KiloSessionPromptQueue.enqueue(
             sessionID,
-            MessageID.make("message_auto_sug_2"),
+            MessageID.make("msg_auto_sug_2"),
             Effect.succeed("second" as const),
             Effect.succeed("second-cancelled" as const),
           ),
@@ -738,73 +822,6 @@ describe("session prompt queue", () => {
         }
         expect(shown).toBe(0)
         expect(await Suggestion.list()).toEqual([])
-
-        release.resolve()
-        expect(await first).toBe("first")
-        expect(await second).toBe("second")
-      },
-    })
-  })
-
-  test("auto-dismisses a question shown after a queued prompt", async () => {
-    await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        const sessionID = SessionID.make("ses_auto_question")
-        const started = Promise.withResolvers<void>()
-        const release = Promise.withResolvers<void>()
-
-        const first = Effect.runPromise(
-          KiloSessionPromptQueue.enqueue(
-            sessionID,
-            MessageID.make("message_auto_q_1"),
-            Effect.gen(function* () {
-              started.resolve()
-              yield* Effect.promise(() => release.promise)
-              return "first" as const
-            }),
-            Effect.succeed("first-cancelled" as const),
-          ),
-        )
-        await started.promise
-
-        const second = Effect.runPromise(
-          KiloSessionPromptQueue.enqueue(
-            sessionID,
-            MessageID.make("message_auto_q_2"),
-            Effect.succeed("second" as const),
-            Effect.succeed("second-cancelled" as const),
-          ),
-        )
-        await Bun.sleep(10)
-        expect(KiloSessionPromptQueue.hasFollowup(sessionID)).toBe(true)
-
-        let asked = 0
-        const offAsked = Bus.subscribe(Question.Event.Asked, (event) => {
-          if (event.properties.sessionID === sessionID) asked++
-        })
-        try {
-          await expect(
-            Question.ask({
-              sessionID,
-              questions: [
-                {
-                  header: "Continue?",
-                  question: "Should I continue?",
-                  options: [
-                    { label: "Yes", description: "Go ahead" },
-                    { label: "No", description: "Stop" },
-                  ],
-                },
-              ],
-            }),
-          ).rejects.toBeInstanceOf(Question.RejectedError)
-        } finally {
-          offAsked()
-        }
-        expect(asked).toBe(0)
-        expect(await Question.list()).toEqual([])
 
         release.resolve()
         expect(await first).toBe("first")

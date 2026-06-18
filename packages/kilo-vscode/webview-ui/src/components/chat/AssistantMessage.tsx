@@ -10,6 +10,7 @@
 import { Component, For, Show, createMemo } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { Part, PART_MAPPING, ToolRegistry } from "@kilocode/kilo-ui/message-part"
+import type { MessageFeedbackControls } from "@kilocode/kilo-ui/message-part"
 import type {
   AssistantMessage as SDKAssistantMessage,
   Part as SDKPart,
@@ -20,7 +21,10 @@ import { useData } from "@kilocode/kilo-ui/context/data"
 import { useSession } from "../../context/session"
 import { useDisplay } from "../../context/display"
 import { useConfig } from "../../context/config"
+import { useLanguage } from "../../context/language"
+import { useServer } from "../../context/server"
 import { snapshotProgress } from "../../context/session-utils"
+import { planDisplayPath } from "../../utils/plan-path"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
 
@@ -28,20 +32,73 @@ import { SuggestBar } from "./SuggestBar"
 // We render these ourselves via ToolRegistry when they complete,
 // so the user can see what the AI set up.
 export const UPSTREAM_SUPPRESSED_TOOLS = new Set(["todowrite", "todoread"])
+const EDIT_TOOLS = new Set(["edit", "write", "apply_patch"])
+
+function editOpen(part: SDKPart, open: boolean) {
+  if (part.type !== "tool") return undefined
+  const tool = (part as unknown as ToolPart).tool
+  return EDIT_TOOLS.has(tool) ? open : undefined
+}
+
+/** Extract plan path from a completed plan_exit tool part. */
+function planExitInfo(part: SDKPart): { plan: string } | undefined {
+  if (part.type !== "tool") return undefined
+  const tp = part as unknown as ToolPart
+  if (tp.tool !== "plan_exit") return undefined
+  if (tp.state?.status !== "completed") return undefined
+  const meta = (tp.state as { metadata?: Record<string, unknown> }).metadata ?? {}
+  const plan = typeof meta.plan === "string" ? meta.plan : undefined
+  if (!plan) return undefined
+  return { plan }
+}
+
+function PlanExitCard(props: { part: ToolPart }) {
+  const language = useLanguage()
+  const server = useServer()
+  const data = useData()
+  const info = createMemo(() => planExitInfo(props.part as unknown as SDKPart))
+  const display = createMemo(() => {
+    const i = info()
+    if (!i) return ""
+    return planDisplayPath(i.plan, server.workspaceDirectory())
+  })
+  const label = createMemo(() => {
+    if (!info()) return ""
+    return language.t("plan.exit.ready")
+  })
+  const open = (e: MouseEvent) => {
+    e.preventDefault()
+    const i = info()
+    if (!i || !data.openFile) return
+    data.openFile(i.plan)
+  }
+  return (
+    <Show when={info()}>
+      <div data-component="plan-exit-card">
+        <span data-slot="plan-exit-label">{label()}</span>{" "}
+        <a data-slot="plan-exit-link" href="#" onClick={open}>
+          {display()}
+        </a>
+      </div>
+    </Show>
+  )
+}
 
 function isRenderable(part: SDKPart): boolean {
   if (part.type === "tool") {
     const tool = (part as SDKPart & { tool: string }).tool
     const state = (part as SDKPart & { state: { status: string } }).state
     if (UPSTREAM_SUPPRESSED_TOOLS.has(tool)) {
-      // Show todo parts only when completed (permissions are now in the dock)
-      return state.status === "completed"
+      // Show completed todo parts only when kilo-ui provides a visible renderer.
+      return state.status === "completed" && !!ToolRegistry.render(tool)
     }
     // Always render question tool parts — active ones get the inline QuestionDock
     return true
   }
   if (part.type === "text") return !snapshotProgress(part) && !!(part as SDKPart & { text: string }).text?.trim()
-  if (part.type === "reasoning") return !!(part as SDKPart & { text: string }).text?.trim()
+  if (part.type === "reasoning") {
+    return !!(part as SDKPart & { text: string }).text?.replace("[REDACTED]", "").trim()
+  }
   return !!PART_MAPPING[part.type]
 }
 
@@ -62,22 +119,33 @@ function matchToolRequest<T extends { tool?: { callID: string; messageID: string
 
 interface AssistantMessageProps {
   message: SDKAssistantMessage
+  parts?: SDKPart[]
   showAssistantCopyPartID?: string | null
+  feedback?: MessageFeedbackControls
+}
+
+type ToolStateProps = {
+  input?: Record<string, unknown>
+  metadata?: Record<string, unknown>
+  output?: string
+  status?: string
 }
 
 function TodoToolCard(props: { part: ToolPart }) {
   const render = ToolRegistry.render(props.part.tool)
-  const state = props.part.state as any
+  const state = () => props.part.state as ToolStateProps
   return (
     <Show when={render}>
       {(renderFn) => (
         <Dynamic
           component={renderFn()}
-          input={state?.input ?? {}}
-          metadata={state?.metadata ?? {}}
+          input={state()?.input ?? {}}
+          metadata={state()?.metadata ?? {}}
           tool={props.part.tool}
-          output={state?.output}
-          status={state?.status}
+          partID={props.part.id}
+          callID={props.part.callID}
+          output={state()?.output}
+          status={state()?.status}
           defaultOpen
           reveal={false}
         />
@@ -88,23 +156,23 @@ function TodoToolCard(props: { part: ToolPart }) {
 
 function BashToolCard(props: { part: ToolPart; defaultOpen: boolean }) {
   const render = ToolRegistry.render(props.part.tool)
-  const state = props.part.state as any
+  const state = () => props.part.state as ToolStateProps
   return (
     <Show when={render}>
       {(card) => (
         <Dynamic
           component={card() as unknown as Component<Record<string, unknown>>}
-          input={state?.input ?? {}}
-          metadata={state?.metadata ?? {}}
+          input={state()?.input ?? {}}
+          metadata={state()?.metadata ?? {}}
           partMetadata={props.part.metadata ?? {}}
           tool={props.part.tool}
           partID={props.part.id}
           callID={props.part.callID}
-          output={state?.output}
-          status={state?.status}
+          output={state()?.output}
+          status={state()?.status}
           defaultOpen={props.defaultOpen}
           animate
-          reveal={state?.status === "pending" || state?.status === "running"}
+          reveal={state()?.status === "pending" || state()?.status === "running"}
         />
       )}
     </Show>
@@ -117,11 +185,18 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const display = useDisplay()
   const { config } = useConfig()
   const open = createMemo(() => config().terminal_command_display !== "collapsed")
+  const edit = createMemo(() => config().code_edit_display === "expanded")
 
   const parts = createMemo(() => {
-    const stored = data.store.part?.[props.message.id]
+    const stored = props.parts ?? data.store.part?.[props.message.id]
     if (!stored) return []
-    return (stored as SDKPart[]).filter((part) => isRenderable(part))
+    return (stored as SDKPart[]).filter((part) => {
+      if (!isRenderable(part)) return false
+      if (part.type === "text" && part.synthetic && props.message.time.completed) return false
+      if (part.type !== "tool" || part.tool !== "question") return true
+      if (part.state.status !== "pending" && part.state.status !== "running") return true
+      return !!matchToolRequest(part, "question", session.questions())
+    })
   })
 
   return (
@@ -145,10 +220,21 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             if (tool.state?.status === "error") return
             return part
           })
+          const planExit = createMemo(() => {
+            if (!planExitInfo(part)) return
+            return part as unknown as ToolPart
+          })
 
           return (
             <Show
-              when={isUpstreamSuppressed || activeQuestion() || activeSuggestion() || bash() || PART_MAPPING[part.type]}
+              when={
+                isUpstreamSuppressed ||
+                activeQuestion() ||
+                activeSuggestion() ||
+                bash() ||
+                planExit() ||
+                PART_MAPPING[part.type]
+              }
             >
               <div data-component="tool-part-wrapper" data-part-type={part.type}>
                 <Show
@@ -158,29 +244,38 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                       when={activeSuggestion()}
                       fallback={
                         <Show
-                          when={bash()}
+                          when={planExit()}
                           fallback={
                             <Show
-                              when={isUpstreamSuppressed}
+                              when={bash()}
                               fallback={
-                                <Part
-                                  part={part}
-                                  message={props.message as SDKMessage}
-                                  showAssistantCopyPartID={props.showAssistantCopyPartID}
-                                  reasoningAutoCollapse={display.reasoningAutoCollapse()}
-                                  animate={
-                                    part.type === "tool" &&
-                                    ((part as unknown as ToolPart).state?.status === "pending" ||
-                                      (part as unknown as ToolPart).state?.status === "running")
+                                <Show
+                                  when={isUpstreamSuppressed}
+                                  fallback={
+                                    <Part
+                                      part={part}
+                                      message={props.message as SDKMessage}
+                                      showAssistantCopyPartID={props.showAssistantCopyPartID}
+                                      defaultOpen={editOpen(part, edit())}
+                                      reasoningAutoCollapse={display.reasoningAutoCollapse()}
+                                      feedback={props.feedback}
+                                      animate={
+                                        part.type === "tool" &&
+                                        ((part as unknown as ToolPart).state?.status === "pending" ||
+                                          (part as unknown as ToolPart).state?.status === "running")
+                                      }
+                                    />
                                   }
-                                />
+                                >
+                                  <TodoToolCard part={part as unknown as ToolPart} />
+                                </Show>
                               }
                             >
-                              <TodoToolCard part={part as unknown as ToolPart} />
+                              {(tool) => <BashToolCard part={tool() as unknown as ToolPart} defaultOpen={open()} />}
                             </Show>
                           }
                         >
-                          {(tool) => <BashToolCard part={tool() as unknown as ToolPart} defaultOpen={open()} />}
+                          {(tp) => <PlanExitCard part={tp()} />}
                         </Show>
                       }
                     >

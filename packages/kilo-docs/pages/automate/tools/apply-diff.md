@@ -1,3 +1,8 @@
+---
+title: Apply Diff Tool | Kilo Code Docs
+description: Learn how the apply_diff tool makes precise, surgical changes to files using search/replace blocks with intelligent matching algorithms.
+---
+
 # apply_diff
 
 The `apply_diff` tool makes precise, surgical changes to files by specifying exactly what content to replace. It uses multiple sophisticated strategies for finding and applying changes while maintaining proper code formatting and structure.

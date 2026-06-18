@@ -16,6 +16,8 @@ export enum TelemetryEvent {
   TOOL_USED = "Tool Used",
   AGENT_USED = "Agent Used",
   PLAN_FOLLOWUP = "Plan Followup",
+  SUGGESTION_SHOWN = "Suggestion Shown",
+  SUGGESTION_ACCEPTED = "Suggestion Accepted",
 
   // Code Indexing
   INDEXING_STARTED = "Indexing Started",
@@ -41,6 +43,9 @@ export enum TelemetryEvent {
 
   // Config Events
   TELEMETRY_DISABLED = "Telemetry Disabled",
+
+  // Feedback
+  FEEDBACK_SUBMITTED = "Feedback Submitted",
 
   // Errors
   ERROR = "Error",

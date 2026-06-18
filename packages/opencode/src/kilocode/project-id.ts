@@ -1,5 +1,5 @@
 import { Context, Effect, Layer } from "effect"
-import { Instance } from "@/project/instance"
+import { Instance } from "@/kilocode/instance"
 import { InstanceState } from "@/effect/instance-state"
 import { makeRuntime } from "@/effect/run-service"
 import path from "path"

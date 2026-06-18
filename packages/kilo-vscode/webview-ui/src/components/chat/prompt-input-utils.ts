@@ -50,6 +50,23 @@ export function atEnd(start: number, end: number, len: number): boolean {
   return start === end && end === len
 }
 
+export function insertSpacedText(
+  text: string,
+  value: string,
+  start: number,
+  end: number,
+): { text: string; pos: number } {
+  const before = text.slice(0, start)
+  const after = text.slice(end)
+  const prefix = before && !/\s$/.test(before) ? " " : ""
+  const suffix = after && !/^\s/.test(after) ? " " : ""
+  const inserted = `${prefix}${value}${suffix}`
+  return {
+    text: `${before}${inserted}${after}`,
+    pos: before.length + inserted.length,
+  }
+}
+
 /**
  * Whether the input prompt should be blocked.
  *
@@ -70,8 +87,8 @@ export function isPromptBlocked(permissions: number): boolean {
  * Returns false (idle-like) when the session is busy only because
  * a suggestion or question tool call is pending.
  */
-export function isPromptBusy(status: string, suggesting: boolean, questioning: boolean): boolean {
-  return status !== "idle" && !suggesting && !questioning
+export function isPromptBusy(status: string, suggesting: boolean, questioning: boolean, submitting: boolean): boolean {
+  return submitting || (status !== "idle" && !suggesting && !questioning)
 }
 
 /**
@@ -92,4 +109,10 @@ export function isSuggesting(blocked: boolean, suggestions: number): boolean {
  */
 export function isQuestioning(blocked: boolean, questions: number): boolean {
   return !blocked && questions > 0
+}
+
+/** Whether a mention token refers to a file or folder path (not a special mention like terminal/git-changes). */
+export function isPathMention(text: string): boolean {
+  const path = text.replace(/^@/, "")
+  return path !== "terminal" && path !== "git-changes"
 }

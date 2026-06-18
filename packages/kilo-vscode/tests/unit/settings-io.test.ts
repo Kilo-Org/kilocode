@@ -167,6 +167,27 @@ describe("parseImport", () => {
     if (result.ok) expect(result.config.model).toBe("test-model")
   })
 
+  it("preserves task subagent model and variant settings", () => {
+    const json = JSON.stringify({
+      subagent_model: "anthropic/claude-sonnet-4",
+      subagent_variant: "high",
+      subagent_variant_overrides: {
+        "anthropic/claude-sonnet-4": "max",
+        "openai/gpt-5": "xhigh",
+      },
+    })
+    const result = parseImport(json)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.config.subagent_model).toBe("anthropic/claude-sonnet-4")
+      expect(result.config.subagent_variant).toBe("high")
+      expect(result.config.subagent_variant_overrides).toEqual({
+        "anthropic/claude-sonnet-4": "max",
+        "openai/gpt-5": "xhigh",
+      })
+    }
+  })
+
   it("strips _meta before returning config", () => {
     const json = JSON.stringify({
       _meta: { version: 1, exportedAt: "2026-01-01", secretsStripped: true },

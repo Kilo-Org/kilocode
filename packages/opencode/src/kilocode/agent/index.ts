@@ -4,9 +4,8 @@ import { NamedError } from "@opencode-ai/core/util/error"
 import { Glob } from "@opencode-ai/core/util/glob"
 import * as Truncate from "../../tool/truncate"
 import { Config } from "../../config/config"
-import { Instance } from "../../project/instance"
-import { makeRuntime } from "@/effect/run-service"
-import z from "zod"
+import type { Info as AgentInfo } from "../../agent/agent"
+import { Schema } from "effect"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
 
@@ -146,7 +145,6 @@ function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
     question: "allow",
     webfetch: "allow",
     websearch: "allow",
-    codesearch: "allow",
     codebase_search: "allow",
     semantic_search: "allow",
     external_directory: {
@@ -156,7 +154,33 @@ function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
   })
 }
 
-function planGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
+function denies(user: Permission.Ruleset) {
+  return user.filter((rule) => rule.action === "deny")
+}
+
+function askEditGuard() {
+  return Permission.fromConfig({ edit: "deny" })
+}
+
+// Upstream v1.14.33 builds Agent state outside the Instance ALS, so reading
+// Instance.worktree here would crash. Thread worktree through from patchAgents
+// instead.
+function planEditRules(worktree: string) {
+  return {
+    "*": "deny" as const,
+    [path.join(".kilo", "plans", "*.md")]: "allow" as const,
+    [path.join("plans", "*.md")]: "allow" as const,
+    [path.join(".plans", "*.md")]: "allow" as const,
+    [path.join(".opencode", "plans", "*.md")]: "allow" as const,
+    [path.relative(worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow" as const,
+  }
+}
+
+function planEditGuard(worktree: string) {
+  return Permission.fromConfig({ edit: planEditRules(worktree) })
+}
+
+function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
   return Permission.fromConfig({
     "*": "deny",
     question: "allow",
@@ -175,19 +199,13 @@ function planGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
     list: "allow",
     webfetch: "allow",
     websearch: "allow",
-    codesearch: "allow",
     codebase_search: "allow",
     semantic_search: "allow",
     external_directory: {
       [Truncate.GLOB]: "allow",
       [path.join(Global.Path.data, "plans", "*")]: "allow",
     },
-    edit: {
-      "*": "deny",
-      [path.join(".kilo", "plans", "*.md")]: "allow",
-      [path.join(".opencode", "plans", "*.md")]: "allow",
-      [path.relative(Instance.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",
-    },
+    edit: planEditRules(worktree),
     ...mcp,
   })
 }
@@ -214,6 +232,16 @@ export function prepare(cfg: Config.Info): KiloData {
   return { mcpRules, defaultsPatch }
 }
 
+export function cacheKey(cfg: Config.Info) {
+  return JSON.stringify({
+    agent: cfg.agent,
+    default_agent: cfg.default_agent,
+    mcp: cfg.mcp,
+    mode: cfg.mode,
+    permission: cfg.permission,
+  })
+}
+
 // Map "build" config key to "code" for backward compatibility.
 export function resolveKey(name: string): string {
   return name === "build" ? "code" : name
@@ -236,6 +264,32 @@ export function processConfigItem(item: {
 }) {
   if (item.options?.displayName && typeof item.options.displayName === "string") {
     item.displayName = item.options.displayName
+  }
+}
+
+const locked = new Set(["compaction", "title", "summary"])
+
+function hardRules() {
+  return Permission.fromConfig({
+    "*": "deny",
+  })
+}
+
+export function harden(item?: { name: string; permission: Permission.Ruleset }) {
+  if (!item) return
+  if (!locked.has(item.name)) return
+  item.permission = hardRules()
+}
+
+export function hardenSystemAgents<T extends { name: string; permission: Permission.Ruleset }>(
+  agents: Record<string, T>,
+) {
+  for (const [key, item] of Object.entries(agents)) {
+    if (locked.has(key)) {
+      item.permission = hardRules()
+      continue
+    }
+    harden(item)
   }
 }
 
@@ -277,6 +331,8 @@ export function patchAgents(
   user: Permission.Ruleset,
   cfg: Config.Info,
   kilo: KiloData,
+  worktree: string,
+  whitelistedDirs: string[],
 ) {
   // Rename "build" → "code" for backward compatibility
   if (agents.build) {
@@ -300,9 +356,10 @@ export function patchAgents(
       description: "Plan mode. Can only edit plan files; all other filesystem mutations are denied.",
       permission: Permission.merge(
         defaults,
+        planGuard(worktree, kilo.mcpRules),
         user,
-        planGuard(kilo.mcpRules),
-        user.filter((r: Permission.Rule) => r.action === "deny"),
+        planEditGuard(worktree),
+        denies(user),
       ),
     }
   }
@@ -322,13 +379,17 @@ export function patchAgents(
           skill: "allow",
           webfetch: "allow",
           websearch: "allow",
-          codesearch: "allow",
           codebase_search: "allow",
           semantic_search: "allow",
           read: "allow",
           external_directory: {
+            // Mirror upstream explore's shape: the outer "*": "deny" above wins
+            // over defaults' external_directory rules via findLast, so re-apply
+            // the full whitelist (Truncate.GLOB, tmp, skill, config, globalDirs)
+            // here. Upstream adds these inline in agent.ts; we do the same from
+            // within the patch.
             "*": "ask",
-            [Truncate.GLOB]: "allow",
+            ...Object.fromEntries(whitelistedDirs.map((dir) => [dir, "allow"])),
           },
         }),
         user,
@@ -381,7 +442,6 @@ export function patchAgents(
         todowrite: "allow",
         webfetch: "allow",
         websearch: "allow",
-        codesearch: "allow",
         codebase_search: "allow",
         external_directory: {
           [Truncate.GLOB]: "allow",
@@ -404,24 +464,18 @@ export function patchAgents(
     description: "Get answers and explanations without making changes to the codebase.",
     prompt: PROMPT_ASK,
     options: {},
-    permission: Permission.merge(
-      defaults,
-      user, // user before ask-specific so ask's deny+allowlist wins
-      askGuard(kilo.mcpRules),
-      user.filter((r: Permission.Rule) => r.action === "deny"), // re-apply user denies so explicit MCP blocks win over mcpRules
-    ),
+    permission: Permission.merge(defaults, askGuard(kilo.mcpRules), user, askEditGuard(), denies(user)),
     mode: "primary",
     native: true,
   }
+
+  hardenSystemAgents(agents)
 }
 
-export const RemoveError = NamedError.create(
-  "AgentRemoveError",
-  z.object({
-    name: z.string(),
-    message: z.string(),
-  }),
-)
+export const RemoveError = NamedError.create("AgentRemoveError", {
+  name: Schema.String,
+  message: Schema.String,
+})
 
 /**
  * Remove a custom agent by deleting its markdown source file and/or
@@ -429,24 +483,22 @@ export const RemoveError = NamedError.create(
  * Scans all config directories for agent/mode .md files matching the name,
  * then also checks the .kilocodemodes files the ModesMigrator reads.
  */
-export async function remove(name: string) {
-  const { Agent } = await import("../../agent/agent")
-  const agents = makeRuntime(Agent.Service, Agent.defaultLayer)
-  const agent = await agents.runPromise((svc) => svc.get(name))
-  if (!agent) throw new RemoveError({ name, message: "agent not found" })
-  if (agent.native) throw new RemoveError({ name, message: "cannot remove native agent" })
+export async function remove(input: { name: string; agent?: AgentInfo; dirs: string[]; directory: string }) {
+  if (!input.agent) throw new RemoveError({ name: input.name, message: "agent not found" })
+  if (input.agent.native) throw new RemoveError({ name: input.name, message: "cannot remove native agent" })
   // Prevent removal of organization-managed agents
-  if (agent.options?.source === "organization")
-    throw new RemoveError({ name, message: "cannot remove organization agent — manage it from the cloud dashboard" })
+  if (input.agent.options?.source === "organization")
+    throw new RemoveError({
+      name: input.name,
+      message: "cannot remove organization agent — manage it from the cloud dashboard",
+    })
 
   const { unlink, writeFile } = await import("fs/promises")
   let found = false
 
   // 1. Delete .md files from config directories
-  const { Config } = await import("../../config/config")
-  const dirs = await Config.directories()
-  const patterns = ["{agent,agents}/**/" + name + ".md", "{mode,modes}/" + name + ".md"]
-  for (const dir of dirs) {
+  const patterns = ["{agent,agents}/**/" + input.name + ".md", "{mode,modes}/" + input.name + ".md"]
+  for (const dir of input.dirs) {
     for (const pattern of patterns) {
       const matches = await Glob.scan(pattern, { cwd: dir, absolute: true, dot: true })
       for (const file of matches) {
@@ -468,14 +520,14 @@ export async function remove(name: string) {
     path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "custom_modes.yaml"),
     path.join(home, ".kilocode", "cli", "global", "settings", "custom_modes.yaml"),
     path.join(home, ".kilocodemodes"),
-    path.join(Instance.directory, ".kilocodemodes"),
+    path.join(input.directory, ".kilocodemodes"),
   ]
 
   for (const file of modesFiles) {
     const modes = await ModesMigrator.readModesFile(file)
     if (!modes.length) continue
 
-    const filtered = modes.filter((m: { slug: string }) => m.slug !== name)
+    const filtered = modes.filter((m: { slug: string }) => m.slug !== input.name)
     if (filtered.length === modes.length) continue
 
     // Rewrite the file without the removed mode
@@ -487,7 +539,5 @@ export async function remove(name: string) {
     found = true
   }
 
-  if (!found) throw new RemoveError({ name, message: "no agent file found on disk" })
-
-  await Instance.dispose()
+  if (!found) throw new RemoveError({ name: input.name, message: "no agent file found on disk" })
 }

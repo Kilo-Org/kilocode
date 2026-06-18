@@ -1,12 +1,8 @@
 import * as vscode from "vscode"
-import { AUTOCOMPLETE_MODELS, getAutocompleteModel } from "../../shared/autocomplete-models"
-
-const keys = new Set(["enableAutoTrigger", "enableSmartInlineTaskKeybinding", "enableChatAutocomplete", "model"])
+import { validAutocompleteModel, validAutocompleteProvider } from "../../shared/autocomplete-models"
 
 type Message = {
   type: string
-  key?: unknown
-  value?: unknown
 }
 
 type Post = (msg: unknown) => void
@@ -17,25 +13,22 @@ export async function routeAutocompleteMessage(message: Message, post: Post): Pr
     return true
   }
 
-  if (message.type === "updateAutocompleteSetting") {
-    if (await update(message.key, message.value)) {
-      post(buildAutocompleteSettingsMessage())
-    }
-    return true
-  }
-
   return false
 }
 
 export function buildAutocompleteSettingsMessage() {
   const config = vscode.workspace.getConfiguration("kilo-code.new.autocomplete")
+  // Pass through provider/model as-is (null when unset) so the webview can
+  // distinguish "user hasn't picked" from "user picked the current default."
+  // The runtime resolves null → DEFAULT_AUTOCOMPLETE_MODEL via getAutocompleteModel().
   return {
     type: "autocompleteSettingsLoaded" as const,
     settings: {
       enableAutoTrigger: config.get<boolean>("enableAutoTrigger", true),
       enableSmartInlineTaskKeybinding: config.get<boolean>("enableSmartInlineTaskKeybinding", false),
       enableChatAutocomplete: config.get<boolean>("enableChatAutocomplete", false),
-      model: getAutocompleteModel(config.get<string>("model") ?? "").id,
+      provider: config.get<string>("provider") ?? null,
+      model: config.get<string>("model") ?? null,
     },
   }
 }
@@ -49,23 +42,21 @@ export function watchAutocompleteConfig(post: Post): vscode.Disposable {
   })
 }
 
-async function update(key: unknown, value: unknown) {
-  if (typeof key !== "string") return false
-  if (!keys.has(key)) return false
-  if (!valid(key, value)) return false
-
-  await vscode.workspace
-    .getConfiguration("kilo-code.new.autocomplete")
-    .update(key, value, vscode.ConfigurationTarget.Global)
-
-  return true
-}
-
-function valid(key: string, value: unknown) {
+export function validAutocompleteSetting(key: string, value: unknown) {
   if (key === "model") {
-    if (typeof value !== "string") return false
-    return AUTOCOMPLETE_MODELS.some((m) => m.id === value)
+    // Allow clearing back to the server-side default.
+    if (value === null || value === undefined) return true
+    return validAutocompleteModel(value)
   }
 
-  return typeof value === "boolean"
+  if (key === "provider") {
+    if (value === null || value === undefined) return true
+    return validAutocompleteProvider(value)
+  }
+
+  if (key === "enableAutoTrigger") return typeof value === "boolean"
+  if (key === "enableSmartInlineTaskKeybinding") return typeof value === "boolean"
+  if (key === "enableChatAutocomplete") return typeof value === "boolean"
+
+  return false
 }

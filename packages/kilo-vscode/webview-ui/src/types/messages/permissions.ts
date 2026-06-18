@@ -16,8 +16,6 @@ export interface PermissionRuleItem {
 export interface PermissionFileDiff {
   file: string
   patch?: string
-  before?: string
-  after?: string
   additions: number
   deletions: number
 }
@@ -44,6 +42,7 @@ export interface PermissionRequest {
     filepath?: string
     filediff?: PermissionFileDiff
     files?: PermissionPatchFile[]
+    description?: string
   }
   message?: string
   tool?: { messageID: string; callID: string }

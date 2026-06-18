@@ -1,6 +1,7 @@
-import type { KiloClient, GlobalEvent, Event } from "@kilocode/sdk/v2/client"
+import type { KiloClient, GlobalEvent } from "@kilocode/sdk/v2/client"
 
-export type SSEEventHandler = (event: Event, directory?: string) => void
+export type SSEPayload = GlobalEvent["payload"]
+export type SSEEventHandler = (event: SSEPayload, directory?: string) => void
 export type SSEErrorHandler = (error: Error) => void
 export type SSEStateHandler = (state: "connecting" | "connected" | "disconnected") => void
 
@@ -15,9 +16,8 @@ export type SSEStateHandler = (state: "connecting" | "connected" | "disconnected
  *
  * In this VS Code extension context the connection is localhost (extension ↔
  * child-process server), so zombie-connection scenarios are less likely than in
- * a browser client (which goes through proxies/CDNs). We keep the heartbeat for
- * consistency with the original strategy but use a generous 90 s timeout to
- * avoid false-positive reconnections during idle periods.
+ * a browser client (which goes through proxies/CDNs). We still keep a heartbeat
+ * grace window so dead local streams recover without waiting indefinitely.
  *
  * NOTE on event coalescing:
  * The app batches rapid events into 16 ms windows before flushing to the UI.
@@ -37,6 +37,7 @@ export class SdkSSEAdapter {
   // Reduced from 90s: with 90s a dead connection could linger for ~1.5 minutes.
   private static readonly HEARTBEAT_TIMEOUT_MS = 15_000
   private static readonly RECONNECT_DELAY_MS = 250
+  private static readonly MAX_RECONNECT_DELAY_MS = 5_000
 
   constructor(private readonly client: KiloClient) {}
 
@@ -126,8 +127,11 @@ export class SdkSSEAdapter {
    * Main reconnection loop — mirrors the pattern in `global-sdk.tsx`.
    */
   private async consumeLoop(signal: AbortSignal): Promise<void> {
+    let delay = SdkSSEAdapter.RECONNECT_DELAY_MS
+
     while (!signal.aborted) {
       const attempt = new AbortController()
+      let ready = false
 
       // Forward the outer abort to the per-attempt controller so
       // `disconnect()` cancels the current fetch immediately.
@@ -159,8 +163,7 @@ export class SdkSSEAdapter {
           },
         })
 
-        console.log("[Kilo New] SSE: ✅ Stream opened successfully")
-        this.notifyState("connected")
+        console.log("[Kilo New] SSE: ⏳ Waiting for first stream event")
         this.resetHeartbeat(attempt)
 
         for await (const event of events.stream) {
@@ -170,16 +173,19 @@ export class SdkSSEAdapter {
 
           this.resetHeartbeat(attempt)
 
-          // The SDK yields GlobalEvent = { directory, payload: Event }.
-          const globalEvent = event as GlobalEvent
-          const type = (globalEvent.payload as { type: string }).type
-          if (type !== "server.heartbeat") {
-            console.log("[Kilo New] SSE: 📨 Event:", type)
+          if (!ready) {
+            ready = true
+            delay = SdkSSEAdapter.RECONNECT_DELAY_MS
+            console.log("[Kilo New] SSE: ✅ Stream opened successfully")
+            this.notifyState("connected")
           }
-          this.notifyEvent(globalEvent.payload as Event, globalEvent.directory)
+
+          this.notifyEvent(event.payload, event.directory)
         }
 
-        console.log("[Kilo New] SSE: 📭 Stream ended normally")
+        console.log(
+          ready ? "[Kilo New] SSE: 📭 Stream ended normally" : "[Kilo New] SSE: 📭 Stream ended before first event",
+        )
       } catch (error) {
         // Suppress AbortErrors — they are expected when the heartbeat timer
         // or reconnect() aborts the per-attempt controller.
@@ -198,9 +204,11 @@ export class SdkSSEAdapter {
         break
       }
 
-      console.log(`[Kilo New] SSE: 🔄 Reconnecting in ${SdkSSEAdapter.RECONNECT_DELAY_MS}ms...`)
+      const wait = delay
+      delay = ready ? SdkSSEAdapter.RECONNECT_DELAY_MS : Math.min(delay * 2, SdkSSEAdapter.MAX_RECONNECT_DELAY_MS)
+      console.log(`[Kilo New] SSE: 🔄 Reconnecting in ${wait}ms...`)
       this.notifyState("connecting")
-      await new Promise((resolve) => setTimeout(resolve, SdkSSEAdapter.RECONNECT_DELAY_MS))
+      await new Promise((resolve) => setTimeout(resolve, wait))
     }
 
     this.notifyState("disconnected")
@@ -228,7 +236,7 @@ export class SdkSSEAdapter {
 
   // ── Notify helpers ─────────────────────────────────────────────────
 
-  private notifyEvent(event: Event, directory?: string): void {
+  private notifyEvent(event: SSEPayload, directory?: string): void {
     for (const handler of this.handlers) {
       try {
         handler(event, directory)

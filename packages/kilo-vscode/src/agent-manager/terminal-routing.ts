@@ -15,7 +15,7 @@
  */
 
 import type { KiloClient } from "@kilocode/sdk/v2/client"
-import type { AgentManagerInMessage, AgentManagerOutMessage } from "./types"
+import type { AgentManagerInMessage, AgentManagerOutMessage, TerminalFont } from "./types"
 import { TerminalManager } from "./terminal-manager"
 
 interface ServerConfig {
@@ -36,6 +36,8 @@ export interface TerminalRoutingDeps {
   log(...args: unknown[]): void
   /** Send a message back to the webview. */
   post(message: AgentManagerOutMessage): void
+  /** Return the current terminal font settings. */
+  getTerminalFont(): TerminalFont
 }
 
 /** True iff the message belongs to the terminal-tab subsystem. */
@@ -106,6 +108,7 @@ export class TerminalRouter {
         terminalId: created.terminalId,
         title: created.title,
         wsUrl: created.wsUrl,
+        font: this.deps.getTerminalFont(),
       })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)

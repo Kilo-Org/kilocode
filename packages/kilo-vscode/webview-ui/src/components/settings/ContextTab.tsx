@@ -15,6 +15,23 @@ const ContextTab: Component = () => {
   const [newPattern, setNewPattern] = createSignal("")
 
   const patterns = () => config().watcher?.ignore ?? []
+  const limit = () => {
+    const value = config().compaction?.threshold_percent
+    return value === null || value === undefined ? "" : String(value)
+  }
+
+  const saveLimit = (value: string) => {
+    const raw = value.trim()
+    if (!raw) {
+      updateConfig({ compaction: { ...config().compaction, threshold_percent: null } })
+      return
+    }
+
+    const percent = Number(raw)
+    if (!Number.isFinite(percent)) return
+    const next = Math.min(100, Math.max(1, percent))
+    updateConfig({ compaction: { ...config().compaction, threshold_percent: next } })
+  }
 
   const addPattern = () => {
     const value = newPattern().trim()
@@ -42,7 +59,7 @@ const ContextTab: Component = () => {
           description={language.t("settings.context.autoCompaction.description")}
         >
           <Switch
-            checked={config().compaction?.auto ?? false}
+            checked={config().compaction?.auto ?? true}
             onChange={(checked) => updateConfig({ compaction: { ...config().compaction, auto: checked } })}
             hideLabel
           >
@@ -50,12 +67,31 @@ const ContextTab: Component = () => {
           </Switch>
         </SettingsRow>
         <SettingsRow
+          title={language.t("settings.context.compactionLimit.title")}
+          description={language.t("settings.context.compactionLimit.description")}
+        >
+          <div style={{ display: "flex", "align-items": "center", gap: "6px", width: "96px" }}>
+            <TextField
+              type="number"
+              min="1"
+              max="100"
+              step="1"
+              value={limit()}
+              placeholder="80"
+              onChange={saveLimit}
+              hideLabel
+              label={language.t("settings.context.compactionLimit.title")}
+            />
+            <span style={{ color: "var(--text-weak-base, var(--vscode-descriptionForeground))" }}>%</span>
+          </div>
+        </SettingsRow>
+        <SettingsRow
           title={language.t("settings.context.prune.title")}
           description={language.t("settings.context.prune.description")}
           last
         >
           <Switch
-            checked={config().compaction?.prune ?? false}
+            checked={config().compaction?.prune ?? true}
             onChange={(checked) => updateConfig({ compaction: { ...config().compaction, prune: checked } })}
             hideLabel
           >

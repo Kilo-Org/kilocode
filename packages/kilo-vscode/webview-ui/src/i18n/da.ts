@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "Del denne session og kopier URL'en til udklipsholderen",
   "command.session.unshare": "Stop deling af session",
   "command.session.unshare.description": "Stop med at dele denne session",
+  "command.session.export": "Eksporter sessionsudskrift",
 
   "palette.search.placeholder": "Søg i filer, kommandoer og sessioner",
   "palette.empty": "Ingen resultater fundet",
@@ -100,16 +101,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "Søg udbydere",
   "dialog.provider.empty": "Ingen udbydere fundet",
-  "dialog.provider.group.popular": "Populære",
   "dialog.provider.group.other": "Andre",
   "dialog.provider.tag.recommended": "Anbefalet",
-  "dialog.provider.opencode.note": "Udvalgte modeller inkl. Claude, GPT, Gemini og flere",
-  "dialog.provider.anthropic.note": "Forbind med Claude Pro/Max eller API-nøgle",
-  "dialog.provider.openai.note": "Forbind med ChatGPT Pro/Plus eller API-nøgle",
-  "dialog.provider.google.note": "Gemini-modeller til hurtige, strukturerede svar",
-  "dialog.provider.openrouter.note": "Adgang til alle understøttede modeller fra én udbyder",
-  "dialog.provider.vercel.note": "Samlet adgang til AI-modeller med smart routing",
-  "dialog.provider.copilot.note": "Forbind med Copilot eller API-nøgle",
 
   "dialog.model.select.title": "Vælg model",
   "dialog.model.search.placeholder": "Søg modeller",
@@ -134,9 +127,25 @@ export const dict = {
   "provider.connect.status.failed": "Godkendelse mislykkedes: {{error}}",
   "provider.connect.apiKey.description":
     "Indtast din {{provider}} API-nøgle for at forbinde din konto og bruge {{provider}} modeller i Kilo.",
+  "provider.connect.apiKey.description.local":
+    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+  "provider.connect.atomicChat.description":
+    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "{{provider}} API-nøgle",
+  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "API-nøgle",
+  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
   "provider.connect.apiKey.required": "API-nøgle er påkrævet",
+  "provider.connect.prompt.required": "{{field}} er påkrævet",
+  "provider.connect.azure.endpointType.label": "Vælg Azure-slutpunktskonfiguration",
+  "provider.connect.azure.endpointType.resourceName.label": "Ressourcenavn",
+  "provider.connect.azure.endpointType.resourceName.hint": "Byg slutpunktet fra dit Azure-ressourcenavn",
+  "provider.connect.azure.endpointType.baseURL.label": "Fuld slutpunkts-URL",
+  "provider.connect.azure.endpointType.baseURL.hint": "Brug et brugerdefineret Azure OpenAI-slutpunkt",
+  "provider.connect.azure.resourceName.label": "Azure-ressourcenavn",
+  "provider.connect.azure.resourceName.placeholder": "f.eks. my-models",
+  "provider.connect.azure.baseURL.label": "Azure OpenAI-slutpunkts-URL",
+  "provider.connect.azure.baseURL.placeholder": "f.eks. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen giver dig adgang til et udvalg af pålidelige optimerede modeller til kodningsagenter.",
   "provider.connect.opencodeZen.line2":
@@ -163,9 +172,12 @@ export const dict = {
   "provider.disconnect.toast.disconnected.title": "{{provider}} frakoblet",
   "provider.disconnect.toast.disconnected.description": "Modeller fra {{provider}} er ikke længere tilgængelige.",
   "model.tag.free": "Gratis",
+  "model.tag.dataCollected": "Data kan bruges til træning",
   "model.tag.latest": "Nyeste",
   "model.group.recommended": "Anbefalet",
   "model.group.favorites": "Favoritter",
+  "model.group.collapse": "Skjul {{group}}",
+  "model.group.expand": "Vis {{group}}",
   "model.favorite.add": "Føj til favoritter",
   "model.favorite.remove": "Fjern fra favoritter",
 
@@ -189,6 +201,9 @@ export const dict = {
   "model.preview.label.cached": "Cached",
   "model.preview.label.average": "Est. gennemsnitspris",
   "model.preview.label.context": "Kontekst",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.label.completion": "Fuldførelse",
+  "model.preview.label.costAttempt": "Pris / forsøg",
   "model.preview.value.notSupported": "Ikke understøttet",
   "model.preview.tooltip.average":
     "Den estimerede gennemsnitspris er baseret på et typisk forhold mellem input-, output- og cache-læsetokens.",
@@ -259,6 +274,7 @@ export const dict = {
   "prompt.attachment.remove": "Fjern vedhæftning",
   "prompt.action.send": "Send",
   "prompt.action.send.blocked": "Besvar eller afvis det afventende spørgsmål først",
+  "prompt.action.send.recording": "Transskriber og send",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Forbedr prompt",
   "prompt.action.autoApprove.enable": "Aktiver automatisk godkendelse",
@@ -270,6 +286,20 @@ export const dict = {
   "prompt.action.resetModel": "Nulstil model til standard",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedr prompt' hjælper med at forbedre din forespørgsel ved at give ekstra kontekst, præcisering eller omformulering. Prøv at skrive en forespørgsel her og klik på knappen igen for at se hvordan det virker.",
+
+  "speechToText.tooltip.start": "Start stemmeinput med Kilo Gateway",
+  "speechToText.tooltip.stop": "Stop lydoptagelse",
+  "speechToText.tooltip.transcribing": "Transskriberer... Klik for at annullere.",
+  "speechToText.tooltip.error": "Stemmeinput mislykkedes. Klik for at rydde.",
+  "speechToText.error.title": "Stemmeinput mislykkedes",
+  "speechToText.error.loginRequired": "Log ind på Kilo for at bruge stemmeinput.",
+  "speechToText.error.permission": "Mikrofontilladelse blev nægtet.",
+  "speechToText.error.microphone": "Kunne ikke starte mikrofonen.",
+  "speechToText.error.recording": "Optagelse mislykkedes.",
+  "speechToText.error.emptyRecording": "Ingen lyd blev optaget.",
+  "speechToText.error.emptyTranscript": "Ingen tale blev registreret.",
+  "speechToText.error.encoding": "Kunne ikke kode optagelsen.",
+  "speechToText.toast.transcribed": "Transskription indsat",
 
   "prompt.toast.pasteUnsupported.title": "Ikke understøttet indsæt",
   "prompt.toast.pasteUnsupported.description": "Kun billeder eller PDF'er kan indsættes her.",
@@ -423,6 +453,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Kunne ikke stoppe deling af session",
   "toast.session.unshare.failed.description": "Der opstod en fejl under stop af sessionsdeling",
 
+  "toast.session.rename.invalid.title": "Ugyldig sessionstitel",
   "toast.session.listFailed.title": "Kunne ikke indlæse sessioner for {{project}}",
 
   "toast.update.title": "Opdatering tilgængelig",
@@ -456,6 +487,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Tilmeld dig gratis for at fortsætte og udforske over 500 modeller. Tager 2 minutter, intet kreditkort nødvendigt. Eller kom tilbage senere.",
   "error.promotionLimit.action": "Tilmeld dig",
+  "error.providerAuth.title": "{{provider}} har logget dig af",
+  "error.providerAuth.description": "Forbind til {{provider}} igen, og send din besked på ny.",
+  "error.providerAuth.chatgpt.title": "OpenAI har logget dig af",
+  "error.providerAuth.chatgpt.description":
+    "Log ind med ChatGPT igen, og send din besked på ny for at fortsætte med at bruge Codex-modeller.",
 
   "error.chain.unknown": "Ukendt fejl",
   "error.chain.causedBy": "Forårsaget af:",
@@ -482,6 +518,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Tilladelse påkrævet (underagent)",
   "notification.permission.description": "{{sessionTitle}} i {{projectName}} kræver tilladelse",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkendelse",
+  "ui.permission.doomLoop.prompt": "Der blev registreret en mulig løkke for værktøjet {{tool}}. Fortsæt kørslen?",
+  "ui.permission.doomLoop.rule": "Fortsæt {{tool}}-kald",
   "ui.permission.rule.addToAllowed": "Tilføj til tilladelseslisten",
   "ui.permission.rule.removeFromAllowed": "Fjern fra tilladelseslisten",
   "ui.permission.rule.addToDenied": "Tilføj til afvisningslisten",
@@ -768,9 +806,20 @@ export const dict = {
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktivér indeksering",
   "settings.indexing.enable.description": "Slå semantisk kodebase-indeksering til eller fra.",
+  "settings.indexing.globalEnable.title": "Aktivér globalt",
+  "settings.indexing.globalEnable.description": "Aktivér indeksering for alle arbejdsområder.",
+  "settings.indexing.projectEnable.title": "Aktivér for dette projekt",
+  "settings.indexing.projectEnable.description":
+    "Aktivér indeksering for dette arbejdsområde, når global indeksering er slået fra.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Global indeksering er aktiveret, så dette projekt er allerede dækket.",
   "settings.indexing.provider.title": "Embedding-udbyder",
   "settings.indexing.provider.description":
     "Vælg udbyderen, der bruges til at generere embeddings til semantisk søgning.",
+  "settings.indexing.kiloModel.title": "Kilo-modelpreset",
+  "settings.indexing.kiloModel.description": "Vælg en understøttet Kilo-hostet embedding-model.",
+  "settings.indexing.kiloSignIn.title": "Kilo-login kræves",
+  "settings.indexing.kiloSignIn.description": "Log ind på Kilo for at bruge hostede embeddings.",
   "settings.indexing.model.title": "Embedding-model",
   "settings.indexing.model.description": "Overskriv standard embedding-modellen for den valgte udbyder.",
   "settings.indexing.providerField.description": "Udbyderspecifik forbindelsesindstilling.",
@@ -810,6 +859,12 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "Forbundet fra dine miljøvariabler",
   "settings.providers.action.signInChatGPT": "Log ind med ChatGPT",
   "settings.providers.custom.description": "Tilføj en OpenAI-kompatibel udbyder via basis-URL.",
+  "settings.providers.subagentModel.title": "Underagentmodel",
+  "settings.providers.subagentModel.description":
+    "Standardmodel og ræsonnementsindsats for task-tool-underagenter. Lad den være tom for at nedarve den kaldende agents model.",
+  "settings.models.hidePromptTraining.title": "Skjul modeller, der træner på prompts",
+  "settings.models.hidePromptTraining.description":
+    "Skjul Kilo Gateway-modeller, hvis udbydere muligvis bruger dine prompts til træning.",
   "settings.providers.modeModels": "Model pr. tilstand",
   "settings.providers.custom.note": "Tilføj en OpenAI-kompatibel udbyder via basis-URL.",
   "settings.providers.modeModels.description":
@@ -823,6 +878,7 @@ export const dict = {
   "provider.custom.field.providerID.description": "Små bogstaver, tal, bindestreger eller understregninger",
   "provider.custom.field.name.label": "Visningsnavn",
   "provider.custom.field.name.placeholder": "Min AI-udbyder",
+  "provider.custom.field.package.label": "Provider API",
   "provider.custom.field.baseURL.label": "Basis-URL",
   "provider.custom.field.baseURL.placeholder": "https://api.myprovider.com/v1",
   "provider.custom.field.apiKey.label": "API-nøgle",
@@ -848,6 +904,11 @@ export const dict = {
   "provider.custom.models.variants.thinking.placeholder": "thinking",
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.thinking.adaptive": "adaptive",
+  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
+  "provider.custom.models.variants.splitReasoning.true": "true",
+  "provider.custom.models.variants.splitReasoning.false": "false",
   "provider.custom.models.variants.chatTemplateArgs.label":
     "Aktivér tænkning via chat-skabelonargs (f.eks. Hugging Face)",
   "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
@@ -861,6 +922,13 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.placeholder": "effort",
+  "provider.custom.models.variants.outputEffort.low": "low",
+  "provider.custom.models.variants.outputEffort.medium": "medium",
+  "provider.custom.models.variants.outputEffort.high": "high",
+  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.max": "max",
   "provider.custom.models.remove": "Fjern model",
   "provider.custom.models.add": "Tilføj model",
   "provider.custom.models.fetch": "Hent modeller",
@@ -973,6 +1041,8 @@ export const dict = {
   "session.delete.confirm": 'Slet session "{{name}}"?',
   "session.delete.button": "Slet session",
   "session.untitled": "Unavngivet",
+  "session.current": "Aktuel session",
+  "session.history.sources": "Historikkilde",
   "session.recent": "Seneste",
   "session.showHistory": "Vis historik",
   "session.search.placeholder": "Søg sessioner...",
@@ -986,6 +1056,32 @@ export const dict = {
   "feedback.dialog.github": "Rapportér et problem på GitHub",
   "feedback.dialog.discord": "Deltag i vores Discord-fællesskab",
   "feedback.dialog.support": "Kundesupport",
+  "workStyle.onboarding.welcome": "Velkommen til Kilo",
+  "workStyle.onboarding.title": "Vælg, hvordan du vil arbejde",
+  "workStyle.onboarding.settingsNote": "Du kan til enhver tid ændre disse valg under",
+  "workStyle.onboarding.settings": "Indstillinger.",
+  "workStyle.onboarding.description":
+    "Dette angiver startindstillingerne for tilladelser, ræsonneringsblokke, terminaloutput og konteksttidslinjen. Det anvendes kun én gang og springer indstillinger over, som du allerede har tilpasset.",
+  "workStyle.onboarding.skip": "Spring over indtil videre",
+  "workStyle.toast.saved.title": "Tilstanden blev gemt",
+  "workStyle.toast.saved.description": "Opdater dine præferencer når som helst under Indstillinger.",
+  "workStyle.toast.saved.action": "Gå til Indstillinger",
+  "workStyle.choice.permissions": "Tilladelser",
+  "workStyle.choice.bash": "Bash",
+  "workStyle.choice.visibility": "Synlighed",
+  "workStyle.choice.human-in-the-loop.eyebrow": "Menneskelig kontrol",
+  "workStyle.choice.human-in-the-loop.title": "Gennemgå først",
+  "workStyle.choice.human-in-the-loop.description": "Kilo holder pause og viser dig sin plan undervejs.",
+  "workStyle.choice.human-in-the-loop.permissions":
+    "Spørger om tilladelse, før filer redigeres eller kommandoer køres.",
+  "workStyle.choice.human-in-the-loop.bash": "Spørger om tilladelse til alle terminalkommandoer.",
+  "workStyle.choice.human-in-the-loop.visibility": "Viser alle samtaledetaljer, herunder ræsonnement.",
+  "workStyle.choice.autonomous.eyebrow": "Færre afbrydelser",
+  "workStyle.choice.autonomous.title": "Høj autonomi",
+  "workStyle.choice.autonomous.description": "Færre afbrydelser og en strømlinet brugerflade.",
+  "workStyle.choice.autonomous.permissions": "Redigerer filer og kører kommandoer i arbejdsområdet uden at spørge.",
+  "workStyle.choice.autonomous.bash": "Kan køre terminalkommandoer i arbejdsområdet uden godkendelse.",
+  "workStyle.choice.autonomous.visibility": "Detaljerne forbliver foldet sammen, indtil du folder dem ud.",
   "session.cloud.import.title": "Importér fra skyen",
   "session.cloud.import.placeholder": "Sessions-ID, URL eller kilo import-kommando",
   "session.cloud.import.button": "Importér",
@@ -1077,6 +1173,14 @@ export const dict = {
   "session.status.retrying": "Prøver igen (forsøg {{ attempt }})… {{ message }}",
   "session.status.working": "Arbejder…",
   "session.status.offline": "Netværk afbrudt — genopretter forbindelse...",
+  "session.outcome.incomplete": "Tur afsluttet, {{count}} to-dos tilbage",
+  "session.outcome.limit": "Svarbegrænsning nået før fuldførelse",
+  "session.outcome.unknown": "Tur afsluttet uden en model-afslutningsårsag",
+  "session.outcome.filtered": "Udbyderen stoppede dette svar på grund af et indholdsfilter.",
+  "session.outcome.unexpected": "Svaret sluttede uventet og kan være ufuldstændigt.",
+  "session.outcome.interrupted": "Tur afbrudt",
+  "session.outcome.error": "Tur mislykkedes",
+  "session.outcome.finish": "Afslutningsårsag: {{reason}}",
 
   "ui.sessionTurn.cancel": "Annuller",
   "ui.sessionTurn.status.thinking": "Tænker...",
@@ -1140,7 +1244,6 @@ export const dict = {
     'Telemetri styres af VS Codes indbyggede telemetriindstilling. For at deaktivere den, gå til Indstillinger > Telemetry > Telemetry Level og sæt den til "off". Genstart VS Code for at anvende ændringen.',
   "settings.aboutKiloCode.telemetry.openSettings": "Åbn telemetriindstillinger",
 
-  "settings.agentBehaviour.subtab.modes": "Tilstande",
   "settings.agentBehaviour.subtab.agents": "Agenter",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-servere",
   "settings.agentBehaviour.subtab.rules": "Regler",
@@ -1170,6 +1273,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Brug en smart tastaturgenvej til at udløse inline-opgaver",
   "settings.autocomplete.chatAutocomplete.title": "Aktiver chat-autofuldførelse",
   "settings.autocomplete.chatAutocomplete.description": "Vis autofuldførelsesforslag i chatfeltet",
+  "settings.autocomplete.modelsHint":
+    "For at vælge hvilken model der bruges til autofuldførelse, se Modelindstillinger.",
   "settings.notifications.agent.title": "Agentafslutning",
   "settings.notifications.agent.description": "Vis notifikation, når agenten fuldfører en opgave",
   "settings.notifications.permissions.title": "Tilladelsesanmodninger",
@@ -1177,6 +1282,10 @@ export const dict = {
   "settings.notifications.errors.title": "Fejl",
   "settings.notifications.errors.description": "Vis notifikation ved fejl",
   "settings.notifications.sounds": "Lyde",
+  "settings.notifications.enable.title": "Aktivér lydnotifikationer",
+  "settings.notifications.enable.description":
+    "Afspil lyde, når sessioner fuldføres, der opstår en fejl, eller der er brug for input fra dig",
+  "settings.notifications.testSound": "Test",
   "settings.notifications.agentSound.title": "Agentafslutningslyd",
   "settings.notifications.agentSound.description": "Lyd ved agentafslutning",
   "settings.notifications.permSound.title": "Tilladelsesanmodningslyd",
@@ -1184,6 +1293,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Fejllyd",
   "settings.notifications.errorSound.description": "Lyd ved fejl",
   "settings.notifications.sound.default": "Standard",
+  "settings.notifications.sound.system": "System",
+  "settings.notifications.sound.description":
+    "Standardindstillingen bruger forskellige lyde til afslutning, input og fejl. Andre valg bruger én lyd til alle hændelser.",
   "settings.notifications.sound.none": "Ingen",
   "settings.experimental.share.title": "Delingstilstand",
   "settings.experimental.share.description": "Adfærd for sessionsdeling",
@@ -1194,18 +1306,17 @@ export const dict = {
   "settings.experimental.formatter.description": "Aktiver automatisk kodeformatering",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Aktiver sprogserverprotokol-integration",
-  "settings.experimental.pasteSummary.title": "Deaktiver indsæt-resumé",
-  "settings.experimental.pasteSummary.description": "Resumér ikke stort indsat indhold",
   "settings.experimental.batch.title": "Batchværktøj",
   "settings.experimental.batch.description": "Aktiver batchbehandling af flere værktøjskald",
-  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
-  "settings.experimental.semanticIndexing.description":
-    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Kodesøgning",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig sprogsøgning på tværs af kodebasen",
-  "settings.experimental.agentManagerTool.title": "Agent Manager-værktøj",
-  "settings.experimental.agentManagerTool.description":
-    "Tillad agenter at starte lokale Agent Manager-sessioner og worktree-sessioner fra et værktøjskald",
+  "settings.experimental.speechToText.title": "Tale til tekst",
+  "settings.experimental.speechToText.description":
+    "Aktivér stemmeinput i prompt-felter ved hjælp af din Kilo-konto gennem Kilo Gateway.",
+  "settings.models.speechToText.disabledDescription":
+    "Aktivér og log ind på Kilo-udbyderen for at bruge Speech to Text. Speech to Text understøttes i øjeblikket kun med Kilo Gateway.",
+  "settings.models.speechToTextModel.title": "Model til tale til tekst",
+  "settings.models.speechToTextModel.description": "Vælg Kilo Gateway-transskriptionsmodellen til stemmeinput.",
   "settings.experimental.continueOnDeny.title": "Fortsæt ved afvisning",
   "settings.experimental.continueOnDeny.description": "Fortsæt agentløkken, når en tilladelse afvises",
   "settings.experimental.mcpTimeout.title": "MCP-timeout (ms)",
@@ -1227,6 +1338,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Vælg en agent at konfigurere…",
   "settings.agentBehaviour.modelOverride.title": "Modeloverstyring",
   "settings.agentBehaviour.modelOverride.description": "Tilsidesæt standardmodellen for denne agent",
+  "settings.agentBehaviour.variantOverride.title": "Variantoverstyring",
+  "settings.agentBehaviour.variantOverride.description": "Tilsidesæt modelvarianten for denne agent",
   "settings.agentBehaviour.prompt.title": "Brugerdefineret prompt",
   "settings.agentBehaviour.prompt.description": "Yderligere systemprompt for denne agent",
   "settings.agentBehaviour.temperature.title": "Temperatur",
@@ -1246,7 +1359,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Ingen skills fundet. Tilføj skill-mappestier eller URL'er nedenfor for at gøre skills tilgængelige.",
   "settings.agentBehaviour.availableModes": "Tilgængelige brugerdefinerede tilstande",
-  "settings.agentBehaviour.noModesFound": "Ingen tilstande fundet.",
+  "settings.agentBehaviour.noAgentsFound": "Ingen agenter fundet.",
   "settings.agentBehaviour.createMode": "Opret ny tilstand",
   "settings.agentBehaviour.createMode.name": "Navn",
   "settings.agentBehaviour.createMode.name.placeholder": "f.eks. reviewer",
@@ -1289,10 +1402,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Kopiér tilladelser som JSON",
   "settings.agentBehaviour.permissions.hint":
     "Reglerne evalueres i rækkefølge — den sidst matchende regel vinder. Dette er det endelige regelsæt fra CLI-backenden.",
-  "settings.agentBehaviour.removeMode.title": "Fjern tilstand",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Vil du fjerne tilstanden "{{name}}"? Dette vil deaktivere tilstanden ved at opdatere din konfiguration.',
-  "settings.agentBehaviour.removeMode.button": "Fjern",
+  "settings.agentBehaviour.removeAgent.title": "Fjern agent",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Fjern agent "{{name}}"? Dette deaktiverer agenten ved at opdatere din konfiguration.',
+  "settings.agentBehaviour.removeAgent.button": "Fjern",
   "settings.agentBehaviour.removeMcp.title": "Fjern MCP-server",
   "settings.agentBehaviour.removeMcp.confirm":
     'Vil du fjerne MCP-serveren "{{name}}"? Dette vil fjerne den fra din konfiguration.',
@@ -1368,8 +1481,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Administrer opgaveliste. Tillader læsning og opdatering af den interne opgaveliste.",
   "settings.autoApprove.tool.webfetch": "Hent en URL. Tillader hentning af indhold fra en specifik URL.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Søg på nettet eller i kode. Tillader udførelse af eksterne web- eller kodesøgninger.",
+  "settings.autoApprove.tool.websearch": "Søg på nettet. Tillader udførelse af eksterne websøgninger.",
   "settings.autoApprove.tool.external_directory":
     "Få adgang til filer uden for arbejdsområdet. Udløses ved adgang til filer uden for den aktuelle projektmappe.",
   "settings.autoApprove.tool.doom_loop":
@@ -1377,7 +1489,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "Aktiver snapshots",
   "settings.checkpoints.enable.description": "Opret kontrolpunkter før filredigeringer",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
-  "settings.context.autoCompaction.description": "Komprimér automatisk kontekst, når den er fuld",
+  "settings.context.autoCompaction.description": "Komprimér automatisk kontekst, før den når grænsen",
+  "settings.context.compactionLimit.title": "Grænse for automatisk komprimering",
+  "settings.context.compactionLimit.description":
+    "Komprimér, når konteksten når denne procentdel af modelvinduet. Lad feltet være tomt for kun at bruge sikkerhedsbufferen.",
   "settings.context.prune.title": "Fjern gamle output",
   "settings.context.prune.description": "Fjern gamle værktøjsoutput under komprimering",
   "settings.context.watcherPatterns": "Filvagt-ignormønstre",
@@ -1395,10 +1510,6 @@ export const dict = {
 
   "settings.display.username.title": "Brugernavn",
   "settings.display.username.description": "Brugerdefineret brugernavn i samtaler",
-  "settings.display.layout.title": "Layout",
-  "settings.display.layout.description": "Layouttilstand for chatgrænsefladen",
-  "settings.display.layout.auto": "Automatisk",
-  "settings.display.layout.stretch": "Stræk",
   "settings.display.fontSize.title": "Skriftstørrelse",
   "settings.display.fontSize.description": "Juster skriftstørrelsen for Kilo webview UI uafhængigt af VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Skjul ræsonnement automatisk",
@@ -1408,6 +1519,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "Koderedigeringsblokke",
+  "settings.display.codeEdit.description":
+    "Vælg, om blokke, der viser koderedigeringer og forskelle, starter foldet ud eller sammen.",
+  "settings.display.codeEdit.expanded": "Foldet ud",
+  "settings.display.codeEdit.collapsed": "Foldet sammen",
   "settings.providers.defaultModel.title": "Standardmodel",
   "settings.providers.defaultModel.description": "Primær model til samtaler",
   "settings.providers.smallModel.title": "Lille model",
@@ -1536,9 +1652,15 @@ export const dict = {
   "notifications.action.close": "Luk",
   "notifications.action.tryModel": "Prøv {{model}}",
   "notifications.action.tryModelGeneric": "Prøv model",
-  "diffViewer.source.workspace.label": "Lokale ændringer",
+  "diffViewer.source.workspace.label": "Gren",
   "diffViewer.source.workspace.tooltip":
     "Alle ændringer på denne gren sammenlignet med basegrenen. Omfatter ikke-commitede filer (stagede, ikke-stagede, usporede) og lokale commits, som endnu ikke er i basen.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Filer med ændringer, du har tilføjet til gits staging-område (`git add`), som de vil fremgå i den næste commit.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Filer ændret i dit arbejdsbibliotek, men ikke stagede endnu, samt ikke-sporede (nye) filer.",
   "diffViewer.source.session.label": "Session",
   "diffViewer.source.session.tooltip":
     "Filer ændret af Kilo i den aktuelle session, baseret på snapshots pr. tur. Nulstilles, når du starter en ny session.",
@@ -1546,4 +1668,13 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots er deaktiveret for dette repository. Rediger dine konfigurationsfiler for at vise sessionens ændringer.",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "Planen er klar:",
 }

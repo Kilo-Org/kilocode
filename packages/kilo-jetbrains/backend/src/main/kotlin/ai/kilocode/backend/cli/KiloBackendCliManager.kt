@@ -1,10 +1,10 @@
 package ai.kilocode.backend.cli
 
+import ai.kilocode.KiloPlugin
+import ai.kilocode.backend.dev.KiloDevMode
 import ai.kilocode.log.KiloLog
-import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.application.PathManager
-import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.system.CpuArch
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +40,10 @@ class KiloBackendCliManager(
 
     @Volatile
     private var process: Process? = null
+    @Volatile
+    private var closing: Process? = null
     private var hook: Thread? = null
+    private var stderr: Thread? = null
 
     @Volatile
     override var forceExtract = false
@@ -59,8 +62,7 @@ class KiloBackendCliManager(
             process?.let { proc ->
                 log.info("Cleaning up orphaned CLI process (pid=${proc.pid()})")
                 process = null
-                uninstall()
-                kill(proc, "startup failure cleanup")
+                cleanup(proc, "startup failure cleanup")
             }
             CliServer.State.Error(
                 message = e.message ?: "Unknown error",
@@ -73,39 +75,48 @@ class KiloBackendCliManager(
         if (process != proc) return
         process = null
         uninstall()
+        stderr = null
     }
 
     override fun stop() {
         val proc = process ?: return
         process = null
-        uninstall()
-        kill(proc, "stop()")
+        cleanup(proc, "stop()")
     }
 
     private fun extractCli(): File {
         val platform = platform()
         val exe = if (SystemInfo.isWindows) "kilo.exe" else "kilo"
-        val resource = "cli/$platform/$exe"
-        val loader = javaClass.classLoader
-
         val target = File(PathManager.getSystemPath(), "kilo/bin/$exe")
+        val snapshot = File(target.parentFile, "models-snapshot.json")
 
-        if (forceExtract && target.exists()) {
-            log.info("Force re-extracting CLI binary — deleting ${target.absolutePath}")
-            target.delete()
+        if (forceExtract) {
+            log.info("Force re-extracting CLI resources under ${target.parentFile.absolutePath}")
+            if (target.exists()) target.delete()
+            if (snapshot.exists()) snapshot.delete()
             forceExtract = false
         }
 
+        extractResource("cli/$platform/$exe", target, executable = true)
+        extractResource("cli/$platform/models-snapshot.json", snapshot, executable = false)
+        return target
+    }
+
+    private fun extractResource(resource: String, target: File, executable: Boolean) {
+        val loader = javaClass.classLoader
         val url = loader.getResource(resource)
-            ?: throw IllegalStateException("CLI binary not found in JAR resources at $resource")
+            ?: throw IllegalStateException("CLI resource not found in JAR resources at $resource")
 
         val size = url.openConnection().contentLengthLong
         if (size >= 0 && target.exists() && target.length() == size) {
-            log.info("CLI binary up-to-date at ${target.absolutePath}")
-            return target
+            log.info("CLI resource up-to-date at ${target.absolutePath}")
+            if (executable && !SystemInfo.isWindows) {
+                target.setExecutable(true)
+            }
+            return
         }
 
-        log.info("Extracting CLI binary to ${target.absolutePath}")
+        log.info("Extracting CLI resource to ${target.absolutePath}")
         target.parentFile.mkdirs()
 
         url.openStream().use { input ->
@@ -114,28 +125,20 @@ class KiloBackendCliManager(
             }
         }
 
-        if (!SystemInfo.isWindows) {
+        if (executable && !SystemInfo.isWindows) {
             target.setExecutable(true)
         }
-
-        return target
     }
+
+    // Must be called from a background thread — devStorageEnv() performs blocking I/O (mkdirs).
+    internal fun buildEnv(pwd: String, base: Map<String, String> = System.getenv()): Map<String, String> =
+        buildKiloCliEnv(pwd, base, log)
 
     private suspend fun spawn(cli: File): CliServer.State =
         withContext(Dispatchers.IO) {
             val pwd = generatePassword()
 
-            val env = buildMap {
-                putAll(System.getenv())
-                put("KILO_SERVER_PASSWORD", pwd)
-                put("KILO_CLIENT", "jetbrains")
-                put("KILO_ENABLE_QUESTION_TOOL", "true")
-                put("KILO_PLATFORM", "jetbrains")
-                put("KILO_APP_NAME", "kilo-code")
-                put("KILO_DISABLE_CLAUDE_CODE", "true")
-                put("KILOCODE_FEATURE", "jetbrains-plugin")
-                ideEnv().forEach { (k, v) -> put(k, v) }
-            }
+            val env = buildEnv(pwd)
 
             val cmd = listOf(cli.absolutePath, "serve", "--port", "0")
             val builder = ProcessBuilder(cmd)
@@ -145,21 +148,31 @@ class KiloBackendCliManager(
 
             log.info("Starting CLI: ${cmd.joinToString(" ")}")
             log.info("CLI env: KILO_CLIENT=jetbrains KILO_PLATFORM=jetbrains KILO_APP_NAME=kilo-code")
-            val proc = builder.start()
+            val proc = try {
+                builder.start()
+            } catch (e: Exception) {
+                log.warn("CLI process failed to start: ${e.message}", e)
+                throw e
+            }
             log.info("CLI process started (pid=${proc.pid()})")
             process = proc
             install(proc)
 
             val stderr = StringBuilder()
 
-            Thread({
-                BufferedReader(InputStreamReader(proc.errorStream)).use { reader ->
-                    reader.lineSequence().forEach { line ->
-                        log.warn("CLI stderr: $line")
-                        synchronized(stderr) { stderr.appendLine(line) }
+            val err = Thread({
+                runCatching {
+                    BufferedReader(InputStreamReader(proc.errorStream)).use { reader ->
+                        reader.lineSequence().forEach { line ->
+                            log.warn("CLI stderr: $line")
+                            synchronized(stderr) { stderr.appendLine(line) }
+                        }
                     }
+                }.onFailure { err ->
+                    if (proc.isAlive && closing !== proc) log.warn("CLI stderr reader failed", err)
                 }
             }, "kilo-cli-stderr").apply { isDaemon = true; start() }
+            this@KiloBackendCliManager.stderr = err
 
             BufferedReader(InputStreamReader(proc.inputStream)).use { reader ->
                 for (line in reader.lineSequence()) {
@@ -179,6 +192,8 @@ class KiloBackendCliManager(
             val details = synchronized(stderr) { stderr.toString().trim() }
             process = null
             uninstall()
+            this@KiloBackendCliManager.stderr = null
+            log.warn("CLI process exited with code $code before announcing a port: $details")
             CliServer.State.Error(
                 message = "CLI process exited with code $code before announcing a port",
                 details = details.ifEmpty { null },
@@ -188,8 +203,23 @@ class KiloBackendCliManager(
     override fun dispose() {
         val proc = process ?: return
         process = null
-        uninstall()
-        kill(proc, "Disposing")
+        cleanup(proc, "Disposing")
+    }
+
+    private fun cleanup(proc: Process, source: String) {
+        closing = proc
+        try {
+            uninstall()
+            close(proc)
+            kill(proc, source)
+            val thread = stderr
+            stderr = null
+            if (thread != null && thread != Thread.currentThread()) {
+                thread.join(TimeUnit.SECONDS.toMillis(1))
+            }
+        } finally {
+            closing = null
+        }
     }
 
     private fun install(proc: Process) {
@@ -230,6 +260,12 @@ class KiloBackendCliManager(
     private fun children(proc: Process): List<ProcessHandle> =
         proc.toHandle().descendants().toList().asReversed()
 
+    private fun close(proc: Process) {
+        runCatching { proc.errorStream.close() }.onFailure { log.info("CLI stderr stream close skipped: ${it.message}") }
+        runCatching { proc.inputStream.close() }.onFailure { log.info("CLI stdout stream close skipped: ${it.message}") }
+        runCatching { proc.outputStream.close() }.onFailure { log.info("CLI stdin stream close skipped: ${it.message}") }
+    }
+
     private fun platform(): String {
         val os = when {
             SystemInfo.isMac -> "darwin"
@@ -245,38 +281,86 @@ class KiloBackendCliManager(
         return "$os-$arch"
     }
 
-    private fun ideEnv(): Map<String, String> = buildMap {
-        runCatching {
-            val info = ApplicationInfo.getInstance()
-            val name = info.fullApplicationName
-            val build = info.build.asString()
-            put("KILO_EDITOR_NAME", name)
-            put("KILOCODE_EDITOR_NAME", "$name $build")
-        }.onFailure { log.info("Could not read ApplicationInfo: ${it.message}") }
-
-        runCatching {
-            val version = PluginManagerCore
-                .getPlugin(PluginId.getId("ai.kilocode"))?.version
-            if (version != null) put("KILO_APP_VERSION", version)
-        }.onFailure { log.info("Could not read plugin version: ${it.message}") }
-
-        runCatching {
-            put("KILO_MACHINE_ID", machineId())
-        }.onFailure { log.info("Could not read machine ID: ${it.message}") }
-    }
-
-    private fun machineId(): String {
-        val file = File(PathManager.getSystemPath(), "kilo/machine-id")
-        if (file.exists()) return file.readText().trim()
-        val id = UUID.randomUUID().toString()
-        file.parentFile.mkdirs()
-        file.writeText(id)
-        return id
-    }
-
     private fun generatePassword(): String {
         val bytes = ByteArray(32)
         SecureRandom().nextBytes(bytes)
         return bytes.joinToString("") { "%02x".format(it) }
     }
+}
+
+private const val DEFAULT_CONFIG = """{"permission":{"edit":"ask","bash":"ask"}}"""
+
+// Must be called from a background thread — devStorageEnv() performs blocking I/O (mkdirs).
+internal fun buildKiloCliEnv(
+    pwd: String,
+    base: Map<String, String> = System.getenv(),
+    log: KiloLog = KiloLog.create(KiloBackendCliManager::class.java),
+): Map<String, String> = buildMap {
+    putAll(base)
+    put("KILO_SERVER_PASSWORD", pwd)
+    put("KILO_CLIENT", "jetbrains")
+    put("KILO_ENABLE_QUESTION_TOOL", "true")
+    put("KILO_PLATFORM", "jetbrains")
+    put("KILO_APP_NAME", "kilo-code")
+    put("KILO_TELEMETRY_LEVEL", if (KiloDevMode.enabled()) "off" else "all")
+    put("KILO_DISABLE_CLAUDE_CODE", "true")
+    put("KILOCODE_FEATURE", "jetbrains-plugin")
+    putIfAbsent("KILO_CONFIG_CONTENT", DEFAULT_CONFIG)
+    ideEnv(log).forEach { entry -> put(entry.key, entry.value) }
+    devStorageEnv(log)?.forEach { entry -> put(entry.key, entry.value) }
+}
+
+private fun ideEnv(log: KiloLog): Map<String, String> = buildMap {
+    runCatching {
+        val info = ApplicationInfo.getInstance()
+        val name = info.fullApplicationName
+        val build = info.build.asString()
+        put("KILO_EDITOR_NAME", name)
+        put("KILOCODE_EDITOR_NAME", "$name $build")
+    }.onFailure { log.info("Could not read ApplicationInfo: ${it.message}") }
+
+    runCatching {
+        val version = KiloPlugin.version()
+        if (version != null) put("KILO_APP_VERSION", version)
+    }.onFailure { log.info("Could not read plugin version: ${it.message}") }
+
+    runCatching {
+        put("KILO_MACHINE_ID", machineId())
+    }.onFailure { log.info("Could not read machine ID: ${it.message}") }
+}
+
+private fun machineId(): String {
+    val file = File(PathManager.getSystemPath(), "kilo/machine-id")
+    if (file.exists()) return file.readText().trim()
+    val id = UUID.randomUUID().toString()
+    file.parentFile.mkdirs()
+    file.writeText(id)
+    return id
+}
+
+private fun devStorageEnv(log: KiloLog): Map<String, String>? {
+    val enabled = System.getProperty("kilo.dev.storage.isolated", "false").toBoolean()
+    if (!enabled) return null
+    val root = System.getProperty("kilo.dev.worktree.root") ?: run {
+        log.warn("kilo.dev.storage.isolated=true but kilo.dev.worktree.root is not set; skipping dev storage isolation")
+        return null
+    }
+    val dev = File(root, ".kilo-dev")
+    val data = File(dev, "data")
+    val config = File(dev, "config")
+    val state = File(dev, "state")
+    val cache = File(dev, "cache")
+    for (dir in listOf(data, config, state, cache)) {
+        if (!dir.mkdirs() && !dir.isDirectory) {
+            log.warn("Failed to create dev storage dir ${dir.absolutePath}; skipping dev storage isolation")
+            return null
+        }
+    }
+    log.info("Dev storage isolation enabled under ${dev.absolutePath}")
+    return mapOf(
+        "XDG_DATA_HOME" to data.absolutePath,
+        "XDG_CONFIG_HOME" to config.absolutePath,
+        "XDG_STATE_HOME" to state.absolutePath,
+        "XDG_CACHE_HOME" to cache.absolutePath,
+    )
 }

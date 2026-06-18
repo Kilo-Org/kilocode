@@ -17,6 +17,7 @@ import { createRoot } from "solid-js"
 import type { SessionInfo } from "../src/types/messages"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { useLanguage } from "../src/context/language"
@@ -45,11 +46,13 @@ export const ConstrainDragYAxis: Component = () => {
 export const SortableTab: Component<{
   tab: SessionInfo
   active: boolean
+  busy: boolean
   keybind?: string
   closeKeybind?: string
   onSelect: () => void
   onMiddleClick: (e: MouseEvent) => void
   onClose: () => void
+  onCloseOthers: () => void
   onFork?: () => void
 }> = (props) => {
   const { t } = useLanguage()
@@ -64,39 +67,55 @@ export const SortableTab: Component<{
     >
       <ContextMenu>
         <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
-          <TooltipKeybind
-            title={props.tab.title || t("agentManager.session.untitled")}
-            keybind={props.keybind ?? ""}
-            placement="bottom"
-            inactive={props.active}
+          <div
+            class={`am-tab ${props.active ? "am-tab-active" : ""}`}
+            onClick={props.onSelect}
+            onMouseDown={props.onMiddleClick}
           >
-            <div
-              class={`am-tab ${props.active ? "am-tab-active" : ""}`}
-              onClick={props.onSelect}
-              onMouseDown={props.onMiddleClick}
+            <TooltipKeybind
+              title={props.tab.title || t("agentManager.session.untitled")}
+              keybind={props.keybind ?? ""}
+              placement="bottom"
+              gutter={8}
+              class="am-tab-tooltip"
+              openDelay={0}
             >
-              <span class="am-tab-label">{props.tab.title || t("agentManager.session.untitled")}</span>
-              <TooltipKeybind title={t("agentManager.tab.close")} keybind={props.closeKeybind ?? ""} placement="bottom">
-                <IconButton
-                  icon="close-small"
-                  size="small"
-                  variant="ghost"
-                  label={t("agentManager.tab.closeTab")}
-                  class="am-tab-close"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    props.onClose()
-                  }}
-                />
-              </TooltipKeybind>
-            </div>
-          </TooltipKeybind>
+              <span class="am-tab-title">
+                <Show when={props.busy}>
+                  <span class="am-tab-icon">
+                    <Spinner class="am-worktree-spinner" />
+                  </span>
+                </Show>
+                <span class="am-tab-label">{props.tab.title || t("agentManager.session.untitled")}</span>
+              </span>
+            </TooltipKeybind>
+            <TooltipKeybind
+              title={t("agentManager.tab.close")}
+              keybind={props.closeKeybind ?? ""}
+              placement="top"
+              gutter={8}
+              class="am-tab-close-wrap"
+              openDelay={0}
+            >
+              <IconButton
+                icon="close-small"
+                size="small"
+                variant="ghost"
+                label={t("agentManager.tab.closeTab")}
+                class="am-tab-close"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  props.onClose()
+                }}
+              />
+            </TooltipKeybind>
+          </div>
         </ContextMenu.Trigger>
         <ContextMenu.Portal>
           <ContextMenu.Content class="am-ctx-menu">
             <Show when={props.onFork}>
               <ContextMenu.Item onSelect={() => props.onFork?.()}>
-                <Icon name="branch" size="small" />
+                <Icon name="fork" size="small" />
                 <ContextMenu.ItemLabel>{t("agentManager.tab.forkSession")}</ContextMenu.ItemLabel>
               </ContextMenu.Item>
               <ContextMenu.Separator />
@@ -111,6 +130,10 @@ export const SortableTab: Component<{
                   ))}
                 </span>
               </Show>
+            </ContextMenu.Item>
+            <ContextMenu.Item onSelect={props.onCloseOthers}>
+              <Icon name="close" size="small" />
+              <ContextMenu.ItemLabel>{t("agentManager.tab.closeOthers")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Portal>
@@ -142,26 +165,44 @@ export const SortableReviewTab: Component<{
       class={`am-tab-sortable ${sortable.isActiveDraggable ? "am-tab-dragging" : ""}`}
       data-tab-id={props.id}
     >
-      <TooltipKeybind title={props.tooltip} keybind={props.keybind ?? ""} placement="bottom" inactive={props.active}>
-        <div
-          class={`am-tab am-tab-review ${props.active ? "am-tab-active" : ""}`}
-          onClick={props.onSelect}
-          onMouseDown={props.onMiddleClick}
+      <div
+        class={`am-tab am-tab-review ${props.active ? "am-tab-active" : ""}`}
+        onClick={props.onSelect}
+        onMouseDown={props.onMiddleClick}
+      >
+        <TooltipKeybind
+          title={props.tooltip}
+          keybind={props.keybind ?? ""}
+          placement="bottom"
+          gutter={8}
+          class="am-tab-tooltip"
+          openDelay={0}
         >
-          <Icon name="layers" size="small" />
-          <span class="am-tab-label">{props.label}</span>
-          <TooltipKeybind title={t("agentManager.tab.close")} keybind={props.closeKeybind ?? ""} placement="bottom">
-            <IconButton
-              icon="close-small"
-              size="small"
-              variant="ghost"
-              label={t("agentManager.tab.closeTab")}
-              class="am-tab-close"
-              onClick={props.onClose}
-            />
-          </TooltipKeybind>
-        </div>
-      </TooltipKeybind>
+          <span class="am-tab-title">
+            <span class="am-tab-icon">
+              <Icon name="layers" size="small" />
+            </span>
+            <span class="am-tab-label">{props.label}</span>
+          </span>
+        </TooltipKeybind>
+        <TooltipKeybind
+          title={t("agentManager.tab.close")}
+          keybind={props.closeKeybind ?? ""}
+          placement="top"
+          gutter={8}
+          class="am-tab-close-wrap"
+          openDelay={0}
+        >
+          <IconButton
+            icon="close-small"
+            size="small"
+            variant="ghost"
+            label={t("agentManager.tab.closeTab")}
+            class="am-tab-close"
+            onClick={props.onClose}
+          />
+        </TooltipKeybind>
+      </div>
     </div>
   )
 }

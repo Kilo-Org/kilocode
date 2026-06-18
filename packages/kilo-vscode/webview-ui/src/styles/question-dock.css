@@ -3,7 +3,7 @@
    ============================================ */
 
 [data-component="question-dock"] {
-  margin: 6px 8px;
+  margin: 0 8px;
   background-color: var(--surface-base);
   border-radius: 8px;
   overflow: hidden;
@@ -298,7 +298,7 @@
     line-height: var(--line-height-large);
 
     &::placeholder {
-      color: var(--text-weak);
+      color: var(--vscode-input-placeholderForeground, var(--text-weaker));
     }
 
     &:disabled {

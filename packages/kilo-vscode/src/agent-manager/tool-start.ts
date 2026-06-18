@@ -3,7 +3,7 @@ import { sanitizeBranchName, versionedName } from "./branch-name"
 import type { CreateWorktreeResult } from "./WorktreeManager"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import type { PanelContext } from "./host"
-import { PLATFORM } from "./constants"
+import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
 
 const LABEL_MAX = 28
 const PREFIX = new Set(["feat", "fix", "chore", "bug", "issue", "task", "branch"])
@@ -41,6 +41,7 @@ export interface ToolDeps {
     name?: string
     label?: string
   }) => Promise<WorktreeCreated | null>
+  claimRequest?: (requestID: string) => boolean
   cleanupWorktree: (wid: string, dir: string) => Promise<void>
   setup: (dir: string, branch?: string, id?: string) => Promise<void>
   createSessionInWorktree: (dir: string, branch: string, id?: string) => Promise<Session | null>
@@ -103,6 +104,7 @@ async function prompt(client: KiloClient, sid: string, dir: string, task: ToolTa
       sessionID: sid,
       directory: dir,
       parts: [{ type: "text", text: body }],
+      snapshotInitialization: SNAPSHOT_INITIALIZATION,
     },
     { throwOnError: true },
   )
@@ -190,6 +192,11 @@ async function worktree(
 }
 
 export async function startFromTool(deps: ToolDeps, req: ToolRequest): Promise<void> {
+  if (deps.claimRequest && !deps.claimRequest(req.requestID)) {
+    deps.log(`Agent Manager tool skipped duplicate request ${req.requestID}`)
+    return
+  }
+
   deps.openPanel(true)
   await deps.getPanel()?.waitForReady()
   await deps.waitReady("startFromTool")

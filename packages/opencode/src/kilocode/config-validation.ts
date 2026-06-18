@@ -2,14 +2,15 @@
 import path from "path"
 import { type ParseError, parse, printParseErrorCode } from "jsonc-parser"
 import { Schema } from "effect"
-import z from "zod"
 import { ConfigProtection } from "./permission/config-paths"
 import { ConfigMarkdown } from "@/config/markdown"
+import { ConfigParse } from "@/config/parse"
 import { Config } from "@/config/config"
 import { ConfigAgent } from "@/config/agent"
 import { ConfigCommand } from "@/config/command"
-import { ConfigPaths } from "@/config/paths"
-import { Instance } from "@/project/instance"
+import { JsonError } from "@/config/error"
+import { Instance } from "@/kilocode/instance"
+import { Filesystem } from "@/util/filesystem"
 
 export namespace ConfigValidation {
   const JSONC_EXT = new Set([".json", ".jsonc"])
@@ -23,7 +24,10 @@ export namespace ConfigValidation {
   }
 
   async function jsonc(filepath: string): Promise<string> {
-    const text = await ConfigPaths.readFile(filepath)
+    const text = await Filesystem.readText(filepath).catch((err: NodeJS.ErrnoException) => {
+      if (err.code === "ENOENT") return undefined
+      throw new JsonError({ path: filepath }, { cause: err })
+    })
     if (text === undefined) return ""
 
     const errors: ParseError[] = []
@@ -44,9 +48,16 @@ export namespace ConfigValidation {
       return `\n\n<config_validation>\nERROR: Config file at ${label(filepath)} is not valid JSON(C)\n  ${detail}\n</config_validation>`
     }
 
-    const result = Config.Info.zod.safeParse(data)
-    if (!result.success) {
-      const issues = result.error.issues.map((i) => `  ${i.path.join(".")}: ${i.message}`).join("\n")
+    const issues = (() => {
+      try {
+        ConfigParse.schema(Config.Info, data, filepath)
+        return undefined
+      } catch (err) {
+        if (err instanceof Error) return err.message
+        return String(err)
+      }
+    })()
+    if (issues) {
       return `\n\n<config_validation>\nWARNING: Configuration is invalid at ${label(filepath)}\n${issues}\n</config_validation>`
     }
 
@@ -80,11 +91,8 @@ export namespace ConfigValidation {
         return `\n\n<config_validation>\nWARNING: Configuration is invalid at ${label(filepath)}\n${issues}\n</config_validation>`
       }
     } else {
-      const result = ConfigAgent.Info.zod.safeParse(config)
-      if (!result.success) {
-        const issues = result.error.issues
-          .map((i: z.core.$ZodIssue) => `  ${i.path.join(".")}: ${i.message}`)
-          .join("\n")
+      const issues = validateEffectSchema(ConfigAgent.Info, config)
+      if (issues) {
         return `\n\n<config_validation>\nWARNING: Configuration is invalid at ${label(filepath)}\n${issues}\n</config_validation>`
       }
     }
@@ -124,8 +132,9 @@ export namespace ConfigValidation {
 
   async function existing(): Promise<string> {
     try {
-      const warns = await Config.warnings()
-      if (!warns || warns.length === 0) return ""
+      const { AppRuntime } = await import("@/effect/app-runtime")
+      const warns = await AppRuntime.runPromise(Config.Service.use((svc) => svc.warnings()))
+      if (warns.length === 0) return ""
       const items = warns.map((w: Config.Warning) => `  ${label(w.path)}: ${w.message}`).join("\n")
       return `Pre-existing config issues (from session start):\n${items}\n\n`
     } catch {
@@ -151,7 +160,6 @@ export namespace ConfigValidation {
     }
 
     const prefix = await existing()
-
     const validation = JSONC_EXT.has(ext) ? await jsonc(filepath) : ext === ".md" ? await markdown(filepath) : ""
 
     if (!validation) return ""

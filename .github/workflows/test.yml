@@ -21,6 +21,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  # kilocode_change start
   unit:
     name: unit (${{ matrix.settings.name }})
     strategy:
@@ -32,6 +33,7 @@ jobs:
           - name: windows
             host: blacksmith-4vcpu-windows-2025 # kilocode_change
     runs-on: ${{ matrix.settings.host }}
+    timeout-minutes: 45 # kilocode_change
     defaults:
       run:
         shell: bash
@@ -41,10 +43,20 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      # kilocode_change start
       - name: Setup Node
+        id: setup-node
+        continue-on-error: ${{ runner.os == 'Windows' }}
         uses: actions/setup-node@v6 # kilocode_change
         with:
           node-version: "24"
+
+      - name: Retry Setup Node on Windows
+        if: runner.os == 'Windows' && steps.setup-node.outcome == 'failure'
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+      # kilocode_change end
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
@@ -64,13 +76,18 @@ jobs:
             turbo-${{ runner.os }}-
 
       - name: Run unit tests
-        run: bun turbo test:ci
+        run: bun turbo test:ci --filter='!@kilocode/kilo-jetbrains'
         env:
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
 
+      - name: Run HttpApi exerciser gates
+        if: runner.os == 'Linux'
+        working-directory: packages/opencode
+        run: bun run test:httpapi
+
       - name: Publish unit reports
         if: always()
-        uses: mikepenz/action-junit-report@v6
+        uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6.4.0
         with:
           report_paths: packages/*/.artifacts/unit/junit.xml
           check_name: "unit results (${{ matrix.settings.name }})"
@@ -87,15 +104,31 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
           path: packages/*/.artifacts/unit/junit.xml
+  # kilocode_change end
 
+  # kilocode_change start
+  jetbrains:
+    name: jetbrains
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: read
+    uses: ./.github/workflows/test-jetbrains.yml
+  # kilocode_change end
+
+  # kilocode_change start
   required:
     name: test (linux)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     needs:
       - unit
+      - jetbrains
     if: always()
     steps:
       - name: Verify upstream test jobs passed
         run: |
           echo "unit=${{ needs.unit.result }}"
+          echo "jetbrains=${{ needs.jetbrains.result }}"
           test "${{ needs.unit.result }}" = "success"
+          test "${{ needs.jetbrains.result }}" = "success"
+  # kilocode_change end

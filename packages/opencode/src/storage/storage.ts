@@ -1,13 +1,10 @@
 import * as Log from "@opencode-ai/core/util/log"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
-import { NamedError } from "@opencode-ai/core/util/error"
-import z from "zod"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Effect, Exit, Layer, Option, RcMap, Schema, Context, TxReentrantLock } from "effect"
-import { NonNegativeInt } from "@/util/schema"
+import { NonNegativeInt } from "@opencode-ai/core/schema"
 import { Git } from "@/git"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 
 const log = Log.create({ service: "storage" })
 
@@ -17,14 +14,15 @@ type Migration = (
   git: Git.Interface,
 ) => Effect.Effect<void, AppFileSystem.Error>
 
-export const NotFoundError = NamedError.create(
-  "NotFoundError",
-  z.object({
-    message: z.string(),
-  }),
-)
+export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()("NotFoundError", {
+  message: Schema.String,
+}) {
+  static isInstance(input: unknown): input is NotFoundError {
+    return input instanceof NotFoundError
+  }
+}
 
-export type Error = AppFileSystem.Error | InstanceType<typeof NotFoundError>
+export type Error = AppFileSystem.Error | NotFoundError
 
 const RootFile = Schema.Struct({
   path: Schema.optional(
@@ -250,7 +248,7 @@ export const layer = Layer.effect(
       }),
     )
 
-    const fail = (target: string): Effect.Effect<never, InstanceType<typeof NotFoundError>> =>
+    const fail = (target: string): Effect.Effect<never, NotFoundError> =>
       Effect.fail(new NotFoundError({ message: `Resource not found: ${target}` }))
 
     const wrap = <A>(target: string, body: Effect.Effect<A, AppFileSystem.Error>) =>
@@ -331,14 +329,5 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer.pipe(Layer.provide(AppFileSystem.defaultLayer), Layer.provide(Git.defaultLayer))
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const read = <T>(key: string[]) => runPromise((svc) => svc.read<T>(key))
-export const write = <T>(key: string[], content: T) => runPromise((svc) => svc.write<T>(key, content))
-export const remove = (key: string[]) => runPromise((svc) => svc.remove(key))
-export const list = (prefix: string[]) => runPromise((svc) => svc.list(prefix))
-export const update = <T>(key: string[], fn: (draft: T) => void) => runPromise((svc) => svc.update<T>(key, fn))
-// kilocode_change end
 
 export * as Storage from "./storage"

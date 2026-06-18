@@ -3,33 +3,31 @@
 // tool propagates each child session's total cost up to the parent's
 // tool-wrapper assistant message (#6321).
 
-import { afterEach, describe, expect, test } from "bun:test"
+import { describe, expect } from "bun:test"
+import { Effect } from "effect"
 import { aggregateSessionStats } from "../../src/cli/cmd/stats"
 import { MessageV2 } from "../../src/session/message-v2"
-import { Instance } from "../../src/project/instance"
 import { ProviderID, ModelID } from "../../src/provider/schema"
 import { Session } from "../../src/session/session"
-import { MessageID, PartID } from "../../src/session/schema"
+import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import * as Log from "@opencode-ai/core/util/log"
-import { tmpdir } from "../fixture/fixture"
+import { testEffect } from "../lib/effect"
 
-Log.init({ print: false })
+void Log.init({ print: false })
 
-afterEach(async () => {
-  await Instance.disposeAll()
-})
+const it = testEffect(Session.defaultLayer)
 
 const ref = {
   providerID: ProviderID.make("test"),
   modelID: ModelID.make("test-model"),
 }
 
-function assistant(sessionID: string, parentID: string, cost: number): MessageV2.Assistant {
+function assistant(sessionID: SessionID, parentID: MessageID, cost: number): MessageV2.Assistant {
   return {
     id: MessageID.ascending(),
     role: "assistant",
-    parentID: parentID as any,
-    sessionID: sessionID as any,
+    parentID,
+    sessionID,
     mode: "build",
     agent: "build",
     cost,
@@ -41,24 +39,26 @@ function assistant(sessionID: string, parentID: string, cost: number): MessageV2
   }
 }
 
-async function step(sessionID: string, messageID: string, cost: number) {
-  await Session.updatePart({
+const step = Effect.fn("StatsSubagentCost.step")(function* (sessionID: SessionID, messageID: MessageID, cost: number) {
+  const svc = yield* Session.Service
+  yield* svc.updatePart({
     id: PartID.ascending(),
-    messageID: messageID as any,
-    sessionID: sessionID as any,
+    messageID,
+    sessionID,
     type: "step-finish",
     reason: "stop",
     cost,
     tokens: { total: 15, input: 10, output: 5, reasoning: 0, cache: { read: 0, write: 0 } },
   })
-}
+})
 
-async function tool(sessionID: string, messageID: string) {
+const tool = Effect.fn("StatsSubagentCost.tool")(function* (sessionID: SessionID, messageID: MessageID) {
   const time = Date.now()
-  await Session.updatePart({
+  const svc = yield* Session.Service
+  yield* svc.updatePart({
     id: PartID.ascending(),
-    messageID: messageID as any,
-    sessionID: sessionID as any,
+    messageID,
+    sessionID,
     type: "tool",
     callID: "call_1",
     tool: "bash",
@@ -71,41 +71,41 @@ async function tool(sessionID: string, messageID: string) {
       time: { start: time, end: time },
     },
   })
-}
+})
 
 describe("stats subagent cost", () => {
-  test("counts child usage without double-counting propagated cost", async () => {
-    await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        const parent = await Session.create({ title: "root" })
-        const child = await Session.create({ parentID: parent.id, title: "subagent" })
+  it.instance(
+    "counts child usage without double-counting propagated cost",
+    () =>
+      Effect.gen(function* () {
+        const svc = yield* Session.Service
+        const parent = yield* svc.create({ title: "root" })
+        const child = yield* svc.create({ parentID: parent.id, title: "subagent" })
 
-        const userMsg = await Session.updateMessage({
+        const userMsg = yield* svc.updateMessage({
           id: MessageID.ascending(),
           role: "user",
           sessionID: parent.id,
           agent: "build",
           model: ref,
           time: { created: Date.now() },
-        } as any)
-        const parentMsg = await Session.updateMessage(assistant(parent.id, userMsg.id, 1.5))
-        await step(parent.id, parentMsg.id, 1)
+        })
+        const parentMsg = yield* svc.updateMessage(assistant(parent.id, userMsg.id, 1.5))
+        yield* step(parent.id, parentMsg.id, 1)
 
-        const childUser = await Session.updateMessage({
+        const childUser = yield* svc.updateMessage({
           id: MessageID.ascending(),
           role: "user",
           sessionID: child.id,
           agent: "general",
           model: ref,
           time: { created: Date.now() },
-        } as any)
-        const childMsg = await Session.updateMessage(assistant(child.id, childUser.id, 0.5))
-        await step(child.id, childMsg.id, 0.5)
-        await tool(child.id, childMsg.id)
+        })
+        const childMsg = yield* svc.updateMessage(assistant(child.id, childUser.id, 0.5))
+        yield* step(child.id, childMsg.id, 0.5)
+        yield* tool(child.id, childMsg.id)
 
-        const stats = await aggregateSessionStats()
+        const stats = yield* aggregateSessionStats()
         const model = stats.modelUsage["test/test-model"]!
         expect(stats.totalCost).toBeCloseTo(1.5, 6)
         expect(stats.totalSessions).toBe(2)
@@ -117,7 +117,7 @@ describe("stats subagent cost", () => {
         expect(model.tokens.input).toBe(20)
         expect(model.tokens.output).toBe(10)
         expect(model.cost).toBeCloseTo(1.5, 6)
-      },
-    })
-  })
+      }),
+    { git: true },
+  )
 })

@@ -2,13 +2,17 @@ import crypto from "crypto"
 import * as vscode from "vscode"
 import { t } from "./shims/i18n"
 import { TelemetryProxy, TelemetryEventName } from "../telemetry"
-import { AutocompleteModel } from "./AutocompleteModel"
 import { AutocompleteStatusBar } from "./AutocompleteStatusBar"
 import { AutocompleteCodeActionProvider } from "./AutocompleteCodeActionProvider"
 import { AutocompleteInlineCompletionProvider } from "./classic-auto-complete/AutocompleteInlineCompletionProvider"
 import { AutocompleteTelemetry } from "./classic-auto-complete/AutocompleteTelemetry"
+import { NextEditInlineCompletionProvider } from "./next-edit/NextEditInlineCompletionProvider"
+import { disposeLog } from "./next-edit/log"
+import { NextEditSuggestionManager } from "./next-edit/NextEditSuggestionManager"
+import { toAllowedMercuryRecentSnippets } from "./next-edit/recentSnippetsAdapter"
 import type { KiloConnectionService } from "../cli-backend"
-import { getAutocompleteModel } from "../../shared/autocomplete-models"
+import { hasValidCredentials } from "./fim"
+import { DEFAULT_AUTOCOMPLETE_MODEL, getAutocompleteModel } from "../../shared/autocomplete-models"
 
 const CONFIG_SECTION = "kilo-code.new.autocomplete"
 
@@ -23,11 +27,13 @@ export interface AutocompleteServiceSettings {
 
 function readSettings(): AutocompleteServiceSettings {
   const config = vscode.workspace.getConfiguration(CONFIG_SECTION)
+  const info = getAutocompleteModel(config.get<string>("provider"), config.get<string>("model"))
   return {
     enableAutoTrigger: config.get<boolean>("enableAutoTrigger") ?? true,
     enableSmartInlineTaskKeybinding: config.get<boolean>("enableSmartInlineTaskKeybinding") ?? true,
     enableChatAutocomplete: config.get<boolean>("enableChatAutocomplete") ?? true,
-    model: getAutocompleteModel(config.get<string>("model") ?? "").id,
+    provider: info.providerID,
+    model: info.modelID,
     snoozeUntil: config.get<number>("snoozeUntil"),
   }
 }
@@ -42,7 +48,7 @@ async function writeSettings(patch: Partial<AutocompleteServiceSettings>): Promi
 export class AutocompleteServiceManager {
   private static _instance: AutocompleteServiceManager | null = null
 
-  private readonly model: AutocompleteModel
+  private readonly connectionService: KiloConnectionService
   private readonly context: vscode.ExtensionContext
   private settings: AutocompleteServiceSettings | null = null
 
@@ -59,9 +65,15 @@ export class AutocompleteServiceManager {
   // VSCode Providers
   public readonly codeActionProvider: AutocompleteCodeActionProvider
   public readonly inlineCompletionProvider: AutocompleteInlineCompletionProvider
+  public readonly nextEditProvider: NextEditInlineCompletionProvider
+  public readonly nextEditSuggestionManager: NextEditSuggestionManager
   private inlineCompletionProviderDisposable: vscode.Disposable | null = null
+  private inlineCompletionProviderKind: "classic" | "next-edit" | null = null
   private unsubscribeState: (() => void) | null = null
   private unsubscribeEvent: (() => void) | null = null
+  // Resolved copy of the classic provider's ignore controller for synchronous
+  // snippet filtering. Null until the async initialize() resolves.
+  private ignoreControllerSync: { validateAccess(fsPath: string): boolean } | null = null
 
   constructor(context: vscode.ExtensionContext, connectionService: KiloConnectionService) {
     if (AutocompleteServiceManager._instance) {
@@ -71,10 +83,8 @@ export class AutocompleteServiceManager {
     }
 
     this.context = context
+    this.connectionService = connectionService
     AutocompleteServiceManager._instance = this
-
-    // Register Internal Components
-    this.model = new AutocompleteModel(connectionService)
 
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? ""
 
@@ -82,13 +92,60 @@ export class AutocompleteServiceManager {
     this.codeActionProvider = new AutocompleteCodeActionProvider()
     this.inlineCompletionProvider = new AutocompleteInlineCompletionProvider(
       this.context,
-      this.model,
+      DEFAULT_AUTOCOMPLETE_MODEL.id,
+      connectionService,
       this.updateCostTracking.bind(this),
       () => this.settings,
       workspacePath,
       new AutocompleteTelemetry(),
       (status) => this.handleFatalAutocompleteError(status),
     )
+    // Cache the resolved ignore controller for synchronous snippet filtering.
+    void this.inlineCompletionProvider.ignoreController.then((ic) => {
+      this.ignoreControllerSync = ic
+    })
+
+    this.nextEditSuggestionManager = new NextEditSuggestionManager()
+    this.nextEditProvider = new NextEditInlineCompletionProvider({
+      connectionService,
+      suggestionManager: this.nextEditSuggestionManager,
+      getModelSelection: () => {
+        const info = getAutocompleteModel(this.settings?.provider, this.settings?.model)
+        return { providerId: info.providerID, modelId: info.modelID }
+      },
+      isFileAllowed: async (fsPath) => {
+        const ignore = await this.inlineCompletionProvider.ignoreController
+        return ignore.validateAccess(fsPath)
+      },
+      getRecentlyViewedSnippets: () => {
+        // Reuse the LRU populated by the classic provider — keeps a single
+        // RecentlyVisitedRangesService instance instead of double-tracking.
+        // Suppress snippets until access checks are available, then include
+        // only content explicitly approved by the ignore controller.
+        const raw = this.inlineCompletionProvider.recentlyVisitedRangesService.getSnippets()
+        const ignore = this.ignoreControllerSync
+        if (!ignore) return []
+        return toAllowedMercuryRecentSnippets(raw, (path) => ignore.validateAccess(path))
+      },
+      onFatalError: (status) => this.handleFatalAutocompleteError(status),
+      onSuggestion: (event) => {
+        const eventName =
+          event.status === "error"
+            ? TelemetryEventName.AUTOCOMPLETE_LLM_REQUEST_FAILED
+            : event.shown
+              ? TelemetryEventName.AUTOCOMPLETE_LLM_SUGGESTION_RETURNED
+              : TelemetryEventName.AUTOCOMPLETE_LLM_REQUEST_COMPLETED
+        TelemetryProxy.capture(eventName, {
+          mode: "next-edit",
+          model: getAutocompleteModel(this.settings?.provider, this.settings?.model).id,
+          latencyMs: event.latencyMs,
+          inputTokens: event.inputTokens,
+          outputTokens: event.outputTokens,
+          shown: event.shown,
+          errorStatus: event.errorStatus,
+        })
+      },
+    })
 
     // Reload when CLI backend connection state changes so autocomplete
     // picks up the connected state even if it wasn't ready at startup.
@@ -120,9 +177,7 @@ export class AutocompleteServiceManager {
   public async load() {
     this.settings = readSettings()
 
-    if (this.settings.model) {
-      this.model.setModel(this.settings.model)
-    }
+    this.inlineCompletionProvider.setModel(getAutocompleteModel(this.settings.provider, this.settings.model).id)
 
     await this.updateGlobalContext()
     this.updateStatusBar()
@@ -137,25 +192,47 @@ export class AutocompleteServiceManager {
    */
   private async ensureInlineCompletionProviderRegistration() {
     const shouldBeRegistered = (this.settings?.enableAutoTrigger ?? false) && !this.isSnoozed()
-    const isRegistered = this.inlineCompletionProviderDisposable !== null
+    const info = getAutocompleteModel(this.settings?.provider, this.settings?.model)
+    const desiredKind: "classic" | "next-edit" = info.kind === "edit" ? "next-edit" : "classic"
 
-    // Already in the correct state — nothing to do
-    if (shouldBeRegistered === isRegistered) {
-      return
+    // Mode change while still enabled requires a swap: tear down the old
+    // registration so the new provider takes over.
+    if (
+      shouldBeRegistered &&
+      this.inlineCompletionProviderKind !== null &&
+      this.inlineCompletionProviderKind !== desiredKind
+    ) {
+      if (this.inlineCompletionProviderKind === "next-edit") this.nextEditSuggestionManager.clear()
+      this.inlineCompletionProviderDisposable?.dispose()
+      this.inlineCompletionProviderDisposable = null
+      this.inlineCompletionProviderKind = null
     }
+
+    if (!shouldBeRegistered && this.inlineCompletionProviderKind === "next-edit") {
+      this.nextEditSuggestionManager.clear()
+    }
+    const isRegistered = this.inlineCompletionProviderDisposable !== null
+    if (shouldBeRegistered === isRegistered) return
 
     if (!shouldBeRegistered) {
       this.inlineCompletionProviderDisposable!.dispose()
       this.inlineCompletionProviderDisposable = null
+      this.inlineCompletionProviderKind = null
       return
     }
 
-    // Register classic provider (tracked via this.inlineCompletionProviderDisposable,
-    // not context.subscriptions, so re-registration on reconnect doesn't leak)
+    const provider: vscode.InlineCompletionItemProvider =
+      desiredKind === "next-edit" ? this.nextEditProvider : this.inlineCompletionProvider
     this.inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
       { scheme: "file" },
-      this.inlineCompletionProvider,
+      provider,
     )
+    this.inlineCompletionProviderKind = desiredKind
+  }
+
+  /** Which provider is currently registered (`null` if none). */
+  public get currentMode(): "classic" | "next-edit" | null {
+    return this.inlineCompletionProviderKind
   }
 
   public async disable() {
@@ -178,37 +255,6 @@ export class AutocompleteServiceManager {
       return false
     }
     return Date.now() < snoozeUntil
-  }
-
-  /**
-   * Get remaining snooze time in seconds
-   */
-  public getSnoozeRemainingSeconds(): number {
-    const snoozeUntil = this.settings?.snoozeUntil
-    if (!snoozeUntil) {
-      return 0
-    }
-    const remaining = Math.max(0, Math.ceil((snoozeUntil - Date.now()) / 1000))
-    return remaining
-  }
-
-  /**
-   * Snooze autocomplete for a specified number of seconds
-   */
-  public async snooze(seconds: number): Promise<void> {
-    if (this.snoozeTimer) {
-      clearTimeout(this.snoozeTimer)
-      this.snoozeTimer = null
-    }
-
-    const snoozeUntil = Date.now() + seconds * 1000
-    await writeSettings({ snoozeUntil })
-
-    this.snoozeTimer = setTimeout(() => {
-      void this.unsnooze()
-    }, seconds * 1000)
-
-    await this.load()
   }
 
   /**
@@ -320,15 +366,17 @@ export class AutocompleteServiceManager {
   }
 
   private getCurrentModelName(): string {
-    return this.model.getModelName()
+    const info = getAutocompleteModel(this.settings?.provider, this.settings?.model)
+    return info.label
   }
 
   private getCurrentProviderName(): string {
-    return this.model.getProviderDisplayName()
+    const info = getAutocompleteModel(this.settings?.provider, this.settings?.model)
+    return info.provider
   }
 
   private hasNoUsableProvider(): boolean {
-    return !this.model.hasValidCredentials()
+    return !hasValidCredentials(this.connectionService)
   }
 
   /**
@@ -368,7 +416,6 @@ export class AutocompleteServiceManager {
       snoozed: this.isSnoozed(),
       model: this.getCurrentModelName(),
       provider: this.getCurrentProviderName(),
-      profileName: this.model.profileName,
       hasNoUsableProvider: this.hasNoUsableProvider(),
       totalSessionCost: this.sessionCost,
       completionCount: this.completionCount,
@@ -410,10 +457,17 @@ export class AutocompleteServiceManager {
     if (this.inlineCompletionProviderDisposable) {
       this.inlineCompletionProviderDisposable.dispose()
       this.inlineCompletionProviderDisposable = null
+      this.inlineCompletionProviderKind = null
     }
 
     // Dispose inline completion provider resources
     this.inlineCompletionProvider.dispose()
+    this.nextEditProvider.dispose()
+    this.nextEditSuggestionManager.dispose()
+
+    // Drop the dedicated Next Edit OutputChannel so it doesn't leak across
+    // extension reloads.
+    disposeLog()
 
     // Clear singleton instance
     AutocompleteServiceManager._instance = null

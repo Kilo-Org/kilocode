@@ -9,15 +9,16 @@
 //
 //   1. Runs the real `track()` in a forked fiber.
 //   2. Waits up to `TIMEOUT_MS` for it to complete.
-//   3. If it times out AND we have a sessionID to target, asks the user:
+//   3. If it times out AND we have a sessionID to target, either waits
+//      silently when the caller selected that product policy, or asks the user:
 //        - "Continue with snapshots": keep waiting on this turn; snapshot
 //          finishes eventually and undo/redo stays functional. Future turns
 //          are fast because the snapshot index is built.
 //        - "Disable for this project": interrupt the in-flight snapshot,
 //          persist `"snapshot": false` to `.kilo/kilo.json`, and skip. All
 //          future sessions on this project load with snapshots off.
-//        - Dismissed / no sessionID: interrupt and skip. Mark the instance
-//          so we don't prompt again until the instance reloads.
+//        - Dismissed / no sessionID: interrupt and skip. Mark the active
+//          Snapshot.Service guard so later calls through it do not prompt again.
 //
 // While the snapshot is running, we inject a synthetic text part into the
 // live assistant message so the user sees an "Initializing snapshot…" line
@@ -25,8 +26,9 @@
 // removed when the snapshot finishes, so the chat history stays clean.
 //
 // Design notes:
-//   - The question is asked once per instance — `state.asked` guards follow-up
-//     prompts so a slow repo doesn't spam the user every turn.
+//   - `state.asked` is scoped to the active Snapshot.Service closure, not the
+//     directory-keyed snapshot state. It suppresses follow-up prompts until a
+//     continued snapshot successfully produces a hash.
 //   - We do NOT call `Config.update()` when the user picks "Disable" because
 //     that finalizer runs `Instance.dispose()` and tears down the live turn.
 //     Instead we write the file directly via `KilocodeConfig.updateProjectConfig`
@@ -75,7 +77,7 @@ interface SessionPartAPI {
 }
 
 type SessionRuntime = {
-  runPromise: <A>(fn: (svc: SessionPartAPI) => Effect.Effect<A>) => Promise<A>
+  runPromise: <A>(fn: (svc: SessionPartAPI) => Effect.Effect<A>, options?: Effect.RunOptions) => Promise<A>
 }
 
 export namespace KiloSnapshotTrack {
@@ -123,12 +125,14 @@ export namespace KiloSnapshotTrack {
   /** Replace the `{spinner}` placeholder in `template` with the given frame. */
   export const formatProgress = (template: string, frame: string): string => template.replace("{spinner}", frame)
 
-  /** Per-instance state. Lives as long as the Snapshot.Service scope. */
+  /** Guard state shared by one Snapshot.Service scope, outside directory-keyed InstanceState. */
   export interface State {
-    /** Skip every future track call once this flips. Resets when the instance reloads. */
+    /** Skip every future track call through this service once this flips. */
     disabledForSession: boolean
-    /** One-shot guard so we don't prompt the user every turn. */
+    /** Guard prompt display until a continued snapshot successfully produces a hash. */
     asked: boolean
+    /** Identify the invocation that currently owns the slow-repository prompt. */
+    owner?: symbol
   }
 
   export const makeState = (): State => ({
@@ -139,6 +143,9 @@ export namespace KiloSnapshotTrack {
   /** Answer shape returned by `askUser`. Three-valued because dismiss !== disable. */
   export type Answer = "continue" | "disable" | "dismissed"
 
+  /** Managed callers can retain snapshots without blocking on the interactive warning. */
+  export type SnapshotInitialization = "wait"
+
   /**
    * Hooks injected by the snapshot layer. Split out so the unit tests can
    * substitute fakes without reaching for the real Question/filesystem stack.
@@ -148,38 +155,27 @@ export namespace KiloSnapshotTrack {
     readonly ask: (input: { sessionID: SessionID }) => Promise<Answer>
     /** Persist `"snapshot": false` to the project config without disposing the instance. */
     readonly persistDisable: () => Promise<void>
-    /**
-     * Publish a synthetic "initializing snapshot…" message part on the given
-     * assistant message so the UI (TUI + webview) renders it in the chat
-     * scrollback. Returns the opaque handle the caller passes to `updateProgress`
-     * / `endProgress`. Returning `undefined` means "no target" — the caller
-     * should then skip the progress indicator entirely.
-     */
-    readonly startProgress: (input: {
-      sessionID: SessionID
-      messageID: MessageID
-      text: string
-    }) => Promise<ProgressHandle | undefined>
+    /** Publish the synthetic progress part allocated by the wrapper. */
+    readonly startProgress: (input: { handle: ProgressHandle; text: string }, signal?: AbortSignal) => Promise<void>
     /** Update the visible text on the in-flight progress part. */
-    readonly updateProgress: (input: { handle: ProgressHandle; text: string }) => Promise<void>
+    readonly updateProgress: (input: { handle: ProgressHandle; text: string }, signal?: AbortSignal) => Promise<void>
     /** Remove the progress part so the chat stays clean once the snapshot is done. */
-    readonly endProgress: (input: { handle: ProgressHandle }) => Promise<void>
+    readonly endProgress: (input: { handle: ProgressHandle }, signal?: AbortSignal) => Promise<void>
   }
 
-  /**
-   * Opaque handle returned by `startProgress`. The production hook stores the
-   * published text-part coordinates; tests store whatever they need to verify
-   * the lifecycle.
-   */
+  /** Coordinates and lifecycle state for one synthetic progress part. */
   export type ProgressHandle = {
     readonly sessionID: SessionID
     readonly messageID: MessageID
     readonly partID: PartID
+    started: boolean
+    ended: boolean
   }
 
   export interface WrapInput {
     readonly inner: Effect.Effect<string | undefined>
     readonly state: State
+    readonly snapshotInitialization?: SnapshotInitialization
     readonly sessionID?: SessionID
     /**
      * When provided, the wrapper injects an in-message "initializing snapshot…"
@@ -196,6 +192,8 @@ export namespace KiloSnapshotTrack {
      * tiny value so the delay is actually observable within a test run.
      */
     readonly progressDelayMs?: number
+    /** Override the progress removal timeout for tests. */
+    readonly progressCleanupTimeoutMs?: number
   }
 
   /**
@@ -205,6 +203,9 @@ export namespace KiloSnapshotTrack {
    * the user gets a clear in-chat reason for the wait.
    */
   const PROGRESS_DELAY_MS = 500
+  const PROGRESS_CLEANUP_TIMEOUT_MS = 1_000
+  const PROGRESS_CLEANUP_RETRY_MS = 50
+  const PROGRESS_CLEANUP_ATTEMPTS = 3
 
   /**
    * Runs `inner` with a timeout + slow-repo prompt flow. Returns the snapshot
@@ -217,11 +218,24 @@ export namespace KiloSnapshotTrack {
       const hooks = input.hooks ?? defaultHooks
       const timeoutMs = input.timeoutMs ?? TIMEOUT_MS
       const progressDelayMs = input.progressDelayMs ?? PROGRESS_DELAY_MS
+      const cleanupTimeoutMs = input.progressCleanupTimeoutMs ?? PROGRESS_CLEANUP_TIMEOUT_MS
 
       // The progress part is only published when we have both a session and
       // a target message. Background/non-turn callers skip the indicator.
-      const canShowProgress = !!(input.sessionID && input.messageID)
-      let handle: ProgressHandle | undefined
+      const handle: ProgressHandle | undefined =
+        input.sessionID && input.messageID
+          ? {
+              sessionID: input.sessionID,
+              messageID: input.messageID,
+              partID: PartIDSchema.ascending(),
+              started: false,
+              ended: false,
+            }
+          : undefined
+      const owner = Symbol()
+      let cleared = false
+      let removal: Promise<void> | undefined
+      let reset = false
       let frameIdx = 0
 
       const nextFrameText = () => {
@@ -230,17 +244,54 @@ export namespace KiloSnapshotTrack {
         return formatProgress(PROGRESS_INITIALIZING, frame)
       }
 
-      const clearProgress = () =>
-        Effect.gen(function* () {
-          if (!handle) return
-          const h = handle
-          handle = undefined
-          yield* Effect.promise(() =>
-            hooks.endProgress({ handle: h }).catch((err) => {
-              log.warn("failed to clear snapshot progress part", { err })
-            }),
-          )
+      const removeProgress = async (force: boolean) => {
+        if (!handle || (cleared && !force)) return
+        for (let attempt = 0; attempt < PROGRESS_CLEANUP_ATTEMPTS; attempt += 1) {
+          if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, PROGRESS_CLEANUP_RETRY_MS))
+          const ctl = new AbortController()
+          const timeout = Promise.withResolvers<false>()
+          const timer = setTimeout(() => {
+            ctl.abort()
+            timeout.resolve(false)
+          }, cleanupTimeoutMs)
+          const removed = await Promise.race([
+            hooks
+              .endProgress({ handle }, ctl.signal)
+              .then(() => true as const)
+              .catch((err) => {
+                log.warn("failed to clear snapshot progress part", { err })
+                return false as const
+              }),
+            timeout.promise,
+          ])
+          clearTimeout(timer)
+          if (!removed) continue
+          cleared = true
+          return
+        }
+        log.warn("snapshot progress part remained after cleanup retries")
+      }
+
+      const settleProgress = async (work: () => Promise<void>, warning: string) => {
+        const settled = await work()
+          .then(() => true)
+          .catch((err) => {
+            log.warn(warning, { err })
+            return false
+          })
+        if (handle?.ended) await removeProgress(true)
+        return settled
+      }
+
+      const clearProgress = () => {
+        if (handle) handle.ended = true
+        if (!handle?.started || removal) return Effect.void
+        return Effect.sync(() => {
+          removal = removeProgress(false).finally(() => {
+            removal = undefined
+          })
         })
+      }
 
       // Delay the "Initializing snapshot…" indicator so fast snapshots never
       // flash a misleading line in the chat. The fiber:
@@ -249,111 +300,129 @@ export namespace KiloSnapshotTrack {
       //   3. Enters an animation loop that advances a frame every
       //      SPINNER_INTERVAL_MS. The loop runs in the same fiber so
       //      interrupting `progressFiber` stops everything.
-      const progressFiber = canShowProgress
+      const progressFiber = handle
         ? yield* Effect.forkChild(
             Effect.gen(function* () {
               yield* Effect.sleep(Duration.millis(Math.min(progressDelayMs, timeoutMs)))
-              if (!input.sessionID || !input.messageID) return
-              const started = yield* Effect.promise(async () => {
-                try {
-                  return await hooks.startProgress({
-                    sessionID: input.sessionID!,
-                    messageID: input.messageID!,
-                    text: nextFrameText(),
-                  })
-                } catch (err) {
-                  log.warn("failed to publish snapshot progress part", { err })
-                  return undefined
-                }
-              })
-              if (!started) return
-              handle = started
+              handle.started = true
+              const started = yield* Effect.promise((signal) =>
+                settleProgress(
+                  () => hooks.startProgress({ handle, text: nextFrameText() }, signal),
+                  "failed to publish snapshot progress part",
+                ),
+              )
+              if (!started || handle.ended) return
               while (true) {
                 yield* Effect.sleep(Duration.millis(SPINNER_INTERVAL_MS))
-                if (!handle) return
+                if (handle.ended) return
                 const text = nextFrameText()
-                const h = handle
-                yield* Effect.promise(() =>
-                  hooks.updateProgress({ handle: h, text }).catch((err) => {
-                    log.warn("failed to advance snapshot spinner frame", { err })
-                  }),
+                yield* Effect.promise((signal) =>
+                  settleProgress(
+                    () => hooks.updateProgress({ handle, text }, signal),
+                    "failed to advance snapshot spinner frame",
+                  ),
                 )
               }
             }),
           )
         : undefined
 
-      const fiber = yield* Effect.forkChild(input.inner)
-      const quick = yield* Fiber.join(fiber).pipe(
-        Effect.timeoutOption(Duration.millis(timeoutMs)),
-        Effect.catch((err) => {
-          log.warn("snapshot track failed", { err })
-          return Effect.succeed({ _tag: "Some" as const, value: undefined as string | undefined })
-        }),
+      const stopProgress = Effect.gen(function* () {
+        if (progressFiber) yield* Fiber.interrupt(progressFiber)
+        yield* clearProgress()
+      })
+
+      return yield* Effect.acquireUseRelease(
+        Effect.forkDetach(input.inner),
+        (fiber) => {
+          const cancelSnapshot = Fiber.interrupt(fiber).pipe(Effect.forkDetach, Effect.asVoid)
+          const cleanup = Effect.gen(function* () {
+            yield* stopProgress
+            if (input.state.owner !== owner) return
+            if (reset) input.state.asked = false
+            input.state.owner = undefined
+          })
+          return Effect.gen(function* () {
+            const quick = yield* Fiber.join(fiber).pipe(
+              Effect.timeoutOption(Duration.millis(timeoutMs)),
+              Effect.catch((err) => {
+                log.warn("snapshot track failed", { err })
+                return Effect.succeed({ _tag: "Some" as const, value: undefined as string | undefined })
+              }),
+            )
+            if (quick._tag === "Some") return quick.value
+
+            // Timed out. Keep the existing "Initializing snapshot…" indicator
+            // animating so the user still sees live progress while the slow-repo
+            // dialog is visible. The progress fiber is only torn down once we've
+            // decided whether to keep waiting, disable, or skip below.
+
+            // Managed products such as Agent Manager expect concurrent snapshot
+            // initialization and cannot stop started turns for an inline question.
+            // Retain the snapshot baseline, but wait silently after the threshold.
+            if (input.snapshotInitialization === "wait") {
+              log.info("snapshot track slow; waiting without question")
+              return yield* Fiber.join(fiber).pipe(
+                Effect.catch((err) => {
+                  log.warn("snapshot track failed while waiting without question", { err })
+                  return Effect.succeed(undefined as string | undefined)
+                }),
+              )
+            }
+
+            // Slow path. No target session to prompt against, or we've already
+            // prompted through this service scope — skip silently.
+            if (!input.sessionID || input.state.asked || input.state.owner) {
+              log.warn("snapshot track slow; skipping for this service scope", { timeoutMs })
+              if (!input.state.owner) input.state.disabledForSession = true
+              yield* cancelSnapshot
+              yield* stopProgress
+              return undefined
+            }
+            input.state.asked = true
+            input.state.owner = owner
+
+            const sessionID = input.sessionID
+            const answer = yield* Effect.promise(() => hooks.ask({ sessionID }))
+
+            if (answer === "continue") {
+              log.info("user chose to keep waiting for snapshot; joining fiber")
+              const finished = yield* Fiber.join(fiber).pipe(
+                Effect.catch((err) => {
+                  log.warn("snapshot track failed after user continue", { err })
+                  return Effect.succeed(undefined as string | undefined)
+                }),
+              )
+              // Reset `asked` only when the snapshot actually succeeded. That way a
+              // future slow turn (e.g. a new massive worktree gets added) still
+              // surfaces the dialog instead of silently disabling snapshots on a
+              // user who just explicitly said "keep them on". If the fiber failed
+              // (finished === undefined), we leave `asked` sticky to avoid prompt
+              // spam on a repo that repeatedly errors.
+              if (finished) reset = true
+              return finished
+            }
+
+            input.state.disabledForSession = true
+            yield* cancelSnapshot
+            yield* stopProgress
+
+            if (answer === "disable") {
+              log.info("user chose to disable snapshot for this project")
+              yield* Effect.promise(() =>
+                hooks.persistDisable().catch((err) => {
+                  log.error("failed to persist snapshot:false to project config", { err })
+                }),
+              )
+            } else {
+              log.info("user dismissed snapshot prompt; disabling for this service scope only")
+            }
+
+            return undefined
+          }).pipe(Effect.ensuring(cleanup))
+        },
+        (fiber) => Fiber.interrupt(fiber).pipe(Effect.forkDetach, Effect.asVoid),
       )
-      if (quick._tag === "Some") {
-        if (progressFiber) yield* Fiber.interrupt(progressFiber)
-        yield* clearProgress()
-        return quick.value
-      }
-
-      // Timed out. Keep the existing "Initializing snapshot…" indicator
-      // animating so the user still sees live progress while the slow-repo
-      // dialog is visible. The progress fiber is only torn down once we've
-      // decided whether to keep waiting, disable, or skip below.
-
-      // Slow path. No target session to prompt against, or we've already
-      // prompted on this instance — skip silently.
-      if (!input.sessionID || input.state.asked) {
-        log.warn("snapshot track slow; skipping for this instance", { timeoutMs })
-        input.state.disabledForSession = true
-        yield* Fiber.interrupt(fiber)
-        if (progressFiber) yield* Fiber.interrupt(progressFiber)
-        yield* clearProgress()
-        return undefined
-      }
-      input.state.asked = true
-
-      const sessionID = input.sessionID
-      const answer = yield* Effect.promise(() => hooks.ask({ sessionID }))
-
-      if (answer === "continue") {
-        log.info("user chose to keep waiting for snapshot; joining fiber")
-        const finished = yield* Fiber.join(fiber).pipe(
-          Effect.catch((err) => {
-            log.warn("snapshot track failed after user continue", { err })
-            return Effect.succeed(undefined as string | undefined)
-          }),
-        )
-        if (progressFiber) yield* Fiber.interrupt(progressFiber)
-        yield* clearProgress()
-        // Reset `asked` only when the snapshot actually succeeded. That way a
-        // future slow turn (e.g. a new massive worktree gets added) still
-        // surfaces the dialog instead of silently disabling snapshots on a
-        // user who just explicitly said "keep them on". If the fiber failed
-        // (finished === undefined), we leave `asked` sticky to avoid prompt
-        // spam on a repo that repeatedly errors.
-        if (finished) input.state.asked = false
-        return finished
-      }
-
-      yield* Fiber.interrupt(fiber)
-      if (progressFiber) yield* Fiber.interrupt(progressFiber)
-      input.state.disabledForSession = true
-
-      if (answer === "disable") {
-        log.info("user chose to disable snapshot for this project")
-        yield* Effect.promise(() =>
-          hooks.persistDisable().catch((err) => {
-            log.error("failed to persist snapshot:false to project config", { err })
-          }),
-        )
-      } else {
-        log.info("user dismissed snapshot prompt; disabling for this instance only")
-      }
-
-      yield* clearProgress()
-      return undefined
     })
 
   // ── Default hooks (production wiring) ──────────────────────────────────
@@ -389,22 +458,10 @@ export namespace KiloSnapshotTrack {
   })
 
   export const defaultHooks: Hooks = {
-    async startProgress(input) {
-      const partID = PartIDSchema.ascending()
-      try {
-        const rt = await sessionRuntime()
-        await rt.runPromise((svc) => svc.updatePart(progressPart({ ...input, partID })))
-        return { sessionID: input.sessionID, messageID: input.messageID, partID }
-      } catch (err) {
-        log.warn("failed to publish snapshot progress part", { err })
-        return undefined
-      }
-    },
-
-    async updateProgress(input) {
-      try {
-        const rt = await sessionRuntime()
-        await rt.runPromise((svc) =>
+    async startProgress(input, signal) {
+      const rt = await sessionRuntime()
+      await rt.runPromise(
+        (svc) =>
           svc.updatePart(
             progressPart({
               sessionID: input.handle.sessionID,
@@ -413,25 +470,37 @@ export namespace KiloSnapshotTrack {
               text: input.text,
             }),
           ),
-        )
-      } catch (err) {
-        log.warn("failed to update snapshot progress part", { err })
-      }
+        { signal },
+      )
     },
 
-    async endProgress(input) {
-      try {
-        const rt = await sessionRuntime()
-        await rt.runPromise((svc) =>
+    async updateProgress(input, signal) {
+      const rt = await sessionRuntime()
+      await rt.runPromise(
+        (svc) =>
+          svc.updatePart(
+            progressPart({
+              sessionID: input.handle.sessionID,
+              messageID: input.handle.messageID,
+              partID: input.handle.partID,
+              text: input.text,
+            }),
+          ),
+        { signal },
+      )
+    },
+
+    async endProgress(input, signal) {
+      const rt = await sessionRuntime()
+      await rt.runPromise(
+        (svc) =>
           svc.removePart({
             sessionID: input.handle.sessionID,
             messageID: input.handle.messageID,
             partID: input.handle.partID,
           }),
-        )
-      } catch (err) {
-        log.warn("failed to remove snapshot progress part", { err })
-      }
+        { signal },
+      )
     },
 
     async ask(input) {
@@ -534,7 +603,7 @@ export namespace KiloSnapshotTrack {
    * tests that bypass the runtime).
    */
   async function currentDirectory(): Promise<{ directory: string; worktree?: string } | undefined> {
-    const { Instance } = await import("@/project/instance")
+    const { Instance } = await import("@/kilocode/instance")
     try {
       return { directory: Instance.directory, worktree: Instance.worktree }
     } catch {

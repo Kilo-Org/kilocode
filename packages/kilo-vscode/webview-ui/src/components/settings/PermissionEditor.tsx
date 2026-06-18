@@ -1,6 +1,7 @@
 import { Component, For, Show, createEffect, createMemo, createSignal } from "solid-js"
 import { Select } from "@kilocode/kilo-ui/select"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Icon } from "@kilocode/kilo-ui/icon"
 
 import { useLanguage } from "../../context/language"
 import type { PermissionConfig, PermissionLevel, PermissionRule, PermissionRuleItem } from "../../types/messages"
@@ -111,14 +112,10 @@ const GROUPED_TOOLS: GroupedToolDef[] = [
     label: "todoread / todowrite",
     descriptionKey: "settings.autoApprove.tool.todoreadwrite",
   },
-  {
-    ids: ["websearch", "codesearch"],
-    label: "websearch / codesearch",
-    descriptionKey: "settings.autoApprove.tool.websearchcodesearch",
-  },
 ]
 
 const TRAILING_TOOLS: ToolDef[] = [
+  { id: "websearch", descriptionKey: "settings.autoApprove.tool.websearch" },
   { id: "webfetch", descriptionKey: "settings.autoApprove.tool.webfetch" },
   { id: "doom_loop", descriptionKey: "settings.autoApprove.tool.doom_loop" },
 ]
@@ -318,6 +315,7 @@ const GranularToolRow: Component<{
   const language = useLanguage()
   const [adding, setAdding] = createSignal(false)
   const [input, setInput] = createSignal("")
+  const [override, setOverride] = createSignal<boolean | null>(null)
   let ref: HTMLInputElement | undefined
 
   createEffect(() => {
@@ -325,6 +323,8 @@ const GranularToolRow: Component<{
   })
 
   const excs = createMemo(() => permissionExceptions(props.rule))
+  const expanded = createMemo(() => override() ?? excs().length <= 5)
+  const toggle = () => setOverride(!expanded())
   const level = createMemo(() => wildcardAction(props.rule, props.fallback))
 
   const submit = () => {
@@ -384,57 +384,82 @@ const GranularToolRow: Component<{
 
       <Show when={excs().length > 0}>
         <div style={{ "margin-top": "4px" }}>
-          <div
+          <button
+            type="button"
+            onClick={toggle}
             style={{
+              display: "flex",
+              "align-items": "center",
+              gap: "4px",
+              padding: "0",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
               "font-size": "var(--kilo-font-size-12)",
               color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
               "margin-bottom": "4px",
+              "font-family": "inherit",
             }}
+            aria-expanded={expanded()}
           >
-            {language.t("settings.autoApprove.exceptions")}
-          </div>
-          <For each={excs()}>
-            {(exc) => (
-              <div
-                style={{
-                  display: "flex",
-                  gap: "8px",
-                  "align-items": "center",
-                  padding: "4px 0",
-                  "padding-left": "12px",
-                  "border-top": "1px solid var(--border-weak-base)",
-                }}
-              >
+            <span
+              style={{
+                display: "inline-flex",
+                "align-items": "center",
+                transition: "transform 0.15s ease",
+                transform: expanded() ? "rotate(90deg)" : "rotate(0deg)",
+              }}
+            >
+              <Icon name="chevron-right" size="small" />
+            </span>
+            <span>
+              {language.t("settings.autoApprove.exceptions")} ({excs().length})
+            </span>
+          </button>
+          <Show when={expanded()}>
+            <For each={excs()}>
+              {(exc) => (
                 <div
                   style={{
-                    flex: "1 1 0%",
-                    "min-width": 0,
-                    "font-size": "var(--kilo-font-size-13)",
-                    "font-family": "var(--vscode-editor-font-family, monospace)",
-                    color: "var(--text-base, #ccc)",
-                    overflow: "hidden",
-                    "text-overflow": "ellipsis",
-                    "white-space": "nowrap",
+                    display: "flex",
+                    gap: "8px",
+                    "align-items": "center",
+                    padding: "4px 0",
+                    "padding-left": "12px",
+                    "border-top": "1px solid var(--border-weak-base)",
                   }}
-                  title={exc.pattern}
                 >
-                  {exc.pattern}
+                  <div
+                    style={{
+                      flex: "1 1 0%",
+                      "min-width": 0,
+                      "font-size": "var(--kilo-font-size-13)",
+                      "font-family": "var(--vscode-editor-font-family, monospace)",
+                      color: "var(--text-base, #ccc)",
+                      overflow: "hidden",
+                      "text-overflow": "ellipsis",
+                      "white-space": "nowrap",
+                    }}
+                    title={exc.pattern}
+                  >
+                    {exc.pattern}
+                  </div>
+                  <div style={{ display: "flex", gap: "4px", "align-items": "center", "flex-shrink": 0 }}>
+                    <ActionSelect
+                      level={exc.action}
+                      onChange={(level: PermissionLevel) => props.onExceptionChange(exc.pattern, level)}
+                    />
+                    <IconButton
+                      variant="ghost"
+                      size="small"
+                      icon="close"
+                      onClick={() => props.onExceptionRemove(exc.pattern)}
+                    />
+                  </div>
                 </div>
-                <div style={{ display: "flex", gap: "4px", "align-items": "center", "flex-shrink": 0 }}>
-                  <ActionSelect
-                    level={exc.action}
-                    onChange={(level: PermissionLevel) => props.onExceptionChange(exc.pattern, level)}
-                  />
-                  <IconButton
-                    variant="ghost"
-                    size="small"
-                    icon="close"
-                    onClick={() => props.onExceptionRemove(exc.pattern)}
-                  />
-                </div>
-              </div>
-            )}
-          </For>
+              )}
+            </For>
+          </Show>
         </div>
       </Show>
 

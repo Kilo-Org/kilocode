@@ -23,21 +23,31 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/FullScreenDiffView.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/MarkdownDiffView.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/DiffEndMarker.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/FileTree.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/review-annotations.ts"),
+  path.join(ROOT, "webview-ui/diff-viewer/FullScreenDiffView.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/ImageDiffView.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/MarkdownDiffView.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/MarkdownAnnotationLayer.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/markdown-comment-ranges.ts"),
+  path.join(ROOT, "webview-ui/diff-viewer/DiffEndMarker.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/FileTree.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/review-annotations.ts"),
+  path.join(ROOT, "webview-ui/diff-viewer/review-annotation-speech.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/MultiModelSelector.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ApplyDialog.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/BranchSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeItem.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SectionHeader.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/SidebarSearchMenu.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/SidebarToggleButton.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/WorktreeSectionActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SortableTerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/render.tsx"),
   path.join(ROOT, "webview-ui/diff-virtual/DiffVirtualApp.tsx"),
+  // Shared components that consume agent-manager CSS classes (e.g. am-dropdown,
+  // am-branch-item) used by both the agent manager and the diff viewer.
+  path.join(ROOT, "webview-ui/src/components/shared/BranchSelect.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/BaseBranchPicker.tsx"),
 ]
 const TSX_FILE = TSX_FILES[0]!
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
@@ -155,6 +165,16 @@ describe("Agent Manager Provider Messages", () => {
     expect(body).toContain("agentManager.sessionAdded")
   })
 
+  it("warms MCP before creating every new worktree session", () => {
+    const body = getMethodBody("createSessionInWorktree")
+    const warmup = body.indexOf("startSession(")
+    const create = body.indexOf("client.session.create(")
+
+    expect(warmup).toBeGreaterThanOrEqual(0)
+    expect(create).toBeGreaterThanOrEqual(0)
+    expect(warmup).toBeLessThan(create)
+  })
+
   it("state-mutating messages wait for state initialization", () => {
     const body = getMethodBody("shouldWaitForState")
     const messages = [
@@ -177,10 +197,41 @@ describe("Agent Manager Provider Messages", () => {
     expect(getMethodBody("onMessage")).toContain("if (this.shouldWaitForState(m)) await this.waitForStateReady(m.type)")
   })
 
+  it("initializeState updates local git exclude before loading persisted state", () => {
+    const body = getMethodBody("initializeState")
+    const exclude = body.indexOf("await this.ensureGitExclude(manager)")
+    const load = body.indexOf("const loaded = await state.load()")
+
+    expect(exclude).toBeGreaterThanOrEqual(0)
+    expect(load).toBeGreaterThanOrEqual(0)
+    expect(exclude).toBeLessThan(load)
+  })
+
   it("async shutdown waits for terminal router cleanup", () => {
     const body = getMethodBody("disposeAsync")
     expect(body).toContain("await this.terminalRouter.dispose()")
     expect(body).not.toContain("void this.terminalRouter.dispose()")
+  })
+
+  it("clears remote session registrations when the panel closes", () => {
+    const body = getMethodBody("attachPanel")
+    expect(body).toContain('this.connectionService.unregisterFocused("agent-manager")')
+    expect(body).toContain('this.connectionService.registerOpen("agent-manager", [])')
+    expect(body).toContain("this.activeSessionId = undefined")
+  })
+
+  it("reports all open Agent Manager sessions for remote control", () => {
+    const body = fs.readFileSync(TSX_FILE, "utf-8")
+    expect(body).toContain("reportRemoteSessions(vscode, localSessionIDs, managedSessions, isPending)")
+  })
+})
+
+describe("Agent Manager Model Picker", () => {
+  it("discloses data collection for free models in compare picker", () => {
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/MultiModelSelector.tsx"), "utf-8")
+
+    expect(source).toContain("model.tag.dataCollected")
+    expect(source).toContain("model.isFree")
   })
 })
 
@@ -260,6 +311,15 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const text = body("onSessionMessage")
     expect(text).toContain("loadMessages")
     expect(text).toContain("syncOnSessionSwitch")
+  })
+
+  it("terminal context keeps the current active terminal when present", () => {
+    const text = body("onSessionMessage")
+    const check = text.indexOf("!this.terminalManager.hasActiveTerminal()")
+    const show = text.indexOf("this.terminalManager.showExisting(m.sessionID)")
+    expect(check).toBeGreaterThan(-1)
+    expect(show).toBeGreaterThan(-1)
+    expect(check, "active terminal check must guard session terminal reveal").toBeLessThan(show)
   })
 
   it("session routing handles clearSession for SSE re-registration", () => {
@@ -607,6 +667,10 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
   "run/task.ts": {
     note: "vscode adapter for Agent Manager run scripts",
   },
+  // Reads terminal.integrated.* and editor.font* config for xterm font settings
+  "terminal-font.ts": {
+    note: "vscode config reader for integrated terminal font settings",
+  },
 }
 
 /**
@@ -734,6 +798,8 @@ describe("Agent Manager — provider chain parity with sidebar", () => {
     // which the agent manager already includes in its provider chain.
     "LanguageProvider",
     "DataProvider",
+    // Work-style onboarding is injected only into the sidebar empty state.
+    "WorkStyleProvider",
   ]
 
   it("agent manager includes all context providers from sidebar App.tsx", () => {

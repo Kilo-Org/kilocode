@@ -68,12 +68,18 @@ export namespace Client {
     })
   }
 
-  export async function shutdown(): Promise<void> {
+  export async function shutdown(timeoutMs?: number): Promise<void> {
     if (client) {
-      // Flush any pending events before shutdown
-      await client.flush()
-      await client.shutdown()
-      client = null
+      try {
+        // PostHog's shutdown drains the queue internally and is bounded by
+        // shutdownTimeoutMs. Calling flush() first is redundant and unbounded:
+        // when the endpoint is unreachable (offline, firewall, DNS adblock),
+        // flush retries up to 3x with 3s delays plus 10s per attempt before
+        // throwing, blocking process exit before shutdown's outer cap kicks in.
+        await client.shutdown(timeoutMs)
+      } finally {
+        client = null
+      }
     }
   }
 }

@@ -1,20 +1,40 @@
 package ai.kilocode.backend.cli
 
+import ai.kilocode.backend.workspace.CommandInfo
+import ai.kilocode.backend.workspace.ModelInfo
+import ai.kilocode.backend.workspace.ModelLimitInfo
+import ai.kilocode.backend.workspace.ProviderData
+import ai.kilocode.backend.workspace.ProviderInfo
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.CloudSessionDto
+import ai.kilocode.rpc.dto.CloudSessionListDto
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.CustomModelDto
+import ai.kilocode.rpc.dto.CustomProviderConfigDto
+import ai.kilocode.rpc.dto.CustomProviderSaveDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelDto
+import ai.kilocode.rpc.dto.ModelLimitDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
+import ai.kilocode.rpc.dto.PermissionFileDiffDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.ProviderAuthMethodDto
+import ai.kilocode.rpc.dto.ProviderAuthOptionDto
+import ai.kilocode.rpc.dto.ProviderAuthPromptDto
+import ai.kilocode.rpc.dto.ProviderMetadataDto
+import ai.kilocode.rpc.dto.ProviderSettingsProviderDto
 import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.PromptDto
+import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
@@ -24,6 +44,7 @@ import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionSummaryDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import ai.kilocode.rpc.dto.TodoDto
+import ai.kilocode.rpc.dto.TodoViewDto
 import ai.kilocode.rpc.dto.TokensDto
 import ai.kilocode.rpc.dto.ToolRefDto
 import kotlinx.serialization.json.Json
@@ -33,12 +54,15 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.put
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -58,6 +82,8 @@ object KiloCliDataParser {
     private val json = Json { ignoreUnknownKeys = true }
     private val pretty = Json { ignoreUnknownKeys = true; prettyPrint = true }
     private val TYPE_REGEX = Regex(""""type"\s*:\s*"([^"]+)"""")
+    private val READ_TOOL_LINE = Regex("^\\s*Called\\s+the\\s+Read\\s+tool\\s+with\\s+the\\s+following\\s+input:", RegexOption.IGNORE_CASE)
+    private val READ_TOOL_PATH = Regex("\"(?:filePath|path)\"\\s*:")
     private val FIELD_RE = ConcurrentHashMap<String, Regex>()
 
     // ================================================================
@@ -124,6 +150,13 @@ object KiloCliDataParser {
                 ChatEventDto.TurnClose(sid, reason)
             }
 
+            "session.created" -> {
+                val info = props["info"]?.jsonObject ?: return null
+                val dto = parseSessionObject(info)
+                val sid = props.str("sessionID") ?: dto.id.takeIf { it.isNotBlank() } ?: return null
+                ChatEventDto.SessionCreated(sid, dto)
+            }
+
             "session.error" -> {
                 val sid = props.str("sessionID")
                 val err = props["error"]?.jsonObject?.let { parseError(it) }
@@ -174,6 +207,13 @@ object KiloCliDataParser {
                 ChatEventDto.SessionStatusChanged(sid, dto)
             }
 
+            "session.updated" -> {
+                val info = props["info"]?.jsonObject ?: return null
+                val dto = parseSessionObject(info)
+                val sid = props.str("sessionID") ?: dto.id.takeIf { it.isNotBlank() } ?: return null
+                ChatEventDto.SessionUpdated(sid, dto)
+            }
+
             "session.idle" -> {
                 val sid = props.str("sessionID") ?: return null
                 ChatEventDto.SessionIdle(sid)
@@ -191,8 +231,8 @@ object KiloCliDataParser {
                     val file = d.str("file") ?: return@mapNotNull null
                     DiffFileDto(
                         file = file,
-                        additions = d.long("additions")?.toInt() ?: 0,
-                        deletions = d.long("deletions")?.toInt() ?: 0,
+                        additions = d.long("additions")?.safeInt() ?: 0,
+                        deletions = d.long("deletions")?.safeInt() ?: 0,
                         patch = d.str("patch"),
                     )
                 } ?: emptyList()
@@ -201,19 +241,94 @@ object KiloCliDataParser {
 
             "todo.updated" -> {
                 val sid = props.str("sessionID") ?: return null
-                val todos = props["todos"]?.jsonArray?.map { elem ->
-                    val t = elem.jsonObject
-                    TodoDto(
-                        content = t.str("content") ?: "",
-                        status = t.str("status") ?: "pending",
-                        priority = t.str("priority") ?: "medium",
-                    )
-                } ?: emptyList()
+                val todos = parseTodos(props["todos"])
                 ChatEventDto.TodoUpdated(sid, todos)
             }
 
             else -> null
         }
+    }
+
+    class ChatEventNormalizer {
+        private val roles = mutableMapOf<String, String>()
+        private val raw = mutableMapOf<Key, String>()
+        private val text = mutableMapOf<Key, String>()
+
+        fun parse(type: String, data: String): List<ChatEventDto>? {
+            val event = parseChatEvent(type, data) ?: return null
+            return when (event) {
+                is ChatEventDto.MessageUpdated -> {
+                    roles[event.info.id] = event.info.role
+                    listOf(event)
+                }
+
+                is ChatEventDto.MessageRemoved -> {
+                    roles.remove(event.messageID)
+                    clear(event.messageID)
+                    listOf(event)
+                }
+
+                is ChatEventDto.PartUpdated -> listOf(update(event))
+
+                is ChatEventDto.PartDelta -> delta(event)
+
+                is ChatEventDto.PartRemoved -> {
+                    val key = Key(event.messageID, event.partID)
+                    raw.remove(key)
+                    text.remove(key)
+                    listOf(event)
+                }
+
+                else -> listOf(event)
+            }
+        }
+
+        private fun update(event: ChatEventDto.PartUpdated): ChatEventDto {
+            val part = event.part
+            val key = Key(part.messageID, part.id)
+            if (roles[part.messageID] != "user" || part.type != "text") {
+                raw.remove(key)
+                text.remove(key)
+                return event
+            }
+
+            val value = part.text.orEmpty()
+            val clean = sanitizeUserPromptText(value)
+            raw[key] = value
+            text[key] = clean
+            return event.copy(part = part.copy(text = clean))
+        }
+
+        private fun delta(event: ChatEventDto.PartDelta): List<ChatEventDto> {
+            if (event.field != "text" || roles[event.messageID] != "user") return listOf(event)
+
+            val key = Key(event.messageID, event.partID)
+            val prev = text[key].orEmpty()
+            val next = raw[key].orEmpty() + event.delta
+            val clean = sanitizeUserPromptText(next)
+            raw[key] = next
+            text[key] = clean
+
+            if (clean == prev) return emptyList()
+            if (clean.startsWith(prev)) return listOf(event.copy(delta = clean.removePrefix(prev)))
+            return listOf(ChatEventDto.PartUpdated(
+                sessionID = event.sessionID,
+                part = PartDto(
+                    id = event.partID,
+                    sessionID = event.sessionID,
+                    messageID = event.messageID,
+                    type = "text",
+                    text = clean,
+                ),
+            ))
+        }
+
+        private fun clear(id: String) {
+            raw.keys.filter { it.messageID == id }.forEach(raw::remove)
+            text.keys.filter { it.messageID == id }.forEach(text::remove)
+        }
+
+        private data class Key(val messageID: String, val partID: String)
     }
 
     /**
@@ -250,12 +365,146 @@ object KiloCliDataParser {
         return arr.mapNotNull { elem ->
             val obj = elem.jsonObject
             val info = obj["info"]?.jsonObject ?: return@mapNotNull null
+            val msg = parseMessage(info)
             val parts = obj["parts"]?.jsonArray ?: JsonArray(emptyList())
             MessageWithPartsDto(
-                info = parseMessage(info),
-                parts = parts.map { parsePart(it.jsonObject) },
+                info = msg,
+                parts = parts.map { sanitizePart(parsePart(it.jsonObject), msg.role) },
             )
         }
+    }
+
+    internal fun sanitizeUserPromptText(text: String): String {
+        val lines = text.lines()
+        if (lines.none(::readPayload)) return text
+
+        val out = mutableListOf<String>()
+        var gap = false
+        for (line in lines) {
+            if (readPayload(line)) {
+                gap = true
+                continue
+            }
+            if (line.isBlank() && out.lastOrNull()?.isBlank() == true && gap) {
+                gap = false
+                continue
+            }
+            out.add(line)
+            if (line.isNotBlank()) gap = false
+        }
+        return out.joinToString("\n")
+    }
+
+    fun parseCloudSessions(raw: String): CloudSessionListDto {
+        val obj = tryParseObject(raw) ?: return CloudSessionListDto(emptyList())
+        val items = obj["cliSessions"]?.jsonArray ?: JsonArray(emptyList())
+        val sessions = items.mapNotNull { elem ->
+            val item = runCatching { elem.jsonObject }.getOrNull() ?: return@mapNotNull null
+            CloudSessionDto(
+                id = item.str("session_id") ?: return@mapNotNull null,
+                title = item.str("title"),
+                createdAt = item.str("created_at") ?: return@mapNotNull null,
+                updatedAt = item.str("updated_at") ?: return@mapNotNull null,
+                version = item.num("version") ?: return@mapNotNull null,
+            )
+        }
+        return CloudSessionListDto(
+            sessions = sessions,
+            nextCursor = obj.str("nextCursor"),
+        )
+    }
+
+    /**
+     * Parse a provider catalog response (`GET /provider`) into [ProviderData].
+     * Throws if [raw] is not a valid JSON object (lets the workspace loading
+     * catch the exception and surface it as a LoadError).
+     */
+    fun parseProviders(raw: String): ProviderData {
+        val obj = json.parseToJsonElement(raw).jsonObject
+        return ProviderData(
+            providers = obj["all"]?.jsonArray?.map { parseProvider(it.jsonObject) } ?: emptyList(),
+            connected = obj["connected"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
+            defaults = obj["default"]?.jsonObject?.mapValues { (_, v) -> v.jsonPrimitive.content } ?: emptyMap(),
+        )
+    }
+
+    fun parseProviderSettingsProviders(raw: String): Triple<List<ProviderSettingsProviderDto>, List<String>, Map<String, String>> {
+        val obj = json.parseToJsonElement(raw).jsonObject
+        val all = obj["all"]?.jsonArray?.map { elem ->
+            val item = elem.jsonObject
+            ProviderSettingsProviderDto(
+                id = item.str("id") ?: "",
+                name = item.str("name") ?: item.str("id") ?: "",
+                description = item.str("description"),
+                source = item.str("source"),
+                key = item.str("key"),
+                metadata = parseProviderMetadata(item["metadata"].obj()),
+                models = item["models"]?.jsonObject?.mapValues { (id, v) -> parseModelDto(id, v.jsonObject) } ?: emptyMap(),
+            )
+        } ?: emptyList()
+        val connected = obj["connected"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+        val defaults = obj["default"]?.jsonObject?.mapValues { (_, v) -> v.jsonPrimitive.content } ?: emptyMap()
+        return Triple(all, connected, defaults)
+    }
+
+    fun parseProviderAuth(raw: String): Map<String, List<ProviderAuthMethodDto>> {
+        val root = tryParseObject(raw) ?: return emptyMap()
+        return root.entries.associate { (id, elem) ->
+            val arr = runCatching { elem.jsonArray }.getOrNull()
+            val methods = arr?.mapNotNull { parseAuthMethod(runCatching { it.jsonObject }.getOrNull()) } ?: emptyList()
+            id to methods
+        }
+    }
+
+    fun parseProviderConfig(raw: String): Pair<Map<String, CustomProviderConfigDto>, Pair<List<String>, List<String>>> {
+        val obj = tryParseObject(raw) ?: return emptyMap<String, CustomProviderConfigDto>() to (emptyList<String>() to emptyList())
+        val cfg = obj["provider"]?.jsonObject?.entries?.mapNotNull { (id, elem) ->
+            val item = runCatching { elem.jsonObject }.getOrNull() ?: return@mapNotNull null
+            id to CustomProviderConfigDto(
+                id = id,
+                name = item.str("name"),
+                npm = item.str("npm"),
+                env = item["env"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
+                options = item["options"].obj()?.entries?.mapNotNull { (key, value) -> value.scalar()?.let { key to it } }?.toMap() ?: emptyMap(),
+                headers = item["headers"].obj()?.entries?.mapNotNull { (key, value) -> value.scalar()?.let { key to it } }?.toMap() ?: emptyMap(),
+                models = item["models"].obj()?.entries?.mapNotNull { (mid, value) ->
+                    val model = runCatching { value.jsonObject }.getOrNull() ?: return@mapNotNull null
+                    mid to CustomModelDto(
+                        id = model.str("id") ?: mid,
+                        name = model.str("name") ?: mid,
+                        reasoning = model["capabilities"].obj()?.bool("reasoning") ?: false,
+                    )
+                }?.toMap() ?: emptyMap(),
+            )
+        }?.toMap() ?: emptyMap()
+        val disabled = obj["disabled_providers"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+        val enabled = obj["enabled_providers"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+        return cfg to (disabled to enabled)
+    }
+
+    /**
+     * Parse a command list response (`GET /command`) into a list of [CommandInfo].
+     * The `template` field is intentionally ignored — CLI commands can return lazy
+     * promise objects (`{}`) for that field, which must not crash JetBrains startup.
+     */
+    fun parseCommands(raw: String): List<CommandInfo> =
+        json.parseToJsonElement(raw).jsonArray.map { item ->
+            val obj = item.jsonObject
+            CommandInfo(
+                name = obj.str("name") ?: "",
+                description = obj.str("description"),
+                source = obj.str("source"),
+                hints = obj["hints"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
+            )
+        }
+
+    /**
+     * Extract the `state` directory path from a `/path` response.
+     * Returns `null` when the field is missing, not a JSON string, or the JSON is malformed.
+     */
+    fun parsePathState(raw: String): String? {
+        val prim = runCatching { tryParseObject(raw)?.get("state")?.jsonPrimitive }.getOrNull() ?: return null
+        return if (prim.isString) prim.content else null
     }
 
     fun parseModelState(raw: String): ModelStateDto {
@@ -290,15 +539,30 @@ object KiloCliDataParser {
     // JSON serialization (DTO → JSON for outgoing requests)
     // ================================================================
 
+    fun parseEnhancedPrompt(raw: String): String =
+        tryParseObject(raw)?.str("text")
+            ?: throw IllegalArgumentException("Enhance prompt response is missing text")
+
+    fun buildEnhancePromptJson(text: String): String =
+        """{"text":${escape(text)}}"""
+
     /**
      * Build the JSON body for `POST /session/{id}/prompt_async`.
      */
     fun buildPromptJson(prompt: PromptDto): String {
         val parts = prompt.parts.joinToString(",") { part ->
-            """{"type":"${part.type}","text":${escape(part.text)}}"""
+            buildPromptPartJson(part)
         }
         val sb = StringBuilder()
         sb.append("""{"parts":[$parts]""")
+        val msg = prompt.messageID
+        if (msg != null) {
+            sb.append(""","messageID":${escape(msg)}""")
+        }
+        val reply = prompt.noReply
+        if (reply != null) {
+            sb.append(""","noReply":$reply""")
+        }
         val pid = prompt.providerID
         val mid = prompt.modelID
         if (pid != null && mid != null) {
@@ -315,6 +579,24 @@ object KiloCliDataParser {
         sb.append("}")
         return sb.toString()
     }
+
+    private fun buildPromptPartJson(part: PromptPartDto): String {
+        val fields = mutableListOf("\"type\":${escape(part.type)}")
+        if (part.type == "file") {
+            part.mime?.let { fields += "\"mime\":${escape(it)}" }
+            part.url?.let { fields += "\"url\":${escape(it)}" }
+            part.filename?.let { fields += "\"filename\":${escape(it)}" }
+            return "{${fields.joinToString(",")}}"
+        }
+        fields += "\"text\":${escape(part.text.orEmpty())}"
+        return "{${fields.joinToString(",")}}"
+    }
+
+    /**
+     * Build the JSON body for `POST /session/{id}/summarize`.
+     */
+    fun buildSummarizeJson(model: ModelSelectionDto): String =
+        """{"providerID":${escape(model.providerID)},"modelID":${escape(model.modelID)}}"""
 
     /**
      * Build the partial JSON body for `PATCH /global/config`.
@@ -341,6 +623,105 @@ object KiloCliDataParser {
         return sb.toString()
     }
 
+    fun buildConfigPatch(patch: ConfigPatchDto): String {
+        val allowed = setOf("model", "small_model", "subagent_model", "subagent_variant")
+        val sb = StringBuilder("{")
+        var first = true
+        fun sep() { if (!first) sb.append(","); first = false }
+        fun value(value: String?) = value?.let(::escape) ?: "null"
+
+        for ((key, value) in patch.values) {
+            if (key !in allowed) continue
+            sep(); sb.append("\"$key\":${value(value)}")
+        }
+
+        if (patch.agents.isNotEmpty()) {
+            sep(); sb.append("\"agent\":{")
+            patch.agents.entries.forEachIndexed { idx, (name, agent) ->
+                if (idx > 0) sb.append(",")
+                sb.append("${escape(name)}:{\"model\":${value(agent.model)}}")
+            }
+            sb.append("}")
+        }
+
+        sb.append("}")
+        return sb.toString()
+    }
+
+    fun buildProviderAuthJson(key: String, metadata: Map<String, String>): String {
+        val obj = buildJsonObject {
+            put("type", "api")
+            put("key", key)
+            if (metadata.isNotEmpty()) {
+                put("metadata", buildJsonObject { metadata.forEach { (k, v) -> put(k, v) } })
+            }
+        }
+        return json.encodeToString(JsonObject.serializer(), obj)
+    }
+
+    fun buildProviderOAuthJson(method: String, inputs: Map<String, String> = emptyMap(), code: String? = null): String {
+        val obj = buildJsonObject {
+            val index = method.toLongOrNull()
+            if (index != null) {
+                put("method", index)
+            } else {
+                put("method", method)
+            }
+            if (inputs.isNotEmpty()) put("inputs", buildJsonObject { inputs.forEach { (k, v) -> put(k, v) } })
+            if (code != null) put("code", code)
+        }
+        return json.encodeToString(JsonObject.serializer(), obj)
+    }
+
+    fun buildDisabledProviderPatch(ids: List<String>): String {
+        val arr = JsonArray(ids.distinct().sorted().map { JsonPrimitive(it) })
+        return json.encodeToString(JsonObject.serializer(), JsonObject(mapOf("disabled_providers" to arr)))
+    }
+
+    fun buildCustomProviderPatch(input: CustomProviderSaveDto): String {
+        val id = input.id.trim()
+        val env = input.envVar?.trim()?.takeIf { it.isNotBlank() }
+        val models = input.models.associate { model ->
+            model.id to buildJsonObject {
+                put("id", model.id)
+                put("name", model.name.ifBlank { model.id })
+                put("capabilities", buildJsonObject { put("reasoning", model.reasoning) })
+            }
+        }
+        val provider = buildJsonObject {
+            put("name", input.name.trim().ifBlank { id })
+            put("npm", "@ai-sdk/openai-compatible")
+            put("options", buildJsonObject { put("baseURL", input.baseUrl.trim()) })
+            if (env != null) put("env", buildJsonArray { add(JsonPrimitive(env)) })
+            if (input.headers.isNotEmpty()) put("headers", buildJsonObject { input.headers.forEach { (k, v) -> put(k, v) } })
+            if (models.isNotEmpty()) put("models", JsonObject(models))
+        }
+        val root = buildJsonObject {
+            put("provider", buildJsonObject { put(id, provider) })
+        }
+        return json.encodeToString(JsonObject.serializer(), root)
+    }
+
+    fun buildCustomProviderDeletePatch(id: String): String {
+        val root = buildJsonObject {
+            put("provider", buildJsonObject { put(id, JsonNull) })
+        }
+        return json.encodeToString(JsonObject.serializer(), root)
+    }
+
+    fun parseOAuthReady(raw: String): Triple<String?, String, String?> {
+        val obj = tryParseObject(raw) ?: return Triple(null, "auto", null)
+        return Triple(obj.str("url"), obj.str("method") ?: "auto", obj.str("instructions"))
+    }
+
+    fun parseModelIds(raw: String): List<String> {
+        val obj = tryParseObject(raw) ?: return emptyList()
+        return obj["data"]?.jsonArray?.mapNotNull { elem ->
+            val item = runCatching { elem.jsonObject }.getOrNull() ?: return@mapNotNull null
+            item.str("id")
+        }?.distinct()?.sorted() ?: emptyList()
+    }
+
     // ================================================================
     // Internal — message/part/session parsing
     // ================================================================
@@ -363,30 +744,34 @@ object KiloCliDataParser {
             modelID = obj.str("modelID"),
             parentID = obj.str("parentID"),
             cost = obj.num("cost"),
-            tokens = tokens?.let {
-                val cache = it["cache"]?.jsonObject
-                TokensDto(
-                    input = it.long("input") ?: 0,
-                    output = it.long("output") ?: 0,
-                    reasoning = it.long("reasoning") ?: 0,
-                    cacheRead = cache?.long("read") ?: 0,
-                    cacheWrite = cache?.long("write") ?: 0,
-                )
-            },
+            tokens = tokens?.let(::parseTokens),
             error = error?.let { parseError(it) },
         )
     }
 
     internal fun parsePart(obj: JsonObject): PartDto {
         val state = obj["state"]?.jsonObject
+        val tokens = obj["tokens"]?.jsonObject
         val top = obj.map("metadata")
         val meta = state.map("metadata") + top
+        val input = state?.get("input").obj()
+        val stateMeta = state?.get("metadata").obj()
+        val topMeta = obj["metadata"].obj()
+        val todos = sequenceOf(topMeta?.get("todos"), stateMeta?.get("todos"), input?.get("todos"))
+            .firstNotNullOfOrNull(::parseTodosOrNull)
+            ?: emptyList()
+        val view = sequenceOf(topMeta?.get("view"), stateMeta?.get("view"))
+            .mapNotNull(::parseTodoView)
+            .firstOrNull()
         return PartDto(
             id = obj.str("id") ?: "",
             sessionID = obj.str("sessionID") ?: "",
             messageID = obj.str("messageID") ?: "",
             type = obj.str("type") ?: "unknown",
             text = obj.str("text"),
+            mime = obj.str("mime"),
+            url = obj.str("url"),
+            filename = obj.str("filename"),
             tool = obj.str("tool"),
             callID = obj.str("callID"),
             state = state?.str("status"),
@@ -396,15 +781,79 @@ object KiloCliDataParser {
             output = state?.str("output"),
             error = state?.str("error"),
             time = obj.time("time") ?: state.time("time"),
+            todos = todos,
+            todoView = view,
+            reason = obj.str("reason"),
+            cost = obj.num("cost"),
+            tokens = tokens?.let(::parseTokens),
+        )
+    }
+
+    private fun sanitizePart(part: PartDto, role: String): PartDto {
+        if (role != "user" || part.type != "text") return part
+        return part.copy(text = part.text?.let(::sanitizeUserPromptText))
+    }
+
+    private fun readPayload(line: String): Boolean {
+        if (!READ_TOOL_LINE.containsMatchIn(line)) return false
+        return READ_TOOL_PATH.containsMatchIn(line)
+    }
+
+    internal fun parseTodos(raw: JsonElement?): List<TodoDto> {
+        return parseTodosOrNull(raw) ?: emptyList()
+    }
+
+    private fun parseTodosOrNull(raw: JsonElement?): List<TodoDto>? {
+        val arr = runCatching { raw?.jsonArray }.getOrNull() ?: return null
+        return arr.mapNotNull { elem ->
+            val obj = runCatching { elem.jsonObject }.getOrNull() ?: return@mapNotNull null
+            parseTodo(obj)
+        }
+    }
+
+    private fun parseTodo(obj: JsonObject) = TodoDto(
+        content = obj.str("content") ?: "",
+        status = obj.str("status") ?: "pending",
+        priority = obj.str("priority") ?: "medium",
+        changed = obj.flag("changed", false),
+    )
+
+    internal fun parseTodoView(raw: JsonElement?): TodoViewDto? {
+        val obj = runCatching { raw?.jsonObject }.getOrNull() ?: return null
+        val rawTodos = runCatching { obj["todos"]?.jsonArray }.getOrNull() ?: return null
+        val todos = parseTodos(rawTodos)
+        return TodoViewDto(
+            mode = obj.str("mode") ?: "full",
+            todos = todos,
+            hiddenBefore = obj.long("hiddenBefore")?.safeInt() ?: 0,
+            hiddenAfter = obj.long("hiddenAfter")?.safeInt() ?: 0,
+            changed = obj.long("changed")?.safeInt() ?: 0,
+        )
+    }
+
+    private fun parseTokens(obj: JsonObject): TokensDto {
+        val cache = obj["cache"]?.jsonObject
+        return TokensDto(
+            input = obj.long("input") ?: 0,
+            output = obj.long("output") ?: 0,
+            reasoning = obj.long("reasoning") ?: 0,
+            cacheRead = cache?.long("read") ?: 0,
+            cacheWrite = cache?.long("write") ?: 0,
         )
     }
 
     internal fun parseError(obj: JsonObject): MessageErrorDto {
         val type = obj.str("type") ?: obj.str("name") ?: "unknown"
+        val data = obj["data"]?.jsonObject
         val msg = obj.str("message")
-            ?: obj["data"]?.jsonObject?.str("message")
+            ?: data?.str("message")
             ?: obj.str("error")
-        return MessageErrorDto(type, msg)
+        return MessageErrorDto(
+            type,
+            msg,
+            statusCode = data?.long("statusCode")?.safeInt(),
+            responseBody = data?.str("responseBody"),
+        )
     }
 
     internal fun parsePermissionRequest(obj: JsonObject): PermissionRequestDto? {
@@ -413,11 +862,27 @@ object KiloCliDataParser {
         val permission = obj.str("permission") ?: return null
         val patterns = obj["patterns"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
         val always = obj["always"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
-        val meta = obj["metadata"]?.jsonObject?.let { m ->
-            m.entries.associate { (k, v) -> k to (v.jsonPrimitive.contentOrNull ?: "") }
-        } ?: emptyMap()
-        val ref = toolRef(obj)
-        return PermissionRequestDto(id, sid, permission, patterns, meta, always, ref)
+        val metaObj = obj["metadata"].obj()
+        val meta = metaObj?.entries?.mapNotNull { (key, value) ->
+            val text = value.scalar() ?: return@mapNotNull null
+            key to text
+        }?.toMap() ?: emptyMap()
+        val path = metaObj.path()
+        val diffs = metaObj.permissionDiffs(path)
+        return PermissionRequestDto(
+            id = id,
+            sessionID = sid,
+            permission = permission,
+            patterns = patterns,
+            metadata = meta,
+            always = always,
+            tool = toolRef(obj),
+            message = obj.str("message") ?: metaObj?.str("message"),
+            command = metaObj?.str("command") ?: obj.str("command"),
+            rules = metaObj.rules(),
+            filePath = path,
+            fileDiffs = diffs,
+        )
     }
 
     internal fun parseQuestionRequest(obj: JsonObject): QuestionRequestDto? {
@@ -427,18 +892,26 @@ object KiloCliDataParser {
             val qo = q.jsonObject
             val options = qo["options"]?.jsonArray?.map { o ->
                 val oo = o.jsonObject
-                QuestionOptionDto(oo.str("label") ?: "", oo.str("description") ?: "")
+                QuestionOptionDto(
+                    label = oo.str("label") ?: "",
+                    description = oo.str("description") ?: "",
+                    labelKey = oo.str("labelKey"),
+                    descriptionKey = oo.str("descriptionKey"),
+                    mode = oo.str("mode"),
+                )
             } ?: emptyList()
             QuestionInfoDto(
                 question = qo.str("question") ?: "",
                 header = qo.str("header") ?: "",
                 options = options,
-                multiple = qo.str("multiple") == "true",
-                custom = qo.str("custom") != "false",
+                multiple = qo.flag("multiple", false),
+                custom = qo.flag("custom", true),
+                questionKey = qo.str("questionKey"),
+                headerKey = qo.str("headerKey"),
             )
         } ?: emptyList()
         val ref = toolRef(obj)
-        return QuestionRequestDto(id, sid, questions, ref)
+        return QuestionRequestDto(id, sid, questions, ref, blocking = obj.flag("blocking", false))
     }
 
     internal fun parseModelFavorites(raw: JsonElement?): List<ModelSelectionDto> {
@@ -480,6 +953,106 @@ object KiloCliDataParser {
         "modelID" to JsonPrimitive(item.modelID),
     ))
 
+    // ================================================================
+    // Internal — provider/catalog parsing
+    // ================================================================
+
+    private val EFFORT_ORDER = listOf("none", "minimal", "low", "medium", "high", "xhigh", "max")
+        .withIndex().associate { it.value to it.index }
+
+    private fun parseProvider(obj: JsonObject) = ProviderInfo(
+        id = obj.str("id") ?: "",
+        name = obj.str("name") ?: "",
+        source = obj.str("source"),
+        models = obj["models"]?.jsonObject?.mapValues { (id, v) -> parseModel(id, v.jsonObject) } ?: emptyMap(),
+    )
+
+    private fun parseProviderMetadata(obj: JsonObject?): ProviderMetadataDto? {
+        if (obj == null) return null
+        val dto = ProviderMetadataDto(
+            noteKey = obj.str("noteKey"),
+            icon = obj.str("icon"),
+            priority = obj.num("priority")?.toInt(),
+        )
+        if (dto.noteKey == null && dto.icon == null && dto.priority == null) return null
+        return dto
+    }
+
+    private fun parseModelDto(id: String, obj: JsonObject): ModelDto {
+        val model = parseModel(id, obj)
+        return ModelDto(
+            id = model.id,
+            name = model.name,
+            attachment = model.attachment,
+            reasoning = model.reasoning,
+            temperature = model.temperature,
+            toolCall = model.toolCall,
+            free = model.free,
+            status = model.status,
+            recommendedIndex = model.recommendedIndex,
+            variants = model.variants,
+            limit = model.limit?.let { ModelLimitDto(it.context, it.input, it.output) },
+        )
+    }
+
+    private fun parseModel(id: String, obj: JsonObject): ModelInfo {
+        val cap = obj["capabilities"]?.jsonObject
+        val limit = obj["limit"]?.jsonObject
+        return ModelInfo(
+            id = obj.str("id") ?: id,
+            name = obj.str("name") ?: id,
+            attachment = cap.bool("attachment"),
+            reasoning = cap.bool("reasoning"),
+            temperature = cap.bool("temperature"),
+            toolCall = cap.bool("toolcall"),
+            free = obj.bool("isFree"),
+            status = obj.str("status"),
+            recommendedIndex = obj.num("recommendedIndex"),
+            variants = parseVariants(obj),
+            limit = limit?.let {
+                ModelLimitInfo(
+                    context = it.long("context") ?: 0,
+                    input = it.long("input"),
+                    output = it.long("output") ?: 0,
+                )
+            },
+        )
+    }
+
+    private fun parseVariants(obj: JsonObject): List<String> {
+        val keys = obj["variants"]?.jsonObject?.keys?.toList() ?: return emptyList()
+        return keys.sortedWith(compareBy<String> { EFFORT_ORDER[it] ?: Int.MAX_VALUE }.thenBy { it })
+    }
+
+    private fun parseAuthMethod(obj: JsonObject?): ProviderAuthMethodDto? {
+        if (obj == null) return null
+        val type = obj.str("type") ?: return null
+        val prompts = obj["prompts"]?.jsonArray?.mapNotNull { elem ->
+            val prompt = runCatching { elem.jsonObject }.getOrNull() ?: return@mapNotNull null
+            val cond = prompt["when"].obj()
+            ProviderAuthPromptDto(
+                key = prompt.str("key") ?: return@mapNotNull null,
+                label = prompt.str("message") ?: prompt.str("label") ?: prompt.str("key") ?: "",
+                type = prompt.str("type") ?: "text",
+                options = prompt["options"]?.jsonArray?.mapNotNull { parseAuthOption(it) } ?: emptyList(),
+                whenKey = cond?.str("key"),
+                whenOp = cond?.str("op"),
+                whenValue = cond?.str("value"),
+            )
+        } ?: emptyList()
+        return ProviderAuthMethodDto(type, obj.str("label") ?: type, prompts)
+    }
+
+    private fun parseAuthOption(elem: JsonElement): ProviderAuthOptionDto? {
+        val item = runCatching { elem.jsonObject }.getOrNull()
+        if (item != null) {
+            val label = item.str("label") ?: item.str("value") ?: return null
+            return ProviderAuthOptionDto(label = label, value = item.str("value") ?: label)
+        }
+        val text = runCatching { elem.jsonPrimitive.contentOrNull }.getOrNull() ?: return null
+        return ProviderAuthOptionDto(label = text, value = text)
+    }
+
     private fun parseSessionObject(obj: JsonObject): SessionDto {
         val time = obj["time"]?.jsonObject
         val summary = obj["summary"]?.jsonObject
@@ -497,9 +1070,9 @@ object KiloCliDataParser {
             ),
             summary = summary?.let {
                 SessionSummaryDto(
-                    additions = it.long("additions")?.toInt() ?: 0,
-                    deletions = it.long("deletions")?.toInt() ?: 0,
-                    files = it.long("files")?.toInt() ?: 0,
+                    additions = it.long("additions")?.safeInt() ?: 0,
+                    deletions = it.long("deletions")?.safeInt() ?: 0,
+                    files = it.long("files")?.safeInt() ?: 0,
                 )
             },
         )
@@ -524,7 +1097,7 @@ object KiloCliDataParser {
         return SessionStatusDto(
             type = type,
             message = st.str("message"),
-            attempt = st.long("attempt")?.toInt(),
+            attempt = st.long("attempt")?.safeInt(),
             next = st.long("next"),
             requestID = st.str("requestID"),
         )
@@ -561,6 +1134,11 @@ object KiloCliDataParser {
     /**
      * Build the JSON body for `POST /permission/{requestID}/reply`.
      */
+    internal fun parseRulesJson(text: String): List<String> {
+        val arr = runCatching { json.parseToJsonElement(text).jsonArray }.getOrNull() ?: return listOf(text)
+        return arr.mapNotNull { runCatching { it.jsonPrimitive.contentOrNull }.getOrNull() }
+    }
+
     fun buildPermissionReplyJson(reply: PermissionReplyDto): String {
         val sb = StringBuilder()
         sb.append("""{"reply":${escape(reply.reply)}""")
@@ -629,6 +1207,70 @@ object KiloCliDataParser {
     }
 }
 
+// Permission metadata helpers
+
+private fun JsonElement?.obj(): JsonObject? = runCatching { this?.jsonObject }.getOrNull()
+private fun JsonElement?.arr(): JsonArray? = runCatching { this?.jsonArray }.getOrNull()
+
+private fun JsonObject?.path(): String? {
+    if (this == null) return null
+    return str("filepath") ?: str("filePath") ?: str("file") ?: str("path")
+}
+
+private fun JsonObject?.rules(): List<String> {
+    if (this == null) return emptyList()
+    val raw = this["rules"] ?: return emptyList()
+    val arr = raw.arr()
+    if (arr != null) {
+        return arr.mapNotNull { it.jsonPrimitive.contentOrNull }
+    }
+    val text = runCatching { raw.jsonPrimitive.contentOrNull }.getOrNull() ?: return emptyList()
+    if (text.startsWith("[")) {
+        return runCatching {
+            KiloCliDataParser.parseRulesJson(text)
+        }.getOrElse { listOf(text) }
+    }
+    return listOf(text)
+}
+
+private fun JsonObject?.permissionDiffs(path: String?): List<PermissionFileDiffDto> {
+    if (this == null) return emptyList()
+    val filediff = this["filediff"].obj()
+    if (filediff != null) {
+        val file = filediff.str("file") ?: filediff.str("relativePath") ?: path ?: return emptyList()
+        return listOf(
+            PermissionFileDiffDto(
+                file = file,
+                patch = filediff.str("patch"),
+                before = filediff.str("before"),
+                after = filediff.str("after"),
+                additions = filediff.long("additions")?.safeInt() ?: 0,
+                deletions = filediff.long("deletions")?.safeInt() ?: 0,
+            )
+        )
+    }
+    val files = this["files"].arr()
+    if (files != null) {
+        return files.mapNotNull { elem ->
+            val item = elem.obj() ?: return@mapNotNull null
+            val file = item.str("relativePath") ?: item.str("filePath") ?: item.str("file") ?: return@mapNotNull null
+            PermissionFileDiffDto(
+                file = file,
+                patch = item.str("patch"),
+                before = item.str("before"),
+                after = item.str("after"),
+                additions = item.long("additions")?.safeInt() ?: 0,
+                deletions = item.long("deletions")?.safeInt() ?: 0,
+            )
+        }
+    }
+    val diff = str("diff")
+    if (diff != null) {
+        return listOf(PermissionFileDiffDto(file = path ?: "patch", patch = diff))
+    }
+    return emptyList()
+}
+
 // JsonObject convenience extensions
 private fun JsonObject.str(key: String): String? =
     this[key]?.jsonPrimitive?.contentOrNull
@@ -638,6 +1280,16 @@ private fun JsonObject.num(key: String): Double? =
 
 private fun JsonObject.long(key: String): Long? =
     this[key]?.jsonPrimitive?.longOrNull
+
+private fun JsonObject?.bool(key: String): Boolean =
+    this?.get(key)?.jsonPrimitive?.booleanOrNull ?: false
+
+private fun JsonObject.flag(key: String, default: Boolean): Boolean {
+    val prim = this[key]?.jsonPrimitive ?: return default
+    return prim.booleanOrNull ?: prim.contentOrNull?.toBooleanStrictOrNull() ?: default
+}
+
+private fun Long.safeInt() = coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
 
 private fun JsonObject?.map(key: String): Map<String, String> {
     val obj = this?.get(key)?.jsonObject ?: return emptyMap()

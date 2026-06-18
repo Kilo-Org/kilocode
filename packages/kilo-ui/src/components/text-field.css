@@ -44,7 +44,7 @@
     color: var(--text-base);
 
     &::placeholder {
-      color: var(--icon-weak-base);
+      color: var(--vscode-input-placeholderForeground, var(--text-weaker));
     }
   }
 

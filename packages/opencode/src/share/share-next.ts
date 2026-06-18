@@ -88,6 +88,20 @@ function api(resource: string): Api {
   }
 }
 
+// kilocode_change start - preserve the share transport contract when stored legacy summary diffs omit file details
+function transport(info: Session.Info): SDK.Session {
+  return {
+    ...info,
+    summary: info.summary
+      ? {
+          ...info.summary,
+          diffs: info.summary.diffs?.filter((diff): diff is typeof diff & { file: string } => diff.file !== undefined),
+        }
+      : undefined,
+  }
+}
+// kilocode_change end
+
 const legacyApi = api("share")
 const consoleApi = api("shares")
 
@@ -183,7 +197,7 @@ export const layer = Layer.effect(
         yield* watch(Session.Event.Updated, (evt) =>
           Effect.gen(function* () {
             const info = evt.properties.info
-            yield* sync(info.id, [{ type: "session", data: info }])
+            yield* sync(info.id, [{ type: "session", data: transport(info) }])
           }),
         )
         yield* watch(MessageV2.Event.Updated, (evt) =>
@@ -272,7 +286,7 @@ export const layer = Layer.effect(
       log.info("full sync", { sessionID })
       const info = yield* session.get(sessionID)
       const diffs = yield* session.diff(sessionID)
-      const messages = yield* Effect.sync(() => Array.from(MessageV2.stream(sessionID)))
+      const messages = yield* session.messages({ sessionID })
       const models = yield* Effect.forEach(
         Array.from(
           new Map(
@@ -287,7 +301,7 @@ export const layer = Layer.effect(
       )
 
       yield* sync(sessionID, [
-        { type: "session", data: info },
+        { type: "session", data: transport(info) },
         ...messages.map((item) => ({ type: "message" as const, data: item.info })),
         ...messages.flatMap((item) => item.parts.map((part) => ({ type: "part" as const, data: part }))),
         { type: "session_diff", data: diffs },

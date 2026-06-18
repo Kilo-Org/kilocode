@@ -6,10 +6,21 @@ export const dict = {
   "provider.connect.kiloGateway.visit.prefix": "",
   "provider.connect.kiloGateway.visit.link": "kilo.ai",
   "provider.connect.kiloGateway.visit.suffix": " にアクセスしてAPIキーを取得してください。",
+  "provider.connect.kiloGateway.byok.prefix": "詳細な使用統計については、",
+  "provider.connect.kiloGateway.byok.link": "Kilo's Gateway経由でBYOK",
+  "provider.connect.kiloGateway.byok.suffix": "をご利用ください。",
 
-  // Provider dialog translations
-  "dialog.provider.group.recommended": "おすすめ",
-  "dialog.provider.kilo.note": "500以上のAIモデルにアクセス",
+  // Provider settings translations
+  "settings.providers.group.recommended": "おすすめ",
+  "settings.providers.note.kilo": "500以上のAIモデルにアクセス",
+  "settings.providers.note.opencode": "Claude、GPT、Geminiなどの厳選モデル",
+  "settings.providers.note.anthropic": "ProやMaxを含むClaudeモデルへ直接アクセス",
+  "settings.providers.note.deepseek": "推論とコーディング作業向けのDeepSeekモデル",
+  "settings.providers.note.copilot": "コーディング支援向けのClaudeモデル",
+  "settings.providers.note.openai": "APIキーまたはChatGPTログインで使えるGPTとCodexモデル",
+  "settings.providers.note.google": "高速で構造化された応答向けのGeminiモデル",
+  "settings.providers.note.openrouter": "1つのプロバイダーからすべての対応モデルにアクセス",
+  "settings.providers.note.vercel": "スマートルーティングによるAIモデルへの統合アクセス",
 
   // Reasoning block label
   "ui.permission.run": "実行",
@@ -18,7 +29,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "スキル",
   "marketplace.tab.mcpServers": "MCPサーバー",
-  "marketplace.tab.modes": "モード",
   "marketplace.category.all": "すべて",
   "marketplace.placeholder": "未実装",
   "marketplace.card.installed": "インストール済み",
@@ -43,6 +53,7 @@ export const dict = {
   "marketplace.remove.cancel": "キャンセル",
   "marketplace.remove.confirm.button": "削除",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "エージェント",
   "marketplace.search": "検索...",
   "marketplace.filter.all": "すべてのアイテム",
   "marketplace.filter.notInstalled": "未インストール",
@@ -58,7 +69,7 @@ export const dict = {
   "marketplace.scope.global": "グローバル",
   "marketplace.remove.type.mcp": "MCPサーバー",
   "marketplace.remove.type.skill": "スキル",
-  "marketplace.remove.type.mode": "モード",
+  "marketplace.remove.type.agent": "エージェント",
   "marketplace.remove.failed": "{{name}} の削除に失敗しました",
   "marketplace.install": "インストール",
   "marketplace.filter.installed": "インストール済み",
@@ -67,8 +78,10 @@ export const dict = {
   "marketplace.warning.busyMany": "複数のセッションが実行中で中断されます",
   "marketplace.warning.installAnyway": "それでもインストール",
   "marketplace.warning.cancel": "キャンセル",
-  "marketplace.contribute.prompt": "スキル、モード、MCP サーバーが見つかりませんか？",
+  "marketplace.contribute.prompt": "スキル、エージェント、またはMCPサーバーが見つかりませんか？",
   "marketplace.contribute.cta": "GitHub で貢献する",
+  "marketplace.migration.notice":
+    "モードはエージェントに置き換えられました。以前にマーケットプレイスのモードをインストールしていた場合は、新しい形式に移行するためにそれらを削除してエージェントとして再インストールしてください。",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "実装",
@@ -89,5 +102,14 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "このプロジェクトでは Kilo のスナップショットを無効にします。Kilo による変更の取り消し/やり直しはできなくなりますが、git は引き続きすべてを追跡します。",
 
-  "ui.messagePart.openInDiffViewer": "差分ビューアで開く",
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "差分ビューアーで開く",
+  "ui.messagePart.shell.command": "コマンド",
+  "ui.messagePart.shell.output": "出力",
+  "ui.messagePart.openInEditor": "エディタで開く",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "役に立ちました",
+  "ui.message.feedback.notHelpful": "役に立ちませんでした",
+  "ui.message.feedback.clearRating": "評価をクリア",
 }

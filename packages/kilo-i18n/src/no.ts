@@ -7,10 +7,21 @@ export const dict = {
   "provider.connect.kiloGateway.visit.prefix": "Besøk ",
   "provider.connect.kiloGateway.visit.link": "kilo.ai",
   "provider.connect.kiloGateway.visit.suffix": " for å hente API-nøkkelen din.",
+  "provider.connect.kiloGateway.byok.prefix": "For mer bruksstatistikk, bruk ",
+  "provider.connect.kiloGateway.byok.link": "BYOK via Kilo's Gateway",
+  "provider.connect.kiloGateway.byok.suffix": ".",
 
-  // Provider dialog translations
-  "dialog.provider.group.recommended": "Anbefalt",
-  "dialog.provider.kilo.note": "Tilgang til 500+ AI-modeller",
+  // Provider settings translations
+  "settings.providers.group.recommended": "Anbefalt",
+  "settings.providers.note.kilo": "Tilgang til 500+ AI-modeller",
+  "settings.providers.note.opencode": "Utvalgte modeller, inkludert Claude, GPT, Gemini og mer",
+  "settings.providers.note.anthropic": "Direkte tilgang til Claude-modeller, inkludert Pro og Max",
+  "settings.providers.note.deepseek": "DeepSeek-modeller for resonnering og kodeoppgaver",
+  "settings.providers.note.copilot": "Claude-modeller for kodeassistanse",
+  "settings.providers.note.openai": "GPT- og Codex-modeller med API-nøkkel eller ChatGPT-innlogging",
+  "settings.providers.note.google": "Gemini-modeller for raske, strukturerte svar",
+  "settings.providers.note.openrouter": "Tilgang til alle støttede modeller fra én leverandør",
+  "settings.providers.note.vercel": "Samlet tilgang til AI-modeller med smart ruting",
 
   // Reasoning block label
   "ui.permission.run": "Kjør",
@@ -19,7 +30,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Skills",
   "marketplace.tab.mcpServers": "MCP-servere",
-  "marketplace.tab.modes": "Moduser",
   "marketplace.category.all": "Alle",
   "marketplace.placeholder": "Skal implementeres",
   "marketplace.card.installed": "Installert",
@@ -45,6 +55,7 @@ export const dict = {
   "marketplace.remove.cancel": "Avbryt",
   "marketplace.remove.confirm.button": "Fjern",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "Agenter",
   "marketplace.search": "Søk...",
   "marketplace.filter.all": "Alle elementer",
   "marketplace.filter.notInstalled": "Ikke installert",
@@ -60,7 +71,7 @@ export const dict = {
   "marketplace.scope.global": "global",
   "marketplace.remove.type.mcp": "MCP-server",
   "marketplace.remove.type.skill": "ferdighet",
-  "marketplace.remove.type.mode": "modus",
+  "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Kunne ikke fjerne {{name}}",
   "marketplace.install": "Installer",
   "marketplace.filter.installed": "Installert",
@@ -69,8 +80,10 @@ export const dict = {
   "marketplace.warning.busyMany": "Flere økter kjører og vil bli avbrutt",
   "marketplace.warning.installAnyway": "Installer uansett",
   "marketplace.warning.cancel": "Avbryt",
-  "marketplace.contribute.prompt": "Mangler du en skill, modus eller MCP-server?",
+  "marketplace.contribute.prompt": "Mangler du en skill, agent eller MCP-server?",
   "marketplace.contribute.cta": "Bidra på GitHub",
+  "marketplace.migration.notice":
+    "Modi er erstattet av agenter. Hvis du tidligere har installert marketplace-modi, fjern dem og installer dem på nytt som agenter for å migrere til det nye formatet.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "Implementer",
@@ -91,5 +104,14 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "Slå av Kilos snapshots for dette prosjektet. Du mister angre/gjør om for Kilo-endringer, men git fortsetter å spore alt.",
 
-  "ui.messagePart.openInDiffViewer": "Åpne i diff-viser",
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "Åpne i diff-visning",
+  "ui.messagePart.shell.command": "Kommando",
+  "ui.messagePart.shell.output": "Utdata",
+  "ui.messagePart.openInEditor": "Åpne i editor",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Dette var nyttig",
+  "ui.message.feedback.notHelpful": "Dette var ikke nyttig",
+  "ui.message.feedback.clearRating": "Fjern vurdering",
 }

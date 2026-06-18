@@ -2,7 +2,13 @@
 export type ToolState =
   | { status: "pending"; input: Record<string, unknown> }
   | { status: "running"; input: Record<string, unknown>; title?: string }
-  | { status: "completed"; input: Record<string, unknown>; output: string; title: string }
+  | {
+      status: "completed"
+      input: Record<string, unknown>
+      output: string
+      title: string
+      metadata?: Record<string, unknown>
+    }
   | { status: "error"; input: Record<string, unknown>; error: string }
 
 // Base part interface - all parts have these fields
@@ -17,6 +23,8 @@ export interface TextPart extends BasePart {
   type: "text"
   text: string
   synthetic?: boolean
+  time?: { start: number; end?: number }
+  metadata?: Record<string, unknown>
 }
 
 export interface FilePartSource {
@@ -46,6 +54,7 @@ export interface ToolPart extends BasePart {
 export interface ReasoningPart extends BasePart {
   type: "reasoning"
   text: string
+  time?: { start: number; end?: number }
 }
 
 // Step parts from the backend
@@ -65,7 +74,14 @@ export interface StepFinishPart extends BasePart {
   }
 }
 
-export type Part = TextPart | FilePart | ToolPart | ReasoningPart | StepStartPart | StepFinishPart
+export interface CompactionPart extends BasePart {
+  type: "compaction"
+  auto: boolean
+  overflow?: boolean
+  tail_start_id?: string
+}
+
+export type Part = TextPart | FilePart | ToolPart | ReasoningPart | StepStartPart | StepFinishPart | CompactionPart
 
 // Part delta for streaming updates
 export interface PartDelta {

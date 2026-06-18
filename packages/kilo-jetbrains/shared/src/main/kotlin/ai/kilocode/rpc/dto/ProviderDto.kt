@@ -14,6 +14,14 @@ data class ModelDto(
     val status: String? = null,
     val recommendedIndex: Double? = null,
     val variants: List<String> = emptyList(),
+    val limit: ModelLimitDto? = null,
+)
+
+@Serializable
+data class ModelLimitDto(
+    val context: Long = 0,
+    val input: Long? = null,
+    val output: Long = 0,
 )
 
 @Serializable

@@ -8,21 +8,21 @@ Guidelines:
 - Never use this tool as a replacement for the final response summary
 - Only suggest review when you are at least 90% confident the user's request is fully addressed
 - Do not suggest review after every edit or partial implementation turn
-- Do not repeat a review suggestion that was already dismissed in this conversation
+- Do not repeat a review suggestion when one has already been made in the current session
 - Keep the suggestion text concise and actionable
 - Provide 1-2 actions maximum
 - Make each action prompt self-contained so it can be injected as a synthetic user message
 - If you need a real answer from the user, use the `question` tool instead
 
 When to suggest a review:
-- Only when the user's original request was to implement a feature, fix a bug, or perform a refactor that they initiated, AND the resulting diff is substantial enough that another independent pass could meaningfully catch issues
+- Suggest review after completed, non-trivial file-changing work when another independent pass could meaningfully catch issues
+- Do not withhold review solely because the work was reactive, fixed CI/lint failures, touched docs/config, or happened around commit/push work
 
 Do NOT suggest a review when:
-- The user is responding to or processing external code-review feedback (GitHub PR comments, reviewer notes) — those changes are already under review
-- The task is reactive to an existing signal (CI/lint failures, reported issues, triage work, applying fixes the user or a tool already identified)
-- The user asked for non-implementation work (research, explanation, git commit/push, triage, documentation-only changes, config tweaks)
-- The changes are trivial (typos, comments, formatting, single-line tweaks, small cosmetic fixes)
-- The current work is itself a review activity (a prior `/local-review*` turn, reviewing someone else's code)
+- No files or implementation-relevant content changed
+- The changes are small or trivial, such as typo-only, comment-only, formatting-only, or tiny single-line tweaks
+- The coding session is fixing another local or remote code review
+- A local code review suggestion has already been made in the current session
 
 Choosing the right review command for the action prompt:
 - Use `/local-review-uncommitted` as the action prompt for uncommitted working-tree changes (staged, unstaged, and untracked files)

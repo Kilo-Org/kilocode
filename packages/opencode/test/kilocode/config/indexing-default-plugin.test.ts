@@ -2,18 +2,22 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { Effect, Layer, Option } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import path from "path"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
 import { Account } from "../../../src/account/account"
 import { Auth } from "../../../src/auth"
 import { Config } from "../../../src/config/config"
+import type { ConfigPlugin } from "../../../src/config/plugin"
+import { KilocodeDefaultPlugins } from "../../../src/kilocode/config/default-plugins"
+import { INDEXING_PLUGIN } from "../../../src/kilocode/indexing-feature"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Env } from "../../../src/env"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { Filesystem } from "../../../src/util/filesystem"
-import { Instance } from "../../../src/project/instance"
+import { provideTestInstance } from "../../fixture/fixture"
 import { Npm } from "@opencode-ai/core/npm"
-import { tmpdir } from "../../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
 
 const infra = CrossSpawnSpawner.defaultLayer.pipe(
   Layer.provideMerge(Layer.mergeAll(NodeFileSystem.layer, NodePath.layer)),
@@ -41,18 +45,36 @@ const layer = Config.layer.pipe(
 )
 
 const load = () => Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(layer)))
-const clear = (wait = false) =>
-  Effect.runPromise(Config.Service.use((svc) => svc.invalidate(wait)).pipe(Effect.scoped, Effect.provide(layer)))
-
 describe("kilocode default indexing plugin", () => {
   afterEach(async () => {
-    await Instance.disposeAll()
-    await clear(true)
+    await disposeAllInstances()
+  })
+
+  test("injects indexing without registering an external plugin origin", () => {
+    const config: { plugin?: ConfigPlugin.Spec[]; plugin_origins?: ConfigPlugin.Origin[] } = {}
+
+    KilocodeDefaultPlugins.apply(config, { disabled: false })
+
+    expect(hasIndexingPlugin(config.plugin ?? [])).toBe(true)
+    expect(config.plugin_origins).toBeUndefined()
+  })
+
+  test("removes a persisted indexing marker from external plugin origins", () => {
+    const external: ConfigPlugin.Origin = { spec: "global-plugin", source: "global", scope: "global" }
+    const config = {
+      plugin: [INDEXING_PLUGIN, external.spec],
+      plugin_origins: [{ spec: INDEXING_PLUGIN, source: "global", scope: "global" as const }, external],
+    }
+
+    KilocodeDefaultPlugins.apply(config, { disabled: true })
+
+    expect(config.plugin).toEqual([INDEXING_PLUGIN, external.spec])
+    expect(config.plugin_origins).toEqual([external])
   })
 
   test("does not hard-enable indexing plugin when default plugins are disabled", async () => {
-    const prev = process.env["KILO_DISABLE_DEFAULT_PLUGINS"]
-    process.env["KILO_DISABLE_DEFAULT_PLUGINS"] = "true"
+    const original = Flag.KILO_DISABLE_DEFAULT_PLUGINS
+    Flag.KILO_DISABLE_DEFAULT_PLUGINS = true
 
     try {
       await using tmp = await tmpdir({
@@ -67,7 +89,7 @@ describe("kilocode default indexing plugin", () => {
         },
       })
 
-      await Instance.provide({
+      await provideTestInstance({
         directory: tmp.path,
         fn: async () => {
           const config = await load()
@@ -75,8 +97,7 @@ describe("kilocode default indexing plugin", () => {
         },
       })
     } finally {
-      if (prev === undefined) delete process.env["KILO_DISABLE_DEFAULT_PLUGINS"]
-      else process.env["KILO_DISABLE_DEFAULT_PLUGINS"] = prev
+      Flag.KILO_DISABLE_DEFAULT_PLUGINS = original
     }
   })
 })

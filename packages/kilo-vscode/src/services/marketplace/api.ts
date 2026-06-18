@@ -1,5 +1,5 @@
 import { parse as parseYaml } from "yaml"
-import type { MarketplaceItem, McpMarketplaceItem, ModeMarketplaceItem, SkillMarketplaceItem, RawSkill } from "./types"
+import type { MarketplaceItem, McpMarketplaceItem, AgentMarketplaceItem, SkillMarketplaceItem, RawSkill } from "./types"
 
 const BASE_URL = "https://api.kilo.ai/api/marketplace"
 const CACHE_TTL = 300_000
@@ -76,18 +76,6 @@ export class MarketplaceApiClient {
     this.cache.set(key, { data, timestamp: Date.now() })
   }
 
-  private async fetchModes(): Promise<ModeMarketplaceItem[]> {
-    const cached = this.getCached("modes")
-    if (cached) return cached as ModeMarketplaceItem[]
-
-    const text = await fetchWithRetry(`${BASE_URL}/modes`)
-    const parsed = parseResponse(text) as { items?: unknown[] }
-    const items = (parsed.items ?? []) as Array<Record<string, unknown>>
-    const result = items.map((item) => ({ ...item, type: "mode" as const }) as ModeMarketplaceItem)
-    this.setCache("modes", result)
-    return result
-  }
-
   private async fetchMcps(): Promise<McpMarketplaceItem[]> {
     const cached = this.getCached("mcps")
     if (cached) return cached as McpMarketplaceItem[]
@@ -97,6 +85,18 @@ export class MarketplaceApiClient {
     const items = (parsed.items ?? []) as Array<Record<string, unknown>>
     const result = items.map((item) => ({ ...item, type: "mcp" as const }) as McpMarketplaceItem)
     this.setCache("mcps", result)
+    return result
+  }
+
+  private async fetchAgents(): Promise<AgentMarketplaceItem[]> {
+    const cached = this.getCached("agents")
+    if (cached) return cached as AgentMarketplaceItem[]
+
+    const text = await fetchWithRetry(`${BASE_URL}/agents`)
+    const parsed = parseResponse(text) as { items?: unknown[] }
+    const items = (parsed.items ?? []) as Array<Record<string, unknown>>
+    const result = items.map((item) => ({ ...item, type: "agent" as const }) as AgentMarketplaceItem)
+    this.setCache("agents", result)
     return result
   }
 
@@ -116,9 +116,9 @@ export class MarketplaceApiClient {
     const errors: string[] = []
 
     const settled = await Promise.all([
-      this.fetchModes().catch((err: unknown) => {
-        errors.push(`Failed to fetch modes: ${err instanceof Error ? err.message : String(err)}`)
-        return [] as ModeMarketplaceItem[]
+      this.fetchAgents().catch((err: unknown) => {
+        errors.push(`Failed to fetch agents: ${err instanceof Error ? err.message : String(err)}`)
+        return [] as AgentMarketplaceItem[]
       }),
       this.fetchMcps().catch((err: unknown) => {
         errors.push(`Failed to fetch mcps: ${err instanceof Error ? err.message : String(err)}`)
@@ -134,10 +134,6 @@ export class MarketplaceApiClient {
       items: [...settled[0], ...settled[1], ...settled[2]],
       errors,
     }
-  }
-
-  clearCache(): void {
-    this.cache.clear()
   }
 
   dispose(): void {

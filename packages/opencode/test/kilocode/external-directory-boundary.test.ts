@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import path from "path"
 import type { Permission } from "../../src/permission"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/kilocode/instance"
+import { InstanceRuntime } from "../../src/project/instance-runtime"
+import { provideTestInstance } from "../fixture/fixture"
 import { SessionID, MessageID } from "../../src/session/schema"
 import { assertExternalDirectory } from "../../src/tool/external-directory"
 import type { Tool } from "../../src/tool/tool"
@@ -12,7 +14,7 @@ import { tmpdir } from "../fixture/fixture"
 
 const base: Omit<Tool.Context, "ask"> = {
   sessionID: SessionID.make("ses_test-boundary-session"),
-  messageID: MessageID.make(""),
+  messageID: MessageID.make("msg_test-boundary-session"),
   callID: "",
   agent: "code",
   abort: AbortSignal.any([]),
@@ -42,13 +44,13 @@ describe("kilocode external directory boundaries", () => {
     const file = path.join(outer.path, "outside.txt")
     const { items, ctx } = asks()
 
-    await Instance.provide({
+    await provideTestInstance({
       directory: repo.path,
       fn: async () => {
         try {
           await assertExternalDirectory(ctx, file)
         } finally {
-          await Instance.dispose()
+          await InstanceRuntime.disposeInstance(Instance.current)
         }
       },
     })
@@ -66,13 +68,13 @@ describe("kilocode external directory boundaries", () => {
     const file = path.join(outer.path, "outside-root.txt")
     const { items, ctx } = asks()
 
-    await Instance.provide({
+    await provideTestInstance({
       directory: root,
       fn: async () => {
         try {
           await assertExternalDirectory(ctx, file)
         } finally {
-          await Instance.dispose()
+          await InstanceRuntime.disposeInstance(Instance.current)
         }
       },
     })

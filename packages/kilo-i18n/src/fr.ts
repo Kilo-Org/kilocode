@@ -7,10 +7,21 @@ export const dict = {
   "provider.connect.kiloGateway.visit.prefix": "Visitez ",
   "provider.connect.kiloGateway.visit.link": "kilo.ai",
   "provider.connect.kiloGateway.visit.suffix": " pour obtenir votre clé API.",
+  "provider.connect.kiloGateway.byok.prefix": "Pour plus de statistiques d'utilisation, utilisez ",
+  "provider.connect.kiloGateway.byok.link": "BYOK via Kilo's Gateway",
+  "provider.connect.kiloGateway.byok.suffix": ".",
 
-  // Provider dialog translations
-  "dialog.provider.group.recommended": "Recommandés",
-  "dialog.provider.kilo.note": "Accès à plus de 500 modèles d'IA",
+  // Provider settings translations
+  "settings.providers.group.recommended": "Recommandés",
+  "settings.providers.note.kilo": "Accès à plus de 500 modèles d'IA",
+  "settings.providers.note.opencode": "Modèles sélectionnés, dont Claude, GPT, Gemini et plus encore",
+  "settings.providers.note.anthropic": "Accès direct aux modèles Claude, y compris Pro et Max",
+  "settings.providers.note.deepseek": "Modèles DeepSeek pour les tâches de raisonnement et de codage",
+  "settings.providers.note.copilot": "Modèles Claude pour l'assistance au codage",
+  "settings.providers.note.openai": "Modèles GPT et Codex avec clé API ou connexion ChatGPT",
+  "settings.providers.note.google": "Modèles Gemini pour des réponses rapides et structurées",
+  "settings.providers.note.openrouter": "Accédez à tous les modèles pris en charge depuis un seul fournisseur",
+  "settings.providers.note.vercel": "Accès unifié aux modèles IA avec routage intelligent",
 
   // Reasoning block label
   "ui.permission.run": "Exécuter",
@@ -19,7 +30,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Skills",
   "marketplace.tab.mcpServers": "Serveurs MCP",
-  "marketplace.tab.modes": "Modes",
   "marketplace.category.all": "Tout",
   "marketplace.placeholder": "À implémenter",
   "marketplace.card.installed": "Installé",
@@ -45,6 +55,7 @@ export const dict = {
   "marketplace.remove.cancel": "Annuler",
   "marketplace.remove.confirm.button": "Supprimer",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "Agents",
   "marketplace.search": "Rechercher...",
   "marketplace.filter.all": "Tous les éléments",
   "marketplace.filter.notInstalled": "Non installé",
@@ -60,7 +71,7 @@ export const dict = {
   "marketplace.scope.global": "global",
   "marketplace.remove.type.mcp": "serveur MCP",
   "marketplace.remove.type.skill": "compétence",
-  "marketplace.remove.type.mode": "mode",
+  "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Échec de la suppression de {{name}}",
   "marketplace.install": "Installer",
   "marketplace.filter.installed": "Installé",
@@ -69,8 +80,10 @@ export const dict = {
   "marketplace.warning.busyMany": "Plusieurs sessions sont en cours et seront interrompues",
   "marketplace.warning.installAnyway": "Installer quand même",
   "marketplace.warning.cancel": "Annuler",
-  "marketplace.contribute.prompt": "Il manque une skill, un mode ou un serveur MCP ?",
+  "marketplace.contribute.prompt": "Il manque une compétence, un agent ou un serveur MCP ?",
   "marketplace.contribute.cta": "Contribuer sur GitHub",
+  "marketplace.migration.notice":
+    "Les modes ont été remplacés par des agents. Si vous avez précédemment installé des modes depuis le marketplace, veuillez les supprimer et les réinstaller en tant qu'agents pour migrer vers le nouveau format.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "Implémenter",
@@ -91,5 +104,14 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "Désactivez les instantanés Kilo pour ce projet. Vous perdez l'annulation/restauration des modifications faites par Kilo, mais git continue de tout suivre.",
 
-  "ui.messagePart.openInDiffViewer": "Ouvrir dans la visionneuse de différences",
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "Ouvrir dans le visualiseur de différences",
+  "ui.messagePart.shell.command": "Commande",
+  "ui.messagePart.shell.output": "Sortie",
+  "ui.messagePart.openInEditor": "Ouvrir dans l'éditeur",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "C'était utile",
+  "ui.message.feedback.notHelpful": "Ce n'était pas utile",
+  "ui.message.feedback.clearRating": "Effacer la notation",
 }

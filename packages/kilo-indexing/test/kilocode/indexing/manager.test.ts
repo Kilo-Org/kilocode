@@ -1,4 +1,8 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, spyOn, test } from "bun:test"
+import { mkdtemp, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { CacheManager } from "../../../src/indexing/cache-manager"
 import { CodeIndexManager } from "../../../src/indexing/manager"
 import type { IndexingConfigInput } from "../../../src/indexing/config-manager"
 import type { IndexingTelemetryEvent, IndexingTelemetryTrigger } from "../../../src/indexing/interfaces/telemetry"
@@ -73,6 +77,59 @@ function createStartError(location = "orchestrator:startIndexing"): IndexingTele
 }
 
 describe("CodeIndexManager", () => {
+  test("falls back when the shared baseline is not ready", async () => {
+    const mgr = new CodeIndexManager("/tmp/worktree", "/tmp/cache", "/tmp/main")
+    let closed = 0
+    const data = mgr as unknown as {
+      createBaseline(factory: { createVectorStore(): unknown }): Promise<{ store?: unknown }>
+    }
+    const baseline = await data.createBaseline({
+      createVectorStore() {
+        return {
+          async openExisting() {
+            throw new Error("baseline rebuilding")
+          },
+          async close() {
+            closed += 1
+          },
+        }
+      },
+    })
+
+    expect(baseline.store).toBeUndefined()
+    expect(closed).toBe(1)
+  })
+
+  test("throttles unchanged baseline cache checks between searches", async () => {
+    const mgr = new CodeIndexManager("/tmp/worktree", "/tmp/cache", "/tmp/main")
+    const data = createData(mgr) as Data & {
+      _baselineStamp: string
+      _baselineSigned: number
+      _orchestrator: { state: string }
+      _searchService: { searchIndex(): Promise<[]> }
+    }
+    data._baselineStamp = "same"
+    data._baselineSigned = Date.now()
+    data._orchestrator = { state: "Indexed" }
+    data._searchService = {
+      async searchIndex() {
+        return []
+      },
+    }
+    const stamp = spyOn(CacheManager.prototype, "stamp").mockResolvedValue("same")
+    const initialize = spyOn(CacheManager.prototype, "initialize").mockResolvedValue()
+
+    try {
+      await mgr.searchIndex("first")
+      await mgr.searchIndex("second")
+      expect(stamp).toHaveBeenCalledTimes(1)
+      expect(initialize).not.toHaveBeenCalled()
+    } finally {
+      stamp.mockRestore()
+      initialize.mockRestore()
+    }
+  })
+
   test("returns standby state before services are initialized", () => {
     const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
     const data = mgr as unknown as {
@@ -98,6 +155,73 @@ describe("CodeIndexManager", () => {
     expect(mgr.isFeatureConfigured).toBe(false)
     expect(mgr.getCurrentStatus().systemStatus).toBe("Standby")
     expect(mgr.getCurrentStatus().message).toContain("not configured")
+  })
+
+  test("initializes an unauthenticated OpenAI-compatible endpoint without auth headers", async () => {
+    const root = await mkdtemp(join(tmpdir(), "kilo-keyless-indexing-"))
+    const workspace = join(root, "workspace")
+    const cache = join(root, "cache")
+    const requests: Array<{ authorization: string | null; apiKey: string | null }> = []
+    await Bun.write(join(workspace, ".gitkeep"), "")
+    const server = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch(req) {
+        requests.push({
+          authorization: req.headers.get("authorization"),
+          apiKey: req.headers.get("api-key"),
+        })
+        return Response.json({
+          object: "list",
+          data: [{ object: "embedding", index: 0, embedding: [0.1, 0.2, 0.3] }],
+          model: "fixture-model",
+          usage: { prompt_tokens: 1, total_tokens: 1 },
+        })
+      },
+    })
+
+    try {
+      const script = `
+        import { CodeIndexManager } from "./src/indexing/manager.ts"
+        import { normalizeIndexingStatus } from "./src/status.ts"
+        const mgr = new CodeIndexManager(${JSON.stringify(workspace)}, ${JSON.stringify(cache)})
+        try {
+          await mgr.initialize({
+            enabled: true,
+            embedderProvider: "openai-compatible",
+            vectorStoreProvider: "lancedb",
+            modelId: "fixture-model",
+            modelDimension: 3,
+            openAiCompatibleBaseUrl: ${JSON.stringify(`http://127.0.0.1:${server.port}/v1`)},
+          })
+          if (!mgr.isInitialized) throw new Error("Manager did not initialize")
+          if (normalizeIndexingStatus(mgr).state === "Disabled") throw new Error("Indexing remained disabled")
+        } finally {
+          await mgr.dispose()
+        }
+      `
+      const child = Bun.spawn([process.execPath, "-e", script], {
+        cwd: join(import.meta.dir, "../../.."),
+        stdout: "pipe",
+        stderr: "pipe",
+        windowsHide: true,
+      })
+      const gate = Promise.withResolvers<never>()
+      const timeout = setTimeout(() => {
+        child.kill()
+        gate.reject(new Error("Indexing subprocess timed out"))
+      }, 10_000)
+      const [exit, stderr] = await Promise.race([
+        Promise.all([child.exited, new Response(child.stderr).text()]),
+        gate.promise,
+      ]).finally(() => clearTimeout(timeout))
+      if (exit !== 0) throw new Error(stderr)
+
+      expect(requests).toEqual([{ authorization: null, apiKey: null }])
+    } finally {
+      server.stop(true)
+      await rm(root, { recursive: true, force: true })
+    }
   })
 
   test("cancels active indexing when configuration is removed", async () => {
@@ -245,6 +369,30 @@ describe("CodeIndexManager", () => {
     expect(calls).toBe(1)
   })
 
+  test("schedules auto-recovery for watcher failures", async () => {
+    const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
+    const data = createData(mgr)
+    let calls = 0
+
+    data._recreateServices = async () => {
+      data._orchestrator = {
+        state: "Standby",
+        stopWatcher() {},
+        async startIndexing() {
+          calls += 1
+          this.state = "Indexed"
+          data._stateManager.setSystemState("Indexed", "done")
+        },
+      }
+      data._searchService = {}
+    }
+
+    data.handleTelemetry(createStartError("orchestrator:watcher"))
+    await data._retryTask
+
+    expect(calls).toBe(1)
+  })
+
   test("ignores non-orchestrator telemetry errors for auto-recovery", async () => {
     const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
     const data = createData(mgr)
@@ -323,30 +471,24 @@ describe("CodeIndexManager", () => {
     expect(mgr.getCurrentStatus().systemStatus).toBe("Indexed")
   })
 
-  test("dispose calls cancelIndexing on orchestrator", () => {
+  test("dispose waits for orchestrator shutdown", async () => {
     const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
-    let cancel = 0
-    let stop = 0
+    let shutdown = 0
     const data = mgr as unknown as {
       _orchestrator?: {
-        stopWatcher(): void
-        cancelIndexing(): void
+        shutdown(): Promise<void>
       }
     }
 
     data._orchestrator = {
-      stopWatcher() {
-        stop += 1
-      },
-      cancelIndexing() {
-        cancel += 1
+      async shutdown() {
+        shutdown += 1
       },
     }
 
-    mgr.dispose()
+    await mgr.dispose()
 
-    expect(cancel).toBe(1)
-    expect(stop).toBe(0)
+    expect(shutdown).toBe(1)
   })
 
   test("dispose during service recreation cancels the recreated orchestrator", async () => {
@@ -386,7 +528,7 @@ describe("CodeIndexManager", () => {
 
     const init = mgr.initialize(createInput({ openAiKey: "sk-test" }))
     await new Promise((resolve) => setTimeout(resolve, 0))
-    mgr.dispose()
+    await mgr.dispose()
     gate.resolve()
     await init
 
@@ -414,7 +556,7 @@ describe("CodeIndexManager", () => {
 
     const task = data.handleTelemetry(createStartError())
     await new Promise((resolve) => setTimeout(resolve, 0))
-    mgr.dispose()
+    await mgr.dispose()
     gate.resolve()
     await data._retryTask
 

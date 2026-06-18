@@ -5,7 +5,7 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useConfig } from "../../context/config"
-import type { ConnectionState, ExtensionMessage } from "../../types/messages"
+import type { Config, ConnectionState, ExtensionMessage } from "../../types/messages"
 import { buildExport, parseImport, MAX_IMPORT_SIZE } from "./settings-io"
 
 export interface AboutKiloCodeTabProps {
@@ -18,13 +18,30 @@ export interface AboutKiloCodeTabProps {
 const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
   const language = useLanguage()
   const vscode = useVSCode()
-  const { updateConfig } = useConfig()
+  const { updateConfig, updateGlobalConfig } = useConfig()
   const [importing, setImporting] = createSignal(false)
   const [exporting, setExporting] = createSignal(false)
   let epoch = 0
 
   const open = (url: string) => {
     vscode.postMessage({ type: "openExternal", url })
+  }
+
+  const importConfig = (config: Config) => {
+    const enabled = config.indexing?.enabled
+    if (enabled === undefined) {
+      updateConfig(config)
+      return
+    }
+
+    const indexing = { ...config.indexing }
+    delete indexing.enabled
+    const next = { ...config }
+    if (Object.keys(indexing).length > 0) next.indexing = indexing
+    else delete next.indexing
+
+    updateConfig(next)
+    updateGlobalConfig({ indexing: { enabled } })
   }
 
   // Listen for globalConfigLoaded response
@@ -91,7 +108,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
             title: language.t("settings.aboutKiloCode.importSettings.newerVersion"),
           })
         }
-        updateConfig(result.config)
+        importConfig(result.config)
         showToast({
           variant: "success",
           title: language.t("settings.aboutKiloCode.importSettings.success"),

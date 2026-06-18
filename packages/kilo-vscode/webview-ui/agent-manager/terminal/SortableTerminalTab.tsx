@@ -33,6 +33,7 @@ export const SortableTerminalTab: Component<{
   onSelect: () => void
   onMiddleClick: (e: MouseEvent) => void
   onClose: (e: MouseEvent) => void
+  onCloseOthers: () => void
 }> = (props) => {
   const { t } = useLanguage()
   const sortable = createSortable(props.id)
@@ -45,31 +46,44 @@ export const SortableTerminalTab: Component<{
     >
       <ContextMenu>
         <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
-          <TooltipKeybind
-            title={props.tooltip}
-            keybind={props.keybind ?? ""}
-            placement="bottom"
-            inactive={props.active}
+          <div
+            class={`am-tab am-tab-terminal ${props.active ? "am-tab-active" : ""}`}
+            onClick={props.onSelect}
+            onMouseDown={props.onMiddleClick}
           >
-            <div
-              class={`am-tab am-tab-terminal ${props.active ? "am-tab-active" : ""}`}
-              onClick={props.onSelect}
-              onMouseDown={props.onMiddleClick}
+            <TooltipKeybind
+              title={props.tooltip}
+              keybind={props.keybind ?? ""}
+              placement="bottom"
+              gutter={8}
+              class="am-tab-tooltip"
+              openDelay={0}
             >
-              <Icon name="console" size="small" />
-              <span class="am-tab-label">{props.label}</span>
-              <TooltipKeybind title={t("agentManager.tab.close")} keybind={props.closeKeybind ?? ""} placement="bottom">
-                <IconButton
-                  icon="close-small"
-                  size="small"
-                  variant="ghost"
-                  label={t("agentManager.tab.closeTab")}
-                  class="am-tab-close"
-                  onClick={props.onClose}
-                />
-              </TooltipKeybind>
-            </div>
-          </TooltipKeybind>
+              <span class="am-tab-title">
+                <span class="am-tab-icon">
+                  <Icon name="console" size="small" />
+                </span>
+                <span class="am-tab-label">{props.label}</span>
+              </span>
+            </TooltipKeybind>
+            <TooltipKeybind
+              title={t("agentManager.tab.close")}
+              keybind={props.closeKeybind ?? ""}
+              placement="top"
+              gutter={8}
+              class="am-tab-close-wrap"
+              openDelay={0}
+            >
+              <IconButton
+                icon="close-small"
+                size="small"
+                variant="ghost"
+                label={t("agentManager.tab.closeTab")}
+                class="am-tab-close"
+                onClick={props.onClose}
+              />
+            </TooltipKeybind>
+          </div>
         </ContextMenu.Trigger>
         <ContextMenu.Portal>
           <ContextMenu.Content class="am-ctx-menu">
@@ -85,6 +99,10 @@ export const SortableTerminalTab: Component<{
                   ))}
                 </span>
               </Show>
+            </ContextMenu.Item>
+            <ContextMenu.Item onSelect={props.onCloseOthers}>
+              <Icon name="close" size="small" />
+              <ContextMenu.ItemLabel>{t("agentManager.tab.closeOthers")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Portal>

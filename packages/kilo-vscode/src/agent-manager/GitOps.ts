@@ -3,7 +3,13 @@ import * as os from "os"
 import * as fs from "fs/promises"
 import { spawn } from "../util/process"
 import simpleGit from "simple-git"
-import { parseWorktreeList, normalizePath } from "./git-import"
+import {
+  parseWorktreeList,
+  normalizePath,
+  parseForEachRefOutput,
+  buildBranchList,
+  type BranchListItem,
+} from "./git-import"
 import type { Semaphore } from "./semaphore"
 
 interface GitOpsOptions {
@@ -42,6 +48,20 @@ export interface ExecResult {
   stderr: string
 }
 
+export interface ExecBufferResult {
+  code: number
+  stdout: Buffer
+  stderr: string
+}
+
+/**
+ * Fixed SSH command injected by {@link nonInteractiveEnv} when the user has
+ * not already configured their own. Exported so callers can check whether a
+ * `GIT_SSH_COMMAND` originated from Kilo (safe) or was inherited from the
+ * parent process (untrusted).
+ */
+export const KILO_NON_INTERACTIVE_SSH_COMMAND = "ssh -o BatchMode=yes"
+
 /**
  * Build environment variables that prevent git and SSH from opening interactive
  * prompts. Used for background operations (e.g. periodic fetch) so users with
@@ -57,9 +77,18 @@ export function nonInteractiveEnv(): NodeJS.ProcessEnv {
     GIT_TERMINAL_PROMPT: "0",
   }
   if (!process.env.GIT_SSH_COMMAND) {
-    env.GIT_SSH_COMMAND = "ssh -o BatchMode=yes"
+    env.GIT_SSH_COMMAND = KILO_NON_INTERACTIVE_SSH_COMMAND
   }
   return env
+}
+
+/**
+ * True when `env.GIT_SSH_COMMAND` is the fixed value Kilo sets, rather than
+ * an inherited one from the parent process. Use this to decide whether it's
+ * safe to pass `allowUnsafeSshCommand: true` to simple-git.
+ */
+export function isKiloOwnedSshCommand(env: NodeJS.ProcessEnv): boolean {
+  return env.GIT_SSH_COMMAND === KILO_NON_INTERACTIVE_SSH_COMMAND
 }
 
 export class GitOps {
@@ -217,6 +246,31 @@ export class GitOps {
     return this.raw(["rev-parse", "--verify", "--quiet", `refs/remotes/${ref}`], cwd)
       .then(() => true)
       .catch(() => false)
+  }
+
+  /**
+   * List local branches and `origin/*` remotes sorted by last commit date,
+   * with the resolved default branch flagged. Mirrors WorktreeManager's
+   * `listBranches` shape but takes `cwd` per call so it works outside the
+   * worktree context (e.g. for the diff viewer's base branch picker).
+   */
+  async listBranches(cwd: string): Promise<{ branches: BranchListItem[]; defaultBranch: string }> {
+    const def = (await this.resolveDefaultBranch(cwd)) ?? ""
+    const raw = await this.raw(
+      [
+        "for-each-ref",
+        "--sort=-committerdate",
+        "--format=%(refname)\t%(committerdate:iso-strict)",
+        "refs/heads/",
+        "refs/remotes/origin/",
+      ],
+      cwd,
+    ).catch((err) => {
+      this.log("listBranches: for-each-ref failed", err instanceof Error ? err.message : String(err))
+      return ""
+    })
+    const { locals, remotes, dates } = parseForEachRefOutput(raw)
+    return { branches: buildBranchList(locals, remotes, dates, def), defaultBranch: def }
   }
 
   /** Return the set of worktree paths for the repo, excluding bare entries. */
@@ -484,12 +538,21 @@ export class GitOps {
     return this.exec(args, cwd, options)
   }
 
-  private exec(args: string[], cwd: string, options?: ExecOptions): Promise<ExecResult> {
+  execGitBuffer(args: string[], cwd: string): Promise<ExecBufferResult> {
+    return this.execBuffer(args, cwd)
+  }
+
+  private async exec(args: string[], cwd: string, options?: ExecOptions): Promise<ExecResult> {
+    const result = await this.execBuffer(args, cwd, options)
+    return { code: result.code, stdout: result.stdout.toString("utf8"), stderr: result.stderr }
+  }
+
+  private execBuffer(args: string[], cwd: string, options?: ExecOptions): Promise<ExecBufferResult> {
     if (this.controller.signal.aborted) {
-      return Promise.resolve({ code: 1, stdout: "", stderr: "GitOps disposed" })
+      return Promise.resolve({ code: 1, stdout: Buffer.alloc(0), stderr: "GitOps disposed" })
     }
     const invoke = () =>
-      new Promise<ExecResult>((resolve) => {
+      new Promise<ExecBufferResult>((resolve) => {
         const child = spawn("git", args, {
           cwd,
           env: options?.env,
@@ -499,7 +562,7 @@ export class GitOps {
 
         if (options?.stdin !== undefined) {
           if (!child.stdin) {
-            resolve({ code: 1, stdout: "", stderr: "stdin not available for git process" })
+            resolve({ code: 1, stdout: Buffer.alloc(0), stderr: "stdin not available for git process" })
             return
           }
           child.stdin.end(options.stdin)
@@ -511,12 +574,12 @@ export class GitOps {
         child.stderr?.on("data", (chunk: Buffer) => err.push(chunk))
 
         child.on("error", (error) => {
-          resolve({ code: 1, stdout: "", stderr: error.message })
+          resolve({ code: 1, stdout: Buffer.alloc(0), stderr: error.message })
         })
         child.on("close", (code) => {
           resolve({
             code: code ?? 1,
-            stdout: Buffer.concat(out).toString("utf8"),
+            stdout: Buffer.concat(out),
             stderr: Buffer.concat(err).toString("utf8"),
           })
         })

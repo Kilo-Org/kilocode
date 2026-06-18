@@ -7,10 +7,21 @@ export const dict = {
   "provider.connect.kiloGateway.visit.prefix": "Besøg ",
   "provider.connect.kiloGateway.visit.link": "kilo.ai",
   "provider.connect.kiloGateway.visit.suffix": " for at hente din API-nøgle.",
+  "provider.connect.kiloGateway.byok.prefix": "For flere brugsstatistikker, brug ",
+  "provider.connect.kiloGateway.byok.link": "BYOK via Kilo's Gateway",
+  "provider.connect.kiloGateway.byok.suffix": ".",
 
-  // Provider dialog translations
-  "dialog.provider.group.recommended": "Anbefalede",
-  "dialog.provider.kilo.note": "Adgang til 500+ AI-modeller",
+  // Provider settings translations
+  "settings.providers.group.recommended": "Anbefalede",
+  "settings.providers.note.kilo": "Adgang til 500+ AI-modeller",
+  "settings.providers.note.opencode": "Udvalgte modeller inklusive Claude, GPT, Gemini og mere",
+  "settings.providers.note.anthropic": "Direkte adgang til Claude-modeller, inklusive Pro og Max",
+  "settings.providers.note.deepseek": "DeepSeek-modeller til ræsonnement og kodningsopgaver",
+  "settings.providers.note.copilot": "Claude-modeller til kodningsassistance",
+  "settings.providers.note.openai": "GPT- og Codex-modeller med API-nøgle eller ChatGPT-login",
+  "settings.providers.note.google": "Gemini-modeller til hurtige, strukturerede svar",
+  "settings.providers.note.openrouter": "Adgang til alle understøttede modeller fra én udbyder",
+  "settings.providers.note.vercel": "Samlet adgang til AI-modeller med smart routing",
 
   // Reasoning block label
   "ui.permission.run": "Kør",
@@ -19,7 +30,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Skills",
   "marketplace.tab.mcpServers": "MCP-servere",
-  "marketplace.tab.modes": "Tilstande",
   "marketplace.category.all": "Alle",
   "marketplace.placeholder": "Skal implementeres",
   "marketplace.card.installed": "Installeret",
@@ -45,6 +55,7 @@ export const dict = {
   "marketplace.remove.cancel": "Annuller",
   "marketplace.remove.confirm.button": "Fjern",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "Agenter",
   "marketplace.search": "Søg...",
   "marketplace.filter.all": "Alle elementer",
   "marketplace.filter.notInstalled": "Ikke installeret",
@@ -60,7 +71,7 @@ export const dict = {
   "marketplace.scope.global": "global",
   "marketplace.remove.type.mcp": "MCP-server",
   "marketplace.remove.type.skill": "færdighed",
-  "marketplace.remove.type.mode": "tilstand",
+  "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Kunne ikke fjerne {{name}}",
   "marketplace.install": "Installer",
   "marketplace.filter.installed": "Installeret",
@@ -69,8 +80,10 @@ export const dict = {
   "marketplace.warning.busyMany": "Flere sessioner kører og vil blive afbrudt",
   "marketplace.warning.installAnyway": "Installer alligevel",
   "marketplace.warning.cancel": "Annuller",
-  "marketplace.contribute.prompt": "Mangler du en skill, tilstand eller MCP-server?",
+  "marketplace.contribute.prompt": "Mangler du en skill, agent eller MCP-server?",
   "marketplace.contribute.cta": "Bidrag på GitHub",
+  "marketplace.migration.notice":
+    "Tilstande er blevet erstattet af agenter. Hvis du tidligere har installeret marketplace-tilstande, skal du fjerne dem og geninstallere dem som agenter for at migrere til det nye format.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "Implementér",
@@ -91,5 +104,14 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "Slå Kilos snapshots fra for dette projekt. Du mister fortryd/gentag for Kilo-ændringer, men git sporer stadig alt.",
 
-  "ui.messagePart.openInDiffViewer": "Åbn i diff-viser",
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "Åbn i Diff-visning",
+  "ui.messagePart.shell.command": "Kommando",
+  "ui.messagePart.shell.output": "Output",
+  "ui.messagePart.openInEditor": "Åbn i editor",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Dette var nyttigt",
+  "ui.message.feedback.notHelpful": "Dette var ikke nyttigt",
+  "ui.message.feedback.clearRating": "Ryd bedømmelse",
 }

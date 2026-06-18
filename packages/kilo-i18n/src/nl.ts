@@ -9,10 +9,21 @@ export const dict = {
   "provider.connect.kiloGateway.visit.prefix": "Bezoek ",
   "provider.connect.kiloGateway.visit.link": "kilo.ai",
   "provider.connect.kiloGateway.visit.suffix": " om je API key op te halen.",
+  "provider.connect.kiloGateway.byok.prefix": "Voor meer gebruiksstatistieken, gebruik ",
+  "provider.connect.kiloGateway.byok.link": "BYOK via Kilo's Gateway",
+  "provider.connect.kiloGateway.byok.suffix": ".",
 
-  // Provider dialog translations
-  "dialog.provider.group.recommended": "Aanbevolen",
-  "dialog.provider.kilo.note": "Toegang tot 500+ AI modellen",
+  // Provider settings translations
+  "settings.providers.group.recommended": "Aanbevolen",
+  "settings.providers.note.kilo": "Toegang tot 500+ AI modellen",
+  "settings.providers.note.opencode": "Geselecteerde modellen, waaronder Claude, GPT, Gemini en meer",
+  "settings.providers.note.anthropic": "Directe toegang tot Claude-modellen, inclusief Pro en Max",
+  "settings.providers.note.deepseek": "DeepSeek-modellen voor redeneer- en codeertaken",
+  "settings.providers.note.copilot": "Claude-modellen voor hulp bij programmeren",
+  "settings.providers.note.openai": "GPT- en Codex-modellen met API-sleutel of ChatGPT-login",
+  "settings.providers.note.google": "Gemini-modellen voor snelle, gestructureerde antwoorden",
+  "settings.providers.note.openrouter": "Toegang tot alle ondersteunde modellen via één provider",
+  "settings.providers.note.vercel": "Geïntegreerde toegang tot AI-modellen met slimme routering",
 
   // Reasoning block label
   "ui.permission.run": "Uitvoeren",
@@ -21,7 +32,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Skills",
   "marketplace.tab.mcpServers": "MCP Servers",
-  "marketplace.tab.modes": "Modi",
   "marketplace.category.all": "Alle",
   "marketplace.placeholder": "Nog te implementeren",
   "marketplace.card.installed": "Geïnstalleerd",
@@ -47,6 +57,7 @@ export const dict = {
   "marketplace.remove.cancel": "Annuleren",
   "marketplace.remove.confirm.button": "Verwijderen",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "Agenten",
   "marketplace.search": "Zoeken...",
   "marketplace.filter.all": "Alle items",
   "marketplace.filter.notInstalled": "Niet geïnstalleerd",
@@ -62,7 +73,7 @@ export const dict = {
   "marketplace.scope.global": "globaal",
   "marketplace.remove.type.mcp": "MCP server",
   "marketplace.remove.type.skill": "skill",
-  "marketplace.remove.type.mode": "modus",
+  "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Verwijderen van {{name}} mislukt",
   "marketplace.install": "Installeren",
   "marketplace.filter.installed": "Geïnstalleerd",
@@ -71,8 +82,10 @@ export const dict = {
   "marketplace.warning.busyMany": "Er zijn meerdere sessies actief en deze zullen worden onderbroken",
   "marketplace.warning.installAnyway": "Toch installeren",
   "marketplace.warning.cancel": "Annuleren",
-  "marketplace.contribute.prompt": "Mist er een skill, modus of MCP-server?",
+  "marketplace.contribute.prompt": "Mist u een skill, agent of MCP-server?",
   "marketplace.contribute.cta": "Bijdragen op GitHub",
+  "marketplace.migration.notice":
+    "Modi zijn vervangen door agenten. Als u eerder marketplace-modi hebt geïnstalleerd, verwijder ze dan en installeer ze opnieuw als agenten om naar het nieuwe formaat te migreren.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "Implementeren",
@@ -93,5 +106,14 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "Zet Kilo-snapshots uit voor dit project. Je verliest ongedaan maken/opnieuw doen van Kilo-wijzigingen, maar git blijft alles volgen.",
 
-  "ui.messagePart.openInDiffViewer": "Openen in diff-viewer",
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "Openen in Diff-weergave",
+  "ui.messagePart.shell.command": "Opdracht",
+  "ui.messagePart.shell.output": "Uitvoer",
+  "ui.messagePart.openInEditor": "Openen in editor",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Dit was nuttig",
+  "ui.message.feedback.notHelpful": "Dit was niet nuttig",
+  "ui.message.feedback.clearRating": "Beoordeling wissen",
 }

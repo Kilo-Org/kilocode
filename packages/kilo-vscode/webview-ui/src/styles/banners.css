@@ -143,6 +143,47 @@
 
 [data-component="diff-picker-header"] {
   margin: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Compact base branch picker mounted next to the source select. Reuses the
+   am-selector styles from agent-manager.css for consistency. */
+.diff-base-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.diff-base-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: var(--kilo-font-size-12);
+  color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+}
+
+.diff-base-current-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
+}
+
+.diff-base-arrow {
+  font-size: var(--kilo-font-size-12);
+  color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+  line-height: 1;
+}
+
+.diff-base-trigger {
+  height: 24px;
+  font-size: var(--kilo-font-size-12);
+  padding: 0 8px;
 }
 
 /* ============================================

@@ -7,8 +7,15 @@ const { KiloProvider } = await import("../../src/KiloProvider")
 type Internals = {
   connectionState: "connecting" | "connected" | "disconnected" | "error"
   currentSession: { id: string } | null
+  cachedIndexingStatusMessage: unknown
+  handleEvent: (event: unknown, directory?: string) => void
   reloadAfterAuthChange: () => Promise<void>
-  handleUpdateConfig: (partial: Partial<Config>) => Promise<void>
+  handleUpdateConfig: (
+    partial: Partial<Config>,
+    project?: Partial<Config>,
+    globalUnset?: string[][],
+    projectUnset?: string[][],
+  ) => Promise<void>
   fetchAndSendConfig: () => Promise<void>
   fetchAndSendProviders: () => Promise<void>
   fetchAndSendAgents: () => Promise<void>
@@ -20,19 +27,28 @@ type Internals = {
 
 function createConnection() {
   let drains = 0
+  const patches: unknown[] = []
   const client = {
     global: {
       config: {
+        get: async () => ({ data: {} }),
         update: async () => ({ data: {} }),
       },
     },
     config: {
       get: async () => ({ data: {} }),
+      update: async () => ({ data: {} }),
+      overlay: async () => ({ data: { project: {} } }),
+      overlayUpdate: async (patch: unknown) => {
+        patches.push(patch)
+        return { data: {} }
+      },
     },
   }
 
   return {
     drains: () => drains,
+    patches: () => patches,
     service: {
       drainPendingPrompts: async () => {
         drains += 1
@@ -93,6 +109,48 @@ describe("KiloProvider indexing refresh", () => {
     expect(indexing).toBe(0)
   })
 
+  it("refreshes providers when prompt-training model visibility changes", async () => {
+    const conn = createConnection()
+    const provider = new KiloProvider({} as never, conn.service as never)
+    const internal = provider as unknown as Internals
+    let calls = 0
+    internal.connectionState = "connected"
+    internal.fetchAndSendProviders = async () => {
+      calls += 1
+    }
+
+    await internal.handleUpdateConfig({ hide_prompt_training_models: true })
+
+    expect(calls).toBe(1)
+  })
+
+  it("passes scoped unset paths to the config overlay endpoint", async () => {
+    const conn = createConnection()
+    const provider = new KiloProvider({} as never, conn.service as never)
+    const internal = provider as unknown as Internals
+    internal.connectionState = "connected"
+
+    await internal.handleUpdateConfig(
+      { indexing: { qdrant: { apiKey: undefined } } },
+      { indexing: { searchMinScore: undefined } },
+      [["indexing", "qdrant", "apiKey"]],
+      [["indexing", "searchMinScore"]],
+    )
+
+    expect(conn.patches()).toEqual([
+      expect.objectContaining({
+        scope: "global",
+        set: { indexing: { qdrant: { apiKey: undefined } } },
+        unset: [["indexing", "qdrant", "apiKey"]],
+      }),
+      expect.objectContaining({
+        scope: "project",
+        set: { indexing: { searchMinScore: undefined } },
+        unset: [["indexing", "searchMinScore"]],
+      }),
+    ])
+  })
+
   it("fetchAndSendIndexingStatus uses current session directory header", async () => {
     const worktree = "/repo/.kilo/.kilocode/worktrees/feature"
     const calls: { input: RequestInfo | URL; init?: RequestInit }[] = []
@@ -137,5 +195,43 @@ describe("KiloProvider indexing refresh", () => {
     } finally {
       globalThis.fetch = original
     }
+  })
+
+  it("forwards indexing.status when directory only differs by Windows drive casing", () => {
+    const provider = new KiloProvider(
+      {} as never,
+      {
+        resolveEventSessionId: () => undefined,
+      } as never,
+    )
+    const internal = provider as unknown as Internals
+    provider.setSessionDirectory("ses_worktree", "C:/Repo/Work")
+    internal.currentSession = { id: "ses_worktree" }
+
+    const desc = Object.getOwnPropertyDescriptor(process, "platform")
+    Object.defineProperty(process, "platform", { value: "win32", configurable: true })
+    try {
+      internal.handleEvent(
+        {
+          type: "indexing.status",
+          properties: {
+            status: {
+              state: "Complete",
+              message: "Done",
+              processedFiles: 10,
+              totalFiles: 10,
+              percent: 100,
+            },
+          },
+        },
+        "c:/repo/work",
+      )
+    } finally {
+      if (desc) Object.defineProperty(process, "platform", desc)
+    }
+
+    const msg = internal.cachedIndexingStatusMessage as { type?: string; status?: { state?: string } } | undefined
+    expect(msg?.type).toBe("indexingStatusLoaded")
+    expect(msg?.status?.state).toBe("Complete")
   })
 })

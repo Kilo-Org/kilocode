@@ -14,9 +14,10 @@ export interface CodeIndexConfig {
   lancedbVectorStoreDirectoryPlaceholder?: string
   modelId?: string
   modelDimension?: number
+  kiloOptions?: { apiKey: string; baseUrl?: string; organizationId?: string }
   openAiOptions?: { apiKey: string }
   ollamaOptions?: { baseUrl: string; modelId?: string }
-  openAiCompatibleOptions?: { baseUrl: string; apiKey: string }
+  openAiCompatibleOptions?: { baseUrl: string; apiKey?: string }
   geminiOptions?: { apiKey: string }
   mistralOptions?: { apiKey: string }
   vercelAiGatewayOptions?: { apiKey: string }
@@ -39,6 +40,9 @@ export type PreviousConfigSnapshot = {
   lancedbVectorStoreDirectory?: string
   modelId?: string
   modelDimension?: number
+  kiloApiKey?: string
+  kiloBaseUrl?: string
+  kiloOrganizationId?: string
   openAiKey?: string
   ollamaBaseUrl?: string
   openAiCompatibleBaseUrl?: string

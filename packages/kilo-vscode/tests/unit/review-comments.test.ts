@@ -6,8 +6,20 @@ import {
   getDirectory,
   getFilename,
   type ReviewComment,
-} from "../../webview-ui/agent-manager/review-comments"
+} from "../../webview-ui/diff-viewer/review-comments"
+import { markdownCommentBlocks } from "../../webview-ui/diff-viewer/markdown-comment-ranges"
+import {
+  buildFileAnnotations,
+  clearReviewComposer,
+  createReviewComposer,
+  reviewAnnotationSpeechKey,
+  reviewComposerDraft,
+  reviewComposerEdit,
+  reviewDraftSpeechKey,
+  reviewEditSpeechKey,
+} from "../../webview-ui/diff-viewer/review-annotations"
 import type { WorktreeFileDiff } from "../../webview-ui/src/types/messages"
+import { parseReview, partReview, reviewMetadata } from "../../src/shared/review-comments"
 
 function diff(file: string, before: string, after: string): WorktreeFileDiff {
   return { file, before, after, additions: 1, deletions: 0 }
@@ -158,6 +170,41 @@ describe("formatReviewCommentsMarkdown", () => {
   })
 })
 
+describe("review message metadata", () => {
+  const comments = [comment({ file: "src/a.ts", line: 5, comment: "Fix this", selectedText: "const a = 1" })]
+  const content = `${formatReviewCommentsMarkdown(comments)}\n\nPlease address this feedback.`
+  const review = { version: 1 as const, comments }
+
+  it("round-trips review comments and extracts the visible body", () => {
+    expect(partReview(reviewMetadata(review), content)).toEqual({
+      data: review,
+      body: "Please address this feedback.",
+    })
+  })
+
+  it("extracts an empty body from a review-only message", () => {
+    expect(partReview(reviewMetadata(review), formatReviewCommentsMarkdown(comments))?.body).toBe("")
+  })
+
+  it("rejects malformed review comments", () => {
+    expect(parseReview({ ...review, comments: [{ ...comments[0], line: 0 }] }, content)).toBeUndefined()
+    expect(parseReview({ ...review, comments: [{ ...comments[0], side: "context" }] }, content)).toBeUndefined()
+    expect(parseReview({ ...review, comments: [{ ...comments[0], file: "../secret" }] }, content)).toBeUndefined()
+    expect(parseReview({ ...review, comments: [{ ...comments[0], file: "/tmp/secret" }] }, content)).toBeUndefined()
+  })
+
+  it("rejects metadata that does not match the hidden text", () => {
+    expect(parseReview(review, `unrelated hidden text\n\n${content}`)).toBeUndefined()
+  })
+
+  it("rejects oversized aggregate metadata before formatting it", () => {
+    const oversized = Array.from({ length: 6 }, (_, index) =>
+      comment({ id: `comment-${index}`, selectedText: "x".repeat(200_000) }),
+    )
+    expect(parseReview({ version: 1, comments: oversized }, "irrelevant")).toBeUndefined()
+  })
+})
+
 // ── extractLines ────────────────────────────────────────────────────────────
 
 describe("extractLines", () => {
@@ -183,6 +230,189 @@ describe("extractLines", () => {
 
   it("handles empty content", () => {
     expect(extractLines("", 1, 1)).toBe("")
+  })
+})
+
+// ── markdownCommentBlocks ───────────────────────────────────────────────────
+
+describe("markdownCommentBlocks", () => {
+  it("keeps fenced code blocks as one selectable range", () => {
+    const result = markdownCommentBlocks("# Demo\n\n```ts\nconst value = 1\nconsole.log(value)\n```\n\nAfter")
+    expect(result).toContainEqual({ type: "block", start: 3, end: 6 })
+  })
+
+  it("maps table comments to rendered rows, not separator lines", () => {
+    const result = markdownCommentBlocks("| Area | Status |\n|---|---|\n| Tables | Pass |\n| Lists | Pass |")
+    expect(result).toEqual([
+      {
+        type: "table",
+        start: 1,
+        end: 4,
+        rows: [
+          { start: 1, end: 1 },
+          { start: 3, end: 3 },
+          { start: 4, end: 4 },
+        ],
+      },
+    ])
+  })
+
+  it("maps list comments to whole list items", () => {
+    const result = markdownCommentBlocks("- First\n  continued\n- [x] Second\n- Third")
+    expect(result).toEqual([
+      {
+        type: "list",
+        start: 1,
+        end: 4,
+        items: [
+          { start: 1, end: 2 },
+          { start: 3, end: 3 },
+          { start: 4, end: 4 },
+        ],
+      },
+    ])
+  })
+
+  it("keeps blockquotes and paragraphs as rendered blocks", () => {
+    const result = markdownCommentBlocks("> Quote\n> Continued\n\nParagraph line one\nparagraph line two")
+    expect(result).toEqual([
+      { type: "block", start: 1, end: 2 },
+      { type: "block", start: 4, end: 5 },
+    ])
+  })
+})
+
+// ── review annotation speech keys ───────────────────────────────────────────
+
+describe("review annotation speech keys", () => {
+  it("keeps draft keys scoped to the selected review location", () => {
+    expect(reviewDraftSpeechKey({ file: "src/a.ts", side: "additions", line: 4 })).toBe("draft:src/a.ts:additions:4:4")
+    expect(reviewDraftSpeechKey({ file: "src/a.ts", side: "deletions", line: 4, endLine: 8 })).toBe(
+      "draft:src/a.ts:deletions:4:8",
+    )
+  })
+
+  it("keeps edit keys scoped to the review comment id", () => {
+    expect(reviewEditSpeechKey("c-123")).toBe("edit:c-123")
+  })
+
+  it("only exposes annotation speech keys for active draft and edit composers", () => {
+    const current = comment({ file: "src/a.ts", line: 7 })
+    expect(
+      reviewAnnotationSpeechKey({
+        type: "draft",
+        comment: null,
+        file: "src/a.ts",
+        side: "additions",
+        line: 7,
+      }),
+    ).toBe("draft:src/a.ts:additions:7:7")
+    expect(
+      reviewAnnotationSpeechKey({
+        type: "comment",
+        comment: current,
+        file: current.file,
+        side: current.side,
+        line: current.line,
+        editing: true,
+      }),
+    ).toBe(`edit:${current.id}`)
+    expect(
+      reviewAnnotationSpeechKey({
+        type: "comment",
+        comment: current,
+        file: current.file,
+        side: current.side,
+        line: current.line,
+      }),
+    ).toBeUndefined()
+  })
+})
+
+// ── buildFileAnnotations composer metadata ─────────────────────────────────
+
+describe("buildFileAnnotations composer metadata", () => {
+  it("preserves unfinished draft text when an annotation is rebuilt", () => {
+    const draft = { file: "a.ts", side: "additions" as const, line: 2 }
+    const first = buildFileAnnotations("a.ts", [], null, draft, null, null)
+    if (!first.draftMeta) throw new Error("expected draft metadata")
+    first.draftMeta.text = "unfinished draft"
+
+    const next = buildFileAnnotations("a.ts", [], null, draft, first.draftMeta, first.editMeta)
+
+    expect(next.draftMeta).toBe(first.draftMeta)
+    expect(next.draftMeta?.text).toBe("unfinished draft")
+  })
+
+  it("creates fresh draft metadata when the anchor changes", () => {
+    const draft = { file: "a.ts", side: "additions" as const, line: 2 }
+    const first = buildFileAnnotations("a.ts", [], null, draft, null, null)
+    const next = buildFileAnnotations("a.ts", [], null, { ...draft, line: 3 }, first.draftMeta, first.editMeta)
+
+    expect(next.draftMeta).not.toBe(first.draftMeta)
+  })
+
+  it("preserves unfinished edits when an annotation is rebuilt", () => {
+    const current = comment({ file: "a.ts", line: 2 })
+    const first = buildFileAnnotations("a.ts", [current], current.id, null, null, null)
+    if (!first.editMeta) throw new Error("expected edit metadata")
+    first.editMeta.text = "unfinished edit"
+
+    const next = buildFileAnnotations("a.ts", [current], current.id, null, first.draftMeta, first.editMeta)
+
+    expect(next.editMeta).toBe(first.editMeta)
+    expect(next.editMeta?.text).toBe("unfinished edit")
+  })
+
+  it("creates fresh edit metadata when the edited comment changes", () => {
+    const firstComment = comment({ file: "a.ts", line: 2 })
+    const secondComment = comment({ file: "a.ts", line: 3 })
+    const first = buildFileAnnotations("a.ts", [firstComment], firstComment.id, null, null, null)
+    const next = buildFileAnnotations("a.ts", [secondComment], secondComment.id, null, first.draftMeta, first.editMeta)
+
+    expect(next.editMeta).not.toBe(first.editMeta)
+  })
+
+  it("drops unfinished edit metadata after edit mode ends", () => {
+    const current = comment({ file: "a.ts", line: 2 })
+    const first = buildFileAnnotations("a.ts", [current], current.id, null, null, null)
+    const next = buildFileAnnotations("a.ts", [current], null, null, first.draftMeta, first.editMeta)
+
+    expect(next.editMeta).toBeNull()
+  })
+
+  it("hands draft and edit composers between review surfaces", () => {
+    const current = comment({ file: "a.ts", line: 2 })
+    const composer = createReviewComposer()
+    const draft = { file: "a.ts", side: "additions" as const, line: 3 }
+    const first = buildFileAnnotations("a.ts", [current], current.id, draft, null, null)
+    if (!first.draftMeta || !first.editMeta) throw new Error("expected composer metadata")
+    first.draftMeta.text = "unfinished draft"
+    first.editMeta.text = "unfinished edit"
+    composer.draft = first.draftMeta
+    composer.edit = first.editMeta
+
+    expect(reviewComposerDraft(composer)).toEqual(draft)
+    expect(reviewComposerEdit(composer)).toBe(current.id)
+    expect(composer.draft.text).toBe("unfinished draft")
+    expect(composer.edit.text).toBe("unfinished edit")
+  })
+
+  it("clears handed-off composers when the review context changes", () => {
+    const composer = createReviewComposer()
+    composer.draft = { type: "draft", comment: null, file: "a.ts", side: "additions", line: 2 }
+    composer.edit = {
+      type: "comment",
+      comment: comment({ file: "a.ts", line: 2 }),
+      file: "a.ts",
+      side: "additions",
+      line: 2,
+    }
+
+    clearReviewComposer(composer)
+
+    expect(reviewComposerDraft(composer)).toBeNull()
+    expect(reviewComposerEdit(composer)).toBeNull()
   })
 })
 

@@ -100,6 +100,18 @@ export const dict = {
   "ui.textField.copied": "Kopirano",
 
   "ui.imagePreview.alt": "Pregled slike",
+  // kilocode_change start
+  "ui.mermaid.rendering": "Renderovanje Mermaid dijagrama...",
+  "ui.mermaid.renderError": "Renderovanje Mermaid dijagrama nije uspjelo: {{message}}",
+  "ui.mermaid.errorDefault": "Nije moguće renderovati Mermaid dijagram.",
+  "ui.mermaid.errorEmpty": "Mermaid je renderovao prazan dijagram.",
+  "ui.mermaid.download": "Preuzmi",
+  "ui.mermaid.copySource": "Kopiraj Mermaid izvor",
+  "ui.mermaid.copySvg": "Kopiraj SVG",
+  "ui.mermaid.copyPng": "Kopiraj PNG",
+  "ui.mermaid.downloadSvg": "Preuzmi SVG",
+  "ui.mermaid.downloadPng": "Preuzmi PNG",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "sadržaj za pomjeranje",
 
   "ui.tool.read": "Čitanje",

@@ -1,21 +1,27 @@
 /**
- * Pure data-transform helpers that strip heavy tool metadata from
- * message parts before sending them to the webview via postMessage.
+ * Pure data-transform helpers that strip heavy message metadata before
+ * sending transcripts to the webview via postMessage.
  *
  * The webview communicates with the extension over VS Code's IPC bridge.
- * Every message is JSON-serialised → deserialised on each side.  Tool parts
+ * Every message is JSON-serialised → deserialised on each side. Tool parts
  * from edit, apply_patch, multiedit and write often carry full file contents
- * (before/after snapshots, patch text, written content).  Sending those on
- * every session switch makes serialisation the dominant bottleneck.
+ * (before/after snapshots, patch text, written content). User message summaries
+ * and reasoning parts can also carry patches and encrypted provider metadata
+ * that the webview does not use. Sending those on every session switch makes
+ * serialisation the dominant bottleneck.
  *
  * This module strips fields the webview never (or rarely) needs while keeping
- * everything required to render collapsed tool-part headers and diagnostics.
+ * everything required to render transcript summaries, tool details and
+ * diagnostics. It transforms outgoing webview copies only: backend session
+ * storage remains the source of truth for continuation, caching, forks and
+ * exports.
  *
  * No vscode dependency — safe to unit-test in isolation.
  */
 
 // Max chars to keep for truncated output fields (bash metadata.output etc.)
 const OUTPUT_CAP = 4000
+const PATCH_CAP = 64_000
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -32,11 +38,22 @@ function cap(v: unknown, limit = OUTPUT_CAP): string | undefined {
   return v.slice(0, limit) + `\n… (truncated, ${v.length - limit} chars omitted)`
 }
 
+function patch(v: unknown): string | undefined {
+  if (typeof v !== "string") return undefined
+  if (v.length > PATCH_CAP) return undefined
+  return v
+}
+
+function withPatch(v: unknown): { patch: string } | {} {
+  const kept = patch(v)
+  return kept ? { patch: kept } : {}
+}
+
 // ---------------------------------------------------------------------------
 // Per-tool slimmers
 // ---------------------------------------------------------------------------
 
-/** edit: strip filediff.before/after (webview falls back to input.oldString/newString). */
+/** edit: strip filediff.before/after while preserving bounded patches for inline diffs. */
 function slimEdit(state: Record<string, unknown>): Record<string, unknown> {
   const next = { ...state }
   const meta = state.metadata
@@ -50,6 +67,7 @@ function slimEdit(state: Record<string, unknown>): Record<string, unknown> {
   if (isObj(fd)) {
     result.filediff = {
       ...(typeof fd.file === "string" ? { file: fd.file } : {}),
+      ...withPatch(fd.patch),
       additions: typeof fd.additions === "number" ? fd.additions : 0,
       deletions: typeof fd.deletions === "number" ? fd.deletions : 0,
     }
@@ -59,7 +77,7 @@ function slimEdit(state: Record<string, unknown>): Record<string, unknown> {
   return next
 }
 
-/** apply_patch: strip files[].before/after/diff, metadata.diff, + input.patchText. */
+/** apply_patch: strip full file contents and input patch text while preserving bounded rendered patches. */
 function slimPatch(state: Record<string, unknown>): Record<string, unknown> {
   const next = { ...state }
   const meta = state.metadata
@@ -67,14 +85,18 @@ function slimPatch(state: Record<string, unknown>): Record<string, unknown> {
     const slim: Record<string, unknown> = {}
     if (meta.diagnostics) slim.diagnostics = meta.diagnostics
     if (Array.isArray(meta.files)) {
-      slim.files = (meta.files as Record<string, unknown>[]).map((f) => ({
-        filePath: f.filePath,
-        relativePath: f.relativePath,
-        type: f.type,
-        additions: f.additions,
-        deletions: f.deletions,
-        movePath: f.movePath,
-      }))
+      slim.files = (meta.files as Record<string, unknown>[]).map((f) => {
+        const diff = patch(f.patch) ?? patch(f.diff)
+        return {
+          filePath: f.filePath,
+          relativePath: f.relativePath,
+          type: f.type,
+          ...withPatch(diff),
+          additions: f.additions,
+          deletions: f.deletions,
+          movePath: f.movePath,
+        }
+      })
     }
     next.metadata = slim
   }
@@ -101,6 +123,7 @@ function slimMultiedit(state: Record<string, unknown>): Record<string, unknown> 
         if (isObj(fd)) {
           rs.filediff = {
             ...(typeof fd.file === "string" ? { file: fd.file } : {}),
+            ...withPatch(fd.patch),
             additions: typeof fd.additions === "number" ? fd.additions : 0,
             deletions: typeof fd.deletions === "number" ? fd.deletions : 0,
           }
@@ -130,6 +153,7 @@ function slimWrite(state: Record<string, unknown>): Record<string, unknown> {
     if (isObj(fd)) {
       slim.filediff = {
         ...(typeof fd.file === "string" ? { file: fd.file } : {}),
+        ...withPatch(fd.patch),
         additions: typeof fd.additions === "number" ? fd.additions : 0,
         deletions: typeof fd.deletions === "number" ? fd.deletions : 0,
       }
@@ -162,6 +186,24 @@ function slimBash(state: Record<string, unknown>): Record<string, unknown> {
 // Public API
 // ---------------------------------------------------------------------------
 
+/** Strip patches used only by the explicit turn-diff fetch from message summaries. */
+export function slimInfo<T>(info: T): T {
+  if (!info || typeof info !== "object") return info
+
+  const obj = info as Record<string, unknown>
+  const summary = obj.summary
+  if (!isObj(summary) || !Array.isArray(summary.diffs)) return info
+  if (!summary.diffs.some((diff) => isObj(diff) && "patch" in diff)) return info
+
+  const diffs = summary.diffs.map((diff) => {
+    if (!isObj(diff) || !("patch" in diff)) return diff
+    const next = { ...diff }
+    delete next.patch
+    return next
+  })
+  return { ...obj, summary: { ...summary, diffs } } as T
+}
+
 const slimmers: Record<string, (state: Record<string, unknown>) => Record<string, unknown>> = {
   read: slimOutput,
   list: slimOutput,
@@ -174,11 +216,24 @@ const slimmers: Record<string, (state: Record<string, unknown>) => Record<string
   bash: slimBash,
 }
 
-/** Strip heavy metadata from a single tool part; pass-through for non-tool parts. */
+/** Strip provider metadata that the webview never reads from reasoning parts. */
+function slimReasoning<T>(part: T, obj: Record<string, unknown>): T {
+  const meta = obj.metadata
+  if (!isObj(meta)) return part
+  const openai = meta.openai
+  if (!isObj(openai) || !("reasoningEncryptedContent" in openai)) return part
+
+  const next = { ...openai }
+  delete next.reasoningEncryptedContent
+  return { ...obj, metadata: { ...meta, openai: next } } as T
+}
+
+/** Strip heavy metadata from a single transcript part. */
 export function slimPart<T>(part: T): T {
   if (!part || typeof part !== "object") return part
 
   const obj = part as Record<string, unknown>
+  if (obj.type === "reasoning") return slimReasoning(part, obj)
   if (obj.type !== "tool") return part
 
   const tool = obj.tool

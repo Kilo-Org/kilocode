@@ -5,18 +5,31 @@
  */
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import { StoryProviders } from "./StoryProviders"
-import { FileTree } from "../../agent-manager/FileTree"
+import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
+import { FileTree } from "../../diff-viewer/FileTree"
 import { DiffPanel } from "../../agent-manager/DiffPanel"
-import { FullScreenDiffView } from "../../agent-manager/FullScreenDiffView"
+import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
+import { ChatView } from "../components/chat/ChatView"
+import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
+import { SessionContext } from "../context/session"
+import { ServerContext } from "../context/server"
+import { WorktreeModeProvider } from "../context/worktree-mode"
+import { SidebarSearchMenu } from "../../agent-manager/SidebarSearchMenu"
+import { SidebarToggleButton } from "../../agent-manager/SidebarToggleButton"
+import type { SidebarSearchItem } from "../../agent-manager/sidebar-search"
+import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
+import { createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats, PRStatus } from "../types/messages"
+import type { ReviewComment } from "../../diff-viewer/review-comments"
 import "../../agent-manager/agent-manager.css"
 import "../../agent-manager/agent-manager-review.css"
+
+registerVscodeToolOverrides()
 
 // ---------------------------------------------------------------------------
 // Shared mock data
@@ -49,6 +62,60 @@ const mockDiffs: WorktreeFileDiff[] = [
   },
 ]
 
+const context = Array.from({ length: 36 }, (_, i) => `  const item${i} = values[${i}]\n`).join("")
+const foldedDiffs: WorktreeFileDiff[] = [
+  {
+    file: "src/components/chat/LongReview.ts",
+    status: "modified",
+    additions: 2,
+    deletions: 2,
+    before: `export function review(values: string[]) {\n  const title = "Draft"\n${context}  return title\n}\n`,
+    after: `export function review(values: string[]) {\n  const title = "Ready"\n${context}  return title.toUpperCase()\n}\n`,
+  },
+]
+
+const ROWS = 140
+function edited(seed: string): WorktreeFileDiff {
+  const before = Array.from({ length: ROWS }, (_, i) => `const row${i} = "${seed}-old-${i}"\n`).join("")
+  const after = Array.from({ length: ROWS }, (_, i) => `const row${i} = "${seed}-new-${i}"\n`).join("")
+  const patch = [
+    "diff --git a/src/agent-edit.ts b/src/agent-edit.ts",
+    "--- a/src/agent-edit.ts",
+    "+++ b/src/agent-edit.ts",
+    `@@ -1,${ROWS} +1,${ROWS} @@`,
+    ...before
+      .trimEnd()
+      .split("\n")
+      .map((line) => `-${line}`),
+    ...after
+      .trimEnd()
+      .split("\n")
+      .map((line) => `+${line}`),
+    "",
+  ].join("\n")
+
+  return {
+    file: "src/agent-edit.ts",
+    status: "modified",
+    additions: ROWS,
+    deletions: ROWS,
+    before,
+    after,
+    patch,
+  }
+}
+
+const tail: WorktreeFileDiff = {
+  file: "src/target.ts",
+  status: "modified",
+  additions: 1,
+  deletions: 1,
+  before: "const target = 'before'\n",
+  after: "const target = 'after'\n",
+  patch:
+    "diff --git a/src/target.ts b/src/target.ts\n--- a/src/target.ts\n+++ b/src/target.ts\n@@ -1 +1 @@\n-const target = 'before'\n+const target = 'after'\n",
+}
+
 // ---------------------------------------------------------------------------
 // Meta
 // ---------------------------------------------------------------------------
@@ -59,6 +126,139 @@ const meta: Meta = {
 }
 export default meta
 type Story = StoryObj
+
+// ---------------------------------------------------------------------------
+// Wide chat layout
+// ---------------------------------------------------------------------------
+
+const chatSessionID = "story-agent-manager-chat"
+const chatUserID = "story-agent-manager-user"
+const chatAssistantID = "story-agent-manager-assistant"
+const chatTime = 1_718_000_000_000
+const chatDiff = {
+  file: "webview-ui/src/styles/chat-layout.css",
+  status: "modified" as const,
+  additions: 12,
+  deletions: 4,
+  before: ".chat-view {\n  display: flex;\n}\n",
+  after: ".chat-view {\n  display: flex;\n  container: chat / inline-size;\n}\n",
+}
+const chatMessages = [
+  {
+    id: chatUserID,
+    sessionID: chatSessionID,
+    role: "user",
+    createdAt: new Date(chatTime).toISOString(),
+    time: { created: chatTime },
+    summary: { diffs: [chatDiff] },
+  },
+  {
+    id: chatAssistantID,
+    sessionID: chatSessionID,
+    role: "assistant",
+    parentID: chatUserID,
+    createdAt: new Date(chatTime + 1000).toISOString(),
+    time: { created: chatTime + 1000, completed: chatTime + 5000 },
+    modelID: "anthropic/claude-sonnet-4-6",
+    providerID: "kilo",
+    mode: "default",
+    agent: "code",
+    path: { cwd: "/project", root: "/project" },
+  },
+]
+const chatParts = {
+  [chatUserID]: [
+    {
+      id: "story-agent-manager-user-text",
+      sessionID: chatSessionID,
+      messageID: chatUserID,
+      type: "text",
+      text: "Make the full-screen Agent Manager conversation easier to scan without squeezing tool output or diffs.",
+    },
+  ],
+  [chatAssistantID]: [
+    {
+      id: "story-agent-manager-assistant-text",
+      sessionID: chatSessionID,
+      messageID: chatAssistantID,
+      type: "text",
+      text: "The transcript now follows a centered 78 character reading lane. Long explanations share one consistent left edge, so the eye can move between turns without crossing the entire editor.\n\nTool output and the composer use the same lane, keeping every conversation element aligned.",
+    },
+    {
+      id: "story-agent-manager-bash",
+      sessionID: chatSessionID,
+      messageID: chatAssistantID,
+      type: "tool",
+      callID: "story-agent-manager-bash-call",
+      tool: "bash",
+      state: {
+        status: "completed",
+        input: { command: "bun run test:unit", description: "Run focused Agent Manager tests" },
+        output: "18 tests passed\n0 tests failed",
+        title: "Run focused Agent Manager tests",
+        metadata: {},
+        time: { start: chatTime + 2000, end: chatTime + 4000 },
+      },
+    },
+  ],
+}
+const chatData = {
+  ...defaultMockData,
+  message: { [chatSessionID]: chatMessages },
+  part: chatParts,
+}
+const chatServer = {
+  connectionState: () => "connected" as const,
+  serverInfo: () => undefined,
+  extensionVersion: () => "1.0.0",
+  errorMessage: () => undefined,
+  errorDetails: () => undefined,
+  isConnected: () => true,
+  profileData: () => null,
+  deviceAuth: () => ({ status: "idle" as const }),
+  startLogin: () => undefined,
+  goToLogin: () => undefined,
+  vscodeLanguage: () => "en",
+  languageOverride: () => undefined,
+  workspaceDirectory: () => "/project",
+  gitInstalled: () => true,
+}
+
+function renderChat() {
+  const session = {
+    ...mockSessionValue({ id: chatSessionID, status: "idle", closeReason: "completed" }),
+    messages: () => chatMessages,
+    visibleMessages: () => chatMessages,
+    userMessages: () => chatMessages.filter((message) => message.role === "user"),
+    getParts: (id: string) => chatParts[id as keyof typeof chatParts] ?? [],
+    worktreeStats: () => ({ files: 3, additions: 32, deletions: 8 }),
+  }
+  return (
+    <StoryProviders data={chatData} sessionID={chatSessionID} status="idle" noPadding>
+      <ServerContext.Provider value={chatServer}>
+        <SessionContext.Provider value={session as any}>
+          <WorktreeModeProvider>
+            <div class="am-chat-wrapper" style={{ height: "100vh" }}>
+              <ChatView onForkSession={() => undefined} />
+            </div>
+          </WorktreeModeProvider>
+        </SessionContext.Provider>
+      </ServerContext.Provider>
+    </StoryProviders>
+  )
+}
+
+export const ReadableChat1280: Story = {
+  name: "Chat - readable wide editor",
+  parameters: { layout: "fullscreen" },
+  render: renderChat,
+}
+
+export const ReadableChat420: Story = {
+  name: "Chat - constrained editor",
+  parameters: { layout: "fullscreen" },
+  render: renderChat,
+}
 
 // ---------------------------------------------------------------------------
 // FileTree
@@ -110,6 +310,75 @@ export const DiffPanelWithDiffs: Story = {
   ),
 }
 
+const buttonFixtureStyle: JSX.CSSProperties = {
+  display: "inline-flex",
+  "align-items": "center",
+  gap: "10px",
+  padding: "8px",
+  background: "var(--surface-base)",
+  border: "1px solid var(--border-weak-base)",
+  "border-radius": "6px",
+}
+
+const buttonFixtureLabelStyle: JSX.CSSProperties = {
+  color: "var(--text-weak)",
+  "font-size": "var(--font-size-small)",
+}
+
+export const InlineDiffBulkActionExpandAllButton: Story = {
+  name: "Inline Diff — expand all button",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={buttonFixtureStyle}>
+        <span style={buttonFixtureLabelStyle}>Inline diff action</span>
+        <IconButton icon="files-expand" size="small" variant="ghost" label="Expand All" />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const InlineDiffBulkActionCollapseAllButton: Story = {
+  name: "Inline Diff — collapse all button",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={buttonFixtureStyle}>
+        <span style={buttonFixtureLabelStyle}>Inline diff action</span>
+        <IconButton icon="files-collapse" size="small" variant="ghost" label="Collapse All" />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const FullScreenDiffBulkActionExpandAllButton: Story = {
+  name: "Full-screen Diff — expand all button",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={buttonFixtureStyle}>
+        <span style={buttonFixtureLabelStyle}>Full-screen diff action</span>
+        <Button size="small" variant="ghost">
+          <Icon name="chevron-grabber-vertical" size="small" />
+          Expand All
+        </Button>
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const FullScreenDiffBulkActionCollapseAllButton: Story = {
+  name: "Full-screen Diff — collapse all button",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={buttonFixtureStyle}>
+        <span style={buttonFixtureLabelStyle}>Full-screen diff action</span>
+        <Button size="small" variant="ghost">
+          <Icon name="chevron-grabber-vertical" size="small" />
+          Collapse All
+        </Button>
+      </div>
+    </StoryProviders>
+  ),
+}
+
 // ---------------------------------------------------------------------------
 // FullScreenDiffView
 // ---------------------------------------------------------------------------
@@ -131,6 +400,71 @@ export const FullScreenDiffWithChanges: Story = {
       </div>
     </StoryProviders>
   ),
+}
+
+export const FullScreenDiffWithCollapsedContext: Story = {
+  name: "FullScreenDiffView - collapsed unchanged context",
+  render: () => (
+    <StoryProviders>
+      <div style={{ width: "420px", height: "700px", display: "flex" }}>
+        <FullScreenDiffView
+          diffs={foldedDiffs}
+          loading={false}
+          diffStyle="unified"
+          onDiffStyleChange={() => {}}
+          comments={[]}
+          onCommentsChange={() => {}}
+          onClose={() => {}}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const FullScreenDiffAgentEditScroll: Story = {
+  name: "FullScreenDiffView - preserve scroll during agent edit",
+  render: () => {
+    const [diffs, setDiffs] = createSignal([edited("before"), tail])
+    const [version, setVersion] = createSignal("before")
+    const [key, setKey] = createSignal("agent-edit-scroll")
+    const [comments, setComments] = createSignal<ReviewComment[]>([])
+    const update = () => {
+      setDiffs([edited("after"), tail])
+      setVersion("after")
+    }
+    const change = () => {
+      setDiffs([edited("context"), tail])
+      setKey("changed-context")
+    }
+    return (
+      <StoryProviders noPadding>
+        <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
+          <div style={{ display: "flex", gap: "8px", padding: "4px", "align-items": "center" }}>
+            <Button size="small" onClick={update}>
+              Apply agent edit
+            </Button>
+            <Button size="small" onClick={change}>
+              Switch review context
+            </Button>
+            <span data-testid="agent-edit-version">{version()}</span>
+            <span data-testid="review-context">{key()}</span>
+          </div>
+          <div style={{ display: "flex", "min-height": "0", flex: "1" }}>
+            <FullScreenDiffView
+              diffs={diffs()}
+              loading={false}
+              sessionKey={key()}
+              diffStyle="unified"
+              onDiffStyleChange={() => {}}
+              comments={comments()}
+              onCommentsChange={setComments}
+              onClose={() => {}}
+            />
+          </div>
+        </div>
+      </StoryProviders>
+    )
+  },
 }
 
 // ---------------------------------------------------------------------------
@@ -465,7 +799,7 @@ const MockTab = (props: { title: string; active?: boolean }) => (
         <TooltipKeybind title={props.title} keybind="⌘1" placement="bottom" inactive={props.active}>
           <div class={`am-tab ${props.active ? "am-tab-active" : ""}`}>
             <span class="am-tab-label">{props.title}</span>
-            <TooltipKeybind title="Close" keybind="⌘W" placement="bottom">
+            <TooltipKeybind title="Close" keybind="⌘W" placement="bottom" class="am-tab-close-wrap">
               <IconButton icon="close-small" size="small" variant="ghost" label="Close" class="am-tab-close" />
             </TooltipKeybind>
           </div>
@@ -480,13 +814,32 @@ const MockReviewTab = (props: { active?: boolean }) => (
   <div class="am-tab-sortable">
     <TooltipKeybind title="Toggle review" keybind="⌘⇧R" placement="bottom" inactive={props.active}>
       <div class={`am-tab am-tab-review ${props.active ? "am-tab-active" : ""}`}>
-        <Icon name="layers" size="small" />
+        <span class="am-tab-icon">
+          <Icon name="layers" size="small" />
+        </span>
         <span class="am-tab-label">Review</span>
-        <TooltipKeybind title="Close" keybind="⌘W" placement="bottom">
+        <TooltipKeybind title="Close" keybind="⌘W" placement="bottom" class="am-tab-close-wrap">
           <IconButton icon="close-small" size="small" variant="ghost" label="Close" class="am-tab-close" />
         </TooltipKeybind>
       </div>
     </TooltipKeybind>
+  </div>
+)
+
+const MockTabLeading = () => (
+  <div class="am-tab-leading">
+    <SidebarToggleButton collapsed={false} onClick={() => {}} />
+  </div>
+)
+
+const MockTabAdd = () => (
+  <div class="am-tab-add-wrap">
+    <div class="am-tab-add-separator" />
+    <div class="am-split-button am-tab-add-split">
+      <TooltipKeybind title="New session" keybind="⌘T" placement="bottom">
+        <IconButton icon="plus" size="small" variant="ghost" label="New session" class="am-tab-add" />
+      </TooltipKeybind>
+    </div>
   </div>
 )
 
@@ -495,16 +848,17 @@ export const TabBarMultipleTabs: Story = {
   render: () => (
     <StoryProviders noPadding>
       <div class="am-tab-bar">
+        <MockTabLeading />
         <div class="am-tab-scroll-area">
-          <div class="am-tab-list">
-            <MockTab title="Implement auth" active />
-            <MockTab title="Fix button styles" />
-            <MockTab title="Add unit tests" />
+          <div class="am-tab-list-wrap">
+            <div class="am-tab-list" style={{ "--tab-count": "3" } as JSX.CSSProperties}>
+              <MockTab title="Implement auth" active />
+              <MockTab title="Fix button styles" />
+              <MockTab title="Add unit tests" />
+            </div>
           </div>
         </div>
-        <TooltipKeybind title="New session" keybind="⌘T" placement="bottom">
-          <IconButton icon="plus" size="small" variant="ghost" label="New session" class="am-tab-add" />
-        </TooltipKeybind>
+        <MockTabAdd />
         <div class="am-tab-actions">
           <button class="am-diff-toggle-btn am-diff-toggle-has-changes">
             <Icon name="layers" size="small" />
@@ -526,15 +880,16 @@ export const TabBarWithReviewTab: Story = {
   render: () => (
     <StoryProviders noPadding>
       <div class="am-tab-bar">
+        <MockTabLeading />
         <div class="am-tab-scroll-area">
-          <div class="am-tab-list">
-            <MockTab title="Implement auth" />
-            <MockReviewTab active />
+          <div class="am-tab-list-wrap">
+            <div class="am-tab-list" style={{ "--tab-count": "2" } as JSX.CSSProperties}>
+              <MockTab title="Implement auth" />
+              <MockReviewTab active />
+            </div>
           </div>
         </div>
-        <TooltipKeybind title="New session" keybind="⌘T" placement="bottom">
-          <IconButton icon="plus" size="small" variant="ghost" label="New session" class="am-tab-add" />
-        </TooltipKeybind>
+        <MockTabAdd />
         <div class="am-tab-actions">
           <IconButton icon="expand" size="small" variant="ghost" label="Review" class="am-tab-diff-btn-active" />
           <IconButton icon="console" size="small" variant="ghost" label="Terminal" />
@@ -549,14 +904,15 @@ export const TabBarSingleTab: Story = {
   render: () => (
     <StoryProviders noPadding>
       <div class="am-tab-bar">
+        <MockTabLeading />
         <div class="am-tab-scroll-area">
-          <div class="am-tab-list">
-            <MockTab title="PR #6966 worktree checkout" active />
+          <div class="am-tab-list-wrap">
+            <div class="am-tab-list" style={{ "--tab-count": "1" } as JSX.CSSProperties}>
+              <MockTab title="PR #6966 worktree checkout" active />
+            </div>
           </div>
         </div>
-        <TooltipKeybind title="New session" keybind="⌘T" placement="bottom">
-          <IconButton icon="plus" size="small" variant="ghost" label="New session" class="am-tab-add" />
-        </TooltipKeybind>
+        <MockTabAdd />
         <div class="am-tab-actions">
           <button class="am-diff-toggle-btn am-diff-toggle-has-changes">
             <Icon name="layers" size="small" />
@@ -571,4 +927,122 @@ export const TabBarSingleTab: Story = {
       </div>
     </StoryProviders>
   ),
+}
+
+const searchSection = { id: "polish", name: "Polish", color: "Blue", order: 0, collapsed: false }
+const slackedSection = { id: "slacked", name: "SLACKED", color: "Yellow", order: 1, collapsed: false }
+const sidebarSearchItems: SidebarSearchItem[] = [
+  {
+    key: "session:session-build",
+    kind: "session",
+    group: "sessions",
+    title: "Build grouped worktree search",
+    meta: ["Polish", "Agent Manager search", "feat/sidebar-search"],
+    search: "Build grouped worktree search Agent Manager search feat/sidebar-search Polish",
+    sessionId: "session-build",
+    location: "worktree",
+    worktreeId: "wt-search",
+    updatedAt: new Date(Date.now() - 3 * 60_000).toISOString(),
+    state: "busy",
+    visible: true,
+    section: searchSection,
+  },
+  {
+    key: "session:session-local",
+    kind: "session",
+    group: "sessions",
+    title: "Investigate local indexing",
+    meta: ["local"],
+    search: "Investigate local indexing local",
+    sessionId: "session-local",
+    location: "local",
+    updatedAt: new Date(Date.now() - 8 * 60_000).toISOString(),
+    state: "idle",
+    visible: true,
+  },
+  {
+    key: "session:session-render",
+    kind: "session",
+    group: "sessions",
+    title: "Render images in diff viewer",
+    meta: ["SLACKED", "images diff viewer", "utopian-approval"],
+    search: "Render images in diff viewer SLACKED images diff viewer utopian-approval",
+    sessionId: "session-render",
+    location: "worktree",
+    worktreeId: "wt-render",
+    updatedAt: new Date(Date.now() - 60 * 60_000).toISOString(),
+    state: "idle",
+    visible: true,
+    section: slackedSection,
+  },
+  {
+    key: "local",
+    kind: "local",
+    group: "contexts",
+    title: "local",
+    meta: ["main"],
+    search: "local main",
+    updatedAt: new Date(Date.now() - 3 * 60_000).toISOString(),
+    state: "idle",
+    visible: true,
+    count: 2,
+  },
+  {
+    key: "worktree:wt-search",
+    kind: "worktree",
+    group: "contexts",
+    title: "Agent Manager search",
+    meta: ["Polish", "feat/sidebar-search"],
+    search: "Agent Manager search Polish feat/sidebar-search",
+    worktreeId: "wt-search",
+    updatedAt: new Date(Date.now() - 3 * 60_000).toISOString(),
+    state: "busy",
+    visible: true,
+    section: searchSection,
+    count: 2,
+  },
+]
+
+export const SidebarSearchOpen: Story = {
+  name: "Sidebar search — worktrees and sessions",
+  render: () => {
+    const [selected, setSelected] = createSignal("worktree:wt-search")
+    let prompt!: HTMLTextAreaElement
+    const refocus = () => requestAnimationFrame(() => prompt.focus())
+    onMount(() => {
+      window.addEventListener("focusPrompt", refocus)
+      onCleanup(() => window.removeEventListener("focusPrompt", refocus))
+    })
+    return (
+      <StoryProviders noPadding>
+        <div style={{ "min-height": "430px", padding: "16px", background: "var(--surface-base)" }}>
+          <div class="am-section-header">
+            <span class="am-section-label">WORKTREES</span>
+            <div class="am-section-actions">
+              <SidebarSearchMenu
+                items={() => sidebarSearchItems}
+                keybind="⌘F"
+                current={() => sidebarSearchItems.find((item) => item.key === selected())}
+                labels={{
+                  search: "Search worktrees and sessions",
+                  scope: "Searches the local workspace, local sessions, worktrees, and their sessions",
+                  contexts: "LOCAL & WORKTREES",
+                  sessions: "SESSIONS",
+                  waiting: "Wait",
+                  retry: "Retry",
+                }}
+                onSelect={(item) => setSelected(item.key)}
+                defaultOpen
+                portal={false}
+              />
+            </div>
+          </div>
+          <output class="sr-only" data-slot="sidebar-search-selection">
+            {selected()}
+          </output>
+          <textarea ref={prompt} class="sr-only" aria-label="Story prompt" />
+        </div>
+      </StoryProviders>
+    )
+  },
 }

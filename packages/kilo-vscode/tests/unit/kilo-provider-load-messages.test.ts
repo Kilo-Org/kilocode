@@ -1,4 +1,5 @@
 import { describe, it, expect } from "bun:test"
+import type { PartUpdate } from "../../src/shared/stream-messages"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider } = await import("../../src/KiloProvider")
@@ -41,13 +42,20 @@ function createClient(options?: {
   messagesDeferred?: Deferred<{ data: unknown[]; response: { headers: Headers } }>
   messagesData?: unknown[]
   deleteDeferred?: Deferred<unknown>
+  sessionData?: unknown
+  sessionGet?: (params: { sessionID: string; directory?: string }) => Promise<{ data: unknown }>
 }) {
   const calls: { before?: string; limit?: number }[] = []
+  const stopped: { sessionID: string; directory?: string }[] = []
   return {
     calls,
+    stopped,
     session: {
       list: async () => ({ data: [] }),
-      get: async () => ({ data: null }),
+      get: async (params: { sessionID: string; directory?: string }) => {
+        if (options?.sessionGet) return options.sessionGet(params)
+        return { data: options?.sessionData ?? null }
+      },
       status: async () => ({ data: {} }),
       messages: async (params: { before?: string; limit?: number }) => {
         calls.push({ before: params.before, limit: params.limit })
@@ -56,6 +64,12 @@ function createClient(options?: {
       },
       delete: async () => {
         if (options?.deleteDeferred) return options.deleteDeferred.promise
+        return { data: {} }
+      },
+    },
+    backgroundProcess: {
+      stopSession: async (params: { sessionID: string; directory?: string }) => {
+        stopped.push(params)
         return { data: {} }
       },
     },
@@ -85,6 +99,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
     registerDirectoryProvider: () => () => undefined,
     getServerInfo: () => ({ port: 12345 }),
     getConnectionState: () => "connected" as const,
+    getConnectionError: () => null,
     resolveEventSessionId: () => undefined,
     recordMessageSessionId: () => undefined,
     notifyNotificationDismissed: () => undefined,
@@ -97,7 +112,13 @@ function createConnection(client: ReturnType<typeof createClient>) {
 type ProviderInternals = {
   connectionState: State
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
+  currentSession: { id: string; directory?: string } | null
+  contextSessionID: string | undefined
+  sessionDirectories: Map<string, string>
   trackedSessionIds: Set<string>
+  streams: { push: (msg: PartUpdate) => void }
+  stopCurrentSessionProcesses: (next?: string) => void
+  handleEvent: (event: unknown) => void
   handleLoadMessages: (sid: string, opts?: { mode?: string; before?: string; limit?: number }) => Promise<void>
   handleDeleteSession: (sid: string) => Promise<void>
 }
@@ -117,6 +138,90 @@ function makeProvider(client: ReturnType<typeof createClient>) {
 }
 
 describe("KiloProvider.handleLoadMessages / focus mode freshness", () => {
+  it("stops background processes for the previous session when switching sessions", async () => {
+    const client = createClient({
+      sessionData: { id: "s2", directory: "/repo/worktree", time: { created: 1, updated: 1 } },
+    })
+    const { internal } = makeProvider(client)
+    internal.currentSession = { id: "s1", directory: "/repo/old" }
+
+    await internal.handleLoadMessages("s2")
+
+    expect(client.stopped).toEqual([{ sessionID: "s1", directory: "/repo/old" }])
+  })
+
+  it("does not stop background processes twice for focus-mode reconcile", async () => {
+    const client = createClient({ messagesData: [mkMessage("m1", "user", 1)] })
+    const { internal } = makeProvider(client)
+    internal.currentSession = { id: "s1", directory: "/repo/old" }
+
+    await internal.handleLoadMessages("s2", { mode: "focus" })
+
+    expect(client.stopped).toEqual([{ sessionID: "s1", directory: "/repo/old" }])
+  })
+
+  it("ignores stale focus refreshes after switching sessions", async () => {
+    const s1 = defer<{ data: unknown }>()
+    const s2 = defer<{ data: unknown }>()
+    const client = createClient({
+      sessionGet: async (params) => {
+        if (params.sessionID === "s1") return s1.promise
+        if (params.sessionID === "s2") return s2.promise
+        return { data: null }
+      },
+    })
+    const { internal } = makeProvider(client)
+    internal.currentSession = { id: "s1", directory: "/repo/old" }
+    internal.trackedSessionIds.add("s1")
+
+    await internal.handleLoadMessages("s1", { mode: "focus" })
+    const load = internal.handleLoadMessages("s2")
+    s2.resolve({ data: { id: "s2", directory: "/repo/new", time: { created: 2, updated: 2 } } })
+    await load
+    await Promise.resolve()
+    expect(internal.currentSession?.id).toBe("s2")
+
+    s1.resolve({ data: { id: "s1", directory: "/repo/old", time: { created: 1, updated: 1 } } })
+    await Promise.resolve()
+
+    expect(internal.currentSession?.id).toBe("s2")
+    expect(client.stopped).toEqual([{ sessionID: "s1", directory: "/repo/old" }])
+  })
+
+  it("stops each synchronously selected session during rapid switches", async () => {
+    const messages = defer<{ data: unknown[]; response: { headers: Headers } }>()
+    const client = createClient({ messagesDeferred: messages })
+    const { internal } = makeProvider(client)
+    internal.currentSession = { id: "s1", directory: "/repo/s1" }
+    internal.contextSessionID = "s1"
+    internal.sessionDirectories.set("s2", "/repo/s2")
+
+    const s2 = internal.handleLoadMessages("s2")
+    const s3 = internal.handleLoadMessages("s3")
+
+    expect(client.stopped).toEqual([
+      { sessionID: "s1", directory: "/repo/s1" },
+      { sessionID: "s2", directory: "/repo/s2" },
+    ])
+
+    messages.resolve(mkResult([]))
+    await Promise.all([s2, s3])
+  })
+
+  it("stops the selected visible session when clearSession runs with stale currentSession", async () => {
+    const client = createClient()
+    const { internal } = makeProvider(client)
+    internal.currentSession = { id: "s1", directory: "/repo/s1" }
+    internal.contextSessionID = "s2"
+    internal.sessionDirectories.set("s2", "/repo/s2")
+
+    internal.stopCurrentSessionProcesses()
+    internal.contextSessionID = undefined
+    internal.currentSession = null
+
+    expect(client.stopped).toEqual([{ sessionID: "s2", directory: "/repo/s2" }])
+  })
+
   it("refetches the tail page on focus-mode reselection and posts a reconcile snapshot", async () => {
     // Regression: switching to an already-loaded session sent mode: "focus"
     // which only refreshed session metadata and status — not messages. If
@@ -143,9 +248,10 @@ describe("KiloProvider.handleLoadMessages / focus mode freshness", () => {
     // so the webview merges without tearing down existing reactive proxies.
     const loaded = sent.find(
       (msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "messagesLoaded",
-    ) as { mode?: string; messages: { id: string }[] } | undefined
+    ) as { mode?: string; since?: number; messages: { id: string }[] } | undefined
     expect(loaded).toBeDefined()
     expect(loaded!.mode).toBe("reconcile")
+    expect(typeof loaded!.since).toBe("number")
     expect(loaded!.messages.map((m) => m.id)).toContain("m3")
   })
 
@@ -183,33 +289,148 @@ describe("KiloProvider.handleLoadMessages / focus mode freshness", () => {
       (msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "messagesLoaded",
     )
     expect(loaded).toEqual([])
+    expect(client.stopped).toEqual([{ sessionID: "s1", directory: "/repo" }])
   })
 })
 
-describe("KiloProvider.loadMessages / sub-agent viewer full history", () => {
-  it("loads all messages without the MESSAGE_PAGE_LIMIT cap (sub-agent viewer needs full turn history)", async () => {
-    // Regression: SubAgentViewerProvider used to call client.session.messages
-    // with no limit, loading every turn. After switching to provider.loadMessages
-    // it inherited the 80-message page cap and sub-agents with more than 80
-    // turns would open truncated with no visible indicator. loadMessages() is
-    // the sub-agent viewer's single entry point — it must request the full
-    // transcript.
-    const big = Array.from({ length: 200 }, (_, i) => mkMessage(`m${i}`, i % 2 === 0 ? "user" : "assistant", i))
-    const client = createClient({ messagesData: big })
+describe("KiloProvider.handleDeleteSession / background processes", () => {
+  it("stops session background processes in the session directory before deletion", async () => {
+    const client = createClient()
+    const { internal } = makeProvider(client)
+    internal.sessionDirectories.set("s1", "/repo/worktree")
+
+    await internal.handleDeleteSession("s1")
+
+    expect(client.stopped).toEqual([{ sessionID: "s1", directory: "/repo/worktree" }])
+  })
+})
+
+describe("KiloProvider.handleLoadMessages / slim payload", () => {
+  it("strips transcript-only metadata before posting messages to the webview", async () => {
+    const user = mkMessage("m1", "user", 1)
+    const assistant = mkMessage("m2", "assistant", 2)
+    const client = createClient({
+      messagesData: [
+        {
+          ...user,
+          info: {
+            ...user.info,
+            summary: { diffs: [{ file: "a.ts", patch: "full patch", additions: 2, deletions: 1 }] },
+          },
+        },
+        {
+          ...assistant,
+          parts: [
+            {
+              type: "reasoning",
+              id: "r1",
+              text: "Considering options",
+              metadata: { openai: { reasoningEncryptedContent: "encrypted", itemId: "item-1" } },
+            },
+          ],
+        },
+      ],
+    })
     const { provider, sent } = makeProvider(client)
 
     await provider.loadMessages("s1")
 
     const loaded = sent.find(
       (msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "messagesLoaded",
-    ) as { messages: unknown[] } | undefined
-    expect(loaded).toBeDefined()
-    expect(loaded!.messages).toHaveLength(200)
+    ) as
+      | {
+          messages: Array<{
+            summary?: { diffs?: Array<Record<string, unknown>> }
+            parts: Array<{ metadata?: { openai?: Record<string, unknown> } }>
+          }>
+        }
+      | undefined
+    expect(loaded?.messages[0]?.summary?.diffs?.[0]).toEqual({ file: "a.ts", additions: 2, deletions: 1 })
+    expect(loaded?.messages[1]?.parts[0]?.metadata?.openai).toEqual({ itemId: "item-1" })
+  })
 
-    // Server contract: limit: 0 (or undefined) returns everything.
-    expect(client.calls).toHaveLength(1)
-    const limit = client.calls[0]?.limit
-    expect(limit === undefined || limit === 0).toBe(true)
+  it("strips summary patches from live message updates", () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+
+    internal.handleEvent({
+      type: "message.updated",
+      properties: {
+        info: {
+          id: "m1",
+          sessionID: "s1",
+          role: "user",
+          time: { created: 1 },
+          summary: { diffs: [{ file: "a.ts", patch: "full patch", additions: 2, deletions: 1 }] },
+        },
+      },
+    })
+
+    const created = sent.find(
+      (msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "messageCreated",
+    ) as { message?: { summary?: { diffs?: Array<Record<string, unknown>> } } } | undefined
+    expect(created?.message?.summary?.diffs?.[0]).toEqual({ file: "a.ts", additions: 2, deletions: 1 })
+  })
+})
+
+describe("KiloProvider.loadMessages / sub-agent viewer", () => {
+  it("uses the same paginated initial load as normal sessions", async () => {
+    const page = Array.from({ length: 80 }, (_, i) => mkMessage(`m${i}`, i % 2 === 0 ? "user" : "assistant", i))
+    const client = createClient({ messagesData: page })
+    const { provider, sent } = makeProvider(client)
+
+    await provider.loadMessages("s1")
+
+    const loaded = sent.find(
+      (msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "messagesLoaded",
+    ) as { messages: unknown[]; hasMore: boolean } | undefined
+    expect(loaded?.messages).toHaveLength(80)
+    expect(loaded?.hasMore).toBe(true)
+    expect(client.calls).toEqual([{ before: undefined, limit: 80 }])
+  })
+
+  it("delivers reasoning updates received during the initial snapshot after messagesLoaded", async () => {
+    const pending = defer<{ data: unknown[]; response: { headers: Headers } }>()
+    const client = createClient({ messagesDeferred: pending })
+    const { provider, internal, sent } = makeProvider(client)
+    const load = provider.loadMessages("s1")
+
+    internal.streams.push({
+      type: "partUpdated",
+      sessionID: "s1",
+      messageID: "m2",
+      part: {
+        id: "r1",
+        sessionID: "s1",
+        messageID: "m2",
+        type: "reasoning",
+        text: "Complete reasoning",
+      },
+    })
+    pending.resolve(
+      mkResult([
+        mkMessage("m1", "user", 1),
+        {
+          ...mkMessage("m2", "assistant", 2),
+          parts: [
+            {
+              id: "r1",
+              sessionID: "s1",
+              messageID: "m2",
+              type: "reasoning",
+              text: "",
+            },
+          ],
+        },
+      ]),
+    )
+    await load
+
+    const types = sent.map((msg) => (typeof msg === "object" && msg ? (msg as { type?: string }).type : undefined))
+    const snapshot = types.indexOf("messagesLoaded")
+    const update = types.findIndex((type) => type === "partUpdated" || type === "partsUpdated")
+    expect(snapshot).toBeGreaterThanOrEqual(0)
+    expect(update).toBeGreaterThan(snapshot)
   })
 })
 

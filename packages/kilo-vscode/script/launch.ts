@@ -14,6 +14,7 @@
  *   --wait            Block until the VS Code window is closed
  *   --clean           Wipe the user-data and extensions dirs before launching
  *   --preserve-settings  Merge defaults into existing VS Code user settings
+ *   --accessible      Enable VS Code accessibility support for assistive-technology testing
  *
  * Environment:
  *   VSCODE_EXEC_PATH  Path to VS Code executable (same as --app-path)
@@ -86,6 +87,7 @@ const explicit = opts["app-path"] as string | undefined
 const blocking = opts["wait"] === true
 const clean = opts["clean"] === true
 const preserve = opts["preserve-settings"] === true
+const accessible = opts["accessible"] === true
 
 // ---------------------------------------------------------------------------
 // VS Code executable detection
@@ -251,11 +253,12 @@ async function installVsix(path: string, app: string) {
 // Settings for isolated instance
 // ---------------------------------------------------------------------------
 
-function settings(keep: boolean) {
+function settings(keep: boolean, enabled: boolean) {
   const dir = join(userDir, "User")
   const file = join(dir, "settings.json")
   const defaults = {
-    "editor.accessibilitySupport": "off",
+    "chat.disableAIFeatures": true,
+    "editor.accessibilitySupport": enabled ? "on" : "off",
     "extensions.autoCheckUpdates": false,
     "extensions.autoUpdate": false,
     "extensions.ignoreRecommendations": true,
@@ -269,7 +272,10 @@ function settings(keep: boolean) {
   }
 
   mkdirSync(dir, { recursive: true })
-  const cfg = keep && existsSync(file) ? { ...defaults, ...load(file) } : defaults
+  const cfg =
+    keep && existsSync(file)
+      ? { ...defaults, ...load(file), ...(enabled ? { "editor.accessibilitySupport": "on" } : {}) }
+      : defaults
 
   writeFileSync(file, JSON.stringify(cfg, null, 2) + "\n")
 }
@@ -306,7 +312,7 @@ async function launch() {
 
   const app = detect()
 
-  settings(preserve)
+  settings(preserve, accessible)
 
   const args = [workspace, `--extensions-dir=${extDir}`, `--user-data-dir=${userDir}`, "--skip-release-notes"]
 
@@ -338,6 +344,7 @@ async function launch() {
   console.log(`[launch] Executable: ${app}`)
   console.log(`[launch] Workspace:  ${workspace}`)
   console.log(`[launch] State:      ${base}`)
+  console.log(`[launch] Accessibility support: ${accessible ? "on" : "off"}`)
 
   if (blocking) {
     const result = Bun.spawnSync([app, ...args], {

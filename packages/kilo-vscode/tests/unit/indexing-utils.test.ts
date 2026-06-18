@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test"
-import { formatIndexingLabel, indexingTone } from "../../webview-ui/src/context/indexing-utils"
+import {
+  applyIndexingStatusMessage,
+  formatIndexingLabel,
+  indexingTone,
+} from "../../webview-ui/src/context/indexing-utils"
 import { mapSSEEventToWebviewMessage } from "../../src/kilo-provider-utils"
 import { configFeatures } from "../../src/features"
 import type { EventIndexingStatus, IndexingStatus } from "@kilocode/sdk/v2/client"
@@ -81,42 +85,75 @@ describe("indexing SSE mapping", () => {
 })
 
 describe("indexing feature detection", () => {
-  it("requires experimental.semantic_indexing when indexing plugin is present", () => {
-    expect(configFeatures({ plugin: ["kilo-indexing"] }).indexing).toBe(false)
-    expect(configFeatures({ plugin: ["kilo-indexing"], experimental: {} }).indexing).toBe(false)
-    expect(configFeatures({ plugin: ["kilo-indexing"], experimental: { semantic_indexing: false } }).indexing).toBe(
-      false,
-    )
+  it("enables indexing settings when the indexing plugin is present", () => {
+    expect(configFeatures({ plugin: ["kilo-indexing"] }).indexing).toBe(true)
   })
 
-  it("detects supported indexing plugin specifiers when experimental.semantic_indexing is true", () => {
-    expect(configFeatures({ plugin: ["kilo-indexing"], experimental: { semantic_indexing: true } }).indexing).toBe(true)
-    expect(
-      configFeatures({ plugin: ["kilo-indexing@1.2.3"], experimental: { semantic_indexing: true } }).indexing,
-    ).toBe(true)
-    expect(
-      configFeatures({ plugin: ["@kilocode/kilo-indexing"], experimental: { semantic_indexing: true } }).indexing,
-    ).toBe(true)
-    expect(
-      configFeatures({ plugin: ["@kilocode/kilo-indexing@1.2.3"], experimental: { semantic_indexing: true } }).indexing,
-    ).toBe(true)
-    expect(
-      configFeatures({
-        plugin: ["file:///tmp/.opencode/plugin/kilo-indexing.js"],
-        experimental: { semantic_indexing: true },
-      }).indexing,
-    ).toBe(true)
-    expect(
-      configFeatures({
-        plugin: ["file:///tmp/node_modules/@kilocode/kilo-indexing/index.js"],
-        experimental: { semantic_indexing: true },
-      }).indexing,
-    ).toBe(true)
+  it("detects supported indexing plugin specifiers", () => {
+    expect(configFeatures({ plugin: ["kilo-indexing"] }).indexing).toBe(true)
+    expect(configFeatures({ plugin: ["kilo-indexing@1.2.3"] }).indexing).toBe(true)
+    expect(configFeatures({ plugin: ["@kilocode/kilo-indexing"] }).indexing).toBe(true)
+    expect(configFeatures({ plugin: ["@kilocode/kilo-indexing@1.2.3"] }).indexing).toBe(true)
+    expect(configFeatures({ plugin: ["file:///tmp/.opencode/plugin/kilo-indexing.js"] }).indexing).toBe(true)
+    expect(configFeatures({ plugin: ["file:///tmp/node_modules/@kilocode/kilo-indexing/index.js"] }).indexing).toBe(
+      true,
+    )
   })
 
   it("ignores unrelated plugin lists", () => {
     expect(configFeatures({ plugin: ["@kilocode/kilo-gateway"] }).indexing).toBe(false)
     expect(configFeatures({ plugin: ["file:///tmp/.opencode/plugin/index.js"] }).indexing).toBe(false)
     expect(configFeatures({}).indexing).toBe(false)
+  })
+})
+
+describe("indexing status message handling", () => {
+  it("applies indexing status regardless of feature-toggle race", () => {
+    let status = makeStatus()
+    let loading = true
+    const applied = applyIndexingStatusMessage(
+      {
+        type: "indexingStatusLoaded",
+        status: makeStatus({
+          state: "In Progress",
+          message: "Indexing",
+          processedFiles: 5,
+          totalFiles: 20,
+          percent: 25,
+        }),
+      },
+      (next) => {
+        status = next
+      },
+      (next) => {
+        loading = next
+      },
+    )
+
+    expect(applied).toBe(true)
+    expect(status.state).toBe("In Progress")
+    expect(status.percent).toBe(25)
+    expect(loading).toBe(false)
+  })
+
+  it("ignores unrelated extension messages", () => {
+    let status = makeStatus()
+    let loading = true
+    const applied = applyIndexingStatusMessage(
+      {
+        type: "connectionState",
+        state: "connected",
+      },
+      (next) => {
+        status = next
+      },
+      (next) => {
+        loading = next
+      },
+    )
+
+    expect(applied).toBe(false)
+    expect(status.state).toBe("Disabled")
+    expect(loading).toBe(true)
   })
 })

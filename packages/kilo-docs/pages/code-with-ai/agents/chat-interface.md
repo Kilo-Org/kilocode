@@ -76,6 +76,18 @@ Find the Kilo Code icon ({% kiloCodeIcon /%}) in VS Code's Primary Side Bar. Cli
 
 The extension automatically passes context from your editor, including your open tabs and active file. You can type `@` in the chat input to get file and terminal autocomplete suggestions — use `@filename` to attach a file or `@terminal` to include your active terminal output. You can also mention file paths naturally in your message (e.g., "update src/utils.ts to add a helper function"). The agent can also discover files on its own using its built-in tools.
 
+**Exporting local transcripts:**
+
+Run `/export` in chat, or open a local session's **History** context menu and choose **Export session transcript**. The save dialog lets you choose the Markdown (`.md`) destination.
+
+Kilo builds the export from the complete local session history, not only the messages currently loaded in the chat view.
+
+**Renaming sessions:**
+
+Double-click the current session title at the top of the chat to edit it inline. Press `Enter` or click outside the field to save, or press `Escape` to cancel.
+
+You can also rename local sessions from **History** using the edit button or the session's context menu.
+
 {% /tab %}
 {% tab label="CLI" %}
 

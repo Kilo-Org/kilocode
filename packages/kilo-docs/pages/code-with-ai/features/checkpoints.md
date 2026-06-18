@@ -360,7 +360,7 @@ Operations are queued to prevent concurrent Git operations that might corrupt re
 
 ## Git Installation
 
-Checkpoints require Git to be installed on your system.
+Checkpoints require Git to be installed on your system. If Git is unavailable or the workspace is not a Git repository, Kilo skips checkpoints automatically; you do not need to disable them manually.
 
 ### macOS
 

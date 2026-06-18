@@ -11,8 +11,7 @@ import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
 import { sanitizedProcessEnv } from "@opencode-ai/core/util/opencode-process"
 import { which } from "@/util/which"
-import { zod } from "@/util/effect-zod"
-import { NonNegativeInt, withStatics } from "@/util/schema"
+import { NonNegativeInt } from "@opencode-ai/core/schema"
 
 const log = Log.create({ service: "ripgrep" })
 const VERSION = "15.1.0"
@@ -69,7 +68,7 @@ export const SearchMatch = Schema.Struct({
       end: NonNegativeInt,
     }),
   ),
-}).pipe(withStatics((s) => ({ zod: zod(s) })))
+})
 
 export const Match = Schema.Struct({
   type: Schema.Literal("match"),
@@ -288,8 +287,10 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | ChildPro
 
       const filepath = yield* Effect.cached(
         Effect.gen(function* () {
-          const system = yield* Effect.sync(() => which(process.platform === "win32" ? "rg.exe" : "rg"))
+          // kilocode_change start - Git for Windows can expose an MSYS rg.exe that fails when spawned natively
+          const system = yield* Effect.sync(() => (process.platform === "win32" ? undefined : which("rg")))
           if (system && (yield* fs.isFile(system).pipe(Effect.orDie))) return system
+          // kilocode_change end
 
           const target = path.join(Global.Path.bin, `rg${process.platform === "win32" ? ".exe" : ""}`)
           if (yield* fs.isFile(target).pipe(Effect.orDie)) return target

@@ -9,14 +9,17 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { Popover } from "@kilocode/kilo-ui/popover"
+import { DeferredPopover } from "../src/components/shared/DeferredPopover"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useVSCode } from "../src/context/vscode"
 import { useServer } from "../src/context/server"
 import { useSession } from "../src/context/session"
 import { useProvider } from "../src/context/provider"
+import { useConfig } from "../src/context/config"
 import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
+import { SpeechToTextButton } from "../src/components/speech-to-text/SpeechToTextButton"
+import { canUseSpeechToText, selectedSpeechToTextModel } from "../src/components/speech-to-text/availability"
 import { ThinkingSelectorBase } from "../src/components/shared/ThinkingSelector"
 import {
   MultiModelSelector,
@@ -27,8 +30,11 @@ import {
 } from "./MultiModelSelector"
 import { useLanguage } from "../src/context/language"
 import { useImageAttachments, type ImageAttachment } from "../src/hooks/useImageAttachments"
+import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
 import { convertToMentionPath } from "../src/utils/path-mentions"
-import { BranchSelect } from "./BranchSelect"
+import { insertSpacedText } from "../src/components/chat/prompt-input-utils"
+import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
+import { tracker } from "./telemetry"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
@@ -65,6 +71,11 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const server = useServer()
   const session = useSession()
   const provider = useProvider()
+  const { config } = useConfig()
+  const metrics = tracker(vscode)
+  const track = (button: string, properties?: Record<string, string | number | boolean | undefined>) =>
+    metrics.track(button, "configure_worktree_dialog", properties)
+  const click = metrics.click
 
   const [tab, setTab] = createSignal<DialogTab>("new")
 
@@ -79,7 +90,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const cached = vscode.getState<Record<string, unknown>>()
   const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
   const [versions, setVersions] = createSignal<VersionCount>(1)
-  const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(session.selected())
+  const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(session.configModel())
   const [compareMode, setCompareMode] = createSignal(false)
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
   const [agent, setAgent] = createSignal(session.selectedAgent())
@@ -91,6 +102,9 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const [compareOpen, setCompareOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
   const [variant, setVariant] = createSignal<string | undefined>(session.currentVariant())
+  const speech = useSpeechToText(vscode, server, { t })
+  const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
+  const speechModel = () => selectedSpeechToTextModel(config())
 
   // Variant list for the currently selected model
   const variants = createMemo(() => {
@@ -112,7 +126,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   // True when the user has changed the model from the session/config default
   const overridden = createMemo(() => {
     const sel = model()
-    const cfg = session.selected()
+    const cfg = session.configModel()
     if (!sel || !cfg) return false
     return sel.providerID !== cfg.providerID || sel.modelID !== cfg.modelID
   })
@@ -196,9 +210,12 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
 
   const canSubmit = () => {
     if (starting()) return false
+    if (speech.active()) return false
     if (compareMode() && totalAllocations(modelAllocations()) === 0) return false
     return true
   }
+  const total = () => (compareMode() ? totalAllocations(modelAllocations()) : versions())
+  const mode = () => (compareMode() ? "compare_models" : versions() > 1 ? "multiple_versions" : "single")
 
   const handleSubmit = () => {
     if (!canSubmit()) return
@@ -214,7 +231,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
 
     const isCompare = compareMode()
     const allocations = isCompare ? allocationsToArray(modelAllocations()) : undefined
-    const count = isCompare ? totalAllocations(modelAllocations()) : versions()
+    const count = total()
     const sel = isCompare ? null : model()
 
     vscode.postMessage({
@@ -248,6 +265,26 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
     if (!textareaRef) return
     textareaRef.style.height = "auto"
     textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
+  }
+
+  const insertSpeechText = (value: string) => {
+    const ref = textareaRef
+    const current = prompt()
+    const start = ref?.selectionStart ?? current.length
+    const end = ref?.selectionEnd ?? start
+    const result = insertSpacedText(current, value, start, end)
+
+    setPrompt(result.text)
+    persistPrompt(result.text)
+    if (!ref) return
+    ref.value = result.text
+    ref.setSelectionRange(result.pos, result.pos)
+    ref.focus()
+    adjustHeight()
+  }
+
+  const startSpeech = () => {
+    speech.start({ model: speechModel(), insert: insertSpeechText })
   }
 
   // --- Import tab state ---
@@ -290,6 +327,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
 
   const handleBranchSelect = (name: string) => {
     if (isPending()) return
+    track("import_branch")
     setImportPending(true)
     setBranchOpen(false)
     setBranchSearch("")
@@ -303,7 +341,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
         <button
           class="am-tab-switcher-pill"
           classList={{ "am-tab-switcher-pill-active": tab() === "new" }}
-          onClick={() => setTab("new")}
+          onClick={click("switch_dialog_tab", "configure_worktree_dialog", () => setTab("new"), { tab: "new" })}
           type="button"
         >
           {t("agentManager.dialog.tab.new")}
@@ -311,7 +349,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
         <button
           class="am-tab-switcher-pill"
           classList={{ "am-tab-switcher-pill-active": tab() === "import" }}
-          onClick={() => setTab("import")}
+          onClick={click("switch_dialog_tab", "configure_worktree_dialog", () => setTab("import"), { tab: "import" })}
           type="button"
         >
           {t("agentManager.dialog.tab.import")}
@@ -366,7 +404,6 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                 <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
                   <textarea
                     ref={textareaRef}
-                    autofocus
                     class="prompt-input am-prompt-input"
                     placeholder={t(
                       isMac
@@ -388,7 +425,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
               <div class="prompt-input-hint">
                 <div class="prompt-input-hint-selectors">
                   <Show when={session.agents().length > 1}>
-                    <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} />
+                    <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} deferDismiss />
                   </Show>
                   <Show when={!compareMode()}>
                     <ModelSelectorBase
@@ -397,14 +434,21 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                         if (pid && mid) setModel({ providerID: pid, modelID: mid })
                       }}
                       placement="top-start"
+                      portal={false}
+                      deferDismiss
                     />
-                    <ThinkingSelectorBase variants={variants()} value={effectiveVariant()} onSelect={setVariant} />
+                    <ThinkingSelectorBase
+                      variants={variants()}
+                      value={effectiveVariant()}
+                      onSelect={setVariant}
+                      deferDismiss
+                    />
                     <Show when={overridden()}>
                       <Tooltip value={t("prompt.action.resetModel")} placement="top">
                         <Button
                           variant="ghost"
                           size="small"
-                          onClick={() => setModel(session.selected())}
+                          onClick={() => setModel(session.configModel())}
                           aria-label={t("prompt.action.resetModel")}
                         >
                           <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
@@ -415,12 +459,25 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                     </Show>
                   </Show>
                 </div>
-                <div class="prompt-input-hint-actions" />
+                <div class="prompt-input-hint-actions">
+                  <Show when={canUseSpeech()}>
+                    <SpeechToTextButton speech={speech} disabled={starting()} start={startSpeech} label={t} />
+                  </Show>
+                </div>
               </div>
             </div>
 
             {/* Advanced options toggle */}
-            <button class="am-advanced-toggle" onClick={() => setShowAdvanced(!showAdvanced())} type="button">
+            <button
+              class="am-advanced-toggle"
+              onClick={click(
+                "advanced_options",
+                "configure_worktree_dialog",
+                () => setShowAdvanced(!showAdvanced()),
+                () => ({ action: showAdvanced() ? "close" : "open" }),
+              )}
+              type="button"
+            >
               <Icon name={showAdvanced() ? "chevron-down" : "chevron-right"} size="small" />
               <span>{t("agentManager.dialog.advancedOptions")}</span>
             </button>
@@ -440,7 +497,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                 <div class="am-advanced-field">
                   <span class="am-nv-config-label">{t("agentManager.dialog.baseBranch")}</span>
                   <div class="am-selector-wrapper">
-                    <Popover
+                    <BranchSelectPopover
                       open={baseBranchOpen()}
                       onOpenChange={(open) => {
                         setBaseBranchOpen(open)
@@ -449,11 +506,6 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                           setHighlightedIndex(0)
                         }
                       }}
-                      placement="top-start"
-                      flip={false}
-                      sameWidth
-                      portal={false}
-                      class="am-dropdown"
                       trigger={
                         <button class="am-selector-trigger" type="button">
                           <span class="am-selector-left">
@@ -532,7 +584,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                         remoteLabel={t("agentManager.dialog.branchBadge.remote")}
                         defaultName={defaultBranch()}
                       />
-                    </Popover>
+                    </BranchSelectPopover>
                   </div>
                 </div>
               </div>
@@ -549,7 +601,9 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                       <button
                         class="am-nv-pill"
                         classList={{ "am-nv-pill-active": versions() === count }}
-                        onClick={() => setVersions(count)}
+                        onClick={click("version_count", "configure_worktree_dialog", () => setVersions(count), {
+                          count,
+                        })}
                         type="button"
                       >
                         {count}
@@ -560,7 +614,13 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                       placement="top"
                       contentClass="am-tooltip-wrap"
                     >
-                      <button class="am-nv-pill am-nv-pill-compare" onClick={() => setCompareMode(true)} type="button">
+                      <button
+                        class="am-nv-pill am-nv-pill-compare"
+                        onClick={click("compare_models", "configure_worktree_dialog", () => setCompareMode(true), {
+                          action: "open",
+                        })}
+                        type="button"
+                      >
                         <Icon name="layers" size="small" />
                         <span class="am-nv-pill-compare-label">{t("agentManager.dialog.compareModels")}</span>
                       </button>
@@ -587,6 +647,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                   <button
                     class="am-nv-pill-back"
                     onClick={() => {
+                      track("compare_models", { action: "close" })
                       setCompareMode(false)
                       setModelAllocations(new Map())
                     }}
@@ -596,12 +657,14 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                     <Icon name="close-small" size="small" />
                   </button>
                 </div>
-                <Popover
+                <DeferredPopover
                   open={compareOpen()}
                   onOpenChange={setCompareOpen}
                   placement="top-start"
                   flip={false}
                   sameWidth
+                  portal={false}
+                  deferDismiss
                   class="am-compare-popover"
                   trigger={
                     <button class="am-selector-trigger" type="button">
@@ -627,13 +690,27 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                   }
                 >
                   <MultiModelSelector allocations={modelAllocations()} onChange={setModelAllocations} />
-                </Popover>
+                </DeferredPopover>
               </div>
             </Show>
           </div>
           {/* Submit button — fixed footer, always visible */}
           <div class="am-nv-dialog-footer">
-            <Button variant="primary" size="large" class="am-nv-submit" onClick={handleSubmit} disabled={!canSubmit()}>
+            <Button
+              variant="primary"
+              size="large"
+              class="am-nv-submit"
+              onClick={click("create_worktree", "configure_worktree_dialog", handleSubmit, () => ({
+                mode: mode(),
+                versionCount: total(),
+                advanced: showAdvanced(),
+                customBranch: showAdvanced() && !!branchName().trim(),
+                customBase: showAdvanced() && !!baseBranch(),
+                hasPrompt: !!prompt().trim(),
+                hasAttachments: imageAttach.images().length > 0,
+              }))}
+              disabled={!canSubmit()}
+            >
               <Show
                 when={!starting()}
                 fallback={
@@ -677,7 +754,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
               <Button
                 variant="secondary"
                 size="small"
-                onClick={handlePRSubmit}
+                onClick={click("import_pull_request", "configure_worktree_dialog", handlePRSubmit)}
                 disabled={!prUrl().trim() || isPending()}
               >
                 <Show when={prPending()} fallback={t("agentManager.import.open")}>
@@ -693,14 +770,9 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
           <div class="am-import-section">
             <span class="am-nv-config-label">{t("agentManager.import.branches")}</span>
             <div class="am-selector-wrapper">
-              <Popover
+              <BranchSelectPopover
                 open={branchOpen()}
                 onOpenChange={setBranchOpen}
-                placement="top-start"
-                flip={false}
-                sameWidth
-                portal={false}
-                class="am-dropdown"
                 trigger={
                   <button class="am-selector-trigger" disabled={isPending()} type="button">
                     <span class="am-selector-left">
@@ -727,7 +799,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                   defaultLabel={t("agentManager.dialog.branchBadge.default")}
                   remoteLabel={t("agentManager.dialog.branchBadge.remote")}
                 />
-              </Popover>
+              </BranchSelectPopover>
             </div>
           </div>
 

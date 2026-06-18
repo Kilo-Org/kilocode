@@ -1,6 +1,15 @@
 import { getUriFileExtension } from "../../util/uri"
 import { BracketMatchingService } from "../filtering/BracketMatchingService"
-import { CharacterFilter, LineFilter } from "../filtering/streamTransforms/lineStream"
+
+type LineStream = AsyncGenerator<string>
+type LineFilter = (args: { lines: LineStream; fullStop: () => void }) => LineStream
+type CharacterFilter = (args: {
+  chars: AsyncGenerator<string>
+  prefix: string
+  suffix: string
+  filepath: string
+  multiline: boolean
+}) => AsyncGenerator<string>
 
 export interface AutocompleteLanguageInfo {
   /**
