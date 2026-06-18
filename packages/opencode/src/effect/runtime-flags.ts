@@ -50,6 +50,7 @@ export class Service extends ConfigService.Service<Service>()("@opencode/Runtime
   experimentalIconDiscovery: enabledByExperimental("KILO_EXPERIMENTAL_ICON_DISCOVERY"),
   outputTokenMax: positiveInteger("KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX"),
   bashDefaultTimeoutMs: positiveInteger("KILO_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS"),
+  experimentalNativeLlm: enabledByExperimental("KILO_EXPERIMENTAL_NATIVE_LLM"),
   client: Config.string("KILO_CLIENT").pipe(Config.withDefault("cli")),
 }) {}
 

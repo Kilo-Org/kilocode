@@ -24,11 +24,12 @@ import LanguageTab from "./LanguageTab"
 import AboutKiloCodeTab from "./AboutKiloCodeTab"
 import IndexingTab from "./IndexingTab"
 import { useServer } from "../../context/server"
+import type { MigrationSource } from "../../types/messages"
 
 export interface SettingsProps {
   tab?: string
   onTabChange?: (tab: string) => void
-  onMigrateClick?: () => void // legacy-migration
+  onMigrationClick?: (source: MigrationSource) => void // legacy-migration
 }
 
 const Settings: Component<SettingsProps> = (props) => {
@@ -275,7 +276,7 @@ const Settings: Component<SettingsProps> = (props) => {
             port={server.serverInfo()?.port ?? null}
             connectionState={server.connectionState()}
             extensionVersion={server.extensionVersion()}
-            onMigrateClick={props.onMigrateClick}
+            onMigrationClick={props.onMigrationClick}
           />
         </Tabs.Content>
       </Tabs>

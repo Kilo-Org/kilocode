@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test"
+import { describe, it, expect, spyOn } from "bun:test"
 import type { PartUpdate } from "../../src/shared/stream-messages"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
@@ -44,12 +44,15 @@ function createClient(options?: {
   deleteDeferred?: Deferred<unknown>
   sessionData?: unknown
   sessionGet?: (params: { sessionID: string; directory?: string }) => Promise<{ data: unknown }>
+  abortFailures?: string[]
 }) {
   const calls: { before?: string; limit?: number }[] = []
   const stopped: { sessionID: string; directory?: string }[] = []
+  const aborted: { sessionID: string; directory?: string }[] = []
   return {
     calls,
     stopped,
+    aborted,
     session: {
       list: async () => ({ data: [] }),
       get: async (params: { sessionID: string; directory?: string }) => {
@@ -57,6 +60,11 @@ function createClient(options?: {
         return { data: options?.sessionData ?? null }
       },
       status: async () => ({ data: {} }),
+      abort: async (params: { sessionID: string; directory?: string }) => {
+        aborted.push(params)
+        if (params.directory && options?.abortFailures?.includes(params.directory)) throw new Error("abort failed")
+        return { data: true }
+      },
       messages: async (params: { before?: string; limit?: number }) => {
         calls.push({ before: params.before, limit: params.limit })
         if (options?.messagesDeferred) return options.messagesDeferred.promise
@@ -118,7 +126,8 @@ type ProviderInternals = {
   trackedSessionIds: Set<string>
   streams: { push: (msg: PartUpdate) => void }
   stopCurrentSessionProcesses: (next?: string) => void
-  handleEvent: (event: unknown) => void
+  handleEvent: (event: unknown, directory?: string) => void
+  handleAbort: (sid?: string) => Promise<void>
   handleLoadMessages: (sid: string, opts?: { mode?: string; before?: string; limit?: number }) => Promise<void>
   handleDeleteSession: (sid: string) => Promise<void>
 }
@@ -136,6 +145,70 @@ function makeProvider(client: ReturnType<typeof createClient>) {
   }
   return { provider, internal, sent }
 }
+
+describe("KiloProvider.handleAbort", () => {
+  it("aborts the original owner after a running session moves to a worktree", async () => {
+    const client = createClient()
+    const { provider, internal, sent } = makeProvider(client)
+    internal.handleEvent(
+      {
+        type: "session.status",
+        properties: { sessionID: "s1", status: { type: "busy" } },
+      },
+      "/repo",
+    )
+    provider.setSessionDirectory("s1", "/repo/worktree")
+
+    await internal.handleAbort("s1")
+
+    expect(client.aborted).toEqual([
+      { sessionID: "s1", directory: "/repo" },
+      { sessionID: "s1", directory: "/repo/worktree" },
+    ])
+    expect(sent.at(-1)).toMatchObject({ type: "sessionStatus", sessionID: "s1", status: "idle" })
+  })
+
+  it("preserves the original owner when the status event lacks a directory", async () => {
+    const client = createClient()
+    const { provider, internal } = makeProvider(client)
+    internal.handleEvent({
+      type: "session.status",
+      properties: { sessionID: "s1", status: { type: "busy" } },
+    })
+    provider.setSessionDirectory("s1", "/repo/worktree")
+
+    await internal.handleAbort("s1")
+
+    expect(client.aborted).toEqual([
+      { sessionID: "s1", directory: "/repo" },
+      { sessionID: "s1", directory: "/repo/worktree" },
+    ])
+  })
+
+  it("attempts every owner and stays busy when one abort fails", async () => {
+    const error = spyOn(console, "error").mockImplementation(() => {})
+    const client = createClient({ abortFailures: ["/repo"] })
+    const { provider, internal, sent } = makeProvider(client)
+    internal.handleEvent(
+      {
+        type: "session.status",
+        properties: { sessionID: "s1", status: { type: "busy" } },
+      },
+      "/repo",
+    )
+    provider.setSessionDirectory("s1", "/repo/worktree")
+
+    await internal.handleAbort("s1")
+
+    expect(client.aborted).toEqual([
+      { sessionID: "s1", directory: "/repo" },
+      { sessionID: "s1", directory: "/repo/worktree" },
+    ])
+    expect(sent.at(-1)).toMatchObject({ type: "sessionStatus", sessionID: "s1", status: "busy" })
+    expect(error).toHaveBeenCalledTimes(1)
+    error.mockRestore()
+  })
+})
 
 describe("KiloProvider.handleLoadMessages / focus mode freshness", () => {
   it("stops background processes for the previous session when switching sessions", async () => {

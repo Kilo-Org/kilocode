@@ -169,7 +169,7 @@ export const TaskTool = Tool.define(
       // kilocode_change end
       // kilocode_change start - refresh current parent restrictions when resuming an existing task session
       if (session) {
-        session.permission = KiloTask.merge(
+        const permission = KiloTask.merge(
           session.permission ?? [],
           deriveSubagentSessionPermission({
             parentSessionPermission: parent.permission ?? [],
@@ -178,7 +178,8 @@ export const TaskTool = Tool.define(
           }),
           KiloTask.permissions(rules),
         )
-        yield* sessions.setPermission({ sessionID: session.id, permission: session.permission })
+        session.permission = permission
+        yield* sessions.setPermission({ sessionID: session.id, permission })
       }
       // kilocode_change end
       const platform = KiloSession.resolvePlatform(ctx.sessionID) // kilocode_change - preserve parent attribution across task creation/resume

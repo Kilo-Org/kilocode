@@ -81,8 +81,6 @@
   <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/MarketplaceContribute.tsx -->
 - <https://github.com/Kilo-Org/kilocode>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
-- <https://github.com/Kilo-Org/kilocode/>
-  <!-- packages/kilo-vscode/webview-ui/src/context/notifications.tsx -->
 - <https://github.com/Kilo-Org/kilocode/issues/6986>
   <!-- packages/kilo-vscode/src/agent-manager/constants.ts -->
 - <https://github.com/Kilo-Org/kilocode/issues/9618>

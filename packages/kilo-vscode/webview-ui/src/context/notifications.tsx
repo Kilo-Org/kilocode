@@ -11,16 +11,6 @@ import {
 import { useVSCode } from "./vscode"
 import type { KilocodeNotification, ExtensionMessage } from "../types/messages"
 
-// Static notifications always shown unconditionally (not fetched from API)
-const STATIC_NOTIFICATIONS: KilocodeNotification[] = [
-  {
-    id: "star-giveaway-june-2026",
-    title: "GitHub Star Giveaway",
-    message: "We're giving away $500 of AI Credits when we reach 25,000 stars on GitHub. Support us:",
-    action: { actionText: "github.com/Kilo-Org/kilocode", actionURL: "https://github.com/Kilo-Org/kilocode/" },
-  },
-]
-
 interface NotificationsContextValue {
   notifications: Accessor<KilocodeNotification[]>
   filteredNotifications: Accessor<KilocodeNotification[]>
@@ -63,8 +53,7 @@ export const NotificationsProvider: ParentComponent = (props) => {
 
   const filteredNotifications = createMemo(() => {
     const dismissed = dismissedIds()
-    const all = [...STATIC_NOTIFICATIONS, ...notifications()]
-    return all.filter((n) => !dismissed.includes(n.id))
+    return notifications().filter((n) => !dismissed.includes(n.id))
   })
 
   const dismiss = (id: string) => {

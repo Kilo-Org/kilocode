@@ -123,6 +123,12 @@ const mockVscode = {
     Workspace: 2,
     WorkspaceFolder: 3,
   },
+  FileType: {
+    Unknown: 0,
+    File: 1,
+    Directory: 2,
+    SymbolicLink: 64,
+  },
   TabInputText: class {
     constructor(public uri: { scheme: string; fsPath: string }) {}
   },

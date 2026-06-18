@@ -85,9 +85,7 @@ describe("kilocode tool registry indexing", () => {
       () =>
         Effect.gen(function* () {
           const err = new Error("ready rejected")
-          const ready = spyOn(KiloIndexing, "ready").mockImplementation(
-            () => Promise.reject(err) as unknown as boolean,
-          )
+          const ready = spyOn(KiloIndexing, "ready").mockImplementation(() => Promise.reject(err) as unknown as boolean)
           const warn = spyOn(logger, "warn").mockImplementation(() => {})
 
           try {

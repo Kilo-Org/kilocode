@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.3.46",
+  "version": "7.3.49",
   "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",
@@ -10,6 +10,8 @@
     "test": "bun run script/test-runner.ts",
     "test:ci": "bun run script/test-runner.ts --ci",
     "test:httpapi": "bun run script/httpapi-exercise.ts --mode coverage --fail-on-missing --fail-on-skip && bun run script/httpapi-exercise.ts --mode auth --fail-on-missing --fail-on-skip && bun run script/httpapi-exercise.ts --mode effect --fail-on-missing --fail-on-skip",
+    "bench:test": "bun run script/bench-test-suite.ts",
+    "profile:test": "bun run script/profile-test-files.ts",
     "build": "bun run script/build.ts",
     "fix-node-pty": "bun run script/fix-node-pty.ts",
     "dev": "bun run --conditions=browser ./src/index.ts",
@@ -65,7 +67,8 @@
     "typescript": "catalog:",
     "vscode-languageserver-types": "3.17.5",
     "why-is-node-running": "3.2.2",
-    "@types/npmcli__arborist": "6.3.3"
+    "@types/npmcli__arborist": "6.3.3",
+    "@opencode-ai/http-recorder": "workspace:*"
   },
   "dependencies": {
     "@actions/core": "1.11.1",
@@ -109,6 +112,7 @@
     "@npmcli/arborist": "9.4.0",
     "@octokit/graphql": "9.0.2",
     "@octokit/rest": "catalog:",
+    "@opencode-ai/llm": "workspace:*",
     "@opencode-ai/script": "workspace:*",
     "@opencode-ai/ui": "workspace:*",
     "@openrouter/ai-sdk-provider": "2.9.0",
@@ -138,7 +142,7 @@
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
     "fuzzysort": "3.1.0",
-    "gitlab-ai-provider": "6.6.0",
+    "gitlab-ai-provider": "6.7.0",
     "google-auth-library": "10.5.0",
     "gray-matter": "4.0.3",
     "htmlparser2": "8.0.2",

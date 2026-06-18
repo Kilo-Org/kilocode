@@ -30,10 +30,11 @@ import type {
   MigrationResultItem,
   MigrationAutoApprovalSelections,
   LegacySettings,
-  LegacyMigrationDataMessage,
-  LegacyMigrationProgressMessage,
-  LegacyMigrationSessionProgressMessage,
-  LegacyMigrationCompleteMessage,
+  MigrationDataMessage,
+  MigrationProgressMessage,
+  MigrationSessionProgressMessage,
+  MigrationCompleteMessage,
+  MigrationSource,
 } from "../../types/messages"
 import "./migration.css"
 
@@ -182,16 +183,36 @@ interface ProgressEntry {
 // ---------------------------------------------------------------------------
 
 export interface MigrationWizardProps {
+  source?: MigrationSource
+  operationId?: string
   onBack: () => void
   onComplete: () => void
 }
+
+const capabilities = {
+  legacy: {
+    intro: true,
+    persist: true,
+    cleanup: true,
+    categories: new Set(["providers", "mcpServers", "customModes", "sessions", "defaultModel", "settings"]),
+  },
+  roo: {
+    intro: false,
+    persist: false,
+    cleanup: false,
+    categories: new Set(["sessions"]),
+  },
+} satisfies Record<MigrationSource, { intro: boolean; persist: boolean; cleanup: boolean; categories: Set<string> }>
 
 const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   const vscode = useVSCode()
   const dialog = useDialog()
   const language = useLanguage()
+  const source = props.source ?? "legacy"
+  const config = capabilities[source]
+  const operationId = props.operationId ?? crypto.randomUUID()
 
-  const [screen, setScreen] = createSignal<Screen>("whats-new")
+  const [screen, setScreen] = createSignal<Screen>(config.intro ? "whats-new" : "migrate")
   const [phase, setPhase] = createSignal<MigratePhase>("selecting")
 
   // Data from extension
@@ -226,46 +247,49 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   // Message handling
   // ---------------------------------------------------------------------------
 
+  const applyData = (data: MigrationDataMessage["data"]) => {
+    setProviders(config.categories.has("providers") ? data.providers : [])
+    setMcpServers(config.categories.has("mcpServers") ? data.mcpServers : [])
+    setCustomModes(config.categories.has("customModes") ? data.customModes : [])
+    setSessions(config.categories.has("sessions") ? (data.sessions ?? []) : [])
+    setDefaultModel(config.categories.has("defaultModel") ? data.defaultModel : undefined)
+    setLegacySettings(config.categories.has("settings") ? data.settings : undefined)
+    setMigrateProviders(
+      config.categories.has("providers") && data.providers.some((item) => item.supported && item.hasApiKey),
+    )
+    setMigrateMcpServers(config.categories.has("mcpServers") && data.mcpServers.length > 0)
+    setMigrateModes(config.categories.has("customModes") && data.customModes.length > 0)
+    setMigrateSessions(config.categories.has("sessions") && (data.sessions?.length ?? 0) > 0)
+    setMigrateDefaultModel(config.categories.has("defaultModel") && Boolean(data.defaultModel))
+
+    const settings = config.categories.has("settings") ? data.settings : undefined
+    if (!settings) return
+    setMigrateAutoApproval(
+      settings.autoApprovalEnabled !== undefined ||
+        Boolean(settings.allowedCommands?.length) ||
+        Boolean(settings.deniedCommands?.length) ||
+        settings.alwaysAllowReadOnly !== undefined ||
+        settings.alwaysAllowReadOnlyOutsideWorkspace !== undefined ||
+        settings.alwaysAllowWrite !== undefined ||
+        settings.alwaysAllowExecute !== undefined ||
+        settings.alwaysAllowMcp !== undefined ||
+        settings.alwaysAllowModeSwitch !== undefined ||
+        settings.alwaysAllowSubtasks !== undefined,
+    )
+    setMigrateLanguage(Boolean(settings.language))
+    setMigrateAutocomplete(Boolean(settings.autocomplete))
+  }
+
   onMount(() => {
     const handler = (event: MessageEvent) => {
       const msg = event.data
-      if (msg?.type === "legacyMigrationData") {
-        const data = (msg as LegacyMigrationDataMessage).data
-        setProviders(data.providers)
-        setMcpServers(data.mcpServers)
-        setCustomModes(data.customModes)
-        setSessions(data.sessions ?? [])
-        setDefaultModel(data.defaultModel)
-        setLegacySettings(data.settings)
-
-        // Pre-select groups that have data
-        setMigrateProviders(data.providers.some((p) => p.supported && p.hasApiKey))
-        setMigrateMcpServers(data.mcpServers.length > 0)
-        setMigrateModes(data.customModes.length > 0)
-        setMigrateSessions((data.sessions?.length ?? 0) > 0)
-        setMigrateDefaultModel(Boolean(data.defaultModel))
-
-        const s = data.settings
-        if (s) {
-          setMigrateAutoApproval(
-            s.autoApprovalEnabled !== undefined ||
-              Boolean(s.allowedCommands?.length) ||
-              Boolean(s.deniedCommands?.length) ||
-              s.alwaysAllowReadOnly !== undefined ||
-              s.alwaysAllowReadOnlyOutsideWorkspace !== undefined ||
-              s.alwaysAllowWrite !== undefined ||
-              s.alwaysAllowExecute !== undefined ||
-              s.alwaysAllowMcp !== undefined ||
-              s.alwaysAllowModeSwitch !== undefined ||
-              s.alwaysAllowSubtasks !== undefined,
-          )
-          setMigrateLanguage(Boolean(s.language))
-          setMigrateAutocomplete(Boolean(s.autocomplete))
-        }
+      if (msg?.source !== source || msg?.operationId !== operationId) return
+      if (msg.type === "migrationData") {
+        applyData((msg as MigrationDataMessage).data)
       }
 
-      if (msg?.type === "legacyMigrationProgress") {
-        const update = msg as LegacyMigrationProgressMessage
+      if (msg.type === "migrationProgress") {
+        const update = msg as MigrationProgressMessage
         setProgressEntries((prev) => {
           const existing = prev.findIndex((e) => e.item === update.item)
           const entry: ProgressEntry = {
@@ -278,8 +302,8 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         })
       }
 
-      if (msg?.type === "legacyMigrationSessionProgress") {
-        const update = msg as LegacyMigrationSessionProgressMessage
+      if (msg.type === "migrationSessionProgress") {
+        const update = msg as MigrationSessionProgressMessage
         setSessionSummary((prev) =>
           updateSessionSummary(prev, createSessionItem(update.session, update.error), update.phase),
         )
@@ -292,8 +316,8 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         })
       }
 
-      if (msg?.type === "legacyMigrationComplete") {
-        const complete = msg as LegacyMigrationCompleteMessage
+      if (msg.type === "migrationComplete") {
+        const complete = msg as MigrationCompleteMessage
         setResults(complete.results)
         setRunning(false)
         const hasErrors = complete.results.some((r) => r.status === "error")
@@ -305,7 +329,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
     }
 
     window.addEventListener("message", handler)
-    vscode.postMessage({ type: "requestLegacyMigrationData" })
+    vscode.postMessage({ type: "requestMigrationData", source, operationId })
     onCleanup(() => window.removeEventListener("message", handler))
   })
 
@@ -314,105 +338,91 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   // ---------------------------------------------------------------------------
 
   const handleSkip = () => {
+    if (!config.persist) {
+      props.onBack()
+      return
+    }
     vscode.postMessage({ type: "skipLegacyMigration" })
     props.onBack()
   }
 
-  const handleStartMigration = () => {
-    const selectedProviderNames = migrateProviders()
+  const emptyAutoApproval = (): MigrationAutoApprovalSelections => ({
+    commandRules: false,
+    readPermission: false,
+    writePermission: false,
+    executePermission: false,
+    mcpPermission: false,
+    taskPermission: false,
+  })
+
+  const autoApprovalSelections = (): MigrationAutoApprovalSelections => {
+    if (!migrateAutoApproval()) return emptyAutoApproval()
+    const settings = legacySettings()
+    return {
+      commandRules:
+        settings?.autoApprovalEnabled !== undefined ||
+        Boolean(settings?.allowedCommands?.length) ||
+        Boolean(settings?.deniedCommands?.length),
+      readPermission:
+        settings?.alwaysAllowReadOnly !== undefined || settings?.alwaysAllowReadOnlyOutsideWorkspace !== undefined,
+      writePermission: settings?.alwaysAllowWrite !== undefined,
+      executePermission: settings?.alwaysAllowExecute !== undefined,
+      mcpPermission: settings?.alwaysAllowMcp !== undefined,
+      taskPermission: settings?.alwaysAllowModeSwitch !== undefined || settings?.alwaysAllowSubtasks !== undefined,
+    }
+  }
+
+  const selections = (sessions: { id: string; force?: boolean }[] = []) => ({
+    providers: migrateProviders()
       ? providers()
-          .filter((p) => p.supported && p.hasApiKey)
-          .map((p) => p.profileName)
-      : []
-    const selectedMcpNames = migrateMcpServers() ? mcpServers().map((s) => s.name) : []
-    const selectedModesSlugs = migrateModes() ? customModes().map((m) => m.slug) : []
+          .filter((provider) => provider.supported && provider.hasApiKey)
+          .map((provider) => provider.profileName)
+      : [],
+    mcpServers: migrateMcpServers() ? mcpServers().map((server) => server.name) : [],
+    customModes: migrateModes() ? customModes().map((mode) => mode.slug) : [],
+    sessions,
+    defaultModel: migrateDefaultModel(),
+    settings: {
+      autoApproval: autoApprovalSelections(),
+      language: migrateLanguage(),
+      autocomplete: migrateAutocomplete(),
+    },
+  })
 
-    const autoApproval: MigrationAutoApprovalSelections = migrateAutoApproval()
-      ? {
-          commandRules:
-            legacySettings()?.autoApprovalEnabled !== undefined ||
-            Boolean(legacySettings()?.allowedCommands?.length) ||
-            Boolean(legacySettings()?.deniedCommands?.length),
-          readPermission:
-            legacySettings()?.alwaysAllowReadOnly !== undefined ||
-            legacySettings()?.alwaysAllowReadOnlyOutsideWorkspace !== undefined,
-          writePermission: legacySettings()?.alwaysAllowWrite !== undefined,
-          executePermission: legacySettings()?.alwaysAllowExecute !== undefined,
-          mcpPermission: legacySettings()?.alwaysAllowMcp !== undefined,
-          taskPermission:
-            legacySettings()?.alwaysAllowModeSwitch !== undefined ||
-            legacySettings()?.alwaysAllowSubtasks !== undefined,
-        }
-      : {
-          commandRules: false,
-          readPermission: false,
-          writePermission: false,
-          executePermission: false,
-          mcpPermission: false,
-          taskPermission: false,
-        }
-
-    // Build progress entries
+  const handleStartMigration = () => {
+    const selected = selections(migrateSessions() ? sessions().map((session) => ({ id: session.id })) : [])
+    const approval = selected.settings.autoApproval
     const entries: ProgressEntry[] = [
-      ...selectedProviderNames.map((name) => ({ item: name, group: "providers", status: "pending" as const })),
-      ...selectedMcpNames.map((name) => ({ item: name, group: "mcpServers", status: "pending" as const })),
-      ...selectedModesSlugs.map((slug) => {
-        const mode = customModes().find((m) => m.slug === slug)
-        return { item: mode?.name ?? slug, group: "customModes", status: "pending" as const }
-      }),
-      ...(migrateSessions()
-        ? sessions().map((session) => ({ item: session.id, group: "sessions", status: "pending" as const }))
-        : []),
-      ...(migrateDefaultModel() && defaultModel()
+      ...selected.providers.map((item) => ({ item, group: "providers", status: "pending" as const })),
+      ...selected.mcpServers.map((item) => ({ item, group: "mcpServers", status: "pending" as const })),
+      ...selected.customModes.map((item) => ({ item, group: "customModes", status: "pending" as const })),
+      ...selected.sessions.map((session) => ({ item: session.id, group: "sessions", status: "pending" as const })),
+      ...(selected.defaultModel && defaultModel()
         ? [{ item: "Default model", group: "defaultModel", status: "pending" as const }]
         : []),
-      ...(autoApproval.commandRules
-        ? [{ item: "Command rules", group: "autoApproval", status: "pending" as const }]
-        : []),
-      ...(autoApproval.readPermission
-        ? [{ item: "Read permission", group: "autoApproval", status: "pending" as const }]
-        : []),
-      ...(autoApproval.writePermission
-        ? [{ item: "Write permission", group: "autoApproval", status: "pending" as const }]
-        : []),
-      ...(autoApproval.executePermission
-        ? [{ item: "Execute permission", group: "autoApproval", status: "pending" as const }]
-        : []),
-      ...(autoApproval.mcpPermission
-        ? [{ item: "MCP permission", group: "autoApproval", status: "pending" as const }]
-        : []),
-      ...(autoApproval.taskPermission
-        ? [{ item: "Task permission", group: "autoApproval", status: "pending" as const }]
-        : []),
-      ...(migrateLanguage() && legacySettings()?.language
+      ...(
+        [
+          [approval.commandRules, "Command rules"],
+          [approval.readPermission, "Read permission"],
+          [approval.writePermission, "Write permission"],
+          [approval.executePermission, "Execute permission"],
+          [approval.mcpPermission, "MCP permission"],
+          [approval.taskPermission, "Task permission"],
+        ] as const
+      ).flatMap(([enabled, item]) => (enabled ? [{ item, group: "autoApproval", status: "pending" as const }] : [])),
+      ...(selected.settings.language && legacySettings()?.language
         ? [{ item: "Language preference", group: "language", status: "pending" as const }]
         : []),
-      ...(migrateAutocomplete() && legacySettings()?.autocomplete
+      ...(selected.settings.autocomplete && legacySettings()?.autocomplete
         ? [{ item: "Autocomplete settings", group: "autocomplete", status: "pending" as const }]
         : []),
     ]
-
     setProgressEntries(entries)
     setSessionSummary(createSessionSummary())
     setSessionProgress(undefined)
     setRunning(true)
     setPhase("migrating")
-
-    vscode.postMessage({
-      type: "startLegacyMigration",
-      selections: {
-        providers: selectedProviderNames,
-        mcpServers: selectedMcpNames,
-        customModes: selectedModesSlugs,
-        sessions: migrateSessions() ? sessions().map((session) => ({ id: session.id })) : [],
-        defaultModel: migrateDefaultModel(),
-        settings: {
-          autoApproval,
-          language: migrateLanguage(),
-          autocomplete: migrateAutocomplete(),
-        },
-      },
-    })
+    vscode.postMessage({ type: "startMigration", source, operationId, selections: selected })
   }
 
   const handleForceReimport = (ids: string[]) => {
@@ -424,13 +434,14 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
           setPhase("migrating")
           setSessionProgress(undefined)
           setResults((prev) => prev.filter((item) => item.category !== "session"))
-          setProgressEntries((prev) => {
-            const keep = prev.filter((item) => item.group !== "sessions")
-            const next = ids.map((id) => ({ item: id, group: "sessions", status: "pending" as const }))
-            return [...keep, ...next]
-          })
+          setProgressEntries((prev) => [
+            ...prev.filter((item) => item.group !== "sessions"),
+            ...ids.map((item) => ({ item, group: "sessions", status: "pending" as const })),
+          ])
           vscode.postMessage({
-            type: "startLegacyMigration",
+            type: "startMigration",
+            source,
+            operationId,
             selections: {
               providers: [],
               mcpServers: [],
@@ -438,14 +449,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
               sessions: ids.map((id) => ({ id, force: true })),
               defaultModel: false,
               settings: {
-                autoApproval: {
-                  commandRules: false,
-                  readPermission: false,
-                  writePermission: false,
-                  executePermission: false,
-                  mcpPermission: false,
-                  taskPermission: false,
-                },
+                autoApproval: emptyAutoApproval(),
                 language: false,
                 autocomplete: false,
               },
@@ -458,12 +462,18 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   }
 
   const handleDone = () => {
+    if (!config.persist) {
+      vscode.postMessage({ type: "loadSessions" })
+      props.onComplete()
+      return
+    }
+
     if (running()) {
       dialog.show(() => (
         <RunningMigrationDialog
           onConfirm={() => {
             vscode.postMessage({ type: "finalizeLegacyMigration" })
-            if (clearLegacyData()) {
+            if (config.cleanup && clearLegacyData()) {
               vscode.postMessage({ type: "clearLegacyData" })
             }
             props.onComplete()
@@ -473,7 +483,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
       return
     }
     vscode.postMessage({ type: "finalizeLegacyMigration" })
-    if (clearLegacyData()) {
+    if (config.cleanup && clearLegacyData()) {
       vscode.postMessage({ type: "clearLegacyData" })
     }
     props.onComplete()
@@ -916,7 +926,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                 <button
                   type="button"
                   class="migration-wizard__btn migration-wizard__btn--ghost"
-                  onClick={() => setScreen("whats-new")}
+                  onClick={() => (config.intro ? setScreen("whats-new") : props.onBack())}
                 >
                   {language.t("common.goBack")}
                 </button>

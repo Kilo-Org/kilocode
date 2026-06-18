@@ -613,7 +613,13 @@ module.exports = [
   },
   {
     source: "/docs/advanced-usage/managed-indexing",
-    destination: "/docs/deploy-secure/managed-indexing",
+    destination: "/docs/customize/context/codebase-indexing",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/deploy-secure/managed-indexing",
+    destination: "/docs/customize/context/codebase-indexing",
     basePath: false,
     permanent: true,
   },

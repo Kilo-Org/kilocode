@@ -245,8 +245,9 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             yield* fs.writeFileString(target, text ? `${text}\n` : "").pipe(Effect.orDie)
           })
 
+          // kilocode_change start
           const add = Effect.fnUntraced(function* (opts?: { env?: Record<string, string>; root?: boolean }) {
-            // kilocode_change
+            // kilocode_change end
             yield* sync()
             const [diff, other] = yield* Effect.all(
               [
@@ -349,8 +350,9 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             )
           })
 
+          // kilocode_change start
           const track = Effect.fnUntraced(function* (opts?: Parameters<Interface["track"]>[0]) {
-            // kilocode_change
+            // kilocode_change end
             return yield* locked(
               Effect.gen(function* () {
                 if (!(yield* enabled())) return
