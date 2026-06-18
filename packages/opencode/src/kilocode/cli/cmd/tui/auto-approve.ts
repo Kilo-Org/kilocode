@@ -1,6 +1,13 @@
 // kilocode_change - new file
+import { createSignal } from "solid-js"
+
 const sessions = new Set<string>()
 const replies = new Map<string, Set<string>>()
+const [version, setVersion] = createSignal(0)
+
+function touch() {
+  setVersion((value) => value + 1)
+}
 
 export type TuiSessionRef = {
   id: string
@@ -8,7 +15,12 @@ export type TuiSessionRef = {
 }
 
 export namespace TuiAutoApprove {
+  export function track() {
+    return version()
+  }
+
   export function enabled(sessionID?: string) {
+    track()
     if (!sessionID) return false
     return sessions.has(sessionID)
   }
@@ -16,6 +28,7 @@ export namespace TuiAutoApprove {
   export function set(sessionID: string, enable: boolean) {
     if (enable) {
       sessions.add(sessionID)
+      touch()
       return
     }
     clear(sessionID)
@@ -24,6 +37,7 @@ export namespace TuiAutoApprove {
   export function boot(sessionID?: string) {
     if (!sessionID) return false
     sessions.add(sessionID)
+    touch()
     return true
   }
 
@@ -49,6 +63,7 @@ export namespace TuiAutoApprove {
   export function clear(sessionID: string) {
     sessions.delete(sessionID)
     replies.delete(sessionID)
+    touch()
   }
 
   export function prune(active: Set<string>) {
@@ -98,6 +113,7 @@ export namespace TuiAutoApprove {
   }
 
   export function roots() {
+    track()
     return [...sessions]
   }
 }

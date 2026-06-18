@@ -15,6 +15,7 @@ import { useTheme, selectedForeground } from "@tui/context/theme"
 import { SplitBorder } from "@tui/component/border"
 import { useTerminalDimensions } from "@opentui/solid"
 import { slashDisplay } from "@/kilocode/cli/cmd/command-display" // kilocode_change
+import { TuiSlash } from "@/kilocode/cli/cmd/tui/slash" // kilocode_change
 import { Locale } from "@/util/locale"
 import type { PromptInfo } from "./history"
 import { useFrecency } from "./frecency"
@@ -549,7 +550,7 @@ export function Autocomplete(props: {
   )
 
   const commands = createMemo((): AutocompleteOption[] => {
-    const results: AutocompleteOption[] = [...slashes()]
+    const results: AutocompleteOption[] = [...TuiSlash.options(slashes())] // kilocode_change
 
     for (const serverCommand of sync.data.command) {
       // kilocode_change start - preserve suffixes like :skill when inserting selected slash commands

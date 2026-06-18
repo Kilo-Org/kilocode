@@ -61,6 +61,7 @@ import { useArgs } from "@tui/context/args"
 import { KiloSessionTuiSync } from "@/kilocode/session/tui-sync"
 import { TuiAutoApprove } from "@/kilocode/cli/cmd/tui/auto-approve"
 import { slashMatches } from "@/kilocode/cli/cmd/command-display"
+import { TuiSlash } from "@/kilocode/cli/cmd/tui/slash"
 // kilocode_change end
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { type WorkspaceStatus } from "../workspace-label"
@@ -204,6 +205,7 @@ export function Prompt(props: PromptProps) {
   const [warpNotice, setWarpNotice] = createSignal<string>()
   const [cursorVersion, setCursorVersion] = createSignal(0)
   const currentProviderLabel = createMemo(() => local.model.parsed().provider)
+  const yolo = createMemo(() => TuiAutoApprove.enabled(props.sessionID)) // kilocode_change
   const hasRightContent = createMemo(() => Boolean(props.right))
 
   function selectWorkspace(selection: WorkspaceSelection | undefined) {
@@ -1123,12 +1125,10 @@ export function Prompt(props: PromptProps) {
         })
 
         return true
-      }
+      } // kilocode_change
 
-      // kilocode_change start
-      sessionID = res.data.id
-      if (args.autoApprove && !args.sessionID && !args.continue) TuiAutoApprove.boot(sessionID)
-      // kilocode_change end
+      sessionID = res.data.id // kilocode_change
+      if (args.autoApprove && !args.sessionID && !args.continue) TuiAutoApprove.boot(sessionID) // kilocode_change
     }
 
     const messageID = MessageID.ascending()
@@ -1185,6 +1185,10 @@ export function Prompt(props: PromptProps) {
         command: inputText,
       })
       setStore("mode", "normal")
+    // kilocode_change start - dispatch local palette slash commands such as /yolo
+    } else if (TuiSlash.dispatch(keymap, inputText)) {
+      void inputText
+    // kilocode_change end
     } else if (
       inputText.startsWith("/") &&
       iife(() => {
@@ -1629,6 +1633,14 @@ export function Prompt(props: PromptProps) {
                               </span>
                             </text>
                           </Show>
+                          {/* kilocode_change start - show active session auto-approve indicator */}
+                          <Show when={yolo()}>
+                            <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
+                            <text>
+                              <span style={{ fg: fadeColor(theme.warning, modelMetaAlpha()), bold: true }}>YOLO</span>
+                            </text>
+                          </Show>
+                          {/* kilocode_change end */}
                         </box>
                       </Show>
                     </>
