@@ -251,12 +251,17 @@ export function init() {
     const active = new Set(sync.data.session.map((item) => item.id))
     if (route.data.type === "session") active.add(route.data.sessionID)
     TuiAutoApprove.prune(active)
-  })
-
-  createEffect(() => {
-    if (route.data.type !== "session") return
-    for (const req of sync.data.permission[route.data.sessionID] ?? []) {
-      void reply(route.data.sessionID, req.id)
+    // kilocode_change start - drop replied request IDs that are no longer pending
+    const allPending = Object.values(sync.data.permission).flatMap((list) => list ?? [])
+    TuiAutoApprove.dropStale(allPending)
+    // kilocode_change end
+    for (const root of TuiAutoApprove.roots()) {
+      const ids = TuiAutoApprove.scope(root, sync.data.session)
+      for (const id of ids) {
+        for (const req of sync.data.permission[id] ?? []) {
+          void reply(id, req.id)
+        }
+      }
     }
   })
 
