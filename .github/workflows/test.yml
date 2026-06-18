@@ -85,10 +85,12 @@ jobs:
         working-directory: packages/opencode
         run: bun run test:httpapi
 
+      # kilocode_change start
       - name: Test approval policy
         if: runner.os == 'Linux'
         working-directory: script/kilocode
         run: bun test approval-policy.test.ts
+      # kilocode_change end
 
       - name: Publish unit reports
         if: always()
