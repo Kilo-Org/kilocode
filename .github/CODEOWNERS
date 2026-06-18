@@ -1,5 +1,1 @@
-# Require an engineering owner for all repository changes.
-* @Kilo-Org/engineering
-
-# Documentation-only changes may be approved by the docs team.
-/packages/kilo-docs/ @LigiaZ @alexkgold @olearycrew
+# kilocode_change - intentionally empty; approvals are enforced without automatic reviewer requests
