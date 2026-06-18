@@ -243,12 +243,22 @@ export function init() {
   })
 
   // kilocode_change start - resolve the root for a permission request's session
-  // so child (Task subagent) prompts are gated on the root, not the child
-  const sessionByID = new Map(sync.data.session.map((item) => [item.id, item]))
-  const rootFor = (sid: string) => TuiAutoApprove.root(sessionByID.get(sid)) ?? sid
+  // so child (Task subagent) prompts are gated on the root, not the child.
+  // The root map must be rebuilt each effect run so runtime-spawned
+  // subagents are visible — a snapshot taken at init() misses them.
+  const buildRootMap = () => {
+    const rootByID = new Map<string, string>()
+    for (const item of sync.data.session) {
+      rootByID.set(item.id, TuiAutoApprove.root(item) ?? item.id)
+    }
+    if (route.data.type === "session" && !rootByID.has(route.data.sessionID)) {
+      rootByID.set(route.data.sessionID, route.data.sessionID)
+    }
+    return rootByID
+  }
 
-  const reply = async (sid: string, rid: string) => {
-    const root = rootFor(sid)
+  const reply = async (sid: string, rid: string, rootByID: Map<string, string>) => {
+    const root = rootByID.get(sid) ?? sid
     if (!TuiAutoApprove.mark(root, rid)) return
     if (!TuiAutoApprove.enabled(root)) return
     const result = await sdk.client.permission.reply({
@@ -261,6 +271,7 @@ export function init() {
   // kilocode_change end
 
   createEffect(() => {
+    const rootByID = buildRootMap()
     const active = new Set(sync.data.session.map((item) => item.id))
     if (route.data.type === "session") active.add(route.data.sessionID)
     TuiAutoApprove.prune(active)
@@ -272,7 +283,7 @@ export function init() {
       const ids = TuiAutoApprove.scope(root, sync.data.session)
       for (const id of ids) {
         for (const req of sync.data.permission[id] ?? []) {
-          void reply(id, req.id)
+          void reply(id, req.id, rootByID)
         }
       }
     }
@@ -335,8 +346,9 @@ export function init() {
           const next = !enabled()
           TuiAutoApprove.set(sessionID, next)
           if (next) {
+            const rootByID = buildRootMap() // kilocode_change
             for (const req of sync.data.permission[sessionID] ?? []) {
-              await reply(sessionID, req.id)
+              await reply(sessionID, req.id, rootByID)
             }
             if (!TuiAutoApprove.enabled(sessionID)) {
               toast.show({
