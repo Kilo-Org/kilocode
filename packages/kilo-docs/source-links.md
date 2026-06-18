@@ -82,7 +82,7 @@
 - <https://github.com/Kilo-Org/kilocode>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
 - <https://github.com/Kilo-Org/kilocode/>
-  <!-- packages/kilo-vscode/webview-ui/src/context/notifications.tsx -->
+  <!-- packages/kilo-vscode/src/shared/notifications.ts -->
 - <https://github.com/Kilo-Org/kilocode/issues/6986>
   <!-- packages/kilo-vscode/src/agent-manager/constants.ts -->
 - <https://github.com/Kilo-Org/kilocode/issues/9618>

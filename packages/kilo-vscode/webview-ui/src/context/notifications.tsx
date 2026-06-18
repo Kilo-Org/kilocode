@@ -10,16 +10,7 @@ import {
 } from "solid-js"
 import { useVSCode } from "./vscode"
 import type { KilocodeNotification, ExtensionMessage } from "../types/messages"
-
-// Static notifications always shown unconditionally (not fetched from API)
-const STATIC_NOTIFICATIONS: KilocodeNotification[] = [
-  {
-    id: "star-giveaway-june-2026",
-    title: "GitHub Star Giveaway",
-    message: "We're giving away $500 of AI Credits when we reach 25,000 stars on GitHub. Support us:",
-    action: { actionText: "github.com/Kilo-Org/kilocode", actionURL: "https://github.com/Kilo-Org/kilocode/" },
-  },
-]
+import { BUILTIN_NOTIFICATIONS, mergeDismissals } from "../../../src/shared/notifications"
 
 interface NotificationsContextValue {
   notifications: Accessor<KilocodeNotification[]>
@@ -33,11 +24,12 @@ export const NotificationsProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
   const [notifications, setNotifications] = createSignal<KilocodeNotification[]>([])
   const [dismissedIds, setDismissedIds] = createSignal<string[]>([])
+  const local = new Set<string>()
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "notificationsLoaded") {
       setNotifications(message.notifications)
-      setDismissedIds(message.dismissedIds)
+      setDismissedIds(mergeDismissals(message.dismissedIds, local))
     }
   })
 
@@ -63,11 +55,12 @@ export const NotificationsProvider: ParentComponent = (props) => {
 
   const filteredNotifications = createMemo(() => {
     const dismissed = dismissedIds()
-    const all = [...STATIC_NOTIFICATIONS, ...notifications()]
+    const all = [...BUILTIN_NOTIFICATIONS, ...notifications()]
     return all.filter((n) => !dismissed.includes(n.id))
   })
 
   const dismiss = (id: string) => {
+    local.add(id)
     setDismissedIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
     vscode.postMessage({ type: "dismissNotification", notificationId: id })
   }
