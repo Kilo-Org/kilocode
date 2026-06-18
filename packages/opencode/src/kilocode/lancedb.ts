@@ -32,6 +32,17 @@ export namespace LanceDBRuntime {
     }
     if (box.ready) return box.ready
 
+    // Try resolving without npm install first (already installed or bundled)
+    try {
+      const resolved = Bun.resolveSync(pkg, process.cwd())
+      if (resolved) {
+        process.env[env] = resolved
+        return
+      }
+    } catch {
+      // Expected when LanceDB is not installed yet — Npm.add handles it below
+    }
+
     box.ready = (async () => {
       const result = await Npm.add(`${pkg}@${version}`)
       if (result.entrypoint) process.env[env] = result.entrypoint

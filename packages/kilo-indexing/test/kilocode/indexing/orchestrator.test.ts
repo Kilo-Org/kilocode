@@ -105,6 +105,7 @@ class Watcher {
   async initialize(): Promise<void> {}
   updateBatchSegmentThreshold(_newThreshold: number): void {}
   setCollecting(_collecting: boolean): void {}
+  clearAccumulatedEvents(): void {}
 
   async processFile(filePath: string): Promise<FileProcessingResult> {
     return {

@@ -21,6 +21,7 @@ const mockLanguageParser = {
   js: {
     parser: {
       parse: mock((content: string) => ({
+        delete: () => {},
         rootNode: {
           text: content,
           startPosition: { row: 0 },
@@ -51,6 +52,7 @@ describe("CodeParser", () => {
 
     // Restore default implementations after reset
     mockLanguageParser.js.parser.parse.mockImplementation((content: string) => ({
+      delete: () => {},
       rootNode: {
         text: content,
         startPosition: { row: 0 },
@@ -326,6 +328,7 @@ describe("CodeParser", () => {
       mockLanguageParser.js.query.captures.mockReset()
 
       mockLanguageParser.js.parser.parse.mockImplementation((content: string) => ({
+        delete: () => {},
         rootNode: {
           text: content,
           startPosition: { row: 0 },
@@ -931,6 +934,7 @@ This content verifies that processing continues after multiple oversized lines.`
       mockLanguageParser.js.query.captures.mockReset()
 
       mockLanguageParser.js.parser.parse.mockImplementation((content: string) => ({
+        delete: () => {},
         rootNode: {
           text: content,
           startPosition: { row: 0 },

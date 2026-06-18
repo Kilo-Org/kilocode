@@ -42,15 +42,19 @@ export const BATCH_SEGMENT_THRESHOLD = 60 // Number of code segments to batch fo
 export const MAX_BATCH_RETRIES = 3
 export const INITIAL_RETRY_DELAY_MS = 500
 export const PARSING_CONCURRENCY = 10
-export const MAX_PENDING_BATCHES = 20 // Maximum number of batches to accumulate before waiting
+export const MAX_PENDING_BATCHES = 50 // Maximum number of batches to accumulate before waiting
 
 /**Manager Recovery */
 export const MAX_MANAGER_RECOVERY_ATTEMPTS = 3
 export const INITIAL_MANAGER_RECOVERY_DELAY_MS = 500
 
+/**File Watcher */
+export const FILE_WATCHER_INIT_TIMEOUT_MS = 30_000
+
 /**Embedder Validation */
 export const REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS = 15_000
 export const REMOTE_EMBEDDER_VALIDATION_MAX_RETRIES = 0
+export const OLLAMA_EMBEDDER_PROBE_TIMEOUT_MS = 10_000
 export const OLLAMA_EMBEDDER_REQUEST_TIMEOUT_MS = 120_000
 
 /**OpenAI Embedder */

@@ -22,6 +22,7 @@ export interface IDirectoryScanner {
     onFilesIndexed?: (indexedCount: number) => void,
     onFileParsed?: () => void,
     mode?: IndexingTelemetryMode,
+    onDiscovered?: (total: number) => void,
   ): Promise<{
     stats: {
       processed: number
@@ -37,6 +38,7 @@ export interface IFileWatcher extends Disposable {
   initialize(): Promise<void>
   updateBatchSegmentThreshold(newThreshold: number): void
   setCollecting(collecting: boolean): void
+  clearAccumulatedEvents(): void
   setOverlay?(overlay?: WorktreeOverlay): void
   shutdown?(): Promise<void>
 

@@ -1,7 +1,7 @@
 import type { Ignore } from "ignore"
 import { stat, readFile } from "fs/promises"
+import { fdir } from "fdir"
 import path from "path"
-import { glob } from "glob"
 import {
   generateNormalizedAbsolutePath,
   generateRelativeFilePath,
@@ -12,7 +12,6 @@ import type { CodeBlock, ICodeParser, IEmbedder, IVectorStore, IDirectoryScanner
 import { createHash } from "crypto"
 import { v5 as uuidv5 } from "uuid"
 import pLimit from "p-limit"
-import { Mutex } from "async-mutex"
 import { CacheManager } from "../cache-manager"
 import {
   QDRANT_CODE_BLOCK_NAMESPACE,
@@ -22,7 +21,6 @@ import {
   INITIAL_RETRY_DELAY_MS,
   PARSING_CONCURRENCY,
   BATCH_PROCESSING_CONCURRENCY,
-  MAX_PENDING_BATCHES,
 } from "../constants"
 import { FileIgnore } from "../../file/ignore"
 import { Log } from "../../util/log"
@@ -134,6 +132,7 @@ export class DirectoryScanner implements IDirectoryScanner {
     onFilesIndexed?: (indexedCount: number) => void,
     onFileParsed?: () => void,
     mode: IndexingTelemetryMode = "full",
+    onDiscovered?: (total: number) => void,
   ): Promise<{ stats: { processed: number; skipped: number }; totalBlockCount: number }> {
     // reset cooperative cancel flag on new full scan
     this._cancelled = false
@@ -143,15 +142,16 @@ export class DirectoryScanner implements IDirectoryScanner {
     const scanWorkspace = directoryPath
     log.info("starting directory scan", { workspacePath: scanWorkspace })
 
-    // Get all files recursively, filtering out ignored directories via glob
-    const allPaths = await glob("**/*", {
-      cwd: directoryPath,
-      absolute: true,
-      nodir: true,
-      dot: false,
-      ignore: FileIgnore.PATTERNS,
-      maxDepth: Infinity,
-    })
+    // Get all files recursively via fdir with built-in symlink cycle detection
+    const allPaths = await new fdir()
+      .withFullPaths()
+      .withSymlinks({ resolvePaths: true })
+      .exclude((_dirName: string, dirPath: string) => {
+        const rel = path.relative(directoryPath, dirPath)
+        return FileIgnore.match(rel)
+      })
+      .crawl(directoryPath)
+      .withPromise()
 
     // Filter by supported extensions, ignore patterns, and excluded directories
     const supportedPaths = allPaths.filter((filePath) => {
@@ -175,263 +175,163 @@ export class DirectoryScanner implements IDirectoryScanner {
     })
     this.emitFileCount(mode, allPaths.length, supportedPaths.length)
 
+    // Report total discovered count upfront for progress visibility
+    onDiscovered?.(supportedPaths.length)
+
     // Initialize tracking variables
     const processedFiles = new Set<string>()
     let processedCount = 0
     let skippedCount = 0
 
     // Initialize parallel processing tools
-    const parseLimiter = pLimit(PARSING_CONCURRENCY) // Concurrency for file parsing
-    const batchLimiter = pLimit(BATCH_PROCESSING_CONCURRENCY) // Concurrency for batch processing
-    const mutex = new Mutex()
+    const parseLimiter = pLimit(PARSING_CONCURRENCY)
 
-    // Shared batch accumulators (protected by mutex)
+    // Shared batch accumulators — no mutex needed: JS single-threaded,
+    // synchronous push/swap is atomic within one microtask.
     let currentBatchBlocks: CodeBlock[] = []
     let currentBatchTexts: string[] = []
     let currentBatchFileInfos: { filePath: string; fileHash: string; isNew: boolean }[] = []
-    const batched = new Map<string, string>()
-    let failed = false
-    const activeBatchPromises = new Set<Promise<void>>()
-    let pendingBatchCount = 0
+    const activeBatches = new Set<Promise<void>>()
 
     // Initialize block counter
     let totalBlockCount = 0
 
-    const queueBatch = async (
+    const enqueueBatch = async (
       batchBlocks: CodeBlock[],
       batchTexts: string[],
       batchFileInfos: { filePath: string; fileHash: string; isNew: boolean }[],
     ): Promise<void> => {
-      while (!this._cancelled) {
-        const release = await mutex.acquire()
-        let wait: Promise<void> | null = null
-
-        try {
-          if (pendingBatchCount < MAX_PENDING_BATCHES) {
-            pendingBatchCount++
-
-            const batchPromise = batchLimiter(() =>
-              this.processBatch(
-                batchBlocks,
-                batchTexts,
-                batchFileInfos,
-                scanWorkspace,
-                mode,
-                onError,
-                onFilesIndexed,
-                () => {
-                  failed = true
-                },
-              ),
-            )
-            activeBatchPromises.add(batchPromise)
-
-            // Clean up completed promises to prevent memory accumulation
-            batchPromise.finally(() => {
-              activeBatchPromises.delete(batchPromise)
-              pendingBatchCount--
-            })
-
-            return
-          }
-
-          wait = activeBatchPromises.size > 0 ? Promise.race(activeBatchPromises) : Promise.resolve()
-        } finally {
-          release()
-        }
-
-        await wait
+      while (activeBatches.size >= BATCH_PROCESSING_CONCURRENCY && !this._cancelled) {
+        await Promise.race(activeBatches)
       }
+      if (this._cancelled) return
+
+      const p = this
+        .processBatch(
+          batchBlocks,
+          batchTexts,
+          batchFileInfos,
+          scanWorkspace,
+          mode,
+          onError,
+          onFilesIndexed,
+        )
+        .finally(() => activeBatches.delete(p))
+      activeBatches.add(p)
     }
 
-    // Process all files in parallel with concurrency control
-    const parsePromises = supportedPaths.map((filePath) =>
-      parseLimiter(async () => {
-        // Early exit if cancellation requested
-        if (this._cancelled) {
-          return
-        }
+    // Process files in chunks to bound memory usage
+    const CHUNK = 200
+    for (let chunkStart = 0; chunkStart < supportedPaths.length && !this._cancelled; chunkStart += CHUNK) {
+      const chunk = supportedPaths.slice(chunkStart, chunkStart + CHUNK)
+      const chunkPromises = chunk.map((filePath) =>
+        parseLimiter(async () => {
+          if (this._cancelled) return
 
-        try {
-          // Check file size
-          const stats = await stat(filePath)
-          if (this._cancelled) {
-            return
-          }
+          try {
+            const stats = await stat(filePath)
+            if (this._cancelled) return
 
-          if (stats.size > MAX_FILE_SIZE_BYTES) {
-            skippedCount++ // Skip large files
-            return
-          }
-
-          // Read file content using fs/promises
-          const content = await readFile(filePath, "utf-8")
-
-          if (this._cancelled) {
-            return
-          }
-
-          // Calculate current hash
-          const currentFileHash = createHash("sha256").update(content).digest("hex")
-          processedFiles.add(filePath)
-
-          // Check against cache
-          const cachedFileHash = this.cacheManager.getHash(filePath)
-          const isNewFile = !cachedFileHash
-          if (cachedFileHash === currentFileHash) {
-            // File is unchanged
-            skippedCount++
-            return
-          }
-
-          // File is new or changed - parse it using the injected parser function
-          const blocks = await this.codeParser.parseFile(filePath, { content, fileHash: currentFileHash })
-
-          if (this._cancelled) {
-            return
-          }
-
-          const fileBlockCount = blocks.length
-          onFileParsed?.()
-          processedCount++
-
-          if (!isNewFile && this.vectorStore) {
-            await this.vectorStore.deletePointsByMultipleFilePaths([filePath])
-          }
-
-          // Process embeddings if configured
-          if (this.embedder && this.vectorStore && blocks.length > 0) {
-            // Add to batch accumulators
-            let addedBlocksFromFile = false
-            let queued = false
-            const info = {
-              filePath,
-              fileHash: currentFileHash,
-              isNew: true,
+            if (stats.size > MAX_FILE_SIZE_BYTES) {
+              skippedCount++
+              return
             }
-            for (const block of blocks) {
-              if (this._cancelled) break
-              const trimmedContent = block.content.trim()
-              if (trimmedContent) {
-                const nextBatch = await (async () => {
-                  const release = await mutex.acquire()
-                  try {
-                    if (this._cancelled) {
-                      // Abort adding more items if cancelled
-                      return null
-                    }
 
-                    currentBatchBlocks.push(block)
-                    currentBatchTexts.push(trimmedContent)
-                    addedBlocksFromFile = true
+            const content = await readFile(filePath, "utf-8")
+            if (this._cancelled) return
 
-                    // Check if batch threshold is met
-                    if (currentBatchBlocks.length < this.batchSegmentThreshold) {
-                      return null
-                    }
+            const currentFileHash = createHash("sha256").update(content).digest("hex")
+            processedFiles.add(filePath)
 
-                    // Copy current batch data and clear accumulators
-                    const batchBlocks = [...currentBatchBlocks]
-                    const batchTexts = [...currentBatchTexts]
-                    // RATIONALE: Include the current file metadata before the flush snapshot
-                    // so threshold-triggered batches still run delete updates for this file.
-                    const batchFileInfos = queued ? [...currentBatchFileInfos] : [...currentBatchFileInfos, info]
-                    queued = true
-                    currentBatchBlocks = []
-                    currentBatchTexts = []
-                    currentBatchFileInfos = []
+            const cachedFileHash = this.cacheManager.getHash(filePath)
+            const isNewFile = !cachedFileHash
+            if (cachedFileHash === currentFileHash) {
+              skippedCount++
+              return
+            }
 
-                    return {
-                      batchBlocks,
-                      batchTexts,
-                      batchFileInfos,
-                    }
-                  } finally {
-                    release()
-                  }
-                })()
+            if (!isNewFile && this.vectorStore) {
+              await this.vectorStore.deletePointsByMultipleFilePaths([filePath])
+            }
 
-                if (!nextBatch) {
-                  continue
+            const blocks = await this.codeParser.parseFile(filePath, { content, fileHash: currentFileHash })
+            if (this._cancelled) return
+
+            onFileParsed?.()
+            processedCount++
+
+            if (this.embedder && this.vectorStore && blocks.length > 0) {
+              // Collect all blocks from this file locally (no mutex needed)
+              const fileBlocks: CodeBlock[] = []
+              const fileTexts: string[] = []
+              for (const block of blocks) {
+                if (this._cancelled) break
+                const trimmedContent = block.content.trim()
+                if (trimmedContent) {
+                  fileBlocks.push(block)
+                  fileTexts.push(trimmedContent)
                 }
-
-                await queueBatch(nextBatch.batchBlocks, nextBatch.batchTexts, nextBatch.batchFileInfos)
               }
-            }
 
-            // Add file info once per file (outside the block loop)
-            if (addedBlocksFromFile) {
-              const release = await mutex.acquire()
-              try {
-                totalBlockCount += fileBlockCount
-                batched.set(filePath, currentFileHash)
-                if (!queued) {
-                  currentBatchFileInfos.push(info)
-                  queued = true
+              if (fileBlocks.length > 0) {
+                const info = { filePath, fileHash: currentFileHash, isNew: true }
+                totalBlockCount += fileBlocks.length
+                currentBatchBlocks.push(...fileBlocks)
+                currentBatchTexts.push(...fileTexts)
+                currentBatchFileInfos.push(info)
+
+                if (currentBatchBlocks.length >= this.batchSegmentThreshold) {
+                  const blocks = currentBatchBlocks
+                  const texts = currentBatchTexts
+                  const infos = currentBatchFileInfos
+                  currentBatchBlocks = []
+                  currentBatchTexts = []
+                  currentBatchFileInfos = []
+
+                  void enqueueBatch(blocks, texts, infos)
                 }
-              } finally {
-                release()
               }
+            } else {
+              this.cacheManager.updateHash(filePath, currentFileHash)
             }
-          } else {
-            // Only update hash if not being processed in a batch
-            this.cacheManager.updateHash(filePath, currentFileHash)
+          } catch (error) {
+            log.error(`Error processing file ${filePath} in workspace ${scanWorkspace}`, {
+              error: sanitizeErrorMessage(error instanceof Error ? error.message : String(error)),
+              stack: error instanceof Error ? sanitizeErrorMessage(error.stack || "") : undefined,
+              location: "scanDirectory:processFile",
+            })
+            if (onError) {
+              onError(
+                error instanceof Error
+                  ? new Error(`${error.message} (Workspace: ${scanWorkspace}, File: ${filePath})`)
+                  : new Error(`Unknown error processing file ${filePath} (Workspace: ${scanWorkspace})`),
+              )
+            }
           }
-        } catch (error) {
-          log.error(`Error processing file ${filePath} in workspace ${scanWorkspace}`, {
-            error: sanitizeErrorMessage(error instanceof Error ? error.message : String(error)),
-            stack: error instanceof Error ? sanitizeErrorMessage(error.stack || "") : undefined,
-            location: "scanDirectory:processFile",
-          })
-          if (onError) {
-            onError(
-              error instanceof Error
-                ? new Error(`${error.message} (Workspace: ${scanWorkspace}, File: ${filePath})`)
-                : new Error(`Unknown error processing file ${filePath} (Workspace: ${scanWorkspace})`),
-            )
-          }
-        }
-      }),
-    )
+        }),
+      )
 
-    // Wait for all parsing to complete
-    await Promise.all(parsePromises)
+      await Promise.all(chunkPromises)
+    }
+
     log.info("finished parsing scan candidates", {
       workspacePath: scanWorkspace,
       processedCount,
       skippedCount,
-      pendingBatches: pendingBatchCount,
+      activeBatches: activeBatches.size,
       cancelled: this._cancelled,
     })
 
     // Process any remaining items in batch
-    const finalBatch = await (async () => {
-      const release = await mutex.acquire()
-      try {
-        if (this._cancelled || currentBatchBlocks.length === 0) {
-          return null
-        }
+    if (!this._cancelled && currentBatchBlocks.length > 0) {
+      const blocks = currentBatchBlocks
+      const texts = currentBatchTexts
+      const infos = currentBatchFileInfos
+      currentBatchBlocks = []
+      currentBatchTexts = []
+      currentBatchFileInfos = []
 
-        // Copy current batch data and clear accumulators
-        const batchBlocks = [...currentBatchBlocks]
-        const batchTexts = [...currentBatchTexts]
-        const batchFileInfos = [...currentBatchFileInfos]
-        currentBatchBlocks = []
-        currentBatchTexts = []
-        currentBatchFileInfos = []
-
-        return {
-          batchBlocks,
-          batchTexts,
-          batchFileInfos,
-        }
-      } finally {
-        release()
-      }
-    })()
-
-    if (finalBatch) {
-      await queueBatch(finalBatch.batchBlocks, finalBatch.batchTexts, finalBatch.batchFileInfos)
+      void enqueueBatch(blocks, texts, infos)
     }
 
     // Short-circuit if cancelled before handling deletions
@@ -450,20 +350,7 @@ export class DirectoryScanner implements IDirectoryScanner {
         totalBlockCount,
       }
     } else {
-      await Promise.all(activeBatchPromises)
-    }
-
-    if (!failed) {
-      for (const [filePath, fileHash] of batched.entries()) {
-        this.cacheManager.updateHash(filePath, fileHash)
-      }
-    }
-
-    if (failed && batched.size > 0) {
-      log.warn("skipping cache hash updates due failed batch", {
-        workspacePath: scanWorkspace,
-        affectedFiles: batched.size,
-      })
+      await Promise.all(activeBatches)
     }
 
     // Handle deleted files
@@ -630,6 +517,11 @@ export class DirectoryScanner implements IDirectoryScanner {
         await this.vectorStore.upsertPoints(points)
         log.debug("Completed Qdrant upsert")
         onFilesIndexed?.(batchFileInfos.length)
+
+        // Persist cache hashes after successful batch so partial progress isn't lost
+        for (const info of batchFileInfos) {
+          this.cacheManager.updateHash(info.filePath, info.fileHash)
+        }
 
         success = true
         log.debug(`Successfully processed batch of ${batchBlocks.length} blocks after ${attempts} attempt(s)`)

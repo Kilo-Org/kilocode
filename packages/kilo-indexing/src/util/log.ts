@@ -16,15 +16,25 @@ type Entry = {
 
 const enabled = process.env.KILO_INDEXING_LOG === "1" || process.env.KILO_INDEXING_LOG === "true"
 
+const NO_OP_LOGGER: Entry = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+  tag: () => NO_OP_LOGGER,
+  clone: () => NO_OP_LOGGER,
+  time: () => ({ stop: () => {}, [Symbol.dispose]: () => {} }),
+}
+
 export namespace Log {
   export type Logger = Entry
 
   export function create(input: Record<string, unknown> = {}): Entry {
+    if (!enabled) return NO_OP_LOGGER
+
     const tags = { ...input }
 
     function write(level: string, message?: unknown, extra?: Record<string, unknown>) {
-      if (!enabled) return
-
       const line = JSON.stringify({
         level,
         time: new Date().toISOString(),

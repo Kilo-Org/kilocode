@@ -68,6 +68,11 @@ export class CodeIndexStateManager {
     this._progressEmitter.fire(this.getCurrentStatus())
   }
 
+  public setTotalFiles(total: number): void {
+    this._totalFiles = total
+    this._progressEmitter.fire(this.getCurrentStatus())
+  }
+
   public reportFileProgress(processedFiles: number, totalFiles: number, currentFileBasename?: string): void {
     const percent = totalFiles > 0 ? Math.min(100, Math.round((processedFiles / totalFiles) * 100)) : 0
     const progressChanged =
