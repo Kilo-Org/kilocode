@@ -34,4 +34,12 @@ describe("SLASH_PATTERN", () => {
     const before = "line one\nline two\n/"
     expect(before.match(SLASH_PATTERN)).not.toBeNull()
   })
+
+  // Regression: with the `m` flag approach, a slash command on a previous line
+  // would still match even after the user continued typing on a new line.
+  it("does not match when slash command was on a previous line and cursor moved to next line", () => {
+    // User typed "/new" then Enter then "hello" — cursor is after "hello", not on a slash line
+    const before = "/new\nhello"
+    expect(before.match(SLASH_PATTERN)).toBeNull()
+  })
 })
