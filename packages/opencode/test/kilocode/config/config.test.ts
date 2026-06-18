@@ -7,6 +7,7 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Npm } from "@opencode-ai/core/npm"
+import { HttpClient } from "effect/unstable/http"
 import { Account } from "../../../src/account/account"
 import { Auth } from "../../../src/auth"
 import { Config } from "../../../src/config/config"
@@ -34,6 +35,9 @@ const noopNpm = Layer.mock(Npm.Service)({
   add: () => Effect.die("not implemented"),
   which: () => Effect.succeed(Option.none()),
 })
+const unexpectedHttp = HttpClient.make((request) =>
+  Effect.die(`unexpected http request: ${request.method} ${request.url}`),
+)
 const layer = Config.layer.pipe(
   Layer.provide(EffectFlock.defaultLayer),
   Layer.provide(AppFileSystem.defaultLayer),
@@ -42,6 +46,7 @@ const layer = Config.layer.pipe(
   Layer.provide(emptyAccount),
   Layer.provideMerge(infra),
   Layer.provide(noopNpm),
+  Layer.provide(Layer.succeed(HttpClient.HttpClient, unexpectedHttp)),
 )
 
 const load = () => Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(layer)))

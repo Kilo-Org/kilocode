@@ -770,7 +770,7 @@ export function UserMessageDisplay(props: {
     const providerID = props.message.model?.providerID
     const modelID = props.message.model?.modelID
     if (!providerID || !modelID) return ""
-    const match = data.store.provider?.all?.find((p) => p.id === providerID)
+    const match = data.store.provider?.all?.get(providerID)
     return match?.models?.[modelID]?.name ?? modelID
   })
 
@@ -2235,7 +2235,6 @@ ToolRegistry.register({
         defaultOpen={props.defaultOpen ?? true}
         onOpenChange={setOpen}
         allowPendingToggle
-        animated
         trigger={
           <div data-slot="basic-tool-tool-info-structured">
             <div data-slot="basic-tool-tool-info-main">

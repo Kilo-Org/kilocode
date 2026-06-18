@@ -14,7 +14,7 @@ import { FileWatcher } from "@/file/watcher"
 import { Storage } from "@/storage/storage"
 import { Snapshot } from "@/snapshot"
 import { Plugin } from "@/plugin"
-import { ModelsDev } from "@opencode-ai/core/models"
+import { ModelsDev } from "@opencode-ai/core/models-dev"
 import { ModelCache } from "@/provider/model-cache" // kilocode_change
 import { Provider } from "@/provider/provider"
 import { ProviderAuth } from "@/provider/auth"

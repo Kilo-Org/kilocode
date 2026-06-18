@@ -62,7 +62,7 @@ export namespace KiloToolRegistry {
 
   function semanticTool(deps: Deps, loaders: Loaders) {
     return Effect.gen(function* () {
-      const ready = yield* (deps.indexing === undefined
+      const ready = yield* deps.indexing === undefined
         ? (() => {
             const indexing = loaders.indexing ?? (() => import("@/kilocode/indexing"))
             return Effect.tryPromise(() => indexing().then((mod) => mod.KiloIndexing.ready())).pipe(
@@ -74,7 +74,7 @@ export namespace KiloToolRegistry {
               ),
             )
           })()
-        : Effect.succeed(deps.indexing))
+        : Effect.succeed(deps.indexing)
       if (!ready) return undefined
 
       const semantic = loaders.semantic ?? (() => import("@/kilocode/tool/semantic-search"))

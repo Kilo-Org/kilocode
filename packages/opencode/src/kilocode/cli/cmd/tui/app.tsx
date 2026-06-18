@@ -9,7 +9,6 @@ import { createEffect, on } from "solid-js"
 import { useKeyboard } from "@opentui/solid"
 import { TextAttributes } from "@opentui/core"
 import * as Clipboard from "@tui/util/clipboard"
-import { useCommandPalette } from "@tui/context/command-palette"
 import { useBindings } from "@tui/keymap"
 import { useSDK } from "@tui/context/sdk"
 import { useSync } from "@tui/context/sync"
@@ -208,7 +207,6 @@ export function init() {
 
   // Inject TUI dependencies for kilo-gateway
   initializeTUIDependencies({
-    useCommandPalette,
     useSync,
     useDialog,
     useToast,

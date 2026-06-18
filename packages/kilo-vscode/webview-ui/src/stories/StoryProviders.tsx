@@ -117,7 +117,7 @@ export const defaultMockData = {
   part: {} as Record<string, any[]>,
   permission: {} as Record<string, any[]>,
   question: {},
-  provider: { all: [], connected: false, default: {} },
+  provider: { all: new Map(), connected: [], default: {} },
 }
 
 // ---------------------------------------------------------------------------

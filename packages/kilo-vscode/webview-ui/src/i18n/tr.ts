@@ -1528,6 +1528,8 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Eski Sürüm Taşıma",
   "settings.aboutKiloCode.legacyMigration.description":
     "Sağlayıcı API anahtarları ve varsayılan model dahil olmak üzere Kilo Code'un önceki yüklemesinden ayarları taşıyın.",
+  "settings.aboutKiloCode.rooImport.description": "Bir Roo Code yüklemesinden konuşma geçmişini içe aktarın.",
+  "settings.aboutKiloCode.rooImport.button": "Roo Code'dan Oturumları İçe Aktar",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Kilo Code'daki Yenilikler",

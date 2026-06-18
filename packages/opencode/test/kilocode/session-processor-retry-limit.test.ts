@@ -9,6 +9,7 @@ import { afterEach, describe, expect, spyOn } from "bun:test"
 import { APICallError } from "ai"
 import { Context, Effect, Layer } from "effect"
 import * as Stream from "effect/Stream"
+import type { LLMEvent } from "@opencode-ai/llm"
 import path from "path"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
@@ -26,7 +27,7 @@ import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionProcessor } from "../../src/session/processor"
 import { SessionRetry } from "../../src/session/retry"
-import { MessageID, PartID, SessionID } from "../../src/session/schema"
+import { MessageID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
 import { SessionSummary } from "../../src/session/summary"
 import { Snapshot } from "../../src/snapshot"
@@ -43,7 +44,7 @@ const ref = {
   modelID: ModelID.make("test-model"),
 }
 
-type Script = Stream.Stream<LLM.Event, unknown>
+type Script = Stream.Stream<LLMEvent, unknown>
 
 class TestLLM extends Context.Service<
   TestLLM,

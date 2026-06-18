@@ -39,10 +39,10 @@ import type {
   WorktreeState,
 } from "./agent-manager"
 import type {
-  LegacyMigrationCompleteMessage,
-  LegacyMigrationDataMessage,
-  LegacyMigrationProgressMessage,
-  LegacyMigrationSessionProgressMessage,
+  MigrationCompleteMessage,
+  MigrationDataMessage,
+  MigrationProgressMessage,
+  MigrationSessionProgressMessage,
   MigrationStateMessage,
 } from "./migration"
 
@@ -1069,10 +1069,10 @@ export type ExtensionMessage =
   | AgentManagerTerminalErrorMessage
   // legacy-migration start
   | MigrationStateMessage
-  | LegacyMigrationDataMessage
-  | LegacyMigrationProgressMessage
-  | LegacyMigrationSessionProgressMessage
-  | LegacyMigrationCompleteMessage
+  | MigrationDataMessage
+  | MigrationProgressMessage
+  | MigrationSessionProgressMessage
+  | MigrationCompleteMessage
   // legacy-migration end
   | EnhancePromptResultMessage
   | EnhancePromptErrorMessage

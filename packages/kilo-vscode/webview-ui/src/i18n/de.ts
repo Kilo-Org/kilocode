@@ -1580,6 +1580,9 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Legacy-Migration",
   "settings.aboutKiloCode.legacyMigration.description":
     "Migrieren Sie Einstellungen von einer früheren Installation von Kilo Code, einschließlich Anbieter-API-Schlüsseln und dem Standardmodell.",
+  "settings.aboutKiloCode.rooImport.description":
+    "Importieren Sie den Konversationsverlauf von einer Installation von Roo Code.",
+  "settings.aboutKiloCode.rooImport.button": "Sitzungen aus Roo Code importieren",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Neuigkeiten in Kilo Code",

@@ -252,14 +252,18 @@ export namespace KiloSessions {
             fn: (evt: { properties: any }) => unknown | Promise<unknown>,
           ) =>
             bus.subscribe(def as never).pipe(
-              Stream.runForEach((evt) =>
-                EffectBridge.fromPromise(() => fn(evt as { properties: any })).pipe(
-                  Effect.catchCause((cause) =>
-                    Effect.sync(() => log.error("subscriber failed", { type: def.type, cause })),
+              Effect.flatMap((stream) =>
+                stream.pipe(
+                  Stream.runForEach((evt) =>
+                    EffectBridge.fromPromise(() => fn(evt as { properties: any })).pipe(
+                      Effect.catchCause((cause) =>
+                        Effect.sync(() => log.error("subscriber failed", { type: def.type, cause })),
+                      ),
+                    ),
                   ),
+                  Effect.forkScoped,
                 ),
               ),
-              Effect.forkScoped,
             )
 
           yield* watch(Session.Event.Created, (evt) => {

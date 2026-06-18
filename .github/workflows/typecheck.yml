@@ -21,6 +21,9 @@ jobs:
       # kilocode_change start
       - name: Run TypeScript typecheck
         run: bun turbo typecheck --filter='!@kilocode/kilo-jetbrains'
+
+      - name: Build Kilo Console
+        run: bun turbo build --filter=@kilocode/kilo-console
       # kilocode_change end
 
   # kilocode_change start

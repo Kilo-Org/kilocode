@@ -1556,6 +1556,8 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Миграция с устаревшей версии",
   "settings.aboutKiloCode.legacyMigration.description":
     "Перенос настроек из предыдущей установки Kilo Code, включая API-ключи провайдеров и модель по умолчанию.",
+  "settings.aboutKiloCode.rooImport.description": "Импорт истории переписки из установки Roo Code.",
+  "settings.aboutKiloCode.rooImport.button": "Импортировать сеансы из Roo Code",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Что нового в Kilo Code",

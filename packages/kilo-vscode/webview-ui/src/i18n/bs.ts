@@ -1559,6 +1559,8 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Migracija sa prethodne verzije",
   "settings.aboutKiloCode.legacyMigration.description":
     "Migrirajte postavke iz prethodne instalacije Kilo Code, uključujući API ključeve provajdera i podrazumijevani model.",
+  "settings.aboutKiloCode.rooImport.description": "Uvezite historiju razgovora iz instalacije Roo Code.",
+  "settings.aboutKiloCode.rooImport.button": "Uvezi sesije iz Roo Code",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Šta je novo u Kilo Code",
