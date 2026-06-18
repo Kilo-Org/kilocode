@@ -2,7 +2,7 @@ import { createSignal, onCleanup } from "solid-js"
 import type { Accessor } from "solid-js"
 import type { SlashCommandInfo, WebviewMessage, ExtensionMessage } from "../types/messages"
 
-export const SLASH_PATTERN = /^\/(\S*)$/
+export const SLASH_PATTERN = /^\/(\S*)$/m
 
 interface VSCodeContext {
   postMessage: (message: WebviewMessage) => void
