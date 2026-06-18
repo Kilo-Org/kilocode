@@ -209,6 +209,7 @@ export function init() {
   const dialog = useDialog()
 
   const enabled = () => {
+    if (route.data.type === "home") return TuiAutoApprove.next()
     if (route.data.type !== "session") return false
     return TuiAutoApprove.enabled(route.data.sessionID)
   }
@@ -337,8 +338,13 @@ export function init() {
         category: "Session",
         slashName: "auto-approve",
         slashAliases: ["yolo"],
-        enabled: route.data.type === "session",
+        enabled: route.data.type === "session" || route.data.type === "home",
         run: async () => {
+          if (route.data.type === "home") {
+            TuiAutoApprove.pending(!enabled())
+            dialog.clear()
+            return
+          }
           if (route.data.type !== "session") return
           const sessionID = route.data.sessionID
           const next = !enabled()

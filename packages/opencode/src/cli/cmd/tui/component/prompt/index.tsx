@@ -205,7 +205,7 @@ export function Prompt(props: PromptProps) {
   const [warpNotice, setWarpNotice] = createSignal<string>()
   const [cursorVersion, setCursorVersion] = createSignal(0)
   const currentProviderLabel = createMemo(() => local.model.parsed().provider)
-  const yolo = createMemo(() => TuiAutoApprove.enabled(props.sessionID)) // kilocode_change
+  const yolo = createMemo(() => TuiAutoApprove.show(props.sessionID)) // kilocode_change
   const hasRightContent = createMemo(() => Boolean(props.right))
 
   function selectWorkspace(selection: WorkspaceSelection | undefined) {
@@ -1128,7 +1128,7 @@ export function Prompt(props: PromptProps) {
       } // kilocode_change
 
       sessionID = res.data.id // kilocode_change
-      if (args.autoApprove && !args.sessionID && !args.continue) TuiAutoApprove.boot(sessionID) // kilocode_change
+      if ((args.autoApprove || TuiAutoApprove.next()) && !args.sessionID && !args.continue) TuiAutoApprove.boot(sessionID) // kilocode_change
     }
 
     const messageID = MessageID.ascending()

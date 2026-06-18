@@ -141,4 +141,21 @@ describe("tui auto-approve", () => {
 
     expect(new Set(TuiAutoApprove.roots())).toEqual(new Set(["ses_a", "ses_b"]))
   })
+
+  test("pending mode shows before boot and clears after boot", async () => {
+    const { TuiAutoApprove } = await load()
+
+    expect(TuiAutoApprove.show()).toBe(false)
+
+    TuiAutoApprove.pending(true)
+
+    expect(TuiAutoApprove.next()).toBe(true)
+    expect(TuiAutoApprove.show()).toBe(true)
+
+    TuiAutoApprove.boot("ses_a")
+
+    expect(TuiAutoApprove.next()).toBe(false)
+    expect(TuiAutoApprove.show()).toBe(false)
+    expect(TuiAutoApprove.show("ses_a")).toBe(true)
+  })
 })

@@ -4,6 +4,7 @@ import { createSignal } from "solid-js"
 const sessions = new Set<string>()
 const replies = new Map<string, Set<string>>()
 const [version, setVersion] = createSignal(0)
+let queued = false
 
 function touch() {
   setVersion((value) => value + 1)
@@ -25,6 +26,20 @@ export namespace TuiAutoApprove {
     return sessions.has(sessionID)
   }
 
+  export function next() {
+    track()
+    return queued
+  }
+
+  export function show(sessionID?: string) {
+    return sessionID ? enabled(sessionID) : next()
+  }
+
+  export function pending(enable: boolean) {
+    queued = enable
+    touch()
+  }
+
   export function set(sessionID: string, enable: boolean) {
     if (enable) {
       sessions.add(sessionID)
@@ -37,6 +52,7 @@ export namespace TuiAutoApprove {
   export function boot(sessionID?: string) {
     if (!sessionID) return false
     sessions.add(sessionID)
+    queued = false
     touch()
     return true
   }
