@@ -201,6 +201,7 @@ const AppContent: Component = () => {
   // legacy-migration: state-driven flag independent of currentView to avoid
   // race conditions with SettingsEditorProvider's navigate messages.
   const [migrationNeeded, setMigrationNeeded] = createSignal(false)
+  const [migrationSource, setMigrationSource] = createSignal<"legacy" | "roo">("legacy")
   const session = useSession()
   const server = useServer()
   const vscode = useVSCode()
@@ -339,8 +340,14 @@ const AppContent: Component = () => {
                 tab={settingsTab()}
                 onTabChange={setSettingsTab}
                 onMigrateClick={() => {
+                  setMigrationSource("legacy")
                   setMigrationNeeded(true)
                   vscode.postMessage({ type: "requestLegacyMigrationData" })
+                }}
+                onImportRooClick={() => {
+                  setMigrationSource("roo")
+                  setMigrationNeeded(true)
+                  vscode.postMessage({ type: "requestRooMigrationData" })
                 }}
               />
             </Match>
@@ -350,7 +357,11 @@ const AppContent: Component = () => {
           </Switch>
         }
       >
-        <MigrationWizard onBack={() => setMigrationNeeded(false)} onComplete={() => setMigrationNeeded(false)} />
+        <MigrationWizard
+          source={migrationSource()}
+          onBack={() => setMigrationNeeded(false)}
+          onComplete={() => setMigrationNeeded(false)}
+        />
       </Show>
       {/* legacy-migration end */}
     </div>

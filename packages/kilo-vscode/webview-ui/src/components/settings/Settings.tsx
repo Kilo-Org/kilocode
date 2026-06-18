@@ -29,6 +29,7 @@ export interface SettingsProps {
   tab?: string
   onTabChange?: (tab: string) => void
   onMigrateClick?: () => void // legacy-migration
+  onImportRooClick?: () => void
 }
 
 const Settings: Component<SettingsProps> = (props) => {
@@ -276,6 +277,7 @@ const Settings: Component<SettingsProps> = (props) => {
             connectionState={server.connectionState()}
             extensionVersion={server.extensionVersion()}
             onMigrateClick={props.onMigrateClick}
+            onImportRooClick={props.onImportRooClick}
           />
         </Tabs.Content>
       </Tabs>

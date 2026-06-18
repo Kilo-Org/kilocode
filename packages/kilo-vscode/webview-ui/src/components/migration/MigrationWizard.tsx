@@ -182,6 +182,7 @@ interface ProgressEntry {
 // ---------------------------------------------------------------------------
 
 export interface MigrationWizardProps {
+  source?: "legacy" | "roo"
   onBack: () => void
   onComplete: () => void
 }
@@ -190,8 +191,9 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   const vscode = useVSCode()
   const dialog = useDialog()
   const language = useLanguage()
+  const source = () => props.source ?? "legacy"
 
-  const [screen, setScreen] = createSignal<Screen>("whats-new")
+  const [screen, setScreen] = createSignal<Screen>(source() === "roo" ? "migrate" : "whats-new")
   const [phase, setPhase] = createSignal<MigratePhase>("selecting")
 
   // Data from extension
@@ -305,7 +307,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
     }
 
     window.addEventListener("message", handler)
-    vscode.postMessage({ type: "requestLegacyMigrationData" })
+    vscode.postMessage({ type: source() === "roo" ? "requestRooMigrationData" : "requestLegacyMigrationData" })
     onCleanup(() => window.removeEventListener("message", handler))
   })
 
@@ -314,8 +316,39 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   // ---------------------------------------------------------------------------
 
   const handleSkip = () => {
+    if (source() === "roo") {
+      props.onBack()
+      return
+    }
+
     vscode.postMessage({ type: "skipLegacyMigration" })
     props.onBack()
+  }
+
+  const autoApprovalSelections = (): MigrationAutoApprovalSelections => {
+    if (!migrateAutoApproval()) {
+      return {
+        commandRules: false,
+        readPermission: false,
+        writePermission: false,
+        executePermission: false,
+        mcpPermission: false,
+        taskPermission: false,
+      }
+    }
+
+    const s = legacySettings()
+    return {
+      commandRules:
+        s?.autoApprovalEnabled !== undefined ||
+        Boolean(s?.allowedCommands?.length) ||
+        Boolean(s?.deniedCommands?.length),
+      readPermission: s?.alwaysAllowReadOnly !== undefined || s?.alwaysAllowReadOnlyOutsideWorkspace !== undefined,
+      writePermission: s?.alwaysAllowWrite !== undefined,
+      executePermission: s?.alwaysAllowExecute !== undefined,
+      mcpPermission: s?.alwaysAllowMcp !== undefined,
+      taskPermission: s?.alwaysAllowModeSwitch !== undefined || s?.alwaysAllowSubtasks !== undefined,
+    }
   }
 
   const handleStartMigration = () => {
@@ -327,30 +360,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
     const selectedMcpNames = migrateMcpServers() ? mcpServers().map((s) => s.name) : []
     const selectedModesSlugs = migrateModes() ? customModes().map((m) => m.slug) : []
 
-    const autoApproval: MigrationAutoApprovalSelections = migrateAutoApproval()
-      ? {
-          commandRules:
-            legacySettings()?.autoApprovalEnabled !== undefined ||
-            Boolean(legacySettings()?.allowedCommands?.length) ||
-            Boolean(legacySettings()?.deniedCommands?.length),
-          readPermission:
-            legacySettings()?.alwaysAllowReadOnly !== undefined ||
-            legacySettings()?.alwaysAllowReadOnlyOutsideWorkspace !== undefined,
-          writePermission: legacySettings()?.alwaysAllowWrite !== undefined,
-          executePermission: legacySettings()?.alwaysAllowExecute !== undefined,
-          mcpPermission: legacySettings()?.alwaysAllowMcp !== undefined,
-          taskPermission:
-            legacySettings()?.alwaysAllowModeSwitch !== undefined ||
-            legacySettings()?.alwaysAllowSubtasks !== undefined,
-        }
-      : {
-          commandRules: false,
-          readPermission: false,
-          writePermission: false,
-          executePermission: false,
-          mcpPermission: false,
-          taskPermission: false,
-        }
+    const autoApproval = autoApprovalSelections()
 
     // Build progress entries
     const entries: ProgressEntry[] = [
@@ -398,21 +408,25 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
     setRunning(true)
     setPhase("migrating")
 
-    vscode.postMessage({
-      type: "startLegacyMigration",
-      selections: {
-        providers: selectedProviderNames,
-        mcpServers: selectedMcpNames,
-        customModes: selectedModesSlugs,
-        sessions: migrateSessions() ? sessions().map((session) => ({ id: session.id })) : [],
-        defaultModel: migrateDefaultModel(),
-        settings: {
-          autoApproval,
-          language: migrateLanguage(),
-          autocomplete: migrateAutocomplete(),
-        },
+    const selections = {
+      providers: selectedProviderNames,
+      mcpServers: selectedMcpNames,
+      customModes: selectedModesSlugs,
+      sessions: migrateSessions() ? sessions().map((session) => ({ id: session.id })) : [],
+      defaultModel: migrateDefaultModel(),
+      settings: {
+        autoApproval,
+        language: migrateLanguage(),
+        autocomplete: migrateAutocomplete(),
       },
-    })
+    }
+
+    if (source() === "roo") {
+      vscode.postMessage({ type: "startRooMigration", selections: { sessions: selections.sessions } })
+      return
+    }
+
+    vscode.postMessage({ type: "startLegacyMigration", selections })
   }
 
   const handleForceReimport = (ids: string[]) => {
@@ -429,6 +443,14 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
             const next = ids.map((id) => ({ item: id, group: "sessions", status: "pending" as const }))
             return [...keep, ...next]
           })
+          if (source() === "roo") {
+            vscode.postMessage({
+              type: "startRooMigration",
+              selections: { sessions: ids.map((id) => ({ id, force: true })) },
+            })
+            showToast({ variant: "success", title: language.t("migration.forceReimport.toast.started") })
+            return
+          }
           vscode.postMessage({
             type: "startLegacyMigration",
             selections: {
@@ -458,6 +480,12 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   }
 
   const handleDone = () => {
+    if (source() === "roo") {
+      vscode.postMessage({ type: "loadSessions" })
+      props.onComplete()
+      return
+    }
+
     if (running()) {
       dialog.show(() => (
         <RunningMigrationDialog
@@ -916,7 +944,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                 <button
                   type="button"
                   class="migration-wizard__btn migration-wizard__btn--ghost"
-                  onClick={() => setScreen("whats-new")}
+                  onClick={() => (source() === "roo" ? props.onBack() : setScreen("whats-new"))}
                 >
                   {language.t("common.goBack")}
                 </button>

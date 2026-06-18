@@ -1489,6 +1489,8 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "旧版迁移",
   "settings.aboutKiloCode.legacyMigration.description":
     "从旧版 Kilo Code 安装迁移设置，包括提供商 API 密钥和默认模型。",
+  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
+  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Kilo Code 新功能",

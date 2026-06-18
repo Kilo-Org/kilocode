@@ -1383,6 +1383,8 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Migrazione legacy",
   "settings.aboutKiloCode.legacyMigration.description":
     "Migra le impostazioni da una precedente installazione di Kilo Code, incluse API key dei provider e modello predefinito.",
+  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
+  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
   "migration.whatsNew.title": "Novità in Kilo Code",
   "migration.whatsNew.subtitle": "Abbiamo ricostruito l'estensione su fondamenta più veloci ed efficienti.",
   "migration.whatsNew.features.performance.title": "Prestazioni agente più rapide",

@@ -2,16 +2,21 @@
  * Legacy migration handlers — extracted from KiloProvider.
  *
  * Manages the migration wizard for users upgrading from Kilo Code v5.x.
- * No vscode dependency — all vscode access is injected via MigrationContext.
+ * VS Code access is limited to migration service helpers and injected context.
  */
 
 import type { KiloClient } from "@kilocode/sdk/v2/client"
+import * as path from "node:path"
 import type {
   LegacyMigrationData,
   MigrationSelections,
   MigrationSessionProgress,
+  MigrationSessionSelection,
 } from "../../legacy-migration/legacy-types"
 import * as MigrationService from "../../legacy-migration/migration-service"
+import { buildSessionMeta } from "../../legacy-migration/migration-session-progress"
+import { migrate as migrateSession } from "../../legacy-migration/sessions/migrate"
+import { detectRooCodeSessions, readRooUiConversation, type RooImportSource } from "../../roo-import/service"
 
 /** Subset of vscode.ExtensionContext needed by migration handlers. */
 interface MigrationExtensionContext {
@@ -34,10 +39,21 @@ export interface MigrationContext {
   postMessage(msg: unknown): void
   refreshSessions(): void
   cachedLegacyData: LegacyMigrationData | null
+  cachedRooSource: RooImportSource | null
   migrationCheckInFlight: boolean
   lastMigrationHadErrors?: boolean
   disposeGlobal(): Promise<void>
   broadcastComplete(): void
+}
+
+function emptyData(sessions: LegacyMigrationData["sessions"] = []): LegacyMigrationData {
+  return {
+    hasData: sessions.length > 0,
+    providers: [],
+    mcpServers: [],
+    customModes: [],
+    sessions,
+  }
 }
 
 function postSessionProgress(ctx: MigrationContext, progress: MigrationSessionProgress): void {
@@ -111,6 +127,76 @@ export async function handleRequestLegacyMigrationData(ctx: MigrationContext): P
       settings: data.settings,
     },
   })
+}
+
+export async function handleRequestRooMigrationData(ctx: MigrationContext): Promise<void> {
+  if (!ctx.extensionContext) return
+  const source = await detectRooCodeSessions(ctx.extensionContext as Parameters<typeof detectRooCodeSessions>[0])
+  ctx.cachedRooSource = source
+  const data = emptyData(source?.sessions ?? [])
+  ctx.postMessage({
+    type: "legacyMigrationData",
+    data: {
+      providers: data.providers,
+      mcpServers: data.mcpServers,
+      customModes: data.customModes,
+      sessions: data.sessions,
+      defaultModel: data.defaultModel,
+      settings: data.settings,
+    },
+  })
+}
+
+export async function handleStartRooMigration(
+  ctx: MigrationContext,
+  selections: { sessions?: MigrationSessionSelection[] },
+): Promise<void> {
+  if (!ctx.extensionContext || !ctx.client) return
+  const source =
+    ctx.cachedRooSource ??
+    (await detectRooCodeSessions(ctx.extensionContext as Parameters<typeof detectRooCodeSessions>[0]))
+  if (!source) {
+    ctx.postMessage({
+      type: "legacyMigrationComplete",
+      results: [
+        { item: "Roo Code sessions", category: "session", status: "warning", message: "No Roo Code sessions found." },
+      ],
+    })
+    return
+  }
+
+  const picked = selections.sessions ?? []
+  const results = []
+  for (const [index, selection] of picked.entries()) {
+    const session = source.sessions.find((item) => item.id === selection.id)
+    const item = source.items.find((next) => next.id === selection.id)
+    const meta = buildSessionMeta(session, index, picked.length)
+    const conversation =
+      source.formats[selection.id] === "ui"
+        ? await readRooUiConversation(path.join(source.dir, selection.id), selection.id)
+        : undefined
+
+    const result = await migrateSession(
+      selection,
+      ctx.extensionContext as Parameters<typeof migrateSession>[1],
+      ctx.client,
+      meta,
+      meta ? (progress) => postSessionProgress(ctx, { ...meta, ...progress }) : undefined,
+      { dir: source.dir, item, conversation },
+    )
+    const status = result.ok ? (result.skipped ? ("warning" as const) : ("success" as const)) : ("error" as const)
+    const message = result.ok ? (result.skipped ? "Already imported." : undefined) : result.message
+    ctx.postMessage({ type: "legacyMigrationProgress", item: selection.id, status, message })
+    results.push({
+      item: session?.title ?? selection.id,
+      category: "session" as const,
+      status,
+      message,
+    })
+  }
+
+  ctx.lastMigrationHadErrors = results.some((item) => item.status === "error")
+  ctx.postMessage({ type: "legacyMigrationComplete", results })
 }
 
 /** Run the migration for the selected items. */

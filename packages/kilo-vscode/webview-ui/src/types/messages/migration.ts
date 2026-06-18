@@ -106,6 +106,10 @@ export interface RequestLegacyMigrationDataMessage {
   type: "requestLegacyMigrationData"
 }
 
+export interface RequestRooMigrationDataMessage {
+  type: "requestRooMigrationData"
+}
+
 export interface MigrationAutoApprovalSelections {
   commandRules: boolean
   readPermission: boolean
@@ -133,6 +137,13 @@ export interface StartLegacyMigrationMessage {
       language: boolean
       autocomplete: boolean
     }
+  }
+}
+
+export interface StartRooMigrationMessage {
+  type: "startRooMigration"
+  selections: {
+    sessions?: MigrationSessionSelection[]
   }
 }
 

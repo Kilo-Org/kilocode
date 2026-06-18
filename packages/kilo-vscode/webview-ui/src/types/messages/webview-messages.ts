@@ -11,8 +11,10 @@ import type {
   ClearLegacyDataMessage,
   FinalizeLegacyMigrationMessage,
   RequestLegacyMigrationDataMessage,
+  RequestRooMigrationDataMessage,
   SkipLegacyMigrationMessage,
   StartLegacyMigrationMessage,
+  StartRooMigrationMessage,
 } from "./migration"
 
 // ============================================
@@ -1225,7 +1227,9 @@ export type WebviewMessage =
   | OpenPRMessage
   // legacy-migration start
   | RequestLegacyMigrationDataMessage
+  | RequestRooMigrationDataMessage
   | StartLegacyMigrationMessage
+  | StartRooMigrationMessage
   | SkipLegacyMigrationMessage
   | ClearLegacyDataMessage
   | FinalizeLegacyMigrationMessage

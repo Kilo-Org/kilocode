@@ -13,6 +13,7 @@ export interface AboutKiloCodeTabProps {
   connectionState: ConnectionState
   extensionVersion?: string
   onMigrateClick?: () => void // legacy-migration
+  onImportRooClick?: () => void
 }
 
 const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
@@ -328,21 +329,39 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
         >
           {language.t("settings.aboutKiloCode.legacyMigration.description")}
         </p>
-        <button
-          type="button"
-          onClick={() => props.onMigrateClick?.()}
-          style={{
-            background: "var(--vscode-button-background)",
-            color: "var(--vscode-button-foreground)",
-            border: "none",
-            padding: "6px 14px",
-            "border-radius": "2px",
-            cursor: "pointer",
-            "font-size": "var(--kilo-font-size-12)",
-          }}
-        >
-          {language.t("settings.legacyMigration.link")}
-        </button>
+        <div style={{ display: "flex", gap: "8px", "flex-wrap": "wrap" }}>
+          <button
+            type="button"
+            onClick={() => props.onMigrateClick?.()}
+            style={{
+              background: "var(--vscode-button-background)",
+              color: "var(--vscode-button-foreground)",
+              border: "none",
+              padding: "6px 14px",
+              "border-radius": "2px",
+              cursor: "pointer",
+              "font-size": "var(--kilo-font-size-12)",
+            }}
+          >
+            {language.t("settings.legacyMigration.link")}
+          </button>
+          <button
+            type="button"
+            onClick={() => props.onImportRooClick?.()}
+            title={language.t("settings.aboutKiloCode.rooImport.description")}
+            style={{
+              background: "var(--vscode-button-background)",
+              color: "var(--vscode-button-foreground)",
+              border: "none",
+              padding: "6px 14px",
+              "border-radius": "2px",
+              cursor: "pointer",
+              "font-size": "var(--kilo-font-size-12)",
+            }}
+          >
+            {language.t("settings.aboutKiloCode.rooImport.button")}
+          </button>
+        </div>
       </div>
       {/* legacy-migration end */}
 
