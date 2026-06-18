@@ -1,5 +1,5 @@
-# web + desktop packages
-packages/app/      @adamdotdevin
-packages/tauri/    @adamdotdevin
-packages/desktop/src-tauri/  @brendonovich
-packages/desktop/  @adamdotdevin
+# Require an engineering owner for all repository changes.
+* @marius-kilocode @markijbema @kirillk @chrarnoldus @catrielmuller @imanolmzd-svg @johnnyeric @lambertjosh @iscekic @alex-alecu @jeanduplessis @RSO
+
+# Documentation-only changes may be approved by the docs team.
+/packages/kilo-docs/ @LigiaZ @alexkgold @olearycrew
