@@ -273,6 +273,7 @@ export function init() {
         },
         category: "Session",
         slashName: "auto-approve",
+        slashAliases: ["yolo"], // kilocode_change
         enabled: route.data.type === "session",
         run: async () => {
           if (route.data.type !== "session") return

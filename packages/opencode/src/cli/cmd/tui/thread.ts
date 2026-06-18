@@ -140,6 +140,7 @@ export const TuiThreadCommand = cmd({
       })
       .option("auto-approve", {
         type: "boolean",
+        alias: ["yolo"], // kilocode_change
         describe: "allow tools to run without permission prompts in this session",
       }),
   // kilocode_change end

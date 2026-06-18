@@ -250,6 +250,7 @@ export const RunCommand = effectCmd({
       })
       .option("auto-approve", {
         type: "boolean",
+        alias: ["yolo"], // kilocode_change
         describe: "allow tools to run without permission prompts",
         default: false,
       })
