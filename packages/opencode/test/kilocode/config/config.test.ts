@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { afterEach, describe, expect, test } from "bun:test"
 import { Effect, Layer, Option, Schema } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
@@ -12,6 +11,7 @@ import { Account } from "../../../src/account/account"
 import { Auth } from "../../../src/auth"
 import { Config } from "../../../src/config/config"
 import { ConfigMarkdown } from "../../../src/config/markdown"
+import { ConfigParse } from "../../../src/config/parse"
 import { Env } from "../../../src/env"
 import { KiloIndexing } from "../../../src/kilocode/indexing"
 import { KilocodeConfig } from "../../../src/kilocode/config/config"
@@ -397,6 +397,109 @@ describe("agent config", () => {
       expect(written).not.toContain('"model"')
       expect(written).not.toContain('"variant"')
       expect(written).toContain('"description": "Keep me"')
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+})
+
+describe("bash permission migration", () => {
+  for (const action of ["allow", "ask", "deny"] as const) {
+    test(`preserves string-form ${action} permission in jsonc`, async () => {
+      const input = `{
+  "$schema": "https://app.kilo.ai/config.json",
+  "permission": "${action}"
+}`
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Filesystem.write(path.join(dir, "kilo.jsonc"), input)
+        },
+      })
+
+      const prev = Global.Path.config
+      ;(Global.Path as { config: string }).config = tmp.path
+      await clear()
+      await disposeAllInstances()
+
+      try {
+        await KilocodeConfig.migrateBashPermission()
+
+        const file = path.join(tmp.path, "kilo.jsonc")
+        const text = await Filesystem.readText(file)
+        const parsed = ConfigParse.schema(Config.Info, ConfigParse.jsonc(text, file), file)
+        expect(text).toBe(input)
+        expect(parsed.permission?.["*"]).toBe(action)
+        expect(parsed.permission?.bash).toBeUndefined()
+      } finally {
+        ;(Global.Path as { config: string }).config = prev
+        await clear()
+        await disposeAllInstances()
+      }
+    })
+
+    test(`preserves string-form ${action} permission in json`, async () => {
+      const input = JSON.stringify({
+        $schema: "https://app.kilo.ai/config.json",
+        permission: action,
+      })
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Filesystem.write(path.join(dir, "kilo.json"), input)
+        },
+      })
+
+      const prev = Global.Path.config
+      ;(Global.Path as { config: string }).config = tmp.path
+      await clear()
+      await disposeAllInstances()
+
+      try {
+        await KilocodeConfig.migrateBashPermission()
+
+        const file = path.join(tmp.path, "kilo.json")
+        const text = await Filesystem.readText(file)
+        const parsed = ConfigParse.schema(Config.Info, ConfigParse.jsonc(text, file), file)
+        expect(text).toBe(input)
+        expect(parsed.permission?.["*"]).toBe(action)
+        expect(parsed.permission?.bash).toBeUndefined()
+      } finally {
+        ;(Global.Path as { config: string }).config = prev
+        await clear()
+        await disposeAllInstances()
+      }
+    })
+  }
+
+  test("migrates object-form global permission in jsonc", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Filesystem.write(
+          path.join(dir, "kilo.jsonc"),
+          `{
+  "$schema": "https://app.kilo.ai/config.json",
+  "permission": {
+    "read": "allow"
+  }
+}`,
+        )
+      },
+    })
+
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = tmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await KilocodeConfig.migrateBashPermission()
+
+      const file = path.join(tmp.path, "kilo.jsonc")
+      const text = await Filesystem.readText(file)
+      const parsed = ConfigParse.schema(Config.Info, ConfigParse.jsonc(text, file), file)
+      expect(parsed.permission?.read).toBe("allow")
+      expect(parsed.permission?.bash).toBe("allow")
     } finally {
       ;(Global.Path as { config: string }).config = prev
       await clear()

@@ -14,11 +14,6 @@ interface LayoutOption {
   labelKey: string
 }
 
-const LAYOUT_OPTIONS: LayoutOption[] = [
-  { value: "auto", labelKey: "settings.display.layout.auto" },
-  { value: "stretch", labelKey: "settings.display.layout.stretch" },
-]
-
 const TERMINAL_OPTIONS: LayoutOption[] = [
   { value: "expanded", labelKey: "settings.display.terminalCommand.expanded" },
   { value: "collapsed", labelKey: "settings.display.terminalCommand.collapsed" },
@@ -48,27 +43,6 @@ const DisplayTab: Component = () => {
               onChange={(val) => updateConfig({ username: val.trim() || undefined })}
             />
           </div>
-        </SettingsRow>
-
-        <SettingsRow
-          title={language.t("settings.display.layout.title")}
-          description={language.t("settings.display.layout.description")}
-        >
-          <Select
-            options={LAYOUT_OPTIONS}
-            current={LAYOUT_OPTIONS.find((o) => o.value === (config().layout ?? "auto"))}
-            value={(o) => o.value}
-            label={(o) => language.t(o.labelKey)}
-            onSelect={(o) => {
-              if (!o) return
-              const next = o.value as "auto" | "stretch"
-              if (next === (config().layout ?? "auto")) return
-              updateConfig({ layout: next })
-            }}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
         </SettingsRow>
 
         <SettingsRow

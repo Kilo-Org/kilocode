@@ -101,17 +101,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "Search providers",
   "dialog.provider.empty": "No providers found",
-  "dialog.provider.group.popular": "Popular",
   "dialog.provider.group.other": "Other",
   "dialog.provider.tag.recommended": "Recommended",
-  "dialog.provider.opencode.note": "Curated models including Claude, GPT, Gemini and more",
-  "dialog.provider.anthropic.note": "Direct access to Claude models, including Pro and Max",
-  "dialog.provider.deepseek.note": "DeepSeek models for reasoning and coding tasks",
-  "dialog.provider.copilot.note": "Claude models for coding assistance",
-  "dialog.provider.openai.note": "GPT and Codex models with API key or ChatGPT login",
-  "dialog.provider.google.note": "Gemini models for fast, structured responses",
-  "dialog.provider.openrouter.note": "Access all supported models from one provider",
-  "dialog.provider.vercel.note": "Unified access to AI models with smart routing",
 
   "dialog.model.select.title": "Select model",
   "dialog.model.search.placeholder": "Search models",
@@ -1305,10 +1296,10 @@ export const dict = {
   "settings.experimental.speechToText.title": "Speech to Text",
   "settings.experimental.speechToText.description":
     "Enable voice input in prompt fields using your Kilo account through Kilo Gateway.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Enable and sign in to the Kilo provider to use Speech to Text. Speech to Text is currently only supported through Kilo Gateway.",
-  "settings.experimental.speechToTextModel.title": "Speech to Text Model",
-  "settings.experimental.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
+  "settings.models.speechToTextModel.title": "Speech to Text Model",
+  "settings.models.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
@@ -1502,10 +1493,6 @@ export const dict = {
 
   "settings.display.username.title": "Username",
   "settings.display.username.description": "Custom username displayed in conversations",
-  "settings.display.layout.title": "Layout",
-  "settings.display.layout.description": "Layout mode for the chat interface",
-  "settings.display.layout.auto": "Auto",
-  "settings.display.layout.stretch": "Stretch",
   "settings.display.fontSize.title": "Font Size",
   "settings.display.fontSize.description": "Adjust the Kilo webview UI font size independently from VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Auto-Collapse Reasoning",

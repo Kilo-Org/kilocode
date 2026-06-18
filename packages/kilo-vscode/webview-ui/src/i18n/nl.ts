@@ -101,17 +101,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "Providers zoeken",
   "dialog.provider.empty": "Geen providers gevonden",
-  "dialog.provider.group.popular": "Populair",
   "dialog.provider.group.other": "Overige",
   "dialog.provider.tag.recommended": "Aanbevolen",
-  "dialog.provider.opencode.note": "Geselecteerde modellen waaronder Claude, GPT, Gemini en meer",
-  "dialog.provider.anthropic.note": "Directe toegang tot Claude-modellen, inclusief Pro en Max",
-  "dialog.provider.deepseek.note": "DeepSeek-modellen voor redeneer- en programmeertaken",
-  "dialog.provider.copilot.note": "Claude-modellen voor programmeerhulp",
-  "dialog.provider.openai.note": "GPT-modellen voor snelle, capabele algemene AI-taken",
-  "dialog.provider.google.note": "Gemini-modellen voor snelle, gestructureerde antwoorden",
-  "dialog.provider.openrouter.note": "Toegang tot alle ondersteunde modellen via één provider",
-  "dialog.provider.vercel.note": "Gecentraliseerde toegang tot AI-modellen met slimme routering",
 
   "dialog.model.select.title": "Model selecteren",
   "dialog.model.search.placeholder": "Modellen zoeken",
@@ -1323,10 +1314,10 @@ export const dict = {
   "settings.experimental.speechToText.title": "Spraak naar tekst",
   "settings.experimental.speechToText.description":
     "Schakel spraakinvoer in promptvelden in met uw Kilo-account via Kilo Gateway.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Schakel de Kilo-provider in en meld u aan om Speech to Text te gebruiken. Speech to Text wordt momenteel alleen ondersteund met Kilo Gateway.",
-  "settings.experimental.speechToTextModel.title": "Spraak-naar-tekst-model",
-  "settings.experimental.speechToTextModel.description": "Kies het Kilo Gateway-transcriptiemodel voor spraakinvoer.",
+  "settings.models.speechToTextModel.title": "Spraak-naar-tekst-model",
+  "settings.models.speechToTextModel.description": "Kies het Kilo Gateway-transcriptiemodel voor spraakinvoer.",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
   "settings.experimental.continueOnDeny.description":
     "Ga door met de agent loop wanneer een toestemming wordt geweigerd",
@@ -1494,10 +1485,6 @@ export const dict = {
 
   "settings.display.username.title": "Gebruikersnaam",
   "settings.display.username.description": "Aangepaste gebruikersnaam weergegeven in gesprekken",
-  "settings.display.layout.title": "Lay-out",
-  "settings.display.layout.description": "Lay-outmodus voor de chatinterface",
-  "settings.display.layout.auto": "Auto",
-  "settings.display.layout.stretch": "Uitrekken",
   "settings.display.fontSize.title": "Lettergrootte",
   "settings.display.fontSize.description": "Pas de lettergrootte van de Kilo webview UI onafhankelijk van VS Code aan.",
   "settings.display.reasoningAutoCollapse.title": "Redenering automatisch inklappen",
@@ -1507,10 +1494,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
-  "settings.display.codeEdit.title": "Code Edit Blocks",
-  "settings.display.codeEdit.description": "Choose whether code edit and diff blocks start expanded or collapsed.",
-  "settings.display.codeEdit.expanded": "Expanded",
-  "settings.display.codeEdit.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "Blokken met codebewerkingen",
+  "settings.display.codeEdit.description":
+    "Kies of blokken met codebewerkingen en verschillen standaard uitgeklapt of ingeklapt zijn.",
+  "settings.display.codeEdit.expanded": "Uitgeklapt",
+  "settings.display.codeEdit.collapsed": "Ingeklapt",
 
   "settings.providers.defaultModel.title": "Standaard Model",
   "settings.providers.defaultModel.description": "Primair model voor gesprekken",

@@ -90,25 +90,34 @@ class SessionMessageListPanel(
 
                 is SessionModelEvent.ContentAdded -> {
                     msgToView[event.messageId]?.upsertPart(event.content)
+                    msgToTurn[event.messageId]?.syncCopyToolbars()
                     refresh()
                 }
 
                 is SessionModelEvent.ContentUpdated -> {
                     msgToView[event.messageId]?.upsertPart(event.content)
+                    msgToTurn[event.messageId]?.syncCopyToolbars()
                     refresh()
                 }
 
                 is SessionModelEvent.ContentRemoved -> {
                     msgToView[event.messageId]?.removePart(event.contentId)
+                    msgToTurn[event.messageId]?.syncCopyToolbars()
                     refresh()
                 }
 
                 is SessionModelEvent.ContentDelta -> {
                     if (event.created) return@addListener
                     val handled = msgToView[event.messageId]?.appendDelta(event.contentId, event.delta) == true
-                    if (handled) return@addListener
+                    if (handled) {
+                        msgToTurn[event.messageId]?.syncCopyToolbars()
+                        return@addListener
+                    }
                     val content = model.content(event.messageId, event.contentId)
-                    if (content != null) msgToView[event.messageId]?.upsertPart(content)
+                    if (content != null) {
+                        msgToView[event.messageId]?.upsertPart(content)
+                        msgToTurn[event.messageId]?.syncCopyToolbars()
+                    }
                 }
 
                 is SessionModelEvent.HistoryLoaded -> rebuild()
@@ -191,6 +200,7 @@ class SessionMessageListPanel(
             val mv = tv.addMessage(msg)
             register(msgId, tv, mv)
         }
+        tv.syncCopyToolbars()
         add(tv)
         anchorFooter()
         refresh()
@@ -216,6 +226,7 @@ class SessionMessageListPanel(
             val mv = tv.addMessage(msg)
             register(id, tv, mv)
         }
+        tv.syncCopyToolbars()
 
         refresh()
     }
@@ -248,6 +259,7 @@ class SessionMessageListPanel(
                 val mv = tv.addMessage(msg)
                 register(msgId, tv, mv)
             }
+            tv.syncCopyToolbars()
             add(tv)
         }
 

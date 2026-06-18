@@ -101,17 +101,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "Pretraži provajdere",
   "dialog.provider.empty": "Nema pronađenih provajdera",
-  "dialog.provider.group.popular": "Popularno",
   "dialog.provider.group.other": "Ostalo",
   "dialog.provider.tag.recommended": "Preporučeno",
-  "dialog.provider.opencode.note": "Kurirani modeli uključujući Claude, GPT, Gemini i druge",
-  "dialog.provider.anthropic.note": "Direktan pristup Claude modelima, uključujući Pro i Max",
-  "dialog.provider.deepseek.note": "DeepSeek modeli za zadatke zaključivanja i kodiranja",
-  "dialog.provider.copilot.note": "Claude modeli za pomoć pri kodiranju",
-  "dialog.provider.openai.note": "GPT modeli za brze, sposobne opšte AI zadatke",
-  "dialog.provider.google.note": "Gemini modeli za brze, strukturirane odgovore",
-  "dialog.provider.openrouter.note": "Pristup svim podržanim modelima preko jednog provajdera",
-  "dialog.provider.vercel.note": "Jedinstven pristup AI modelima uz pametno rutiranje",
 
   "dialog.model.select.title": "Odaberi model",
   "dialog.model.search.placeholder": "Pretraži modele",
@@ -1328,11 +1319,10 @@ export const dict = {
   "settings.experimental.speechToText.title": "Govor u tekst",
   "settings.experimental.speechToText.description":
     "Omogućite glasovni unos u poljima za promptove koristeći vaš Kilo račun preko Kilo Gateway.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Omogućite i prijavite se na Kilo provajder da biste koristili Speech to Text. Speech to Text je trenutno podržan samo uz Kilo Gateway.",
-  "settings.experimental.speechToTextModel.title": "Model govora u tekst",
-  "settings.experimental.speechToTextModel.description":
-    "Odaberite Kilo Gateway model za transkripciju za glasovni unos.",
+  "settings.models.speechToTextModel.title": "Model govora u tekst",
+  "settings.models.speechToTextModel.description": "Odaberite Kilo Gateway model za transkripciju za glasovni unos.",
   "settings.experimental.continueOnDeny.title": "Nastavi pri odbijanju",
   "settings.experimental.continueOnDeny.description": "Nastavi petlju agenta kada je dozvola odbijena",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
@@ -1530,10 +1520,6 @@ export const dict = {
 
   "settings.display.username.title": "Korisničko ime",
   "settings.display.username.description": "Prilagođeno korisničko ime u razgovorima",
-  "settings.display.layout.title": "Raspored",
-  "settings.display.layout.description": "Način rasporeda za sučelje chata",
-  "settings.display.layout.auto": "Automatski",
-  "settings.display.layout.stretch": "Rastegni",
   "settings.display.fontSize.title": "Veličina fonta",
   "settings.display.fontSize.description": "Prilagodite veličinu fonta za Kilo webview UI nezavisno od VS Code-a.",
   "settings.display.reasoningAutoCollapse.title": "Automatski sažmi razmišljanje",
@@ -1543,10 +1529,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
-  "settings.display.codeEdit.title": "Code Edit Blocks",
-  "settings.display.codeEdit.description": "Choose whether code edit and diff blocks start expanded or collapsed.",
-  "settings.display.codeEdit.expanded": "Expanded",
-  "settings.display.codeEdit.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "Blokovi izmjena koda",
+  "settings.display.codeEdit.description":
+    "Odaberite da li će blokovi koji prikazuju izmjene koda i razlike u početku biti prošireni ili sažeti.",
+  "settings.display.codeEdit.expanded": "Prošireni",
+  "settings.display.codeEdit.collapsed": "Sažeti",
   "settings.providers.defaultModel.title": "Zadani model",
   "settings.providers.defaultModel.description": "Primarni model za razgovore",
   "settings.providers.smallModel.title": "Mali model",

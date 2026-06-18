@@ -105,17 +105,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "Anbieter durchsuchen",
   "dialog.provider.empty": "Keine Anbieter gefunden",
-  "dialog.provider.group.popular": "Beliebt",
   "dialog.provider.group.other": "Andere",
   "dialog.provider.tag.recommended": "Empfohlen",
-  "dialog.provider.opencode.note": "Kuratierte Modelle wie Claude, GPT, Gemini und mehr",
-  "dialog.provider.anthropic.note": "Mit Claude Pro/Max oder API-Schlüssel verbinden",
-  "dialog.provider.deepseek.note": "DeepSeek-Modelle für Reasoning- und Programmieraufgaben",
-  "dialog.provider.openai.note": "Mit ChatGPT Pro/Plus oder API-Schlüssel verbinden",
-  "dialog.provider.google.note": "Gemini-Modelle für schnelle, strukturierte Antworten",
-  "dialog.provider.openrouter.note": "Zugriff auf alle unterstützten Modelle über einen Anbieter",
-  "dialog.provider.vercel.note": "Einheitlicher Zugriff auf KI-Modelle mit intelligentem Routing",
-  "dialog.provider.copilot.note": "Mit Copilot oder API-Schlüssel verbinden",
 
   "dialog.model.select.title": "Modell auswählen",
   "dialog.model.search.placeholder": "Modelle durchsuchen",
@@ -1345,10 +1336,10 @@ export const dict = {
   "settings.experimental.speechToText.title": "Sprache zu Text",
   "settings.experimental.speechToText.description":
     "Aktivieren Sie die Spracheingabe in Prompt-Feldern mit Ihrem Kilo-Konto über Kilo Gateway.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Aktivieren Sie den Kilo-Anbieter und melden Sie sich an, um Speech to Text zu verwenden. Speech to Text wird derzeit nur mit Kilo Gateway unterstützt.",
-  "settings.experimental.speechToTextModel.title": "Sprache-zu-Text-Modell",
-  "settings.experimental.speechToTextModel.description":
+  "settings.models.speechToTextModel.title": "Sprache-zu-Text-Modell",
+  "settings.models.speechToTextModel.description":
     "Wählen Sie das Kilo Gateway-Transkriptionsmodell für die Spracheingabe.",
   "settings.experimental.continueOnDeny.title": "Bei Ablehnung fortfahren",
   "settings.experimental.continueOnDeny.description":
@@ -1550,10 +1541,6 @@ export const dict = {
 
   "settings.display.username.title": "Benutzername",
   "settings.display.username.description": "Benutzerdefinierter Benutzername in Gesprächen",
-  "settings.display.layout.title": "Layout",
-  "settings.display.layout.description": "Layout-Modus für die Chat-Oberfläche",
-  "settings.display.layout.auto": "Automatisch",
-  "settings.display.layout.stretch": "Gestreckt",
   "settings.display.fontSize.title": "Schriftgröße",
   "settings.display.fontSize.description": "Passen Sie die Schriftgröße der Kilo webview UI unabhängig von VS Code an.",
   "settings.display.reasoningAutoCollapse.title": "Reasoning automatisch einklappen",
@@ -1563,10 +1550,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
-  "settings.display.codeEdit.title": "Code Edit Blocks",
-  "settings.display.codeEdit.description": "Choose whether code edit and diff blocks start expanded or collapsed.",
-  "settings.display.codeEdit.expanded": "Expanded",
-  "settings.display.codeEdit.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "Blöcke für Codebearbeitungen",
+  "settings.display.codeEdit.description":
+    "Wählen Sie, ob Blöcke mit Codebearbeitungen und Unterschieden anfangs aus- oder eingeklappt sind.",
+  "settings.display.codeEdit.expanded": "Ausgeklappt",
+  "settings.display.codeEdit.collapsed": "Eingeklappt",
   "settings.providers.defaultModel.title": "Standardmodell",
   "settings.providers.defaultModel.description": "Primäres Modell für Gespräche",
   "settings.providers.smallModel.title": "Kleines Modell",

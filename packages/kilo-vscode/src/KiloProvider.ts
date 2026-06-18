@@ -303,7 +303,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private configWarningsShown = false
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: unknown = null
-  private pendingKiloModelID: string | null = null
+  private pendingKiloModel: { modelID?: string; agent?: string } | null = null
   private pendingReviewComments: { comments: unknown[]; autoSend: boolean }[] = []
   private readyResolvers: (() => void)[] = []
   private promptRecoveryQueued = false
@@ -601,7 +601,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.statsPoller.setEnabled(webviewView.visible)
         this.statsPoller.setVisible(webviewView.visible)
       }
-      this.focusSession(webviewView.visible ? this.currentSession?.id : undefined)
+      this.focusSession(webviewView.visible ? this.contextSessionID : undefined)
     })
     this.initializeConnection()
   }
@@ -719,8 +719,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({ type: "openCloudSession", sessionId })
   }
 
-  public selectKiloModel(modelID: string): void {
-    this.pendingKiloModelID = modelID
+  public selectKiloModel(modelID?: string, agent?: string): void {
+    if (!modelID && !agent) return
+    this.pendingKiloModel = { ...(modelID && { modelID }), ...(agent && { agent }) }
     this.flushPendingKiloModel()
   }
 
@@ -1490,6 +1491,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.stopCurrentSessionProcesses(session.id)
       this.setCurrentSession(session)
       this.contextSessionID = session.id
+      this.focusSession(session.id)
       this.trackDirectory(session.id, workspaceDir)
       this.trackedSessionIds.add(session.id)
 
@@ -2510,6 +2512,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.stopCurrentSessionProcesses(session.id)
       this.setCurrentSession(session)
       this.contextSessionID = session.id
+      this.focusSession(session.id)
       this.trackDirectory(session.id, dir)
       this.trackedSessionIds.add(session.id)
       this.postMessage({
@@ -3301,11 +3304,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private flushPendingKiloModel(): void {
-    if (!this.webview || !this.isWebviewReady || !this.client || !this.pendingKiloModelID) return
+    if (!this.webview || !this.isWebviewReady || !this.client || !this.pendingKiloModel) return
 
-    const modelID = this.pendingKiloModelID
-    this.pendingKiloModelID = null
-    this.postMessage({ type: "selectKiloModel", modelID })
+    const pending = this.pendingKiloModel
+    this.pendingKiloModel = null
+    this.postMessage({ type: "selectKiloModel", ...pending })
   }
 
   public async appendReviewComments(comments: unknown[], autoSend = false): Promise<void> {

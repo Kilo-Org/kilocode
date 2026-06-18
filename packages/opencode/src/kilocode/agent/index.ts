@@ -267,6 +267,32 @@ export function processConfigItem(item: {
   }
 }
 
+const locked = new Set(["compaction", "title", "summary"])
+
+function hardRules() {
+  return Permission.fromConfig({
+    "*": "deny",
+  })
+}
+
+export function harden(item?: { name: string; permission: Permission.Ruleset }) {
+  if (!item) return
+  if (!locked.has(item.name)) return
+  item.permission = hardRules()
+}
+
+export function hardenSystemAgents<T extends { name: string; permission: Permission.Ruleset }>(
+  agents: Record<string, T>,
+) {
+  for (const [key, item] of Object.entries(agents)) {
+    if (locked.has(key)) {
+      item.permission = hardRules()
+      continue
+    }
+    harden(item)
+  }
+}
+
 // Returns experimental_telemetry config for generate calls.
 // AI SDK span recording (ai.* / gen_ai.*) is disabled.
 export function telemetryOptions(_cfg: Config.Info) {
@@ -442,6 +468,8 @@ export function patchAgents(
     mode: "primary",
     native: true,
   }
+
+  hardenSystemAgents(agents)
 }
 
 export const RemoveError = NamedError.create("AgentRemoveError", {

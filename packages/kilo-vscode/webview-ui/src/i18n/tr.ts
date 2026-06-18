@@ -101,17 +101,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "Sağlayıcı ara",
   "dialog.provider.empty": "Sağlayıcı bulunamadı",
-  "dialog.provider.group.popular": "Popüler",
   "dialog.provider.group.other": "Diğer",
   "dialog.provider.tag.recommended": "Önerilen",
-  "dialog.provider.opencode.note": "Claude, GPT, Gemini ve daha fazlasını içeren seçilmiş modeller",
-  "dialog.provider.anthropic.note": "Pro ve Max dahil Claude modellerine doğrudan erişim",
-  "dialog.provider.deepseek.note": "Muhakeme ve kodlama görevleri için DeepSeek modelleri",
-  "dialog.provider.copilot.note": "Kodlama yardımı için Claude modelleri",
-  "dialog.provider.openai.note": "Hızlı ve yetenekli genel yapay zeka görevleri için GPT modelleri",
-  "dialog.provider.google.note": "Hızlı ve yapılandırılmış yanıtlar için Gemini modelleri",
-  "dialog.provider.openrouter.note": "Tek bir sağlayıcıdan tüm desteklenen modellere eriş",
-  "dialog.provider.vercel.note": "Akıllı yönlendirme ile yapay zeka modellerine birleşik erişim",
 
   "dialog.model.select.title": "Model seç",
   "dialog.model.search.placeholder": "Model ara",
@@ -1316,10 +1307,10 @@ export const dict = {
   "settings.experimental.speechToText.title": "Sesten metne",
   "settings.experimental.speechToText.description":
     "Kilo Gateway üzerinden Kilo hesabınızı kullanarak komut alanlarında sesli girişi etkinleştirin.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Speech to Text kullanmak için Kilo sağlayıcısını etkinleştirin ve giriş yapın. Speech to Text şu anda yalnızca Kilo Gateway ile desteklenmektedir.",
-  "settings.experimental.speechToTextModel.title": "Sesten metne modeli",
-  "settings.experimental.speechToTextModel.description": "Sesli giriş için Kilo Gateway transkripsiyon modelini seçin.",
+  "settings.models.speechToTextModel.title": "Sesten metne modeli",
+  "settings.models.speechToTextModel.description": "Sesli giriş için Kilo Gateway transkripsiyon modelini seçin.",
   "settings.experimental.continueOnDeny.title": "Reddetme Durumunda Devam Et",
   "settings.experimental.continueOnDeny.description": "Bir izin reddedildiğinde ajan döngüsüne devam et",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
@@ -1483,10 +1474,6 @@ export const dict = {
 
   "settings.display.username.title": "Kullanıcı Adı",
   "settings.display.username.description": "Sohbetlerde görüntülenen özel kullanıcı adı",
-  "settings.display.layout.title": "Düzen",
-  "settings.display.layout.description": "Sohbet arayüzü için düzen modu",
-  "settings.display.layout.auto": "Otomatik",
-  "settings.display.layout.stretch": "Genişlet",
   "settings.display.fontSize.title": "Yazı Tipi Boyutu",
   "settings.display.fontSize.description": "Kilo webview UI yazı tipi boyutunu VS Code'dan bağımsız olarak ayarlayın.",
   "settings.display.reasoningAutoCollapse.title": "Akıl yürütmeyi otomatik daralt",
@@ -1496,10 +1483,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
-  "settings.display.codeEdit.title": "Code Edit Blocks",
-  "settings.display.codeEdit.description": "Choose whether code edit and diff blocks start expanded or collapsed.",
-  "settings.display.codeEdit.expanded": "Expanded",
-  "settings.display.codeEdit.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "Kod Düzenleme Blokları",
+  "settings.display.codeEdit.description":
+    "Kod düzenleme ve fark bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
+  "settings.display.codeEdit.expanded": "Genişletilmiş",
+  "settings.display.codeEdit.collapsed": "Daraltılmış",
 
   "settings.providers.defaultModel.title": "Varsayılan Model",
   "settings.providers.defaultModel.description": "Sohbetler için birincil model",

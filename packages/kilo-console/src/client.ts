@@ -446,6 +446,7 @@ export async function loadProjectConsole(input: ProjectConsoleQuery): Promise<Pr
     sdk.vcs.get({ directory: query.dir }),
     sdk.worktree.list({ directory: query.dir }),
   ])
+  const overlay = demand("Config", config)
   const dirs = demand("Worktrees", worktrees)
   const terminals = await Promise.all(
     [query.dir, ...dirs.map((item) => item.directory)].map((dir) => loadProjectTerminals({ url: input.url, dir }, dir)),
@@ -453,7 +454,7 @@ export async function loadProjectConsole(input: ProjectConsoleQuery): Promise<Pr
 
   return {
     project,
-    config: demand("Config", config).effective,
+    config: overlay.global,
     vcs: demand("VCS", vcs),
     worktrees: dirs,
     terminals: terminals.flat(),

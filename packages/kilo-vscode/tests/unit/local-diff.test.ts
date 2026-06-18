@@ -237,6 +237,28 @@ describe("diffSummary", () => {
     })
   })
 
+  it("loads binary-safe before and after data for image diffs", async () => {
+    await withRepo(async (dir, base) => {
+      const before = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x01])
+      const after = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0xff])
+      await fs.writeFile(path.join(dir, "banner.png"), before)
+      runSync(dir, ["add", "banner.png"])
+      runSync(dir, ["commit", "-m", "add banner"])
+      runSync(dir, ["branch", "-f", base])
+      await fs.writeFile(path.join(dir, "banner.png"), after)
+
+      const local = createLocalDiff(git())
+      const summary = (await local.summary(dir, base)).find((entry) => entry.file === "banner.png")
+      const detail = await local.file(dir, base, "banner.png")
+
+      expect(summary?.kind).toBe("image")
+      expect(summary?.summarized).toBe(true)
+      expect(detail?.summarized).toBe(false)
+      expect(detail?.image?.before?.data).toBe(before.toString("base64"))
+      expect(detail?.image?.after?.data).toBe(after.toString("base64"))
+    })
+  })
+
   it("marks generated-like files via generatedLike flag", async () => {
     await withRepo(async (dir, base) => {
       await fs.mkdir(path.join(dir, "dist"), { recursive: true })
@@ -263,6 +285,20 @@ describe("diffFile", () => {
     await withRepo(async (dir, base) => {
       const result = await diffFile(git(), dir, base, "does-not-exist.txt")
       expect(result).toBeNull()
+    })
+  })
+
+  it("rejects image detail paths outside the repository", async () => {
+    await withRepo(async (dir, base) => {
+      const name = `${path.basename(dir)}-secret.png`
+      const secret = path.join(path.dirname(dir), name)
+      await fs.writeFile(secret, Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00]))
+      try {
+        expect(await diffFile(git(), dir, base, `../${name}`)).toBeNull()
+        expect(await diffFile(git(), dir, base, secret)).toBeNull()
+      } finally {
+        await fs.rm(secret, { force: true })
+      }
     })
   })
 

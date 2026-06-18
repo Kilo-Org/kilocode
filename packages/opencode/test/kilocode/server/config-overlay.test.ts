@@ -113,6 +113,21 @@ describe("config overlay routes", () => {
     })
   })
 
+  test.serial("resolves prompt-training model visibility across scopes", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir({ config: { hide_prompt_training_models: false } })
+    await setGlobal(global.path, { hide_prompt_training_models: true })
+
+    const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+
+    expect(body.fields.hide_prompt_training_models).toMatchObject({
+      source: "project",
+      inherited: false,
+      overridden: true,
+      value: false,
+    })
+  })
+
   test.serial("marks global indexing values inherited in project scope", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir()

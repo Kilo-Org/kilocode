@@ -92,17 +92,8 @@ export const dict = {
   "palette.group.files": "File",
   "dialog.provider.search.placeholder": "Cerca provider",
   "dialog.provider.empty": "Nessun provider trovato",
-  "dialog.provider.group.popular": "Popolari",
   "dialog.provider.group.other": "Altro",
   "dialog.provider.tag.recommended": "Consigliato",
-  "dialog.provider.opencode.note": "Modelli curati, inclusi Claude, GPT, Gemini e altri",
-  "dialog.provider.anthropic.note": "Accesso diretto ai modelli Claude, inclusi Pro e Max",
-  "dialog.provider.copilot.note": "Modelli AI per assistenza al coding tramite GitHub Copilot",
-  "dialog.provider.openai.note": "Modelli GPT per attività AI generali rapide e capaci",
-  "dialog.provider.google.note": "Modelli Gemini per risposte rapide e strutturate",
-  "dialog.provider.deepseek.note": "Modelli DeepSeek per ragionamento e attività di coding",
-  "dialog.provider.openrouter.note": "Accesso a tutti i modelli supportati da un solo provider",
-  "dialog.provider.vercel.note": "Accesso unificato ai modelli AI con routing intelligente",
   "dialog.model.select.title": "Seleziona modello",
   "dialog.model.search.placeholder": "Cerca modelli",
   "dialog.model.empty": "Nessun risultato modello",
@@ -1350,10 +1341,6 @@ export const dict = {
     "es. Genera messaggi di commit in spagnolo seguendo il formato conventional commits. Restituisci SOLO il messaggio di commit.",
   "settings.display.username.title": "Nome utente",
   "settings.display.username.description": "Nome utente personalizzato mostrato nelle conversazioni",
-  "settings.display.layout.title": "Layout",
-  "settings.display.layout.description": "Modalità layout per l'interfaccia chat",
-  "settings.display.layout.auto": "Auto",
-  "settings.display.layout.stretch": "Esteso",
   "settings.display.fontSize.title": "Dimensione font",
   "settings.display.fontSize.description":
     "Regola la dimensione del font della webview Kilo indipendentemente da VS Code.",
@@ -1364,10 +1351,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Scegli se i blocchi comando terminale iniziano espansi o compressi.",
   "settings.display.terminalCommand.expanded": "Espansi",
   "settings.display.terminalCommand.collapsed": "Compressi",
-  "settings.display.codeEdit.title": "Code Edit Blocks",
-  "settings.display.codeEdit.description": "Choose whether code edit and diff blocks start expanded or collapsed.",
-  "settings.display.codeEdit.expanded": "Expanded",
-  "settings.display.codeEdit.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "Blocchi di modifica del codice",
+  "settings.display.codeEdit.description":
+    "Scegli se i blocchi delle modifiche al codice e delle differenze iniziano espansi o compressi.",
+  "settings.display.codeEdit.expanded": "Espansi",
+  "settings.display.codeEdit.collapsed": "Compressi",
   "settings.providers.defaultModel.title": "Modello predefinito",
   "settings.providers.defaultModel.description": "Modello principale per le conversazioni",
   "settings.providers.smallModel.title": "Modello leggero",
@@ -1537,11 +1525,10 @@ export const dict = {
   "settings.experimental.speechToText.title": "Da voce a testo",
   "settings.experimental.speechToText.description":
     "Abilita input vocale nei campi prompt usando il tuo account Kilo tramite Kilo Gateway.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Abilita e accedi al provider Kilo per usare Da voce a testo. Da voce a testo è attualmente supportato solo tramite Kilo Gateway.",
-  "settings.experimental.speechToTextModel.title": "Modello Da voce a testo",
-  "settings.experimental.speechToTextModel.description":
-    "Scegli il modello di trascrizione Kilo Gateway per l'input vocale.",
+  "settings.models.speechToTextModel.title": "Modello Da voce a testo",
+  "settings.models.speechToTextModel.description": "Scegli il modello di trascrizione Kilo Gateway per l'input vocale.",
 
   // Compaction limit
   "settings.context.compactionLimit.title": "Limite compattazione automatica",

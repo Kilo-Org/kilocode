@@ -101,17 +101,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "ค้นหาผู้ให้บริการ",
   "dialog.provider.empty": "ไม่พบผู้ให้บริการ",
-  "dialog.provider.group.popular": "ยอดนิยม",
   "dialog.provider.group.other": "อื่น ๆ",
   "dialog.provider.tag.recommended": "แนะนำ",
-  "dialog.provider.opencode.note": "โมเดลที่คัดสรร รวมถึง Claude, GPT, Gemini และอื่น ๆ",
-  "dialog.provider.anthropic.note": "เข้าถึงโมเดล Claude โดยตรง รวมถึง Pro และ Max",
-  "dialog.provider.deepseek.note": "โมเดล DeepSeek สำหรับงานการให้เหตุผลและการเขียนโค้ด",
-  "dialog.provider.copilot.note": "โมเดล Claude สำหรับการช่วยเหลือในการเขียนโค้ด",
-  "dialog.provider.openai.note": "โมเดล GPT สำหรับงาน AI ทั่วไปที่รวดเร็วและมีความสามารถ",
-  "dialog.provider.google.note": "โมเดล Gemini สำหรับการตอบสนองที่รวดเร็วและมีโครงสร้าง",
-  "dialog.provider.openrouter.note": "เข้าถึงโมเดลที่รองรับทั้งหมดจากผู้ให้บริการเดียว",
-  "dialog.provider.vercel.note": "การเข้าถึงโมเดล AI แบบรวมด้วยการกำหนดเส้นทางอัจฉริยะ",
 
   "dialog.model.select.title": "เลือกโมเดล",
   "dialog.model.search.placeholder": "ค้นหาโมเดล",
@@ -1306,11 +1297,10 @@ export const dict = {
   "settings.experimental.speechToText.title": "แปลงเสียงเป็นข้อความ",
   "settings.experimental.speechToText.description":
     "เปิดใช้งานการป้อนข้อมูลด้วยเสียงในช่องพรอมต์โดยใช้บัญชี Kilo ของคุณผ่าน Kilo Gateway",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "เปิดใช้งานและลงชื่อเข้าใช้ผู้ให้บริการ Kilo เพื่อใช้ Speech to Text ปัจจุบัน Speech to Text รองรับเฉพาะกับ Kilo Gateway เท่านั้น",
-  "settings.experimental.speechToTextModel.title": "โมเดลแปลงเสียงเป็นข้อความ",
-  "settings.experimental.speechToTextModel.description":
-    "เลือกโมเดลการถอดเสียง Kilo Gateway สำหรับการป้อนข้อมูลด้วยเสียง",
+  "settings.models.speechToTextModel.title": "โมเดลแปลงเสียงเป็นข้อความ",
+  "settings.models.speechToTextModel.description": "เลือกโมเดลการถอดเสียง Kilo Gateway สำหรับการป้อนข้อมูลด้วยเสียง",
   "settings.experimental.continueOnDeny.title": "ดำเนินต่อเมื่อถูกปฏิเสธ",
   "settings.experimental.continueOnDeny.description": "ดำเนินลูปเอเจนต์ต่อเมื่อสิทธิ์ถูกปฏิเสธ",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
@@ -1498,10 +1488,6 @@ export const dict = {
 
   "settings.display.username.title": "ชื่อผู้ใช้",
   "settings.display.username.description": "ชื่อผู้ใช้กำหนดเองในบทสนทนา",
-  "settings.display.layout.title": "เค้าโครง",
-  "settings.display.layout.description": "โหมดเค้าโครงสำหรับอินเทอร์เฟซแชท",
-  "settings.display.layout.auto": "อัตโนมัติ",
-  "settings.display.layout.stretch": "ยืด",
   "settings.display.fontSize.title": "ขนาดฟอนต์",
   "settings.display.fontSize.description": "ปรับขนาดฟอนต์ webview UI ของ Kilo แยกเป็นอิสระจาก VS Code.",
   "settings.display.reasoningAutoCollapse.title": "ยุบเหตุผลอัตโนมัติ",
@@ -1511,10 +1497,10 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
-  "settings.display.codeEdit.title": "Code Edit Blocks",
-  "settings.display.codeEdit.description": "Choose whether code edit and diff blocks start expanded or collapsed.",
-  "settings.display.codeEdit.expanded": "Expanded",
-  "settings.display.codeEdit.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "บล็อกการแก้ไขโค้ด",
+  "settings.display.codeEdit.description": "เลือกว่าบล็อกการแก้ไขโค้ดและบล็อกแสดงความแตกต่างจะเริ่มต้นแบบขยายหรือยุบ",
+  "settings.display.codeEdit.expanded": "ขยาย",
+  "settings.display.codeEdit.collapsed": "ยุบ",
   "settings.providers.defaultModel.title": "โมเดลเริ่มต้น",
   "settings.providers.defaultModel.description": "โมเดลหลักสำหรับบทสนทนา",
   "settings.providers.smallModel.title": "โมเดลขนาดเล็ก",
