@@ -184,7 +184,7 @@ export async function load(dir: string, warnings?: Warning[]) {
     // kilocode_change end
     // kilocode_change start - use Effect schema (propertyOrder: original) + non-fatal handleInvalid
     try {
-      result[config.name] = ConfigParse.schema(Info, config, item) as Info
+      result[name] = ConfigParse.schema(Info, config, item) as Info
     } catch (err) {
       if (ConfigError.InvalidError.isInstance(err)) {
         await KilocodeConfig.handleInvalid("agent", item, err.data.issues ?? [], err, warnings)

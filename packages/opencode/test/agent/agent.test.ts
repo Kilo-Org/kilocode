@@ -329,12 +329,15 @@ it.instance(
   },
 )
 
+// kilocode_change start - keep agent config keys as stable identifiers
 it.instance(
-  "agent name can be overridden",
+  "agent name config becomes the display name",
   () =>
     Effect.gen(function* () {
       const build = yield* load((svc) => svc.get("build"))
-      expect(build?.name).toBe("Builder")
+      expect(build?.name).toBe("code")
+      expect(build?.displayName).toBe("Builder")
+      expect(yield* load((svc) => svc.get("Builder"))).toBeUndefined()
     }),
   {
     config: {
@@ -344,6 +347,7 @@ it.instance(
     },
   },
 )
+// kilocode_change end
 
 it.instance(
   "agent prompt can be set from config",
