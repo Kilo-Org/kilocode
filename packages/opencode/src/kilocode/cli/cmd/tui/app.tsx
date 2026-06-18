@@ -23,7 +23,9 @@ import { isKiloError, showKiloErrorToast } from "@/kilocode/kilo-errors"
 import { registerKiloCommands } from "@/kilocode/kilo-commands"
 import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui"
 import { DialogProcessList } from "@/kilocode/cli/cmd/tui/component/dialog-process-list"
+import { DialogWorktreeCreate } from "@/kilocode/cli/cmd/tui/component/dialog-worktree-create"
 import { useIndexingWarnings } from "@/kilocode/cli/cmd/tui/indexing-warning"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { KiloTerminalTitle } from "./terminal-title"
 import type { KiloTitleIcon } from "./title-icon"
 import { Session as SessionApi } from "@/session/session"
@@ -240,6 +242,20 @@ export function init() {
           dialog.replace(() => <DialogProcessList />)
         },
       },
+      // kilocode_change start
+      {
+        namespace: "palette",
+        name: "session.new.worktree",
+        title: "New session in a new worktree",
+        desc: "Create a new git worktree and start a session in it",
+        category: "Session",
+        enabled: Flag.KILO_EXPERIMENTAL_WORKSPACES,
+        slashName: "worktree",
+        run: () => {
+          dialog.replace(() => <DialogWorktreeCreate />)
+        },
+      },
+      // kilocode_change end
       {
         namespace: "palette",
         name: "permission.allow_everything",
