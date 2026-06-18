@@ -1527,6 +1527,8 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "레거시 마이그레이션",
   "settings.aboutKiloCode.legacyMigration.description":
     "공급자 API 키 및 기본 모델을 포함하여 이전 Kilo Code 설치에서 설정을 마이그레이션합니다.",
+  "settings.aboutKiloCode.rooImport.description": "Roo Code 설치에서 대화 기록을 가져옵니다.",
+  "settings.aboutKiloCode.rooImport.button": "Roo Code에서 세션 가져오기",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Kilo Code의 새로운 기능",

@@ -186,6 +186,8 @@ Options:
       --port                          port for the local server (defaults to random port if no value provided)  [number]
       --variant                       model variant (provider-specific reasoning effort, e.g., high, max, minimal)  [string]
       --thinking                      show thinking blocks  [boolean]
+      --replay                        replay visible session history on interactive resume  [boolean] [default: false]
+      --replay-limit                  cap visible interactive replay to the newest N messages  [number]
   -i, --interactive                   run in direct interactive split-footer mode  [boolean] [default: false]
       --dangerously-skip-permissions  auto-approve permissions that are not explicitly denied (dangerous!)  [boolean] [default: false]
       --auto                          auto-approve all permissions (for autonomous/pipeline usage)  [boolean] [default: false]

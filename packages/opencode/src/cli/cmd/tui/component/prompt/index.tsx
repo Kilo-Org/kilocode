@@ -28,7 +28,7 @@ import { MessageID, PartID } from "@/session/schema"
 import { createStore, produce, unwrap } from "solid-js/store"
 import { usePromptHistory, type PromptInfo } from "./history"
 import { computePromptTraits } from "./traits"
-import { assign } from "./part"
+import { assign, expandPastedTextPlaceholders } from "./part"
 import { usePromptStash } from "./stash"
 import { DialogStash } from "../dialog-stash"
 import { type AutocompleteRef, Autocomplete } from "./autocomplete"
@@ -64,13 +64,11 @@ import { slashMatches } from "@/kilocode/cli/cmd/command-display"
 // kilocode_change end
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { type WorkspaceStatus } from "../workspace-label"
-import { useCommandPalette } from "../../context/command-palette"
-import { useBindings, useCommandShortcut, useLeaderActive, useOpencodeKeymap } from "../../keymap"
+import { KILO_BASE_MODE, useBindings, useCommandShortcut, useLeaderActive, useOpencodeKeymap } from "../../keymap"
 import { useTuiConfig } from "../../context/tui-config"
 
 export type PromptProps = {
   sessionID?: string
-  workspaceID?: string
   visible?: boolean
   disabled?: boolean
   onSubmit?: () => void
@@ -157,7 +155,6 @@ export function Prompt(props: PromptProps) {
   const status = createMemo(() => sync.data.session_status?.[props.sessionID ?? ""] ?? { type: "idle" })
   const history = usePromptHistory()
   const stash = usePromptStash()
-  const command = useCommandPalette()
   const keymap = useOpencodeKeymap()
   const agentShortcut = useCommandShortcut("agent.cycle")
   const paletteShortcut = useCommandShortcut("command.palette.show")
@@ -208,7 +205,6 @@ export function Prompt(props: PromptProps) {
   const [cursorVersion, setCursorVersion] = createSignal(0)
   const currentProviderLabel = createMemo(() => local.model.parsed().provider)
   const hasRightContent = createMemo(() => Boolean(props.right))
-  const defaultWorkspaceID = createMemo(() => props.workspaceID ?? project.workspace.current())
 
   function selectWorkspace(selection: WorkspaceSelection | undefined) {
     setWorkspaceSelection(selection)
@@ -639,7 +635,7 @@ export function Prompt(props: PromptProps) {
   }))
 
   useBindings(() => ({
-    enabled: command.matcher,
+    mode: KILO_BASE_MODE,
     bindings: tuiConfig.keybinds.gather("prompt.palette", [
       "prompt.submit",
       "prompt.editor",
@@ -1102,7 +1098,7 @@ export function Prompt(props: PromptProps) {
     if (sessionID == null) {
       const workspace = workspaceSelection()
       const workspaceID = iife(() => {
-        if (!workspace) return defaultWorkspaceID()
+        if (!workspace) return undefined
         if (workspace.type === "none") return undefined
         if (workspace.type === "existing") return workspace.workspaceID
         return undefined
@@ -1467,17 +1463,7 @@ export function Prompt(props: PromptProps) {
     | undefined
   >(() => {
     const selected = workspaceSelection()
-    if (!selected) {
-      const workspaceID = defaultWorkspaceID()
-      if (props.sessionID || !workspaceID) return
-      const workspace = project.workspace.get(workspaceID)
-      return {
-        type: "existing",
-        workspaceType: workspace?.type ?? "unknown",
-        workspaceName: workspace?.name ?? workspaceID,
-        status: project.workspace.status(workspaceID) ?? "error",
-      }
-    }
+    if (!selected) return
     if (selected.type === "none") return
     if (props.sessionID && !workspaceCreating()) return
     if (selected.type === "new") {
@@ -1495,7 +1481,10 @@ export function Prompt(props: PromptProps) {
   })
 
   const spinnerDef = createMemo(() => {
-    const agent = local.agent.current()
+    const agent =
+      status().type !== "idle"
+        ? (local.agent.list().find((a) => a.name === lastUserMessage()?.agent) ?? local.agent.current())
+        : local.agent.current()
     const color = agent ? local.agent.color(agent.name ?? "") : theme.border // kilocode_change
     return {
       frames: createFrames({
@@ -1590,6 +1579,9 @@ export function Prompt(props: PromptProps) {
               }}
               ref={(r: TextareaRenderable) => {
                 input = r
+                Object.assign(r, {
+                  getClipboardText: (text: string) => expandPastedTextPlaceholders(text, store.prompt.parts),
+                })
                 setInputTarget(r)
                 if (promptPartTypeId === 0) {
                   promptPartTypeId = input.extmarks.registerType("prompt-part")

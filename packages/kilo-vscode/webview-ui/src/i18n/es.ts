@@ -1572,6 +1572,9 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Migración heredada",
   "settings.aboutKiloCode.legacyMigration.description":
     "Migra la configuración de una instalación anterior de Kilo Code, incluyendo las claves API de proveedores y el modelo predeterminado.",
+  "settings.aboutKiloCode.rooImport.description":
+    "Importa el historial de conversaciones de una instalación de Roo Code.",
+  "settings.aboutKiloCode.rooImport.button": "Importar sesiones desde Roo Code",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Novedades en Kilo Code",

@@ -75,6 +75,14 @@ Turborepo + Bun workspaces. The packages you'll work with most:
 | `packages/util/` | `@opencode-ai/util` | Shared utilities (error, path, retry, slug, etc.) |
 | `packages/plugin/` | `@kilocode/plugin` | Plugin/tool interface definitions |
 
+## Commits and PR Titles
+
+Use conventional commit-style messages and PR titles: `type(scope): summary`.
+
+Valid types are `feat`, `fix`, `docs`, `chore`, `refactor`, and `test`. Scopes are optional; use the affected package or area when helpful, e.g. `core`, `opencode`, `tui`, `app`, `desktop`, `sdk`, or `plugin`.
+
+Examples: `fix(tui): simplify thinking toggle styling`, `docs: update contributing guide`, `chore(sdk): regenerate types`.
+
 ## Style Guide
 
 - Keep things in one function unless composable or reusable

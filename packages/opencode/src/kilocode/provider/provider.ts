@@ -115,6 +115,11 @@ function useLanguageModel(sdk: any) {
   return sdk.responses === undefined && sdk.chat === undefined
 }
 
+export function patchKiloProviderPrivacy(provider: { options?: Record<string, any> } | undefined, config: any) {
+  if (!provider || config.hide_prompt_training_models !== true) return
+  provider.options = { ...provider.options, dataCollection: "deny" }
+}
+
 export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> {
   return {
     "github-copilot-enterprise": () =>
@@ -129,16 +134,20 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
 
     kilo: Effect.fnUntraced(function* (input: any) {
       const env = yield* dep.env()
+      const config = yield* dep.config()
       const hasKey = yield* Effect.gen(function* () {
         if (input.env.some((item: string) => env[item])) return true
         if (yield* dep.auth(input.id)) return true
-        if ((yield* dep.config()).provider?.["kilo"]?.options?.apiKey) return true
+        if (config.provider?.["kilo"]?.options?.apiKey) return true
         return false
       })
 
       const options: Record<string, string> = {}
       if (env.KILO_ORG_ID) {
         options.kilocodeOrganizationId = env.KILO_ORG_ID
+      }
+      if (config.hide_prompt_training_models === true) {
+        options.dataCollection = "deny"
       }
       if (!hasKey) {
         options.apiKey = "anonymous"

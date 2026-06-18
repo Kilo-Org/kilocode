@@ -28,8 +28,13 @@ function strip(input: unknown[]) {
   return { kept, changed }
 }
 
-export function sanitizeResponsesBody(input: string | URL | Request, body: BodyInit | null | undefined) {
-  if (!endpoint(input)) return body
+export function transformRequestBody(
+  input: string | URL | Request,
+  body: BodyInit | null | undefined,
+  value?: "allow" | "deny",
+) {
+  const responses = endpoint(input)
+  if (!responses && !value) return body
   if (typeof body !== "string") return body
 
   const data = (() => {
@@ -40,10 +45,14 @@ export function sanitizeResponsesBody(input: string | URL | Request, body: BodyI
     }
   })()
   if (!record(data)) return body
-  if (data.store === true) return body
-  if (!Array.isArray(data.input)) return body
 
-  const result = strip(data.input)
-  if (!result.changed) return body
-  return JSON.stringify({ ...data, input: result.kept })
+  const result = responses && data.store !== true && Array.isArray(data.input) ? strip(data.input) : undefined
+  if (!result?.changed && !value) return body
+
+  const provider = record(data.provider) ? data.provider : {}
+  return JSON.stringify({
+    ...data,
+    ...(result?.changed ? { input: result.kept } : {}),
+    ...(value ? { provider: { ...provider, data_collection: value } } : {}),
+  })
 }

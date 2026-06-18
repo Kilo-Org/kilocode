@@ -1,14 +1,15 @@
 import { createStore } from "solid-js/store"
-import { createMemo, createSignal, For, Show } from "solid-js"
+import { createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js"
 import { useRenderer } from "@opentui/solid"
 import type { TextareaRenderable } from "@opentui/core"
 import { selectedForeground, tint, useTheme } from "../../context/theme"
 import type { QuestionAnswer, QuestionRequest } from "@kilocode/sdk/v2"
 import { useSDK } from "../../context/sdk"
 import { SplitBorder } from "../../component/border"
-import { useDialog } from "../../ui/dialog"
 import { useTuiConfig } from "../../context/tui-config"
-import { useBindings } from "../../keymap"
+import { useBindings, useOpencodeModeStack } from "../../keymap"
+
+const QUESTION_MODE = "question"
 
 // kilocode_change start
 export function QuestionPrompt(props: {
@@ -21,6 +22,7 @@ export function QuestionPrompt(props: {
   const { theme } = useTheme()
   const renderer = useRenderer()
   const tuiConfig = useTuiConfig()
+  const modeStack = useOpencodeModeStack()
 
   const questions = createMemo(() => props.request.questions)
   const single = createMemo(() => questions().length === 1 && questions()[0]?.multiple !== true)
@@ -126,9 +128,13 @@ export function QuestionPrompt(props: {
     pick(opt.label)
   }
 
-  const dialog = useDialog()
+  onMount(() => {
+    const popMode = modeStack.push(QUESTION_MODE)
+    onCleanup(popMode)
+  })
 
   useBindings(() => ({
+    mode: QUESTION_MODE,
     enabled: store.editing && !confirm(),
     commands: [
       {
@@ -209,8 +215,10 @@ export function QuestionPrompt(props: {
     const max = Math.min(total, 9)
 
     return {
-      // kilocode_change - avoid intrusive key capture for non-blocking review questions
-      enabled: dialog.stack.length === 0 && !store.editing && !(props.nonBlocking && props.inputFocused?.()),
+      mode: QUESTION_MODE,
+      // kilocode_change start - avoid intrusive key capture for non-blocking review questions
+      enabled: !store.editing && !(props.nonBlocking && props.inputFocused?.()),
+      // kilocode_change end
       commands: [
         {
           name: "app.exit",
@@ -383,7 +391,7 @@ export function QuestionPrompt(props: {
                           </text>
                         </box>
                         <Show when={!multi()}>
-                          <text fg={theme.success}>{picked() ? "✓" : ""}</text>
+                          <text fg={theme.success}>{picked() ? " ✓" : ""}</text>
                         </Show>
                       </box>
 
@@ -416,7 +424,7 @@ export function QuestionPrompt(props: {
                     </box>
 
                     <Show when={!multi()}>
-                      <text fg={theme.success}>{customPicked() ? "✓" : ""}</text>
+                      <text fg={theme.success}>{customPicked() ? " ✓" : ""}</text>
                     </Show>
                   </box>
                   <Show when={store.editing}>

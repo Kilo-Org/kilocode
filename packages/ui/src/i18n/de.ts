@@ -57,6 +57,15 @@ export const dict = {
   "ui.sessionTurn.error.freeUsageExceeded": "Kostenloses Nutzungslimit überschritten",
   "ui.sessionTurn.error.addCredits": "Guthaben aufladen",
 
+  "dialog.usageExceeded.freeTier.title": "Kostenloses Limit erreicht",
+  "dialog.usageExceeded.freeTier.description":
+    "Abonniere Kilo Go für zuverlässigen Zugriff auf die besten Open-Source-Modelle, ab $5/Monat.",
+  "dialog.usageExceeded.freeTier.actionLabel": "Abonnieren",
+  "dialog.usageExceeded.accountRateLimit.title": "Go-Limit erreicht",
+  "dialog.usageExceeded.accountRateLimit.description":
+    "Nutzungslimit erreicht. Um dieses Modell jetzt weiter zu nutzen, aktiviere die Nutzung über dein verfügbares Guthaben",
+  "dialog.usageExceeded.accountRateLimit.actionLabel": "Einstellungen öffnen",
+
   "ui.sessionTurn.status.delegating": "Arbeit delegieren",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",

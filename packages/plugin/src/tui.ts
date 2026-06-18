@@ -79,6 +79,11 @@ export type TuiKeys = {
 
 export type TuiKeymap = Keymap<Renderable, KeyEvent>
 
+export type TuiModeApi = {
+  current: () => string
+  push: (mode: string) => () => void
+}
+
 /**
  * Legacy `api.command` shape kept so v1 plugins can initialize. Remove in v2.
  *
@@ -206,7 +211,6 @@ export type TuiPromptRef = {
 
 export type TuiPromptProps = {
   sessionID?: string
-  workspaceID?: string
   visible?: boolean
   disabled?: boolean
   onSubmit?: () => void
@@ -460,12 +464,9 @@ export type TuiHostSlotMap = {
   app_bottom: {}
   home_logo: {}
   home_prompt: {
-    workspace_id?: string
     ref?: (ref: TuiPromptRef | undefined) => void
   }
-  home_prompt_right: {
-    workspace_id?: string
-  }
+  home_prompt_right: {}
   session_prompt: {
     session_id: string
     visible?: boolean
@@ -596,6 +597,7 @@ export type TuiPluginApi = {
   command?: TuiCommandApi
   keys: TuiKeys
   keymap: TuiKeymap
+  mode: TuiModeApi
   route: {
     register: (routes: TuiRouteDefinition[]) => () => void
     navigate: (name: string, params?: Record<string, unknown>) => void

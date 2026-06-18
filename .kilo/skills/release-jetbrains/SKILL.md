@@ -50,7 +50,7 @@ Pass a generous Bash timeout, such as `1800000` ms, because the script blocks on
 bun .kilo/skills/release-jetbrains/script/dispatch-prepare.ts --kind rc --version 7.0.1-rc.7 --run-id <run-id>
 ```
 
-The script prints `prNumber`, `prUrl`, `runUrl`, and `branch` on success.
+The script prints `prNumber`, `prUrl`, `runUrl`, and `branch` on success. Immediately show the `prUrl` to the user so they can open the release PR without asking for it later.
 
 ## Changelog Draft
 
@@ -116,6 +116,8 @@ gh api "repos/Kilo-Org/kilocode/contents/packages/kilo-jetbrains/CHANGELOG.md?re
 ```
 
 Then either fix and retry the helper, or perform the equivalent contents API update using `ref` in the query string.
+
+After the changelog commit succeeds, show the release PR URL again and tell the user that the PR needs manual approval and merge before publishing can continue.
 
 ## Approve And Publish
 

@@ -1,4 +1,4 @@
-import { createEffect, For, Match, on, onCleanup, Show, Switch, type JSX } from "solid-js"
+import { createEffect, For, Match, on, onCleanup, onMount, Show, Switch, type JSX } from "solid-js"
 import { animate, type AnimationPlaybackControls } from "motion"
 import { useI18n } from "../context/i18n"
 import { createStore } from "solid-js/store"
@@ -43,26 +43,76 @@ export interface BasicToolProps {
 }
 
 const SPRING = { type: "spring" as const, visualDuration: 0.35, bounce: 0 }
+const deferredMounts: Array<{ active: boolean; fn: () => void }> = []
+let deferredFrame: number | undefined
+
+function flushDeferredMounts() {
+  while (deferredMounts.length > 0) {
+    // Timeline tools are mounted top-to-bottom, but the viewport starts at the latest turn.
+    // Pop from the end so heavy default-open bodies near the bottom become interactive first.
+    const item = deferredMounts.pop()!
+    if (item.active) {
+      deferredFrame = deferredMounts.length > 0 ? requestAnimationFrame(flushDeferredMounts) : undefined
+      item.fn()
+      return
+    }
+  }
+  deferredFrame = undefined
+}
+
+function scheduleDeferredFlush() {
+  if (deferredFrame !== undefined) return
+  deferredFrame = requestAnimationFrame(() => {
+    deferredFrame = requestAnimationFrame(flushDeferredMounts)
+  })
+}
+
+function scheduleDeferredMount(fn: () => void) {
+  const item = { active: true, fn }
+  deferredMounts.push(item)
+  scheduleDeferredFlush()
+  return () => {
+    item.active = false
+  }
+}
+
+function scheduleFrameMount(fn: () => void) {
+  const frame = requestAnimationFrame(fn)
+  return () => cancelAnimationFrame(frame)
+}
 
 export function BasicTool(props: BasicToolProps) {
   const [state, setState] = createStore({
     open: props.defaultOpen ?? false,
-    ready: props.defaultOpen ?? false,
+    ready: !props.defer && (props.defaultOpen ?? false),
   })
   const open = () => state.open
   const ready = () => state.ready
   const pending = () => props.status === "pending" || props.status === "running"
-  const hasDetails = () => props.hasDetails ?? !!props.children // kilocode_change
+  const hasChildren = () => (props.defer ? "children" in props : props.children)
+  const hasDetails = () => props.hasDetails ?? !!hasChildren() // kilocode_change
 
-  let frame: number | undefined
+  let cancelReady: (() => void) | undefined
 
   const cancel = () => {
-    if (frame === undefined) return
-    cancelAnimationFrame(frame)
-    frame = undefined
+    cancelReady?.()
+    cancelReady = undefined
+  }
+
+  const scheduleReady = (initial = false) => {
+    cancel()
+    cancelReady = (initial ? scheduleDeferredMount : scheduleFrameMount)(() => {
+      cancelReady = undefined
+      if (!open()) return
+      setState("ready", true)
+    })
   }
 
   onCleanup(cancel)
+
+  onMount(() => {
+    if (props.defer && open()) scheduleReady(true)
+  })
 
   createEffect(() => {
     if (props.forceOpen) setState("open", true)
@@ -79,12 +129,7 @@ export function BasicTool(props: BasicToolProps) {
           return
         }
 
-        cancel()
-        frame = requestAnimationFrame(() => {
-          frame = undefined
-          if (!open()) return
-          setState("ready", true)
-        })
+        scheduleReady()
       },
       { defer: true },
     ),
@@ -201,7 +246,14 @@ export function BasicTool(props: BasicToolProps) {
         </div>
       </div>
       {/* kilocode_change start */}
-      <Show when={hasDetails() && !props.hideDetails && !props.locked && (!pending() || props.allowPendingToggle)}>
+      <Show
+        when={
+          (hasChildren() || hasDetails()) &&
+          !props.hideDetails &&
+          !props.locked &&
+          (!pending() || props.allowPendingToggle)
+        }
+      >
         <Collapsible.Arrow />
       </Show>
       {/* kilocode_change end */}
@@ -232,7 +284,7 @@ export function BasicTool(props: BasicToolProps) {
           </Collapsible.Trigger>
         )}
       </Show>
-      <Show when={props.animated && props.children && !props.hideDetails}>
+      <Show when={props.animated && hasChildren() && !props.hideDetails}>
         <div
           ref={contentRef}
           data-slot="collapsible-content"
@@ -242,11 +294,11 @@ export function BasicTool(props: BasicToolProps) {
             overflow: initialOpen ? "visible" : "hidden",
           }}
         >
-          {props.children}
+          <Show when={!props.defer || ready()}>{props.children}</Show>
         </div>
       </Show>
       {/* kilocode_change start */}
-      <Show when={!props.animated && hasDetails() && !props.hideDetails}>
+      <Show when={!props.animated && (hasChildren() || hasDetails()) && !props.hideDetails}>
         <Collapsible.Content>
           <Show when={!props.defer || ready()}>{props.children}</Show>
         </Collapsible.Content>
