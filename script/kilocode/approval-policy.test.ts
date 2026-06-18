@@ -1,47 +1,46 @@
 import { describe, expect, test } from "bun:test"
-import { approvers, evaluate } from "./approval-policy"
+import { approvers, evaluate, type Review } from "./approval-policy"
 
 const engineers = new Set(["engineer"])
+const head = "current"
+const review = (user: string, state: string, commit = head): Review => ({ user, state, commit })
 
 describe("approval policy", () => {
   test("requires engineering approval", () => {
-    expect(evaluate([], engineers, "author").ok).toBe(false)
-    expect(evaluate([{ user: "outsider", state: "APPROVED" }], engineers, "author").ok).toBe(false)
-    expect(evaluate([{ user: "Engineer", state: "APPROVED" }], engineers, "author")).toEqual({
+    expect(evaluate([], engineers, "author", head).ok).toBe(false)
+    expect(evaluate([review("outsider", "APPROVED")], engineers, "author", head).ok).toBe(false)
+    expect(evaluate([review("Engineer", "APPROVED")], engineers, "author", head)).toEqual({
       ok: true,
       reason: "Approved by engineering team member @engineer",
     })
   })
 
   test("does not count self approval", () => {
-    expect(evaluate([{ user: "engineer", state: "APPROVED" }], engineers, "ENGINEER").ok).toBe(false)
+    expect(evaluate([review("engineer", "APPROVED")], engineers, "ENGINEER", head).ok).toBe(false)
+  })
+
+  test("does not count approval for an older commit", () => {
+    expect(evaluate([review("engineer", "APPROVED", "old")], engineers, "author", head).ok).toBe(false)
   })
 
   test("uses the latest opinionated review", () => {
     expect(
-      approvers([
-        { user: "engineer", state: "APPROVED" },
-        { user: "engineer", state: "COMMENTED" },
-        { user: "engineer", state: "CHANGES_REQUESTED" },
-      ]).has("engineer"),
+      approvers(
+        [review("engineer", "APPROVED"), review("engineer", "COMMENTED"), review("engineer", "CHANGES_REQUESTED")],
+        head,
+      ).has("engineer"),
     ).toBe(false)
   })
 
   test("retains approval after a comment-only review", () => {
-    expect(
-      approvers([
-        { user: "engineer", state: "APPROVED" },
-        { user: "engineer", state: "COMMENTED" },
-      ]).has("engineer"),
-    ).toBe(true)
+    expect(approvers([review("engineer", "APPROVED"), review("engineer", "COMMENTED")], head).has("engineer")).toBe(
+      true,
+    )
   })
 
   test("does not count a dismissed approval", () => {
-    expect(
-      approvers([
-        { user: "engineer", state: "APPROVED" },
-        { user: "engineer", state: "DISMISSED" },
-      ]).has("engineer"),
-    ).toBe(false)
+    expect(approvers([review("engineer", "APPROVED"), review("engineer", "DISMISSED")], head).has("engineer")).toBe(
+      false,
+    )
   })
 })

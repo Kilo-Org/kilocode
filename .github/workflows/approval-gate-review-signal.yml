@@ -13,17 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Record pull request number
+      - name: Validate pull request event
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          set -euo pipefail
-          [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]
-          printf '%s\n' "$PR_NUMBER" > pr-number
-
-      - name: Upload pull request reference
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: approval-gate-pr
-          path: pr-number
-          retention-days: 1
+        run: '[[ "$PR_NUMBER" =~ ^[0-9]+$ ]]'

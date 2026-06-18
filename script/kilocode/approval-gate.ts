@@ -22,6 +22,7 @@ type Pull = {
 type ApiReview = {
   state: string
   submitted_at: string | null
+  commit_id: string
   user: { login: string } | null
 }
 
@@ -76,7 +77,7 @@ try {
   const reviews: Review[] = raw
     .filter((review) => review.user)
     .sort((a, b) => (a.submitted_at ?? "").localeCompare(b.submitted_at ?? ""))
-    .map((review) => ({ user: review.user!.login, state: review.state }))
+    .map((review) => ({ user: review.user!.login, state: review.state, commit: review.commit_id }))
   const engineers = new Set(members.map((member) => member.login.toLowerCase()))
   const current = (await request<Pull>(`/repos/${repo}/pulls/${number}`, statusToken)).data
   if (current.head.sha !== pull.head.sha) throw new Error("PR head changed during approval evaluation")
@@ -86,7 +87,7 @@ try {
     process.exit(1)
   }
 
-  const result = evaluate(reviews, engineers, pull.user.login)
+  const result = evaluate(reviews, engineers, pull.user.login, pull.head.sha)
   await status(pull.head.sha, result.ok ? "success" : "failure", result.reason)
   if (!result.ok) process.exit(1)
   console.log(result.reason)

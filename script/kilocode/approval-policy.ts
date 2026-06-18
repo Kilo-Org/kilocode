@@ -1,6 +1,7 @@
 export type Review = {
   user: string
   state: string
+  commit: string
 }
 
 export type Result = {
@@ -8,9 +9,10 @@ export type Result = {
   reason: string
 }
 
-export function approvers(reviews: Review[]) {
+export function approvers(reviews: Review[], head: string) {
   const states = new Map<string, string>()
   for (const review of reviews) {
+    if (review.commit !== head) continue
     const user = review.user.toLowerCase()
     if (!user) continue
     if (review.state === "APPROVED" || review.state === "CHANGES_REQUESTED" || review.state === "DISMISSED") {
@@ -20,8 +22,8 @@ export function approvers(reviews: Review[]) {
   return new Set([...states].filter(([, state]) => state === "APPROVED").map(([user]) => user))
 }
 
-export function evaluate(reviews: Review[], engineers: Set<string>, author: string): Result {
-  const approved = approvers(reviews)
+export function evaluate(reviews: Review[], engineers: Set<string>, author: string, head: string): Result {
+  const approved = approvers(reviews, head)
   approved.delete(author.toLowerCase())
 
   const engineer = [...approved].find((user) => engineers.has(user))

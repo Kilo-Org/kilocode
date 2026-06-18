@@ -15,7 +15,6 @@ on:
         type: number
 
 permissions:
-  actions: read
   contents: read
   pull-requests: read
   statuses: write
@@ -30,25 +29,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Download review signal
-        if: github.event_name == 'workflow_run'
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: approval-gate-pr
-          path: signal
-          github-token: ${{ github.token }}
-          run-id: ${{ github.event.workflow_run.id }}
-
       - name: Resolve pull request number
         id: pr
         env:
           EVENT_NAME: ${{ github.event_name }}
           EVENT_PR: ${{ github.event.pull_request.number }}
           INPUT_PR: ${{ inputs.pr_number }}
+          RUN_PR: ${{ github.event.workflow_run.pull_requests[0].number }}
         run: |
           set -euo pipefail
           if [ "$EVENT_NAME" = "workflow_run" ]; then
-            PR_NUMBER="$(cat signal/pr-number)"
+            PR_NUMBER="$RUN_PR"
           else
             PR_NUMBER="${EVENT_PR:-$INPUT_PR}"
           fi
