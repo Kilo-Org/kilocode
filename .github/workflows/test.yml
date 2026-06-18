@@ -57,7 +57,7 @@ jobs:
         with:
           node-version: "24"
       # kilocode_change end
-
+      # kilocode_change start
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
         with:
@@ -78,6 +78,7 @@ jobs:
             --filter='@opencode-ai/llm'
             --filter='@opencode-ai/script'
             --filter='@opencode-ai/ui'
+        # kilocode_change end
 
       - name: Configure git identity
         run: |
