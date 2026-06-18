@@ -3,7 +3,7 @@ import { removeAgent, removeMcp, type RemoveConfigItemContext } from "../../src/
 
 function context(opts: {
   project?: string
-  remove: ReturnType<typeof mock>
+  uninstall: ReturnType<typeof mock>
   refresh: ReturnType<typeof mock>
 }): RemoveConfigItemContext {
   return {
@@ -11,43 +11,54 @@ function context(opts: {
       getClientAsync: mock(async () => ({
         global: { config: { update: mock(async () => {}) } },
         instance: { dispose: mock(async () => {}) },
+        kilocode: { marketplace: { uninstall: opts.uninstall } },
       })),
     } as unknown as RemoveConfigItemContext["connection"],
     project: () => opts.project,
     directory: () => "/repo",
     refresh: opts.refresh,
-    remove: opts.remove,
   }
 }
 
 describe("remove config item adapter", () => {
   it("removes agents from project and global scopes, then refreshes", async () => {
-    const remove = mock(async () => ({ success: true, slug: "reviewer" }))
+    const uninstall = mock(async () => ({ data: { success: true, slug: "reviewer" } }))
     const refresh = mock(async () => {})
-    const ctx = context({ project: "/repo", remove, refresh })
+    const ctx = context({ project: "/repo", uninstall, refresh })
 
     expect(await removeAgent(ctx, "reviewer")).toBe(true)
-    expect(remove).toHaveBeenCalledTimes(2)
-    expect(remove).toHaveBeenNthCalledWith(1, { id: "reviewer", type: "agent" }, "project", "/repo")
-    expect(remove).toHaveBeenNthCalledWith(2, { id: "reviewer", type: "agent" }, "global", "/repo")
+    expect(uninstall).toHaveBeenCalledTimes(2)
+    expect(uninstall).toHaveBeenNthCalledWith(
+      1,
+      { id: "reviewer", type: "agent", target: "project", directory: "/repo" },
+      { throwOnError: true },
+    )
+    expect(uninstall).toHaveBeenNthCalledWith(
+      2,
+      { id: "reviewer", type: "agent", target: "global", directory: "/repo" },
+      { throwOnError: true },
+    )
     expect(refresh).toHaveBeenCalledTimes(1)
   })
 
   it("removes MCP servers globally when there is no project, then refreshes", async () => {
-    const remove = mock(async () => ({ success: true, slug: "memory" }))
+    const uninstall = mock(async () => ({ data: { success: true, slug: "memory" } }))
     const refresh = mock(async () => {})
-    const ctx = context({ remove, refresh })
+    const ctx = context({ uninstall, refresh })
 
     expect(await removeMcp(ctx, "memory")).toBe(true)
-    expect(remove).toHaveBeenCalledTimes(1)
-    expect(remove).toHaveBeenCalledWith({ id: "memory", type: "mcp" }, "global", undefined)
+    expect(uninstall).toHaveBeenCalledTimes(1)
+    expect(uninstall).toHaveBeenCalledWith(
+      { id: "memory", type: "mcp", target: "global", directory: "/repo" },
+      { throwOnError: true },
+    )
     expect(refresh).toHaveBeenCalledTimes(1)
   })
 
   it("does not refresh when removal fails", async () => {
-    const remove = mock(async () => ({ success: false, slug: "reviewer" }))
+    const uninstall = mock(async () => ({ data: { success: false, slug: "reviewer" } }))
     const refresh = mock(async () => {})
-    const ctx = context({ remove, refresh })
+    const ctx = context({ uninstall, refresh })
 
     expect(await removeAgent(ctx, "reviewer")).toBe(false)
     expect(refresh).not.toHaveBeenCalled()

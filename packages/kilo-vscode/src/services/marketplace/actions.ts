@@ -2,7 +2,6 @@ import * as path from "path"
 import * as vscode from "vscode"
 import type { KiloConnectionService } from "../cli-backend"
 import { retry } from "../cli-backend/retry"
-import type { MarketplaceService } from "."
 import type {
   InstallMarketplaceItemOptions,
   InstallResult,
@@ -14,23 +13,24 @@ import type {
 
 export interface MarketplaceActionContext {
   connection: KiloConnectionService
-  marketplace: MarketplaceService
   storage?: vscode.Uri
-}
-
-export interface MarketplaceRemoveContext {
-  connection: KiloConnectionService
-  storage?: vscode.Uri
-  remove: (item: MarketplaceItemRef, scope: "project" | "global", project?: string) => Promise<RemoveResult>
 }
 
 export async function fetchMarketplaceData(
   ctx: MarketplaceActionContext,
-  project: string | undefined,
-  dir: string | undefined,
+  dir: string,
 ): Promise<MarketplaceDataResponse> {
-  const skills = dir ? await fetchSkills(ctx, dir) : undefined
-  return ctx.marketplace.fetchData(project, skills)
+  const started = Date.now()
+  console.info("[Kilo New] Marketplace: list request", { directory: dir })
+  const client = await ctx.connection.getClientAsync(dir)
+  const { data } = await retry(() => client.kilocode.marketplace.list({ directory: dir }, { throwOnError: true }))
+  console.info("[Kilo New] Marketplace: list response", {
+    directory: dir,
+    durationMs: Date.now() - started,
+    itemCount: data.marketplaceItems.length,
+    errorCount: data.errors?.length ?? 0,
+  })
+  return data
 }
 
 export async function installMarketplaceItem(
@@ -45,11 +45,39 @@ export async function installMarketplaceItem(
     return { success: false, slug: item.id, error: "No workspace directory for project-scope install" }
   }
 
+  const started = Date.now()
+  console.info("[Kilo New] Marketplace: install request", {
+    id: item.id,
+    type: item.type,
+    scope,
+    directory: dir,
+    hasParameters: !!opts.parameters && Object.keys(opts.parameters).length > 0,
+    method: typeof opts.parameters?.__method === "string" ? opts.parameters.__method : undefined,
+  })
+
   try {
-    const result = await ctx.marketplace.install(item, opts, project)
-    if (result.success) await invalidate(ctx, scope, scope === "project" ? project! : dir)
-    return result
+    const client = await ctx.connection.getClientAsync(dir)
+    const { data } = await retry(() =>
+      client.kilocode.marketplace.install(
+        { id: item.id, type: item.type, target: scope, parameters: opts.parameters, item, directory: dir },
+        { throwOnError: true },
+      ),
+    )
+    console.info("[Kilo New] Marketplace: install response", {
+      id: item.id,
+      type: item.type,
+      scope,
+      directory: dir,
+      durationMs: Date.now() - started,
+      success: data.success,
+      error: data.error,
+    })
+    return {
+      ...data,
+      line: typeof data.line === "number" ? data.line : undefined,
+    }
   } catch (err) {
+    console.warn("[Kilo New] Marketplace: install failed", { id: item.id, type: item.type, scope, directory: dir, err })
     return { success: false, slug: item.id, error: String(err) }
   }
 }
@@ -61,72 +89,85 @@ export async function removeMarketplaceItem(
   project: string | undefined,
   dir: string,
 ): Promise<RemoveResult> {
+  return removeMarketplaceItemRef(ctx, item, scope, project, dir)
+}
+
+export async function removeMarketplaceItemRef(
+  ctx: MarketplaceActionContext,
+  item: MarketplaceItemRef,
+  scope: "project" | "global",
+  project: string | undefined,
+  dir: string,
+): Promise<RemoveResult> {
   if (scope === "project" && !project) {
     return { success: false, slug: item.id, error: "No workspace directory for project-scope removal" }
   }
 
+  const started = Date.now()
+  console.info("[Kilo New] Marketplace: uninstall request", { id: item.id, type: item.type, scope, directory: dir })
+
   try {
-    if (item.type === "mcp") await removeLegacyMcp(ctx, item.id, project, scope)
-    const result = await ctx.marketplace.remove(item, scope, project)
-    if (result.success) await invalidate(ctx, scope, scope === "project" ? project! : dir)
-    return result
+    if (item.type === "mcp") await removeVsCodeLegacyMcp(ctx, item.id, project, scope)
+    const client = await ctx.connection.getClientAsync(dir)
+    const { data } = await retry(() =>
+      client.kilocode.marketplace.uninstall(
+        { id: item.id, type: item.type, target: scope, directory: dir },
+        { throwOnError: true },
+      ),
+    )
+    console.info("[Kilo New] Marketplace: uninstall response", {
+      id: item.id,
+      type: item.type,
+      scope,
+      directory: dir,
+      durationMs: Date.now() - started,
+      success: data.success,
+      error: data.error,
+    })
+    return data
   } catch (err) {
+    console.warn("[Kilo New] Marketplace: uninstall failed", {
+      id: item.id,
+      type: item.type,
+      scope,
+      directory: dir,
+      err,
+    })
     return { success: false, slug: item.id, error: String(err) }
   }
 }
 
 export async function removeMarketplaceItemFromAllScopes(
-  ctx: MarketplaceRemoveContext,
+  ctx: MarketplaceActionContext,
   item: MarketplaceItemRef,
   project: string | undefined,
   dir: string,
 ): Promise<boolean> {
+  const started = Date.now()
+  console.info("[Kilo New] Marketplace: uninstall all scopes request", { id: item.id, type: item.type, directory: dir })
+
   try {
-    if (item.type === "mcp") await removeLegacyMcp(ctx, item.id, project, "all")
-    const local = project ? await ctx.remove(item, "project", project) : undefined
-    const global = await ctx.remove(item, "global", project)
-    if (!local?.success && !global.success) return false
-    await invalidate(ctx, global.success ? "global" : "project", global.success ? dir : project!)
-    return true
+    if (item.type === "mcp") await removeVsCodeLegacyMcp(ctx, item.id, project, "all")
+    const [local, global] = await Promise.all([
+      project ? removeMarketplaceItemRef(ctx, item, "project", project, dir) : Promise.resolve(undefined),
+      removeMarketplaceItemRef(ctx, item, "global", project, dir),
+    ])
+    console.info("[Kilo New] Marketplace: uninstall all scopes response", {
+      id: item.id,
+      type: item.type,
+      directory: dir,
+      durationMs: Date.now() - started,
+      project: local ? { success: local.success, error: local.error } : undefined,
+      global: { success: global.success, error: global.error },
+    })
+    return !!local?.success || global.success
   } catch (err) {
     console.warn("[Kilo New] Marketplace removal failed:", err)
     return false
   }
 }
 
-async function fetchSkills(ctx: MarketplaceActionContext, dir: string) {
-  try {
-    const client = await ctx.connection.getClientAsync(dir)
-    const { data } = await retry(() => client.app.skills({ directory: dir }, { throwOnError: true }))
-    return data
-  } catch (err) {
-    console.warn("[Kilo New] Failed to fetch CLI skills for marketplace:", err)
-    return undefined
-  }
-}
-
-async function invalidate(
-  ctx: { connection: KiloConnectionService },
-  scope: "project" | "global",
-  dir: string,
-): Promise<void> {
-  const client = await ctx.connection.getClientAsync(dir).catch((err: unknown) => {
-    console.warn("[Kilo New] Marketplace CLI invalidation deferred:", err)
-    return null
-  })
-  if (!client) return
-
-  if (scope === "global") {
-    await client.global.config.update({ config: {} }).catch((err: unknown) => {
-      console.warn("[Kilo New] global.config.update after marketplace change failed:", err)
-    })
-  }
-  await client.instance.dispose({ directory: dir }).catch((err: unknown) => {
-    console.warn("[Kilo New] instance.dispose() after marketplace change failed:", err)
-  })
-}
-
-async function removeLegacyMcp(
+async function removeVsCodeLegacyMcp(
   ctx: { storage?: vscode.Uri },
   name: string,
   project: string | undefined,

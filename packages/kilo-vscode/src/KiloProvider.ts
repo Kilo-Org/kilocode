@@ -51,7 +51,7 @@ import { GitOps } from "./agent-manager/GitOps"
 import { GitStatsPoller, type LocalStats } from "./agent-manager/GitStatsPoller"
 import { diffSummary as localDiffSummary } from "./agent-manager/local-diff"
 import { getWorkspaceRoot } from "./review-utils"
-import { createMarketplaceRemover, removeAgent, removeMcp } from "./kilo-provider/remove-config-item"
+import type { InstallResult, MarketplaceItem, RemoveResult } from "./services/marketplace/types"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 import { resolveProjectDirectory } from "./project-directory"
 import { seedSessionStatuses } from "./session-status"
@@ -338,7 +338,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
   private autoApproveBridge: ReturnType<typeof createAutoApproveBridge> | null = null
-  private readonly marketplaceRemove = createMarketplaceRemover()
 
   private ignoreController: FileIgnoreController | null = null
   private ignoreControllerDir: string | null = null
@@ -458,13 +457,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
-  // Strip metadata unused by the webview to keep session switches fast.
-  // Logic in kilo-provider/slim-metadata.ts.
-  private slimInfo<T>(info: T): T {
-    if (!this.slimEditMetadata) return info
-    return slimInfo(info)
-  }
-
+  // Strip edit-tool metadata.filediff.before/after (multi-MB for edit-heavy
+  // sessions) to keep session switches fast. Logic in kilo-provider/slim-metadata.ts.
   private slimPart<T>(part: T): T {
     if (!this.slimEditMetadata) return part
     return slimPart(part)
@@ -475,6 +469,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return slimParts(parts)
   }
 
+  private slimInfo<T>(info: T): T {
+    if (!this.slimEditMetadata) return info
+    return slimInfo(info)
+  }
+
   private get forkCtx() {
     return {
       connection: this.connectionService,
@@ -483,21 +482,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       forked: (session: Session) => this.postMessage({ type: "sessionForked", sessionID: session.id }),
       status: (sessionID: string) => this.sessionStatusMap.get(sessionID),
       directory: (sessionID: string) => this.getWorkspaceDirectory(sessionID),
-    }
-  }
-
-  private get removeConfigItemCtx() {
-    return {
-      connection: this.connectionService,
-      project: () => this.getProjectDirectory(this.currentSession?.id),
-      directory: () => this.getWorkspaceDirectory(),
-      remove: this.marketplaceRemove,
-      refresh: async () => {
-        this.cachedAgentsMessage = null
-        this.cachedConfigMessage = null
-        await Promise.all([this.fetchAndSendAgents(), this.fetchAndSendConfig()])
-      },
-      storage: this.extensionContext?.globalStorageUri,
     }
   }
 
@@ -1250,6 +1234,48 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             })
           break
         }
+        case "fetchMarketplaceData": {
+          await this.handleFetchMarketplaceData()
+          break
+        }
+        case "filterMarketplaceItems": {
+          // Client-side filtering — no server action needed
+          break
+        }
+        case "installMarketplaceItem": {
+          const item = message.mpItem as MarketplaceItem
+          const result = await this.installMarketplaceItem(item, message.mpInstallOptions)
+          if (result.success) {
+            vscode.window.showInformationMessage(`Successfully installed ${item.name}`)
+            await this.invalidateAfterMarketplaceChange(item.type)
+          }
+          this.postMessage({
+            type: "marketplaceInstallResult",
+            success: result.success,
+            slug: result.slug,
+            error: result.error,
+          })
+          break
+        }
+        case "removeInstalledMarketplaceItem": {
+          const scope = message.mpInstallOptions?.target ?? "project"
+          const item = message.mpItem as MarketplaceItem
+          const result = await this.removeMarketplaceItem(item, scope)
+          if (result.success) {
+            vscode.window.showInformationMessage(`Successfully removed ${item.name}`)
+          }
+          this.postMessage({
+            type: "marketplaceRemoveResult",
+            success: result.success,
+            slug: result.slug,
+            error: result.error,
+          })
+          break
+        }
+        case "dismissAgentMigrationBanner": {
+          await this.extensionContext?.globalState.update("kilo.agentMigrationBannerDismissed", true)
+          break
+        }
       }
     })
     this.webviewMessageDisposable = watchFontSizeConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
@@ -1262,6 +1288,22 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       diff: this.diffVirtualProvider,
       storage: this.extensionContext?.globalStorageUri,
     })
+  }
+
+  private async handleFetchMarketplaceData(): Promise<void> {
+    if (!this.client) return
+    const directory = this.getProjectDirectory(this.currentSession?.id) ?? this.getWorkspaceDirectory()
+    const started = Date.now()
+    console.info("[Kilo New] Marketplace: list request", { directory })
+    const { data } = await retry(() => this.client!.kilocode.marketplace.list({ directory }, { throwOnError: true }))
+    console.info("[Kilo New] Marketplace: list response", {
+      directory,
+      durationMs: Date.now() - started,
+      itemCount: data.marketplaceItems.length,
+      errorCount: data.errors?.length ?? 0,
+    })
+    const dismissed = this.extensionContext?.globalState.get<boolean>("kilo.agentMigrationBannerDismissed") ?? false
+    this.postMessage({ type: "marketplaceData", ...data, showAgentMigrationBanner: !dismissed })
   }
 
   /**
@@ -2071,13 +2113,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     } catch {
       // fall through to kilo.json removal
     }
-    if (!(await removeAgent(this.removeConfigItemCtx, name))) {
+    if (!(await this.removeMarketplaceItemFromAllScopes(name, "agent"))) {
       console.error("[Kilo New] KiloProvider: Failed to remove agent:", name)
     }
   }
 
   private async handleRemoveMcp(name: string): Promise<void> {
-    const removed = await removeMcp(this.removeConfigItemCtx, name)
+    const removed = await this.removeMarketplaceItemFromAllScopes(name, "mcp")
     if (!removed) {
       console.error("[Kilo New] KiloProvider: Failed to remove MCP server:", name)
     }
@@ -2102,6 +2144,125 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch MCP status:", error)
     }
+  }
+
+  /**
+   * Remove a marketplace item from a single scope and invalidate CLI caches.
+   */
+  private async removeMarketplaceItem(item: MarketplaceItem, scope: "project" | "global"): Promise<RemoveResult> {
+    if (!this.client) return { success: false, slug: item.id, error: "Not connected to CLI backend" }
+    const directory = this.getProjectDirectory(this.currentSession?.id) ?? this.getWorkspaceDirectory()
+    const started = Date.now()
+    console.info("[Kilo New] Marketplace: uninstall request", { id: item.id, type: item.type, scope, directory })
+    const { data: result } = await retry(() =>
+      this.client!.kilocode.marketplace.uninstall(
+        { id: item.id, type: item.type, target: scope, directory },
+        { throwOnError: true },
+      ),
+    )
+    console.info("[Kilo New] Marketplace: uninstall response", {
+      id: item.id,
+      type: item.type,
+      scope,
+      directory,
+      durationMs: Date.now() - started,
+      success: result.success,
+      error: result.error,
+    })
+    if (result.success) {
+      await this.invalidateAfterMarketplaceChange(item.type)
+    }
+    return result
+  }
+
+  private async installMarketplaceItem(
+    item: MarketplaceItem,
+    options?: { target?: "project" | "global"; parameters?: Record<string, unknown> },
+  ): Promise<InstallResult> {
+    if (!this.client) return { success: false, slug: item.id, error: "Not connected to CLI backend" }
+    const directory = this.getProjectDirectory(this.currentSession?.id) ?? this.getWorkspaceDirectory()
+    const scope = options?.target ?? "project"
+    const started = Date.now()
+    console.info("[Kilo New] Marketplace: install request", {
+      id: item.id,
+      type: item.type,
+      scope,
+      directory,
+      hasParameters: !!options?.parameters && Object.keys(options.parameters).length > 0,
+      method: typeof options?.parameters?.__method === "string" ? options.parameters.__method : undefined,
+    })
+    const { data } = await retry(() =>
+      this.client!.kilocode.marketplace.install(
+        { id: item.id, type: item.type, target: options?.target, parameters: options?.parameters, item, directory },
+        { throwOnError: true },
+      ),
+    )
+    console.info("[Kilo New] Marketplace: install response", {
+      id: item.id,
+      type: item.type,
+      scope,
+      directory,
+      durationMs: Date.now() - started,
+      success: data.success,
+      error: data.error,
+    })
+    return data
+  }
+
+  /**
+   * Remove a marketplace item from both project and global scopes.
+   * mp.remove returns success even when the entry doesn't exist (no-op),
+   * so we must attempt both scopes to cover dual-scope installations.
+   * Returns true if at least one scope removal succeeded.
+   */
+  private async removeMarketplaceItemFromAllScopes(id: string, type: "agent" | "mcp" | "skill"): Promise<boolean> {
+    if (!this.client) return false
+    const directory = this.getProjectDirectory(this.currentSession?.id) ?? this.getWorkspaceDirectory()
+    const started = Date.now()
+    console.info("[Kilo New] Marketplace: uninstall all scopes request", { id, type, directory })
+    const [project, global] = await Promise.all([
+      retry(() =>
+        this.client!.kilocode.marketplace.uninstall({ id, type, target: "project", directory }, { throwOnError: true }),
+      ),
+      retry(() =>
+        this.client!.kilocode.marketplace.uninstall({ id, type, target: "global", directory }, { throwOnError: true }),
+      ),
+    ])
+    console.info("[Kilo New] Marketplace: uninstall all scopes response", {
+      id,
+      type,
+      directory,
+      durationMs: Date.now() - started,
+      project: { success: project.data.success, error: project.data.error },
+      global: { success: global.data.success, error: global.data.error },
+    })
+
+    if (project.data.success || global.data.success) {
+      await this.invalidateAfterMarketplaceChange(type)
+      return true
+    }
+    return false
+  }
+
+  /**
+   * Refresh local webview caches after the CLI marketplace endpoint updates backend state.
+   */
+  private async invalidateAfterMarketplaceChange(type: MarketplaceItem["type"]): Promise<void> {
+    if (type === "agent") {
+      this.cachedAgentsMessage = null
+      this.cachedConfigMessage = null
+      await Promise.all([this.fetchAndSendAgents(), this.fetchAndSendConfig()])
+      return
+    }
+    if (type === "mcp") {
+      this.cachedMcpStatusMessage = null
+      this.cachedConfigMessage = null
+      await Promise.all([this.fetchAndSendMcpStatus(), this.fetchAndSendConfig()])
+      return
+    }
+    this.cachedSkillsMessage = null
+    this.clearCommandsCache()
+    await Promise.all([this.fetchAndSendSkills(), this.fetchAndSendCommands()])
   }
 
   /**
@@ -3256,12 +3417,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.streams.push({ ...msg, part: this.slimPart(msg.part) })
       return
     }
-    const next = msg.type === "messageCreated" ? { ...msg, message: this.slimInfo(msg.message) } : msg
-    if (next.type === "indexingStatusLoaded") {
-      this.cachedIndexingStatusMessage = next
+    if (msg.type === "messageCreated") {
+      this.postMessage({ ...msg, message: this.slimInfo(msg.message) })
+      return
+    }
+    if (msg.type === "indexingStatusLoaded") {
+      this.cachedIndexingStatusMessage = msg
     }
     this.streams.flush(sessionID)
-    this.postMessage(next)
+    this.postMessage(msg)
   }
 
   /** Wait until the webview has sent "webviewReady". Resolves immediately when already ready. */

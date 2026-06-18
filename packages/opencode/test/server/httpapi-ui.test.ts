@@ -65,6 +65,7 @@ function app(input?: { password?: string; username?: string }) {
     ),
     { disableLogger: true },
   ).handler
+  // kilocode_change start - expose fetch-like test app helper
   return {
     request(input: string | URL | Request, init?: RequestInit) {
       return Effect.promise(
@@ -78,6 +79,7 @@ function app(input?: { password?: string; username?: string }) {
       )
     },
   }
+  // kilocode_change end
 }
 
 function uiApp(input?: {
@@ -113,6 +115,7 @@ function uiApp(input?: {
     ),
     { disableLogger: true },
   ).handler
+  // kilocode_change start - expose fetch-like test app helper
   return {
     request(input: string | URL | Request, init?: RequestInit) {
       return Effect.promise(
@@ -126,6 +129,7 @@ function uiApp(input?: {
       )
     },
   }
+  // kilocode_change end
 }
 
 function routeOrderingApp() {
@@ -154,7 +158,8 @@ function routeOrderingApp() {
       ]),
     ),
     { disableLogger: true },
-  ).handler
+  ).handler // kilocode_change
+  // kilocode_change start - expose fetch-like test app helper with proxy inspection
   return {
     proxiedUrl: () => proxiedUrl,
     request(input: string | URL | Request, init?: RequestInit) {
@@ -169,6 +174,7 @@ function routeOrderingApp() {
       )
     },
   }
+  // kilocode_change end
 }
 
 function httpClient(response: Response, onRequest?: (request: HttpClientRequest.HttpClientRequest) => void) {

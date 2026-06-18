@@ -7,6 +7,7 @@ import {
   WorkspaceRoutingQuery,
 } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
+import * as Marketplace from "@/kilocode/marketplace/types"
 
 const root = "/kilocode"
 
@@ -22,6 +23,9 @@ export const KilocodePaths = {
   heapSnapshot: `${root}/heap/snapshot`,
   removeSkill: `${root}/skill/remove`,
   removeAgent: `${root}/agent/remove`,
+  marketplace: `${root}/marketplace`,
+  marketplaceInstall: `${root}/marketplace/install`,
+  marketplaceUninstall: `${root}/marketplace/uninstall`,
 } as const
 
 export const KilocodeApi = HttpApi.make("kilocode")
@@ -62,6 +66,41 @@ export const KilocodeApi = HttpApi.make("kilocode")
             summary: "Remove a custom agent",
             description:
               "Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state.",
+          }),
+        ),
+        HttpApiEndpoint.get("marketplace", KilocodePaths.marketplace, {
+          query: WorkspaceRoutingQuery,
+          success: described(Marketplace.Response, "Marketplace catalog and installed metadata"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.marketplace.list",
+            summary: "List marketplace items",
+            description: "Return marketplace items and installed metadata for the request directory.",
+          }),
+        ),
+        HttpApiEndpoint.post("marketplaceInstall", KilocodePaths.marketplaceInstall, {
+          query: WorkspaceRoutingQuery,
+          payload: Marketplace.InstallPayload,
+          success: described(Marketplace.InstallResult, "Marketplace install result"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.marketplace.install",
+            summary: "Install marketplace item",
+            description: "Install a marketplace item by id, type, and target scope.",
+          }),
+        ),
+        HttpApiEndpoint.post("marketplaceUninstall", KilocodePaths.marketplaceUninstall, {
+          query: WorkspaceRoutingQuery,
+          payload: Marketplace.UninstallPayload,
+          success: described(Marketplace.RemoveResult, "Marketplace uninstall result"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.marketplace.uninstall",
+            summary: "Uninstall marketplace item",
+            description: "Uninstall a marketplace item by id, type, and target scope.",
           }),
         ),
       )

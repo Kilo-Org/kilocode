@@ -9432,6 +9432,263 @@ export type KilocodeRemoveAgentResponses = {
 
 export type KilocodeRemoveAgentResponse = KilocodeRemoveAgentResponses[keyof KilocodeRemoveAgentResponses]
 
+export type KilocodeMarketplaceListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/marketplace"
+}
+
+export type KilocodeMarketplaceListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeMarketplaceListError = KilocodeMarketplaceListErrors[keyof KilocodeMarketplaceListErrors]
+
+export type KilocodeMarketplaceListResponses = {
+  /**
+   * Marketplace catalog and installed metadata
+   */
+  200: {
+    marketplaceItems: Array<
+      | {
+          id: string
+          name: string
+          description: string
+          author?: string
+          authorUrl?: string
+          tags?: Array<string>
+          prerequisites?: Array<string>
+          type: "mcp"
+          url: string
+          content:
+            | string
+            | Array<{
+                name: string
+                content: string
+                parameters?: Array<{
+                  name: string
+                  key: string
+                  placeholder?: string
+                  optional?: boolean
+                }>
+                prerequisites?: Array<string>
+              }>
+          parameters?: Array<{
+            name: string
+            key: string
+            placeholder?: string
+            optional?: boolean
+          }>
+        }
+      | {
+          id: string
+          name: string
+          description: string
+          author?: string
+          authorUrl?: string
+          tags?: Array<string>
+          prerequisites?: Array<string>
+          type: "agent"
+          content: {
+            mode: "primary" | "subagent" | "all"
+            description: string
+            prompt: string
+            options?: {
+              [key: string]: unknown
+            }
+            permission?: {
+              [key: string]: unknown
+            }
+          }
+        }
+      | {
+          id: string
+          name: string
+          description: string
+          author?: string
+          authorUrl?: string
+          tags?: Array<string>
+          prerequisites?: Array<string>
+          type: "skill"
+          category: string
+          githubUrl: string
+          content: string
+          displayName: string
+          displayCategory: string
+        }
+    >
+    marketplaceInstalledMetadata: {
+      project: {
+        [key: string]: {
+          type: "agent" | "mcp" | "skill"
+        }
+      }
+      global: {
+        [key: string]: {
+          type: "agent" | "mcp" | "skill"
+        }
+      }
+    }
+    errors?: Array<string>
+  }
+}
+
+export type KilocodeMarketplaceListResponse = KilocodeMarketplaceListResponses[keyof KilocodeMarketplaceListResponses]
+
+export type KilocodeMarketplaceInstallData = {
+  body?: {
+    id: string
+    type: "agent" | "mcp" | "skill"
+    target?: "global" | "project"
+    parameters?: {
+      [key: string]: unknown
+    }
+    item?:
+      | {
+          id: string
+          name: string
+          description: string
+          author?: string
+          authorUrl?: string
+          tags?: Array<string>
+          prerequisites?: Array<string>
+          type: "mcp"
+          url: string
+          content:
+            | string
+            | Array<{
+                name: string
+                content: string
+                parameters?: Array<{
+                  name: string
+                  key: string
+                  placeholder?: string
+                  optional?: boolean
+                }>
+                prerequisites?: Array<string>
+              }>
+          parameters?: Array<{
+            name: string
+            key: string
+            placeholder?: string
+            optional?: boolean
+          }>
+        }
+      | {
+          id: string
+          name: string
+          description: string
+          author?: string
+          authorUrl?: string
+          tags?: Array<string>
+          prerequisites?: Array<string>
+          type: "agent"
+          content: {
+            mode: "primary" | "subagent" | "all"
+            description: string
+            prompt: string
+            options?: {
+              [key: string]: unknown
+            }
+            permission?: {
+              [key: string]: unknown
+            }
+          }
+        }
+      | {
+          id: string
+          name: string
+          description: string
+          author?: string
+          authorUrl?: string
+          tags?: Array<string>
+          prerequisites?: Array<string>
+          type: "skill"
+          category: string
+          githubUrl: string
+          content: string
+          displayName: string
+          displayCategory: string
+        }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/marketplace/install"
+}
+
+export type KilocodeMarketplaceInstallErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeMarketplaceInstallError = KilocodeMarketplaceInstallErrors[keyof KilocodeMarketplaceInstallErrors]
+
+export type KilocodeMarketplaceInstallResponses = {
+  /**
+   * Marketplace install result
+   */
+  200: {
+    success: boolean
+    slug: string
+    error?: string
+    filePath?: string
+    line?: number
+  }
+}
+
+export type KilocodeMarketplaceInstallResponse =
+  KilocodeMarketplaceInstallResponses[keyof KilocodeMarketplaceInstallResponses]
+
+export type KilocodeMarketplaceUninstallData = {
+  body?: {
+    id: string
+    type: "agent" | "mcp" | "skill"
+    target: "global" | "project"
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/marketplace/uninstall"
+}
+
+export type KilocodeMarketplaceUninstallErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeMarketplaceUninstallError =
+  KilocodeMarketplaceUninstallErrors[keyof KilocodeMarketplaceUninstallErrors]
+
+export type KilocodeMarketplaceUninstallResponses = {
+  /**
+   * Marketplace uninstall result
+   */
+  200: {
+    success: boolean
+    slug: string
+    error?: string
+  }
+}
+
+export type KilocodeMarketplaceUninstallResponse =
+  KilocodeMarketplaceUninstallResponses[keyof KilocodeMarketplaceUninstallResponses]
+
 export type NetworkListData = {
   body?: never
   path?: never

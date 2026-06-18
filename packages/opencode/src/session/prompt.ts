@@ -1670,10 +1670,10 @@ export const layer = Layer.effect(
           ), // kilocode_change
           bridge.run(lastAssistant(input.sessionID)),
         )
-        // kilocode_change end
       },
       Effect.catchTag("NotFoundError", Effect.die),
     )
+    // kilocode_change end
 
     const lastAssistant = Effect.fnUntraced(function* (sessionID: SessionID) {
       // kilocode_change start - retry when cancel races before shellImpl writes messages
@@ -1701,7 +1701,7 @@ export const layer = Layer.effect(
       const envCache: KiloSessionPrompt.EnvCache = {}
       closeReasons.delete(sessionID) // kilocode_change
       let compactionAttempts = 0 // kilocode_change - cap compaction attempts per turn to avoid infinite loops
-      const ctx = yield* InstanceState.context
+      const ctx = yield* InstanceState.context // kilocode_change
       const slog = elog.with({ sessionID })
       let structured: unknown
       let step = 0
