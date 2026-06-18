@@ -98,7 +98,7 @@ export const layer = Layer.effect(
         editorContext?: EditorContext,
       ) {
         const ctx = yield* InstanceState.context
-        return KilocodeSystemPrompt.environment({ ctx, model, editor: editorContext })
+        return yield* KilocodeSystemPrompt.environment({ ctx, model, editor: editorContext })
       }),
       // kilocode_change end
 

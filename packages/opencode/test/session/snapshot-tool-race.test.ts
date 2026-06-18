@@ -61,6 +61,7 @@ import { Format } from "../../src/format"
 import { Reference } from "../../src/reference/reference"
 import { SyncEvent } from "@/sync"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { MemoryService } from "@/kilocode/memory/service" // kilocode_change
 
 void Log.init({ print: false })
 
@@ -129,6 +130,7 @@ function makeHttp() {
     BackgroundJob.defaultLayer,
     status,
     SyncEvent.defaultLayer,
+    MemoryService.defaultLayer, // kilocode_change
   ).pipe(Layer.provideMerge(infra))
   const question = Question.layer.pipe(Layer.provideMerge(deps))
   const todo = Todo.layer.pipe(Layer.provideMerge(deps))

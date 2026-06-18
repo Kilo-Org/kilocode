@@ -8,6 +8,7 @@ import { enhancePromptHandlers } from "./handlers/enhance-prompt"
 import { indexingHandlers } from "./handlers/indexing"
 import { kiloGatewayHandlers } from "./handlers/kilo-gateway"
 import { kilocodeHandlers } from "./handlers/kilocode"
+import { memoryHandlers } from "./handlers/memory"
 import { networkHandlers } from "./handlers/network"
 import { remoteHandlers } from "./handlers/remote"
 import { sessionImportHandlers } from "./handlers/session-import"
@@ -23,6 +24,7 @@ export const provide = Layer.provide([
   indexingHandlers,
   kiloGatewayHandlers,
   kilocodeHandlers,
+  memoryHandlers,
   networkHandlers,
   remoteHandlers,
   sessionImportHandlers,

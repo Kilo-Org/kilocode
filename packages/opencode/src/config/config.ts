@@ -630,6 +630,22 @@ export const layer = Layer.effect(
       }
     })
 
+    // kilocode_change start - memory data directories do not need plugin dependency installs
+    // Allowlist of entries that indicate a memory-data-only directory (no plugin/tool/agent/command).
+    const MEMORY_DATA_ENTRIES = new Set([
+      "memory", ".gitignore",
+      "package.json", "package-lock.json", "pnpm-lock.yaml", "bun.lock", "yarn.lock",
+    ])
+    const needsDependencyInstall = Effect.fn("Config.needsDependencyInstall")(function* (dir: string) {
+      if (dir === Global.Path.config || dir === Flag.KILO_CONFIG_DIR) return true
+      const entries = yield* fs.readDirectory(dir).pipe(Effect.catch(() => Effect.succeed([] as string[])))
+      if (entries.length === 0) return true
+      if (!entries.includes("memory")) return true
+      // memory-only iff every entry is a known memory-data artifact; any plugin/tool/unknown entry forces install
+      return entries.some((e) => !MEMORY_DATA_ENTRIES.has(e))
+    })
+    // kilocode_change end
+
     const loadInstanceState = Effect.fn("Config.loadInstanceState")(
       function* (ctx: InstanceContext) {
         // kilocode_change start - warning accumulator and legacy Kilo config
@@ -829,30 +845,34 @@ export const layer = Layer.effect(
           }
           // kilocode_change end
 
-          yield* ensureGitignore(dir).pipe(Effect.orDie)
+          // kilocode_change start - skip plugin package setup for memory-only .kilo data dirs
+          if (yield* needsDependencyInstall(dir)) {
+            yield* ensureGitignore(dir).pipe(Effect.orDie)
 
-          const dep = yield* npmSvc
-            .install(dir, {
-              add: [
-                {
-                  name: "@kilocode/plugin",
-                  version: InstallationLocal ? undefined : InstallationVersion,
-                },
-              ],
-            })
-            .pipe(
-              Effect.exit,
-              Effect.tap((exit) =>
-                Exit.isFailure(exit)
-                  ? Effect.sync(() => {
-                      log.warn("background dependency install failed", { dir, error: String(exit.cause) })
-                    })
-                  : Effect.void,
-              ),
-              Effect.asVoid,
-              Effect.forkDetach,
-            )
-          deps.push(dep)
+            const dep = yield* npmSvc
+              .install(dir, {
+                add: [
+                  {
+                    name: "@kilocode/plugin",
+                    version: InstallationLocal ? undefined : InstallationVersion,
+                  },
+                ],
+              })
+              .pipe(
+                Effect.exit,
+                Effect.tap((exit) =>
+                  Exit.isFailure(exit)
+                    ? Effect.sync(() => {
+                        log.warn("background dependency install failed", { dir, error: String(exit.cause) })
+                      })
+                    : Effect.void,
+                ),
+                Effect.asVoid,
+                Effect.forkDetach,
+              )
+            deps.push(dep)
+          }
+          // kilocode_change end
 
           // kilocode_change start - propagate parse errors to the Warning accumulator
           result.command = mergeDeep(

@@ -6,10 +6,17 @@ import { Global } from "@opencode-ai/core/global"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import path from "node:path"
 import { Bus } from "@/bus"
+import { Provider } from "@/provider/provider"
+import { Session } from "@/session/session"
+import { SessionSummary } from "@/session/summary"
 import { SessionExport } from "@/kilocode/session-export"
 import { createWorkspaceProvider } from "@/kilocode/session-export/workspace-provider"
 import { Instance } from "@/project/instance"
 import { Identity } from "@kilocode/kilo-telemetry"
+import { MemoryLifecycle } from "@/kilocode/memory/lifecycle"
+import { MemoryService } from "@/kilocode/memory/service"
+import { MemoryEvents } from "@/kilocode/memory/events" // kilocode_change
+import { KiloToolRegistry } from "@/kilocode/tool/registry" // kilocode_change
 
 const log = Log.create({ service: "kilocode-bootstrap" })
 
@@ -23,10 +30,24 @@ export namespace KilocodeBootstrap {
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
-      const sessions = yield* KiloSessions.Service
+      const kilo = yield* KiloSessions.Service
+      const bus = yield* Bus.Service
+      const sessions = yield* Session.Service
+      const summary = yield* SessionSummary.Service
+      const provider = yield* Provider.Service
+      const memory = yield* MemoryService.Service
 
       const init = Effect.fn("KilocodeBootstrap.init")(function* () {
-        yield* sessions.init()
+        yield* kilo.init()
+        yield* MemoryLifecycle.subscribe({ bus, sessions, summary, provider, memory })
+        // kilocode_change start - invalidate enabled cache on every memory state mutation (properties.directory holds the memory root)
+        yield* bus.subscribeCallback(MemoryEvents.Status, (evt) =>
+          KiloToolRegistry.invalidateMemoryEnabled(evt.properties.directory),
+        )
+        yield* bus.subscribeCallback(MemoryEvents.Updated, (evt) =>
+          KiloToolRegistry.invalidateMemoryEnabled(evt.properties.directory),
+        )
+        // kilocode_change end
         // kilocode_change start - session export bootstrap
         yield* Effect.gen(function* () {
           const anon = yield* EffectBridge.fromPromise(() =>
@@ -66,5 +87,14 @@ export namespace KilocodeBootstrap {
     }),
   )
 
-  export const defaultLayer = layer.pipe(Layer.provide(KiloSessions.defaultLayer))
+  export const defaultLayer = layer.pipe(
+    Layer.provide([
+      KiloSessions.defaultLayer,
+      Session.defaultLayer,
+      SessionSummary.defaultLayer,
+      Provider.defaultLayer,
+      MemoryService.defaultLayer,
+      Bus.defaultLayer,
+    ]),
+  )
 }

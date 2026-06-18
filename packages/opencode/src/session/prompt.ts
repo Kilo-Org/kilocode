@@ -2,6 +2,8 @@ import path from "path"
 import os from "os"
 import fs from "fs/promises"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { KilocodeSystemPrompt } from "@/kilocode/system-prompt" // kilocode_change
+import { MemoryMarker } from "@/kilocode/memory/marker" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
@@ -548,6 +550,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       processor: Pick<SessionProcessor.Handle, "message" | "updateToolCall" | "completeToolCall">
       bypassAgentCheck: boolean
       messages: MessageV2.WithParts[]
+      memoryCache: MemoryMarker.Cache // kilocode_change
     }) {
       using _ = log.time("resolveTools")
       const tools: Record<string, AITool> = {}
@@ -621,6 +624,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                     messageID: input.processor.message.id,
                   })),
                 }
+                // kilocode_change start - mark successful targeted memory recalls for the assistant badge
+                if (item.id === "kilo_memory_recall") MemoryMarker.recall({ result: output, cache: input.memoryCache })
+                // kilocode_change end
                 yield* plugin.trigger(
                   "tool.execute.after",
                   { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID, args },
@@ -1786,6 +1792,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       // kilocode_change end
       // kilocode_change — cache environment details per turn (prompt caching)
       const envCache: KiloSessionPrompt.EnvCache = {}
+      const memoryCache: MemoryMarker.Cache = {} // kilocode_change
       closeReasons.delete(sessionID) // kilocode_change
       let compactionAttempts = 0 // kilocode_change - cap compaction attempts per turn to avoid infinite loops
       const ctx = yield* InstanceState.context
@@ -1987,6 +1994,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             processor: handle,
             bypassAgentCheck,
             messages: msgs,
+            memoryCache, // kilocode_change
           })
 
           if (lastUser.format?.type === "json_schema") {
@@ -2033,11 +2041,19 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           // kilocode_change end
 
           // kilocode_change start - persistently prune stale tool outputs when payload is already large
-          const [skills, env, instructions] = yield* Effect.all([
+          const enabled = yield* KiloSessionPrompt.memoryToolEnabled({ ctx }) // kilocode_change
+          const [skills, env, mem, instructions] = yield* Effect.all([
             sys.skills(agent),
-            sys.environment(model, lastUser.editorContext), // kilocode_change
+            sys.environment(model, lastUser.editorContext),
+            KilocodeSystemPrompt.memoryBlocks({
+              ctx,
+              sessionID,
+              record: step === 1,
+              enabled,
+            }), // kilocode_change
             instruction.system().pipe(Effect.orDie),
           ])
+          MemoryMarker.startup({ marker: mem.marker, cache: memoryCache }) // kilocode_change
           let modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model)
           const size = Buffer.byteLength(JSON.stringify(modelMsgs))
           if (size > REQUEST_PRUNE_BYTES) {
@@ -2053,7 +2069,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             if (nextSize > REQUEST_PRUNE_BYTES) log.warn("payload still large after pruning", { size: nextSize })
           }
           // kilocode_change end
-          const system = [...env, ...instructions, ...(skills ? [skills] : [])]
+          const system = [...env, ...mem.blocks, ...instructions, ...(skills ? [skills] : [])]
           const format = lastUser.format ?? { type: "text" as const }
           if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT) // kilocode_change
           const result = yield* handle.process({
@@ -2071,6 +2087,11 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             model,
             toolChoice: format.type === "json_schema" ? "required" : undefined,
           })
+
+          // kilocode_change start - persist a lightweight marker when this assistant step had memory context
+          const memory = MemoryMarker.part({ sessionID, message: handle.message, cache: memoryCache })
+          if (memory) yield* sessions.updatePart(memory)
+          // kilocode_change end
 
           if (structured !== undefined) {
             handle.message.structured = structured
@@ -2182,13 +2203,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           runLoop(input).pipe(Effect.orDie),
         ), // kilocode_change
         Effect.fnUntraced(function* (exit) {
+          const reason = KiloSessionPrompt.resolveCloseReason({
+            sessionID: input.sessionID,
+            closeReasons,
+            exit,
+          })
           yield* bus.publish(KiloSession.Event.TurnClose, {
             sessionID: input.sessionID,
-            reason: KiloSessionPrompt.resolveCloseReason({
-              sessionID: input.sessionID,
-              closeReasons,
-              exit,
-            }),
+            reason,
           })
         }),
       )
