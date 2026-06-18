@@ -242,16 +242,23 @@ export function init() {
     TuiAutoApprove.boot(route.data.sessionID)
   })
 
+  // kilocode_change start - resolve the root for a permission request's session
+  // so child (Task subagent) prompts are gated on the root, not the child
+  const sessionByID = new Map(sync.data.session.map((item) => [item.id, item]))
+  const rootFor = (sid: string) => TuiAutoApprove.root(sessionByID.get(sid)) ?? sid
+
   const reply = async (sid: string, rid: string) => {
-    if (!TuiAutoApprove.mark(sid, rid)) return
-    if (!TuiAutoApprove.enabled(sid)) return
+    const root = rootFor(sid)
+    if (!TuiAutoApprove.mark(root, rid)) return
+    if (!TuiAutoApprove.enabled(root)) return
     const result = await sdk.client.permission.reply({
       requestID: rid,
       reply: "once",
       workspace: project.workspace.current(), // kilocode_change - match manual permission replies
     })
-    if (result.error) TuiAutoApprove.clear(sid)
+    if (result.error) TuiAutoApprove.unmark(root, rid)
   }
+  // kilocode_change end
 
   createEffect(() => {
     const active = new Set(sync.data.session.map((item) => item.id))
