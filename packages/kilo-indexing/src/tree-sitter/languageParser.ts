@@ -29,6 +29,7 @@ import {
   embeddedTemplateQuery,
   elispQuery,
   elixirQuery,
+  perlQuery,
 } from "./queries"
 import { Log } from "../util/log"
 
@@ -285,6 +286,12 @@ export async function loadRequiredLanguageParsers(filesToParse: string[], source
       case "exs":
         language = await loadLanguage("elixir", sourceDirectory)
         query = new Query(language, elixirQuery)
+        break
+      case "pl":
+      case "pm":
+      case "t":
+        language = await loadLanguage("perl", sourceDirectory)
+        query = new Query(language, perlQuery)
         break
       default:
         throw new Error(`Unsupported language: ${ext}`)

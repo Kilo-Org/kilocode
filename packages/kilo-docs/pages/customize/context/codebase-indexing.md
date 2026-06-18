@@ -255,7 +255,7 @@ The interface shows real-time status:
 ### Smart Code Parsing
 
 - **Tree-sitter Integration**: Uses AST parsing to identify semantic code blocks
-- **Language Support**: Broad language coverage via Tree-sitter — C, C#, C++, CSS, Elisp, Elixir, Go, HTML, Java, JavaScript, Kotlin, Lua, OCaml, PHP, Python, Ruby, Rust, Scala, Solidity, Swift, SystemRDL, TLA+, TOML, TSX, TypeScript, Vue, Zig, and more
+- **Language Support**: Broad language coverage via Tree-sitter — C, C#, C++, CSS, Elisp, Elixir, Go, HTML, Java, JavaScript, Kotlin, Lua, OCaml, PHP, Perl, Python, Ruby, Rust, Scala, Solidity, Swift, SystemRDL, TLA+, TOML, TSX, TypeScript, Vue, Zig, and more
 - **Markdown Support**: Dedicated parser for markdown and documentation
 - **Fallback**: Line-based chunking for unsupported file types
 - **Block Sizing**:

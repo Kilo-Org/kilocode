@@ -296,5 +296,15 @@ export default {
         ],
       },
     },
+    {
+      filetype: "perl",
+      aliases: ["perl6"],
+      wasm: "https://github.com/tree-sitter-perl/tree-sitter-perl/releases/download/v1.1.2/tree-sitter-perl.wasm",
+      queries: {
+        highlights: [
+          "https://raw.githubusercontent.com/tree-sitter-perl/tree-sitter-perl/master/queries/highlights.scm",
+        ],
+      },
+    },
   ],
 }

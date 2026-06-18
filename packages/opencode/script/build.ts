@@ -58,6 +58,15 @@ const plugin = createSolidTransformPlugin()
 // kilocode_change - packages/app was removed; the web UI embed step is no longer applicable
 
 // kilocode_change start - codebase indexing
+const PERL_WASM_SHA256 = "09BC63F5612514D96CDD218F518BAFF408BFFD655F6F280BDACE50B7EF82AC0B"
+
+function verifySha256(filePath: string, expected: string): void {
+  const hash = require("crypto").createHash("sha256").update(fs.readFileSync(filePath)).digest("hex")
+  if (hash.toLowerCase() !== expected.toLowerCase()) {
+    throw new Error(`tree-sitter-perl.wasm SHA256 mismatch: expected ${expected}, got ${hash}`)
+  }
+}
+
 async function copyTreeSitterWasms(outputDir: string) {
   const runtimeWasmPath = require.resolve("web-tree-sitter/tree-sitter.wasm")
   const languagePackagePath = require.resolve("tree-sitter-wasms/package.json")
@@ -73,7 +82,16 @@ async function copyTreeSitterWasms(outputDir: string) {
     languageWasmFiles.map((file) => fs.promises.copyFile(path.join(languageWasmDir, file), path.join(targetDir, file))),
   )
 
-  console.log(`copied ${languageWasmFiles.length + 1} tree-sitter wasm files to ${targetDir}`)
+  // Perl WASM is bundled as a checksum-verified resource (not in tree-sitter-wasms)
+  const bundledPerlWasm = path.resolve(dir, "resources", "tree-sitter", "tree-sitter-perl.wasm")
+  if (!fs.existsSync(bundledPerlWasm)) {
+    throw new Error("Missing bundled tree-sitter-perl.wasm in resources/tree-sitter/")
+  }
+  verifySha256(bundledPerlWasm, PERL_WASM_SHA256)
+  await fs.promises.copyFile(bundledPerlWasm, path.join(targetDir, "tree-sitter-perl.wasm"))
+  console.log("bundled tree-sitter-perl.wasm (SHA256 verified)")
+
+  console.log(`copied ${languageWasmFiles.length + 2} tree-sitter wasm files to ${targetDir}`)
 }
 // kilocode_change end
 
