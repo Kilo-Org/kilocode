@@ -127,6 +127,7 @@ import {
 import { fetchAndSendPendingSuggestions } from "./kilo-provider/handlers/suggestion"
 import { nativeTitle } from "./kilo-provider/native-tab-title"
 import { parseReview, reviewMetadata, type ReviewMessageData } from "./shared/review-comments"
+import { KiloProviderMemory } from "./kilo-provider/memory"
 
 import {
   buildActionContext,
@@ -296,6 +297,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private readonly streams = new SessionStreamScheduler((msg) => this.postMessage(msg))
   private readonly visibleTaskStreams = new VisibleTaskStreams((id, visible) => this.streams.setVisible(id, visible))
   private readonly confirmations = new MessageConfirmation()
+  private readonly memory = new KiloProviderMemory({
+    client: () => this.client ?? undefined,
+    session: () => this.currentSession ?? undefined,
+    dir: (sessionID) => this.getProjectDirectory(sessionID) ?? this.getWorkspaceDirectory(sessionID),
+    post: (message) => this.postMessage(message),
+  })
   private unsubscribeEvent: (() => void) | null = null
   private unsubscribeState: (() => void) | null = null
   /** Cached legacy migration data so migrate() doesn't re-read from disk/SecretStorage. */ // legacy-migration
@@ -351,7 +358,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ) {
     this.projectDirectory = opts.projectDirectory
     this.slimEditMetadata = opts.slimEditMetadata ?? true
-
     TelemetryProxy.getInstance().setProvider(this)
   }
 
@@ -776,6 +782,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         return
       }
       this.visibleTaskStreams.handle(message)
+      if (await this.handleMemoryMessage(message)) return
       switch (message.type) {
         case "webviewReady":
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
@@ -1281,6 +1288,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
           // Remote status events are global and should always pass through
           if (event.type === "kilo-sessions.remote-status-changed") return true
+          if (event.type === "memory.status" || event.type === "memory.updated" || event.type === "memory.error")
+            return true
           const sessionId = this.resolveEventSessionId(event)
 
           // message.part.* events are always session-scoped; drop if session unknown.
@@ -1409,6 +1418,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.fetchAndSendConfig(),
         this.fetchAndSendIndexingStatus(),
         this.fetchAndSendNotifications(),
+        this.memory.fetch(),
         this.seedSessionStatusMap(),
       ])
       this.cachedGitRepo = await hasGit(this.client!, this.getWorkspaceDirectory())
@@ -2067,6 +2077,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch MCP status:", error)
     }
+  }
+
+  private async handleMemoryMessage(message: Record<string, unknown>): Promise<boolean> {
+    return this.memory.handle(message)
   }
 
   /**
@@ -3099,6 +3113,38 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    if (event.type === "memory.status" || event.type === "memory.updated" || event.type === "memory.error") {
+      const props = event.properties as { sessionID?: unknown; detail?: unknown; reason?: unknown }
+      const eventSessionID = typeof props.sessionID === "string" ? props.sessionID : undefined
+      const active = this.currentSession?.id
+      const local =
+        !directory || sameDirectory(directory, this.getProjectDirectory(active) ?? this.getWorkspaceDirectory(active))
+      const tracked = Boolean(eventSessionID && this.trackedSessionIds.has(eventSessionID))
+      if (!local && !tracked) return
+      if (tracked && eventSessionID && directory) this.trackDirectory(eventSessionID, directory)
+      const targets = new Set<string | undefined>()
+      if (tracked && eventSessionID) targets.add(eventSessionID)
+      if (local && active) targets.add(active)
+      if (targets.size === 0 && local) targets.add(undefined)
+      const detail =
+        props.detail && typeof props.detail === "object"
+          ? props.detail
+          : event.type === "memory.error" && typeof props.reason === "string"
+            ? { type: "error", message: props.reason, reason: props.reason }
+            : undefined
+      for (const sessionID of targets) {
+        if (detail) {
+          this.postMessage({
+            type: "memoryEvent",
+            sessionID,
+            detail,
+          })
+        }
+        void this.memory.fetch(sessionID, false)
+      }
+      return
+    }
+
     // Drop session events from other projects before any tracking logic.
     // This must come first: the trackedSessionIds guard below would otherwise
     // let a foreign session through if it was accidentally tracked.
@@ -3279,6 +3325,31 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     this.flushPendingReviewComments()
+  }
+
+  public async inspectMemory(sessionID?: string): Promise<void> {
+    await this.memory.inspect(sessionID ?? this.currentSession?.id)
+  }
+
+  public async toggleMemory(sessionID?: string): Promise<void> {
+    if (!this.client) {
+      void vscode.window.showErrorMessage("Not connected to CLI backend")
+      return
+    }
+
+    const sid = sessionID ?? this.currentSession?.id
+    const directory = this.getProjectDirectory(sid) ?? this.getWorkspaceDirectory(sid)
+    try {
+      const { data: status } = await this.client.memory.status({ directory }, { throwOnError: true })
+      const operation = status.state.enabled ? "disable" : "enable"
+      const ok = await this.memory.run({ operation, sessionID: sid })
+      if (ok) {
+        void vscode.window.showInformationMessage(`Project memory ${operation === "enable" ? "enabled" : "disabled"}.`)
+      }
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to toggle memory:", error)
+      void vscode.window.showErrorMessage(getErrorMessage(error) || "Failed to toggle memory")
+    }
   }
 
   private flushPendingReviewComments(): void {

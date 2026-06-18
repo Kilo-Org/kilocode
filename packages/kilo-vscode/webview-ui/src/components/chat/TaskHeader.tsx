@@ -14,6 +14,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
+import { useMemory } from "../../context/memory"
 import { calcTokenUsage, collapseCostBreakdown } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
@@ -29,6 +30,7 @@ interface TaskHeaderProps {
 
 export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const session = useSession()
+  const memory = useMemory()
   const language = useLanguage()
 
   const title = createMemo(() => session.currentSession()?.title ?? language.t("command.session.new"))
@@ -83,6 +85,14 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
     return String(n)
   }
+
+  const memoryLabel = createMemo(() => {
+    const status = memory.status()
+    if (!status) return memory.loading() ? language.t("chat.memory.loading") : undefined
+    if (!status.state.enabled) return language.t("chat.memory.off")
+    const count = memory.sessionTokens()
+    return count > 0 ? language.t("chat.memory.label", { tokens: fmtNum(count) }) : language.t("chat.memory.on")
+  })
 
   const vscode = useVSCode()
   const [expanded, setExpanded] = createSignal(true)
@@ -233,6 +243,69 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <div data-slot="task-header-graph-row">
             <ContextProgress />
           </div>
+          <Show when={memory.status()}>
+            <div class="task-header-memory">
+              <span class="task-header-memory-status" data-enabled={memory.active() ? "" : undefined}>
+                <Icon name="brain" size="small" />
+                <span>{memoryLabel()}</span>
+              </span>
+              <span class="task-header-memory-actions">
+                <Tooltip value={language.t("chat.memory.inspect")} placement="bottom">
+                  <IconButton
+                    icon="eye"
+                    size="small"
+                    variant="ghost"
+                    disabled={memory.loading() || memory.pending()}
+                    onClick={() => memory.inspect()}
+                    aria-label={language.t("chat.memory.inspect")}
+                  />
+                </Tooltip>
+                <Tooltip value={language.t("chat.memory.remember")} placement="bottom">
+                  <IconButton
+                    icon="plus-small"
+                    size="small"
+                    variant="ghost"
+                    disabled={memory.pending() || !memory.enabled()}
+                    onClick={() => memory.remember()}
+                    aria-label={language.t("chat.memory.remember")}
+                  />
+                </Tooltip>
+                <Tooltip value={language.t("chat.memory.forget")} placement="bottom">
+                  <IconButton
+                    icon="trash"
+                    size="small"
+                    variant="ghost"
+                    disabled={memory.pending() || !memory.enabled()}
+                    onClick={() => memory.forget()}
+                    aria-label={language.t("chat.memory.forget")}
+                  />
+                </Tooltip>
+                <Tooltip value={language.t("chat.memory.rebuild")} placement="bottom">
+                  <IconButton
+                    icon="reset"
+                    size="small"
+                    variant="ghost"
+                    disabled={memory.pending() || !memory.enabled()}
+                    onClick={() => memory.rebuild()}
+                    aria-label={language.t("chat.memory.rebuild")}
+                  />
+                </Tooltip>
+                <Tooltip
+                  value={memory.enabled() ? language.t("chat.memory.disable") : language.t("chat.memory.enable")}
+                  placement="bottom"
+                >
+                  <IconButton
+                    icon={memory.enabled() ? "circle-ban-sign" : "check-small"}
+                    size="small"
+                    variant="ghost"
+                    disabled={memory.pending()}
+                    onClick={() => (memory.enabled() ? memory.disable() : memory.enable())}
+                    aria-label={memory.enabled() ? language.t("chat.memory.disable") : language.t("chat.memory.enable")}
+                  />
+                </Tooltip>
+              </span>
+            </div>
+          </Show>
           <Show when={tokens()}>
             {(tk) => (
               <div class="task-header-tokens">
