@@ -12,6 +12,7 @@ import * as Clipboard from "@tui/util/clipboard"
 import { useCommandPalette } from "@tui/context/command-palette"
 import { useArgs } from "@tui/context/args"
 import { useRoute } from "@tui/context/route"
+import { useProject } from "@tui/context/project" // kilocode_change
 import { useBindings } from "@tui/keymap"
 import { useSDK } from "@tui/context/sdk"
 import { useSync } from "@tui/context/sync"
@@ -204,6 +205,7 @@ export function init() {
   const args = useArgs()
   const sync = useSync()
   const sdk = useSDK()
+  const project = useProject() // kilocode_change
   const toast = useToast()
   const dialog = useDialog()
 
@@ -243,7 +245,11 @@ export function init() {
   const reply = async (sid: string, rid: string) => {
     if (!TuiAutoApprove.mark(sid, rid)) return
     if (!TuiAutoApprove.enabled(sid)) return
-    const result = await sdk.client.permission.reply({ requestID: rid, reply: "once" })
+    const result = await sdk.client.permission.reply({
+      requestID: rid,
+      reply: "once",
+      workspace: project.workspace.current(), // kilocode_change - match manual permission replies
+    })
     if (result.error) TuiAutoApprove.clear(sid)
   }
 
