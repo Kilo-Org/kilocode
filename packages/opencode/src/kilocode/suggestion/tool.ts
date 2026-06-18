@@ -11,9 +11,12 @@ const log = Log.create({ service: "tool.suggest" })
 
 const Params = Schema.Struct({
   suggest: Schema.String.annotate({ description: "Short suggestion text shown to the user" }),
-  actions: Schema.Array(Suggestion.ActionSchema)
-    .check(Schema.isMinLength(1), Schema.isMaxLength(2))
-    .annotate({ description: "Available actions the user can take" }),
+  label: Schema.String.annotate({ description: "Button label for the action (1-5 words)" }),
+  prompt: Schema.String.annotate({ description: "Synthetic user prompt to inject when accepted" }),
+  description: Schema.optional(Schema.String).annotate({ description: "Brief explanation of the action" }),
+  label2: Schema.optional(Schema.String).annotate({ description: "Button label for a second optional action (1-5 words)" }),
+  prompt2: Schema.optional(Schema.String).annotate({ description: "Synthetic user prompt for the second action" }),
+  description2: Schema.optional(Schema.String).annotate({ description: "Brief explanation of the second action" }),
 })
 
 type Meta = {
@@ -71,10 +74,17 @@ export const SuggestTool = Tool.define<typeof Params, Meta, Command.Service | Se
       parameters: Params,
       execute: (params, ctx) =>
         Effect.gen(function* () {
+          const actions: Array<{ label: string; prompt: string; description?: string }> = [
+            { label: params.label, prompt: params.prompt, description: params.description },
+          ]
+          if (params.label2 && params.prompt2) {
+            actions.push({ label: params.label2, prompt: params.prompt2, description: params.description2 })
+          }
+
           const promise = Suggestion.show({
             sessionID: ctx.sessionID,
             text: params.suggest,
-            actions: params.actions.map((a) => ({ ...a })),
+            actions,
             blocking: false, // render above an active input; VS Code does the same
             tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
           })

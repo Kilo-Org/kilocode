@@ -10,7 +10,7 @@ Guidelines:
 - Do not suggest review after every edit or partial implementation turn
 - Do not repeat a review suggestion when one has already been made in the current session
 - Keep the suggestion text concise and actionable
-- Provide 1-2 actions maximum
+- Provide 1-2 actions maximum using the flat fields: `label`/`prompt`/`description` for the first action, and optionally `label2`/`prompt2`/`description2` for a second action
 - Make each action prompt self-contained so it can be injected as a synthetic user message
 - If you need a real answer from the user, use the `question` tool instead
 

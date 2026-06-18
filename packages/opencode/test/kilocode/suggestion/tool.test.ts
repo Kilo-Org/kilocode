@@ -83,7 +83,8 @@ describe("tool.suggest", () => {
       const result = yield* tool.execute(
         {
           suggest: "Run review?",
-          actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+          label: "Start",
+          prompt: "/local-review-uncommitted",
         },
         ctx as any,
       )
@@ -112,7 +113,8 @@ describe("tool.suggest", () => {
       const result = yield* tool.execute(
         {
           suggest: "Run review?",
-          actions: [{ label: "Start review", prompt: "/local-review-uncommitted" }],
+          label: "Start review",
+          prompt: "/local-review-uncommitted",
         },
         ctx as any,
       )
@@ -141,7 +143,8 @@ describe("tool.suggest", () => {
       const result = yield* tool.execute(
         {
           suggest: "Tests might need running",
-          actions: [{ label: "Run tests", prompt: "Run the test suite and fix any failures" }],
+          label: "Run tests",
+          prompt: "Run the test suite and fix any failures",
         },
         ctx as any,
       )
@@ -165,7 +168,8 @@ describe("tool.suggest", () => {
       const result = yield* tool.execute(
         {
           suggest: "Try this?",
-          actions: [{ label: "Unknown cmd", prompt: "/nonexistent-command" }],
+          label: "Unknown cmd",
+          prompt: "/nonexistent-command",
         },
         ctx as any,
       )
@@ -193,7 +197,8 @@ describe("tool.suggest", () => {
       const result = yield* tool.execute(
         {
           suggest: "Run review?",
-          actions: [{ label: "Start review", prompt: "/local-review-uncommitted" }],
+          label: "Start review",
+          prompt: "/local-review-uncommitted",
         },
         ctx as any,
       )
@@ -215,7 +220,8 @@ describe("tool.suggest", () => {
       yield* tool.execute(
         {
           suggest: "Run review?",
-          actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+          label: "Start",
+          prompt: "/local-review-uncommitted",
         },
         ctx as any,
       )
@@ -247,7 +253,8 @@ describe("tool.suggest", () => {
         .execute(
           {
             suggest: "Run review?",
-            actions: [{ label: "Start", prompt: "do it" }],
+            label: "Start",
+            prompt: "do it",
           },
           ctx as any,
         )
@@ -277,7 +284,8 @@ describe("tool.suggest", () => {
       yield* tool.execute(
         {
           suggest: "Go?",
-          actions: [{ label: "Go", prompt: "go" }],
+          label: "Go",
+          prompt: "go",
         },
         ctx as any,
       )
@@ -298,7 +306,8 @@ describe("tool.suggest", () => {
       yield* tool.execute(
         {
           suggest: "Go?",
-          actions: [{ label: "Go", prompt: "go" }],
+          label: "Go",
+          prompt: "go",
         },
         ctx as any,
       )
