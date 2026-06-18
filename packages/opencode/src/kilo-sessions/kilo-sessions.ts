@@ -200,7 +200,7 @@ export namespace KiloSessions {
   })
 
   const remoteEnabled = process.env["KILO_REMOTE"] === "1"
-  let remote: { conn: RemoteWS.Connection; sender: RemoteSender.Sender; heartbeat: () => Promise<void> } | undefined
+  let remote: { conn: RemoteWS.Connection; sender: RemoteSender.Sender } | undefined
   let enabling: Promise<void> | undefined
   let remoteSeq = 0
   const focused = new Set<string>()
@@ -252,14 +252,18 @@ export namespace KiloSessions {
             fn: (evt: { properties: any }) => unknown | Promise<unknown>,
           ) =>
             bus.subscribe(def as never).pipe(
-              Stream.runForEach((evt) =>
-                EffectBridge.fromPromise(() => fn(evt as { properties: any })).pipe(
-                  Effect.catchCause((cause) =>
-                    Effect.sync(() => log.error("subscriber failed", { type: def.type, cause })),
+              Effect.flatMap((stream) =>
+                stream.pipe(
+                  Stream.runForEach((evt) =>
+                    EffectBridge.fromPromise(() => fn(evt as { properties: any })).pipe(
+                      Effect.catchCause((cause) =>
+                        Effect.sync(() => log.error("subscriber failed", { type: def.type, cause })),
+                      ),
+                    ),
                   ),
+                  Effect.forkScoped,
                 ),
               ),
-              Effect.forkScoped,
             )
 
           yield* watch(Session.Event.Created, (evt) => {
@@ -452,17 +456,13 @@ export namespace KiloSessions {
         log,
       })
 
-      const heartbeat = async () => {
-        conn.send({ type: "heartbeat", ...(await getSessions()) })
-      }
-
       if (seq !== remoteSeq) {
         sender.dispose()
         conn.close()
         return
       }
 
-      remote = { conn, sender, heartbeat }
+      remote = { conn, sender }
       log.info("remote connection enabled", { connected: conn.connected })
       Telemetry.trackRemoteConnectionOpened()
       void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: true, connected: conn.connected })
@@ -509,7 +509,7 @@ export namespace KiloSessions {
     for (const id of input.open ?? []) {
       opened.add(id)
     }
-    if (remote) void remote.heartbeat().catch((err) => log.warn("heartbeat failed", { error: String(err) }))
+    if (remote) void remote.conn.heartbeat().catch((err) => log.warn("heartbeat failed", { error: String(err) }))
   }
 
   export async function create(sessionId: string) {

@@ -18,8 +18,8 @@ import { gitlabAuthPlugin as GitlabAuthPlugin } from "opencode-gitlab-auth"
 import { PoeAuthPlugin } from "opencode-poe-auth"
 import { CloudflareAIGatewayAuthPlugin, CloudflareWorkersAuthPlugin } from "./cloudflare"
 import { AzureAuthPlugin } from "./azure"
-import { XaiAuthPlugin } from "./xai" // kilocode_change
 import { DigitalOceanAuthPlugin } from "./digitalocean"
+import { XaiAuthPlugin } from "./xai"
 import { Effect, Layer, Context, Stream } from "effect"
 import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
@@ -27,6 +27,7 @@ import { errorMessage } from "@/util/error"
 import { PluginLoader } from "./loader"
 import { parsePluginSpecifier, readPluginId, readV1Plugin, resolvePluginId } from "./shared"
 import { KiloAuthPlugin } from "@kilocode/kilo-gateway" // kilocode_change
+import { AtomicChatPlugin } from "@kilocode/plugin-atomic-chat" // kilocode_change
 import { registerAdapter } from "@/control-plane/adapters"
 import type { WorkspaceAdapter } from "@/control-plane/types"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -62,6 +63,7 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/Pl
 // kilocode_change start
 const INTERNAL_PLUGINS: PluginInstance[] = [
   KiloAuthPlugin,
+  AtomicChatPlugin,
   CodexAuthPlugin,
   CopilotAuthPlugin,
   // kilocode_change - external auth plugins ship against @opencode-ai/plugin; bridge to our @kilocode/plugin types
@@ -70,8 +72,8 @@ const INTERNAL_PLUGINS: PluginInstance[] = [
   CloudflareWorkersAuthPlugin,
   CloudflareAIGatewayAuthPlugin,
   AzureAuthPlugin,
-  XaiAuthPlugin,
   DigitalOceanAuthPlugin,
+  XaiAuthPlugin,
 ]
 // kilocode_change end
 
@@ -251,7 +253,7 @@ export const layer = Layer.effect(
         }
 
         // Subscribe to bus events, fiber interrupted when scope closes
-        yield* bus.subscribeAll().pipe(
+        yield* (yield* bus.subscribeAll()).pipe(
           Stream.runForEach((input) =>
             Effect.sync(() => {
               for (const hook of hooks) {

@@ -34,11 +34,12 @@ function event(value: unknown) {
 }
 
 describe("AttentionService", () => {
-  it("plays the upstream completion sound once after active becomes idle", () => {
+  it("plays the upstream completion sound once after a completed turn closes", () => {
     const test = setup()
     test.event(event({ type: "session.status", properties: { sessionID: "s1", status: { type: "busy" } } }))
     test.event(event({ type: "session.status", properties: { sessionID: "s1", status: { type: "idle" } } }))
-    test.event(event({ type: "session.status", properties: { sessionID: "s1", status: { type: "idle" } } }))
+    test.event(event({ type: "session.turn.close", properties: { sessionID: "s1", reason: "completed" } }))
+    test.event(event({ type: "session.turn.close", properties: { sessionID: "s1", reason: "completed" } }))
 
     expect(test.sounds).toEqual(["done"])
     test.service.dispose()
@@ -58,6 +59,7 @@ describe("AttentionService", () => {
     )
     test.event(event({ type: "session.status", properties: { sessionID: "child", status: { type: "retry" } } }))
     test.event(event({ type: "session.status", properties: { sessionID: "child", status: { type: "idle" } } }))
+    test.event(event({ type: "session.turn.close", properties: { sessionID: "child", reason: "completed" } }))
 
     expect(test.sounds).toEqual(["subagent_done"])
     test.service.dispose()
@@ -86,11 +88,37 @@ describe("AttentionService", () => {
     test.service.dispose()
   })
 
+  it("stays silent when a turn is manually interrupted after becoming idle", () => {
+    const test = setup()
+    test.event(event({ type: "session.status", properties: { sessionID: "s1", status: { type: "busy" } } }))
+    test.event(event({ type: "session.status", properties: { sessionID: "s1", status: { type: "idle" } } }))
+    test.event(event({ type: "session.turn.close", properties: { sessionID: "s1", reason: "interrupted" } }))
+
+    expect(test.sounds).toEqual([])
+    test.service.dispose()
+  })
+
+  it("does not treat an aborted session error as requiring attention", () => {
+    const test = setup()
+    test.event(event({ type: "session.status", properties: { sessionID: "s1", status: { type: "busy" } } }))
+    test.event(
+      event({
+        type: "session.error",
+        properties: { sessionID: "s1", error: { name: "MessageAbortedError", data: { message: "Aborted" } } },
+      }),
+    )
+    test.event(event({ type: "session.turn.close", properties: { sessionID: "s1", reason: "interrupted" } }))
+
+    expect(test.sounds).toEqual([])
+    test.service.dispose()
+  })
+
   it("clears transitions when the backend disconnects", () => {
     const test = setup()
     test.event(event({ type: "session.status", properties: { sessionID: "s1", status: { type: "busy" } } }))
     test.state("disconnected")
     test.event(event({ type: "session.status", properties: { sessionID: "s1", status: { type: "idle" } } }))
+    test.event(event({ type: "session.turn.close", properties: { sessionID: "s1", reason: "completed" } }))
 
     expect(test.sounds).toEqual([])
     test.service.dispose()

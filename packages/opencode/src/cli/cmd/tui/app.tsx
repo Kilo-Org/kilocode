@@ -17,6 +17,7 @@ import {
   batch,
   Show,
   on,
+  untrack, // kilocode_change
 } from "solid-js"
 import { win32DisableProcessedInput, win32FlushInputBuffer, win32InstallCtrlCGuard } from "./win32" // kilocode_change
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -25,7 +26,7 @@ import { DialogProvider, useDialog } from "@tui/ui/dialog"
 import { DialogProvider as DialogProviderList } from "@tui/component/dialog-provider"
 import { InstallationVersion } from "@opencode-ai/core/installation/version" // kilocode_change
 import { PluginRouteMissing } from "@tui/component/plugin-route-missing"
-import { ProjectProvider } from "@tui/context/project"
+import { ProjectProvider, useProject } from "@tui/context/project"
 import { EditorContextProvider } from "@tui/context/editor"
 import { useEvent } from "@tui/context/event"
 import { SDKProvider, useSDK } from "@tui/context/sdk"
@@ -52,7 +53,6 @@ import { DialogAlert } from "./ui/dialog-alert"
 import { DialogConfirm } from "./ui/dialog-confirm"
 import { ToastProvider, useToast } from "./ui/toast"
 import { ExitProvider, useExit } from "./context/exit"
-import { Session as SessionApi } from "@/session/session"
 // kilocode_change start
 import { DialogSelect } from "./ui/dialog-select"
 import { Link } from "./ui/link"
@@ -72,9 +72,15 @@ import type { RouteMap } from "@/cli/cmd/tui/plugin/api"
 import { createTuiAttention } from "@/cli/cmd/tui/attention"
 import { FormatError, FormatUnknownError } from "@/cli/error"
 import { kitty, resetTerminalState } from "@/kilocode/cli/cmd/tui/util/terminal" // kilocode_change
-import * as AppExit from "@/kilocode/tui/app-exit" // kilocode_change
-import { CommandPaletteProvider, useCommandPalette } from "./context/command-palette"
-import { OpencodeKeymapProvider, registerOpencodeKeymap, useBindings, useOpencodeKeymap } from "./keymap"
+import { CommandPaletteDialog } from "./component/command-palette"
+import {
+  COMMAND_PALETTE_COMMAND,
+  KILO_BASE_MODE,
+  OpencodeKeymapProvider,
+  registerOpencodeKeymap,
+  useBindings,
+  useOpencodeKeymap,
+} from "./keymap"
 
 import type { EventSource } from "./context/sdk"
 import { DialogVariant } from "./component/dialog-variant"
@@ -237,17 +243,15 @@ export function tui(input: {
                                   <LocalProvider>
                                     <PromptStashProvider>
                                       <DialogProvider>
-                                        <CommandPaletteProvider>
-                                          <FrecencyProvider>
-                                            <PromptHistoryProvider>
-                                              <PromptRefProvider>
-                                                <EditorContextProvider>
-                                                  <App onSnapshot={input.onSnapshot} />
-                                                </EditorContextProvider>
-                                              </PromptRefProvider>
-                                            </PromptHistoryProvider>
-                                          </FrecencyProvider>
-                                        </CommandPaletteProvider>
+                                        <FrecencyProvider>
+                                          <PromptHistoryProvider>
+                                            <PromptRefProvider>
+                                              <EditorContextProvider>
+                                                <App onSnapshot={input.onSnapshot} />
+                                              </EditorContextProvider>
+                                            </PromptRefProvider>
+                                          </PromptHistoryProvider>
+                                        </FrecencyProvider>
                                       </DialogProvider>
                                     </PromptStashProvider>
                                   </LocalProvider>
@@ -277,7 +281,6 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
   const dialog = useDialog()
   const local = useLocal()
   const kv = useKV()
-  const command = useCommandPalette()
   const keymap = useOpencodeKeymap()
   const event = useEvent()
   const sdk = useSDK()
@@ -285,6 +288,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
   const themeState = useTheme()
   const { theme, mode, setMode, locked, lock, unlock } = themeState
   const sync = useSync()
+  const project = useProject()
   const exit = useExit()
   const promptRef = usePromptRef()
   const routes: RouteMap = new Map()
@@ -349,6 +353,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     renderer.clearSelection()
   }
   const [terminalTitleEnabled, setTerminalTitleEnabled] = createSignal(kv.get("terminal_title_enabled", true))
+  const [done, setDone] = createSignal<Record<string, true>>({}) // kilocode_change
   const [pasteSummaryEnabled, setPasteSummaryEnabled] = createSignal(
     kv.get("paste_summary_enabled", !sync.data.config.experimental?.disable_paste_summary),
   )
@@ -364,30 +369,22 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
 
     const titleDefault = KiloApp.APP_TITLE // kilocode_change
 
-    if (route.data.type === "home") {
-      renderer.setTerminalTitle(titleDefault) // kilocode_change
-      return
-    }
-
-    if (route.data.type === "session") {
-      const session = sync.session.get(route.data.sessionID)
-      if (!session || SessionApi.isDefaultTitle(session.title)) {
-        renderer.setTerminalTitle(titleDefault) // kilocode_change
-        return
-      }
-
-      const title = session.title.length > 40 ? session.title.slice(0, 37) + "..." : session.title
-      renderer.setTerminalTitle(`${titleDefault} | ${title}`) // kilocode_change
-      return
-    }
-
-    if (route.data.type === "plugin") {
-      renderer.setTerminalTitle(`${titleDefault} | ${route.data.id}`) // kilocode_change
-    }
-
     // kilocode_change start
-    const kiloTitle = KiloApp.getTerminalTitle(route, titleDefault)
-    if (kiloTitle) renderer.setTerminalTitle(kiloTitle)
+    const kiloTitle = KiloApp.getTerminalTitle({
+      route,
+      base: titleDefault,
+      sync,
+      done: untrack(done),
+      icon: tuiConfig.title_icon,
+    })
+    if (kiloTitle) {
+      const id = kiloTitle.id
+      if (id && kiloTitle.active && untrack(() => done()[id]) !== true) {
+        setDone((prev) => ({ ...prev, [id]: true }))
+      }
+      renderer.setTerminalTitle(kiloTitle.title)
+      return
+    }
     // kilocode_change end
   })
 
@@ -465,15 +462,22 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
   )
 
   const connected = useConnected()
+  const currentWorktreeWorkspace = createMemo(() => {
+    const workspaceID = project.workspace.current()
+    if (!workspaceID) return
+    const workspace = project.workspace.get(workspaceID)
+    if (workspace?.type !== "worktree" || !workspace.directory) return
+    return workspace
+  })
   const appCommands = createMemo(() =>
     [
       {
-        name: "command.palette.show",
+        name: COMMAND_PALETTE_COMMAND,
         title: "Show command palette",
         category: "System",
         hidden: true,
         run: () => {
-          command.show()
+          dialog.replace(() => <CommandPaletteDialog />)
         },
       },
       {
@@ -498,6 +502,20 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
           route.navigate({
             type: "home",
           })
+          dialog.clear()
+        },
+      },
+      {
+        name: "workspace.copy_path",
+        title: "Copy worktree path",
+        category: "Workspace",
+        enabled: () => currentWorktreeWorkspace() !== undefined,
+        run: async () => {
+          const workspace = currentWorktreeWorkspace()
+          if (!workspace?.directory) return
+          await Clipboard.copy(workspace.directory)
+            .then(() => toast.show({ message: "Copied worktree path", variant: "info" }))
+            .catch(toast.error)
           dialog.clear()
         },
       },
@@ -690,7 +708,14 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         },
         category: "System",
       },
-      AppExit.command(exit), // kilocode_change
+      {
+        name: "app.exit",
+        title: "Exit the app",
+        slashName: "exit",
+        slashAliases: ["quit", "q"],
+        run: () => exit(),
+        category: "System",
+      },
       {
         name: "app.debug",
         title: "Toggle debug panel",
@@ -816,19 +841,24 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
   }))
 
   useBindings(() => ({
-    enabled: command.matcher,
+    mode: KILO_BASE_MODE,
     bindings: tuiConfig.keybinds.gather("app", appBindingCommands),
   }))
 
   useBindings(() => ({
-    enabled: () => AppExit.enabled(command.matcher.get(), promptRef.current), // kilocode_change
+    mode: KILO_BASE_MODE,
+    enabled: () => {
+      const current = promptRef.current
+      if (!current?.focused) return true
+      return current.current.input === ""
+    },
     bindings: tuiConfig.keybinds.gather("app_exit", ["app.exit"]),
   }))
 
   KiloApp.init() // kilocode_change
 
   event.on(TuiEvent.CommandExecute.type, (evt) => {
-    command.run(evt.properties.command)
+    keymap.dispatchCommand(evt.properties.command)
   })
 
   event.on(TuiEvent.ToastShow.type, (evt) => {

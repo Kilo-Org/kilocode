@@ -8,6 +8,7 @@ if (process.platform === "win32" && !("type" in process)) {
 // kilocode_change end
 
 import { dynamicTool, type Tool, jsonSchema, type JSONSchema7 } from "ai"
+import { serviceUse } from "@/effect/service-use"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js"
@@ -24,11 +25,10 @@ import { Config } from "@/config/config"
 import { ConfigMCP } from "../config/mcp"
 import * as Log from "@opencode-ai/core/util/log"
 import { NamedError } from "@opencode-ai/core/util/error"
-import { Installation } from "../installation"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { withTimeout } from "@/util/timeout"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
-import { McpOAuthProvider } from "./oauth-provider"
+import { McpOAuthProvider, OAUTH_CALLBACK_PATH } from "./oauth-provider"
 import { McpOAuthCallback } from "./oauth-callback"
 import { McpAuth } from "./auth"
 import { BusEvent } from "../bus/bus-event"
@@ -89,6 +89,10 @@ export const BrowserOpenFailed = BusEvent.define(
 export const Failed = NamedError.create("MCPFailed", {
   name: Schema.String,
 })
+
+export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()("MCP.NotFoundError", {
+  name: Schema.String,
+}) {}
 
 type MCPClient = Client
 
@@ -265,8 +269,8 @@ export interface Interface {
   readonly prompts: () => Effect.Effect<Record<string, PromptInfo & { client: string }>>
   readonly resources: () => Effect.Effect<Record<string, ResourceInfo & { client: string }>>
   readonly add: (name: string, mcp: ConfigMCP.Info) => Effect.Effect<{ status: Record<string, Status> | Status }>
-  readonly connect: (name: string) => Effect.Effect<void>
-  readonly disconnect: (name: string) => Effect.Effect<void>
+  readonly connect: (name: string) => Effect.Effect<void, NotFoundError>
+  readonly disconnect: (name: string) => Effect.Effect<void, NotFoundError>
   readonly getPrompt: (
     clientName: string,
     name: string,
@@ -276,16 +280,20 @@ export interface Interface {
     clientName: string,
     resourceUri: string,
   ) => Effect.Effect<Awaited<ReturnType<MCPClient["readResource"]>> | undefined>
-  readonly startAuth: (mcpName: string) => Effect.Effect<{ authorizationUrl: string; oauthState: string }>
-  readonly authenticate: (mcpName: string) => Effect.Effect<Status>
-  readonly finishAuth: (mcpName: string, authorizationCode: string) => Effect.Effect<Status>
+  readonly startAuth: (
+    mcpName: string,
+  ) => Effect.Effect<{ authorizationUrl: string; oauthState: string }, NotFoundError>
+  readonly authenticate: (mcpName: string) => Effect.Effect<Status, NotFoundError>
+  readonly finishAuth: (mcpName: string, authorizationCode: string) => Effect.Effect<Status, NotFoundError>
   readonly removeAuth: (mcpName: string) => Effect.Effect<void>
-  readonly supportsOAuth: (mcpName: string) => Effect.Effect<boolean>
+  readonly supportsOAuth: (mcpName: string) => Effect.Effect<boolean, NotFoundError>
   readonly hasStoredTokens: (mcpName: string) => Effect.Effect<boolean>
   readonly getAuthStatus: (mcpName: string) => Effect.Effect<AuthStatus>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/MCP") {}
+
+export const use = serviceUse(Service)
 
 export const layer = Layer.effect(
   Service,
@@ -339,6 +347,7 @@ export const layer = Layer.effect(
             clientId: oauthConfig?.clientId,
             clientSecret: oauthConfig?.clientSecret,
             scope: oauthConfig?.scope,
+            callbackPort: oauthConfig?.callbackPort,
             redirectUri: oauthConfig?.redirectUri,
           },
           {
@@ -663,15 +672,12 @@ export const layer = Layer.effect(
     })
 
     const connect = Effect.fn("MCP.connect")(function* (name: string) {
-      const mcp = yield* getMcpConfig(name)
-      if (!mcp) {
-        log.error("MCP config not found or invalid", { name })
-        return
-      }
+      const mcp = yield* requireMcpConfig(name)
       yield* createAndStore(name, { ...mcp, enabled: true })
     })
 
     const disconnect = Effect.fn("MCP.disconnect")(function* (name: string) {
+      yield* requireMcpConfig(name)
       const s = yield* InstanceState.get(state)
       yield* closeClient(s, name)
       delete s.clients[name]
@@ -780,11 +786,16 @@ export const layer = Layer.effect(
       return mcpConfig
     })
 
+    const requireMcpConfig = Effect.fnUntraced(function* (mcpName: string) {
+      const mcpConfig = yield* getMcpConfig(mcpName)
+      if (!mcpConfig) return yield* new NotFoundError({ name: mcpName })
+      return mcpConfig
+    })
+
     // kilocode_change start - `opts?: { callback?: boolean }` parameter is Kilo-specific
     const startAuth = Effect.fn("MCP.startAuth")(function* (mcpName: string, opts?: { callback?: boolean }) {
       // kilocode_change end
-      const mcpConfig = yield* getMcpConfig(mcpName)
-      if (!mcpConfig) throw new Error(`MCP server ${mcpName} not found or disabled`)
+      const mcpConfig = yield* requireMcpConfig(mcpName)
       if (mcpConfig.type !== "remote") throw new Error(`MCP server ${mcpName} is not a remote server`)
       if (mcpConfig.oauth === false) throw new Error(`MCP server ${mcpName} has OAuth explicitly disabled`)
       const url = remoteURL(mcpName, mcpConfig.url)
@@ -793,9 +804,14 @@ export const layer = Layer.effect(
       // OAuth config is optional - if not provided, we'll use auto-discovery
       const oauthConfig = typeof mcpConfig.oauth === "object" ? mcpConfig.oauth : undefined
 
+      // Resolve effective redirect URI: explicit redirectUri > callbackPort shorthand > default
+      const effectiveRedirectUri =
+        oauthConfig?.redirectUri ??
+        (oauthConfig?.callbackPort ? `http://127.0.0.1:${oauthConfig.callbackPort}${OAUTH_CALLBACK_PATH}` : undefined)
+
       // kilocode_change start - authenticate() defers binding the callback port until a redirect is needed
       if (opts?.callback !== false) {
-        yield* Effect.promise(() => McpOAuthCallback.ensureRunning(oauthConfig?.redirectUri))
+        yield* Effect.promise(() => McpOAuthCallback.ensureRunning(effectiveRedirectUri))
       }
       // kilocode_change end
 
@@ -811,7 +827,7 @@ export const layer = Layer.effect(
           clientId: oauthConfig?.clientId,
           clientSecret: oauthConfig?.clientSecret,
           scope: oauthConfig?.scope,
-          redirectUri: oauthConfig?.redirectUri,
+          redirectUri: effectiveRedirectUri,
         },
         {
           onRedirect: async (url) => {
@@ -846,11 +862,9 @@ export const layer = Layer.effect(
       const result = yield* startAuth(mcpName, { callback: false }) // kilocode_change
       if (!result.authorizationUrl) {
         const client = "client" in result ? result.client : undefined
-        const mcpConfig = yield* getMcpConfig(mcpName)
-        if (!mcpConfig) {
-          yield* Effect.tryPromise(() => client?.close() ?? Promise.resolve()).pipe(Effect.ignore)
-          return { status: "failed", error: "MCP config not found after auth" } as Status
-        }
+        const mcpConfig = yield* requireMcpConfig(mcpName).pipe(
+          Effect.tapError(() => Effect.tryPromise(() => client?.close() ?? Promise.resolve()).pipe(Effect.ignore)),
+        )
 
         const listed = client ? yield* defs(mcpName, client, mcpConfig.timeout) : undefined
         if (!client || !listed) {
@@ -871,8 +885,11 @@ export const layer = Layer.effect(
       if (mcpConfig.type !== "remote")
         return { status: "failed", error: `MCP server ${mcpName} is not a remote server` } as Status
       const oauthConfig = typeof mcpConfig.oauth === "object" ? mcpConfig.oauth : undefined
+      const effectiveRedirectUri =
+        oauthConfig?.redirectUri ??
+        (oauthConfig?.callbackPort ? `http://127.0.0.1:${oauthConfig.callbackPort}${OAUTH_CALLBACK_PATH}` : undefined)
       const err = yield* Effect.tryPromise({
-        try: () => McpOAuthCallback.ensureRunning(oauthConfig?.redirectUri),
+        try: () => McpOAuthCallback.ensureRunning(effectiveRedirectUri),
         catch: (err) => (err instanceof Error ? err : new Error(String(err))),
       }).pipe(
         Effect.match({
@@ -926,6 +943,7 @@ export const layer = Layer.effect(
     })
 
     const finishAuth = Effect.fn("MCP.finishAuth")(function* (mcpName: string, authorizationCode: string) {
+      yield* requireMcpConfig(mcpName)
       const transport = pendingOAuthTransports.get(mcpName)
       if (!transport) throw new Error(`No pending OAuth flow for MCP server: ${mcpName}`)
 
@@ -944,8 +962,7 @@ export const layer = Layer.effect(
       yield* auth.clearCodeVerifier(mcpName)
       pendingOAuthTransports.delete(mcpName)
 
-      const mcpConfig = yield* getMcpConfig(mcpName)
-      if (!mcpConfig) return { status: "failed", error: "MCP config not found after auth" } as Status
+      const mcpConfig = yield* requireMcpConfig(mcpName)
 
       return yield* createAndStore(mcpName, mcpConfig)
     })
@@ -958,8 +975,7 @@ export const layer = Layer.effect(
     })
 
     const supportsOAuth = Effect.fn("MCP.supportsOAuth")(function* (mcpName: string) {
-      const mcpConfig = yield* getMcpConfig(mcpName)
-      if (!mcpConfig) return false
+      const mcpConfig = yield* requireMcpConfig(mcpName)
       return mcpConfig.type === "remote" && mcpConfig.oauth !== false
     })
 

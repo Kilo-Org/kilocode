@@ -4,7 +4,3 @@ packages/desktop/src/bindings.ts
 # alignment, which creates large spurious diffs on any unrelated content change.
 # See AGENTS.md "Markdown Tables" and script/check-md-table-padding.ts.
 *.md
-
-packages/opencode/src/provider/models-snapshot.ts
-packages/opencode/src/provider/models-snapshot.js
-packages/opencode/src/provider/models-snapshot.d.ts

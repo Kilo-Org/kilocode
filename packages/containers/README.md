@@ -8,6 +8,7 @@ Images
 
 - `base`: Ubuntu 24.04 with common build tools and utilities
 - `bun-node`: `base` plus Bun and Node.js 24
+- `jetbrains`: `bun-node` plus Java 21, JBR font libraries, and pre-cached Gradle and Bun packages <!-- kilocode_change -->
 - `rust`: `bun-node` plus Rust (stable, minimal profile)
 - `tauri-linux`: `rust` plus Tauri Linux build dependencies
 - `publish`: `bun-node` plus Docker CLI and AUR tooling

@@ -11,9 +11,17 @@ export const dict = {
   "provider.connect.kiloGateway.byok.link": "BYOK через Kilo's Gateway",
   "provider.connect.kiloGateway.byok.suffix": ".",
 
-  // Provider dialog translations
-  "dialog.provider.group.recommended": "Рекомендуемые",
-  "dialog.provider.kilo.note": "Доступ к 500+ моделям ИИ",
+  // Provider settings translations
+  "settings.providers.group.recommended": "Рекомендуемые",
+  "settings.providers.note.kilo": "Доступ к 500+ моделям ИИ",
+  "settings.providers.note.opencode": "Подобранные модели, включая Claude, GPT, Gemini и другие",
+  "settings.providers.note.anthropic": "Прямой доступ к моделям Claude, включая Pro и Max",
+  "settings.providers.note.deepseek": "Модели DeepSeek для задач рассуждения и программирования",
+  "settings.providers.note.copilot": "Модели Claude для помощи в программировании",
+  "settings.providers.note.openai": "Модели GPT и Codex с API-ключом или входом через ChatGPT",
+  "settings.providers.note.google": "Модели Gemini для быстрых структурированных ответов",
+  "settings.providers.note.openrouter": "Доступ ко всем поддерживаемым моделям через одного провайдера",
+  "settings.providers.note.vercel": "Единый доступ к AI-моделям с умной маршрутизацией",
 
   // Reasoning block label
   "ui.permission.run": "Запустить",

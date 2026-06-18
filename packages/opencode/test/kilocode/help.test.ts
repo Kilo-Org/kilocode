@@ -198,8 +198,10 @@ describe("Kilo CLI customizations are wired into index.ts", () => {
   test("registers the local Kilo Console instead of the upstream account console", async () => {
     const index = await file(INDEX)
     const setup = await file(SETUP)
+    const barrel = await file(BARREL)
     expect(setup).toContain("KiloConsoleCommand")
     expect(index).not.toContain(".command(ConsoleCommand)")
+    expect(barrel).not.toContain('from "../cli/cmd/account"')
   })
 
   test("every .command() in index.ts has an entry in the commands array", async () => {
@@ -238,11 +240,10 @@ describe("Kilo CLI customizations are wired into index.ts", () => {
     const entries = [...body.matchAll(/\b(\w+Command)\b/g)].map((m) => m[1]!)
 
     // Not registered as a bare `.command(Ident)`:
-    //  ConsoleCommand    - replaced by KiloConsoleCommand
     //  CompletionCommand - provided by yargs `.completion(...)`
     //  HelpCommand       - registered via createHelpCommand(() => cli)
     //  (DevSetup/DevAlias enter the array via `...dev`, so they aren't scraped here)
-    const except = new Set(["ConsoleCommand", "CompletionCommand", "HelpCommand"])
+    const except = new Set(["CompletionCommand", "HelpCommand"])
     const missing = entries.filter((name) => !except.has(name) && !registered.has(name))
     expect(missing).toEqual([])
   })

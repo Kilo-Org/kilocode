@@ -51,7 +51,7 @@ const mockData = {
   part: { [MSG_ID]: [shellPart] },
   permission: {},
   question: {},
-  provider: { all: [], connected: false, default: {} },
+  provider: { all: new Map(), connected: [], default: {} },
 }
 
 const meta: Meta = {

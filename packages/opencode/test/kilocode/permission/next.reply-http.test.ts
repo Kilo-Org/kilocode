@@ -23,9 +23,12 @@ describe("POST /permission/:requestID/reply", () => {
         })
 
         expect(response.status).toBe(404)
-        const body = (await response.json()) as { name: string; data: { message: string } }
-        expect(body.name).toBe("NotFoundError")
-        expect(body.data.message).toMatch(/permission_missing/)
+        const body = (await response.json()) as { _tag: string; requestID: string; message: string }
+        expect(body).toEqual({
+          _tag: "PermissionNotFoundError",
+          requestID: "permission_missing",
+          message: "Permission request not found: permission_missing",
+        })
       },
     })
   })
@@ -47,8 +50,12 @@ describe("POST /permission/:requestID/always-rules", () => {
         })
 
         expect(response.status).toBe(404)
-        const body = (await response.json()) as { name: string }
-        expect(body.name).toBe("NotFoundError")
+        const body = (await response.json()) as { _tag: string; requestID: string; message: string }
+        expect(body).toEqual({
+          _tag: "PermissionNotFoundError",
+          requestID: "permission_missing",
+          message: "Permission request not found: permission_missing",
+        })
       },
     })
   })

@@ -11,9 +11,17 @@ export const dict = {
   "provider.connect.kiloGateway.byok.link": "BYOK عبر Kilo's Gateway",
   "provider.connect.kiloGateway.byok.suffix": ".",
 
-  // Provider dialog translations
-  "dialog.provider.group.recommended": "موصى به",
-  "dialog.provider.kilo.note": "الوصول إلى أكثر من 500 نموذج ذكاء اصطناعي",
+  // Provider settings translations
+  "settings.providers.group.recommended": "موصى به",
+  "settings.providers.note.kilo": "الوصول إلى أكثر من 500 نموذج ذكاء اصطناعي",
+  "settings.providers.note.opencode": "نماذج منتقاة تشمل Claude وGPT وGemini والمزيد",
+  "settings.providers.note.anthropic": "وصول مباشر إلى نماذج Claude، بما في ذلك Pro وMax",
+  "settings.providers.note.deepseek": "نماذج DeepSeek لمهام الاستدلال والبرمجة",
+  "settings.providers.note.copilot": "نماذج Claude للمساعدة في البرمجة",
+  "settings.providers.note.openai": "نماذج GPT وCodex باستخدام مفتاح API أو تسجيل دخول ChatGPT",
+  "settings.providers.note.google": "نماذج Gemini لاستجابات سريعة ومنظمة",
+  "settings.providers.note.openrouter": "الوصول إلى كل النماذج المدعومة من موفر واحد",
+  "settings.providers.note.vercel": "وصول موحد إلى نماذج الذكاء الاصطناعي مع توجيه ذكي",
 
   // Reasoning block label
   "ui.permission.run": "تشغيل",

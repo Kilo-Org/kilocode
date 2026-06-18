@@ -41,6 +41,10 @@ const ACCESSIBLE_MODELS: EnrichedModel[] = [
   { id: "alpha", name: "Alpha", providerID: "kilo", providerName: "Kilo" },
   { id: "bravo", name: "Bravo", providerID: "kilo", providerName: "Kilo" },
   { id: "charlie", name: "Charlie", providerID: "kilo", providerName: "Kilo" },
+  { id: "delta", name: "Delta", providerID: "kilo", providerName: "Kilo" },
+  { id: "echo", name: "Echo", providerID: "kilo", providerName: "Kilo" },
+  { id: "nova", name: "Nova", providerID: "nvidia", providerName: "NVIDIA" },
+  { id: "nemotron", name: "Nemotron", providerID: "nvidia", providerName: "NVIDIA" },
 ]
 
 const AccessibleModelSelector = () => {

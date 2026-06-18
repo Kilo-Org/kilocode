@@ -6,6 +6,7 @@ import {
   restoreLocalSessions,
   reconcileLocalSessions,
   filterUnassignedSessions,
+  remoteSessions,
   LOCAL,
 } from "../../webview-ui/agent-manager/navigate"
 
@@ -393,6 +394,30 @@ describe("restoreLocalSessions", () => {
   it("returns undefined when no disk sessions and no tab order", () => {
     const result = restoreLocalSessions([], [], undefined, isPending, identity)
     expect(result).toBeUndefined()
+  })
+})
+
+describe("remoteSessions", () => {
+  const pending = (id: string) => id.startsWith("pending:")
+
+  it("returns every real tab without collapsing sessions in the same worktree", () => {
+    const result = remoteSessions(
+      ["local-1", "pending:1", "shared"],
+      [
+        { id: "shared", worktreeId: "wt-1" },
+        { id: "worktree-1", worktreeId: "wt-1" },
+        { id: "worktree-2", worktreeId: "wt-1" },
+        { id: "worktree-3", worktreeId: "wt-2" },
+        { id: "closed-local", worktreeId: null },
+      ],
+      pending,
+    )
+
+    expect(result).toEqual(["local-1", "shared", "worktree-1", "worktree-2", "worktree-3"])
+  })
+
+  it("returns an empty list without open sessions", () => {
+    expect(remoteSessions([], [], pending)).toEqual([])
   })
 })
 

@@ -29,10 +29,7 @@ const indexingDir = join(packagesDir, "kilo-indexing")
 const targetBinDir = join(kiloVscodeDir, "bin")
 const binName = process.platform === "win32" ? "kilo.exe" : "kilo"
 const targetBinPath = join(targetBinDir, binName)
-const snapshotName = "models-snapshot.json"
-const targetSnapshotPath = join(targetBinDir, snapshotName)
 const versionFile = join(targetBinDir, ".cli-version")
-const devSnapshotPath = join(opencodeDir, "src", "provider", snapshotName)
 
 function log(msg: string) {
   console.log(`[local-bin] ${msg}`)
@@ -102,7 +99,6 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
   try {
     statSync(preferred)
     if (!hasTreeSitterResources(preferred)) return null
-    if (!existsSync(snapshotForBinary(preferred))) return null
     return preferred
   } catch {
     // fall through to generic search
@@ -129,16 +125,11 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
       }
       if (e.isFile() && (e.name === "kilo" || e.name === "kilo.exe") && basename(dirname(p)) === "bin") {
         if (!hasTreeSitterResources(p)) continue
-        if (!existsSync(snapshotForBinary(p))) continue
         return p
       }
     }
   }
   return null
-}
-
-function snapshotForBinary(file: string): string {
-  return join(dirname(file), snapshotName)
 }
 
 async function ensureBuiltBinary(): Promise<string> {
@@ -191,7 +182,6 @@ async function writeSourceWrapper() {
     ].join("\n"),
   )
   chmodSync(targetBinPath, 0o755)
-  if (existsSync(devSnapshotPath)) await $`cp ${devSnapshotPath} ${targetSnapshotPath}`
   await ensureFfmpegForTarget(currentFfmpegTarget(), targetBinDir)
 
   const hash = await cliSourceHash()
@@ -204,11 +194,10 @@ async function writeSourceWrapper() {
 async function main() {
   const targetFile = Bun.file(targetBinPath)
   const exists = await targetFile.exists()
-  const snapshotExists = await Bun.file(targetSnapshotPath).exists()
-  const ready = exists && snapshotExists
+  const ready = exists
 
   const stale = ready && !forceRebuild && (await isStale())
-  const rebuild = forceRebuild || stale || (exists && !snapshotExists)
+  const rebuild = forceRebuild || stale
 
   if (ready && !rebuild) {
     const st = statSync(targetBinPath)
@@ -226,7 +215,6 @@ async function main() {
   if (exists && rebuild) {
     log(stale ? `CLI source has changed — rebuilding.` : `Refreshing existing CLI resources.`)
     rmSync(targetBinPath)
-    if (existsSync(targetSnapshotPath)) rmSync(targetSnapshotPath)
     if (forceRebuild || stale) {
       removeDist()
     }
@@ -243,9 +231,7 @@ async function main() {
     return null
   })
   if (!sourceBinPath) return
-  const sourceSnapshotPath = snapshotForBinary(sourceBinPath)
   await $`mkdir -p ${targetBinDir}`
-  await $`cp ${sourceSnapshotPath} ${targetSnapshotPath}`
   await $`cp ${sourceBinPath} ${targetBinPath}`
   await copyTreeSitterResources(sourceBinPath, targetBinPath)
   chmodSync(targetBinPath, 0o755)

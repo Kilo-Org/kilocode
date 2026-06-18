@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/session-turn"
+export * from "@opencode-ai/ui/session-turn"

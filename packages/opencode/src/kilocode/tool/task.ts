@@ -71,8 +71,8 @@ export namespace KiloTask {
     ]
   }
 
-  export function merge(...rulesets: Permission.Ruleset[]): Permission.Ruleset {
-    const result: Permission.Ruleset = []
+  export function merge(...rulesets: Permission.Ruleset[]): Permission.Rule[] {
+    const result: Permission.Rule[] = []
     const seen = new Set<string>()
     for (const rule of rulesets.flat()) {
       const key = `${rule.permission}\u0000${rule.pattern}\u0000${rule.action}`

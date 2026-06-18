@@ -4,7 +4,7 @@
 import { expect } from "bun:test"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { ModelsDev } from "../../src/provider/models"
-import * as CoreModels from "@opencode-ai/core/models"
+import * as CoreModels from "@opencode-ai/core/models-dev"
 import { Effect, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import { kiloCustomLoaders } from "../../src/kilocode/provider/provider"

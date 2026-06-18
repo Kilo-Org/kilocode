@@ -88,17 +88,14 @@ class KiloBackendCliManager(
         val platform = platform()
         val exe = if (SystemInfo.isWindows) "kilo.exe" else "kilo"
         val target = File(PathManager.getSystemPath(), "kilo/bin/$exe")
-        val snapshot = File(target.parentFile, "models-snapshot.json")
 
         if (forceExtract) {
             log.info("Force re-extracting CLI resources under ${target.parentFile.absolutePath}")
             if (target.exists()) target.delete()
-            if (snapshot.exists()) snapshot.delete()
             forceExtract = false
         }
 
         extractResource("cli/$platform/$exe", target, executable = true)
-        extractResource("cli/$platform/models-snapshot.json", snapshot, executable = false)
         return target
     }
 

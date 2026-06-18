@@ -1,6 +1,7 @@
 import { Config } from "@/config/config"
 import { ConfigPlugin } from "@/config/plugin"
 import { KilocodeKeybinds } from "@/kilocode/tui/keybinds"
+import { KiloTitleIcon } from "@/kilocode/cli/cmd/tui/title-icon"
 import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/middleware/instance-context"
 import {
@@ -108,6 +109,7 @@ const TuiConfigShape = {
   keybinds: Schema.optional(Schema.Record(Schema.String, Schema.String)),
   plugin: Schema.optional(Schema.Array(ConfigPlugin.Spec)),
   plugin_enabled: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
+  title_icon: Schema.optional(KiloTitleIcon.Value),
   scroll_speed: Schema.optional(Schema.Number),
   scroll_acceleration: Schema.optional(Schema.Struct({ enabled: Schema.Boolean })),
   diff_style: Schema.optional(Schema.Literals(["auto", "stacked"])),

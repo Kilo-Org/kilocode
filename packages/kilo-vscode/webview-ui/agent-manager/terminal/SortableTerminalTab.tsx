@@ -33,6 +33,7 @@ export const SortableTerminalTab: Component<{
   onSelect: () => void
   onMiddleClick: (e: MouseEvent) => void
   onClose: (e: MouseEvent) => void
+  onCloseOthers: () => void
 }> = (props) => {
   const { t } = useLanguage()
   const sortable = createSortable(props.id)
@@ -98,6 +99,10 @@ export const SortableTerminalTab: Component<{
                   ))}
                 </span>
               </Show>
+            </ContextMenu.Item>
+            <ContextMenu.Item onSelect={props.onCloseOthers}>
+              <Icon name="close" size="small" />
+              <ContextMenu.ItemLabel>{t("agentManager.tab.closeOthers")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Portal>

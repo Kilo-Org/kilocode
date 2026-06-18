@@ -1,5 +1,8 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
 import com.intellij.openapi.ui.popup.util.PopupUtil
 import com.intellij.ui.NewUI
 import com.intellij.ui.popup.list.SelectablePanel
@@ -8,6 +11,7 @@ import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JList
+import javax.swing.border.Border
 
 internal class PickerRow : SelectablePanel() {
     init {
@@ -15,9 +19,12 @@ internal class PickerRow : SelectablePanel() {
         isOpaque = true
     }
 
-    fun setContent(component: JComponent) {
+    fun setContent(component: JComponent, trailing: JComponent? = null, border: Border? = null) {
+        removeAll()
+        component.border = border ?: component.border
         accessibleContextProvider = component
         add(component, BorderLayout.CENTER)
+        if (trailing != null) add(trailing.align(HAlign.RIGHT, VAlign.CENTER), BorderLayout.EAST)
     }
 
     fun update(list: JList<*>, selected: Boolean, focused: Boolean) {

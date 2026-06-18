@@ -202,9 +202,9 @@ One-click deployments from directly within Kilo. Go from code to production with
 
 Automatically analyzes your PRs using your choice of AI model. Reviews happen the moment a PR is opened or updated, covering performance, security, style, and test coverage.
 
-### Managed Indexing
+### Codebase Indexing
 
-Semantic search across your repositories using cloud-hosted embeddings. Kilo indexes your codebase to deliver more relevant, context-aware responses.
+Semantic search across your repositories using configurable embedding providers and vector stores. Kilo indexes your codebase to deliver more relevant, context-aware responses.
 
 ### Autocomplete
 

@@ -2,6 +2,7 @@ import { NodeFileSystem } from "@effect/platform-node"
 import { describe, expect } from "bun:test"
 import { Context, Effect, Layer } from "effect"
 import * as Stream from "effect/Stream"
+import { LLMEvent, type LLMEvent as Event } from "@opencode-ai/llm"
 import path from "path"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
@@ -36,12 +37,12 @@ const ref = {
   modelID: ModelID.make("test-model"),
 }
 
-type Script = Stream.Stream<LLM.Event, unknown>
+type Script = Stream.Stream<Event, unknown>
 
 class TestLLM extends Context.Service<
   TestLLM,
   {
-    readonly reply: (...items: LLM.Event[]) => Effect.Effect<void>
+    readonly reply: (...items: Event[]) => Effect.Effect<void>
   }
 >()("@test/EmptyToolCallsLLM") {}
 
@@ -80,7 +81,7 @@ const llm = Layer.unwrap(
       queue.push(item)
       return Effect.void
     }
-    const reply = (...items: LLM.Event[]) => push(Stream.make(...items))
+    const reply = (...items: Event[]) => push(Stream.make(...items))
     return Layer.mergeAll(
       Layer.succeed(
         LLM.Service,
@@ -135,17 +136,9 @@ describe("session processor empty tool-calls", () => {
           const session = yield* Session.Service
 
           yield* test.reply(
-            { type: "start" },
-            {
-              type: "start-step",
-            } as LLM.Event,
-            {
-              type: "finish-step",
-              finishReason: "tool-calls",
-              usage: usage(),
-              providerMetadata: undefined,
-            } as LLM.Event,
-            { type: "finish" } as LLM.Event,
+            LLMEvent.stepStart({ index: 0 }),
+            LLMEvent.stepFinish({ index: 0, reason: "tool-calls", usage: usage() }),
+            LLMEvent.finish({ reason: "tool-calls", usage: usage() }),
           )
 
           const chat = yield* session.create({})
@@ -209,18 +202,12 @@ describe("session processor empty tool-calls", () => {
           const session = yield* Session.Service
 
           yield* test.reply(
-            { type: "start" },
-            { type: "start-step" } as LLM.Event,
-            { type: "reasoning-start", id: "reasoning", providerMetadata: undefined } as LLM.Event,
-            { type: "reasoning-delta", id: "reasoning", text: "thinking", providerMetadata: undefined } as LLM.Event,
-            { type: "reasoning-end", id: "reasoning", providerMetadata: undefined } as LLM.Event,
-            {
-              type: "finish-step",
-              finishReason: "length",
-              usage: usage(),
-              providerMetadata: undefined,
-            } as LLM.Event,
-            { type: "finish" } as LLM.Event,
+            LLMEvent.stepStart({ index: 0 }),
+            LLMEvent.reasoningStart({ id: "reasoning" }),
+            LLMEvent.reasoningDelta({ id: "reasoning", text: "thinking" }),
+            LLMEvent.reasoningEnd({ id: "reasoning" }),
+            LLMEvent.stepFinish({ index: 0, reason: "length", usage: usage() }),
+            LLMEvent.finish({ reason: "length", usage: usage() }),
           )
 
           const chat = yield* session.create({})
@@ -290,15 +277,9 @@ describe("session processor empty tool-calls", () => {
           const session = yield* Session.Service
 
           yield* test.reply(
-            { type: "start" },
-            { type: "start-step" } as LLM.Event,
-            {
-              type: "finish-step",
-              finishReason: "error",
-              usage: usage(),
-              providerMetadata: undefined,
-            } as LLM.Event,
-            { type: "finish" } as LLM.Event,
+            LLMEvent.stepStart({ index: 0 }),
+            LLMEvent.stepFinish({ index: 0, reason: "error", usage: usage() }),
+            LLMEvent.finish({ reason: "error", usage: usage() }),
           )
 
           const chat = yield* session.create({})
@@ -364,18 +345,12 @@ describe("session processor empty tool-calls", () => {
           const session = yield* Session.Service
 
           yield* test.reply(
-            { type: "start" },
-            { type: "start-step" } as LLM.Event,
-            { type: "text-start", id: "text", providerMetadata: undefined } as LLM.Event,
-            { type: "text-delta", id: "text", text: "partial answer", providerMetadata: undefined } as LLM.Event,
-            { type: "text-end", id: "text", providerMetadata: undefined } as LLM.Event,
-            {
-              type: "finish-step",
-              finishReason: "length",
-              usage: usage(),
-              providerMetadata: undefined,
-            } as LLM.Event,
-            { type: "finish" } as LLM.Event,
+            LLMEvent.stepStart({ index: 0 }),
+            LLMEvent.textStart({ id: "text" }),
+            LLMEvent.textDelta({ id: "text", text: "partial answer" }),
+            LLMEvent.textEnd({ id: "text" }),
+            LLMEvent.stepFinish({ index: 0, reason: "length", usage: usage() }),
+            LLMEvent.finish({ reason: "length", usage: usage() }),
           )
 
           const chat = yield* session.create({})
@@ -447,15 +422,9 @@ describe("session processor empty tool-calls", () => {
           const session = yield* Session.Service
 
           yield* test.reply(
-            { type: "start" },
-            { type: "start-step" } as LLM.Event,
-            {
-              type: "finish-step",
-              finishReason: "stop",
-              usage: usage(),
-              providerMetadata: undefined,
-            } as LLM.Event,
-            { type: "finish" } as LLM.Event,
+            LLMEvent.stepStart({ index: 0 }),
+            LLMEvent.stepFinish({ index: 0, reason: "stop", usage: usage() }),
+            LLMEvent.finish({ reason: "stop", usage: usage() }),
           )
 
           const chat = yield* session.create({})
@@ -518,18 +487,10 @@ describe("session processor empty tool-calls", () => {
           const session = yield* Session.Service
 
           yield* test.reply(
-            { type: "start" },
-            {
-              type: "start-step",
-            } as LLM.Event,
-            { type: "tool-input-start", id: "call_1", toolName: "test_tool" } as LLM.Event,
-            {
-              type: "finish-step",
-              finishReason: "tool-calls",
-              usage: usage(),
-              providerMetadata: undefined,
-            } as LLM.Event,
-            { type: "finish" } as LLM.Event,
+            LLMEvent.stepStart({ index: 0 }),
+            LLMEvent.toolInputStart({ id: "call_1", name: "test_tool" }),
+            LLMEvent.stepFinish({ index: 0, reason: "tool-calls", usage: usage() }),
+            LLMEvent.finish({ reason: "tool-calls", usage: usage() }),
           )
 
           const chat = yield* session.create({})
