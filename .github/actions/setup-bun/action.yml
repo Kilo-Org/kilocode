@@ -45,8 +45,7 @@ runs:
       with:
         path: ${{ steps.cache.outputs.dir }}
         key: ${{ runner.os }}-${{ inputs.cache-namespace }}-${{ hashFiles('**/bun.lock') }} # kilocode_change
-        restore-keys: |
-          ${{ runner.os }}-${{ inputs.cache-namespace }}- # kilocode_change
+        restore-keys: ${{ runner.os }}-${{ inputs.cache-namespace }}- # kilocode_change
 
     - name: Install setuptools for distutils compatibility
       run: python3 -m pip install setuptools || pip install setuptools || true
