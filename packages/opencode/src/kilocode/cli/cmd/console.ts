@@ -53,5 +53,6 @@ export const KiloConsoleCommand = cmd({
       console.warn(`Could not open browser automatically: ${err instanceof Error ? err.message : String(err)}`)
     })
     console.log(`Kilo Console: ${url}`)
+    console.log(`kilo server listening on http://${state.options.hostname}:${state.options.port}`)
   },
 })
