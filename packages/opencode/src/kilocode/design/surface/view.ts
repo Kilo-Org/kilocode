@@ -15,6 +15,7 @@ export type ViewInput = {
 const VOICE_GLYPH: Record<State["voice"], string> = {
   standby: "○",
   "requesting-permission": "◌",
+  loading: "◌",
   listening: "●",
   speaking: "◉",
   processing: "◍",

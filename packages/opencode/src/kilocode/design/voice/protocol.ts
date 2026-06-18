@@ -7,11 +7,12 @@
 // silently dropping malformed ones (a noisy sidecar must never crash the loop).
 
 /** Lifecycle states a voice source reports. Mirrors Yoke's status vocabulary. */
-export type VoiceState = "standby" | "requesting-permission" | "listening" | "speaking" | "processing"
+export type VoiceState = "standby" | "requesting-permission" | "loading" | "listening" | "speaking" | "processing"
 
 export const VOICE_STATES: readonly VoiceState[] = [
   "standby",
   "requesting-permission",
+  "loading",
   "listening",
   "speaking",
   "processing",
