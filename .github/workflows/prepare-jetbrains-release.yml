@@ -31,7 +31,7 @@ concurrency:
 jobs:
   prepare:
     if: github.repository == 'Kilo-Org/kilocode'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: blacksmith-8vcpu-ubuntu-2404
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -41,6 +41,22 @@ jobs:
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+        with:
+          install-flags: --frozen-lockfile
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y patchelf zip
+
+      - name: Preflight CLI resources
+        working-directory: packages/kilo-jetbrains
+        run: bun script/build.ts --production --prepare-cli
+        env:
+          KILO_VERSION: ${{ inputs.version }}
+          KILO_CHANNEL: ${{ inputs.kind == 'rc' && 'rc' || 'latest' }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
 
       - name: Setup Git Committer
         id: committer

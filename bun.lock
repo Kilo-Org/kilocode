@@ -108,6 +108,7 @@
         "@kilocode/kilo-web-ui": "workspace:*",
         "@kilocode/sdk": "workspace:*",
         "@lottiefiles/dotlottie-web": "0.74.0",
+        "@pierre/diffs": "catalog:",
         "@solidjs/router": "catalog:",
         "ghostty-web": "0.4.0",
         "solid-js": "catalog:",
