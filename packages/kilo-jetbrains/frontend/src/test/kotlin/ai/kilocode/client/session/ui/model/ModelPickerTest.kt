@@ -202,7 +202,39 @@ class ModelPickerTest : BasePlatformTestCase() {
         picker.setItems(listOf(item("a", "A", "openai", "OpenAI")))
 
         assertEquals("openai/a", picker.selectionKeyForTest())
-        assertEquals("A ▾", picker.text)
+        assertEquals("OpenAI / A ▾", picker.text)
+    }
+
+    fun `test non-kilo selected model uses provider prefix`() {
+        val picker = ModelPicker()
+
+        picker.setItems(listOf(item("gpt-55", "GPT-5.5", "openai", "OpenAI")))
+
+        assertEquals("OpenAI / GPT-5.5 ▾", picker.text)
+    }
+
+    fun `test non-kilo selected model strips duplicate provider prefix`() {
+        val picker = ModelPicker()
+
+        picker.setItems(listOf(item("gpt-55", "OpenAI GPT-5.5", "openai", "OpenAI")))
+
+        assertEquals("OpenAI / GPT-5.5 ▾", picker.text)
+    }
+
+    fun `test non-kilo selected model strips vscode provider prefix`() {
+        val picker = ModelPicker()
+
+        picker.setItems(listOf(item("gpt-55", "OpenAI: GPT-5.5", "openai", "OpenAI")))
+
+        assertEquals("OpenAI / GPT-5.5 ▾", picker.text)
+    }
+
+    fun `test kilo selected model remains unprefixed`() {
+        val picker = ModelPicker()
+
+        picker.setItems(listOf(item("auto", "Kilo Auto", "kilo", "Kilo")))
+
+        assertEquals("Auto ▾", picker.text)
     }
 
     fun `test allowEmpty keeps empty selection`() {

@@ -13,9 +13,17 @@ export const dict = {
   "provider.connect.kiloGateway.byok.link": "BYOK via Kilo's Gateway",
   "provider.connect.kiloGateway.byok.suffix": ".",
 
-  // Provider dialog translations
-  "dialog.provider.group.recommended": "Recommended",
-  "dialog.provider.kilo.note": "Access 500+ AI models",
+  // Provider settings translations
+  "settings.providers.group.recommended": "Recommended",
+  "settings.providers.note.kilo": "Access 500+ AI models",
+  "settings.providers.note.opencode": "Curated models including Claude, GPT, Gemini and more",
+  "settings.providers.note.anthropic": "Direct access to Claude models, including Pro and Max",
+  "settings.providers.note.deepseek": "DeepSeek models for reasoning and coding tasks",
+  "settings.providers.note.copilot": "Claude models for coding assistance",
+  "settings.providers.note.openai": "GPT and Codex models with API key or ChatGPT login",
+  "settings.providers.note.google": "Gemini models for fast, structured responses",
+  "settings.providers.note.openrouter": "Access all supported models from one provider",
+  "settings.providers.note.vercel": "Unified access to AI models with smart routing",
 
   // Reasoning block label
   "ui.permission.run": "Run",

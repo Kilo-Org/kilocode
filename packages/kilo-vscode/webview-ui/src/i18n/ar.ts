@@ -101,17 +101,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "البحث عن موفرين",
   "dialog.provider.empty": "لم يتم العثور على موفرين",
-  "dialog.provider.group.popular": "شائع",
   "dialog.provider.group.other": "آخر",
   "dialog.provider.tag.recommended": "موصى به",
-  "dialog.provider.opencode.note": "نماذج مختارة تشمل Claude وGPT وGemini والمزيد",
-  "dialog.provider.anthropic.note": "اتصل باستخدام Claude Pro/Max أو مفتاح API",
-  "dialog.provider.deepseek.note": "نماذج DeepSeek لمهام الاستدلال والبرمجة",
-  "dialog.provider.openai.note": "اتصل باستخدام ChatGPT Pro/Plus أو مفتاح API",
-  "dialog.provider.google.note": "نماذج Gemini للاستجابات السريعة والمنظمة",
-  "dialog.provider.openrouter.note": "الوصول إلى جميع النماذج المدعومة من موفر واحد",
-  "dialog.provider.vercel.note": "وصول موحد إلى نماذج الذكاء الاصطناعي مع توجيه ذكي",
-  "dialog.provider.copilot.note": "اتصل باستخدام Copilot أو مفتاح API",
 
   "dialog.model.select.title": "تحديد نموذج",
   "dialog.model.search.placeholder": "البحث عن نماذج",

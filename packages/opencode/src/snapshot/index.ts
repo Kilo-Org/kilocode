@@ -423,7 +423,12 @@ export const layer: Layer.Layer<Service, never, Requirements> =
               Effect.gen(function* () {
                 yield* add()
                 const result = yield* git(
-                  [...quote, ...args(["diff", "--cached", "--no-ext-diff", "--name-only", hash, "--", "."])],
+                  // kilocode_change start
+                  [
+                    ...quote,
+                    ...args(["diff", "--cached", "--no-ext-diff", "--no-renames", "--name-only", hash, "--", "."]),
+                  ],
+                  // kilocode_change end
                   {
                     cwd: state.directory,
                   },

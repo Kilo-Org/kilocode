@@ -124,24 +124,28 @@ function BackgroundProcessTool(props: ToolProps) {
       defaultOpen={expanded(props.status, props.defaultOpen)}
       allowPendingToggle
     >
-      <Show when={rows().length > 0}>
-        <div data-component="background-process-fields">
-          <For each={rows()}>
-            {(row) => (
-              <div data-slot="background-process-field">
-                <span data-slot="background-process-label">{row[0]}</span>
-                <span data-slot="background-process-value">{row[1]}</span>
+      <Show when={rows().length > 0 || data().output}>
+        <div data-component="background-process-details">
+          <Show when={rows().length > 0}>
+            <div data-component="background-process-fields">
+              <For each={rows()}>
+                {(row) => (
+                  <div data-slot="background-process-field">
+                    <span data-slot="background-process-label">{row[0]}</span>
+                    <span data-slot="background-process-value">{row[1]}</span>
+                  </div>
+                )}
+              </For>
+            </div>
+          </Show>
+          <Show when={data().output}>
+            {(value) => (
+              <div data-component="tool-output" data-variant="preview" data-scrollable>
+                <pre data-slot="background-process-output">{value()}</pre>
               </div>
             )}
-          </For>
+          </Show>
         </div>
-      </Show>
-      <Show when={data().output}>
-        {(value) => (
-          <div data-component="tool-output" data-scrollable>
-            <pre data-slot="background-process-output">{value()}</pre>
-          </div>
-        )}
       </Show>
     </BasicTool>
   )

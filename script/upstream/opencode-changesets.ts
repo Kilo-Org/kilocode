@@ -53,8 +53,14 @@ function tag(input: string) {
 }
 
 function slug(from: string, to: string) {
-  const base = tag(from).replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase()
-  const head = tag(to).replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase()
+  const base = tag(from)
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase()
+  const head = tag(to)
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase()
   return `opencode-${base}-to-${head}.md`
 }
 
@@ -99,7 +105,10 @@ function filter(input: string, sections: string[]) {
     if (!skip) out.push(line)
   }
 
-  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim()
+  return out
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
 }
 
 function add(groups: Group, section: string, category: string, lines: string[]) {

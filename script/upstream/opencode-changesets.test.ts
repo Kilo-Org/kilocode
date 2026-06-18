@@ -33,9 +33,7 @@ describe("opencode changesets", () => {
   })
 
   test("formats changeset markdown", () => {
-    expect(
-      changeset([{ tag_name: "v1.2.2", body: "\r\n## Core\r\n\r\n- Fix issue\r\n" }], "1.2.1", "1.2.2"),
-    ).toBe(`---
+    expect(changeset([{ tag_name: "v1.2.2", body: "\r\n## Core\r\n\r\n- Fix issue\r\n" }], "1.2.1", "1.2.2")).toBe(`---
 "@kilocode/cli": patch
 "kilo-code": patch
 ---
@@ -48,10 +46,11 @@ Changes from opencode v1.2.1 to v1.2.2 upstream:
 
   test("filters ignored sections and contributor thanks", () => {
     expect(
-      changeset([
-        {
-          tag_name: "v1.2.2",
-          body: `## Core
+      changeset(
+        [
+          {
+            tag_name: "v1.2.2",
+            body: `## Core
 
 - Keep this
 
@@ -68,8 +67,11 @@ Changes from opencode v1.2.1 to v1.2.2 upstream:
 - @user:
   - Helped
 `,
-        },
-      ], "1.2.1", "1.2.2"),
+          },
+        ],
+        "1.2.1",
+        "1.2.2",
+      ),
     ).toBe(`---
 "@kilocode/cli": patch
 "kilo-code": patch
@@ -83,10 +85,11 @@ Changes from opencode v1.2.1 to v1.2.2 upstream:
 
   test("bundles release notes into shared sections", () => {
     expect(
-      changeset([
-        {
-          tag_name: "v1.2.1",
-          body: `## Core
+      changeset(
+        [
+          {
+            tag_name: "v1.2.1",
+            body: `## Core
 
 ### Bugfixes
 
@@ -98,10 +101,10 @@ Changes from opencode v1.2.1 to v1.2.2 upstream:
 
 - Improve first
 `,
-        },
-        {
-          tag_name: "v1.2.2",
-          body: `## Core
+          },
+          {
+            tag_name: "v1.2.2",
+            body: `## Core
 
 ### Bugfixes
 
@@ -117,8 +120,11 @@ Changes from opencode v1.2.1 to v1.2.2 upstream:
 
 - Improve second
 `,
-        },
-      ], "1.2.0", "1.2.2"),
+          },
+        ],
+        "1.2.0",
+        "1.2.2",
+      ),
     ).toBe(`---
 "@kilocode/cli": patch
 "kilo-code": patch
@@ -136,10 +142,11 @@ Changes from opencode v1.2.0 to v1.2.2 upstream:
 
   test("preserves multiline markdown blocks", () => {
     expect(
-      changeset([
-        {
-          tag_name: "v1.2.2",
-          body: `## Core
+      changeset(
+        [
+          {
+            tag_name: "v1.2.2",
+            body: `## Core
 
 ### Improvements
 
@@ -149,8 +156,11 @@ Changes from opencode v1.2.0 to v1.2.2 upstream:
   Continuation paragraph
 - Second item
 `,
-        },
-      ], "1.2.1", "1.2.2"),
+          },
+        ],
+        "1.2.1",
+        "1.2.2",
+      ),
     ).toBe(`---
 "@kilocode/cli": patch
 "kilo-code": patch

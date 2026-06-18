@@ -1609,9 +1609,15 @@ export type Model = {
 export type Provider = {
   id: string
   name: string
+  description?: string
   source: "env" | "config" | "custom" | "api"
   env: Array<string>
   key?: string
+  metadata?: {
+    noteKey?: string
+    icon?: string
+    priority?: number
+  }
   options: {
     [key: string]: unknown
   }

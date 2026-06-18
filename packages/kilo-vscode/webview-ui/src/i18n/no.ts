@@ -104,17 +104,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "Søk etter leverandører",
   "dialog.provider.empty": "Ingen leverandører funnet",
-  "dialog.provider.group.popular": "Populære",
   "dialog.provider.group.other": "Andre",
   "dialog.provider.tag.recommended": "Anbefalt",
-  "dialog.provider.opencode.note": "Utvalgte modeller inkludert Claude, GPT, Gemini og flere",
-  "dialog.provider.anthropic.note": "Koble til med Claude Pro/Max eller API-nøkkel",
-  "dialog.provider.deepseek.note": "DeepSeek-modeller for resonnering og kodeoppgaver",
-  "dialog.provider.openai.note": "Koble til med ChatGPT Pro/Plus eller API-nøkkel",
-  "dialog.provider.google.note": "Gemini-modeller for raske, strukturerte svar",
-  "dialog.provider.openrouter.note": "Tilgang til alle støttede modeller fra én leverandør",
-  "dialog.provider.vercel.note": "Samlet tilgang til AI-modeller med smart ruting",
-  "dialog.provider.copilot.note": "Koble til med Copilot eller API-nøkkel",
 
   "dialog.model.select.title": "Velg modell",
   "dialog.model.search.placeholder": "Søk etter modeller",

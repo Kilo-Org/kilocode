@@ -101,17 +101,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "Pretraži provajdere",
   "dialog.provider.empty": "Nema pronađenih provajdera",
-  "dialog.provider.group.popular": "Popularno",
   "dialog.provider.group.other": "Ostalo",
   "dialog.provider.tag.recommended": "Preporučeno",
-  "dialog.provider.opencode.note": "Kurirani modeli uključujući Claude, GPT, Gemini i druge",
-  "dialog.provider.anthropic.note": "Direktan pristup Claude modelima, uključujući Pro i Max",
-  "dialog.provider.deepseek.note": "DeepSeek modeli za zadatke zaključivanja i kodiranja",
-  "dialog.provider.copilot.note": "Claude modeli za pomoć pri kodiranju",
-  "dialog.provider.openai.note": "GPT modeli za brze, sposobne opšte AI zadatke",
-  "dialog.provider.google.note": "Gemini modeli za brze, strukturirane odgovore",
-  "dialog.provider.openrouter.note": "Pristup svim podržanim modelima preko jednog provajdera",
-  "dialog.provider.vercel.note": "Jedinstven pristup AI modelima uz pametno rutiranje",
 
   "dialog.model.select.title": "Odaberi model",
   "dialog.model.search.placeholder": "Pretraži modele",

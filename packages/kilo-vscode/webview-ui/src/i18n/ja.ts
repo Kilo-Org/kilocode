@@ -101,17 +101,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "プロバイダーを検索",
   "dialog.provider.empty": "プロバイダーが見つかりません",
-  "dialog.provider.group.popular": "人気",
   "dialog.provider.group.other": "その他",
   "dialog.provider.tag.recommended": "推奨",
-  "dialog.provider.opencode.note": "Claude、GPT、Geminiなどの厳選されたモデル",
-  "dialog.provider.anthropic.note": "Claude Pro/MaxまたはAPIキーで接続",
-  "dialog.provider.deepseek.note": "推論とコーディングタスク向けのDeepSeekモデル",
-  "dialog.provider.openai.note": "ChatGPT Pro/PlusまたはAPIキーで接続",
-  "dialog.provider.google.note": "高速で構造化された応答のためのGeminiモデル",
-  "dialog.provider.openrouter.note": "1つのプロバイダーからすべてのモデルにアクセス",
-  "dialog.provider.vercel.note": "スマートルーティングによるAIモデルへの統合アクセス",
-  "dialog.provider.copilot.note": "CopilotまたはAPIキーで接続",
 
   "dialog.model.select.title": "モデルを選択",
   "dialog.model.search.placeholder": "モデルを検索",

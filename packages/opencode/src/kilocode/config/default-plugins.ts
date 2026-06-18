@@ -24,9 +24,7 @@ export namespace KilocodeDefaultPlugins {
 
     cfg.plugin = plugins
     // Built-in plugins are not loaded externally and must not wait for external plugin setup.
-    const origins = cfg.plugin_origins?.filter(
-      (item) => !isIndexingPlugin(item.spec) && !isAtomicChatPlugin(item.spec),
-    )
+    const origins = cfg.plugin_origins?.filter((item) => !isIndexingPlugin(item.spec) && !isAtomicChatPlugin(item.spec))
     if (!origins) return cfg
     if (opts.disabled) {
       cfg.plugin_origins = origins
