@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "../image-preview"
-import { isAbsolutePath } from "../path-utils"
+import { escapeGlob, isAbsolutePath } from "../path-utils"
 import { validateFiles } from "./file-links"
 import type { DiffVirtualFile, DiffVirtualProvider } from "../DiffVirtualProvider"
 
@@ -139,14 +139,17 @@ function show(uri: vscode.Uri, line?: number, column?: number): void {
 }
 
 /**
- * Fallback when the exact path does not exist: search the workspace by filename.
- * Opens the file directly on a single match, prompts on multiple, warns on none.
+ * Fallback when the exact path does not exist: search the session directory by
+ * filename. Opens the file directly on a single match, prompts on multiple,
+ * warns on none. The search is scoped to `dir` (the active session's directory)
+ * via a RelativePattern so it can't cross into another worktree/branch.
  */
-function findFallback(filePath: string, line?: number, column?: number): void {
+function findFallback(dir: string, filePath: string, line?: number, column?: number): void {
   const name = filePath.split(/[\\/]/).pop() || filePath
-  // Escape glob metacharacters so filenames like `[id].tsx` or `[...slug].tsx` resolve correctly.
-  const escaped = name.replace(/[\[\]{}?*!()]/g, "\\$&")
-  Promise.resolve(vscode.workspace.findFiles(`**/${escaped}`, "**/node_modules/**", 5)).then(
+  // VS Code globs don't honor backslash escapes, so bracket-escape metacharacters
+  // (e.g. `[id].tsx`) instead — otherwise such names never match.
+  const pattern = new vscode.RelativePattern(vscode.Uri.file(dir), `**/${escapeGlob(name)}`)
+  Promise.resolve(vscode.workspace.findFiles(pattern, "**/node_modules/**", 5)).then(
     (matches) => {
       if (matches.length === 1) {
         show(matches[0], line, column)
@@ -178,6 +181,6 @@ function openFile(dir: string, filePath: string, line?: number, column?: number)
       }
       show(uri, line, column)
     },
-    () => findFallback(filePath, line, column),
+    () => findFallback(dir, filePath, line, column),
   )
 }
