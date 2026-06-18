@@ -731,4 +731,69 @@ describe("Anthropic Messages route", () => {
       expect(body.messages[0]?.content[0]?.cache_control).toBeUndefined()
     }),
   )
+
+  // regression for Claude Opus 4.7 / 4.8 adaptive thinking passthrough
+  it.effect("forwards adaptive thinking with display=summarized to the wire", () =>
+    Effect.gen(function* () {
+      const prepared = yield* LLMClient.prepare(
+        LLM.request({
+          id: "req_adaptive",
+          model,
+          prompt: "hi",
+          cache: "none",
+          providerOptions: { anthropic: { thinking: { type: "adaptive", display: "summarized" } } },
+        }),
+      )
+      const body = prepared.body as { thinking?: unknown }
+      expect(body.thinking).toEqual({ type: "adaptive", display: "summarized" })
+    }),
+  )
+
+  it.effect("forwards adaptive thinking without display when omitted", () =>
+    Effect.gen(function* () {
+      const prepared = yield* LLMClient.prepare(
+        LLM.request({
+          id: "req_adaptive_bare",
+          model,
+          prompt: "hi",
+          cache: "none",
+          providerOptions: { anthropic: { thinking: { type: "adaptive" } } },
+        }),
+      )
+      const body = prepared.body as { thinking?: unknown }
+      expect(body.thinking).toEqual({ type: "adaptive" })
+    }),
+  )
+
+  it.effect("forwards disabled thinking", () =>
+    Effect.gen(function* () {
+      const prepared = yield* LLMClient.prepare(
+        LLM.request({
+          id: "req_disabled",
+          model,
+          prompt: "hi",
+          cache: "none",
+          providerOptions: { anthropic: { thinking: { type: "disabled" } } },
+        }),
+      )
+      const body = prepared.body as { thinking?: unknown }
+      expect(body.thinking).toEqual({ type: "disabled" })
+    }),
+  )
+
+  it.effect("still forwards legacy enabled thinking with budgetTokens", () =>
+    Effect.gen(function* () {
+      const prepared = yield* LLMClient.prepare(
+        LLM.request({
+          id: "req_enabled_legacy",
+          model,
+          prompt: "hi",
+          cache: "none",
+          providerOptions: { anthropic: { thinking: { type: "enabled", budgetTokens: 8000 } } },
+        }),
+      )
+      const body = prepared.body as { thinking?: unknown }
+      expect(body.thinking).toEqual({ type: "enabled", budget_tokens: 8000 })
+    }),
+  )
 })

@@ -144,10 +144,22 @@ const AnthropicToolChoice = Schema.Union([
   Schema.Struct({ type: Schema.tag("tool"), name: Schema.String }),
 ])
 
-const AnthropicThinking = Schema.Struct({
+// kilocode_change start - support adaptive / disabled thinking shapes
+const AnthropicThinkingEnabled = Schema.Struct({
   type: Schema.tag("enabled"),
   budget_tokens: Schema.Number,
 })
+const AnthropicThinkingAdaptive = Schema.Struct({
+  type: Schema.tag("adaptive"),
+  display: Schema.optional(Schema.Literals(["summarized", "detailed"])),
+})
+const AnthropicThinkingDisabled = Schema.Struct({ type: Schema.tag("disabled") })
+const AnthropicThinking = Schema.Union([
+  AnthropicThinkingEnabled,
+  AnthropicThinkingAdaptive,
+  AnthropicThinkingDisabled,
+])
+// kilocode_change end
 
 const AnthropicBodyFields = {
   model: Schema.String,
@@ -415,7 +427,16 @@ const anthropicOptions = (request: LLMRequest) => request.providerOptions?.anthr
 
 const lowerThinking = Effect.fn("AnthropicMessages.lowerThinking")(function* (request: LLMRequest) {
   const thinking = anthropicOptions(request)?.thinking
-  if (!ProviderShared.isRecord(thinking) || thinking.type !== "enabled") return undefined
+  // kilocode_change start - allow adaptive / disabled passthrough
+  if (!ProviderShared.isRecord(thinking)) return undefined
+  if (thinking.type === "adaptive") {
+    if (thinking.display === "summarized") return { type: "adaptive" as const, display: "summarized" as const }
+    if (thinking.display === "detailed") return { type: "adaptive" as const, display: "detailed" as const }
+    return { type: "adaptive" as const }
+  }
+  if (thinking.type === "disabled") return { type: "disabled" as const }
+  if (thinking.type !== "enabled") return undefined
+  // kilocode_change end
   const budget =
     typeof thinking.budgetTokens === "number"
       ? thinking.budgetTokens
