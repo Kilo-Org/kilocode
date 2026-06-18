@@ -56,6 +56,16 @@ export const APP_NAME = "Kilo"
 // Utilities
 // ---------------------------------------------------------------------------
 
+// kilocode_change start - global allow-everything helper for persistent config auto-approve
+export function isAllowEverything(permission: unknown): boolean {
+  if (typeof permission !== "object" || permission === null) return false
+  const wildcard = (permission as Record<string, unknown>)["*"]
+  if (typeof wildcard === "string") return wildcard === "allow"
+  if (typeof wildcard === "object" && wildcard !== null) return (wildcard as Record<string, unknown>)["*"] === "allow"
+  return false
+}
+// kilocode_change end
+
 /**
  * Reactive effects for session management:
  * - Notify the server which session the user is viewing (live indicators)
@@ -265,15 +275,41 @@ export function init() {
           dialog.replace(() => <DialogProcessList />)
         },
       },
+      // kilocode_change start - global allow_everything for persistent config-level auto-approve
       {
         namespace: "palette",
         name: "permission.allow_everything",
         get title() {
-          return enabled() ? "Disable auto-approve mode" : "Enable auto-approve mode"
+          return isAllowEverything(sync.data.config.permission)
+            ? "Disable global auto-approve mode"
+            : "Enable global auto-approve mode"
         },
+        desc: "Persist auto-approve for all sessions in config",
+        category: "System",
+        run: async () => {
+          const enabled = isAllowEverything(sync.data.config.permission)
+          const result = await sdk.client.permission.allowEverything({ enable: !enabled })
+          if (result.error) {
+            toast.show({
+              variant: "error",
+              message: `Failed to ${!enabled ? "enable" : "disable"} auto-approve mode`,
+            })
+            return
+          }
+          dialog.clear()
+        },
+      },
+      // kilocode_change end
+      {
+        namespace: "palette",
+        name: "permission.auto_approve_session",
+        get title() {
+          return enabled() ? "Disable session auto-approve" : "Enable session auto-approve"
+        },
+        desc: "Approve permission prompts once for this session",
         category: "Session",
         slashName: "auto-approve",
-        slashAliases: ["yolo"], // kilocode_change
+        slashAliases: ["yolo"],
         enabled: route.data.type === "session",
         run: async () => {
           if (route.data.type !== "session") return
