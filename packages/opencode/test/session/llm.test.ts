@@ -120,15 +120,21 @@ describe("session.llm.hasToolCalls", () => {
   })
 })
 
-describe("session.llm.repairToolCall", () => {
+describe("session.llm.experimental_repairToolCall", () => {
   test("repairs tool name with leading whitespace", () => {
     const sortedTools = {
       bash: tool({ description: "Run bash", inputSchema: z.object({}) }),
     }
 
-    const result = LLM.repairToolCall(" bash", sortedTools)
+    const failed = {
+      toolCall: { toolName: " bash", toolCallId: "call-1" },
+      error: new Error("Tool not found"),
+    }
 
-    expect(result).toBe("bash")
+    const result = LLM.experimental_repairToolCall(failed, sortedTools)
+
+    expect(result.toolName).toBe("bash")
+    expect(result.input).toBeUndefined()
   })
 
   test("repairs tool name with trailing whitespace", () => {
@@ -136,49 +142,106 @@ describe("session.llm.repairToolCall", () => {
       bash: tool({ description: "Run bash", inputSchema: z.object({}) }),
     }
 
-    const result = LLM.repairToolCall("BASH ", sortedTools)
+    const failed = {
+      toolCall: { toolName: "bash ", toolCallId: "call-2" },
+      error: new Error("Tool not found"),
+    }
 
-    expect(result).toBe("bash")
+    const result = LLM.experimental_repairToolCall(failed, sortedTools)
+
+    expect(result.toolName).toBe("bash")
+    expect(result.input).toBeUndefined()
   })
 
-  test("returns undefined when name matches exactly (no repair needed)", () => {
+  test("returns invalid tool when no match found", () => {
     const sortedTools = {
       bash: tool({ description: "Run bash", inputSchema: z.object({}) }),
     }
 
-    const result = LLM.repairToolCall("bash", sortedTools)
+    const failed = {
+      toolCall: { toolName: "nonexistent", toolCallId: "call-3" },
+      error: new Error("Tool not found"),
+    }
 
-    expect(result).toBeUndefined()
+    const result = LLM.experimental_repairToolCall(failed, sortedTools)
+
+    expect(result.toolName).toBe("invalid")
+    expect(result.input).toContain("nonexistent")
+    expect(result.input).toContain("Tool not found")
   })
 
-  test("returns undefined when no match found", () => {
+  test("returns original tool call when name matches exactly (no repair needed)", () => {
     const sortedTools = {
       bash: tool({ description: "Run bash", inputSchema: z.object({}) }),
     }
 
-    const result = LLM.repairToolCall("nonexistent", sortedTools)
-
-    expect(result).toBeUndefined()
-  })
-
-  test("repairs tool name with both leading and trailing whitespace", () => {
-    const sortedTools = {
-      bash: tool({ description: "Run bash", inputSchema: z.object({}) }),
+    const failed = {
+      toolCall: { toolName: "bash", toolCallId: "call-4" },
+      error: new Error("Some error"),
     }
 
-    const result = LLM.repairToolCall("  BASH  ", sortedTools)
+    const result = LLM.experimental_repairToolCall(failed, sortedTools)
 
-    expect(result).toBe("bash")
+    expect(result.toolName).toBe("bash")
+    expect(result.input).toBeUndefined()
   })
 
-  test("repairs tool name with only whitespace difference", () => {
+  test("preserves original tool call properties", () => {
     const sortedTools = {
+      read: tool({ description: "Read file", inputSchema: z.object({ filePath: z.string() }) }),
+    }
+
+    const failed = {
+      toolCall: { toolName: " read", toolCallId: "call-5", input: '{"filePath": "/test"}' },
+      error: new Error("Invalid input"),
+    }
+
+    const result = LLM.experimental_repairToolCall(failed, sortedTools)
+
+    expect(result.toolName).toBe("read")
+    expect(result.toolCallId).toBe("call-5")
+  })
+
+  test("handles multiple tools with different cases", () => {
+    const sortedTools = {
+      bash: tool({ description: "Run bash", inputSchema: z.object({}) }),
       glob: tool({ description: "Find files", inputSchema: z.object({}) }),
+      read: tool({ description: "Read file", inputSchema: z.object({}) }),
     }
 
-    const result = LLM.repairToolCall(" glob ", sortedTools)
+    const failedBash = {
+      toolCall: { toolName: "bash ", toolCallId: "call-1" },
+      error: new Error("Error"),
+    }
 
-    expect(result).toBe("glob")
+    const failedGlob = {
+      toolCall: { toolName: " glob", toolCallId: "call-2" },
+      error: new Error("Error"),
+    }
+
+    const failedRead = {
+      toolCall: { toolName: "READ", toolCallId: "call-3" },
+      error: new Error("Error"),
+    }
+
+    expect(LLM.experimental_repairToolCall(failedBash, sortedTools).toolName).toBe("bash")
+    expect(LLM.experimental_repairToolCall(failedGlob, sortedTools).toolName).toBe("glob")
+    expect(LLM.experimental_repairToolCall(failedRead, sortedTools).toolName).toBe("read")
+  })
+
+  test("returns invalid for completely unknown tool", () => {
+    const sortedTools = {
+      bash: tool({ description: "Run bash", inputSchema: z.object({}) }),
+    }
+
+    const failed = {
+      toolCall: { toolName: "nonexistent", toolCallId: "call-1" },
+      error: new Error("Error"),
+    }
+
+    const result = LLM.experimental_repairToolCall(failed, sortedTools)
+    expect(result.toolName).toBe("invalid")
+    expect(result.input).toContain("nonexistent")
   })
 })
 

@@ -681,13 +681,39 @@ function resolveTools(input: Pick<StreamInput, "tools" | "agent" | "permission" 
   return Record.filter(input.tools, (_, k) => input.user.tools?.[k] !== false && !disabled.has(k))
 }
 
-export function repairToolCall(toolName: string, sortedTools: Record<string, Tool>): string | undefined {
+function repairToolCall(toolName: string, sortedTools: Record<string, Tool>): string | undefined {
   const trimmed = toolName.trim()
+  // If already exact match, return it (no repair needed, but signal success)
+  if (sortedTools[trimmed]) {
+    return trimmed
+  }
+  // If case-insensitive match after trimming, return the lowercase version
   const lower = trimmed.toLowerCase()
-  if (lower !== toolName && sortedTools[lower]) {
+  if (sortedTools[lower]) {
     return lower
   }
   return undefined
+}
+
+export function experimental_repairToolCall(
+  failed: { toolCall: { toolName: string; toolCallId: string; input?: string }; error: Error },
+  sortedTools: Record<string, Tool>,
+): { toolName: string; input?: string; toolCallId?: string } {
+  const repaired = repairToolCall(failed.toolCall.toolName, sortedTools)
+  if (repaired) {
+    return {
+      ...failed.toolCall,
+      toolName: repaired,
+    }
+  }
+  return {
+    ...failed.toolCall,
+    input: JSON.stringify({
+      tool: failed.toolCall.toolName,
+      error: failed.error.message,
+    }),
+    toolName: "invalid",
+  }
 }
 
 // Check if messages contain any tool-call content
