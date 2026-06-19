@@ -10,6 +10,7 @@ import type { Session } from "../../session/session"
 import type { Agent } from "../../agent/agent"
 import type { Config } from "../../config/config"
 import { Provider } from "../../provider/provider"
+import { REVIEWER_AGENT } from "@/kilocode/agent"
 import z from "zod"
 
 const log = Log.create({ service: "kilocode-task-model" })
@@ -36,9 +37,9 @@ export namespace KiloTask {
     if (info.mode === "primary") throw new Error(`Agent "${name}" is a primary agent and cannot be used as a subagent`)
   }
 
-  /** Kilo keeps delegation one level deep to avoid recursive subagent chains. */
-  export function nestedTask(): false {
-    return false
+  /** Kilo keeps delegation one level deep except for Reviewer -> Explore. */
+  export function nestedTask(name: string) {
+    return name === REVIEWER_AGENT
   }
 
   /**
@@ -63,9 +64,9 @@ export namespace KiloTask {
   }
 
   /** Extra permission rules appended to subagent sessions */
-  export function permissions(rules: Permission.Ruleset): Permission.Ruleset {
+  export function permissions(rules: Permission.Ruleset, canTask: boolean): Permission.Ruleset {
     return [
-      { permission: "task", pattern: "*", action: "deny" },
+      ...(canTask ? [] : [{ permission: "task" as const, pattern: "*" as const, action: "deny" as const }]),
       { permission: "question", pattern: "*", action: "deny" },
       ...rules,
     ]

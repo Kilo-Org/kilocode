@@ -13,6 +13,9 @@ import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
 import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
 import PROMPT_ASK from "../../agent/prompt/ask.txt"
 import PROMPT_EXPLORE from "../../agent/prompt/explore.txt"
+import PROMPT_REVIEWER from "./prompt/reviewer.txt"
+
+export const REVIEWER_AGENT = "kilo-reviewer"
 
 export const bash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "ask",
@@ -56,7 +59,7 @@ export const bash: Record<string, "allow" | "ask" | "deny"> = {
   "gunzip *": "allow",
 }
 
-export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
+const readBash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "deny",
   "cat *": "allow",
   "head *": "allow",
@@ -108,6 +111,9 @@ export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "git branch -r *": "allow",
   "git remote -v *": "allow",
   "gh *": "ask",
+}
+
+const shellDenyBash: Record<string, "allow" | "ask" | "deny"> = {
   "*\n*": "deny",
   "*<(*": "deny",
   "*|*": "deny",
@@ -126,6 +132,33 @@ export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "sort * -o *": "deny",
   "sort --output*": "deny",
   "sort * --output*": "deny",
+}
+
+export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
+  ...readBash,
+  ...shellDenyBash,
+}
+
+export const reviewerBash: Record<string, "allow" | "ask" | "deny"> = {
+  ...readBash,
+  "git merge-base *": "allow",
+  "git show-ref *": "allow",
+  "git -c core.quotepath=false diff *": "allow",
+  "gh pr view *": "allow",
+  "gh pr diff *": "allow",
+  "git diff --output*": "deny",
+  "git diff * --output*": "deny",
+  "git -c core.quotepath=false diff --output*": "deny",
+  "git -c core.quotepath=false diff * --output*": "deny",
+  "git diff --ext-diff*": "deny",
+  "git diff * --ext-diff*": "deny",
+  "git -c core.quotepath=false diff --ext-diff*": "deny",
+  "git -c core.quotepath=false diff * --ext-diff*": "deny",
+  "git diff --output-indicator*": "deny",
+  "git diff * --output-indicator*": "deny",
+  "git -c core.quotepath=false diff --output-indicator*": "deny",
+  "git -c core.quotepath=false diff * --output-indicator*": "deny",
+  ...shellDenyBash,
 }
 
 function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
@@ -210,6 +243,37 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
   })
 }
 
+function reviewerGuard() {
+  return Permission.fromConfig({
+    "*": "deny",
+    bash: reviewerBash,
+    read: {
+      "*": "allow",
+      "*.env": "ask",
+      "*.env.*": "ask",
+      "*.env.example": "allow",
+    },
+    grep: "allow",
+    glob: "allow",
+    list: "allow",
+    skill: "allow",
+    webfetch: "allow",
+    websearch: "allow",
+    codebase_search: "allow",
+    semantic_search: "allow",
+    external_directory: {
+      [Truncate.GLOB]: "allow",
+    },
+    task: {
+      "*": "deny",
+      explore: "allow",
+    },
+    edit: "deny",
+    question: "deny",
+    suggest: "deny",
+  })
+}
+
 // Generate per-server MCP wildcard rules that allow MCP tools with user approval.
 export function getMcpRules(cfg: Config.Info): Record<string, "allow" | "ask" | "deny"> {
   const rules: Record<string, "allow" | "ask" | "deny"> = {}
@@ -251,6 +315,7 @@ export function resolveKey(name: string): string {
 export function preprocessConfig<T>(agentConfig: Record<string, T>): Record<string, T> {
   const result: Record<string, T> = {}
   for (const [key, value] of Object.entries(agentConfig)) {
+    if (key === REVIEWER_AGENT) continue
     result[key === "build" ? "code" : key] = value
   }
   return result
@@ -467,6 +532,18 @@ export function patchAgents(
     permission: Permission.merge(defaults, askGuard(kilo.mcpRules), user, askEditGuard(), denies(user)),
     mode: "primary",
     native: true,
+  }
+
+  agents[REVIEWER_AGENT] = {
+    name: REVIEWER_AGENT,
+    displayName: "Reviewer",
+    description: "High-signal read-only review agent that delegates only to Explore.",
+    prompt: PROMPT_REVIEWER,
+    options: {},
+    permission: Permission.merge(defaults, reviewerGuard()),
+    mode: "subagent",
+    native: true,
+    hidden: true,
   }
 
   hardenSystemAgents(agents)

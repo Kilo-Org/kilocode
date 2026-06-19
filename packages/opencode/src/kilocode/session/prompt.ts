@@ -22,9 +22,10 @@ import { Filesystem } from "@/util/filesystem"
 import { InstanceState } from "@/effect/instance-state"
 import NATIVE_PLAN_PROMPT from "@/kilocode/session/native-plan-prompt.txt"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
+import { REVIEWER_AGENT } from "@/kilocode/agent"
 
 export namespace KiloSessionPrompt {
-  const modes = ["ask", "plan", "architect"]
+  const modes = ["ask", "plan", "architect", REVIEWER_AGENT]
 
   export function titleID(sessionID: SessionID) {
     return `title-${sessionID}`

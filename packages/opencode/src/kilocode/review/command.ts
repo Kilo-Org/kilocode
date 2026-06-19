@@ -2,6 +2,7 @@ import type { Command } from "@/command"
 import type { ReviewCommand } from "@kilocode/kilo-telemetry"
 import LOCAL_REVIEW from "./local-review.txt"
 import LOCAL_REVIEW_UNCOMMITTED from "./local-review-uncommitted.txt"
+import { REVIEWER_AGENT } from "@/kilocode/agent"
 
 export function isReviewCommand(command: string | undefined): command is ReviewCommand {
   return command === "review" || command === "local-review" || command === "local-review-uncommitted"
@@ -13,6 +14,14 @@ export function parseReviewCommand(prompt: string | undefined): ReviewCommand | 
   if (isReviewCommand(name)) return name
 }
 
+export function reviewerCommand(command: Command.Info): Command.Info {
+  return {
+    ...command,
+    agent: REVIEWER_AGENT,
+    subtask: true,
+  }
+}
+
 /**
  * /local-review-uncommitted - local review (uncommitted changes)
  */
@@ -20,7 +29,9 @@ export function localReviewUncommittedCommand(): Command.Info {
   return {
     name: "local-review-uncommitted",
     description: "local review (uncommitted changes)",
+    agent: REVIEWER_AGENT,
     template: LOCAL_REVIEW_UNCOMMITTED,
+    subtask: true,
     hints: ["$ARGUMENTS"],
   }
 }
@@ -32,7 +43,9 @@ export function localReviewCommand(): Command.Info {
   return {
     name: "local-review",
     description: "local review (current branch, optional base or instructions)",
+    agent: REVIEWER_AGENT,
     template: LOCAL_REVIEW,
+    subtask: true,
     hints: ["$ARGUMENTS"],
   }
 }
