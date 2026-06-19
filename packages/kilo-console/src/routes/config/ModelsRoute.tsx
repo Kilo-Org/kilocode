@@ -40,6 +40,7 @@ function chips(model: Model) {
   const list: string[] = []
   if (model.capabilities.toolcall) list.push("toolcall")
   if (model.capabilities.attachment) list.push("attachment")
+  if (model.capabilities.temperature) list.push("temperature")
   if (model.capabilities.input.image) list.push("vision")
   if (model.capabilities.input.audio || model.capabilities.output.audio) list.push("audio")
   return list
@@ -87,6 +88,7 @@ function Stat(props: { label: string; value: string; sub?: string; mono?: boolea
 const caps = [
   { key: "toolcall", label: "toolcall" },
   { key: "attachment", label: "attachment" },
+  { key: "temperature", label: "temperature" },
   { key: "input:image", label: "vision" },
   { key: "input:audio", label: "audio" },
 ] satisfies { key: Capability; label: string }[]
@@ -476,6 +478,7 @@ export function ModelsAvailableRoute() {
                     <Stat label="Input" value={money(item.model.cost.input)} sub="/ 1M tok" mono />
                     <Stat label="Output" value={money(item.model.cost.output)} sub="/ 1M tok" mono />
                     <Stat label="Reasoning" value={item.model.capabilities.reasoning ? "Yes" : "No"} />
+                    <Stat label="Temperature" value={item.model.capabilities.temperature ? "Yes" : "No"} />
                   </div>
                   <Show when={chips(item.model).length}>
                     <div class="tags model-capabilities">

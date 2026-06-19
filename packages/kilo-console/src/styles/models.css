@@ -272,6 +272,10 @@
   flex-wrap: wrap;
 }
 
+.kilo-console .models-capabilities-list button {
+  text-transform: capitalize;
+}
+
 .kilo-console .explore-models {
   grid-template-columns: repeat(auto-fill, minmax(22.5rem, 1fr));
   gap: 0.625rem;
