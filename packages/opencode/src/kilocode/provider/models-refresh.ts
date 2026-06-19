@@ -12,6 +12,7 @@ export const refresh = Effect.fn("ModelsRefresh.refresh")(function* (
   cache: ModelCache.Interface,
 ) {
   yield* models.refresh(true)
-  yield* cache.refresh("kilo")
+  yield* cache.clear("kilo")
+  yield* models.get()
   yield* Refresh.notify()
 })

@@ -11,7 +11,7 @@ it.effect(
   Effect.gen(function* () {
     const calls = yield* Ref.make<string[]>([])
     const models = ModelsDev.Service.of({
-      get: () => Effect.succeed({}),
+      get: () => Ref.update(calls, (items) => [...items, "models:get"]).pipe(Effect.as({})),
       refresh: (force) => Ref.update(calls, (items) => [...items, `models.dev:${force}`]),
     })
     const cache = ModelCache.Service.of({
@@ -19,14 +19,18 @@ it.effect(
       failedProviders: () => Effect.succeed([]),
       get: () => Effect.succeed(undefined),
       fetch: () => Effect.succeed({}),
-      refresh: (provider) =>
-        Ref.update(calls, (items) => [...items, `gateway:${provider}`]).pipe(Effect.as({})),
-      clear: () => Effect.void,
+      refresh: () => Effect.succeed({}),
+      clear: (provider) => Ref.update(calls, (items) => [...items, `gateway:clear:${provider}`]),
     })
 
     yield* Refresh.watch(() => Ref.update(calls, (items) => [...items, "notify"]))
     yield* ModelsRefresh.refresh(models, cache)
 
-    expect(yield* Ref.get(calls)).toEqual(["models.dev:true", "gateway:kilo", "notify"])
+    expect(yield* Ref.get(calls)).toEqual([
+      "models.dev:true",
+      "gateway:clear:kilo",
+      "models:get",
+      "notify",
+    ])
   }),
 )
