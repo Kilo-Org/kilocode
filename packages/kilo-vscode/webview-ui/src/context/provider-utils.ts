@@ -2,6 +2,20 @@ import type { Provider, ProviderModel, ModelSelection } from "../types/messages"
 
 export type EnrichedModel = ProviderModel & { providerID: string; providerName: string }
 
+const ORDERS = [
+  ["none", "minimal", "low", "medium", "high", "xhigh", "max"],
+  ["instant", "thinking"],
+  ["instant", "low", "medium", "high"],
+]
+
+function order(variants: NonNullable<ProviderModel["variants"]>) {
+  const entries = Object.entries(variants)
+  const names = entries.map(([name]) => name)
+  const ranks = ORDERS.find((rank) => names.every((name) => rank.includes(name)))
+  if (!ranks) return variants
+  return Object.fromEntries(entries.sort(([a], [b]) => ranks.indexOf(a) - ranks.indexOf(b)))
+}
+
 /**
  * Flatten a provider map into a list of models enriched with provider info.
  */
@@ -10,8 +24,10 @@ export function flattenModels(providers: Record<string, Provider>): EnrichedMode
   for (const providerID of Object.keys(providers)) {
     const provider = providers[providerID]!
     for (const modelID of Object.keys(provider.models)) {
+      const model = provider.models[modelID]!
       result.push({
-        ...provider.models[modelID]!,
+        ...model,
+        ...(model.variants ? { variants: order(model.variants) } : {}),
         id: modelID,
         providerID,
         providerName: provider.name,

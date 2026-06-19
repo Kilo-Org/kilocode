@@ -41,6 +41,103 @@ describe("flattenModels", () => {
     const providers = { empty: makeProvider("empty", "Empty", []) }
     expect(flattenModels(providers)).toEqual([])
   })
+
+  it("orders standard reasoning variants from weakest to strongest", () => {
+    const provider = makeProvider("openai", "OpenAI", ["gpt-5"])
+    provider.models["gpt-5"]!.variants = {
+      low: { reasoningEffort: "low" },
+      high: { reasoningEffort: "high" },
+      none: { reasoningEffort: "none" },
+      max: { reasoning: { enabled: true, effort: "xhigh" }, verbosity: "max" },
+      xhigh: { reasoningEffort: "xhigh" },
+      minimal: { reasoningEffort: "minimal" },
+      medium: { reasoningEffort: "medium" },
+    }
+
+    const model = flattenModels({ openai: provider })[0]!
+
+    expect(Object.keys(model.variants ?? {})).toEqual(["none", "minimal", "low", "medium", "high", "xhigh", "max"])
+    expect(model.variants?.max).toEqual({ reasoning: { enabled: true, effort: "xhigh" }, verbosity: "max" })
+  })
+
+  it("orders reasoning subsets used by cloud model families", () => {
+    const cases = {
+      openai: {
+        input: ["low", "high", "none", "xhigh", "medium"],
+        output: ["none", "low", "medium", "high", "xhigh"],
+      },
+      codex: {
+        input: ["low", "high", "xhigh", "medium"],
+        output: ["low", "medium", "high", "xhigh"],
+      },
+      claude: {
+        input: ["low", "high", "none", "max", "medium"],
+        output: ["none", "low", "medium", "high", "max"],
+      },
+      opus: {
+        input: ["low", "high", "none", "xhigh", "max", "medium"],
+        output: ["none", "low", "medium", "high", "xhigh", "max"],
+      },
+      gemini25: {
+        input: ["max", "high"],
+        output: ["high", "max"],
+      },
+      deepseek: {
+        input: ["high", "none", "xhigh"],
+        output: ["none", "high", "xhigh"],
+      },
+    }
+    const result = Object.fromEntries(
+      Object.entries(cases).map(([id, sample]) => {
+        const provider = makeProvider(id, id, ["model"])
+        provider.models.model!.variants = Object.fromEntries(sample.input.map((name) => [name, { name }]))
+        const model = flattenModels({ [id]: provider })[0]!
+        return [id, Object.keys(model.variants ?? {})]
+      }),
+    )
+
+    expect(result).toEqual(Object.fromEntries(Object.entries(cases).map(([id, sample]) => [id, sample.output])))
+  })
+
+  it("orders cloud toggle and mixed reasoning variants", () => {
+    const cases = {
+      binary: {
+        input: ["thinking", "instant"],
+        output: ["instant", "thinking"],
+      },
+      thinkingOnly: {
+        input: ["thinking"],
+        output: ["thinking"],
+      },
+      mercury: {
+        input: ["low", "high", "instant", "medium"],
+        output: ["instant", "low", "medium", "high"],
+      },
+    }
+    const result = Object.fromEntries(
+      Object.entries(cases).map(([id, sample]) => {
+        const provider = makeProvider(id, id, ["model"])
+        provider.models.model!.variants = Object.fromEntries(sample.input.map((name) => [name, { name }]))
+        const model = flattenModels({ [id]: provider })[0]!
+        return [id, Object.keys(model.variants ?? {})]
+      }),
+    )
+
+    expect(result).toEqual(Object.fromEntries(Object.entries(cases).map(([id, sample]) => [id, sample.output])))
+  })
+
+  it("preserves provider order when variants include custom names", () => {
+    const provider = makeProvider("custom", "Custom", ["model"])
+    provider.models.model!.variants = {
+      high: { reasoningEffort: "high" },
+      turbo: { reasoningEffort: "high" },
+      low: { reasoningEffort: "low" },
+    }
+
+    const model = flattenModels({ custom: provider })[0]!
+
+    expect(Object.keys(model.variants ?? {})).toEqual(["high", "turbo", "low"])
+  })
 })
 
 describe("findModel", () => {
