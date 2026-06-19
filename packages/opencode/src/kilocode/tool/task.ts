@@ -10,9 +10,25 @@ import type { Session } from "../../session/session"
 import type { Agent } from "../../agent/agent"
 import type { Config } from "../../config/config"
 import { Provider } from "../../provider/provider"
+import { REVIEWER_AGENT } from "@/kilocode/agent"
+import { Wildcard } from "@/util/wildcard"
 import z from "zod"
 
 const log = Log.create({ service: "kilocode-task-model" })
+
+const restricted = [
+  "read",
+  "grep",
+  "glob",
+  "list",
+  "skill",
+  "webfetch",
+  "websearch",
+  "codebase_search",
+  "semantic_search",
+  "external_directory",
+  "suggest",
+]
 
 // RATIONALE: Mirror narrow state slice Task tool consumes and ignore unrelated TUI fields.
 const ModelState = z
@@ -36,15 +52,15 @@ export namespace KiloTask {
     if (info.mode === "primary") throw new Error(`Agent "${name}" is a primary agent and cannot be used as a subagent`)
   }
 
-  /** Kilo keeps delegation one level deep to avoid recursive subagent chains. */
-  export function nestedTask(): false {
-    return false
+  /** Kilo keeps delegation one level deep except for Reviewer -> Explore. */
+  export function nestedTask(name: string) {
+    return name === REVIEWER_AGENT
   }
 
   /**
    * Build inherited permission rules from the calling agent.
    * Merges the static agent definition with the session's accumulated permissions
-   * so restrictions survive multi-hop chains (plan → general → explore).
+   * so concrete restrictions survive multi-hop chains (plan → general → explore).
    *
    * The caller must resolve `caller` (Agent.Info) and `session` (Session.Info)
    * before calling — this function is pure/synchronous.
@@ -54,18 +70,28 @@ export namespace KiloTask {
     session: Session.Info
     mcp: Config.Info["mcp"]
   }): Permission.Ruleset {
-    const rules = Permission.merge(input.caller.permission ?? [], input.session.permission ?? [])
     const prefixes = Object.keys(input.mcp ?? {}).map((k) => k.replace(/[^a-zA-Z0-9_-]/g, "_") + "_")
     const isMcp = (p: string) => prefixes.some((prefix) => p.startsWith(prefix))
-    return rules.filter(
-      (r: Permission.Rule) => r.permission === "edit" || r.permission === "bash" || isMcp(r.permission),
-    )
+    const isRestricted = (p: string) => restricted.some((tool) => Wildcard.match(tool, p))
+    const keep = (rule: Permission.Rule, session: boolean) => {
+      if (rule.permission === "*") return session && rule.action !== "allow"
+      if (rule.permission === "bash") return session ? rule.action !== "allow" : true
+      if (rule.permission === "edit") return rule.action !== "allow"
+      if (rule.permission === "external_directory") return true
+      if (isMcp(rule.permission)) return true
+      if (!isRestricted(rule.permission)) return false
+      return rule.action !== "allow"
+    }
+    return [
+      ...(input.caller.permission ?? []).filter((rule) => keep(rule, false)),
+      ...(input.session.permission ?? []).filter((rule) => keep(rule, true)),
+    ]
   }
 
   /** Extra permission rules appended to subagent sessions */
-  export function permissions(rules: Permission.Ruleset): Permission.Ruleset {
+  export function permissions(rules: Permission.Ruleset, canTask: boolean): Permission.Ruleset {
     return [
-      { permission: "task", pattern: "*", action: "deny" },
+      ...(canTask ? [] : [{ permission: "task" as const, pattern: "*" as const, action: "deny" as const }]),
       { permission: "question", pattern: "*", action: "deny" },
       ...rules,
     ]

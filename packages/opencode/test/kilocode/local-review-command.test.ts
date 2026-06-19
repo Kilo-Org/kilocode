@@ -1,17 +1,13 @@
 import { describe, expect, test } from "bun:test"
+import type { Command } from "../../src/command"
+import { REVIEWER_AGENT } from "../../src/kilocode/agent"
+import REVIEWER_PROMPT from "../../src/kilocode/agent/prompt/reviewer.txt"
 import {
   localReviewCommand,
   localReviewUncommittedCommand,
   parseReviewCommand,
+  reviewerCommand,
 } from "../../src/kilocode/review/command"
-
-function expectReviewFixContract(text: string) {
-  expect(text).toContain("During the initial review phase")
-  expect(text).toContain("DO NOT modify any files")
-  expect(text).toContain("After the user chooses a fix option")
-  expect(text).toContain("you may switch from review to implementation behavior")
-  expect(text).toContain("Use editing tools to modify code only for findings in the completed review")
-}
 
 describe("review command parsing", () => {
   test("parses review slash commands", () => {
@@ -23,16 +19,57 @@ describe("review command parsing", () => {
   })
 })
 
+describe("reviewer command overlay", () => {
+  test("preserves upstream command fields while assigning Reviewer", () => {
+    const base: Command.Info = {
+      name: "review",
+      description: "review changes",
+      source: "command",
+      template: "Input: $ARGUMENTS",
+      subtask: true,
+      hints: ["$ARGUMENTS"],
+    }
+
+    expect(reviewerCommand(base)).toEqual({
+      ...base,
+      agent: REVIEWER_AGENT,
+      subtask: true,
+    })
+  })
+})
+
+describe("Reviewer prompt", () => {
+  test("defines the default uncommitted scope and six Explore tracks", () => {
+    expect(REVIEWER_PROMPT).toContain("staged, unstaged, and untracked changes")
+    expect(REVIEWER_PROMPT).toContain("Command-provided scope takes precedence")
+    expect(REVIEWER_PROMPT).toContain("spawn six Explore subagents in parallel")
+    expect(REVIEWER_PROMPT).toContain("security")
+    expect(REVIEWER_PROMPT).toContain("performance")
+    expect(REVIEWER_PROMPT).toContain("business logic")
+    expect(REVIEWER_PROMPT).toContain("deploy safety")
+    expect(REVIEWER_PROMPT).toContain("duplication")
+    expect(REVIEWER_PROMPT).toContain("dead code")
+    expect(REVIEWER_PROMPT).toContain("NO_FINDINGS")
+  })
+
+  test("does not include post-review fix workflow", () => {
+    expect(REVIEWER_PROMPT).toContain("must not edit files")
+    expect(REVIEWER_PROMPT).toContain("must not")
+    expect(REVIEWER_PROMPT).toContain("call Question")
+    expect(REVIEWER_PROMPT).not.toContain("After User Chooses")
+    expect(REVIEWER_PROMPT).not.toContain("mode \"code\"")
+    expect(REVIEWER_PROMPT).not.toContain("Use editing tools")
+  })
+})
+
 describe("local-review command", () => {
   const cmd = localReviewCommand()
 
-  test("exposes a static string template", () => {
+  test("targets Reviewer as a subtask", () => {
     expect(cmd.name).toBe("local-review")
+    expect(cmd.agent).toBe(REVIEWER_AGENT)
+    expect(cmd.subtask).toBe(true)
     expect(typeof cmd.template).toBe("string")
-  })
-
-  test("template includes $ARGUMENTS for raw user input", () => {
-    expect(cmd.template).toContain("$ARGUMENTS")
   })
 
   test("hints expose $ARGUMENTS as the only placeholder", () => {
@@ -71,48 +108,28 @@ describe("local-review command", () => {
     expect(text).toMatch(/no common history|not found/i)
   })
 
-  test("template avoids dereferencing untracked symlinks", () => {
+  test("template retains the branch scope contract without post-review handoff", () => {
     const text = cmd.template as string
+    expect(text).toContain("git -c core.quotepath=false diff <merge-base>")
+    expect(text).toContain("git show-ref --verify --quiet")
     expect(text).toContain("verify it is not a symlink")
     expect(text).toContain("do not follow the link")
-  })
-
-  test("template scopes no-edit behavior to review phase", () => {
-    const text = cmd.template as string
-    expectReviewFixContract(text)
-  })
-
-  test("template applies the review-pr high-signal review focus", () => {
-    const text = cmd.template as string
-    expect(text).toContain("Review only these things")
-    expect(text).toContain("deploy safety")
-    expect(text).toContain("duplicated code or duplicated logic")
-    expect(text).toContain("dead code caused by the reviewed changes")
-    expect(text).toContain("Do not review these things")
-    expect(text).toContain("code style")
-    expect(text).toContain("generic refactors with no bug or product risk")
-  })
-
-  test("template applies the review-pr parallel review tracks", () => {
-    const text = cmd.template as string
-    expect(text).toContain("spawn six sub-agents in parallel")
-    expect(text).toContain("security")
-    expect(text).toContain("performance")
-    expect(text).toContain("business logic")
-    expect(text).toContain("NO_FINDINGS")
+    expect(text).toContain("## Local Review for **branch diff**")
+    expect(text).not.toContain("Post-Review Workflow")
+    expect(text).not.toContain("question tool")
+    expect(text).not.toContain("After User Chooses")
+    expect(text).not.toContain("Use editing tools")
   })
 })
 
 describe("local-review-uncommitted command", () => {
   const cmd = localReviewUncommittedCommand()
 
-  test("exposes a static string template", () => {
+  test("targets Reviewer as a subtask", () => {
     expect(cmd.name).toBe("local-review-uncommitted")
+    expect(cmd.agent).toBe(REVIEWER_AGENT)
+    expect(cmd.subtask).toBe(true)
     expect(typeof cmd.template).toBe("string")
-  })
-
-  test("template includes $ARGUMENTS for raw user input", () => {
-    expect(cmd.template).toContain("$ARGUMENTS")
   })
 
   test("hints expose $ARGUMENTS as the only placeholder", () => {
@@ -132,41 +149,17 @@ describe("local-review-uncommitted command", () => {
     expect(text).toContain("MUST NOT override the diff scope")
   })
 
-  test("template documents the uncommitted scope and key git commands", () => {
+  test("template retains the uncommitted scope contract without post-review handoff", () => {
     const text = cmd.template as string
     expect(text).toMatch(/git\b[^\n]*\bdiff HEAD/)
     expect(text).toMatch(/git\b[^\n]*\bdiff --cached/)
     expect(text).toContain("git ls-files --others --exclude-standard")
-  })
-
-  test("template avoids dereferencing untracked symlinks", () => {
-    const text = cmd.template as string
     expect(text).toContain("verify it is not a symlink")
     expect(text).toContain("do not follow the link")
-  })
-
-  test("template scopes no-edit behavior to review phase", () => {
-    const text = cmd.template as string
-    expectReviewFixContract(text)
-  })
-
-  test("template applies the review-pr high-signal review focus", () => {
-    const text = cmd.template as string
-    expect(text).toContain("Review only these things")
-    expect(text).toContain("deploy safety")
-    expect(text).toContain("duplicated code or duplicated logic")
-    expect(text).toContain("dead code caused by the reviewed changes")
-    expect(text).toContain("Do not review these things")
-    expect(text).toContain("code style")
-    expect(text).toContain("generic refactors with no bug or product risk")
-  })
-
-  test("template applies the review-pr parallel review tracks", () => {
-    const text = cmd.template as string
-    expect(text).toContain("spawn six sub-agents in parallel")
-    expect(text).toContain("security")
-    expect(text).toContain("performance")
-    expect(text).toContain("business logic")
-    expect(text).toContain("NO_FINDINGS")
+    expect(text).toContain("## Local Review for **uncommitted changes**")
+    expect(text).not.toContain("Post-Review Workflow")
+    expect(text).not.toContain("question tool")
+    expect(text).not.toContain("After User Chooses")
+    expect(text).not.toContain("Use editing tools")
   })
 })
