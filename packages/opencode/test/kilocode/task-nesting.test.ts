@@ -248,9 +248,11 @@ describe("Kilo task nesting", () => {
             { permission: "task", pattern: "*", action: "deny" },
             { permission: "question", pattern: "*", action: "deny" },
             { permission: "edit", pattern: "*", action: "deny" },
+            { permission: "suggest", pattern: "*", action: "deny" },
           ]),
         )
         expect(Permission.evaluate("edit", "src/file.ts", explore.permission ?? []).action).toBe("deny")
+        expect(Permission.evaluate("suggest", "*", explore.permission ?? []).action).toBe("deny")
         expect(Permission.evaluate("bash", "git commit -m test", explore.permission ?? []).action).toBe("deny")
         expect(Permission.evaluate("bash", "git merge-base HEAD main", explore.permission ?? []).action).toBe("allow")
       }),
@@ -313,6 +315,7 @@ describe("Kilo task nesting", () => {
           expect(Permission.evaluate("glob", "*", rules).action).toBe("deny")
           expect(Permission.evaluate("webfetch", "*", rules).action).toBe("deny")
           expect(Permission.evaluate("skill", "*", rules).action).toBe("ask")
+          expect(Permission.evaluate("suggest", "*", rules).action).toBe("deny")
           expect(Permission.evaluate("external_directory", "/tmp/private", rules).action).toBe("deny")
           expect(Permission.evaluate("external_directory", "/tmp/review-cache", rules).action).toBe("allow")
           expect(Permission.evaluate("bash", "git commit -m test", rules).action).toBe("deny")
@@ -326,6 +329,7 @@ describe("Kilo task nesting", () => {
             grep: "ask",
             glob: "deny",
             webfetch: "deny",
+            suggest: "allow",
             skill: "ask",
             external_directory: {
               "*": "deny",

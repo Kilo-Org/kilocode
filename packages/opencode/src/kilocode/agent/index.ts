@@ -141,24 +141,30 @@ export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
 }
 
 export const reviewerBash: Record<string, "allow" | "ask" | "deny"> = {
-  ...readBash,
-  "git merge-base *": "allow",
-  "git show-ref *": "allow",
+  "*": "deny",
+  "test -L *": "allow",
+  "readlink *": "allow",
+  "git -c core.quotepath=false diff": "allow",
   "git -c core.quotepath=false diff *": "allow",
+  "git ls-files --others --exclude-standard": "allow",
+  "git log *..HEAD --oneline": "allow",
+  "git merge-base HEAD *": "allow",
+  "git rev-parse --abbrev-ref HEAD": "allow",
+  "git show-ref --verify --quiet refs/heads/*": "allow",
+  "git show-ref --verify --quiet refs/remotes/*": "allow",
+  "git status --short": "allow",
   "gh pr view *": "allow",
   "gh pr diff *": "allow",
-  "git diff --output*": "deny",
-  "git diff * --output*": "deny",
-  "git -c core.quotepath=false diff --output*": "deny",
-  "git -c core.quotepath=false diff * --output*": "deny",
-  "git diff --ext-diff*": "deny",
-  "git diff * --ext-diff*": "deny",
-  "git -c core.quotepath=false diff --ext-diff*": "deny",
-  "git -c core.quotepath=false diff * --ext-diff*": "deny",
-  "git diff --output-indicator*": "deny",
-  "git diff * --output-indicator*": "deny",
-  "git -c core.quotepath=false diff --output-indicator*": "deny",
-  "git -c core.quotepath=false diff * --output-indicator*": "deny",
+  "git --output*": "deny",
+  "git * --output*": "deny",
+  "git * -o *": "deny",
+  "git * -o*": "deny",
+  "git --ext-diff*": "deny",
+  "git * --ext-diff*": "deny",
+  "git --output-indicator*": "deny",
+  "git * --output-indicator*": "deny",
+  "gh pr view --web*": "deny",
+  "gh pr view * --web*": "deny",
   ...shellDenyBash,
 }
 
@@ -293,19 +299,6 @@ const reviewerTools = [
   "suggest",
 ]
 
-const reviewerSafe = new Set([
-  "read",
-  "grep",
-  "glob",
-  "list",
-  "skill",
-  "webfetch",
-  "websearch",
-  "codebase_search",
-  "semantic_search",
-  "external_directory",
-])
-
 function reviewerUser(user: Permission.Ruleset, guard: Permission.Ruleset) {
   return user.flatMap((rule) => {
     const tools = reviewerTools.filter((tool) => Wildcard.match(tool, rule.permission))
@@ -316,9 +309,9 @@ function reviewerUser(user: Permission.Ruleset, guard: Permission.Ruleset) {
         .filter((tool) => rule.action === "deny" || Permission.evaluate(tool, rule.pattern, guard).action === "allow")
         .map((permission) => ({ ...rule, permission }))
     }
-    if (tools.every((tool) => reviewerSafe.has(tool))) return [rule]
+    if (rule.action === "allow") return []
     if (rule.action === "deny") return [rule]
-    if (tools.every((tool) => Permission.evaluate(tool, rule.pattern, guard).action === "allow")) return [rule]
+    if (tools.every((tool) => Permission.evaluate(tool, rule.pattern, guard).action !== "deny")) return [rule]
     return []
   })
 }

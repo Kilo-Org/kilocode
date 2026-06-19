@@ -94,16 +94,33 @@ describe("Reviewer agent", () => {
         expect(Permission.evaluate("list", "*", rules).action).toBe("allow")
         expect(Permission.evaluate("skill", "*", rules).action).toBe("allow")
         expect(Permission.evaluate("bash", "git merge-base HEAD main", rules).action).toBe("allow")
-        expect(Permission.evaluate("bash", "git show-ref --verify --quiet refs/heads/main", rules).action).toBe(
+        expect(Permission.evaluate("bash", "git show-ref --verify --quiet refs/heads/main", rules).action).toBe("allow")
+        expect(Permission.evaluate("bash", "git show-ref --verify --quiet refs/remotes/origin/main", rules).action).toBe(
           "allow",
         )
         expect(Permission.evaluate("bash", "git -c core.quotepath=false diff HEAD", rules).action).toBe("allow")
+        expect(Permission.evaluate("bash", "git -c core.quotepath=false diff", rules).action).toBe("allow")
+        expect(Permission.evaluate("bash", "git ls-files --others --exclude-standard", rules).action).toBe("allow")
+        expect(Permission.evaluate("bash", "git log origin/main..HEAD --oneline", rules).action).toBe("allow")
+        expect(Permission.evaluate("bash", "git rev-parse --abbrev-ref HEAD", rules).action).toBe("allow")
+        expect(Permission.evaluate("bash", "git status --short", rules).action).toBe("allow")
+        expect(Permission.evaluate("bash", "test -L src/index.ts", rules).action).toBe("allow")
+        expect(Permission.evaluate("bash", "readlink src/link", rules).action).toBe("allow")
         expect(Permission.evaluate("bash", "gh pr view 123", rules).action).toBe("allow")
         expect(Permission.evaluate("bash", "gh pr diff 123", rules).action).toBe("allow")
 
+        expect(Permission.evaluate("bash", "cat .env", rules).action).toBe("deny")
+        expect(Permission.evaluate("bash", "printenv PATH", rules).action).toBe("deny")
+        expect(Permission.evaluate("bash", "grep secret .env", rules).action).toBe("deny")
         expect(Permission.evaluate("bash", "git commit -m test", rules).action).toBe("deny")
         expect(Permission.evaluate("bash", "git diff --output=out.patch HEAD", rules).action).toBe("deny")
+        expect(Permission.evaluate("bash", "git show --output=out.patch HEAD", rules).action).toBe("deny")
+        expect(Permission.evaluate("bash", "git show HEAD:.env", rules).action).toBe("deny")
+        expect(Permission.evaluate("bash", "git log -p -- .env", rules).action).toBe("deny")
         expect(Permission.evaluate("bash", "git -c core.quotepath=false diff HEAD --output=out.patch", rules).action).toBe(
+          "deny",
+        )
+        expect(Permission.evaluate("bash", "git -c core.quotepath=false diff HEAD --ext-diff", rules).action).toBe(
           "deny",
         )
         expect(Permission.evaluate("edit", "src/index.ts", rules).action).toBe("deny")
@@ -123,6 +140,7 @@ describe("Reviewer agent", () => {
         permission: {
           "*": "allow",
           bash: "allow",
+          read: "allow",
           edit: "allow",
           question: "allow",
           suggest: "allow",
@@ -145,8 +163,12 @@ describe("Reviewer agent", () => {
 
         expect(Permission.evaluate("webfetch", "*", rules).action).toBe("deny")
         expect(Permission.evaluate("skill", "*", rules).action).toBe("ask")
+        expect(Permission.evaluate("read", "src/index.ts", rules).action).toBe("allow")
+        expect(Permission.evaluate("read", ".env", rules).action).toBe("ask")
+        expect(Permission.evaluate("read", ".env.local", rules).action).toBe("ask")
+        expect(Permission.evaluate("read", ".env.example", rules).action).toBe("allow")
         expect(Permission.evaluate("external_directory", "/tmp/private", rules).action).toBe("deny")
-        expect(Permission.evaluate("external_directory", "/tmp/review-cache", rules).action).toBe("allow")
+        expect(Permission.evaluate("external_directory", "/tmp/review-cache", rules).action).toBe("deny")
 
         expect(Permission.evaluate("bash", "git commit -m test", rules).action).toBe("deny")
         expect(Permission.evaluate("edit", "src/index.ts", rules).action).toBe("deny")

@@ -27,6 +27,7 @@ const restricted = [
   "codebase_search",
   "semantic_search",
   "external_directory",
+  "suggest",
 ]
 
 // RATIONALE: Mirror narrow state slice Task tool consumes and ignore unrelated TUI fields.
