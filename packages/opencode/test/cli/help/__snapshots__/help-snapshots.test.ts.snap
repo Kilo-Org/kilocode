@@ -115,6 +115,8 @@ Options:
                                       (dangerous!)                        [boolean] [default: false]
       --auto                          auto-approve all permissions (for autonomous/pipeline usage)
                                                                           [boolean] [default: false]
+      --auto-approve, --yolo          allow tools to run without permission prompts
+                                                                          [boolean] [default: false]
       --demo                          enable direct interactive demo slash commands; pass one as the
                                       message to run it immediately       [boolean] [default: false]"
 `;
