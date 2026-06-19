@@ -27,6 +27,9 @@ export function ProvidersRoute() {
           description="Credentials and endpoints for upstream model providers. Each provider exposes one or more models."
           actions={
             <>
+              <Button variant="secondary" disabled={Boolean(state.ctx.saving())} onClick={state.reload}>
+                Reload models
+              </Button>
               <Button
                 icon="plus"
                 variant="primary"

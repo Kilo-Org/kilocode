@@ -2,7 +2,7 @@ import { createMemo, createSignal } from "solid-js"
 import type { Provider, ProviderAuthAuthorization, ProviderAuthMethod, ProviderConfig } from "@kilocode/sdk/v2/client"
 import { useConfig } from "../../../context/config"
 import { clean, csv, errMsg } from "../../../shared/utils"
-import { authorizeProvider, completeProvider, connectProvider } from "../../../client"
+import { authorizeProvider, completeProvider, connectProvider, reloadModels } from "../../../client"
 
 const priority = ["kilo", "anthropic", "github-copilot", "openai", "google", "openrouter", "vercel"]
 const pattern = /^[a-z0-9][a-z0-9-_]*$/
@@ -230,6 +230,10 @@ export function useProviderSettings() {
     if (list.length === 1) selectMethod(0, providerID)
   }
 
+  function reload() {
+    ctx.run("Reloading models", () => reloadModels(ctx.target()))
+  }
+
   function add() {
     setEditing(undefined)
     setFilter("")
@@ -415,6 +419,7 @@ export function useProviderSettings() {
     models,
     setModels,
     pending,
+    reload,
     add,
     close,
     pick,

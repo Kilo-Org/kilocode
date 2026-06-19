@@ -158,6 +158,8 @@ import type {
   KiloEditResponses,
   KiloFimErrors,
   KiloFimResponses,
+  KiloModelsRefreshErrors,
+  KiloModelsRefreshResponses,
   KiloModesErrors,
   KiloModesResponses,
   KiloNotificationsErrors,
@@ -6436,6 +6438,38 @@ export class Audio extends HeyApiClient {
   }
 }
 
+export class Models extends HeyApiClient {
+  /**
+   * Reload provider models
+   *
+   * Reload model catalogs from models.dev and Kilo Gateway
+   */
+  public refresh<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<KiloModelsRefreshResponses, KiloModelsRefreshErrors, ThrowOnError>({
+      url: "/kilo/models/refresh",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Organization extends HeyApiClient {
   /**
    * Update Kilo Gateway organization
@@ -6892,6 +6926,11 @@ export class Kilo extends HeyApiClient {
   private _audio?: Audio
   get audio(): Audio {
     return (this._audio ??= new Audio({ client: this.client }))
+  }
+
+  private _models?: Models
+  get models(): Models {
+    return (this._models ??= new Models({ client: this.client }))
   }
 
   private _organization?: Organization

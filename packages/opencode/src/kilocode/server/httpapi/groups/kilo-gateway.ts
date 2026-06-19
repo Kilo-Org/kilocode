@@ -251,6 +251,7 @@ export const KiloGatewayPaths = {
   edit: `${root}/edit`,
   audioTranscriptions: `${root}/audio/transcriptions`,
   notifications: `${root}/notifications`,
+  modelsRefresh: `${root}/models/refresh`,
   organization: `${root}/organization`,
   clawStatus: `${root}/claw/status`,
   clawChatCredentials: `${root}/claw/chat-credentials`,
@@ -342,6 +343,17 @@ export const KiloGatewayApi = HttpApi.make("kilo")
             identifier: "kilo.notifications",
             summary: "Get Kilo notifications",
             description: "Fetch notifications from Kilo Gateway for CLI display",
+          }),
+        ),
+        HttpApiEndpoint.post("modelsRefresh", KiloGatewayPaths.modelsRefresh, {
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Boolean, "Model catalogs reloaded"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilo.models.refresh",
+            summary: "Reload provider models",
+            description: "Reload model catalogs from models.dev and Kilo Gateway",
           }),
         ),
         HttpApiEndpoint.post("organization", KiloGatewayPaths.organization, {

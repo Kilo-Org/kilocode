@@ -35,6 +35,8 @@ import { Identifier } from "@/id/id"
 import { Instance } from "@/kilocode/instance"
 import { InstanceStore } from "@/project/instance-store"
 import { ModelCache } from "@/provider/model-cache"
+import { ModelsDev } from "@/provider/models"
+import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { MessageTable, PartTable, SessionTable } from "@/session/session.sql"
 import { Session } from "@/session/session"
@@ -60,6 +62,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     const auth = yield* Auth.Service
     const store = yield* InstanceStore.Service
     const cache = yield* ModelCache.Service
+    const models = yield* ModelsDev.Service
 
     const profile = Effect.fn("KiloGatewayHttpApi.profile")(function* () {
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
@@ -318,6 +321,11 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       )
     })
 
+    const modelsRefresh = Effect.fn("KiloGatewayHttpApi.modelsRefresh")(function* () {
+      yield* ModelsRefresh.refresh(models, cache).pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
+      return true
+    })
+
     const organization = Effect.fn("KiloGatewayHttpApi.organization")(function* (ctx) {
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
       if (!info || info.type !== "oauth") return yield* Effect.fail(new HttpApiError.Unauthorized({}))
@@ -517,6 +525,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       .handle("edit", edit)
       .handle("audioTranscriptions", audioTranscriptions)
       .handle("notifications", notifications)
+      .handle("modelsRefresh", modelsRefresh)
       .handle("organization", organization)
       .handle("clawStatus", clawStatus)
       .handle("clawChatCredentials", clawChatCredentials)

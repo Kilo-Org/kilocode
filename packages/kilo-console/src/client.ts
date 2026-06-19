@@ -415,6 +415,10 @@ export async function loadEmbeddingModels(input: Query): Promise<KiloEmbeddingMo
   return demand("Kilo embedding models", await client(input).indexing.models())
 }
 
+export async function reloadModels(input: Query) {
+  demand("Reload provider models", await client(input).kilo.models.refresh())
+}
+
 export async function loadKiloProfile(input: ProjectQuery): Promise<KiloProfileData> {
   const sdk = client(input)
   const result = await sdk.kilo.profile(directory(input))

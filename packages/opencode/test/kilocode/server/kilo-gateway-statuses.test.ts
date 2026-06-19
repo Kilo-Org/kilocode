@@ -8,6 +8,7 @@ import { KiloGatewayApi, KiloGatewayPaths } from "../../../src/kilocode/server/h
 import { kiloGatewayHandlers } from "../../../src/kilocode/server/httpapi/handlers/kilo-gateway"
 import { InstanceStore } from "../../../src/project/instance-store"
 import { ModelCache } from "../../../src/provider/model-cache"
+import { ModelsDev } from "../../../src/provider/models"
 import { Session } from "../../../src/session/session"
 import { Authorization } from "../../../src/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "../../../src/server/routes/instance/httpapi/middleware/instance-context"
@@ -24,6 +25,7 @@ const auth = Layer.mock(Auth.Service)({
 })
 const store = Layer.mock(InstanceStore.Service)({})
 const cache = Layer.mock(ModelCache.Service)({})
+const models = Layer.mock(ModelsDev.Service)({})
 const session = Layer.mock(Session.Service)({})
 const passthroughAuthorization = Layer.succeed(
   Authorization,
@@ -50,6 +52,7 @@ const layer = HttpRouter.serve(
       auth,
       store,
       cache,
+      models,
       session,
     ]),
   ),
