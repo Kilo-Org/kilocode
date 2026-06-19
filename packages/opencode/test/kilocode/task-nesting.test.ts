@@ -257,6 +257,86 @@ describe("Kilo task nesting", () => {
     ),
   )
 
+  it.live("carries reviewer restrictions into Explore", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const { chat, assistant } = yield* seed()
+          const tool = yield* TaskTool
+          const def = yield* tool.init()
+          const promptOps = stubOps()
+
+          const review = yield* def.execute(
+            {
+              description: "review changes",
+              prompt: "review uncommitted changes",
+              subagent_type: REVIEWER_AGENT,
+            },
+            {
+              sessionID: chat.id,
+              messageID: assistant.id,
+              agent: "build",
+              abort: new AbortController().signal,
+              extra: { promptOps },
+              messages: [],
+              metadata: () => Effect.void,
+              ask: () => Effect.void,
+            },
+          )
+
+          const reviewer = yield* sessions.get(review.metadata.sessionId)
+          const msg = yield* seedMessage({ session: reviewer, agent: REVIEWER_AGENT })
+          const result = yield* def.execute(
+            {
+              description: "security track",
+              prompt: "research the security track",
+              subagent_type: "explore",
+            },
+            {
+              sessionID: reviewer.id,
+              messageID: msg.id,
+              agent: "explore",
+              abort: new AbortController().signal,
+              extra: { promptOps },
+              messages: [],
+              metadata: () => Effect.void,
+              ask: () => Effect.void,
+            },
+          )
+
+          const explore = yield* sessions.get(result.metadata.sessionId)
+          const rules = explore.permission ?? []
+
+          expect(Permission.evaluate("read", "README.md", rules).action).toBe("deny")
+          expect(Permission.evaluate("grep", "*", rules).action).toBe("ask")
+          expect(Permission.evaluate("glob", "*", rules).action).toBe("deny")
+          expect(Permission.evaluate("webfetch", "*", rules).action).toBe("deny")
+          expect(Permission.evaluate("skill", "*", rules).action).toBe("ask")
+          expect(Permission.evaluate("external_directory", "/tmp/private", rules).action).toBe("deny")
+          expect(Permission.evaluate("external_directory", "/tmp/review-cache", rules).action).toBe("allow")
+          expect(Permission.evaluate("bash", "git commit -m test", rules).action).toBe("deny")
+          expect(rules.some((rule) => rule.permission === "*" && rule.action === "deny")).toBe(false)
+        }),
+      {
+        config: {
+          permission: {
+            bash: "allow",
+            read: "deny",
+            grep: "ask",
+            glob: "deny",
+            webfetch: "deny",
+            skill: "ask",
+            external_directory: {
+              "*": "deny",
+              "/tmp/review-cache": "allow",
+            },
+          },
+        },
+      },
+    ),
+  )
+
   it.live("allows primary agents to delegate one level to a subagent", () =>
     provideTmpdirInstance(() =>
       Effect.gen(function* () {
