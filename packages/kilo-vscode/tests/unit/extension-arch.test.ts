@@ -139,14 +139,15 @@ describe("Extension — package.json command sync", () => {
       key: "alt+.",
       mac: "alt+.",
       when: "kilo-code.new.sidebarFocus || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'",
+      args: { nativeInput: "mac-option-period" },
     })
   })
 
   it("broadcasts reasoning effort changes to the focused chat surface", () => {
     const ext = fs.readFileSync(EXTENSION_FILE, "utf-8")
-    const command = sliceBlock(ext, ext.indexOf('registerCommand("kilo-code.new.cycleReasoningEffort"'))
     const helper = sliceBlock(ext, ext.indexOf("const postChatAction"))
-    expect(command).toContain('postChatAction("cycleReasoningEffort")')
+    expect(ext).toContain('opts?.nativeInput === "mac-option-period"')
+    expect(ext).toContain('postChatAction("cycleReasoningEffort", nativeInput)')
     expect(helper).toContain("provider.postMessage")
     expect(helper).toContain("activeTabProvider()?.postMessage")
     expect(helper).toContain("agentManagerProvider.postMessage")

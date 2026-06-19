@@ -792,7 +792,10 @@
         "command": "kilo-code.new.cycleReasoningEffort",
         "key": "alt+.",
         "mac": "alt+.",
-        "when": "kilo-code.new.sidebarFocus || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
+        "when": "kilo-code.new.sidebarFocus || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'",
+        "args": {
+          "nativeInput": "mac-option-period"
+        }
       },
       {
         "command": "kilo-code.new.autocomplete.cancelSuggestions",

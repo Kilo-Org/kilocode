@@ -50,6 +50,54 @@ export function atEnd(start: number, end: number, len: number): boolean {
   return start === end && end === len
 }
 
+export interface NativeEdit {
+  before: string
+  after: string
+  start: number
+  end: number
+  pos: number
+  direction: "forward" | "backward" | "none"
+}
+
+export function optionPeriodEdit(
+  event: Pick<KeyboardEvent, "code" | "altKey" | "ctrlKey" | "metaKey" | "shiftKey" | "isComposing">,
+  value: string,
+  start: number,
+  end: number,
+  direction: "forward" | "backward" | "none",
+): NativeEdit | undefined {
+  if (event.code !== "Period" || !event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.isComposing)
+    return undefined
+  return {
+    before: value,
+    after: `${value.slice(0, start)}≥${value.slice(end)}`,
+    start,
+    end,
+    pos: start + 1,
+    direction,
+  }
+}
+
+export function matchesOptionPeriodInput(
+  edit: NativeEdit,
+  event: Pick<InputEvent, "data" | "inputType">,
+  value: string,
+  start: number,
+  end: number,
+) {
+  return (
+    event.inputType === "insertText" &&
+    event.data === "≥" &&
+    value === edit.after &&
+    start === edit.pos &&
+    end === edit.pos
+  )
+}
+
+export function canRestoreOptionPeriodEdit(edit: NativeEdit, value: string, start: number, end: number) {
+  return value === edit.after && start === edit.pos && end === edit.pos
+}
+
 export function insertSpacedText(
   text: string,
   value: string,

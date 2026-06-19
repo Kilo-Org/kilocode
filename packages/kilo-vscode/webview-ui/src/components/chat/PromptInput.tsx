@@ -42,6 +42,10 @@ import {
   insertSpacedText,
   isPromptBusy,
   isPathMention,
+  optionPeriodEdit,
+  matchesOptionPeriodInput,
+  canRestoreOptionPeriodEdit,
+  type NativeEdit,
 } from "./prompt-input-utils"
 import type { ReviewComment, SendMessageFailedMessage, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
@@ -167,6 +171,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
   let slashDropdownRef: HTMLDivElement | undefined
+  let native: (NativeEdit & { inserted: boolean; command: boolean; enhanced: string | null }) | undefined
   // Save/restore input text when switching sessions.
   // Uses `on()` to track only draftKey — avoids re-running on every keystroke.
   createEffect(
@@ -435,6 +440,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       textareaRef?.focus()
     }
 
+    if (
+      message.type === "action" &&
+      message.action === "cycleReasoningEffort" &&
+      message.nativeInput === "mac-option-period" &&
+      native
+    ) {
+      native.command = true
+      restoreNativeInput()
+    }
+
     if (message.type === "enhancePromptResult") {
       const result = message as import("../../types/messages").EnhancePromptResultMessage
       if (result.requestId === `enhance-${draftKey()}-${enhanceCounter}`) {
@@ -461,6 +476,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   onCleanup(() => {
     // Persist current draft before unmounting
     saveDraft(draftKey(), text(), reviewComments(), imageAttach.images())
+    native = undefined
     unsubAutoApprove()
     unsubscribe()
   })
@@ -508,6 +524,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const handlePaste = (e: ClipboardEvent) => {
+    native = undefined
     imageAttach.handlePaste(e)
     // After pasting text, the textarea content changes but the layout may not
     // have reflowed yet, causing the caret position to be visually out of sync.
@@ -518,22 +535,57 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     })
   }
 
-  const handleInput = (e: InputEvent) => {
-    const target = e.target as HTMLTextAreaElement
-    const val = target.value
+  const syncInput = (val: string, pos: number) => {
     setText(val)
-    preEnhanceText = null
     adjustHeight()
     syncHighlightScroll()
     history.reset()
-
-    slash.onInput(val, target.selectionStart ?? val.length)
-    mention.onInput(val, target.selectionStart ?? val.length)
+    slash.onInput(val, pos)
+    mention.onInput(val, pos)
     ghost.setMentionOpen(slash.show() || mention.showMention())
     ghost.scheduleRequest(val, textareaRef)
   }
 
+  function restoreNativeInput() {
+    const edit = native
+    const ref = textareaRef
+    if (!edit?.inserted || !edit.command || !ref || !document.hasFocus() || document.activeElement !== ref) return
+    if (!canRestoreOptionPeriodEdit(edit, ref.value, ref.selectionStart, ref.selectionEnd)) {
+      native = undefined
+      return
+    }
+    native = undefined
+    preEnhanceText = edit.enhanced
+    ref.value = edit.before
+    ref.setSelectionRange(edit.start, edit.end, edit.direction)
+    syncInput(edit.before, edit.end)
+  }
+
+  const handleInput = (e: InputEvent) => {
+    const target = e.target as HTMLTextAreaElement
+    const val = target.value
+    const edit = native
+    const matches =
+      edit &&
+      matchesOptionPeriodInput(edit, e, val, target.selectionStart ?? val.length, target.selectionEnd ?? val.length)
+    if (!matches) native = undefined
+    if (matches) {
+      edit.inserted = true
+      if (edit.command) {
+        restoreNativeInput()
+        return
+      }
+    }
+    preEnhanceText = null
+    syncInput(val, target.selectionStart ?? val.length)
+  }
+
   const handleKeyDown = (e: KeyboardEvent) => {
+    const ref = textareaRef
+    const edit = ref
+      ? optionPeriodEdit(e, ref.value, ref.selectionStart, ref.selectionEnd, ref.selectionDirection)
+      : undefined
+    native = edit ? { ...edit, inserted: false, command: false, enhanced: preEnhanceText } : undefined
     // Undo enhanced prompt with Ctrl+Z / ⌘Z
     if (e.key === "z" && (e.metaKey || e.ctrlKey) && !e.shiftKey && preEnhanceText !== null) {
       e.preventDefault()
@@ -981,9 +1033,15 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             onKeyDown={handleKeyDown}
             onKeyUp={syncGhost}
             onPaste={handlePaste}
+            onCompositionStart={() => {
+              native = undefined
+            }}
             onClick={syncGhost}
             onFocus={syncGhost}
-            onBlur={syncGhost}
+            onBlur={() => {
+              native = undefined
+              syncGhost()
+            }}
             onSelect={() => {
               syncGhost()
               if (textareaRef) mention.snapSelection(textareaRef)

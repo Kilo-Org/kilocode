@@ -10,6 +10,9 @@ import {
   isSuggesting,
   isQuestioning,
   isPathMention,
+  optionPeriodEdit,
+  matchesOptionPeriodInput,
+  canRestoreOptionPeriodEdit,
 } from "../../webview-ui/src/components/chat/prompt-input-utils"
 
 describe("fileName", () => {
@@ -149,6 +152,61 @@ describe("atEnd", () => {
 
   it("returns false when caret is at start of non-empty input", () => {
     expect(atEnd(0, 0, 10)).toBe(false)
+  })
+})
+
+describe("Option+Period input", () => {
+  const key = {
+    code: "Period",
+    altKey: true,
+    ctrlKey: false,
+    metaKey: false,
+    shiftKey: false,
+    isComposing: false,
+  }
+
+  it("records the exact native edit at the caret", () => {
+    expect(optionPeriodEdit(key, "hello", 2, 2, "none")).toEqual({
+      before: "hello",
+      after: "he≥llo",
+      start: 2,
+      end: 2,
+      pos: 3,
+      direction: "none",
+    })
+  })
+
+  it("records replacement of selected text", () => {
+    expect(optionPeriodEdit(key, "hello", 1, 4, "backward")).toEqual({
+      before: "hello",
+      after: "h≥o",
+      start: 1,
+      end: 4,
+      pos: 2,
+      direction: "backward",
+    })
+  })
+
+  it("rejects modified, composing, and non-period keys", () => {
+    expect(optionPeriodEdit({ ...key, code: "Comma" }, "", 0, 0, "none")).toBeUndefined()
+    expect(optionPeriodEdit({ ...key, ctrlKey: true }, "", 0, 0, "none")).toBeUndefined()
+    expect(optionPeriodEdit({ ...key, metaKey: true }, "", 0, 0, "none")).toBeUndefined()
+    expect(optionPeriodEdit({ ...key, shiftKey: true }, "", 0, 0, "none")).toBeUndefined()
+    expect(optionPeriodEdit({ ...key, isComposing: true }, "", 0, 0, "none")).toBeUndefined()
+  })
+
+  it("matches only the corresponding native insertion", () => {
+    const edit = optionPeriodEdit(key, "a≥b", 3, 3, "none")!
+    expect(matchesOptionPeriodInput(edit, { inputType: "insertText", data: "≥" }, "a≥b≥", 4, 4)).toBe(true)
+    expect(matchesOptionPeriodInput(edit, { inputType: "insertFromPaste", data: "≥" }, "a≥b≥", 4, 4)).toBe(false)
+    expect(matchesOptionPeriodInput(edit, { inputType: "insertText", data: "." }, "a≥b.", 4, 4)).toBe(false)
+  })
+
+  it("restores only while the value and caret still match", () => {
+    const edit = optionPeriodEdit(key, "a≥b", 3, 3, "none")!
+    expect(canRestoreOptionPeriodEdit(edit, "a≥b≥", 4, 4)).toBe(true)
+    expect(canRestoreOptionPeriodEdit(edit, "a≥b≥x", 5, 5)).toBe(false)
+    expect(canRestoreOptionPeriodEdit(edit, "a≥b≥", 3, 3)).toBe(false)
   })
 })
 
