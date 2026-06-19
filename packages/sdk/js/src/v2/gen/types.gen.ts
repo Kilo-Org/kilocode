@@ -1620,6 +1620,7 @@ export type Model = {
   prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo" | "ling" | "gpt55"
   isFree?: boolean
   mayTrainOnYourPrompts?: boolean
+  hasUserByokAvailable?: boolean
   terminalBench?: {
     overallScore: number
     avgAttemptCostUsd: number
@@ -3158,6 +3159,7 @@ export type EventSessionTurnClose = {
   type: "session.turn.close"
   properties: {
     sessionID: string
+    parentID?: string
     reason: "completed" | "error" | "interrupted"
   }
 }

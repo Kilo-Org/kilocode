@@ -40,6 +40,7 @@ import { DialogMcp } from "@tui/component/dialog-mcp"
 import { DialogStatus } from "@tui/component/dialog-status"
 import { DialogThemeList } from "@tui/component/dialog-theme-list"
 import { DialogHelp } from "./ui/dialog-help"
+import { DialogHeadlessLink } from "@/kilocode/cli/cmd/tui/component/dialog-headless-link" // kilocode_change
 import { DialogAgent } from "@tui/component/dialog-agent"
 import { DialogSessionList } from "@tui/component/dialog-session-list"
 import { DialogConsoleOrg } from "@tui/component/dialog-console-org"
@@ -72,6 +73,7 @@ import type { RouteMap } from "@/cli/cmd/tui/plugin/api"
 import { createTuiAttention } from "@/cli/cmd/tui/attention"
 import { FormatError, FormatUnknownError } from "@/cli/error"
 import { kitty, resetTerminalState } from "@/kilocode/cli/cmd/tui/util/terminal" // kilocode_change
+import { hasDisplay } from "@/kilocode/cli/cmd/tui/util/display" // kilocode_change
 import { CommandPaletteDialog } from "./component/command-palette"
 import {
   COMMAND_PALETTE_COMMAND,
@@ -703,8 +705,14 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         name: "docs.open",
         title: "Open docs",
         run: () => {
-          open(KiloApp.DOCS_URL).catch(() => {}) // kilocode_change
+          // kilocode_change start
+          if (!hasDisplay()) {
+            DialogHeadlessLink.show(dialog, KiloApp.DOCS_URL)
+            return
+          }
+          open(KiloApp.DOCS_URL).catch(() => {})
           dialog.clear()
+          // kilocode_change end
         },
         category: "System",
       },

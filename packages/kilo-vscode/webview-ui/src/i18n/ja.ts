@@ -854,7 +854,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "カスタムプロバイダー",
   "settings.providers.connected.environmentDescription": "環境変数から接続されています",
   "settings.providers.action.signInChatGPT": "ChatGPT でサインイン",
-  "settings.providers.custom.description": "ベースURLでOpenAI互換プロバイダーを追加します。",
+  "settings.providers.custom.description": "ベース URL でカスタムプロバイダーを追加します。",
   "settings.providers.subagentModel.title": "サブエージェントモデル",
   "settings.providers.subagentModel.description":
     "task-tool サブエージェントのデフォルトモデルと推論の労力。呼び出し元のエージェントのモデルを継承する場合は未設定のままにしてください。",
@@ -862,11 +862,11 @@ export const dict = {
   "settings.models.hidePromptTraining.description":
     "プロバイダーがプロンプトを学習に使用する可能性のある Kilo Gateway モデルを非表示にします。",
   "settings.providers.modeModels": "モードごとのモデル",
-  "settings.providers.custom.note": "Base URL で OpenAI 互換プロバイダーを追加します。",
+  "settings.providers.custom.note": "Base URL でカスタムプロバイダーを追加します。",
   "settings.providers.modeModels.description":
     "特定のモードのデフォルトモデルを上書きします。設定されていない場合、グローバルデフォルトモデルが使用されます。",
   "provider.custom.title": "カスタムプロバイダー",
-  "provider.custom.description.prefix": "OpenAI互換プロバイダーを設定します。",
+  "provider.custom.description.prefix": "カスタムプロバイダーを設定します。",
   "provider.custom.description.link": "プロバイダー設定ドキュメント",
   "provider.custom.description.suffix": "を参照してください。",
   "provider.custom.field.providerID.label": "プロバイダーID",

@@ -816,7 +816,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "사용자 정의 공급자",
   "settings.providers.connected.environmentDescription": "환경 변수에서 연결됨",
   "settings.providers.action.signInChatGPT": "ChatGPT로 로그인",
-  "settings.providers.custom.description": "기본 URL로 OpenAI 호환 공급자를 추가합니다.",
+  "settings.providers.custom.description": "기본 URL로 사용자 정의 공급자를 추가합니다.",
   "settings.providers.subagentModel.title": "하위 에이전트 모델",
   "settings.providers.subagentModel.description":
     "task-tool 하위 에이전트의 기본 모델 및 추론 수준입니다. 호출하는 에이전트의 모델을 상속하려면 비워 두세요.",
@@ -824,11 +824,11 @@ export const dict = {
   "settings.models.hidePromptTraining.description":
     "제공업체가 사용자의 프롬프트를 학습에 사용할 수 있는 Kilo Gateway 모델을 숨깁니다.",
   "settings.providers.modeModels": "모드별 모델",
-  "settings.providers.custom.note": "Base URL로 OpenAI 호환 공급자를 추가합니다.",
+  "settings.providers.custom.note": "Base URL로 사용자 정의 공급자를 추가합니다.",
   "settings.providers.modeModels.description":
     "특정 모드의 기본 모델을 재정의합니다. 설정하지 않으면 전역 기본 모델이 사용됩니다.",
   "provider.custom.title": "사용자 정의 공급자",
-  "provider.custom.description.prefix": "OpenAI 호환 공급자를 구성합니다. ",
+  "provider.custom.description.prefix": "사용자 정의 공급자를 구성합니다. ",
   "provider.custom.description.link": "공급자 구성 문서",
   "provider.custom.description.suffix": "를 참조하세요.",
   "provider.custom.field.providerID.label": "공급자 ID",

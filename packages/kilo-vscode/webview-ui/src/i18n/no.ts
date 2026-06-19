@@ -825,7 +825,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Egendefinert leverandør",
   "settings.providers.connected.environmentDescription": "Koblet til fra dine miljøvariabler",
   "settings.providers.action.signInChatGPT": "Logg inn med ChatGPT",
-  "settings.providers.custom.description": "Legg til en OpenAI-kompatibel leverandør via basis-URL.",
+  "settings.providers.custom.description": "Legg til en egendefinert leverandør via basis-URL.",
   "settings.providers.subagentModel.title": "Underagentmodell",
   "settings.providers.subagentModel.description":
     "Standardmodell og resonneringsinnsats for task-tool-underagenter. La stå tom for å arve den kallende agentens modell.",
@@ -833,11 +833,11 @@ export const dict = {
   "settings.models.hidePromptTraining.description":
     "Skjul Kilo Gateway-modeller der leverandørene kan bruke ledetekstene dine til trening.",
   "settings.providers.modeModels": "Modell per modus",
-  "settings.providers.custom.note": "Legg til en OpenAI-kompatibel leverandør via basis-URL.",
+  "settings.providers.custom.note": "Legg til en egendefinert leverandør via basis-URL.",
   "settings.providers.modeModels.description":
     "Overstyr standardmodellen for bestemte moduser. Hvis ikke angitt, brukes den globale standardmodellen.",
   "provider.custom.title": "Egendefinert leverandør",
-  "provider.custom.description.prefix": "Konfigurer en OpenAI-kompatibel leverandør. Se ",
+  "provider.custom.description.prefix": "Konfigurer en egendefinert leverandør. Se ",
   "provider.custom.description.link": "dokumentasjon for leverandørkonfigurasjon",
   "provider.custom.description.suffix": ".",
   "provider.custom.field.providerID.label": "Leverandør-ID",

@@ -824,10 +824,10 @@ export const dict = {
   "settings.providers.tag.other": "Diğer",
   "settings.providers.connected.environmentDescription": "Ortam değişkenlerinizden bağlandı",
   "settings.providers.action.signInChatGPT": "ChatGPT ile oturum aç",
-  "settings.providers.custom.description": "Temel URL üzerinden OpenAI uyumlu bir sağlayıcı ekleyin.",
+  "settings.providers.custom.description": "Temel URL üzerinden özel bir sağlayıcı ekleyin.",
 
   "provider.custom.title": "Özel sağlayıcı",
-  "provider.custom.description.prefix": "OpenAI uyumlu bir sağlayıcı yapılandırın. ",
+  "provider.custom.description.prefix": "Özel bir sağlayıcı yapılandırın. ",
   "provider.custom.description.link": "Sağlayıcı yapılandırma dökümanları",
   "provider.custom.description.suffix": " sayfasına bakın.",
   "provider.custom.field.providerID.label": "Sağlayıcı kimlik",
@@ -1510,7 +1510,7 @@ export const dict = {
   "settings.providers.enabled.description":
     "Ayarlanırsa yalnızca bu sağlayıcılar kullanılabilir olacak (özel izin listesi)",
   "settings.providers.notSet": "Ayarlanmadı (sunucu varsayılanını kullan)",
-  "settings.providers.custom.note": "Temel URL üzerinden OpenAI uyumlu bir sağlayıcı ekleyin.",
+  "settings.providers.custom.note": "Temel URL üzerinden özel bir sağlayıcı ekleyin.",
   "settings.providers.search.placeholder": "Sağlayıcı ara",
   "settings.providers.select.placeholder": "Sağlayıcı seç...",
 

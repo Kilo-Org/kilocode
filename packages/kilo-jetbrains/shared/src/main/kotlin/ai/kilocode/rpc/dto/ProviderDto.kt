@@ -11,6 +11,7 @@ data class ModelDto(
     val temperature: Boolean = false,
     val toolCall: Boolean = false,
     val free: Boolean = false,
+    val byok: Boolean = false,
     val status: String? = null,
     val recommendedIndex: Double? = null,
     val variants: List<String> = emptyList(),

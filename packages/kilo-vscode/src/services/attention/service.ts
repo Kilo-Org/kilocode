@@ -20,7 +20,6 @@ export class AttentionService implements vscode.Disposable {
   private readonly errored = new Set<string>()
   private readonly questions = new Set<string>()
   private readonly permissions = new Set<string>()
-  private readonly parents = new Map<string, string | undefined>()
   private readonly unsubscribeEvent: () => void
   private readonly unsubscribeState: () => void
 
@@ -35,7 +34,6 @@ export class AttentionService implements vscode.Disposable {
     this.unsubscribeEvent()
     this.unsubscribeState()
     this.reset()
-    this.parents.clear()
   }
 
   private handle(event: SSEPayload) {
@@ -44,26 +42,20 @@ export class AttentionService implements vscode.Disposable {
       return this.question(event)
     }
     if (event.type === "permission.asked" || event.type === "permission.replied") return this.permission(event)
+    if (event.type === "session.deleted") return this.remove(event.properties.sessionID)
     if (event.type === "session.status") return this.status(event)
     if (event.type === "session.turn.close") return this.close(event)
     if (event.type === "session.error") return this.error(event)
   }
 
   private sync(event: Sync) {
-    if (event.name === "session.created.1") {
-      this.parents.set(event.data.sessionID, event.data.info.parentID)
-      return
-    }
-    if (event.name === "session.updated.1") {
-      if (event.data.info.parentID !== undefined) {
-        this.parents.set(event.data.sessionID, event.data.info.parentID ?? undefined)
-      }
-      return
-    }
     if (event.name !== "session.deleted.1") return
-    this.parents.delete(event.data.sessionID)
-    this.active.delete(event.data.sessionID)
-    this.errored.delete(event.data.sessionID)
+    this.remove(event.data.sessionID)
+  }
+
+  private remove(sessionID: string) {
+    this.active.delete(sessionID)
+    this.errored.delete(sessionID)
   }
 
   private question(event: Question) {
@@ -98,7 +90,8 @@ export class AttentionService implements vscode.Disposable {
     if (!this.active.delete(sessionID)) return
     if (this.errored.delete(sessionID)) return
     if (event.properties.reason !== "completed") return
-    this.notify(this.parents.get(sessionID) ? "subagent_done" : "done")
+    if (event.properties.parentID !== undefined) return
+    this.notify("done")
   }
 
   private error(event: Error) {

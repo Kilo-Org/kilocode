@@ -823,7 +823,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Provedor personalizado",
   "settings.providers.connected.environmentDescription": "Conectado a partir das suas variáveis de ambiente",
   "settings.providers.action.signInChatGPT": "Entrar com ChatGPT",
-  "settings.providers.custom.description": "Adicione um provedor compatível com OpenAI pela URL base.",
+  "settings.providers.custom.description": "Adicione um provedor personalizado pela URL base.",
   "settings.providers.subagentModel.title": "Modelo de Subagente",
   "settings.providers.subagentModel.description":
     "Modelo padrão e esforço de raciocínio para subagentes do task-tool. Deixe em branco para herdar o modelo do agente chamador.",
@@ -831,11 +831,11 @@ export const dict = {
   "settings.models.hidePromptTraining.description":
     "Oculte os modelos do Kilo Gateway cujos provedores podem usar seus prompts para treinamento.",
   "settings.providers.modeModels": "Modelo por Modo",
-  "settings.providers.custom.note": "Adicione um provedor compatível com OpenAI por URL base.",
+  "settings.providers.custom.note": "Adicione um provedor personalizado por URL base.",
   "settings.providers.modeModels.description":
     "Substitua o modelo padrão para modos específicos. Se não definido, o modelo padrão global é usado.",
   "provider.custom.title": "Provedor personalizado",
-  "provider.custom.description.prefix": "Configure um provedor compatível com OpenAI. Veja a ",
+  "provider.custom.description.prefix": "Configure um provedor personalizado. Veja a ",
   "provider.custom.description.link": "documentação de configuração de provedores",
   "provider.custom.description.suffix": ".",
   "provider.custom.field.providerID.label": "ID do provedor",

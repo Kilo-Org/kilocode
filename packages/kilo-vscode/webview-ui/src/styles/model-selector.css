@@ -437,6 +437,11 @@
   opacity: 0.8;
 }
 
+.model-selector-data-badge--byok [data-component="tag"] {
+  background: var(--vscode-badge-background) !important;
+  color: var(--vscode-badge-foreground) !important;
+}
+
 .model-selector-trigger-free-data {
   display: inline-flex;
   align-items: center;

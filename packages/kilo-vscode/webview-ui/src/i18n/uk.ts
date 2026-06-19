@@ -825,10 +825,10 @@ export const dict = {
   "settings.providers.tag.other": "Інші",
   "settings.providers.connected.environmentDescription": "Підключено зі змінних середовища",
   "settings.providers.action.signInChatGPT": "Увійти через ChatGPT",
-  "settings.providers.custom.description": "Додати OpenAI-сумісного провайдера через базовий URL.",
+  "settings.providers.custom.description": "Додати власного провайдера через базовий URL.",
 
   "provider.custom.title": "Власний провайдер",
-  "provider.custom.description.prefix": "Налаштувати OpenAI-сумісного провайдера. ",
+  "provider.custom.description.prefix": "Налаштувати власного провайдера. ",
   "provider.custom.description.link": "Документація щодо налаштування провайдера",
   "provider.custom.description.suffix": ".",
   "provider.custom.field.providerID.label": "Ідентифікатор провайдера",
@@ -1507,7 +1507,7 @@ export const dict = {
   "settings.providers.enabled": "Увімкнені провайдери (список дозволених)",
   "settings.providers.enabled.description": "Якщо встановлено, доступні лише ці провайдери (власний список дозволених)",
   "settings.providers.notSet": "Не встановлено (використовувати стандартний сервера)",
-  "settings.providers.custom.note": "Додати OpenAI-сумісного провайдера через базовий URL.",
+  "settings.providers.custom.note": "Додати власного провайдера через базовий URL.",
   "settings.providers.search.placeholder": "Пошук провайдера",
   "settings.providers.select.placeholder": "Вибрати провайдера...",
 

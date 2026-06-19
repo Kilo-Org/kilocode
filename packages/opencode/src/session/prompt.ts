@@ -1763,6 +1763,7 @@ export const layer = Layer.effect(
       "SessionPrompt.loop",
     )(function* (input: LoopInput) {
       // kilocode_change start
+      const session = yield* sessions.get(input.sessionID)
       yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
       yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
       yield* bus.publish(KiloSession.Event.TurnOpen, { sessionID: input.sessionID })
@@ -1775,6 +1776,7 @@ export const layer = Layer.effect(
         Effect.fnUntraced(function* (exit) {
           yield* bus.publish(KiloSession.Event.TurnClose, {
             sessionID: input.sessionID,
+            parentID: session.parentID,
             reason: KiloSessionPrompt.resolveCloseReason({
               sessionID: input.sessionID,
               closeReasons,

@@ -88,6 +88,23 @@
 
 ## [Unreleased]
 
+## [7.0.1-rc.12] - 2026-06-18
+
+### Added
+
+- Provider settings management, including searchable provider lists, API-key configuration, OAuth provider login, provider enable/disable controls, disconnect actions, and shared provider metadata.
+- Add copy controls to session messages so prompts and assistant responses can be copied directly from the transcript.
+- Share codebase indexes across worktrees so Agent Manager and worktree sessions can use semantic search without duplicating the full index.
+
+### Fixed
+
+- Keep long JetBrains prompt input usable by capping growth, preserving scrolling, and hiding soft-wrap glyphs.
+- Copy actions correctly in session.
+
+### Changed
+
+- Update the bundled CLI runtime to OpenCode 1.15.9
+
 ## [7.0.1-rc.11] - 2026-06-17
 
 ### Added

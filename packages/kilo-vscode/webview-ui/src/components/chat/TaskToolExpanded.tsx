@@ -7,7 +7,7 @@
  * Call registerExpandedTaskTool() once at app startup to activate.
  */
 
-import { Component, createEffect, createMemo, createSignal, For, Show, onCleanup } from "solid-js"
+import { Component, createEffect, createMemo, createSignal, Index, Show, onCleanup } from "solid-js"
 import { ToolRegistry, ToolProps, getToolInfo } from "@kilocode/kilo-ui/message-part"
 import { BasicTool, initialOpen } from "@kilocode/kilo-ui/basic-tool"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -141,15 +141,13 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
               </div>
             </Show>
             <Show when={result()}>{(text) => <Markdown text={text()} />}</Show>
-            <For each={childToolParts()}>
+            <Index each={childToolParts()}>
               {(item) => {
-                const info = createMemo(() => getToolInfo(item.tool, item.state?.input))
+                const info = createMemo(() => getToolInfo(item().tool, item().state?.input))
                 const subtitle = createMemo(() => {
                   if (info().subtitle) return info().subtitle
-                  const state = item.state as { status: string; title?: string }
-                  if (state.status === "completed" || state.status === "running") {
-                    return state.title
-                  }
+                  const state = item().state as { status: string; title?: string }
+                  if (state.status === "completed" || state.status === "running") return state.title
                   return undefined
                 })
                 return (
@@ -162,7 +160,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
                   </div>
                 )
               }}
-            </For>
+            </Index>
           </div>
         </div>
       </BasicTool>

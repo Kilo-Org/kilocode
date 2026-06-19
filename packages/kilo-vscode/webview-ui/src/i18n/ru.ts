@@ -862,7 +862,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Пользовательский провайдер",
   "settings.providers.connected.environmentDescription": "Подключён из ваших переменных окружения",
   "settings.providers.action.signInChatGPT": "Войти через ChatGPT",
-  "settings.providers.custom.description": "Добавьте OpenAI-совместимый провайдер по базовому URL.",
+  "settings.providers.custom.description": "Добавьте пользовательский провайдер по базовому URL.",
   "settings.providers.subagentModel.title": "Модель субагента",
   "settings.providers.subagentModel.description":
     "Модель по умолчанию и уровень рассуждения для субагентов task-tool. Оставьте пустым, чтобы унаследовать модель вызывающего агента.",
@@ -870,11 +870,11 @@ export const dict = {
   "settings.models.hidePromptTraining.description":
     "Скрывать модели Kilo Gateway, поставщики которых могут использовать ваши запросы для обучения.",
   "settings.providers.modeModels": "Модель для режима",
-  "settings.providers.custom.note": "Добавьте OpenAI-совместимого провайдера по базовому URL.",
+  "settings.providers.custom.note": "Добавьте пользовательского провайдера по базовому URL.",
   "settings.providers.modeModels.description":
     "Переопределите модель по умолчанию для определённых режимов. Если не задано, используется глобальная модель по умолчанию.",
   "provider.custom.title": "Пользовательский провайдер",
-  "provider.custom.description.prefix": "Настройте провайдер, совместимый с OpenAI. См. ",
+  "provider.custom.description.prefix": "Настройте пользовательский провайдер. См. ",
   "provider.custom.description.link": "документацию по настройке провайдера",
   "provider.custom.description.suffix": ".",
   "provider.custom.field.providerID.label": "ID провайдера",
