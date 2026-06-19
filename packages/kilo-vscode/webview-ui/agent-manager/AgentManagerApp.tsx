@@ -280,8 +280,8 @@ const AgentManagerContent: Component = () => {
   const [applySelectionTouched, setApplySelectionTouched] = createSignal(false)
 
   // Pending local tab counter for generating unique IDs
-  let pendingCounter = 0
   const PENDING_PREFIX = "pending:"
+  const closedDrafts = new Set<string>()
   const [activePendingId, setActivePendingId] = createSignal<string | undefined>()
 
   // Per-sidebar-context terminal state. `terms.activeId` holds the id
@@ -596,7 +596,7 @@ const AgentManagerContent: Component = () => {
   const appendToTabOrder = tabOrderSync.append
 
   const addPendingTab = () => {
-    const id = `${PENDING_PREFIX}${++pendingCounter}`
+    const id = `${PENDING_PREFIX}${crypto.randomUUID()}`
     setLocalSessionIDs((prev) => [...prev, id])
     appendToTabOrder(LOCAL, id)
     // Deactivate any focused terminal so the new pending session is
@@ -1143,6 +1143,7 @@ const AgentManagerContent: Component = () => {
     const unsubCreate = vscode.onMessage((msg) => {
       if (msg.type !== "sessionCreated") return
       const created = msg as SessionCreatedMessage
+      if (created.draftID && closedDrafts.delete(created.draftID)) return
       const pending = created.draftID && localSessionIDs().includes(created.draftID) ? created.draftID : undefined
       if (!pending && localSessionIDs().includes(created.session.id)) return
       if (worktreeSessionIds().has(created.session.id)) return
@@ -1159,7 +1160,11 @@ const AgentManagerContent: Component = () => {
         tabOrderSync.append(LOCAL, created.session.id)
         setSelection(LOCAL)
       }
-      vscode.postMessage({ type: "agentManager.persistSession", sessionId: created.session.id })
+      vscode.postMessage({
+        type: "agentManager.persistSession",
+        sessionId: created.session.id,
+        draftID: created.draftID,
+      })
       if (focus) session.selectSession(created.session.id)
     })
 
@@ -1942,10 +1947,9 @@ const AgentManagerContent: Component = () => {
     }
     if (pending || localSet().has(sessionId)) {
       setLocalSessionIDs((prev) => prev.filter((id) => id !== sessionId))
-      if (!pending) vscode.postMessage({ type: "agentManager.forgetSession", sessionId })
-    } else {
-      vscode.postMessage({ type: "agentManager.closeSession", sessionId })
     }
+    if (pending) closedDrafts.add(sessionId)
+    vscode.postMessage({ type: "agentManager.closeSession", sessionId })
   }
 
   const handleTabMouseDown = (sessionId: string, e: MouseEvent) => {

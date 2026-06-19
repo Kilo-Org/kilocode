@@ -38,22 +38,33 @@ function mkResult(items: unknown[]) {
   return { data: items, response: { headers: new Headers() } }
 }
 
+function mkSession(id = "created") {
+  return { id, title: "Created", time: { created: 0, updated: 0 } }
+}
+
 function createClient(options?: {
   messagesDeferred?: Deferred<{ data: unknown[]; response: { headers: Headers } }>
   messagesData?: unknown[]
   deleteDeferred?: Deferred<unknown>
   sessionData?: unknown
   sessionGet?: (params: { sessionID: string; directory?: string }) => Promise<{ data: unknown }>
+  createDeferred?: Deferred<{ data: ReturnType<typeof mkSession> }>
   abortFailures?: string[]
+  abortDeferred?: Deferred<void>
 }) {
   const calls: { before?: string; limit?: number }[] = []
   const stopped: { sessionID: string; directory?: string }[] = []
   const aborted: { sessionID: string; directory?: string }[] = []
+  const deleted: { sessionID: string; directory?: string }[] = []
+  const prompts: unknown[] = []
   return {
     calls,
     stopped,
     aborted,
+    deleted,
+    prompts,
     session: {
+      create: async () => options?.createDeferred?.promise ?? { data: mkSession() },
       list: async () => ({ data: [] }),
       get: async (params: { sessionID: string; directory?: string }) => {
         if (options?.sessionGet) return options.sessionGet(params)
@@ -63,6 +74,11 @@ function createClient(options?: {
       abort: async (params: { sessionID: string; directory?: string }) => {
         aborted.push(params)
         if (params.directory && options?.abortFailures?.includes(params.directory)) throw new Error("abort failed")
+        await options?.abortDeferred?.promise
+        return { data: true }
+      },
+      promptAsync: async (params: unknown) => {
+        prompts.push(params)
         return { data: true }
       },
       messages: async (params: { before?: string; limit?: number }) => {
@@ -70,7 +86,8 @@ function createClient(options?: {
         if (options?.messagesDeferred) return options.messagesDeferred.promise
         return mkResult(options?.messagesData ?? [])
       },
-      delete: async () => {
+      delete: async (params: { sessionID: string; directory?: string }) => {
+        deleted.push(params)
         if (options?.deleteDeferred) return options.deleteDeferred.promise
         return { data: {} }
       },
@@ -128,6 +145,9 @@ type ProviderInternals = {
   stopCurrentSessionProcesses: (next?: string) => void
   handleEvent: (event: unknown, directory?: string) => void
   handleAbort: (sid?: string) => Promise<void>
+  resolveSession: (sid?: string, draft?: string, context?: string, dir?: string) => Promise<unknown>
+  gatherEditorContext: () => Promise<Record<string, never>>
+  handleSendMessage: (text: string, messageID?: string, sid?: string, draft?: string) => Promise<void>
   handleLoadMessages: (sid: string, opts?: { mode?: string; before?: string; limit?: number }) => Promise<void>
   handleDeleteSession: (sid: string) => Promise<void>
 }
@@ -207,6 +227,87 @@ describe("KiloProvider.handleAbort", () => {
     expect(sent.at(-1)).toMatchObject({ type: "sessionStatus", sessionID: "s1", status: "busy" })
     expect(error).toHaveBeenCalledTimes(1)
     error.mockRestore()
+  })
+
+  it("snapshots every session owner before provider disposal", async () => {
+    const pending = defer<void>()
+    const client = createClient({ abortDeferred: pending })
+    const { provider, internal } = makeProvider(client)
+    internal.handleEvent(
+      {
+        type: "session.status",
+        properties: { sessionID: "s1", status: { type: "busy" } },
+      },
+      "/repo",
+    )
+    provider.setSessionDirectory("s1", "/repo/worktree")
+    provider.setSessionDirectory("s2", "/repo/other")
+
+    const stopped = provider.abortSessions(["s1", "s2", "s2"])
+    provider.dispose()
+
+    expect(client.aborted).toEqual([
+      { sessionID: "s1", directory: "/repo" },
+      { sessionID: "s1", directory: "/repo/worktree" },
+      { sessionID: "s2", directory: "/repo/other" },
+    ])
+    pending.resolve(undefined)
+    await stopped
+  })
+
+  it("discards a session created after its pending tab closes", async () => {
+    const created = defer<{ data: ReturnType<typeof mkSession> }>()
+    const client = createClient({ createDeferred: created })
+    const { provider, internal, sent } = makeProvider(client)
+
+    const resolving = internal.resolveSession(undefined, "pending:1", "local")
+    await provider.abortSessions(["pending:1"])
+    created.resolve({ data: mkSession() })
+
+    expect(await resolving).toBeUndefined()
+    expect(client.deleted).toEqual([{ sessionID: "created", directory: "/repo" }])
+    expect(sent).not.toContainEqual(expect.objectContaining({ type: "sessionCreated" }))
+  })
+
+  it("does not tombstone a pending tab that never started creating", async () => {
+    const client = createClient()
+    const { provider, internal } = makeProvider(client)
+
+    await provider.abortSessions(["pending:1"])
+    expect(await internal.resolveSession(undefined, "pending:1", "local")).toBeDefined()
+    expect(client.deleted).toEqual([])
+  })
+
+  it("does not submit a prompt when its pending tab closes after creation", async () => {
+    const context = defer<Record<string, never>>()
+    const client = createClient()
+    const { provider, internal, sent } = makeProvider(client)
+    internal.gatherEditorContext = () => context.promise
+
+    const sending = internal.handleSendMessage("hello", "msg-1", undefined, "pending:1")
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(sent).toContainEqual(expect.objectContaining({ type: "sessionCreated" }))
+
+    await provider.abortSessions(["pending:1"])
+    context.resolve({})
+    await sending
+
+    expect(client.aborted).toEqual([{ sessionID: "created", directory: "/repo" }])
+    expect(client.prompts).toEqual([])
+
+    await provider.abortSessions(["pending:1"])
+    expect(client.aborted).toHaveLength(1)
+  })
+
+  it("releases draft routing after the webview adopts the created session", async () => {
+    const client = createClient()
+    const { provider, internal } = makeProvider(client)
+
+    expect(await internal.resolveSession(undefined, "pending:1", "local")).toBeDefined()
+    provider.acknowledgeDraft("pending:1", "created")
+    await provider.abortSessions(["pending:1"])
+
+    expect(client.aborted).toEqual([])
   })
 })
 

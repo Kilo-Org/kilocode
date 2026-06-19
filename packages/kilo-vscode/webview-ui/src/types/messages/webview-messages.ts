@@ -551,7 +551,7 @@ export interface SidebarForkSessionRequest {
   messageId?: string
 }
 
-// Close (remove) a session from its worktree
+// Stop and remove a Local or worktree session from Agent Manager
 export interface CloseSessionRequest {
   type: "agentManager.closeSession"
   sessionId: string
@@ -561,6 +561,7 @@ export interface CloseSessionRequest {
 export interface PersistSessionRequest {
   type: "agentManager.persistSession"
   sessionId: string
+  draftID?: string
 }
 
 /** Remove a non-worktree session from agent-manager.json. */

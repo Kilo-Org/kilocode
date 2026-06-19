@@ -14,6 +14,7 @@ import { PlanFollowup } from "@/kilocode/plan-followup"
 import { PlanFile } from "@/kilocode/plan-file"
 import { KiloSession } from "@/kilocode/session"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
+import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Permission } from "@/permission"
 import { Question } from "@/question"
 import { environmentDetails, type EditorContext } from "@/kilocode/editor-context"
@@ -86,9 +87,31 @@ export namespace KiloSessionPrompt {
     return action === "continue" ? "continue" : "break"
   }
 
-  export function abortPlanFollowup(sessionID: SessionID) {
-    return PlanFollowup.abort(sessionID)
-  }
+  export const cancelTree = Effect.fn("KiloSessionPrompt.cancelTree")(function* (input: {
+    sessionID: SessionID
+    sessions: Pick<Session.Interface, "children">
+    cancel: (sessionID: SessionID) => Effect.Effect<void>
+  }) {
+    function descendants(sessionID: SessionID): Effect.Effect<SessionID[]> {
+      return Effect.gen(function* () {
+        const children = yield* input.sessions.children(sessionID)
+        const nested = yield* Effect.forEach(children, (child) => descendants(child.id), { concurrency: "unbounded" })
+        return [...children.map((child) => child.id), ...nested.flat()]
+      })
+    }
+
+    const children = yield* descendants(input.sessionID)
+    yield* Effect.forEach(
+      [input.sessionID, ...children],
+      (sessionID) =>
+        Effect.gen(function* () {
+          yield* KiloSessionPromptQueue.cancel(sessionID)
+          PlanFollowup.abort(sessionID)
+          yield* input.cancel(sessionID)
+        }),
+      { concurrency: "unbounded", discard: true },
+    )
+  })
 
   export const recoverDanglingAssistant = Effect.fn("KiloSessionPrompt.recoverDanglingAssistant")(function* (input: {
     sessionID: SessionID
