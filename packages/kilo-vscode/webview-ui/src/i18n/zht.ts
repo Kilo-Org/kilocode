@@ -1425,6 +1425,9 @@ export const dict = {
   "settings.display.username.description": "對話中顯示的自訂使用者名稱",
   "settings.display.fontSize.title": "字體大小",
   "settings.display.fontSize.description": "獨立於 VS Code 調整 Kilo webview UI 的字體大小。",
+  "settings.display.limitChatContentWidth.title": "限制聊天內容寬度",
+  "settings.display.limitChatContentWidth.description":
+    "讓聊天內容和提示詞以適合閱讀的寬度置中顯示。關閉後將使用完整的面板寬度。",
   "settings.display.reasoningAutoCollapse.title": "自動收合推理",
   "settings.display.reasoningAutoCollapse.description":
     "在代理寫完推理後收合推理區塊。保持關閉可讓推理保持展開，除非你手動收合它。",

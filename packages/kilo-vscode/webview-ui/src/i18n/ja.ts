@@ -1507,6 +1507,9 @@ export const dict = {
   "settings.display.username.description": "会話に表示されるカスタムユーザー名",
   "settings.display.fontSize.title": "フォントサイズ",
   "settings.display.fontSize.description": "VS Code とは独立して Kilo webview UI のフォントサイズを調整します。",
+  "settings.display.limitChatContentWidth.title": "チャットコンテンツの幅を制限",
+  "settings.display.limitChatContentWidth.description":
+    "チャットコンテンツとプロンプトを、読みやすい幅で中央に表示します。パネルの幅全体を使用するにはオフにしてください。",
   "settings.display.reasoningAutoCollapse.title": "推論を自動で折りたたむ",
   "settings.display.reasoningAutoCollapse.description":
     "エージェントが推論の書き込みを終えた後に推論ブロックを自動で折りたたみます。手動で折りたたむまでは推論を展開したままにするには、オフのままにしてください。",

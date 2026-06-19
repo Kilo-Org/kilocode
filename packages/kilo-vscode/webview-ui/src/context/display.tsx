@@ -18,23 +18,39 @@ interface DisplayContextValue {
   setReasoningAutoCollapse: (collapse: boolean) => void
   fontSize: Accessor<number>
   setFontSize: (size: number) => void
+  limitChatContentWidth: Accessor<boolean>
+  setLimitChatContentWidth: (limited: boolean) => void
 }
 
 export const DisplayContext = createContext<DisplayContextValue>()
+
+function readChatContentWidthLimit() {
+  const width = getComputedStyle(document.documentElement).getPropertyValue("--kilo-chat-content-width").trim()
+  return width !== "100%"
+}
 
 export const DisplayProvider: ParentComponent = (props) => {
   const { config, updateConfig } = useConfig()
   const vscode = useVSCode()
   const reasoningAutoCollapse = createMemo(() => config().auto_collapse_reasoning ?? false)
   const [fontSize, setFontSizeSignal] = createSignal(readFontSize())
+  const [limitChatContentWidth, setLimitChatContentWidthSignal] = createSignal(readChatContentWidthLimit())
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "ready" && message.fontSize !== undefined) setFontSizeSignal(clampFontSize(message.fontSize))
     if (message.type === "fontSizeChanged") setFontSizeSignal(clampFontSize(message.fontSize))
+    if (message.type === "chatContentWidthLimitChanged") setLimitChatContentWidthSignal(message.limited)
   })
 
   createEffect(() => {
     applyFontSize(fontSize())
+  })
+
+  createEffect(() => {
+    document.documentElement.style.setProperty(
+      "--kilo-chat-content-width",
+      limitChatContentWidth() ? "initial" : "100%",
+    )
   })
 
   onCleanup(unsubscribe)
@@ -49,6 +65,11 @@ export const DisplayProvider: ParentComponent = (props) => {
           const next = clampFontSize(size)
           setFontSizeSignal(next)
           vscode.postMessage({ type: "updateSetting", key: "fontSize", value: next })
+        },
+        limitChatContentWidth,
+        setLimitChatContentWidth: (limited) => {
+          setLimitChatContentWidthSignal(limited)
+          vscode.postMessage({ type: "updateSetting", key: "limitChatContentWidth", value: limited })
         },
       }}
     >

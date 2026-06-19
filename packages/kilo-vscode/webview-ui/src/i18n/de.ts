@@ -1543,6 +1543,9 @@ export const dict = {
   "settings.display.username.description": "Benutzerdefinierter Benutzername in Gesprächen",
   "settings.display.fontSize.title": "Schriftgröße",
   "settings.display.fontSize.description": "Passen Sie die Schriftgröße der Kilo webview UI unabhängig von VS Code an.",
+  "settings.display.limitChatContentWidth.title": "Breite des Chat-Inhalts begrenzen",
+  "settings.display.limitChatContentWidth.description":
+    "Chat-Inhalte und den Prompt in einer zentrierten Spalte mit gut lesbarer Breite anzeigen. Deaktivieren Sie diese Option, um die gesamte Breite des Panels zu nutzen.",
   "settings.display.reasoningAutoCollapse.title": "Reasoning automatisch einklappen",
   "settings.display.reasoningAutoCollapse.description":
     "Klappt Reasoning-Blöcke ein, nachdem der Agent sie fertig geschrieben hat. Deaktiviert lassen, damit Reasoning erweitert bleibt, sofern du es nicht manuell einklappst.",

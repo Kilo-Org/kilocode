@@ -1476,6 +1476,9 @@ export const dict = {
   "settings.display.username.description": "Sohbetlerde görüntülenen özel kullanıcı adı",
   "settings.display.fontSize.title": "Yazı Tipi Boyutu",
   "settings.display.fontSize.description": "Kilo webview UI yazı tipi boyutunu VS Code'dan bağımsız olarak ayarlayın.",
+  "settings.display.limitChatContentWidth.title": "Sohbet İçeriği Genişliğini Sınırla",
+  "settings.display.limitChatContentWidth.description":
+    "Sohbet içeriğini ve komut alanını ortalanmış, rahat okunabilir genişlikte bir sütunda tutun. Panelin tam genişliğini kullanmak için kapatın.",
   "settings.display.reasoningAutoCollapse.title": "Akıl yürütmeyi otomatik daralt",
   "settings.display.reasoningAutoCollapse.description":
     "Ajan yazmayı bitirdikten sonra akıl yürütme bloklarını daraltır. Manuel olarak daraltmadığınız sürece akıl yürütmenin geniş kalması için kapalı bırakın.",

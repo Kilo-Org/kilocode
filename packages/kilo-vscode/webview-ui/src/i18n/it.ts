@@ -1344,6 +1344,9 @@ export const dict = {
   "settings.display.fontSize.title": "Dimensione font",
   "settings.display.fontSize.description":
     "Regola la dimensione del font della webview Kilo indipendentemente da VS Code.",
+  "settings.display.limitChatContentWidth.title": "Limita la larghezza del contenuto della chat",
+  "settings.display.limitChatContentWidth.description":
+    "Mantieni il contenuto della chat e il prompt in una colonna centrata di larghezza comoda per la lettura. Disattiva questa opzione per usare l'intera larghezza del pannello.",
   "settings.display.reasoningAutoCollapse.title": "Comprimi automaticamente ragionamento",
   "settings.display.reasoningAutoCollapse.description":
     "Comprimi i blocchi di ragionamento dopo che l'agente ha finito di scriverli. Lascia disattivato per tenerli espansi finché non li comprimi manualmente.",

@@ -1492,6 +1492,9 @@ export const dict = {
   "settings.display.username.description": "대화에 표시되는 사용자 정의 사용자 이름",
   "settings.display.fontSize.title": "글꼴 크기",
   "settings.display.fontSize.description": "VS Code와 독립적으로 Kilo webview UI 글꼴 크기를 조정합니다.",
+  "settings.display.limitChatContentWidth.title": "채팅 콘텐츠 너비 제한",
+  "settings.display.limitChatContentWidth.description":
+    "채팅 콘텐츠와 프롬프트를 읽기 편한 너비로 가운데에 표시합니다. 패널의 전체 너비를 사용하려면 끄세요.",
   "settings.display.reasoningAutoCollapse.title": "추론 자동 접기",
   "settings.display.reasoningAutoCollapse.description":
     "에이전트가 추론 작성을 마친 뒤 추론 블록을 자동으로 접습니다. 수동으로 접기 전까지 추론을 펼친 상태로 두려면 끄세요.",

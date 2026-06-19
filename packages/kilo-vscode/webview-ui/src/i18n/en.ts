@@ -1495,6 +1495,9 @@ export const dict = {
   "settings.display.username.description": "Custom username displayed in conversations",
   "settings.display.fontSize.title": "Font Size",
   "settings.display.fontSize.description": "Adjust the Kilo webview UI font size independently from VS Code.",
+  "settings.display.limitChatContentWidth.title": "Limit Chat Content Width",
+  "settings.display.limitChatContentWidth.description":
+    "Keep chat content and the prompt in a centered, readable-width column. Turn off to use the full panel width.",
   "settings.display.reasoningAutoCollapse.title": "Auto-Collapse Reasoning",
   "settings.display.reasoningAutoCollapse.description":
     "Collapse reasoning blocks after the agent finishes writing them. Leave off to keep reasoning expanded unless you collapse it manually.",

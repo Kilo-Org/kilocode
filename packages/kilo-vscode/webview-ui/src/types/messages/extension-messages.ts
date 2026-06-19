@@ -65,6 +65,11 @@ export interface FontSizeChangedMessage {
   fontSize: number
 }
 
+export interface ChatContentWidthLimitChangedMessage {
+  type: "chatContentWidthLimitChanged"
+  limited: boolean
+}
+
 export interface GitStatusMessage {
   type: "gitStatus"
   repo: boolean
@@ -962,6 +967,7 @@ export interface RemoteStatusMessage {
 export type ExtensionMessage =
   | ReadyMessage
   | FontSizeChangedMessage
+  | ChatContentWidthLimitChangedMessage
   | GitStatusMessage
   | ConnectionStateMessage
   | ErrorMessage
