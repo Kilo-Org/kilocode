@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> | <a href="README.zh.md">简体中文</a> | 繁體中文 | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.uk.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a>
+  <a href="../README.md">English</a> | <a href="README.zh.md">简体中文</a> | 繁體中文 | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.uk.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
 <p align="center">
@@ -155,7 +155,7 @@ kilo run --auto "run tests and fix any failures"
 
 ### 貢獻
 
-歡迎開發者、作者以及所有人參與貢獻。請先閱讀 [Contributing Guide](/CONTRIBUTING.md)，了解環境設定、程式碼標準以及如何建立 Pull Request。VS Code 擴充功能和 CLI 的發布流程請參閱 [RELEASING.md](RELEASING.md)，JetBrains 外掛請參閱 [packages/kilo-jetbrains/RELEASING.md](packages/kilo-jetbrains/RELEASING.md)。
+歡迎開發者、作者以及所有人參與貢獻。請先閱讀 [Contributing Guide](/CONTRIBUTING.md)，了解環境設定、程式碼標準以及如何建立 Pull Request。VS Code 擴充功能和 CLI 的發布流程請參閱 [RELEASING.md](../RELEASING.md)，JetBrains 外掛請參閱 [packages/kilo-jetbrains/RELEASING.md](../packages/kilo-jetbrains/RELEASING.md)。
 
 參與前請閱讀我們的 [Code of Conduct](/CODE_OF_CONDUCT.md)。
 

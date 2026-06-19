@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | 한국어 | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.uk.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a>
+  <a href="../README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | 한국어 | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.uk.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
 <p align="center">
@@ -155,7 +155,7 @@ kilo run --auto "run tests and fix any failures"
 
 ### 기여
 
-개발자, 작성자 등 누구나 기여할 수 있습니다. 환경 설정, 코딩 표준, pull request 여는 방법은 [Contributing Guide](/CONTRIBUTING.md)에서 시작하세요. VS Code 확장과 CLI 릴리스 절차는 [RELEASING.md](RELEASING.md)를, JetBrains 플러그인은 [packages/kilo-jetbrains/RELEASING.md](packages/kilo-jetbrains/RELEASING.md)를 참조하세요.
+개발자, 작성자 등 누구나 기여할 수 있습니다. 환경 설정, 코딩 표준, pull request 여는 방법은 [Contributing Guide](/CONTRIBUTING.md)에서 시작하세요. VS Code 확장과 CLI 릴리스 절차는 [RELEASING.md](../RELEASING.md)를, JetBrains 플러그인은 [packages/kilo-jetbrains/RELEASING.md](../packages/kilo-jetbrains/RELEASING.md)를 참조하세요.
 
 참여하기 전에 [Code of Conduct](/CODE_OF_CONDUCT.md)를 읽어 주세요.
 
