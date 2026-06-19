@@ -718,8 +718,8 @@ export const RunCommand = effectCmd({
 
             if (event.type === "message.part.updated") {
               const part = event.properties.part
-              // kilocode_change start - track Task child sessions for --auto permission replies
-              if (args.auto) KiloRunAuto.track(auto, part)
+              // kilocode_change start - track Task child sessions for non-interactive replies
+              KiloRunAuto.track(auto, part)
               // kilocode_change end
               if (part.sessionID !== sessionID) continue
 
@@ -809,6 +809,15 @@ export const RunCommand = effectCmd({
             ) {
               break
             }
+
+            // kilocode_change start - non-interactive runs cannot answer blocking questions
+            if (event.type === "question.asked") {
+              const question = event.properties
+              if (!KiloRunAuto.allowed(auto, question.sessionID)) continue
+              await client.question.reject({ requestID: question.id })
+              continue
+            }
+            // kilocode_change end
 
             if (event.type === "permission.asked") {
               const permission = event.properties
