@@ -262,6 +262,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private readonly instanceId = crypto.randomUUID()
 
   private webview: vscode.Webview | null = null
+  private sidebar = false
   private currentSession: Session | null = null
   /** Remembers the last selected session so /new can stay in the same worktree after clearSession. */
   private contextSessionID: string | undefined
@@ -580,6 +581,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken,
   ) {
+    this.sidebar = true
     this.isWebviewReady = false
     this.webview = webviewView.webview
 
@@ -607,6 +609,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private setSidebarVisible(visible: boolean): void {
     this.setStreamVisibility(visible)
     vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarVisible", visible)
+    if (!visible) vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarFocus", false)
   }
 
   /** Resolve a WebviewPanel for displaying Kilo in an editor tab. */
@@ -802,6 +805,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
       this.visibleTaskStreams.handle(message)
       switch (message.type) {
+        case "webviewFocusChanged":
+          if (this.sidebar) {
+            await vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarFocus", message.focused)
+          }
+          break
         case "webviewReady":
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
           this.isWebviewReady = true
@@ -3561,6 +3569,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Does NOT kill the server — that's the connection service's job.
    */
   dispose(): void {
+    if (this.sidebar) vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarFocus", false)
     this.unsubscribeRemote?.()
     this.focusSession()
     this.statsPoller?.stop()

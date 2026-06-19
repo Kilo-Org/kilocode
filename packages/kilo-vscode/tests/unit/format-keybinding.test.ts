@@ -77,4 +77,10 @@ describe("buildKeybindingMap", () => {
     expect(buildKeybindingMap(bindings, true).search).toBe("⌘F")
     expect(buildKeybindingMap(bindings, false).search).toBe("Ctrl+F")
   })
+
+  it("maps the configurable reasoning effort shortcut", () => {
+    const bindings = [{ command: "kilo-code.new.cycleReasoningEffort", key: "alt+.", mac: "alt+." }]
+    expect(buildKeybindingMap(bindings, true).cycleReasoningEffort).toBe("⌥.")
+    expect(buildKeybindingMap(bindings, false).cycleReasoningEffort).toBe("Alt+.")
+  })
 })

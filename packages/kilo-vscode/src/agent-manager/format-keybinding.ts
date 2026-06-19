@@ -41,6 +41,7 @@ const GLOBAL_KEYBINDINGS: Record<string, string> = {
   "kilo-code.new.agentManagerOpen": "agentManagerOpen",
   "kilo-code.new.cycleAgentMode": "cycleAgentMode",
   "kilo-code.new.cyclePreviousAgentMode": "cyclePreviousAgentMode",
+  "kilo-code.new.cycleReasoningEffort": "cycleReasoningEffort",
 }
 
 /**

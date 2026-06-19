@@ -155,6 +155,11 @@ export interface WebviewReadyRequest {
   type: "webviewReady"
 }
 
+export interface WebviewFocusRequest {
+  type: "webviewFocusChanged"
+  focused: boolean
+}
+
 export interface SelectSourceRequest {
   type: "selectSource"
   id: string
@@ -1122,6 +1127,7 @@ export type WebviewMessage =
   | CancelLoginRequest
   | SetOrganizationRequest
   | WebviewReadyRequest
+  | WebviewFocusRequest
   | SelectSourceRequest
   | RequestProvidersMessage
   | CompactRequest

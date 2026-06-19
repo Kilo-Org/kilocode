@@ -8,6 +8,10 @@ export interface ShortcutCategory {
   shortcuts: ShortcutEntry[]
 }
 
+function binding(bindings: Record<string, string>, name: string) {
+  return bindings[name] ?? ""
+}
+
 export function buildShortcutCategories(
   bindings: Record<string, string>,
   t: (key: string, params?: Record<string, string | number>) => string,
@@ -62,6 +66,7 @@ export function buildShortcutCategories(
         { label: t("agentManager.shortcuts.openAgentManager"), binding: bindings.agentManagerOpen ?? "" },
         { label: t("agentManager.shortcuts.cycleAgentMode"), binding: bindings.cycleAgentMode ?? "" },
         { label: t("agentManager.shortcuts.cyclePreviousAgentMode"), binding: bindings.cyclePreviousAgentMode ?? "" },
+        { label: t("command.model.variant.cycle"), binding: binding(bindings, "cycleReasoningEffort") },
         { label: t("agentManager.shortcuts.showShortcuts"), binding: bindings.showShortcuts ?? "" },
       ].filter((s) => s.binding),
     },

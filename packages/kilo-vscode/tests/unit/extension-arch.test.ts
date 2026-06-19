@@ -126,6 +126,31 @@ describe("Extension — package.json command sync", () => {
       when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'",
     })
   })
+
+  it("contributes an overridable reasoning effort shortcut for every chat surface", () => {
+    const command = pkg.contributes?.commands?.find(
+      (item: { command: string }) => item.command === "kilo-code.new.cycleReasoningEffort",
+    )
+    const binding = pkg.contributes?.keybindings?.find(
+      (item: { command: string }) => item.command === "kilo-code.new.cycleReasoningEffort",
+    )
+    expect(command).toMatchObject({ title: "Cycle Reasoning Effort", category: "Kilo Code" })
+    expect(binding).toMatchObject({
+      key: "alt+.",
+      mac: "alt+.",
+      when: "kilo-code.new.sidebarFocus || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'",
+    })
+  })
+
+  it("broadcasts reasoning effort changes to the focused chat surface", () => {
+    const ext = fs.readFileSync(EXTENSION_FILE, "utf-8")
+    const command = sliceBlock(ext, ext.indexOf('registerCommand("kilo-code.new.cycleReasoningEffort"'))
+    const helper = sliceBlock(ext, ext.indexOf("const postChatAction"))
+    expect(command).toContain('postChatAction("cycleReasoningEffort")')
+    expect(helper).toContain("provider.postMessage")
+    expect(helper).toContain("activeTabProvider()?.postMessage")
+    expect(helper).toContain("agentManagerProvider.postMessage")
+  })
 })
 
 // ---------------------------------------------------------------------------

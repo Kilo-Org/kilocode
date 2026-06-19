@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test"
 import {
   getVariant,
+  nextVariant,
   sessionVariantKeys,
   sessionVariants,
   transferVariants,
@@ -10,6 +11,26 @@ import type { ModelSelection } from "../../webview-ui/src/types/messages"
 
 const model: ModelSelection = { providerID: "anthropic", modelID: "claude-sonnet-4" }
 const variants = ["low", "medium", "high"]
+
+describe("variant cycling", () => {
+  it("selects the next variant", () => {
+    expect(nextVariant("low", variants)).toBe("medium")
+  })
+
+  it("wraps the last variant to the first", () => {
+    expect(nextVariant("high", variants)).toBe("low")
+  })
+
+  it("starts from the first variant when the current value is missing or stale", () => {
+    expect(nextVariant(undefined, variants)).toBe("low")
+    expect(nextVariant("unsupported", variants)).toBe("low")
+  })
+
+  it("returns no variant for an empty list and preserves a single choice", () => {
+    expect(nextVariant("high", [])).toBeUndefined()
+    expect(nextVariant("high", ["high"])).toBe("high")
+  })
+})
 
 describe("per-session variant selection", () => {
   it("keeps reasoning effort independent for each Agent Manager session", () => {

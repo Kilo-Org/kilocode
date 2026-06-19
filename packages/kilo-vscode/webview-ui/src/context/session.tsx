@@ -69,7 +69,7 @@ import { errorIDs } from "./session-errors"
 import { PartStash } from "./part-stash"
 import { mergeParts, sameParts } from "./session-parts"
 import { state as todoState } from "./todo-revert"
-import { getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
+import { getVariant, nextVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
 import { visibleMessages as filterVisibleMessages } from "./session-queue"
@@ -225,6 +225,7 @@ interface SessionContextValue {
   variantList: (sessionID?: string) => string[]
   currentVariant: (sessionID?: string) => string | undefined
   selectVariant: (value: string, sessionID?: string) => void
+  cycleVariant: (sessionID?: string) => void
 
   // Model favorites
   favoriteModels: Accessor<ModelSelection[]>
@@ -842,6 +843,16 @@ export const SessionProvider: ParentComponent = (props) => {
     const key = variantKey(sel, agentForScope(sid), sid)
     setStore("variantSelections", key, value)
     if (!sid) vscode.postMessage({ type: "persistVariant", key, value })
+  }
+
+  const cycleVariant = (sessionID?: string) => {
+    const sid = sessionID ?? currentSessionID() ?? draftSessionID() ?? undefined
+    const variants = variantList(sid)
+    if (variants.length < 2) return
+    const current = currentVariant(sid)
+    const next = nextVariant(current, variants)
+    if (!next || next === current) return
+    selectVariant(next, sid)
   }
 
   // Load persisted variants from extension globalState
@@ -2786,6 +2797,7 @@ export const SessionProvider: ParentComponent = (props) => {
     variantList,
     currentVariant,
     selectVariant,
+    cycleVariant,
     revert,
     revertedCount,
     summary,

@@ -190,6 +190,7 @@ const defaultBindings: Record<string, string> = {
   agentManagerOpen: isMac ? "⌘⇧M" : "Ctrl+Shift+M",
   cycleAgentMode: isMac ? "⌘." : "Ctrl+.",
   cyclePreviousAgentMode: isMac ? "⌘⇧." : "Ctrl+Shift+.",
+  cycleReasoningEffort: isMac ? "⌥." : "Alt+.",
   ...Object.fromEntries(
     Array.from({ length: MAX_JUMP_INDEX }, (_, i) => [`jumpTo${i + 1}`, isMac ? `⌘${i + 1}` : `Ctrl+${i + 1}`]),
   ),
@@ -1066,6 +1067,8 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "newTerminal") termHandlers.requestNew()
       else if (msg.action === "cycleAgentMode" && document.hasFocus()) cycleAgent(1)
       else if (msg.action === "cyclePreviousAgentMode" && document.hasFocus()) cycleAgent(-1)
+      else if (msg.action === "cycleReasoningEffort" && document.hasFocus() && !terms.activeId())
+        session.cycleVariant(activePendingId())
       else {
         // Handle jumpTo1 through jumpTo9
         const match = /^jumpTo([1-9])$/.exec(msg.action ?? "")

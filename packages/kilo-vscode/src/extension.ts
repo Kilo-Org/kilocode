@@ -322,6 +322,12 @@ export function activate(context: vscode.ExtensionContext) {
     void vscode.commands.executeCommand(command)
   }
 
+  const postChatAction = (action: string) => {
+    provider.postMessage({ type: "action", action })
+    activeTabProvider()?.postMessage({ type: "action", action })
+    agentManagerProvider.postMessage({ type: "action", action })
+  }
+
   // Register toolbar button command handlers
   context.subscriptions.push(
     vscode.commands.registerCommand("kilo-code.new.sidebarTitle.plusButtonClicked", () => {
@@ -375,6 +381,9 @@ export function activate(context: vscode.ExtensionContext) {
       if (tab) tab.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
       else provider.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
       agentManagerProvider.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.cycleReasoningEffort", () => {
+      postChatAction("cycleReasoningEffort")
     }),
     vscode.commands.registerCommand("kilo-code.new.profileButtonClicked", () => {
       settingsEditorProvider.openPanel("profile")

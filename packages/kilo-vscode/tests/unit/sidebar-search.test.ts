@@ -159,4 +159,13 @@ describe("Agent Manager shortcut map", () => {
       binding: "⌘⇧R",
     })
   })
+
+  it("includes reasoning effort in the global section", () => {
+    const categories = buildShortcutCategories({ cycleReasoningEffort: "⌥." }, (key) => key)
+    const global = categories.find((category) => category.title === "agentManager.shortcuts.category.global")
+    expect(global?.shortcuts).toContainEqual({
+      label: "command.model.variant.cycle",
+      binding: "⌥.",
+    })
+  })
 })
