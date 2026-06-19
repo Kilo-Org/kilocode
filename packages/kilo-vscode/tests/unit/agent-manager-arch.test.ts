@@ -761,6 +761,26 @@ describe("Agent Manager — VS Code import boundary", () => {
   })
 })
 
+describe("Agent Manager reasoning effort routing", () => {
+  const app = fs.readFileSync(TSX_FILE, "utf-8")
+
+  it("clears a local pending tab when selecting a worktree", () => {
+    const start = app.indexOf("const selectWorktree")
+    const end = app.indexOf("const addSessionToCurrentWorktree", start)
+    const block = app.slice(start, end)
+    expect(block).toContain("setActivePendingId(undefined)")
+  })
+
+  it("targets the visible chat tab instead of stale pending state", () => {
+    const start = app.indexOf('msg.action === "cycleReasoningEffort"')
+    const end = app.indexOf("} else {", start)
+    const block = app.slice(start, end)
+    expect(block).toContain("visibleTabId()")
+    expect(block).toContain("session.cycleVariant(id)")
+    expect(block).not.toContain("activePendingId()")
+  })
+})
+
 // ---------------------------------------------------------------------------
 // Provider chain parity — sidebar App.tsx vs AgentManagerApp.tsx
 //

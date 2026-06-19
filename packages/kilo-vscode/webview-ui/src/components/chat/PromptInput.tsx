@@ -43,9 +43,10 @@ import {
   isPromptBusy,
   isPathMention,
   optionPeriodEdit,
-  matchesOptionPeriodInput,
+  optionPeriodInput,
   canRestoreOptionPeriodEdit,
   type NativeEdit,
+  type NativeInput,
 } from "./prompt-input-utils"
 import type { ReviewComment, SendMessageFailedMessage, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
@@ -171,7 +172,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
   let slashDropdownRef: HTMLDivElement | undefined
-  let native: (NativeEdit & { inserted: boolean; command: boolean; enhanced: string | null }) | undefined
+  let native: { edit: NativeEdit; input?: NativeInput; command: boolean; enhanced: string | null } | undefined
   // Save/restore input text when switching sessions.
   // Uses `on()` to track only draftKey — avoids re-running on every keystroke.
   createEffect(
@@ -547,31 +548,32 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   function restoreNativeInput() {
-    const edit = native
+    const state = native
+    const edit = state?.input
     const ref = textareaRef
-    if (!edit?.inserted || !edit.command || !ref || !document.hasFocus() || document.activeElement !== ref) return
+    if (!edit || !state.command || !ref || !document.hasFocus() || document.activeElement !== ref) return
     if (!canRestoreOptionPeriodEdit(edit, ref.value, ref.selectionStart, ref.selectionEnd)) {
       native = undefined
       return
     }
     native = undefined
-    preEnhanceText = edit.enhanced
+    preEnhanceText = state.enhanced
     ref.value = edit.before
     ref.setSelectionRange(edit.start, edit.end, edit.direction)
-    syncInput(edit.before, edit.end)
+    syncInput(edit.before, ref.selectionStart ?? edit.start)
   }
 
   const handleInput = (e: InputEvent) => {
     const target = e.target as HTMLTextAreaElement
     const val = target.value
-    const edit = native
-    const matches =
-      edit &&
-      matchesOptionPeriodInput(edit, e, val, target.selectionStart ?? val.length, target.selectionEnd ?? val.length)
-    if (!matches) native = undefined
-    if (matches) {
-      edit.inserted = true
-      if (edit.command) {
+    const state = native
+    const input = state
+      ? optionPeriodInput(state.edit, e, val, target.selectionStart ?? val.length, target.selectionEnd ?? val.length)
+      : undefined
+    if (!input) native = undefined
+    if (state && input) {
+      state.input = input
+      if (state.command) {
         restoreNativeInput()
         return
       }
@@ -585,7 +587,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const edit = ref
       ? optionPeriodEdit(e, ref.value, ref.selectionStart, ref.selectionEnd, ref.selectionDirection)
       : undefined
-    native = edit ? { ...edit, inserted: false, command: false, enhanced: preEnhanceText } : undefined
+    native = edit ? { edit, command: false, enhanced: preEnhanceText } : undefined
     // Undo enhanced prompt with Ctrl+Z / ⌘Z
     if (e.key === "z" && (e.metaKey || e.ctrlKey) && !e.shiftKey && preEnhanceText !== null) {
       e.preventDefault()
@@ -672,6 +674,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       e.preventDefault()
       handleSend()
     }
+  }
+
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (native && !native.input && e.code === "Period" && e.altKey) native = undefined
+    syncGhost()
   }
 
   const canEnhance = () => !isBusy() && !isDisabled() && !enhancing()
@@ -1031,7 +1038,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             value={text()}
             onInput={handleInput}
             onKeyDown={handleKeyDown}
-            onKeyUp={syncGhost}
+            onKeyUp={handleKeyUp}
             onPaste={handlePaste}
             onCompositionStart={() => {
               native = undefined

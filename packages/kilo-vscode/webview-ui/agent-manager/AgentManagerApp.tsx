@@ -941,6 +941,7 @@ const AgentManagerContent: Component = () => {
 
   const selectWorktree = (worktreeId: string) => {
     saveTabMemory()
+    setActivePendingId(undefined)
     setSelection(worktreeId)
     const remembered = tabMemory()[worktreeId]
     if (terms.hasRemembered(worktreeId, remembered)) return termHandlers.activate(remembered!)
@@ -1067,9 +1068,10 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "newTerminal") termHandlers.requestNew()
       else if (msg.action === "cycleAgentMode" && document.hasFocus()) cycleAgent(1)
       else if (msg.action === "cyclePreviousAgentMode" && document.hasFocus()) cycleAgent(-1)
-      else if (msg.action === "cycleReasoningEffort" && document.hasFocus() && !terms.activeId())
-        session.cycleVariant(activePendingId())
-      else {
+      else if (msg.action === "cycleReasoningEffort" && document.hasFocus()) {
+        const id = visibleTabId()
+        if (id && id !== REVIEW_TAB_ID && !isTerminalTabId(id)) session.cycleVariant(id)
+      } else {
         // Handle jumpTo1 through jumpTo9
         const match = /^jumpTo([1-9])$/.exec(msg.action ?? "")
         if (match) jumpToItem(parseInt(match[1]!) - 1)

@@ -11,7 +11,7 @@ import {
   isQuestioning,
   isPathMention,
   optionPeriodEdit,
-  matchesOptionPeriodInput,
+  optionPeriodInput,
   canRestoreOptionPeriodEdit,
 } from "../../webview-ui/src/components/chat/prompt-input-utils"
 
@@ -165,24 +165,11 @@ describe("Option+Period input", () => {
     isComposing: false,
   }
 
-  it("records the exact native edit at the caret", () => {
-    expect(optionPeriodEdit(key, "hello", 2, 2, "none")).toEqual({
-      before: "hello",
-      after: "he≥llo",
-      start: 2,
-      end: 2,
-      pos: 3,
-      direction: "none",
-    })
-  })
-
-  it("records replacement of selected text", () => {
+  it("records the value and selection before native input", () => {
     expect(optionPeriodEdit(key, "hello", 1, 4, "backward")).toEqual({
       before: "hello",
-      after: "h≥o",
       start: 1,
       end: 4,
-      pos: 2,
       direction: "backward",
     })
   })
@@ -195,18 +182,59 @@ describe("Option+Period input", () => {
     expect(optionPeriodEdit({ ...key, isComposing: true }, "", 0, 0, "none")).toBeUndefined()
   })
 
-  it("matches only the corresponding native insertion", () => {
-    const edit = optionPeriodEdit(key, "a≥b", 3, 3, "none")!
-    expect(matchesOptionPeriodInput(edit, { inputType: "insertText", data: "≥" }, "a≥b≥", 4, 4)).toBe(true)
-    expect(matchesOptionPeriodInput(edit, { inputType: "insertFromPaste", data: "≥" }, "a≥b≥", 4, 4)).toBe(false)
-    expect(matchesOptionPeriodInput(edit, { inputType: "insertText", data: "." }, "a≥b.", 4, 4)).toBe(false)
+  it.each([
+    ["≥", "he≥llo", 3],
+    ["…", "he…llo", 3],
+    ["🙂", "he🙂llo", 4],
+  ])("derives the native insertion from the input event for %s", (data, value, pos) => {
+    const edit = optionPeriodEdit(key, "hello", 2, 2, "none")!
+    expect(optionPeriodInput(edit, { inputType: "insertText", data, isComposing: false }, value, pos, pos)).toEqual({
+      ...edit,
+      after: value,
+      pos,
+    })
   })
 
-  it("restores only while the value and caret still match", () => {
+  it("records replacement of selected text", () => {
+    const edit = optionPeriodEdit(key, "hello", 1, 4, "backward")!
+    expect(optionPeriodInput(edit, { inputType: "insertText", data: "…", isComposing: false }, "h…o", 2, 2)).toEqual({
+      ...edit,
+      after: "h…o",
+      pos: 2,
+    })
+  })
+
+  it("rejects input that does not exactly match the native edit", () => {
     const edit = optionPeriodEdit(key, "a≥b", 3, 3, "none")!
-    expect(canRestoreOptionPeriodEdit(edit, "a≥b≥", 4, 4)).toBe(true)
-    expect(canRestoreOptionPeriodEdit(edit, "a≥b≥x", 5, 5)).toBe(false)
-    expect(canRestoreOptionPeriodEdit(edit, "a≥b≥", 3, 3)).toBe(false)
+    expect(
+      optionPeriodInput(edit, { inputType: "insertFromPaste", data: "≥", isComposing: false }, "a≥b≥", 4, 4),
+    ).toBeUndefined()
+    expect(
+      optionPeriodInput(edit, { inputType: "insertCompositionText", data: "≥", isComposing: false }, "a≥b≥", 4, 4),
+    ).toBeUndefined()
+    expect(
+      optionPeriodInput(edit, { inputType: "insertText", data: "≥", isComposing: true }, "a≥b≥", 4, 4),
+    ).toBeUndefined()
+    expect(
+      optionPeriodInput(edit, { inputType: "insertText", data: null, isComposing: false }, "a≥b", 3, 3),
+    ).toBeUndefined()
+    expect(
+      optionPeriodInput(edit, { inputType: "insertText", data: "", isComposing: false }, "a≥b", 3, 3),
+    ).toBeUndefined()
+    expect(
+      optionPeriodInput(edit, { inputType: "insertText", data: "≥", isComposing: false }, "a≥b≥x", 5, 5),
+    ).toBeUndefined()
+    expect(
+      optionPeriodInput(edit, { inputType: "insertText", data: "≥", isComposing: false }, "a≥b≥", 3, 4),
+    ).toBeUndefined()
+  })
+
+  it("restores only while the observed value and caret still match", () => {
+    const edit = optionPeriodEdit(key, "a≥b", 3, 3, "none")!
+    const input = optionPeriodInput(edit, { inputType: "insertText", data: "🙂", isComposing: false }, "a≥b🙂", 5, 5)!
+    expect(canRestoreOptionPeriodEdit(input, "a≥b🙂", 5, 5)).toBe(true)
+    expect(canRestoreOptionPeriodEdit(input, "a≥b🙂x", 6, 6)).toBe(false)
+    expect(canRestoreOptionPeriodEdit(input, "a≥b🙂", 4, 4)).toBe(false)
   })
 })
 
