@@ -8,6 +8,7 @@ import type { Info as AgentInfo } from "../../agent/agent"
 import { Schema } from "effect"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
+import { Wildcard } from "@/util/wildcard"
 
 import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
 import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
@@ -274,6 +275,54 @@ function reviewerGuard() {
   })
 }
 
+const reviewerTools = [
+  "bash",
+  "read",
+  "grep",
+  "glob",
+  "list",
+  "skill",
+  "webfetch",
+  "websearch",
+  "codebase_search",
+  "semantic_search",
+  "external_directory",
+  "task",
+  "edit",
+  "question",
+  "suggest",
+]
+
+const reviewerSafe = new Set([
+  "read",
+  "grep",
+  "glob",
+  "list",
+  "skill",
+  "webfetch",
+  "websearch",
+  "codebase_search",
+  "semantic_search",
+  "external_directory",
+])
+
+function reviewerUser(user: Permission.Ruleset, guard: Permission.Ruleset) {
+  return user.flatMap((rule) => {
+    const tools = reviewerTools.filter((tool) => Wildcard.match(tool, rule.permission))
+    if (!tools.length) return []
+    if (rule.permission === "*") {
+      if (rule.action === "allow") return []
+      return tools
+        .filter((tool) => rule.action === "deny" || Permission.evaluate(tool, rule.pattern, guard).action === "allow")
+        .map((permission) => ({ ...rule, permission }))
+    }
+    if (tools.every((tool) => reviewerSafe.has(tool))) return [rule]
+    if (rule.action === "deny") return [rule]
+    if (tools.every((tool) => Permission.evaluate(tool, rule.pattern, guard).action === "allow")) return [rule]
+    return []
+  })
+}
+
 // Generate per-server MCP wildcard rules that allow MCP tools with user approval.
 export function getMcpRules(cfg: Config.Info): Record<string, "allow" | "ask" | "deny"> {
   const rules: Record<string, "allow" | "ask" | "deny"> = {}
@@ -534,13 +583,14 @@ export function patchAgents(
     native: true,
   }
 
+  const reviewer = reviewerGuard()
   agents[REVIEWER_AGENT] = {
     name: REVIEWER_AGENT,
     displayName: "Reviewer",
     description: "High-signal read-only review agent that delegates only to Explore.",
     prompt: PROMPT_REVIEWER,
     options: {},
-    permission: Permission.merge(defaults, reviewerGuard()),
+    permission: Permission.merge(defaults, reviewer, reviewerUser(user, reviewer)),
     mode: "subagent",
     native: true,
     hidden: true,

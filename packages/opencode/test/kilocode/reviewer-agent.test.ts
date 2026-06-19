@@ -117,6 +117,47 @@ describe("Reviewer agent", () => {
     })
   })
 
+  test("honors user restrictions without broadening Reviewer", async () => {
+    await using tmp = await tmpdir({
+      config: {
+        permission: {
+          "*": "allow",
+          bash: "allow",
+          edit: "allow",
+          question: "allow",
+          suggest: "allow",
+          task: "allow",
+          webfetch: "deny",
+          skill: "ask",
+          external_directory: {
+            "*": "deny",
+            "/tmp/review-cache": "allow",
+          },
+        },
+      },
+    })
+
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const reviewer = await load(tmp.path, (svc) => svc.get(REVIEWER_AGENT))
+        const rules = reviewer?.permission ?? []
+
+        expect(Permission.evaluate("webfetch", "*", rules).action).toBe("deny")
+        expect(Permission.evaluate("skill", "*", rules).action).toBe("ask")
+        expect(Permission.evaluate("external_directory", "/tmp/private", rules).action).toBe("deny")
+        expect(Permission.evaluate("external_directory", "/tmp/review-cache", rules).action).toBe("allow")
+
+        expect(Permission.evaluate("bash", "git commit -m test", rules).action).toBe("deny")
+        expect(Permission.evaluate("edit", "src/index.ts", rules).action).toBe("deny")
+        expect(Permission.evaluate("question", "*", rules).action).toBe("deny")
+        expect(Permission.evaluate("suggest", "*", rules).action).toBe("deny")
+        expect(Permission.evaluate("task", "general", rules).action).toBe("deny")
+        expect(Permission.evaluate("task", "explore", rules).action).toBe("allow")
+      },
+    })
+  })
+
   test("hard permission guard preserves Reviewer denies after session allows", async () => {
     await using tmp = await tmpdir()
 
