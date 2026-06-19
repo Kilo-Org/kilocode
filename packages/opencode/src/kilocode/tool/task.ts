@@ -51,7 +51,7 @@ export namespace KiloTask {
    */
   export function inherited(input: {
     caller: Agent.Info
-    session: Session.Info
+    session: Pick<Session.Info, "permission">
     mcp: Config.Info["mcp"]
   }): Permission.Ruleset {
     const rules = Permission.merge(input.caller.permission ?? [], input.session.permission ?? [])

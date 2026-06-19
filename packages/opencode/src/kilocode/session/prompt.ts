@@ -164,9 +164,11 @@ export namespace KiloSessionPrompt {
       log.warn("question option selected unavailable agent", { mode, agent: agent.name })
       return
     }
-    if (agent.name === input.lastUser.agent) return
+    const current = yield* MessageV2.get({ sessionID: input.lastUser.sessionID, messageID: input.lastUser.id })
+    if (current.info.role !== "user") return
+    if (agent.name === current.info.agent) return
 
-    yield* input.sessions.updateMessage({ ...input.lastUser, agent: agent.name })
+    yield* input.sessions.updateMessage({ ...current.info, agent: agent.name })
     yield* input.events.publish(SessionEvent.AgentSwitched, {
       sessionID: input.lastUser.sessionID,
       timestamp: DateTime.makeUnsafe(Date.now()),

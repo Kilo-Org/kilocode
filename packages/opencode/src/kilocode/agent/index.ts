@@ -15,7 +15,7 @@ import PROMPT_ASK from "../../agent/prompt/ask.txt"
 import PROMPT_EXPLORE from "../../agent/prompt/explore.txt"
 import PROMPT_REVIEWER from "./prompt/reviewer.txt"
 
-export const REVIEWER_AGENT = "reviewer"
+export const REVIEWER_AGENT = "kilo-reviewer"
 
 export const bash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "ask",
@@ -114,6 +114,8 @@ export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "git branch -a *": "allow",
   "git branch -r *": "allow",
   "git remote -v *": "allow",
+  "git diff *--output*": "deny",
+  "git -c core.quotepath=false diff *--output*": "deny",
   "gh *": "ask",
   "*\n*": "deny",
   "*<(*": "deny",
@@ -181,6 +183,7 @@ function reviewGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
     },
     grep: "allow",
     glob: "allow",
+    edit: "deny",
     list: "allow",
     skill: "allow",
     task: "allow",

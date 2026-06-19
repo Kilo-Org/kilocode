@@ -1,9 +1,8 @@
 import type { Command } from "@/command"
 import type { ReviewCommand } from "@kilocode/kilo-telemetry"
+import { REVIEWER_AGENT } from "../agent"
 import LOCAL_REVIEW from "./local-review.txt"
 import LOCAL_REVIEW_UNCOMMITTED from "./local-review-uncommitted.txt"
-
-const REVIEWER_AGENT = "reviewer"
 
 export function isReviewCommand(command: string | undefined): command is ReviewCommand {
   return command === "review" || command === "local-review" || command === "local-review-uncommitted"

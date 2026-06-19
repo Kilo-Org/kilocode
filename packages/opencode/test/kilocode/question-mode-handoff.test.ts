@@ -3,6 +3,7 @@ import { describe, expect } from "bun:test"
 import { Effect, Fiber, Layer } from "effect"
 import { Agent } from "../../src/agent/agent"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
+import { REVIEWER_AGENT } from "../../src/kilocode/agent"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Question } from "../../src/question"
@@ -43,7 +44,7 @@ const ctx = {
   sessionID: SessionID.make("ses_question_mode_tool"),
   messageID: MessageID.make("msg_question_mode_tool"),
   callID: "call_question_mode_tool",
-  agent: "reviewer",
+  agent: REVIEWER_AGENT,
   abort: AbortSignal.any([]),
   messages: [],
   metadata: () => Effect.void,
@@ -88,7 +89,7 @@ describe("question mode handoff", () => {
         id: MessageID.ascending(),
         role: "user",
         sessionID: chat.id,
-        agent: "reviewer",
+        agent: REVIEWER_AGENT,
         model: ref,
         time: { created: Date.now() },
         tools: {},
@@ -98,8 +99,8 @@ describe("question mode handoff", () => {
         role: "assistant",
         parentID: user.id,
         sessionID: chat.id,
-        mode: "reviewer",
-        agent: "reviewer",
+        mode: REVIEWER_AGENT,
+        agent: REVIEWER_AGENT,
         path: { cwd: "/tmp", root: "/tmp" },
         cost: 0,
         tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
@@ -125,6 +126,10 @@ describe("question mode handoff", () => {
           time: { start: now, end: now },
         },
       } satisfies MessageV2.ToolPart)
+      yield* sessions.updateMessage({
+        ...user,
+        summary: { additions: 0, deletions: 0, files: 0, diffs: [] },
+      })
 
       yield* KiloSessionPrompt.applyQuestionMode({ messageID: msg.id, lastUser: user, sessions, agents, events })
 
@@ -134,6 +139,7 @@ describe("question mode handoff", () => {
       const stored = msgs.find((item) => item.info.id === user.id)
       expect(stored?.info.role).toBe("user")
       if (stored?.info.role === "user") expect(stored.info.agent).toBe("code")
+      if (stored?.info.role === "user") expect(stored.info.summary?.diffs).toEqual([])
     }),
   )
 })
