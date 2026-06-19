@@ -23,7 +23,7 @@ describe("chat content width setting", () => {
     const display = read("webview-ui/src/context/display.tsx")
 
     expect(utils).toContain("--kilo-chat-content-width")
-    expect(layout).toContain("var(--kilo-chat-content-width, 88ch)")
+    expect(layout).toContain("var(--kilo-chat-content-width, 98ch)")
     expect(display).toContain('limitChatContentWidth() ? "initial" : "100%"')
   })
 
