@@ -69,8 +69,8 @@ const tui: TuiPlugin = async (api) => {
     if (!active.delete(sessionID)) return
     if (errored.delete(sessionID)) return
     if (event.properties.reason !== "completed") return
-    const session = api.state.session.get(sessionID)
-    notify(api, sessionID, "Session done", session?.parentID ? "subagent_done" : "done")
+    if (event.properties.parentID !== undefined) return
+    notify(api, sessionID, "Session done", "done")
   })
   // kilocode_change end
 

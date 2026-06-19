@@ -583,6 +583,7 @@ data class ModelItem(
     val providerName: String,
     val recommendedIndex: Double?,
     val free: Boolean,
+    val byok: Boolean = false,
     val variants: List<String>,
     val limit: ModelLimitItem?,
     val attachment: Boolean = false,

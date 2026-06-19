@@ -193,7 +193,7 @@ describe("internal notifications TUI plugin", () => {
     expect(harness.notifications).toEqual([])
   })
 
-  test("uses sound-only notifications and subagent_done sound for subagent sessions", async () => {
+  test("keeps subagent request notifications but suppresses completion attention", async () => {
     const harness = await setup()
 
     harness.emit({ id: "event-1", type: "question.asked", properties: question("question-1", "subagent") })
@@ -210,7 +210,7 @@ describe("internal notifications TUI plugin", () => {
     harness.emit({
       id: "event-4",
       type: "session.turn.close",
-      properties: { sessionID: "subagent", reason: "completed" },
+      properties: { sessionID: "subagent", parentID: "session", reason: "completed" },
     })
 
     expect(harness.notifications).toEqual([
@@ -219,12 +219,6 @@ describe("internal notifications TUI plugin", () => {
         message: "Question needs input",
         notification: false,
         sound: { name: "question", when: "always" },
-      },
-      {
-        title: "Subagent session",
-        message: "Session done",
-        notification: false,
-        sound: { name: "subagent_done", when: "always" },
       },
     ])
   })

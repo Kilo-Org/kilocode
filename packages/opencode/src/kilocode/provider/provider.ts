@@ -36,6 +36,7 @@ export const KILO_MODEL_SCHEMA_EXTENSIONS = {
   prompt: Schema.optional(Schema.Literals(PROMPTS)),
   isFree: Schema.optional(Schema.Boolean),
   mayTrainOnYourPrompts: Schema.optional(Schema.Boolean),
+  hasUserByokAvailable: Schema.optional(Schema.Boolean),
   terminalBench: optionalOmitUndefined(
     Schema.Struct({
       overallScore: Schema.Finite,
@@ -56,6 +57,7 @@ export function patchModelsDevModel(providerID: string, source: any) {
     prompt: source.prompt,
     isFree: source.isFree,
     mayTrainOnYourPrompts: source.mayTrainOnYourPrompts,
+    hasUserByokAvailable: source.hasUserByokAvailable,
     terminalBench: source.terminalBench,
     ai_sdk_provider: source.ai_sdk_provider,
     options: source.options ?? {},
@@ -72,6 +74,7 @@ export function patchConfigModel(cfg: any, existing: any) {
     prompt: cfg.prompt ?? existing?.prompt,
     isFree: cfg.isFree ?? existing?.isFree,
     mayTrainOnYourPrompts: cfg.mayTrainOnYourPrompts ?? existing?.mayTrainOnYourPrompts,
+    hasUserByokAvailable: cfg.hasUserByokAvailable ?? existing?.hasUserByokAvailable,
     terminalBench: existing?.terminalBench,
     ai_sdk_provider: cfg.ai_sdk_provider ?? existing?.ai_sdk_provider,
     variants: cfg.variants

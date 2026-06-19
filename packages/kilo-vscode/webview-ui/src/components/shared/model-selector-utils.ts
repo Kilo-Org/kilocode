@@ -26,6 +26,10 @@ export function isDataCollectedModel(model: Pick<EnrichedModel, "mayTrainOnYourP
   return model.mayTrainOnYourPrompts === true
 }
 
+export function hasByok(model: Pick<EnrichedModel, "hasUserByokAvailable">): boolean {
+  return model.hasUserByokAvailable === true
+}
+
 export function freeDataLabel(_free: string, data: string): string {
   return data
 }

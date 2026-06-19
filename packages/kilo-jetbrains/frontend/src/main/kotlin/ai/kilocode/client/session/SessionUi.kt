@@ -404,6 +404,7 @@ class SessionUi(
                             it.providerName,
                              it.recommendedIndex,
                              it.free,
+                             it.byok,
                              it.variants,
                              it.attachment,
                          )

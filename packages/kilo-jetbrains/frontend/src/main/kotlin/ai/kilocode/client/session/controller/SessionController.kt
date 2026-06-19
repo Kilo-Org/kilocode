@@ -663,6 +663,7 @@ class SessionController(
                                         provider.name,
                                          info.recommendedIndex,
                                          info.free,
+                                         info.byok,
                                          info.variants,
                                          info.limit?.let { ModelLimitItem(it.context, it.input, it.output) },
                                          info.attachment,

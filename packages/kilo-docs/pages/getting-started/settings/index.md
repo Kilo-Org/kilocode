@@ -59,6 +59,18 @@ When the Kilo provider is enabled and you are signed in, choose the transcriptio
 }
 ```
 
+### Prompt-Training Model Visibility
+
+Enable **Hide Prompt-Training Models** under **Models** to remove Kilo Gateway models whose providers may use your prompts for training from model lists. Models from other providers and models without explicit prompt-training metadata remain visible. The setting is disabled by default.
+
+You can also enable it in `kilo.jsonc`:
+
+```json
+{
+  "hide_prompt_training_models": true
+}
+```
+
 ### Reasoning Blocks
 
 Reasoning blocks stay expanded by default in the VS Code chat UI. Enable **Auto-Collapse Reasoning** in the Display tab, or set `auto_collapse_reasoning` in `kilo.jsonc`, to collapse them after the agent finishes writing them:

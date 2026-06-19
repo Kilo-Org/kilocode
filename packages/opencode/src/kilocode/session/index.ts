@@ -39,6 +39,7 @@ export namespace KiloSession {
       "session.turn.close",
       Schema.Struct({
         sessionID: SessionID,
+        parentID: Schema.optional(SessionID),
         reason: CloseReasonSchema,
       }),
     ),

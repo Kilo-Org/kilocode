@@ -128,7 +128,8 @@ class GeneratedApiModelSerializationTest {
                         "options": {},
                         "headers": {},
                         "release_date": "2025-01-01",
-                        "isFree": true
+                        "isFree": true,
+                        "hasUserByokAvailable": true
                     }
                 }
             }],
@@ -139,6 +140,7 @@ class GeneratedApiModelSerializationTest {
         val obj = json.decodeFromString<ProviderList200Response>(src)
         val model = obj.all[0].models["free-model"]!!
         assertEquals(true, model.isFree)
+        assertEquals(true, model.hasUserByokAvailable)
         assertEquals(
             ai.kilocode.jetbrains.api.model.Model.Status.BETA,
             model.status,

@@ -45,23 +45,20 @@ describe("AttentionService", () => {
     test.service.dispose()
   })
 
-  it("uses the upstream subagent completion sound", () => {
+  it("plays completion sounds only for parent agents", () => {
     const test = setup()
-    test.event(
-      event({
-        type: "sync",
-        name: "session.created.1",
-        data: { sessionID: "child", info: { parentID: "parent" } },
-      }),
-    )
-    test.event(
-      event({ type: "sync", name: "session.updated.1", data: { sessionID: "child", info: { title: "work" } } }),
-    )
     test.event(event({ type: "session.status", properties: { sessionID: "child", status: { type: "retry" } } }))
     test.event(event({ type: "session.status", properties: { sessionID: "child", status: { type: "idle" } } }))
-    test.event(event({ type: "session.turn.close", properties: { sessionID: "child", reason: "completed" } }))
+    test.event(
+      event({
+        type: "session.turn.close",
+        properties: { sessionID: "child", parentID: "parent", reason: "completed" },
+      }),
+    )
+    test.event(event({ type: "session.status", properties: { sessionID: "parent", status: { type: "busy" } } }))
+    test.event(event({ type: "session.turn.close", properties: { sessionID: "parent", reason: "completed" } }))
 
-    expect(test.sounds).toEqual(["subagent_done"])
+    expect(test.sounds).toEqual(["done"])
     test.service.dispose()
   })
 
@@ -119,6 +116,19 @@ describe("AttentionService", () => {
     test.state("disconnected")
     test.event(event({ type: "session.status", properties: { sessionID: "s1", status: { type: "idle" } } }))
     test.event(event({ type: "session.turn.close", properties: { sessionID: "s1", reason: "completed" } }))
+
+    expect(test.sounds).toEqual([])
+    test.service.dispose()
+  })
+
+  it("clears transitions when a session is deleted", () => {
+    const test = setup()
+    test.event(event({ type: "session.status", properties: { sessionID: "s1", status: { type: "busy" } } }))
+    test.event(event({ type: "session.deleted", properties: { sessionID: "s1", info: { id: "s1" } } }))
+    test.event(event({ type: "session.turn.close", properties: { sessionID: "s1", reason: "completed" } }))
+    test.event(event({ type: "session.status", properties: { sessionID: "s2", status: { type: "busy" } } }))
+    test.event(event({ type: "sync", name: "session.deleted.1", data: { sessionID: "s2" } }))
+    test.event(event({ type: "session.turn.close", properties: { sessionID: "s2", reason: "completed" } }))
 
     expect(test.sounds).toEqual([])
     test.service.dispose()

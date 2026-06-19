@@ -54,6 +54,7 @@ data class ModelInfo(
     val temperature: Boolean,
     val toolCall: Boolean,
     val free: Boolean,
+    val byok: Boolean = false,
     val status: String?,
     val recommendedIndex: Double?,
     val variants: List<String>,

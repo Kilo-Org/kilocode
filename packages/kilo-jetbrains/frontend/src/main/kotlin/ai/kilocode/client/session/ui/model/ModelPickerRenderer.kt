@@ -74,6 +74,14 @@ internal class ModelPickerRenderer(
     private val badgeLabel = BadgeLabel(badge).apply {
         border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
     }
+    private val byok = FilledBadgeIcon(
+        "BYOK",
+        UiStyle.Colors.badgeBg(),
+        UiStyle.Colors.badgeFg(),
+    )
+    private val byokLabel = BadgeLabel(byok).apply {
+        border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
+    }
     private val warn = JBLabel(DATA_COLLECTED).apply {
         toolTipText = ModelText.dataCollected()
         border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
@@ -83,6 +91,7 @@ internal class ModelPickerRenderer(
         add(title)
         add(warn)
         add(badgeLabel)
+        add(byokLabel)
         add(provider)
     }
     private val star = JBLabel().apply {
@@ -136,6 +145,7 @@ internal class ModelPickerRenderer(
         if (item == null) {
             title.append(value.emptyText, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, fg))
             badgeLabel.isVisible = false
+            byokLabel.isVisible = false
             warn.isVisible = false
             provider.isVisible = false
             star.icon = EmptyIcon.ICON_16
@@ -150,7 +160,8 @@ internal class ModelPickerRenderer(
         title.append(name.model, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, fg))
 
         warn.isVisible = ModelText.collectsData(item)
-        badgeLabel.isVisible = item.free
+        badgeLabel.isVisible = item.free && !item.byok
+        byokLabel.isVisible = item.byok
         provider.isVisible = value.favorite
         provider.text = item.providerName
         provider.foreground = weak
@@ -173,6 +184,8 @@ internal class ModelPickerRenderer(
     internal fun badgeVisible(): Boolean = badgeLabel.isVisible
 
     internal fun badgeText(): String = badge.text
+
+    internal fun byokVisible(): Boolean = byokLabel.isVisible
 
     internal fun warningVisible(): Boolean = warn.isVisible
 

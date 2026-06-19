@@ -19,6 +19,7 @@ export interface ProviderModel {
   recommendedIndex?: number
   isFree?: boolean
   mayTrainOnYourPrompts?: boolean
+  hasUserByokAvailable?: boolean
   terminalBench?: {
     overallScore: number
     avgAttemptCostUsd: number

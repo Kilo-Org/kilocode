@@ -74,6 +74,7 @@ internal object KiloWorkspaceDtoMapper {
         temperature = m.temperature,
         toolCall = m.toolCall,
         free = m.free,
+        byok = m.byok,
         status = m.status,
         recommendedIndex = m.recommendedIndex,
         variants = m.variants,

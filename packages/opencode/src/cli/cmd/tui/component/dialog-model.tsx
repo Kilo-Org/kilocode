@@ -64,9 +64,12 @@ export function DialogModel(props: { providerID?: string }) {
   })
 
   const footer = (providerID: string, model: Model) => {
-    if (providerID === "kilo" && FreeModelDisclosure.collectsData(model)) return FreeModelDisclosure.label
-    if (model.cost?.input === 0 && providerID === "opencode") return "Free"
-    return undefined
+    const labels = [
+      providerID === "kilo" && FreeModelDisclosure.hasByok(model) ? FreeModelDisclosure.byok : undefined,
+      providerID === "kilo" && FreeModelDisclosure.collectsData(model) ? FreeModelDisclosure.label : undefined,
+      model.cost?.input === 0 && providerID === "opencode" ? "Free" : undefined,
+    ].filter((label) => label !== undefined)
+    return labels.length > 0 ? labels.join(" · ") : undefined
   }
   // kilocode_change end
 

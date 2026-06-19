@@ -97,5 +97,6 @@ Your IAM user or role must have the following permissions:
 ## Using BYOK in the Extensions and CLI
 
 - BYOK works with the Kilo Gateway provider. Users should ensure that is set as the active [provider](/docs/ai-providers).
-- Select a model from a provider configured for BYOK, for example Claude Sonnet 4.5 if you configured BYOK for Anthropic, or GLM-4.7 if you configured the Z.ai Coding Plan.
+- Kilo Gateway models that can use one of your enabled personal or organization BYOK providers display a `BYOK` badge in the model picker. The badge does not apply to models selected through other providers.
+- Select a model with the `BYOK` badge, for example Claude Sonnet 4.5 if you configured BYOK for Anthropic, or GLM-4.7 if you configured the Z.ai Coding Plan.
 - (Optional) Validate with the provider that traffic is being served by that key.

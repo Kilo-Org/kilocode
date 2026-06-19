@@ -1254,6 +1254,8 @@ class KiloCliDataParserTest {
                             },
                             "limit": {"context": 200000, "input": 100000, "output": 16000},
                             "status": "active",
+                            "isFree": false,
+                            "hasUserByokAvailable": true,
                             "recommendedIndex": 2,
                             "variants": {"high": {}, "low": {}, "medium": {}},
                             "options": {}, "headers": {}
@@ -1273,6 +1275,8 @@ class KiloCliDataParserTest {
             assertTrue(model.temperature)
             assertTrue(model.toolCall)
             assertEquals("active", model.status)
+            assertFalse(model.free)
+            assertTrue(model.byok)
             assertEquals(2.0, model.recommendedIndex)
             assertEquals(200000L, model.limit?.context)
             assertEquals(100000L, model.limit?.input)

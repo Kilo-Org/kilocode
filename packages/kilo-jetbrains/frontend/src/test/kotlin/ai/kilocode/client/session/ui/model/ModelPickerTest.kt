@@ -397,6 +397,22 @@ class ModelPickerTest : BasePlatformTestCase() {
         assertEquals("Data may be used for training", renderer.warningTooltip())
     }
 
+    fun `test renderer shows BYOK instead of free when both are available`() {
+        val row = ModelPickerRow(
+            ModelPicker.Item("claude", "Claude", "kilo", "Kilo", free = true, byok = true),
+            "Kilo",
+            false,
+        )
+        val model = CollectionListModel(listOf(row))
+        val renderer = ModelPickerRenderer(model, { null }, { emptySet() })
+        val list = JBList(model)
+
+        renderer.getListCellRendererComponent(list, row, 0, false, false)
+
+        assertTrue(renderer.byokVisible())
+        assertFalse(renderer.badgeVisible())
+    }
+
     fun `test renderer hides data collection warning for non-kilo free model`() {
         val row = ModelPickerRow(ModelPicker.Item("free", "Free", "openrouter", "OpenRouter", free = true), "OpenRouter", false)
         val model = CollectionListModel(listOf(row))
@@ -420,6 +436,7 @@ class ModelPickerTest : BasePlatformTestCase() {
 
         assertSame(EmptyIcon.ICON_16, renderer.starIcon())
         assertFalse(renderer.badgeVisible())
+        assertFalse(renderer.byokVisible())
     }
 
     private fun item(

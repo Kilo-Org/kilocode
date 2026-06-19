@@ -21344,6 +21344,9 @@
           "mayTrainOnYourPrompts": {
             "type": "boolean"
           },
+          "hasUserByokAvailable": {
+            "type": "boolean"
+          },
           "terminalBench": {
             "type": "object",
             "properties": {
@@ -26149,6 +26152,10 @@
             "type": "object",
             "properties": {
               "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "parentID": {
                 "type": "string",
                 "pattern": "^ses"
               },

@@ -75,6 +75,11 @@ export function ModelInfoPanel(props: Props) {
           </text>
           <text fg={theme.textMuted}>{props.provider ?? m().providerID ?? ""}</text>
         </box>
+        <Show when={FreeModelDisclosure.hasByok(m())}>
+          <box>
+            <text fg={theme.text}>{FreeModelDisclosure.byok}</text>
+          </box>
+        </Show>
         <Show when={FreeModelDisclosure.collectsData(m())}>
           <box>
             <text fg={theme.text}>{FreeModelDisclosure.panel}</text>
