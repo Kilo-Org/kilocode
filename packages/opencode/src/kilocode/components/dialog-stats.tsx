@@ -125,9 +125,13 @@ export function DialogStats(props: DialogStatsProps) {
                   const bar = "█".repeat(barLength)
                   const total = totalToolUsage()
                   const pct = total > 0 ? ((n / total) * 100).toFixed(1) : "0.0"
+                  const maxToolLength = 18
+                  const truncatedTool =
+                    tool.length > maxToolLength ? tool.substring(0, maxToolLength - 2) + ".." : tool
                   return (
                     <text fg={theme.text}>
-                      {tool.padEnd(20)} {bar.padEnd(20)} {n.toString().padStart(3)} ({pct.padStart(4)}%)
+                      {truncatedTool.padEnd(maxToolLength)} {bar.padEnd(20)} {n.toString().padStart(3)} (
+                      {pct.padStart(4)}%)
                     </text>
                   )
                 }}
