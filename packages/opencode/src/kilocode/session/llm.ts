@@ -51,14 +51,15 @@ export namespace KiloLLM {
     messages: ModelMessage[]
     tools: Record<string, { description?: string; inputSchema?: unknown }>
     configured: number | undefined
-    tokens?: number
+    contextTokens?: number
   }): number | undefined {
     if (input.configured == null) return input.configured
     if (input.configured <= 0) return undefined
     const { context } = input.model.limit
     if (!context) return input.configured
 
-    const tokens = input.tokens ?? KiloSessionOverflow.measure({ messages: input.messages, tools: input.tools }).raw
+    const tokens =
+      input.contextTokens ?? KiloSessionOverflow.measure({ messages: input.messages, tools: input.tools }).normalized
     const available = context - tokens - SAFETY
     // If available is ≤0 the input alone exceeds context — return the original
     // value so the provider returns a natural overflow error which triggers
