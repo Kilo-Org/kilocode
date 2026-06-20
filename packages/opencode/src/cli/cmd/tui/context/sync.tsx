@@ -143,6 +143,11 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
     const kv = useKV()
 
     // kilocode_change start
+    function processScope(scope: string) {
+      const current = project.instance.path()
+      return scope === current.directory || scope === current.worktree || scope === project.data.project.worktree
+    }
+
     function evict(sessionID: string) {
       // Collect child session IDs so we can evict them too.
       const children = store.session.filter((s) => s.parentID === sessionID).map((s) => s.id)
@@ -156,7 +161,9 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           delete draft.session_diff[sessionID]
           delete draft.session_status[sessionID]
           delete draft.todo[sessionID]
-          delete draft.background_process[sessionID] // kilocode_change
+          const processes = draft.background_process[sessionID]?.filter((item) => item.lifetime === "persistent")
+          if (processes?.length) draft.background_process[sessionID] = processes
+          else delete draft.background_process[sessionID]
           delete draft.permission[sessionID]
           delete draft.question[sessionID]
           delete draft.suggestion[sessionID]
@@ -354,39 +361,39 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
 
         // kilocode_change start
         case "background_process.updated": {
+          if (!processScope(event.properties.scope)) break
           const info = event.properties.info
           deleted.delete(info.id)
-          const list = store.background_process[info.sessionID]
-          if (!list) {
-            setStore("background_process", info.sessionID, [info])
-            break
-          }
-          const result = Binary.search(list, info.id, (item) => item.id)
-          if (result.found) {
-            setStore("background_process", info.sessionID, result.index, reconcile(info))
-            break
-          }
           setStore(
             "background_process",
-            info.sessionID,
             produce((draft) => {
-              draft.splice(result.index, 0, info)
+              for (const [sessionID, list] of Object.entries(draft)) {
+                const index = list.findIndex((item) => item.id === info.id)
+                if (index < 0) continue
+                list.splice(index, 1)
+                if (list.length === 0) delete draft[sessionID]
+              }
+              const list = draft[info.sessionID] ?? []
+              const result = Binary.search(list, info.id, (item) => item.id)
+              list.splice(result.index, 0, info)
+              draft[info.sessionID] = list
             }),
           )
           break
         }
 
         case "background_process.deleted": {
+          if (!processScope(event.properties.scope)) break
           deleted.add(event.properties.processID)
-          const list = store.background_process[event.properties.sessionID]
-          if (!list) break
-          const result = Binary.search(list, event.properties.processID, (item) => item.id)
-          if (!result.found) break
           setStore(
             "background_process",
-            event.properties.sessionID,
             produce((draft) => {
-              draft.splice(result.index, 1)
+              for (const [sessionID, list] of Object.entries(draft)) {
+                const index = list.findIndex((item) => item.id === event.properties.processID)
+                if (index < 0) continue
+                list.splice(index, 1)
+                if (list.length === 0) delete draft[sessionID]
+              }
             }),
           )
           break
@@ -695,17 +702,22 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
               setStore(
                 "background_process",
                 produce((draft) => {
-                  for (const [sessionID, list] of Object.entries(next)) {
-                    const items = new Map((draft[sessionID] ?? []).map((item) => [item.id, item]))
-                    for (const item of list) {
-                      if (deleted.has(item.id)) continue
-                      const prev = items.get(item.id)
-                      if (!prev || item.time.updated >= prev.time.updated) items.set(item.id, item)
-                    }
-                    const value = Array.from(items.values()).toSorted((a, b) => a.id.localeCompare(b.id))
-                    if (value.length === 0) delete draft[sessionID]
-                    else draft[sessionID] = value
+                  const items = new Map(
+                    Object.values(draft)
+                      .flat()
+                      .map((item) => [item.id, item]),
+                  )
+                  for (const item of Object.values(next).flat()) {
+                    if (deleted.has(item.id)) continue
+                    const prev = items.get(item.id)
+                    if (!prev || item.time.updated > prev.time.updated) items.set(item.id, item)
                   }
+                  for (const sessionID of Object.keys(draft)) delete draft[sessionID]
+                  for (const item of items.values()) {
+                    if (!draft[item.sessionID]) draft[item.sessionID] = []
+                    draft[item.sessionID].push(item)
+                  }
+                  for (const list of Object.values(draft)) list.sort((a, b) => a.id.localeCompare(b.id))
                 }),
               )
             }),

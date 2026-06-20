@@ -9,6 +9,7 @@ import { Config } from "@/config/config"
 import { Auth } from "@/auth"
 import { InstanceRuntime } from "@/project/instance-runtime"
 import { SessionExport } from "@/kilocode/session-export"
+import { KiloShutdown } from "@/kilocode/cli/shutdown"
 import { createHelpCommand } from "@/kilocode/help-command"
 import { KiloConsoleCommand } from "@/kilocode/cli/cmd/console"
 import { RollCallCommand } from "@/kilocode/cli/cmd/roll-call"
@@ -40,6 +41,11 @@ export namespace KiloCli {
     // sidesteps the self-referential type error the old inline registration hit in index.ts.
     cli.command(createHelpCommand(() => cli))
     return cli
+  }
+
+  export async function runner() {
+    if (!process.argv.includes("__background-process-runner")) return false
+    return (await import("@/kilocode/background-process/runner")).BackgroundProcessRunner.maybe()
   }
 
   // Runs from the upstream `.middleware`, before any command handler. Env tagging is additive so
@@ -87,6 +93,7 @@ export namespace KiloCli {
         log.warn("telemetry shutdown failed", { err })
       }
     } finally {
+      await KiloShutdown.run()
       await InstanceRuntime.disposeAllInstances() // safety net (no-op if already disposed)
     }
   }

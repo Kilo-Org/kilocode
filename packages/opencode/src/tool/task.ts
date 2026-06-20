@@ -13,6 +13,7 @@ import { SessionStatus } from "@/session/status"
 import { Config } from "@/config/config"
 import { Provider } from "@/provider/provider" // kilocode_change
 import { KiloTask } from "../kilocode/tool/task" // kilocode_change
+import { KiloTaskBackgroundProcess } from "../kilocode/tool/task-background-process" // kilocode_change
 import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode_change
 import { KiloSession } from "../kilocode/session" // kilocode_change
@@ -270,7 +271,7 @@ export const TaskTool = Tool.define(
         }
         // kilocode_change end
         return result.parts.findLast((item) => item.type === "text")?.text ?? ""
-      })
+      }, Effect.ensuring(KiloTaskBackgroundProcess.finish(nextSession.id))) // kilocode_change - transfer inherited processes when the child run ends
 
       const resumeWhenIdle: (input: { userID: MessageID; state: "completed" | "error" }) => Effect.Effect<void> =
         Effect.fn("TaskTool.resumeWhenIdle")(function* (input: { userID: MessageID; state: "completed" | "error" }) {
