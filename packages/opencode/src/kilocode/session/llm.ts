@@ -6,6 +6,7 @@ import type { Provider } from "@/provider/provider"
 import { KiloSessionOverflow } from "./overflow"
 
 const SAFETY = 2048
+const MEDIA_OUTPUT_RESERVE = 2048
 const MIN_OUTPUT = 1024
 
 export namespace KiloLLM {
@@ -59,7 +60,11 @@ export namespace KiloLLM {
     if (!context) return input.configured
 
     const tokens =
-      input.contextTokens ?? KiloSessionOverflow.measure({ messages: input.messages, tools: input.tools }).normalized
+      input.contextTokens ??
+      (() => {
+        const usage = KiloSessionOverflow.measure({ messages: input.messages, tools: input.tools })
+        return usage.normalized + usage.media * MEDIA_OUTPUT_RESERVE
+      })()
     const available = context - tokens - SAFETY
     // If available is ≤0 the input alone exceeds context — return the original
     // value so the provider returns a natural overflow error which triggers
