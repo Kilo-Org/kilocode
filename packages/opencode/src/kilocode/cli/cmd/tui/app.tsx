@@ -260,12 +260,17 @@ export function init() {
     const root = rootByID.get(sid) ?? sid
     if (!TuiAutoApprove.mark(root, rid)) return
     if (!TuiAutoApprove.enabled(root)) return
-    const result = await sdk.client.permission.reply({
-      requestID: rid,
-      reply: "once",
-      workspace: project.workspace.current(), // kilocode_change - match manual permission replies
-    })
-    if (result.error) TuiAutoApprove.unmark(root, rid)
+    try {
+      const result = await sdk.client.permission.reply({
+        requestID: rid,
+        reply: "once",
+        workspace: project.workspace.current(), // kilocode_change - match manual permission replies
+      })
+      if (result.error) TuiAutoApprove.unmark(root, rid)
+    } catch (err) {
+      console.error("kilocode: auto-approve reply failed", err)
+      TuiAutoApprove.unmark(root, rid)
+    }
   }
   // kilocode_change end
 
@@ -312,8 +317,10 @@ export function init() {
             ? "Disable global auto-approve mode"
             : "Enable global auto-approve mode"
         },
-        desc: "Persist auto-approve for all sessions in config",
+        desc: "Auto-approve all permissions across all sessions (persists in config)",
         category: "System",
+        slashName: "auto-approve-all",
+        slashAliases: ["yolo-all"],
         run: async () => {
           const enabled = isAllowEverything(sync.data.config.permission)
           const result = await sdk.client.permission.allowEverything({ enable: !enabled })

@@ -26,6 +26,11 @@ export namespace TuiAutoApprove {
     return sessions.has(sessionID)
   }
 
+  /**
+   * Return the queued flag without consuming it. Callers (e.g. the route
+   * rendering the home screen) use this to decide whether to pre-arm
+   * auto-approve for the next session before it is booted.
+   */
   export function next() {
     track()
     return queued
@@ -35,6 +40,13 @@ export namespace TuiAutoApprove {
     return sessionID ? enabled(sessionID) : next()
   }
 
+  /**
+   * Set the queued flag. The palette's permission.auto_approve_session
+   * command calls this on the home route to pre-arm the next session.
+   * The flag persists across navigation. The next call to boot()
+   * consumes it (boots the session with auto-approve and clears the flag).
+   * Users can toggle off by calling pending(false).
+   */
   export function pending(enable: boolean) {
     queued = enable
     touch()
@@ -79,6 +91,18 @@ export namespace TuiAutoApprove {
   export function clear(sessionID: string) {
     sessions.delete(sessionID)
     replies.delete(sessionID)
+    touch()
+  }
+
+  /**
+   * Clear all auto-approve state: tracked sessions, replied request IDs,
+   * and the queued flag. Use on full teardown (e.g. logout, workspace
+   * switch) when no carryover to a new session is desired.
+   */
+  export function reset() {
+    sessions.clear()
+    replies.clear()
+    queued = false
     touch()
   }
 

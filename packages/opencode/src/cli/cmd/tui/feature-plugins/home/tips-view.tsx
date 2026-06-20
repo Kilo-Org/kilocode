@@ -280,9 +280,6 @@ const TIPS: Tip[] = [
   "Use {highlight}/connect{/highlight} with OpenCode Zen for curated, tested models",
   "Commit your project's {highlight}AGENTS.md{/highlight} file to Git for team sharing",
   "Use {highlight}/review{/highlight} to review uncommitted changes, branches, or PRs",
-  // kilocode_change start - auto-approve tip
-  "Use {highlight}/auto-approve{/highlight} or start with {highlight}kilo --auto-approve{/highlight} to skip tool permission prompts for the current session",
-  // kilocode_change end
   (shortcuts) => `Use ${commandText("/help", shortcuts.helpShow())} to show the help dialog`,
   "Use {highlight}/rename{/highlight} to rename the current session",
   ...(process.platform === "win32"

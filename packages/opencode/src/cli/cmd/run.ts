@@ -255,13 +255,13 @@ export const RunCommand = effectCmd({
       // kilocode_change start - auto approve tracked task sessions
       .option("auto", {
         type: "boolean",
-        describe: "auto-approve all permissions (for autonomous/pipeline usage)",
+        describe: "auto-approve all permissions for autonomous/pipeline usage (see also --auto-approve)",
         default: false,
       })
       .option("auto-approve", {
         type: "boolean",
         alias: ["yolo"], // kilocode_change
-        describe: "allow tools to run without permission prompts",
+        describe: "auto-approve tool permission prompts for this session (transient, replies once; alias: --yolo; see also --auto)",
         default: false,
       })
       // kilocode_change end

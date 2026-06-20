@@ -1096,6 +1096,16 @@ export function Prompt(props: PromptProps) {
     }
 
     const variant = local.model.variant.current()
+    // kilocode_change start - dispatch local palette slash commands such as /yolo before creating a session
+    if (props.sessionID == null && TuiSlash.dispatch(keymap, store.prompt.input)) {
+      history.append({ ...store.prompt, mode: store.mode })
+      setStore("prompt", { input: "", parts: [] })
+      input.extmarks.clear()
+      setStore("extmarkToPartIndex", new Map())
+      input.clear()
+      return true
+    }
+    // kilocode_change end
     let sessionID = props.sessionID
     if (sessionID == null) {
       const workspace = workspaceSelection()
@@ -1185,10 +1195,6 @@ export function Prompt(props: PromptProps) {
         command: inputText,
       })
       setStore("mode", "normal")
-    // kilocode_change start - dispatch local palette slash commands such as /yolo
-    } else if (TuiSlash.dispatch(keymap, inputText)) {
-      void inputText
-    // kilocode_change end
     } else if (
       inputText.startsWith("/") &&
       iife(() => {
@@ -1637,7 +1643,7 @@ export function Prompt(props: PromptProps) {
                           <Show when={yolo()}>
                             <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
                             <text>
-                              <span style={{ fg: fadeColor(theme.warning, modelMetaAlpha()), bold: true }}>YOLO</span>
+                              <span style={{ fg: fadeColor(theme.warning, modelMetaAlpha()), bold: true }}>auto-approve</span>
                             </text>
                           </Show>
                           {/* kilocode_change end */}
