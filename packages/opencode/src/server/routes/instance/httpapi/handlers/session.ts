@@ -1,5 +1,6 @@
 import { Image } from "@/image/image" // kilocode_change - classify user image validation defects
 import { KiloSessionHttpApi } from "@/kilocode/server/httpapi/session-fork" // kilocode_change
+import { KiloSessionSummary } from "@/kilocode/session/summary" // kilocode_change
 import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
 import { Command } from "@/command"
@@ -34,6 +35,7 @@ import {
   RevertPayload,
   ShellPayload,
   SummarizePayload,
+  SummaryPayload, // kilocode_change
   UpdatePayload,
   ViewedPayload, // kilocode_change
 } from "../groups/session"
@@ -274,6 +276,26 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       return true
     })
 
+    // kilocode_change start
+    const summaryText = Effect.fn("SessionHttpApi.summaryText")(function* (ctx: {
+      params: { sessionID: SessionID }
+      payload: typeof SummaryPayload.Type
+    }) {
+      yield* requireSession(ctx.params.sessionID)
+      const messages = yield* SessionError.mapStorageNotFound(
+        session.messages({ sessionID: ctx.params.sessionID }),
+      )
+      const turns = messages.filter((m) => m.info.role === "user" || m.info.role === "assistant")
+      return yield* Effect.tryPromise(() =>
+        KiloSessionSummary.generate({
+          messages: turns,
+          providerID: ctx.payload.providerID,
+          modelID: ctx.payload.modelID,
+        }),
+      ).pipe(Effect.orDie)
+    })
+    // kilocode_change end
+
     const prompt = Effect.fn("SessionHttpApi.prompt")(function* (ctx: {
       params: { sessionID: SessionID }
       payload: typeof PromptPayload.Type
@@ -434,6 +456,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       .handle("share", share)
       .handle("unshare", unshare)
       .handle("summarize", summarize)
+      .handle("summary", summaryText) // kilocode_change
       .handle("prompt", prompt)
       .handle("promptAsync", promptAsync)
       .handle("command", command)
