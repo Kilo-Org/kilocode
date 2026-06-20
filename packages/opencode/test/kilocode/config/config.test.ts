@@ -113,6 +113,60 @@ describe("markdown substitutions", () => {
 })
 
 describe("kilocode indexing config", () => {
+  test("prefers global kilo config over opencode config", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir({ git: true })
+
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(globalTmp.path, { model: "openai/gpt-4o" }, "opencode.jsonc")
+      await writeConfig(globalTmp.path, { model: "anthropic/claude-sonnet-4" }, "kilo.jsonc")
+
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const config = await load()
+          expect(config.model).toBe("anthropic/claude-sonnet-4")
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("prefers project kilo config over opencode config", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir({ git: true })
+
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(tmp.path, { model: "openai/gpt-4o" }, "opencode.jsonc")
+      await writeConfig(tmp.path, { model: "anthropic/claude-sonnet-4" }, "kilo.jsonc")
+
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const config = await load()
+          expect(config.model).toBe("anthropic/claude-sonnet-4")
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
   test("ignores retired semantic indexing flags in existing configs", async () => {
     await using tmp = await tmpdir({ git: true })
     await writeConfig(tmp.path, {
