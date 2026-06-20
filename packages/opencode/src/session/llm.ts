@@ -373,6 +373,7 @@ const live: Layer.Layer<
         toolChoice: input.toolChoice,
         maxOutputTokens: prepared.params.maxOutputTokens,
         abortSignal: input.abort,
+        ...KiloLLM.timeout({ options: prepared.params.options, fallback: item.options, log: l }), // kilocode_change
         headers: prepared.headers,
         maxRetries: input.retries ?? 0,
         messages: prepared.messages,

@@ -587,6 +587,7 @@ data class ModelItem(
     val variants: List<String>,
     val limit: ModelLimitItem?,
     val attachment: Boolean = false,
+    val mayTrainOnYourPrompts: Boolean = false,
 ) {
     val key: String get() = "$provider/$id"
 }

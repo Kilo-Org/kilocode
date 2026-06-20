@@ -421,6 +421,21 @@ export function ModelsAvailableRoute() {
               </div>
               <strong class="models-context-value mono">{fmtContext(state.top())}</strong>
             </div>
+            <Show when={state.gateway()}>
+              <div class="models-privacy-filter-group">
+                <span>Privacy</span>
+                <button
+                  class="models-privacy-filter"
+                  classList={{ selected: state.privacy() }}
+                  type="button"
+                  aria-label="Hide Kilo Gateway models whose providers may use prompts for training"
+                  aria-pressed={state.privacy()}
+                  onClick={() => state.setPrivacy(!state.privacy())}
+                >
+                  Hide prompt-training models
+                </button>
+              </div>
+            </Show>
             <div class="models-capabilities-filter">
               <span>Capabilities</span>
               <div class="models-capabilities-list">

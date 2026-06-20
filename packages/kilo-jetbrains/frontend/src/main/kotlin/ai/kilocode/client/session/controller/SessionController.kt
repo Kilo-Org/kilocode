@@ -657,17 +657,18 @@ class SessionController(
                             .flatMap { provider ->
                                 provider.models.map { (id, info) ->
                                     ModelItem(
-                                        id,
-                                        info.name,
-                                        provider.id,
-                                        provider.name,
-                                         info.recommendedIndex,
-                                         info.free,
-                                         info.byok,
-                                         info.variants,
-                                         info.limit?.let { ModelLimitItem(it.context, it.input, it.output) },
-                                         info.attachment,
-                                     )
+                                        id = id,
+                                        display = info.name,
+                                        provider = provider.id,
+                                        providerName = provider.name,
+                                        recommendedIndex = info.recommendedIndex,
+                                        free = info.free,
+                                        byok = info.byok,
+                                        variants = info.variants,
+                                        limit = info.limit?.let { ModelLimitItem(it.context, it.input, it.output) },
+                                        attachment = info.attachment,
+                                        mayTrainOnYourPrompts = info.mayTrainOnYourPrompts,
+                                    )
                                 }
                             }
                     } ?: emptyList()

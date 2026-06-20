@@ -9,6 +9,7 @@ import { Flock } from "@opencode-ai/core/util/flock"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { Filesystem } from "@/util/filesystem"
 import { Process } from "@/util/process"
+import { serverUrls } from "@/kilocode/cli/server-urls"
 
 export namespace Daemon {
   const username = "kilo"
@@ -30,6 +31,13 @@ export namespace Daemon {
     hostname: z.string(),
     port: z.number().int().positive(),
     url: z.string(),
+    urls: z
+      .object({
+        local: z.string(),
+        network: z.string().optional(),
+        bind: z.string(),
+      })
+      .optional(),
     username: z.string(),
     password: z.string(),
     token: z.string(),
@@ -205,6 +213,7 @@ export namespace Daemon {
           hostname: ready.hostname,
           port: ready.port,
           url: `http://${host(ready.hostname)}:${ready.port}`,
+          urls: serverUrls(ready.hostname, ready.port),
           username,
           password,
           token,

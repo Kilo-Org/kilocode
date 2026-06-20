@@ -1256,6 +1256,7 @@ class KiloCliDataParserTest {
                             "status": "active",
                             "isFree": false,
                             "hasUserByokAvailable": true,
+                            "mayTrainOnYourPrompts": true,
                             "recommendedIndex": 2,
                             "variants": {"high": {}, "low": {}, "medium": {}},
                             "options": {}, "headers": {}
@@ -1277,6 +1278,7 @@ class KiloCliDataParserTest {
             assertEquals("active", model.status)
             assertFalse(model.free)
             assertTrue(model.byok)
+            assertTrue(model.mayTrainOnYourPrompts)
             assertEquals(2.0, model.recommendedIndex)
             assertEquals(200000L, model.limit?.context)
             assertEquals(100000L, model.limit?.input)
@@ -1326,7 +1328,13 @@ class KiloCliDataParserTest {
                         "extra": true
                     },
                     "unknown": "ok",
-                    "models": {}
+                    "models": {
+                        "gpt-5": {
+                            "name": "GPT-5",
+                            "capabilities": {},
+                            "mayTrainOnYourPrompts": true
+                        }
+                    }
                 }],
                 "default": {"code":"openai/gpt-5"},
                 "connected": ["openai"]
@@ -1339,6 +1347,7 @@ class KiloCliDataParserTest {
             assertEquals("Build with OpenAI models", provider.description)
             assertEquals("openai", provider.metadata?.icon)
             assertEquals(3, provider.metadata?.priority)
+            assertTrue(provider.models.getValue("gpt-5").mayTrainOnYourPrompts)
             assertEquals(listOf("openai"), result.second)
             assertEquals(mapOf("code" to "openai/gpt-5"), result.third)
         }
@@ -1372,6 +1381,7 @@ class KiloCliDataParserTest {
             assertEquals(false, model.reasoning)
             assertEquals(false, model.temperature)
             assertEquals(false, model.toolCall)
+            assertFalse(model.mayTrainOnYourPrompts)
             assertNull(model.limit)
         }
 

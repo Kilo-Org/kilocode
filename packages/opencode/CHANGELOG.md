@@ -1,5 +1,40 @@
 # @kilocode/cli
 
+## 7.3.50
+
+### Minor Changes
+
+- [#11421](https://github.com/Kilo-Org/kilocode/pull/11421) [`ccec216`](https://github.com/Kilo-Org/kilocode/commit/ccec2162383a6f378ed5e62d630720607d185209) - Show a BYOK badge for Kilo Gateway models that can use an enabled personal or organization provider key.
+
+- [#11028](https://github.com/Kilo-Org/kilocode/pull/11028) [`a6ded9b`](https://github.com/Kilo-Org/kilocode/commit/a6ded9b60a65f41a9a68f65d8ababa478cf51f52) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Display local and network URLs when the server binds to 0.0.0.0
+
+### Patch Changes
+
+- [#11412](https://github.com/Kilo-Org/kilocode/pull/11412) [`2c9e72c`](https://github.com/Kilo-Org/kilocode/commit/2c9e72c14a87387199fd42546746bbea30aa1570) - Deny provider data collection for Kilo Gateway requests when prompt-training models are hidden.
+
+- [#11301](https://github.com/Kilo-Org/kilocode/pull/11301) [`081b653`](https://github.com/Kilo-Org/kilocode/commit/081b65325f539a4c71db90ce9a89dba4cfa3226f) - Add a privacy filter to the Console model explorer that hides Kilo Gateway models whose providers may use prompts for training.
+
+- [#11026](https://github.com/Kilo-Org/kilocode/pull/11026) [`e2ebf8b`](https://github.com/Kilo-Org/kilocode/commit/e2ebf8b7c8299cb42e68ef33e74507caef448206) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Skip automatic browser launch on Linux when no display is detected.
+
+- [#11212](https://github.com/Kilo-Org/kilocode/pull/11212) [`8649ab6`](https://github.com/Kilo-Org/kilocode/commit/8649ab6dcd04e219b0d4bf98787fc4c2e9353c95) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Show docs URL in dialog when no display server is detected on headless Linux systems
+
+- [#11319](https://github.com/Kilo-Org/kilocode/pull/11319) [`fb37d9c`](https://github.com/Kilo-Org/kilocode/commit/fb37d9c773791f3ec86379dcef9221797ce50f5c) Thanks [@grandmaster451](https://github.com/grandmaster451)! - Show the docs URL in an alert dialog when the browser cannot be opened on headless systems instead of silently failing.
+
+- [#11455](https://github.com/Kilo-Org/kilocode/pull/11455) [`4d09333`](https://github.com/Kilo-Org/kilocode/commit/4d0933371ca9be212cdd0357605e250ebacf7e1b) - Hide reverted provider errors so Redo controls remain visible after rewinding a session.
+
+- [#11475](https://github.com/Kilo-Org/kilocode/pull/11475) [`3d4ccc2`](https://github.com/Kilo-Org/kilocode/commit/3d4ccc25cf1caee91af93f50be127190bead2a23) - Preserve custom subagent tool permissions when tasks inherit restrictions from their parent agent.
+
+- [#11453](https://github.com/Kilo-Org/kilocode/pull/11453) [`f7e68d1`](https://github.com/Kilo-Org/kilocode/commit/f7e68d19d9d8b23b087d3c7c92d487abced8d7ec) - Limit completion sounds to parent agent sessions.
+
+- Updated dependencies [[`ccec216`](https://github.com/Kilo-Org/kilocode/commit/ccec2162383a6f378ed5e62d630720607d185209), [`2c9e72c`](https://github.com/Kilo-Org/kilocode/commit/2c9e72c14a87387199fd42546746bbea30aa1570), [`f7e68d1`](https://github.com/Kilo-Org/kilocode/commit/f7e68d19d9d8b23b087d3c7c92d487abced8d7ec)]:
+  - @kilocode/kilo-gateway@7.4.0
+  - @kilocode/sdk@7.3.50
+  - @kilocode/kilo-indexing@7.3.50
+  - @kilocode/kilo-telemetry@7.3.50
+  - @kilocode/plugin@7.3.50
+  - @opencode-ai/ui@7.3.50
+  - @kilocode/plugin-atomic-chat@7.3.50
+
 ## 7.3.49
 
 ## 7.3.48

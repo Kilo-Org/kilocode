@@ -993,6 +993,7 @@ object KiloCliDataParser {
             recommendedIndex = model.recommendedIndex,
             variants = model.variants,
             limit = model.limit?.let { ModelLimitDto(it.context, it.input, it.output) },
+            mayTrainOnYourPrompts = model.mayTrainOnYourPrompts,
         )
     }
 
@@ -1018,6 +1019,7 @@ object KiloCliDataParser {
                     output = it.long("output") ?: 0,
                 )
             },
+            mayTrainOnYourPrompts = obj.bool("mayTrainOnYourPrompts"),
         )
     }
 

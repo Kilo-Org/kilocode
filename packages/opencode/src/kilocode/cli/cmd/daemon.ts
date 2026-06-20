@@ -1,6 +1,7 @@
 import type { Argv } from "yargs"
 import { cmd } from "@/cli/cmd/cmd"
 import { explicitNetworkOptions, withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
+import { serverUrls } from "@/kilocode/cli/server-urls"
 import { AppRuntime } from "@/effect/app-runtime"
 import { Daemon } from "@/kilocode/daemon/daemon"
 import { warnPort } from "@/kilocode/cli/port-warning"
@@ -19,6 +20,7 @@ function safe(input: Daemon.State | undefined) {
     hostname: input.hostname,
     port: input.port,
     url: input.url,
+    urls: input.urls,
     username: input.username,
     version: input.version,
     startedAt: input.startedAt,
@@ -47,7 +49,13 @@ function print(input: Daemon.Status, json?: boolean) {
     return
   }
   console.log(`kilo daemon running`)
-  console.log(`url: ${input.state?.url}`)
+  if (input.state?.urls) {
+    const urls = input.state.urls
+    console.log(`local:   ${urls.local}`)
+    if (urls.network) console.log(`network: ${urls.network}`)
+  } else {
+    console.log(`url: ${input.state?.url}`)
+  }
   console.log(`pid: ${input.state?.pid}`)
   console.log(`version: ${input.health?.version ?? input.state?.version}`)
   console.log(`auth: enabled`)

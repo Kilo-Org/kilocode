@@ -1,5 +1,39 @@
 # kilo-code
 
+## 7.3.50
+
+### Minor Changes
+
+- [#11421](https://github.com/Kilo-Org/kilocode/pull/11421) [`ccec216`](https://github.com/Kilo-Org/kilocode/commit/ccec2162383a6f378ed5e62d630720607d185209) - Show a BYOK badge for Kilo Gateway models that can use an enabled personal or organization provider key.
+
+### Patch Changes
+
+- [#11418](https://github.com/Kilo-Org/kilocode/pull/11418) [`8b32375`](https://github.com/Kilo-Org/kilocode/commit/8b32375fe67d96f29fa88933d711699e3720ebf4) - Describe custom providers independently of their selected API protocol.
+
+- [#11455](https://github.com/Kilo-Org/kilocode/pull/11455) [`4d09333`](https://github.com/Kilo-Org/kilocode/commit/4d0933371ca9be212cdd0357605e250ebacf7e1b) - Hide reverted provider errors so Redo controls remain visible after rewinding a session.
+
+- [#11423](https://github.com/Kilo-Org/kilocode/pull/11423) [`aa17a8a`](https://github.com/Kilo-Org/kilocode/commit/aa17a8a4191a04604b3a402e75d5c7e7b8149da4) - Keep changed identifiers intact when highlighting edits within diff lines.
+
+- [#11453](https://github.com/Kilo-Org/kilocode/pull/11453) [`f7e68d1`](https://github.com/Kilo-Org/kilocode/commit/f7e68d19d9d8b23b087d3c7c92d487abced8d7ec) - Limit completion sounds to parent agent sessions.
+
+- [#10940](https://github.com/Kilo-Org/kilocode/pull/10940) [`4de8293`](https://github.com/Kilo-Org/kilocode/commit/4de82931ed3d5315e6717827a9b53b11c1162e7f) Thanks [@mjnaderi](https://github.com/mjnaderi)! - Avoid failing Agent Manager startup when another extension already registered VS Code panel commands.
+
+- [#11464](https://github.com/Kilo-Org/kilocode/pull/11464) [`c829642`](https://github.com/Kilo-Org/kilocode/commit/c8296420544a68e730fa4307e1a045210d79fcad) - Keep chat output updating after reverting and resubmitting a prompt.
+
+- [#11433](https://github.com/Kilo-Org/kilocode/pull/11433) [`867beac`](https://github.com/Kilo-Org/kilocode/commit/867beac3a19881861536d6c22a9efcb5ae379cc4) - Prevent concurrent subagent updates from blanking the Agent Manager webview.
+
+- [#11463](https://github.com/Kilo-Org/kilocode/pull/11463) [`909ec73`](https://github.com/Kilo-Org/kilocode/commit/909ec73b9c852de6899c20f473b6da14d6c428b5) - Speed up Agent Manager worktree hover cards so pull request details appear and dismiss more quickly.
+
+- [#11451](https://github.com/Kilo-Org/kilocode/pull/11451) [`732fbc3`](https://github.com/Kilo-Org/kilocode/commit/732fbc30dc3ee969caabc96282ad1a0ff5c652ce) - Widen the chat readable lane from 88ch to 98ch so conversations, tools, and diffs can use more editor space.
+
+- Updated dependencies [[`ccec216`](https://github.com/Kilo-Org/kilocode/commit/ccec2162383a6f378ed5e62d630720607d185209), [`2c9e72c`](https://github.com/Kilo-Org/kilocode/commit/2c9e72c14a87387199fd42546746bbea30aa1570), [`f7e68d1`](https://github.com/Kilo-Org/kilocode/commit/f7e68d19d9d8b23b087d3c7c92d487abced8d7ec)]:
+  - @kilocode/kilo-gateway@7.4.0
+  - @kilocode/sdk@7.3.50
+  - @kilocode/kilo-indexing@7.3.50
+  - @kilocode/kilo-ui@7.3.50
+  - @kilocode/plugin@7.3.50
+  - @opencode-ai/ui@7.3.50
+
 ## 7.3.49
 
 ### Minor Changes

@@ -398,16 +398,17 @@ class SessionUi(
                     }, m.agent)
                     val items = m.models.map {
                         ModelPicker.Item(
-                            it.id,
-                            it.display,
-                            it.provider,
-                            it.providerName,
-                             it.recommendedIndex,
-                             it.free,
-                             it.byok,
-                             it.variants,
-                             it.attachment,
-                         )
+                            id = it.id,
+                            display = it.display,
+                            provider = it.provider,
+                            providerName = it.providerName,
+                            recommendedIndex = it.recommendedIndex,
+                            free = it.free,
+                            byok = it.byok,
+                            variants = it.variants,
+                            attachment = it.attachment,
+                            mayTrainOnYourPrompts = it.mayTrainOnYourPrompts,
+                        )
                     }
                     val selected =
                         m.model?.let { full -> items.firstOrNull { it.key == full }?.key }
