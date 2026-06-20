@@ -8,7 +8,7 @@
  */
 
 import { Show } from "solid-js"
-import type { JSX } from "solid-js"
+import type { Accessor, JSX } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -18,6 +18,45 @@ import type { TerminalStateControls } from "./terminal"
 import { isTerminalTabId, renderTerminalTab } from "./terminal"
 import type { SessionInfo } from "../src/types/messages"
 import { parseBindingTokens } from "./keybind-tokens"
+
+interface FocusTabDeps {
+  id: string
+  terms: TerminalStateControls
+  isTerminal: (id: string) => boolean
+  isPending: (id: string) => boolean
+  reviewId: string
+  reviewOpen: Accessor<boolean>
+  setReviewOpen: (open: boolean) => void
+  setReviewActive: (active: boolean) => void
+  tabLookup: Accessor<Map<string, SessionInfo>>
+  setActivePendingId: (id: string | undefined) => void
+  clearSession: () => void
+  selectSession: (id: string) => void
+  activateTerminal: (id: string) => void
+}
+
+export function focusCurrentTab(deps: FocusTabDeps) {
+  if (deps.isTerminal(deps.id)) {
+    deps.activateTerminal(deps.id)
+    return
+  }
+  deps.terms.setActiveId(undefined)
+  if (deps.id === deps.reviewId) {
+    if (!deps.reviewOpen()) deps.setReviewOpen(true)
+    deps.setReviewActive(true)
+    return
+  }
+  const target = deps.tabLookup().get(deps.id)
+  if (!target) return
+  deps.setReviewActive(false)
+  if (deps.isPending(target.id)) {
+    deps.setActivePendingId(target.id)
+    deps.clearSession()
+    return
+  }
+  deps.setActivePendingId(undefined)
+  deps.selectSession(target.id)
+}
 
 export interface TabRenderDeps {
   terms: TerminalStateControls

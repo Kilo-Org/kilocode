@@ -353,7 +353,7 @@ export namespace KilocodeConfig {
         .catch(() => "")
       const data = parseJsonc(text) ?? {}
       configs.push({ file, data })
-      if (isRecord(data.permission) && data.permission.bash) return
+      if (typeof data.permission === "string" || (isRecord(data.permission) && data.permission.bash)) return
     }
 
     // A schema-only file is generated for editor completion. It does not mean

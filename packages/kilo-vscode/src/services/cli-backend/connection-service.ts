@@ -85,6 +85,8 @@ export class KiloConnectionService {
   /** Provider key → all open (background) session IDs. */
   private readonly opened: Map<string, string[]> = new Map()
   private debounceTimer: ReturnType<typeof setTimeout> | null = null
+  private viewedSending = false
+  private viewedDirty = false
   private unsubRemote: (() => void) | null = null
 
   constructor(context: vscode.ExtensionContext) {
@@ -520,17 +522,38 @@ export class KiloConnectionService {
     if (this.debounceTimer) clearTimeout(this.debounceTimer)
     this.debounceTimer = setTimeout(() => {
       this.debounceTimer = null
-      const focus = new Set(this.focused.values())
-      const open = new Set<string>()
-      for (const ids of this.opened.values()) {
-        for (const id of ids) {
-          if (!focus.has(id)) open.add(id)
-        }
-      }
-      this.client?.session
-        .viewed({ focused: [...focus], open: [...open] })
-        .catch((err) => console.warn("[Kilo New] ConnectionService: viewed flush failed:", err))
+      this.sendViewed()
     }, 150)
+  }
+
+  private sendViewed(): void {
+    if (!this.isRemoteEnabled()) {
+      this.viewedDirty = false
+      return
+    }
+    if (this.viewedSending) {
+      this.viewedDirty = true
+      return
+    }
+    if (!this.client) return
+
+    const focus = new Set(this.focused.values())
+    const open = new Set<string>()
+    for (const ids of this.opened.values()) {
+      for (const id of ids) {
+        if (!focus.has(id)) open.add(id)
+      }
+    }
+
+    this.viewedSending = true
+    this.viewedDirty = false
+    void this.client.session
+      .viewed({ focused: [...focus], open: [...open] })
+      .catch((err) => console.warn("[Kilo New] ConnectionService: viewed flush failed:", err))
+      .finally(() => {
+        this.viewedSending = false
+        if (this.viewedDirty) this.sendViewed()
+      })
   }
 
   /**
@@ -558,6 +581,7 @@ export class KiloConnectionService {
       clearTimeout(this.debounceTimer)
       this.debounceTimer = null
     }
+    this.viewedDirty = false
     this.unsubRemote?.()
     this.unsubRemote = null
     this.client = null

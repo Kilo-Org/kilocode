@@ -15,12 +15,15 @@ import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverri
 import { SessionContext } from "../context/session"
 import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
+import { SidebarSearchMenu } from "../../agent-manager/SidebarSearchMenu"
+import { SidebarToggleButton } from "../../agent-manager/SidebarToggleButton"
+import type { SidebarSearchItem } from "../../agent-manager/sidebar-search"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
-import { createSignal, type JSX } from "solid-js"
+import { createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats, PRStatus } from "../types/messages"
 import type { ReviewComment } from "../../diff-viewer/review-comments"
 import "../../agent-manager/agent-manager.css"
@@ -823,18 +826,9 @@ const MockReviewTab = (props: { active?: boolean }) => (
   </div>
 )
 
-const MockTabsSearchButton = () => (
-  <button class="am-tabs-menu-trigger" type="button" aria-label="Search open tabs">
-    <svg class="am-tabs-search-icon" viewBox="0 0 16 16" aria-hidden="true">
-      <circle cx="6.8" cy="6.8" r="4.3" />
-      <path d="M10.2 10.2L13.5 13.5" />
-    </svg>
-  </button>
-)
-
 const MockTabLeading = () => (
   <div class="am-tab-leading">
-    <MockTabsSearchButton />
+    <SidebarToggleButton collapsed={false} onClick={() => {}} />
   </div>
 )
 
@@ -933,4 +927,122 @@ export const TabBarSingleTab: Story = {
       </div>
     </StoryProviders>
   ),
+}
+
+const searchSection = { id: "polish", name: "Polish", color: "Blue", order: 0, collapsed: false }
+const slackedSection = { id: "slacked", name: "SLACKED", color: "Yellow", order: 1, collapsed: false }
+const sidebarSearchItems: SidebarSearchItem[] = [
+  {
+    key: "session:session-build",
+    kind: "session",
+    group: "sessions",
+    title: "Build grouped worktree search",
+    meta: ["Polish", "Agent Manager search", "feat/sidebar-search"],
+    search: "Build grouped worktree search Agent Manager search feat/sidebar-search Polish",
+    sessionId: "session-build",
+    location: "worktree",
+    worktreeId: "wt-search",
+    updatedAt: new Date(Date.now() - 3 * 60_000).toISOString(),
+    state: "busy",
+    visible: true,
+    section: searchSection,
+  },
+  {
+    key: "session:session-local",
+    kind: "session",
+    group: "sessions",
+    title: "Investigate local indexing",
+    meta: ["local"],
+    search: "Investigate local indexing local",
+    sessionId: "session-local",
+    location: "local",
+    updatedAt: new Date(Date.now() - 8 * 60_000).toISOString(),
+    state: "idle",
+    visible: true,
+  },
+  {
+    key: "session:session-render",
+    kind: "session",
+    group: "sessions",
+    title: "Render images in diff viewer",
+    meta: ["SLACKED", "images diff viewer", "utopian-approval"],
+    search: "Render images in diff viewer SLACKED images diff viewer utopian-approval",
+    sessionId: "session-render",
+    location: "worktree",
+    worktreeId: "wt-render",
+    updatedAt: new Date(Date.now() - 60 * 60_000).toISOString(),
+    state: "idle",
+    visible: true,
+    section: slackedSection,
+  },
+  {
+    key: "local",
+    kind: "local",
+    group: "contexts",
+    title: "local",
+    meta: ["main"],
+    search: "local main",
+    updatedAt: new Date(Date.now() - 3 * 60_000).toISOString(),
+    state: "idle",
+    visible: true,
+    count: 2,
+  },
+  {
+    key: "worktree:wt-search",
+    kind: "worktree",
+    group: "contexts",
+    title: "Agent Manager search",
+    meta: ["Polish", "feat/sidebar-search"],
+    search: "Agent Manager search Polish feat/sidebar-search",
+    worktreeId: "wt-search",
+    updatedAt: new Date(Date.now() - 3 * 60_000).toISOString(),
+    state: "busy",
+    visible: true,
+    section: searchSection,
+    count: 2,
+  },
+]
+
+export const SidebarSearchOpen: Story = {
+  name: "Sidebar search — worktrees and sessions",
+  render: () => {
+    const [selected, setSelected] = createSignal("worktree:wt-search")
+    let prompt!: HTMLTextAreaElement
+    const refocus = () => requestAnimationFrame(() => prompt.focus())
+    onMount(() => {
+      window.addEventListener("focusPrompt", refocus)
+      onCleanup(() => window.removeEventListener("focusPrompt", refocus))
+    })
+    return (
+      <StoryProviders noPadding>
+        <div style={{ "min-height": "430px", padding: "16px", background: "var(--surface-base)" }}>
+          <div class="am-section-header">
+            <span class="am-section-label">WORKTREES</span>
+            <div class="am-section-actions">
+              <SidebarSearchMenu
+                items={() => sidebarSearchItems}
+                keybind="⌘F"
+                current={() => sidebarSearchItems.find((item) => item.key === selected())}
+                labels={{
+                  search: "Search worktrees and sessions",
+                  scope: "Searches the local workspace, local sessions, worktrees, and their sessions",
+                  contexts: "LOCAL & WORKTREES",
+                  sessions: "SESSIONS",
+                  waiting: "Wait",
+                  retry: "Retry",
+                }}
+                onSelect={(item) => setSelected(item.key)}
+                defaultOpen
+                portal={false}
+              />
+            </div>
+          </div>
+          <output class="sr-only" data-slot="sidebar-search-selection">
+            {selected()}
+          </output>
+          <textarea ref={prompt} class="sr-only" aria-label="Story prompt" />
+        </div>
+      </StoryProviders>
+    )
+  },
 }

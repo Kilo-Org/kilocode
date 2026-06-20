@@ -1254,6 +1254,9 @@ class KiloCliDataParserTest {
                             },
                             "limit": {"context": 200000, "input": 100000, "output": 16000},
                             "status": "active",
+                            "isFree": false,
+                            "hasUserByokAvailable": true,
+                            "mayTrainOnYourPrompts": true,
                             "recommendedIndex": 2,
                             "variants": {"high": {}, "low": {}, "medium": {}},
                             "options": {}, "headers": {}
@@ -1273,6 +1276,9 @@ class KiloCliDataParserTest {
             assertTrue(model.temperature)
             assertTrue(model.toolCall)
             assertEquals("active", model.status)
+            assertFalse(model.free)
+            assertTrue(model.byok)
+            assertTrue(model.mayTrainOnYourPrompts)
             assertEquals(2.0, model.recommendedIndex)
             assertEquals(200000L, model.limit?.context)
             assertEquals(100000L, model.limit?.input)
@@ -1308,6 +1314,58 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseProviderSettingsProviders - preserves provider metadata and unknown fields`() {
+            val raw = """{
+                "all": [{
+                    "id": "openai",
+                    "name": "OpenAI",
+                    "description": "Build with OpenAI models",
+                    "source": "api",
+                    "metadata": {
+                        "noteKey": "settings.providers.note.openai",
+                        "icon": "openai",
+                        "priority": 3,
+                        "extra": true
+                    },
+                    "unknown": "ok",
+                    "models": {
+                        "gpt-5": {
+                            "name": "GPT-5",
+                            "capabilities": {},
+                            "mayTrainOnYourPrompts": true
+                        }
+                    }
+                }],
+                "default": {"code":"openai/gpt-5"},
+                "connected": ["openai"]
+            }"""
+
+            val result = KiloCliDataParser.parseProviderSettingsProviders(raw)
+            val provider = result.first.single()
+
+            assertEquals("settings.providers.note.openai", provider.metadata?.noteKey)
+            assertEquals("Build with OpenAI models", provider.description)
+            assertEquals("openai", provider.metadata?.icon)
+            assertEquals(3, provider.metadata?.priority)
+            assertTrue(provider.models.getValue("gpt-5").mayTrainOnYourPrompts)
+            assertEquals(listOf("openai"), result.second)
+            assertEquals(mapOf("code" to "openai/gpt-5"), result.third)
+        }
+
+        @Test
+        fun `parseProviderSettingsProviders - malformed metadata becomes null`() {
+            val raw = """{
+                "all": [{"id":"p","name":"P","source":"api","metadata":"bad","models":{}}],
+                "default": {},
+                "connected": []
+            }"""
+
+            val provider = KiloCliDataParser.parseProviderSettingsProviders(raw).first.single()
+
+            assertNull(provider.metadata)
+        }
+
+        @Test
         fun `parseProviders - model boolean capabilities default to false`() {
             val raw = """{
                 "all": [{
@@ -1323,6 +1381,7 @@ class KiloCliDataParserTest {
             assertEquals(false, model.reasoning)
             assertEquals(false, model.temperature)
             assertEquals(false, model.toolCall)
+            assertFalse(model.mayTrainOnYourPrompts)
             assertNull(model.limit)
         }
 
@@ -1338,6 +1397,33 @@ class KiloCliDataParserTest {
             assertFailsWith<Exception> {
                 KiloCliDataParser.parseProviders("""[1,2,3]""")
             }
+        }
+
+        @Test
+        fun `parseProviderAuth - maps structured select options`() {
+            val raw = """{
+                "azure": [{
+                    "type": "api",
+                    "label": "API key",
+                    "prompts": [{
+                        "type": "select",
+                        "key": "endpointType",
+                        "message": "Select Azure endpoint configuration",
+                        "options": [
+                            {"label": "Resource name", "value": "resourceName", "hint": "Build the endpoint"},
+                            {"label": "Full endpoint URL", "value": "baseURL"}
+                        ]
+                    }]
+                }]
+            }"""
+
+            val prompt = KiloCliDataParser.parseProviderAuth(raw).getValue("azure").single().prompts.single()
+
+            assertEquals("Select Azure endpoint configuration", prompt.label)
+            assertEquals("Resource name", prompt.options[0].label)
+            assertEquals("resourceName", prompt.options[0].value)
+            assertEquals("Full endpoint URL", prompt.options[1].label)
+            assertEquals("baseURL", prompt.options[1].value)
         }
 
         // ---- parseCommands ----
@@ -1471,6 +1557,13 @@ class KiloCliDataParserTest {
             )
             val result = KiloCliDataParser.buildPromptJson(prompt)
             assertEquals("""{"parts":[{"type":"text","text":"Hi"}],"noReply":true}""", result)
+        }
+
+        @Test
+        fun `buildProviderOAuthJson - numeric method index`() {
+            val result = KiloCliDataParser.buildProviderOAuthJson("0", mapOf("deploymentType" to "github.com"))
+
+            assertEquals("""{"method":0,"inputs":{"deploymentType":"github.com"}}""", result)
         }
 
         @Test

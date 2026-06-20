@@ -11,9 +11,17 @@ export const dict = {
   "provider.connect.kiloGateway.byok.link": "BYOK ผ่าน Kilo's Gateway",
   "provider.connect.kiloGateway.byok.suffix": "",
 
-  // Provider dialog translations
-  "dialog.provider.group.recommended": "แนะนำ",
-  "dialog.provider.kilo.note": "เข้าถึงโมเดล AI มากกว่า 500 รายการ",
+  // Provider settings translations
+  "settings.providers.group.recommended": "แนะนำ",
+  "settings.providers.note.kilo": "เข้าถึงโมเดล AI มากกว่า 500 รายการ",
+  "settings.providers.note.opencode": "โมเดลที่คัดสรร รวมถึง Claude, GPT, Gemini และอื่น ๆ",
+  "settings.providers.note.anthropic": "เข้าถึงโมเดล Claude โดยตรง รวมถึง Pro และ Max",
+  "settings.providers.note.deepseek": "โมเดล DeepSeek สำหรับงานใช้เหตุผลและเขียนโค้ด",
+  "settings.providers.note.copilot": "โมเดล Claude สำหรับช่วยเขียนโค้ด",
+  "settings.providers.note.openai": "โมเดล GPT และ Codex พร้อมคีย์ API หรือการเข้าสู่ระบบ ChatGPT",
+  "settings.providers.note.google": "โมเดล Gemini สำหรับคำตอบที่รวดเร็วและเป็นโครงสร้าง",
+  "settings.providers.note.openrouter": "เข้าถึงโมเดลที่รองรับทั้งหมดจากผู้ให้บริการเดียว",
+  "settings.providers.note.vercel": "เข้าถึงโมเดล AI แบบรวมศูนย์พร้อมการกำหนดเส้นทางอัจฉริยะ",
 
   // Reasoning block label
   "ui.permission.run": "เรียกใช้",

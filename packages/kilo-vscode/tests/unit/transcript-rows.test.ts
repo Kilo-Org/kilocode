@@ -84,6 +84,32 @@ describe("transcriptRows", () => {
     expect(rows.at(-1)).toMatchObject({ type: "error", message: a3, error: a3.error })
   })
 
+  it("hides provider errors at and after an assistant part boundary", () => {
+    const revert = { messageID: "message_2", partID: "part_2" }
+    const u1 = user("message_1")
+    const a1 = assistant("message_2", "message_1", { error: { name: "ProviderError" } })
+    const a2 = assistant("message_3", "message_1", { error: { name: "ProviderError" } })
+    const parts = { message_2: [part("part_1", "message_2"), part("part_2", "message_2")] }
+    const rows = transcriptRows(messageTurns([u1, a1, a2], revert), lookup(parts), { revert })
+
+    expect(rows.map((row) => row.type)).toEqual(["user", "assistant"])
+    expect(rows.filter((row) => row.type === "assistant").flatMap((row) => row.parts.map((item) => item.id))).toEqual([
+      "part_1",
+    ])
+    expect(rows.some((row) => row.message.id === "message_3")).toBe(false)
+  })
+
+  it("keeps provider errors before an assistant part boundary", () => {
+    const revert = { messageID: "message_3", partID: "part_2" }
+    const u1 = user("message_1")
+    const a1 = assistant("message_2", "message_1", { error: { name: "ProviderError" } })
+    const a2 = assistant("message_3", "message_1")
+    const parts = { message_3: [part("part_1", "message_3"), part("part_2", "message_3")] }
+    const rows = transcriptRows(messageTurns([u1, a1, a2], revert), lookup(parts), { revert })
+
+    expect(rows.at(-1)).toMatchObject({ type: "error", message: a1 })
+  })
+
   it("keeps keys stable when older turns are prepended and parts are appended", () => {
     const u1 = user("u1")
     const a1 = assistant("a1", "u1")
@@ -131,7 +157,7 @@ describe("transcriptRows", () => {
     })
     const a2 = assistant("a2", "u1")
     const u3 = user("u3")
-    const turns = messageTurns([u1, a1, u2, a2, u3], "u3")
+    const turns = messageTurns([u1, a1, u2, a2, u3], { messageID: "u3" })
     const rows = transcriptRows(turns, (id) => (id === "u2" ? (u2.parts ?? []) : []))
 
     expect(rows.map((row) => `${row.turn}:${row.message.id}`)).toEqual(["u1:u1", "u1:a1", "u2:u2", "u2:a2"])

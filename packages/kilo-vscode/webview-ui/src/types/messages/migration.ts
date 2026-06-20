@@ -54,21 +54,18 @@ export interface MigrationResultItem {
   message?: string
 }
 
+export type MigrationSource = "legacy" | "roo"
+
 export interface MigrationStateMessage {
   type: "migrationState"
   needed: boolean
-  data?: {
-    providers: MigrationProviderInfo[]
-    mcpServers: MigrationMcpServerInfo[]
-    customModes: MigrationCustomModeInfo[]
-    sessions?: MigrationSessionInfo[]
-    defaultModel?: { provider: string; model: string }
-    settings?: LegacySettings
-  }
+  source: "legacy"
 }
 
-export interface LegacyMigrationDataMessage {
-  type: "legacyMigrationData"
+export interface MigrationDataMessage {
+  type: "migrationData"
+  source: MigrationSource
+  operationId: string
   data: {
     providers: MigrationProviderInfo[]
     mcpServers: MigrationMcpServerInfo[]
@@ -79,8 +76,10 @@ export interface LegacyMigrationDataMessage {
   }
 }
 
-export interface LegacyMigrationProgressMessage {
-  type: "legacyMigrationProgress"
+export interface MigrationProgressMessage {
+  type: "migrationProgress"
+  source: MigrationSource
+  operationId: string
   item: string
   status: "migrating" | "success" | "warning" | "error"
   message?: string
@@ -88,8 +87,10 @@ export interface LegacyMigrationProgressMessage {
 
 export type LegacyMigrationSessionPhase = "preparing" | "storing" | "skipped" | "done" | "summary" | "error"
 
-export interface LegacyMigrationSessionProgressMessage {
-  type: "legacyMigrationSessionProgress"
+export interface MigrationSessionProgressMessage {
+  type: "migrationSessionProgress"
+  source: MigrationSource
+  operationId: string
   session: MigrationSessionInfo
   index: number
   total: number
@@ -97,13 +98,17 @@ export interface LegacyMigrationSessionProgressMessage {
   error?: string
 }
 
-export interface LegacyMigrationCompleteMessage {
-  type: "legacyMigrationComplete"
+export interface MigrationCompleteMessage {
+  type: "migrationComplete"
+  source: MigrationSource
+  operationId: string
   results: MigrationResultItem[]
 }
 
-export interface RequestLegacyMigrationDataMessage {
-  type: "requestLegacyMigrationData"
+export interface RequestMigrationDataMessage {
+  type: "requestMigrationData"
+  source: MigrationSource
+  operationId: string
 }
 
 export interface MigrationAutoApprovalSelections {
@@ -120,8 +125,10 @@ export interface MigrationSessionSelection {
   force?: boolean
 }
 
-export interface StartLegacyMigrationMessage {
-  type: "startLegacyMigration"
+export interface StartMigrationMessage {
+  type: "startMigration"
+  source: MigrationSource
+  operationId: string
   selections: {
     providers: string[]
     mcpServers: string[]

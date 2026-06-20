@@ -29,18 +29,13 @@ const allow: Record<string, string> = {
 }
 
 const testAllow: Record<string, { count: number; reason: string }> = {
-  "control-plane/workspace.test.ts": { count: 5, reason: "existing runtime integration test" },
   "kilocode/config-resilience.test.ts": { count: 4, reason: "existing runtime integration test" },
   "kilocode/config-validation.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/plan-followup.test.ts": { count: 4, reason: "existing runtime integration test" },
-  "kilocode/session/platform-attribution.test.ts": { count: 5, reason: "existing runtime integration test" },
+  "kilocode/session/platform-attribution.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/session-prompt-queue.test.ts": { count: 5, reason: "prompt queue legacy instance bridge regression" },
-  "kilocode/session/session.test.ts": { count: 5, reason: "existing runtime integration test" },
-  "provider/amazon-bedrock.test.ts": { count: 2, reason: "existing runtime integration test" },
-  "provider/provider.test.ts": { count: 3, reason: "existing runtime integration test" },
   "server/experimental-session-list.test.ts": { count: 2, reason: "Kilo session list integration test" },
-  "server/httpapi-event.test.ts": { count: 6, reason: "event stream integration test" },
-  "session/llm.test.ts": { count: 2, reason: "existing runtime integration test" },
+  "kilocode/server/listener-runtime.test.ts": { count: 3, reason: "listener and AppRuntime integration test" },
   "tool/recall.test.ts": { count: 11, reason: "existing runtime integration test" },
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { sanitizeResponsesBody } from "../src/responses"
+import { transformRequestBody } from "../src/responses"
 
 describe("Responses request sanitization", () => {
   test("strips item ids when storage is disabled", () => {
@@ -30,7 +30,7 @@ describe("Responses request sanitization", () => {
       ],
     })
 
-    const result = sanitizeResponsesBody("https://api.kilo.ai/api/openrouter/responses", body)
+    const result = transformRequestBody("https://api.kilo.ai/api/openrouter/responses", body)
     const data = JSON.parse(result as string)
 
     expect(data.input).toHaveLength(3)
@@ -60,19 +60,19 @@ describe("Responses request sanitization", () => {
       ],
     })
 
-    expect(sanitizeResponsesBody("https://api.kilo.ai/api/openrouter/responses", body)).toBe(body)
+    expect(transformRequestBody("https://api.kilo.ai/api/openrouter/responses", body)).toBe(body)
   })
 
   test("leaves non-responses requests unchanged", () => {
     const body = "not json"
 
-    expect(sanitizeResponsesBody("https://api.kilo.ai/api/openrouter/chat/completions", body)).toBe(body)
+    expect(transformRequestBody("https://api.kilo.ai/api/openrouter/chat/completions", body)).toBe(body)
   })
 
   test("leaves invalid responses JSON unchanged", () => {
     const body = "not json"
 
-    expect(sanitizeResponsesBody("https://api.kilo.ai/api/openrouter/responses", body)).toBe(body)
+    expect(transformRequestBody("https://api.kilo.ai/api/openrouter/responses", body)).toBe(body)
   })
 
   test("matches relative responses paths without a placeholder host", () => {
@@ -86,9 +86,32 @@ describe("Responses request sanitization", () => {
         },
       ],
     })
-    const result = sanitizeResponsesBody("/api/openrouter/responses?stream=true", body)
+    const result = transformRequestBody("/api/openrouter/responses?stream=true", body)
     const data = JSON.parse(result as string)
 
     expect(data.input[0].id).toBeUndefined()
+  })
+
+  test("sanitizes responses and denies data collection in one transform", () => {
+    const body = JSON.stringify({
+      input: [{ type: "message", role: "assistant", id: "msg_tmp_123" }],
+      provider: { order: ["anthropic"] },
+    })
+    const result = transformRequestBody("https://api.kilo.ai/api/openrouter/responses", body, "deny")
+
+    expect(JSON.parse(result as string)).toEqual({
+      input: [{ type: "message", role: "assistant" }],
+      provider: { order: ["anthropic"], data_collection: "deny" },
+    })
+  })
+
+  test("denies data collection for non-responses requests", () => {
+    const body = JSON.stringify({ model: "anthropic/claude-sonnet-4" })
+    const result = transformRequestBody("https://api.kilo.ai/api/openrouter/chat/completions", body, "deny")
+
+    expect(JSON.parse(result as string)).toEqual({
+      model: "anthropic/claude-sonnet-4",
+      provider: { data_collection: "deny" },
+    })
   })
 })

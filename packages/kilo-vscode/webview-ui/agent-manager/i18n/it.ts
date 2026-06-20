@@ -56,11 +56,12 @@ export const dict = {
   "agentManager.tab.terminal": "Terminale",
   "agentManager.tab.openTerminal": "Apri terminale",
   "agentManager.tab.newOptions": "Altre opzioni nuova scheda",
-  "agentManager.tabsMenu.label": "Cerca e cambia scheda",
-  "agentManager.tabsMenu.search": "Cerca schede...",
-  "agentManager.tabsMenu.empty": "Nessuna scheda corrispondente",
   "agentManager.tabsMenu.status.waiting": "Attendi",
   "agentManager.tabsMenu.status.retry": "Riprova",
+  "agentManager.sidebarSearch.label": "Cerca Worktree e sessioni",
+  "agentManager.sidebarSearch.scope":
+    "Cerca nell'area di lavoro locale, nelle sessioni locali, nei Worktree e nelle relative sessioni",
+  "agentManager.sidebarSearch.contexts": "LOCALE & WORKTREE",
 
   "agentManager.terminal.new": "Nuova scheda terminale",
   "agentManager.terminal.ended": "terminale terminato - chiudi la scheda per nasconderlo",
@@ -85,6 +86,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Elemento successivo",
   "agentManager.shortcuts.newWorktree": "Nuovo worktree",
   "agentManager.shortcuts.openWorktree": "Apri worktree",
+  "agentManager.shortcuts.openPR": "Apri pull request",
   "agentManager.shortcuts.advancedWorktree": "Configura nuovo worktree",
   "agentManager.shortcuts.deleteWorktree": "Elimina worktree",
   "agentManager.shortcuts.previousTab": "Scheda precedente",
@@ -189,6 +191,13 @@ export const dict = {
   "agentManager.review.collapsedOnly": "{{count}} compressi",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} compressi, {{large}} grandi",
   "agentManager.review.largeFileCollapsed": "File grande (compresso)",
+  "agentManager.review.image": "Immagine",
+  "agentManager.review.imageBefore": "Prima",
+  "agentManager.review.imageAfter": "Dopo",
+  "agentManager.review.imageTooLarge": "L'immagine è troppo grande per visualizzare l'anteprima ({{size}}).",
+  "agentManager.review.imageUnreadable": "Non è stato possibile visualizzare questa immagine.",
+  "agentManager.review.imageUnavailable":
+    "L'anteprima dell'immagine non è disponibile per questa istantanea della sessione.",
   "agentManager.review.endOfLongDiff": "Sei arrivato alla fine!",
 
   "agentManager.import.pullRequest": "Pull Request",

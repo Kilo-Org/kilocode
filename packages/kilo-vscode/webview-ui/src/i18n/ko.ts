@@ -105,17 +105,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "공급자 검색",
   "dialog.provider.empty": "공급자 없음",
-  "dialog.provider.group.popular": "인기",
   "dialog.provider.group.other": "기타",
   "dialog.provider.tag.recommended": "추천",
-  "dialog.provider.opencode.note": "Claude, GPT, Gemini 등 엄선된 모델",
-  "dialog.provider.anthropic.note": "Claude Pro/Max 또는 API 키로 연결",
-  "dialog.provider.deepseek.note": "추론 및 코딩 작업을 위한 DeepSeek 모델",
-  "dialog.provider.openai.note": "ChatGPT Pro/Plus 또는 API 키로 연결",
-  "dialog.provider.google.note": "빠르고 구조화된 응답을 위한 Gemini 모델",
-  "dialog.provider.openrouter.note": "하나의 공급자에서 모든 지원 모델에 액세스",
-  "dialog.provider.vercel.note": "스마트 라우팅으로 AI 모델에 통합 액세스",
-  "dialog.provider.copilot.note": "Copilot 또는 API 키로 연결",
 
   "dialog.model.select.title": "모델 선택",
   "dialog.model.search.placeholder": "모델 검색",
@@ -825,7 +816,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "사용자 정의 공급자",
   "settings.providers.connected.environmentDescription": "환경 변수에서 연결됨",
   "settings.providers.action.signInChatGPT": "ChatGPT로 로그인",
-  "settings.providers.custom.description": "기본 URL로 OpenAI 호환 공급자를 추가합니다.",
+  "settings.providers.custom.description": "기본 URL로 사용자 정의 공급자를 추가합니다.",
   "settings.providers.subagentModel.title": "하위 에이전트 모델",
   "settings.providers.subagentModel.description":
     "task-tool 하위 에이전트의 기본 모델 및 추론 수준입니다. 호출하는 에이전트의 모델을 상속하려면 비워 두세요.",
@@ -833,11 +824,11 @@ export const dict = {
   "settings.models.hidePromptTraining.description":
     "제공업체가 사용자의 프롬프트를 학습에 사용할 수 있는 Kilo Gateway 모델을 숨깁니다.",
   "settings.providers.modeModels": "모드별 모델",
-  "settings.providers.custom.note": "Base URL로 OpenAI 호환 공급자를 추가합니다.",
+  "settings.providers.custom.note": "Base URL로 사용자 정의 공급자를 추가합니다.",
   "settings.providers.modeModels.description":
     "특정 모드의 기본 모델을 재정의합니다. 설정하지 않으면 전역 기본 모델이 사용됩니다.",
   "provider.custom.title": "사용자 정의 공급자",
-  "provider.custom.description.prefix": "OpenAI 호환 공급자를 구성합니다. ",
+  "provider.custom.description.prefix": "사용자 정의 공급자를 구성합니다. ",
   "provider.custom.description.link": "공급자 구성 문서",
   "provider.custom.description.suffix": "를 참조하세요.",
   "provider.custom.field.providerID.label": "공급자 ID",
@@ -1310,10 +1301,10 @@ export const dict = {
   "settings.experimental.speechToText.title": "음성 텍스트 변환",
   "settings.experimental.speechToText.description":
     "Kilo Gateway를 통해 Kilo 계정을 사용하여 프롬프트 필드에서 음성 입력을 활성화합니다.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Speech to Text를 사용하려면 Kilo 제공자를 활성화하고 로그인하세요. 현재 Speech to Text는 Kilo Gateway에서만 지원됩니다.",
-  "settings.experimental.speechToTextModel.title": "음성 텍스트 변환 모델",
-  "settings.experimental.speechToTextModel.description": "음성 입력에 사용할 Kilo Gateway 변환 모델을 선택하세요.",
+  "settings.models.speechToTextModel.title": "음성 텍스트 변환 모델",
+  "settings.models.speechToTextModel.description": "음성 입력에 사용할 Kilo Gateway 변환 모델을 선택하세요.",
   "settings.experimental.continueOnDeny.title": "거부 시 계속",
   "settings.experimental.continueOnDeny.description": "권한이 거부되면 에이전트 루프 계속",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
@@ -1536,6 +1527,8 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "레거시 마이그레이션",
   "settings.aboutKiloCode.legacyMigration.description":
     "공급자 API 키 및 기본 모델을 포함하여 이전 Kilo Code 설치에서 설정을 마이그레이션합니다.",
+  "settings.aboutKiloCode.rooImport.description": "Roo Code 설치에서 대화 기록을 가져옵니다.",
+  "settings.aboutKiloCode.rooImport.button": "Roo Code에서 세션 가져오기",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Kilo Code의 새로운 기능",

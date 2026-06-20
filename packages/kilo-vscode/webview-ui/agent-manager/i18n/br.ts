@@ -52,11 +52,12 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Abrir Terminal",
   "agentManager.tab.newOptions": "Mais opções de nova aba",
-  "agentManager.tabsMenu.label": "Pesquisar abas abertas",
-  "agentManager.tabsMenu.search": "Pesquisar abas...",
-  "agentManager.tabsMenu.empty": "Nenhuma aba correspondente",
   "agentManager.tabsMenu.status.waiting": "Espera",
   "agentManager.tabsMenu.status.retry": "Repetir",
+  "agentManager.sidebarSearch.label": "Pesquisar Worktrees e sessões",
+  "agentManager.sidebarSearch.scope":
+    "Pesquisa o espaço de trabalho local, as sessões locais, os Worktrees e suas sessões",
+  "agentManager.sidebarSearch.contexts": "LOCAL & WORKTREES",
 
   "agentManager.terminal.new": "Nova aba de terminal",
   "agentManager.terminal.ended": "terminal encerrado — feche a aba para dispensar",
@@ -80,6 +81,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Próximo item",
   "agentManager.shortcuts.newWorktree": "Novo Worktree",
   "agentManager.shortcuts.openWorktree": "Abrir Worktree",
+  "agentManager.shortcuts.openPR": "Abrir PR",
   "agentManager.shortcuts.advancedWorktree": "Configurar novo worktree",
   "agentManager.shortcuts.deleteWorktree": "Excluir Worktree",
   "agentManager.shortcuts.previousTab": "Aba anterior",
@@ -183,6 +185,13 @@ export const dict = {
   "agentManager.review.collapsedOnly": "{{count}} recolhidos",
   "agentManager.review.collapsedWithLarge": "{{collapsed}} recolhidos, {{large}} grandes",
   "agentManager.review.largeFileCollapsed": "Arquivo grande (recolhido)",
+  "agentManager.review.image": "Imagem",
+  "agentManager.review.imageBefore": "Antes",
+  "agentManager.review.imageAfter": "Depois",
+  "agentManager.review.imageTooLarge": "A imagem é muito grande para ser visualizada ({{size}}).",
+  "agentManager.review.imageUnreadable": "Não foi possível renderizar esta imagem.",
+  "agentManager.review.imageUnavailable":
+    "A visualização da imagem não está disponível para este instantâneo da sessão.",
   "agentManager.review.endOfLongDiff": "Você chegou ao fim!",
 
   "agentManager.import.pullRequest": "Solicitação de extração",
