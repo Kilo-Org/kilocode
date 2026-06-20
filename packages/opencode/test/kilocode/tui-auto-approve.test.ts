@@ -3,7 +3,7 @@
 // the createEffect itself — that requires Solid contexts and is out of
 // scope here. They verify that the primitives compose correctly.
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { TuiAutoApprove } from '../../../src/kilocode/cli/cmd/tui/auto-approve'
+import { TuiAutoApprove } from '../../src/kilocode/cli/cmd/tui/auto-approve'
 
 describe('tui auto-approve wiring', () => {
   beforeEach(() => {
