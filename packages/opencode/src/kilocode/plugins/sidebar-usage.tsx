@@ -16,7 +16,8 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
     return {
       input: formatCount(total.input),
       output: formatCount(total.output),
-      cached: formatCount(total.cached),
+      cacheRead: formatCount(total.cacheRead),
+      cacheWrite: formatCount(total.cacheWrite),
     }
   })
   const bench = createMemo(() => {
@@ -41,8 +42,12 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
           <text fg={theme().textMuted}>{usage().output}</text>
         </box>
         <box flexDirection="row" justifyContent="space-between">
-          <text fg={theme().textMuted}>Cached</text>
-          <text fg={theme().textMuted}>{usage().cached}</text>
+          <text fg={theme().textMuted}>Cache Read</text>
+          <text fg={theme().textMuted}>{usage().cacheRead}</text>
+        </box>
+        <box flexDirection="row" justifyContent="space-between">
+          <text fg={theme().textMuted}>Cache Write</text>
+          <text fg={theme().textMuted}>{usage().cacheWrite}</text>
         </box>
       </box>
       <Show when={bench()}>
