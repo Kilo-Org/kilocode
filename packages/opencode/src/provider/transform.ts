@@ -601,17 +601,23 @@ function openaiCompatibleReasoningEfforts(id: string) {
   return gpt5CodexReasoningEfforts(apiId) ?? versionedGpt5ReasoningEfforts(apiId) ?? OPENAI_EFFORTS
 }
 
+// kilocode_change start
+const ANTHROPIC_ADAPTIVE_RE = /(opus|sonnet)[-_.]?4[-_.]?[78]\b/i
+export function isAnthropicAdaptiveId(apiId: string): boolean {
+  return ANTHROPIC_ADAPTIVE_RE.test(apiId)
+}
+const ANTHROPIC_LEGACY_ADAPTIVE_RE = /(opus|sonnet)[-_.]?4[-_.]?6\b/i
+
 function anthropicAdaptiveEfforts(apiId: string): string[] | null {
-  // kilocode_change start - treat opus-4.8 like opus-4.7
-  if (["opus-4-7", "opus-4.7", "opus-4-8", "opus-4.8"].some((v) => apiId.includes(v))) {
+  if (isAnthropicAdaptiveId(apiId)) {
     return ["low", "medium", "high", "xhigh", "max"]
   }
-  // kilocode_change end
-  if (["opus-4-6", "opus-4.6", "sonnet-4-6", "sonnet-4.6"].some((v) => apiId.includes(v))) {
+  if (ANTHROPIC_LEGACY_ADAPTIVE_RE.test(apiId)) {
     return ["low", "medium", "high", "max"]
   }
   return null
 }
+// kilocode_change end
 
 function googleThinkingLevelEfforts(apiId: string) {
   const id = apiId.toLowerCase()
@@ -811,12 +817,30 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     // https://v5.ai-sdk.dev/providers/ai-sdk-providers/deepinfra
     case "venice-ai-sdk-provider":
     // https://docs.venice.ai/overview/guides/reasoning-models#reasoning-effort
-    case "@ai-sdk/openai-compatible":
+
+    // kilocode_change start - OpenAI-compatible proxies fronting Anthropic adaptive
+    case "@ai-sdk/openai-compatible": {
+      if (isAnthropicAdaptiveId(model.api.id)) {
+        const adaptiveLevels = anthropicAdaptiveEfforts(model.api.id) ?? [...WIDELY_SUPPORTED_EFFORTS]
+        const LITELLM_STANDARD_EFFORTS = new Set(["minimal", "low", "medium", "high"])
+        return Object.fromEntries(
+          adaptiveLevels.map((effort) => [
+            effort,
+            {
+              thinking: { type: "adaptive" },
+              output_config: { effort },
+              reasoningEffort: LITELLM_STANDARD_EFFORTS.has(effort) ? effort : "high",
+            },
+          ]),
+        )
+      }
       const efforts = [...WIDELY_SUPPORTED_EFFORTS]
       if (model.api.id.toLowerCase().includes("deepseek-v4")) {
         efforts.push("max")
       }
       return Object.fromEntries(efforts.map((effort) => [effort, { reasoningEffort: effort }]))
+    }
+    // kilocode_change end
 
     case "@ai-sdk/azure":
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/azure
@@ -866,8 +890,8 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       if (adaptiveEfforts) {
         let efforts = [...adaptiveEfforts]
         if (model.providerID === "github-copilot") {
-          // kilocode_change start - treat opus-4.8 like opus-4.7
-          if (model.api.id.includes("opus-4.7") || model.api.id.includes("opus-4.8")) {
+          // kilocode_change start - treat opus-4.8 like opus-4.7 (centralized matcher)
+          if (isAnthropicAdaptiveId(model.api.id)) {
             efforts = ["medium"]
           }
           // kilocode_change end
@@ -880,10 +904,8 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
             {
               thinking: {
                 type: "adaptive",
-                // kilocode_change start - treat opus-4.8 like opus-4.7
-                ...(["opus-4-7", "opus-4.7", "opus-4-8", "opus-4.8"].some((v) => model.api.id.includes(v))
-                  ? { display: "summarized" }
-                  : {}),
+                // kilocode_change start - centralized matcher (covers id aliases like opus_4_8 / -bedrock suffix)
+                ...(isAnthropicAdaptiveId(model.api.id) ? { display: "summarized" } : {}),
                 // kilocode_change end
               },
               effort,
@@ -895,6 +917,17 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       if (["opus-4-5", "opus-4.5"].some((v) => model.api.id.includes(v))) {
         return Object.fromEntries(WIDELY_SUPPORTED_EFFORTS.map((effort) => [effort, { effort }]))
       }
+
+      // kilocode_change start - never fall back to thinking.type=enabled for known adaptive ids
+      if (isAnthropicAdaptiveId(model.api.id)) {
+        return Object.fromEntries(
+          ["high", "max"].map((effort) => [
+            effort,
+            { thinking: { type: "adaptive", display: "summarized" }, effort },
+          ]),
+        )
+      }
+      // kilocode_change end
 
       return {
         high: {
@@ -921,16 +954,26 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
               reasoningConfig: {
                 type: "adaptive",
                 maxReasoningEffort: effort,
-                // kilocode_change start - treat opus-4.8 like opus-4.7
-                ...(["opus-4-7", "opus-4.7", "opus-4-8", "opus-4.8"].some((v) => model.api.id.includes(v))
-                  ? { display: "summarized" }
-                  : {}),
+                // kilocode_change start - centralized matcher (covers id aliases)
+                ...(isAnthropicAdaptiveId(model.api.id) ? { display: "summarized" } : {}),
                 // kilocode_change end
               },
             },
           ]),
         )
       }
+      // kilocode_change start - never emit reasoningConfig.type=enabled for known adaptive ids
+      if (isAnthropicAdaptiveId(model.api.id)) {
+        return Object.fromEntries(
+          ["high", "max"].map((effort) => [
+            effort,
+            {
+              reasoningConfig: { type: "adaptive", maxReasoningEffort: effort, display: "summarized" },
+            },
+          ]),
+        )
+      }
+      // kilocode_change end
       // For Anthropic models on Bedrock, use reasoningConfig with budgetTokens
       if (model.api.id.includes("anthropic")) {
         return {
