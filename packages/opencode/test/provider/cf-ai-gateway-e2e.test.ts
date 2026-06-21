@@ -128,4 +128,44 @@ describe("cf-ai-gateway end-to-end (regression: #24432)", () => {
     })
     expect(upstream?.reasoning_effort).toBeUndefined()
   })
+
+  test("variants() for @ai-sdk/openai-compatible remaps reasoning effort 'none' to enabled false", () => {
+    // Regression: MiMo and other OpenAI-compatible providers reject
+    // reasoning_effort: "none". User-provided variants that carry
+    // { reasoning: { effort: "none" } } must be rewritten to
+    // { reasoning: { enabled: false } } so the SDK never sends "none".
+    const mimoModel = {
+      id: ModelID.make("opencode-go/mimo-v2.5-pro"),
+      providerID: ProviderID.make("opencode-go"),
+      name: "MiMo V2.5 Pro",
+      api: {
+        id: "mimo-v2.5-pro",
+        url: "https://opencode.ai/zen/go/v1",
+        npm: "@ai-sdk/openai-compatible",
+      },
+      capabilities: {
+        reasoning: true,
+        temperature: true,
+        attachment: true,
+        toolcall: true,
+        input: { text: true, audio: false, image: false, video: false, pdf: false },
+        output: { text: true, audio: false, image: false, video: false, pdf: false },
+        interleaved: false,
+      },
+      cost: { input: 1, output: 1, cache: { read: 0, write: 0 } },
+      limit: { context: 1_000_000, output: 128_000 },
+      status: "active",
+      options: {},
+      headers: {},
+      release_date: "2026-04-22",
+      variants: {
+        instant: { reasoning: { effort: "none" } },
+        thinking: { reasoning: { effort: "high" } },
+      },
+    } satisfies Provider.Model
+
+    const result = ProviderTransform.variants(mimoModel)
+    expect(result.instant).toEqual({ reasoning: { enabled: false } })
+    expect(result.thinking).toEqual({ reasoning: { effort: "high" } })
+  })
 })
