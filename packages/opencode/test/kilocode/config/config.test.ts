@@ -167,6 +167,34 @@ describe("kilocode indexing config", () => {
     }
   })
 
+  test("prefers nearer project opencode config over ancestor kilo config", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir({ git: true })
+    const nested = path.join(tmp.path, "packages", "app")
+
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(tmp.path, { model: "anthropic/claude-sonnet-4" }, "kilo.jsonc")
+      await writeConfig(nested, { model: "openai/gpt-4o" }, "opencode.jsonc")
+
+      await provideTestInstance({
+        directory: nested,
+        fn: async () => {
+          const config = await load()
+          expect(config.model).toBe("openai/gpt-4o")
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
   test("ignores retired semantic indexing flags in existing configs", async () => {
     await using tmp = await tmpdir({ git: true })
     await writeConfig(tmp.path, {
