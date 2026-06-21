@@ -9,10 +9,12 @@ function guard(pattern: string) {
 }
 
 const CONFIG_DIRS = [".kilo/", ".kilocode/", ".opencode/"]
+const CONFIG_ROOT_FILES = new Set(["kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc", "AGENTS.md"])
 const EXCLUDED_SUBDIRS = ["plans/"]
 
 function isConfigDir(pattern: string): boolean {
   const normalized = path.posix.normalize(pattern.replaceAll("\\", "/"))
+  if (CONFIG_ROOT_FILES.has(normalized)) return true
   for (const dir of CONFIG_DIRS) {
     if (normalized.startsWith(dir)) {
       const remainder = normalized.slice(dir.length)

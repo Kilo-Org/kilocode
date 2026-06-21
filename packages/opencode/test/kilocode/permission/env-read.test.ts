@@ -205,4 +205,14 @@ describe("config dir read hardening", () => {
       expect(Permission.resolve("read", "packages/sub/.kilo/plans/plan.md", broadAllow).action).toBe("allow")
     }),
   )
+
+  it.live("root-level config files are hardened", () =>
+    Effect.sync(() => {
+      expect(Permission.resolve("read", "kilo.json", broadAllow).action).toBe("ask")
+      expect(Permission.resolve("read", "kilo.jsonc", broadAllow).action).toBe("ask")
+      expect(Permission.resolve("read", "opencode.json", broadAllow).action).toBe("ask")
+      expect(Permission.resolve("read", "opencode.jsonc", broadAllow).action).toBe("ask")
+      expect(Permission.resolve("read", "AGENTS.md", broadAllow).action).toBe("ask")
+    }),
+  )
 })
