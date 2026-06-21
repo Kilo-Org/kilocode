@@ -208,13 +208,15 @@ export function Prompt(props: PromptProps) {
   const currentProviderLabel = createMemo(() => local.model.parsed().provider)
   const yolo = createMemo(() => TuiAutoApprove.show(props.sessionID)) // kilocode_change
   const yoloGlobal = createMemo(() => isAllowEverything(sync.data.config.permission)) // kilocode_change
+  // kilocode_change start - resolve auto-approve mode for the indicator (session vs global)
   const yoloKind = createMemo<"none" | "session" | "global">(() => {
     const session = yolo()
     const global = yoloGlobal()
     if (!session && !global) return "none"
     if (global) return "global" // global wins the badge when both are on
     return "session"
-  }) // kilocode_change
+  })
+  // kilocode_change end
   const hasRightContent = createMemo(() => Boolean(props.right))
 
   function selectWorkspace(selection: WorkspaceSelection | undefined) {
