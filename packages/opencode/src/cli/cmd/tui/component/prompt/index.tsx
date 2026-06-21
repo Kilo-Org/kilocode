@@ -62,6 +62,7 @@ import { KiloSessionTuiSync } from "@/kilocode/session/tui-sync"
 import { TuiAutoApprove } from "@/kilocode/cli/cmd/tui/auto-approve"
 import { slashMatches } from "@/kilocode/cli/cmd/command-display"
 import { TuiSlash } from "@/kilocode/cli/cmd/tui/slash"
+import { isAllowEverything } from "@/kilocode/cli/cmd/tui/app"
 // kilocode_change end
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { type WorkspaceStatus } from "../workspace-label"
@@ -206,6 +207,14 @@ export function Prompt(props: PromptProps) {
   const [cursorVersion, setCursorVersion] = createSignal(0)
   const currentProviderLabel = createMemo(() => local.model.parsed().provider)
   const yolo = createMemo(() => TuiAutoApprove.show(props.sessionID)) // kilocode_change
+  const yoloGlobal = createMemo(() => isAllowEverything(sync.data.config.permission)) // kilocode_change
+  const yoloKind = createMemo<"none" | "session" | "global">(() => {
+    const session = yolo()
+    const global = yoloGlobal()
+    if (!session && !global) return "none"
+    if (global) return "global" // global wins the badge when both are on
+    return "session"
+  }) // kilocode_change
   const hasRightContent = createMemo(() => Boolean(props.right))
 
   function selectWorkspace(selection: WorkspaceSelection | undefined) {
@@ -1640,11 +1649,16 @@ export function Prompt(props: PromptProps) {
                             </text>
                           </Show>
                           {/* kilocode_change start - show active session auto-approve indicator */}
-                          <Show when={yolo()}>
+                          <Show when={yoloKind() !== "none"}>
                             <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
                             <text>
                               <span style={{ fg: fadeColor(theme.warning, modelMetaAlpha()), bold: true }}>auto-approve</span>
                             </text>
+                            <Show when={yoloKind() === "global"}>
+                              <text>
+                                <span style={{ fg: fadeColor(theme.warning, modelMetaAlpha()), bold: true }}>(g)</span>
+                              </text>
+                            </Show>
                           </Show>
                           {/* kilocode_change end */}
                         </box>

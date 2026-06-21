@@ -319,8 +319,8 @@ export function init() {
         },
         desc: "Auto-approve all permissions across all sessions (persists in config)",
         category: "System",
-        slashName: "auto-approve-all",
-        slashAliases: ["yolo-all"],
+        slashName: "auto-approve-global",
+        slashAliases: ["yolo-global"],
         run: async () => {
           const enabled = isAllowEverything(sync.data.config.permission)
           const result = await sdk.client.permission.allowEverything({ enable: !enabled })
