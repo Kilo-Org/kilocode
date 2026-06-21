@@ -152,6 +152,12 @@ export const Definitions = {
   prompt_submit: keybind("none", "Submit prompt"),
   prompt_editor_context_clear: keybind("none", "Clear editor context"),
   prompt_skills: keybind("none", "Open skill selector"),
+  // kilocode_change start - skill management actions
+  skill_marketplace_browse: keybind("none", "Browse skill marketplace"),
+  skill_install_url: keybind("none", "Install skill from URL"),
+  skill_install_folder: keybind("none", "Install skill from local folder"),
+  skill_uninstall: keybind("none", "Uninstall selected skill"),
+  // kilocode_change end
   prompt_stash: keybind("none", "Stash prompt"),
   prompt_stash_pop: keybind("none", "Pop stashed prompt"),
   prompt_stash_list: keybind("none", "List stashed prompts"),
@@ -351,6 +357,12 @@ export const CommandMap = {
   prompt_submit: "prompt.submit",
   prompt_editor_context_clear: "prompt.editor_context.clear",
   prompt_skills: "prompt.skills",
+  // kilocode_change start - skill management action command ids
+  skill_marketplace_browse: "skill.marketplace.browse",
+  skill_install_url: "skill.install.url",
+  skill_install_folder: "skill.install.folder",
+  skill_uninstall: "skill.uninstall",
+  // kilocode_change end
   prompt_stash: "prompt.stash",
   prompt_stash_pop: "prompt.stash.pop",
   prompt_stash_list: "prompt.stash.list",

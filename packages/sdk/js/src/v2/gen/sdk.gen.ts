@@ -142,8 +142,16 @@ import type {
   KiloCloudSessionsResponses,
   KilocodeHeapSnapshotErrors,
   KilocodeHeapSnapshotResponses,
+  KilocodeInstallSkillErrors,
+  KilocodeInstallSkillFolderErrors,
+  KilocodeInstallSkillFolderResponses,
+  KilocodeInstallSkillResponses,
+  KilocodeMarketplaceSkillsErrors,
+  KilocodeMarketplaceSkillsResponses,
   KilocodeRemoveAgentErrors,
   KilocodeRemoveAgentResponses,
+  KilocodeRemoveInstalledSkillErrors,
+  KilocodeRemoveInstalledSkillResponses,
   KilocodeRemoveSkillErrors,
   KilocodeRemoveSkillResponses,
   KilocodeSessionImportMessageErrors,
@@ -7407,6 +7415,171 @@ export class Kilocode extends HeyApiClient {
         },
       },
     )
+  }
+
+  /**
+   * Install a skill from a tarball URL
+   *
+   * Download a skill tarball, extract it into ~/.kilo/skills/<id>/ (global) or <workspace>/.kilo/skills/<id>/ (project), and dispose the instance so skill state reloads.
+   */
+  public installSkill<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      id?: string
+      url?: string
+      scope?: "global" | "project"
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "id" },
+            { in: "body", key: "url" },
+            { in: "body", key: "scope" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeInstallSkillResponses,
+      KilocodeInstallSkillErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/skill/install",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Remove an installed skill directory
+   *
+   * Recursively delete a skill folder under ~/.kilo/skills/<id>/ (global) or <workspace>/.kilo/skills/<id>/ (project) and dispose the instance so skill state reloads.
+   */
+  public removeInstalledSkill<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      id?: string
+      scope?: "global" | "project"
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "id" },
+            { in: "body", key: "scope" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeRemoveInstalledSkillResponses,
+      KilocodeRemoveInstalledSkillErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/skill/installed/remove",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Register a local folder as a skill source
+   *
+   * Add a folder path to kilo.json skills.paths (or remove it if already present) so skills inside are discovered on next session start.
+   */
+  public installSkillFolder<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      path?: string
+      scope?: "global" | "project"
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "path" },
+            { in: "body", key: "scope" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeInstallSkillFolderResponses,
+      KilocodeInstallSkillFolderErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/skill/install/folder",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * List marketplace skills
+   *
+   * Fetch the current list of skills available in the Kilo Marketplace.
+   */
+  public marketplaceSkills<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeMarketplaceSkillsResponses,
+      KilocodeMarketplaceSkillsErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/marketplace/skills",
+      ...options,
+      ...params,
+    })
   }
 
   private _heap?: Heap
