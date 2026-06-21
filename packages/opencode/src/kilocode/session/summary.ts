@@ -1,4 +1,4 @@
-import { generateText, type ModelMessage } from "ai"
+import { streamText, type ModelMessage } from "ai"
 import { mergeDeep } from "remeda"
 import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
@@ -133,8 +133,8 @@ async function runGenerateText(input: {
             content: `Summarize the following session transcript using the structure from your instructions. Do not call any tools. Output only the markdown summary.\n\n${transcript}`,
           },
         ]
-        const result = yield* Effect.tryPromise(() =>
-          generateText({
+        const text = yield* Effect.tryPromise(async () => {
+          const result = streamText({
             model: language,
             temperature: model.capabilities.temperature ? 0.2 : undefined,
             providerOptions: ProviderTransform.providerOptions(
@@ -145,9 +145,11 @@ async function runGenerateText(input: {
             tools: {},
             toolChoice: "none",
             messages,
-          }),
-        )
-        return { model, result: { text: result.text } }
+          })
+          await result.consumeStream()
+          return result.text
+        })
+        return { model, result: { text } }
       }),
     ),
   )

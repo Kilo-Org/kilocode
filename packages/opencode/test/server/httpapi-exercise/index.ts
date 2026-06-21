@@ -1315,6 +1315,7 @@ const llmScenarios = new Set([
   "session.prompt_async",
   "session.command",
   "session.summarize",
+  "session.summary", // kilocode_change
 ])
 
 const main = Effect.gen(function* () {
