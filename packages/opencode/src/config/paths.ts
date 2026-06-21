@@ -12,9 +12,20 @@ export const files = Effect.fn("ConfigPaths.projectFiles")(function* (
   directory: string,
   worktree?: string,
 ) {
+  return yield* namedFiles([name], directory, worktree)
+})
+
+export const namedFiles = Effect.fn("ConfigPaths.namedProjectFiles")(function* (
+  names: readonly string[],
+  directory: string,
+  worktree?: string,
+) {
   const afs = yield* AppFileSystem.Service
+  const targets = names
+    .toReversed()
+    .flatMap((name) => [`${name}.jsonc`, `${name}.json`])
   return (yield* afs.up({
-    targets: [`${name}.jsonc`, `${name}.json`],
+    targets,
     start: directory,
     stop: worktree,
   })).toReversed()

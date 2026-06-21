@@ -823,19 +823,22 @@ export const layer = Layer.effect(
 
         if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
           // kilocode_change start - also discover kilo.json project files
-          for (const name of ["opencode", "kilo"] as const) {
-            for (const file of yield* ConfigPaths.files(name, ctx.directory, ctx.project.worktree).pipe(Effect.orDie)) {
-              yield* merge(
-                file,
-                yield* loadFile(file, authEnv).pipe(
-                  Effect.catchDefect((err: unknown) => {
-                    caughtWarning(warnings, file, err)
-                    return Effect.succeed({} as Info)
-                  }),
-                ),
-                "local",
-              )
-            }
+          const projectConfigFiles = yield* ConfigPaths.namedFiles(
+            ["opencode", "kilo"],
+            ctx.directory,
+            ctx.project.worktree,
+          ).pipe(Effect.orDie)
+          for (const file of projectConfigFiles) {
+            yield* merge(
+              file,
+              yield* loadFile(file, authEnv).pipe(
+                Effect.catchDefect((err: unknown) => {
+                  caughtWarning(warnings, file, err)
+                  return Effect.succeed({} as Info)
+                }),
+              ),
+              "local",
+            )
           }
           // kilocode_change end
         }
