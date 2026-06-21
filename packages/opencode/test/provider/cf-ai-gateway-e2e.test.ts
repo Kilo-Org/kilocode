@@ -134,6 +134,7 @@ describe("cf-ai-gateway end-to-end (regression: #24432)", () => {
     // reasoning_effort: "none". User-provided variants that carry
     // { reasoning: { effort: "none" } } must be rewritten to
     // { reasoning: { enabled: false } } so the SDK never sends "none".
+    // Sibling options in the variant object must be preserved.
     const mimoModel = {
       id: ModelID.make("opencode-go/mimo-v2.5-pro"),
       providerID: ProviderID.make("opencode-go"),
@@ -167,5 +168,35 @@ describe("cf-ai-gateway end-to-end (regression: #24432)", () => {
     const result = ProviderTransform.variants(mimoModel)
     expect(result.instant).toEqual({ reasoning: { enabled: false } })
     expect(result.thinking).toEqual({ reasoning: { effort: "high" } })
+  })
+
+  test("variants() preserves sibling options when remapping reasoning effort 'none'", () => {
+    const model = {
+      id: ModelID.make("opencode-go/custom"),
+      providerID: ProviderID.make("opencode-go"),
+      name: "Custom",
+      api: { id: "custom", url: "https://example.com/v1", npm: "@ai-sdk/openai-compatible" },
+      capabilities: {
+        reasoning: true,
+        temperature: true,
+        attachment: false,
+        toolcall: true,
+        input: { text: true, audio: false, image: false, video: false, pdf: false },
+        output: { text: true, audio: false, image: false, video: false, pdf: false },
+        interleaved: false,
+      },
+      cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
+      limit: { context: 100_000, output: 4096 },
+      status: "active",
+      options: {},
+      headers: {},
+      release_date: "2026-01-01",
+      variants: {
+        instant: { reasoning: { effort: "none" }, temperature: 0.5 },
+      },
+    } satisfies Provider.Model
+
+    const result = ProviderTransform.variants(model)
+    expect(result.instant).toEqual({ reasoning: { enabled: false }, temperature: 0.5 })
   })
 })

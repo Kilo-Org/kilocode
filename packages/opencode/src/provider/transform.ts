@@ -638,7 +638,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     if (model.api.npm === "@ai-sdk/openai-compatible") {
       return mapValues(model.variants, (v) => {
         if (v?.reasoning?.effort === "none") {
-          return { reasoning: { enabled: false } }
+          return { ...v, reasoning: { enabled: false } }
         }
         return v
       })
