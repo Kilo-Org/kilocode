@@ -41,11 +41,18 @@ const OpenCommand = cmd({
   command: "$0",
   describe: "open the local Kilo Console",
   builder: (yargs) =>
-    withNetworkOptions(yargs).option("background", {
-      alias: "b",
-      describe: "open browser and exit immediately without keeping the daemon attached",
-      type: "boolean",
-    }),
+    withNetworkOptions(yargs)
+      .option("background", {
+        alias: "b",
+        describe: "open browser and exit immediately without keeping the daemon attached",
+        type: "boolean",
+      })
+      .option("foreground", {
+        alias: "f",
+        describe: "deprecated: console now runs in the foreground by default",
+        type: "boolean",
+        hidden: true,
+      }),
   handler: async (args) => {
     const run = async (signal?: AbortSignal) => {
       const opts = await AppRuntime.runPromise(resolveNetworkOptions(args))
