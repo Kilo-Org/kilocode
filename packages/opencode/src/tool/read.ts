@@ -15,6 +15,8 @@ import { Reference } from "@/reference/reference"
 // kilocode_change start
 import * as Encoding from "../kilocode/encoding"
 import * as Extract from "../kilocode/tool/read-extract"
+import { formatFileWithHashes } from "../kilocode/hashline/hashline"
+import { Config } from "@/config/config"
 // kilocode_change end
 
 const DEFAULT_READ_LIMIT = 2000
@@ -49,6 +51,9 @@ export const ReadTool = Tool.define(
     const lsp = yield* LSP.Service
     const reference = yield* Reference.Service
     const scope = yield* Scope.Scope
+    // kilocode_change start
+    const config = yield* Config.Service
+    // kilocode_change end
 
     const miss = Effect.fn("ReadTool.miss")(function* (filepath: string) {
       const dir = path.dirname(filepath)
@@ -340,12 +345,29 @@ export const ReadTool = Tool.define(
       }
       // kilocode_change end
 
-      let output = [`<path>${filepath}</path>`, `<type>file</type>`, "<content>\n"].join("\n")
-      output += file.raw.map((line, i) => `${i + file.offset}: ${line}`).join("\n")
-
+      // kilocode_change start
+      const cfg = yield* config.get()
+      const useHashline = cfg.hashlineEdit?.enabled === true
+      const rawLines = file.raw
       const last = file.offset + file.raw.length - 1
       const next = last + 1
       const truncated = file.more || file.cut
+      let output: string
+      if (useHashline) {
+        // Annotate the visible slice with hashes so the LLM can use hash_edit
+        const slice = rawLines.join("\n")
+        const prefix = cfg.hashlineEdit?.prefix
+        const hashLen = cfg.hashlineEdit?.hashLength
+        const includeRev = cfg.hashlineEdit?.fileRev !== false
+        const annotated = formatFileWithHashes(slice, hashLen ?? undefined, prefix ?? undefined, includeRev)
+        output = [`<path>${filepath}</path>`, `<type>file</type>`, "<content>\n"].join("\n")
+        output += annotated
+      } else {
+        output = [`<path>${filepath}</path>`, `<type>file</type>`, "<content>\n"].join("\n")
+        output += rawLines.map((line, i) => `${i + file.offset}: ${line}`).join("\n")
+      }
+      // kilocode_change end
+
       if (file.cut) {
         output += `\n\n(Output capped at ${MAX_BYTES_LABEL}. Showing lines ${file.offset}-${last}. Use offset=${next} to continue.)`
       } else if (file.more) {

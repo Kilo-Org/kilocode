@@ -223,6 +223,14 @@ export const Info = Schema.Struct({
     description: "Automatically collapse reasoning blocks after the agent finishes writing them",
   }),
   indexing: Schema.optional(IndexingRef).annotate({ description: "Codebase indexing configuration" }),
+  hashlineEdit: Schema.optional(
+    Schema.Struct({
+      enabled: Schema.optional(Schema.Boolean).annotate({ description: "Enable hashline editing mode" }),
+      prefix: Schema.optional(Schema.String).annotate({ description: "Prefix for hashline annotations (default: '#HL ')" }),
+      hashLength: Schema.optional(Schema.Number).annotate({ description: "Override hash length for hashline (0 = adaptive)" }),
+      fileRev: Schema.optional(Schema.Boolean).annotate({ description: "Include file revision hash (default: true)" }),
+    })
+  ).annotate({ description: "Hashline edit configuration" }),
   console: Schema.optional(
     Schema.Struct({
       context_sidebar_width: Schema.optional(
