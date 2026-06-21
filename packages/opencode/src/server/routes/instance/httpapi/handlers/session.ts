@@ -1,6 +1,7 @@
 import { Image } from "@/image/image" // kilocode_change - classify user image validation defects
 import { KiloSessionHttpApi } from "@/kilocode/server/httpapi/session-fork" // kilocode_change
 import { KiloSessionSummary } from "@/kilocode/session/summary" // kilocode_change
+import { Provider } from "@/provider/provider" // kilocode_change - classify provider errors on the summary route
 import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
 import { Command } from "@/command"
@@ -286,13 +287,18 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
         session.messages({ sessionID: ctx.params.sessionID }),
       )
       const turns = messages.filter((m) => m.info.role === "user" || m.info.role === "assistant")
-      return yield* Effect.tryPromise(() =>
-        KiloSessionSummary.generate({
-          messages: turns,
-          providerID: ctx.payload.providerID,
-          modelID: ctx.payload.modelID,
+      return yield* KiloSessionSummary.generate({
+        messages: turns,
+        providerID: ctx.payload.providerID,
+        modelID: ctx.payload.modelID,
+      }).pipe(
+        Effect.mapError((error) => {
+          if (Provider.ModelNotFoundError.isInstance(error)) {
+            return new HttpApiError.BadRequest({})
+          }
+          return new HttpApiError.InternalServerError({})
         }),
-      ).pipe(Effect.orDie)
+      )
     })
     // kilocode_change end
 

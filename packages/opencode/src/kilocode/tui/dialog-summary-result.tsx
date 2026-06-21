@@ -20,11 +20,23 @@ function defaultFilename(sessionID: string): string {
   return `session-summary-${sessionID.slice(0, 8)}-${today}.md`
 }
 
-function copySummary(dialog: DialogContext, toast: ReturnType<typeof useToast>, text: string) {
+function copySummary(
+  dialog: DialogContext,
+  toast: ReturnType<typeof useToast>,
+  text: string,
+  rerender: (copied: boolean) => void,
+) {
   void Clipboard.copy(text)
-    .then(() => toast.show({ variant: "success", message: "Summary copied to clipboard" }))
-    .catch(() => toast.show({ variant: "error", message: "Failed to copy summary" }))
-  dialog.clear()
+    .then(() => {
+      toast.show({ variant: "success", message: "Summary copied to clipboard" })
+      rerender(true)
+      dialog.clear()
+    })
+    .catch(() => {
+      toast.show({ variant: "error", message: "Failed to copy summary" })
+      rerender(false)
+      dialog.clear()
+    })
 }
 
 async function exportSummary(
@@ -60,21 +72,23 @@ async function exportSummary(
   }
 }
 
-export function DialogSummaryResult(props: { text: string; sessionID: string }) {
+export function DialogSummaryResult(props: { text: string; sessionID: string; copied: boolean }) {
   const dialog = useDialog()
   const toast = useToast()
   const { theme, syntax } = useTheme()
   const [store, setStore] = createStore({ active: "copy" as Action })
   const rendered = createMemo(() => formatMarkdownTables(props.text.trim()))
 
-  const rerender = () => {
+  const rerender = (copied: boolean) => {
     dialog.setSize("large")
-    dialog.replace(() => <DialogSummaryResult text={props.text} sessionID={props.sessionID} />)
+    dialog.replace(() => (
+      <DialogSummaryResult text={props.text} sessionID={props.sessionID} copied={copied} />
+    ))
   }
 
   const run = (action: Action) => {
-    if (action === "copy") copySummary(dialog, toast, props.text)
-    if (action === "export") void exportSummary(dialog, toast, props.text, props.sessionID, rerender)
+    if (action === "copy") copySummary(dialog, toast, props.text, rerender)
+    if (action === "export") void exportSummary(dialog, toast, props.text, props.sessionID, () => rerender(props.copied))
     if (action === "close") dialog.clear()
   }
 
@@ -131,8 +145,11 @@ export function DialogSummaryResult(props: { text: string; sessionID: string }) 
   return (
     <box flexDirection="column" paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
       <box flexDirection="row" justifyContent="space-between">
-        <text attributes={TextAttributes.BOLD} fg={theme.success}>
-          ✓ Copied to clipboard
+        <text
+          attributes={TextAttributes.BOLD}
+          fg={props.copied ? theme.success : theme.warning}
+        >
+          {props.copied ? "✓ Copied to clipboard" : "⚠ Clipboard unavailable — use Export"}
         </text>
         <text fg={theme.textMuted} onMouseUp={() => dialog.clear()}>
           esc

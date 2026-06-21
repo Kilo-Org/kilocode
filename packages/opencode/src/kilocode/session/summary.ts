@@ -46,7 +46,6 @@ const MAX_TEXT_CHARS = 8_000
 
 function partText(part: MessageV2.Part): string {
   if (part.type === "text") return part.synthetic ? "" : part.text
-  if (part.type === "reasoning") return part.text
   return ""
 }
 
@@ -67,11 +66,6 @@ function flattenMessage(message: MessageV2.WithParts): string | undefined {
     if (part.type === "text") {
       const text = partText(part)
       if (text) sections.push(text)
-      continue
-    }
-    if (part.type === "reasoning") {
-      const text = partText(part)
-      if (text) sections.push(`(reasoning)\n${text}`)
       continue
     }
     if (part.type === "file") {
@@ -133,21 +127,24 @@ async function runGenerateText(input: {
             content: `Summarize the following session transcript using the structure from your instructions. Do not call any tools. Output only the markdown summary.\n\n${transcript}`,
           },
         ]
-        const text = yield* Effect.tryPromise(async () => {
-          const result = streamText({
-            model: language,
-            temperature: model.capabilities.temperature ? 0.2 : undefined,
-            providerOptions: ProviderTransform.providerOptions(
-              model,
-              mergeDeep(ProviderTransform.smallOptions(model), model.options),
-            ),
-            maxRetries: 3,
-            tools: {},
-            toolChoice: "none",
-            messages,
-          })
-          await result.consumeStream()
-          return result.text
+        const text = yield* Effect.tryPromise({
+          try: async () => {
+            const result = streamText({
+              model: language,
+              temperature: model.capabilities.temperature ? 0.2 : undefined,
+              providerOptions: ProviderTransform.providerOptions(
+                model,
+                mergeDeep(ProviderTransform.smallOptions(model), model.options),
+              ),
+              maxRetries: 3,
+              tools: {},
+              toolChoice: "none",
+              messages,
+            })
+            await result.consumeStream()
+            return result.text
+          },
+          catch: (error) => error instanceof Error ? error : new Error(String(error)),
         })
         return { model, result: { text } }
       }),
@@ -172,14 +169,25 @@ function stripToolNoise(text: string): string {
   return result.replace(/\n{3,}/g, "\n\n").trim()
 }
 
+export type SummaryError = Provider.ModelNotFoundError | Error
+
 export const KiloSessionSummary = {
-  async generate(input: {
+  generate(input: {
     messages: MessageV2.WithParts[]
     providerID: ProviderID
     modelID: ModelID
-  }): Promise<string> {
-    const { result } = await runGenerateText(input)
-    return stripToolNoise(result.text)
+  }): Effect.Effect<string, SummaryError> {
+    return Effect.tryPromise({
+      try: async () => {
+        const { result } = await runGenerateText(input)
+        return stripToolNoise(result.text)
+      },
+      catch: (error): SummaryError => {
+        if (Provider.ModelNotFoundError.isInstance(error)) return error
+        if (error instanceof Error) return error
+        return new Error(String(error))
+      },
+    })
   },
 }
 
@@ -188,5 +196,5 @@ export async function generateSummary(input: {
   providerID: ProviderID
   modelID: ModelID
 }): Promise<string> {
-  return KiloSessionSummary.generate(input)
+  return KiloSessionSummary.generate(input).pipe(Effect.orDie, AppRuntime.runPromise)
 }

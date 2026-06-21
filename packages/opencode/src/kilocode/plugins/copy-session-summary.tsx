@@ -57,19 +57,36 @@ const tui: TuiPlugin = async (api) => {
               providerID: model.providerID,
               modelID: model.modelID,
             })
-            if (res.error || !res.data) {
-              api.ui.toast({ variant: "error", message: "Failed to generate session summary" })
+            if (res.error) {
+              const message =
+                res.error && typeof res.error === "object" && "message" in res.error
+                  ? String((res.error as { message: unknown }).message)
+                  : "Failed to generate session summary"
+              api.ui.toast({ variant: "error", message })
               api.ui.dialog.clear()
               return
             }
-            const text = res.data as string
+            const text = (res.data ?? "") as string
+            if (!text.trim()) {
+              api.ui.toast({
+                variant: "info",
+                message: "Nothing to summarize yet — send a message and try again",
+                duration: 3000,
+              })
+              api.ui.dialog.clear()
+              return
+            }
+            let copied = false
             try {
               await Clipboard.copy(text)
+              copied = true
             } catch {
-              // best-effort: proceed to result dialog even if clipboard fails
+              copied = false
             }
             api.ui.dialog.setSize("large")
-            api.ui.dialog.replace(() => <DialogSummaryResult text={text} sessionID={sessionID} />)
+            api.ui.dialog.replace(() => (
+              <DialogSummaryResult text={text} sessionID={sessionID} copied={copied} />
+            ))
           } catch (err) {
             if (err instanceof DOMException && err.name === "AbortError") return
             api.ui.toast({
