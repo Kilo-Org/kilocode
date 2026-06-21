@@ -976,7 +976,7 @@ export const layer = Layer.effect(
         slog.info("process")
         ctx.needsCompaction = false
         ctx.compactionError = undefined // kilocode_change
-        ctx.shouldBreak = (yield* config.get()).experimental?.continue_loop_on_deny !== true
+        ctx.shouldBreak = (yield* config.get()).experimental?.stop_on_deny === true
 
         return yield* Effect.gen(function* () {
           yield* Effect.gen(function* () {

@@ -398,7 +398,10 @@ export const Info = Schema.Struct({
         description: "Tools that should only be available to primary agents.",
       }),
       continue_loop_on_deny: Schema.optional(Schema.Boolean).annotate({
-        description: "Continue the agent loop when a tool call is denied",
+        description: "Deprecated: use stop_on_deny instead. Continue the agent loop when a tool call is denied.",
+      }),
+      stop_on_deny: Schema.optional(Schema.Boolean).annotate({
+        description: "Stop the agent loop when a tool call is denied or rejected by the user.",
       }),
       mcp_timeout: Schema.optional(PositiveInt).annotate({
         description: "Timeout in milliseconds for model context protocol (MCP) requests",
