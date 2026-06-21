@@ -2,4 +2,4 @@
 "kilo-code": patch
 ---
 
-Fix ReadPermission.harden() respecting EXCLUDED_SUBDIRS — .kilo/plans/*.md is no longer downgraded to "ask" by config dir hardening, matching ConfigProtection exemption semantics.
+Fix plan files under `.kilo/plans/` being incorrectly blocked from reads — broad read allow rules for plan files are no longer downgraded by config dir hardening.
