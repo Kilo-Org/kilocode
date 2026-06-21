@@ -199,7 +199,9 @@ export function DialogSessionList() {
       const status = sync.data.session_status?.[x.id]
       const isWorking = status?.type === "busy" || status?.type === "retry"
       // kilocode_change start - show attention indicator for sessions needing user input (#11466)
-      const hasPermissions = (sync.data.permission[x.id]?.length ?? 0) > 0
+      const hasPermissions =
+        (sync.data.permission[x.id]?.length ?? 0) > 0 ||
+        sync.data.session.some((child) => child.parentID === x.id && (sync.data.permission[child.id]?.length ?? 0) > 0)
       const slot = slotByID.get(x.id)
       const gutter = hasPermissions
         ? () => <text fg={theme.warning}>!</text>
