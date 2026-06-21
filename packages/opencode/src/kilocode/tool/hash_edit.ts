@@ -7,6 +7,7 @@ import { Bus } from "@/bus"
 import { File } from "@/file"
 import { FileWatcher } from "@/file/watcher"
 import { applyHashEdit, HashlineError, formatFileWithHashes, stripHashes } from "../hashline/hashline"
+import * as Encoding from "../encoding"
 import DESCRIPTION from "./hash_edit.txt"
 import { assertExternalDirectoryEffect } from "../../tool/external-directory"
 
@@ -70,7 +71,9 @@ export const HashEditTool = Tool.define(
           })
 
           const bytes = yield* fs.readFile(filepath)
-          const raw = Buffer.from(bytes).toString("utf-8")
+          const buf = Buffer.from(bytes)
+          const encoding = Encoding.detect(buf)
+          const raw = Encoding.decode(buf, encoding)
 
           // Strip any existing hashline annotations before applying the edit
           // so applyHashEdit operates on clean file content
@@ -98,7 +101,7 @@ export const HashEditTool = Tool.define(
             },
           })
 
-          yield* fs.writeFileString(filepath, result.content)
+          yield* fs.writeFile(filepath, Encoding.encode(result.content, encoding))
           yield* bus.publish(File.Event.Edited, { file: filepath })
           yield* bus.publish(FileWatcher.Event.Updated, { file: filepath, event: "change" })
 

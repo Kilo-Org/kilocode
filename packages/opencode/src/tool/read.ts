@@ -358,8 +358,8 @@ export const ReadTool = Tool.define(
         const slice = rawLines.join("\n")
         const prefix = cfg.hashlineEdit?.prefix
         const hashLen = cfg.hashlineEdit?.hashLength
-        const includeRev = cfg.hashlineEdit?.fileRev !== false
-        const annotated = formatFileWithHashes(slice, hashLen ?? undefined, prefix ?? undefined, includeRev)
+        const includeRev = cfg.hashlineEdit?.fileRev !== false && file.offset === 1 && !truncated
+        const annotated = formatFileWithHashes(slice, hashLen ?? undefined, prefix ?? undefined, includeRev, file.offset)
         output = [`<path>${filepath}</path>`, `<type>file</type>`, "<content>\n"].join("\n")
         output += annotated
       } else {

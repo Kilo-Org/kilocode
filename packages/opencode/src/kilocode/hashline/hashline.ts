@@ -324,6 +324,7 @@ export function formatFileWithHashes(
   hashLen?: number,
   prefix?: string | false,
   includeFileRev?: boolean,
+  startLine: number = 1,
 ): string {
   const normalized = content.includes("\r\n") ? content.replace(/\r\n/g, "\n") : content;
   const lines = normalized.split("\n");
@@ -336,7 +337,7 @@ export function formatFileWithHashes(
   const hashes: string[] = new Array(lines.length);
 
   for (let idx = 0; idx < lines.length; idx++) {
-    hashes[idx] = computeLineHash(idx, lines[idx], effectiveLen);
+    hashes[idx] = computeLineHash(idx + startLine - 1, lines[idx], effectiveLen);
   }
 
   // Iteratively resolve collisions — only rescan indices that were upgraded
@@ -366,7 +367,7 @@ export function formatFileWithHashes(
         const newLen = Math.min(hashLens[idx] + 1, 8);
         if (newLen === hashLens[idx]) continue; // already at max length
         hashLens[idx] = newLen;
-        hashes[idx] = computeLineHash(idx, lines[idx], newLen);
+        hashes[idx] = computeLineHash(idx + startLine - 1, lines[idx], newLen);
         nextDirty.add(idx);
         hasCollisions = true;
       }
@@ -388,7 +389,7 @@ export function formatFileWithHashes(
   }
 
   const annotatedLines = lines.map((line, idx) => {
-    return `${effectivePrefix}${idx + 1}:${hashes[idx]}|${line}`;
+    return `${effectivePrefix}${idx + startLine}:${hashes[idx]}|${line}`;
   });
 
   if (includeFileRev) {
@@ -487,7 +488,8 @@ export function normalizeHashRef(ref: string): string {
     return `${parseInt(plain[1], 10)}:${plain[2].toLowerCase()}`;
   }
 
-  const annotated = trimmed.match(/^(?:[#\w]*\s+)?(\d+):([0-9a-f]{2,8})\|.*$/i);
+  // To support any custom prefix, match anything up to the <line>:<hash>| pattern
+  const annotated = trimmed.match(/^(?:.*?)(\d+):([0-9a-f]{2,8})\|.*$/i);
   if (annotated) {
     return `${parseInt(annotated[1], 10)}:${annotated[2].toLowerCase()}`;
   }
