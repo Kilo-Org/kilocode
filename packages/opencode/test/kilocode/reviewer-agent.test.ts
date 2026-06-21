@@ -1,0 +1,147 @@
+import { afterEach, expect, test } from "bun:test"
+import { Effect } from "effect"
+import { Agent } from "../../src/agent/agent"
+import { REVIEWER_AGENT } from "../../src/kilocode/agent"
+import { KiloTask } from "../../src/kilocode/tool/task"
+import { Permission } from "../../src/permission"
+import { disposeAllInstances, provideInstance, tmpdir, withTestInstance } from "../fixture/fixture"
+
+function perm(agent: Agent.Info | undefined, name: string): Permission.Action | undefined {
+  if (!agent) return undefined
+  return Permission.evaluate(name, "*", agent.permission).action
+}
+
+function bash(agent: Agent.Info | undefined, command: string): Permission.Action | undefined {
+  if (!agent) return undefined
+  return Permission.evaluate("bash", command, agent.permission).action
+}
+
+function load<A>(dir: string, fn: (svc: Agent.Interface) => Effect.Effect<A>) {
+  return Effect.runPromise(provideInstance(dir)(Agent.Service.use(fn)).pipe(Effect.provide(Agent.defaultLayer)))
+}
+
+afterEach(async () => {
+  await disposeAllInstances()
+})
+
+test("registers reviewer as a hidden read-only primary agent", async () => {
+  await using tmp = await tmpdir()
+  await withTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const reviewer = await load(tmp.path, (svc) => svc.get(REVIEWER_AGENT))
+
+      expect(reviewer).toBeDefined()
+      if (!reviewer) throw new Error("reviewer not found")
+      expect(reviewer?.mode).toBe("primary")
+      expect(reviewer?.hidden).toBe(true)
+      expect(reviewer?.native).toBe(true)
+      expect(reviewer?.prompt).toBeTruthy()
+      expect(perm(reviewer, "edit")).toBe("deny")
+      expect(perm(reviewer, "task")).toBe("allow")
+      expect(KiloTask.inherited({ caller: reviewer, session: { permission: [] }, mcp: {} })).toContainEqual({
+        permission: "edit",
+        pattern: "*",
+        action: "deny",
+      })
+      expect(perm(reviewer, "read")).toBe("allow")
+      expect(perm(reviewer, "grep")).toBe("allow")
+      expect(perm(reviewer, "glob")).toBe("allow")
+      expect(bash(reviewer, "git merge-base HEAD main")).toBe("allow")
+      expect(bash(reviewer, "git show-ref --verify --quiet refs/heads/main")).toBe("allow")
+      expect(bash(reviewer, "git -c core.quotepath=false diff HEAD")).toBe("allow")
+      expect(bash(reviewer, "git -c core.quotepath=false diff HEAD --output=review.txt")).toBe("deny")
+      expect(bash(reviewer, "touch file")).toBe("deny")
+    },
+  })
+})
+
+test("keeps hidden reviewer available when config disables custom reviewer", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        reviewer: { disable: true },
+      },
+    },
+  })
+
+  await withTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const reviewer = await load(tmp.path, (svc) => svc.get(REVIEWER_AGENT))
+
+      expect(reviewer).toBeDefined()
+      expect(reviewer?.mode).toBe("primary")
+      expect(reviewer?.hidden).toBe(true)
+      expect(reviewer?.native).toBe(true)
+      expect(perm(reviewer, "edit")).toBe("deny")
+    },
+  })
+})
+
+test("preserves custom reviewer config separately from hidden reviewer", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        reviewer: {
+          prompt: "custom reviewer prompt",
+          mode: "subagent",
+          hidden: false,
+          permission: {
+            edit: "allow",
+            bash: "allow",
+            task: "deny",
+          },
+        },
+      },
+    },
+  })
+
+  await withTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const hidden = await load(tmp.path, (svc) => svc.get(REVIEWER_AGENT))
+      const reviewer = await load(tmp.path, (svc) => svc.get("reviewer"))
+
+      expect(hidden).toBeDefined()
+      expect(hidden?.mode).toBe("primary")
+      expect(hidden?.hidden).toBe(true)
+      expect(hidden?.prompt).not.toBe("custom reviewer prompt")
+      expect(perm(hidden, "edit")).toBe("deny")
+      expect(perm(hidden, "task")).toBe("allow")
+      expect(bash(hidden, "touch file")).toBe("deny")
+      expect(bash(hidden, "git status")).toBe("allow")
+      expect(reviewer).toBeDefined()
+      expect(reviewer?.mode).toBe("subagent")
+      expect(reviewer?.hidden).toBe(false)
+      expect(reviewer?.prompt).toBe("custom reviewer prompt")
+      expect(perm(reviewer, "edit")).toBe("allow")
+      expect(perm(reviewer, "task")).toBe("deny")
+    },
+  })
+})
+
+test("keeps reviewer read-only when global config allows every tool", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      permission: {
+        "*": "allow",
+      },
+    },
+  })
+
+  await withTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const reviewer = await load(tmp.path, (svc) => svc.get(REVIEWER_AGENT))
+
+      expect(reviewer).toBeDefined()
+      expect(perm(reviewer, "edit")).toBe("deny")
+      expect(perm(reviewer, "todowrite")).toBe("deny")
+      expect(perm(reviewer, "suggest")).toBe("deny")
+      expect(perm(reviewer, "webfetch")).toBe("allow")
+      expect(bash(reviewer, "touch file")).toBe("deny")
+      expect(bash(reviewer, "git status")).toBe("allow")
+    },
+  })
+})

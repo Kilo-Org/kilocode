@@ -1666,6 +1666,10 @@ export const layer = Layer.effect(
             toolChoice: format.type === "json_schema" ? "required" : undefined,
           })
 
+          // kilocode_change start
+          yield* KiloSessionPrompt.applyQuestionMode({ messageID: handle.message.id, lastUser, sessions, agents, events })
+          // kilocode_change end
+
           if (structured !== undefined) {
             handle.message.structured = structured
             handle.message.finish = handle.message.finish ?? "stop"
@@ -1748,11 +1752,13 @@ export const layer = Layer.effect(
           }
           // kilocode_change end
           return "continue" as const
+          // kilocode_change start - clear turn instructions and honor Kilo loop breaks
         }).pipe(
           Effect.ensuring(instruction.clear(handle.message.id)),
           Effect.onInterrupt(() => finalize),
         )
         if (outcome === "break") break
+        // kilocode_change end
         continue
       }
 
@@ -1984,10 +1990,12 @@ export const PromptInput = Schema.Struct({
   model: Schema.optional(ModelRef),
   agent: Schema.optional(Schema.String),
   noReply: Schema.optional(Schema.Boolean),
+  // kilocode_change start - preserve legacy tools input for Kilo clients
   tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)).annotate({
     description:
       "@deprecated tools and permissions have been merged, you can set permissions on the session itself now",
   }),
+  // kilocode_change end
   format: Schema.optional(MessageV2.Format),
   system: Schema.optional(Schema.String),
   variant: Schema.optional(Schema.String),
@@ -2053,6 +2061,7 @@ export const CommandInput = Schema.Struct({
     description: "Wait silently if snapshot initialization is slow instead of asking the user.",
   }),
   // kilocode_change end
+  // kilocode_change start - accept file parts for command prompts
   // Inlined (no identifier annotation) to keep the original SDK output — the
   // PromptInput call site below references FilePartInput by ref via the
   // Schema export in message-v2.ts.
@@ -2071,8 +2080,10 @@ export const CommandInput = Schema.Struct({
     ),
   ),
 })
+// kilocode_change end
 export type CommandInput = Schema.Schema.Type<typeof CommandInput>
 
+// kilocode_change start - expose structured output success hook for tests
 /** @internal Exported for testing */
 export function createStructuredOutputTool(input: {
   schema: Record<string, any>
@@ -2101,6 +2112,7 @@ export function createStructuredOutputTool(input: {
     },
   })
 }
+// kilocode_change end
 const bashRegex = /!`([^`]+)`/g
 // Match [Image N] as single token, quoted strings, or non-space sequences
 const argsRegex = /(?:\[Image\s+\d+\]|"[^"]*"|'[^']*'|[^\s"']+)/gi

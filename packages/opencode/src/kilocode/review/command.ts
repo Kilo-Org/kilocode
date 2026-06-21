@@ -1,5 +1,6 @@
 import type { Command } from "@/command"
 import type { ReviewCommand } from "@kilocode/kilo-telemetry"
+import { REVIEWER_AGENT } from "../agent"
 import LOCAL_REVIEW from "./local-review.txt"
 import LOCAL_REVIEW_UNCOMMITTED from "./local-review-uncommitted.txt"
 
@@ -20,6 +21,7 @@ export function localReviewUncommittedCommand(): Command.Info {
   return {
     name: "local-review-uncommitted",
     description: "local review (uncommitted changes)",
+    agent: REVIEWER_AGENT,
     template: LOCAL_REVIEW_UNCOMMITTED,
     hints: ["$ARGUMENTS"],
   }
@@ -32,6 +34,7 @@ export function localReviewCommand(): Command.Info {
   return {
     name: "local-review",
     description: "local review (current branch, optional base or instructions)",
+    agent: REVIEWER_AGENT,
     template: LOCAL_REVIEW,
     hints: ["$ARGUMENTS"],
   }

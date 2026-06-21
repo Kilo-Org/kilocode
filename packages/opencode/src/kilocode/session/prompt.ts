@@ -1,9 +1,9 @@
-// kilocode_change - new file
 import path from "path"
 import fs from "fs/promises"
 import { StringDecoder } from "string_decoder"
 import { Cause, Effect, Exit } from "effect"
-import { SessionID, PartID } from "@/session/schema"
+import * as DateTime from "effect/DateTime"
+import { SessionID, PartID, MessageID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
 import { Agent } from "@/agent/agent"
@@ -20,8 +20,13 @@ import { environmentDetails, type EditorContext } from "@/kilocode/editor-contex
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
 import { InstanceState } from "@/effect/instance-state"
+import { EventV2 } from "@opencode-ai/core/event"
+import { SessionEvent } from "@opencode-ai/core/session-event"
+import * as Log from "@opencode-ai/core/util/log"
 import NATIVE_PLAN_PROMPT from "@/kilocode/session/native-plan-prompt.txt"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
+
+const log = Log.create({ service: "kilocode.session.prompt" })
 
 export namespace KiloSessionPrompt {
   const modes = ["ask", "plan", "architect"]
@@ -132,6 +137,44 @@ export namespace KiloSessionPrompt {
       yield* input.sessions.removeMessage({ sessionID: input.sessionID, messageID: tail.info.id })
     },
   )
+
+  export const applyQuestionMode = Effect.fn("KiloSessionPrompt.applyQuestionMode")(function* (input: {
+    messageID: MessageID
+    lastUser: MessageV2.User
+    sessions: Pick<Session.Interface, "updateMessage">
+    agents: Pick<Agent.Interface, "get">
+    events: Pick<EventV2.Interface, "publish">
+  }) {
+    const mode = MessageV2.parts(input.messageID).reduce<string | undefined>((current, part) => {
+      if (part.type !== "tool") return current
+      if (part.tool !== "question") return current
+      if (part.state.status !== "completed") return current
+      const mode = part.state.metadata.mode
+      if (typeof mode !== "string" || mode.length === 0) return current
+      return mode
+    }, undefined)
+    if (!mode) return
+
+    const agent = yield* input.agents.get(mode)
+    if (!agent) {
+      log.warn("question option selected unknown agent", { mode })
+      return
+    }
+    if (agent.hidden === true || agent.mode === "subagent") {
+      log.warn("question option selected unavailable agent", { mode, agent: agent.name })
+      return
+    }
+    const current = yield* MessageV2.get({ sessionID: input.lastUser.sessionID, messageID: input.lastUser.id })
+    if (current.info.role !== "user") return
+    if (agent.name === current.info.agent) return
+
+    yield* input.sessions.updateMessage({ ...current.info, agent: agent.name })
+    yield* input.events.publish(SessionEvent.AgentSwitched, {
+      sessionID: input.lastUser.sessionID,
+      timestamp: DateTime.makeUnsafe(Date.now()),
+      agent: agent.name,
+    })
+  })
 
   export function guardPermissions(input: {
     agent: { name: string; permission: Permission.Ruleset }

@@ -24,4 +24,17 @@ export namespace KiloQuestionTool {
     output: "User dismissed the question.",
     metadata: { answers: [] as ReadonlyArray<Question.Answer>, dismissed: true as const },
   })
+
+  export function selectedMode(input: {
+    questions: ReadonlyArray<Question.Prompt>
+    answers: ReadonlyArray<Question.Answer>
+  }) {
+    return input.questions.reduce<string | undefined>((mode, q, idx) => {
+      const answers = input.answers[idx] ?? []
+      return answers.reduce((current, answer) => {
+        const option = q.options.find((item) => item.label === answer)
+        return option?.mode ?? current
+      }, mode)
+    }, undefined)
+  }
 }

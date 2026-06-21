@@ -4,6 +4,7 @@ import {
   localReviewUncommittedCommand,
   parseReviewCommand,
 } from "../../src/kilocode/review/command"
+import { REVIEWER_AGENT } from "../../src/kilocode/agent"
 
 function expectReviewFixContract(text: string) {
   expect(text).toContain("During the initial review phase")
@@ -21,6 +22,16 @@ describe("review command parsing", () => {
     expect(parseReviewCommand("/test")).toBeUndefined()
     expect(parseReviewCommand("local-review")).toBeUndefined()
   })
+})
+
+test("routes local review commands to the reviewer agent", () => {
+  const branch = localReviewCommand()
+  const uncommitted = localReviewUncommittedCommand()
+
+  expect(branch.agent).toBe(REVIEWER_AGENT)
+  expect(uncommitted.agent).toBe(REVIEWER_AGENT)
+  expect(branch.subtask).not.toBe(true)
+  expect(uncommitted.subtask).not.toBe(true)
 })
 
 describe("local-review command", () => {
