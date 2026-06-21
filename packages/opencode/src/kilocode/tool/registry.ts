@@ -3,6 +3,7 @@ import { CodebaseSearchTool } from "../../tool/warpgrep"
 import { RecallTool } from "../../tool/recall"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
+import { HashEditTool } from "./hash_edit"
 import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Effect } from "effect"
@@ -37,14 +38,15 @@ export namespace KiloToolRegistry {
       const recall = yield* RecallTool
       const manager = yield* AgentManagerTool
       const process = yield* BackgroundProcessTool
-      return { codebase, recall, manager, process }
+      const hashEdit = yield* HashEditTool
+      return { codebase, recall, manager, process, hashEdit }
     })
   }
 
   /** Finalize Kilo-specific tools into Tool.Defs. Call this inside the InstanceState state Effect —
    * it has no Service deps beyond what Tool.init itself needs. */
   export function build(
-    tools: { codebase: Tool.Info; recall: Tool.Info; manager: Tool.Info; process: Tool.Info },
+    tools: { codebase: Tool.Info; recall: Tool.Info; manager: Tool.Info; process: Tool.Info; hashEdit: Tool.Info },
     deps: Deps,
     loaders: Loaders = {},
   ) {
@@ -54,6 +56,7 @@ export namespace KiloToolRegistry {
         recall: Tool.init(tools.recall),
         manager: Tool.init(tools.manager),
         process: Tool.init(tools.process),
+        hashEdit: Tool.init(tools.hashEdit),
       })
       const semantic = yield* semanticTool(deps, loaders)
       return { ...base, semantic }
@@ -99,8 +102,8 @@ export namespace KiloToolRegistry {
 
   /** Kilo-specific tools to append to the builtin list */
   export function extra(
-    tools: { codebase: Tool.Def; semantic?: Tool.Def; recall: Tool.Def; manager: Tool.Def; process: Tool.Def },
-    cfg: { experimental?: { codebase_search?: boolean } },
+    tools: { codebase: Tool.Def; semantic?: Tool.Def; recall: Tool.Def; manager: Tool.Def; process: Tool.Def; hashEdit: Tool.Def },
+    cfg: { experimental?: { codebase_search?: boolean }; hashlineEdit?: { enabled?: boolean } },
   ): Tool.Def[] {
     return [
       ...(cfg.experimental?.codebase_search === true ? [tools.codebase] : []),
@@ -109,6 +112,8 @@ export namespace KiloToolRegistry {
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
       // The extension is the only client that can consume the Agent Manager start event.
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.manager] : []),
+      // Include hash_edit tool when hashline editing is enabled
+      ...(cfg.hashlineEdit?.enabled === true ? [tools.hashEdit] : []),
     ]
   }
 

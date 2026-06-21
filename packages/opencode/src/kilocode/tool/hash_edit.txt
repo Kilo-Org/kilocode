@@ -1,0 +1,29 @@
+Performs precise, hash-anchored line edits on files.
+
+Lines are addressed by a stable identifier (<lineNumber>:<hash>) that you obtain from the Read tool when hashline mode is active. The Read tool returns annotated output like:
+
+  #HL REV:a1b2c3d4
+  #HL 1:a3f|function hello() {
+  #HL 2:f1c|  return "world";
+  #HL 3:0e7|}
+
+Usage rules:
+- You MUST use the Read tool before calling hash_edit to obtain fresh hash references.
+- Pass the full annotated line (e.g. "#HL 2:f1c|const x = 1;") OR the short ref (e.g. "2:f1c") as startRef/endRef.
+- Always pass the fileRev value from the "#HL REV:<hash>" header line for safety.
+- Do NOT include the hash prefix in the replacement content — only supply the raw new content.
+
+Operations:
+- "replace"        — replace the single line at startRef with replacement content
+- "delete"         — remove the line(s) from startRef to endRef (endRef defaults to startRef)
+- "insert_before"  — insert replacement content before the line at startRef
+- "insert_after"   — insert replacement content after the line at startRef
+
+Error codes you may receive:
+- HASH_MISMATCH     — the file changed since you last read it; re-read the file and retry
+- FILE_REV_MISMATCH — the file was modified by another process; re-read and retry
+- TARGET_OUT_OF_RANGE — line number is beyond the end of the file
+- INVALID_REF       — malformed hash reference; ensure format is "<line>:<2-8 hex chars>"
+- MISSING_REPLACEMENT — replacement is required for this operation but was not provided
+
+When you encounter a HASH_MISMATCH or FILE_REV_MISMATCH, always re-read the file to get fresh references before retrying.
