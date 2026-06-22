@@ -24,6 +24,14 @@ export function notebookUri(uri: vscode.Uri): vscode.Uri | undefined {
   return resolveNotebook(uri)?.uri
 }
 
+export function supportsNotebook(document: vscode.TextDocument): boolean {
+  if (document.uri.scheme !== "vscode-notebook-cell") return true
+  const cell = resolveNotebook(document.uri)
+    ?.getCells()
+    .find((cell) => cell.document.uri.toString() === document.uri.toString())
+  return cell?.kind === vscode.NotebookCellKind.Code && document.languageId === "python"
+}
+
 export function getNotebookContext(
   document: vscode.TextDocument,
   position: vscode.Position,

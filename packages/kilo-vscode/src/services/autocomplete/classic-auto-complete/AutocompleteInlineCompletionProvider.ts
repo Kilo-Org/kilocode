@@ -32,7 +32,7 @@ import { postprocessAutocompleteSuggestion } from "./uselessSuggestionFilter"
 import { shouldSkipAutocomplete } from "./contextualSkip"
 import { FileIgnoreController } from "../shims/FileIgnoreController"
 import { AutocompleteTelemetry } from "./AutocompleteTelemetry"
-import { getNotebookContext, notebookUri } from "../continuedev/core/autocomplete/notebook"
+import { getNotebookContext, notebookUri, supportsNotebook } from "../continuedev/core/autocomplete/notebook"
 import { ErrorBackoff } from "./ErrorBackoff"
 
 const MAX_SUGGESTIONS_HISTORY = 20
@@ -352,6 +352,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     _token: vscode.CancellationToken,
   ): Promise<vscode.InlineCompletionItem[] | vscode.InlineCompletionList> {
     vscode.commands.executeCommand("setContext", "kilo-code.new.autocomplete.hasSuggestions", false)
+    if (!supportsNotebook(document)) return []
 
     // Build telemetry context
     const telemetryContext: AutocompleteContext = {

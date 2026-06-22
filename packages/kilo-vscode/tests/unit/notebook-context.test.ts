@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it } from "bun:test"
 import * as vscode from "vscode"
-import { getNotebookContext, notebookUri } from "../../src/services/autocomplete/continuedev/core/autocomplete/notebook"
+import {
+  getNotebookContext,
+  notebookUri,
+  supportsNotebook,
+} from "../../src/services/autocomplete/continuedev/core/autocomplete/notebook"
 
 function uri(scheme: string, path: string, fragment = ""): vscode.Uri {
   const value = `${scheme}:${path}${fragment ? `#${fragment}` : ""}`
@@ -11,9 +15,10 @@ function uri(scheme: string, path: string, fragment = ""): vscode.Uri {
   } as vscode.Uri
 }
 
-function document(id: string, text: string): vscode.TextDocument {
+function document(id: string, text: string, languageId = "python"): vscode.TextDocument {
   return {
     uri: uri("vscode-notebook-cell", "/workspace/example.ipynb", id),
+    languageId,
     getText: () => text,
   } as vscode.TextDocument
 }
@@ -52,7 +57,7 @@ describe("notebook context", () => {
   })
 
   it("accounts for the opening quotes in a markup cell", () => {
-    const current = document("current", "# Heading")
+    const current = document("current", "# Heading", "markdown")
     const notebook = {
       uri: uri("file", "/workspace/example.ipynb"),
       getCells: () => [{ kind: vscode.NotebookCellKind.Markup, document: current }],
@@ -62,6 +67,26 @@ describe("notebook context", () => {
     const context = getNotebookContext(current, new vscode.Position(0, 4))
 
     expect(context?.position).toEqual(new vscode.Position(0, 7))
+  })
+
+  it("limits notebook completion to Python code cells", () => {
+    const python = document("python", "value = 1")
+    const javascript = document("javascript", "const value = 1", "javascript")
+    const markdown = document("markdown", "# Heading", "markdown")
+    const notebook = {
+      uri: uri("file", "/workspace/example.ipynb"),
+      getCells: () => [
+        { kind: vscode.NotebookCellKind.Code, document: python },
+        { kind: vscode.NotebookCellKind.Code, document: javascript },
+        { kind: vscode.NotebookCellKind.Markup, document: markdown },
+      ],
+    } as vscode.NotebookDocument
+    notebooks([notebook])
+
+    expect(supportsNotebook(python)).toBe(true)
+    expect(supportsNotebook(javascript)).toBe(false)
+    expect(supportsNotebook(markdown)).toBe(false)
+    expect(supportsNotebook({ uri: uri("file", "/workspace/file.ts") } as vscode.TextDocument)).toBe(true)
   })
 
   it("resolves file and notebook cell URIs", () => {
