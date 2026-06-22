@@ -16,6 +16,10 @@ import { DEFAULT_AUTOCOMPLETE_MODEL, getAutocompleteModel } from "../../shared/a
 
 const CONFIG_SECTION = "kilo-code.new.autocomplete"
 
+export function selector(kind: "classic" | "next-edit"): vscode.DocumentSelector {
+  return kind === "classic" ? [{ scheme: "file" }, { scheme: "vscode-notebook-cell" }] : [{ scheme: "file" }]
+}
+
 export interface AutocompleteServiceSettings {
   enableAutoTrigger?: boolean
   enableSmartInlineTaskKeybinding?: boolean
@@ -224,7 +228,7 @@ export class AutocompleteServiceManager {
     const provider: vscode.InlineCompletionItemProvider =
       desiredKind === "next-edit" ? this.nextEditProvider : this.inlineCompletionProvider
     this.inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
-      { scheme: "file" },
+      selector(desiredKind),
       provider,
     )
     this.inlineCompletionProviderKind = desiredKind

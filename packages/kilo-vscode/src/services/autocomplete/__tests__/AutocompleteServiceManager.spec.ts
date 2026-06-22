@@ -251,7 +251,7 @@ describe("AutocompleteServiceManager (less mocked logic)", () => {
       await (manager as any).ensureInlineCompletionProviderRegistration()
 
       expect(vscode.languages.registerInlineCompletionItemProvider).toHaveBeenCalledWith(
-        { scheme: "file" },
+        [{ scheme: "file" }, { scheme: "vscode-notebook-cell" }],
         manager.inlineCompletionProvider,
       )
       expect((manager as any).inlineCompletionProviderDisposable).toBe(disposable)

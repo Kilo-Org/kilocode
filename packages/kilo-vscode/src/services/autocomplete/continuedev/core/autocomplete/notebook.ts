@@ -2,6 +2,7 @@
 // https://github.com/continuedev/continue/blob/d0a3c0b626b5bebc3bef4742eec05a0242be0bab/extensions/vscode/src/autocomplete/completionProvider.ts#L226-L263
 // Copyright 2023 Continue
 // Licensed under the Apache License, Version 2.0.
+// Modified by Kilo Code to expose notebook paths and correct markup-cell cursor positions.
 
 import * as vscode from "vscode"
 
@@ -11,15 +12,25 @@ export interface NotebookContext {
   position: vscode.Position
 }
 
+function resolveNotebook(uri: vscode.Uri): vscode.NotebookDocument | undefined {
+  return vscode.workspace.notebookDocuments.find((notebook) =>
+    notebook.getCells().some((cell) => cell.document.uri.toString() === uri.toString()),
+  )
+}
+
+export function notebookUri(uri: vscode.Uri): vscode.Uri | undefined {
+  if (uri.scheme === "file") return uri
+  if (uri.scheme !== "vscode-notebook-cell") return
+  return resolveNotebook(uri)?.uri
+}
+
 export function getNotebookContext(
   document: vscode.TextDocument,
   position: vscode.Position,
 ): NotebookContext | undefined {
   if (document.uri.scheme !== "vscode-notebook-cell") return
 
-  const notebook = vscode.workspace.notebookDocuments.find((notebook) =>
-    notebook.getCells().some((cell) => cell.document.uri.toString() === document.uri.toString()),
-  )
+  const notebook = resolveNotebook(document.uri)
   if (!notebook) return
 
   const cells = notebook.getCells()
@@ -37,10 +48,13 @@ export function getNotebookContext(
   const line = cells
     .slice(0, index)
     .reduce((line, cell) => line + cell.document.getText().split("\n").length + 1, position.line)
+  const cell = cells[index]
+  const character =
+    cell.kind === vscode.NotebookCellKind.Markup && position.line === 0 ? position.character + 3 : position.character
 
   return {
     contents,
     filepath: notebook.uri.fsPath,
-    position: new vscode.Position(line, position.character),
+    position: new vscode.Position(line, character),
   }
 }

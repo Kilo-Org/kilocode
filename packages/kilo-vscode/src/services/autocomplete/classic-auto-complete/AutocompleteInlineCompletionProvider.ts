@@ -32,9 +32,16 @@ import { postprocessAutocompleteSuggestion } from "./uselessSuggestionFilter"
 import { shouldSkipAutocomplete } from "./contextualSkip"
 import { FileIgnoreController } from "../shims/FileIgnoreController"
 import { AutocompleteTelemetry } from "./AutocompleteTelemetry"
+import { getNotebookContext, notebookUri } from "../continuedev/core/autocomplete/notebook"
 import { ErrorBackoff } from "./ErrorBackoff"
 
 const MAX_SUGGESTIONS_HISTORY = 20
+
+function accessible(controller: FileIgnoreController, document: vscode.TextDocument): boolean {
+  const uri = notebookUri(document.uri)
+  if (uri && uri.scheme !== "file") return true
+  return controller.validateAccess(uri?.fsPath ?? document.fileName)
+}
 
 /**
  * Minimum debounce delay in milliseconds.
@@ -211,7 +218,16 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
       recentlyEditedRanges,
     }
 
-    const autocompleteInput = contextToAutocompleteInput(context)
+    const input = contextToAutocompleteInput(context)
+    const notebook = getNotebookContext(document, position)
+    const autocompleteInput = notebook
+      ? {
+          ...input,
+          filepath: notebook.filepath,
+          pos: { line: notebook.position.line, character: notebook.position.character },
+          manuallyPassFileContents: notebook.contents,
+        }
+      : input
 
     const { prefix, suffix } = extractPrefixSuffix(document, position)
     const languageId = document.languageId
@@ -389,8 +405,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
             return []
           }
 
-          const isAccessible = controller.validateAccess(document.fileName)
-          if (!isAccessible) {
+          if (!accessible(controller, document)) {
             return []
           }
         } catch {
