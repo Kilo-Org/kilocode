@@ -52,6 +52,33 @@ export const CollaborateNav: NavSection[] = [
     ],
   },
   {
+    title: "Evaluation",
+    links: [
+      {
+        href: "/collaborate/evaluation",
+        children: "Run a Kilo Evaluation",
+        subLinks: [
+          {
+            href: "/collaborate/evaluation/plan",
+            children: "Plan your evaluation",
+          },
+          {
+            href: "/collaborate/evaluation/setup",
+            children: "Set up your evaluation",
+          },
+          {
+            href: "/collaborate/evaluation/measure",
+            children: "Measure adoption, quality, and cost",
+          },
+          {
+            href: "/collaborate/evaluation/decide",
+            children: "Make a rollout decision",
+          },
+        ],
+      },
+    ],
+  },
+  {
     title: "Enterprise",
     links: [
       { href: "/collaborate/enterprise/sso", children: "SSO" },

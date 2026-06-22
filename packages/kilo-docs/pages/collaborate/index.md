@@ -39,6 +39,7 @@ Kilo Code's paid plans provide powerful team management features:
 
 Enterprise features for large organizations:
 
+- [**Run a Kilo Evaluation**](/docs/collaborate/evaluation) — Evaluate Kilo with a small cohort, approved workflows, lightweight measurement, and a clear GO / EXTEND / NO-GO decision
 - [**Audit Logs**](/docs/collaborate/enterprise/audit-logs) — Track and audit team activity
 - [**SSO**](/docs/collaborate/enterprise/sso) — Single sign-on with OIDC and SCIM
 - [**Model Access Controls**](/docs/collaborate/enterprise/model-access-controls) — Limit models and providers
