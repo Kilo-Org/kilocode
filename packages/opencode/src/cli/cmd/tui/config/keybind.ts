@@ -152,11 +152,11 @@ export const Definitions = {
   prompt_submit: keybind("none", "Submit prompt"),
   prompt_editor_context_clear: keybind("none", "Clear editor context"),
   prompt_skills: keybind("none", "Open skill selector"),
-  // kilocode_change start - skill management actions
-  skill_marketplace_browse: keybind("none", "Browse skill marketplace"),
-  skill_install_url: keybind("none", "Install skill from URL"),
-  skill_install_folder: keybind("none", "Install skill from local folder"),
-  skill_uninstall: keybind("none", "Uninstall selected skill"),
+  // kilocode_change start - skill management actions (function keys to avoid collisions with existing ctrl+/alt+ binds)
+  skill_marketplace_browse: keybind("f1", "Browse skill marketplace"),
+  skill_install_url: keybind("f2", "Install skill from URL"),
+  skill_install_folder: keybind("f3", "Install skill from local folder"),
+  skill_uninstall: keybind("f4", "Uninstall selected skill"),
   // kilocode_change end
   prompt_stash: keybind("none", "Stash prompt"),
   prompt_stash_pop: keybind("none", "Pop stashed prompt"),
