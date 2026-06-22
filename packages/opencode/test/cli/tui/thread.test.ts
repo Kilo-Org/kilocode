@@ -22,7 +22,7 @@ function setupTuiSpies() {
   // and mock.restore() does not reset mock.module values. If this switches back
   // to module mocks, later suites can see mocked @/config/tui and fail.
   // See: https://github.com/oven-sh/bun/issues/7823 and #12823.
-  spyOn(App, "tui").mockImplementation(async (input) => {
+  spyOn(App, "tui").mockImplementation((input) => {
     seen.args.push({ autoApprove: input.args.autoApprove })
     throw stop
   })
