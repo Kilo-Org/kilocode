@@ -11,9 +11,17 @@ export const dict = {
   "provider.connect.kiloGateway.byok.link": "BYOK putem Kilo's Gateway",
   "provider.connect.kiloGateway.byok.suffix": ".",
 
-  // Provider dialog translations
-  "dialog.provider.group.recommended": "Preporučeno",
-  "dialog.provider.kilo.note": "Pristup za 500+ AI modela",
+  // Provider settings translations
+  "settings.providers.group.recommended": "Preporučeno",
+  "settings.providers.note.kilo": "Pristup za 500+ AI modela",
+  "settings.providers.note.opencode": "Odabrani modeli uključujući Claude, GPT, Gemini i još mnogo toga",
+  "settings.providers.note.anthropic": "Direktan pristup Claude modelima, uključujući Pro i Max",
+  "settings.providers.note.deepseek": "DeepSeek modeli za zadatke rezonovanja i programiranja",
+  "settings.providers.note.copilot": "Claude modeli za pomoć pri programiranju",
+  "settings.providers.note.openai": "GPT i Codex modeli uz API ključ ili ChatGPT prijavu",
+  "settings.providers.note.google": "Gemini modeli za brze, strukturirane odgovore",
+  "settings.providers.note.openrouter": "Pristup svim podržanim modelima od jednog provajdera",
+  "settings.providers.note.vercel": "Objedinjen pristup AI modelima s pametnim usmjeravanjem",
 
   // Desktop translations
   "desktop.menu.reloadWebview": "Ponovno učitavanje webview-a",

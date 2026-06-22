@@ -42,11 +42,11 @@ it.instance(
 )
 
 it.instance(
-  "customize-opencode is protected from removal",
+  "kilo-config is protected from removal",
   () =>
     Effect.gen(function* () {
       const skill = yield* Skill.Service
-      const item = yield* skill.get("customize-opencode")
+      const item = yield* skill.get("kilo-config")
       expect(item).toBeDefined()
       expect(KiloSkill.builtin(item!.location)).toBe(true)
     }),

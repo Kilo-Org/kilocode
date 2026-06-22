@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/resize-handle"
+export * from "@opencode-ai/ui/resize-handle"

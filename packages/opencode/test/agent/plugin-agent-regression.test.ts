@@ -1,12 +1,14 @@
 import { expect } from "bun:test"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Effect, Layer } from "effect"
+import { FetchHttpClient } from "effect/unstable/http"
 import path from "path"
 import { pathToFileURL } from "url"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
 import { Env } from "../../src/env"
+import { Git } from "../../src/git" // kilocode_change
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Plugin } from "../../src/plugin"
 import { AccountTest } from "../fake/account"
@@ -24,12 +26,14 @@ const pluginUrl = pathToFileURL(path.join(import.meta.dir, "..", "fixture", "age
 
 const provider = ProviderTest.fake()
 const configLayer = Config.layer.pipe(
+  Layer.provide(Git.defaultLayer), // kilocode_change
   Layer.provide(RuntimeFlags.layer({ disableDefaultPlugins: true })),
   Layer.provide(AppFileSystem.defaultLayer),
   Layer.provide(Env.defaultLayer),
   Layer.provide(AuthTest.empty),
   Layer.provide(AccountTest.empty),
   Layer.provide(NpmTest.noop),
+  Layer.provide(FetchHttpClient.layer),
 )
 const pluginLayer = Plugin.layer.pipe(
   Layer.provide(Bus.layer),
@@ -51,7 +55,7 @@ it.instance(
   () =>
     Effect.gen(function* () {
       yield* Plugin.Service.use((p) => p.init())
-      const agents = yield* Agent.Service.use((svc) => svc.list())
+      const agents = yield* Agent.use.list()
       const added = agents.find((agent) => agent.name === PLUGIN_AGENT.name)
       expect(added?.description).toBe(PLUGIN_AGENT.description)
       expect(added?.mode).toBe(PLUGIN_AGENT.mode)

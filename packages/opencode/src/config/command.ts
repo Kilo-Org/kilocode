@@ -1,5 +1,6 @@
 export * as ConfigCommand from "./command"
 
+import path from "path"
 import * as Log from "@opencode-ai/core/util/log"
 import { Cause, Exit, Schema, SchemaIssue } from "effect"
 import { Glob } from "@opencode-ai/core/util/glob"
@@ -59,19 +60,7 @@ export async function load(dir: string, warnings?: Warning[]) {
     })
     if (!md) continue
 
-    // kilocode_change start
-    const patterns = [
-      "/.kilo/command/",
-      "/.kilo/commands/",
-      "/.kilocode/command/",
-      "/.kilocode/commands/",
-      "/.opencode/command/",
-      "/.opencode/commands/",
-      "/command/",
-      "/commands/",
-    ]
-    // kilocode_change end
-    const name = configEntryNameFromPath(item, patterns)
+    const name = configEntryNameFromPath(path.relative(dir, item), ["command/", "commands/"])
 
     const config = {
       name,

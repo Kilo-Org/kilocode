@@ -8,6 +8,7 @@ import { DaemonClient } from "@/kilocode/daemon/client"
 import { createKiloClient } from "@kilocode/sdk/v2"
 
 type TuiInput = Parameters<typeof import("@/cli/cmd/tui/app").tui>[0]
+export type StartInput = Omit<TuiInput, "renderer">
 
 type Args = NetworkOptions & {
   prompt?: string
@@ -23,7 +24,7 @@ type Input = {
   args: Args
   cwd: string
   input: () => Promise<string | undefined>
-  start: (input: TuiInput) => Promise<void>
+  start: (input: StartInput) => Promise<void>
 }
 
 async function session(input: Input, daemon: DaemonClient.Connection) {

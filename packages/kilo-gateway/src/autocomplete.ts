@@ -97,7 +97,7 @@ const models: AutocompleteModelDef[] = [
 export const AUTOCOMPLETE_MODELS: readonly AutocompleteModelDef[] = models
 
 export const DEFAULT_AUTOCOMPLETE_PROVIDER_ID: AutocompleteProviderID = "kilo"
-export const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/codestral-2508"
+export const DEFAULT_AUTOCOMPLETE_MODEL_ID = "inception/mercury-next-edit"
 
 export const DEFAULT_AUTOCOMPLETE_MODEL: AutocompleteModelDef = (() => {
   const found = models.find(

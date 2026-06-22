@@ -8,6 +8,7 @@ type Sync = Extract<SSEPayload, { type: "sync" }>
 type Question = Extract<SSEPayload, { type: "question.asked" | "question.replied" | "question.rejected" }>
 type Permission = Extract<SSEPayload, { type: "permission.asked" | "permission.replied" }>
 type Status = Extract<SSEPayload, { type: "session.status" }>
+type Close = Extract<SSEPayload, { type: "session.turn.close" }>
 type Error = Extract<SSEPayload, { type: "session.error" }>
 
 export function previewSound(value: string) {
@@ -19,7 +20,6 @@ export class AttentionService implements vscode.Disposable {
   private readonly errored = new Set<string>()
   private readonly questions = new Set<string>()
   private readonly permissions = new Set<string>()
-  private readonly parents = new Map<string, string | undefined>()
   private readonly unsubscribeEvent: () => void
   private readonly unsubscribeState: () => void
 
@@ -34,7 +34,6 @@ export class AttentionService implements vscode.Disposable {
     this.unsubscribeEvent()
     this.unsubscribeState()
     this.reset()
-    this.parents.clear()
   }
 
   private handle(event: SSEPayload) {
@@ -43,25 +42,20 @@ export class AttentionService implements vscode.Disposable {
       return this.question(event)
     }
     if (event.type === "permission.asked" || event.type === "permission.replied") return this.permission(event)
+    if (event.type === "session.deleted") return this.remove(event.properties.sessionID)
     if (event.type === "session.status") return this.status(event)
+    if (event.type === "session.turn.close") return this.close(event)
     if (event.type === "session.error") return this.error(event)
   }
 
   private sync(event: Sync) {
-    if (event.name === "session.created.1") {
-      this.parents.set(event.data.sessionID, event.data.info.parentID)
-      return
-    }
-    if (event.name === "session.updated.1") {
-      if (event.data.info.parentID !== undefined) {
-        this.parents.set(event.data.sessionID, event.data.info.parentID ?? undefined)
-      }
-      return
-    }
     if (event.name !== "session.deleted.1") return
-    this.parents.delete(event.data.sessionID)
-    this.active.delete(event.data.sessionID)
-    this.errored.delete(event.data.sessionID)
+    this.remove(event.data.sessionID)
+  }
+
+  private remove(sessionID: string) {
+    this.active.delete(sessionID)
+    this.errored.delete(sessionID)
   }
 
   private question(event: Question) {
@@ -86,22 +80,25 @@ export class AttentionService implements vscode.Disposable {
 
   private status(event: Status) {
     const sessionID = event.properties.sessionID
-    if (event.properties.status.type === "busy" || event.properties.status.type === "retry") {
-      this.active.add(sessionID)
-      this.errored.delete(sessionID)
-      return
-    }
-    if (event.properties.status.type !== "idle") return
-    if (!this.active.has(sessionID)) return
-    this.active.delete(sessionID)
+    if (event.properties.status.type !== "busy" && event.properties.status.type !== "retry") return
+    this.active.add(sessionID)
+    this.errored.delete(sessionID)
+  }
+
+  private close(event: Close) {
+    const sessionID = event.properties.sessionID
+    if (!this.active.delete(sessionID)) return
     if (this.errored.delete(sessionID)) return
-    this.notify(this.parents.get(sessionID) ? "subagent_done" : "done")
+    if (event.properties.reason !== "completed") return
+    if (event.properties.parentID !== undefined) return
+    this.notify("done")
   }
 
   private error(event: Error) {
     const sessionID = event.properties.sessionID
     if (!sessionID || !this.active.has(sessionID)) return
     this.errored.add(sessionID)
+    if (event.properties.error?.name === "MessageAbortedError") return
     this.notify("error")
   }
 

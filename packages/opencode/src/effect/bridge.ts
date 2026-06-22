@@ -34,7 +34,8 @@ function captureSync() {
 export const bind = <Args extends readonly unknown[], Result>(fn: (...args: Args) => Result) => {
   const captured = captureSync()
   return (...args: Args) =>
-    restore(captured.instance, captured.workspace, () => // kilocode_change
+    // kilocode_change start
+    restore(captured.instance, captured.workspace, () =>
       Effect.runSync(
         attachWith(
           Effect.sync(() => fn(...args)),
@@ -42,6 +43,7 @@ export const bind = <Args extends readonly unknown[], Result>(fn: (...args: Args
         ),
       ),
     )
+  // kilocode_change end
 }
 
 /**

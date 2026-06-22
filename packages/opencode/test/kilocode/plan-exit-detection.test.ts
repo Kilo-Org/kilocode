@@ -681,9 +681,9 @@ describe("plan_exit detection", () => {
 
       const part = user.parts.at(-1)
       const text = part?.type === "text" ? part.text : ""
-      expect(text).toContain("Use the plan path specified by the user or project instructions")
+      expect(text).toContain(`${session.time.created}-<concise-kebab-case-suffix>.md`)
+      expect(text).toContain(`${session.time.created}-database-cache-plan.md`)
       expect(text).toContain("plans/ or .plans/")
-      expect(text).toContain("If none is specified")
       expect(text).not.toContain(Session.plan(session, Instance.current))
     }))
 
@@ -733,8 +733,7 @@ describe("plan_exit detection", () => {
       const text = content(user)
       expect(text).toContain("The current saved plan file is")
       expect(text.replaceAll(path.sep, "/")).toContain(".plans/fix.md")
-      expect(text).toContain("Read and edit this file when refining the plan")
-      expect(text).toContain("experienced technical leader")
+      expect(text).not.toContain(`${session.time.created}-<concise-kebab-case-suffix>.md`)
       expect(text).not.toContain("No plan file exists yet")
     }))
 
@@ -771,8 +770,7 @@ describe("plan_exit detection", () => {
 
       const part = user.parts.at(-1)
       const text = part?.type === "text" ? part.text : ""
-      expect(text).toContain("Use the plan path specified by the user or project instructions")
-      expect(text).toContain("If none is specified")
+      expect(text).toContain(`${session.time.created}-<concise-kebab-case-suffix>.md`)
       expect(text).toContain("plans/ or .plans/")
       expect(text).not.toContain("Default to")
       expect(text).not.toContain("A fallback plan file exists")

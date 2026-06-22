@@ -96,6 +96,11 @@ export interface KiloProviderOptions {
   name?: string
 
   /**
+   * Data collection preference for upstream provider routing
+   */
+  dataCollection?: "allow" | "deny"
+
+  /**
    * Custom fetch function
    */
   fetch?: typeof fetch

@@ -64,9 +64,12 @@ export function DialogModel(props: { providerID?: string }) {
   })
 
   const footer = (providerID: string, model: Model) => {
-    if (providerID === "kilo" && FreeModelDisclosure.collectsData(model)) return FreeModelDisclosure.label
-    if (model.cost?.input === 0 && providerID === "opencode") return "Free"
-    return undefined
+    const labels = [
+      providerID === "kilo" && FreeModelDisclosure.hasByok(model) ? FreeModelDisclosure.byok : undefined,
+      providerID === "kilo" && FreeModelDisclosure.collectsData(model) ? FreeModelDisclosure.label : undefined,
+      model.cost?.input === 0 && providerID === "opencode" ? "Free" : undefined,
+    ].filter((label) => label !== undefined)
+    return labels.length > 0 ? labels.join(" · ") : undefined
   }
   // kilocode_change end
 
@@ -123,6 +126,7 @@ export function DialogModel(props: { providerID?: string }) {
           map(([model, info]) => ({
             value: { providerID: provider.id, modelID: model },
             title: info.name ?? model,
+            releaseDate: info.release_date,
             description: favorites.some((item) => item.providerID === provider.id && item.modelID === model)
               ? "(Favorite)"
               : undefined,
@@ -150,15 +154,7 @@ export function DialogModel(props: { providerID?: string }) {
             // kilocode_change end
             return true
           }),
-          sortBy(
-            // kilocode_change start - Sort within Recommended / Kilo Gateway
-            (x) => (x.value.providerID === "kilo" ? (kiloRank().get(x.value.modelID) ?? Infinity) : 0),
-            // kilocode_change end
-            // kilocode_change start - free model footers include Kilo disclosure labels
-            (x) => x.footer === undefined,
-            // kilocode_change end
-            (x) => x.title, // kilocode_change
-          ), // kilocode_change
+          (options) => sortModelOptions(options, props.providerID !== undefined, kiloRank()), // kilocode_change
         ),
       ),
     )
@@ -262,4 +258,35 @@ export function DialogModel(props: { providerID?: string }) {
     </box>
   )
   // kilocode_change end
+}
+
+export function sortModelOptions<
+  T extends {
+    footer?: string
+    releaseDate: string
+    title: string
+    value?: { providerID: string; modelID: string } // kilocode_change
+  },
+>(
+  options: T[],
+  newestFirst: boolean,
+  rank: ReadonlyMap<string, number> = new Map(), // kilocode_change
+) {
+  // kilocode_change start - Sort within Recommended / Kilo Gateway
+  const recommended = (option: T) =>
+    option.value?.providerID === "kilo" ? (rank.get(option.value.modelID) ?? Infinity) : 0
+  // kilocode_change end
+  if (newestFirst)
+    return sortBy(
+      options,
+      recommended, // kilocode_change
+      [(option) => option.releaseDate, "desc"],
+      (option) => option.title,
+    )
+  return sortBy(
+    options,
+    recommended, // kilocode_change
+    (option) => option.footer === undefined, // kilocode_change - free model footers include Kilo disclosure labels
+    (option) => option.title,
+  )
 }

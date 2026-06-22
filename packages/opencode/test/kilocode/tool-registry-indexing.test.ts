@@ -52,7 +52,7 @@ describe("kilocode tool registry indexing", () => {
     ),
   )
 
-  it.live("keeps non-indexing tools when indexing readiness throws", () =>
+  it.live("registers semantic search from config even when readiness throws", () =>
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
@@ -66,22 +66,21 @@ describe("kilocode tool registry indexing", () => {
             const registry = yield* ToolRegistry.Service
             const ids = yield* registry.ids()
 
-            expect(ids).not.toContain("semantic_search")
+            expect(ids).toContain("semantic_search")
             expect(ids).toContain("question")
             expect(ids).toContain("read")
             expect(ids).toContain("suggest")
-            expect(warn.mock.calls[0]?.[0]).toBe("semantic search unavailable")
-            expect(warn.mock.calls[0]?.[1]?.err).toBeDefined()
+            expect(warn).not.toHaveBeenCalled()
           } finally {
             ready.mockRestore()
             warn.mockRestore()
           }
         }),
-      { git: true },
+      { git: true, config: { indexing: { enabled: true } } },
     ),
   )
 
-  it.live("keeps non-indexing tools when indexing readiness rejects", () =>
+  it.live("registers semantic search from config even when readiness rejects", () =>
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
@@ -93,22 +92,21 @@ describe("kilocode tool registry indexing", () => {
             const registry = yield* ToolRegistry.Service
             const ids = yield* registry.ids()
 
-            expect(ids).not.toContain("semantic_search")
+            expect(ids).toContain("semantic_search")
             expect(ids).toContain("question")
             expect(ids).toContain("read")
             expect(ids).toContain("suggest")
-            expect(warn.mock.calls[0]?.[0]).toBe("semantic search unavailable")
-            expect(warn.mock.calls[0]?.[1]?.err).toBeDefined()
+            expect(warn).not.toHaveBeenCalled()
           } finally {
             ready.mockRestore()
             warn.mockRestore()
           }
         }),
-      { git: true },
+      { git: true, config: { indexing: { enabled: true } } },
     ),
   )
 
-  it.live("registers semantic_search when indexing is ready", () =>
+  it.live("registers semantic_search when indexing is enabled", () =>
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
@@ -123,7 +121,7 @@ describe("kilocode tool registry indexing", () => {
             ready.mockRestore()
           }
         }),
-      { git: true },
+      { git: true, config: { indexing: { enabled: true } } },
     ),
   )
 
@@ -151,7 +149,7 @@ describe("kilocode tool registry indexing", () => {
     ),
   )
 
-  it.live("includes semantic_search hint in glob and grep descriptions when indexing is ready", () =>
+  it.live("includes semantic_search hint in glob and grep descriptions when indexing is enabled", () =>
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
@@ -173,9 +171,23 @@ describe("kilocode tool registry indexing", () => {
             ready.mockRestore()
           }
         }),
-      { git: true },
+      { git: true, config: { indexing: { enabled: true } } },
     ),
   )
+
+  test("enables semantic search from indexing configuration before the index is ready", () => {
+    expect(
+      KiloToolRegistry.indexing({
+        indexing: { enabled: true },
+      }),
+    ).toBe(true)
+    expect(
+      KiloToolRegistry.indexing({
+        indexing: { enabled: false },
+      }),
+    ).toBe(false)
+    expect(KiloToolRegistry.indexing({}, { indexing: { enabled: true } })).toBe(true)
+  })
 
   test("conditionally includes Kilo registry extras", () => {
     const prev = process.env["KILO_CLIENT"]

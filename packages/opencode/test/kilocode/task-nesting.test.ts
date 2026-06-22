@@ -14,6 +14,7 @@ import type { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, PartID } from "../../src/session/schema"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Provider } from "../../src/provider/provider"
+import { Permission } from "../../src/permission"
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
 import { Truncate } from "../../src/tool/truncate"
@@ -112,7 +113,6 @@ function stubOps(opts?: { onPrompt?: (input: SessionPrompt.PromptInput) => void 
     cancel: () => Effect.void,
     resolvePromptParts: (template) => Effect.succeed([{ type: "text" as const, text: template }]),
     prompt,
-    loop: (input) => prompt({ sessionID: input.sessionID, parts: [] }),
   }
 }
 
@@ -231,6 +231,79 @@ describe("Kilo task nesting", () => {
       { permission: "edit", pattern: "*", action: "allow" },
     ])
   })
+
+  it.live("preserves a custom subagent bash policy while inheriting parent denials", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const agents = yield* Agent.Service
+          const { chat, assistant } = yield* seed()
+          const tool = yield* TaskTool
+          const def = yield* tool.init()
+
+          const result = yield* def.execute(
+            {
+              description: "validate ansible",
+              prompt: "run ansible-lint --version",
+              subagent_type: "validator",
+            },
+            {
+              sessionID: chat.id,
+              messageID: assistant.id,
+              agent: "build",
+              abort: new AbortController().signal,
+              extra: { promptOps: stubOps() },
+              messages: [],
+              metadata: () => Effect.void,
+              ask: () => Effect.void,
+            },
+          )
+
+          const child = yield* sessions.get(result.metadata.sessionId)
+          const validator = yield* agents.get("validator")
+          expect(validator).toBeDefined()
+          if (!validator) return
+
+          expect(Permission.evaluate("bash", "ansible-lint --version", validator.permission).action).toBe("allow")
+          expect(Permission.evaluate("bash", "rm -rf build", validator.permission).action).toBe("deny")
+
+          const effective = Permission.merge(
+            validator.permission,
+            KiloSessionPrompt.guardPermissions({ agent: validator, session: child }),
+          )
+          expect(child.permission).not.toContainEqual({ permission: "bash", pattern: "*", action: "ask" })
+          expect(child.permission).toContainEqual({ permission: "bash", pattern: "rm -rf *", action: "deny" })
+          expect({
+            allowed: Permission.evaluate("bash", "ansible-lint --version", effective).action,
+            denied: Permission.evaluate("bash", "rm -rf build", effective).action,
+          }).toEqual({ allowed: "allow", denied: "deny" })
+        }),
+      {
+        config: {
+          permission: {
+            bash: {
+              "*": "ask",
+              "git -c *": "allow",
+              "echo *": "allow",
+              "rm -rf *": "deny",
+            },
+          },
+          agent: {
+            validator: {
+              mode: "subagent",
+              permission: {
+                bash: {
+                  "*": "deny",
+                  "*ansible-lint*": "allow",
+                },
+              },
+            },
+          },
+        },
+      },
+    ),
+  )
 
   it.live("refreshes inherited restrictions when resuming a task child", () =>
     provideTmpdirInstance(() =>

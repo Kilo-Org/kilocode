@@ -13,6 +13,8 @@ import java.awt.Component
 import java.awt.Container
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
+import javax.swing.Icon
+import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.border.Border
 
@@ -129,6 +131,24 @@ class QuestionResultViewTest : BasePlatformTestCase() {
 
         view.toggle()
         assertFalse("Should be collapsed after second toggle", view.isExpanded())
+    }
+
+    fun `test toggle uses right and down chevron icons`() {
+        val view = QuestionResultView(completedTool(
+            input = mapOf("questions" to """[{"question":"Q1"}]"""),
+            metadata = mapOf("answers" to """[["A1"]]"""),
+        ))
+
+        assertTrue(icons(view).contains(SessionViewIcons.chevronCollapsed))
+        assertTrue(icons(view).contains(SessionViewIcons.chevronRight))
+        val closed = SessionViewIcons.chevronCollapsed
+
+        view.toggle()
+
+        assertTrue(icons(view).contains(SessionViewIcons.chevronExpanded))
+        assertTrue(icons(view).contains(SessionViewIcons.chevronDown))
+        assertEquals(closed.iconWidth, SessionViewIcons.chevronExpanded.iconWidth)
+        assertEquals(closed.iconHeight, SessionViewIcons.chevronExpanded.iconHeight)
     }
 
     fun `test hover only changes header background`() {
@@ -308,6 +328,17 @@ class QuestionResultViewTest : BasePlatformTestCase() {
         assertEquals(rgb, Color(image.getRGB(0, 2), true).rgb)
         assertEquals(rgb, Color(image.getRGB(4, 2), true).rgb)
         assertEquals(rgb, Color(image.getRGB(2, 4), true).rgb)
+    }
+
+    private fun icons(component: Component): List<Icon> {
+        val found = mutableListOf<Icon>()
+        collect(component, found)
+        return found
+    }
+
+    private fun collect(component: Component, found: MutableList<Icon>) {
+        if (component is JLabel) component.icon?.let(found::add)
+        if (component is Container) component.components.forEach { collect(it, found) }
     }
 
 }

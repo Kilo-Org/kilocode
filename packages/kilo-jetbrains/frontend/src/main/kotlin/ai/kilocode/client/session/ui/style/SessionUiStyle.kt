@@ -5,6 +5,7 @@ import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
+import java.awt.Insets
 import javax.swing.border.Border
 
 /** Static style tokens owned by the chat session UI. */
@@ -16,7 +17,7 @@ object SessionUiStyle {
     /** Geometry for the transcript list and its scroll behavior. */
     object SessionLayout {
         const val GAP = 3
-        const val TRANSCRIPT_PADDING = 12
+        val InnerInsets = Insets(UiStyle.Gap.md(), UiStyle.Gap.md(), UiStyle.Gap.sm(), UiStyle.Gap.sm())
         const val TRANSCRIPT_SCROLLBAR_PADDING = 10
         const val USER_PROMPT_INDENT = 100
         const val SCROLL_INCREMENT = 48
@@ -64,8 +65,6 @@ object SessionUiStyle {
         /** Prompt input dimensions and chrome inside the session view. */
         object Prompt {
             const val EDITOR_LINES = 3
-            const val EDITOR_MAX_LINES = 8
-            const val EDITOR_SPARE_LINES = 1
             const val EDITOR_CHROME = 16
             const val SEND_BUTTON_SIZE = 24
             const val CORNER_ARC = 6
@@ -121,16 +120,16 @@ object SessionUiStyle {
 
         /** Markdown code block geometry inside assistant messages. */
         object Code {
-            const val BLOCK_GAP = 6
+            const val BLOCK_GAP = SessionLayout.GAP
             const val MIN_ROWS = 1
             const val BORDER_WIDTH = 1
             const val VIEWPORT_TOP_PADDING = 6
             const val VIEWPORT_HORIZONTAL_PADDING = 8
-            const val VIEWPORT_BOTTOM_PADDING = 0
+            const val VIEWPORT_BOTTOM_PADDING = 6
             const val SCROLLBAR_HEIGHT = 12
             const val WIDTH_PADDING = 16
 
-            fun topPadding(): Int = VIEWPORT_TOP_PADDING + SCROLLBAR_HEIGHT
+            fun topPadding(): Int = VIEWPORT_TOP_PADDING
         }
 
         /** Permission session-view command preview limits. */

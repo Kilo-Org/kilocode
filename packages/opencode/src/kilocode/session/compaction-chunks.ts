@@ -63,12 +63,7 @@ export namespace KiloCompactionChunks {
     return input.result === "stop" && input.error?.name === "ContextOverflowError"
   }
 
-  export function needed(input: {
-    cfg: Config.Info
-    model: Provider.Model
-    tokens: number
-    outputTokenMax?: number
-  }) {
+  export function needed(input: { cfg: Config.Info; model: Provider.Model; tokens: number; outputTokenMax?: number }) {
     const mdl = model(input.model, input.outputTokenMax)
     // Apply 1.3x multiplier to token estimate to compensate for Token.estimate
     // under-counting actual provider tokenizer counts by ~15-30%.

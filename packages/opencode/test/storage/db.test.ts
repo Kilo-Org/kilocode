@@ -13,7 +13,7 @@ describe("Database.getChannelPath", () => {
       const flags = yield* RuntimeFlags.Service
       const expected = ["latest", "beta", "prod"].includes(InstallationChannel)
         ? path.join(Global.Path.data, "kilo.db")
-        : path.join(Global.Path.data, `opencode-${InstallationChannel.replace(/[^a-zA-Z0-9._-]/g, "-")}.db`)
+        : path.join(Global.Path.data, `kilo-${InstallationChannel.replace(/[^a-zA-Z0-9._-]/g, "-")}.db`) // kilocode_change
 
       expect(Database.getChannelPath(flags)).toBe(expected)
     }).pipe(Effect.provide(RuntimeFlags.layer())),

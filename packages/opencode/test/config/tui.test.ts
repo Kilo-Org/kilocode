@@ -103,7 +103,7 @@ it.instance("keeps server and tui plugin merge semantics aligned", () =>
         plugin: [["shared-plugin@2.0.0", { source: "local" }], "local-only@1.0.0"],
       })
 
-      const server = yield* Config.Service.use((svc) => svc.get())
+      const server = yield* Config.use.get()
       const tui = yield* getTuiConfig(test.directory)
       const serverPlugins = (server.plugin ?? []).map((item) => ConfigPlugin.pluginSpecifier(item))
       const tuiPlugins = (tui.plugin ?? []).map((item) => ConfigPlugin.pluginSpecifier(item))
@@ -151,7 +151,7 @@ it.instance("resolves attention config defaults and overrides", () =>
         notifications: true,
         sound: true,
         volume: 0.4,
-        sound_pack: "opencode.default",
+        sound_pack: "kilo.default", // kilocode_change
         sounds: {},
       })
 
@@ -480,6 +480,7 @@ it.instance("resolves keybind lookup from canonical keybinds", () =>
           which_key_toggle: "alt+k",
           editor_open: "ctrl+e",
           "prompt.autocomplete.next": "ctrl+j",
+          "dialog.prompt.submit": "ctrl+s",
           "dialog.mcp.toggle": "ctrl+t",
           model_favorite_toggle: "ctrl+f",
           "dialog.plugins.install": "shift+i",
@@ -501,6 +502,7 @@ it.instance("resolves keybind lookup from canonical keybinds", () =>
       )
       expect(config.keybinds.get("prompt.editor")?.[0]?.key).toBe("ctrl+e")
       expect(config.keybinds.get("prompt.autocomplete.next")?.[0]?.key).toBe("ctrl+j")
+      expect(config.keybinds.get("dialog.prompt.submit")?.[0]?.key).toBe("ctrl+s")
       expect(config.keybinds.get("dialog.mcp.toggle")?.[0]?.key).toBe("ctrl+t")
       expect(config.keybinds.get("model.dialog.favorite")?.[0]?.key).toBe("ctrl+f")
       expect(config.keybinds.get("dialog.plugins.install")?.[0]?.key).toBe("shift+i")

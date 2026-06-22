@@ -8,6 +8,7 @@
  */
 
 import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
+import type { DiffImage } from "../diff/types"
 import type { Worktree, ManagedSession, Section } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"
@@ -33,6 +34,8 @@ export type WorktreeDiffEntry = SnapshotFileDiff & {
   generatedLike?: boolean
   summarized?: boolean
   stamp?: string
+  kind?: "image"
+  image?: DiffImage
 }
 
 // ---------------------------------------------------------------------------

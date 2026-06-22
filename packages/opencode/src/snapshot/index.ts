@@ -185,7 +185,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             files: string[],
             opts?: { env?: Record<string, string>; root?: boolean },
           ) {
-          // kilocode_change end
+            // kilocode_change end
             if (!files.length) return
             // kilocode_change start
             // A new root snapshot covers the full worktree, so a single pathspec avoids
@@ -245,7 +245,9 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             yield* fs.writeFileString(target, text ? `${text}\n` : "").pipe(Effect.orDie)
           })
 
-          const add = Effect.fnUntraced(function* (opts?: { env?: Record<string, string>; root?: boolean }) { // kilocode_change
+          // kilocode_change start
+          const add = Effect.fnUntraced(function* (opts?: { env?: Record<string, string>; root?: boolean }) {
+            // kilocode_change end
             yield* sync()
             const [diff, other] = yield* Effect.all(
               [
@@ -348,7 +350,9 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             )
           })
 
-          const track = Effect.fnUntraced(function* (opts?: Parameters<Interface["track"]>[0]) { // kilocode_change
+          // kilocode_change start
+          const track = Effect.fnUntraced(function* (opts?: Parameters<Interface["track"]>[0]) {
+            // kilocode_change end
             return yield* locked(
               Effect.gen(function* () {
                 if (!(yield* enabled())) return
@@ -421,7 +425,12 @@ export const layer: Layer.Layer<Service, never, Requirements> =
               Effect.gen(function* () {
                 yield* add()
                 const result = yield* git(
-                  [...quote, ...args(["diff", "--cached", "--no-ext-diff", "--name-only", hash, "--", "."])],
+                  // kilocode_change start
+                  [
+                    ...quote,
+                    ...args(["diff", "--cached", "--no-ext-diff", "--no-renames", "--name-only", hash, "--", "."]),
+                  ],
+                  // kilocode_change end
                   {
                     cwd: state.directory,
                   },

@@ -10,9 +10,17 @@ export const dict = {
   "provider.connect.kiloGateway.byok.link": "Kilo's Gateway経由でBYOK",
   "provider.connect.kiloGateway.byok.suffix": "をご利用ください。",
 
-  // Provider dialog translations
-  "dialog.provider.group.recommended": "おすすめ",
-  "dialog.provider.kilo.note": "500以上のAIモデルにアクセス",
+  // Provider settings translations
+  "settings.providers.group.recommended": "おすすめ",
+  "settings.providers.note.kilo": "500以上のAIモデルにアクセス",
+  "settings.providers.note.opencode": "Claude、GPT、Geminiなどの厳選モデル",
+  "settings.providers.note.anthropic": "ProやMaxを含むClaudeモデルへ直接アクセス",
+  "settings.providers.note.deepseek": "推論とコーディング作業向けのDeepSeekモデル",
+  "settings.providers.note.copilot": "コーディング支援向けのClaudeモデル",
+  "settings.providers.note.openai": "APIキーまたはChatGPTログインで使えるGPTとCodexモデル",
+  "settings.providers.note.google": "高速で構造化された応答向けのGeminiモデル",
+  "settings.providers.note.openrouter": "1つのプロバイダーからすべての対応モデルにアクセス",
+  "settings.providers.note.vercel": "スマートルーティングによるAIモデルへの統合アクセス",
 
   // Reasoning block label
   "ui.permission.run": "実行",

@@ -287,12 +287,13 @@ export namespace KiloSessionPrompt {
     const file = input.messages ? PlanFile.latest(input.messages) : undefined
     const saved = PlanFile.resolve(file, ctx)
     const target = saved ?? plan
+    const time = input.session.time.created
     const dir = path.dirname(target)
     if (saved && !(await Filesystem.exists(target))) await ensurePlanDir(dir)
 
     const info = saved
       ? `The current saved plan file is ${target}. Read and edit this file when refining the plan.`
-      : `Use the plan path specified by the user or project instructions when present and permissions allow it. If none is specified, create a plan in ${dir} using a concise kebab-case filename based on the plan details.`
+      : `Use any exact plan file path from user or project instructions unchanged. If only a directory is specified, create the plan there; otherwise create it in ${dir}. For generated filenames, use ${time}-<concise-kebab-case-suffix>.md, choosing the suffix from the plan details, for example ${time}-database-cache-plan.md.`
     const body = [
       "## Plan File",
       info,

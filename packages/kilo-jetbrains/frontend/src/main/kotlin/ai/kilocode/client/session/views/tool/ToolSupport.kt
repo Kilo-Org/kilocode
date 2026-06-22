@@ -6,6 +6,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
@@ -16,6 +17,8 @@ import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
 import ai.kilocode.cli.KiloCliParser
 import ai.kilocode.log.KiloLog
+import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.fileTypes.PlainTextFileType
@@ -164,10 +167,14 @@ class ToolBody private constructor(
     fun register(selection: SessionSelection, parent: Disposable) {
         val field = ed
         if (field != null) {
+            (field as? ToolField)?.selection = selection
             selection.register(field, parent)
             return
         }
-        area?.let { selection.register(it, parent) }
+        area?.let {
+            (it as? ToolArea)?.selection = selection
+            selection.register(it, parent)
+        }
     }
 
     @RequiresEdt
@@ -210,10 +217,10 @@ class ToolBody private constructor(
             val disposable = Disposer.newDisposable("Tool body")
             val body = runCatching {
                 val field = ToolField(preview(tool), SessionEditorStyle.current()).also { ed ->
-                    ed.setDisposedWith(disposable)
                     Disposer.register(disposable) {
                         ed.getEditor(false)?.let(EditorFactory.getInstance()::releaseEditor)
                     }
+                    ed.setDisposedWith(disposable)
                 }
                 ToolBody(null, field, pane(field, true), disposable)
             }.getOrElse { err ->
@@ -233,7 +240,7 @@ class ToolBody private constructor(
             return body
         }
 
-        private fun area(tool: Tool, wrap: Boolean) = JBTextArea().apply {
+        private fun area(tool: Tool, wrap: Boolean) = ToolArea().apply {
             isEditable = false
             caret.isVisible = false
             caret.isSelectionVisible = true
@@ -272,13 +279,29 @@ class ToolBody private constructor(
     }
 }
 
+private class ToolArea : JBTextArea(), UiDataProvider, SessionCopyTarget {
+    var selection: SessionSelection? = null
+    override val copyAnchor: JComponent get() = this
+
+    override fun copyText() = text
+
+    override fun uiDataSnapshot(sink: DataSink) {
+        selection?.provideCopy(sink) { copyText() }
+    }
+}
+
 private class ToolField(value: String, private var style: SessionEditorStyle) : EditorTextField(
     EditorFactory.getInstance().createDocument(value.trimEnd('\n')),
     ProjectManager.getInstance().defaultProject,
     PlainTextFileType.INSTANCE,
     true,
     false,
-) {
+), SessionCopyTarget {
+    var selection: SessionSelection? = null
+    override val copyAnchor: JComponent get() = this
+
+    override fun copyText() = text
+
     init {
         setFontInheritedFromLAF(false)
         font = style.editorFont
@@ -295,6 +318,11 @@ private class ToolField(value: String, private var style: SessionEditorStyle) : 
             ed.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
             ed.scrollPane.verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
         }
+    }
+
+    override fun uiDataSnapshot(sink: DataSink) {
+        super.uiDataSnapshot(sink)
+        selection?.provideCopy(sink) { copyText() }
     }
 }
 
@@ -329,7 +357,7 @@ internal fun toolParts(
         add(link, LINK_CARD)
     }
     val state = JBLabel().apply { foreground = UiStyle.Colors.weak() }
-    val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply { isOpaque = false }
+    val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply { isOpaque = false }
     val controls = Stack.horizontal()
     val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
         isOpaque = false
@@ -365,7 +393,7 @@ internal fun searchParts(count: Int): ToolParts {
     val state = JBLabel().apply { foreground = UiStyle.Colors.weak() }
     val stack = Stack.fitHorizontal(UiStyle.Gap.md()).apply { targets.forEach { next(it) } }
     val target = stack.align(HAlign.TRACK, VAlign.CENTER)
-    val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
+    val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         isOpaque = false
         minimumSize = JBUI.size(0, minimumSize.height)
         add(title, BorderLayout.WEST)
