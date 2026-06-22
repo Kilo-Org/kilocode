@@ -18,8 +18,14 @@ export function DialogSkillMarketplace(props: { installed: Set<string>; onInstal
   const [busy, setBusy] = createSignal<string | null>(null)
   const [error, setError] = createSignal<string | undefined>()
 
-  const [data] = createResource(async () => {
+  const [data, { refetch }] = createResource(async () => {
     const result = await sdk.client.kilocode.marketplaceSkills()
+    // Surface server-side errors (e.g. upstream marketplace outage) as a
+    // top-level error so the dialog can show it instead of a silent empty list.
+    if (result.error) {
+      const err = result.error as { message?: string }
+      throw new Error(err.message ?? "Failed to fetch marketplace skills")
+    }
     return result.data
   })
 
@@ -28,11 +34,15 @@ export function DialogSkillMarketplace(props: { installed: Set<string>; onInstal
     return items.map((item) => {
       const isInstalled = props.installed.has(item.id)
       const isBusy = busy() === item.id
+      // Title-case the id and category on the client (the API returns them
+      // in their raw kebab/snake form).
+      const displayName = kebabToTitleCase(item.id)
+      const displayCategory = kebabToTitleCase(item.category)
       return {
-        title: item.displayName,
+        title: displayName,
         description: item.description?.replace(/\s+/g, " ").trim(),
         value: item.id,
-        category: item.displayCategory || "Skills",
+        category: displayCategory || "Skills",
         gutter: isInstalled ? () => <InstalledMark /> : undefined,
         footer: isBusy ? <BusyMark /> : isInstalled ? <InstalledBadge /> : undefined,
         disabled: isBusy,
@@ -66,17 +76,48 @@ export function DialogSkillMarketplace(props: { installed: Set<string>; onInstal
     })
   })
 
+  // Loading state — shown while the resource is pending or during retry.
+  // Error state — replaces the list when the fetch failed; user can retry.
+  // Empty state — explicit "no skills" message (the marketplace API always
+  // returns 40, so an empty list is a server-side bug worth showing).
+  const loading = data.loading
+  const fetchError = data.error
+  const items = data()?.items ?? []
+
   return (
     <DialogSelect
       title="Marketplace Skills"
-      placeholder="Search marketplace..."
+      placeholder={
+        loading
+          ? "Loading marketplace..."
+          : fetchError
+            ? "Failed to load marketplace (press ctrl+r to retry)"
+            : "Search marketplace..."
+      }
       options={options()}
       onSelect={(_option) => {
         // Don't close on select; install action handles its own close.
       }}
-      footerHints={error() ? [{ title: "error", label: error()!, side: "right" }] : undefined}
+      footerHints={
+        fetchError
+          ? [{ title: "error", label: String((fetchError as Error).message ?? fetchError), side: "right" }]
+          : error()
+            ? [{ title: "error", label: error()!, side: "right" }]
+            : loading
+              ? [{ title: "loading", label: "fetching skills...", side: "right" }]
+              : items.length === 0
+                ? [{ title: "empty", label: "marketplace returned 0 skills", side: "right" }]
+                : undefined
+      }
     />
   )
+}
+
+function kebabToTitleCase(str: string): string {
+  return str
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ")
 }
 
 function InstalledMark() {

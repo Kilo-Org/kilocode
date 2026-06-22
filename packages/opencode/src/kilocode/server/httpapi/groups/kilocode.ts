@@ -45,12 +45,10 @@ export const SkillInstallResult = Schema.Struct({
 
 export const MarketplaceSkillItem = Schema.Struct({
   id: Schema.String,
-  name: Schema.String,
-  displayName: Schema.String,
   description: Schema.String,
   category: Schema.String,
-  displayCategory: Schema.String,
   githubUrl: Schema.String,
+  rawUrl: Schema.String,
   content: Schema.String,
 })
 

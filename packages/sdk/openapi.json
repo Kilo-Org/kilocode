@@ -15099,38 +15099,23 @@
                           "id": {
                             "type": "string"
                           },
-                          "name": {
-                            "type": "string"
-                          },
-                          "displayName": {
-                            "type": "string"
-                          },
                           "description": {
                             "type": "string"
                           },
                           "category": {
                             "type": "string"
                           },
-                          "displayCategory": {
+                          "githubUrl": {
                             "type": "string"
                           },
-                          "githubUrl": {
+                          "rawUrl": {
                             "type": "string"
                           },
                           "content": {
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "id",
-                          "name",
-                          "displayName",
-                          "description",
-                          "category",
-                          "displayCategory",
-                          "githubUrl",
-                          "content"
-                        ],
+                        "required": ["id", "description", "category", "githubUrl", "rawUrl", "content"],
                         "additionalProperties": false
                       }
                     },

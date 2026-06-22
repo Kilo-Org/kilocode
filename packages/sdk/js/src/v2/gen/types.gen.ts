@@ -10618,12 +10618,10 @@ export type KilocodeMarketplaceSkillsResponses = {
   200: {
     items: Array<{
       id: string
-      name: string
-      displayName: string
       description: string
       category: string
-      displayCategory: string
       githubUrl: string
+      rawUrl: string
       content: string
     }>
     error?: string

@@ -2,8 +2,10 @@
 // Kilo Marketplace API client for browsing installable skills.
 // Ported from packages/kilo-vscode/src/services/marketplace/api.ts so the
 // CLI/TUI can browse skills without depending on the VS Code extension.
-// JSON-only parsing to avoid adding a `yaml` runtime dependency to the
-// shared opencode package; the marketplace API returns JSON.
+// The marketplace API returns YAML; we import `yaml` (already a Kilo
+// dependency in kilo-vscode and kilo-console) to parse it.
+
+import { parse as parseYaml } from "yaml"
 
 export const BASE_URL = "https://api.kilo.ai/api/marketplace"
 const CACHE_TTL = 300_000
@@ -20,17 +22,16 @@ export interface RawSkill {
   description: string
   category: string
   githubUrl: string
+  rawUrl: string
   content: string
 }
 
 export interface SkillItem {
   id: string
-  name: string
-  displayName: string
   description: string
   category: string
-  displayCategory: string
   githubUrl: string
+  rawUrl: string
   content: string
 }
 
@@ -42,24 +43,27 @@ export function kebabToTitleCase(str: string): string {
 }
 
 export function transformSkill(raw: RawSkill): SkillItem {
-  const display = kebabToTitleCase(raw.id)
   return {
     id: raw.id,
-    name: display,
-    displayName: display,
     description: raw.description,
     category: raw.category,
-    displayCategory: kebabToTitleCase(raw.category),
     githubUrl: raw.githubUrl,
+    rawUrl: raw.rawUrl,
     content: raw.content,
   }
 }
 
 function parseResponse(text: string): unknown {
+  // Marketplace API returns YAML. Try YAML first; fall back to JSON for
+  // any future endpoint that may switch to JSON.
   try {
-    return JSON.parse(text)
+    return parseYaml(text)
   } catch {
-    return { items: [] }
+    try {
+      return JSON.parse(text)
+    } catch {
+      return { items: [] }
+    }
   }
 }
 

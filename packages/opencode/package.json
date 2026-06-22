@@ -107,6 +107,7 @@
     "@kilocode/plugin-atomic-chat": "workspace:*",
     "@kilocode/sdk": "workspace:*",
     "@lydell/node-pty": "catalog:",
+    "yaml": "2.8.3",
     "@modelcontextprotocol/sdk": "1.29.0",
     "@morphllm/morphsdk": "0.2.166",
     "@npmcli/arborist": "9.4.0",
