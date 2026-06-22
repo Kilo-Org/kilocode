@@ -1282,16 +1282,20 @@ export const dict = {
     "ค่าเริ่มต้นจะใช้เสียงที่แตกต่างกันสำหรับการเสร็จสิ้น การป้อนข้อมูล และข้อผิดพลาด ส่วนตัวเลือกอื่นจะใช้เสียงเดียวสำหรับทุกเหตุการณ์",
   "settings.notifications.sound.none": "ไม่มี",
   "settings.experimental.share.title": "โหมดแชร์",
-  "settings.experimental.share.description": "พฤติกรรมการแชร์เซสชัน",
+  "settings.experimental.share.description":
+    "Controls when sessions are published to the web. Manual: share each session individually using the share button. Auto: new sessions are shared automatically. Disabled: session sharing is turned off.",
   "settings.experimental.share.manual": "ด้วยตนเอง",
   "settings.experimental.share.auto": "อัตโนมัติ",
   "settings.experimental.share.disabled": "ปิดใช้งาน",
   "settings.experimental.formatter.title": "ฟอร์แมตเตอร์",
-  "settings.experimental.formatter.description": "เปิดใช้งานฟอร์แมตโค้ดอัตโนมัติ",
+  "settings.experimental.formatter.description":
+    "Enable the automatic code formatter to apply consistent formatting after file edits.",
   "settings.experimental.lsp.title": "LSP",
-  "settings.experimental.lsp.description": "เปิดใช้งานการรวม Language Server Protocol",
+  "settings.experimental.lsp.description":
+    "Enable Language Server Protocol integration so the agent can use IDE-quality diagnostics, completions, and hover info during coding tasks.",
   "settings.experimental.batch.title": "เครื่องมือแบทช์",
-  "settings.experimental.batch.description": "เปิดใช้งานการประมวลผลแบทช์ของการเรียกเครื่องมือ",
+  "settings.experimental.batch.description":
+    "Allow the agent to execute multiple tool calls in a single step, which can speed up tasks that require many parallel operations.",
   "settings.experimental.codebaseSearch.title": "ค้นหาโค้ดเบส",
   "settings.experimental.codebaseSearch.description": "เปิดใช้งานการค้นหาด้วยภาษาธรรมชาติโดย AI ทั่วทั้งโค้ดเบส",
   "settings.experimental.speechToText.title": "แปลงเสียงเป็นข้อความ",
@@ -1302,7 +1306,8 @@ export const dict = {
   "settings.models.speechToTextModel.title": "โมเดลแปลงเสียงเป็นข้อความ",
   "settings.models.speechToTextModel.description": "เลือกโมเดลการถอดเสียง Kilo Gateway สำหรับการป้อนข้อมูลด้วยเสียง",
   "settings.experimental.continueOnDeny.title": "ดำเนินต่อเมื่อถูกปฏิเสธ",
-  "settings.experimental.continueOnDeny.description": "ดำเนินลูปเอเจนต์ต่อเมื่อสิทธิ์ถูกปฏิเสธ",
+  "settings.experimental.continueOnDeny.description":
+    "When a permission request is denied, allow the agent to continue working instead of stopping. The agent will skip the denied action and attempt to proceed with the task.",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
   "settings.experimental.remote.title": "การควบคุม Remote",
@@ -1327,11 +1332,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "พรอมต์กำหนดเอง",
   "settings.agentBehaviour.prompt.description": "พรอมต์ระบบเพิ่มเติมสำหรับเอเจนต์นี้",
   "settings.agentBehaviour.temperature.title": "อุณหภูมิ",
-  "settings.agentBehaviour.temperature.description": "อุณหภูมิการสุ่มตัวอย่าง (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controls the randomness of AI responses (0–2). Lower values (e.g. 0.2) produce more focused, consistent outputs. Higher values (e.g. 1.0) produce more varied, creative responses. Leave empty to use the model's default.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "พารามิเตอร์ nucleus sampling (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Nucleus sampling threshold (0–1). Only the most probable tokens whose cumulative probability reaches this value are considered. Lower values make outputs more focused; higher values allow more variety. Leave empty to use the model's default.",
   "settings.agentBehaviour.maxSteps.title": "ขั้นตอนสูงสุด",
-  "settings.agentBehaviour.maxSteps.description": "จำนวนรอบเอเจนต์สูงสุด",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximum number of agentic iterations (tool calls + responses) allowed per session before the agent stops automatically.",
   "settings.agentBehaviour.hidden.title": "ซ่อน",
   "settings.agentBehaviour.hidden.description": "ซ่อนเอเจนต์นี้จากตัวสลับโหมดในช่องป้อนแชท",
   "settings.agentBehaviour.disable.title": "ปิดใช้งาน",

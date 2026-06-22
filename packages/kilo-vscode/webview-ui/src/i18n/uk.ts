@@ -1290,16 +1290,20 @@ export const dict = {
   "settings.notifications.sound.none": "Немає",
 
   "settings.experimental.share.title": "Режим публікації",
-  "settings.experimental.share.description": "Як поводиться публікація сесій",
+  "settings.experimental.share.description":
+    "Controls when sessions are published to the web. Manual: share each session individually using the share button. Auto: new sessions are shared automatically. Disabled: session sharing is turned off.",
   "settings.experimental.share.manual": "Вручну",
   "settings.experimental.share.auto": "Автоматично",
   "settings.experimental.share.disabled": "Вимкнено",
   "settings.experimental.formatter.title": "Форматер",
-  "settings.experimental.formatter.description": "Увімкнути автоматичне форматування коду",
+  "settings.experimental.formatter.description":
+    "Enable the automatic code formatter to apply consistent formatting after file edits.",
   "settings.experimental.lsp.title": "LSP",
-  "settings.experimental.lsp.description": "Увімкнути інтеграцію з мовним сервером",
+  "settings.experimental.lsp.description":
+    "Enable Language Server Protocol integration so the agent can use IDE-quality diagnostics, completions, and hover info during coding tasks.",
   "settings.experimental.batch.title": "Пакетний інструмент",
-  "settings.experimental.batch.description": "Увімкнути пакетну обробку кількох викликів інструментів",
+  "settings.experimental.batch.description":
+    "Allow the agent to execute multiple tool calls in a single step, which can speed up tasks that require many parallel operations.",
   "settings.experimental.codebaseSearch.title": "Пошук по кодовій базі",
   "settings.experimental.codebaseSearch.description":
     "Увімкнути пошук природною мовою на основі ШІ по всій кодовій базі",
@@ -1311,7 +1315,8 @@ export const dict = {
   "settings.models.speechToTextModel.title": "Модель мовлення в текст",
   "settings.models.speechToTextModel.description": "Виберіть модель транскрипції Kilo Gateway для голосового введення.",
   "settings.experimental.continueOnDeny.title": "Продовжувати при відхиленні",
-  "settings.experimental.continueOnDeny.description": "Продовжувати цикл агента, коли дозвіл відхилено",
+  "settings.experimental.continueOnDeny.description":
+    "When a permission request is denied, allow the agent to continue working instead of stopping. The agent will skip the denied action and attempt to proceed with the task.",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Тайм-аут у мілісекундах для запитів до MCP-сервера",
   "settings.experimental.remote.title": "Керування Remote",
@@ -1337,11 +1342,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Власний запит",
   "settings.agentBehaviour.prompt.description": "Додатковий системний запит для цього агента",
   "settings.agentBehaviour.temperature.title": "Температура",
-  "settings.agentBehaviour.temperature.description": "Температура вибірки (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controls the randomness of AI responses (0–2). Lower values (e.g. 0.2) produce more focused, consistent outputs. Higher values (e.g. 1.0) produce more varied, creative responses. Leave empty to use the model's default.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Параметр nucleus sampling (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Nucleus sampling threshold (0–1). Only the most probable tokens whose cumulative probability reaches this value are considered. Lower values make outputs more focused; higher values allow more variety. Leave empty to use the model's default.",
   "settings.agentBehaviour.maxSteps.title": "Максимальна кількість кроків",
-  "settings.agentBehaviour.maxSteps.description": "Максимальна кількість ітерацій агента",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximum number of agentic iterations (tool calls + responses) allowed per session before the agent stops automatically.",
   "settings.agentBehaviour.hidden.title": "Прихований",
   "settings.agentBehaviour.hidden.description": "Приховати цього агента з перемикача режимів у полі введення чату",
   "settings.agentBehaviour.disable.title": "Вимкнений",

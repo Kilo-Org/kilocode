@@ -1298,16 +1298,20 @@ export const dict = {
   "settings.notifications.sound.none": "Geen",
 
   "settings.experimental.share.title": "Deelmodus",
-  "settings.experimental.share.description": "Hoe sessiedelen zich gedraagt",
+  "settings.experimental.share.description":
+    "Controls when sessions are published to the web. Manual: share each session individually using the share button. Auto: new sessions are shared automatically. Disabled: session sharing is turned off.",
   "settings.experimental.share.manual": "Handmatig",
   "settings.experimental.share.auto": "Auto",
   "settings.experimental.share.disabled": "Uitgeschakeld",
   "settings.experimental.formatter.title": "Formatter",
-  "settings.experimental.formatter.description": "Schakel de automatische code formatter in",
+  "settings.experimental.formatter.description":
+    "Enable the automatic code formatter to apply consistent formatting after file edits.",
   "settings.experimental.lsp.title": "LSP",
-  "settings.experimental.lsp.description": "Schakel language server protocol integratie in",
+  "settings.experimental.lsp.description":
+    "Enable Language Server Protocol integration so the agent can use IDE-quality diagnostics, completions, and hover info during coding tasks.",
   "settings.experimental.batch.title": "Batch Tool",
-  "settings.experimental.batch.description": "Schakel batching van meerdere tool calls in",
+  "settings.experimental.batch.description":
+    "Allow the agent to execute multiple tool calls in a single step, which can speed up tasks that require many parallel operations.",
   "settings.experimental.codebaseSearch.title": "Codebase Zoeken",
   "settings.experimental.codebaseSearch.description":
     "Schakel AI-aangedreven zoeken in natuurlijke taal door je codebase in",
@@ -1320,7 +1324,7 @@ export const dict = {
   "settings.models.speechToTextModel.description": "Kies het Kilo Gateway-transcriptiemodel voor spraakinvoer.",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
   "settings.experimental.continueOnDeny.description":
-    "Ga door met de agent loop wanneer een toestemming wordt geweigerd",
+    "When a permission request is denied, allow the agent to continue working instead of stopping. The agent will skip the denied action and attempt to proceed with the task.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",
@@ -1346,11 +1350,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Aangepaste Prompt",
   "settings.agentBehaviour.prompt.description": "Aanvullende systeem prompt voor deze agent",
   "settings.agentBehaviour.temperature.title": "Temperatuur",
-  "settings.agentBehaviour.temperature.description": "Sampling temperatuur (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controls the randomness of AI responses (0–2). Lower values (e.g. 0.2) produce more focused, consistent outputs. Higher values (e.g. 1.0) produce more varied, creative responses. Leave empty to use the model's default.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Nucleus-samplingparameter (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Nucleus sampling threshold (0–1). Only the most probable tokens whose cumulative probability reaches this value are considered. Lower values make outputs more focused; higher values allow more variety. Leave empty to use the model's default.",
   "settings.agentBehaviour.maxSteps.title": "Max Stappen",
-  "settings.agentBehaviour.maxSteps.description": "Maximale agent iteraties",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximum number of agentic iterations (tool calls + responses) allowed per session before the agent stops automatically.",
   "settings.agentBehaviour.hidden.title": "Verborgen",
   "settings.agentBehaviour.hidden.description": "Verberg deze agent uit de modusschakelaar in de chatinvoer",
   "settings.agentBehaviour.disable.title": "Uitgeschakeld",

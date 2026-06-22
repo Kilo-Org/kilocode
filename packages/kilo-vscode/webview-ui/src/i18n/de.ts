@@ -1320,16 +1320,20 @@ export const dict = {
     "Die Standardeinstellung verwendet unterschiedliche Töne für Abschluss, Eingabe und Fehler. Bei anderen Optionen wird für alle Ereignisse derselbe Ton verwendet.",
   "settings.notifications.sound.none": "Kein",
   "settings.experimental.share.title": "Freigabemodus",
-  "settings.experimental.share.description": "Verhalten der Sitzungsfreigabe",
+  "settings.experimental.share.description":
+    "Controls when sessions are published to the web. Manual: share each session individually using the share button. Auto: new sessions are shared automatically. Disabled: session sharing is turned off.",
   "settings.experimental.share.manual": "Manuell",
   "settings.experimental.share.auto": "Automatisch",
   "settings.experimental.share.disabled": "Deaktiviert",
   "settings.experimental.formatter.title": "Formatierer",
-  "settings.experimental.formatter.description": "Automatischen Code-Formatierer aktivieren",
+  "settings.experimental.formatter.description":
+    "Enable the automatic code formatter to apply consistent formatting after file edits.",
   "settings.experimental.lsp.title": "LSP",
-  "settings.experimental.lsp.description": "Language-Server-Protokoll-Integration aktivieren",
+  "settings.experimental.lsp.description":
+    "Enable Language Server Protocol integration so the agent can use IDE-quality diagnostics, completions, and hover info during coding tasks.",
   "settings.experimental.batch.title": "Batch-Werkzeug",
-  "settings.experimental.batch.description": "Bündelung mehrerer Werkzeugaufrufe aktivieren",
+  "settings.experimental.batch.description":
+    "Allow the agent to execute multiple tool calls in a single step, which can speed up tasks that require many parallel operations.",
   "settings.experimental.codebaseSearch.title": "Codebase-Suche",
   "settings.experimental.codebaseSearch.description":
     "KI-gestützte Suche in natürlicher Sprache über die gesamte Codebasis aktivieren",
@@ -1343,7 +1347,7 @@ export const dict = {
     "Wählen Sie das Kilo Gateway-Transkriptionsmodell für die Spracheingabe.",
   "settings.experimental.continueOnDeny.title": "Bei Ablehnung fortfahren",
   "settings.experimental.continueOnDeny.description":
-    "Agent-Schleife fortsetzen, wenn eine Berechtigung abgelehnt wird",
+    "When a permission request is denied, allow the agent to continue working instead of stopping. The agent will skip the denied action and attempt to proceed with the task.",
   "settings.experimental.mcpTimeout.title": "MCP-Zeitlimit (ms)",
   "settings.experimental.mcpTimeout.description": "Zeitlimit für MCP-Server-Anfragen in Millisekunden",
   "settings.experimental.remote.title": "Remote-Steuerung",
@@ -1368,11 +1372,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Benutzerdefinierter Prompt",
   "settings.agentBehaviour.prompt.description": "Zusätzlicher System-Prompt für diesen Agent",
   "settings.agentBehaviour.temperature.title": "Temperatur",
-  "settings.agentBehaviour.temperature.description": "Sampling-Temperatur (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controls the randomness of AI responses (0–2). Lower values (e.g. 0.2) produce more focused, consistent outputs. Higher values (e.g. 1.0) produce more varied, creative responses. Leave empty to use the model's default.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Nucleus-Sampling-Parameter (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Nucleus sampling threshold (0–1). Only the most probable tokens whose cumulative probability reaches this value are considered. Lower values make outputs more focused; higher values allow more variety. Leave empty to use the model's default.",
   "settings.agentBehaviour.maxSteps.title": "Max. Schritte",
-  "settings.agentBehaviour.maxSteps.description": "Maximale Agent-Iterationen",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximum number of agentic iterations (tool calls + responses) allowed per session before the agent stops automatically.",
   "settings.agentBehaviour.hidden.title": "Versteckt",
   "settings.agentBehaviour.hidden.description": "Diesen Agent im Modus-Umschalter der Chat-Eingabe ausblenden",
   "settings.agentBehaviour.disable.title": "Deaktiviert",

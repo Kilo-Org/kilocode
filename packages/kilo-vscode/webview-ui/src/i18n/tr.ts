@@ -1291,16 +1291,20 @@ export const dict = {
   "settings.notifications.sound.none": "Yok",
 
   "settings.experimental.share.title": "Paylaşım Modu",
-  "settings.experimental.share.description": "Oturum paylaşımının nasıl davranacağı",
+  "settings.experimental.share.description":
+    "Controls when sessions are published to the web. Manual: share each session individually using the share button. Auto: new sessions are shared automatically. Disabled: session sharing is turned off.",
   "settings.experimental.share.manual": "Manuel",
   "settings.experimental.share.auto": "Otomatik",
   "settings.experimental.share.disabled": "Devre Dışı",
   "settings.experimental.formatter.title": "Biçimlendirici",
-  "settings.experimental.formatter.description": "Otomatik kod biçimlendiriciyi etkinleştir",
+  "settings.experimental.formatter.description":
+    "Enable the automatic code formatter to apply consistent formatting after file edits.",
   "settings.experimental.lsp.title": "LSP",
-  "settings.experimental.lsp.description": "Dil sunucu protokolü entegrasyonunu etkinleştir",
+  "settings.experimental.lsp.description":
+    "Enable Language Server Protocol integration so the agent can use IDE-quality diagnostics, completions, and hover info during coding tasks.",
   "settings.experimental.batch.title": "Toplu Araç",
-  "settings.experimental.batch.description": "Birden fazla araç çağrısının toplu işlenmesini etkinleştir",
+  "settings.experimental.batch.description":
+    "Allow the agent to execute multiple tool calls in a single step, which can speed up tasks that require many parallel operations.",
   "settings.experimental.codebaseSearch.title": "Kod Tabanı Araması",
   "settings.experimental.codebaseSearch.description":
     "Kod tabanınız genelinde yapay zeka destekli doğal dil aramasını etkinleştir",
@@ -1312,7 +1316,8 @@ export const dict = {
   "settings.models.speechToTextModel.title": "Sesten metne modeli",
   "settings.models.speechToTextModel.description": "Sesli giriş için Kilo Gateway transkripsiyon modelini seçin.",
   "settings.experimental.continueOnDeny.title": "Reddetme Durumunda Devam Et",
-  "settings.experimental.continueOnDeny.description": "Bir izin reddedildiğinde ajan döngüsüne devam et",
+  "settings.experimental.continueOnDeny.description":
+    "When a permission request is denied, allow the agent to continue working instead of stopping. The agent will skip the denied action and attempt to proceed with the task.",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
   "settings.experimental.remote.title": "Remote Kontrolü",
@@ -1338,11 +1343,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Özel Komut",
   "settings.agentBehaviour.prompt.description": "Bu ajan için ek sistem komutu",
   "settings.agentBehaviour.temperature.title": "Sıcaklık",
-  "settings.agentBehaviour.temperature.description": "Örnekleme sıcaklığı (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controls the randomness of AI responses (0–2). Lower values (e.g. 0.2) produce more focused, consistent outputs. Higher values (e.g. 1.0) produce more varied, creative responses. Leave empty to use the model's default.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Çekirdek örnekleme parametresi (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Nucleus sampling threshold (0–1). Only the most probable tokens whose cumulative probability reaches this value are considered. Lower values make outputs more focused; higher values allow more variety. Leave empty to use the model's default.",
   "settings.agentBehaviour.maxSteps.title": "Maksimum Adım",
-  "settings.agentBehaviour.maxSteps.description": "Maksimum ajanlık yinelemesi",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximum number of agentic iterations (tool calls + responses) allowed per session before the agent stops automatically.",
   "settings.agentBehaviour.hidden.title": "Gizli",
   "settings.agentBehaviour.hidden.description": "Bu ajanı sohbet girişindeki mod değiştiriciden gizle",
   "settings.agentBehaviour.disable.title": "Devre dışı",
