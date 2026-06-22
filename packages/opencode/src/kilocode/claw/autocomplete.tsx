@@ -6,7 +6,7 @@
  * extmark wiring) and only handles `/` slash commands.
  *
  * Source of slash commands is supplied by the caller via the `slashes`
- * prop. We intentionally do NOT pull from `useCommandPalette().slashes()`
+ * prop. We intentionally do NOT pull from the global `useCommandSlashes()` registry
  * because that registry holds globally-registered commands across all
  * routes (e.g. the home route's `/new` for sessions), which would clash
  * with kiloclaw's own `/new` for conversations.
@@ -22,8 +22,7 @@ import { Index, Show, createEffect, createMemo, createSignal, onCleanup, onMount
 import { createStore } from "solid-js/store"
 import { useTerminalDimensions } from "@opentui/solid"
 import { SplitBorder } from "@tui/component/border"
-import { useCommandPalette } from "@tui/context/command-palette"
-import { useBindings } from "@tui/keymap"
+import { useBindings, useOpencodeModeStack } from "@tui/keymap"
 import { selectedForeground, useTheme } from "@tui/context/theme"
 
 export type ClawAutocompleteRef = {
@@ -47,7 +46,7 @@ export function ClawAutocomplete(props: {
   input: () => TextareaRenderable | undefined
   ref: (ref: ClawAutocompleteRef) => void
 }) {
-  const command = useCommandPalette()
+  const modeStack = useOpencodeModeStack()
   const { theme } = useTheme()
   const dimensions = useTerminalDimensions()
 
@@ -58,6 +57,12 @@ export function ClawAutocomplete(props: {
   })
 
   const [positionTick, setPositionTick] = createSignal(0)
+
+  createEffect(() => {
+    if (!store.visible) return
+    const pop = modeStack.push("autocomplete")
+    onCleanup(pop)
+  })
 
   // Reposition the popup if the anchor moves (e.g., textarea grows).
   createEffect(() => {
@@ -186,7 +191,6 @@ export function ClawAutocomplete(props: {
   }))
 
   function show() {
-    command.suspend(true)
     setStore({
       visible: true,
       index: props.input()?.cursorOffset ?? 0,
@@ -195,7 +199,6 @@ export function ClawAutocomplete(props: {
 
   function dismiss() {
     if (!store.visible) return
-    command.suspend(false)
     setStore("visible", false)
   }
 
@@ -248,10 +251,6 @@ export function ClawAutocomplete(props: {
           hide()
         }
       },
-    })
-
-    onCleanup(() => {
-      if (store.visible) command.suspend(false)
     })
   })
 

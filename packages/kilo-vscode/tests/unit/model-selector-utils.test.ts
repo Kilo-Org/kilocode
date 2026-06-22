@@ -8,6 +8,7 @@ import {
   PROVIDER_ORDER,
   freeDataLabel,
   isDataCollectedModel,
+  hasByok,
   isFree,
 } from "../../webview-ui/src/components/shared/model-selector-utils"
 
@@ -116,6 +117,14 @@ describe("isDataCollectedModel", () => {
     expect(isDataCollectedModel({ mayTrainOnYourPrompts: true })).toBe(true)
     expect(isDataCollectedModel({ mayTrainOnYourPrompts: false })).toBe(false)
     expect(isDataCollectedModel({})).toBe(false)
+  })
+})
+
+describe("hasByok", () => {
+  it("uses only explicit user BYOK metadata", () => {
+    expect(hasByok({ hasUserByokAvailable: true })).toBe(true)
+    expect(hasByok({ hasUserByokAvailable: false })).toBe(false)
+    expect(hasByok({})).toBe(false)
   })
 })
 

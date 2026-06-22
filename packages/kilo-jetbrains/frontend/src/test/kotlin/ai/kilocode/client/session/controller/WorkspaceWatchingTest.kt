@@ -1,6 +1,8 @@
 package ai.kilocode.client.session.controller
 
 import ai.kilocode.rpc.dto.AgentDto
+import ai.kilocode.rpc.dto.ModelDto
+import ai.kilocode.rpc.dto.ProviderDto
 
 class WorkspaceWatchingTest : SessionControllerTestBase() {
 
@@ -10,13 +12,28 @@ class WorkspaceWatchingTest : SessionControllerTestBase() {
         flush()
         events.clear()
 
-        projectRpc.state.value = workspaceReady()
+        projectRpc.state.value = workspaceReady(
+            providers = listOf(
+                ProviderDto(
+                    id = "kilo",
+                    name = "Kilo",
+                    models = mapOf(
+                        "gpt-5" to ModelDto(
+                            id = "gpt-5",
+                            name = "GPT-5",
+                            mayTrainOnYourPrompts = true,
+                        ),
+                    ),
+                ),
+            ),
+        )
         flush()
 
         assertEquals(1, m.model.agents.size)
         assertEquals("code", m.model.agents[0].name)
         assertEquals(1, m.model.models.size)
         assertEquals("gpt-5", m.model.models[0].id)
+        assertTrue(m.model.models[0].mayTrainOnYourPrompts)
         assertFalse(m.model.isReady())
         assertControllerEvents("""
             AccountOverlayChanged show loggedIn=false

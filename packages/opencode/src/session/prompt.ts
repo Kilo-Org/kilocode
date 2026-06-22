@@ -1,6 +1,5 @@
 import path from "path"
 import os from "os"
-import fs from "fs/promises"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
@@ -10,6 +9,7 @@ import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
+import { BUILTIN_COMMANDS } from "@/kilocode/session/builtin-commands" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
 import { withStatics } from "@opencode-ai/core/schema" // kilocode_change
 import { SessionID, MessageID, PartID } from "./schema"
@@ -21,18 +21,15 @@ import * as Session from "./session"
 import { Agent } from "../agent/agent"
 import { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "../provider/schema"
-import { type Tool as AITool, tool, jsonSchema, type ToolExecutionOptions, asSchema } from "ai"
+import { type Tool as AITool, tool, jsonSchema } from "ai"
 import type { JSONSchema7 } from "@ai-sdk/provider"
 import { SessionCompaction } from "./compaction"
 import { Bus } from "../bus"
-import { ProviderTransform } from "@/provider/transform"
 import { SystemPrompt } from "./system"
 import { Instruction } from "./instruction"
 import { Plugin } from "../plugin"
-import CODE_SWITCH from "../session/prompt/code-switch.txt"
 import MAX_STEPS from "../session/prompt/max-steps.txt"
 import { ToolRegistry } from "@/tool/registry"
-import { ToolJsonSchema } from "@/tool/json-schema"
 import { MCP } from "../mcp"
 import { LSP } from "@/lsp/lsp"
 import { ulid } from "ulid"
@@ -59,11 +56,10 @@ import { decodeDataUrl } from "@/util/data-url"
 import { Cause, Effect, Exit, Latch, Layer, Option, Scope, Context, Schema, Types } from "effect"
 import * as EffectLogger from "@opencode-ai/core/effect/logger"
 import { InstanceState } from "@/effect/instance-state"
+import { EffectBridge } from "@/effect/bridge"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
 import { SessionRunState } from "./run-state"
-import { EffectBridge } from "@/effect/bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { EventV2 } from "@opencode-ai/core/event"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { SessionEvent } from "@opencode-ai/core/session-event"
 import { ModelV2 } from "@opencode-ai/core/model"
@@ -74,6 +70,10 @@ import * as DateTime from "effect/DateTime"
 import { eq } from "@/storage/db"
 import * as Database from "@/storage/db"
 import { SessionTable } from "./session.sql"
+import { referencePromptMetadata, referenceTextPart } from "./prompt/reference"
+import { SessionReminders } from "./reminders"
+import { SessionTools } from "./tools"
+import { LLMEvent } from "@opencode-ai/llm"
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -101,86 +101,10 @@ const REQUEST_PRUNE_BYTES = 1_250_000
 const log = Log.create({ service: "session.prompt" })
 const elog = EffectLogger.create({ service: "session.prompt" })
 
-type ReferencePromptMetadata = {
-  name: string
-  kind: "local" | "git" | "invalid"
-  path?: string
-  repository?: string
-  branch?: string
-  target?: string
-  targetPath?: string
-  problem?: string
-  source: { value: string; start: number; end: number }
-}
-
-function stringField(record: Record<string, unknown>, key: string) {
-  return typeof record[key] === "string" ? record[key] : undefined
-}
-
-function referencePromptMetadata(input: unknown): ReferencePromptMetadata | undefined {
-  if (!input || typeof input !== "object" || Array.isArray(input)) return
-  const record = input as Record<string, unknown>
-  const name = stringField(record, "name")
-  const kind = stringField(record, "kind")
-  if (!name || (kind !== "local" && kind !== "git" && kind !== "invalid")) return
-  if (!record.source || typeof record.source !== "object" || Array.isArray(record.source)) return
-  const source = record.source as Record<string, unknown>
-  const value = stringField(source, "value")
-  if (!value || typeof source.start !== "number" || typeof source.end !== "number") return
-  return {
-    name,
-    kind,
-    path: stringField(record, "path"),
-    repository: stringField(record, "repository"),
-    branch: stringField(record, "branch"),
-    target: stringField(record, "target"),
-    targetPath: stringField(record, "targetPath"),
-    problem: stringField(record, "problem"),
-    source: { value, start: source.start, end: source.end },
-  }
-}
-
-function referenceTextPart(input: {
-  reference: Reference.Resolved
-  source: ReferencePromptMetadata["source"]
-  target?: string
-  targetPath?: string
-  problem?: string
-}): MessageV2.TextPartInput {
-  const metadata: ReferencePromptMetadata = {
-    name: input.reference.name,
-    kind: input.reference.kind,
-    ...(input.reference.kind === "invalid"
-      ? { repository: input.reference.repository }
-      : { path: input.reference.path }),
-    ...(input.reference.kind === "git"
-      ? { repository: input.reference.repository, branch: input.reference.branch }
-      : {}),
-    ...(input.target === undefined ? {} : { target: input.target }),
-    ...(input.targetPath ? { targetPath: input.targetPath } : {}),
-    problem: input.problem ?? (input.reference.kind === "invalid" ? input.reference.message : undefined),
-    source: input.source,
-  }
-  const label = metadata.target === undefined ? `@${metadata.name}` : `@${metadata.name}/${metadata.target}`
-  return {
-    type: "text",
-    synthetic: true,
-    text: [
-      `Referenced configured reference ${label}.`,
-      ...(metadata.kind === "local" ? ["Kind: local directory"] : []),
-      ...(metadata.kind === "git" ? ["Kind: git repository"] : []),
-      ...(metadata.repository ? [`Repository: ${metadata.repository}`] : []),
-      ...(metadata.branch ? [`Branch/ref: ${metadata.branch}`] : []),
-      ...(metadata.path ? [`Reference root: ${metadata.path}`] : []),
-      ...(metadata.targetPath ? [`Resolved path: ${metadata.targetPath}`] : []),
-      ...(metadata.problem
-        ? [`Problem: ${metadata.problem}`]
-        : [
-            "For targeted context, inspect the reference path directly with Read, Glob, and Grep. For broader research, call the task tool with subagent scout and include this reference path.",
-          ]),
-    ].join("\n"),
-    metadata: { reference: metadata },
-  }
+function isOrphanedInterruptedTool(part: MessageV2.ToolPart) {
+  // cleanup() marks abandoned tool_use blocks this way after retries/aborts.
+  // They are not pending work and must not trigger an assistant-prefill request.
+  return part.state.status === "error" && part.state.metadata?.interrupted === true
 }
 
 export interface Interface {
@@ -226,15 +150,11 @@ export const layer = Layer.effect(
     const references = yield* Reference.Service
     const events = yield* EventV2Bridge.Service
     const flags = yield* RuntimeFlags.Service
-    const runner = Effect.fn("SessionPrompt.runner")(function* () {
-      return yield* EffectBridge.make()
-    })
     const ops = Effect.fn("SessionPrompt.ops")(function* () {
       return {
         cancel: (sessionID: SessionID) => cancel(sessionID),
         resolvePromptParts: (template: string) => resolvePromptParts(template),
         prompt: (input: PromptInput) => prompt(input).pipe(Effect.catch(Effect.die)),
-        loop: (input: LoopInput) => loop(input).pipe(Effect.orDie),
       } satisfies TaskPromptOps
     })
 
@@ -386,7 +306,7 @@ export const layer = Layer.effect(
           messages: [{ role: "user", content: "Generate a title for this conversation:\n" }, ...msgs],
         })
         .pipe(
-          Stream.filter((e): e is Extract<LLM.Event, { type: "text-delta" }> => e.type === "text-delta"),
+          Stream.filter(LLMEvent.is.textDelta),
           Stream.map((e) => e.text),
           Stream.mkString,
           Effect.orDie,
@@ -401,330 +321,6 @@ export const layer = Layer.effect(
       yield* sessions
         .setTitle({ sessionID: input.session.id, title: t })
         .pipe(Effect.catchCause((cause) => elog.error("failed to generate title", { error: Cause.squash(cause) })))
-    })
-
-    const insertReminders = Effect.fn("SessionPrompt.insertReminders")(function* (input: {
-      messages: MessageV2.WithParts[]
-      agent: Agent.Info
-      session: Session.Info
-    }) {
-      const userMessage = input.messages.findLast((msg) => msg.info.role === "user")
-      if (!userMessage) return input.messages
-
-      if (!flags.experimentalPlanMode) {
-        // kilocode_change start - inject plan file path so agent writes to .kilo/plans/
-        yield* Effect.promise(() =>
-          KiloSessionPrompt.insertPlanReminders({
-            agent: input.agent,
-            session: input.session,
-            userMessage,
-            messages: input.messages,
-          }),
-        )
-        // kilocode_change end
-        const wasPlan = input.messages.some((msg) => msg.info.role === "assistant" && msg.info.agent === "plan")
-        if (wasPlan && input.agent.name === "code") {
-          // kilocode_change - renamed from "build" to "code"
-          userMessage.parts.push({
-            id: PartID.ascending(),
-            messageID: userMessage.info.id,
-            sessionID: userMessage.info.sessionID,
-            type: "text",
-            text: CODE_SWITCH, // kilocode_change - renamed from BUILD_SWITCH to CODE_SWITCH
-            synthetic: true,
-          })
-        }
-        return input.messages
-      }
-
-      const assistantMessage = input.messages.findLast((msg) => msg.info.role === "assistant")
-      if (input.agent.name !== "plan" && assistantMessage?.info.agent === "plan") {
-        const ctx = yield* InstanceState.context
-        const plan = Session.plan(input.session, ctx)
-        if (!(yield* fsys.existsSafe(plan))) return input.messages
-        const part = yield* sessions.updatePart({
-          id: PartID.ascending(),
-          messageID: userMessage.info.id,
-          sessionID: userMessage.info.sessionID,
-          type: "text",
-          text: `${CODE_SWITCH}\n\nA plan file exists at ${plan}. You should execute on the plan defined within it`, // kilocode_change - renamed from BUILD_SWITCH to CODE_SWITCH
-          synthetic: true,
-        })
-        userMessage.parts.push(part)
-        return input.messages
-      }
-
-      if (input.agent.name !== "plan" || assistantMessage?.info.agent === "plan") return input.messages
-
-      const ctx = yield* InstanceState.context
-      const plan = Session.plan(input.session, ctx)
-      const exists = yield* fsys.existsSafe(plan)
-      if (!exists) yield* fsys.ensureDir(path.dirname(plan)).pipe(Effect.catch(Effect.die))
-      const part = yield* sessions.updatePart({
-        id: PartID.ascending(),
-        messageID: userMessage.info.id,
-        sessionID: userMessage.info.sessionID,
-        type: "text",
-        text: `<system-reminder>
-Plan mode is active. The user indicated that they do not want you to execute yet -- you MUST NOT make any edits (with the exception of the plan file mentioned below), run any non-readonly tools (including changing configs or making commits), or otherwise make any changes to the system. This supersedes any other instructions you have received.
-
-## Plan File Info:
-${exists ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.` : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`}
-You should build your plan incrementally by writing to or editing this file. NOTE that this is the only file you are allowed to edit - other than this you are only allowed to take READ-ONLY actions.
-
-## Plan Workflow
-
-### Phase 1: Initial Understanding
-Goal: Gain a comprehensive understanding of the user's request by reading through code and asking them questions. Critical: In this phase you should only use the explore subagent type.
-
-1. Focus on understanding the user's request and the code associated with their request
-
-2. **Launch up to 3 explore agents IN PARALLEL** (single message, multiple tool calls) to efficiently explore the codebase.
- - Use 1 agent when the task is isolated to known files, the user provided specific file paths, or you're making a small targeted change.
- - Use multiple agents when: the scope is uncertain, multiple areas of the codebase are involved, or you need to understand existing patterns before planning.
- - Quality over quantity - 3 agents maximum, but you should try to use the minimum number of agents necessary (usually just 1)
- - If using multiple agents: Provide each agent with a specific search focus or area to explore. Example: One agent searches for existing implementations, another explores related components, a third investigates testing patterns
-
-3. After exploring the code, use the question tool to clarify ambiguities in the user request up front.
-
-### Phase 2: Design
-Goal: Design an implementation approach.
-
-Launch general agent(s) to design the implementation based on the user's intent and your exploration results from Phase 1.
-
-You can launch up to 1 agent(s) in parallel.
-
-**Guidelines:**
-- **Default**: Launch at least 1 Plan agent for most tasks - it helps validate your understanding and consider alternatives
-- **Skip agents**: Only for truly trivial tasks (typo fixes, single-line changes, simple renames)
-
-Examples of when to use multiple agents:
-- The task touches multiple parts of the codebase
-- It's a large refactor or architectural change
-- There are many edge cases to consider
-- You'd benefit from exploring different approaches
-
-Example perspectives by task type:
-- New feature: simplicity vs performance vs maintainability
-- Bug fix: root cause vs workaround vs prevention
-- Refactoring: minimal change vs clean architecture
-
-In the agent prompt:
-- Provide comprehensive background context from Phase 1 exploration including filenames and code path traces
-- Describe requirements and constraints
-- Request a detailed implementation plan
-
-### Phase 3: Review
-Goal: Review the plan(s) from Phase 2 and ensure alignment with the user's intentions.
-1. Read the critical files identified by agents to deepen your understanding
-2. Ensure that the plans align with the user's original request
-3. Use question tool to clarify any remaining questions with the user
-
-### Phase 4: Final Plan
-Goal: Write your final plan to the plan file (the only file you can edit).
-- Include only your recommended approach, not all alternatives
-- Ensure that the plan file is concise enough to scan quickly, but detailed enough to execute effectively
-- Include the paths of critical files to be modified
-- Include a verification section describing how to test the changes end-to-end (run the code, use MCP tools, run tests)
-
-### Phase 5: Call plan_exit tool
-At the very end of your turn, once you have asked the user questions and are happy with your final plan file - you should always call plan_exit to indicate to the user that you are done planning.
-This is critical - your turn should only end with either asking the user a question or calling plan_exit. Do not stop unless it's for these 2 reasons.
-
-**Important:** Use question tool to clarify requirements/approach, use plan_exit to request plan approval. Do NOT use question tool to ask "Is this plan okay?" - that's what plan_exit does.
-
-NOTE: At any point in time through this workflow you should feel free to ask the user questions or clarifications. Don't make large assumptions about user intent. The goal is to present a well researched plan to the user, and tie any loose ends before implementation begins.
-</system-reminder>`,
-        synthetic: true,
-      })
-      userMessage.parts.push(part)
-      return input.messages
-    })
-
-    const resolveTools = Effect.fn("SessionPrompt.resolveTools")(function* (input: {
-      agent: Agent.Info
-      model: Provider.Model
-      session: Session.Info
-      tools?: Record<string, boolean>
-      processor: Pick<SessionProcessor.Handle, "message" | "updateToolCall" | "completeToolCall">
-      bypassAgentCheck: boolean
-      messages: MessageV2.WithParts[]
-    }) {
-      using _ = log.time("resolveTools")
-      const tools: Record<string, AITool> = {}
-      const run = yield* runner()
-      const promptOps = yield* ops()
-
-      const context = (args: any, options: ToolExecutionOptions): Tool.Context => ({
-        sessionID: input.session.id,
-        abort: options.abortSignal!,
-        messageID: input.processor.message.id,
-        callID: options.toolCallId,
-        extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck, promptOps },
-        agent: input.agent.name,
-        messages: input.messages,
-        metadata: (val) =>
-          input.processor.updateToolCall(options.toolCallId, (match) => {
-            if (!["running", "pending"].includes(match.state.status)) return match
-            return {
-              ...match,
-              state: {
-                title: val.title,
-                metadata: val.metadata,
-                status: "running",
-                input: args,
-                time: { start: Date.now() },
-              },
-            }
-          }),
-        // kilocode_change start - resolve permissions at ask time so active tools see config edits
-        ask: (req) =>
-          KiloSessionPrompt.askPermission({
-            permission,
-            agents,
-            sessions,
-            agent: input.agent,
-            session: input.session,
-            request: {
-              ...req,
-              sessionID: input.session.id,
-              tool: { messageID: input.processor.message.id, callID: options.toolCallId },
-            },
-          }).pipe(Effect.orDie),
-        // kilocode_change end
-      })
-
-      for (const item of yield* registry.tools({
-        modelID: ModelID.make(input.model.api.id),
-        providerID: input.model.providerID,
-        agent: input.agent,
-      })) {
-        const schema = ProviderTransform.schema(input.model, ToolJsonSchema.fromTool(item))
-        tools[item.id] = tool({
-          description: item.description,
-          inputSchema: jsonSchema(schema),
-          execute(args, options) {
-            return run.promise(
-              Effect.gen(function* () {
-                const ctx = context(args, options)
-                yield* plugin.trigger(
-                  "tool.execute.before",
-                  { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID },
-                  { args },
-                )
-                const result = yield* item.execute(args, ctx)
-                const output = {
-                  ...result,
-                  attachments: result.attachments?.map((attachment) => ({
-                    ...attachment,
-                    id: PartID.ascending(),
-                    sessionID: ctx.sessionID,
-                    messageID: input.processor.message.id,
-                  })),
-                }
-                yield* plugin.trigger(
-                  "tool.execute.after",
-                  { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID, args },
-                  output,
-                )
-                if (options.abortSignal?.aborted) {
-                  yield* input.processor.completeToolCall(options.toolCallId, output)
-                }
-                return output
-              }),
-            )
-          },
-        })
-      }
-
-      for (const [key, item] of Object.entries(yield* mcp.tools())) {
-        const execute = item.execute
-        if (!execute) continue
-
-        const schema = yield* Effect.promise(() => Promise.resolve(asSchema(item.inputSchema).jsonSchema))
-        const transformed = ProviderTransform.schema(input.model, schema)
-        item.inputSchema = jsonSchema(transformed)
-        item.execute = (args, opts) =>
-          run.promise(
-            Effect.gen(function* () {
-              const ctx = context(args, opts)
-              yield* plugin.trigger(
-                "tool.execute.before",
-                { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId },
-                { args },
-              )
-              const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* Effect.gen(function* () {
-                yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
-                return yield* Effect.promise(() => execute(args, opts))
-              }).pipe(
-                Effect.withSpan("Tool.execute", {
-                  attributes: {
-                    "tool.name": key,
-                    "tool.call_id": opts.toolCallId,
-                    "session.id": ctx.sessionID,
-                    "message.id": input.processor.message.id,
-                  },
-                }),
-              )
-              yield* plugin.trigger(
-                "tool.execute.after",
-                { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId, args },
-                result,
-              )
-
-              const textParts: string[] = []
-              const attachments: Omit<MessageV2.FilePart, "id" | "sessionID" | "messageID">[] = []
-              for (const contentItem of result.content) {
-                if (contentItem.type === "text") textParts.push(contentItem.text)
-                else if (contentItem.type === "image") {
-                  attachments.push({
-                    type: "file",
-                    mime: contentItem.mimeType,
-                    url: `data:${contentItem.mimeType};base64,${contentItem.data}`,
-                  })
-                } else if (contentItem.type === "resource") {
-                  const { resource } = contentItem
-                  if (resource.text) textParts.push(resource.text)
-                  if (resource.blob) {
-                    attachments.push({
-                      type: "file",
-                      mime: resource.mimeType ?? "application/octet-stream",
-                      url: `data:${resource.mimeType ?? "application/octet-stream"};base64,${resource.blob}`,
-                      filename: resource.uri,
-                    })
-                  }
-                }
-              }
-
-              const truncated = yield* truncate.output(textParts.join("\n\n"), {}, input.agent)
-              const metadata = {
-                ...result.metadata,
-                truncated: truncated.truncated,
-                ...(truncated.truncated && { outputPath: truncated.outputPath }),
-              }
-
-              const output = {
-                title: "",
-                metadata,
-                output: truncated.content,
-                attachments: attachments.map((attachment) => ({
-                  ...attachment,
-                  id: PartID.ascending(),
-                  sessionID: ctx.sessionID,
-                  messageID: input.processor.message.id,
-                })),
-                content: result.content,
-              }
-              if (opts.abortSignal?.aborted) {
-                yield* input.processor.completeToolCall(opts.toolCallId, output)
-              }
-              return output
-            }),
-          )
-        tools[key] = item
-      }
-
-      return tools
     })
 
     const handleSubtask = Effect.fn("SessionPrompt.handleSubtask")(function* (input: {
@@ -1148,7 +744,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         .findMessage(sessionID, (m) => m.info.role === "user" && !!m.info.model)
         .pipe(Effect.orDie)
       if (Option.isSome(match) && match.value.info.role === "user") return match.value.info.model
-      return yield* provider.defaultModel()
+      return yield* provider.defaultModel().pipe(Effect.orDie)
     })
 
     const createUserMessage = Effect.fn("SessionPrompt.createUserMessage")(function* (input: PromptInput) {
@@ -1711,7 +1307,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         const message = yield* createUserMessage(input)
         yield* sessions.touch(input.sessionID)
 
-        const permissions: Permission.Ruleset = []
+        const permissions: Permission.Rule[] = []
         for (const [t, enabled] of Object.entries(input.tools ?? {})) {
           permissions.push({ permission: t, action: enabled ? "allow" : "deny", pattern: "*" })
         }
@@ -1739,7 +1335,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         if (input.noReply === true) return message
         // Queue tails and runner fibers can resume outside the HTTP request's
         // ambient instance context; bridge both Effect refs and legacy ALS.
-        const bridge = yield* runner()
+        const bridge = yield* EffectBridge.make()
         return yield* KiloSessionPromptQueue.enqueue(
           input.sessionID,
           message.info.id,
@@ -1818,14 +1414,13 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           ) ?? KiloSessionProcessor.extractSuggestionReviewTelemetry(lastAssistantMsg?.parts ?? [])
         // kilocode_change end
 
-        // kilocode_change start - keep provider-executed tools from forcing a re-loop
-        // Some providers return "stop" even when the assistant message contains tool calls.
-        // Keep the loop running so tool results can be sent back to the model.
-        // Skip provider-executed tool parts — those were fully handled within the
-        // provider's stream (e.g. DWS Agent Platform) and don't need a re-loop.
+        // Some providers return "stop" even when the assistant message contains
+        // tool calls. Keep the loop running so tool results can be sent back to
+        // the model, but ignore cleanup-marked interrupted orphans.
         const hasToolCalls =
-          lastAssistantMsg?.parts.some((part) => part.type === "tool" && !part.metadata?.providerExecuted) ?? false
-        // kilocode_change end
+          lastAssistantMsg?.parts.some(
+            (part) => part.type === "tool" && !part.metadata?.providerExecuted && !isOrphanedInterruptedTool(part),
+          ) ?? false
 
         // kilocode_change start - plan_exit is a hard stop before another model call
         if (
@@ -1851,12 +1446,16 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           lastAssistant.parentID === lastUser.id && // kilocode_change - unrelated later assistants do not answer this turn
           userBeforeAssistant // kilocode_change - compare chronology, not generated IDs
         ) {
-          // kilocode_change start - ask follow-up when plan_exit tool was called
-          const action = yield* Effect.promise((signal) =>
-            KiloSessionPrompt.askPlanFollowup({ sessionID, messages: msgs, abort: signal, question }),
+          const orphan = lastAssistantMsg?.parts.find(
+            (part): part is MessageV2.ToolPart => part.type === "tool" && isOrphanedInterruptedTool(part),
           )
-          if (action === "continue") continue
-          // kilocode_change end
+          if (orphan) {
+            yield* slog.warn("loop exit with orphaned interrupted tool", {
+              messageID: lastAssistant.id,
+              tool: orphan.tool,
+              callID: orphan.callID,
+            })
+          }
           yield* slog.info("exiting loop")
           break
         }
@@ -1931,7 +1530,11 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         }
         const maxSteps = agent.steps ?? Infinity
         const isLastStep = step >= maxSteps
-        msgs = yield* insertReminders({ messages: msgs, agent, session })
+        msgs = yield* SessionReminders.apply({ messages: msgs, agent, session }).pipe(
+          Effect.provideService(RuntimeFlags.Service, flags),
+          Effect.provideService(AppFileSystem.Service, fsys),
+          Effect.provideService(Session.Service, sessions),
+        )
 
         const msg: MessageV2.Assistant = {
           id: MessageID.ascending(),
@@ -1971,16 +1574,25 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         const outcome: "break" | "continue" = yield* Effect.gen(function* () {
           const lastUserMsg = msgs.findLast((m) => m.info.role === "user")
           const bypassAgentCheck = lastUserMsg?.parts.some((p) => p.type === "agent") ?? false
+          const promptOps = yield* ops()
 
-          const tools = yield* resolveTools({
+          const tools = yield* SessionTools.resolve({
             agent,
             session,
             model,
-            tools: lastUser.tools,
             processor: handle,
             bypassAgentCheck,
             messages: msgs,
-          })
+            promptOps,
+          }).pipe(
+            Effect.provideService(Plugin.Service, plugin),
+            Effect.provideService(Permission.Service, permission),
+            Effect.provideService(Agent.Service, agents), // kilocode_change
+            Effect.provideService(Session.Service, sessions), // kilocode_change
+            Effect.provideService(ToolRegistry.Service, registry),
+            Effect.provideService(MCP.Service, mcp),
+            Effect.provideService(Truncate.Service, truncate),
+          )
 
           if (lastUser.format?.type === "json_schema") {
             tools["StructuredOutput"] = createStructuredOutputTool({
@@ -2048,9 +1660,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           // kilocode_change end
           const system = [...env, ...instructions, ...(skills ? [skills] : [])]
           const format = lastUser.format ?? { type: "text" as const }
-          if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT) // kilocode_change
+          if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
           const result = yield* handle.process({
-            // kilocode_change
             // kilocode_change start - keep Ask/Plan tool filtering hardened against session allows
             user: lastUser,
             agent,
@@ -2163,6 +1774,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       "SessionPrompt.loop",
     )(function* (input: LoopInput) {
       // kilocode_change start
+      const session = yield* sessions.get(input.sessionID)
       yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
       yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
       yield* bus.publish(KiloSession.Event.TurnOpen, { sessionID: input.sessionID })
@@ -2175,6 +1787,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         Effect.fnUntraced(function* (exit) {
           yield* bus.publish(KiloSession.Event.TurnClose, {
             sessionID: input.sessionID,
+            parentID: session.parentID,
             reason: KiloSessionPrompt.resolveCloseReason({
               sessionID: input.sessionID,
               closeReasons,
@@ -2203,6 +1816,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       const cmd = yield* commands.get(input.command)
       if (!cmd) {
         const available = (yield* commands.list()).map((c) => c.name)
+        available.push(...BUILTIN_COMMANDS) // kilocode_change - surface built-in session commands in error hint
+        available.sort() // kilocode_change - alphabetical for stable, easy-to-scan output
         const hint = available.length ? ` Available commands: ${available.join(", ")}` : ""
         const error = new NamedError.Unknown({ message: `Command not found: "${input.command}".${hint}` })
         yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })

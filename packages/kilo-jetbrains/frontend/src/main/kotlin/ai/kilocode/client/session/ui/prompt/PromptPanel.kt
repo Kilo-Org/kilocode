@@ -5,19 +5,26 @@ import ai.kilocode.client.actions.SendPromptAction
 import ai.kilocode.client.actions.StopSessionAction
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.ReasoningPicker
+import ai.kilocode.client.session.ui.SessionRootPanel
+import ai.kilocode.client.session.model.PromptAttachment
+import ai.kilocode.client.session.model.PromptAttachmentExtractor
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
+import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.ui.HoverIcon
-import ai.kilocode.client.ui.RoundedContentPanel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
+import ai.kilocode.rpc.dto.PromptPartDto
 import com.intellij.icons.AllIcons
 import com.intellij.ide.DataManager
+import com.intellij.ide.dnd.DnDEvent
+import com.intellij.ide.dnd.DnDSupport
+import com.intellij.ide.dnd.FileCopyPasteUtil
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUiKind
@@ -35,9 +42,9 @@ import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.AnimatedIcon
+import com.intellij.ui.JBColor
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.xml.util.XmlStringUtil
-import com.intellij.util.ui.JBValue
 import com.intellij.util.ui.JBDimension
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -49,27 +56,34 @@ import java.awt.Cursor
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
+import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.Transferable
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.util.concurrent.Future
 import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.Icon
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.ScrollPaneConstants
+import javax.swing.SwingUtilities
 
 /**
- * Prompt input panel with borderless IntelliJ editor text field and
- * mode/model controls grouped inside one rounded editor-background shell.
+ * Prompt input panel with a borderless IntelliJ editor text field and
+ * mode/model controls in the full bottom session area.
  */
 class PromptPanel(
     private val project: Project,
-    private val onSend: (String) -> Unit,
+    private val onSend: (String, List<PromptPartDto>) -> Unit,
     private val onAbort: () -> Unit,
     private val onEnhance: (String, (Result<String>) -> Unit) -> Unit,
-) : BorderLayoutPanel(), SessionEditorStyleTarget, SendPromptContext {
+    private val selection: SessionSelection? = null,
+) : BorderLayoutPanel(), SessionEditorStyleTarget, SendPromptContext, UiDataProvider {
 
     companion object {
         private val LOG = KiloLog.create(PromptPanel::class.java)
@@ -88,12 +102,31 @@ class PromptPanel(
     var onReset: () -> Unit = {}
     var onChange: () -> Unit = {}
     var onAutoApproveToggle: (Boolean) -> Unit = {}
+    var onFileDrag: (Boolean) -> Unit = {}
     private var style = SessionEditorStyle.current()
-    private val shell = PromptShell()
+    private val shell = BorderLayoutPanel().apply {
+        isOpaque = true
+        border = JBUI.Borders.empty(
+            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
+        )
+    }
+    private val attachments = mutableListOf<PromptAttachment>()
+    private val strip = PromptAttachmentStrip(project) { removeAttachment(it) }
     private var bus: MessageBusConnection? = null
     private var autoApprove = false
+    private var attachment = true
+    private var submitting = false
+    private var root: SessionRootPanel? = null
+    private val resize = object : ComponentAdapter() {
+        override fun componentResized(e: ComponentEvent) {
+            syncEditorHeight()
+        }
+    }
 
-    private val editor = PromptEditorTextField(project, this).apply {
+    private val editor = PromptEditorTextField(project, this, selection).apply {
         border = JBUI.Borders.empty()
         setFontInheritedFromLAF(false)
         setPlaceholder(placeholder())
@@ -108,16 +141,22 @@ class PromptPanel(
             ed.scrollPane.background = style.editorScheme.defaultBackground
             ed.scrollPane.viewport.background = style.editorScheme.defaultBackground
             ed.settings.isUseSoftWraps = true
+            ed.settings.isPaintSoftWraps = false
             ed.settings.isAdditionalPageAtBottom = false
+            ed.putUserData(PROMPT_ATTACHMENT_PASTE_HANDLER_KEY, PromptAttachmentPasteHandler { processPaste(it) })
+            ed.scrollPane.verticalScrollBarPolicy =
+                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
             ed.scrollPane.horizontalScrollBarPolicy =
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+            installFileDrop(ed.contentComponent, "editor")
+            installFileDrop(ed.scrollPane, "scroll")
             ed.contentComponent.addFocusListener(object : FocusAdapter() {
                 override fun focusGained(e: FocusEvent) {
-                    shell.repaint()
+                    repaint()
                 }
 
                 override fun focusLost(e: FocusEvent) {
-                    shell.repaint()
+                    repaint()
                 }
             })
         }
@@ -166,23 +205,14 @@ class PromptPanel(
     private var request = 0L
 
     override val isSendEnabled: Boolean
-        get() = ready && !busy && text().isNotEmpty()
+        get() = ready && !busy && !submitting && (text().isNotEmpty() || attachments.isNotEmpty())
 
     override val isStopEnabled: Boolean
         get() = busy
 
     init {
-        border = JBUI.Borders.compound(
-            JBUI.Borders.customLineTop(JBUI.CurrentTheme.ToolWindow.borderColor()),
-            JBUI.Borders.empty(
-                JBUI.scale(SessionUiStyle.View.Prompt.PANEL_VERTICAL_PADDING),
-                JBUI.scale(SessionUiStyle.View.Prompt.PANEL_HORIZONTAL_PADDING),
-                JBUI.scale(SessionUiStyle.View.Prompt.PANEL_VERTICAL_PADDING),
-                JBUI.scale(SessionUiStyle.View.Prompt.PANEL_HORIZONTAL_PADDING),
-            ),
-        )
-
         applyStyle(style)
+        selection?.register(editor)
         editor.text = ""
         editor.addDocumentListener(object : DocumentListener {
             override fun documentChanged(e: DocumentEvent) {
@@ -191,6 +221,7 @@ class PromptPanel(
                 onChange()
             }
         })
+        shell.add(strip, BorderLayout.NORTH)
         shell.add(editor, BorderLayout.CENTER)
 
         val bar = BorderLayoutPanel().apply {
@@ -213,15 +244,30 @@ class PromptPanel(
         bar.add(button)
         shell.add(bar, BorderLayout.SOUTH)
         add(shell, BorderLayout.CENTER)
+        addComponentListener(resize)
+        installFileDrop(shell, "shell")
         syncTooltip()
         syncAutoApprove()
         syncEnhance()
+    }
+
+    override fun updateUI() {
+        super.updateUI()
+        border = JBUI.Borders.compound(
+            JBUI.Borders.customLineTop(separator()),
+            JBUI.Borders.empty(),
+        )
     }
 
     @RequiresEdt
     fun setReady(value: Boolean) {
         ready = value
         if (!value) invalidateEnhancement() else syncEnhance()
+    }
+
+    @RequiresEdt
+    fun setAttachmentEnabled(value: Boolean) {
+        attachment = value
     }
 
     @RequiresEdt
@@ -270,11 +316,19 @@ class PromptPanel(
 
     internal fun buttonForTest(): JButton = button
 
+    internal fun attachmentCountForTest(): Int = attachments.size
+
     internal val defaultFocusedComponent: JComponent get() = editor
+
+    override fun uiDataSnapshot(sink: DataSink) {
+        selection?.provideCopy(sink) { editor.text }
+    }
 
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
+        background = style.editorScheme.defaultBackground
+        shell.background = style.editorScheme.defaultBackground
         editor.font = style.editorFont
         editor.getEditor(false)?.let(style::applyToEditor)
         editor.background = style.editorScheme.defaultBackground
@@ -285,8 +339,17 @@ class PromptPanel(
     @RequiresEdt
     fun clear() {
         editor.text = ""
+        attachments.clear()
+        strip.clear()
         syncEditorHeight()
     }
+
+    @RequiresEdt
+    fun addAttachmentForTest(item: PromptAttachment) {
+        addAttachment(item)
+    }
+
+    internal fun processPasteForTest(transferable: Transferable): Future<*> = processPaste(transferable)
 
     @RequiresEdt
     fun focus() {
@@ -295,10 +358,13 @@ class PromptPanel(
 
     override fun addNotify() {
         super.addNotify()
+        bindRoot()
         bindKeymap()
     }
 
     override fun removeNotify() {
+        root?.removeComponentListener(resize)
+        root = null
         bus?.disconnect()
         bus = null
         super.removeNotify()
@@ -310,6 +376,7 @@ class PromptPanel(
         val source = editor.text
         if (source.isBlank()) {
             editor.text = KiloBundle.message("prompt.action.enhance.description")
+            syncEditorHeight()
             focus()
             return
         }
@@ -326,6 +393,7 @@ class PromptPanel(
         syncEnhance()
         result.onSuccess {
             editor.text = it
+            syncEditorHeight()
             focus()
         }.onFailure {
             if (it is CancellationException) return@onFailure
@@ -359,10 +427,134 @@ class PromptPanel(
     private fun submit(src: String) {
         if (!isSendEnabled) return
         val txt = text()
-        LOG.debug { "${ChatLogSummary.prompt(txt)} src=$src busy=$busy" }
-        if (txt.isNotEmpty()) {
-            onSend(txt)
+        val items = attachments.toList()
+        submitting = true
+        ApplicationManager.getApplication().executeOnPooledThread {
+            try {
+                val files = items.map { it.part() }
+                ApplicationManager.getApplication().invokeLater {
+                    submitting = false
+                    if (project.isDisposed) return@invokeLater
+                    LOG.debug { "${ChatLogSummary.prompt(promptDto(txt, files))} src=$src busy=$busy" }
+                    onSend(txt, files)
+                }
+            } catch (e: Exception) {
+                ApplicationManager.getApplication().invokeLater {
+                    submitting = false
+                    if (project.isDisposed) return@invokeLater
+                    LOG.warn("kind=prompt-submit src=$src failed message=${e.message}", e)
+                    notify(KiloBundle.message("prompt.attachment.send.failed", e.message ?: e.javaClass.simpleName))
+                }
+            }
         }
+    }
+
+    @RequiresEdt
+    private fun addAttachment(item: PromptAttachment) {
+        if (!attachment && PromptAttachmentExtractor.media(item.mime)) {
+            LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} blocked=unsupported-model" }
+            notify(KiloBundle.message("prompt.attachment.unsupported.model"))
+            return
+        }
+        if (attachments.any { it.id == item.id }) {
+            LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} blocked=duplicate" }
+            return
+        }
+        attachments += item
+        strip.add(item)
+        LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} count=${attachments.size}" }
+        syncEditorHeight()
+        onChange()
+    }
+
+    @RequiresEdt
+    private fun removeAttachment(item: PromptAttachment) {
+        if (!attachments.removeIf { it.id == item.id }) return
+        strip.remove(item)
+        syncEditorHeight()
+        onChange()
+    }
+
+    private fun promptDto(text: String, files: List<PromptPartDto>) = ai.kilocode.rpc.dto.PromptDto(
+        parts = buildList {
+            text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
+            addAll(files)
+        }
+    )
+
+    internal fun installFileDrop(target: JComponent, area: String) {
+        LOG.debug { "kind=prompt-dnd install area=$area component=${target.javaClass.name}" }
+        DnDSupport.createBuilder(target)
+            .enableAsNativeTarget()
+            .setTargetChecker { event ->
+                if (!FileCopyPasteUtil.isFileListFlavorAvailable(event)) {
+                    onFileDrag(false)
+                    LOG.debug { "kind=prompt-dnd check area=$area accept=false flavor=false" }
+                    return@setTargetChecker true
+                }
+                event.setDropPossible(true)
+                onFileDrag(true)
+                LOG.debug { "kind=prompt-dnd check area=$area accept=true flavor=true" }
+                false
+            }
+            .setCleanUpOnLeaveCallback {
+                onFileDrag(false)
+            }
+            .setDropHandlerWithResult { event ->
+                val start = System.nanoTime()
+                val files = dropFiles(event)
+                val ms = elapsedMs(start)
+                LOG.debug { "kind=prompt-dnd drop area=$area files=${files.size} extractMs=$ms queued=${files.isNotEmpty()}" }
+                onFileDrag(false)
+                if (files.isEmpty()) return@setDropHandlerWithResult false
+                processAttachments("prompt-dnd", area, files, null, ms)
+                true
+            }
+            .install()
+    }
+
+    private fun processPaste(transferable: Transferable): Future<*> {
+        return processAttachments("prompt-paste", "editor", null, transferable, 0)
+    }
+
+    private fun processAttachments(
+        kind: String,
+        area: String,
+        files: List<java.io.File>?,
+        transferable: Transferable?,
+        sourceMs: Long,
+    ): Future<*> {
+        return ApplicationManager.getApplication().executeOnPooledThread {
+            val start = System.nanoTime()
+            try {
+                val list = files ?: transferable?.let { FileCopyPasteUtil.getFileList(it).orEmpty() }.orEmpty()
+                val image = transferable?.takeIf { list.isEmpty() && it.isDataFlavorSupported(DataFlavor.imageFlavor) }
+                    ?.getTransferData(DataFlavor.imageFlavor)
+                    ?.let(PromptAttachmentExtractor::image)
+                val items = PromptAttachmentExtractor.files(list) + listOfNotNull(image)
+                val ms = elapsedMs(start)
+                LOG.debug { "kind=$kind extract area=$area files=${list.size} image=${image != null} attachments=${items.size} extractMs=$ms sourceMs=$sourceMs" }
+                if (items.isEmpty()) return@executeOnPooledThread
+                ApplicationManager.getApplication().invokeLater {
+                    if (project.isDisposed) return@invokeLater
+                    LOG.debug { "kind=$kind attach area=$area files=${list.size} image=${image != null} attachments=${items.size} extractMs=$ms sourceMs=$sourceMs" }
+                    items.forEach(::addAttachment)
+                }
+            } catch (e: Exception) {
+                LOG.warn("kind=$kind extract area=$area failed message=${e.message}", e)
+            }
+        }
+    }
+
+    private fun dropFiles(event: DnDEvent): List<java.io.File> {
+        if (!FileCopyPasteUtil.isFileListFlavorAvailable(event)) return emptyList()
+        return FileCopyPasteUtil.getFileListFromAttachedObject(event.attachedObject).orEmpty()
+    }
+
+    private fun elapsedMs(start: Long) = (System.nanoTime() - start) / 1_000_000
+
+    private fun notify(text: String) {
+        com.intellij.notification.Notification("Kilo Code", text, com.intellij.notification.NotificationType.WARNING).notify(project)
     }
 
     @RequiresEdt
@@ -435,19 +627,54 @@ class PromptPanel(
         return KiloBundle.message("prompt.placeholder")
     }
 
+    private fun separator() = JBColor.namedColor("EditorTabs.underTabsBorderColor", JBUI.CurrentTheme.EditorTabs.borderColor())
+
     @RequiresEdt
     private fun syncEditorHeight() {
-        val count = ApplicationManager.getApplication().runReadAction<Int> { editor.document.lineCount }
-        val lines = (count + SessionUiStyle.View.Prompt.EDITOR_SPARE_LINES).coerceIn(
-            SessionUiStyle.View.Prompt.EDITOR_LINES,
-            SessionUiStyle.View.Prompt.EDITOR_MAX_LINES,
-        )
-        val height = style.editorFont.size * lines + JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
-        if (editor.preferredSize.height == height && editor.minimumSize.height == height) return
+        val before = editor.preferredSize.height
+        val lower = editor.minimumSize.height
+        editor.setPreferredSize(null)
+        editor.setMinimumSize(null)
+        editor.getEditor(false)?.let {
+            it.contentComponent.invalidate()
+            it.component.invalidate()
+            it.scrollPane.invalidate()
+        }
+        editor.invalidate()
+        editor.ensureWillComputePreferredSize()
+        val view = editor.getEditor(false)
+        val line = view?.lineHeight ?: editor.getFontMetrics(editor.font).height
+        val min = line * SessionUiStyle.View.Prompt.EDITOR_LINES + JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
+        val content = editor.preferredSize.height
+        val sessionCap = rootCap(min)
+        val height = minOf(content, sessionCap ?: content).coerceAtLeast(min)
+        if (before == height && lower == height) {
+            editor.preferredSize = JBDimension(0, height)
+            editor.minimumSize = JBDimension(0, height)
+            return
+        }
         editor.preferredSize = JBDimension(0, height)
         editor.minimumSize = JBDimension(0, height)
         revalidate()
         repaint()
+    }
+
+    @RequiresEdt
+    private fun rootCap(min: Int): Int? {
+        val root = root ?: return null
+        if (root.height <= 0) return null
+        val chrome = (shell.preferredSize.height - editor.preferredSize.height).coerceAtLeast(0)
+        return (root.height / 3 - chrome).coerceAtLeast(min)
+    }
+
+    @RequiresEdt
+    private fun bindRoot() {
+        val next = SwingUtilities.getAncestorOfClass(SessionRootPanel::class.java, this) as? SessionRootPanel
+        if (root === next) return
+        root?.removeComponentListener(resize)
+        root = next
+        root?.addComponentListener(resize)
+        syncEditorHeight()
     }
 
     private inner class SendButton : JButton(), UiDataProvider {
@@ -552,22 +779,4 @@ class PromptPanel(
         }
     }
 
-    private inner class PromptShell : RoundedContentPanel(
-        JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
-        JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
-    ) {
-        private val focus = JBValue.UIInteger("Component.focusWidth", SessionUiStyle.View.Prompt.FOCUS_WIDTH)
-
-        override fun contentColor() = style.editorScheme.defaultBackground
-
-        override fun outlineColor() = if (UIUtil.isFocusAncestor(editor)) {
-            JBUI.CurrentTheme.Focus.focusColor()
-        } else {
-            SessionUiStyle.View.Outline.brightColor()
-        }
-
-        override fun outlineWidth() = if (UIUtil.isFocusAncestor(editor)) focus.get() else SessionUiStyle.View.Outline.width()
-
-        override fun cornerArc() = JBUI.scale(JBUI.getInt("Button.arc", SessionUiStyle.View.Prompt.CORNER_ARC))
-    }
 }

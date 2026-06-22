@@ -9,6 +9,7 @@ import { Flock } from "@opencode-ai/core/util/flock"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { Filesystem } from "@/util/filesystem"
 import { Process } from "@/util/process"
+import { serverUrls } from "@/kilocode/cli/server-urls"
 
 export namespace Daemon {
   const username = "kilo"
@@ -30,6 +31,13 @@ export namespace Daemon {
     hostname: z.string(),
     port: z.number().int().positive(),
     url: z.string(),
+    urls: z
+      .object({
+        local: z.string(),
+        network: z.string().optional(),
+        bind: z.string(),
+      })
+      .optional(),
     username: z.string(),
     password: z.string(),
     token: z.string(),
@@ -74,6 +82,8 @@ export namespace Daemon {
   export type Stop = Status & {
     stopped: boolean
   }
+
+  export type Identity = Pick<State, "pid" | "startedAt">
 
   function root() {
     return process.env.KILO_TEST_DAEMON_STATE_DIR ?? Global.Path.state
@@ -205,6 +215,7 @@ export namespace Daemon {
           hostname: ready.hostname,
           port: ready.port,
           url: `http://${host(ready.hostname)}:${ready.port}`,
+          urls: serverUrls(ready.hostname, ready.port),
           username,
           password,
           token,
@@ -229,12 +240,12 @@ export namespace Daemon {
     return await run(input, explicit)
   }
 
-  export async function stop(): Promise<Stop> {
+  export async function stop(expected?: Identity): Promise<Stop> {
     return await Flock.withLock(
       lock,
       async () => {
         const current = await status()
-        if (!current.state) return { ...current, stopped: false }
+        if (!current.state || (expected && !same(current.state, expected))) return { ...current, stopped: false }
         if (alive(current.state.pid)) {
           await terminate(current.state.pid, false)
           if (alive(current.state.pid)) await terminate(current.state.pid, true)
@@ -244,6 +255,31 @@ export namespace Daemon {
       },
       { dir: path.join(root(), "locks"), timeoutMs: 15_000, staleMs: 30_000 },
     )
+  }
+
+  export async function foreground(start: (signal: AbortSignal) => Promise<Identity>) {
+    const ctl = new AbortController()
+    const interrupt = new AbortController()
+    const done = Promise.withResolvers<"signal">()
+    const signals = ["SIGINT", "SIGTERM", "SIGHUP"] as const
+    const quit = () => {
+      interrupt.abort()
+      done.resolve("signal")
+    }
+    for (const signal of signals) process.once(signal, quit)
+
+    try {
+      const expected = await start(interrupt.signal)
+      if (interrupt.signal.aborted) {
+        await stop(expected)
+        return
+      }
+      const result = await Promise.race([done.promise, watch(expected, ctl.signal)])
+      if (result === "signal") await stop(expected)
+    } finally {
+      ctl.abort()
+      for (const signal of signals) process.off(signal, quit)
+    }
   }
 
   export async function restart(input: Options): Promise<Start> {
@@ -371,8 +407,36 @@ export namespace Daemon {
     return { hostname: match[1], port: Number(match[2]) }
   }
 
-  function sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms))
+  function same(state: State, expected: Identity) {
+    return state.pid === expected.pid && state.startedAt === expected.startedAt
+  }
+
+  async function watch(expected: Identity, signal: AbortSignal): Promise<"daemon"> {
+    while (!signal.aborted) {
+      const state = await read()
+      if (!state || !same(state, expected) || !alive(expected.pid)) return "daemon"
+      await sleep(250, signal)
+    }
+    return "daemon"
+  }
+
+  function sleep(ms: number, signal?: AbortSignal) {
+    return new Promise<void>((resolve) => {
+      const done = () => {
+        signal?.removeEventListener("abort", cancel)
+        resolve()
+      }
+      const timer = setTimeout(done, ms)
+      const cancel = () => {
+        clearTimeout(timer)
+        done()
+      }
+      if (signal?.aborted) {
+        cancel()
+        return
+      }
+      signal?.addEventListener("abort", cancel, { once: true })
+    })
   }
 
   async function terminate(pid: number, force: boolean) {

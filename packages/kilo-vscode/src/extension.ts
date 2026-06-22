@@ -15,6 +15,7 @@ import { KiloConnectionService } from "./services/cli-backend"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
+import { AttentionService } from "./services/attention"
 import { BrowserAutomationService } from "./services/browser-automation"
 import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
@@ -65,6 +66,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(context)
+  const attention = new AttentionService(connectionService)
   let restore = context.workspaceState.get<RestoreState>(RESTORE_KEY) ?? {}
   const remember = (patch: RestoreState) => {
     const next = { ...restore, ...patch }
@@ -162,7 +164,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(kiloClawProvider)
 
   // Create Agent Manager provider for editor panel
-  const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context)
+  const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context, remoteService)
   const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService)
   agentManagerProvider.onPanelVisibilityChange((visible) => remember({ agentManager: visible }))
   agentManager = agentManagerProvider
@@ -402,7 +404,7 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     // legacy-migration start
     vscode.commands.registerCommand("kilo-code.new.openMigrationWizard", () => {
-      provider.postMessage({ type: "migrationState", needed: true })
+      provider.postMessage({ type: "migrationState", needed: true, source: "legacy" })
     }),
     // legacy-migration end
     vscode.commands.registerCommand("kilo-code.new.generateTerminalCommand", async () => {
@@ -450,6 +452,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.nextTab", () => {
       agentManagerProvider.postMessage({ type: "action", action: "tabNext" })
     }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.search", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "search" })
+    }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.showTerminal", () => {
       // Route through the webview so it can reach into the active session
       // state and open the VS Code integrated terminal for it.
@@ -480,6 +485,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.openWorktree", () => {
       agentManagerProvider.postMessage({ type: "action", action: "openWorktree" })
     }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.openPR", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "openPR" })
+    }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.closeWorktree", () => {
       agentManagerProvider.postMessage({ type: "action", action: "closeWorktree" })
     }),
@@ -506,12 +514,14 @@ export function activate(context: vscode.ExtensionContext) {
           return
         }
 
-        if (uri.path !== "/kilocode/model") return
-        const modelID = new URLSearchParams(uri.query).get("model")
-        if (!modelID) return
-        console.log("[Kilo New] URI handler: selecting linked Kilo model:", modelID)
+        if (uri.path !== "/kilocode/switch" && uri.path !== "/kilocode/model") return
+        const params = new URLSearchParams(uri.query)
+        const modelID = params.get("model") || undefined
+        const agent = params.get("agent") || undefined
+        if (!modelID && !agent) return
+        console.log("[Kilo New] URI handler: applying linked Kilo selection:", { modelID, agent })
         await vscode.commands.executeCommand(`${KiloProvider.viewType}.focus`)
-        provider.selectKiloModel(modelID)
+        provider.selectKiloModel(modelID, agent)
       },
     }),
   )
@@ -542,6 +552,7 @@ export function activate(context: vscode.ExtensionContext) {
     dispose: () => {
       shuttingDown = true
       unsubscribeStateChange()
+      attention.dispose()
       browserAutomationService.dispose()
       provider.dispose()
       connectionService.dispose()

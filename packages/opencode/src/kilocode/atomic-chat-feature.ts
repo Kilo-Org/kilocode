@@ -1,37 +1,23 @@
-import { pathToFileURL } from "url"
 import { ATOMIC_CHAT_PLUGIN } from "@kilocode/plugin-atomic-chat"
+import { parsePluginSpecifier } from "@/plugin/shared"
 
 type PluginSpec = string | [string, Record<string, unknown>]
 
-type Req = {
-  resolve: (id: string) => string
-}
-
-type LogLike = {
-  debug: (msg: string, data?: Record<string, unknown>) => void
+export function isAtomicChatPlugin(item: PluginSpec): boolean {
+  const spec = typeof item === "string" ? item : item[0]
+  const parsed = parsePluginSpecifier(spec)
+  if (!parsed.version.startsWith("npm:")) return parsed.pkg === ATOMIC_CHAT_PLUGIN
+  if (!parsed.version.startsWith(`npm:${ATOMIC_CHAT_PLUGIN}`)) return false
+  const version = parsed.version.slice(`npm:${ATOMIC_CHAT_PLUGIN}`.length)
+  return version === "" || version.startsWith("@")
 }
 
 export function hasAtomicChatPlugin(plugins: readonly PluginSpec[]): boolean {
-  return plugins.some((item) => {
-    const spec = typeof item === "string" ? item : item[0]
-    return spec.includes("plugin-atomic-chat") || spec === ATOMIC_CHAT_PLUGIN
-  })
+  return plugins.some(isAtomicChatPlugin)
 }
 
-export function resolveAtomicChatPlugin(req: Req, log?: LogLike): string {
-  try {
-    const file = req.resolve(ATOMIC_CHAT_PLUGIN)
-    return pathToFileURL(file).href
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err)
-    log?.debug("failed to resolve atomic chat plugin package, using package marker", { error })
-    return ATOMIC_CHAT_PLUGIN
-  }
-}
-
-export function ensureAtomicChatPlugin(items: readonly PluginSpec[], plugin?: string): PluginSpec[] {
+export function ensureAtomicChatPlugin(items: readonly PluginSpec[]): PluginSpec[] {
   const plugins = [...items]
-  if (!plugin) return plugins
   if (hasAtomicChatPlugin(plugins)) return plugins
-  return [...plugins, plugin]
+  return [...plugins, ATOMIC_CHAT_PLUGIN]
 }

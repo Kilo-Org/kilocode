@@ -63,10 +63,10 @@ describe("OpenAICompatibleEmbedder", () => {
       )
     })
 
-    test("should throw error when apiKey is missing", () => {
-      expect(() => new OpenAICompatibleEmbedder(testBaseUrl, "", testModelId)).toThrow(
-        "API key is required for OpenAI-compatible embedder",
-      )
+    test("should create embedder without an API key", () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, "", testModelId)
+
+      expect(embedder).toBeDefined()
     })
 
     test("should throw error when both baseUrl and apiKey are missing", () => {
@@ -647,6 +647,69 @@ describe("OpenAICompatibleEmbedder", () => {
           expect(mockEmbeddingsCreate).toHaveBeenCalled()
           expect(mockFetch).not.toHaveBeenCalled()
           expect(baseResult.embeddings[0]).toEqual([0.4, 0.5, 0.6])
+        })
+
+        test("should omit auth headers for a keyless full endpoint", async () => {
+          const embedder = new OpenAICompatibleEmbedder(azureUrl, undefined, testModelId)
+          const base64String = createBase64Embedding([0.1, 0.2, 0.3])
+          mockFetch.mockResolvedValue(
+            createMockResponse({
+              data: [{ embedding: base64String }],
+              usage: { prompt_tokens: 1, total_tokens: 1 },
+            }) as any,
+          )
+
+          await embedder.createEmbeddings(["test"])
+
+          const init = mockFetch.mock.calls[0]?.[1] as RequestInit | undefined
+          const headers = new Headers(init?.headers)
+          expect(headers.get("authorization")).toBeNull()
+          expect(headers.get("api-key")).toBeNull()
+        })
+
+        test("should preserve custom headers for a keyless full endpoint", async () => {
+          const embedder = new OpenAICompatibleEmbedder(azureUrl, undefined, testModelId, undefined, {
+            headers: { Authorization: "Custom token", "x-fixture": "present" },
+          })
+          const base64String = createBase64Embedding([0.1, 0.2, 0.3])
+          mockFetch.mockResolvedValue(
+            createMockResponse({
+              data: [{ embedding: base64String }],
+              usage: { prompt_tokens: 1, total_tokens: 1 },
+            }) as any,
+          )
+
+          await embedder.createEmbeddings(["test"])
+
+          const init = mockFetch.mock.calls[0]?.[1] as RequestInit | undefined
+          const headers = new Headers(init?.headers)
+          expect(headers.get("authorization")).toBe("Custom token")
+          expect(headers.get("x-fixture")).toBe("present")
+        })
+
+        test("should omit generated SDK auth headers when no key is configured", async () => {
+          let request: ((input: string | URL | Request, init?: RequestInit) => Promise<Response>) | undefined
+          setOpenAIConstructorHook((config) => {
+            request = config.fetch
+          })
+          new OpenAICompatibleEmbedder(baseUrl, undefined, testModelId)
+          mockFetch.mockResolvedValue(new Response())
+
+          if (!request) throw new Error("Missing OpenAI-compatible fetch adapter")
+          await request("https://api.example.com/v1/embeddings", {
+            headers: {
+              Authorization: "Bearer EMPTY",
+              "api-key": "EMPTY",
+              "x-fixture": "present",
+            },
+          })
+
+          const init = mockFetch.mock.calls[0]?.[1] as RequestInit | undefined
+          const headers = new Headers(init?.headers)
+          expect(init?.headers).not.toBeInstanceOf(Headers)
+          expect(headers.get("authorization")).toBeNull()
+          expect(headers.get("api-key")).toBeNull()
+          expect(headers.get("x-fixture")).toBe("present")
         })
 
         test.each([

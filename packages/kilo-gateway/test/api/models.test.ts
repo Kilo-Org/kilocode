@@ -17,6 +17,7 @@ const VALID_RESPONSE = JSON.stringify({
       supported_parameters: ["tools", "temperature"],
       isFree: false,
       mayTrainOnYourPrompts: true,
+      hasUserByokAvailable: true,
     },
   ],
 })
@@ -148,6 +149,7 @@ test("returns models without error on success", async () => {
   expect(result.models["test/model-a"]).toMatchObject({
     isFree: false,
     mayTrainOnYourPrompts: true,
+    hasUserByokAvailable: true,
   })
 })
 

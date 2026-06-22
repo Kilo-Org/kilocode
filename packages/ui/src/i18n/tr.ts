@@ -58,6 +58,15 @@ export const dict = {
   "ui.sessionTurn.error.freeUsageExceeded": "Ücretsiz kullanım aşıldı",
   "ui.sessionTurn.error.addCredits": "Kredi ekle",
 
+  "dialog.usageExceeded.freeTier.title": "Ücretsiz sınıra ulaşıldı",
+  "dialog.usageExceeded.freeTier.description":
+    "En iyi açık kaynak modellere güvenilir erişim için Kilo Go'ya abone olun. Aylık $5'tan başlar.",
+  "dialog.usageExceeded.freeTier.actionLabel": "Abone ol",
+  "dialog.usageExceeded.accountRateLimit.title": "Go sınırına ulaşıldı",
+  "dialog.usageExceeded.accountRateLimit.description":
+    "Kullanım sınırına ulaşıldı. Bu modeli şimdi kullanmaya devam etmek için mevcut bakiyenizden kullanımı etkinleştirin",
+  "dialog.usageExceeded.accountRateLimit.actionLabel": "Ayarları aç",
+
   "ui.sessionTurn.status.delegating": "Görev devrediliyor",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",

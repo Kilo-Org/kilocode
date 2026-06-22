@@ -1,25 +1,36 @@
 import type { ModelMessage } from "ai"
-import { Effect } from "effect"
 import * as Stream from "effect/Stream"
+import type { LLMEvent } from "@opencode-ai/llm"
+import type { Logger } from "@opencode-ai/core/util/log"
 import type { Provider } from "@/provider/provider"
-import type { Event } from "@/session/llm"
 import { KiloSessionOverflow } from "./overflow"
 
 const SAFETY = 2048
 const MIN_OUTPUT = 1024
 
 export namespace KiloLLM {
-  // Preserve error and abort events while collecting text so Kilo callers can detect failed generations.
-  export function text(stream: Stream.Stream<Event, unknown>) {
+  // Stream failures and interruptions propagate while text deltas are collected.
+  export function text(stream: Stream.Stream<LLMEvent, unknown>) {
     return stream.pipe(
-      Stream.mapEffect((event) => {
-        if (event.type === "error") return Effect.fail(event.error)
-        if (event.type === "abort") return Effect.fail(new DOMException("Aborted", "AbortError"))
-        if (event.type !== "text-delta") return Effect.succeed("")
-        return Effect.succeed(event.text)
-      }),
+      Stream.map((event) => (event.type === "text-delta" ? event.text : "")),
       Stream.mkString,
     )
+  }
+
+  export function timeout(input: {
+    options: Record<string, unknown>
+    fallback?: Record<string, unknown>
+    log?: Pick<Logger, "debug">
+  }): { timeout?: { chunkMs: number } } {
+    const value =
+      typeof input.options["chunkTimeout"] === "number"
+        ? input.options["chunkTimeout"]
+        : typeof input.fallback?.["chunkTimeout"] === "number"
+          ? input.fallback["chunkTimeout"]
+          : undefined
+    if (!value) return {}
+    input.log?.debug("chunk idle timeout configured", { chunkTimeout: value })
+    return { timeout: { chunkMs: value } }
   }
 
   export function needsEstimate(input: { model: Provider.Model; configured: number | undefined }) {

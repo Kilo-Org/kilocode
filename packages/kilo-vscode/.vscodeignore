@@ -26,5 +26,5 @@ AGENTS.md
 # Include bin/ directory for CLI binary (production)
 !bin/**
 
-# Include default enterprise config
-!default-opencode.json
+# Include WAV assets used by extension-host notification playback
+!audio-wav/**

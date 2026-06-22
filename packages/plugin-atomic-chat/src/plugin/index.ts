@@ -7,8 +7,6 @@ import { createAuthHook } from "./auth-hook"
 import { LOG_PREFIX } from "../constants"
 
 export const AtomicChatPlugin: Plugin = async (input: PluginInput) => {
-  console.log(`${LOG_PREFIX} Atomic Chat plugin initialized`)
-
   const { client } = input
 
   if (!client || typeof client !== "object") {

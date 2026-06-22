@@ -169,6 +169,7 @@ function planEditRules(worktree: string) {
   return {
     "*": "deny" as const,
     [path.join(".kilo", "plans", "*.md")]: "allow" as const,
+    [path.join("plans", "*.md")]: "allow" as const,
     [path.join(".plans", "*.md")]: "allow" as const,
     [path.join(".opencode", "plans", "*.md")]: "allow" as const,
     [path.relative(worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow" as const,
@@ -263,6 +264,32 @@ export function processConfigItem(item: {
 }) {
   if (item.options?.displayName && typeof item.options.displayName === "string") {
     item.displayName = item.options.displayName
+  }
+}
+
+const locked = new Set(["compaction", "title", "summary"])
+
+function hardRules() {
+  return Permission.fromConfig({
+    "*": "deny",
+  })
+}
+
+export function harden(item?: { name: string; permission: Permission.Ruleset }) {
+  if (!item) return
+  if (!locked.has(item.name)) return
+  item.permission = hardRules()
+}
+
+export function hardenSystemAgents<T extends { name: string; permission: Permission.Ruleset }>(
+  agents: Record<string, T>,
+) {
+  for (const [key, item] of Object.entries(agents)) {
+    if (locked.has(key)) {
+      item.permission = hardRules()
+      continue
+    }
+    harden(item)
   }
 }
 
@@ -441,6 +468,8 @@ export function patchAgents(
     mode: "primary",
     native: true,
   }
+
+  hardenSystemAgents(agents)
 }
 
 export const RemoveError = NamedError.create("AgentRemoveError", {

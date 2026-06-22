@@ -1,18 +1,53 @@
 /**
  * SessionTerminalManager tests.
  *
- * The class is tightly coupled to VS Code terminal APIs. We use ts-morph
- * static analysis to verify structural invariants that protect against
- * real regressions — focusing on ordering constraints and cleanup logic
- * that are easy to break during refactoring.
+ * Structural tests use ts-morph to protect ordering and cleanup invariants.
+ * Command behavior tests exercise the narrow TerminalHost interface directly.
  */
 
 import { describe, it, expect } from "bun:test"
 import path from "node:path"
 import { Project, SyntaxKind } from "ts-morph"
+import { SessionTerminalManager, type TerminalHost } from "../../src/agent-manager/SessionTerminalManager"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const FILE = path.join(ROOT, "src/agent-manager/SessionTerminalManager.ts")
+const COMMAND = "workbench.action.togglePanel"
+
+type Handler = (...args: unknown[]) => Promise<unknown>
+
+function runtime(run: () => Promise<unknown>) {
+  let blocked = false
+  const handlers = new Map<string, Handler>()
+  const host: TerminalHost = {
+    createTerminal() {
+      throw new Error("not used")
+    },
+    activeTerminal: () => undefined,
+    repoPath: () => undefined,
+    showWarning() {},
+    setContext() {},
+    onTerminalClosed: () => ({ dispose() {} }),
+    onActiveTerminalChanged: () => ({ dispose() {} }),
+    registerCommand(id, handler) {
+      if (blocked && id === COMMAND) throw new Error(`command '${id}' already exists`)
+      handlers.set(id, handler)
+      return {
+        dispose() {
+          if (handlers.get(id) === handler) handlers.delete(id)
+        },
+      }
+    },
+    executeCommand() {
+      blocked = true
+      return run()
+    },
+  }
+  const manager = new SessionTerminalManager(() => {}, host)
+  const handler = handlers.get(COMMAND)
+  if (!handler) throw new Error(`command '${COMMAND}' was not registered`)
+  return { manager, handler }
+}
 
 function getClass() {
   const project = new Project({ compilerOptions: { allowJs: true } })
@@ -88,8 +123,35 @@ describe("SessionTerminalManager structure", () => {
     expect(text).toContain("this.showExistingLocal()")
   })
 
+  it("panel command registration is best effort", () => {
+    const text = body("tryRegisterCommand")
+    expect(text).toContain("this.host.registerCommand")
+    expect(text).toContain("catch (err)")
+    expect(text).toContain("panel command registration skipped")
+  })
+
   it("exposes active terminal state for terminal context routing", () => {
     const text = body("hasActiveTerminal")
     expect(text).toContain("this.host.activeTerminal()")
+  })
+})
+
+describe("SessionTerminalManager command restoration", () => {
+  it("preserves the original command result when re-registration fails", async () => {
+    const expected = { status: "complete" }
+    const state = runtime(async () => expected)
+
+    expect(await state.handler()).toBe(expected)
+    state.manager.dispose()
+  })
+
+  it("preserves the original command error when re-registration fails", async () => {
+    const expected = new Error("panel command failed")
+    const state = runtime(async () => {
+      throw expected
+    })
+
+    await expect(state.handler()).rejects.toBe(expected)
+    state.manager.dispose()
   })
 })

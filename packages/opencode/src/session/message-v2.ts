@@ -24,6 +24,7 @@ import { ModelID, ProviderID } from "@/provider/schema"
 import { SessionNetwork } from "./network" // kilocode_change
 import { CodexAuthExpiredError } from "@/kilocode/provider/codex-refresh" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
+import * as TextStream from "@/kilocode/text-stream" // kilocode_change
 import { Effect, Schema, Types } from "effect"
 import { NonNegativeInt } from "@opencode-ai/core/schema"
 import * as EffectLogger from "@opencode-ai/core/effect/logger"
@@ -283,8 +284,11 @@ export type ToolStateCompleted = Types.DeepMutable<Schema.Schema.Type<typeof Too
 
 function truncateToolOutput(text: string, maxChars?: number) {
   if (!maxChars || text.length <= maxChars) return text
-  const omitted = text.length - maxChars
-  return `${text.slice(0, maxChars)}\n[Tool output truncated for compaction: omitted ${omitted} chars]`
+  // kilocode_change start - avoid persisting malformed Unicode in compacted tool output
+  const sliced = TextStream.safeSlice(text, maxChars)
+  const omitted = text.length - sliced.length
+  return `${sliced}\n[Tool output truncated for compaction: omitted ${omitted} chars]`
+  // kilocode_change end
 }
 
 export const ToolStateError = Schema.Struct({
@@ -752,6 +756,7 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
     if (model.api.npm === "@ai-sdk/anthropic") return true
     if (model.api.npm === "@ai-sdk/openai") return true
     if (model.api.npm === "@ai-sdk/amazon-bedrock") return attachment.mime.startsWith("image/")
+    if (model.api.npm === "@ai-sdk/xai") return attachment.mime.startsWith("image/")
     if (model.api.npm === "@ai-sdk/google-vertex/anthropic") return true
     if (model.api.npm === "@ai-sdk/google") {
       const id = model.api.id.toLowerCase()
@@ -1255,6 +1260,29 @@ export function fromError(
           metadata: {
             code: (e as FetchDecompressionError).code,
             message: e.message,
+          },
+        },
+        { cause: e },
+      ).toObject()
+    case e instanceof ProviderError.HeaderTimeoutError:
+      return new APIError(
+        {
+          message: e.message,
+          isRetryable: true,
+          metadata: {
+            code: e.name,
+            timeoutMs: String(e.ms),
+          },
+        },
+        { cause: e },
+      ).toObject()
+    case e instanceof ProviderError.ResponseStreamError:
+      return new APIError(
+        {
+          message: e.message,
+          isRetryable: true,
+          metadata: {
+            code: e.name,
           },
         },
         { cause: e },

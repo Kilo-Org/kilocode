@@ -202,7 +202,39 @@ class ModelPickerTest : BasePlatformTestCase() {
         picker.setItems(listOf(item("a", "A", "openai", "OpenAI")))
 
         assertEquals("openai/a", picker.selectionKeyForTest())
-        assertEquals("A ▾", picker.text)
+        assertEquals("OpenAI / A ▾", picker.text)
+    }
+
+    fun `test non-kilo selected model uses provider prefix`() {
+        val picker = ModelPicker()
+
+        picker.setItems(listOf(item("gpt-55", "GPT-5.5", "openai", "OpenAI")))
+
+        assertEquals("OpenAI / GPT-5.5 ▾", picker.text)
+    }
+
+    fun `test non-kilo selected model strips duplicate provider prefix`() {
+        val picker = ModelPicker()
+
+        picker.setItems(listOf(item("gpt-55", "OpenAI GPT-5.5", "openai", "OpenAI")))
+
+        assertEquals("OpenAI / GPT-5.5 ▾", picker.text)
+    }
+
+    fun `test non-kilo selected model strips vscode provider prefix`() {
+        val picker = ModelPicker()
+
+        picker.setItems(listOf(item("gpt-55", "OpenAI: GPT-5.5", "openai", "OpenAI")))
+
+        assertEquals("OpenAI / GPT-5.5 ▾", picker.text)
+    }
+
+    fun `test kilo selected model remains unprefixed`() {
+        val picker = ModelPicker()
+
+        picker.setItems(listOf(item("auto", "Kilo Auto", "kilo", "Kilo")))
+
+        assertEquals("Auto ▾", picker.text)
     }
 
     fun `test allowEmpty keeps empty selection`() {
@@ -233,20 +265,20 @@ class ModelPickerTest : BasePlatformTestCase() {
         assertEquals(listOf("low", "high"), item.variants)
     }
 
-    fun `test selected free model indicates data collection`() {
+    fun `test selected paid model with training flag indicates data collection`() {
         val picker = ModelPicker()
 
-        picker.setItems(listOf(item("auto", "Auto Free", "kilo", "Kilo", free = true)))
+        picker.setItems(listOf(item("paid", "Paid", "kilo", "Kilo", training = true)))
 
         assertFalse(picker.text.contains("Data may be used for training"))
         assertSame(ModelPickerRenderer.DATA_COLLECTED, picker.icon)
         assertEquals("<html><nobr>Select model</nobr><br><nobr>The current selected model may be used for training</nobr></html>", picker.toolTipText)
     }
 
-    fun `test selected non-kilo free model does not indicate data collection`() {
+    fun `test selected free model without training flag does not indicate data collection`() {
         val picker = ModelPicker()
 
-        picker.setItems(listOf(item("free", "OpenRouter Free", "openrouter", "OpenRouter", free = true)))
+        picker.setItems(listOf(item("free", "Free", "kilo", "Kilo", free = true)))
 
         assertNull(picker.icon)
         assertEquals("Select model", picker.toolTipText)
@@ -361,11 +393,39 @@ class ModelPickerTest : BasePlatformTestCase() {
 
         assertTrue(renderer.badgeVisible())
         assertEquals("Free", renderer.badgeText())
+        assertFalse(renderer.warningVisible())
+    }
+
+    fun `test renderer shows data collection warning for paid training model`() {
+        val row = ModelPickerRow(item("paid", "Paid", "kilo", "Kilo", training = true), "Kilo", false)
+        val model = CollectionListModel(listOf(row))
+        val renderer = ModelPickerRenderer(model, { null }, { emptySet() })
+        val list = JBList(model)
+
+        renderer.getListCellRendererComponent(list, row, 0, false, false)
+
+        assertFalse(renderer.badgeVisible())
         assertTrue(renderer.warningVisible())
         assertEquals("Data may be used for training", renderer.warningTooltip())
     }
 
-    fun `test renderer hides data collection warning for non-kilo free model`() {
+    fun `test renderer shows BYOK instead of free when both are available`() {
+        val row = ModelPickerRow(
+            ModelPicker.Item("claude", "Claude", "kilo", "Kilo", free = true, byok = true),
+            "Kilo",
+            false,
+        )
+        val model = CollectionListModel(listOf(row))
+        val renderer = ModelPickerRenderer(model, { null }, { emptySet() })
+        val list = JBList(model)
+
+        renderer.getListCellRendererComponent(list, row, 0, false, false)
+
+        assertTrue(renderer.byokVisible())
+        assertFalse(renderer.badgeVisible())
+    }
+
+    fun `test renderer hides data collection warning without training flag`() {
         val row = ModelPickerRow(ModelPicker.Item("free", "Free", "openrouter", "OpenRouter", free = true), "OpenRouter", false)
         val model = CollectionListModel(listOf(row))
         val renderer = ModelPickerRenderer(model, { null }, { emptySet() })
@@ -388,6 +448,7 @@ class ModelPickerTest : BasePlatformTestCase() {
 
         assertSame(EmptyIcon.ICON_16, renderer.starIcon())
         assertFalse(renderer.badgeVisible())
+        assertFalse(renderer.byokVisible())
     }
 
     private fun item(
@@ -397,7 +458,8 @@ class ModelPickerTest : BasePlatformTestCase() {
         name: String,
         index: Double? = null,
         free: Boolean = false,
-    ) = ModelPicker.Item(id, display, provider, name, index, free = free)
+        training: Boolean = false,
+    ) = ModelPicker.Item(id, display, provider, name, index, free = free, mayTrainOnYourPrompts = training)
 
     private fun favoriteInset(list: JBList<*>): Int {
         if (!NewUI.isEnabled()) return 0

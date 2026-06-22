@@ -3,6 +3,8 @@ package ai.kilocode.client.session
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.util.UiTimerSource
+import ai.kilocode.client.util.UiTimers
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
@@ -19,6 +21,7 @@ class SessionUiFactory(
         workspace: Workspace,
         manager: SessionManager,
         ref: SessionRef? = null,
+        timers: UiTimerSource = UiTimers,
     ): SessionUi = SessionUi(
         project = project,
         workspace = workspace,
@@ -27,6 +30,7 @@ class SessionUiFactory(
         cs = scope(),
         ref = ref,
         manager = manager,
+        timers = timers,
     )
 
     fun scope(): CoroutineScope {

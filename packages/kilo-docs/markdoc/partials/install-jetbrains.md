@@ -48,9 +48,7 @@ To install the EAP build and receive updates:
 3. Click the gear icon and choose **Manage Plugin Repositories**
 4. Add this repository URL:
 
-```text
-https://plugins.jetbrains.com/plugins/list?channel=eap&pluginId=28350
-```
+{% copyLine text="https://plugins.jetbrains.com/plugins/list?channel=eap&pluginId=28350" /%}
 
 5. Return to the **Marketplace** tab
 6. Search for **Kilo Code**

@@ -15,11 +15,14 @@ import { Reference } from "@/reference/reference"
 // kilocode_change start
 import * as Encoding from "../kilocode/encoding"
 import * as Extract from "../kilocode/tool/read-extract"
+import * as TextStream from "../kilocode/text-stream"
 // kilocode_change end
 
 const DEFAULT_READ_LIMIT = 2000
 const MAX_LINE_LENGTH = 2000
-const MAX_LINE_SUFFIX = `... (line truncated to ${MAX_LINE_LENGTH} chars)`
+// kilocode_change start - report the safe Unicode slice length
+const suffix = (length: number) => `... (line truncated to ${length} chars)`
+// kilocode_change end
 const MAX_BYTES = 50 * 1024
 const MAX_BYTES_LABEL = `${MAX_BYTES / 1024} KB`
 const SAMPLE_BYTES = 4096
@@ -110,30 +113,33 @@ export const ReadTool = Tool.define(
       )
     })
 
-    const lines = Effect.fn("ReadTool.lines")((filepath: string, opts: { limit: number; offset: number }) =>
-      // kilocode_change - extracted formats still need their native readers; ordinary text stays on AppFileSystem
-      Effect.tryPromise({
-        try: () => Extract.open(filepath),
-        catch: (err) => (err instanceof Error ? err : new Error(String(err))),
-      }).pipe(
-        Effect.flatMap((extracted) =>
-          extracted
-            ? Effect.tryPromise({
-                try: () => collect(extracted, opts),
-                catch: (err) => (err instanceof Error ? err : new Error(String(err))),
-              })
-            : fs.readFile(filepath).pipe(
-                Effect.map((bytes) => Encoding.decode(Buffer.from(bytes), Encoding.detect(Buffer.from(bytes)))),
-                Effect.flatMap((text) =>
-                  Effect.tryPromise({
-                    try: () => collect(Readable.from([text]), opts),
-                    catch: (err) => (err instanceof Error ? err : new Error(String(err))),
-                  }),
-                ),
-              ),
+    // kilocode_change start - extracted formats use native readers; ordinary text streams through AppFileSystem
+    const lines = Effect.fn("ReadTool.lines")(
+      (filepath: string, opts: { limit: number; offset: number }, abort: AbortSignal) =>
+        Effect.tryPromise({
+          try: () => Extract.open(filepath),
+          catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+        }).pipe(
+          Effect.flatMap((extracted) =>
+            extracted
+              ? Effect.tryPromise({
+                  try: (signal) => collect(TextStream.abortable(extracted, AbortSignal.any([abort, signal])), opts),
+                  catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+                })
+              : Effect.tryPromise({
+                  try: (signal) =>
+                    TextStream.withFallback(
+                      fs,
+                      filepath,
+                      (stream) => collect(stream, opts),
+                      AbortSignal.any([abort, signal]),
+                    ),
+                  catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+                }),
+          ),
         ),
-      ),
     )
+    // kilocode_change end
 
     const isBinaryFile = (filepath: string, bytes: Uint8Array) => {
       const ext = path.extname(filepath).toLowerCase()
@@ -196,6 +202,7 @@ export const ReadTool = Tool.define(
       filepath: string,
       items: string[],
       directory: string,
+      abort: AbortSignal,
     ) {
       const entries = yield* fs.readDirectoryEntries(filepath).pipe(Effect.catch(() => Effect.succeed([])))
       const types = new Map(entries.map((entry) => [entry.name, entry.type]))
@@ -209,7 +216,7 @@ export const ReadTool = Tool.define(
             Effect.catch(() => Effect.succeed(new Uint8Array())),
           )
           if (isBinaryFile(child, sample)) return
-          const file = yield* lines(child, { limit: DEFAULT_READ_LIMIT, offset: 1 }).pipe(
+          const file = yield* lines(child, { limit: DEFAULT_READ_LIMIT, offset: 1 }, abort).pipe(
             Effect.catch(() => Effect.void),
           )
           if (!file) return
@@ -264,14 +271,14 @@ export const ReadTool = Tool.define(
 
       if (stat.type === "Directory") {
         const items = yield* list(filepath)
-        const limit = params.limit ?? DEFAULT_READ_LIMIT
+        const limit = Math.max(1, params.limit ?? DEFAULT_READ_LIMIT) // kilocode_change - prevent zero-limit loops
         const offset = params.offset || 1
         const start = offset - 1
         const sliced = items.slice(start, start + limit)
         const truncated = start + sliced.length < items.length
         // kilocode_change start
         const expand = Boolean(ctx.extra?.["includeDirectoryFiles"])
-        const loaded = expand ? yield* readDirectoryFiles(filepath, sliced, instance.directory) : []
+        const loaded = expand ? yield* readDirectoryFiles(filepath, sliced, instance.directory, ctx.abort) : []
         const content = loaded.map((item) => item.content).join("\n\n")
         // kilocode_change end
 
@@ -332,7 +339,14 @@ export const ReadTool = Tool.define(
         return yield* Effect.fail(new Error(`Cannot read binary file: ${filepath}`))
       }
 
-      const file = yield* lines(filepath, { limit: params.limit ?? DEFAULT_READ_LIMIT, offset: params.offset || 1 })
+      const file = yield* lines(
+        filepath,
+        {
+          limit: Math.max(1, params.limit ?? DEFAULT_READ_LIMIT),
+          offset: params.offset || 1,
+        },
+        ctx.abort,
+      )
       if (file.count < file.offset && !(file.count === 0 && file.offset === 1)) {
         return yield* Effect.fail(
           new Error(`Offset ${file.offset} is out of range for this file (${file.count} lines)`),
@@ -399,7 +413,10 @@ async function collect(stream: Readable, opts: { limit: number; offset: number }
         more = true
         continue
       }
-      const line = text.length > MAX_LINE_LENGTH ? text.substring(0, MAX_LINE_LENGTH) + MAX_LINE_SUFFIX : text
+      // kilocode_change start - keep truncated output valid Unicode
+      const sliced = TextStream.safeSlice(text, MAX_LINE_LENGTH)
+      const line = text.length > MAX_LINE_LENGTH ? sliced + suffix(sliced.length) : text
+      // kilocode_change end
       const size = Buffer.byteLength(line, "utf-8") + (raw.length > 0 ? 1 : 0)
       if (bytes + size > MAX_BYTES) {
         cut = true

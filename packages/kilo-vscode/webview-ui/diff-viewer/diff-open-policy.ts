@@ -14,7 +14,7 @@ export function shouldVirtualizeDiff(diff: WorktreeFileDiff): boolean {
 }
 
 export function isDiffExpandable(diff: WorktreeFileDiff): boolean {
-  return diff.summarized === true || Boolean(diff.patch || diff.before || diff.after)
+  return diff.kind === "image" || diff.summarized === true || Boolean(diff.patch || diff.before || diff.after)
 }
 
 export function sanitizeOpenFiles(diffs: WorktreeFileDiff[], open: string[]): string[] {
@@ -27,7 +27,7 @@ export function expandableOpenFiles(diffs: WorktreeFileDiff[]): string[] {
 }
 
 export function initialOpenFiles(diffs: WorktreeFileDiff[]): string[] {
-  return expandableOpenFiles(diffs)
+  return diffs.filter((diff) => diff.kind !== "image" && isDiffExpandable(diff)).map((diff) => diff.file)
 }
 
 export function allOpenFiles(diffs: WorktreeFileDiff[], open: string[]): boolean {

@@ -3,6 +3,22 @@ import { STATUS_CODES } from "http"
 import { iife } from "@/util/iife"
 import type { ProviderID } from "./schema"
 
+export class HeaderTimeoutError extends Error {
+  public override readonly name = "ProviderHeaderTimeoutError"
+
+  constructor(public readonly ms: number) {
+    super(`Provider response headers timed out after ${ms}ms`)
+  }
+}
+
+export class ResponseStreamError extends Error {
+  public override readonly name = "ProviderResponseStreamError"
+
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options)
+  }
+}
+
 // Adapted from overflow detection patterns in:
 // https://github.com/badlogic/pi-mono/blob/main/packages/ai/src/utils/overflow.ts
 const OVERFLOW_PATTERNS = [
@@ -135,6 +151,18 @@ export function parseStreamError(input: unknown): ParsedStreamError | undefined 
         message: "Input exceeds context window of this model",
         responseBody,
       }
+    // kilocode_change start - normalize empty provider rate-limit stream errors
+    case "rate_limit_exceeded":
+      return {
+        type: "api_error",
+        message:
+          typeof body?.error?.message === "string" && body.error.message.trim()
+            ? body.error.message
+            : "Provider rate limit exceeded. Please try again shortly.",
+        isRetryable: true,
+        responseBody,
+      }
+    // kilocode_change end
     case "insufficient_quota":
       return {
         type: "api_error",

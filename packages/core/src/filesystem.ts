@@ -3,9 +3,10 @@ import { dirname, isAbsolute, join, relative, resolve as pathResolve, sep } from
 import { realpathSync } from "fs"
 import * as NFS from "fs/promises"
 import { lookup } from "mime-types"
-import { Effect, FileSystem, Layer, Schema, Context } from "effect"
+import { Context, Effect, FileSystem, Layer, Schema } from "effect"
 import type { PlatformError } from "effect/PlatformError"
 import { Glob } from "./util/glob"
+import { serviceUse } from "./effect/service-use"
 
 // kilocode_change start - Windows-resilient mkdir -p.
 // fs.mkdir(dir, { recursive: true }) should be idempotent, but on Windows
@@ -60,6 +61,8 @@ export namespace AppFileSystem {
   }
 
   export class Service extends Context.Service<Service, Interface>()("@opencode/FileSystem") {}
+
+  export const use = serviceUse(Service)
 
   export const layer = Layer.effect(
     Service,

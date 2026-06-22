@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/checkbox"
+export * from "@opencode-ai/ui/checkbox"

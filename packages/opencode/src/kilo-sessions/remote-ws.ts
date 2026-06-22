@@ -27,6 +27,7 @@ export namespace RemoteWS {
   export type Connection = {
     readonly connectionId: string
     send(msg: RemoteProtocol.Outbound): void
+    heartbeat(): Promise<void>
     close(): void
     readonly connected: boolean
   }
@@ -43,13 +44,37 @@ export namespace RemoteWS {
     let beat: Timer | undefined
     let closed = false
     const buffer: string[] = []
+    let beating: Promise<void> | undefined
+    let queued = false
+
+    function heartbeat(): Promise<void> {
+      queued = true
+      if (beating) return beating
+
+      const current = Promise.resolve(
+        withContext(async () => {
+          while (queued && !closed) {
+            queued = false
+            const sessions = await options.getSessions()
+            if (closed) return
+            send({ type: "heartbeat", ...sessions })
+          }
+        }),
+      ).finally(() => {
+        beating = undefined
+        if (!queued || closed) return
+        void heartbeat().catch((err) => {
+          options.log.error("remote-ws heartbeat failed", { error: String(err) })
+        })
+      })
+      beating = current
+      return current
+    }
 
     function startHeartbeat() {
       stopHeartbeat()
       beat = setInterval(() => {
-        void withContext(async () => {
-          send({ type: "heartbeat", ...(await options.getSessions()) })
-        }).catch((err) => {
+        void heartbeat().catch((err) => {
           options.log.error("remote-ws heartbeat failed", { error: String(err) })
         })
       }, interval)
@@ -168,6 +193,7 @@ export namespace RemoteWS {
 
     function close() {
       closed = true
+      queued = false
       stopHeartbeat()
       stopWatchdog()
       if (timer) clearTimeout(timer)
@@ -179,6 +205,7 @@ export namespace RemoteWS {
     return {
       connectionId,
       send,
+      heartbeat,
       close,
       get connected() {
         return ws?.readyState === WebSocket.OPEN

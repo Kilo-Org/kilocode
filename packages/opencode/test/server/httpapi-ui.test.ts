@@ -329,6 +329,20 @@ describe("HttpApi UI fallback", () => {
     }),
   )
 
+  it.live("accepts basic auth passwords containing colons for the web UI", () =>
+    Effect.gen(function* () {
+      const response = yield* uiApp({
+        password: "sec:ret",
+        username: "opencode",
+        disableEmbeddedWebUi: true,
+      }).request("/", {
+        headers: { authorization: `Basic ${btoa("opencode:sec:ret")}` },
+      })
+
+      expect(response.status).toBe(404) // kilocode_change - auth succeeds, but Kilo does not proxy a fallback UI
+    }),
+  )
+
   // Regression for #25698 (Ope): the browser fetches the PWA manifest and
   // its icons via flows that don't carry app-managed credentials (the
   // `<link rel="manifest">` request is not under page-auth control), so the

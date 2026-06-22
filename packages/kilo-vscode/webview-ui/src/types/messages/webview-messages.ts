@@ -10,9 +10,9 @@ import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-styl
 import type {
   ClearLegacyDataMessage,
   FinalizeLegacyMigrationMessage,
-  RequestLegacyMigrationDataMessage,
+  RequestMigrationDataMessage,
   SkipLegacyMigrationMessage,
-  StartLegacyMigrationMessage,
+  StartMigrationMessage,
 } from "./migration"
 
 // ============================================
@@ -451,6 +451,11 @@ export interface UpdateConfigMessage {
 
 export interface RequestNotificationSettingsMessage {
   type: "requestNotificationSettings"
+}
+
+export interface TestNotificationMessage {
+  type: "testNotification"
+  sound: string
 }
 
 export interface ResetAllSettingsRequest {
@@ -1171,6 +1176,7 @@ export type WebviewMessage =
   | UpdateConfigMessage
   | OpenSettingsTabRequest
   | RequestNotificationSettingsMessage
+  | TestNotificationMessage
   | ResetAllSettingsRequest
   | SettingsTabChangedMessage
   | SyncSessionRequest
@@ -1226,8 +1232,8 @@ export type WebviewMessage =
   | RefreshPRMessage
   | OpenPRMessage
   // legacy-migration start
-  | RequestLegacyMigrationDataMessage
-  | StartLegacyMigrationMessage
+  | RequestMigrationDataMessage
+  | StartMigrationMessage
   | SkipLegacyMigrationMessage
   | ClearLegacyDataMessage
   | FinalizeLegacyMigrationMessage

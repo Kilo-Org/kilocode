@@ -1,5 +1,1 @@
-import type { ComponentProps } from "solid-js"
-
-export function DiffChanges(props: ComponentProps<"pre">) {
-  return <pre {...props} data-component="diff-changes" />
-}
+export * from "@opencode-ai/ui/diff-changes"

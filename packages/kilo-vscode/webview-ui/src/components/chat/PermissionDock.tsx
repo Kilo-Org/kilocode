@@ -23,6 +23,7 @@ import { PermissionDiff } from "./PermissionDiff"
 import { permissionDiffs } from "./permission-diff-utils"
 import { normalizeUrls } from "../../../../../opencode/src/kilocode/util/url"
 import type { PermissionRequest } from "../../types/messages"
+import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 
 let rulesExpandedPreference = false
 
@@ -132,8 +133,7 @@ export const PermissionDock: Component<{
       "button, input, select, textarea, a[href], [contenteditable='true'], [role='button'], [role='menu'], [role='menuitem'], [role='listbox'], [role='option'], [role='combobox'], [role='textbox']",
     )
 
-  const plain = (e: KeyboardEvent) =>
-    e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey && !e.isComposing
+  const plain = (e: KeyboardEvent) => isEnterKeyCommitNotIme(e) && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey
 
   const skip = (e: KeyboardEvent, target: Element | undefined) => {
     const local = !!target?.closest("[data-component='permission-shortcuts']")

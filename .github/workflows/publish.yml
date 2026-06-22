@@ -288,7 +288,7 @@ jobs:
             $output = & $binary --pure models anthropic
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             if (-not ($output -match "(?m)^anthropic/")) {
-              throw "Compiled Windows binary did not list Anthropic models from the sidecar snapshot"
+              throw "Compiled Windows binary did not list Anthropic models from the embedded snapshot"
             }
           } finally {
             Remove-Item -Recurse -Force $root -ErrorAction SilentlyContinue

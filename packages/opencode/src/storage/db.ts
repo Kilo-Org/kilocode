@@ -30,9 +30,12 @@ const readRuntimeFlags = () =>
 
 export function getChannelPath(flags: Pick<DatabaseFlags, "disableChannelDb"> = readRuntimeFlags()) {
   if (["latest", "beta", "prod"].includes(InstallationChannel) || flags.disableChannelDb)
-    return path.join(Global.Path.data, "kilo.db")
+    return path.join(Global.Path.data, "kilo.db") // kilocode_change
   const safe = InstallationChannel.replace(/[^a-zA-Z0-9._-]/g, "-")
-  return path.join(Global.Path.data, `opencode-${safe}.db`)
+  const next = path.join(Global.Path.data, `kilo-${safe}.db`) // kilocode_change
+  const prev = path.join(Global.Path.data, `opencode-${safe}.db`) // kilocode_change
+  if (!existsSync(next) && existsSync(prev)) return prev // kilocode_change
+  return next // kilocode_change
 }
 
 export const getPath = (flags?: Pick<DatabaseFlags, "disableChannelDb">) => {

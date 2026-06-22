@@ -1,5 +1,6 @@
 import z from "zod"
 import path from "path"
+import { Effect } from "effect"
 import { type IndexingTelemetryEvent, type VectorStoreSearchResult } from "@kilocode/kilo-indexing/engine"
 import { toIndexingConfigInput, type IndexingConfig } from "@kilocode/kilo-indexing/config"
 import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
@@ -22,6 +23,7 @@ import { indexingWarningKey, type IndexingWarning } from "./indexing-warning"
 import { IndexingWorker } from "./indexing-worker-client"
 import { LanceDBRuntime } from "./lancedb" // kilocode_change
 import { indexingWithKiloDefault, resolveKiloIndexingAuth, type KiloIndexingAuth } from "./indexing-auth" // kilocode_change
+import { primaryWorktree } from "./primary-worktree"
 
 const log = Log.create({ service: "kilocode-indexing" })
 const auth = makeRuntime(Auth.Service, Auth.defaultLayer)
@@ -29,19 +31,19 @@ const missing = () => disabledIndexingStatus("Indexing plugin is not enabled for
 const noWorkspace = () =>
   disabledIndexingStatus("Codebase indexing is disabled because no workspace folder is open in VS Code.")
 
-function worktreeDisabled(): z.infer<typeof IndexingStatus> {
-  return {
-    state: "Disabled",
-    message: "Indexing is disabled in worktree sessions. Use the main workspace for indexing.",
-    processedFiles: 0,
-    totalFiles: 0,
-    percent: 0,
-  }
-}
+const baselineDirectory = Effect.fn("KiloIndexing.baselineDirectory")(function* (dir: string) {
+  if (Instance.project.vcs !== "git") return undefined
+  const checkout = path.resolve(Instance.worktree)
+  const main = yield* primaryWorktree(checkout)
+  if (!main || checkout === main) return undefined
 
-function isWorktreePath(dir: string): boolean {
-  return /(?:\/|\\)\.kilo(?:code)?(?:\/|\\)worktrees(?:\/|\\)/.test(dir)
-}
+  const scope = path.relative(checkout, path.resolve(dir))
+  if (scope === ".." || scope.startsWith(`..${path.sep}`) || path.isAbsolute(scope)) return undefined
+
+  const baseline = path.resolve(main, scope)
+  if (baseline === path.resolve(dir)) return undefined
+  return baseline
+})
 
 function failed(err: unknown): z.infer<typeof IndexingStatus> {
   const msg = err instanceof Error ? err.message : String(err)
@@ -242,7 +244,15 @@ export namespace KiloIndexing {
 
   const boot = async (hit: Cache): Promise<Entry> => {
     const dir = Instance.directory
-    const cfg = await AppRuntime.runPromise(Config.Service.use((svc) => svc.get()))
+    const startup = await AppRuntime.runPromise(
+      Effect.gen(function* () {
+        const baseline = yield* baselineDirectory(dir)
+        const cfg = yield* Config.Service.use((svc) => svc.get())
+        return { baseline, cfg }
+      }),
+    )
+    const baseline = startup.baseline
+    const cfg = startup.cfg
     if (process.env["KILO_DISABLE_CODEBASE_INDEXING"] === "vscode-no-workspace") {
       return track(hit, await inert(() => noWorkspace()))
     }
@@ -250,11 +260,7 @@ export namespace KiloIndexing {
       return track(hit, await inert(() => missing()))
     }
 
-    if (isWorktreePath(dir)) {
-      return track(hit, await inert(() => worktreeDisabled()))
-    }
-
-    log.info("initializing project indexing", { workspacePath: dir })
+    log.info("initializing project indexing", { workspacePath: dir, baselineDirectory: baseline })
     const root = path.join(Global.Path.state, "indexing")
     const auth = await kiloAuth(cfg)
     const globalConfig = await AppRuntime.runPromise(Config.Service.use((svc) => svc.getGlobal()))
@@ -385,7 +391,7 @@ export namespace KiloIndexing {
         if (hit.disposed) return
         const engine = IndexingWorker.create(dir, root, { status, telemetry, warning, log: output, failure })
         base.engine = engine
-        box.status = await engine.init(cfgInput)
+        box.status = await engine.init(cfgInput, baseline)
         base.initialized = true
       })
       .then(
@@ -505,7 +511,7 @@ export namespace KiloIndexing {
   }
 
   export async function search(query: string, directoryPrefix?: string): Promise<VectorStoreSearchResult[]> {
-    const entry = await hit().ready
+    const entry = await hit().promise
     entry.scope(WorkspaceContext.workspaceID)
     if (!entry.initialized || entry.current().state === "Disabled" || !entry.engine) return []
     return entry.engine.search(query, directoryPrefix)

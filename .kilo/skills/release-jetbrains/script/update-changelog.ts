@@ -30,7 +30,7 @@ const branch = `jetbrains/release/v${ver}`
 const section = strip((await Bun.file(file).text()).trim())
 validate(section, ver)
 
-const current = (await $`gh api ${`repos/${repo}/contents/${path}`} -f ref=${branch}`.json()) as {
+const current = (await $`gh api ${`repos/${repo}/contents/${path}?ref=${encodeURIComponent(branch)}`}`.json()) as {
   content: string
   encoding: string
   sha: string

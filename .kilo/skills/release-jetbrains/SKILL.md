@@ -50,7 +50,7 @@ Pass a generous Bash timeout, such as `1800000` ms, because the script blocks on
 bun .kilo/skills/release-jetbrains/script/dispatch-prepare.ts --kind rc --version 7.0.1-rc.7 --run-id <run-id>
 ```
 
-The script prints `prNumber`, `prUrl`, `runUrl`, and `branch` on success.
+The script prints `prNumber`, `prUrl`, `runUrl`, and `branch` on success. Immediately show the `prUrl` to the user so they can open the release PR without asking for it later.
 
 ## Changelog Draft
 
@@ -58,7 +58,13 @@ Create a changelog draft after the prepare PR exists:
 
 1. Read the PR body with `gh pr view <pr> --json body`.
 2. Extract `JetBrains-From-Tag`, `JetBrains-Tag`, and `## Generated Notes`.
-3. Use the release range and path filter as the primary relevance signal:
+3. Fetch the release range tags if they are missing locally:
+
+```bash
+git fetch origin refs/tags/<from-tag>:refs/tags/<from-tag> refs/tags/<tag>:refs/tags/<tag>
+```
+
+4. Use the release range and path filter as the primary relevance signal:
 
 ```bash
 git log --oneline <from-tag>..<tag> -- packages/opencode packages/kilo-jetbrains
@@ -103,9 +109,35 @@ The script updates `packages/kilo-jetbrains/CHANGELOG.md` on `jetbrains/release/
 docs(jetbrains): edit changelog for v<version>
 ```
 
+If `update-changelog.ts` fails with `gh: Not Found (HTTP 404)`, verify the release branch and changelog path with:
+
+```bash
+gh api "repos/Kilo-Org/kilocode/contents/packages/kilo-jetbrains/CHANGELOG.md?ref=jetbrains/release/v<version>"
+```
+
+Then either fix and retry the helper, or perform the equivalent contents API update using `ref` in the query string.
+
+After the changelog commit succeeds, show the release PR URL again and tell the user that the PR needs manual approval and merge before publishing can continue.
+
 ## Approve And Publish
 
-Ask the user to approve the release changelog and metadata. By default, have the user merge the release PR manually in GitHub, then watch the publish workflow:
+Ask the user to approve the release changelog and metadata. Before merging or publishing, verify the PR approval and required checks are green:
+
+```bash
+gh pr view <pr> --json mergeStateStatus,reviewDecision,statusCheckRollup
+gh pr checks <pr> --watch --interval 10
+```
+
+Do not merge or publish while required checks are failing unless the user explicitly gives a maintainer override.
+
+If a required check fails from an apparent flake, rerun only the failed jobs and wait for the run to finish:
+
+```bash
+gh run rerun <run-id> --failed
+gh run watch <run-id> --exit-status
+```
+
+By default, have the user merge the release PR manually in GitHub, then watch the publish workflow:
 
 ```bash
 bun .kilo/skills/release-jetbrains/script/watch-publish.ts --pr <number> --version 7.0.1-rc.7
@@ -123,11 +155,18 @@ Pass a generous Bash timeout, such as `1800000` ms. If the shell times out, re-a
 bun .kilo/skills/release-jetbrains/script/watch-publish.ts --pr <number> --version 7.0.1-rc.7 --run-id <run-id>
 ```
 
+If `watch-publish.ts --merge` reports that the PR is already merged, or a transient GitHub API `5xx` interrupts publish-run discovery, rerun without `--merge`:
+
+```bash
+bun .kilo/skills/release-jetbrains/script/watch-publish.ts --pr <number> --version <version>
+```
+
 Report the Marketplace channel and GitHub Release URL. RC versions publish to the `eap` channel; stable versions publish to the default Marketplace channel.
 
 ## Recovery
 
 - If prepare created the tag but failed before creating a PR, rerun prepare for the same version. The existing workflow reuses the tag if it points to the same commit.
 - If a tag points to an unexpected SHA, stop and inspect manually. Do not move or delete release tags casually.
+- If release PR checks fail from an apparent flake, use `gh run rerun <run-id> --failed`, then `gh run watch <run-id> --exit-status` before publishing.
 - If publish fails after merge, rerun the failed workflow only if Marketplace did not already accept the version.
 - If Marketplace succeeds but GitHub Release upload fails, manually create or edit the GitHub Release for `jetbrains/v<version>` using the reviewed changelog.

@@ -10,6 +10,7 @@ export type Theme = {
 }
 
 type Diff = "auto" | "stacked"
+export type TitleIcon = NonNullable<TuiPatch["title_icon"]>
 
 const fallback = ["#0c0a09", "#fafaf9", "#f9f76f", "#a6a09b", "#3794ff", "#44403b"]
 
@@ -204,15 +205,18 @@ export function useTuiNotificationSettings() {
   const [notify, setNotify] = createSignal(true)
   const [sound, setSound] = createSignal(true)
   const [volume, setVolume] = createSignal("0.4")
+  const [icon, setIcon] = createSignal<TitleIcon>("none")
   const [dirty, setDirty] = createSignal(false)
 
   createEffect(() => {
     if (dirty()) return
-    const cfg = ctx.data()?.tui.attention
+    const tui = ctx.data()?.tui
+    const cfg = tui?.attention
     setAlert(bool(cfg?.enabled, false))
     setNotify(bool(cfg?.notifications, true))
     setSound(bool(cfg?.sound, true))
     setVolume(String(cfg?.volume ?? 0.4))
+    setIcon(tui?.title_icon ?? "none")
   })
 
   function change(run: () => void) {
@@ -228,6 +232,7 @@ export function useTuiNotificationSettings() {
     }
 
     ctx.tui({
+      title_icon: icon(),
       attention: {
         enabled: alert(),
         notifications: notify(),
@@ -248,6 +253,8 @@ export function useTuiNotificationSettings() {
     setSound: (value: boolean) => change(() => setSound(value)),
     volume,
     setVolume: (value: string) => change(() => setVolume(value)),
+    icon,
+    setIcon: (value: TitleIcon) => change(() => setIcon(value)),
     dirty,
     save,
   }

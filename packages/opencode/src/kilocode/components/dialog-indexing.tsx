@@ -59,7 +59,7 @@ const PROVIDER_FIELDS: Record<EmbeddingProvider, ProviderFieldDef[]> = {
   ollama: [{ key: "baseUrl", label: "Base URL", placeholder: "http://localhost:11434" }],
   "openai-compatible": [
     { key: "baseUrl", label: "Base URL", placeholder: "https://api.example.com/v1" },
-    { key: "apiKey", label: "API Key", placeholder: "sk-...", sensitive: true },
+    { key: "apiKey", label: "API Key (optional)", placeholder: "sk-...", sensitive: true },
   ],
   gemini: [{ key: "apiKey", label: "API Key", placeholder: "AI...", sensitive: true }],
   mistral: [{ key: "apiKey", label: "API Key", placeholder: "...", sensitive: true }],

@@ -101,17 +101,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "Search providers",
   "dialog.provider.empty": "No providers found",
-  "dialog.provider.group.popular": "Popular",
   "dialog.provider.group.other": "Other",
   "dialog.provider.tag.recommended": "Recommended",
-  "dialog.provider.opencode.note": "Curated models including Claude, GPT, Gemini and more",
-  "dialog.provider.anthropic.note": "Direct access to Claude models, including Pro and Max",
-  "dialog.provider.deepseek.note": "DeepSeek models for reasoning and coding tasks",
-  "dialog.provider.copilot.note": "Claude models for coding assistance",
-  "dialog.provider.openai.note": "GPT and Codex models with API key or ChatGPT login",
-  "dialog.provider.google.note": "Gemini models for fast, structured responses",
-  "dialog.provider.openrouter.note": "Access all supported models from one provider",
-  "dialog.provider.vercel.note": "Unified access to AI models with smart routing",
 
   "dialog.model.select.title": "Select model",
   "dialog.model.search.placeholder": "Search models",
@@ -801,10 +792,10 @@ export const dict = {
   "settings.providers.tag.other": "Other",
   "settings.providers.connected.environmentDescription": "Connected from your environment variables",
   "settings.providers.action.signInChatGPT": "Sign in with ChatGPT",
-  "settings.providers.custom.description": "Add an OpenAI-compatible provider by base URL.",
+  "settings.providers.custom.description": "Add a custom provider by base URL.",
 
   "provider.custom.title": "Custom provider",
-  "provider.custom.description.prefix": "Configure an OpenAI-compatible provider. See the ",
+  "provider.custom.description.prefix": "Configure a custom provider. See the ",
   "provider.custom.description.link": "provider config docs",
   "provider.custom.description.suffix": ".",
   "provider.custom.field.providerID.label": "Provider ID",
@@ -812,6 +803,7 @@ export const dict = {
   "provider.custom.field.providerID.description": "Lowercase letters, numbers, hyphens, or underscores",
   "provider.custom.field.name.label": "Display name",
   "provider.custom.field.name.placeholder": "My AI Provider",
+  "provider.custom.field.package.label": "Provider API",
   "provider.custom.field.baseURL.label": "Base URL",
   "provider.custom.field.baseURL.placeholder": "https://api.myprovider.com/v1",
   "provider.custom.field.apiKey.label": "API key",
@@ -837,6 +829,11 @@ export const dict = {
   "provider.custom.models.variants.thinking.placeholder": "thinking",
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.thinking.adaptive": "adaptive",
+  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
+  "provider.custom.models.variants.splitReasoning.true": "true",
+  "provider.custom.models.variants.splitReasoning.false": "false",
   "provider.custom.models.variants.chatTemplateArgs.label":
     "Enable thinking via chat template args (e.g. Hugging Face)",
   "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
@@ -850,6 +847,13 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.placeholder": "effort",
+  "provider.custom.models.variants.outputEffort.low": "low",
+  "provider.custom.models.variants.outputEffort.medium": "medium",
+  "provider.custom.models.variants.outputEffort.high": "high",
+  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.max": "max",
   "provider.custom.models.remove": "Remove model",
   "provider.custom.models.add": "Add model",
   "provider.custom.models.fetch": "Fetch models",
@@ -1276,6 +1280,10 @@ export const dict = {
   "settings.notifications.errors.title": "Errors",
   "settings.notifications.errors.description": "Show notification on errors",
   "settings.notifications.sounds": "Sounds",
+  "settings.notifications.enable.title": "Enable Sound Notifications",
+  "settings.notifications.enable.description":
+    "Play sounds when sessions complete, encounter an error, or need your input",
+  "settings.notifications.testSound": "Test",
   "settings.notifications.agentSound.title": "Agent Completion Sound",
   "settings.notifications.agentSound.description": "Sound to play when agent completes",
   "settings.notifications.permSound.title": "Permission Request Sound",
@@ -1283,6 +1291,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Error Sound",
   "settings.notifications.errorSound.description": "Sound to play on errors",
   "settings.notifications.sound.default": "Default",
+  "settings.notifications.sound.system": "System",
+  "settings.notifications.sound.description":
+    "Default uses different sounds for completion, input, and errors. Other choices use one sound for every event.",
   "settings.notifications.sound.none": "None",
 
   "settings.experimental.share.title": "Share Mode",
@@ -1301,10 +1312,10 @@ export const dict = {
   "settings.experimental.speechToText.title": "Speech to Text",
   "settings.experimental.speechToText.description":
     "Enable voice input in prompt fields using your Kilo account through Kilo Gateway.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Enable and sign in to the Kilo provider to use Speech to Text. Speech to Text is currently only supported through Kilo Gateway.",
-  "settings.experimental.speechToTextModel.title": "Speech to Text Model",
-  "settings.experimental.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
+  "settings.models.speechToTextModel.title": "Speech to Text Model",
+  "settings.models.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
@@ -1498,10 +1509,6 @@ export const dict = {
 
   "settings.display.username.title": "Username",
   "settings.display.username.description": "Custom username displayed in conversations",
-  "settings.display.layout.title": "Layout",
-  "settings.display.layout.description": "Layout mode for the chat interface",
-  "settings.display.layout.auto": "Auto",
-  "settings.display.layout.stretch": "Stretch",
   "settings.display.fontSize.title": "Font Size",
   "settings.display.fontSize.description": "Adjust the Kilo webview UI font size independently from VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Auto-Collapse Reasoning",
@@ -1511,6 +1518,10 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "Code Edit Blocks",
+  "settings.display.codeEdit.description": "Choose whether code edit and diff blocks start expanded or collapsed.",
+  "settings.display.codeEdit.expanded": "Expanded",
+  "settings.display.codeEdit.collapsed": "Collapsed",
 
   "settings.providers.defaultModel.title": "Default Model",
   "settings.providers.defaultModel.description": "Primary model for conversations",
@@ -1520,6 +1531,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Subagent Model",
   "settings.providers.subagentModel.description":
     "Default model and reasoning effort for task-tool subagents. Leave unset to inherit the calling agent's model.",
+  "settings.models.hidePromptTraining.title": "Hide Prompt-Training Models",
+  "settings.models.hidePromptTraining.description":
+    "Hide Kilo Gateway models whose providers may use your prompts for training.",
   "settings.providers.modeModels": "Model per Mode",
   "settings.providers.modeModels.description":
     "Override the default model for specific modes. If not set, the global default model is used.",
@@ -1529,7 +1543,7 @@ export const dict = {
   "settings.providers.enabled": "Enabled Providers (Allowlist)",
   "settings.providers.enabled.description": "If set, only these providers will be available (exclusive allowlist)",
   "settings.providers.notSet": "Not set (use server default)",
-  "settings.providers.custom.note": "Add an OpenAI-compatible provider by base URL.",
+  "settings.providers.custom.note": "Add a custom provider by base URL.",
   "settings.providers.search.placeholder": "Search providers",
   "settings.providers.select.placeholder": "Select provider...",
 
@@ -1548,6 +1562,8 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Legacy Migration",
   "settings.aboutKiloCode.legacyMigration.description":
     "Migrate settings from a previous installation of Kilo Code, including provider API keys and default model.",
+  "settings.aboutKiloCode.rooImport.description": "Import conversation history from a Roo Code installation.",
+  "settings.aboutKiloCode.rooImport.button": "Import Sessions from Roo Code",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "What's New in Kilo Code",

@@ -1,4 +1,4 @@
-import { Config, ConfigProvider, Context, Effect, Layer } from "effect"
+import { Config, ConfigProvider, Context, Effect, Layer, Option } from "effect"
 import { ConfigService } from "@/effect/config-service"
 
 const bool = (name: string) => Config.boolean(name).pipe(Config.withDefault(false))
@@ -9,7 +9,9 @@ const positiveInteger = (name: string) =>
   )
 const experimental = bool("KILO_EXPERIMENTAL")
 const enabledByExperimental = (name: string) =>
-  Config.all({ experimental, enabled: bool(name) }).pipe(Config.map((flags) => flags.experimental || flags.enabled))
+  Config.all({ experimental, enabled: Config.boolean(name).pipe(Config.option) }).pipe(
+    Config.map((flags) => Option.getOrElse(flags.enabled, () => flags.experimental)),
+  )
 
 export class Service extends ConfigService.Service<Service>()("@opencode/RuntimeFlags", {
   autoShare: bool("KILO_AUTO_SHARE"),
@@ -50,6 +52,8 @@ export class Service extends ConfigService.Service<Service>()("@opencode/Runtime
   experimentalIconDiscovery: enabledByExperimental("KILO_EXPERIMENTAL_ICON_DISCOVERY"),
   outputTokenMax: positiveInteger("KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX"),
   bashDefaultTimeoutMs: positiveInteger("KILO_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS"),
+  experimentalNativeLlm: bool("KILO_EXPERIMENTAL_NATIVE_LLM"),
+  experimentalWebSockets: bool("KILO_EXPERIMENTAL_WEBSOCKETS"),
   client: Config.string("KILO_CLIENT").pipe(Config.withDefault("cli")),
 }) {}
 

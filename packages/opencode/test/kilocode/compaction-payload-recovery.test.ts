@@ -2,6 +2,7 @@ import { afterEach, describe, expect, mock, test } from "bun:test"
 import { APICallError } from "ai"
 import { Effect, Layer, ManagedRuntime, Scope } from "effect"
 import * as Stream from "effect/Stream"
+import { LLMEvent, type LLMEvent as Event } from "@opencode-ai/llm"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
@@ -115,12 +116,10 @@ async function assistant(sessionID: SessionID, parentID: MessageID, root: string
 }
 
 function llm() {
-  const queue: Array<
-    Stream.Stream<LLM.Event, unknown> | ((input: LLM.StreamInput) => Stream.Stream<LLM.Event, unknown>)
-  > = []
+  const queue: Array<Stream.Stream<Event, unknown> | ((input: LLM.StreamInput) => Stream.Stream<Event, unknown>)> = []
 
   return {
-    push(stream: Stream.Stream<LLM.Event, unknown> | ((input: LLM.StreamInput) => Stream.Stream<LLM.Event, unknown>)) {
+    push(stream: Stream.Stream<Event, unknown> | ((input: LLM.StreamInput) => Stream.Stream<Event, unknown>)) {
       queue.push(stream)
     },
     layer: Layer.succeed(
@@ -139,40 +138,16 @@ function llm() {
 function reply(
   text: string,
   capture?: (input: LLM.StreamInput) => void,
-): (input: LLM.StreamInput) => Stream.Stream<LLM.Event, unknown> {
+): (input: LLM.StreamInput) => Stream.Stream<Event, unknown> {
   return (input) => {
     capture?.(input)
+    const usage = { inputTokens: 1, outputTokens: 1, totalTokens: 2 }
     return Stream.make(
-      { type: "start" } as LLM.Event,
-      { type: "text-start", id: "txt-0" } as LLM.Event,
-      { type: "text-delta", id: "txt-0", delta: text, text } as LLM.Event,
-      { type: "text-end", id: "txt-0" } as LLM.Event,
-      {
-        type: "finish-step",
-        finishReason: "stop",
-        rawFinishReason: "stop",
-        response: { id: "res", modelId: "test-model", timestamp: new Date() },
-        providerMetadata: undefined,
-        usage: {
-          inputTokens: 1,
-          outputTokens: 1,
-          totalTokens: 2,
-          inputTokenDetails: { noCacheTokens: undefined, cacheReadTokens: undefined, cacheWriteTokens: undefined },
-          outputTokenDetails: { textTokens: undefined, reasoningTokens: undefined },
-        },
-      } as LLM.Event,
-      {
-        type: "finish",
-        finishReason: "stop",
-        rawFinishReason: "stop",
-        totalUsage: {
-          inputTokens: 1,
-          outputTokens: 1,
-          totalTokens: 2,
-          inputTokenDetails: { noCacheTokens: undefined, cacheReadTokens: undefined, cacheWriteTokens: undefined },
-          outputTokenDetails: { textTokens: undefined, reasoningTokens: undefined },
-        },
-      } as LLM.Event,
+      LLMEvent.textStart({ id: "txt-0" }),
+      LLMEvent.textDelta({ id: "txt-0", text }),
+      LLMEvent.textEnd({ id: "txt-0" }),
+      LLMEvent.stepFinish({ index: 0, reason: "stop", usage }),
+      LLMEvent.finish({ reason: "stop", usage }),
     )
   }
 }
@@ -301,20 +276,16 @@ describe("KiloCompactionPayloadRecovery", () => {
     const captures: string[] = []
     stub.push((input) => {
       captures.push(JSON.stringify(input.messages))
-      return Stream.make({ type: "start" } as LLM.Event).pipe(
-        Stream.concat(
-          Stream.fail(
-            new APICallError({
-              message: "Request Entity Too Large",
-              url: "https://api.kilo.ai/api/openrouter/responses",
-              requestBodyValues: {},
-              statusCode: 413,
-              responseHeaders: { "content-type": "text/plain" },
-              responseBody: "Request Entity Too Large\n\nFUNCTION_PAYLOAD_TOO_LARGE",
-              isRetryable: false,
-            }),
-          ),
-        ),
+      return Stream.fail(
+        new APICallError({
+          message: "Request Entity Too Large",
+          url: "https://api.kilo.ai/api/openrouter/responses",
+          requestBodyValues: {},
+          statusCode: 413,
+          responseHeaders: { "content-type": "text/plain" },
+          responseBody: "Request Entity Too Large\n\nFUNCTION_PAYLOAD_TOO_LARGE",
+          isRetryable: false,
+        }),
       )
     })
     stub.push(

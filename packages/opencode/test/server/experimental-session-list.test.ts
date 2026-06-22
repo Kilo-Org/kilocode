@@ -36,6 +36,8 @@ describe("experimental.session.list", () => {
     await using first = await tmpdir({ git: true })
     await using second = await tmpdir({ git: true })
     const worktree = path.join(first.path, "..", path.basename(first.path) + "-worktree")
+    const nested = path.join(first.path, "nested")
+    await $`git clone --no-local ${first.path} ${nested}`.quiet()
 
     try {
       await $`git worktree add ${worktree} -b test-branch-${Date.now()}`.cwd(first.path).quiet()
@@ -64,6 +66,10 @@ describe("experimental.session.list", () => {
         })
         await Bun.file(path.join(first.path, ".git", "kilo")).delete()
 
+        const nestedSession = await withTestInstance({
+          directory: nested,
+          fn: (ctx) => create("nested-project-session", ctx),
+        })
         await withTestInstance({
           directory: second.path,
           fn: (ctx) => create("other-project-session", ctx),
@@ -84,9 +90,11 @@ describe("experimental.session.list", () => {
         const dirs = body.map((item: { directory: string }) => item.directory)
 
         expect(root.session.projectID).not.toBe(branch.projectID)
+        expect(nestedSession.projectID).toBe(branch.projectID)
         expect(project.id).toBe(root.session.projectID)
         expect(ids).toContain(root.session.id)
         expect(ids).toContain(branch.id)
+        expect(ids).not.toContain(nestedSession.id)
         expect(dirs).toContain(worktree)
         expect(body.some((item: { title: string }) => item.title === "other-project-session")).toBe(false)
       } finally {
@@ -149,6 +157,114 @@ describe("experimental.session.list", () => {
         expect(ids).toContain(root.session.id)
         expect(ids).toContain(branch.id)
         expect(body.some((item: { title: string }) => item.title === "other-project-session")).toBe(false)
+      } finally {
+        mock.restore()
+      }
+    } finally {
+      await $`git worktree remove ${worktree}`.cwd(first.path).quiet().nothrow()
+    }
+  })
+
+  test("current=true narrows worktrees to the directory containing worktree", async () => {
+    await using first = await tmpdir({ git: true })
+    const worktree = path.join(first.path, "..", path.basename(first.path) + "-worktree")
+
+    try {
+      await $`git worktree add ${worktree} -b test-branch-current-${Date.now()}`.cwd(first.path).quiet()
+
+      try {
+        const { Server } = await import("../../src/server/server")
+
+        const branch = await withTestInstance({
+          directory: worktree,
+          fn: (ctx) => create("worktree-session", ctx),
+        })
+
+        const root = await withTestInstance({
+          directory: first.path,
+          fn: async (ctx) => ({
+            app: Server.Default().app,
+            project: await Server.Default().app.request("/project/current", {
+              headers: { "x-kilo-directory": first.path },
+            }),
+            session: await create("root-session", ctx),
+          }),
+        })
+
+        const app = root.app
+        const project = await root.project.json()
+        const cwd = path.join(worktree, "packages", "opencode")
+        const response = await app.request(
+          `/experimental/session?projectID=${encodeURIComponent(project.id)}&roots=true&worktrees=true&current=true&directory=${encodeURIComponent(cwd)}`,
+          {
+            headers: { "x-kilo-directory": first.path },
+          },
+        )
+
+        expect(response.status).toBe(200)
+        const body = await response.json()
+        const ids = body.map((item: { id: string }) => item.id)
+
+        expect(ids).toContain(branch.id)
+        expect(ids).not.toContain(root.session.id)
+      } finally {
+        mock.restore()
+      }
+    } finally {
+      await $`git worktree remove ${worktree}`.cwd(first.path).quiet().nothrow()
+    }
+  })
+
+  test("current=true excludes Agent Manager worktrees from the root worktree", async () => {
+    await using first = await tmpdir({ git: true })
+    const worktree = path.join(first.path, ".kilo", "worktrees", "nested-current")
+
+    try {
+      await $`git worktree add --quiet -b test-branch-nested-current-${Date.now()} ${worktree} HEAD`.cwd(first.path)
+
+      try {
+        const { Server } = await import("../../src/server/server")
+
+        const branch = await withTestInstance({
+          directory: worktree,
+          fn: (ctx) => create("worktree-session", ctx),
+        })
+
+        const root = await withTestInstance({
+          directory: first.path,
+          fn: async (ctx) => ({
+            app: Server.Default().app,
+            project: await Server.Default().app.request("/project/current", {
+              headers: { "x-kilo-directory": first.path },
+            }),
+            session: await create("root-session", ctx),
+          }),
+        })
+
+        const app = root.app
+        const project = await root.project.json()
+        const all = await app.request(
+          `/experimental/session?projectID=${encodeURIComponent(project.id)}&roots=true&worktrees=true&directory=${encodeURIComponent(first.path)}`,
+          {
+            headers: { "x-kilo-directory": first.path },
+          },
+        )
+        const current = await app.request(
+          `/experimental/session?projectID=${encodeURIComponent(project.id)}&roots=true&worktrees=true&current=true&directory=${encodeURIComponent(first.path)}`,
+          {
+            headers: { "x-kilo-directory": first.path },
+          },
+        )
+
+        expect(all.status).toBe(200)
+        expect(current.status).toBe(200)
+        const allIds = (await all.json()).map((item: { id: string }) => item.id)
+        const currentIds = (await current.json()).map((item: { id: string }) => item.id)
+
+        expect(allIds).toContain(root.session.id)
+        expect(allIds).toContain(branch.id)
+        expect(currentIds).toContain(root.session.id)
+        expect(currentIds).not.toContain(branch.id)
       } finally {
         mock.restore()
       }

@@ -1,6 +1,6 @@
 export * as ConfigAgent from "./agent"
 
-import path from "path" // kilocode_change
+import path from "path"
 import { Schema, SchemaGetter } from "effect"
 import { PositiveInt } from "@opencode-ai/core/schema"
 import * as Log from "@opencode-ai/core/util/log"
@@ -153,19 +153,7 @@ export async function load(dir: string, warnings?: Warning[]) {
     })
     if (!md) continue
 
-    // kilocode_change start
-    const patterns = [
-      "/.kilo/agent/",
-      "/.kilo/agents/",
-      "/.kilocode/agent/",
-      "/.kilocode/agents/",
-      "/.opencode/agent/",
-      "/.opencode/agents/",
-      "/agent/",
-      "/agents/",
-    ]
-    // kilocode_change end
-    const name = configEntryNameFromPath(item, patterns)
+    const name = configEntryNameFromPath(path.relative(dir, item), ["agent/", "agents/"])
 
     // kilocode_change start - substitute agent prompt variables relative to the agent file
     const prompt = await ConfigVariable.substitute({
@@ -230,7 +218,7 @@ export async function loadMode(dir: string, warnings?: Warning[]) {
     if (!md) continue
 
     const config = {
-      name: configEntryNameFromPath(item, []),
+      name: configEntryNameFromPath(path.relative(dir, item), ["mode/", "modes/"]),
       ...md.data,
       prompt: md.content.trim(),
     }
