@@ -54,6 +54,10 @@ export interface FillInAtCursorSuggestion {
   suffix: string
 }
 
+export interface CachedSuggestion extends FillInAtCursorSuggestion {
+  scope: string
+}
+
 export interface MatchingSuggestionResult {
   text: string
   matchType: CacheMatchType
@@ -105,6 +109,7 @@ export interface LastSuggestionInfo extends AutocompleteContext {
 }
 
 export interface PendingRequest {
+  scope: string
   prefix: string
   suffix: string
   promise: Promise<void>
