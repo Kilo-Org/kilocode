@@ -1,4 +1,4 @@
-import { Component, createSignal, createEffect, on, Show } from "solid-js"
+﻿import { Component, createSignal, createEffect, on, Show } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tabs } from "@kilocode/kilo-ui/tabs"
 import { Button } from "@kilocode/kilo-ui/button"
@@ -20,7 +20,6 @@ import ContextTab from "./ContextTab"
 
 import CommitMessageTab from "./CommitMessageTab"
 import ExperimentalTab from "./ExperimentalTab"
-import EnterpriseTab from "./EnterpriseTab"
 import LanguageTab from "./LanguageTab"
 import AboutKiloCodeTab from "./AboutKiloCodeTab"
 import IndexingTab from "./IndexingTab"
@@ -198,17 +197,7 @@ const Settings: Component<SettingsProps> = (props) => {
               <span class="label">{language.t("settings.indexing.title")}</span>
             </Tabs.Trigger>
           </Show>
-<<<<<<< HEAD
-          <Tabs.Trigger value="enterprise">
-            <Icon name="server" />
-            <span class="label">{language.t("settings.enterprise.title")}</span>
-          </Tabs.Trigger>
-          <Tabs.Trigger value="experimental">
-||||||| fb2db2e018
-          <Tabs.Trigger value="experimental">
-=======
           <Tabs.Trigger value="experimental" aria-label={language.t("settings.experimental.title")}>
->>>>>>> upstream/main
             <Icon name="settings-gear" />
             <span class="label">{language.t("settings.experimental.title")}</span>
           </Tabs.Trigger>
@@ -273,10 +262,6 @@ const Settings: Component<SettingsProps> = (props) => {
             <IndexingTab />
           </Tabs.Content>
         </Show>
-        <Tabs.Content value="enterprise">
-          <h3>{language.t("settings.enterprise.title")}</h3>
-          <EnterpriseTab />
-        </Tabs.Content>
         <Tabs.Content value="experimental">
           <h3>{language.t("settings.experimental.title")}</h3>
           <ExperimentalTab />
@@ -296,7 +281,7 @@ const Settings: Component<SettingsProps> = (props) => {
         </Tabs.Content>
       </Tabs>
 
-      {/* Save bar — slides in when there are unsaved config changes */}
+      {/* Save bar 鈥?slides in when there are unsaved config changes */}
       <Show when={isDirty()}>
         <div class="settings-save-bar-wrap">
           <Show when={saveError()}>
