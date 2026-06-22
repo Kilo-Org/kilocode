@@ -1,9 +1,12 @@
 import { DialogSelect, type DialogSelectOption } from "@tui/ui/dialog-select"
-import { createResource, createMemo, createSignal } from "solid-js"
+import { createResource, createMemo } from "solid-js"
 import { useDialog } from "@tui/ui/dialog"
 import { useSDK } from "@tui/context/sdk"
-import { DialogPrompt } from "@tui/ui/dialog-prompt"
 import { DialogSkillMarketplace } from "@/kilocode/cli/cmd/tui/component/dialog-skill-marketplace" // kilocode_change
+// kilocode_change start - Kilo skill management: busy signal + URL/folder prompts
+import { createSignal } from "solid-js"
+import { DialogPrompt } from "@tui/ui/dialog-prompt"
+// kilocode_change end
 
 export type DialogSkillProps = {
   onSelect: (skill: string) => void
@@ -12,6 +15,7 @@ export type DialogSkillProps = {
 export function DialogSkill(props: DialogSkillProps) {
   const dialog = useDialog()
   const sdk = useSDK()
+  dialog.setSize("large")
   // kilocode_change start - skill management (install/uninstall/browse marketplace)
   const [skills, { refetch }] = createResource(async () => {
     const result = await sdk.client.app.skills()
@@ -19,7 +23,6 @@ export function DialogSkill(props: DialogSkillProps) {
   })
   const [busy, setBusy] = createSignal<string | null>(null)
   // kilocode_change end
-  dialog.setSize("large")
 
   const options = createMemo<DialogSelectOption<string>[]>(() => {
     const list = skills() ?? []
