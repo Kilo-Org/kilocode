@@ -56,4 +56,28 @@ describe("tui slash commands", () => {
 
     expect(km.calls).toEqual([])
   })
+
+  test("defers to server command on name collision", () => {
+    const km = keymap()
+
+    expect(TuiSlash.dispatch(km, "/auto-approve", [{ name: "auto-approve" }])).toBe(false)
+
+    expect(km.calls).toEqual([])
+  })
+
+  test("defers to server skill command on name collision", () => {
+    const km = keymap()
+
+    expect(TuiSlash.dispatch(km, "/yolo", [{ name: "yolo", source: "skill" }])).toBe(false)
+
+    expect(km.calls).toEqual([])
+  })
+
+  test("dispatches palette slash when no server collision", () => {
+    const km = keymap()
+
+    expect(TuiSlash.dispatch(km, "/yolo", [{ name: "unrelated" }])).toBe(true)
+
+    expect(km.calls).toEqual(["permission.auto_approve_session"])
+  })
 })

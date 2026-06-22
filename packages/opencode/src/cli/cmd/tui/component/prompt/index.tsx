@@ -1108,7 +1108,7 @@ export function Prompt(props: PromptProps) {
 
     const variant = local.model.variant.current()
     // kilocode_change start - dispatch local palette slash commands such as /yolo (works from home and inside a session)
-    if (TuiSlash.dispatch(keymap, store.prompt.input)) {
+    if (TuiSlash.dispatch(keymap, store.prompt.input, sync.data.command)) {
       history.append({ ...store.prompt, mode: store.mode })
       setStore("prompt", { input: "", parts: [] })
       input.extmarks.clear()

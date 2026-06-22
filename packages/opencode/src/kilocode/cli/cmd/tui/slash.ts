@@ -18,6 +18,18 @@ type Keymap = {
   dispatchCommand(command: string): unknown
 }
 
+type ServerCommand = {
+  name: string
+  source?: "command" | "mcp" | "skill"
+}
+
+function serverMatches(cmd: ServerCommand, name: string) {
+  if (cmd.name === name) return true
+  if (cmd.source === "skill" && `${cmd.name}:skill` === name) return true
+  if (cmd.source === "mcp" && `${cmd.name}:mcp` === name) return true
+  return false
+}
+
 type Option = {
   display: string
   aliases?: string[]
@@ -49,9 +61,10 @@ function match(command: Command, name: string) {
 }
 
 export namespace TuiSlash {
-  export function dispatch(keymap: Keymap, input: string) {
+  export function dispatch(keymap: Keymap, input: string, serverCommands?: readonly ServerCommand[]) {
     const name = parse(input)
     if (!name) return false
+    if (serverCommands?.some((cmd) => serverMatches(cmd, name))) return false
     const entry = keymap
       .getCommandEntries({
         visibility: "reachable",
