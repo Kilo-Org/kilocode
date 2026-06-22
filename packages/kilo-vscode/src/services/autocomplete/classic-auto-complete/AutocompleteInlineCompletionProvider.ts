@@ -37,9 +37,8 @@ import { ErrorBackoff } from "./ErrorBackoff"
 
 const MAX_SUGGESTIONS_HISTORY = 20
 
-function accessible(controller: FileIgnoreController, document: vscode.TextDocument): boolean {
+export function accessible(controller: FileIgnoreController, document: vscode.TextDocument): boolean {
   const uri = notebookUri(document.uri)
-  if (uri && uri.scheme !== "file") return true
   return controller.validateAccess(uri?.fsPath ?? document.fileName)
 }
 

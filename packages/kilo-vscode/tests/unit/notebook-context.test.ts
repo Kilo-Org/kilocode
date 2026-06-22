@@ -5,6 +5,8 @@ import {
   notebookUri,
   supportsNotebook,
 } from "../../src/services/autocomplete/continuedev/core/autocomplete/notebook"
+import { accessible } from "../../src/services/autocomplete/classic-auto-complete/AutocompleteInlineCompletionProvider"
+import type { FileIgnoreController } from "../../src/services/autocomplete/shims/FileIgnoreController"
 
 function uri(scheme: string, path: string, fragment = ""): vscode.Uri {
   const value = `${scheme}:${path}${fragment ? `#${fragment}` : ""}`
@@ -18,6 +20,7 @@ function uri(scheme: string, path: string, fragment = ""): vscode.Uri {
 function document(id: string, text: string, languageId = "python"): vscode.TextDocument {
   return {
     uri: uri("vscode-notebook-cell", "/workspace/example.ipynb", id),
+    fileName: `/workspace/${id}.py`,
     languageId,
     getText: () => text,
   } as vscode.TextDocument
@@ -101,5 +104,26 @@ describe("notebook context", () => {
     expect(notebookUri(file)).toBe(file)
     expect(notebookUri(cell.uri)).toBe(notebook.uri)
     expect(notebookUri(uri("untitled", "Untitled-1"))).toBeUndefined()
+  })
+
+  it("validates notebook parent paths regardless of URI scheme", () => {
+    for (const scheme of ["file", "untitled", "memfs"]) {
+      const cell = document(scheme, "value = 1")
+      const notebook = {
+        uri: uri(scheme, `/workspace/${scheme}.ipynb`),
+        getCells: () => [{ kind: vscode.NotebookCellKind.Code, document: cell }],
+      } as vscode.NotebookDocument
+      const paths: string[] = []
+      const controller = {
+        validateAccess: (path: string) => {
+          paths.push(path)
+          return false
+        },
+      } as FileIgnoreController
+      notebooks([notebook])
+
+      expect(accessible(controller, cell)).toBe(false)
+      expect(paths).toEqual([`/workspace/${scheme}.ipynb`])
+    }
   })
 })
