@@ -152,11 +152,11 @@ export const Definitions = {
   prompt_submit: keybind("none", "Submit prompt"),
   prompt_editor_context_clear: keybind("none", "Clear editor context"),
   prompt_skills: keybind("none", "Open skill selector"),
-  // kilocode_change start - skill management actions (leader-letter combos match existing convention; universally work in any terminal)
-  skill_marketplace_browse: keybind("<leader>k", "Browse skill marketplace"),
-  skill_install_url: keybind("<leader>i", "Install skill from URL"),
-  skill_install_folder: keybind("<leader>f", "Install skill from local folder"),
-  skill_uninstall: keybind("<leader>d", "Uninstall selected skill"),
+  // kilocode_change start - skill management actions (ctrl+shift+letter combos that are free in TUI and not captured by VS Code in the integrated terminal)
+  skill_marketplace_browse: keybind("ctrl+shift+b", "Browse skill marketplace"),
+  skill_install_url: keybind("ctrl+shift+i", "Install skill from URL"),
+  skill_install_folder: keybind("ctrl+shift+f", "Install skill from local folder"),
+  skill_uninstall: keybind("ctrl+shift+u", "Uninstall selected skill"),
   // kilocode_change end
   prompt_stash: keybind("none", "Stash prompt"),
   prompt_stash_pop: keybind("none", "Pop stashed prompt"),

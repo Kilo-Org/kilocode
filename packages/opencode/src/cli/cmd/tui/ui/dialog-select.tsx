@@ -506,7 +506,21 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
           <box flexDirection="row" gap={2}>
             <For each={left()}>
               {(item) => (
-                <text>
+                <text
+                  // kilocode_change start - make action footer clickable
+                  onMouseUp={() => {
+                    const action = actions().find((a) => a.title === item.title)
+                    if (!action) return
+                    if (action.requiresSelection === false) {
+                      action.onTrigger()
+                      return
+                    }
+                    const option = selected()
+                    if (!option) return
+                    action.onTrigger(option)
+                  }}
+                  // kilocode_change end
+                >
                   <span style={{ fg: theme.text }}>
                     <b>{item.title}</b>{" "}
                   </span>
@@ -518,7 +532,21 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
           <box flexDirection="row" gap={2}>
             <For each={right()}>
               {(item) => (
-                <text>
+                <text
+                  // kilocode_change start - make action footer clickable
+                  onMouseUp={() => {
+                    const action = actions().find((a) => a.title === item.title)
+                    if (!action) return
+                    if (action.requiresSelection === false) {
+                      action.onTrigger()
+                      return
+                    }
+                    const option = selected()
+                    if (!option) return
+                    action.onTrigger(option)
+                  }}
+                  // kilocode_change end
+                >
                   <span style={{ fg: theme.text }}>
                     <b>{item.title}</b>{" "}
                   </span>
