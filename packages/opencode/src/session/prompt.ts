@@ -101,6 +101,12 @@ const REQUEST_PRUNE_BYTES = 1_250_000
 const log = Log.create({ service: "session.prompt" })
 const elog = EffectLogger.create({ service: "session.prompt" })
 
+function isOrphanedInterruptedTool(part: MessageV2.ToolPart) {
+  // cleanup() marks abandoned tool_use blocks this way after retries/aborts.
+  // They are not pending work and must not trigger an assistant-prefill request.
+  return part.state.status === "error" && part.state.metadata?.interrupted === true
+}
+
 export interface Interface {
   readonly cancel: (sessionID: SessionID) => Effect.Effect<void>
   readonly prompt: (input: PromptInput) => Effect.Effect<MessageV2.WithParts, Image.Error>
@@ -149,7 +155,6 @@ export const layer = Layer.effect(
         cancel: (sessionID: SessionID) => cancel(sessionID),
         resolvePromptParts: (template: string) => resolvePromptParts(template),
         prompt: (input: PromptInput) => prompt(input).pipe(Effect.catch(Effect.die)),
-        loop: (input: LoopInput) => loop(input).pipe(Effect.orDie),
       } satisfies TaskPromptOps
     })
 
@@ -1409,12 +1414,13 @@ export const layer = Layer.effect(
           ) ?? KiloSessionProcessor.extractSuggestionReviewTelemetry(lastAssistantMsg?.parts ?? [])
         // kilocode_change end
 
-        // Some providers return "stop" even when the assistant message contains tool calls.
-        // Keep the loop running so tool results can be sent back to the model.
-        // Skip provider-executed tool parts — those were fully handled within the
-        // provider's stream (e.g. DWS Agent Platform) and don't need a re-loop.
+        // Some providers return "stop" even when the assistant message contains
+        // tool calls. Keep the loop running so tool results can be sent back to
+        // the model, but ignore cleanup-marked interrupted orphans.
         const hasToolCalls =
-          lastAssistantMsg?.parts.some((part) => part.type === "tool" && !part.metadata?.providerExecuted) ?? false
+          lastAssistantMsg?.parts.some(
+            (part) => part.type === "tool" && !part.metadata?.providerExecuted && !isOrphanedInterruptedTool(part),
+          ) ?? false
 
         // kilocode_change start - plan_exit is a hard stop before another model call
         if (
@@ -1440,12 +1446,16 @@ export const layer = Layer.effect(
           lastAssistant.parentID === lastUser.id && // kilocode_change - unrelated later assistants do not answer this turn
           userBeforeAssistant // kilocode_change - compare chronology, not generated IDs
         ) {
-          // kilocode_change start - ask follow-up when plan_exit tool was called
-          const action = yield* Effect.promise((signal) =>
-            KiloSessionPrompt.askPlanFollowup({ sessionID, messages: msgs, abort: signal, question }),
+          const orphan = lastAssistantMsg?.parts.find(
+            (part): part is MessageV2.ToolPart => part.type === "tool" && isOrphanedInterruptedTool(part),
           )
-          if (action === "continue") continue
-          // kilocode_change end
+          if (orphan) {
+            yield* slog.warn("loop exit with orphaned interrupted tool", {
+              messageID: lastAssistant.id,
+              tool: orphan.tool,
+              callID: orphan.callID,
+            })
+          }
           yield* slog.info("exiting loop")
           break
         }

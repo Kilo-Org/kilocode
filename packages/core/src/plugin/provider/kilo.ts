@@ -10,7 +10,7 @@ export const KiloPlugin = PluginV2.define({
   effect: Effect.gen(function* () {
     return {
       "catalog.transform": Effect.fn(function* (evt) {
-        for (const item of evt.data) {
+        for (const item of evt.provider.list()) {
           if (item.provider.id !== id) continue // kilocode_change
           evt.provider.update(item.provider.id, (provider) => {
             // kilocode_change start

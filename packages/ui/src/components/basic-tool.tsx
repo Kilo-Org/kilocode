@@ -29,6 +29,8 @@ export interface BasicToolProps {
   status?: string
   hideDetails?: boolean
   defaultOpen?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
   forceOpen?: boolean
   defer?: boolean
   hasDetails?: boolean // kilocode_change
@@ -36,7 +38,6 @@ export interface BasicToolProps {
   animated?: boolean
   allowPendingToggle?: boolean // kilocode_change
   onSubtitleClick?: () => void
-  onOpenChange?: (open: boolean) => void // kilocode_change
   onTriggerClick?: JSX.EventHandlerUnion<HTMLElement, MouseEvent>
   triggerHref?: string
   clickable?: boolean
@@ -86,7 +87,7 @@ export function BasicTool(props: BasicToolProps) {
     open: props.defaultOpen ?? false,
     ready: !props.defer && (props.defaultOpen ?? false),
   })
-  const open = () => state.open
+  const open = () => props.open ?? state.open
   const ready = () => state.ready
   const pending = () => props.status === "pending" || props.status === "running"
   const hasChildren = () => (props.defer ? "children" in props : props.children)
@@ -114,8 +115,15 @@ export function BasicTool(props: BasicToolProps) {
     if (props.defer && open()) scheduleReady(true)
   })
 
+  const setOpen = (value: boolean) => {
+    if (props.open === undefined) setState("open", value)
+    props.onOpenChange?.(value)
+  }
+
   createEffect(() => {
-    if (props.forceOpen) setState("open", true)
+    if (!props.forceOpen) return
+    if (open()) return
+    setOpen(true)
   })
 
   createEffect(
@@ -171,7 +179,7 @@ export function BasicTool(props: BasicToolProps) {
     if (pending() && !props.allowPendingToggle) return // kilocode_change
     if (props.hideDetails) return // kilocode_change
     if (props.locked && !value) return
-    setState("open", value)
+    setOpen(value)
     props.onOpenChange?.(value) // kilocode_change
   }
 

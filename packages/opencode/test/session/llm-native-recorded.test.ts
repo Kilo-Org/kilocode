@@ -1,6 +1,7 @@
 import { NodeFileSystem } from "@effect/platform-node"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { ModelsDev } from "@opencode-ai/core/models-dev"
+import { LocationServiceMap } from "@opencode-ai/core/location-layer"
 import { HttpRecorder, Redactor } from "@opencode-ai/http-recorder"
 import { describe, expect, test } from "bun:test"
 import { tool, type ModelMessage, type JSONValue } from "ai"
@@ -281,6 +282,7 @@ function recordedNativeLLMLayer(scenario: RecordedScenario) {
     Layer.provide(Plugin.defaultLayer),
     Layer.provide(ModelsDev.defaultLayer),
     Layer.provide(RuntimeFlags.defaultLayer),
+    Layer.provide(LocationServiceMap.layer),
   )
   // Only the HTTP client is recorded; RequestExecutor and the opencode LLM stack remain real.
   const recordedClient = LLMClient.layer.pipe(
@@ -341,10 +343,25 @@ const weatherTool = tool({
 })
 
 const toolRoundtrip = (
+  events: ReadonlyArray<LLMEvent>,
   call: { readonly id: string; readonly name: string; readonly input: unknown },
   result: JSONValue,
 ): ModelMessage[] => [
-  { role: "assistant", content: [{ type: "tool-call", toolCallId: call.id, toolName: call.name, input: call.input }] },
+  {
+    role: "assistant",
+    content: [
+      ...events.filter(LLMEvent.is.reasoningEnd).map((part) => ({
+        type: "reasoning" as const,
+        text: events
+          .filter(LLMEvent.is.reasoningDelta)
+          .filter((event) => event.id === part.id)
+          .map((event) => event.text)
+          .join(""),
+        providerMetadata: part.providerMetadata,
+      })),
+      { type: "tool-call", toolCallId: call.id, toolName: call.name, input: call.input },
+    ],
+  },
   {
     role: "tool",
     content: [
@@ -400,7 +417,7 @@ const driveToolLoop = (scenario: RecordedScenario) =>
 
     const turn2 = yield* collect({
       ...base,
-      messages: [userMessage, ...toolRoundtrip(toolCall!, WEATHER_RESULT)],
+      messages: [userMessage, ...toolRoundtrip(turn1, toolCall!, WEATHER_RESULT)],
     })
 
     expect(LLMResponse.text({ events: turn2 })).toMatch(/Paris is sunny/i)

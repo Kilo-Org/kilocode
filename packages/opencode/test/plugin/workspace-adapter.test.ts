@@ -10,6 +10,7 @@ import { Auth } from "../../src/auth"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
 import { Env } from "../../src/env"
+import { Git } from "../../src/git" // kilocode_change
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Workspace } from "../../src/control-plane/workspace"
 import { Plugin } from "../../src/plugin/index"
@@ -28,6 +29,7 @@ import { AuthTest } from "../fake/auth"
 import { NpmTest } from "../fake/npm"
 
 const configLayer = Config.layer.pipe(
+  Layer.provide(Git.defaultLayer), // kilocode_change
   Layer.provide(EffectFlock.defaultLayer),
   Layer.provide(AppFileSystem.defaultLayer),
   Layer.provide(Env.defaultLayer),
