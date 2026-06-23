@@ -35,6 +35,7 @@ import { ToolJsonSchema } from "@/tool/json-schema"
 import { MessageID, SessionID } from "@/session/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Command } from "@/command" // kilocode_change
+import { Auth } from "@/auth" // kilocode_change
 
 const node = CrossSpawnSpawner.defaultLayer
 const configLayer = TestConfig.layer({
@@ -73,6 +74,7 @@ const registryLayer = (opts: RegistryLayerOptions = {}) =>
     .pipe(
       Layer.provide(RuntimeFlags.layer(opts.flags ?? {})),
       Layer.provide(Command.defaultLayer), // kilocode_change
+      Layer.provide(Auth.defaultLayer), // kilocode_change
     )
 
 // Fake Plugin.Service that returns a single plugin whose `tool` map contains

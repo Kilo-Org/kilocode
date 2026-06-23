@@ -51,6 +51,7 @@ function infos() {
     recall: info("recall"),
     manager: info("agent_manager"),
     process: info("background_process"),
+    image: info("generate_image"),
   }
 }
 
