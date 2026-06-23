@@ -62,7 +62,7 @@ describe("plugin.openai.ws", () => {
       onConnectionInvalid: (error) => invalid.push(error.message),
     })
 
-    expect((await readError(response)).message).toContain("idle timeout sending websocket request")
+    expect((await readError(response)).message).toContain("idle timeout sending websocket request") // kilocode_change
     expect(invalid).toEqual(["idle timeout sending websocket request"])
   })
 
@@ -111,6 +111,7 @@ describe("plugin.openai.ws", () => {
       onConnectionInvalid: (error) => invalid.push(error),
     })
 
+    // kilocode_change
     expect((await readError(response)).message).toContain(
       "WebSocket closed before response.completed (code 1009: message too big: payload too large)",
     )
@@ -135,7 +136,7 @@ describe("plugin.openai.ws", () => {
       onConnectionInvalid: (error) => invalid.push(error.message),
     })
 
-    expect((await readError(response)).message).toContain("Unexpected binary WebSocket frame")
+    expect((await readError(response)).message).toContain("Unexpected binary WebSocket frame") // kilocode_change
     expect(invalid).toEqual(["Unexpected binary WebSocket frame"])
   })
 })
@@ -196,8 +197,8 @@ describe("plugin.openai.ws-pool", () => {
       streamRetries: 1,
     })
 
-    const first = await fetch(server.url, streamRequest({ [TITLE_HEADER]: "false" }))
-    expect(await readError(first)).toBeInstanceOf(ProviderError.ResponseStreamError)
+    const first = await fetch(server.url, streamRequest({ [TITLE_HEADER]: "false" })) // kilocode_change
+    expect(await readError(first)).toBeInstanceOf(ProviderError.ResponseStreamError) // kilocode_change
     const second = await fetch(server.url, streamRequest({ [TITLE_HEADER]: "false" }))
     const third = await fetch(server.url, streamRequest({ [TITLE_HEADER]: "false" }))
 
@@ -281,8 +282,8 @@ describe("plugin.openai.ws-pool", () => {
       url: server.url,
     })
 
-    const first = await fetch(server.url, streamRequest())
-    expect((await readError(first)).message).toContain("Responses websocket connection limit reached")
+    const first = await fetch(server.url, streamRequest()) // kilocode_change
+    expect((await readError(first)).message).toContain("Responses websocket connection limit reached") // kilocode_change
     const second = await fetch(server.url, streamRequest())
     const text = await second.text()
 
@@ -318,10 +319,10 @@ describe("plugin.openai.ws-pool", () => {
       streamRetries: 2,
     })
 
-    const first = await fetch(server.url, streamRequest())
-    expect((await readError(first)).message).toContain("Responses websocket connection limit reached")
-    const second = await fetch(server.url, streamRequest())
-    expect((await readError(second)).message).toContain("Responses websocket connection limit reached")
+    const first = await fetch(server.url, streamRequest()) // kilocode_change
+    expect((await readError(first)).message).toContain("Responses websocket connection limit reached") // kilocode_change
+    const second = await fetch(server.url, streamRequest()) // kilocode_change
+    expect((await readError(second)).message).toContain("Responses websocket connection limit reached") // kilocode_change
     const third = await fetch(server.url, streamRequest())
     const fourth = await fetch(server.url, streamRequest())
 
@@ -358,8 +359,8 @@ describe("plugin.openai.ws-pool", () => {
       streamRetries: 1,
     })
 
-    const first = await fetch(server.url, streamRequest())
-    expect((await readError(first)).message).toContain("WebSocket closed before response.completed")
+    const first = await fetch(server.url, streamRequest()) // kilocode_change
+    expect((await readError(first)).message).toContain("WebSocket closed before response.completed") // kilocode_change
     const second = await fetch(server.url, streamRequest())
 
     expect(await second.text()).toBe("http")
@@ -375,13 +376,13 @@ describe("plugin.openai.ws-pool", () => {
       socket.once("message", () => {})
     })
     const fetch = OpenAIWebSocketPool.createWebSocketFetch({
-      url: server.url,
-      idleTimeout: 1_000,
+      url: server.url, // kilocode_change
+      idleTimeout: 1_000, // kilocode_change
       streamRetries: 1,
     })
 
-    const first = await fetch(server.url, streamRequest())
-    expect((await readError(first)).message).toContain("idle timeout waiting for websocket")
+    const first = await fetch(server.url, streamRequest()) // kilocode_change
+    expect((await readError(first)).message).toContain("idle timeout waiting for websocket") // kilocode_change
     const second = await fetch(server.url, streamRequest())
     const third = await fetch(server.url, streamRequest())
 
@@ -393,22 +394,25 @@ describe("plugin.openai.ws-pool", () => {
   })
 
   test("falls back to HTTP after a failed websocket stream", async () => {
+    // kilocode_change
     await using server = await createWebSocketServer((socket) => {
       socket.once("message", () => {
         socket.send(JSON.stringify({ type: "response.output_text.delta", delta: "started" }))
       })
     })
+    // kilocode_change start
     const fetch = OpenAIWebSocketPool.createWebSocketFetch({
       url: server.url,
       idleTimeout: 1_000,
       streamRetries: 0,
     })
+    // kilocode_change end
 
-    const first = await fetch(server.url, streamRequest())
-    expect((await readError(first)).message).toContain("idle timeout waiting for websocket")
-    const second = await fetch(server.url, streamRequest())
+    const first = await fetch(server.url, streamRequest()) // kilocode_change
+    expect((await readError(first)).message).toContain("idle timeout waiting for websocket") // kilocode_change
+    const second = await fetch(server.url, streamRequest()) // kilocode_change
 
-    expect(await second.text()).toBe("http")
+    expect(await second.text()).toBe("http") // kilocode_change
     expect(server.httpRequests).toHaveLength(1)
     fetch.close()
   })
@@ -429,16 +433,16 @@ describe("plugin.openai.ws-pool", () => {
       })
     })
     const fetch = OpenAIWebSocketPool.createWebSocketFetch({
-      url: server.url,
-      streamRetries: 1,
+      url: server.url, // kilocode_change
+      streamRetries: 1, // kilocode_change
     })
 
-    const first = await fetch(server.url, streamRequest())
-    expect((await readError(first)).message).toContain("WebSocket closed before response.completed")
+    const first = await fetch(server.url, streamRequest()) // kilocode_change
+    expect((await readError(first)).message).toContain("WebSocket closed before response.completed") // kilocode_change
     const second = await fetch(server.url, streamRequest())
-    expect(await second.text()).toContain("data: [DONE]")
+    expect(await second.text()).toContain("data: [DONE]") // kilocode_change
     const third = await fetch(server.url, streamRequest())
-    expect((await readError(third)).message).toContain("WebSocket closed before response.completed")
+    expect((await readError(third)).message).toContain("WebSocket closed before response.completed") // kilocode_change
     const fourth = await fetch(server.url, streamRequest())
 
     expect(await fourth.text()).toContain("data: [DONE]")
@@ -476,20 +480,22 @@ describe("plugin.openai.ws-pool", () => {
       })
     })
     const abort = new AbortController()
+    // kilocode_change start
     const fetch = OpenAIWebSocketPool.createWebSocketFetch({
       url: server.url,
     })
+    // kilocode_change end
 
     const first = await fetch(server.url, streamRequest({}, abort.signal))
-    const firstError = readError(first)
+    const firstError = readError(first) // kilocode_change
     await waitFor(() => connections === 1, "websocket did not connect")
-    const second = await fetch(server.url, streamRequest())
+    const second = await fetch(server.url, streamRequest()) // kilocode_change
 
-    expect(await second.text()).toBe("http")
+    expect(await second.text()).toBe("http") // kilocode_change
     expect(server.httpRequests).toHaveLength(1)
-    expect(connections).toBe(1)
+    expect(connections).toBe(1) // kilocode_change
     abort.abort(new Error("stop"))
-    expect((await firstError).message).toContain("stop")
+    expect((await firstError).message).toContain("stop") // kilocode_change
     fetch.close()
   })
 
@@ -521,13 +527,15 @@ describe("plugin.openai.ws-pool", () => {
         socket.close(1001, "server shutdown")
       })
     })
+    // kilocode_change start
     const fetch = OpenAIWebSocketPool.createWebSocketFetch({
       url: server.url,
       streamRetries: 1,
     })
+    // kilocode_change end
 
     const first = await fetch(server.url, streamRequest())
-    expect((await readError(first)).message).toContain("WebSocket closed before response.completed")
+    expect((await readError(first)).message).toContain("WebSocket closed before response.completed") // kilocode_change
     const second = await fetch(server.url, streamRequest())
     const third = await fetch(server.url, streamRequest())
 
@@ -548,18 +556,20 @@ describe("plugin.openai.ws-pool", () => {
           return
         }
         socket.send(JSON.stringify({ type: "response.completed", response: { id: "resp_456" } }))
-      })
+      }) // kilocode_change
     })
+    // kilocode_change start
     const abort = new AbortController()
     const fetch = OpenAIWebSocketPool.createWebSocketFetch({
       url: server.url,
     })
+    // kilocode_change end
 
-    const first = await fetch(server.url, streamRequest({}, abort.signal))
-    const firstError = readError(first)
-    await waitFor(() => connections === 1, "first websocket did not connect")
+    const first = await fetch(server.url, streamRequest({}, abort.signal)) // kilocode_change
+    const firstError = readError(first) // kilocode_change
+    await waitFor(() => connections === 1, "first websocket did not connect") // kilocode_change
     abort.abort(new Error("stop"))
-    expect((await firstError).message).toContain("stop")
+    expect((await firstError).message).toContain("stop") // kilocode_change
 
     const second = await fetch(server.url, streamRequest())
 
@@ -601,15 +611,17 @@ describe("plugin.openai.ws-pool", () => {
 function streamRequest(headers?: Record<string, string>, signal?: AbortSignal): RequestInit {
   return {
     method: "POST",
+    // kilocode_change start
     headers: {
       "session-id": "session-1",
       authorization: "Bearer test",
       ...headers,
     },
-    body: JSON.stringify({ stream: true, input: "hi" }),
-    signal,
-  }
-}
+    // kilocode_change end
+    body: JSON.stringify({ stream: true, input: "hi" }), // kilocode_change
+    signal, // kilocode_change
+  } // kilocode_change
+} // kilocode_change
 
 // kilocode_change start - consume errored streams through an attached reader to avoid Bun Response.text races
 async function readError(response: Response) {
