@@ -23,7 +23,7 @@ describe("Kilo Gateway MiniMax M3 thinking", () => {
     expect(kiloProviderOptions(options).anthropic.thinking).toEqual({ type: "adaptive" })
   })
 
-  test("allows the none variant to disable thinking", () => {
+  test("allows the instant variant to disable thinking", () => {
     const base = ProviderTransform.options({ model, sessionID: "test-session" })
     const options = mergeDeep(base, { reasoning: { enabled: false, effort: "none" } })
 
