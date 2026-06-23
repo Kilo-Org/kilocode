@@ -13,6 +13,7 @@ import { createHelpCommand } from "@/kilocode/help-command"
 import { KiloConsoleCommand } from "@/kilocode/cli/cmd/console"
 import { RollCallCommand } from "@/kilocode/cli/cmd/roll-call"
 import { ProfileCommand } from "@/kilocode/cli/cmd/profile"
+import { OrgCommand } from "@/kilocode/cli/cmd/org"
 import { DaemonCommand } from "@/kilocode/cli/cmd/daemon"
 import { DevSetupCommand, DevAliasCommand } from "@/kilocode/cli/dev-setup"
 import { RemoteCommand } from "@/cli/cmd/remote"
@@ -31,6 +32,7 @@ export namespace KiloCli {
       .command(KiloConsoleCommand)
       .command(RollCallCommand)
       .command(ProfileCommand)
+      .command(OrgCommand)
       .command(RemoteCommand)
       .command(DaemonCommand)
       .command(ConfigCLICommand)
