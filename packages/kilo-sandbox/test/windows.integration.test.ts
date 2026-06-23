@@ -5,7 +5,7 @@ import path from "node:path"
 import { Effect } from "effect"
 import type { Launch } from "../src/backend"
 import type { Profile } from "../src/profile"
-import { generate } from "../src/windows"
+import { generate, resolveExecutable } from "../src/windows"
 
 const helper = process.env.KILO_WINDOWS_SANDBOX_HELPER
 const enabled = process.platform === "win32" && helper !== undefined && path.win32.isAbsolute(helper)
@@ -64,18 +64,19 @@ test.skipIf(!enabled)("Windows helper enforces writes through the generated back
     temp: path.join(temp, "temp.txt"),
     child: path.join(external, "child.txt"),
   }
+  const runtime = resolveExecutable("node", project, process.env) ?? process.execPath
   const launch: Launch = {
-    command: process.execPath,
+    command: runtime,
     args: ["-e", code, JSON.stringify(paths)],
     cwd: project,
-      environment: {
-        ...process.env,
-        KILO_WINDOWS_SANDBOX_HELPER: undefined,
-        KILO_WINDOWS_SANDBOX_PROTOTYPE: undefined,
-        TEMP: temp,
-        TMP: temp,
-        TMPDIR: temp,
-      },
+    environment: {
+      ...process.env,
+      KILO_WINDOWS_SANDBOX_HELPER: undefined,
+      KILO_WINDOWS_SANDBOX_PROTOTYPE: undefined,
+      TEMP: temp,
+      TMP: temp,
+      TMPDIR: temp,
+    },
   }
 
   try {
