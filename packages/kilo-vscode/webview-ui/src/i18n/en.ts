@@ -1281,18 +1281,23 @@ export const dict = {
   "settings.notifications.sound.none": "None",
 
   "settings.experimental.share.title": "Share Mode",
-  "settings.experimental.share.description": "How session sharing behaves",
+  "settings.experimental.share.description":
+    "Controls how conversation sessions are shared. Manual: you choose when to share. Auto: sessions are shared automatically. Disabled: sharing is turned off completely.",
   "settings.experimental.share.manual": "Manual",
   "settings.experimental.share.auto": "Auto",
   "settings.experimental.share.disabled": "Disabled",
   "settings.experimental.formatter.title": "Formatter",
-  "settings.experimental.formatter.description": "Enable the automatic code formatter",
+  "settings.experimental.formatter.description":
+    "Automatically formats code files after the agent makes edits. Uses your project's formatter configuration (e.g., prettier, black) to keep code style consistent.",
   "settings.experimental.lsp.title": "LSP",
-  "settings.experimental.lsp.description": "Enable language server protocol integration",
+  "settings.experimental.lsp.description":
+    "Enables Language Server Protocol integration for better code understanding. Provides the agent with autocomplete, go-to-definition, and type information from your language server.",
   "settings.experimental.batch.title": "Batch Tool",
-  "settings.experimental.batch.description": "Enable batching of multiple tool calls",
+  "settings.experimental.batch.description":
+    "Allows the agent to batch multiple tool calls together for faster execution. Instead of running tools one-by-one, related operations are grouped and executed in parallel.",
   "settings.experimental.codebaseSearch.title": "Codebase Search",
-  "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
+  "settings.experimental.codebaseSearch.description":
+    "Enables AI-powered natural language search across your entire codebase. The agent can find relevant files and code snippets by describing what it's looking for in plain English.",
   "settings.experimental.speechToText.title": "Speech to Text",
   "settings.experimental.speechToText.description":
     "Enable voice input in prompt fields using your Kilo account through Kilo Gateway.",
@@ -1301,9 +1306,11 @@ export const dict = {
   "settings.models.speechToTextModel.title": "Speech to Text Model",
   "settings.models.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
-  "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
+  "settings.experimental.continueOnDeny.description":
+    "When enabled, the agent continues running even if a permission request is denied. Useful for autonomous workflows where you want the agent to try alternative approaches.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
-  "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
+  "settings.experimental.mcpTimeout.description":
+    "Maximum time in milliseconds to wait for a response from an MCP (Model Context Protocol) server. Increase this if your MCP servers are slow to respond.",
   "settings.experimental.remote.title": "Remote Control",
   "settings.experimental.remote.description":
     "Enable remote control of sessions via Kilo Cloud. This will also affect CLIs on this machine.",
