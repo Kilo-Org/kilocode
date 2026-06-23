@@ -126,7 +126,11 @@ function sanitize(env: Readonly<Record<string, string | undefined>>) {
   return Object.fromEntries(
     Object.entries(env).filter(([key]) => {
       const name = key.toUpperCase()
-      return name !== "KILO_WINDOWS_SANDBOX_HELPER" && name !== "KILO_WINDOWS_SANDBOX_PROTOTYPE"
+      return (
+        name !== "KILO_WINDOWS_SANDBOX_HELPER" &&
+        name !== "KILO_WINDOWS_SANDBOX_PROBE" &&
+        name !== "KILO_WINDOWS_SANDBOX_PROTOTYPE"
+      )
     }),
   )
 }

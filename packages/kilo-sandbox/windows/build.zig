@@ -22,6 +22,17 @@ pub fn build(b: *std.Build) void {
     exe.root_module.linkSystemLibrary("userenv", .{});
     b.installArtifact(exe);
 
+    const probe = b.addExecutable(.{
+        .name = "kilo-sandbox-windows-probe",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/probe.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    probe.root_module.linkSystemLibrary("kernel32", .{});
+    b.installArtifact(probe);
+
     const tests = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/protocol.zig"),

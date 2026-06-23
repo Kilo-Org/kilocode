@@ -1,14 +1,20 @@
 import { expect, test } from "bun:test"
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { Effect } from "effect"
 import type { Launch } from "../src/backend"
 import type { Profile } from "../src/profile"
-import { generate, resolveExecutable } from "../src/windows"
+import { generate } from "../src/windows"
 
 const helper = process.env.KILO_WINDOWS_SANDBOX_HELPER
-const enabled = process.platform === "win32" && helper !== undefined && path.win32.isAbsolute(helper)
+const probe = process.env.KILO_WINDOWS_SANDBOX_PROBE
+const enabled =
+  process.platform === "win32" &&
+  helper !== undefined &&
+  path.win32.isAbsolute(helper) &&
+  probe !== undefined &&
+  path.win32.isAbsolute(probe)
 
 test.skipIf(!enabled)("Windows helper enforces writes through the generated backend launch", async () => {
   const root = mkdtempSync(path.join(tmpdir(), "kilo-sandbox-windows-"))
@@ -25,28 +31,7 @@ test.skipIf(!enabled)("Windows helper enforces writes through the generated back
     external: path.join(external, "external.txt"),
     git: path.join(git, "config"),
     temp: path.join(temp, "temp.txt"),
-    child: path.join(external, "child.txt"),
   }
-  const child = path.join(project, "child.cmd")
-  const script = path.join(project, "probe.cmd")
-  const blocked = path.join(project, "blocked.cmd")
-  const marker = path.join(external, "target-started")
-  writeFileSync(child, `@echo off\r\necho bad>"${paths.child}"\r\nexit /b 0\r\n`)
-  writeFileSync(blocked, `@echo off\r\necho bad>"${marker}"\r\nexit /b 0\r\n`)
-  writeFileSync(
-    script,
-    [
-      "@echo off",
-      `echo ok>"${paths.project}"`,
-      `echo bad>"${paths.external}"`,
-      `echo bad>"${paths.git}"`,
-      `echo ok>"${paths.temp}"`,
-      `"%ComSpec%" /d /s /c ""${child}""`,
-      "exit /b 0",
-      "",
-    ].join("\r\n"),
-  )
-
   const profile: Profile = {
     filesystem: {
       allowWrite: [
@@ -60,22 +45,29 @@ test.skipIf(!enabled)("Windows helper enforces writes through the generated back
     network: { mode: "deny", allowedHosts: [] },
     environment: { deny: [], set: {} },
   }
-  const command = resolveExecutable(process.env.COMSPEC ?? "cmd.exe", project, process.env)
-  if (!command) throw new Error("Could not resolve cmd.exe for the Windows sandbox test")
   const launch: Launch = {
-    command,
-    args: ["/d", "/s", "/c", script],
+    command: probe!,
+    args: [],
     cwd: project,
     environment: {
       ...process.env,
       KILO_WINDOWS_SANDBOX_HELPER: undefined,
       KILO_WINDOWS_SANDBOX_PROTOTYPE: undefined,
+      KILO_WINDOWS_SANDBOX_PROBE: undefined,
+      KILO_PROBE_PROJECT: paths.project,
+      KILO_PROBE_EXTERNAL: paths.external,
+      KILO_PROBE_GIT: paths.git,
+      KILO_PROBE_TEMP: paths.temp,
       TEMP: temp,
       TMP: temp,
       TMPDIR: temp,
     },
   }
-  const blockedLaunch = { ...launch, args: ["/d", "/s", "/c", blocked] }
+  const marker = path.join(external, "target-started")
+  const blocked = {
+    ...launch,
+    environment: { ...launch.environment, KILO_PROBE_PROJECT: marker },
+  }
 
   try {
     await Effect.runPromise(
@@ -98,10 +90,9 @@ test.skipIf(!enabled)("Windows helper enforces writes through the generated back
     expect(existsSync(paths.external)).toBe(false)
     expect(existsSync(paths.git)).toBe(false)
     expect(existsSync(paths.temp)).toBe(true)
-    expect(existsSync(paths.child)).toBe(false)
 
     await expect(
-      Effect.runPromise(Effect.scoped(generate(profile, blockedLaunch, path.join(root, "missing.exe")))),
+      Effect.runPromise(Effect.scoped(generate(profile, blocked, path.join(root, "missing.exe")))),
     ).rejects.toThrow("helper is not available")
     expect(existsSync(marker)).toBe(false)
 
@@ -112,7 +103,7 @@ test.skipIf(!enabled)("Windows helper enforces writes through the generated back
     await Effect.runPromise(
       Effect.scoped(
         Effect.gen(function* () {
-          const next = yield* generate(invalid, blockedLaunch, helper)
+          const next = yield* generate(invalid, blocked, helper)
           const proc = Bun.spawnSync([next.command, ...next.args], {
             cwd: next.cwd,
             env: next.environment,

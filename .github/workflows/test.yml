@@ -84,6 +84,7 @@ jobs:
           zig build -Dtarget=x86_64-windows-gnu -Doptimize=Debug --prefix dist/windows-x64
           zig build -Dtarget=aarch64-windows-gnu -Doptimize=Debug --prefix dist/windows-arm64
           echo "KILO_WINDOWS_SANDBOX_HELPER=$(cygpath -w "$PWD/dist/windows-x64/bin/kilo-sandbox-windows.exe")" >> "$GITHUB_ENV"
+          echo "KILO_WINDOWS_SANDBOX_PROBE=$(cygpath -w "$PWD/dist/windows-x64/bin/kilo-sandbox-windows-probe.exe")" >> "$GITHUB_ENV"
           echo "KILO_WINDOWS_SANDBOX_PROTOTYPE=1" >> "$GITHUB_ENV"
           echo "NODE_ENV=test" >> "$GITHUB_ENV"
 
@@ -144,8 +145,8 @@ jobs:
           name: zig-windows-sandbox-${{ github.sha }}-${{ github.run_attempt }}
           retention-days: 7
           path: |
-            packages/kilo-sandbox/windows/dist/windows-x64/bin/kilo-sandbox-windows.exe
-            packages/kilo-sandbox/windows/dist/windows-arm64/bin/kilo-sandbox-windows.exe
+            packages/kilo-sandbox/windows/dist/windows-x64/bin/kilo-sandbox-windows*.exe
+            packages/kilo-sandbox/windows/dist/windows-arm64/bin/kilo-sandbox-windows*.exe
   # kilocode_change end
 
   # kilocode_change start
