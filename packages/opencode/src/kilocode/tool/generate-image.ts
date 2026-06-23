@@ -19,6 +19,7 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 /** Fallback catalog used when the gateway is unreachable or the user is offline. */
 export const FALLBACK_IMAGE_MODELS = [
+  { value: "openrouter/auto", label: "Auto Router" },
   { value: "google/gemini-2.5-flash-image", label: "Gemini 2.5 Flash Image" },
   { value: "google/gemini-3-pro-image-preview", label: "Gemini 3 Pro Image Preview" },
   { value: "openai/gpt-5-image", label: "GPT-5 Image" },
@@ -27,7 +28,7 @@ export const FALLBACK_IMAGE_MODELS = [
   { value: "black-forest-labs/flux.2-pro", label: "Black Forest Labs FLUX.2 Pro" },
 ] as const
 
-export const DEFAULT_MODEL = "google/gemini-2.5-flash-image"
+export const DEFAULT_MODEL = "openrouter/auto"
 
 /** Kept for test compatibility. */
 export const IMAGE_MODELS = FALLBACK_IMAGE_MODELS

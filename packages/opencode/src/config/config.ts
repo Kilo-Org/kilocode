@@ -392,7 +392,7 @@ export const Info = Schema.Struct({
       codebase_search: Schema.optional(Schema.Boolean).annotate({ description: "Enable AI-powered codebase search" }),
       image_generation: Schema.optional(Schema.Boolean).annotate({ description: "Enable AI image generation" }),
       image_generation_model: Schema.optional(Schema.String).annotate({
-        description: "Model ID to use for image generation (default: google/gemini-2.5-flash-image)",
+        description: "Model ID to use for image generation (default: openrouter/auto)",
       }),
       speech_to_text_model: Schema.optional(Schema.String).annotate({
         description: "Speech-to-text transcription model ID to use for voice input",
