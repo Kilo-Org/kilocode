@@ -72,6 +72,9 @@ test.skipIf(!enabled)("Windows helper enforces writes through the generated back
         ...process.env,
         KILO_WINDOWS_SANDBOX_HELPER: undefined,
         KILO_WINDOWS_SANDBOX_PROTOTYPE: undefined,
+        TEMP: temp,
+        TMP: temp,
+        TMPDIR: temp,
       },
   }
 

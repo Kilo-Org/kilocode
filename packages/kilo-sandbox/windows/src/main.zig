@@ -368,7 +368,10 @@ pub fn main(init: std.process.Init) !void {
     // additive ACEs persist without an ownership journal/recovery mechanism, and restoring
     // stale whole DACLs is forbidden; denyNames only protects entries present during this
     // scan; process containment still needs an independent parent-death lease.
-    const code = try run(alloc, parsed.value);
+    const code = run(alloc, parsed.value) catch |err| {
+        std.debug.print("kilo-sandbox-windows: setup failed: {s}\n", .{@errorName(err)});
+        std.process.exit(125);
+    };
     std.process.exit(@truncate(code));
 }
 
