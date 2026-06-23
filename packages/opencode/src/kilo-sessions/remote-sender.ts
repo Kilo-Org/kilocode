@@ -9,7 +9,7 @@ import { Permission } from "@/permission"
 import { PermissionID } from "@/permission/schema"
 import { SessionID } from "@/session/schema"
 import { QuestionID } from "@/question/schema"
-import { ModelID, ProviderID } from "@/provider/schema"
+
 import * as Log from "@opencode-ai/core/util/log"
 import z from "zod"
 import { zodObject } from "@opencode-ai/core/effect-zod"
@@ -47,19 +47,14 @@ function getRemotePromptInput() {
   }))
 }
 // kilocode_change end
-function normalizeModel(model: string | undefined) {
-  if (!model) return undefined
-  return {
-    providerID: ProviderID.make("kilo"),
-    modelID: ModelID.make(model.startsWith("kilocode/") ? model.slice("kilocode/".length) : model),
-  }
-}
-
 function normalizePrompt(input: SessionPrompt.PromptInput & { model?: string }): SessionPrompt.PromptInput {
-  return {
-    ...input,
-    model: normalizeModel(input.model),
-  }
+  // Don't override the session's own model from the remote relay. The session
+  // already has a model configured, and the cloud app may mangle the provider
+  // prefix for unknown providers (e.g. sending "kilo/deepseek-v4-flash" when
+  // the session uses "opencode-go/deepseek-v4-flash"). Let the session's model
+  // resolution chain (input.model ?? ag.model ?? currentModel) handle it.
+  const { model: _model, ...rest } = input
+  return rest
 }
 
 export namespace RemoteSender {
