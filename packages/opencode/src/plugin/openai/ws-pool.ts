@@ -97,21 +97,18 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
         maxConnectionAge,
         init?.signal,
       )
-      // kilocode_change start
-      type First = { started: true } | { started: false; error: ProviderError.ResponseStreamError }
-      let resolveFirstEvent: (value: First) => void = () => {}
+      let resolveFirstEvent: (started: boolean) => void = () => {}
       let rejectFirstEvent: (error: Error) => void = () => {}
-      const firstEvent = new Promise<First>((resolve, reject) => {
+      const firstEvent = new Promise<boolean>((resolve, reject) => {
         resolveFirstEvent = resolve
         rejectFirstEvent = reject
       })
-      // kilocode_change end
       const response = OpenAIWebSocket.streamResponsesWebSocket({
         socket: entry.socket,
         body,
-        idleTimeout, // kilocode_change
-        signal: init?.signal ?? undefined, // kilocode_change
-        onFirstEvent: () => resolveFirstEvent({ started: true }), // kilocode_change
+        idleTimeout,
+        signal: init?.signal ?? undefined,
+        onFirstEvent: () => resolveFirstEvent(true),
         onTerminal: (event) => {
           entry.busy = false
           entry.lastUsedAt = Date.now()
@@ -124,10 +121,10 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
         onConnectionInvalid: (error) => {
           log.warn("websocket invalidated", { key, error: error.message })
           entry.busy = false
-          if (!entry.fallback) recordStreamFailure(entry) // kilocode_change
-          invalidate(entry) // kilocode_change
-          resolveFirstEvent({ started: false, error }) // kilocode_change
-          return true // kilocode_change - the pool replaces the hidden pre-event response
+          entry.lastUsedAt = Date.now() // kilocode_change - port upstream #30586
+          if (!entry.fallback) recordStreamFailure(entry)
+          invalidate(entry)
+          resolveFirstEvent(false)
         },
         onAbort: (error) => {
           log.debug("websocket aborted", { key })
@@ -142,11 +139,10 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
           if (!error) return undefined
           log.warn("websocket connection limit reached", { key })
           throw error
-        }, // kilocode_change
-      }) // kilocode_change
-      const first = await firstEvent // kilocode_change
-      if (first.started) return response // kilocode_change
-      if (!entry.fallback) return failedResponse(first.error) // kilocode_change
+        },
+      })
+      if (await firstEvent) return response
+      if (!entry.fallback) return response
       log.debug("http fallback", { key, reason: "websocket_retries_exhausted" })
       return httpFetch(input, httpInit)
     } catch (error) {
@@ -184,6 +180,7 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
     const now = Date.now()
     for (const [key, entry] of pool) {
       if (entry.busy) continue
+      if (entry.fallback) continue // kilocode_change - port upstream #30586
       if (now - entry.lastUsedAt < idleTimeout) continue
       log.debug("websocket idle prune", { key })
       invalidate(entry)
@@ -206,14 +203,19 @@ function connectionLimitError(event: Record<string, unknown>) {
   return new Error(typeof event.error.message === "string" ? event.error.message : CONNECTION_LIMIT_REACHED_CODE)
 }
 
-// kilocode_change start - expose pre-event transport failures as retryable HTTP errors
 function failedResponse(error: ProviderError.ResponseStreamError) {
-  return Response.json(
-    { error: { message: error.message, type: "response_stream_error" } },
-    { status: 503, headers: { "retry-after": "0" } },
+  return new Response(
+    new ReadableStream({
+      start(controller) {
+        controller.error(error)
+      },
+    }),
+    {
+      status: 200,
+      headers: { "content-type": "text/event-stream" },
+    },
   )
 }
-// kilocode_change end
 
 async function socket(
   entry: PoolEntry,
