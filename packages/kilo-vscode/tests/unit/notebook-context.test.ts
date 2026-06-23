@@ -107,24 +107,13 @@ describe("notebook context", () => {
     expect(notebookUri(uri("untitled", "Untitled-1"))).toBeUndefined()
   })
 
-  it("changes autocomplete scope when another cell changes", () => {
-    const current = document("current", "print(value)")
-    const first = document("context", "value = 1")
-    const second = document("context", "value = 2")
-    const cells = (context: vscode.TextDocument) => [
-      { kind: vscode.NotebookCellKind.Code, document: context },
-      { kind: vscode.NotebookCellKind.Code, document: current },
-    ]
-    const notebook = {
-      uri: uri("file", "/workspace/example.ipynb"),
-      getCells: () => cells(first),
-    } as vscode.NotebookDocument
-    notebooks([notebook])
+  it("scopes autocomplete cache to the current cell", () => {
+    const first = document("first", "value = 1")
+    const second = document("second", "value = 1")
 
-    const before = autocompleteScope(current)
-    notebook.getCells = () => cells(second) as vscode.NotebookCell[]
-
-    expect(autocompleteScope(current)).not.toBe(before)
+    expect(autocompleteScope(first)).toBe(first.uri.toString())
+    expect(autocompleteScope(second)).toBe(second.uri.toString())
+    expect(autocompleteScope(first)).not.toBe(autocompleteScope(second))
   })
 
   it("validates notebook parent paths regardless of URI scheme", () => {

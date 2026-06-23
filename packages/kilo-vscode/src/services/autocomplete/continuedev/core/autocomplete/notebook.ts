@@ -4,7 +4,6 @@
 // Licensed under the Apache License, Version 2.0.
 // Modified by Kilo Code for notebook paths, cursor positions, and cache scoping.
 
-import { createHash } from "node:crypto"
 import * as vscode from "vscode"
 
 export interface NotebookContext {
@@ -34,17 +33,7 @@ export function supportsNotebook(document: vscode.TextDocument): boolean {
 }
 
 export function autocompleteScope(document: vscode.TextDocument): string {
-  const id = document.uri.toString()
-  const notebook = resolveNotebook(document.uri)
-  if (!notebook) return id
-
-  const context = notebook
-    .getCells()
-    .filter((cell) => cell.document.uri.toString() !== id)
-    .map((cell) => `${cell.kind}:${cell.document.uri.toString()}:${cell.document.getText()}`)
-    .join("\0")
-  const hash = createHash("sha256").update(context).digest("hex")
-  return `${id}:${hash}`
+  return document.uri.toString()
 }
 
 export function getNotebookContext(

@@ -2,4 +2,4 @@
 "kilo-code": minor
 ---
 
-Support Jupyter notebooks in editor context and Python code-cell inline autocomplete, including a FIM fallback when Next Edit is selected.
+Use surrounding notebook cells to provide relevant Python autocomplete suggestions.
