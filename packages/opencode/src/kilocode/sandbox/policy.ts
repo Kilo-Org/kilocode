@@ -1,3 +1,5 @@
+import { readFileSync, statSync } from "node:fs"
+import path from "node:path"
 import { Effect } from "effect"
 import { Global } from "@opencode-ai/core/global"
 import { run as runSandbox, type Profile } from "@kilocode/sandbox"
@@ -9,11 +11,44 @@ function root(path: string) {
   return { path, kind: "subtree" as const }
 }
 
+function marker(dir: string) {
+  try {
+    const file = path.join(dir, ".git")
+    const entry = statSync(file, { throwIfNoEntry: false })
+    if (!entry?.isFile()) return false
+    const match = readFileSync(file, "utf8")
+      .trim()
+      .match(/^gitdir:\s*(.+)$/i)
+    if (!match) return true
+    const git = path.resolve(dir, match[1])
+    if (!statSync(git, { throwIfNoEntry: false })?.isDirectory()) return true
+    return statSync(path.join(git, "commondir"), { throwIfNoEntry: false })?.isFile() ?? false
+  } catch {
+    return true
+  }
+}
+
+function linked(dir: string, stop: string): boolean {
+  if (marker(dir)) return true
+  if (dir === stop) return false
+  const parent = path.dirname(dir)
+  if (parent === dir) return false
+  return linked(parent, stop)
+}
+
+function isolated(ctx: InstanceContext) {
+  if (ctx.worktree === "/") return true
+  return linked(path.resolve(ctx.directory), path.resolve(ctx.worktree))
+}
+
 export function profile(ctx: InstanceContext): Profile {
+  const project = isolated(ctx)
+    ? [ctx.directory]
+    : ctx.directory === ctx.worktree
+      ? [ctx.directory]
+      : [ctx.worktree, ctx.directory]
   const writable = [
-    ...(ctx.worktree === "/" ? [] : [ctx.worktree]),
-    ctx.directory,
-    ...(ctx.project.sandboxes ?? []),
+    ...project,
     Global.Path.data,
     Global.Path.cache,
     Global.Path.config,

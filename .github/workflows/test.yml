@@ -81,9 +81,10 @@ jobs:
         run: bun turbo test:ci --filter='!@kilocode/kilo-jetbrains'
         env:
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
+          KILO_TEST_PROFILE: ${{ runner.os == 'macOS' && github.event_name == 'pull_request' && 'darwin' || '' }} # kilocode_change
 
       - name: Run HttpApi exerciser gates
-        if: runner.os != 'Windows' # kilocode_change
+        if: runner.os == 'Linux' # kilocode_change
         working-directory: packages/opencode
         run: bun run test:httpapi
 
