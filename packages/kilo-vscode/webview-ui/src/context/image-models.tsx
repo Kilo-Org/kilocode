@@ -18,12 +18,18 @@ export const ImageModelsProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
   const [models, setModels] = createSignal<ImageModel[]>([])
 
+  const request = () => vscode.postMessage({ type: "requestImageModels" })
+
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "imageModelsLoaded") return
     setModels(message.models)
   })
 
-  vscode.postMessage({ type: "requestImageModels" })
+  request()
+
+  // Retry once after a delay in case the backend wasn't ready for the initial request.
+  const retry = setTimeout(request, 3000)
+  onCleanup(() => clearTimeout(retry))
 
   onCleanup(unsubscribe)
 
