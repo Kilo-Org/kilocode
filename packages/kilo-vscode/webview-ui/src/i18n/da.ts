@@ -806,6 +806,9 @@ export const dict = {
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktivér indeksering",
   "settings.indexing.enable.description": "Slå semantisk kodebase-indeksering til eller fra.",
+  "settings.indexing.showButton.title": "Vis knappen, når indeksering er slået fra",
+  "settings.indexing.showButton.description":
+    "Vis indekseringsknappen under promptfeltet, mens indeksering er slået fra. Hvis knappen er skjult, skal du åbne Indstillinger > Indeksering for at slå indeksering til.",
   "settings.indexing.globalEnable.title": "Aktivér globalt",
   "settings.indexing.globalEnable.description": "Aktivér indeksering for alle arbejdsområder.",
   "settings.indexing.projectEnable.title": "Aktivér for dette projekt",

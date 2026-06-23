@@ -772,6 +772,9 @@ export const dict = {
   "settings.indexing.title": "索引",
   "settings.indexing.enable.title": "启用索引",
   "settings.indexing.enable.description": "打开或关闭语义代码库索引。",
+  "settings.indexing.showButton.title": "索引关闭时显示按钮",
+  "settings.indexing.showButton.description":
+    "索引关闭时，在提示词下方显示索引按钮。如果该按钮已隐藏，请打开“设置 > 索引”以启用索引。",
   "settings.indexing.globalEnable.title": "全局启用",
   "settings.indexing.globalEnable.description": "为每个工作区启用索引。",
   "settings.indexing.projectEnable.title": "为此项目启用",

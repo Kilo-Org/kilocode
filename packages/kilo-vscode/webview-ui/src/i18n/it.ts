@@ -970,6 +970,9 @@ export const dict = {
   "settings.indexing.status.title": "Stato",
   "settings.indexing.enable.title": "Abilita indicizzazione",
   "settings.indexing.enable.description": "Attiva o disattiva l'indicizzazione semantica del codebase.",
+  "settings.indexing.showButton.title": "Mostra il pulsante quando l'indicizzazione è disattivata",
+  "settings.indexing.showButton.description":
+    "Mostra il pulsante di indicizzazione sotto il prompt quando l'indicizzazione è disattivata. Se il pulsante è nascosto, apri Impostazioni > Indicizzazione per attivare l'indicizzazione.",
   "settings.indexing.provider.title": "Provider embedding",
   "settings.indexing.provider.description": "Scegli il provider usato per generare embedding per la ricerca semantica.",
   "settings.indexing.model.title": "Modello embedding",

@@ -796,6 +796,9 @@ export const dict = {
   "settings.indexing.dimension.placeholder": "Auto",
   "settings.indexing.dimension.title": "Dimenzija vektora",
   "settings.indexing.enable.description": "Uključite ili isključite semantičko indeksiranje baze koda.",
+  "settings.indexing.showButton.title": "Prikaži dugme kada je indeksiranje isključeno",
+  "settings.indexing.showButton.description":
+    "Prikaži dugme za indeksiranje ispod polja za unos dok je indeksiranje isključeno. Ako je dugme skriveno, otvorite Postavke > Indeksiranje da biste omogućili indeksiranje.",
   "settings.indexing.enable.title": "Omogući indeksiranje",
   "settings.indexing.globalEnable.title": "Omogući globalno",
   "settings.indexing.globalEnable.description": "Omogući indeksiranje za svaki radni prostor.",

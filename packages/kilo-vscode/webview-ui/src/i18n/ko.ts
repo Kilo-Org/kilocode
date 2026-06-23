@@ -1122,6 +1122,9 @@ export const dict = {
   "settings.indexing.dimension.placeholder": "자동",
   "settings.indexing.dimension.title": "벡터 차원",
   "settings.indexing.enable.description": "의미적 코드베이스 인덱싱을 켜거나 끕니다.",
+  "settings.indexing.showButton.title": "인덱싱이 꺼져 있을 때 버튼 표시",
+  "settings.indexing.showButton.description":
+    "인덱싱이 꺼져 있는 동안 프롬프트 아래에 인덱싱 버튼을 표시합니다. 버튼이 숨겨져 있는 경우 설정 > 인덱싱을 열어 인덱싱을 활성화하세요.",
   "settings.indexing.enable.title": "인덱싱 활성화",
   "settings.indexing.globalEnable.title": "전역으로 활성화",
   "settings.indexing.globalEnable.description": "모든 작업 영역에 대해 인덱싱을 활성화합니다.",

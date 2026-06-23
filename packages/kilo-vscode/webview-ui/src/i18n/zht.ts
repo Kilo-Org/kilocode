@@ -1462,6 +1462,9 @@ export const dict = {
   "settings.indexing.dimension.placeholder": "自動",
   "settings.indexing.dimension.title": "向量維度",
   "settings.indexing.enable.description": "開啟或關閉語意程式碼庫索引。",
+  "settings.indexing.showButton.title": "索引關閉時顯示按鈕",
+  "settings.indexing.showButton.description":
+    "索引關閉時，在提示詞下方顯示索引按鈕。如果該按鈕已隱藏，請開啟「設定 > 索引」以啟用索引。",
   "settings.indexing.enable.title": "啟用索引",
   "settings.indexing.globalEnable.title": "全域啟用",
   "settings.indexing.globalEnable.description": "為每個工作區啟用索引。",

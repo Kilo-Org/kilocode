@@ -793,6 +793,9 @@ export const dict = {
   "settings.indexing.title": "Индексация",
   "settings.indexing.enable.title": "Включить индексацию",
   "settings.indexing.enable.description": "Включить или отключить семантическую индексацию кодовой базы.",
+  "settings.indexing.showButton.title": "Показывать кнопку, когда индексация отключена",
+  "settings.indexing.showButton.description":
+    "Показывать кнопку индексации под полем ввода, пока индексация отключена. Если кнопка скрыта, откройте «Настройки > Индексация», чтобы включить индексацию.",
   "settings.indexing.globalEnable.title": "Включить глобально",
   "settings.indexing.globalEnable.description": "Включить индексирование для каждого рабочего пространства.",
   "settings.indexing.projectEnable.title": "Включить для этого проекта",

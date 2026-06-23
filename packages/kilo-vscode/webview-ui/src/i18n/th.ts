@@ -783,6 +783,9 @@ export const dict = {
   "settings.indexing.title": "การสร้างดัชนี",
   "settings.indexing.enable.title": "เปิดใช้งานการสร้างดัชนี",
   "settings.indexing.enable.description": "เปิดหรือปิดการสร้างดัชนีโค้ดเบสเชิงความหมาย",
+  "settings.indexing.showButton.title": "แสดงปุ่มเมื่อปิดการสร้างดัชนี",
+  "settings.indexing.showButton.description":
+    "แสดงปุ่มการสร้างดัชนีใต้ช่องพรอมต์ขณะปิดการสร้างดัชนี หากซ่อนปุ่มไว้ ให้เปิด การตั้งค่า > การสร้างดัชนี เพื่อเปิดใช้การสร้างดัชนี",
   "settings.indexing.globalEnable.title": "เปิดใช้งานแบบโกลบอล",
   "settings.indexing.globalEnable.description": "เปิดใช้งานการทำดัชนีสำหรับทุกพื้นที่ทำงาน",
   "settings.indexing.projectEnable.title": "เปิดใช้งานสำหรับโปรเจกต์นี้",

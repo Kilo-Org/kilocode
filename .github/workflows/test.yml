@@ -30,6 +30,8 @@ jobs:
         settings:
           - name: linux
             host: blacksmith-4vcpu-ubuntu-2404 # kilocode_change
+          - name: macos
+            host: macos-15 # kilocode_change
           - name: windows
             host: blacksmith-4vcpu-windows-2025 # kilocode_change
     runs-on: ${{ matrix.settings.host }}
@@ -81,7 +83,7 @@ jobs:
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
 
       - name: Run HttpApi exerciser gates
-        if: runner.os == 'Linux'
+        if: runner.os != 'Windows' # kilocode_change
         working-directory: packages/opencode
         run: bun run test:httpapi
 

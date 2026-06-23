@@ -924,6 +924,12 @@
           "default": false,
           "description": "Enable chat textarea autocomplete"
         },
+        "kilo-code.new.indexing.showButtonWhenDisabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Show the codebase indexing button below the prompt while indexing is disabled."
+        },
         "kilo-code.new.claudeCodeCompat": {
           "type": "boolean",
           "default": false,

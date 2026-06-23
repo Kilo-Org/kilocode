@@ -722,6 +722,9 @@ export const dict = {
   "settings.indexing.dimension.placeholder": "Auto",
   "settings.indexing.dimension.title": "Dimension vectorielle",
   "settings.indexing.enable.description": "Activer ou désactiver l'indexation sémantique de la base de code.",
+  "settings.indexing.showButton.title": "Afficher le bouton lorsque l’indexation est désactivée",
+  "settings.indexing.showButton.description":
+    "Affichez le bouton d’indexation sous le champ de saisie lorsque l’indexation est désactivée. S’il est masqué, ouvrez Paramètres > Indexation pour activer l’indexation.",
   "settings.indexing.enable.title": "Activer l'indexation",
   "settings.indexing.globalEnable.title": "Activer globalement",
   "settings.indexing.globalEnable.description": "Activer l'indexation pour chaque espace de travail.",

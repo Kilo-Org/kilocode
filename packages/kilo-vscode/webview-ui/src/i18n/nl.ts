@@ -1122,6 +1122,9 @@ export const dict = {
   "settings.indexing.status.title": "Status",
   "settings.indexing.enable.title": "Indexering inschakelen",
   "settings.indexing.enable.description": "Schakel semantische codebase-indexering in of uit.",
+  "settings.indexing.showButton.title": "Knop weergeven wanneer indexering is uitgeschakeld",
+  "settings.indexing.showButton.description":
+    "Geef de indexeringsknop onder de prompt weer wanneer indexering is uitgeschakeld. Als de knop verborgen is, opent u Instellingen > Indexering om indexering in te schakelen.",
   "settings.indexing.globalEnable.title": "Globaal inschakelen",
   "settings.indexing.globalEnable.description": "Indexering inschakelen voor elke werkruimte.",
   "settings.indexing.projectEnable.title": "Inschakelen voor dit project",

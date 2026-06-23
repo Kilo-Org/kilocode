@@ -1120,6 +1120,9 @@ export const dict = {
   "settings.indexing.status.title": "Статус",
   "settings.indexing.enable.title": "Увімкнути індексування",
   "settings.indexing.enable.description": "Увімкніть або вимкніть семантичне індексування кодової бази.",
+  "settings.indexing.showButton.title": "Показувати кнопку, коли індексування вимкнено",
+  "settings.indexing.showButton.description":
+    "Показувати кнопку індексування під полем введення, поки індексування вимкнено. Якщо кнопку приховано, відкрийте «Налаштування > Індексування», щоб увімкнути індексування.",
   "settings.indexing.globalEnable.title": "Увімкнути глобально",
   "settings.indexing.globalEnable.description": "Увімкнути індексування для кожного робочого простору.",
   "settings.indexing.projectEnable.title": "Увімкнути для цього проєкту",

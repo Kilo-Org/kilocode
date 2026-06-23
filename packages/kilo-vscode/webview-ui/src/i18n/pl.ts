@@ -1307,6 +1307,9 @@ export const dict = {
   "settings.indexing.dimension.placeholder": "Automatycznie",
   "settings.indexing.dimension.title": "Wymiar wektora",
   "settings.indexing.enable.description": "Włącz lub wyłącz semantyczne indeksowanie bazy kodu.",
+  "settings.indexing.showButton.title": "Pokazuj przycisk, gdy indeksowanie jest wyłączone",
+  "settings.indexing.showButton.description":
+    "Pokazuj przycisk indeksowania pod monitem, gdy indeksowanie jest wyłączone. Jeśli przycisk jest ukryty, otwórz Ustawienia > Indeksowanie, aby włączyć indeksowanie.",
   "settings.indexing.enable.title": "Włącz indeksowanie",
   "settings.indexing.globalEnable.title": "Włącz globalnie",
   "settings.indexing.globalEnable.description": "Włącz indeksowanie dla każdego obszaru roboczego.",
