@@ -1209,6 +1209,11 @@ export function options(input: {
   if (modelId.includes("minimax-m3") && input.model.api.npm === "@ai-sdk/anthropic") {
     result["thinking"] = { type: "adaptive" }
   }
+  // kilocode_change start - match MiniMax M3's adaptive default through Kilo Gateway
+  if (modelId.includes("minimax-m3") && input.model.api.npm === "@kilocode/kilo-gateway") {
+    result["reasoning"] = { enabled: true }
+  }
+  // kilocode_change end
 
   // Enable thinking by default for kimi models using anthropic SDK
   if (
