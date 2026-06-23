@@ -1334,6 +1334,10 @@ export const dict = {
   "settings.models.speechToTextModel.description": "Odaberite Kilo Gateway model za transkripciju za glasovni unos.",
   "settings.experimental.continueOnDeny.title": "Nastavi pri odbijanju",
   "settings.experimental.continueOnDeny.description": "Nastavi petlju agenta kada je dozvola odbijena",
+  "settings.sandboxing.title": "Rad u izoliranom okruženju",
+  "settings.sandboxing.network.title": "Ograniči pristup mreži",
+  "settings.sandboxing.network.description":
+    "Blokiraj odlazni mrežni pristup za naredbe koje potiču od modela i HTTP alate. Lokalni MCP serveri i hookovi dodataka izvršavaju se izvan ovog ograničenja. Saobraćaj za inferenciju pružatelja i modela ostaje dostupan.",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",

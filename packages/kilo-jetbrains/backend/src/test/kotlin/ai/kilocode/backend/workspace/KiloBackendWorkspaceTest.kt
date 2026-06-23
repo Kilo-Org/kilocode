@@ -296,11 +296,14 @@ class KiloBackendWorkspaceTest {
 
     @Test
     fun `agents response filters hidden and subagent`() = runBlocking {
+        mock.providers = PROVIDERS_JSON
         mock.agents = """[
             {"name":"code","mode":"primary","permission":[],"options":{}},
             {"name":"helper","mode":"subagent","permission":[],"options":{}},
             {"name":"secret","mode":"primary","hidden":true,"permission":[],"options":{}}
         ]"""
+        mock.commands = COMMANDS_JSON
+        mock.skills = SKILLS_JSON
         val app = setup()
         val ws = ready(app)
 

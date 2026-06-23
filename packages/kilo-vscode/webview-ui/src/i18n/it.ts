@@ -1161,6 +1161,10 @@ export const dict = {
   "settings.experimental.codebaseSearch.description": "Abilita ricerca in linguaggio naturale con AI nel codebase",
   "settings.experimental.continueOnDeny.title": "Continua dopo rifiuto",
   "settings.experimental.continueOnDeny.description": "Continua il loop agente quando un'autorizzazione viene negata",
+  "settings.sandboxing.title": "Sandbox",
+  "settings.sandboxing.network.title": "Limita l'accesso alla rete",
+  "settings.sandboxing.network.description":
+    "Blocca l'accesso in uscita alla rete per i comandi avviati dal modello e gli strumenti HTTP. I server MCP locali e gli hook dei plugin operano al di fuori di questa restrizione. Il traffico verso i provider e per l'inferenza dei modelli rimane disponibile.",
   "settings.experimental.mcpTimeout.title": "Timeout MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout per richieste server MCP in millisecondi",
   "settings.experimental.remote.title": "Controllo remoto",

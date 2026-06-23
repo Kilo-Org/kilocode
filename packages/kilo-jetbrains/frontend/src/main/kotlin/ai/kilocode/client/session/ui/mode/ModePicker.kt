@@ -66,6 +66,11 @@ class ModePicker : PickerButton() {
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
     }
 
+    fun open() {
+        if (!isEnabled || items.isEmpty()) return
+        showPopup()
+    }
+
     private fun showPopup() {
         val item = selected ?: items.first()
         val popup = JBPopupFactory.getInstance()
