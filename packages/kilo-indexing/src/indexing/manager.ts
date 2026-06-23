@@ -549,7 +549,7 @@ export class CodeIndexManager {
     const ignoreInstance = await loadIgnore(this.workspacePath)
     const config = this._configManager!.getConfig()
     const baseline = prepared ?? (await this.createBaseline(factory))
-    const { embedder, vectorStore, scanner, fileWatcher } = factory.createServices(this._cacheManager!, ignoreInstance)
+    const { embedder, vectorStore, scanner, fileWatcher } = await factory.createServices(this._cacheManager!, ignoreInstance)
     fileWatcher.setOverlay?.(baseline?.overlay)
     log.info("created indexing services", {
       workspacePath: this.workspacePath,
