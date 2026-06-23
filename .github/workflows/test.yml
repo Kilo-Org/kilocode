@@ -63,6 +63,23 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
+      - name: Setup Zig
+        if: runner.os == 'Windows'
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: 0.16.0
+
+      - name: Build Windows sandbox helpers
+        if: runner.os == 'Windows'
+        working-directory: packages/kilo-sandbox/windows
+        run: |
+          zig build test
+          zig build -Dtarget=x86_64-windows-gnu -Doptimize=Debug --prefix dist/windows-x64
+          zig build -Dtarget=aarch64-windows-gnu -Doptimize=Debug --prefix dist/windows-arm64
+          echo "KILO_WINDOWS_SANDBOX_HELPER=$(cygpath -w "$PWD/dist/windows-x64/bin/kilo-sandbox-windows.exe")" >> "$GITHUB_ENV"
+          echo "KILO_WINDOWS_SANDBOX_PROTOTYPE=1" >> "$GITHUB_ENV"
+          echo "NODE_ENV=test" >> "$GITHUB_ENV"
+
       - name: Configure git identity
         run: |
           git config --global user.email "kilo-maintainer[bot]@users.noreply.github.com"
@@ -107,6 +124,16 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
           path: packages/*/.artifacts/unit/junit.xml
+
+      - name: Upload Windows sandbox comparison helpers
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: zig-windows-sandbox-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 7
+          path: |
+            packages/kilo-sandbox/windows/dist/windows-x64/bin/kilo-sandbox-windows.exe
+            packages/kilo-sandbox/windows/dist/windows-arm64/bin/kilo-sandbox-windows.exe
   # kilocode_change end
 
   # kilocode_change start

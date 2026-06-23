@@ -3,6 +3,7 @@ import { ChildProcess } from "effect/unstable/process"
 import { current } from "./context"
 import type { Profile } from "./profile"
 import { seatbelt } from "./seatbelt"
+import { windows } from "./windows"
 
 export interface Launch {
   readonly command: string
@@ -19,7 +20,7 @@ export interface Support {
 
 export interface Backend {
   readonly support: Support
-  readonly prepare: (profile: Profile, launch: Launch) => Effect.Effect<Launch, never, Scope.Scope>
+  readonly prepare: (profile: Profile, launch: Launch) => Effect.Effect<Launch, PlatformError.PlatformError, Scope.Scope>
 }
 
 function unavailable(reason: string): Backend {
@@ -36,7 +37,7 @@ function select(): Backend {
     case "linux":
       return unavailable("The Linux sandbox backend is not available")
     case "win32":
-      return unavailable("The Windows sandbox backend is not available")
+      return windows
     default:
       return unavailable("No sandbox backend is available for this operating system")
   }

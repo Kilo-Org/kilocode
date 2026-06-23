@@ -68,3 +68,4 @@ tsconfig.tsbuildinfo
 # Test Artifacts
 packages/app/.artifacts/
 packages/opencode/.artifacts/
+packages/kilo-sandbox/.artifacts/

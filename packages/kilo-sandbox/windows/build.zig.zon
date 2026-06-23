@@ -1,0 +1,11 @@
+.{
+    .name = .kilo_sandbox_windows,
+    .version = "0.0.0",
+    .minimum_zig_version = "0.16.0",
+    .fingerprint = 0xe79a78838134eed6,
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
