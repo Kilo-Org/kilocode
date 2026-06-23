@@ -4,27 +4,48 @@ import { UI } from "@/cli/ui"
 import { Auth, type Info as AuthInfo } from "@/auth"
 import { makeRuntime } from "@/effect/run-service"
 import { isRecord } from "@/util/record"
-import { buildKiloHeaders, KILO_API_BASE } from "@kilocode/kilo-gateway"
+import { buildKiloHeaders, fetchProfile, KILO_API_BASE, type KilocodeProfile } from "@kilocode/kilo-gateway"
+import { isCancel, select } from "@clack/prompts"
 
 const runtime = makeRuntime(Auth.Service, Auth.defaultLayer)
 
 type Fetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
+type SummaryInput = ReturnType<typeof summaryInput>
 
 interface Args {
+  json?: boolean
   getAuth?: (providerID: string) => Promise<AuthInfo | undefined>
+  setAuth?: (providerID: string, auth: AuthInfo) => Promise<void>
+  getProfile?: (token: string) => Promise<KilocodeProfile>
+  selectOrg?: (input: { orgs: Org[]; current?: string }) => Promise<string | undefined>
   fetch?: Fetch
   write?: (msg: string) => void
   error?: (msg: string) => void
   exit?: (code: number) => void
 }
 
+interface Org {
+  id: string
+  name: string
+}
+
 export function summaryInput(now = new Date()) {
   const start = new Date(now)
-  start.setUTCDate(start.getUTCDate() - 30)
+  start.setHours(0, 0, 0, 0)
   return {
     startDate: start.toISOString(),
     endDate: now.toISOString(),
     granularity: "day",
+    costSource: "cost",
+    personalScope: "personal-only",
+    viewAs: "org-wide",
+  }
+}
+
+function requestInput(input: { summary: SummaryInput; org: string }) {
+  return {
+    ...input.summary,
+    organizationId: input.org,
   }
 }
 
@@ -41,10 +62,102 @@ function unwrap(input: unknown) {
   return data.json ?? data
 }
 
-export async function fetchUsageSummary(input: { token: string; org: string; fetch?: Fetch }) {
+function label(input: string) {
+  return input
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/\bmicro(?:s|dollars?|usd)?\b/gi, "")
+    .trim()
+    .replace(/^./, (char) => char.toUpperCase())
+}
+
+function dollars(value: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value / 1_000_000)
+}
+
+function scalar(key: string, value: unknown) {
+  if (typeof value === "number" && /micro|cost/i.test(key)) return dollars(value)
+  if (typeof value === "number") return new Intl.NumberFormat("en-US").format(value)
+  if (typeof value === "string") return value
+  if (typeof value === "boolean") return value ? "true" : "false"
+  if (value === null) return "null"
+  return JSON.stringify(value)
+}
+
+function isDateKey(key: string) {
+  return /^(start|end)?date$/i.test(key) || /date$/i.test(key)
+}
+
+function isCostKey(key: string) {
+  return /cost|token|spend|amount|credit|balance/i.test(key)
+}
+
+function isOperationKey(key: string) {
+  return /request|call|error|fail|success|rate|latency|duration|time|p50|p90|p95|p99/i.test(key)
+}
+
+function formatDate(value: string) {
+  const date = new Date(value)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function periodLine(period: SummaryInput) {
+  const start = formatDate(period.startDate)
+  const end = formatDate(period.endDate)
+  if (start === end) return `Date: ${start}`
+  return `Date Range: ${start} to ${end}`
+}
+
+function lines(value: unknown, depth = 0, key = ""): string[] {
+  const pad = "  ".repeat(depth)
+  if (Array.isArray(value)) {
+    if (value.length === 0) return [`${pad}${label(key || "Items")}: none`]
+    return value.flatMap((item, index) => [
+      `${pad}${label(key || "Item")} ${index + 1}:`,
+      ...lines(item, depth + 1),
+    ])
+  }
+
+  if (isRecord(value)) {
+    return Object.entries(value).flatMap(([name, item]) => {
+      if (isRecord(item) || Array.isArray(item)) return [`${pad}${label(name)}:`, ...lines(item, depth + 1, name)]
+      return [`${pad}${label(name)}: ${scalar(name, item)}`]
+    })
+  }
+
+  return [`${pad}${scalar(key, value)}`]
+}
+
+export function formatSummary(input: unknown) {
+  return formatSummaryForPeriod(input, summaryInput())
+}
+
+export function formatSummaryForPeriod(input: unknown, period: SummaryInput) {
+  if (!isRecord(input)) return [periodLine(period), "", ...lines(input)].join("\n")
+
+  const entries = Object.entries(input)
+  const totals = entries.filter(([key]) => isCostKey(key))
+  const ops = entries.filter(([key]) => !isCostKey(key) && isOperationKey(key))
+  const details = entries.filter(([key]) => !isDateKey(key) && !isCostKey(key) && !isOperationKey(key))
+  const section = (title: string, values: [string, unknown][]) => {
+    if (values.length === 0) return []
+    return [title, ...values.flatMap(([key, value]) => lines({ [key]: value }))]
+  }
+
+  const sections = [section("Cost & Tokens", totals), section("Operations", ops), section("Details", details)].filter(
+    (items) => items.length > 0,
+  )
+  return [periodLine(period), ...sections.flatMap((items) => ["", ...items])].join("\n")
+}
+
+export async function fetchUsageSummaryResponse(input: { token: string; org: string; fetch?: Fetch; summary?: SummaryInput }) {
+  const summary = input.summary ?? summaryInput()
   const params = new URLSearchParams({
     batch: "1",
-    input: JSON.stringify({ "0": summaryInput() }),
+    input: JSON.stringify({ "0": requestInput({ summary, org: input.org }) }),
   })
   const res = await (input.fetch ?? fetch)(`${KILO_API_BASE}/api/trpc/usageAnalytics.getSummary?${params}`, {
     headers: {
@@ -59,31 +172,82 @@ export async function fetchUsageSummary(input: { token: string; org: string; fet
     throw new Error(`Usage summary fetch failed: ${res.status}${text ? ` ${text.slice(0, 500)}` : ""}`)
   }
 
-  return unwrap(await res.json())
+  return res.json()
+}
+
+export async function fetchUsageSummary(input: { token: string; org: string; fetch?: Fetch; summary?: SummaryInput }) {
+  return unwrap(await fetchUsageSummaryResponse(input))
+}
+
+async function promptOrg(input: { orgs: Org[]; current?: string }) {
+  const orgs = [...input.orgs].sort((a, b) => {
+    if (a.id === input.current) return -1
+    if (b.id === input.current) return 1
+    return a.name.localeCompare(b.name)
+  })
+  const choice = await select({
+    message: "Select Kilo organization",
+    options: orgs.map((org) => ({
+      label: org.id === input.current ? `${org.name} (current)` : org.name,
+      value: org.id,
+      hint: org.id,
+    })),
+  })
+  if (isCancel(choice)) return undefined
+  return choice
+}
+
+export async function resolveOrg(input: {
+  auth: AuthInfo
+  getProfile?: (token: string) => Promise<KilocodeProfile>
+  selectOrg?: (input: { orgs: Org[]; current?: string }) => Promise<string | undefined>
+  setAuth?: (providerID: string, auth: AuthInfo) => Promise<void>
+}) {
+  if (input.auth.type !== "oauth") return undefined
+
+  const profile = await (input.getProfile ?? fetchProfile)(input.auth.access)
+  const orgs = profile.organizations ?? []
+  if (orgs.length === 0) return input.auth.accountId
+
+  const current = input.auth.accountId
+  const selected = current && orgs.length === 1 ? current : await (input.selectOrg ?? promptOrg)({ orgs, current })
+  if (!selected) return undefined
+
+  if (selected !== current) {
+    await input.setAuth?.("kilo", { ...input.auth, accountId: selected })
+  }
+  return selected
 }
 
 export async function handleUsage(args: Args = {}) {
   const get = args.getAuth ?? ((id: string) => runtime.runPromise((svc) => svc.get(id)))
+  const set = args.setAuth ?? ((id: string, auth: AuthInfo) => runtime.runPromise((svc) => svc.set(id, auth)))
   const auth = await get("kilo")
   const error = args.error ?? UI.error
   const exit = args.exit ?? ((code: number) => (process.exitCode = code))
 
   if (!auth || auth.type !== "oauth") {
-    error("Not authenticated with Kilo Gateway")
-    exit(1)
-    return
-  }
-
-  if (!auth.accountId) {
-    error("No active Kilo organization selected")
+    error("Not authenticated with a Kilo organization")
     exit(1)
     return
   }
 
   try {
-    const summary = await fetchUsageSummary({ token: auth.access, org: auth.accountId, fetch: args.fetch })
+    const org = await resolveOrg({ auth, getProfile: args.getProfile, selectOrg: args.selectOrg, setAuth: set })
+    if (!org) {
+      error("No Kilo organization selected for the authenticated account")
+      exit(1)
+      return
+    }
+
+    const summary = summaryInput()
+    const res = await fetchUsageSummaryResponse({ token: auth.access, org, fetch: args.fetch, summary })
     const write = args.write ?? ((msg: string) => process.stdout.write(msg))
-    write(JSON.stringify(summary, null, 2) + "\n")
+    if (args.json) {
+      write(JSON.stringify(res, null, 2) + "\n")
+      return
+    }
+    write(formatSummaryForPeriod(unwrap(res), summary) + "\n")
   } catch (err) {
     error(err instanceof Error ? err.message : String(err))
     exit(1)
@@ -93,8 +257,14 @@ export async function handleUsage(args: Args = {}) {
 const UsageCommand = cmd({
   command: "usage",
   describe: "show organization usage summary",
-  handler: async () => {
-    await handleUsage()
+  builder: (yargs) =>
+    yargs.option("json", {
+      describe: "print raw JSON response",
+      type: "boolean",
+      default: false,
+    }),
+  handler: async (args) => {
+    await handleUsage({ json: args.json })
   },
 })
 

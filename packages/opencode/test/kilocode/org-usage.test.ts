@@ -1,14 +1,19 @@
 import { describe, expect, test } from "bun:test"
-import { fetchUsageSummary, handleUsage, summaryInput } from "@/kilocode/cli/cmd/org"
+import { fetchUsageSummary, formatSummaryForPeriod, handleUsage, resolveOrg, summaryInput } from "@/kilocode/cli/cmd/org"
 
 type Fetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
 
 describe("org usage", () => {
   test("builds the default summary input", () => {
-    expect(summaryInput(new Date("2026-06-23T17:33:56.000Z"))).toEqual({
-      startDate: "2026-05-24T17:33:56.000Z",
-      endDate: "2026-06-23T17:33:56.000Z",
+    const now = new Date(2026, 5, 23, 11, 33, 56)
+    const start = new Date(2026, 5, 23, 0, 0, 0)
+    expect(summaryInput(now)).toEqual({
+      startDate: start.toISOString(),
+      endDate: now.toISOString(),
       granularity: "day",
+      costSource: "cost",
+      personalScope: "personal-only",
+      viewAs: "org-wide",
     })
   })
 
@@ -30,17 +35,91 @@ describe("org usage", () => {
     expect(input["0"].startDate).toBeString()
     expect(input["0"].endDate).toBeString()
     expect(input["0"].granularity).toBe("day")
+    expect(input["0"].costSource).toBe("cost")
+    expect(input["0"].personalScope).toBe("personal-only")
+    expect(input["0"].viewAs).toBe("org-wide")
+    expect(input["0"].organizationId).toBe("org_123")
     expect(calls[0].headers.get("authorization")).toBe("Bearer token")
     expect(calls[0].headers.get("x-kilocode-organizationid")).toBe("org_123")
   })
 
-  test("prints the summary for the authenticated org", async () => {
+  test("formats microdollar fields as dollars", () => {
+    expect(
+      formatSummaryForPeriod(
+        {
+          totalCostMicros: 1_234_567,
+          costPerRequest: 6309.126,
+          requests: 2,
+          byDay: [{ date: "2026-06-23", costMicros: 500_000 }],
+        },
+        summaryInput(new Date(2026, 5, 23, 11, 33, 56)),
+      ),
+    ).toBe(
+      [
+        "Date: 2026-06-23",
+        "",
+        "Cost & Tokens",
+        "Total Cost: $1.23",
+        "Cost Per Request: $0.01",
+        "",
+        "Operations",
+        "Requests: 2",
+        "",
+        "Details",
+        "By Day:",
+        "  By Day 1:",
+        "    Date: 2026-06-23",
+        "    Cost: $0.50",
+      ].join("\n"),
+    )
+  })
+
+  test("groups operational metrics separately from totals", () => {
+    expect(
+      formatSummaryForPeriod(
+        {
+          totalCostMicros: 1_234_567,
+          totalTokens: 100_000,
+          errorRate: 0.03,
+          p95LatencyMs: 210,
+          model: "kilo-auto",
+        },
+        {
+          startDate: new Date(2026, 5, 23, 0, 0, 0).toISOString(),
+          endDate: new Date(2026, 5, 23, 23, 59, 59).toISOString(),
+          granularity: "day",
+          costSource: "cost",
+          personalScope: "personal-only",
+          viewAs: "org-wide",
+        },
+      ),
+    ).toBe(
+      [
+        "Date: 2026-06-23",
+        "",
+        "Cost & Tokens",
+        "Total Cost: $1.23",
+        "Total Tokens: 100,000",
+        "",
+        "Operations",
+        "Error Rate: 0.03",
+        "P95 Latency Ms: 210",
+        "",
+        "Details",
+        "Model: kilo-auto",
+      ].join("\n"),
+    )
+  })
+
+  test("pretty-prints the summary for the authenticated org", async () => {
     const out: string[] = []
     const codes: number[] = []
-    const fetcher = (async () => Response.json([{ result: { data: { json: { requests: 2 } } } }])) satisfies Fetch
+    const fetcher = (async () =>
+      Response.json([{ result: { data: { json: { totalCostMicros: 1_234_567, requests: 2 } } } }])) satisfies Fetch
 
     await handleUsage({
       getAuth: async () => ({ type: "oauth", access: "token", refresh: "refresh", expires: Date.now(), accountId: "org_123" }),
+      getProfile: async () => ({ email: "test@example.com", organizations: [{ id: "org_123", name: "Org", role: "owner" }] }),
       fetch: fetcher,
       write: (msg) => out.push(msg),
       error: (msg) => out.push(msg),
@@ -48,7 +127,62 @@ describe("org usage", () => {
     })
 
     expect(codes).toEqual([])
-    expect(out).toEqual([JSON.stringify({ requests: 2 }, null, 2) + "\n"])
+    expect(out[0]).toContain("Date: ")
+    expect(out[0]).toContain("Cost & Tokens\nTotal Cost: $1.23")
+    expect(out[0]).toContain("Operations\nRequests: 2")
+  })
+
+  test("prints the raw response when json is requested", async () => {
+    const out: string[] = []
+    const raw = [{ result: { data: { json: { totalCostMicros: 1_234_567 } } } }]
+    const fetcher = (async () => Response.json(raw)) satisfies Fetch
+
+    await handleUsage({
+      json: true,
+      getAuth: async () => ({ type: "oauth", access: "token", refresh: "refresh", expires: Date.now(), accountId: "org_123" }),
+      getProfile: async () => ({ email: "test@example.com", organizations: [{ id: "org_123", name: "Org", role: "owner" }] }),
+      fetch: fetcher,
+      write: (msg) => out.push(msg),
+      error: (msg) => out.push(msg),
+      exit: () => undefined,
+    })
+
+    expect(out).toEqual([JSON.stringify(raw, null, 2) + "\n"])
+  })
+
+  test("prompts for an org when multiple orgs are available", async () => {
+    const saved: string[] = []
+    const auth = { type: "oauth", access: "token", refresh: "refresh", expires: Date.now(), accountId: "org_1" } as const
+
+    const org = await resolveOrg({
+      auth,
+      getProfile: async () => ({
+        email: "test@example.com",
+        organizations: [
+          { id: "org_1", name: "One", role: "owner" },
+          { id: "org_2", name: "Two", role: "member" },
+        ],
+      }),
+      selectOrg: async () => "org_2",
+      setAuth: async (_id, info) => {
+        saved.push(info.type === "oauth" ? (info.accountId ?? "") : "")
+      },
+    })
+
+    expect(org).toBe("org_2")
+    expect(saved).toEqual(["org_2"])
+  })
+
+  test("prompts for an org when none is selected", async () => {
+    const auth = { type: "oauth", access: "token", refresh: "refresh", expires: Date.now() } as const
+
+    const org = await resolveOrg({
+      auth,
+      getProfile: async () => ({ email: "test@example.com", organizations: [{ id: "org_1", name: "One", role: "owner" }] }),
+      selectOrg: async () => "org_1",
+    })
+
+    expect(org).toBe("org_1")
   })
 
   test("requires an authenticated org", async () => {
@@ -57,11 +191,12 @@ describe("org usage", () => {
 
     await handleUsage({
       getAuth: async () => ({ type: "oauth", access: "token", refresh: "refresh", expires: Date.now() }),
+      getProfile: async () => ({ email: "test@example.com", organizations: [] }),
       error: (msg) => errors.push(msg),
       exit: (code) => codes.push(code),
     })
 
-    expect(errors).toEqual(["No active Kilo organization selected"])
+    expect(errors).toEqual(["No Kilo organization selected for the authenticated account"])
     expect(codes).toEqual([1])
   })
 })
