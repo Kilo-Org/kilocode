@@ -243,6 +243,37 @@ fn verify(token: Handle, expected: win.DWORD) !void {
     if (groups.GroupCount == 0 or groups.GroupCount != expected) return error.MissingRestrictedSids;
 }
 
+fn defaults(alloc: Allocator, token: Handle, roots: []const Root) !void {
+    var size: win.DWORD = 0;
+    _ = win.GetTokenInformation(token, win.TokenUser, null, 0, &size);
+    if (size == 0) return error.MissingTokenUser;
+    const buf = try alloc.alignedAlloc(u8, .of(usize), size);
+    defer alloc.free(buf);
+    if (win.GetTokenInformation(token, win.TokenUser, buf.ptr, size, &size) == 0) return error.TokenUserInfo;
+    const user: *win.TOKEN_USER = @ptrCast(@alignCast(buf.ptr));
+
+    const entries = try alloc.alloc(win.EXPLICIT_ACCESS_W, roots.len + 1);
+    defer alloc.free(entries);
+    for (entries, 0..) |*entry, i| {
+        entry.* = std.mem.zeroes(win.EXPLICIT_ACCESS_W);
+        entry.grfAccessPermissions = win.GENERIC_ALL;
+        entry.grfAccessMode = win.GRANT_ACCESS;
+        entry.grfInheritance = win.NO_INHERITANCE;
+        entry.Trustee.TrusteeForm = win.TRUSTEE_IS_SID;
+        entry.Trustee.TrusteeType = win.TRUSTEE_IS_UNKNOWN;
+        const value = if (i == 0) user.User.Sid else roots[i - 1].sid;
+        entry.Trustee.ptstrName = @ptrCast(@alignCast(value));
+    }
+    var acl: win.PACL = null;
+    if (win.SetEntriesInAclW(@intCast(entries.len), entries.ptr, null, &acl) != win.ERROR_SUCCESS) return error.MakeDefaultAcl;
+    defer if (acl != null) {
+        _ = win.LocalFree(acl);
+    };
+    var info = std.mem.zeroes(win.TOKEN_DEFAULT_DACL);
+    info.DefaultDacl = acl;
+    if (win.SetTokenInformation(token, win.TokenDefaultDacl, &info, @sizeOf(win.TOKEN_DEFAULT_DACL)) == 0) return error.SetDefaultAcl;
+}
+
 fn run(alloc: Allocator, req: protocol.Request) !u32 {
     if (!protocol.absolute(req.command) or !protocol.absolute(req.cwd)) return error.NotAbsolute;
     const exe = try open(alloc, req.command, false, 0);
@@ -284,7 +315,8 @@ fn run(alloc: Allocator, req: protocol.Request) !u32 {
     };
 
     var source: Handle = null;
-    check(win.OpenProcessToken(win.GetCurrentProcess(), win.TOKEN_ALL_ACCESS, &source), "OpenProcessToken");
+    const access = win.TOKEN_DUPLICATE | win.TOKEN_QUERY | win.TOKEN_ASSIGN_PRIMARY | win.TOKEN_ADJUST_DEFAULT | win.TOKEN_ADJUST_SESSIONID | win.TOKEN_ADJUST_PRIVILEGES;
+    check(win.OpenProcessToken(win.GetCurrentProcess(), access, &source), "OpenProcessToken");
     defer close(source);
     const groups = try alloc.alloc(win.SID_AND_ATTRIBUTES, roots.len);
     defer alloc.free(groups);
@@ -293,6 +325,9 @@ fn run(alloc: Allocator, req: protocol.Request) !u32 {
     check(win.CreateRestrictedToken(source, win.DISABLE_MAX_PRIVILEGE | win.LUA_TOKEN | win.WRITE_RESTRICTED, 0, null, 0, null, @intCast(groups.len), groups.ptr, &restricted), "CreateRestrictedToken");
     defer close(restricted);
     try verify(restricted, @intCast(groups.len));
+    // The default descriptor must satisfy both the normal user-SID check and the
+    // WRITE_RESTRICTED capability-SID check for process-private kernel objects.
+    try defaults(alloc, restricted, roots);
 
     var handles = [_]Handle{ win.GetStdHandle(win.STD_INPUT_HANDLE), win.GetStdHandle(win.STD_OUTPUT_HANDLE), win.GetStdHandle(win.STD_ERROR_HANDLE) };
     for (handles) |handle| {
