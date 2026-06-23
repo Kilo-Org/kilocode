@@ -10,15 +10,6 @@ import { generate, resolveExecutable } from "../src/windows"
 const helper = process.env.KILO_WINDOWS_SANDBOX_HELPER
 const enabled = process.platform === "win32" && helper !== undefined && path.win32.isAbsolute(helper)
 
-function write(target: string) {
-  try {
-    writeFileSync(target, "ok")
-    return true
-  } catch {
-    return false
-  }
-}
-
 test.skipIf(!enabled)("Windows helper enforces writes through the generated backend launch", async () => {
   const root = mkdtempSync(path.join(tmpdir(), "kilo-sandbox-windows-"))
   const project = path.join(root, "project")
@@ -28,7 +19,33 @@ test.skipIf(!enabled)("Windows helper enforces writes through the generated back
   mkdirSync(git, { recursive: true })
   mkdirSync(temp)
   mkdirSync(external)
+
+  const paths = {
+    project: path.join(project, "project.txt"),
+    external: path.join(external, "external.txt"),
+    git: path.join(git, "config"),
+    temp: path.join(temp, "temp.txt"),
+    child: path.join(external, "child.txt"),
+  }
+  const child = path.join(project, "child.cmd")
+  const script = path.join(project, "probe.cmd")
+  const blocked = path.join(project, "blocked.cmd")
   const marker = path.join(external, "target-started")
+  writeFileSync(child, `@echo off\r\necho bad>"${paths.child}"\r\nexit /b 0\r\n`)
+  writeFileSync(blocked, `@echo off\r\necho bad>"${marker}"\r\nexit /b 0\r\n`)
+  writeFileSync(
+    script,
+    [
+      "@echo off",
+      `echo ok>"${paths.project}"`,
+      `echo bad>"${paths.external}"`,
+      `echo bad>"${paths.git}"`,
+      `echo ok>"${paths.temp}"`,
+      `"%ComSpec%" /d /s /c ""${child}""`,
+      "exit /b 0",
+      "",
+    ].join("\r\n"),
+  )
 
   const profile: Profile = {
     filesystem: {
@@ -43,31 +60,11 @@ test.skipIf(!enabled)("Windows helper enforces writes through the generated back
     network: { mode: "deny", allowedHosts: [] },
     environment: { deny: [], set: {} },
   }
-  const code = `
-    const fs = require("node:fs");
-    const cp = require("node:child_process");
-    const paths = JSON.parse(process.argv[1]);
-    function write(file) { try { fs.writeFileSync(file, "ok"); return true } catch { return false } }
-    const child = cp.spawnSync(process.execPath, ["-e", "require('node:fs').writeFileSync(process.argv[1], 'bad')", paths.child]);
-    process.stdout.write(JSON.stringify({
-      project: write(paths.project),
-      external: write(paths.external),
-      git: write(paths.git),
-      temp: write(paths.temp),
-      child: child.status === 0,
-    }));
-  `
-  const paths = {
-    project: path.join(project, "project.txt"),
-    external: path.join(external, "external.txt"),
-    git: path.join(git, "config"),
-    temp: path.join(temp, "temp.txt"),
-    child: path.join(external, "child.txt"),
-  }
-  const runtime = resolveExecutable("node", project, process.env) ?? process.execPath
+  const command = resolveExecutable(process.env.COMSPEC ?? "cmd.exe", project, process.env)
+  if (!command) throw new Error("Could not resolve cmd.exe for the Windows sandbox test")
   const launch: Launch = {
-    command: runtime,
-    args: ["-e", code, JSON.stringify(paths)],
+    command,
+    args: ["/d", "/s", "/c", script],
     cwd: project,
     environment: {
       ...process.env,
@@ -78,29 +75,33 @@ test.skipIf(!enabled)("Windows helper enforces writes through the generated back
       TMPDIR: temp,
     },
   }
+  const blockedLaunch = { ...launch, args: ["/d", "/s", "/c", blocked] }
 
   try {
-    const output = await Effect.runPromise(
+    await Effect.runPromise(
       Effect.scoped(
         Effect.gen(function* () {
           const next = yield* generate(profile, launch, helper)
-          const child = Bun.spawnSync([next.command, ...next.args], {
+          const proc = Bun.spawnSync([next.command, ...next.args], {
             cwd: next.cwd,
             env: next.environment,
             stdout: "pipe",
             stderr: "pipe",
           })
-          if (child.exitCode !== 0) {
-            throw new Error(`Windows sandbox helper exited ${child.exitCode}: ${child.stderr.toString()}`)
+          if (proc.exitCode !== 0) {
+            throw new Error(`Windows sandbox helper exited ${proc.exitCode}: ${proc.stderr.toString()}`)
           }
-          return child.stdout.toString()
         }),
       ),
     )
-    expect(JSON.parse(output)).toEqual({ project: true, external: false, git: false, temp: true, child: false })
+    expect(existsSync(paths.project)).toBe(true)
+    expect(existsSync(paths.external)).toBe(false)
+    expect(existsSync(paths.git)).toBe(false)
+    expect(existsSync(paths.temp)).toBe(true)
+    expect(existsSync(paths.child)).toBe(false)
 
     await expect(
-      Effect.runPromise(Effect.scoped(generate(profile, { ...launch, args: ["-e", `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "bad")`] }, path.join(root, "missing.exe")))),
+      Effect.runPromise(Effect.scoped(generate(profile, blockedLaunch, path.join(root, "missing.exe")))),
     ).rejects.toThrow("helper is not available")
     expect(existsSync(marker)).toBe(false)
 
@@ -111,9 +112,14 @@ test.skipIf(!enabled)("Windows helper enforces writes through the generated back
     await Effect.runPromise(
       Effect.scoped(
         Effect.gen(function* () {
-          const next = yield* generate(invalid, { ...launch, args: ["-e", `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "bad")`] }, helper)
-          const failed = Bun.spawnSync([next.command, ...next.args], { cwd: next.cwd, env: next.environment })
-          expect(failed.exitCode).not.toBe(0)
+          const next = yield* generate(invalid, blockedLaunch, helper)
+          const proc = Bun.spawnSync([next.command, ...next.args], {
+            cwd: next.cwd,
+            env: next.environment,
+            stdout: "pipe",
+            stderr: "pipe",
+          })
+          expect(proc.exitCode).not.toBe(0)
         }),
       ),
     )
