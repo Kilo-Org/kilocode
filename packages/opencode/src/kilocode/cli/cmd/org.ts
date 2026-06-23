@@ -16,6 +16,7 @@ type SummaryInput = ReturnType<typeof summaryInput>
 
 interface Args {
   json?: boolean
+  org?: string
   period?: Period
   verbose?: boolean
   getAuth?: (providerID: string) => Promise<AuthInfo | undefined>
@@ -79,6 +80,35 @@ function label(input: string) {
     .replace(/\bmicro(?:s|dollars?|usd)?\b/gi, "")
     .trim()
     .replace(/^./, (char) => char.toUpperCase())
+}
+
+function norm(input: string) {
+  return input.toLowerCase().replace(/[^a-z0-9]+/g, "")
+}
+
+function distance(a: string, b: string) {
+  const rows = Array.from({ length: a.length + 1 }, (_, index) => index)
+  for (const [index, char] of [...b].entries()) {
+    const prev = [...rows]
+    rows[0] = index + 1
+    for (const pos of [...a].keys()) {
+      rows[pos + 1] = Math.min(rows[pos] + 1, prev[pos + 1] + 1, prev[pos] + (a[pos] === char ? 0 : 1))
+    }
+  }
+  return rows[a.length] ?? 0
+}
+
+function score(input: string, org: Org) {
+  const query = norm(input)
+  const names = [org.id, org.name].map(norm).filter(Boolean)
+  if (names.some((name) => name === query)) return 0
+  if (names.some((name) => name.includes(query) || query.includes(name))) return 1
+  return 2 + Math.min(...names.map((name) => distance(query, name)))
+}
+
+function resolveRequestedOrg(input: { orgs: Org[]; org: string }) {
+  const sorted = [...input.orgs].sort((a, b) => score(input.org, a) - score(input.org, b))
+  return sorted[0]
 }
 
 function dollars(value: number) {
@@ -207,8 +237,17 @@ export function formatSummaryTable(input: unknown, period: SummaryInput) {
   ].join("\n\n")
 }
 
-export function formatSummaryForPeriod(input: unknown, period: SummaryInput) {
-  if (!isRecord(input)) return [periodLine(period), "", ...lines(input)].join("\n")
+function header(org?: Org) {
+  if (!org) return []
+  return [`Organization: ${org.name}`, ""]
+}
+
+export function formatSummaryTableForOrg(input: unknown, period: SummaryInput, org?: Org) {
+  return [...header(org), formatSummaryTable(input, period)].join("\n")
+}
+
+export function formatSummaryForPeriod(input: unknown, period: SummaryInput, org?: Org) {
+  if (!isRecord(input)) return [...header(org), periodLine(period), "", ...lines(input)].join("\n")
 
   const entries = Object.entries(input)
   const totals = entries.filter(([key]) => isCostKey(key))
@@ -222,7 +261,7 @@ export function formatSummaryForPeriod(input: unknown, period: SummaryInput) {
   const sections = [section("Cost & Tokens", totals), section("Operations", ops), section("Details", details)].filter(
     (items) => items.length > 0,
   )
-  return [periodLine(period), ...sections.flatMap((items) => ["", ...items])].join("\n")
+  return [...header(org), periodLine(period), ...sections.flatMap((items) => ["", ...items])].join("\n")
 }
 
 export async function fetchUsageSummaryResponse(input: { token: string; org: string; fetch?: Fetch; summary?: SummaryInput }) {
@@ -293,6 +332,7 @@ export async function resolvePeriod(input: {
 
 export async function resolveOrg(input: {
   auth: AuthInfo
+  org?: string
   getProfile?: (token: string) => Promise<KilocodeProfile>
   selectOrg?: (input: { orgs: Org[]; current?: string }) => Promise<string | undefined>
   setAuth?: (providerID: string, auth: AuthInfo) => Promise<void>
@@ -304,13 +344,16 @@ export async function resolveOrg(input: {
   if (orgs.length === 0) return undefined
 
   const current = input.auth.accountId
-  const selected = orgs.length === 1 ? orgs[0]?.id : await (input.selectOrg ?? promptOrg)({ orgs, current })
-  if (!selected) return undefined
+  const requested = input.org ? resolveRequestedOrg({ orgs, org: input.org }) : undefined
+  const selected = requested ?? (orgs.length === 1 ? orgs[0] : undefined)
+  const id = selected?.id ?? (await (input.selectOrg ?? promptOrg)({ orgs, current }))
+  const org = selected ?? orgs.find((org) => org.id === id)
+  if (!org) return undefined
 
-  if (selected !== current) {
-    await input.setAuth?.("kilo", { ...input.auth, accountId: selected })
+  if (org.id !== current) {
+    await input.setAuth?.("kilo", { ...input.auth, accountId: org.id })
   }
-  return selected
+  return { id: org.id, name: org.name }
 }
 
 export async function handleUsage(args: Args = {}) {
@@ -327,7 +370,7 @@ export async function handleUsage(args: Args = {}) {
   }
 
   try {
-    const org = await resolveOrg({ auth, getProfile: args.getProfile, selectOrg: args.selectOrg, setAuth: set })
+    const org = await resolveOrg({ auth, org: args.org, getProfile: args.getProfile, selectOrg: args.selectOrg, setAuth: set })
     if (!org) {
       error("No Kilo organization selected for the authenticated account")
       exit(1)
@@ -342,14 +385,14 @@ export async function handleUsage(args: Args = {}) {
     }
 
     const summary = summaryInputForPeriod(period)
-    const res = await fetchUsageSummaryResponse({ token: auth.access, org, fetch: args.fetch, summary })
+    const res = await fetchUsageSummaryResponse({ token: auth.access, org: org.id, fetch: args.fetch, summary })
     const write = args.write ?? ((msg: string) => process.stdout.write(msg))
     if (args.json) {
       write(JSON.stringify(res, null, 2) + "\n")
       return
     }
     const data = unwrap(res)
-    write((args.verbose ? formatSummaryForPeriod(data, summary) : formatSummaryTable(data, summary)) + "\n")
+    write((args.verbose ? formatSummaryForPeriod(data, summary, org) : formatSummaryTableForOrg(data, summary, org)) + "\n")
   } catch (err) {
     error(err instanceof Error ? err.message : String(err))
     exit(1)
@@ -357,10 +400,18 @@ export async function handleUsage(args: Args = {}) {
 }
 
 const UsageCommand = cmd({
-  command: "usage",
+  command: "usage [organization]",
   describe: "show organization usage summary",
   builder: (yargs) =>
     yargs
+      .positional("organization", {
+        describe: "organization name or id",
+        type: "string",
+      })
+      .option("org", {
+        describe: "organization name or id",
+        type: "string",
+      })
       .option("json", {
         describe: "print raw JSON response",
         type: "boolean",
@@ -377,7 +428,12 @@ const UsageCommand = cmd({
         default: false,
       }),
   handler: async (args) => {
-    await handleUsage({ json: args.json, period: args.period as Period | undefined, verbose: args.verbose })
+    await handleUsage({
+      json: args.json,
+      org: (args.org ?? args.organization) as string | undefined,
+      period: args.period as Period | undefined,
+      verbose: args.verbose,
+    })
   },
 })
 

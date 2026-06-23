@@ -3,6 +3,7 @@ import {
   fetchUsageSummary,
   formatSummaryForPeriod,
   formatSummaryTable,
+  formatSummaryTableForOrg,
   handleUsage,
   resolvePeriod,
   resolveOrg,
@@ -196,6 +197,17 @@ describe("org usage", () => {
     expect(out).toContain("│Avg Latency                                  1,234.5 ms │")
   })
 
+  test("formats the summary table with an org header", () => {
+    const out = formatSummaryTableForOrg(
+      { costMicrodollars: 1_234_567, requestCount: 2 },
+      summaryInput(new Date(2026, 5, 23, 11, 33, 56)),
+      { id: "org_123", name: "Acme" },
+    )
+
+    expect(out).toStartWith("Organization: Acme\n\n")
+    expect(out).toContain("OVERVIEW")
+  })
+
   test("prints the boxed summary for the authenticated org", async () => {
     const out: string[] = []
     const codes: number[] = []
@@ -216,6 +228,7 @@ describe("org usage", () => {
     })
 
     expect(codes).toEqual([])
+    expect(out[0]).toContain("Organization: Org")
     expect(out[0]).toContain("OVERVIEW")
     expect(out[0]).toContain("COST & TOKENS")
     expect(out[0]).toContain("OPERATIONS")
@@ -224,6 +237,46 @@ describe("org usage", () => {
     const url = new URL(calls[0].url)
     const input = JSON.parse(url.searchParams.get("input") ?? "{}")
     expect(input["0"].granularity).toBe("month")
+  })
+
+  test("prints usage for a requested org without prompting", async () => {
+    const out: string[] = []
+    const saved: string[] = []
+    const calls: Request[] = []
+    const fetcher = (async (input, init) => {
+      calls.push(new Request(input, init))
+      return Response.json([{ result: { data: { json: { costMicrodollars: 1_234_567, requestCount: 2 } } } }])
+    }) satisfies Fetch
+
+    await handleUsage({
+      org: "two",
+      period: "day",
+      getAuth: async () => ({ type: "oauth", access: "token", refresh: "refresh", expires: Date.now(), accountId: "org_1" }),
+      getProfile: async () => ({
+        email: "test@example.com",
+        organizations: [
+          { id: "org_1", name: "One", role: "owner" },
+          { id: "org_2", name: "Two Trees", role: "member" },
+        ],
+      }),
+      selectOrg: async () => {
+        throw new Error("should not prompt")
+      },
+      setAuth: async (_id, info) => {
+        saved.push(info.type === "oauth" ? (info.accountId ?? "") : "")
+      },
+      fetch: fetcher,
+      write: (msg) => out.push(msg),
+      error: (msg) => out.push(msg),
+      exit: () => undefined,
+    })
+
+    expect(saved).toEqual(["org_2"])
+    expect(out[0]).toContain("Organization: Two Trees")
+    const url = new URL(calls[0].url)
+    const input = JSON.parse(url.searchParams.get("input") ?? "{}")
+    expect(input["0"].organizationId).toBe("org_2")
+    expect(calls[0].headers.get("x-kilocode-organizationid")).toBe("org_2")
   })
 
   test("prints the verbose summary when requested", async () => {
@@ -285,8 +338,29 @@ describe("org usage", () => {
       },
     })
 
-    expect(org).toBe("org_2")
+    expect(org).toEqual({ id: "org_2", name: "Two" })
     expect(saved).toEqual(["org_2"])
+  })
+
+  test("resolves a requested org by closest name match", async () => {
+    const auth = { type: "oauth", access: "token", refresh: "refresh", expires: Date.now(), accountId: "org_1" } as const
+
+    const org = await resolveOrg({
+      auth,
+      org: "tw tre",
+      getProfile: async () => ({
+        email: "test@example.com",
+        organizations: [
+          { id: "org_1", name: "One", role: "owner" },
+          { id: "org_2", name: "Two Trees", role: "member" },
+        ],
+      }),
+      selectOrg: async () => {
+        throw new Error("should not prompt")
+      },
+    })
+
+    expect(org).toEqual({ id: "org_2", name: "Two Trees" })
   })
 
   test("selects the only org without prompting when none is selected", async () => {
@@ -304,7 +378,7 @@ describe("org usage", () => {
       },
     })
 
-    expect(org).toBe("org_1")
+    expect(org).toEqual({ id: "org_1", name: "One" })
     expect(saved).toEqual(["org_1"])
   })
 
@@ -323,7 +397,7 @@ describe("org usage", () => {
       },
     })
 
-    expect(org).toBe("org_1")
+    expect(org).toEqual({ id: "org_1", name: "One" })
     expect(saved).toEqual(["org_1"])
   })
 
