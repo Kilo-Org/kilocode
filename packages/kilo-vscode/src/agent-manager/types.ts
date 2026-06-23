@@ -291,6 +291,7 @@ interface PRStatusOutMessage {
 interface ActionOutMessage {
   type: "action"
   action: string
+  nativeInput?: "mac-option-period"
 }
 
 interface RunStatusMessage extends RunStatus {

@@ -409,6 +409,11 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.cycleReasoningEffort",
+        "title": "Cycle Reasoning Effort",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.toggleAutoApprove",
         "title": "Toggle Auto-Approve",
         "category": "Kilo Code"
@@ -782,6 +787,15 @@
         "key": "ctrl+shift+.",
         "mac": "cmd+shift+.",
         "when": "sideBarFocus && kilo-code.new.sidebarVisible || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
+      },
+      {
+        "command": "kilo-code.new.cycleReasoningEffort",
+        "key": "alt+.",
+        "mac": "alt+.",
+        "when": "kilo-code.new.sidebarFocus || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'",
+        "args": {
+          "nativeInput": "mac-option-period"
+        }
       },
       {
         "command": "kilo-code.new.autocomplete.cancelSuggestions",

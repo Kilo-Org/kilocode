@@ -227,6 +227,9 @@ const AppContent: Component = () => {
       case "cyclePreviousAgentMode":
         if (document.hasFocus()) cycleAgent(-1)
         break
+      case "cycleReasoningEffort":
+        if (document.hasFocus()) session.cycleVariant()
+        break
     }
   }
 
@@ -283,8 +286,18 @@ const AppContent: Component = () => {
         setMigrationNeeded(message.needed)
       }
     }
+    const focus = () => vscode.postMessage({ type: "webviewFocusChanged", focused: true })
+    const blur = () => vscode.postMessage({ type: "webviewFocusChanged", focused: false })
     window.addEventListener("message", handler)
-    onCleanup(() => window.removeEventListener("message", handler))
+    window.addEventListener("focus", focus)
+    window.addEventListener("blur", blur)
+    if (document.hasFocus()) focus()
+    onCleanup(() => {
+      window.removeEventListener("message", handler)
+      window.removeEventListener("focus", focus)
+      window.removeEventListener("blur", blur)
+      blur()
+    })
   })
 
   const handleSelectSession = (id: string) => {

@@ -322,6 +322,13 @@ export function activate(context: vscode.ExtensionContext) {
     void vscode.commands.executeCommand(command)
   }
 
+  const postChatAction = (action: string, nativeInput?: "mac-option-period") => {
+    const message = { type: "action", action, nativeInput }
+    provider.postMessage(message)
+    activeTabProvider()?.postMessage(message)
+    agentManagerProvider.postMessage(message)
+  }
+
   // Register toolbar button command handlers
   context.subscriptions.push(
     vscode.commands.registerCommand("kilo-code.new.sidebarTitle.plusButtonClicked", () => {
@@ -375,6 +382,10 @@ export function activate(context: vscode.ExtensionContext) {
       if (tab) tab.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
       else provider.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
       agentManagerProvider.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.cycleReasoningEffort", (opts?: { nativeInput?: unknown }) => {
+      const nativeInput = opts?.nativeInput === "mac-option-period" ? "mac-option-period" : undefined
+      postChatAction("cycleReasoningEffort", nativeInput)
     }),
     vscode.commands.registerCommand("kilo-code.new.profileButtonClicked", () => {
       settingsEditorProvider.openPanel("profile")

@@ -248,6 +248,7 @@ export interface SelectKiloModelMessage {
 export interface ActionMessage {
   type: "action"
   action: string
+  nativeInput?: "mac-option-period"
 }
 
 export interface SetChatBoxMessage {
