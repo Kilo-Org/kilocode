@@ -28,10 +28,12 @@ import { RepositoryCache } from "../../src/reference/repository-cache"
 import { SessionCompaction } from "../../src/session/compaction"
 import { Instruction } from "../../src/session/instruction"
 import { LLM } from "../../src/session/llm"
+import { MessageV2 } from "../../src/session/message-v2"
 import { SessionProcessor } from "../../src/session/processor"
 import { SessionPrompt } from "../../src/session/prompt"
 import { SessionRevert } from "../../src/session/revert"
 import { SessionRunState } from "../../src/session/run-state"
+import { SessionID } from "../../src/session/schema"
 import { Session } from "../../src/session/session"
 import { SessionStatus } from "../../src/session/status"
 import { SystemPrompt } from "../../src/session/system"
@@ -45,7 +47,7 @@ import { Ripgrep } from "../../src/file/ripgrep"
 import { ToolRegistry } from "../../src/tool/registry"
 import { Truncate } from "../../src/tool/truncate"
 import { provideTmpdirServer } from "../fixture/fixture"
-import { testEffect } from "../lib/effect"
+import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
 
 void Log.init({ print: false })
@@ -226,7 +228,7 @@ const cfg = {
   },
 }
 
-function providerCfg(url: string) {
+function providerCfg(url: string, options: Record<string, unknown> = {}) {
   return {
     ...cfg,
     provider: {
@@ -235,6 +237,7 @@ function providerCfg(url: string) {
         ...cfg.provider.test,
         options: {
           ...cfg.provider.test.options,
+          ...options,
           baseURL: url,
         },
       },
@@ -289,4 +292,94 @@ it.live("active tool calls use permissions changed after model streaming starts"
       }),
     },
   ),
+)
+
+it.live(
+  "recovers a foreground task when the child stream stalls after bash completes",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({
+          title: "Pinned",
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        })
+
+        yield* llm.tool("task", {
+          description: "run child bash",
+          prompt: "Run one shell command and report its output.",
+          subagent_type: "general",
+        })
+        yield* llm.tool("bash", {
+          command: "printf child-bash-done",
+          description: "Print child completion marker",
+        })
+        yield* llm.push(reply().reason("Reviewing the completed command output.").hang())
+        yield* llm.text("child recovered")
+        yield* llm.text("parent completed")
+
+        yield* prompt.prompt({
+          sessionID: chat.id,
+          agent: "build",
+          noReply: true,
+          parts: [{ type: "text", text: "delegate the child bash command" }],
+        })
+
+        const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkScoped)
+        yield* awaitWithTimeout(llm.wait(3), "child did not open its post-bash model request", "10 seconds")
+
+        const task = yield* pollWithTimeout(
+          Effect.gen(function* () {
+            const msgs = yield* MessageV2.filterCompactedEffect(chat.id)
+            const part = msgs.flatMap((msg) => msg.parts).find((part) => part.type === "tool" && part.tool === "task")
+            if (part?.type !== "tool" || part.state.status !== "running") return
+            const child = part.state.metadata?.sessionId
+            if (typeof child !== "string") return
+            return { part, child: SessionID.make(child) }
+          }),
+          "parent task never entered the running state",
+        )
+
+        const output = yield* pollWithTimeout(
+          Effect.gen(function* () {
+            const msgs = yield* MessageV2.filterCompactedEffect(task.child)
+            const part = msgs.flatMap((msg) => msg.parts).find((part) => part.type === "tool" && part.tool === "bash")
+            if (part?.type !== "tool" || part.state.status !== "completed") return
+            return part.state.output
+          }),
+          "child bash tool never completed",
+        )
+
+        expect(output).toContain("child-bash-done")
+
+        const exit = yield* awaitWithTimeout(
+          Fiber.await(fiber),
+          "parent prompt remained stuck after the child stream stalled",
+          "5 seconds",
+        )
+        expect(Exit.isSuccess(exit)).toBe(true)
+        expect(yield* llm.calls).toBe(5)
+
+        const status = yield* SessionStatus.Service
+        expect((yield* status.get(chat.id)).type).toBe("idle")
+        expect((yield* status.get(task.child)).type).toBe("idle")
+
+        const parent = (yield* MessageV2.filterCompactedEffect(chat.id))
+          .flatMap((msg) => msg.parts)
+          .find((part) => part.type === "tool" && part.tool === "task")
+        expect(parent?.type === "tool" ? parent.state.status : undefined).toBe("completed")
+        expect(parent?.type === "tool" && parent.state.status === "completed" ? parent.state.output : "").toContain(
+          "child recovered",
+        )
+      }),
+      {
+        git: true,
+        config: (url) => ({
+          ...providerCfg(url, { chunkTimeout: 500 }),
+          permission: { task: "allow", bash: "allow" },
+        }),
+      },
+    ),
+  10_000,
 )
