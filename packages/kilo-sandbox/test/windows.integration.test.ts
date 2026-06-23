@@ -86,7 +86,9 @@ test.skipIf(!enabled)("Windows helper enforces writes through the generated back
             stdout: "pipe",
             stderr: "pipe",
           })
-          expect(child.exitCode).toBe(0)
+          if (child.exitCode !== 0) {
+            throw new Error(`Windows sandbox helper exited ${child.exitCode}: ${child.stderr.toString()}`)
+          }
           return child.stdout.toString()
         }),
       ),
