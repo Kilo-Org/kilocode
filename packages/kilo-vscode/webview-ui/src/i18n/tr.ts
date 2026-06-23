@@ -285,6 +285,11 @@ export const dict = {
   "prompt.action.resetModel": "Modeli varsayılana sıfırla",
   "prompt.action.enhanceDescription":
     "'Komutu Geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifadelendirme sağlayarak komutunuzu iyileştirmeye yardımcı olur. Buraya bir komut yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
+  "prompt.action.sandbox.enable": "Sandbox'ı etkinleştir",
+  "prompt.action.sandbox.disable": "Sandbox'ı devre dışı bırak",
+  "prompt.action.sandbox.enabled": "Sandbox etkin. Agent shell komutları proje ve Kilo dizinleriyle sınırlıdır.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox devre dışı. Agent shell komut yazma işlemlerini proje ve Kilo dizinleriyle sınırlamak için tıklayın.",
 
   "speechToText.tooltip.start": "Kilo Gateway ile sesli girişi başlatın",
   "speechToText.tooltip.stop": "Ses yakalamayı durdur",
@@ -1121,6 +1126,9 @@ export const dict = {
   "settings.indexing.status.title": "Durum",
   "settings.indexing.enable.title": "İndekslemeyi etkinleştir",
   "settings.indexing.enable.description": "Anlamsal kod tabanı indekslemeyi açın veya kapatın.",
+  "settings.indexing.showButton.title": "İndeksleme kapalıyken düğmeyi göster",
+  "settings.indexing.showButton.description":
+    "İndeksleme kapalıyken istem alanının altında indeksleme düğmesini göster. Düğme gizliyse indekslemeyi etkinleştirmek için Ayarlar > İndeksleme'yi açın.",
   "settings.indexing.globalEnable.title": "Genel olarak etkinleştir",
   "settings.indexing.globalEnable.description": "Her çalışma alanı için dizine eklemeyi etkinleştir.",
   "settings.indexing.projectEnable.title": "Bu proje için etkinleştir",
@@ -1324,6 +1332,9 @@ export const dict = {
   "settings.experimental.remote.inactive": "Pasif",
   "settings.experimental.remote.hint": "Geçiş yapmak için sohbette /remote kullanın",
   "settings.experimental.toolToggles": "Araç Açma/Kapatma",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Agent shell komutlarını, proje ve Kilo durum dizinlerine yazmaları kısıtlanan işletim sistemi düzeyinde bir sandbox içinde çalıştırın",
 
   "settings.agentBehaviour.defaultAgent.title": "Varsayılan Ajan",
   "settings.agentBehaviour.defaultAgent.description": "Belirtilmediğinde kullanılacak ajan",

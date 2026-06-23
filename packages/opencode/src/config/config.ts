@@ -403,6 +403,11 @@ export const Info = Schema.Struct({
       continue_loop_on_deny: Schema.optional(Schema.Boolean).annotate({
         description: "Continue the agent loop when a tool call is denied",
       }),
+      // kilocode_change start
+      sandbox: Schema.optional(Schema.Boolean).annotate({
+        description: "Run agent shell commands inside an OS-level sandbox that restricts writes to the project and Kilo state directories",
+      }),
+      // kilocode_change end
       mcp_timeout: Schema.optional(PositiveInt).annotate({
         description: "Timeout in milliseconds for model context protocol (MCP) requests",
       }),

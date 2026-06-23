@@ -1,4 +1,5 @@
 import { NodeFileSystem } from "@effect/platform-node"
+import { assertWrite, decorateFileSystem } from "@kilocode/sandbox" // kilocode_change
 import { dirname, isAbsolute, join, relative, resolve as pathResolve, sep } from "path" // kilocode_change - harden containment checks
 import { realpathSync } from "fs"
 import * as NFS from "fs/promises"
@@ -67,7 +68,7 @@ export namespace AppFileSystem {
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem
+      const fs = decorateFileSystem(yield* FileSystem.FileSystem) // kilocode_change
 
       const existsSafe = Effect.fn("FileSystem.existsSafe")(function* (path: string) {
         return yield* fs.exists(path).pipe(Effect.orElseSucceed(() => false))
@@ -116,7 +117,8 @@ export namespace AppFileSystem {
       })
 
       const ensureDir = Effect.fn("FileSystem.ensureDir")(function* (path: string) {
-        // kilocode_change start - use mkdirSafe to tolerate Windows EEXIST
+        // kilocode_change start - enforce the active sandbox and tolerate Windows EEXIST
+        yield* assertWrite(path)
         yield* Effect.tryPromise({
           try: () => mkdirSafe(path),
           catch: (cause) => new FileSystemError({ method: "ensureDir", cause }),
@@ -136,7 +138,8 @@ export namespace AppFileSystem {
             (e) => e.reason._tag === "NotFound",
             () =>
               Effect.gen(function* () {
-                // kilocode_change start - use mkdirSafe to tolerate Windows EEXIST
+                // kilocode_change start - enforce the active sandbox and tolerate Windows EEXIST
+                yield* assertWrite(dirname(path))
                 yield* Effect.tryPromise({
                   try: () => mkdirSafe(dirname(path)),
                   catch: (cause) => new FileSystemError({ method: "writeWithDirs:mkdir", cause }),

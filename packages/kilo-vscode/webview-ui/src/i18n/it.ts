@@ -970,6 +970,9 @@ export const dict = {
   "settings.indexing.status.title": "Stato",
   "settings.indexing.enable.title": "Abilita indicizzazione",
   "settings.indexing.enable.description": "Attiva o disattiva l'indicizzazione semantica del codebase.",
+  "settings.indexing.showButton.title": "Mostra il pulsante quando l'indicizzazione è disattivata",
+  "settings.indexing.showButton.description":
+    "Mostra il pulsante di indicizzazione sotto il prompt quando l'indicizzazione è disattivata. Se il pulsante è nascosto, apri Impostazioni > Indicizzazione per attivare l'indicizzazione.",
   "settings.indexing.provider.title": "Provider embedding",
   "settings.indexing.provider.description": "Scegli il provider usato per generare embedding per la ricerca semantica.",
   "settings.indexing.model.title": "Modello embedding",
@@ -1197,6 +1200,15 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Nessuna skill rilevata. Aggiungi percorsi cartella o URL di skill qui sotto per renderle disponibili.",
   "settings.agentBehaviour.availableModes": "Modalità personalizzate disponibili",
+  "prompt.action.sandbox.enable": "Abilita sandbox",
+  "prompt.action.sandbox.disable": "Disabilita sandbox",
+  "prompt.action.sandbox.enabled":
+    "Sandbox abilitata. I comandi shell dell'agente sono limitati alle directory del progetto e di Kilo.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox disabilitata. Fai clic per limitare le scritture dei comandi shell dell'agente alle directory del progetto e di Kilo.",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Esegui i comandi shell dell'agente all'interno di un sandbox a livello di sistema operativo che limita le scritture alle directory di stato del progetto e di Kilo",
 
   "settings.agentBehaviour.skillPaths": "Percorsi cartelle skill",
   "settings.agentBehaviour.skillUrls": "URL skill",

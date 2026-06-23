@@ -284,6 +284,12 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "「プロンプトを強化」ボタンは、追加コンテキスト、説明、または言い換えを提供することで、リクエストを改善します。ここにリクエストを入力し、ボタンを再度クリックして動作を確認してください。",
   "prompt.action.indexing": "インデックス設定",
+  "prompt.action.sandbox.enable": "サンドボックスを有効化",
+  "prompt.action.sandbox.disable": "サンドボックスを無効化",
+  "prompt.action.sandbox.enabled":
+    "サンドボックスが有効です。エージェントのシェルコマンドは、プロジェクトおよびKiloディレクトリに制限されています。",
+  "prompt.action.sandbox.disabled":
+    "サンドボックスが無効です。クリックしてエージェントのシェルコマンドの書き込みをプロジェクトおよびKiloディレクトリに制限します。",
 
   "speechToText.tooltip.start": "Kilo Gatewayで音声入力を開始",
   "speechToText.tooltip.stop": "音声キャプチャを停止",
@@ -787,6 +793,9 @@ export const dict = {
   "settings.indexing.dimension.placeholder": "自動",
   "settings.indexing.dimension.title": "ベクトル次元",
   "settings.indexing.enable.description": "セマンティックコードベースインデックスをオンまたはオフにします。",
+  "settings.indexing.showButton.title": "インデックス作成がオフのときにボタンを表示",
+  "settings.indexing.showButton.description":
+    "インデックス作成がオフの間、プロンプトの下にインデックス作成ボタンを表示します。ボタンが非表示の場合は、設定 > インデックス作成を開いてインデックス作成を有効にしてください。",
   "settings.indexing.enable.title": "インデックスを有効にする",
   "settings.indexing.globalEnable.title": "グローバルで有効にする",
   "settings.indexing.globalEnable.description": "すべてのワークスペースでインデックス作成を有効にします。",
@@ -1446,6 +1455,9 @@ export const dict = {
     "カスタムコマンドが設定されていません。opencode.json にコマンドを追加するとここに表示されます。",
   "settings.agentBehaviour.workflows.detail.description": "説明",
   "settings.agentBehaviour.workflows.detail.template": "テンプレート",
+  "settings.experimental.sandbox.title": "サンドボックス",
+  "settings.experimental.sandbox.description":
+    "エージェントのシェルコマンドを、プロジェクトおよびKiloの状態ディレクトリへの書き込みを制限するOSレベルのサンドボックス内で実行",
 
   "settings.autoApprove.description":
     "ツールの実行許可を定義します。ほとんどのツールはデフォルトで「許可」されます。doom_loop と external_directory はデフォルトで「確認」になります。",

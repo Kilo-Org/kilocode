@@ -287,6 +287,12 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Przycisk 'Ulepsz podpowiedź' pomaga ulepszyć Twoją prośbę, dostarczając dodatkowy kontekst, wyjaśnienia lub przeformułowania. Spróbuj wpisać prośbę tutaj i kliknij przycisk ponownie, aby zobaczyć, jak to działa.",
   "prompt.action.indexing": "Ustawienia indeksowania",
+  "prompt.action.sandbox.enable": "Włącz sandbox",
+  "prompt.action.sandbox.disable": "Wyłącz sandbox",
+  "prompt.action.sandbox.enabled":
+    "Sandbox jest włączony. Polecenia shell agenta są ograniczone do katalogów projektu i Kilo.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox jest wyłączony. Kliknij, aby ograniczyć zapisy poleceń shell agenta do katalogów projektu i Kilo.",
 
   "speechToText.tooltip.start": "Rozpocznij wprowadzanie głosowe z Kilo Gateway",
   "speechToText.tooltip.stop": "Zatrzymaj przechwytywanie dźwięku",
@@ -1301,6 +1307,9 @@ export const dict = {
   "settings.indexing.dimension.placeholder": "Automatycznie",
   "settings.indexing.dimension.title": "Wymiar wektora",
   "settings.indexing.enable.description": "Włącz lub wyłącz semantyczne indeksowanie bazy kodu.",
+  "settings.indexing.showButton.title": "Pokazuj przycisk, gdy indeksowanie jest wyłączone",
+  "settings.indexing.showButton.description":
+    "Pokazuj przycisk indeksowania pod monitem, gdy indeksowanie jest wyłączone. Jeśli przycisk jest ukryty, otwórz Ustawienia > Indeksowanie, aby włączyć indeksowanie.",
   "settings.indexing.enable.title": "Włącz indeksowanie",
   "settings.indexing.globalEnable.title": "Włącz globalnie",
   "settings.indexing.globalEnable.description": "Włącz indeksowanie dla każdego obszaru roboczego.",
@@ -1454,6 +1463,9 @@ export const dict = {
     "Brak skonfigurowanych niestandardowych komend. Dodaj komendy do opencode.json, aby je tu zobaczyć.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Szablon",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Uruchamiaj polecenia shell agenta w sandboxie na poziomie systemu operacyjnego, który ogranicza zapisy do katalogów stanu projektu i Kilo",
 
   "settings.autoApprove.description":
     "Zdefiniuj, jak narzędzia mogą być uruchamiane. Większość narzędzi domyślnie ma ustawienie Zezwalaj. doom_loop i external_directory domyślnie mają ustawienie Pytaj.",

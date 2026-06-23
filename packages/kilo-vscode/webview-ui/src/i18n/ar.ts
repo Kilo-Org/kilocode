@@ -283,6 +283,11 @@ export const dict = {
   "prompt.action.resetModel": "إعادة تعيين النموذج إلى الافتراضي",
   "prompt.action.enhanceDescription":
     "زر «حسّن الموجه» يطوّر موجهك بإضافة سياق أو توضيح أو إعادة صياغة. جرّب اكتب موجه هنا ثم اضغط الزر مرة ثانية وشوف النتيجة.",
+  "prompt.action.sandbox.enable": "تفعيل sandbox",
+  "prompt.action.sandbox.disable": "تعطيل sandbox",
+  "prompt.action.sandbox.enabled": "sandbox مُفعّل. أوامر shell الخاصة بالوكيل مقتصرة على مجلدات المشروع و Kilo.",
+  "prompt.action.sandbox.disabled":
+    "sandbox مُعطّل. انقر لتقييد كتابة أوامر shell الخاصة بالوكيل على مجلدات المشروع و Kilo.",
 
   "speechToText.tooltip.start": "بدء الإدخال الصوتي باستخدام Kilo Gateway",
   "speechToText.tooltip.stop": "إيقاف التقاط الصوت",
@@ -1110,6 +1115,9 @@ export const dict = {
   "settings.indexing.title": "الفهرسة",
   "settings.indexing.enable.title": "تمكين الفهرسة",
   "settings.indexing.enable.description": "تشغيل أو إيقاف فهرسة قاعدة الكود الدلالية.",
+  "settings.indexing.showButton.title": "إظهار الزر عند تعطيل الفهرسة",
+  "settings.indexing.showButton.description":
+    "إظهار زر الفهرسة أسفل حقل الإدخال عندما تكون الفهرسة معطلة. إذا كان الزر مخفيًا، فافتح الإعدادات > الفهرسة لتفعيل الفهرسة.",
   "settings.indexing.globalEnable.title": "تمكين عام",
   "settings.indexing.globalEnable.description": "تمكين الفهرسة لكل مساحة عمل.",
   "settings.indexing.projectEnable.title": "تمكين لهذا المشروع",
@@ -1425,6 +1433,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "لم يتم تهيئة أوامر مخصصة. أضف أوامر إلى opencode.json لرؤيتها هنا.",
   "settings.agentBehaviour.workflows.detail.description": "الوصف",
   "settings.agentBehaviour.workflows.detail.template": "القالب",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "تشغيل أوامر shell الخاصة بالوكيل داخل sandbox على مستوى نظام التشغيل يقيّد الكتابة على مجلدات حالة المشروع و Kilo",
 
   "settings.autoApprove.description":
     "تحديد كيفية السماح بتشغيل الأدوات. معظم الأدوات معينة افتراضياً على السماح. doom_loop و external_directory معينة افتراضياً على السؤال.",

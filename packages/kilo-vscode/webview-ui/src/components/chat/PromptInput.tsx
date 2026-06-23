@@ -13,6 +13,7 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useIndexing } from "../../context/indexing"
+import { indexingButtonVisible } from "../../context/indexing-utils"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useConfig } from "../../context/config"
@@ -78,7 +79,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const session = useSession()
   const server = useServer()
   const indexing = useIndexing()
-  const { config, features } = useConfig()
+  const { config, globalConfig, settings, features } = useConfig()
   const provider = useProvider()
   const language = useLanguage()
   const vscode = useVSCode()
@@ -142,6 +143,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
   const [autoApprove, setAutoApprove] = createSignal(false)
+  const sandbox = () => config().experimental?.sandbox ?? false
   let enhanceCounter = 0
   let preEnhanceText: string | null = null
 
@@ -295,6 +297,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const isBusy = () =>
     isPromptBusy(session.status(), !!props.suggesting?.(), !!props.questioning?.(), session.submitting())
+  const showIndexing = () =>
+    indexingButtonVisible(
+      features().indexing,
+      Boolean(settings()["indexing.showButtonWhenDisabled"] ?? true),
+      config(),
+      globalConfig(),
+    )
   const isDisabled = () => !server.isConnected()
   const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
   const speechModel = () => selectedSpeechToTextModel(config())
@@ -1015,7 +1024,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </Show>
         </div>
         <div class="prompt-input-hint-actions">
-          <Show when={features().indexing}>
+          <Show when={showIndexing()}>
             <Tooltip value={indexing.status().message || indexing.label()} placement="top">
               <Button
                 variant="ghost"
@@ -1059,11 +1068,37 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   : language.t("prompt.action.autoApprove.enable")
               }
               aria-pressed={autoApprove()}
-              class={`prompt-auto-approve-button ${autoApprove() ? "prompt-auto-approve-button--active" : ""}`}
+              class={`prompt-status-button ${autoApprove() ? "prompt-status-button--active" : ""}`}
             >
               <Icon name="shield" size="small" />
             </Button>
           </Tooltip>
+          <Show when={features().sandboxControls}>
+            <Tooltip
+              value={
+                sandbox() ? language.t("prompt.action.sandbox.enabled") : language.t("prompt.action.sandbox.disabled")
+              }
+              placement="top"
+            >
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={() =>
+                  vscode.postMessage({
+                    type: "updateConfig",
+                    config: { experimental: { sandbox: !sandbox() } },
+                  })
+                }
+                aria-label={
+                  sandbox() ? language.t("prompt.action.sandbox.disable") : language.t("prompt.action.sandbox.enable")
+                }
+                aria-pressed={sandbox()}
+                class={`prompt-status-button ${sandbox() ? "prompt-status-button--active" : ""}`}
+              >
+                <Icon name="lock" size="small" />
+              </Button>
+            </Tooltip>
+          </Show>
           <Tooltip value={language.t("prompt.action.enhance")} placement="top">
             <Button
               variant="ghost"

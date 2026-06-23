@@ -284,6 +284,10 @@ export const dict = {
   "prompt.action.resetModel": "重置模型为默认值",
   "prompt.action.enhanceDescription":
     "'增强提示'按钮通过提供额外上下文、澄清或重新表述来帮助改进您的请求。尝试在此处输入请求，然后再次点击按钮查看其工作原理。",
+  "prompt.action.sandbox.enable": "启用沙盒",
+  "prompt.action.sandbox.disable": "禁用沙盒",
+  "prompt.action.sandbox.enabled": "沙盒已启用。代理 shell 命令被限制在项目和 Kilo 目录内。",
+  "prompt.action.sandbox.disabled": "沙盒已禁用。点击以将代理 shell 命令的写入限制在项目和 Kilo 目录内。",
 
   "speechToText.tooltip.start": "使用 Kilo Gateway 开始语音输入",
   "speechToText.tooltip.stop": "停止捕获音频",
@@ -772,6 +776,9 @@ export const dict = {
   "settings.indexing.title": "索引",
   "settings.indexing.enable.title": "启用索引",
   "settings.indexing.enable.description": "打开或关闭语义代码库索引。",
+  "settings.indexing.showButton.title": "索引关闭时显示按钮",
+  "settings.indexing.showButton.description":
+    "索引关闭时，在提示词下方显示索引按钮。如果该按钮已隐藏，请打开“设置 > 索引”以启用索引。",
   "settings.indexing.globalEnable.title": "全局启用",
   "settings.indexing.globalEnable.description": "为每个工作区启用索引。",
   "settings.indexing.projectEnable.title": "为此项目启用",
@@ -1403,6 +1410,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "未配置自定义命令。将命令添加到 opencode.json 即可在此处看到。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "模板",
+  "settings.experimental.sandbox.title": "沙盒",
+  "settings.experimental.sandbox.description":
+    "在操作系统级沙盒中运行代理 shell 命令，将写入限制在项目和 Kilo 状态目录内",
 
   "settings.autoApprove.description":
     "定义工具的运行权限。大多数工具默认为「允许」。doom_loop 和 external_directory 默认为「询问」。",
