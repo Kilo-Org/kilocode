@@ -20,7 +20,6 @@ interface Args {
   period?: Period
   verbose?: boolean
   getAuth?: (providerID: string) => Promise<AuthInfo | undefined>
-  setAuth?: (providerID: string, auth: AuthInfo) => Promise<void>
   getProfile?: (token: string) => Promise<KilocodeProfile>
   selectOrg?: (input: { orgs: Org[]; current?: string }) => Promise<string | undefined>
   selectPeriod?: (input: { current: Period }) => Promise<Period | undefined>
@@ -86,29 +85,17 @@ function norm(input: string) {
   return input.toLowerCase().replace(/[^a-z0-9]+/g, "")
 }
 
-function distance(a: string, b: string) {
-  const rows = Array.from({ length: a.length + 1 }, (_, index) => index)
-  for (const [index, char] of [...b].entries()) {
-    const prev = [...rows]
-    rows[0] = index + 1
-    for (const pos of [...a].keys()) {
-      rows[pos + 1] = Math.min(rows[pos] + 1, prev[pos + 1] + 1, prev[pos] + (a[pos] === char ? 0 : 1))
-    }
-  }
-  return rows[a.length] ?? 0
-}
-
-function score(input: string, org: Org) {
-  const query = norm(input)
-  const names = [org.id, org.name].map(norm).filter(Boolean)
-  if (names.some((name) => name === query)) return 0
-  if (names.some((name) => name.includes(query) || query.includes(name))) return 1
-  return 2 + Math.min(...names.map((name) => distance(query, name)))
+function names(org: Org) {
+  return [org.id, org.name].map(norm).filter(Boolean)
 }
 
 function resolveRequestedOrg(input: { orgs: Org[]; org: string }) {
-  const sorted = [...input.orgs].sort((a, b) => score(input.org, a) - score(input.org, b))
-  return sorted[0]
+  const query = norm(input.org)
+  const exact = input.orgs.filter((org) => names(org).some((name) => name === query))
+  if (exact.length > 0) return { matches: exact, exact: true }
+
+  const partial = input.orgs.filter((org) => names(org).some((name) => name.includes(query)))
+  return { matches: partial, exact: false }
 }
 
 function dollars(value: number) {
@@ -335,7 +322,6 @@ export async function resolveOrg(input: {
   org?: string
   getProfile?: (token: string) => Promise<KilocodeProfile>
   selectOrg?: (input: { orgs: Org[]; current?: string }) => Promise<string | undefined>
-  setAuth?: (providerID: string, auth: AuthInfo) => Promise<void>
 }) {
   if (input.auth.type !== "oauth") return undefined
 
@@ -345,20 +331,19 @@ export async function resolveOrg(input: {
 
   const current = input.auth.accountId
   const requested = input.org ? resolveRequestedOrg({ orgs, org: input.org }) : undefined
-  const selected = requested ?? (orgs.length === 1 ? orgs[0] : undefined)
-  const id = selected?.id ?? (await (input.selectOrg ?? promptOrg)({ orgs, current }))
+  if (requested && requested.matches.length === 0) throw new Error(`No Kilo organization matches "${input.org}"`)
+
+  const choices = requested && !requested.exact && requested.matches.length > 1 ? requested.matches : orgs
+  const selected = requested?.matches.length === 1 ? requested.matches[0] : orgs.length === 1 ? orgs[0] : undefined
+  const id = selected?.id ?? (await (input.selectOrg ?? promptOrg)({ orgs: choices, current }))
   const org = selected ?? orgs.find((org) => org.id === id)
   if (!org) return undefined
 
-  if (org.id !== current) {
-    await input.setAuth?.("kilo", { ...input.auth, accountId: org.id })
-  }
   return { id: org.id, name: org.name }
 }
 
 export async function handleUsage(args: Args = {}) {
   const get = args.getAuth ?? ((id: string) => runtime.runPromise((svc) => svc.get(id)))
-  const set = args.setAuth ?? ((id: string, auth: AuthInfo) => runtime.runPromise((svc) => svc.set(id, auth)))
   const auth = await get("kilo")
   const error = args.error ?? UI.error
   const exit = args.exit ?? ((code: number) => (process.exitCode = code))
@@ -370,7 +355,7 @@ export async function handleUsage(args: Args = {}) {
   }
 
   try {
-    const org = await resolveOrg({ auth, org: args.org, getProfile: args.getProfile, selectOrg: args.selectOrg, setAuth: set })
+    const org = await resolveOrg({ auth, org: args.org, getProfile: args.getProfile, selectOrg: args.selectOrg })
     if (!org) {
       error("No Kilo organization selected for the authenticated account")
       exit(1)

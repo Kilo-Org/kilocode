@@ -241,7 +241,6 @@ describe("org usage", () => {
 
   test("prints usage for a requested org without prompting", async () => {
     const out: string[] = []
-    const saved: string[] = []
     const calls: Request[] = []
     const fetcher = (async (input, init) => {
       calls.push(new Request(input, init))
@@ -262,16 +261,12 @@ describe("org usage", () => {
       selectOrg: async () => {
         throw new Error("should not prompt")
       },
-      setAuth: async (_id, info) => {
-        saved.push(info.type === "oauth" ? (info.accountId ?? "") : "")
-      },
       fetch: fetcher,
       write: (msg) => out.push(msg),
       error: (msg) => out.push(msg),
       exit: () => undefined,
     })
 
-    expect(saved).toEqual(["org_2"])
     expect(out[0]).toContain("Organization: Two Trees")
     const url = new URL(calls[0].url)
     const input = JSON.parse(url.searchParams.get("input") ?? "{}")
@@ -320,7 +315,6 @@ describe("org usage", () => {
   })
 
   test("prompts for an org when multiple orgs are available", async () => {
-    const saved: string[] = []
     const auth = { type: "oauth", access: "token", refresh: "refresh", expires: Date.now(), accountId: "org_1" } as const
 
     const org = await resolveOrg({
@@ -333,21 +327,17 @@ describe("org usage", () => {
         ],
       }),
       selectOrg: async () => "org_2",
-      setAuth: async (_id, info) => {
-        saved.push(info.type === "oauth" ? (info.accountId ?? "") : "")
-      },
     })
 
     expect(org).toEqual({ id: "org_2", name: "Two" })
-    expect(saved).toEqual(["org_2"])
   })
 
-  test("resolves a requested org by closest name match", async () => {
+  test("resolves a requested org by unique partial name match", async () => {
     const auth = { type: "oauth", access: "token", refresh: "refresh", expires: Date.now(), accountId: "org_1" } as const
 
     const org = await resolveOrg({
       auth,
-      org: "tw tre",
+      org: "trees",
       getProfile: async () => ({
         email: "test@example.com",
         organizations: [
@@ -363,8 +353,53 @@ describe("org usage", () => {
     expect(org).toEqual({ id: "org_2", name: "Two Trees" })
   })
 
+  test("prompts when a requested org matches multiple orgs", async () => {
+    const seen: string[][] = []
+    const auth = { type: "oauth", access: "token", refresh: "refresh", expires: Date.now(), accountId: "org_1" } as const
+
+    const org = await resolveOrg({
+      auth,
+      org: "two",
+      getProfile: async () => ({
+        email: "test@example.com",
+        organizations: [
+          { id: "org_1", name: "One", role: "owner" },
+          { id: "org_2", name: "Two Trees", role: "member" },
+          { id: "org_3", name: "Two Rivers", role: "member" },
+        ],
+      }),
+      selectOrg: async (input) => {
+        seen.push(input.orgs.map((org) => org.id))
+        return "org_3"
+      },
+    })
+
+    expect(org).toEqual({ id: "org_3", name: "Two Rivers" })
+    expect(seen).toEqual([["org_2", "org_3"]])
+  })
+
+  test("rejects a requested org with no exact or partial match", async () => {
+    const auth = { type: "oauth", access: "token", refresh: "refresh", expires: Date.now(), accountId: "org_1" } as const
+
+    await expect(
+      resolveOrg({
+        auth,
+        org: "twp",
+        getProfile: async () => ({
+          email: "test@example.com",
+          organizations: [
+            { id: "org_1", name: "One", role: "owner" },
+            { id: "org_2", name: "Two Trees", role: "member" },
+          ],
+        }),
+        selectOrg: async () => {
+          throw new Error("should not prompt")
+        },
+      }),
+    ).rejects.toThrow('No Kilo organization matches "twp"')
+  })
+
   test("selects the only org without prompting when none is selected", async () => {
-    const saved: string[] = []
     const auth = { type: "oauth", access: "token", refresh: "refresh", expires: Date.now() } as const
 
     const org = await resolveOrg({
@@ -373,17 +408,12 @@ describe("org usage", () => {
       selectOrg: async () => {
         throw new Error("should not prompt")
       },
-      setAuth: async (_id, info) => {
-        saved.push(info.type === "oauth" ? (info.accountId ?? "") : "")
-      },
     })
 
     expect(org).toEqual({ id: "org_1", name: "One" })
-    expect(saved).toEqual(["org_1"])
   })
 
-  test("replaces a stale accountId with the only profile org", async () => {
-    const saved: string[] = []
+  test("selects the only profile org without persisting over a stale accountId", async () => {
     const auth = { type: "oauth", access: "token", refresh: "refresh", expires: Date.now(), accountId: "org_old" } as const
 
     const org = await resolveOrg({
@@ -392,13 +422,9 @@ describe("org usage", () => {
       selectOrg: async () => {
         throw new Error("should not prompt")
       },
-      setAuth: async (_id, info) => {
-        saved.push(info.type === "oauth" ? (info.accountId ?? "") : "")
-      },
     })
 
     expect(org).toEqual({ id: "org_1", name: "One" })
-    expect(saved).toEqual(["org_1"])
   })
 
   test("does not use a stale accountId when the profile has no orgs", async () => {
