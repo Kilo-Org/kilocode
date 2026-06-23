@@ -15,3 +15,15 @@ describe("DEFAULT_AUTOCOMPLETE_MODEL", () => {
     expect(DEFAULT_AUTOCOMPLETE_MODEL).toBe(match!)
   })
 })
+
+describe("Next Edit FIM models", () => {
+  test("reference a FIM model from the same provider", () => {
+    for (const model of AUTOCOMPLETE_MODELS) {
+      if (model.kind !== "edit") continue
+      const sibling = AUTOCOMPLETE_MODELS.find((candidate) => candidate.id === model.fimModelID)
+      expect(sibling).toBeDefined()
+      expect(sibling?.kind).not.toBe("edit")
+      expect(sibling?.providerID).toBe(model.providerID)
+    }
+  })
+})

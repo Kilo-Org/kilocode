@@ -12,7 +12,11 @@ import { NextEditSuggestionManager } from "./next-edit/NextEditSuggestionManager
 import { toAllowedMercuryRecentSnippets } from "./next-edit/recentSnippetsAdapter"
 import type { KiloConnectionService } from "../cli-backend"
 import { hasValidCredentials } from "./fim"
-import { DEFAULT_AUTOCOMPLETE_MODEL, getAutocompleteModel } from "../../shared/autocomplete-models"
+import {
+  DEFAULT_AUTOCOMPLETE_MODEL,
+  getAutocompleteModel,
+  getAutocompleteModelById,
+} from "../../shared/autocomplete-models"
 
 const CONFIG_SECTION = "kilo-code.new.autocomplete"
 
@@ -23,8 +27,7 @@ export function selector(kind: "classic" | "next-edit"): vscode.DocumentSelector
 export function notebookModel(provider?: string, model?: string) {
   const info = getAutocompleteModel(provider, model)
   if (info.kind !== "edit") return info
-  const fallback = info.providerID === "kilo" ? "inception/mercury-edit-2" : "mercury-edit-2"
-  return getAutocompleteModel(info.providerID, fallback)
+  return getAutocompleteModelById(info.fimModelID)
 }
 
 export interface AutocompleteServiceSettings {
