@@ -525,7 +525,9 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       })
 
       if (result.error) {
-        return yield* Effect.fail(new HttpApiError.BadRequest({}))
+        const err =
+          result.error.kind === "unauthorized" ? new HttpApiError.Unauthorized({}) : new HttpApiError.BadRequest({})
+        return yield* Effect.fail(err)
       }
 
       return result.models

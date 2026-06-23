@@ -2263,9 +2263,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async fetchAndSendImageModels(): Promise<void> {
     const dir = this.getWorkspaceDirectory()
     const result = await fetchImageModels(this.connectionService, dir)
-    const message = result.ok
-      ? { type: "imageModelsLoaded" as const, models: result.models }
-      : { type: "imageModelsLoaded" as const, models: [] }
+    if (!result.ok) {
+      if (this.cachedImageModelsMessage) {
+        this.postMessage(this.cachedImageModelsMessage)
+      }
+      return
+    }
+    const message = { type: "imageModelsLoaded" as const, models: result.models }
     this.cachedImageModelsMessage = message
     this.postMessage(message)
   }

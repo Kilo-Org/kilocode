@@ -9,7 +9,6 @@ import { InstanceState } from "@/effect/instance-state"
 import * as Log from "@opencode-ai/core/util/log"
 import { assertExternalDirectoryEffect } from "../../tool/external-directory"
 import { Config } from "@/config/config"
-import { fetchKiloImageModels } from "@kilocode/kilo-gateway"
 import DESCRIPTION from "./generate-image.txt"
 
 const log = Log.create({ service: "tool.generate_image" })
@@ -33,7 +32,7 @@ export const DEFAULT_MODEL = "openrouter/auto"
 /** Kept for test compatibility. */
 export const IMAGE_MODELS = FALLBACK_IMAGE_MODELS
 
-export type ImageFormat = "png" | "jpeg" | "jpg"
+export type ImageFormat = "png" | "jpeg"
 
 const DATA_URL_RE = /^data:image\/(png|jpeg|jpg);base64,(.+)$/
 
@@ -49,7 +48,8 @@ export function parseImageResponse(body: string): { format: ImageFormat; base64:
   if (typeof url !== "string") return null
   const m = url.match(DATA_URL_RE)
   if (!m) return null
-  return { format: m[1] as ImageFormat, base64: m[2] }
+  const format = (m[1] === "jpg" ? "jpeg" : m[1]) as ImageFormat
+  return { format, base64: m[2] }
 }
 
 export type AuthInput = {
@@ -87,7 +87,12 @@ export function resolveProvider(
 
 export function ensureExtension(relPath: string, format: ImageFormat): string {
   const ext = format === "jpeg" ? "jpg" : format
-  if (/\.(png|jpe?g)$/i.test(relPath)) return relPath
+  const existing = relPath.match(/\.([a-z]+)$/i)?.[1]?.toLowerCase()
+  if (!existing) return `${relPath}.${ext}`
+  const png = ["png"]
+  const jpg = ["jpg", "jpeg"]
+  if (ext === "jpg" && jpg.includes(existing)) return relPath
+  if (ext === "png" && png.includes(existing)) return relPath
   return `${relPath}.${ext}`
 }
 
@@ -182,7 +187,8 @@ export const GenerateImageTool = Tool.define(
             yield* assertExternalDirectoryEffect(ctx, imgPath)
             const buf = yield* Effect.tryPromise(() => readFile(imgPath))
             const ext = path.extname(imgPath).slice(1).toLowerCase() || "png"
-            inputImage = `data:image/${ext};base64,${buf.toString("base64")}`
+            const mime = ext === "jpg" ? "jpeg" : ext
+            inputImage = `data:image/${mime};base64,${buf.toString("base64")}`
           }
 
           const cfg = yield* configSvc.get()
@@ -220,6 +226,7 @@ export const GenerateImageTool = Tool.define(
 
           const finalPath = ensureExtension(params.path, parsed.format)
           const absPath = path.isAbsolute(finalPath) ? finalPath : path.join(instance.directory, finalPath)
+          yield* assertExternalDirectoryEffect(ctx, absPath)
           yield* ctx.ask({
             permission: "write",
             patterns: [path.relative(instance.worktree, absPath)],

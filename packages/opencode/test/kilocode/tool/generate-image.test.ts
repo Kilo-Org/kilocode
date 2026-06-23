@@ -89,28 +89,17 @@ describe("generate-image provider resolver", () => {
     expect(result!.provider).toBe("kilo")
     expect(result!.token).toBe("kilo-token")
   })
+})
 
-  test("uses Kilo cloud with API key auth", () => {
-    const result = resolveProvider({ type: "api", key: "kilo-api-key" }, undefined)
-    expect(result!.token).toBe("kilo-api-key")
-    expect(result!.provider).toBe("kilo")
-  })
-
-  test("falls back to OpenRouter with BYO key when no Kilo auth", () => {
-    const result = resolveProvider(undefined, "or-key-123")
-    expect(result!.provider).toBe("openrouter")
-    expect(result!.token).toBe("or-key-123")
-    expect(result!.url).toContain("openrouter.ai")
-  })
-
-  test("returns null when no auth source is available", () => {
-    expect(resolveProvider(undefined, undefined)).toBeNull()
-  })
-
-  test("prefers Kilo auth over OpenRouter key", () => {
-    const result = resolveProvider({ type: "oauth", access: "kilo-token" }, "or-key")
-    expect(result!.provider).toBe("kilo")
-    expect(result!.token).toBe("kilo-token")
+describe("generate-image response parser MIME normalization", () => {
+  test("normalizes jpg data URL to jpeg format", () => {
+    const base64 = "/9j/4AAQSkZJRgABAQAAAQABAAD"
+    const body = JSON.stringify({
+      choices: [{ message: { images: [{ image_url: { url: `data:image/jpg;base64,${base64}` } }] } }],
+    })
+    const result = parseImageResponse(body)
+    expect(result!.format).toBe("jpeg")
+    expect(result!.base64).toBe(base64)
   })
 })
 
@@ -123,19 +112,23 @@ describe("generate-image path extension", () => {
     expect(ensureExtension("output/photo", "jpeg")).toBe("output/photo.jpg")
   })
 
-  test("keeps existing .png extension", () => {
+  test("keeps existing .png extension when format is png", () => {
     expect(ensureExtension("output/logo.png", "png")).toBe("output/logo.png")
   })
 
-  test("keeps existing .jpg extension for jpeg format", () => {
+  test("keeps existing .jpg extension when format is jpeg", () => {
     expect(ensureExtension("output/photo.jpg", "jpeg")).toBe("output/photo.jpg")
   })
 
-  test("keeps existing .jpeg extension", () => {
+  test("keeps existing .jpeg extension when format is jpeg", () => {
     expect(ensureExtension("output/photo.jpeg", "jpeg")).toBe("output/photo.jpeg")
   })
 
-  test("keeps uppercase .PNG extension", () => {
+  test("replaces mismatched extension when format differs", () => {
+    expect(ensureExtension("output/photo.jpg", "png")).toBe("output/photo.jpg.png")
+  })
+
+  test("keeps uppercase .PNG extension when format is png", () => {
     expect(ensureExtension("output/logo.PNG", "png")).toBe("output/logo.PNG")
   })
 

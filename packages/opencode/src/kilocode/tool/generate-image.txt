@@ -1,4 +1,4 @@
-Search the web for images or generates a new image using AI models through the Kilo Gateway or OpenRouter. Supports both generating new images from text prompts and editing existing images.
+Generate a new image from a text prompt or edit an existing image using AI models through the Kilo Gateway or OpenRouter.
 
 Usage notes:
   - Provide a `prompt` describing what to generate or how to edit
