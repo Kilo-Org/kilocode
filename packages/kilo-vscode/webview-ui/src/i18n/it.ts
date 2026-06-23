@@ -1141,23 +1141,28 @@ export const dict = {
     "L'opzione predefinita usa suoni diversi per completamento, intervento ed errori. Le altre opzioni usano un unico suono per tutti gli eventi.",
   "settings.notifications.sound.none": "Nessuno",
   "settings.experimental.share.title": "Modalità condivisione",
-  "settings.experimental.share.description": "Come si comporta la condivisione sessione",
+  "settings.experimental.share.description":
+    "Controls when sessions are published to the web. Manual: share each session individually using the share button. Auto: new sessions are shared automatically. Disabled: session sharing is turned off.",
   "settings.experimental.share.manual": "Manuale",
   "settings.experimental.share.auto": "Automatica",
   "settings.experimental.share.disabled": "Disabilitata",
   "settings.experimental.formatter.title": "Formatter",
-  "settings.experimental.formatter.description": "Abilita il formatter automatico del codice",
+  "settings.experimental.formatter.description":
+    "Enable the automatic code formatter to apply consistent formatting after file edits.",
   "settings.experimental.lsp.title": "LSP",
-  "settings.experimental.lsp.description": "Abilita integrazione language server protocol",
+  "settings.experimental.lsp.description":
+    "Enable Language Server Protocol integration so the agent can use IDE-quality diagnostics, completions, and hover info during coding tasks.",
   "settings.experimental.batch.title": "Tool batch",
-  "settings.experimental.batch.description": "Abilita batching di più chiamate tool",
+  "settings.experimental.batch.description":
+    "Allow the agent to execute multiple tool calls in a single step, which can speed up tasks that require many parallel operations.",
   "settings.experimental.semanticIndexing.title": "Indicizzazione semantica",
   "settings.experimental.semanticIndexing.description":
     "Abilita l'indicizzazione semantica del codebase e il tool semantic_search. Richiede configurazione indicizzazione.",
   "settings.experimental.codebaseSearch.title": "Ricerca codebase",
   "settings.experimental.codebaseSearch.description": "Abilita ricerca in linguaggio naturale con AI nel codebase",
   "settings.experimental.continueOnDeny.title": "Continua dopo rifiuto",
-  "settings.experimental.continueOnDeny.description": "Continua il loop agente quando un'autorizzazione viene negata",
+  "settings.experimental.continueOnDeny.description":
+    "When a permission request is denied, allow the agent to continue working instead of stopping. The agent will skip the denied action and attempt to proceed with the task.",
   "settings.experimental.mcpTimeout.title": "Timeout MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout per richieste server MCP in millisecondi",
   "settings.experimental.remote.title": "Controllo remoto",
@@ -1180,11 +1185,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Prompt personalizzato",
   "settings.agentBehaviour.prompt.description": "Prompt di sistema aggiuntivo per questo agente",
   "settings.agentBehaviour.temperature.title": "Temperatura",
-  "settings.agentBehaviour.temperature.description": "Temperatura di campionamento (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controls the randomness of AI responses (0–2). Lower values (e.g. 0.2) produce more focused, consistent outputs. Higher values (e.g. 1.0) produce more varied, creative responses. Leave empty to use the model's default.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Parametro di campionamento nucleus (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Nucleus sampling threshold (0–1). Only the most probable tokens whose cumulative probability reaches this value are considered. Lower values make outputs more focused; higher values allow more variety. Leave empty to use the model's default.",
   "settings.agentBehaviour.maxSteps.title": "Passaggi massimi",
-  "settings.agentBehaviour.maxSteps.description": "Numero massimo di iterazioni agentiche",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximum number of agentic iterations (tool calls + responses) allowed per session before the agent stops automatically.",
   "settings.agentBehaviour.hidden.title": "Nascosto",
   "settings.agentBehaviour.hidden.description": "Nascondi questo agente dal selettore modalità nell'input chat",
   "settings.agentBehaviour.disable.title": "Disabilitato",

@@ -1303,16 +1303,20 @@ export const dict = {
     "По умолчанию для завершения, запроса вашего участия и ошибок используются разные звуки. В остальных вариантах для всех событий используется один и тот же звук.",
   "settings.notifications.sound.none": "Нет",
   "settings.experimental.share.title": "Режим обмена",
-  "settings.experimental.share.description": "Поведение обмена сессиями",
+  "settings.experimental.share.description":
+    "Controls when sessions are published to the web. Manual: share each session individually using the share button. Auto: new sessions are shared automatically. Disabled: session sharing is turned off.",
   "settings.experimental.share.manual": "Вручную",
   "settings.experimental.share.auto": "Автоматически",
   "settings.experimental.share.disabled": "Отключено",
   "settings.experimental.formatter.title": "Форматтер",
-  "settings.experimental.formatter.description": "Включить автоматическое форматирование кода",
+  "settings.experimental.formatter.description":
+    "Enable the automatic code formatter to apply consistent formatting after file edits.",
   "settings.experimental.lsp.title": "LSP",
-  "settings.experimental.lsp.description": "Включить интеграцию протокола языкового сервера",
+  "settings.experimental.lsp.description":
+    "Enable Language Server Protocol integration so the agent can use IDE-quality diagnostics, completions, and hover info during coding tasks.",
   "settings.experimental.batch.title": "Пакетный инструмент",
-  "settings.experimental.batch.description": "Включить пакетную обработку вызовов инструментов",
+  "settings.experimental.batch.description":
+    "Allow the agent to execute multiple tool calls in a single step, which can speed up tasks that require many parallel operations.",
   "settings.experimental.codebaseSearch.title": "Поиск по коду",
   "settings.experimental.codebaseSearch.description": "Включить поиск на естественном языке с ИИ по всей кодовой базе",
   "settings.experimental.speechToText.title": "Речь в текст",
@@ -1323,7 +1327,8 @@ export const dict = {
   "settings.models.speechToTextModel.title": "Модель речи в текст",
   "settings.models.speechToTextModel.description": "Выберите модель транскрипции Kilo Gateway для голосового ввода.",
   "settings.experimental.continueOnDeny.title": "Продолжить при отказе",
-  "settings.experimental.continueOnDeny.description": "Продолжить цикл агента при отказе в разрешении",
+  "settings.experimental.continueOnDeny.description":
+    "When a permission request is denied, allow the agent to continue working instead of stopping. The agent will skip the denied action and attempt to proceed with the task.",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Таймаут запросов MCP-сервера в миллисекундах",
   "settings.experimental.remote.title": "Управление Remote",
@@ -1348,11 +1353,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Пользовательский промпт",
   "settings.agentBehaviour.prompt.description": "Дополнительный системный промпт для этого агента",
   "settings.agentBehaviour.temperature.title": "Температура",
-  "settings.agentBehaviour.temperature.description": "Температура сэмплирования (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controls the randomness of AI responses (0–2). Lower values (e.g. 0.2) produce more focused, consistent outputs. Higher values (e.g. 1.0) produce more varied, creative responses. Leave empty to use the model's default.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Параметр nucleus-сэмплирования (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Nucleus sampling threshold (0–1). Only the most probable tokens whose cumulative probability reaches this value are considered. Lower values make outputs more focused; higher values allow more variety. Leave empty to use the model's default.",
   "settings.agentBehaviour.maxSteps.title": "Макс. шагов",
-  "settings.agentBehaviour.maxSteps.description": "Максимальное число итераций агента",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximum number of agentic iterations (tool calls + responses) allowed per session before the agent stops automatically.",
   "settings.agentBehaviour.hidden.title": "Скрытый",
   "settings.agentBehaviour.hidden.description": "Скрыть этого агента из переключателя режимов в поле ввода чата",
   "settings.agentBehaviour.disable.title": "Отключён",

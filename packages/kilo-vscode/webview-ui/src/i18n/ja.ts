@@ -1292,16 +1292,20 @@ export const dict = {
     "デフォルトでは、完了、入力、エラーにそれぞれ異なるサウンドが使用されます。その他の選択肢では、すべてのイベントに同じサウンドが使用されます。",
   "settings.notifications.sound.none": "なし",
   "settings.experimental.share.title": "共有モード",
-  "settings.experimental.share.description": "セッション共有の動作",
+  "settings.experimental.share.description":
+    "Controls when sessions are published to the web. Manual: share each session individually using the share button. Auto: new sessions are shared automatically. Disabled: session sharing is turned off.",
   "settings.experimental.share.manual": "手動",
   "settings.experimental.share.auto": "自動",
   "settings.experimental.share.disabled": "無効",
   "settings.experimental.formatter.title": "フォーマッター",
-  "settings.experimental.formatter.description": "自動コードフォーマッターを有効にする",
+  "settings.experimental.formatter.description":
+    "Enable the automatic code formatter to apply consistent formatting after file edits.",
   "settings.experimental.lsp.title": "LSP",
-  "settings.experimental.lsp.description": "言語サーバープロトコル統合を有効にする",
+  "settings.experimental.lsp.description":
+    "Enable Language Server Protocol integration so the agent can use IDE-quality diagnostics, completions, and hover info during coding tasks.",
   "settings.experimental.batch.title": "バッチツール",
-  "settings.experimental.batch.description": "複数のツール呼び出しのバッチ処理を有効にする",
+  "settings.experimental.batch.description":
+    "Allow the agent to execute multiple tool calls in a single step, which can speed up tasks that require many parallel operations.",
   "settings.experimental.codebaseSearch.title": "コードベース検索",
   "settings.experimental.codebaseSearch.description": "コードベース全体でAIによる自然言語検索を有効にする",
   "settings.experimental.speechToText.title": "音声認識",
@@ -1312,7 +1316,8 @@ export const dict = {
   "settings.models.speechToTextModel.title": "音声認識モデル",
   "settings.models.speechToTextModel.description": "音声入力に使用するKilo Gateway文字起こしモデルを選択します。",
   "settings.experimental.continueOnDeny.title": "拒否時に続行",
-  "settings.experimental.continueOnDeny.description": "権限が拒否された場合にエージェントループを続行",
+  "settings.experimental.continueOnDeny.description":
+    "When a permission request is denied, allow the agent to continue working instead of stopping. The agent will skip the denied action and attempt to proceed with the task.",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
   "settings.experimental.remote.title": "Remote コントロール",
@@ -1337,11 +1342,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "カスタムプロンプト",
   "settings.agentBehaviour.prompt.description": "このエージェントの追加システムプロンプト",
   "settings.agentBehaviour.temperature.title": "温度",
-  "settings.agentBehaviour.temperature.description": "サンプリング温度（0-2）",
+  "settings.agentBehaviour.temperature.description":
+    "Controls the randomness of AI responses (0–2). Lower values (e.g. 0.2) produce more focused, consistent outputs. Higher values (e.g. 1.0) produce more varied, creative responses. Leave empty to use the model's default.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "核サンプリングパラメータ（0-1）",
+  "settings.agentBehaviour.topP.description":
+    "Nucleus sampling threshold (0–1). Only the most probable tokens whose cumulative probability reaches this value are considered. Lower values make outputs more focused; higher values allow more variety. Leave empty to use the model's default.",
   "settings.agentBehaviour.maxSteps.title": "最大ステップ数",
-  "settings.agentBehaviour.maxSteps.description": "最大エージェント反復回数",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximum number of agentic iterations (tool calls + responses) allowed per session before the agent stops automatically.",
   "settings.agentBehaviour.hidden.title": "非表示",
   "settings.agentBehaviour.hidden.description": "チャット入力のモード切り替えからこのエージェントを非表示にする",
   "settings.agentBehaviour.disable.title": "無効",

@@ -1263,16 +1263,20 @@ export const dict = {
     "Opcja domyślna używa różnych dźwięków dla zakończenia, oczekiwania na reakcję i błędów. Pozostałe opcje używają jednego dźwięku dla wszystkich zdarzeń.",
   "settings.notifications.sound.none": "Brak",
   "settings.experimental.share.title": "Tryb udostępniania",
-  "settings.experimental.share.description": "Zachowanie udostępniania sesji",
+  "settings.experimental.share.description":
+    "Controls when sessions are published to the web. Manual: share each session individually using the share button. Auto: new sessions are shared automatically. Disabled: session sharing is turned off.",
   "settings.experimental.share.manual": "Ręczny",
   "settings.experimental.share.auto": "Automatyczny",
   "settings.experimental.share.disabled": "Wyłączony",
   "settings.experimental.formatter.title": "Formater",
-  "settings.experimental.formatter.description": "Włącz automatyczny formater kodu",
+  "settings.experimental.formatter.description":
+    "Enable the automatic code formatter to apply consistent formatting after file edits.",
   "settings.experimental.lsp.title": "LSP",
-  "settings.experimental.lsp.description": "Włącz integrację protokołu serwera języka",
+  "settings.experimental.lsp.description":
+    "Enable Language Server Protocol integration so the agent can use IDE-quality diagnostics, completions, and hover info during coding tasks.",
   "settings.experimental.batch.title": "Narzędzie wsadowe",
-  "settings.experimental.batch.description": "Włącz przetwarzanie wsadowe wywołań narzędzi",
+  "settings.experimental.batch.description":
+    "Allow the agent to execute multiple tool calls in a single step, which can speed up tasks that require many parallel operations.",
   "settings.experimental.codebaseSearch.title": "Wyszukiwanie kodu",
   "settings.experimental.codebaseSearch.description": "Włącz wyszukiwanie w języku naturalnym z AI w całej bazie kodu",
   "settings.experimental.speechToText.title": "Mowa na tekst",
@@ -1284,7 +1288,8 @@ export const dict = {
   "settings.models.speechToTextModel.description":
     "Wybierz model transkrypcji Kilo Gateway dla wprowadzania głosowego.",
   "settings.experimental.continueOnDeny.title": "Kontynuuj przy odmowie",
-  "settings.experimental.continueOnDeny.description": "Kontynuuj pętlę agenta po odmowie uprawnienia",
+  "settings.experimental.continueOnDeny.description":
+    "When a permission request is denied, allow the agent to continue working instead of stopping. The agent will skip the denied action and attempt to proceed with the task.",
   "settings.experimental.mcpTimeout.title": "Limit czasu MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Limit czasu żądań serwera MCP w milisekundach",
   "settings.experimental.remote.title": "Sterowanie Remote",
@@ -1344,11 +1349,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Niestandardowy prompt",
   "settings.agentBehaviour.prompt.description": "Dodatkowy prompt systemowy dla tego agenta",
   "settings.agentBehaviour.temperature.title": "Temperatura",
-  "settings.agentBehaviour.temperature.description": "Temperatura próbkowania (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controls the randomness of AI responses (0–2). Lower values (e.g. 0.2) produce more focused, consistent outputs. Higher values (e.g. 1.0) produce more varied, creative responses. Leave empty to use the model's default.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Parametr próbkowania nucleus (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Nucleus sampling threshold (0–1). Only the most probable tokens whose cumulative probability reaches this value are considered. Lower values make outputs more focused; higher values allow more variety. Leave empty to use the model's default.",
   "settings.agentBehaviour.maxSteps.title": "Maks. kroki",
-  "settings.agentBehaviour.maxSteps.description": "Maksymalna liczba iteracji agenta",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximum number of agentic iterations (tool calls + responses) allowed per session before the agent stops automatically.",
   "settings.agentBehaviour.hidden.title": "Ukryty",
   "settings.agentBehaviour.hidden.description": "Ukryj tego agenta z przełącznika trybów w polu czatu",
   "settings.agentBehaviour.disable.title": "Wyłączony",

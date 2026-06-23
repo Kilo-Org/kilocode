@@ -1327,16 +1327,20 @@ export const dict = {
     "L’option par défaut utilise des sons différents pour la fin des sessions, les demandes d’intervention et les erreurs. Les autres options utilisent un même son pour tous les événements.",
   "settings.notifications.sound.none": "Aucun",
   "settings.experimental.share.title": "Mode de partage",
-  "settings.experimental.share.description": "Comportement du partage de session",
+  "settings.experimental.share.description":
+    "Controls when sessions are published to the web. Manual: share each session individually using the share button. Auto: new sessions are shared automatically. Disabled: session sharing is turned off.",
   "settings.experimental.share.manual": "Manuel",
   "settings.experimental.share.auto": "Automatique",
   "settings.experimental.share.disabled": "Désactivé",
   "settings.experimental.formatter.title": "Formateur",
-  "settings.experimental.formatter.description": "Activer le formateur de code automatique",
+  "settings.experimental.formatter.description":
+    "Enable the automatic code formatter to apply consistent formatting after file edits.",
   "settings.experimental.lsp.title": "LSP",
-  "settings.experimental.lsp.description": "Activer l'intégration du protocole de serveur de langage",
+  "settings.experimental.lsp.description":
+    "Enable Language Server Protocol integration so the agent can use IDE-quality diagnostics, completions, and hover info during coding tasks.",
   "settings.experimental.batch.title": "Outil par lot",
-  "settings.experimental.batch.description": "Activer le traitement par lot d'appels d'outils",
+  "settings.experimental.batch.description":
+    "Allow the agent to execute multiple tool calls in a single step, which can speed up tasks that require many parallel operations.",
   "settings.experimental.codebaseSearch.title": "Recherche de code",
   "settings.experimental.codebaseSearch.description":
     "Activer la recherche en langage naturel par IA dans toute la base de code",
@@ -1350,7 +1354,7 @@ export const dict = {
     "Choisissez le modèle de transcription Kilo Gateway pour la saisie vocale.",
   "settings.experimental.continueOnDeny.title": "Continuer en cas de refus",
   "settings.experimental.continueOnDeny.description":
-    "Continuer la boucle de l'agent lorsqu'une autorisation est refusée",
+    "When a permission request is denied, allow the agent to continue working instead of stopping. The agent will skip the denied action and attempt to proceed with the task.",
   "settings.experimental.mcpTimeout.title": "Délai MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Délai des requêtes du serveur MCP en millisecondes",
   "settings.experimental.remote.title": "Contrôle Remote",
@@ -1375,11 +1379,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Prompt personnalisé",
   "settings.agentBehaviour.prompt.description": "Prompt système supplémentaire pour cet agent",
   "settings.agentBehaviour.temperature.title": "Température",
-  "settings.agentBehaviour.temperature.description": "Température d'échantillonnage (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controls the randomness of AI responses (0–2). Lower values (e.g. 0.2) produce more focused, consistent outputs. Higher values (e.g. 1.0) produce more varied, creative responses. Leave empty to use the model's default.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Paramètre d'échantillonnage nucleus (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Nucleus sampling threshold (0–1). Only the most probable tokens whose cumulative probability reaches this value are considered. Lower values make outputs more focused; higher values allow more variety. Leave empty to use the model's default.",
   "settings.agentBehaviour.maxSteps.title": "Étapes max.",
-  "settings.agentBehaviour.maxSteps.description": "Itérations maximales de l'agent",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximum number of agentic iterations (tool calls + responses) allowed per session before the agent stops automatically.",
   "settings.agentBehaviour.hidden.title": "Masqué",
   "settings.agentBehaviour.hidden.description": "Masquer cet agent du sélecteur de mode dans la saisie du chat",
   "settings.agentBehaviour.disable.title": "Désactivé",

@@ -1286,16 +1286,20 @@ export const dict = {
     "기본값은 완료, 입력, 오류에 서로 다른 소리를 사용합니다. 다른 옵션에서는 모든 이벤트에 동일한 소리를 사용합니다.",
   "settings.notifications.sound.none": "없음",
   "settings.experimental.share.title": "공유 모드",
-  "settings.experimental.share.description": "세션 공유 동작 방식",
+  "settings.experimental.share.description":
+    "Controls when sessions are published to the web. Manual: share each session individually using the share button. Auto: new sessions are shared automatically. Disabled: session sharing is turned off.",
   "settings.experimental.share.manual": "수동",
   "settings.experimental.share.auto": "자동",
   "settings.experimental.share.disabled": "비활성화",
   "settings.experimental.formatter.title": "포매터",
-  "settings.experimental.formatter.description": "자동 코드 포매터 활성화",
+  "settings.experimental.formatter.description":
+    "Enable the automatic code formatter to apply consistent formatting after file edits.",
   "settings.experimental.lsp.title": "LSP",
-  "settings.experimental.lsp.description": "언어 서버 프로토콜 통합 활성화",
+  "settings.experimental.lsp.description":
+    "Enable Language Server Protocol integration so the agent can use IDE-quality diagnostics, completions, and hover info during coding tasks.",
   "settings.experimental.batch.title": "배치 도구",
-  "settings.experimental.batch.description": "여러 도구 호출의 배치 처리 활성화",
+  "settings.experimental.batch.description":
+    "Allow the agent to execute multiple tool calls in a single step, which can speed up tasks that require many parallel operations.",
   "settings.experimental.codebaseSearch.title": "코드베이스 검색",
   "settings.experimental.codebaseSearch.description": "코드베이스 전체에서 AI 기반 자연어 검색 활성화",
   "settings.experimental.speechToText.title": "음성 텍스트 변환",
@@ -1306,7 +1310,8 @@ export const dict = {
   "settings.models.speechToTextModel.title": "음성 텍스트 변환 모델",
   "settings.models.speechToTextModel.description": "음성 입력에 사용할 Kilo Gateway 변환 모델을 선택하세요.",
   "settings.experimental.continueOnDeny.title": "거부 시 계속",
-  "settings.experimental.continueOnDeny.description": "권한이 거부되면 에이전트 루프 계속",
+  "settings.experimental.continueOnDeny.description":
+    "When a permission request is denied, allow the agent to continue working instead of stopping. The agent will skip the denied action and attempt to proceed with the task.",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
   "settings.experimental.mcpTimeout.description": "MCP 서버 요청의 타임아웃 시간 (밀리초)",
   "settings.experimental.remote.title": "Remote 제어",
@@ -1331,11 +1336,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "사용자 정의 프롬프트",
   "settings.agentBehaviour.prompt.description": "이 에이전트의 추가 시스템 프롬프트",
   "settings.agentBehaviour.temperature.title": "온도",
-  "settings.agentBehaviour.temperature.description": "샘플링 온도 (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controls the randomness of AI responses (0–2). Lower values (e.g. 0.2) produce more focused, consistent outputs. Higher values (e.g. 1.0) produce more varied, creative responses. Leave empty to use the model's default.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "핵 샘플링 매개변수 (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Nucleus sampling threshold (0–1). Only the most probable tokens whose cumulative probability reaches this value are considered. Lower values make outputs more focused; higher values allow more variety. Leave empty to use the model's default.",
   "settings.agentBehaviour.maxSteps.title": "최대 단계",
-  "settings.agentBehaviour.maxSteps.description": "최대 에이전트 반복 횟수",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximum number of agentic iterations (tool calls + responses) allowed per session before the agent stops automatically.",
   "settings.agentBehaviour.hidden.title": "숨김",
   "settings.agentBehaviour.hidden.description": "채팅 입력의 모드 전환기에서 이 에이전트를 숨기기",
   "settings.agentBehaviour.disable.title": "비활성화됨",

@@ -1263,16 +1263,20 @@ export const dict = {
     "默认选项为完成、输入和错误使用不同的声音。其他选项为所有事件使用同一种声音。",
   "settings.notifications.sound.none": "无",
   "settings.experimental.share.title": "分享模式",
-  "settings.experimental.share.description": "会话分享行为",
+  "settings.experimental.share.description":
+    "Controls when sessions are published to the web. Manual: share each session individually using the share button. Auto: new sessions are shared automatically. Disabled: session sharing is turned off.",
   "settings.experimental.share.manual": "手动",
   "settings.experimental.share.auto": "自动",
   "settings.experimental.share.disabled": "禁用",
   "settings.experimental.formatter.title": "格式化工具",
-  "settings.experimental.formatter.description": "启用自动代码格式化",
+  "settings.experimental.formatter.description":
+    "Enable the automatic code formatter to apply consistent formatting after file edits.",
   "settings.experimental.lsp.title": "LSP",
-  "settings.experimental.lsp.description": "启用语言服务器协议集成",
+  "settings.experimental.lsp.description":
+    "Enable Language Server Protocol integration so the agent can use IDE-quality diagnostics, completions, and hover info during coding tasks.",
   "settings.experimental.batch.title": "批量工具",
-  "settings.experimental.batch.description": "启用多个工具调用的批处理",
+  "settings.experimental.batch.description":
+    "Allow the agent to execute multiple tool calls in a single step, which can speed up tasks that require many parallel operations.",
   "settings.experimental.codebaseSearch.title": "代码库搜索",
   "settings.experimental.codebaseSearch.description": "启用 AI 驱动的自然语言代码库搜索",
   "settings.experimental.speechToText.title": "语音转文本",
@@ -1282,7 +1286,8 @@ export const dict = {
   "settings.models.speechToTextModel.title": "语音转文本模型",
   "settings.models.speechToTextModel.description": "选择用于语音输入的 Kilo Gateway 转录模型。",
   "settings.experimental.continueOnDeny.title": "拒绝后继续",
-  "settings.experimental.continueOnDeny.description": "权限被拒绝时继续智能体循环",
+  "settings.experimental.continueOnDeny.description":
+    "When a permission request is denied, allow the agent to continue working instead of stopping. The agent will skip the denied action and attempt to proceed with the task.",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -1306,11 +1311,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "自定义提示词",
   "settings.agentBehaviour.prompt.description": "此智能体的附加系统提示词",
   "settings.agentBehaviour.temperature.title": "温度",
-  "settings.agentBehaviour.temperature.description": "采样温度（0-2）",
+  "settings.agentBehaviour.temperature.description":
+    "Controls the randomness of AI responses (0–2). Lower values (e.g. 0.2) produce more focused, consistent outputs. Higher values (e.g. 1.0) produce more varied, creative responses. Leave empty to use the model's default.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "核采样参数（0-1）",
+  "settings.agentBehaviour.topP.description":
+    "Nucleus sampling threshold (0–1). Only the most probable tokens whose cumulative probability reaches this value are considered. Lower values make outputs more focused; higher values allow more variety. Leave empty to use the model's default.",
   "settings.agentBehaviour.maxSteps.title": "最大步数",
-  "settings.agentBehaviour.maxSteps.description": "最大智能体迭代次数",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximum number of agentic iterations (tool calls + responses) allowed per session before the agent stops automatically.",
   "settings.agentBehaviour.hidden.title": "隐藏",
   "settings.agentBehaviour.hidden.description": "在聊天输入的模式切换器中隐藏此智能体",
   "settings.agentBehaviour.disable.title": "已禁用",

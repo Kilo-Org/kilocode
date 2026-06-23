@@ -1263,16 +1263,20 @@ export const dict = {
     "Standardvalget bruker forskjellige lyder for fullføring, innspill og feil. Andre valg bruker én lyd for alle hendelser.",
   "settings.notifications.sound.none": "Ingen",
   "settings.experimental.share.title": "Delingsmodus",
-  "settings.experimental.share.description": "Oppførsel for sesjonsdeling",
+  "settings.experimental.share.description":
+    "Controls when sessions are published to the web. Manual: share each session individually using the share button. Auto: new sessions are shared automatically. Disabled: session sharing is turned off.",
   "settings.experimental.share.manual": "Manuell",
   "settings.experimental.share.auto": "Automatisk",
   "settings.experimental.share.disabled": "Deaktivert",
   "settings.experimental.formatter.title": "Formater",
-  "settings.experimental.formatter.description": "Aktiver automatisk kodeformatering",
+  "settings.experimental.formatter.description":
+    "Enable the automatic code formatter to apply consistent formatting after file edits.",
   "settings.experimental.lsp.title": "LSP",
-  "settings.experimental.lsp.description": "Aktiver språkserverprotokoll-integrasjon",
+  "settings.experimental.lsp.description":
+    "Enable Language Server Protocol integration so the agent can use IDE-quality diagnostics, completions, and hover info during coding tasks.",
   "settings.experimental.batch.title": "Batchverktøy",
-  "settings.experimental.batch.description": "Aktiver batchbehandling av verktøykall",
+  "settings.experimental.batch.description":
+    "Allow the agent to execute multiple tool calls in a single step, which can speed up tasks that require many parallel operations.",
   "settings.experimental.codebaseSearch.title": "Kodesøk",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig språksøk på tvers av kodebasen",
   "settings.experimental.speechToText.title": "Tale til tekst",
@@ -1283,7 +1287,8 @@ export const dict = {
   "settings.models.speechToTextModel.title": "Tale-til-tekst-modell",
   "settings.models.speechToTextModel.description": "Velg Kilo Gateway-transkripsjonsmodellen for taleinndata.",
   "settings.experimental.continueOnDeny.title": "Fortsett ved avvisning",
-  "settings.experimental.continueOnDeny.description": "Fortsett agentløkken når en tillatelse avvises",
+  "settings.experimental.continueOnDeny.description":
+    "When a permission request is denied, allow the agent to continue working instead of stopping. The agent will skip the denied action and attempt to proceed with the task.",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
   "settings.experimental.remote.title": "Remote-kontroll",
@@ -1342,11 +1347,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Egendefinert prompt",
   "settings.agentBehaviour.prompt.description": "Ekstra systemprompt for denne agenten",
   "settings.agentBehaviour.temperature.title": "Temperatur",
-  "settings.agentBehaviour.temperature.description": "Samplingstemperatur (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controls the randomness of AI responses (0–2). Lower values (e.g. 0.2) produce more focused, consistent outputs. Higher values (e.g. 1.0) produce more varied, creative responses. Leave empty to use the model's default.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Nucleus-samplingsparameter (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Nucleus sampling threshold (0–1). Only the most probable tokens whose cumulative probability reaches this value are considered. Lower values make outputs more focused; higher values allow more variety. Leave empty to use the model's default.",
   "settings.agentBehaviour.maxSteps.title": "Maks. trinn",
-  "settings.agentBehaviour.maxSteps.description": "Maksimale agentiterasjoner",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximum number of agentic iterations (tool calls + responses) allowed per session before the agent stops automatically.",
   "settings.agentBehaviour.hidden.title": "Skjult",
   "settings.agentBehaviour.hidden.description": "Skjul denne agenten fra modusvelgeren i chatinntastingen",
   "settings.agentBehaviour.disable.title": "Deaktivert",

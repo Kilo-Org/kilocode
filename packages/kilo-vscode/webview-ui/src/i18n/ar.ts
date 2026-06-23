@@ -1274,16 +1274,20 @@ export const dict = {
     "يستخدم الخيار الافتراضي أصواتًا مختلفة عند الاكتمال أو الحاجة إلى ردّك أو حدوث خطأ. تستخدم الخيارات الأخرى صوتًا واحدًا لجميع الأحداث.",
   "settings.notifications.sound.none": "بدون",
   "settings.experimental.share.title": "وضع المشاركة",
-  "settings.experimental.share.description": "سلوك مشاركة الجلسة",
+  "settings.experimental.share.description":
+    "Controls when sessions are published to the web. Manual: share each session individually using the share button. Auto: new sessions are shared automatically. Disabled: session sharing is turned off.",
   "settings.experimental.share.manual": "يدوي",
   "settings.experimental.share.auto": "تلقائي",
   "settings.experimental.share.disabled": "معطل",
   "settings.experimental.formatter.title": "المنسق",
-  "settings.experimental.formatter.description": "تمكين منسق الكود التلقائي",
+  "settings.experimental.formatter.description":
+    "Enable the automatic code formatter to apply consistent formatting after file edits.",
   "settings.experimental.lsp.title": "LSP",
-  "settings.experimental.lsp.description": "تمكين تكامل بروتوكول خادم اللغة",
+  "settings.experimental.lsp.description":
+    "Enable Language Server Protocol integration so the agent can use IDE-quality diagnostics, completions, and hover info during coding tasks.",
   "settings.experimental.batch.title": "أداة دفعية",
-  "settings.experimental.batch.description": "تمكين المعالجة الدفعية لاستدعاءات الأدوات",
+  "settings.experimental.batch.description":
+    "Allow the agent to execute multiple tool calls in a single step, which can speed up tasks that require many parallel operations.",
   "settings.experimental.codebaseSearch.title": "بحث في قاعدة الكود",
   "settings.experimental.codebaseSearch.description": "تمكين البحث بالذكاء الاصطناعي باللغة الطبيعية عبر قاعدة الكود",
   "settings.experimental.speechToText.title": "تحويل الصوت إلى نص",
@@ -1294,7 +1298,8 @@ export const dict = {
   "settings.models.speechToTextModel.title": "نموذج تحويل الصوت إلى نص",
   "settings.models.speechToTextModel.description": "اختر نموذج نسخ Kilo Gateway للإدخال الصوتي.",
   "settings.experimental.continueOnDeny.title": "المتابعة عند الرفض",
-  "settings.experimental.continueOnDeny.description": "متابعة حلقة الوكيل عند رفض الإذن",
+  "settings.experimental.continueOnDeny.description":
+    "When a permission request is denied, allow the agent to continue working instead of stopping. The agent will skip the denied action and attempt to proceed with the task.",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",
@@ -1319,11 +1324,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "موجه مخصص",
   "settings.agentBehaviour.prompt.description": "موجه نظام إضافي لهذا الوكيل",
   "settings.agentBehaviour.temperature.title": "الحرارة",
-  "settings.agentBehaviour.temperature.description": "حرارة أخذ العينات (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controls the randomness of AI responses (0–2). Lower values (e.g. 0.2) produce more focused, consistent outputs. Higher values (e.g. 1.0) produce more varied, creative responses. Leave empty to use the model's default.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "معامل أخذ العينات النووي (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Nucleus sampling threshold (0–1). Only the most probable tokens whose cumulative probability reaches this value are considered. Lower values make outputs more focused; higher values allow more variety. Leave empty to use the model's default.",
   "settings.agentBehaviour.maxSteps.title": "الحد الأقصى للخطوات",
-  "settings.agentBehaviour.maxSteps.description": "الحد الأقصى لتكرارات الوكيل",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximum number of agentic iterations (tool calls + responses) allowed per session before the agent stops automatically.",
   "settings.agentBehaviour.hidden.title": "مخفي",
   "settings.agentBehaviour.hidden.description": "إخفاء هذا الوكيل من مبدل الأوضاع في إدخال الدردشة",
   "settings.agentBehaviour.disable.title": "معطل",

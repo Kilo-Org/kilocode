@@ -868,12 +868,12 @@
         "kilo-code.new.model.providerID": {
           "type": "string",
           "default": "kilo",
-          "description": "Default model provider ID for new sessions"
+          "markdownDescription": "Default AI provider for new sessions (e.g. `kilo`, `anthropic`, `openai`). It is recommended to configure this from the **Models** tab in Kilo Settings instead of editing this directly."
         },
         "kilo-code.new.model.modelID": {
           "type": "string",
           "default": "kilo-auto/free",
-          "description": "Default model ID for new sessions"
+          "markdownDescription": "Default model for new sessions (e.g. `claude-sonnet-4-5`). It is recommended to configure this from the **Models** tab in Kilo Settings instead of editing this directly."
         },
         "kilo-code.new.autocomplete.model": {
           "type": "string",
@@ -917,12 +917,12 @@
         "kilo-code.new.autocomplete.enableSmartInlineTaskKeybinding": {
           "type": "boolean",
           "default": false,
-          "description": "Enable smart inline task keybinding"
+          "markdownDescription": "When enabled, pressing `Tab` accepts an inline suggestion and `Shift+Tab` opens the inline task prompt for targeted AI‑assisted edits at the cursor position."
         },
         "kilo-code.new.autocomplete.enableChatAutocomplete": {
           "type": "boolean",
           "default": false,
-          "description": "Enable chat textarea autocomplete"
+          "description": "Enable AI-powered autocomplete suggestions in the Kilo chat input field."
         },
         "kilo-code.new.claudeCodeCompat": {
           "type": "boolean",
@@ -1041,7 +1041,7 @@
             "High autonomy: let Kilo take most actions with fewer interruptions",
             "Onboarding was skipped without changing work style settings"
           ],
-          "description": "Preferred agent work style. Set to Unset to show the onboarding flow again."
+          "markdownDescription": "Controls how autonomously Kilo operates. **Human in the Loop** pauses before risky actions for your review. **Autonomous** lets Kilo work with fewer interruptions. Set to **Unset** to show the onboarding flow again."
         },
         "kilo-code.new.diff.renderMarkdown": {
           "type": "boolean",
