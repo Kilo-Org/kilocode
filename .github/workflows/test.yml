@@ -63,6 +63,7 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
+      # kilocode_change start
       - name: Build Windows sandbox helper
         if: runner.os == 'Windows'
         run: cargo build --locked --release --manifest-path packages/kilo-sandbox/native/windows/Cargo.toml
@@ -73,6 +74,7 @@ jobs:
         run: bun test test/windows.integration.test.ts --timeout 30000
         env:
           KILO_WINDOWS_SANDBOX_HELPER: ${{ github.workspace }}/packages/kilo-sandbox/native/windows/target/release/kilo-sandbox-win.exe
+      # kilocode_change end
 
       - name: Configure git identity
         run: |
