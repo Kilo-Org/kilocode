@@ -65,9 +65,16 @@ jobs:
 
       - name: Setup Zig
         if: runner.os == 'Windows'
-        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
-        with:
-          version: 0.16.0
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP "zig-0.16.0.zip"
+          $target = Join-Path $env:RUNNER_TEMP "zig-0.16.0"
+          Invoke-WebRequest "https://ziglang.org/download/0.16.0/zig-x86_64-windows-0.16.0.zip" -OutFile $archive
+          $actual = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          $expected = "68659eb5f1e4eb1437a722f1dd889c5a322c9954607f5edcf337bc3684a75a7e"
+          if ($actual -ne $expected) { throw "Unexpected Zig archive checksum: $actual" }
+          Expand-Archive $archive -DestinationPath $target
+          Add-Content $env:GITHUB_PATH (Join-Path $target "zig-x86_64-windows-0.16.0")
 
       - name: Build Windows sandbox helpers
         if: runner.os == 'Windows'
