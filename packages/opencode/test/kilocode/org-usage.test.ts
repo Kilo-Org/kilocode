@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test"
-import { fetchUsageSummary, formatSummaryForPeriod, handleUsage, resolveOrg, summaryInput } from "@/kilocode/cli/cmd/org"
+import {
+  fetchUsageSummary,
+  formatSummaryForPeriod,
+  formatSummaryTable,
+  handleUsage,
+  resolveOrg,
+  summaryInput,
+} from "@/kilocode/cli/cmd/org"
 
 type Fetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
 
@@ -111,11 +118,42 @@ describe("org usage", () => {
     )
   })
 
-  test("pretty-prints the summary for the authenticated org", async () => {
+  test("formats the default summary table", () => {
+    const out = formatSummaryTable(
+      {
+        costMicrodollars: 1_234_567,
+        costPerRequest: 617_283.5,
+        tokensPerRequest: 1000.5,
+        totalTokens: 2_000,
+        inputTokens: 1_000,
+        outputTokens: 200,
+        cacheHitTokens: 300,
+        cacheWriteTokens: 500,
+        requestCount: 2,
+        distinctUsers: 1,
+        errorCount: 1,
+        errorRate: 0.5,
+        avgLatencyMs: 1234.5,
+        byokRequestCount: 1,
+        freeRequestCount: 0,
+        cancelledCount: 0,
+      },
+      summaryInput(new Date(2026, 5, 23, 11, 33, 56)),
+    )
+
+    expect(out).toContain("│                        OVERVIEW                        │")
+    expect(out).toContain("│                     COST & TOKENS                      │")
+    expect(out).toContain("│                       OPERATIONS                       │")
+    expect(out).toContain("│Cost                                              $1.23 │")
+    expect(out).toContain("│Cost/Request                                      $0.62 │")
+    expect(out).toContain("│Avg Latency                                  1,234.5 ms │")
+  })
+
+  test("prints the boxed summary for the authenticated org", async () => {
     const out: string[] = []
     const codes: number[] = []
     const fetcher = (async () =>
-      Response.json([{ result: { data: { json: { totalCostMicros: 1_234_567, requests: 2 } } } }])) satisfies Fetch
+      Response.json([{ result: { data: { json: { costMicrodollars: 1_234_567, requestCount: 2 } } } }])) satisfies Fetch
 
     await handleUsage({
       getAuth: async () => ({ type: "oauth", access: "token", refresh: "refresh", expires: Date.now(), accountId: "org_123" }),
@@ -127,9 +165,31 @@ describe("org usage", () => {
     })
 
     expect(codes).toEqual([])
+    expect(out[0]).toContain("OVERVIEW")
+    expect(out[0]).toContain("COST & TOKENS")
+    expect(out[0]).toContain("OPERATIONS")
+    expect(out[0]).toContain("│Cost                                              $1.23 │")
+    expect(out[0]).toContain("│Requests                                              2 │")
+  })
+
+  test("prints the verbose summary when requested", async () => {
+    const out: string[] = []
+    const fetcher = (async () =>
+      Response.json([{ result: { data: { json: { costMicrodollars: 1_234_567, requestCount: 2 } } } }])) satisfies Fetch
+
+    await handleUsage({
+      verbose: true,
+      getAuth: async () => ({ type: "oauth", access: "token", refresh: "refresh", expires: Date.now(), accountId: "org_123" }),
+      getProfile: async () => ({ email: "test@example.com", organizations: [{ id: "org_123", name: "Org", role: "owner" }] }),
+      fetch: fetcher,
+      write: (msg) => out.push(msg),
+      error: (msg) => out.push(msg),
+      exit: () => undefined,
+    })
+
     expect(out[0]).toContain("Date: ")
-    expect(out[0]).toContain("Cost & Tokens\nTotal Cost: $1.23")
-    expect(out[0]).toContain("Operations\nRequests: 2")
+    expect(out[0]).toContain("Cost & Tokens\nCost: $1.23")
+    expect(out[0]).toContain("Operations\nRequest Count: 2")
   })
 
   test("prints the raw response when json is requested", async () => {

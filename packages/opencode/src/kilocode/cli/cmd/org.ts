@@ -14,6 +14,7 @@ type SummaryInput = ReturnType<typeof summaryInput>
 
 interface Args {
   json?: boolean
+  verbose?: boolean
   getAuth?: (providerID: string) => Promise<AuthInfo | undefined>
   setAuth?: (providerID: string, auth: AuthInfo) => Promise<void>
   getProfile?: (token: string) => Promise<KilocodeProfile>
@@ -75,6 +76,11 @@ function dollars(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value / 1_000_000)
 }
 
+function value(input: Record<string, unknown>, key: string) {
+  const item = input[key]
+  return typeof item === "number" && Number.isFinite(item) ? item : 0
+}
+
 function scalar(key: string, value: unknown) {
   if (typeof value === "number" && /micro|cost/i.test(key)) return dollars(value)
   if (typeof value === "number") return new Intl.NumberFormat("en-US").format(value)
@@ -133,6 +139,63 @@ function lines(value: unknown, depth = 0, key = ""): string[] {
 
 export function formatSummary(input: unknown) {
   return formatSummaryForPeriod(input, summaryInput())
+}
+
+function title(input: string, width: number) {
+  const left = Math.floor((width - input.length) / 2)
+  const right = Math.max(0, width - input.length - left)
+  return `│${" ".repeat(left)}${input}${" ".repeat(right)}│`
+}
+
+function row(label: string, text: string, width: number) {
+  const padding = Math.max(0, width - 1 - label.length - text.length)
+  return `│${label}${" ".repeat(padding)}${text} │`
+}
+
+function box(name: string, rows: [string, string][]) {
+  const width = 56
+  const top = "┌" + "─".repeat(width) + "┐"
+  const mid = "├" + "─".repeat(width) + "┤"
+  const bottom = "└" + "─".repeat(width) + "┘"
+  return [top, title(name, width), mid, ...rows.map(([name, text]) => row(name, text, width)), bottom].join("\n")
+}
+
+function integer(value: number) {
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value)
+}
+
+function decimal(value: number) {
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 3 }).format(value)
+}
+
+export function formatSummaryTable(input: unknown, period: SummaryInput) {
+  if (!isRecord(input)) return formatSummaryForPeriod(input, period)
+
+  return [
+    box("OVERVIEW", [
+      [periodLine(period), ""],
+      ["Requests", integer(value(input, "requestCount"))],
+      ["Distinct Users", integer(value(input, "distinctUsers"))],
+    ]),
+    box("COST & TOKENS", [
+      ["Cost", dollars(value(input, "costMicrodollars"))],
+      ["Cost/Request", dollars(value(input, "costPerRequest"))],
+      ["Tokens/Request", decimal(value(input, "tokensPerRequest"))],
+      ["Total Tokens", integer(value(input, "totalTokens"))],
+      ["Input", integer(value(input, "inputTokens"))],
+      ["Output", integer(value(input, "outputTokens"))],
+      ["Cache Hit", integer(value(input, "cacheHitTokens"))],
+      ["Cache Write", integer(value(input, "cacheWriteTokens"))],
+    ]),
+    box("OPERATIONS", [
+      ["Errors", integer(value(input, "errorCount"))],
+      ["Error Rate", decimal(value(input, "errorRate"))],
+      ["Avg Latency", `${decimal(value(input, "avgLatencyMs"))} ms`],
+      ["BYOK Requests", integer(value(input, "byokRequestCount"))],
+      ["Free Requests", integer(value(input, "freeRequestCount"))],
+      ["Cancelled", integer(value(input, "cancelledCount"))],
+    ]),
+  ].join("\n\n")
 }
 
 export function formatSummaryForPeriod(input: unknown, period: SummaryInput) {
@@ -247,7 +310,8 @@ export async function handleUsage(args: Args = {}) {
       write(JSON.stringify(res, null, 2) + "\n")
       return
     }
-    write(formatSummaryForPeriod(unwrap(res), summary) + "\n")
+    const data = unwrap(res)
+    write((args.verbose ? formatSummaryForPeriod(data, summary) : formatSummaryTable(data, summary)) + "\n")
   } catch (err) {
     error(err instanceof Error ? err.message : String(err))
     exit(1)
@@ -258,13 +322,19 @@ const UsageCommand = cmd({
   command: "usage",
   describe: "show organization usage summary",
   builder: (yargs) =>
-    yargs.option("json", {
-      describe: "print raw JSON response",
-      type: "boolean",
-      default: false,
-    }),
+    yargs
+      .option("json", {
+        describe: "print raw JSON response",
+        type: "boolean",
+        default: false,
+      })
+      .option("verbose", {
+        describe: "print detailed usage fields",
+        type: "boolean",
+        default: false,
+      }),
   handler: async (args) => {
-    await handleUsage({ json: args.json })
+    await handleUsage({ json: args.json, verbose: args.verbose })
   },
 })
 
