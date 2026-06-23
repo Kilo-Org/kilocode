@@ -3,6 +3,7 @@ import { ChildProcess } from "effect/unstable/process"
 import { current } from "./context"
 import type { Profile } from "./profile"
 import { seatbelt } from "./seatbelt"
+import { windows } from "./windows"
 
 export interface Launch {
   readonly command: string
@@ -36,7 +37,7 @@ function select(): Backend {
     case "linux":
       return unavailable("The Linux sandbox backend is not available")
     case "win32":
-      return unavailable("The Windows sandbox backend is not available")
+      return windows
     default:
       return unavailable("No sandbox backend is available for this operating system")
   }
@@ -46,9 +47,10 @@ const backend = select()
 
 function environment(profile: Profile, launch: Launch) {
   const source = { ...launch.environment, ...profile.environment.set }
-  const denied = new Set(profile.environment.deny)
+  const normalize = process.platform === "win32" ? (key: string) => key.toLowerCase() : (key: string) => key
+  const denied = new Set(profile.environment.deny.map(normalize))
   return Object.fromEntries(
-    Object.entries(source).filter(([key, value]) => value !== undefined && !denied.has(key)),
+    Object.entries(source).filter(([key, value]) => value !== undefined && !denied.has(normalize(key))),
   ) as Record<string, string>
 }
 
