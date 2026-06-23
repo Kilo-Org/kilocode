@@ -69,6 +69,7 @@ When `Config.Info` in `packages/opencode/src/config/config.ts` gains a new `kilo
 - Tests should exercise real implementation, not duplicate logic into the test.
 - Mocks should be avoided where reasonable; flag mock-heavy tests that look like they're testing the mock rather than the code.
 - New behavior in `packages/opencode/` should generally come with a test under `packages/opencode/test/`.
+- When a correctness bug is fixed, a regression test that directly exercises the faulty condition should be included in the same PR; flag its absence unless the defect is only reachable through an external system (e.g., a live network stall) that cannot be reliably simulated in the test environment.
 
 ### 6. User-facing changes
 
