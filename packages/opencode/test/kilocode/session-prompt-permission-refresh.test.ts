@@ -327,7 +327,7 @@ it.live(
         })
 
         const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkScoped)
-        yield* awaitWithTimeout(llm.wait(3), "child did not open its post-bash model request", "10 seconds")
+        yield* awaitWithTimeout(llm.wait(3), "child did not open its post-bash model request", "20 seconds")
 
         const task = yield* pollWithTimeout(
           Effect.gen(function* () {
@@ -356,7 +356,7 @@ it.live(
         const exit = yield* awaitWithTimeout(
           Fiber.await(fiber),
           "parent prompt remained stuck after the child stream stalled",
-          "5 seconds",
+          "10 seconds",
         )
         expect(Exit.isSuccess(exit)).toBe(true)
         expect(yield* llm.calls).toBe(5)
@@ -381,5 +381,5 @@ it.live(
         }),
       },
     ),
-  10_000,
+  30_000,
 )

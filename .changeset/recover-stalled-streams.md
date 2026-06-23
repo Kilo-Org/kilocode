@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Recover stalled model response streams instead of leaving subagents running indefinitely.
+Prevent subagents from hanging on stalled model response streams or interactive suggestions.

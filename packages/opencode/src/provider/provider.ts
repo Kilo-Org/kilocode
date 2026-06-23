@@ -1679,10 +1679,12 @@ export const layer = Layer.effect(
         if (existing) return existing
 
         const customFetch = options["fetch"]
+        // kilocode_change start - prevent indefinitely stalled response streams
         const chunkTimeout = streamTimeout({
           options,
           defaultMs: STREAM_IDLE_TIMEOUT_MS,
-        }) // kilocode_change - prevent indefinitely stalled response streams
+        })
+        // kilocode_change end
         const headerTimeout = options["headerTimeout"]
         delete options["chunkTimeout"]
         delete options["headerTimeout"]
