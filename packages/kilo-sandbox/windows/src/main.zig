@@ -345,6 +345,7 @@ fn run(alloc: Allocator, req: protocol.Request) !u32 {
     if (win.WaitForSingleObject(proc.hProcess, win.INFINITE) != win.WAIT_OBJECT_0) fail("WaitForSingleObject");
     var code: win.DWORD = 0;
     check(win.GetExitCodeProcess(proc.hProcess, &code), "GetExitCodeProcess");
+    if (code != 0) std.debug.print("kilo-sandbox-windows: target exited {d}\n", .{code});
     return code;
 }
 
