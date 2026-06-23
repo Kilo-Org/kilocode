@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import type { KiloConnectionService } from "../../cli-backend"
+import { ErrorBackoff } from "../classic-auto-complete/ErrorBackoff"
 import { computeEditableRegion } from "./editableRegion"
 import { EditHistoryTracker } from "./editHistoryTracker"
 import { nesLog } from "./log"
@@ -47,6 +48,8 @@ type SuggestionResult = {
 
 export class NextEditInlineCompletionProvider implements vscode.InlineCompletionItemProvider, vscode.Disposable {
   private readonly editHistoryTracker: EditHistoryTracker
+  private readonly backoff = new ErrorBackoff()
+  private fatalNotified = false
   private debounceTimer: NodeJS.Timeout | null = null
   private currentAbort: AbortController | null = null
 
@@ -67,6 +70,7 @@ export class NextEditInlineCompletionProvider implements vscode.InlineCompletion
     token: vscode.CancellationToken,
   ): Promise<vscode.InlineCompletionItem[] | vscode.InlineCompletionList | undefined> {
     if (document.uri.scheme !== "file") return undefined
+    if (this.backoff.blocked()) return []
     if (this.deps.suggestionManager?.isPending()) return undefined
 
     // Never send a file unless the access policy explicitly approves it.
@@ -357,8 +361,17 @@ export class NextEditInlineCompletionProvider implements vscode.InlineCompletion
       status: "error",
       errorStatus: status ?? undefined,
     })
-    if (status === 401 || status === 402) this.deps.onFatalError?.(status)
+    const kind = this.backoff.failure(err)
+    if (kind === "fatal" && !this.fatalNotified) {
+      this.fatalNotified = true
+      this.deps.onFatalError?.(status)
+    }
     return undefined
+  }
+
+  resetBackoff(): void {
+    this.backoff.reset()
+    this.fatalNotified = false
   }
 
   private debounce(ms: number, token: vscode.CancellationToken): Promise<void> {
