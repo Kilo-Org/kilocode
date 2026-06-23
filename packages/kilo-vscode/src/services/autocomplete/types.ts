@@ -52,9 +52,6 @@ export interface FillInAtCursorSuggestion {
   text: string
   prefix: string
   suffix: string
-}
-
-export interface CachedSuggestion extends FillInAtCursorSuggestion {
   scope: string
 }
 

@@ -5,7 +5,6 @@ import {
   contextToAutocompleteInput,
   AutocompleteContextProvider,
   FillInAtCursorSuggestion,
-  CachedSuggestion,
   AutocompletePrompt,
   MatchingSuggestionResult,
   CostTrackingCallback,
@@ -86,7 +85,7 @@ export function findMatchingSuggestion(
   scope: string,
   prefix: string,
   suffix: string,
-  suggestionsHistory: CachedSuggestion[],
+  suggestionsHistory: FillInAtCursorSuggestion[],
 ): MatchingSuggestionWithFillIn | null {
   return _findMatchingSuggestion(scope, prefix, suffix, suggestionsHistory)
 }
@@ -117,7 +116,7 @@ export function stringToInlineCompletions(text: string, position: vscode.Positio
 }
 
 export class AutocompleteInlineCompletionProvider implements vscode.InlineCompletionItemProvider {
-  public suggestionsHistory: CachedSuggestion[] = []
+  public suggestionsHistory: FillInAtCursorSuggestion[] = []
   /** Tracks all pending/in-flight requests */
   private pendingRequests: PendingRequest[] = []
   private fimPromptBuilder: FimPromptBuilder
@@ -189,7 +188,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     })
   }
 
-  public updateSuggestions(fillInAtCursor: CachedSuggestion): void {
+  public updateSuggestions(fillInAtCursor: FillInAtCursorSuggestion): void {
     const isDuplicate = this.suggestionsHistory.some(
       (existing) =>
         existing.scope === fillInAtCursor.scope &&
@@ -259,6 +258,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
 
   private processSuggestion(
     suggestionText: string,
+    scope: string,
     prefix: string,
     suffix: string,
     telemetryContext: AutocompleteContext,
@@ -266,7 +266,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
   ): FillInAtCursorSuggestion {
     if (!suggestionText) {
       this.telemetry?.captureSuggestionFiltered("empty_response", telemetryContext)
-      return { text: "", prefix, suffix }
+      return { text: "", scope, prefix, suffix }
     }
 
     const processedText = postprocessAutocompleteSuggestion({
@@ -278,11 +278,11 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     })
 
     if (processedText) {
-      return { text: processedText, prefix, suffix }
+      return { text: processedText, scope, prefix, suffix }
     }
 
     this.telemetry?.captureSuggestionFiltered("filtered_by_postprocessing", telemetryContext)
-    return { text: "", prefix, suffix }
+    return { text: "", scope, prefix, suffix }
   }
 
   private async disposeIgnoreController(): Promise<void> {
@@ -601,9 +601,9 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     }
 
     try {
-      // Curry processSuggestion with prefix, suffix, telemetry context, and languageId
+      // Curry processSuggestion with request context
       const curriedProcessSuggestion = (text: string) =>
-        this.processSuggestion(text, prefix, suffix, telemetryContext, languageId)
+        this.processSuggestion(text, scope, prefix, suffix, telemetryContext, languageId)
 
       const result = await this.fimPromptBuilder.getFromFIM(
         this.connectionService,
@@ -635,7 +635,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
       this.fatalNotified = false
 
       // Always update suggestions, even if text is empty (for caching)
-      this.updateSuggestions({ ...result.suggestion, scope })
+      this.updateSuggestions(result.suggestion)
     } catch (error) {
       // Aborted requests are expected (user typed again) — don't report as failures
       if (controller.signal.aborted) return

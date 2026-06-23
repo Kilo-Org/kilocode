@@ -1,7 +1,7 @@
-import type { CachedSuggestion, MatchingSuggestionResult, PendingRequest } from "../types"
+import type { FillInAtCursorSuggestion, MatchingSuggestionResult, PendingRequest } from "../types"
 
 export interface MatchingSuggestionWithFillIn extends MatchingSuggestionResult {
-  fillInAtCursor: CachedSuggestion
+  fillInAtCursor: FillInAtCursorSuggestion
 }
 
 const MIN_DEBOUNCE_DELAY_MS = 150
@@ -15,7 +15,7 @@ export function findMatchingSuggestion(
   scope: string,
   prefix: string,
   suffix: string,
-  suggestionsHistory: CachedSuggestion[],
+  suggestionsHistory: FillInAtCursorSuggestion[],
 ): MatchingSuggestionWithFillIn | null {
   for (let i = suggestionsHistory.length - 1; i >= 0; i--) {
     const fillInAtCursor = suggestionsHistory[i]!

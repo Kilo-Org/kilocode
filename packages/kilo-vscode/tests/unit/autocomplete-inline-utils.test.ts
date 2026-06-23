@@ -8,11 +8,11 @@ import {
   calcDebounceDelay,
   findCoveringPendingRequest,
 } from "../../src/services/autocomplete/classic-auto-complete/inline-utils"
-import type { CachedSuggestion, PendingRequest } from "../../src/services/autocomplete/types"
+import type { FillInAtCursorSuggestion, PendingRequest } from "../../src/services/autocomplete/types"
 
 const scope = "file:///workspace/file.ts"
 
-function makeSuggestion(prefix: string, text: string, suffix = "", value = scope): CachedSuggestion {
+function makeSuggestion(prefix: string, text: string, suffix = "", value = scope): FillInAtCursorSuggestion {
   return { scope: value, prefix, suffix, text }
 }
 
