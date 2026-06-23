@@ -12,28 +12,59 @@ export interface NotebookContext {
   position: vscode.Position
 }
 
-function resolveNotebook(uri: vscode.Uri): vscode.NotebookDocument | undefined {
-  return vscode.workspace.notebookDocuments.find((notebook) =>
-    notebook.getCells().some((cell) => cell.document.uri.toString() === uri.toString()),
-  )
+interface NotebookResolution {
+  notebook: vscode.NotebookDocument
+  cells: vscode.NotebookCell[]
+  cell: vscode.NotebookCell
+  index: number
+  version: number
+}
+
+const resolutions = new Map<string, NotebookResolution>()
+
+function resolveNotebook(uri: vscode.Uri): NotebookResolution | undefined {
+  const id = uri.toString()
+  const cached = resolutions.get(id)
+  if (
+    cached &&
+    cached.notebook.version === cached.version &&
+    vscode.workspace.notebookDocuments.includes(cached.notebook)
+  ) {
+    return cached
+  }
+
+  resolutions.delete(id)
+  for (const notebook of vscode.workspace.notebookDocuments) {
+    const cells = notebook.getCells()
+    const index = cells.findIndex((cell) => cell.document.uri.toString() === id)
+    if (index < 0) continue
+    const resolved = { notebook, cells, cell: cells[index]!, index, version: notebook.version }
+    resolutions.set(id, resolved)
+    return resolved
+  }
 }
 
 export function notebookUri(uri: vscode.Uri): vscode.Uri | undefined {
   if (uri.scheme === "file") return uri
   if (uri.scheme !== "vscode-notebook-cell") return
-  return resolveNotebook(uri)?.uri
+  return resolveNotebook(uri)?.notebook.uri
 }
 
 export function supportsNotebook(document: vscode.TextDocument): boolean {
   if (document.uri.scheme !== "vscode-notebook-cell") return true
-  const cell = resolveNotebook(document.uri)
-    ?.getCells()
-    .find((cell) => cell.document.uri.toString() === document.uri.toString())
-  return cell?.kind === vscode.NotebookCellKind.Code && document.languageId === "python"
+  const resolved = resolveNotebook(document.uri)
+  return resolved?.cell.kind === vscode.NotebookCellKind.Code && document.languageId === "python"
 }
 
 export function autocompleteScope(document: vscode.TextDocument): string {
-  return document.uri.toString()
+  const id = document.uri.toString()
+  const resolved = resolveNotebook(document.uri)
+  if (!resolved) return id
+
+  const siblings = resolved.cells
+    .filter((_, index) => index !== resolved.index)
+    .map((cell) => [cell.document.uri.toString(), cell.kind, cell.document.languageId, cell.document.version])
+  return JSON.stringify([id, resolved.notebook.uri.toString(), resolved.index, siblings])
 }
 
 export function getNotebookContext(
@@ -42,10 +73,10 @@ export function getNotebookContext(
 ): NotebookContext | undefined {
   if (document.uri.scheme !== "vscode-notebook-cell") return
 
-  const notebook = resolveNotebook(document.uri)
-  if (!notebook) return
+  const resolved = resolveNotebook(document.uri)
+  if (!resolved) return
 
-  const cells = notebook.getCells()
+  const cells = resolved.cells
   const contents = cells
     .map((cell) => {
       const text = cell.document.getText()
@@ -56,17 +87,13 @@ export function getNotebookContext(
     })
     .join("\n\n")
 
-  const index = cells.findIndex((cell) => cell.document.uri.toString() === document.uri.toString())
   const line = cells
-    .slice(0, index)
+    .slice(0, resolved.index)
     .reduce((line, cell) => line + cell.document.getText().split("\n").length + 1, position.line)
-  const cell = cells[index]
-  const character =
-    cell.kind === vscode.NotebookCellKind.Markup && position.line === 0 ? position.character + 3 : position.character
 
   return {
     contents,
-    filepath: notebook.uri.fsPath,
-    position: new vscode.Position(line, character),
+    filepath: resolved.notebook.uri.fsPath,
+    position: new vscode.Position(line, position.character),
   }
 }

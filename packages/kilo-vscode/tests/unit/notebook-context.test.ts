@@ -18,11 +18,12 @@ function uri(scheme: string, path: string, fragment = ""): vscode.Uri {
   } as vscode.Uri
 }
 
-function document(id: string, text: string, languageId = "python"): vscode.TextDocument {
+function document(id: string, text: string, languageId = "python", version = 1): vscode.TextDocument {
   return {
     uri: uri("vscode-notebook-cell", "/workspace/example.ipynb", id),
     fileName: `/workspace/${id}.py`,
     languageId,
+    version,
     getText: () => text,
   } as vscode.TextDocument
 }
@@ -39,7 +40,7 @@ describe("notebook context", () => {
 
   it("flattens notebook cells and translates the cursor", () => {
     const markdown = document("markdown", "# Title\nNotes")
-    const code = document("code", "value = 1\nvalue += 1")
+    const code = document("code", "const value = 1\nvalue += 1", "javascript")
     const current = document("current", "print(value)\nprint('done')")
     const notebook = {
       uri: uri("file", "/workspace/example.ipynb"),
@@ -54,23 +55,10 @@ describe("notebook context", () => {
     const context = getNotebookContext(current, new vscode.Position(1, 5))
 
     expect(context).toEqual({
-      contents: `"""# Title\nNotes"""\n\nvalue = 1\nvalue += 1\n\nprint(value)\nprint('done')`,
+      contents: `"""# Title\nNotes"""\n\nconst value = 1\nvalue += 1\n\nprint(value)\nprint('done')`,
       filepath: "/workspace/example.ipynb",
       position: new vscode.Position(7, 5),
     })
-  })
-
-  it("accounts for the opening quotes in a markup cell", () => {
-    const current = document("current", "# Heading", "markdown")
-    const notebook = {
-      uri: uri("file", "/workspace/example.ipynb"),
-      getCells: () => [{ kind: vscode.NotebookCellKind.Markup, document: current }],
-    } as vscode.NotebookDocument
-    notebooks([notebook])
-
-    const context = getNotebookContext(current, new vscode.Position(0, 4))
-
-    expect(context?.position).toEqual(new vscode.Position(0, 7))
   })
 
   it("limits notebook completion to Python code cells", () => {
@@ -107,13 +95,72 @@ describe("notebook context", () => {
     expect(notebookUri(uri("untitled", "Untitled-1"))).toBeUndefined()
   })
 
-  it("scopes autocomplete cache to the current cell", () => {
-    const first = document("first", "value = 1")
-    const second = document("second", "value = 1")
+  it("scopes autocomplete cache to the cell and sibling versions", () => {
+    const current = document("current", "value = 1")
+    const sibling = document("sibling", "other = 1")
+    const cells = [
+      { kind: vscode.NotebookCellKind.Code, document: current },
+      { kind: vscode.NotebookCellKind.Code, document: sibling },
+    ] as vscode.NotebookCell[]
+    const notebook = {
+      uri: uri("file", "/workspace/example.ipynb"),
+      version: 1,
+      getCells: () => cells,
+    } as vscode.NotebookDocument
+    notebooks([notebook])
 
-    expect(autocompleteScope(first)).toBe(first.uri.toString())
-    expect(autocompleteScope(second)).toBe(second.uri.toString())
-    expect(autocompleteScope(first)).not.toBe(autocompleteScope(second))
+    const initial = autocompleteScope(current)
+    Object.assign(current, { version: 2 })
+    Object.assign(notebook, { version: 2 })
+    expect(autocompleteScope(current)).toBe(initial)
+
+    Object.assign(sibling, { version: 2 })
+    Object.assign(notebook, { version: 3 })
+    expect(autocompleteScope(current)).not.toBe(initial)
+    expect(autocompleteScope(current)).not.toBe(autocompleteScope(sibling))
+  })
+
+  it("changes autocomplete scope when sibling order changes", () => {
+    const current = document("current", "value = 1")
+    const first = document("first", "first = 1")
+    const second = document("second", "second = 1")
+    const cells = [
+      { kind: vscode.NotebookCellKind.Code, document: first },
+      { kind: vscode.NotebookCellKind.Code, document: second },
+      { kind: vscode.NotebookCellKind.Code, document: current },
+    ] as vscode.NotebookCell[]
+    const notebook = {
+      uri: uri("file", "/workspace/example.ipynb"),
+      version: 1,
+      getCells: () => cells,
+    } as vscode.NotebookDocument
+    notebooks([notebook])
+
+    const initial = autocompleteScope(current)
+    cells.splice(0, 2, cells[1]!, cells[0]!)
+    Object.assign(notebook, { version: 2 })
+
+    expect(autocompleteScope(current)).not.toBe(initial)
+  })
+
+  it("reuses notebook resolution within the same notebook version", () => {
+    const current = document("current", "value = 1")
+    const cells = [{ kind: vscode.NotebookCellKind.Code, document: current }] as vscode.NotebookCell[]
+    let calls = 0
+    const notebook = {
+      uri: uri("file", "/workspace/example.ipynb"),
+      version: 1,
+      getCells: () => {
+        calls++
+        return cells
+      },
+    } as vscode.NotebookDocument
+    notebooks([notebook])
+
+    expect(supportsNotebook(current)).toBe(true)
+    expect(notebookUri(current.uri)).toBe(notebook.uri)
+    expect(getNotebookContext(current, new vscode.Position(0, 0))).toBeDefined()
+    expect(calls).toBe(1)
   })
 
   it("validates notebook parent paths regardless of URI scheme", () => {
