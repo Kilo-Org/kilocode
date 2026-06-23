@@ -38,7 +38,7 @@ export function summaryInput(now = new Date()) {
     endDate: now.toISOString(),
     granularity: "day",
     costSource: "cost",
-    personalScope: "personal-only",
+    personalScope: "include-orgs",
     viewAs: "org-wide",
   }
 }
@@ -270,10 +270,10 @@ export async function resolveOrg(input: {
 
   const profile = await (input.getProfile ?? fetchProfile)(input.auth.access)
   const orgs = profile.organizations ?? []
-  if (orgs.length === 0) return input.auth.accountId
+  if (orgs.length === 0) return undefined
 
   const current = input.auth.accountId
-  const selected = current && orgs.length === 1 ? current : await (input.selectOrg ?? promptOrg)({ orgs, current })
+  const selected = orgs.length === 1 ? orgs[0]?.id : await (input.selectOrg ?? promptOrg)({ orgs, current })
   if (!selected) return undefined
 
   if (selected !== current) {

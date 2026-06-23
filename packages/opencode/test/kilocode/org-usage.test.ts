@@ -19,7 +19,7 @@ describe("org usage", () => {
       endDate: now.toISOString(),
       granularity: "day",
       costSource: "cost",
-      personalScope: "personal-only",
+      personalScope: "include-orgs",
       viewAs: "org-wide",
     })
   })
@@ -43,7 +43,7 @@ describe("org usage", () => {
     expect(input["0"].endDate).toBeString()
     expect(input["0"].granularity).toBe("day")
     expect(input["0"].costSource).toBe("cost")
-    expect(input["0"].personalScope).toBe("personal-only")
+    expect(input["0"].personalScope).toBe("include-orgs")
     expect(input["0"].viewAs).toBe("org-wide")
     expect(input["0"].organizationId).toBe("org_123")
     expect(calls[0].headers.get("authorization")).toBe("Bearer token")
@@ -96,7 +96,7 @@ describe("org usage", () => {
           endDate: new Date(2026, 5, 23, 23, 59, 59).toISOString(),
           granularity: "day",
           costSource: "cost",
-          personalScope: "personal-only",
+          personalScope: "include-orgs",
           viewAs: "org-wide",
         },
       ),
@@ -233,16 +233,53 @@ describe("org usage", () => {
     expect(saved).toEqual(["org_2"])
   })
 
-  test("prompts for an org when none is selected", async () => {
+  test("selects the only org without prompting when none is selected", async () => {
+    const saved: string[] = []
     const auth = { type: "oauth", access: "token", refresh: "refresh", expires: Date.now() } as const
 
     const org = await resolveOrg({
       auth,
       getProfile: async () => ({ email: "test@example.com", organizations: [{ id: "org_1", name: "One", role: "owner" }] }),
-      selectOrg: async () => "org_1",
+      selectOrg: async () => {
+        throw new Error("should not prompt")
+      },
+      setAuth: async (_id, info) => {
+        saved.push(info.type === "oauth" ? (info.accountId ?? "") : "")
+      },
     })
 
     expect(org).toBe("org_1")
+    expect(saved).toEqual(["org_1"])
+  })
+
+  test("replaces a stale accountId with the only profile org", async () => {
+    const saved: string[] = []
+    const auth = { type: "oauth", access: "token", refresh: "refresh", expires: Date.now(), accountId: "org_old" } as const
+
+    const org = await resolveOrg({
+      auth,
+      getProfile: async () => ({ email: "test@example.com", organizations: [{ id: "org_1", name: "One", role: "owner" }] }),
+      selectOrg: async () => {
+        throw new Error("should not prompt")
+      },
+      setAuth: async (_id, info) => {
+        saved.push(info.type === "oauth" ? (info.accountId ?? "") : "")
+      },
+    })
+
+    expect(org).toBe("org_1")
+    expect(saved).toEqual(["org_1"])
+  })
+
+  test("does not use a stale accountId when the profile has no orgs", async () => {
+    const auth = { type: "oauth", access: "token", refresh: "refresh", expires: Date.now(), accountId: "org_old" } as const
+
+    const org = await resolveOrg({
+      auth,
+      getProfile: async () => ({ email: "test@example.com", organizations: [] }),
+    })
+
+    expect(org).toBeUndefined()
   })
 
   test("requires an authenticated org", async () => {
