@@ -7,11 +7,13 @@ import { Config } from "@/config/config"
 import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { HeapSnapshot } from "@/kilocode/cli/heap-snapshot"
-import { Notebook } from "@/kilocode/notebook/service"
 import type { RequestID as NotebookRequestID } from "@/kilocode/notebook/protocol"
+import { Notebook } from "@/kilocode/notebook/service"
+import { ModelUsage } from "@/kilocode/session/model-usage"
 import { InstanceStore } from "@/project/instance-store"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { Skill } from "@/skill"
+import type { SessionID } from "@/session/schema"
 import { NotebookRejectPayload, NotebookReplyPayload, RemoveAgentPayload, RemoveSkillPayload } from "../groups/kilocode"
 
 export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode", (handlers) =>
@@ -77,6 +79,14 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return true
     })
 
+    const sessionModelUsage = Effect.fn("KilocodeHttpApi.sessionModelUsage")(function* (ctx: {
+      params: { sessionID: SessionID }
+    }) {
+      const usage = yield* ModelUsage.get(ctx.params.sessionID)
+      if (!usage) return yield* new HttpApiError.NotFound({})
+      return usage
+    })
+
     return handlers
       .handle("heapSnapshot", heapSnapshot)
       .handle("removeSkill", removeSkill)
@@ -84,5 +94,6 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("notebookList", notebookList)
       .handle("notebookReply", notebookReply)
       .handle("notebookReject", notebookReject)
+      .handle("sessionModelUsage", sessionModelUsage)
   }),
 )

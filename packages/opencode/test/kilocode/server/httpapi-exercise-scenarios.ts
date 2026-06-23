@@ -262,6 +262,19 @@ export const kiloScenarios: Scenario[] = [
     .at((ctx) => ({ path: "/enhance-prompt", headers: ctx.headers(), body: { text: "" } }))
     .status(400),
   http.protected
+    .get("/session/{sessionID}/model-usage", "kilocode.sessionModelUsage")
+    .seeded((ctx) => ctx.session({ title: "Model usage" }))
+    .at((ctx) => ({
+      path: route("/session/{sessionID}/model-usage", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      array(body.models)
+      object(body.totals)
+      check(body.models.length === 0, "a new session should have no model usage")
+    }),
+  http.protected
     .post("/kilocode/heap/snapshot", "kilocode.heap.snapshot")
     .mutating()
     .jsonEffect(200, (body) =>
