@@ -105,6 +105,7 @@
     "@kilocode/kilo-telemetry": "workspace:*",
     "@kilocode/plugin": "workspace:*",
     "@kilocode/plugin-atomic-chat": "workspace:*",
+    "@kilocode/sandbox": "workspace:*",
     "@kilocode/sdk": "workspace:*",
     "@lydell/node-pty": "catalog:",
     "@modelcontextprotocol/sdk": "1.29.0",

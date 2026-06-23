@@ -315,6 +315,7 @@ const ConfigWrapper: ParentComponent<{
 
       return {
         indexing: hasIndexingPlugin(config.plugin ?? []),
+        sandboxControls: false,
       }
     })
 

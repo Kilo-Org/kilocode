@@ -143,6 +143,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
   const [autoApprove, setAutoApprove] = createSignal(false)
+  const sandbox = () => config().experimental?.sandbox ?? false
   let enhanceCounter = 0
   let preEnhanceText: string | null = null
 
@@ -1067,11 +1068,37 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   : language.t("prompt.action.autoApprove.enable")
               }
               aria-pressed={autoApprove()}
-              class={`prompt-auto-approve-button ${autoApprove() ? "prompt-auto-approve-button--active" : ""}`}
+              class={`prompt-status-button ${autoApprove() ? "prompt-status-button--active" : ""}`}
             >
               <Icon name="shield" size="small" />
             </Button>
           </Tooltip>
+          <Show when={features().sandboxControls}>
+            <Tooltip
+              value={
+                sandbox() ? language.t("prompt.action.sandbox.enabled") : language.t("prompt.action.sandbox.disabled")
+              }
+              placement="top"
+            >
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={() =>
+                  vscode.postMessage({
+                    type: "updateConfig",
+                    config: { experimental: { sandbox: !sandbox() } },
+                  })
+                }
+                aria-label={
+                  sandbox() ? language.t("prompt.action.sandbox.disable") : language.t("prompt.action.sandbox.enable")
+                }
+                aria-pressed={sandbox()}
+                class={`prompt-status-button ${sandbox() ? "prompt-status-button--active" : ""}`}
+              >
+                <Icon name="lock" size="small" />
+              </Button>
+            </Tooltip>
+          </Show>
           <Tooltip value={language.t("prompt.action.enhance")} placement="top">
             <Button
               variant="ghost"

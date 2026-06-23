@@ -286,6 +286,12 @@ export const dict = {
   "prompt.action.resetModel": "모델을 기본값으로 재설정",
   "prompt.action.enhanceDescription":
     "'프롬프트 향상' 버튼은 추가 컨텍스트, 명확화 또는 재구성을 제공하여 요청을 개선합니다. 여기에 요청을 입력한 다음 버튼을 다시 클릭하여 작동 방식을 확인해보세요.",
+  "prompt.action.sandbox.enable": "샌드박스 활성화",
+  "prompt.action.sandbox.disable": "샌드박스 비활성화",
+  "prompt.action.sandbox.enabled":
+    "샌드박스가 활성화되어 있습니다. 에이전트 셸 명령은 프로젝트 및 Kilo 디렉터리로 제한됩니다.",
+  "prompt.action.sandbox.disabled":
+    "샌드박스가 비활성화되어 있습니다. 클릭하여 에이전트 셸 명령 쓰기를 프로젝트 및 Kilo 디렉터리로 제한합니다.",
 
   "speechToText.tooltip.start": "Kilo Gateway로 음성 입력 시작",
   "speechToText.tooltip.stop": "음성 캡처 중지",
@@ -1445,6 +1451,9 @@ export const dict = {
     "구성된 사용자 정의 명령이 없습니다. opencode.json에 명령을 추가하면 여기에 표시됩니다.",
   "settings.agentBehaviour.workflows.detail.description": "설명",
   "settings.agentBehaviour.workflows.detail.template": "템플릿",
+  "settings.experimental.sandbox.title": "샌드박스",
+  "settings.experimental.sandbox.description":
+    "에이전트 셸 명령을 프로젝트 및 Kilo 상태 디렉터리에 대한 쓰기를 제한하는 OS 수준의 샌드박스 내에서 실행",
 
   "settings.autoApprove.description":
     "도구 실행 허용 방식을 정의합니다. 대부분의 도구 기본값은 '허용'입니다. doom_loop 및 external_directory의 기본값은 '확인'입니다.",

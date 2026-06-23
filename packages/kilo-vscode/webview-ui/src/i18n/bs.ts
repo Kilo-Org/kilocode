@@ -287,6 +287,12 @@ export const dict = {
   "prompt.action.resetModel": "Resetuj model na zadani",
   "prompt.action.enhanceDescription":
     "Dugme 'Poboljšaj prompt' pomaže poboljšati vaš zahtjev pružajući dodatni kontekst, pojašnjenje ili preformulaciju. Pokušajte upisati zahtjev ovdje i ponovo kliknite na dugme da vidite kako funkcioniše.",
+  "prompt.action.sandbox.enable": "Omogući sandbox",
+  "prompt.action.sandbox.disable": "Onemogući sandbox",
+  "prompt.action.sandbox.enabled":
+    "Sandbox je omogućen. Shell komande agenta su ograničene na direktorije projekta i Kilo.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox je onemogućen. Kliknite da ograničite pisanje shell komandi agenta na direktorije projekta i Kilo.",
 
   "speechToText.tooltip.start": "Započni glasovni unos sa Kilo Gateway",
   "speechToText.tooltip.stop": "Zaustavi hvatanje zvuka",
@@ -1466,6 +1472,9 @@ export const dict = {
     "Nema konfiguriranih prilagođenih komandi. Dodajte komande u opencode.json da ih vidite ovdje.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Predložak",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Pokrenite shell komande agenta unutar sandboxa na nivou operativnog sistema koji ograničava pisanje na direktorije stanja projekta i Kilo",
 
   "settings.autoApprove.description":
     "Definišite kako je dozvoljeno pokretanje alata. Većina alata je podrazumijevano na Dozvoli. doom_loop i external_directory su podrazumijevano na Pitaj.",

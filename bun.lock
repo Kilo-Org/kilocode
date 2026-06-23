@@ -57,6 +57,7 @@
         "@effect/opentelemetry": "catalog:",
         "@effect/platform-node": "catalog:",
         "@kilocode/kilo-gateway": "workspace:*",
+        "@kilocode/sandbox": "workspace:*",
         "@npmcli/arborist": "9.4.0",
         "@npmcli/config": "10.8.1",
         "@openrouter/ai-sdk-provider": "2.9.0",
@@ -250,6 +251,19 @@
     "packages/kilo-jetbrains": {
       "name": "@kilocode/kilo-jetbrains",
       "version": "7.3.54",
+    },
+    "packages/kilo-sandbox": {
+      "name": "@kilocode/sandbox",
+      "version": "7.3.52",
+      "dependencies": {
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "@effect/platform-node": "catalog:",
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+        "@typescript/native-preview": "catalog:",
+      },
     },
     "packages/kilo-telemetry": {
       "name": "@kilocode/kilo-telemetry",
@@ -446,6 +460,7 @@
         "@kilocode/kilo-telemetry": "workspace:*",
         "@kilocode/plugin": "workspace:*",
         "@kilocode/plugin-atomic-chat": "workspace:*",
+        "@kilocode/sandbox": "workspace:*",
         "@kilocode/sdk": "workspace:*",
         "@lydell/node-pty": "catalog:",
         "@modelcontextprotocol/sdk": "1.29.0",
@@ -1310,6 +1325,8 @@
     "@kilocode/plugin": ["@kilocode/plugin@workspace:packages/plugin"],
 
     "@kilocode/plugin-atomic-chat": ["@kilocode/plugin-atomic-chat@workspace:packages/plugin-atomic-chat"],
+
+    "@kilocode/sandbox": ["@kilocode/sandbox@workspace:packages/kilo-sandbox"],
 
     "@kilocode/sdk": ["@kilocode/sdk@workspace:packages/sdk/js"],
 

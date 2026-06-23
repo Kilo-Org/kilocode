@@ -285,6 +285,12 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "ปุ่ม 'ปรับปรุงพรอมต์' ช่วยปรับปรุงพรอมต์ของคุณโดยให้บริบทเพิ่มเติม ชี้แจง หรือเขียนใหม่ ลองพิมพ์พรอมต์ที่นี่และคลิกปุ่มอีกครั้งเพื่อดูว่ามันทำงานอย่างไร",
   "prompt.action.indexing": "การตั้งค่าการสร้างดัชนี",
+  "prompt.action.sandbox.enable": "เปิดใช้งาน sandbox",
+  "prompt.action.sandbox.disable": "ปิดใช้งาน sandbox",
+  "prompt.action.sandbox.enabled":
+    "เปิดใช้งาน sandbox แล้ว คำสั่ง shell ของ agent ถูกจำกัดไว้ที่โฟลเดอร์โปรเจ็กต์และ Kilo",
+  "prompt.action.sandbox.disabled":
+    "ปิดใช้งาน sandbox อยู่ คลิกเพื่อจำกัดการเขียนคำสั่ง shell ของ agent ไว้ที่โฟลเดอร์โปรเจ็กต์และ Kilo",
 
   "speechToText.tooltip.start": "เริ่มการป้อนข้อมูลด้วยเสียงด้วย Kilo Gateway",
   "speechToText.tooltip.stop": "หยุดจับเสียง",
@@ -1442,6 +1448,9 @@ export const dict = {
     "ไม่มีคำสั่งแบบกำหนดเองที่กำหนดค่าไว้ เพิ่มคำสั่งใน opencode.json เพื่อดูที่นี่",
   "settings.agentBehaviour.workflows.detail.description": "คำอธิบาย",
   "settings.agentBehaviour.workflows.detail.template": "เทมเพลต",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "เรียกใช้คำสั่ง shell ของ agent ใน sandbox ระดับระบบปฏิบัติการที่จำกัดการเขียนไปยังโฟลเดอร์สถานะของโปรเจ็กต์และ Kilo",
 
   "settings.autoApprove.description":
     "กำหนดวิธีอนุญาตการทำงานของเครื่องมือ โดยค่าเริ่มต้นเครื่องมือส่วนใหญ่คืออนุญาต ส่วน doom_loop และ external_directory ค่าเริ่มต้นคือถาม",

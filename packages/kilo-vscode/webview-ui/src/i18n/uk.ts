@@ -287,6 +287,11 @@ export const dict = {
   "prompt.action.resetModel": "Скинути модель до стандартної",
   "prompt.action.enhanceDescription":
     "Кнопка 'Покращити запит' допомагає вдосконалити ваш запит, надаючи додатковий контекст, уточнення або перефразування. Введіть запит тут і натисніть кнопку ще раз, щоб побачити, як це працює.",
+  "prompt.action.sandbox.enable": "Увімкнути пісочницю",
+  "prompt.action.sandbox.disable": "Вимкнути пісочницю",
+  "prompt.action.sandbox.enabled": "Пісочницю увімкнено. Команди оболонки агента обмежені каталогами проєкту та Kilo.",
+  "prompt.action.sandbox.disabled":
+    "Пісочницю вимкнено. Натисніть, щоб обмежити запис команд оболонки агента каталогами проєкту та Kilo.",
 
   "speechToText.tooltip.start": "Почати голосове введення з Kilo Gateway",
   "speechToText.tooltip.stop": "Зупинити захоплення звуку",
@@ -1332,6 +1337,9 @@ export const dict = {
   "settings.experimental.remote.inactive": "Неактивний",
   "settings.experimental.remote.hint": "Використовуйте /remote у чаті для перемикання",
   "settings.experimental.toolToggles": "Перемикачі інструментів",
+  "settings.experimental.sandbox.title": "Пісочниця",
+  "settings.experimental.sandbox.description":
+    "Виконувати команди оболонки агента в пісочниці на рівні ОС, яка обмежує запис до каталогів стану проєкту та Kilo",
 
   "settings.agentBehaviour.defaultAgent.title": "Агент за замовчуванням",
   "settings.agentBehaviour.defaultAgent.description": "Агент, що використовується, якщо не вказано інший",

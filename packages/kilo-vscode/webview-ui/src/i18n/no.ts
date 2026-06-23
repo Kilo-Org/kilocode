@@ -290,6 +290,12 @@ export const dict = {
   "prompt.action.indexing": "Indekseringsinnstillinger",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedre prompt' hjelper med å forbedre forespørselen din ved å gi ekstra kontekst, avklaring eller omformulering. Prøv å skrive en forespørsel her og klikk på knappen igjen for å se hvordan det fungerer.",
+  "prompt.action.sandbox.enable": "Aktiver sandbox",
+  "prompt.action.sandbox.disable": "Deaktiver sandbox",
+  "prompt.action.sandbox.enabled":
+    "Sandbox er aktivert. Shell-kommandoer for agenten er begrenset til prosjekt- og Kilo-mappene.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox er deaktivert. Klikk for å begrense skriving av shell-kommandoer for agenten til prosjekt- og Kilo-mappene.",
 
   "speechToText.tooltip.start": "Start taleinndata med Kilo Gateway",
   "speechToText.tooltip.stop": "Stopp lydfangst",
@@ -1458,6 +1464,9 @@ export const dict = {
     "Ingen egendefinerte kommandoer konfigurert. Legg til kommandoer i opencode.json for å se dem her.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Mal",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Kjør shell-kommandoer for agenten i en sandbox på operativsystemnivå som begrenser skriving til prosjekt- og Kilo-tilstandsmapper",
 
   "settings.autoApprove.description":
     "Definer hvordan verktøy kan kjøre. De fleste verktøy har Tillat som standard. doom_loop og external_directory har Spør som standard.",

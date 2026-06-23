@@ -1206,6 +1206,15 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Nessuna skill rilevata. Aggiungi percorsi cartella o URL di skill qui sotto per renderle disponibili.",
   "settings.agentBehaviour.availableModes": "Modalità personalizzate disponibili",
+  "prompt.action.sandbox.enable": "Abilita sandbox",
+  "prompt.action.sandbox.disable": "Disabilita sandbox",
+  "prompt.action.sandbox.enabled":
+    "Sandbox abilitata. I comandi shell dell'agente sono limitati alle directory del progetto e di Kilo.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox disabilitata. Fai clic per limitare le scritture dei comandi shell dell'agente alle directory del progetto e di Kilo.",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Esegui i comandi shell dell'agente all'interno di un sandbox a livello di sistema operativo che limita le scritture alle directory di stato del progetto e di Kilo",
 
   "settings.agentBehaviour.skillPaths": "Percorsi cartelle skill",
   "settings.agentBehaviour.skillUrls": "URL skill",

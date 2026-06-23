@@ -283,6 +283,10 @@ export const dict = {
   "prompt.action.resetModel": "重置模型為預設值",
   "prompt.action.enhanceDescription":
     "「強化提示詞」按鈕可透過提供額外內容、說明或改寫來協助改善提示詞。試著在這裡輸入提示詞，再點選一次按鈕以了解其運作方式。",
+  "prompt.action.sandbox.enable": "啟用沙盒",
+  "prompt.action.sandbox.disable": "停用沙盒",
+  "prompt.action.sandbox.enabled": "沙盒已啟用。代理 shell 指令被限制在專案和 Kilo 目錄內。",
+  "prompt.action.sandbox.disabled": "沙盒已停用。點擊以將代理 shell 指令的寫入限制在專案和 Kilo 目錄內。",
 
   "speechToText.tooltip.start": "使用 Kilo Gateway 開始語音輸入",
   "speechToText.tooltip.stop": "停止擷取音訊",
@@ -1379,6 +1383,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "未設定自訂命令。將命令新增至 opencode.json 即可在此處看到。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "範本",
+  "settings.experimental.sandbox.title": "沙盒",
+  "settings.experimental.sandbox.description":
+    "在作業系統層級沙盒中執行代理 shell 指令，將寫入限制在專案和 Kilo 狀態目錄內",
 
   "settings.autoApprove.description":
     "定義工具的執行權限。大多數工具預設為允許。doom_loop 與 external_directory 預設為詢問。",

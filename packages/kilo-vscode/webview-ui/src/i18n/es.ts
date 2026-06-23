@@ -288,6 +288,12 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "El botón 'Mejorar el mensaje' ayuda a mejorar tu petición proporcionando contexto adicional, aclaraciones o reformulaciones. Intenta escribir una petición aquí y haz clic en el botón nuevamente para ver cómo funciona.",
   "prompt.action.indexing": "Configuración de indexación",
+  "prompt.action.sandbox.enable": "Activar sandbox",
+  "prompt.action.sandbox.disable": "Desactivar sandbox",
+  "prompt.action.sandbox.enabled":
+    "Sandbox activado. Los comandos de shell del agente están limitados a los directorios del proyecto y de Kilo.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox desactivado. Haz clic para limitar las escrituras de los comandos de shell del agente a los directorios del proyecto y de Kilo.",
 
   "speechToText.tooltip.start": "Iniciar entrada de voz con Kilo Gateway",
   "speechToText.tooltip.stop": "Detener captura",
@@ -1480,6 +1486,9 @@ export const dict = {
     "No hay comandos personalizados configurados. Añada comandos a opencode.json para verlos aquí.",
   "settings.agentBehaviour.workflows.detail.description": "Descripción",
   "settings.agentBehaviour.workflows.detail.template": "Plantilla",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Ejecutar los comandos de shell del agente dentro de un sandbox a nivel de sistema operativo que restringe las escrituras a los directorios de estado del proyecto y de Kilo",
 
   "settings.autoApprove.description":
     "Defina cómo se permite la ejecución de las herramientas. La mayoría de las herramientas tienen como valor predeterminado Permitir. doom_loop y external_directory tienen como valor predeterminado Preguntar.",
