@@ -20,6 +20,13 @@ export function selector(kind: "classic" | "next-edit"): vscode.DocumentSelector
   return kind === "classic" ? [{ scheme: "file" }, { scheme: "vscode-notebook-cell" }] : [{ scheme: "file" }]
 }
 
+export function notebookModel(provider?: string, model?: string) {
+  const info = getAutocompleteModel(provider, model)
+  if (info.kind !== "edit") return info
+  const fallback = info.providerID === "kilo" ? "inception/mercury-edit-2" : "mercury-edit-2"
+  return getAutocompleteModel(info.providerID, fallback)
+}
+
 export interface AutocompleteServiceSettings {
   enableAutoTrigger?: boolean
   enableSmartInlineTaskKeybinding?: boolean
@@ -72,6 +79,7 @@ export class AutocompleteServiceManager {
   public readonly nextEditProvider: NextEditInlineCompletionProvider
   public readonly nextEditSuggestionManager: NextEditSuggestionManager
   private inlineCompletionProviderDisposable: vscode.Disposable | null = null
+  private notebookCompletionProviderDisposable: vscode.Disposable | null = null
   private inlineCompletionProviderKind: "classic" | "next-edit" | null = null
   private unsubscribeState: (() => void) | null = null
   private unsubscribeEvent: (() => void) | null = null
@@ -181,7 +189,7 @@ export class AutocompleteServiceManager {
   public async load() {
     this.settings = readSettings()
 
-    this.inlineCompletionProvider.setModel(getAutocompleteModel(this.settings.provider, this.settings.model).id)
+    this.inlineCompletionProvider.setModel(notebookModel(this.settings.provider, this.settings.model).id)
 
     await this.updateGlobalContext()
     this.updateStatusBar()
@@ -208,7 +216,9 @@ export class AutocompleteServiceManager {
     ) {
       if (this.inlineCompletionProviderKind === "next-edit") this.nextEditSuggestionManager.clear()
       this.inlineCompletionProviderDisposable?.dispose()
+      this.notebookCompletionProviderDisposable?.dispose()
       this.inlineCompletionProviderDisposable = null
+      this.notebookCompletionProviderDisposable = null
       this.inlineCompletionProviderKind = null
     }
 
@@ -220,7 +230,9 @@ export class AutocompleteServiceManager {
 
     if (!shouldBeRegistered) {
       this.inlineCompletionProviderDisposable!.dispose()
+      this.notebookCompletionProviderDisposable?.dispose()
       this.inlineCompletionProviderDisposable = null
+      this.notebookCompletionProviderDisposable = null
       this.inlineCompletionProviderKind = null
       return
     }
@@ -231,6 +243,12 @@ export class AutocompleteServiceManager {
       selector(desiredKind),
       provider,
     )
+    if (desiredKind === "next-edit") {
+      this.notebookCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
+        [{ scheme: "vscode-notebook-cell" }],
+        this.inlineCompletionProvider,
+      )
+    }
     this.inlineCompletionProviderKind = desiredKind
   }
 
@@ -463,6 +481,8 @@ export class AutocompleteServiceManager {
       this.inlineCompletionProviderDisposable = null
       this.inlineCompletionProviderKind = null
     }
+    this.notebookCompletionProviderDisposable?.dispose()
+    this.notebookCompletionProviderDisposable = null
 
     // Dispose inline completion provider resources
     this.inlineCompletionProvider.dispose()
