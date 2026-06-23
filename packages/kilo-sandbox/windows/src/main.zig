@@ -67,7 +67,6 @@ fn open(alloc: Allocator, raw: []const u8, directory: ?bool, access: win.DWORD) 
     var info: win.BY_HANDLE_FILE_INFORMATION = undefined;
     if (win.GetFileInformationByHandle(handle, &info) == 0) return error.PathInfo;
     if ((info.dwFileAttributes & win.FILE_ATTRIBUTE_REPARSE_POINT) != 0) return error.ReparsePoint;
-    if (info.nNumberOfLinks != 1) return error.Hardlink;
     const is_dir = (info.dwFileAttributes & win.FILE_ATTRIBUTE_DIRECTORY) != 0;
     if (directory) |expected| if (is_dir != expected) return error.PathType;
     return .{ .handle = handle, .path = try canonical(alloc, handle), .info = info };
@@ -166,6 +165,7 @@ fn scan(alloc: Allocator, path: []const u8, root_sid: win.PSID, req: protocol.Re
         alloc.free(node.path);
     }
     const directory = (node.info.dwFileAttributes & win.FILE_ATTRIBUTE_DIRECTORY) != 0;
+    if (!directory and node.info.nNumberOfLinks != 1) return error.Hardlink;
     const inherit: win.DWORD = if (directory) win.SUB_CONTAINERS_AND_OBJECTS_INHERIT else win.NO_INHERITANCE;
     try ace(node.handle, root_sid, win.GRANT_ACCESS, allow_mask, inherit);
     if (protocol.denied(node.path, leaf(node.path), req.denyWrite, req.denyNames))
