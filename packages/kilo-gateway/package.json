@@ -42,6 +42,7 @@
     "@clack/prompts": "1.0.0-alpha.1",
     "ai": "catalog:",
     "open": "10.1.2",
+    "venice-ai-sdk-provider": "2.0.1",
     "zod": "catalog:"
   },
   "devDependencies": {

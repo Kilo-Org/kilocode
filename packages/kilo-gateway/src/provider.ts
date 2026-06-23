@@ -4,6 +4,7 @@ import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import { createMistral } from "@ai-sdk/mistral"
+import { createVenice } from "venice-ai-sdk-provider"
 import type { KiloProvider, KiloProviderOptions } from "./types.js"
 import { getApiKey } from "./auth/token.js"
 import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
@@ -82,6 +83,7 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   const openai = createOpenAI(sdkOptions)
   const openaiCompatible = createOpenAICompatible({ ...sdkOptions, name: "openaiCompatible" })
   const mistral = createMistral(sdkOptions)
+  const venice = createVenice(sdkOptions)
 
   return {
     languageModel(modelId) {
@@ -110,6 +112,9 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
     },
     openaiCompatible(modelId) {
       return openaiCompatible(modelId)
+    },
+    venice(modelId) {
+      return venice(modelId)
     },
   }
 }

@@ -166,6 +166,7 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
           if (provider === "mistral") return sdk.mistral(modelID)
           if (provider === "openai") return sdk.openai(modelID)
           if (provider === "openai-compatible") return sdk.openaiCompatible(modelID)
+          if (provider === "venice") return sdk.venice(modelID)
           return sdk.languageModel(modelID)
         },
       }

@@ -187,3 +187,38 @@ it.effect("enables a paid catalog when auth exists", () =>
     expect(result.options).toEqual({})
   }),
 )
+
+it.effect("dispatches Venice Kilo models through the Venice SDK selector", () =>
+  Effect.gen(function* () {
+    const result = yield* kiloCustomLoaders({
+      auth: () => Effect.succeed(undefined),
+      config: () => Effect.succeed({}),
+      env: () => Effect.succeed({}),
+      get: () => Effect.succeed(undefined),
+    }).kilo({
+      ...input,
+      models: {
+        "venice-model": {
+          ...input.models["paid-model"],
+          id: "venice-model",
+          ai_sdk_provider: "venice",
+        },
+      },
+    })
+    const calls: string[] = []
+    const sdk = {
+      venice(id: string) {
+        calls.push(id)
+        return { id, provider: "venice.chat" }
+      },
+      languageModel(id: string) {
+        return { id, provider: "openrouter.chat" }
+      },
+    }
+
+    const model = yield* Effect.promise(() => result.getModel!(sdk as never, "venice-model"))
+
+    expect(model).toEqual({ id: "venice-model", provider: "venice.chat" })
+    expect(calls).toEqual(["venice-model"])
+  }),
+)
