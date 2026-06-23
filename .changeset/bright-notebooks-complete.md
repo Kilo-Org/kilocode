@@ -2,4 +2,4 @@
 "kilo-code": minor
 ---
 
-Use surrounding notebook cells to provide relevant Python autocomplete suggestions.
+Suggest Python code using variables and functions defined in other Jupyter notebook cells.

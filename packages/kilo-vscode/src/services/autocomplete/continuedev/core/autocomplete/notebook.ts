@@ -71,7 +71,7 @@ export function getNotebookContext(
   document: vscode.TextDocument,
   position: vscode.Position,
 ): NotebookContext | undefined {
-  if (document.uri.scheme !== "vscode-notebook-cell") return
+  if (document.uri.scheme !== "vscode-notebook-cell" || !supportsNotebook(document)) return
 
   const resolved = resolveNotebook(document.uri)
   if (!resolved) return

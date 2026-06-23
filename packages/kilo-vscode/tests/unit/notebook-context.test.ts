@@ -78,6 +78,8 @@ describe("notebook context", () => {
     expect(supportsNotebook(python)).toBe(true)
     expect(supportsNotebook(javascript)).toBe(false)
     expect(supportsNotebook(markdown)).toBe(false)
+    expect(getNotebookContext(javascript, new vscode.Position(0, 0))).toBeUndefined()
+    expect(getNotebookContext(markdown, new vscode.Position(0, 0))).toBeUndefined()
     expect(supportsNotebook({ uri: uri("file", "/workspace/file.ts") } as vscode.TextDocument)).toBe(true)
   })
 
