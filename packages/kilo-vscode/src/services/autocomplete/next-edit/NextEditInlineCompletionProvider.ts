@@ -70,7 +70,18 @@ export class NextEditInlineCompletionProvider implements vscode.InlineCompletion
     token: vscode.CancellationToken,
   ): Promise<vscode.InlineCompletionItem[] | vscode.InlineCompletionList | undefined> {
     if (document.uri.scheme !== "file") return undefined
-    if (this.backoff.blocked()) return []
+    // Circuit breaker / backoff: once a fatal (401/402/403) or sustained error
+    // is recorded, stop sending Mercury requests so a single keystroke doesn't
+    // re-pop the "autocomplete paused" toast on every character.
+    if (this.backoff.blocked()) {
+      // For 402 (credits depleted) self-heal without an auth event: every few
+      // minutes hit the balance endpoint instead of a probe completion request,
+      // and resume if the user has topped up. Mirrors the classic FIM path.
+      if (this.backoff.getFatalStatus() === 402 && this.backoff.shouldProbe() && (await this.hasBalance())) {
+        this.resetBackoff()
+      }
+      if (this.backoff.blocked()) return []
+    }
     if (this.deps.suggestionManager?.isPending()) return undefined
 
     // Never send a file unless the access policy explicitly approves it.
@@ -94,6 +105,10 @@ export class NextEditInlineCompletionProvider implements vscode.InlineCompletion
 
     try {
       const suggestion = await provider.suggest(ctx)
+      // A non-throwing response means the gateway is healthy again — clear any
+      // backoff state and re-arm the fatal notification for the next episode.
+      this.backoff.success()
+      this.fatalNotified = false
       if (!suggestion || token.isCancellationRequested) {
         this.deps.onSuggestion?.({ shown: false, latencyMs: 0, status: "no-replacement" })
         return undefined
@@ -372,6 +387,18 @@ export class NextEditInlineCompletionProvider implements vscode.InlineCompletion
   resetBackoff(): void {
     this.backoff.reset()
     this.fatalNotified = false
+  }
+
+  /**
+   * Check the user's credit balance via the profile endpoint. Returns true only
+   * for a positive balance; false on any error (not connected, fetch failed).
+   * Used to self-heal from a 402 without waiting for an auth/reconnect event.
+   */
+  private async hasBalance(): Promise<boolean> {
+    const client = await this.deps.connectionService.getClientAsync().catch(() => null)
+    if (!client) return false
+    const result = await client.kilo.profile().catch(() => null)
+    return (result?.data?.balance?.balance ?? 0) > 0
   }
 
   private debounce(ms: number, token: vscode.CancellationToken): Promise<void> {
