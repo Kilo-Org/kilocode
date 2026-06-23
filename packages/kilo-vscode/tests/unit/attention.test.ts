@@ -5,7 +5,7 @@ import type { KiloConnectionService } from "../../src/services/cli-backend/conne
 import type { SSEPayload } from "../../src/services/cli-backend/sdk-sse-adapter"
 import { CustomSoundIDs, resolveSoundID } from "../../src/services/attention/sound"
 
-function setup() {
+function setup(opts: { approve?: () => boolean | Promise<boolean> } = {}) {
   const sounds: TuiAttentionSoundName[] = []
   const events: Array<(event: SSEPayload) => void> = []
   const states: Array<(state: "connecting" | "connected" | "disconnected" | "error") => void> = []
@@ -19,7 +19,7 @@ function setup() {
       return () => undefined
     },
   } as unknown as KiloConnectionService
-  const service = new AttentionService(connection)
+  const service = new AttentionService(connection, opts)
   ;(service as unknown as { notify: (sound: TuiAttentionSoundName) => void }).notify = (sound) => sounds.push(sound)
   return {
     sounds,
@@ -72,6 +72,36 @@ describe("AttentionService", () => {
     test.event(event({ type: "permission.asked", properties: { id: "p1", sessionID: "s1" } }))
 
     expect(test.sounds).toEqual(["question", "question", "permission"])
+    test.service.dispose()
+  })
+
+  it("stays silent for auto-approved permission requests", () => {
+    const test = setup({ approve: () => true })
+    test.event(event({ type: "permission.asked", properties: { id: "p1", sessionID: "s1" } }))
+    test.event(event({ type: "permission.replied", properties: { requestID: "p1", sessionID: "s1" } }))
+
+    expect(test.sounds).toEqual([])
+    test.service.dispose()
+  })
+
+  it("plays attention when auto-approval fails and the request remains pending", async () => {
+    const test = setup({ approve: async () => false })
+    test.event(event({ type: "permission.asked", properties: { id: "p1", sessionID: "s1" } }))
+    await Bun.sleep(0)
+
+    expect(test.sounds).toEqual(["permission"])
+    test.service.dispose()
+  })
+
+  it("stays silent when a permission resolves before auto-approval failure settles", async () => {
+    const approval = Promise.withResolvers<boolean>()
+    const test = setup({ approve: () => approval.promise })
+    test.event(event({ type: "permission.asked", properties: { id: "p1", sessionID: "s1" } }))
+    test.event(event({ type: "permission.replied", properties: { requestID: "p1", sessionID: "s1" } }))
+    approval.resolve(false)
+    await Bun.sleep(0)
+
+    expect(test.sounds).toEqual([])
     test.service.dispose()
   })
 
