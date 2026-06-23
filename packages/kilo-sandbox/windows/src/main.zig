@@ -348,7 +348,7 @@ fn run(alloc: Allocator, req: protocol.Request) !u32 {
     return code;
 }
 
-pub fn main(init: std.process.Init) !void {
+fn execute(init: std.process.Init) !u32 {
     const alloc = init.gpa;
     var args = try init.minimal.args.iterateAllocator(alloc);
     defer args.deinit();
@@ -368,7 +368,11 @@ pub fn main(init: std.process.Init) !void {
     // additive ACEs persist without an ownership journal/recovery mechanism, and restoring
     // stale whole DACLs is forbidden; denyNames only protects entries present during this
     // scan; process containment still needs an independent parent-death lease.
-    const code = run(alloc, parsed.value) catch |err| {
+    return run(alloc, parsed.value);
+}
+
+pub fn main(init: std.process.Init) void {
+    const code = execute(init) catch |err| {
         std.debug.print("kilo-sandbox-windows: setup failed: {s}\n", .{@errorName(err)});
         std.process.exit(125);
     };
