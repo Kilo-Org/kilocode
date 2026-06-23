@@ -20,11 +20,11 @@ interface NotebookResolution {
   version: number
 }
 
-const resolutions = new Map<string, NotebookResolution>()
+const resolutions = new WeakMap<vscode.Uri, NotebookResolution>()
 
 function resolveNotebook(uri: vscode.Uri): NotebookResolution | undefined {
   const id = uri.toString()
-  const cached = resolutions.get(id)
+  const cached = resolutions.get(uri)
   if (
     cached &&
     cached.notebook.version === cached.version &&
@@ -33,13 +33,13 @@ function resolveNotebook(uri: vscode.Uri): NotebookResolution | undefined {
     return cached
   }
 
-  resolutions.delete(id)
+  resolutions.delete(uri)
   for (const notebook of vscode.workspace.notebookDocuments) {
     const cells = notebook.getCells()
     const index = cells.findIndex((cell) => cell.document.uri.toString() === id)
     if (index < 0) continue
     const resolved = { notebook, cells, cell: cells[index]!, index, version: notebook.version }
-    resolutions.set(id, resolved)
+    resolutions.set(uri, resolved)
     return resolved
   }
 }
