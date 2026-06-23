@@ -97,9 +97,10 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
         maxConnectionAge,
         init?.signal,
       )
-      let resolveFirstEvent: (started: boolean) => void = () => {}
+      type First = { started: true } | { started: false; error: ProviderError.ResponseStreamError }
+      let resolveFirstEvent: (value: First) => void = () => {}
       let rejectFirstEvent: (error: Error) => void = () => {}
-      const firstEvent = new Promise<boolean>((resolve, reject) => {
+      const firstEvent = new Promise<First>((resolve, reject) => {
         resolveFirstEvent = resolve
         rejectFirstEvent = reject
       })
@@ -108,7 +109,7 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
         body,
         idleTimeout,
         signal: init?.signal ?? undefined,
-        onFirstEvent: () => resolveFirstEvent(true),
+        onFirstEvent: () => resolveFirstEvent({ started: true }),
         onTerminal: (event) => {
           entry.busy = false
           entry.lastUsedAt = Date.now()
@@ -123,7 +124,8 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
           entry.busy = false
           if (!entry.fallback) recordStreamFailure(entry)
           invalidate(entry)
-          resolveFirstEvent(false)
+          resolveFirstEvent({ started: false, error })
+          return true // kilocode_change - the pool replaces the hidden pre-event response
         },
         onAbort: (error) => {
           log.debug("websocket aborted", { key })
@@ -140,8 +142,9 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
           throw error
         },
       })
-      if (await firstEvent) return response
-      if (!entry.fallback) return response
+      const first = await firstEvent
+      if (first.started) return response
+      if (!entry.fallback) return failedResponse(first.error)
       log.debug("http fallback", { key, reason: "websocket_retries_exhausted" })
       return httpFetch(input, httpInit)
     } catch (error) {
@@ -202,17 +205,12 @@ function connectionLimitError(event: Record<string, unknown>) {
 }
 
 function failedResponse(error: ProviderError.ResponseStreamError) {
-  return new Response(
-    new ReadableStream({
-      start(controller) {
-        controller.error(error)
-      },
-    }),
-    {
-      status: 200,
-      headers: { "content-type": "text/event-stream" },
-    },
+  // kilocode_change start - expose pre-event transport failures as retryable HTTP errors
+  return Response.json(
+    { error: { message: error.message, type: "response_stream_error" } },
+    { status: 503, headers: { "retry-after": "0" } },
   )
+  // kilocode_change end
 }
 
 async function socket(

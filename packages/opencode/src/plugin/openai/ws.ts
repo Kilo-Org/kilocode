@@ -24,7 +24,7 @@ export interface StreamResponsesWebSocketOptions {
   onComplete?: (event: Record<string, unknown>) => void
   onTerminal?: (event: Record<string, unknown>) => void
   onRetryableTerminal?: (event: Record<string, unknown>) => Promise<WebSocket | undefined>
-  onConnectionInvalid?: (error: ProviderError.ResponseStreamError) => void
+  onConnectionInvalid?: (error: ProviderError.ResponseStreamError) => unknown // kilocode_change - acknowledge owned pre-event failures with true
   onAbort?: (error: Error) => void
 }
 
@@ -158,8 +158,14 @@ export function streamResponsesWebSocket(options: StreamResponsesWebSocketOption
     if (completed) return
     completed = true
     cleanup()
-    options.onConnectionInvalid?.(error)
-    controller?.error(error)
+    // kilocode_change start - settle pre-event responses according to whether the pool exposes or replaces them
+    const handled = !emitted && options.onConnectionInvalid?.(error) === true
+    if (handled) {
+      controller?.close()
+      return
+    }
+    queueMicrotask(() => queueMicrotask(() => controller?.error(error)))
+    // kilocode_change end
   }
 
   function resetIdleTimeout(message: string) {
