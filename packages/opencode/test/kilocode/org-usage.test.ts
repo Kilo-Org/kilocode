@@ -4,8 +4,10 @@ import {
   formatSummaryForPeriod,
   formatSummaryTable,
   handleUsage,
+  resolvePeriod,
   resolveOrg,
   summaryInput,
+  summaryInputForPeriod,
 } from "@/kilocode/cli/cmd/org"
 
 type Fetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
@@ -22,6 +24,51 @@ describe("org usage", () => {
       personalScope: "include-orgs",
       viewAs: "org-wide",
     })
+  })
+
+  test("builds weekly and monthly summary inputs", () => {
+    const now = new Date(2026, 5, 23, 11, 33, 56)
+    expect(summaryInputForPeriod("week", now)).toEqual({
+      startDate: new Date(2026, 5, 22, 0, 0, 0).toISOString(),
+      endDate: now.toISOString(),
+      granularity: "week",
+      costSource: "cost",
+      personalScope: "include-orgs",
+      viewAs: "org-wide",
+    })
+    expect(summaryInputForPeriod("month", now)).toEqual({
+      startDate: new Date(2026, 5, 1, 0, 0, 0).toISOString(),
+      endDate: now.toISOString(),
+      granularity: "month",
+      costSource: "cost",
+      personalScope: "include-orgs",
+      viewAs: "org-wide",
+    })
+  })
+
+  test("prompts for a usage period with day as the default", async () => {
+    const defaults: string[] = []
+
+    const period = await resolvePeriod({
+      selectPeriod: async (input) => {
+        defaults.push(input.current)
+        return "week"
+      },
+    })
+
+    expect(period).toBe("week")
+    expect(defaults).toEqual(["day"])
+  })
+
+  test("uses an explicit usage period without prompting", async () => {
+    const period = await resolvePeriod({
+      period: "month",
+      selectPeriod: async () => {
+        throw new Error("should not prompt")
+      },
+    })
+
+    expect(period).toBe("month")
   })
 
   test("fetches the usage summary with the active org header", async () => {
@@ -152,10 +199,14 @@ describe("org usage", () => {
   test("prints the boxed summary for the authenticated org", async () => {
     const out: string[] = []
     const codes: number[] = []
-    const fetcher = (async () =>
-      Response.json([{ result: { data: { json: { costMicrodollars: 1_234_567, requestCount: 2 } } } }])) satisfies Fetch
+    const calls: Request[] = []
+    const fetcher = (async (input, init) => {
+      calls.push(new Request(input, init))
+      return Response.json([{ result: { data: { json: { costMicrodollars: 1_234_567, requestCount: 2 } } } }])
+    }) satisfies Fetch
 
     await handleUsage({
+      period: "month",
       getAuth: async () => ({ type: "oauth", access: "token", refresh: "refresh", expires: Date.now(), accountId: "org_123" }),
       getProfile: async () => ({ email: "test@example.com", organizations: [{ id: "org_123", name: "Org", role: "owner" }] }),
       fetch: fetcher,
@@ -170,6 +221,9 @@ describe("org usage", () => {
     expect(out[0]).toContain("OPERATIONS")
     expect(out[0]).toContain("│Cost                                              $1.23 │")
     expect(out[0]).toContain("│Requests                                              2 │")
+    const url = new URL(calls[0].url)
+    const input = JSON.parse(url.searchParams.get("input") ?? "{}")
+    expect(input["0"].granularity).toBe("month")
   })
 
   test("prints the verbose summary when requested", async () => {
@@ -179,6 +233,7 @@ describe("org usage", () => {
 
     await handleUsage({
       verbose: true,
+      selectPeriod: async () => "day",
       getAuth: async () => ({ type: "oauth", access: "token", refresh: "refresh", expires: Date.now(), accountId: "org_123" }),
       getProfile: async () => ({ email: "test@example.com", organizations: [{ id: "org_123", name: "Org", role: "owner" }] }),
       fetch: fetcher,
@@ -199,6 +254,7 @@ describe("org usage", () => {
 
     await handleUsage({
       json: true,
+      selectPeriod: async () => "day",
       getAuth: async () => ({ type: "oauth", access: "token", refresh: "refresh", expires: Date.now(), accountId: "org_123" }),
       getProfile: async () => ({ email: "test@example.com", organizations: [{ id: "org_123", name: "Org", role: "owner" }] }),
       fetch: fetcher,

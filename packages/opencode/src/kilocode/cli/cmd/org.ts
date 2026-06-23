@@ -10,15 +10,19 @@ import { isCancel, select } from "@clack/prompts"
 const runtime = makeRuntime(Auth.Service, Auth.defaultLayer)
 
 type Fetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
+const periods = ["day", "week", "month"] as const
+type Period = (typeof periods)[number]
 type SummaryInput = ReturnType<typeof summaryInput>
 
 interface Args {
   json?: boolean
+  period?: Period
   verbose?: boolean
   getAuth?: (providerID: string) => Promise<AuthInfo | undefined>
   setAuth?: (providerID: string, auth: AuthInfo) => Promise<void>
   getProfile?: (token: string) => Promise<KilocodeProfile>
   selectOrg?: (input: { orgs: Org[]; current?: string }) => Promise<string | undefined>
+  selectPeriod?: (input: { current: Period }) => Promise<Period | undefined>
   fetch?: Fetch
   write?: (msg: string) => void
   error?: (msg: string) => void
@@ -31,12 +35,17 @@ interface Org {
 }
 
 export function summaryInput(now = new Date()) {
-  const start = new Date(now)
+  return summaryInputForPeriod("day", now)
+}
+
+export function summaryInputForPeriod(period: Period, now = new Date(), start = new Date(now)) {
   start.setHours(0, 0, 0, 0)
+  if (period === "week") start.setDate(start.getDate() - ((start.getDay() + 6) % 7))
+  if (period === "month") start.setDate(1)
   return {
     startDate: start.toISOString(),
     endDate: now.toISOString(),
-    granularity: "day",
+    granularity: period,
     costSource: "cost",
     personalScope: "include-orgs",
     viewAs: "org-wide",
@@ -260,6 +269,28 @@ async function promptOrg(input: { orgs: Org[]; current?: string }) {
   return choice
 }
 
+async function promptPeriod(input: { current: Period }) {
+  const choice = await select({
+    message: "Select usage period",
+    initialValue: input.current,
+    options: periods.map((period) => ({
+      label: period === input.current ? `${label(period)} (default)` : label(period),
+      value: period,
+    })),
+  })
+  if (isCancel(choice)) return undefined
+  return choice
+}
+
+export async function resolvePeriod(input: {
+  period?: Period
+  selectPeriod?: (input: { current: Period }) => Promise<Period | undefined>
+}) {
+  if (input.period) return input.period
+
+  return (input.selectPeriod ?? promptPeriod)({ current: "day" })
+}
+
 export async function resolveOrg(input: {
   auth: AuthInfo
   getProfile?: (token: string) => Promise<KilocodeProfile>
@@ -303,7 +334,14 @@ export async function handleUsage(args: Args = {}) {
       return
     }
 
-    const summary = summaryInput()
+    const period = await resolvePeriod({ period: args.period, selectPeriod: args.selectPeriod })
+    if (!period) {
+      error("No usage period selected")
+      exit(1)
+      return
+    }
+
+    const summary = summaryInputForPeriod(period)
     const res = await fetchUsageSummaryResponse({ token: auth.access, org, fetch: args.fetch, summary })
     const write = args.write ?? ((msg: string) => process.stdout.write(msg))
     if (args.json) {
@@ -328,13 +366,18 @@ const UsageCommand = cmd({
         type: "boolean",
         default: false,
       })
+      .option("period", {
+        describe: "usage period to summarize",
+        type: "string",
+        choices: periods,
+      })
       .option("verbose", {
         describe: "print detailed usage fields",
         type: "boolean",
         default: false,
       }),
   handler: async (args) => {
-    await handleUsage({ json: args.json, verbose: args.verbose })
+    await handleUsage({ json: args.json, period: args.period as Period | undefined, verbose: args.verbose })
   },
 })
 
