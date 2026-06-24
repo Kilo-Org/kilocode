@@ -3,20 +3,15 @@ import { Glob } from "@opencode-ai/core/util/glob"
 import { ConfigMarkdown } from "@/config/markdown"
 
 export namespace KilocodeInstruction {
-  export interface Rule {
-    content: string
-    paths?: string[]
-  }
-
-  export interface ClaudeInput {
+  export interface CompatibilityInput {
     home: string
     directory: string
     worktree: string
-    disabled: boolean
+    enabled: boolean
     project: boolean
   }
 
-  const paths = (data: Record<string, unknown>) => {
+  const scopes = (data: Record<string, unknown>) => {
     if (!Object.prototype.hasOwnProperty.call(data, "paths")) return undefined
     const value = data.paths
     if (typeof value === "string") return [value]
@@ -24,30 +19,23 @@ export namespace KilocodeInstruction {
     return value.filter((item): item is string => typeof item === "string")
   }
 
-  export async function rule(item: string): Promise<Rule> {
+  export async function parse(item: string) {
     try {
       const md = await ConfigMarkdown.parse(item)
       return {
         content: md.content,
-        paths: paths(md.data),
+        paths: scopes(md.data),
       }
     } catch {
       return { content: "" }
     }
   }
 
-  export function match(rule: Rule, filepath: string, root: string) {
-    if (!rule.paths) return false
+  export function match(parsed: { paths?: string[] }, filepath: string, root: string) {
+    if (!parsed.paths) return false
     if (!inside(filepath, root)) return false
     const rel = path.relative(root, filepath).replaceAll(path.sep, "/")
-    return rule.paths.some((pattern) => Glob.match(pattern, rel))
-  }
-
-  function add(result: string[], seen: Set<string>, item: string) {
-    const resolved = path.resolve(item)
-    if (seen.has(resolved)) return
-    seen.add(resolved)
-    result.push(resolved)
+    return parsed.paths.some((pattern) => Glob.match(pattern, rel))
   }
 
   async function scan(pattern: string, cwd: string) {
@@ -75,18 +63,17 @@ export namespace KilocodeInstruction {
     return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel))
   }
 
-  export async function claude(input: ClaudeInput) {
-    const result: string[] = []
-    const seen = new Set<string>()
-    if (input.disabled) return result
+  export async function compatibility(input: CompatibilityInput) {
+    const result = new Set<string>()
+    if (!input.enabled) return []
 
-    for (const item of await scan("rules/**/*.md", path.join(input.home, ".claude"))) add(result, seen, item)
-    if (!input.project) return result
+    for (const item of await scan("rules/**/*.md", path.join(input.home, ".claude"))) result.add(path.resolve(item))
+    if (!input.project) return Array.from(result)
 
     for (const root of roots(input.directory, input.worktree)) {
-      for (const item of await scan(".claude/rules/**/*.md", root)) add(result, seen, item)
+      for (const item of await scan(".claude/rules/**/*.md", root)) result.add(path.resolve(item))
     }
 
-    return result
+    return Array.from(result)
   }
 }

@@ -91,13 +91,13 @@ export const layer: Layer.Layer<
       return yield* fs.globUp(instruction, root, root).pipe(Effect.catch(() => Effect.succeed([] as string[]))) // kilocode_change
     })
 
-    // kilocode_change start - parse local rule frontmatter at the Kilo boundary
-    const rule = Effect.fnUntraced(function* (filepath: string) {
-      return yield* Effect.promise(() => KilocodeInstruction.rule(filepath))
+    // kilocode_change start - parse local instruction frontmatter at the Kilo boundary
+    const parse = Effect.fnUntraced(function* (filepath: string) {
+      return yield* Effect.promise(() => KilocodeInstruction.parse(filepath))
     })
 
     const read = Effect.fnUntraced(function* (filepath: string) {
-      return (yield* rule(filepath)).content
+      return (yield* parse(filepath)).content
     })
     // kilocode_change end
 
@@ -116,7 +116,7 @@ export const layer: Layer.Layer<
       s.claims.delete(messageID)
     })
 
-    // kilocode_change start - share candidate discovery between startup and scoped rules
+    // kilocode_change start - share candidate discovery between startup and scoped instructions
     const candidatePaths = Effect.fn("Instruction.candidatePaths")(function* () {
       const config = yield* cfg.get()
       const ctx = yield* InstanceState.context
@@ -142,16 +142,17 @@ export const layer: Layer.Layer<
         }
       }
 
-      const claude = yield* Effect.promise(() =>
-        KilocodeInstruction.claude({
+      // Add .claude/rules Markdown files as ordinary local instruction candidates.
+      const compat = yield* Effect.promise(() =>
+        KilocodeInstruction.compatibility({
           home: global.home,
           directory: ctx.directory,
           worktree: ctx.worktree,
-          disabled: flags.disableClaudeCodePrompt,
+          enabled: !flags.disableClaudeCodePrompt,
           project: !Flag.KILO_DISABLE_PROJECT_CONFIG,
         }),
       )
-      claude.forEach((item) => paths.add(path.resolve(item)))
+      compat.forEach((item) => paths.add(path.resolve(item)))
 
       if (config.instructions) {
         for (const raw of config.instructions) {
@@ -179,7 +180,7 @@ export const layer: Layer.Layer<
         Array.from(paths),
         (item) =>
           Effect.gen(function* () {
-            return (yield* rule(item)).paths ? undefined : item
+            return (yield* parse(item)).paths ? undefined : item
           }),
         { concurrency: 8 },
       )
@@ -221,11 +222,11 @@ export const layer: Layer.Layer<
         Array.from(candidates),
         (item) =>
           Effect.gen(function* () {
-            return { filepath: path.resolve(item), rule: yield* rule(item) }
+            return { filepath: path.resolve(item), parsed: yield* parse(item) }
           }),
         { concurrency: 8 },
       ) // kilocode_change
-      const sys = new Set(parsed.filter((item) => !item.rule.paths).map((item) => item.filepath)) // kilocode_change
+      const sys = new Set(parsed.filter((item) => !item.parsed.paths).map((item) => item.filepath)) // kilocode_change
       const already = extract(messages)
       const results: { filepath: string; content: string }[] = []
       const s = yield* InstanceState.get(state)
@@ -256,7 +257,7 @@ export const layer: Layer.Layer<
         }
 
         // kilocode_change start - honor paths frontmatter on nearby instruction files
-        const parsed = yield* rule(found)
+        const parsed = yield* parse(found)
         if (parsed.paths && !KilocodeInstruction.match(parsed, target, worktree)) {
           current = path.dirname(current)
           continue
@@ -275,15 +276,15 @@ export const layer: Layer.Layer<
         current = path.dirname(current)
       }
 
-      // kilocode_change start - append matching path-scoped local rule files after nearby instructions
+      // kilocode_change start - append matching path-scoped local instruction files after nearby instructions
       for (const item of parsed) {
         const resolved = item.filepath
         if (resolved === target || sys.has(resolved) || already.has(resolved)) continue
 
-        if (!KilocodeInstruction.match(item.rule, target, worktree)) continue
+        if (!KilocodeInstruction.match(item.parsed, target, worktree)) continue
         if (!claim(resolved)) continue
-        if (item.rule.content) {
-          results.push({ filepath: resolved, content: `Instructions from: ${resolved}\n${item.rule.content}` })
+        if (item.parsed.content) {
+          results.push({ filepath: resolved, content: `Instructions from: ${resolved}\n${item.parsed.content}` })
         }
       }
       // kilocode_change end
