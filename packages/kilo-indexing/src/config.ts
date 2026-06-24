@@ -17,6 +17,7 @@ const providers = [
   "bedrock",
   "openrouter",
   "voyage",
+  "noop",
 ] as const satisfies readonly EmbedderProvider[]
 const stores = ["lancedb", "qdrant"] as const
 

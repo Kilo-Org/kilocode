@@ -9,6 +9,7 @@ import {
 } from "../shared/get-relative-path"
 import { scannerExtensions } from "../shared/supported-extensions"
 import type { CodeBlock, ICodeParser, IEmbedder, IVectorStore, IDirectoryScanner } from "../interfaces"
+import type { GraphIntegration } from "../graph/integration"
 import { createHash } from "crypto"
 import { v5 as uuidv5 } from "uuid"
 import pLimit from "p-limit"
@@ -46,6 +47,7 @@ export class DirectoryScanner implements IDirectoryScanner {
     maxBatchRetries?: number,
     private readonly onTelemetry?: IndexingTelemetryReporter,
     private readonly telemetryMeta?: IndexingTelemetryMeta,
+    private readonly graphIntegration?: GraphIntegration,
   ) {
     this.batchSegmentThreshold = batchSegmentThreshold ?? BATCH_SEGMENT_THRESHOLD
     this.maxBatchRetries = maxBatchRetries ?? MAX_BATCH_RETRIES
@@ -285,7 +287,16 @@ export class DirectoryScanner implements IDirectoryScanner {
           }
 
           // File is new or changed - parse it using the injected parser function
-          const blocks = await this.codeParser.parseFile(filePath, { content, fileHash: currentFileHash })
+          let blocks: CodeBlock[]
+          if (this.graphIntegration) {
+            const parsed = await this.codeParser.parseFileWithRelationships(filePath, { content, fileHash: currentFileHash })
+            blocks = parsed.blocks
+            if (parsed.captures.length > 0 || parsed.relationships.calls.length > 0 || parsed.relationships.imports.length > 0) {
+              await this.graphIntegration.onFileParsed(filePath, content, parsed.captures, parsed.relationships)
+            }
+          } else {
+            blocks = await this.codeParser.parseFile(filePath, { content, fileHash: currentFileHash })
+          }
 
           if (this._cancelled) {
             return

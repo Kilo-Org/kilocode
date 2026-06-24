@@ -18,6 +18,7 @@
     "./config": "./src/config.ts",
     "./detect": "./src/detect.ts",
     "./embedding-models": "./src/kilo-embedding-models.ts",
+    "./model-registry": "./src/indexing/model-registry.ts",
     "./engine": "./src/indexing/index.ts",
     "./server": "./src/server/routes.ts",
     "./status": "./src/status.ts"
@@ -36,10 +37,10 @@
     "@aws-sdk/credential-provider-ini": "3.972.31",
     "@kilocode/kilo-gateway": "workspace:*",
     "@kilocode/plugin": "workspace:*",
-    "@lancedb/lancedb": "0.26.2",
+    "@lancedb/lancedb": "0.30.0",
     "@qdrant/js-client-rest": "1.17.0",
     "async-mutex": "0.5.0",
-    "chokidar": "4.0.3",
+    "chokidar": "5.0.0",
     "effect": "catalog:",
     "glob": "13.0.6",
     "hono": "catalog:",
@@ -50,7 +51,7 @@
     "p-limit": "7.3.0",
     "tree-sitter-wasms": "0.1.13",
     "uuid": "14.0.0",
-    "web-tree-sitter": "0.25.10",
+    "web-tree-sitter": "0.26.9",
     "zod": "catalog:"
   },
   "devDependencies": {

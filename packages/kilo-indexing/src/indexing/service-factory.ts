@@ -14,6 +14,7 @@ import { VercelAiGatewayEmbedder } from "./embedders/vercel-ai-gateway"
 import { BedrockEmbedder } from "./embedders/bedrock"
 import { OpenRouterEmbedder } from "./embedders/openrouter"
 import { VoyageEmbedder } from "./embedders/voyage"
+import { NoOpEmbedder } from "./embedders/noop"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
 import { LanceDBVectorStore } from "./vector-store/lancedb-vector-store"
 import { codeParser, DirectoryScanner, FileWatcher } from "./processors"
@@ -21,6 +22,7 @@ import type { ICodeParser, IEmbedder, IFileWatcher, IVectorStore } from "./inter
 import type { CodeIndexConfigManager } from "./config-manager"
 import type { CacheManager } from "./cache-manager"
 import type { IndexingTelemetryMeta, IndexingTelemetryReporter } from "./interfaces/telemetry"
+import type { GraphIntegration } from "./graph/integration"
 import {
   BATCH_SEGMENT_THRESHOLD,
   DEFAULT_VECTOR_STORE,
@@ -50,6 +52,7 @@ export class CodeIndexServiceFactory {
     private readonly cacheManager: CacheManager,
     private readonly cacheDirectory: string,
     private readonly onTelemetry?: IndexingTelemetryReporter,
+    private readonly graphIntegration?: GraphIntegration,
   ) {}
 
   private getTelemetryMeta(): IndexingTelemetryMeta {
@@ -124,7 +127,11 @@ export class CodeIndexServiceFactory {
       return new VoyageEmbedder(config.voyageOptions.apiKey, config.modelId)
     }
 
-    throw new Error(`Unsupported embedder provider: ${provider}`)
+    // kilocode_change - fallback to no-op embedder for zero-config graph indexing
+    // This allows the graph database to work without any embedding provider configured.
+    // Semantic search returns empty results until a real embedder is configured.
+    log.warn("no embedder provider configured, using no-op embedder — graph will work but semantic search will be disabled", { provider })
+    return new NoOpEmbedder()
   }
 
   public async validateEmbedder(embedder: IEmbedder): Promise<{ valid: boolean; error?: string }> {
@@ -222,6 +229,7 @@ export class CodeIndexServiceFactory {
       config.scannerMaxBatchRetries,
       this.onTelemetry,
       meta,
+      this.graphIntegration,
     )
   }
 
@@ -243,6 +251,7 @@ export class CodeIndexServiceFactory {
       config.scannerMaxBatchRetries,
       this.onTelemetry,
       meta,
+      this.graphIntegration,
     )
   }
 

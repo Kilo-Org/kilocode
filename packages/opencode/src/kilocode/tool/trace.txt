@@ -1,0 +1,1 @@
+Find the shortest path between two symbols in the codebase graph. Shows how code flows from one function/class to another through calls, imports, and inheritance. Useful for understanding connections between distant parts of the codebase.

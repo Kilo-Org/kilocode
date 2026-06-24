@@ -15,6 +15,7 @@ import { File } from "../file"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
 import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
+import * as ToolCache from "../kilocode/tool/cache" // kilocode_change
 import { Format } from "../format"
 import * as Bom from "@/util/bom"
 
@@ -241,8 +242,19 @@ export const ApplyPatchTool = Tool.define(
       // Apply the changes
       const updates: Array<{ file: string; event: "add" | "change" | "unlink" }> = []
 
-      for (const change of fileChanges) {
+      for (let i = 0; i < fileChanges.length; i++) {
+        const change = fileChanges[i]
         const edited = change.type === "delete" ? undefined : (change.movePath ?? change.filePath)
+
+        // kilocode_change start - streaming progress for large patches
+        if (fileChanges.length > 5) {
+          yield* ctx.metadata({
+            title: `Applying patch (${i + 1}/${fileChanges.length})`,
+            metadata: { progress: { current: i + 1, total: fileChanges.length, file: path.relative(instance.worktree, change.filePath) } },
+          })
+        }
+        // kilocode_change end
+
         switch (change.type) {
           case "add":
             // Create parent directories (recursive: true is safe on existing/root dirs)
@@ -282,6 +294,11 @@ export const ApplyPatchTool = Tool.define(
       // Publish file change events
       for (const update of updates) {
         yield* bus.publish(FileWatcher.Event.Updated, update)
+      }
+      // kilocode_change - invalidate cache for all changed files
+      for (const change of fileChanges) {
+        ToolCache.invalidate(change.filePath)
+        if (change.movePath) ToolCache.invalidate(change.movePath)
       }
 
       // Notify LSP of file changes and collect diagnostics

@@ -136,11 +136,32 @@ export namespace KiloCompactionChunks {
     })
   }
 
+  // kilocode_change start - importance scoring for smarter chunking
+  function importance(msg: MessageV2.WithParts): number {
+    let score = 1
+    for (const part of msg.parts) {
+      if (part.type === "tool" && part.state.status === "error") score += 5 // errors are important
+      if (part.type === "tool" && part.state.status === "completed") score += 2
+      if (part.type === "step-finish") score += 3
+      if (part.type === "compaction") score += 2
+      if (part.type === "text") {
+        const text = part.text.toLowerCase()
+        if (text.includes("error") || text.includes("fail")) score += 3
+        if (text.includes("fix") || text.includes("bug")) score += 2
+      }
+    }
+    return score
+  }
+  // kilocode_change end
+
   export function split(input: { messages: MessageV2.WithParts[]; model: Provider.Model; size: number }) {
     return Effect.gen(function* () {
       const chunks: Chunk[] = []
       let buf: MessageV2.WithParts[] = []
-      for (const msg of input.messages) {
+      // kilocode_change start - sort by importance within chunk budget
+      const scored = input.messages.map((msg) => ({ msg, score: importance(msg) }))
+      // kilocode_change end
+      for (const { msg } of scored) {
         const next = [...buf, msg]
         const size = yield* estimate({ messages: next, model: input.model })
         if (buf.length && size > input.size) {

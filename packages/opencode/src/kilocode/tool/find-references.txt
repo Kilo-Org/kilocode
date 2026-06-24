@@ -1,0 +1,16 @@
+Find all references to a symbol (function, class, variable, etc.) across the codebase.
+
+This tool uses the native graph index to find:
+- All definitions of the symbol
+- All call sites
+- All imports/exports
+- All type references
+- All property accesses
+
+Use this when you need to understand where a symbol is used, not just where it's defined.
+
+Examples:
+- Find all callers of a function
+- Find all implementations of an interface
+- Find all usages of a constant
+- Trace how a variable flows through the codebase

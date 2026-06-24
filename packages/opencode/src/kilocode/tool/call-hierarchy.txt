@@ -1,0 +1,16 @@
+Show the call hierarchy for a function or method — who calls it and what it calls.
+
+This tool traces the call graph to answer:
+- "Who calls this function?" (incoming)
+- "What does this function call?" (outgoing)
+- "Show me both directions" (both)
+
+The graph is traversed up to a configurable depth (default 3, max 5).
+
+Use this when you need to understand the control flow around a specific function,
+not just find its definition.
+
+Examples:
+- Trace all callers of an authentication function
+- See what API endpoints a service layer calls
+- Understand the call chain leading to an error handler

@@ -147,6 +147,13 @@ function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
     websearch: "allow",
     codebase_search: "allow",
     semantic_search: "allow",
+    find_references: "allow", // kilocode_change
+    call_hierarchy: "allow", // kilocode_change
+    dependency_graph: "allow", // kilocode_change
+    impact_analysis: "allow", // kilocode_change
+    trace: "allow", // kilocode_change
+    symbol_context: "allow", // kilocode_change
+    graph_query: "allow", // kilocode_change
     external_directory: {
       [Truncate.GLOB]: "allow",
     },
@@ -343,7 +350,16 @@ export function patchAgents(
         defaults,
         agents.build.permission,
         user,
-        Permission.fromConfig({ semantic_search: "allow" }),
+        Permission.fromConfig({
+          semantic_search: "allow",
+          find_references: "allow", // kilocode_change
+          call_hierarchy: "allow", // kilocode_change
+          dependency_graph: "allow", // kilocode_change
+          impact_analysis: "allow", // kilocode_change
+          trace: "allow", // kilocode_change
+          symbol_context: "allow", // kilocode_change
+          graph_query: "allow", // kilocode_change
+        }),
       ),
     }
     delete agents.build
@@ -381,6 +397,13 @@ export function patchAgents(
           websearch: "allow",
           codebase_search: "allow",
           semantic_search: "allow",
+          find_references: "allow", // kilocode_change
+          call_hierarchy: "allow", // kilocode_change
+          dependency_graph: "allow", // kilocode_change
+          impact_analysis: "allow", // kilocode_change
+          trace: "allow", // kilocode_change
+          symbol_context: "allow", // kilocode_change
+          graph_query: "allow", // kilocode_change
           read: "allow",
           external_directory: {
             // Mirror upstream explore's shape: the outer "*": "deny" above wins
@@ -413,6 +436,13 @@ export function patchAgents(
         suggest: "allow", // kilocode_change
         plan_enter: "allow",
         semantic_search: "allow",
+        find_references: "allow", // kilocode_change
+        call_hierarchy: "allow", // kilocode_change
+        dependency_graph: "allow", // kilocode_change
+        impact_analysis: "allow", // kilocode_change
+        trace: "allow", // kilocode_change
+        symbol_context: "allow", // kilocode_change
+        graph_query: "allow", // kilocode_change
       }),
       user,
     ),

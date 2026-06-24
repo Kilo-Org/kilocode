@@ -460,6 +460,83 @@ function tryMatch(lines: string[], pattern: string[], startIndex: number, compar
   return -1
 }
 
+// kilocode_change start - fuzzy matching helpers for patch auto-recovery
+function levenshtein(a: string, b: string): number {
+  const m = a.length
+  const n = b.length
+  if (m === 0) return n
+  if (n === 0) return m
+  const dp: number[] = new Array(n + 1)
+  for (let j = 0; j <= n; j++) dp[j] = j
+  for (let i = 1; i <= m; i++) {
+    let prev = dp[0]
+    dp[0] = i
+    for (let j = 1; j <= n; j++) {
+      const temp = dp[j]
+      if (a[i - 1] === b[j - 1]) {
+        dp[j] = prev
+      } else {
+        dp[j] = Math.min(prev + 1, dp[j] + 1, dp[j - 1] + 1)
+      }
+      prev = temp
+    }
+  }
+  return dp[n]
+}
+
+function similarity(a: string, b: string): number {
+  const maxLen = Math.max(a.length, b.length)
+  if (maxLen === 0) return 1
+  return 1 - levenshtein(a, b) / maxLen
+}
+
+function fuzzyMatch(lines: string[], pattern: string[], startIndex: number, eof: boolean): number {
+  const MIN_SIMILARITY = 0.75 // 75% similarity threshold
+  const MAX_CANDIDATES = 50 // limit search space
+
+  if (pattern.length === 0) return -1
+
+  let candidates: number[] = []
+
+  if (eof) {
+    const fromEnd = lines.length - pattern.length
+    if (fromEnd >= startIndex) candidates.push(fromEnd)
+  }
+
+  // Find candidates where first line has decent similarity
+  for (let i = startIndex; i < lines.length && candidates.length < MAX_CANDIDATES; i++) {
+    if (similarity(lines[i], pattern[0]) >= MIN_SIMILARITY) {
+      candidates.push(i)
+    }
+  }
+
+  let bestIdx = -1
+  let bestScore = -1
+
+  for (const idx of candidates) {
+    if (idx + pattern.length > lines.length) continue
+    let totalSim = 0
+    let matched = 0
+    for (let j = 0; j < pattern.length; j++) {
+      const sim = similarity(lines[idx + j], pattern[j])
+      if (sim >= MIN_SIMILARITY) {
+        totalSim += sim
+        matched++
+      }
+    }
+    if (matched === pattern.length) {
+      const score = totalSim / pattern.length
+      if (score > bestScore) {
+        bestScore = score
+        bestIdx = idx
+      }
+    }
+  }
+
+  return bestIdx
+}
+// kilocode_change end
+
 function seekSequence(lines: string[], pattern: string[], startIndex: number, eof = false): number {
   if (pattern.length === 0) return -1
 
@@ -483,7 +560,17 @@ function seekSequence(lines: string[], pattern: string[], startIndex: number, eo
     (a, b) => normalizeUnicode(a.trim()) === normalizeUnicode(b.trim()),
     eof,
   )
-  return normalized
+  if (normalized !== -1) return normalized
+
+  // kilocode_change start - Pass 5: fuzzy fallback for patch auto-recovery
+  const fuzzy = fuzzyMatch(lines, pattern, startIndex, eof)
+  if (fuzzy !== -1) {
+    log.info("patch fuzzy match recovered", { line: fuzzy, pattern: pattern[0].slice(0, 50) })
+    return fuzzy
+  }
+  // kilocode_change end
+
+  return -1
 }
 
 function generateUnifiedDiff(oldContent: string, newContent: string): string {

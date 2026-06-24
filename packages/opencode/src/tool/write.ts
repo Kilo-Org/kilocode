@@ -16,9 +16,10 @@ import { assertExternalDirectoryEffect } from "./external-directory"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
 import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
+import * as ToolCache from "../kilocode/tool/cache" // kilocode_change
 import * as Bom from "@/util/bom"
 
-const MAX_PROJECT_DIAGNOSTICS_FILES = 5
+const MAX_PROJECT_DIAGNOSTICS_FILES = 10
 
 export const Parameters = Schema.Struct({
   content: Schema.String.annotate({ description: "The content to write to the file" }),
@@ -79,6 +80,7 @@ export const WriteTool = Tool.define(
             file: filepath,
             event: exists ? "change" : "add",
           })
+          ToolCache.invalidate(filepath) // kilocode_change - invalidate cached reads of this file
 
           let output = "Wrote file successfully."
           yield* lsp.touchFile(filepath, "document")

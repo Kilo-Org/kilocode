@@ -8,6 +8,9 @@ import { assertExternalDirectoryEffect } from "./external-directory"
 import DESCRIPTION from "./glob.txt"
 import * as Tool from "./tool"
 import { Reference } from "@/reference/reference"
+// kilocode_change start
+import * as ToolCache from "../kilocode/tool/cache"
+// kilocode_change end
 
 // kilocode_change start — support absolute glob patterns (e.g. ~/.config/kilo/command/*.md)
 function normalize(p: string) {
@@ -114,7 +117,7 @@ export const GlobTool = Tool.define(
             }
           }
 
-          return {
+          const result = {
             title: path.relative(ins.worktree, search),
             metadata: {
               count: files.length,
@@ -122,6 +125,10 @@ export const GlobTool = Tool.define(
             },
             output: output.join("\n"),
           }
+          // kilocode_change start - cache glob results
+          ToolCache.set("glob", { pattern: params.pattern, path: params.path }, result)
+          // kilocode_change end
+          return result
         }).pipe(Effect.orDie),
     }
   }),

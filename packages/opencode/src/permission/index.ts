@@ -160,6 +160,7 @@ interface PendingEntry {
   ruleset: Ruleset
   hardRuleset?: Ruleset
   saved?: boolean
+  batched?: boolean // true if this entry was auto-approved as part of a batch
   // kilocode_change end
   deferred: Deferred.Deferred<void, RejectedError | CorrectedError>
 }
@@ -192,6 +193,25 @@ export function resolve(permission: string, pattern: string, ruleset: Ruleset, .
   if (saved.action === "allow") return saved
   return base
 }
+
+// kilocode_change start - granular auto-approve: prefer most specific matching rule
+function bestRule(permission: string, pattern: string, ...rulesets: Ruleset[]): Rule | undefined {
+  let best: Rule | undefined
+  let bestScore = -1
+  for (const ruleset of rulesets) {
+    for (const rule of ruleset) {
+      if (!Wildcard.match(permission, rule.permission)) continue
+      if (!Wildcard.match(pattern, rule.pattern)) continue
+      const score = Wildcard.specificity(rule.pattern)
+      if (score > bestScore) {
+        bestScore = score
+        best = rule
+      }
+    }
+  }
+  return best
+}
+// kilocode_change end
 
 function veto(permission: string, pattern: string, ruleset?: Ruleset) {
   if (!ruleset) return false
@@ -256,7 +276,9 @@ export const layer = Layer.effect(
       // kilocode_change end
 
       for (const pattern of request.patterns) {
-        const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
+        // kilocode_change start - granular auto-approve: use most specific matching rule
+        const rule = bestRule(request.permission, pattern, ruleset, approved, local) ??
+          resolve(request.permission, pattern, ruleset, approved, local)
         log.info("evaluated", { permission: request.permission, pattern, action: rule })
         // kilocode_change start — saved/session approvals cannot override hard Ask/Plan denials
         if (veto(request.permission, pattern, hardRuleset)) {
@@ -296,6 +318,37 @@ export const layer = Layer.effect(
       const deferred = yield* Deferred.make<void, RejectedError | CorrectedError>()
       pending.set(id, { info, ruleset, hardRuleset, deferred }) // kilocode_change
       yield* bus.publish(Event.Asked, info)
+
+      // kilocode_change start - Smart Permission Batching
+      // If there are other pending requests for the same permission in the same session,
+      // batch them together so one user approval covers all
+      const batchWindowMs = 500 // 500ms window to batch concurrent requests
+      yield* Effect.forkChild(
+        Effect.sleep(`${batchWindowMs} millis`).pipe(
+          Effect.andThen(
+            Effect.sync(() => {
+              const samePermission = [...pending.values()].filter(
+                (p) =>
+                  p.info.id !== id &&
+                  p.info.sessionID === info.sessionID &&
+                  p.info.permission === info.permission &&
+                  !p.batched,
+              )
+              if (samePermission.length === 0) return
+              log.info("batching permissions", {
+                base: id,
+                count: samePermission.length,
+                permission: info.permission,
+              })
+              for (const p of samePermission) {
+                p.batched = true
+              }
+            }),
+          ),
+        ),
+      ).pipe(Effect.asVoid)
+      // kilocode_change end
+
       return yield* Effect.ensuring(
         Deferred.await(deferred),
         Effect.sync(() => {
@@ -336,6 +389,26 @@ export const layer = Layer.effect(
       }
 
       yield* Deferred.succeed(existing.deferred, undefined)
+
+      // kilocode_change start - approve all batched requests for the same permission
+      for (const [id, item] of pending.entries()) {
+        if (
+          item.info.sessionID === existing.info.sessionID &&
+          item.info.permission === existing.info.permission &&
+          item.batched
+        ) {
+          pending.delete(id)
+          yield* bus.publish(Event.Replied, {
+            sessionID: item.info.sessionID,
+            requestID: item.info.id,
+            reply: input.reply,
+          })
+          yield* Deferred.succeed(item.deferred, undefined)
+          log.info("batch approved", { requestID: id, base: input.requestID })
+        }
+      }
+      // kilocode_change end
+
       if (input.reply === "once") return
 
       // kilocode_change start — downgrade "always" to "once" for config file edits

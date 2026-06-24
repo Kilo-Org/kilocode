@@ -1,0 +1,14 @@
+Analyze file dependencies and detect circular imports in the codebase.
+
+This tool uses the native import graph to:
+- Show what files a given file imports (direct and transitive)
+- Show what files import a given file
+- Detect circular dependency cycles across the entire project
+
+Use this when you need to understand module coupling, refactor import structures,
+or eliminate circular dependencies.
+
+Examples:
+- "Show me all files that depend on utils.ts"
+- "Find circular dependencies in the project"
+- "Trace the import chain from app.ts to database.ts"

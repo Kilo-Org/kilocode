@@ -6,6 +6,7 @@ import { Instance } from "@/kilocode/instance"
 
 import DESCRIPTION from "./semantic-search.txt"
 
+// kilocode_change start - enhanced semantic search parameters
 const Parameters = Schema.Struct({
   query: Schema.String.annotate({
     description: "The search query, expressed in natural language.",
@@ -14,7 +15,14 @@ const Parameters = Schema.Struct({
     description:
       "Limit search to specific subdirectory (relative to the current workspace directory). Leave empty for entire workspace.",
   }),
+  limit: Schema.optional(Schema.Number).annotate({
+    description: "Maximum number of results to return (default 10, max 50).",
+  }),
+  type: Schema.optional(Schema.String).annotate({
+    description: "Filter by code element type: 'function', 'class', 'method', 'interface', 'variable', or 'all' (default).",
+  }),
 })
+// kilocode_change end
 
 type SearchResult = {
   filePath: string
@@ -55,7 +63,7 @@ export const SemanticSearchTool = Tool.define(
         const prefix = normalizeSearchPath(params.path)
         const matches = yield* Effect.promise(() => KiloIndexing.search(params.query, prefix))
 
-        const results = matches.flatMap<SearchResult>((item) => {
+        let results = matches.flatMap<SearchResult>((item) => {
           const payload = item.payload
           if (!payload) return []
           if (
@@ -77,6 +85,23 @@ export const SemanticSearchTool = Tool.define(
             },
           ]
         })
+
+        // kilocode_change start - enhanced filtering
+        const limit = Math.min(Math.max(1, params.limit ?? 10), 50)
+        const typeFilter = params.type?.toLowerCase()
+        if (typeFilter && typeFilter !== "all") {
+          results = results.filter((r) => {
+            const chunk = r.codeChunk.toLowerCase()
+            if (typeFilter === "function") return chunk.includes("function ") || chunk.includes("def ") || chunk.includes("const ") || chunk.includes("=> ")
+            if (typeFilter === "class") return chunk.includes("class ") || chunk.includes("interface ")
+            if (typeFilter === "method") return chunk.includes("(") && (chunk.includes("async ") || chunk.includes("public ") || chunk.includes("private "))
+            if (typeFilter === "interface") return chunk.includes("interface ") || chunk.includes("type ")
+            if (typeFilter === "variable") return chunk.includes("const ") || chunk.includes("let ") || chunk.includes("var ")
+            return true
+          })
+        }
+        results = results.slice(0, limit)
+        // kilocode_change end
 
         if (results.length === 0) {
           return {

@@ -1,0 +1,1 @@
+Get a 360-degree view of any symbol: its definitions, all callers, all callees, inheritance hierarchy (subclasses and superclasses), imports, and files that import it. The fastest way to understand any function, class, or variable in the codebase.

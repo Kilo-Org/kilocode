@@ -93,3 +93,35 @@ export function hasModelProfile(provider: EmbedderProvider, modelId: string | un
   if (!modelId) return false
   return profiles[provider]?.[modelId] !== undefined
 }
+
+export interface EmbeddingModelOption {
+  id: string
+  label: string
+  dimension: number
+  scoreThreshold?: number
+}
+
+export function getEmbeddingModelOptions(provider: EmbedderProvider): EmbeddingModelOption[] {
+  const providerProfiles = profiles[provider]
+  if (!providerProfiles) return []
+  return Object.entries(providerProfiles).map(([id, profile]) => ({
+    id,
+    label: id,
+    dimension: profile.dimension,
+    scoreThreshold: profile.scoreThreshold,
+  }))
+}
+
+export function getEmbeddingModelOption(
+  provider: EmbedderProvider,
+  modelId: string,
+): EmbeddingModelOption | undefined {
+  const profile = profiles[provider]?.[modelId]
+  if (!profile) return undefined
+  return {
+    id: modelId,
+    label: modelId,
+    dimension: profile.dimension,
+    scoreThreshold: profile.scoreThreshold,
+  }
+}

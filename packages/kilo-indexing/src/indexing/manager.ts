@@ -14,6 +14,8 @@ import { Log } from "../util/log"
 import { loadIgnore } from "./shared/load-ignore"
 import { sanitizeErrorMessage } from "./shared/validation-helpers"
 import { WorktreeOverlay } from "./worktree-overlay"
+import { GraphIntegration } from "./graph/integration"
+import { FileLock } from "./shared/file-lock"
 
 const log = Log.create({ service: "indexing-manager" })
 const BASELINE_CHECK_INTERVAL = 1_000
@@ -55,6 +57,8 @@ export class CodeIndexManager {
   private _retryMaxAttempts = MAX_MANAGER_RECOVERY_ATTEMPTS
   private _retryInitialDelayMs = INITIAL_MANAGER_RECOVERY_DELAY_MS
   private _disposed = false
+  private _graphIntegration: GraphIntegration | undefined
+  private _fileLock: FileLock | undefined
 
   constructor(
     public readonly workspacePath: string,
@@ -62,6 +66,10 @@ export class CodeIndexManager {
     public readonly baselinePath?: string,
   ) {
     this._stateManager = new CodeIndexStateManager()
+  }
+
+  public get graphIntegration(): GraphIntegration | undefined {
+    return this._graphIntegration
   }
 
   public get onProgressUpdate() {
@@ -307,6 +315,35 @@ export class CodeIndexManager {
       return { requiresRestart }
     }
 
+    // Acquire cross-process lock to prevent multiple processes indexing the same workspace
+    if (!this._fileLock) {
+      this._fileLock = new FileLock(this.workspacePath, this.cacheDirectory)
+    }
+    const lockAcquired = await this._fileLock.tryLock()
+    if (!lockAcquired) {
+      log.info("another process is indexing this workspace, waiting for it to complete", {
+        workspacePath: this.workspacePath,
+      })
+      this._stateManager.setSystemState("Indexing", "Waiting for another process to finish indexing...")
+      const gotLock = await this._fileLock.acquire(60_000, 1_000)
+      if (!gotLock) {
+        log.warn("timed out waiting for indexing lock, starting watcher only", {
+          workspacePath: this.workspacePath,
+        })
+        // Even without lock, try to start watcher if index exists
+        if (this._orchestrator) {
+          const hasData = await this._orchestrator.hasIndexedData()
+          if (hasData) {
+            this._orchestrator.startWatcherOnly()
+            return { requiresRestart }
+          }
+        }
+        this._stateManager.setSystemState("Standby", "Indexing is locked by another process.")
+        return { requiresRestart }
+      }
+      log.info("acquired indexing lock after waiting", { workspacePath: this.workspacePath })
+    }
+
     if (!this._cacheManager) {
       log.info("initializing indexing cache", { cacheDirectory: this.cacheDirectory })
       this._cacheManager = new CacheManager(this.cacheDirectory, this.workspacePath)
@@ -347,15 +384,26 @@ export class CodeIndexManager {
     const shouldStartOrRestart =
       requiresRestart || (needsServiceRecreation && (!this._orchestrator || this._orchestrator.state !== "Indexing"))
 
-    if (shouldStartOrRestart && !this._disposed) {
-      log.info("starting background indexing", {
-        workspacePath: this.workspacePath,
-        requiresRestart,
-        orchestratorState: this._orchestrator?.state,
-      })
-      this.emitStart("background")
-      // Fire and forget — indexing is a long-running background process
-      this._orchestrator?.startIndexing("background")
+    if (shouldStartOrRestart && !this._disposed && this._orchestrator) {
+      // Check if index is already complete to skip unnecessary scans
+      const hasExistingData = !requiresRestart ? await this._orchestrator.hasIndexedData() : false
+
+      if (hasExistingData) {
+        log.info("index already complete, starting watcher only", {
+          workspacePath: this.workspacePath,
+        })
+        // Fire and forget — just start the watcher, no scan needed
+        this._orchestrator.startWatcherOnly()
+      } else {
+        log.info("starting background indexing", {
+          workspacePath: this.workspacePath,
+          requiresRestart,
+          orchestratorState: this._orchestrator.state,
+        })
+        this.emitStart("background")
+        // Fire and forget — indexing is a long-running background process
+        this._orchestrator.startIndexing("background")
+      }
     }
 
     return { requiresRestart }
@@ -431,6 +479,7 @@ export class CodeIndexManager {
     this._retryTask = undefined
     await this._orchestrator?.shutdown?.()
     await this._baselineStore?.close?.()
+    await this._fileLock?.release()
     this._stateManager.dispose()
     this._telemetry.dispose()
   }
@@ -539,12 +588,21 @@ export class CodeIndexManager {
 
   private async _recreateServices(prepared?: Baseline): Promise<void> {
     log.info("starting indexing service recreation", { workspacePath: this.workspacePath })
+
+    // kilocode_change - initialize graph integration before factory
+    if (!this._graphIntegration) {
+      this._graphIntegration = new GraphIntegration(this.cacheDirectory, this.workspacePath)
+      await this._graphIntegration.initialize()
+      log.info("graph integration initialized", { workspacePath: this.workspacePath, stats: this._graphIntegration.getStats() })
+    }
+
     const factory = new CodeIndexServiceFactory(
       this._configManager!,
       this.workspacePath,
       this._cacheManager!,
       this.cacheDirectory,
       (event) => this.handleTelemetry(event),
+      this._graphIntegration,
     )
     const ignoreInstance = await loadIgnore(this.workspacePath)
     const config = this._configManager!.getConfig()

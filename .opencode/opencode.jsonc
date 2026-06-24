@@ -19,4 +19,5 @@
     "github-pr-search": false,
   },
   "disabled_providers": [],
+  "snapshot": false,
 }

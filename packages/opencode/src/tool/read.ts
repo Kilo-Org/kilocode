@@ -16,6 +16,7 @@ import { Reference } from "@/reference/reference"
 import * as Encoding from "../kilocode/encoding"
 import * as Extract from "../kilocode/tool/read-extract"
 import * as TextStream from "../kilocode/text-stream"
+import * as ToolCache from "../kilocode/tool/cache"
 // kilocode_change end
 
 const DEFAULT_READ_LIMIT = 2000
@@ -375,6 +376,58 @@ export const ReadTool = Tool.define(
         output += `\n\n<system-reminder>\n${loaded.map((item) => item.content).join("\n\n")}\n</system-reminder>`
       }
 
+      // kilocode_change start - predictive pre-reading: cache likely next files
+      yield* Effect.forkChild(
+        Effect.gen(function* () {
+          const imports = file.raw
+            .filter((line) => {
+              const trimmed = line.trim()
+              return (
+                trimmed.startsWith("import ") ||
+                trimmed.startsWith("from ") ||
+                trimmed.startsWith("require(") ||
+                trimmed.startsWith("#include ") ||
+                trimmed.startsWith("using ")
+              )
+            })
+            .slice(0, 5)
+          if (imports.length === 0) return
+          const dir = path.dirname(filepath)
+          for (const line of imports) {
+            const match = line.match(/["']([^"']+)["']/)
+            if (!match) continue
+            const importPath = match[1]
+            if (importPath.startsWith(".") || importPath.startsWith("/")) {
+              const resolved = path.resolve(dir, importPath)
+              const candidates = [resolved, resolved + ".ts", resolved + ".tsx", resolved + ".js", resolved + ".jsx"]
+              for (const candidate of candidates) {
+                const info = yield* fs.stat(candidate).pipe(Effect.catch(() => Effect.succeed(undefined)))
+                if (info?.type === "File") {
+                  if (!ToolCache.get("read", { path: candidate, offset: 1, limit: DEFAULT_READ_LIMIT })) {
+                    const pre = yield* lines(candidate, { limit: 50, offset: 1 }, ctx.abort).pipe(
+                      Effect.catch(() => Effect.succeed(undefined)),
+                    )
+                    if (pre) {
+                      ToolCache.set(
+                        "read",
+                        { path: candidate, offset: 1, limit: DEFAULT_READ_LIMIT },
+                        {
+                          title: path.relative(instance.worktree, candidate),
+                          output: ``,
+                          metadata: { preview: pre.raw.slice(0, 20).join("\n"), truncated: pre.more, preloaded: true },
+                        },
+                      )
+                    }
+                  }
+                  break
+                }
+              }
+            }
+          }
+        }).pipe(Effect.catch(() => Effect.void)),
+      )
+      // kilocode_change end
+
       return {
         title,
         output,
@@ -390,7 +443,21 @@ export const ReadTool = Tool.define(
       description: DESCRIPTION,
       parameters: Parameters,
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
-        run(params, ctx).pipe(Effect.orDie),
+        // kilocode_change start - cache read results with file-hash invalidation
+        Effect.gen(function* () {
+          const cached = ToolCache.get<{
+            title: string
+            output: string
+            metadata: Record<string, unknown>
+            attachments?: unknown[]
+          }>("read", { path: params.filePath, offset: params.offset, limit: params.limit })
+          if (cached) return cached as Tool.ExecuteResult<Record<string, unknown>>
+
+          const result = yield* run(params, ctx)
+          ToolCache.set("read", { path: params.filePath, offset: params.offset, limit: params.limit }, result)
+          return result as Tool.ExecuteResult<Record<string, unknown>>
+        }).pipe(Effect.orDie),
+      // kilocode_change end
     }
   }),
 )

@@ -2,6 +2,7 @@ import type { PointStruct } from "./vector-store"
 import type { Disposable, Emitter } from "../runtime"
 import type { IndexingTelemetryMode } from "./telemetry"
 import type { WorktreeOverlay } from "../worktree-overlay"
+import type { RelationshipResult } from "../graph/ast-relationships"
 
 export interface ICodeParser {
   parseFile(
@@ -13,6 +14,28 @@ export interface ICodeParser {
       fileHash?: string
     },
   ): Promise<CodeBlock[]>
+
+  // kilocode_change - parse with captures for graph extraction
+  parseFileWithCaptures(
+    filePath: string,
+    options?: {
+      content?: string
+      fileHash?: string
+    },
+  ): Promise<{ blocks: CodeBlock[]; captures: Array<{ name: string; node: { text: string; startPosition: { row: number; column: number }; endPosition: { row: number; column: number } } }> }>
+
+  // kilocode_change - parse with captures AND AST relationships (second pass)
+  parseFileWithRelationships(
+    filePath: string,
+    options?: {
+      content?: string
+      fileHash?: string
+    },
+  ): Promise<{
+    blocks: CodeBlock[]
+    captures: Array<{ name: string; node: { text: string; startPosition: { row: number; column: number }; endPosition: { row: number; column: number } } }>
+    relationships: RelationshipResult
+  }>
 }
 
 export interface IDirectoryScanner {
