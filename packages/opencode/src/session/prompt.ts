@@ -10,6 +10,7 @@ import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
 import { BUILTIN_COMMANDS } from "@/kilocode/session/builtin-commands" // kilocode_change
+import { resolveAgentVariant } from "@/kilocode/cli/cmd/tui/model-variant" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
 import { withStatics } from "@opencode-ai/core/schema" // kilocode_change
 import { SessionID, MessageID, PartID } from "./schema"
@@ -766,14 +767,22 @@ export const layer = Layer.effect(
           .get(),
       )
       const model = input.model ?? ag.model ?? (yield* currentModel(input.sessionID))
-      const same = ag.model && model.providerID === ag.model.providerID && model.modelID === ag.model.modelID
+      // kilocode_change start - agent.variant applies when the effective model matches, or when no agent model is pinned
       const full =
-        !input.variant && ag.variant && same
+        !input.variant && ag.variant
           ? yield* provider
               .getModel(model.providerID, model.modelID)
               .pipe(Effect.catchIf(Provider.ModelNotFoundError.isInstance, () => Effect.succeed(undefined)))
           : undefined
-      const variant = input.variant ?? (ag.variant && full?.variants?.[ag.variant] ? ag.variant : undefined)
+      const variant =
+        input.variant ??
+        resolveAgentVariant({
+          current: model,
+          config: ag.model,
+          variant: ag.variant,
+          variants: full?.variants,
+        })
+      // kilocode_change end
 
       const info: MessageV2.User = {
         id: input.messageID ?? MessageID.ascending(),

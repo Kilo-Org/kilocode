@@ -7,10 +7,11 @@
 
 import * as fs from "fs"
 import * as path from "path"
-import type { KiloClient } from "@kilocode/sdk/v2/client"
+import type { Config, KiloClient } from "@kilocode/sdk/v2/client"
 import { validateModelSelections } from "../provider-actions"
 
 type PostMessage = (msg: unknown) => void
+type Model = { providerID: string; modelID: string }
 
 let cached: string | undefined
 let queue: Promise<void> = Promise.resolve()
@@ -41,11 +42,59 @@ async function read(client: KiloClient | null): Promise<Record<string, unknown>>
   }
 }
 
+function key(model: Model) {
+  return `${model.providerID}/${model.modelID}`
+}
+
+function variants(input: unknown) {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) return {}
+  return Object.fromEntries(
+    Object.entries(input).filter((item): item is [string, string] => typeof item[1] === "string"),
+  )
+}
+
+async function migrate(client: KiloClient | null, data: Record<string, unknown>, model: Array<[string, Model]>) {
+  const old = variants(data.variant)
+  if (Object.keys(old).length === 0) return {}
+  if (!client) return old
+
+  const current = await client.global.config.get({ throwOnError: true }).then((result) => result.data)
+  const agent: NonNullable<Config["agent"]> = {}
+  const used = new Set<string>()
+  const seen = new Set<string>()
+
+  for (const [name, item] of model) {
+    const id = key(item)
+    const value = old[id]
+    if (!value) continue
+    if (seen.has(name)) continue
+    seen.add(name)
+    used.add(id)
+    if (current?.agent?.[name]?.variant !== undefined) continue
+    agent[name] = { variant: value }
+  }
+
+  if (Object.keys(agent).length > 0) await client.global.config.update({ config: { agent } }, { throwOnError: true })
+  return Object.fromEntries(Object.entries(old).filter(([id]) => !used.has(id)))
+}
+
 function write(client: KiloClient | null, key: string, value: unknown): Promise<void> {
   const op = queue.then(async () => {
     const p = await resolve(client)
     if (!p) return
     const existing = await read(client)
+    const model = Object.entries(validateModelSelections(existing.model))
+    if (key === "model") {
+      const pending = validateModelSelections(value)
+      for (const [name, item] of Object.entries(pending)) {
+        model.push([name, item])
+      }
+    }
+    const migrated = await migrate(client, existing, model).catch(() => false)
+    if (migrated !== false) {
+      if (Object.keys(migrated).length > 0) existing.variant = migrated
+      else delete existing.variant
+    }
     existing[key] = value
     await fs.promises.writeFile(p, JSON.stringify(existing, null, 2))
   })

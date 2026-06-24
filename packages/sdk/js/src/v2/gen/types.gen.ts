@@ -2347,9 +2347,6 @@ export type ConfigModelStateResponse = {
     providerID: string
     modelID: string
   }>
-  variant: {
-    [key: string]: string
-  }
 }
 
 export type TuiConfigGetResponse = {

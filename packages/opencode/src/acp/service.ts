@@ -439,7 +439,11 @@ export function make(input: {
       if (!snapshot.availableModes.some((mode) => mode.id === params.value)) {
         return yield* new ACPError.InvalidModeError({ mode: params.value })
       }
-      const state = yield* session.setMode(params.sessionId, params.value)
+      // kilocode_change start - explicit mode switches clear stale variants
+      const state = yield* session
+        .setMode(params.sessionId, params.value)
+        .pipe(Effect.andThen(session.setVariant(params.sessionId, undefined)))
+      // kilocode_change end
       return {
         configOptions: configOptions(snapshot, {
           model: state.model ?? selectDefaultModel(snapshot),
@@ -458,7 +462,11 @@ export function make(input: {
     if (!snapshot.availableModes.some((mode) => mode.id === params.modeId)) {
       return yield* new ACPError.InvalidModeError({ mode: params.modeId })
     }
-    yield* session.setMode(params.sessionId, params.modeId)
+    // kilocode_change start - explicit mode switches clear stale variants
+    yield* session
+      .setMode(params.sessionId, params.modeId)
+      .pipe(Effect.andThen(session.setVariant(params.sessionId, undefined)))
+    // kilocode_change end
     return {}
   })
 

@@ -42,7 +42,7 @@ describe("config model state routes", () => {
       }),
     )
 
-    const body = await json<{ favorite: Array<{ providerID: string; modelID: string }> }>(
+    const body = await json<{ favorite: Array<{ providerID: string; modelID: string }>; variant?: unknown }>(
       await req("/config/model-state"),
     )
 
@@ -50,6 +50,7 @@ describe("config model state routes", () => {
       { providerID: "kilo", modelID: "gpt-5.5" },
       { providerID: "kilo", modelID: "qwen/qwen3-8b" },
     ])
+    expect(body.variant).toBeUndefined()
   })
 
   test("updates favorites while preserving recents", async () => {
@@ -75,5 +76,8 @@ describe("config model state routes", () => {
 
     expect(body.recent).toEqual([{ providerID: "kilo", modelID: "recent" }])
     expect(body.favorite).toEqual([{ providerID: "kilo", modelID: "gpt-5.5" }])
+
+    const saved = JSON.parse(await Bun.file(path.join(tmp.path, "model.json")).text()) as { variant?: unknown }
+    expect(saved.variant).toBeUndefined()
   })
 })

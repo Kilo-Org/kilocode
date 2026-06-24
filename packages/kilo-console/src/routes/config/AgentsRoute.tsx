@@ -204,7 +204,7 @@ export function AgentBuilderRoute() {
   const state = useAgentBuilder(agent)
   const title = createMemo(() => {
     if (!agent()) return "Agent Builder"
-    if (state.locked()) return "Inspect Agent"
+    if (state.locked() && !state.variantEdit()) return "Inspect Agent"
     return "Edit Agent"
   })
 
@@ -226,6 +226,11 @@ export function AgentBuilderRoute() {
               <Show when={!state.locked()}>
                 <Button variant="primary" disabled={Boolean(state.ctx.saving()) || !state.ready()} onClick={state.save}>
                   Save
+                </Button>
+              </Show>
+              <Show when={state.locked() && state.variantEdit()}>
+                <Button variant="primary" disabled={Boolean(state.ctx.saving()) || !state.ready()} onClick={state.save}>
+                  Save Variant
                 </Button>
               </Show>
               <IconButton
@@ -359,6 +364,21 @@ export function AgentBuilderRoute() {
                           <span class="mono">{model().id}</span>
                         </>
                       )}
+                    </Show>
+                  </FieldCard>
+                  <FieldCard
+                    label="Model variant"
+                    description="Stored in kilo.json as agent variant configuration. Use Inherit to remove the local override."
+                  >
+                    <CustomSelect
+                      label="Agent model variant"
+                      value={state.currentVariant()}
+                      options={state.variantOptions()}
+                      disabled={(state.locked() && !state.variantEdit()) || Boolean(state.ctx.saving())}
+                      onSelect={state.setVariant}
+                    />
+                    <Show when={state.variantModel()}>
+                      {(model) => <span class="mono">Resolved against {model().id}</span>}
                     </Show>
                   </FieldCard>
                   <FieldCard
